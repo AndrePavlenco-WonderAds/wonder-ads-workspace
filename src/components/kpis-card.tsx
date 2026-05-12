@@ -41,7 +41,7 @@ export function KpisCard({ href = "/seo/kpis" }: { href?: string }) {
             <span className="brand-gradient-text">SEO DPT KPIs</span>
           </h2>
           <p className="mt-1 max-w-xl text-sm text-white/60 sm:text-base">
-            Avaliação mensal de performance · 3 pilares · bónus trimestral
+            Monthly performance evaluation · 3 pillars · quarterly bonus
           </p>
         </div>
       </div>

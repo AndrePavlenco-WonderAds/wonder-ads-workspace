@@ -16,50 +16,50 @@ export const metadata = {
 };
 
 const PILLAR_1_KPIS = [
-  "NPS Score do cliente — Rating de satisfação preenchido pelo cliente",
-  "Ausência de erros críticos que causem crise ou confusão",
-  "Updates semanais entregues com clareza (5ª ou 6ª feira)",
-  "Monthly calls de SEO realizadas com o cliente",
-  "Tempo de resposta a dúvidas (< 24 horas)",
-  "Taxa de resolução de questões na 1ª interação",
-  "Relatório mensal completo enviado ao cliente",
+  "Client NPS score — satisfaction rating filled out by the client",
+  "Absence of critical errors that cause crisis or confusion",
+  "Weekly updates delivered clearly (Thursday or Friday)",
+  "Monthly SEO calls held with the client",
+  "Response time to questions (< 24 hours)",
+  "First-contact resolution rate (without escalating)",
+  "Complete monthly report sent to the client",
 ];
 
 const PILLAR_2_KPIS = [
-  "Crescimento de tráfego orgânico (visitors vs mês anterior)",
-  "% de keywords em top 50, top 10 e top 3 do Google",
-  "Keywords com progresso de posição — quantas saltaram?",
-  "Documentos entregues SEO-ready (blog posts, GMB posts, audits)",
-  "Leads geradas organicamente (Google Searches) e AIs",
-  "Revenue / ROI do cliente",
-  "Otimizações técnicas (Core Web Vitals, crawlability, indexação)",
-  "Backlinks de qualidade criados",
+  "Organic traffic growth (visitors vs previous month)",
+  "% of keywords in top 50, top 10 and top 3 of Google",
+  "Keywords with position progress — how many moved up",
+  "SEO-ready documents delivered (blog posts, GMB posts, audits)",
+  "Leads generated organically (Google Search and AIs)",
+  "Client revenue / ROI",
+  "Technical optimisations (Core Web Vitals, crawlability, indexing)",
+  "Quality backlinks built",
 ];
 
 const PILLAR_3_KPIS = [
-  "Liderança em calls de SEO com os 5 projetos",
-  "Problem-solving independente — sem escalar",
-  "Qualidade de documentação enviada ao cliente",
-  "Conhecimento técnico atualizado (algoritmos, AIs, tendências)",
-  "Cumprimento de deadlines internos (Miro roadmap, tarefas)",
-  "Mentorias a consultores juniores",
-  "Inovação — propostas de estratégias novas e testes",
+  "Leadership on SEO calls across the consultant's 5 projects",
+  "Independent problem-solving — without escalating",
+  "Quality of documentation sent to the client",
+  "Up-to-date technical knowledge (algorithms, AIs, trends)",
+  "Meeting internal deadlines (Miro roadmap, tasks)",
+  "Mentoring junior consultants on the team",
+  "Innovation — proposing new strategies and tests",
 ];
 
 const TEAM_LEADER_CRITERIA = [
-  "Score geral ≥ 2.33 / 3.0",
-  "Pilar 3 (Cultura & Leadership) com score ≥ 2.5",
-  "Mentalidade de mentor — ajuda outros sem deixar os seus projetos",
-  "Proatividade em propor estratégias novas",
-  "Consistência — scores elevados em múltiplos meses",
-  "Energia e alinhamento alto com os valores da empresa",
+  "Overall score ≥ 2.33 / 3.0",
+  "Pillar 3 (Culture & Leadership) score ≥ 2.5",
+  "Mentor mindset — helps others without dropping their own projects",
+  "Proactive in proposing new strategies",
+  "Consistency — high scores across multiple months",
+  "High energy and alignment with the company's values",
 ];
 
 const COO_NOTES = [
-  "Este framework é mensalmente revisitado para calibração. Esta versão está em vigor mas pode ter alterações — irei avisar caso haja.",
-  "Darei feedback individual a cada consultor após avaliação e estarei sempre disponível para qualquer questão ou problema.",
-  "Áreas de melhoria devem ser melhoradas e não devem criar atrito — não é esse o objetivo.",
-  "Histórico de scores e frameworks como esta ajudam a identificar gaps de conhecimento para novas pessoas na equipa.",
+  "This framework is reviewed monthly for calibration. This version is in effect but may change — I'll let you know if it does.",
+  "I'll give individual feedback to each consultant after the evaluation and will always be available for any questions or issues.",
+  "Areas for improvement should be addressed and should not create friction — that's not the goal.",
+  "A history of scores and frameworks like this one help identify knowledge gaps when bringing new people onto the team.",
 ];
 
 export default function SeoKpisPage() {
@@ -94,52 +94,49 @@ export default function SeoKpisPage() {
           </span>
           <h1 className="mt-3 text-4xl font-semibold leading-[1.05] tracking-tight sm:text-5xl">
             <span className="brand-gradient-text">
-              Avaliação Mensal de Performance
+              Monthly Performance Evaluation
             </span>
           </h1>
           <p className="mt-3 max-w-2xl text-base text-white/65 sm:text-lg">
-            KPIs do Departamento de SEO · WonderAds
+            SEO Department KPIs · WonderAds
           </p>
         </div>
       </section>
 
-      <Section
-        title="1. Objetivos da Framework"
-        Icon={Target}
-        delay={0.15}
-      >
+      <Section title="1. Framework Objectives" Icon={Target} delay={0.15}>
         <p className="text-white/75">
-          Este documento define o framework de avaliação mensal de performance
-          dos consultores de SEO. O objetivo é identificar:
+          This document defines the monthly performance evaluation framework for
+          SEO consultants. The goals are to identify:
         </p>
         <ul className="mt-4 space-y-2 text-white/75">
           {[
-            "Consultores com melhor performance geral",
-            "Garantir satisfação do cliente e entrega de resultados",
-            "Áreas de melhoria e desenvolvimento por consultor",
-            "Candidatos à posição de Team Leader e a Bónus Trimestral",
+            "Consultants with the best overall performance",
+            "Sustained client satisfaction and results delivery",
+            "Areas of improvement and development per consultant",
+            "Candidates for Team Leader and for the Quarterly Bonus",
           ].map((item) => (
             <Bullet key={item}>{item}</Bullet>
           ))}
         </ul>
         <p className="mt-5 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white/75">
-          O objetivo nº5, o mais importante, é entender as falhas e melhorar,
-          não desanimar. Queremos ser a melhor equipa e portanto agência de SEO
-          em Portugal — isto é a estrutura interna para tal.
+          The fifth goal — the most important — is to understand failures and
+          improve, not to be discouraged. We want to be the best team and
+          therefore the best SEO agency in Portugal. This is the internal
+          structure that gets us there.
         </p>
       </Section>
 
       <Section
-        title="2. Os Três Pilares de Avaliação"
+        title="2. The Three Evaluation Pillars"
         Icon={Award}
         delay={0.2}
       >
         <p className="text-white/75">
-          A avaliação estrutura-se em 3 pilares de KPIs com igual importância
-          (33.3% cada). Mensalmente, cada consultor tem uma classificação em
-          cada pilar. Ao final de cada trimestre, agrega-se a média dos 3 meses
-          — o score trimestral determina a elegibilidade para o bónus
-          trimestral.
+          Evaluation is structured around 3 KPI pillars of equal weight (33.3%
+          each). Each month, every consultant gets a score in each pillar. At
+          the end of each quarter, the 3 monthly scores are averaged — the
+          quarterly score determines eligibility for the quarterly bonus on top
+          of the base salary.
         </p>
 
         <div className="mt-8 grid grid-cols-1 gap-5 lg:grid-cols-3">
@@ -150,7 +147,7 @@ export default function SeoKpisPage() {
             emoji="😀"
             Icon={Smile}
             kpis={PILLAR_1_KPIS}
-            description="Avalia a satisfação e a experiência do cliente durante o mês."
+            description="How the client's experience went throughout the month."
           />
           <PillarCard
             number="2"
@@ -159,44 +156,40 @@ export default function SeoKpisPage() {
             emoji="📈"
             Icon={TrendingUp}
             kpis={PILLAR_2_KPIS}
-            description="Avalia os resultados entregues aos clientes."
+            description="The actual results delivered to clients."
           />
           <PillarCard
             number="3"
-            title="Cultura & Leadership"
+            title="Culture & Leadership"
             weight="33.3%"
             emoji="🤎"
             Icon={HeartHandshake}
             kpis={PILLAR_3_KPIS}
-            description="Cultura, comunicação, liderança, conhecimento técnico e desenvolvimento."
+            description="Culture, communication, leadership, technical knowledge and team development."
           />
         </div>
       </Section>
 
-      <Section
-        title="3. Escala de Avaliação"
-        Icon={Target}
-        delay={0.25}
-      >
+      <Section title="3. Evaluation Scale" Icon={Target} delay={0.25}>
         <p className="text-white/75">
-          Cada KPI dos pilares é avaliado em 3 níveis:
+          Each KPI inside the three pillars is scored on a 3-point scale:
         </p>
         <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
           {[
             {
-              level: "Abaixo do Esperado",
-              desc: "Não atendeu aos objetivos. Necessária melhoria.",
-              value: "1 valor",
+              level: "Below Expectations",
+              desc: "Did not meet objectives. Improvement needed.",
+              value: "1 point",
             },
             {
-              level: "Esperado",
-              desc: "Atendeu aos objetivos conforme esperado.",
-              value: "2 valores",
+              level: "Expected",
+              desc: "Met objectives as expected.",
+              value: "2 points",
             },
             {
-              level: "Acima do Esperado",
-              desc: "Superou objetivos com alta qualidade ou inovação.",
-              value: "3 valores",
+              level: "Above Expectations",
+              desc: "Exceeded objectives with high quality or innovation.",
+              value: "3 points",
             },
           ].map((row) => (
             <div
@@ -216,23 +209,24 @@ export default function SeoKpisPage() {
 
         <div className="mt-6 rounded-xl border border-white/10 bg-white/[0.04] px-5 py-4 text-sm text-white/80">
           <p>
-            <span className="font-semibold">Score Final Mês</span> = (Pilar 1 +
-            Pilar 2 + Pilar 3) / 3
+            <span className="font-semibold">Monthly Final Score</span> = (Pillar
+            1 + Pillar 2 + Pillar 3) / 3
           </p>
           <p className="mt-2 text-white/65">
-            Score Trimestre = média dos scores dos 3 meses
+            <span className="font-semibold">Quarterly Score</span> = average of
+            the 3 monthly scores
           </p>
         </div>
       </Section>
 
       <Section
-        title="4. Critérios para Candidato a Team Leader"
+        title="4. Team Leader Candidate Criteria"
         Icon={Award}
         delay={0.3}
       >
         <p className="text-white/75">
-          Um consultor deve reunir os seguintes critérios para ser considerado
-          candidato a Team Leader:
+          A consultant must meet the following criteria to be considered a Team
+          Leader candidate:
         </p>
         <ul className="mt-4 space-y-2 text-white/75">
           {TEAM_LEADER_CRITERIA.map((item) => (
@@ -241,18 +235,14 @@ export default function SeoKpisPage() {
         </ul>
       </Section>
 
-      <Section
-        title="5. Notas Adicionais do COO"
-        Icon={Info}
-        delay={0.35}
-      >
+      <Section title="5. Additional Notes from the COO" Icon={Info} delay={0.35}>
         <ul className="space-y-2 text-white/75">
           {COO_NOTES.map((note) => (
             <Bullet key={note}>{note}</Bullet>
           ))}
         </ul>
         <p className="mt-6 text-sm text-white/55">
-          Obrigado e até já! —{" "}
+          Thanks and talk soon —{" "}
           <a
             href="mailto:andre@wonder-ads.com"
             className="brand-gradient-text font-semibold hover:underline"
@@ -348,7 +338,7 @@ function PillarCard({
 
       <div className="relative z-10 mt-5">
         <p className="text-xs uppercase tracking-[0.18em] text-white/45">
-          Pilar nº {number}
+          Pillar No. {number}
         </p>
         <h3 className="mt-1 text-xl font-semibold tracking-tight text-white">
           {title} <span aria-hidden>{emoji}</span>

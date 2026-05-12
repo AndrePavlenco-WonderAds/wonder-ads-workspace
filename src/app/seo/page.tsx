@@ -52,17 +52,14 @@ export default function SeoPage() {
     <PageShell>
       <DepartmentHeader
         title="SEO DPT"
-        tagline="Organic growth, technical SEO & content strategy. Audits, keyword research, on-page work, briefs and ongoing reporting live here."
+        tagline="Organic growth in Google and AIs. #1 SEO & GEO Agency in Portugal."
         Icon={Search}
       />
 
-      <div className="mt-12 sm:mt-16">
-        <KpisCard />
-      </div>
-
       <div className="mt-12 grid grid-cols-1 gap-10 lg:mt-16 lg:grid-cols-[1fr_420px]">
-        <div className="order-2 lg:order-1">
+        <div className="order-2 space-y-10 lg:order-1">
           <ProjectGrid projects={SEO_PROJECTS} label="Projects" />
+          <KpisCard />
         </div>
         <div className="order-1 lg:order-2 lg:sticky lg:top-6 lg:self-start">
           <ClaudeChat
