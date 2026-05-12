@@ -46,17 +46,13 @@ const DEPARTMENTS: Department[] = [
 export default function Home() {
   return (
     <PageShell>
-      <section className="mx-auto mb-14 max-w-3xl text-center sm:mb-20">
+      <section className="mx-auto mb-10 max-w-3xl text-center sm:mb-14">
         <span className="animate-fade-up inline-flex items-center rounded-full border border-[color:var(--border)] bg-white/5 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.18em] text-white/70 backdrop-blur">
           Wonder Ads Workspace
         </span>
         <h1 className="animate-fade-up mt-6 text-balance text-4xl font-semibold leading-[1.05] tracking-tight sm:text-6xl">
-          Choose a <span className="brand-gradient-text">department</span>
+          Choose a <span className="brand-gradient-text">Department</span>
         </h1>
-        <p className="animate-fade-up mx-auto mt-5 max-w-xl text-base text-white/60 sm:text-lg">
-          Internal hub for the Wonder Ads team — pick a department to jump into
-          its tools, briefs and ongoing work.
-        </p>
       </section>
 
       <HubSection />

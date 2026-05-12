@@ -21,12 +21,12 @@ export function PageShell({ children }: { children: ReactNode }) {
         </nav>
       </header>
 
-      <main className="relative z-20 mx-auto flex w-full max-w-7xl flex-col px-6 pb-24 pt-6 sm:px-10 sm:pb-32">
+      <main className="relative z-20 mx-auto flex w-full max-w-7xl flex-col px-6 pb-20 pt-6 sm:px-10 sm:pb-24">
         {children}
 
-        <footer className="mt-20 flex flex-wrap items-center justify-between gap-3 text-xs text-white/40 sm:mt-28">
-          <span>© {new Date().getFullYear()} Wonder Ads</span>
-          <span className="font-mono">workspace.v1</span>
+        <footer className="mt-16 flex flex-wrap items-center justify-between gap-3 text-xs text-white/40 sm:mt-20">
+          <span>© {new Date().getFullYear()} Wonder Ads. All Copy Rights Reserved.</span>
+          <span className="font-mono">workspace.v2</span>
         </footer>
       </main>
     </div>
