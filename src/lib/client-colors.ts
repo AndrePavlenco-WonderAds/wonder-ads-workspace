@@ -17,7 +17,7 @@ const PALETTES: Record<string, ClientPalette> = {
   "a-domingos": { from: "#E0C097", via: "#A4794A", to: "#5B3A1A" },
   "senior-resort": { from: "#A8C8E0", via: "#E8DCC4", to: "#7BA7C2" },
   "c-saccor": { from: "#FFE8C2", via: "#D9A864", to: "#7A4A1F" },
-  "mimus-clinica-dentaria": { from: "#FFAFCC", via: "#FF5C8A", to: "#9B2C5C" },
+  "clinica-mimus": { from: "#FFAFCC", via: "#FF5C8A", to: "#9B2C5C" },
   wonderads: { from: "#343ED7", via: "#783DF5", to: "#C535C9" }, // our own brand
   "monte-mar": { from: "#5BA8D9", via: "#2F6A8F", to: "#0F2A3F" },
   "corrida-do-tempo": { from: "#E0A075", via: "#B07650", to: "#3D1F1B" },

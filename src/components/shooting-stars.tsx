@@ -1,12 +1,13 @@
-// Pure-CSS animated meteors. Each star streaks diagonally across the screen
-// with a staggered delay so visually one appears roughly every ~3s.
+// Pure-CSS animated meteors. Each star streaks from upper-left toward the
+// lower-right at a slight downward angle. Staggered delays so on average one
+// becomes visible every ~3s.
 
 const STARS = [
-  { top: "10%", left: "85%", delay: "0s", duration: "2.8s" },
-  { top: "22%", left: "62%", delay: "3s", duration: "3.2s" },
-  { top: "8%", left: "40%", delay: "6s", duration: "2.6s" },
-  { top: "35%", left: "78%", delay: "9s", duration: "3.4s" },
-  { top: "18%", left: "20%", delay: "12s", duration: "3s" },
+  { top: "4%", left: "8%", delay: "0s", duration: "2.6s" },
+  { top: "14%", left: "22%", delay: "3s", duration: "3.0s" },
+  { top: "6%", left: "38%", delay: "6s", duration: "2.8s" },
+  { top: "22%", left: "5%", delay: "9s", duration: "3.4s" },
+  { top: "10%", left: "52%", delay: "12s", duration: "3s" },
 ];
 
 export function ShootingStars() {

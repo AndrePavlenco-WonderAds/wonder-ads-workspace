@@ -71,9 +71,8 @@ export function ClientCard({
         <h3 className="text-base font-semibold tracking-tight text-white">
           {title}
         </h3>
-        <p className="mt-1.5 flex items-center gap-1.5 text-xs text-white/50">
-          <UserRound className="h-3 w-3" />
-          <span className="text-white/55">Head Consultant ·</span>
+        <p className="mt-1.5 flex items-center gap-1.5 text-xs">
+          <UserRound className="h-3 w-3 text-white/50" />
           <span className="font-medium text-white/75">{consultant}</span>
         </p>
       </div>

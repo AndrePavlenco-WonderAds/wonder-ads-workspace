@@ -9,13 +9,15 @@ export function DepartmentHeader({
   count,
   countLabel,
   rightSlot,
+  large = false,
 }: {
   title: string;
   tagline: string;
-  Icon: LucideIcon;
+  Icon?: LucideIcon;
   count?: number;
   countLabel?: string;
   rightSlot?: ReactNode;
+  large?: boolean;
 }) {
   return (
     <>
@@ -29,32 +31,52 @@ export function DepartmentHeader({
 
       <div className="animate-fade-up mt-10 grid grid-cols-1 gap-10 sm:mt-14 lg:grid-cols-[1fr_auto] lg:items-center">
         <section className="flex flex-col items-start gap-6">
-          <div className="relative">
-            <div
-              className="brand-gradient-bg flex h-16 w-16 items-center justify-center rounded-2xl shadow-[0_10px_40px_-8px_rgba(120,61,245,0.7)]"
-              aria-hidden
-            >
-              <Icon className="h-7 w-7 text-white" strokeWidth={2.25} />
+          {Icon && (
+            <div className="relative">
+              <div
+                className="brand-gradient-bg flex h-16 w-16 items-center justify-center rounded-2xl shadow-[0_10px_40px_-8px_rgba(120,61,245,0.7)]"
+                aria-hidden
+              >
+                <Icon className="h-7 w-7 text-white" strokeWidth={2.25} />
+              </div>
+              <div
+                aria-hidden
+                className="absolute inset-0 -z-10 rounded-2xl opacity-60 blur-2xl"
+                style={{ background: "var(--brand-gradient)" }}
+              />
             </div>
-            <div
-              aria-hidden
-              className="absolute inset-0 -z-10 rounded-2xl opacity-60 blur-2xl"
-              style={{ background: "var(--brand-gradient)" }}
-            />
-          </div>
+          )}
 
           <div>
-            <div className="flex flex-wrap items-center gap-3">
-              <h1 className="text-4xl font-semibold leading-[1.05] tracking-tight sm:text-5xl">
-                <span className="brand-gradient-text">{title}</span>
-              </h1>
-              {typeof count === "number" && (
-                <CountBadge value={count} label={countLabel ?? "clients"} />
-              )}
-            </div>
-            <p className="mt-3 max-w-2xl text-base text-white/65 sm:text-lg">
+            <h1
+              className={
+                large
+                  ? "text-6xl font-bold leading-[0.95] tracking-tight sm:text-7xl lg:text-8xl"
+                  : "text-4xl font-semibold leading-[1.05] tracking-tight sm:text-5xl"
+              }
+            >
+              <span
+                className={
+                  large ? "brand-gradient-text-rich" : "brand-gradient-text"
+                }
+              >
+                {title}
+              </span>
+            </h1>
+            <p
+              className={
+                large
+                  ? "mt-5 max-w-2xl text-lg text-white/65 sm:text-xl"
+                  : "mt-3 max-w-2xl text-base text-white/65 sm:text-lg"
+              }
+            >
               {tagline}
             </p>
+            {typeof count === "number" && (
+              <div className="mt-5">
+                <CountBadge value={count} label={countLabel ?? "clients"} />
+              </div>
+            )}
           </div>
         </section>
 
@@ -71,13 +93,13 @@ export function DepartmentHeader({
 function CountBadge({ value, label }: { value: number; label: string }) {
   return (
     <span
-      className="animate-count-pop group/badge inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.06] px-3.5 py-1.5 backdrop-blur-md transition-all duration-300 hover:scale-105 hover:border-white/30 hover:bg-white/[0.1] hover:shadow-[0_8px_30px_-8px_rgba(120,61,245,0.7)]"
+      className="animate-count-pop group/badge inline-flex items-center gap-2.5 rounded-full border border-white/15 bg-white/[0.06] px-4 py-2 backdrop-blur-md transition-all duration-300 hover:scale-105 hover:border-white/30 hover:bg-white/[0.1] hover:shadow-[0_8px_30px_-8px_rgba(120,61,245,0.7)]"
     >
       <span
         aria-hidden
-        className="brand-gradient-bg h-2 w-2 rounded-full shadow-[0_0_10px_rgba(197,53,201,0.8)] transition-transform duration-300 group-hover/badge:scale-125"
+        className="brand-gradient-bg h-2.5 w-2.5 rounded-full shadow-[0_0_12px_rgba(197,53,201,0.9)] transition-transform duration-300 group-hover/badge:scale-125"
       />
-      <span className="brand-gradient-text text-xl font-bold leading-none tracking-tight sm:text-2xl">
+      <span className="brand-gradient-text-rich text-2xl font-bold leading-none tracking-tight sm:text-3xl">
         {value}
       </span>
       <span className="text-xs uppercase tracking-[0.18em] text-white/55 group-hover/badge:text-white/80">

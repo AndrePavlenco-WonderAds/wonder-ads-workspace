@@ -91,6 +91,29 @@ body {
   color: transparent;
 }
 
+/* Richer 5-stop gradient with subtle shimmer — used on hero titles. */
+.brand-gradient-text-rich {
+  background: linear-gradient(
+    110deg,
+    #5C6FFF 0%,
+    #8A4DF8 25%,
+    #C535C9 50%,
+    #FF6FB6 75%,
+    #FFC15E 100%
+  );
+  background-size: 220% auto;
+  background-position: 0% center;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: gradient-shimmer 9s linear infinite;
+}
+
+@keyframes gradient-shimmer {
+  0% { background-position: 0% center; }
+  100% { background-position: -220% center; }
+}
+
 /* Gradient border via mask trick — renders a 1px gradient ring */
 .brand-gradient-border {
   position: relative;
@@ -181,15 +204,15 @@ body {
   content: "";
   position: absolute;
   top: 50%;
-  right: 0;
+  left: 0;
   height: 1px;
   width: 120px;
   transform: translateY(-50%);
   background: linear-gradient(
-    -90deg,
-    #fff 0%,
-    rgba(197, 53, 201, 0.7) 30%,
-    rgba(120, 61, 245, 0.0) 100%
+    90deg,
+    rgba(120, 61, 245, 0.0) 0%,
+    rgba(197, 53, 201, 0.7) 70%,
+    #fff 100%
   );
   border-radius: 9999px;
 }
@@ -206,7 +229,7 @@ body {
     opacity: 1;
   }
   100% {
-    transform: translate3d(-360px, 260px, 0) rotate(35deg);
+    transform: translate3d(420px, 260px, 0) rotate(35deg);
     opacity: 0;
   }
 }

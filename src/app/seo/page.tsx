@@ -1,4 +1,3 @@
-import { Search } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { DepartmentHeader } from "@/components/department-header";
 import { ClaudeChat } from "@/components/claude-chat";
@@ -34,42 +33,38 @@ export default async function SeoPage() {
       <DepartmentHeader
         title="SEO DPT"
         tagline="Organic growth in Google and AIs. #1 SEO & GEO Agency in Portugal."
-        Icon={Search}
         count={clients.length || undefined}
         countLabel="clients"
         rightSlot={<WorldMap />}
+        large
       />
 
       <div className="mt-12 grid grid-cols-1 gap-10 lg:mt-16 lg:grid-cols-[1fr_420px]">
-        <div className="order-2 space-y-10 lg:order-1">
-          <section aria-label="Clients">
-            <header className="mb-5 flex items-baseline justify-between">
-              <h2 className="text-sm font-medium uppercase tracking-[0.18em] text-white/55">
-                Clients
-              </h2>
-            </header>
+        <section aria-label="Clients" className="order-2 lg:order-1">
+          <header className="mb-5 flex items-baseline justify-between">
+            <h2 className="text-sm font-medium uppercase tracking-[0.18em] text-white/55">
+              Clients
+            </h2>
+          </header>
 
-            {notionError ? (
-              <NotionFallback message={notionError} />
-            ) : (
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {clients.map((c, i) => (
-                  <ClientCard
-                    key={c.id}
-                    title={c.title}
-                    icon={c.icon}
-                    href={`/seo/${c.slug}`}
-                    consultant={c.consultant}
-                    palette={c.palette}
-                    index={i}
-                  />
-                ))}
-              </div>
-            )}
-          </section>
-
-          <KpisCard />
-        </div>
+          {notionError ? (
+            <NotionFallback message={notionError} />
+          ) : (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {clients.map((c, i) => (
+                <ClientCard
+                  key={c.id}
+                  title={c.title}
+                  icon={c.icon}
+                  href={`/seo/${c.slug}`}
+                  consultant={c.consultant}
+                  palette={c.palette}
+                  index={i}
+                />
+              ))}
+            </div>
+          )}
+        </section>
         <div className="order-1 lg:order-2 lg:sticky lg:top-6 lg:self-start">
           <ClaudeChat
             department="seo"
@@ -77,6 +72,10 @@ export default async function SeoPage() {
           />
         </div>
       </div>
+
+      <section aria-label="SEO DPT KPIs" className="mt-12 sm:mt-16">
+        <KpisCard />
+      </section>
     </PageShell>
   );
 }

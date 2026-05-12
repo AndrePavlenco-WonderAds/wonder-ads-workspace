@@ -1,6 +1,7 @@
 import { Client } from "@notionhq/client";
 import { cache } from "react";
 import { getClientPalette, type ClientPalette } from "./client-colors";
+import { TITLE_OVERRIDES, getConsultantForSlug } from "./client-overrides";
 
 const SEO_SPACE_PAGE_ID = "aa162d6cc35b458e8f5e8452406593a0";
 const SEO_PROJECTS_COLUMN_LIST_ID = "23cc892b-a7ef-487e-8b85-9fdc36074aa1";
@@ -50,10 +51,11 @@ export const getSeoClients = cache(async (): Promise<NotionClient[]> => {
     const items = await listChildren(column.id);
     for (const block of items) {
       if (block.type !== "child_page") continue;
-      const title = (
+      const rawTitle = (
         (block as unknown as { child_page: { title: string } }).child_page.title
       ).trim();
-      if (!title) continue;
+      if (!rawTitle) continue;
+      const title = TITLE_OVERRIDES[rawTitle] ?? rawTitle;
       const page = await notion.pages.retrieve({ page_id: block.id });
       const icon =
         "icon" in page && page.icon && page.icon.type === "emoji"
@@ -65,7 +67,7 @@ export const getSeoClients = cache(async (): Promise<NotionClient[]> => {
         title,
         slug,
         icon,
-        consultant: "André",
+        consultant: getConsultantForSlug(slug),
         palette: getClientPalette(slug),
       });
     }
