@@ -1,0 +1,74 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #0b0c12;
+  --surface: #f6f6f8;
+  --surface-strong: #efefef;
+  --border: rgba(11, 12, 18, 0.08);
+
+  --brand-blue: #343ed7;
+  --brand-purple: #783df5;
+  --brand-magenta: #c535c9;
+  --brand-gradient: linear-gradient(
+    135deg,
+    #343ed7 0%,
+    #783df5 53.65%,
+    #c535c9 100%
+  );
+  --brand-gradient-soft: linear-gradient(
+    135deg,
+    rgba(52, 62, 215, 0.08) 0%,
+    rgba(120, 61, 245, 0.08) 53.65%,
+    rgba(197, 53, 201, 0.08) 100%
+  );
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-border: var(--border);
+  --color-brand-blue: var(--brand-blue);
+  --color-brand-purple: var(--brand-purple);
+  --color-brand-magenta: var(--brand-magenta);
+  --font-sans: var(--font-be-vietnam-pro);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-be-vietnam-pro), "Be Vietnam Pro", system-ui,
+    -apple-system, Segoe UI, Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.brand-gradient-bg {
+  background: var(--brand-gradient);
+}
+
+.brand-gradient-text {
+  background: var(--brand-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.brand-gradient-border {
+  position: relative;
+  isolation: isolate;
+}
+.brand-gradient-border::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: var(--brand-gradient);
+  -webkit-mask: linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 1;
+}
