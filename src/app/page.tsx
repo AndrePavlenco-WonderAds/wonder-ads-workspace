@@ -1,258 +1,210 @@
-import type { ReactNode } from "react";
+import Link from "next/link";
+import {
+  Search,
+  Code2,
+  Megaphone,
+  Handshake,
+  ArrowUpRight,
+  type LucideIcon,
+} from "lucide-react";
+import { PageShell } from "@/components/page-shell";
 
 type Department = {
   title: string;
   tagline: string;
-  icon: ReactNode;
+  href: string;
+  Icon: LucideIcon;
 };
 
 const DEPARTMENTS: Department[] = [
   {
     title: "SEO DPT",
-    tagline: "Organic growth, technical SEO & content strategy",
-    icon: <SeoIcon />,
+    tagline: "Organic growth, technical SEO & content strategy.",
+    href: "/seo",
+    Icon: Search,
   },
   {
     title: "WEB DPT",
-    tagline: "Websites, landing pages & conversion-focused builds",
-    icon: <WebIcon />,
+    tagline: "High-converting websites, landing pages & dev work.",
+    href: "/web",
+    Icon: Code2,
   },
   {
     title: "ADS DPT",
-    tagline: "Paid media, performance campaigns & creative",
-    icon: <AdsIcon />,
+    tagline: "Paid media, performance campaigns & creative.",
+    href: "/ads",
+    Icon: Megaphone,
   },
   {
     title: "COMMERCIAL DPT",
-    tagline: "Sales pipeline, partnerships & client success",
-    icon: <CommercialIcon />,
+    tagline: "Sales pipeline, partnerships & client success.",
+    href: "/commercial",
+    Icon: Handshake,
   },
 ];
 
 export default function Home() {
   return (
-    <div className="relative min-h-screen overflow-hidden bg-white">
-      <BackgroundDecor />
+    <PageShell>
+      <section className="mx-auto mb-14 max-w-3xl text-center sm:mb-20">
+        <span className="animate-fade-up inline-flex items-center rounded-full border border-[color:var(--border)] bg-white/5 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.18em] text-white/70 backdrop-blur">
+          Wonder Ads Workspace
+        </span>
+        <h1 className="animate-fade-up mt-6 text-balance text-4xl font-semibold leading-[1.05] tracking-tight sm:text-6xl">
+          Choose a <span className="brand-gradient-text">department</span>
+        </h1>
+        <p className="animate-fade-up mx-auto mt-5 max-w-xl text-base text-white/60 sm:text-lg">
+          Internal hub for the Wonder Ads team — pick a department to jump into
+          its tools, briefs and ongoing work.
+        </p>
+      </section>
 
-      <main className="relative mx-auto flex min-h-screen max-w-6xl flex-col px-6 py-16 sm:px-10 sm:py-24">
-        <header className="mb-14 flex flex-col items-start gap-4 sm:mb-20">
-          <span className="inline-flex items-center rounded-full border border-[color:var(--border)] bg-white/70 px-3 py-1 text-xs font-medium tracking-wide text-[color:var(--foreground)]/70 backdrop-blur">
-            WONDER ADS WORKSPACE
-          </span>
-          <h1 className="text-4xl font-semibold leading-[1.05] tracking-tight sm:text-6xl">
-            Choose a <span className="brand-gradient-text">department</span>
-          </h1>
-          <p className="max-w-xl text-base text-[color:var(--foreground)]/65 sm:text-lg">
-            Internal hub for the Wonder Ads team. Pick a department to jump into
-            its tools, briefs and ongoing work.
-          </p>
-        </header>
-
-        <section
-          aria-label="Departments"
-          className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-6"
-        >
-          {DEPARTMENTS.map((dept) => (
-            <DepartmentCard key={dept.title} dept={dept} />
-          ))}
-        </section>
-
-        <footer className="mt-16 flex flex-wrap items-center justify-between gap-3 text-sm text-[color:var(--foreground)]/55 sm:mt-24">
-          <span>© {new Date().getFullYear()} Wonder Ads</span>
-          <span>wonder-ads.com</span>
-        </footer>
-      </main>
-    </div>
+      <HubSection />
+    </PageShell>
   );
 }
 
-function DepartmentCard({ dept }: { dept: Department }) {
+function HubSection() {
   return (
-    <article className="brand-gradient-border group relative flex flex-col overflow-hidden rounded-3xl bg-white p-6 shadow-[0_1px_2px_rgba(11,12,18,0.04),0_12px_40px_-12px_rgba(52,62,215,0.18)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_1px_2px_rgba(11,12,18,0.04),0_24px_60px_-12px_rgba(120,61,245,0.32)] sm:p-8">
+    <section
+      aria-label="Departments"
+      className="relative mx-auto w-full max-w-5xl"
+    >
+      <BeamsOverlay />
+
       <div
         aria-hidden
-        className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full opacity-70 blur-3xl transition-opacity duration-500 group-hover:opacity-100"
+        className="pointer-events-none absolute left-1/2 top-1/2 z-0 hidden h-56 w-56 -translate-x-1/2 -translate-y-1/2 sm:block"
+      >
+        <div className="orb-glow animate-orb-pulse h-full w-full rounded-full" />
+        <div className="brand-gradient-bg absolute left-1/2 top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full shadow-[0_0_24px_8px_rgba(120,61,245,0.55)]" />
+      </div>
+
+      <div className="relative z-10 grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-10">
+        {DEPARTMENTS.map((dept, i) => (
+          <DepartmentCard key={dept.title} dept={dept} index={i} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function DepartmentCard({
+  dept,
+  index,
+}: {
+  dept: Department;
+  index: number;
+}) {
+  const { Icon } = dept;
+
+  return (
+    <Link
+      href={dept.href}
+      className="brand-gradient-border animate-fade-up group relative flex flex-col gap-6 rounded-2xl bg-white/[0.035] p-6 backdrop-blur-md transition-all duration-500 hover:-translate-y-1 hover:bg-white/[0.06] sm:p-7"
+      style={{ animationDelay: `${0.1 + index * 0.08}s` }}
+    >
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 -z-10 rounded-2xl opacity-0 blur-2xl transition-opacity duration-500 group-hover:opacity-60"
         style={{ background: "var(--brand-gradient)" }}
       />
 
-      <div className="relative z-10 flex h-32 w-full items-center justify-center rounded-2xl bg-gradient-to-br from-[#f4f3ff] via-[#faf2fb] to-[#fef0fb] sm:h-40">
-        <div className="h-16 w-16 sm:h-20 sm:w-20">{dept.icon}</div>
-      </div>
-
-      <div className="relative z-10 mt-6 flex flex-1 flex-col">
-        <h2 className="text-xl font-semibold tracking-tight sm:text-2xl">
-          <span className="brand-gradient-text">{dept.title}</span>
-        </h2>
-        <p className="mt-2 text-sm text-[color:var(--foreground)]/65 sm:text-base">
-          {dept.tagline}
-        </p>
-
-        <div className="mt-6 flex items-center gap-2 text-sm font-medium text-[color:var(--foreground)]/80">
-          <span>Enter</span>
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 16 16"
-            fill="none"
-            className="transition-transform duration-300 group-hover:translate-x-1"
+      <div className="flex items-start justify-between">
+        <div className="relative">
+          <div
+            className="brand-gradient-bg flex h-11 w-11 items-center justify-center rounded-xl shadow-[0_8px_30px_-6px_rgba(120,61,245,0.6)] transition-transform duration-500 group-hover:scale-110"
             aria-hidden
           >
-            <path
-              d="M3 8h10M9 4l4 4-4 4"
-              stroke="url(#arrow-grad)"
-              strokeWidth="1.75"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            <defs>
-              <linearGradient
-                id="arrow-grad"
-                x1="0"
-                y1="0"
-                x2="16"
-                y2="16"
-                gradientUnits="userSpaceOnUse"
-              >
-                <stop offset="0" stopColor="#343ED7" />
-                <stop offset="0.5365" stopColor="#783DF5" />
-                <stop offset="1" stopColor="#C535C9" />
-              </linearGradient>
-            </defs>
-          </svg>
+            <Icon className="h-5 w-5 text-white" strokeWidth={2.25} />
+          </div>
+          <div
+            aria-hidden
+            className="absolute inset-0 -z-10 rounded-xl opacity-50 blur-xl"
+            style={{ background: "var(--brand-gradient)" }}
+          />
         </div>
+
+        <ArrowUpRight
+          className="h-5 w-5 text-white/40 transition-all duration-500 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-white"
+          aria-hidden
+        />
       </div>
-    </article>
-  );
-}
 
-function BackgroundDecor() {
-  return (
-    <>
+      <div>
+        <h2 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">
+          {dept.title}
+        </h2>
+        <p className="mt-2 text-sm text-white/55 sm:text-base">
+          {dept.tagline}
+        </p>
+      </div>
+
       <div
         aria-hidden
-        className="pointer-events-none absolute -left-40 -top-40 h-[480px] w-[480px] rounded-full opacity-30 blur-[120px]"
-        style={{ background: "var(--brand-gradient)" }}
+        className="brand-gradient-bg pointer-events-none absolute bottom-0 left-6 right-6 h-px origin-left scale-x-0 rounded-full opacity-0 transition-all duration-500 group-hover:scale-x-100 group-hover:opacity-90 sm:left-7 sm:right-7"
       />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -bottom-48 -right-32 h-[520px] w-[520px] rounded-full opacity-25 blur-[140px]"
-        style={{ background: "var(--brand-gradient)" }}
-      />
-    </>
+    </Link>
   );
 }
 
-function GradientStops() {
+function BeamsOverlay() {
   return (
-    <defs>
-      <linearGradient
-        id="wa-grad"
-        x1="0"
-        y1="0"
-        x2="48"
-        y2="48"
-        gradientUnits="userSpaceOnUse"
-      >
-        <stop offset="0" stopColor="#343ED7" />
-        <stop offset="0.5365" stopColor="#783DF5" />
-        <stop offset="1" stopColor="#C535C9" />
-      </linearGradient>
-    </defs>
-  );
-}
-
-function SeoIcon() {
-  return (
-    <svg viewBox="0 0 48 48" fill="none" className="h-full w-full" aria-hidden>
-      <GradientStops />
-      <circle
-        cx="20"
-        cy="20"
-        r="11"
-        stroke="url(#wa-grad)"
-        strokeWidth="2.5"
-      />
-      <path
-        d="M28.5 28.5L40 40"
-        stroke="url(#wa-grad)"
-        strokeWidth="2.5"
+    <svg
+      aria-hidden
+      className="pointer-events-none absolute inset-0 z-0 hidden h-full w-full sm:block"
+      viewBox="0 0 100 100"
+      preserveAspectRatio="none"
+    >
+      <defs>
+        <linearGradient id="beam-grad" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#343ED7" />
+          <stop offset="0.5365" stopColor="#783DF5" />
+          <stop offset="1" stopColor="#C535C9" />
+        </linearGradient>
+      </defs>
+      <line
+        x1="32"
+        y1="32"
+        x2="50"
+        y2="50"
+        stroke="url(#beam-grad)"
+        strokeWidth="0.6"
         strokeLinecap="round"
+        className="animate-beam"
       />
-      <path
-        d="M14 23l4-4 3 3 5-6"
-        stroke="url(#wa-grad)"
-        strokeWidth="2"
+      <line
+        x1="68"
+        y1="32"
+        x2="50"
+        y2="50"
+        stroke="url(#beam-grad)"
+        strokeWidth="0.6"
         strokeLinecap="round"
-        strokeLinejoin="round"
+        className="animate-beam"
+        style={{ animationDelay: "0.6s" }}
       />
-    </svg>
-  );
-}
-
-function WebIcon() {
-  return (
-    <svg viewBox="0 0 48 48" fill="none" className="h-full w-full" aria-hidden>
-      <GradientStops />
-      <rect
-        x="5"
-        y="8"
-        width="38"
-        height="28"
-        rx="3"
-        stroke="url(#wa-grad)"
-        strokeWidth="2.5"
-      />
-      <path d="M5 15h38" stroke="url(#wa-grad)" strokeWidth="2.5" />
-      <circle cx="10" cy="11.5" r="1.2" fill="url(#wa-grad)" />
-      <circle cx="14" cy="11.5" r="1.2" fill="url(#wa-grad)" />
-      <circle cx="18" cy="11.5" r="1.2" fill="url(#wa-grad)" />
-      <path
-        d="M18 42h12M24 36v6"
-        stroke="url(#wa-grad)"
-        strokeWidth="2.5"
+      <line
+        x1="32"
+        y1="68"
+        x2="50"
+        y2="50"
+        stroke="url(#beam-grad)"
+        strokeWidth="0.6"
         strokeLinecap="round"
+        className="animate-beam"
+        style={{ animationDelay: "1.2s" }}
       />
-    </svg>
-  );
-}
-
-function AdsIcon() {
-  return (
-    <svg viewBox="0 0 48 48" fill="none" className="h-full w-full" aria-hidden>
-      <GradientStops />
-      <path
-        d="M8 20v8a2 2 0 002 2h4l3 8h4l-3-8 14-4V14L18 18h-8a2 2 0 00-2 2z"
-        stroke="url(#wa-grad)"
-        strokeWidth="2.5"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M38 18v12"
-        stroke="url(#wa-grad)"
-        strokeWidth="2.5"
+      <line
+        x1="68"
+        y1="68"
+        x2="50"
+        y2="50"
+        stroke="url(#beam-grad)"
+        strokeWidth="0.6"
         strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-function CommercialIcon() {
-  return (
-    <svg viewBox="0 0 48 48" fill="none" className="h-full w-full" aria-hidden>
-      <GradientStops />
-      <path
-        d="M8 38l8-8 6 6 10-12 8 8"
-        stroke="url(#wa-grad)"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M40 22V14h-8"
-        stroke="url(#wa-grad)"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
+        className="animate-beam"
+        style={{ animationDelay: "1.8s" }}
       />
     </svg>
   );

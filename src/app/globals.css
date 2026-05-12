@@ -1,26 +1,38 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #0b0c12;
-  --surface: #f6f6f8;
-  --surface-strong: #efefef;
-  --border: rgba(11, 12, 18, 0.08);
+  --background: #07080d;
+  --foreground: #f5f6fa;
+  --surface: rgba(255, 255, 255, 0.04);
+  --surface-strong: rgba(255, 255, 255, 0.07);
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.16);
 
   --brand-blue: #343ed7;
   --brand-purple: #783df5;
   --brand-magenta: #c535c9;
+
   --brand-gradient: linear-gradient(
     135deg,
     #343ed7 0%,
     #783df5 53.65%,
     #c535c9 100%
   );
+
   --brand-gradient-soft: linear-gradient(
     135deg,
-    rgba(52, 62, 215, 0.08) 0%,
-    rgba(120, 61, 245, 0.08) 53.65%,
-    rgba(197, 53, 201, 0.08) 100%
+    rgba(52, 62, 215, 0.18) 0%,
+    rgba(120, 61, 245, 0.18) 53.65%,
+    rgba(197, 53, 201, 0.18) 100%
+  );
+
+  --orb-glow: radial-gradient(
+    circle at center,
+    rgba(120, 61, 245, 0.9) 0%,
+    rgba(120, 61, 245, 0.45) 25%,
+    rgba(52, 62, 215, 0.25) 50%,
+    rgba(197, 53, 201, 0.12) 70%,
+    transparent 100%
   );
 }
 
@@ -28,21 +40,46 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-surface: var(--surface);
+  --color-surface-strong: var(--surface-strong);
   --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
   --color-brand-blue: var(--brand-blue);
   --color-brand-purple: var(--brand-purple);
   --color-brand-magenta: var(--brand-magenta);
   --font-sans: var(--font-be-vietnam-pro);
 }
 
+html,
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-be-vietnam-pro), "Be Vietnam Pro", system-ui,
-    -apple-system, Segoe UI, Roboto, sans-serif;
+    -apple-system, "Segoe UI", Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
+/* Starfield — two layers of fine dots, very subtle */
+.starfield {
+  background-image:
+    radial-gradient(1px 1px at 12% 18%, rgba(255, 255, 255, 0.6), transparent),
+    radial-gradient(1px 1px at 27% 84%, rgba(255, 255, 255, 0.45), transparent),
+    radial-gradient(1px 1px at 41% 12%, rgba(255, 255, 255, 0.5), transparent),
+    radial-gradient(1px 1px at 58% 67%, rgba(255, 255, 255, 0.5), transparent),
+    radial-gradient(1px 1px at 73% 28%, rgba(255, 255, 255, 0.55), transparent),
+    radial-gradient(1px 1px at 89% 53%, rgba(255, 255, 255, 0.4), transparent),
+    radial-gradient(1px 1px at 8% 55%, rgba(255, 255, 255, 0.35), transparent),
+    radial-gradient(1px 1px at 34% 38%, rgba(255, 255, 255, 0.5), transparent),
+    radial-gradient(1px 1px at 62% 14%, rgba(255, 255, 255, 0.4), transparent),
+    radial-gradient(1px 1px at 81% 78%, rgba(255, 255, 255, 0.45), transparent),
+    radial-gradient(1px 1px at 95% 22%, rgba(255, 255, 255, 0.5), transparent),
+    radial-gradient(1px 1px at 18% 73%, rgba(255, 255, 255, 0.4), transparent),
+    radial-gradient(2px 2px at 47% 47%, rgba(255, 255, 255, 0.7), transparent),
+    radial-gradient(2px 2px at 70% 88%, rgba(255, 255, 255, 0.6), transparent);
+  background-size: 100% 100%;
+}
+
+/* Brand gradient utilities */
 .brand-gradient-bg {
   background: var(--brand-gradient);
 }
@@ -54,6 +91,7 @@ body {
   color: transparent;
 }
 
+/* Gradient border via mask trick — renders a 1px gradient ring */
 .brand-gradient-border {
   position: relative;
   isolation: isolate;
@@ -65,10 +103,79 @@ body {
   border-radius: inherit;
   padding: 1px;
   background: var(--brand-gradient);
-  -webkit-mask: linear-gradient(#000 0 0) content-box,
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
     linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
   pointer-events: none;
   z-index: 1;
+  opacity: 0.65;
+  transition: opacity 0.4s ease;
+}
+.brand-gradient-border:hover::before,
+.group:hover .brand-gradient-border::before {
+  opacity: 1;
+}
+
+/* The central orb */
+.orb-glow {
+  background: var(--orb-glow);
+  filter: blur(2px);
+}
+
+/* Animations */
+@keyframes orb-pulse {
+  0%, 100% { transform: scale(1); opacity: 0.95; }
+  50% { transform: scale(1.06); opacity: 1; }
+}
+
+@keyframes drift {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(20px, -10px, 0); }
+}
+
+@keyframes beam-flow {
+  0% { stroke-dashoffset: 0; opacity: 0.35; }
+  50% { opacity: 0.9; }
+  100% { stroke-dashoffset: -60; opacity: 0.35; }
+}
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-orb-pulse {
+  animation: orb-pulse 5s ease-in-out infinite;
+  transform-origin: center;
+}
+
+.animate-drift-slow {
+  animation: drift 16s ease-in-out infinite;
+}
+
+.animate-beam {
+  stroke-dasharray: 6 6;
+  animation: beam-flow 4s linear infinite;
+}
+
+.animate-fade-up {
+  animation: fade-in-up 0.6s ease-out both;
+}
+
+/* Respect prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  .animate-orb-pulse,
+  .animate-drift-slow,
+  .animate-beam,
+  .animate-fade-up {
+    animation: none;
+  }
+}
+
+/* Selection */
+::selection {
+  background: rgba(120, 61, 245, 0.35);
+  color: #fff;
 }
