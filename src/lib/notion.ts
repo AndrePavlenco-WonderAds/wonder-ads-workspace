@@ -1,5 +1,6 @@
 import { Client } from "@notionhq/client";
 import { cache } from "react";
+import { getClientPalette, type ClientPalette } from "./client-colors";
 
 const SEO_SPACE_PAGE_ID = "aa162d6cc35b458e8f5e8452406593a0";
 const SEO_PROJECTS_COLUMN_LIST_ID = "23cc892b-a7ef-487e-8b85-9fdc36074aa1";
@@ -11,6 +12,8 @@ export type NotionClient = {
   title: string;
   slug: string;
   icon: string | null;
+  consultant: string;
+  palette: ClientPalette;
 };
 
 export function slugify(s: string): string {
@@ -56,11 +59,14 @@ export const getSeoClients = cache(async (): Promise<NotionClient[]> => {
         "icon" in page && page.icon && page.icon.type === "emoji"
           ? page.icon.emoji
           : null;
+      const slug = slugify(title);
       clients.push({
         id: block.id,
         title,
-        slug: slugify(title),
+        slug,
         icon,
+        consultant: "André",
+        palette: getClientPalette(slug),
       });
     }
   }

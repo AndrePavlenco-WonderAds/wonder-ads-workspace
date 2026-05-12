@@ -8,6 +8,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
+import { ShootingStars } from "@/components/shooting-stars";
 
 type Department = {
   title: string;
@@ -46,6 +47,7 @@ const DEPARTMENTS: Department[] = [
 export default function Home() {
   return (
     <PageShell>
+      <ShootingStars />
       <section className="mx-auto mb-10 max-w-3xl text-center sm:mb-14">
         <span className="animate-fade-up inline-flex items-center rounded-full border border-[color:var(--border)] bg-white/5 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.18em] text-white/70 backdrop-blur">
           Wonder Ads Workspace

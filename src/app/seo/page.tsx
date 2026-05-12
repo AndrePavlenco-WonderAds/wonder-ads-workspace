@@ -4,6 +4,7 @@ import { DepartmentHeader } from "@/components/department-header";
 import { ClaudeChat } from "@/components/claude-chat";
 import { KpisCard } from "@/components/kpis-card";
 import { ClientCard } from "@/components/client-card";
+import { WorldMap } from "@/components/world-map";
 import { getSeoClients, type NotionClient } from "@/lib/notion";
 
 export const metadata = {
@@ -34,6 +35,9 @@ export default async function SeoPage() {
         title="SEO DPT"
         tagline="Organic growth in Google and AIs. #1 SEO & GEO Agency in Portugal."
         Icon={Search}
+        count={clients.length || undefined}
+        countLabel="clients"
+        rightSlot={<WorldMap />}
       />
 
       <div className="mt-12 grid grid-cols-1 gap-10 lg:mt-16 lg:grid-cols-[1fr_420px]">
@@ -43,9 +47,6 @@ export default async function SeoPage() {
               <h2 className="text-sm font-medium uppercase tracking-[0.18em] text-white/55">
                 Clients
               </h2>
-              <span className="text-xs text-white/35">
-                {clients.length || "—"}
-              </span>
             </header>
 
             {notionError ? (
@@ -58,6 +59,8 @@ export default async function SeoPage() {
                     title={c.title}
                     icon={c.icon}
                     href={`/seo/${c.slug}`}
+                    consultant={c.consultant}
+                    palette={c.palette}
                     index={i}
                   />
                 ))}
