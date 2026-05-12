@@ -1,3 +1,4 @@
+import { anthropic } from "@ai-sdk/anthropic";
 import { convertToModelMessages, streamText, type UIMessage } from "ai";
 
 export const maxDuration = 30;
@@ -14,14 +15,11 @@ Style:
 - Cite real best-practice patterns; never invent ranking factor claims.`;
 
 export async function POST(req: Request) {
-  const { messages, department }: { messages: UIMessage[]; department?: string } =
-    await req.json();
-
-  const system = department === "seo" ? SEO_SYSTEM_PROMPT : SEO_SYSTEM_PROMPT;
+  const { messages }: { messages: UIMessage[] } = await req.json();
 
   const result = streamText({
-    model: "anthropic/claude-sonnet-4.6",
-    system,
+    model: anthropic("claude-sonnet-4-6"),
+    system: SEO_SYSTEM_PROMPT,
     messages: await convertToModelMessages(messages),
   });
 

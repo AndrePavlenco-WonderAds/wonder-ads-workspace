@@ -124,8 +124,9 @@ export function ClaudeChat({
 
         {error && (
           <div className="mt-4 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-300">
-            Something went wrong. Make sure <code>AI_GATEWAY_API_KEY</code> is
-            set, or check the API route logs.
+            Something went wrong. Make sure <code>ANTHROPIC_API_KEY</code> is
+            set in the Vercel project env vars (or local <code>.env.local</code>
+            ).
           </div>
         )}
       </div>
