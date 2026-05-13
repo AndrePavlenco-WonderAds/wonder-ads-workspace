@@ -11,6 +11,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: 19,
+    date: "2026-05-13",
+    title: "Client page header — icon and title side-by-side",
+    highlights: [
+      "On every SEO and ADS client page, the gradient icon square now sits to the left of the badge + title (was stacked vertically).",
+      "On SEO pages, the 'Open in Notion' link moves to the top-right of the header so the icon + title group can sit together.",
+    ],
+  },
+  {
     version: 18,
     date: "2026-05-13",
     title: "ADS DPT clients + cross-department brief sync",

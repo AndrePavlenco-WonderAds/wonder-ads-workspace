@@ -64,39 +64,40 @@ export default async function ClientPage({
     <PageShell>
       <BackLink />
 
-      <section className="animate-fade-up mt-10 flex flex-col items-start gap-5 sm:mt-14">
-        <div className="relative">
-          <div
-            className="brand-gradient-bg flex h-16 w-16 items-center justify-center rounded-2xl text-3xl shadow-[0_10px_40px_-8px_rgba(120,61,245,0.7)]"
-            aria-hidden
-          >
-            <span className="leading-none">{client.icon ?? "🌐"}</span>
+      <section className="animate-fade-up mt-10 flex flex-wrap items-start justify-between gap-5 sm:mt-14">
+        <div className="flex items-center gap-5">
+          <div className="relative shrink-0">
+            <div
+              className="brand-gradient-bg flex h-16 w-16 items-center justify-center rounded-2xl text-3xl shadow-[0_10px_40px_-8px_rgba(120,61,245,0.7)]"
+              aria-hidden
+            >
+              <span className="leading-none">{client.icon ?? "🌐"}</span>
+            </div>
+            <div
+              aria-hidden
+              className="absolute inset-0 -z-10 rounded-2xl opacity-60 blur-2xl"
+              style={{ background: "var(--brand-gradient)" }}
+            />
           </div>
-          <div
-            aria-hidden
-            className="absolute inset-0 -z-10 rounded-2xl opacity-60 blur-2xl"
-            style={{ background: "var(--brand-gradient)" }}
-          />
-        </div>
 
-        <div className="w-full">
-          <span className="inline-flex items-center rounded-full border border-white/15 bg-white/5 px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-[0.18em] text-white/70">
-            SEO DPT · Client
-          </span>
-          <div className="mt-3 flex flex-wrap items-end justify-between gap-3">
-            <h1 className="text-4xl font-semibold leading-[1.05] tracking-tight sm:text-5xl">
+          <div>
+            <span className="inline-flex items-center rounded-full border border-white/15 bg-white/5 px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-[0.18em] text-white/70">
+              SEO DPT · Client
+            </span>
+            <h1 className="mt-2 text-4xl font-semibold leading-[1.05] tracking-tight sm:text-5xl">
               <span className="brand-gradient-text">{client.title}</span>
             </h1>
-            <a
-              href={notionUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 text-sm text-white/55 transition hover:text-white"
-            >
-              Open in Notion <ExternalLink className="h-3.5 w-3.5" />
-            </a>
           </div>
         </div>
+
+        <a
+          href={notionUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 text-sm text-white/55 transition hover:text-white"
+        >
+          Open in Notion <ExternalLink className="h-3.5 w-3.5" />
+        </a>
       </section>
 
       <section className="animate-fade-up mt-10 sm:mt-14">
