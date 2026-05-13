@@ -1,4 +1,3 @@
-import { Megaphone } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { DepartmentHeader } from "@/components/department-header";
 import { ClientCard } from "@/components/client-card";
@@ -21,8 +20,7 @@ export default function AdsPage() {
     <PageShell>
       <DepartmentHeader
         title="ADS DPT"
-        tagline="Paid media, performance campaigns and creative. Strategy, launch plans, creative briefs and active campaign monitoring all live here."
-        Icon={Megaphone}
+        tagline="Strategy, propose creative plans, briefs and activate campaigns."
         count={ADS_CLIENTS.length}
         countLabel="clients"
         rightSlot={

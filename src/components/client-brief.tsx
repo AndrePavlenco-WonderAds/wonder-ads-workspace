@@ -44,6 +44,30 @@ export function ClientBrief({
   const lastSavedRef = useRef<Brief>(initial);
   const savingRef = useRef(false);
 
+  // On mount, always fetch the latest from KV. The page itself is statically
+  // generated / ISR-cached, so the server-rendered brief can be stale — this
+  // guarantees the displayed brief matches the live KV record within a tick.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/briefs/${slug}`, { cache: "no-store" });
+        if (cancelled || !res.ok) return;
+        const fresh = (await res.json()) as Brief;
+        if (cancelled || savingRef.current) return;
+        if (!sameBrief(fresh, lastSavedRef.current)) {
+          lastSavedRef.current = fresh;
+          setBrief(fresh);
+        }
+      } catch {
+        /* ignore — polling will retry */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [slug]);
+
   // Cross-tab instant sync via BroadcastChannel.
   useEffect(() => {
     if (typeof BroadcastChannel === "undefined") return;

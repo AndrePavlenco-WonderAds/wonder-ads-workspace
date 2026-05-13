@@ -11,6 +11,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: 22,
+    date: "2026-05-14",
+    title: "Fix stale brief render + ADS DPT header polish",
+    highlights: [
+      "Fix: edits to Do's/Don'ts now show up on refresh and across tabs immediately. The ClientBrief client component fetches the live KV record on mount, so the static-cached server render can't show stale data.",
+      "ADS DPT: removed the gradient megaphone icon square in the header.",
+      "ADS DPT tagline updated to: 'Strategy, propose creative plans, briefs and activate campaigns.'",
+    ],
+  },
+  {
     version: 21,
     date: "2026-05-14",
     title: "ADS DPT polish + real-time brief sync",
