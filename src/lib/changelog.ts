@@ -11,6 +11,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: 15,
+    date: "2026-05-13",
+    title: "Typewriter prompt on SEO DPT",
+    highlights: [
+      "Added a typewriter-animated prompt under the 16-clients badge that types out 'What are working on today, boss?' on every page load.",
+      "Brand-gradient caret continues blinking after the text finishes typing.",
+      "Respects prefers-reduced-motion (no caret blink for users who opted out).",
+    ],
+  },
+  {
     version: 14,
     date: "2026-05-13",
     title: "Public changelog",

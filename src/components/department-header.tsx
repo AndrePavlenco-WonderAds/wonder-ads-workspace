@@ -9,6 +9,7 @@ export function DepartmentHeader({
   count,
   countLabel,
   rightSlot,
+  extra,
   large = false,
 }: {
   title: string;
@@ -17,6 +18,7 @@ export function DepartmentHeader({
   count?: number;
   countLabel?: string;
   rightSlot?: ReactNode;
+  extra?: ReactNode;
   large?: boolean;
 }) {
   return (
@@ -71,6 +73,7 @@ export function DepartmentHeader({
                 <CountBadge value={count} label={countLabel ?? "clients"} />
               </div>
             )}
+            {extra && <div className="mt-4">{extra}</div>}
           </div>
         </section>
 

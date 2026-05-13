@@ -4,6 +4,7 @@ import { ClaudeChat } from "@/components/claude-chat";
 import { KpisCard } from "@/components/kpis-card";
 import { ClientCard } from "@/components/client-card";
 import { WorldMap } from "@/components/world-map";
+import { TypewriterPrompt } from "@/components/typewriter-prompt";
 import { getSeoClients, type NotionClient } from "@/lib/notion";
 import { CONSULTANT_ORDER } from "@/lib/client-overrides";
 import { TIER_RANK } from "@/lib/client-tiers";
@@ -53,6 +54,7 @@ export default async function SeoPage() {
         count={clients.length || undefined}
         countLabel="clients"
         rightSlot={<WorldMap />}
+        extra={<TypewriterPrompt text="What are working on today, boss?" />}
         large
       />
 
