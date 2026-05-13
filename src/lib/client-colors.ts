@@ -1,7 +1,7 @@
 // Per-client brand colour palettes for SEO DPT clients.
-// InSync Design comes from the actual site (#ffd900 + #108474).
-// The others are thematic placeholders chosen from each client's name/emoji —
-// swap to the real brand colours when the user provides website URLs.
+// Colours extracted directly from each client's live website (HTML + linked
+// CSS). Where the site exposed too few brand colours, a thematic complement
+// has been chosen to round out the gradient.
 
 export type ClientPalette = {
   from: string;
@@ -10,23 +10,44 @@ export type ClientPalette = {
 };
 
 const PALETTES: Record<string, ClientPalette> = {
-  "insync-design": { from: "#FFD900", to: "#108474" }, // yellow → teal (live site)
-  "institute-of-holistic-nutrition": { from: "#A8E063", via: "#56AB2F", to: "#1E5631" },
-  "aeger-prima": { from: "#8E9BAE", via: "#3A4757", to: "#1A2230" },
-  "b-life": { from: "#00E5FF", via: "#0066FF", to: "#1D2671" },
-  "a-domingos": { from: "#E0C097", via: "#A4794A", to: "#5B3A1A" },
-  "senior-resort": { from: "#A8C8E0", via: "#E8DCC4", to: "#7BA7C2" },
-  "c-saccor": { from: "#FFE8C2", via: "#D9A864", to: "#7A4A1F" },
-  "clinica-mimus": { from: "#FFAFCC", via: "#FF5C8A", to: "#9B2C5C" },
-  wonderads: { from: "#343ED7", via: "#783DF5", to: "#C535C9" }, // our own brand
-  "monte-mar": { from: "#5BA8D9", via: "#2F6A8F", to: "#0F2A3F" },
-  "corrida-do-tempo": { from: "#E0A075", via: "#B07650", to: "#3D1F1B" },
-  "sea-yourself": { from: "#FFB088", via: "#FF6B6B", to: "#2F8FB1" },
-  "hds-learning": { from: "#C49AE0", via: "#7E3FBF", to: "#2A1148" },
-  "white-clinic": { from: "#FFFFFF", via: "#B9DDF1", to: "#3A8FC2" },
-  "fisio-restelo": { from: "#F2A0A8", via: "#E63946", to: "#1D3557" },
-  "safe-away": { from: "#4A6E91", via: "#1E3A5F", to: "#0A1424" },
-  "clinica-em-casa": { from: "#A5D8F0", via: "#5DA8D6", to: "#1A4D7D" },
+  // Australia — insyncdesign.com.au — yellow + teal accent on dark
+  "insync-design": { from: "#FFD900", to: "#108474" },
+  // Canada — instituteofholisticnutrition.com — terracotta + olive (earthy)
+  "institute-of-holistic-nutrition": {
+    from: "#D0552C",
+    via: "#A37033",
+    to: "#455616",
+  },
+  // Lisbon — aegerprima.pt — orange + purple + navy
+  "aeger-prima": { from: "#EF8722", via: "#573996", to: "#003388" },
+  // Cascais — b-life.clinic — clean medical cyan / deep blue
+  "b-life": { from: "#00C2D7", via: "#0073E6", to: "#003366" },
+  // Fundão — adomingoscorreia.pt — sky blue → teal → deep purple
+  "a-domingos": { from: "#4FB2E5", via: "#2F6E89", to: "#322382" },
+  // Cadaval — senior-resort.pt — green tones
+  "senior-resort": { from: "#6FE6B2", via: "#00DD80", to: "#009C61" },
+  // Oeiras — clinicasacoor.pt — yellow + cool grey-blue
+  "c-saccor": { from: "#FAD033", via: "#989DBA", to: "#50596C" },
+  // Ermesinde — mimus.pt — coral pink + teal
+  "clinica-mimus": { from: "#FF8A8B", via: "#3EC7C5", to: "#404040" },
+  // Wonder Ads itself — keep brand gradient
+  wonderads: { from: "#343ED7", via: "#783DF5", to: "#C535C9" },
+  // Cascais — montemar.pt — sea blue + warm gold (coastal)
+  "monte-mar": { from: "#FFBF00", via: "#8ECFD7", to: "#4B4B49" },
+  // Lisbon — corridadotempo.pt — yellow/orange + near-black (high contrast)
+  "corrida-do-tempo": { from: "#F9B600", via: "#F6A800", to: "#222221" },
+  // Nazaré — seayourself.pt — purple-blue + ocean blue
+  "sea-yourself": { from: "#5D4FFF", via: "#4A90E2", to: "#2C5282" },
+  // Dubai — hdslearning.com — sky to deep blue
+  "hds-learning": { from: "#38B5E6", via: "#1E88E5", to: "#0D47A1" },
+  // Lisbon — whiteclinic.pt — blue + warm tan + deep green
+  "white-clinic": { from: "#1863DC", via: "#AE895D", to: "#0F341F" },
+  // Lisbon — fisiorestelo.pt — cyan → blue → deep navy
+  "fisio-restelo": { from: "#00B0C7", via: "#1863DC", to: "#0E2A5E" },
+  // Madeira — safeaway.pt — mint teal + blue (their primary colour is mint)
+  "safe-away": { from: "#66C6C2", via: "#5897FB", to: "#007AFF" },
+  // Portugal — clinicaemcasa.pt — light blue → primary blue → deep
+  "clinica-em-casa": { from: "#95D3EA", via: "#1C5CFF", to: "#2A5296" },
 };
 
 const DEFAULT_PALETTE: ClientPalette = {
