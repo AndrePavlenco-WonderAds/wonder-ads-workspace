@@ -11,6 +11,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: 25,
+    date: "2026-05-14",
+    title: "Website URL on project pages + 3-pane SEO project workspace",
+    highlights: [
+      "Every SEO and ADS client page now shows the client's website as a clickable chip next to the 'SEO/ADS DPT · CLIENT' tag.",
+      "New three-column section under the Client Brief on every SEO project page:",
+      "Left — Quick Actions: Write SEO Blog · Meta Title & Description · Keyword Research · On-Page Audit · Backlink Outreach · Schema Markup. Disabled until the per-project Claude chat lands.",
+      "Middle — GA4 Metrics placeholder: 4 metric tiles + a ghost sparkline. Marked 'Not connected' until the GA4 Data API is wired.",
+      "Right — Tracked Keywords placeholder: 5 ghost rows showing rank + trend. Marked 'Not connected' until DataForSEO lands.",
+    ],
+  },
+  {
     version: 24,
     date: "2026-05-14",
     title: "ADS DPT: Core tier override + channel tags",

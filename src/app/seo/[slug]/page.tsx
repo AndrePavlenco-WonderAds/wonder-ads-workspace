@@ -3,8 +3,10 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, ExternalLink } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { ClientBrief } from "@/components/client-brief";
+import { SeoProjectContainers } from "@/components/seo-project-containers";
 import { getBriefForSlug } from "@/lib/briefs-storage";
 import { getClientBySlug, getSeoClients } from "@/lib/notion";
+import { getClientWebsite, displayDomain } from "@/lib/client-meta";
 
 export const revalidate = 60;
 
@@ -53,6 +55,7 @@ export default async function ClientPage({
 
   const brief = await getBriefForSlug(slug);
   const notionUrl = `https://www.notion.so/${client.id.replace(/-/g, "")}`;
+  const website = getClientWebsite(slug);
 
   return (
     <PageShell>
@@ -75,9 +78,22 @@ export default async function ClientPage({
           </div>
 
           <div>
-            <span className="inline-flex items-center rounded-full border border-white/15 bg-white/5 px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-[0.18em] text-white/70">
-              SEO DPT · Client
-            </span>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center rounded-full border border-white/15 bg-white/5 px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-[0.18em] text-white/70">
+                SEO DPT · Client
+              </span>
+              {website && (
+                <a
+                  href={website}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-0.5 text-[11px] font-medium text-white/65 transition hover:border-white/25 hover:bg-white/[0.08] hover:text-white"
+                >
+                  {displayDomain(website)}
+                  <ExternalLink className="h-3 w-3" />
+                </a>
+              )}
+            </div>
             <h1 className="mt-2 text-4xl font-semibold leading-[1.05] tracking-tight sm:text-5xl">
               <span className="brand-gradient-text">{client.title}</span>
             </h1>
@@ -100,6 +116,10 @@ export default async function ClientPage({
           slug={slug}
           clientName={client.title}
         />
+      </section>
+
+      <section className="animate-fade-up mt-10 sm:mt-14">
+        <SeoProjectContainers clientName={client.title} />
       </section>
     </PageShell>
   );
