@@ -1,8 +1,11 @@
+import Link from "next/link";
 import type { ReactNode } from "react";
 import { BackgroundDecor } from "./background-decor";
 import { WonderAdsLogo } from "./wonder-ads-logo";
+import { getCurrentVersion } from "@/lib/changelog";
 
 export function PageShell({ children }: { children: ReactNode }) {
+  const version = getCurrentVersion();
   return (
     <div className="relative min-h-screen overflow-hidden bg-[color:var(--background)] text-[color:var(--foreground)]">
       <BackgroundDecor />
@@ -26,7 +29,13 @@ export function PageShell({ children }: { children: ReactNode }) {
 
         <footer className="mt-16 flex flex-wrap items-center justify-between gap-3 text-xs text-white/40 sm:mt-20">
           <span>© {new Date().getFullYear()} Wonder Ads. All Rights Reserved.</span>
-          <span className="font-mono">workspace.v13</span>
+          <Link
+            href="/changelog"
+            className="font-mono transition hover:text-white"
+            aria-label={`View changelog — workspace v${version}`}
+          >
+            workspace.v{version}
+          </Link>
         </footer>
       </main>
     </div>
