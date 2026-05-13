@@ -4,19 +4,23 @@ import type { Topology, GeometryCollection } from "topojson-specification";
 import type { FeatureCollection, Geometry } from "geojson";
 import worldData from "@/lib/world-110m.json";
 
-// Numeric ISO 3166-1 codes (zero-padded as strings) for highlighted countries.
-// Canada · Portugal · Spain · UAE · Australia.
-const HIGHLIGHTED = new Set(["124", "620", "724", "784", "036", "36"]);
-
 type CountryFeature = FeatureCollection<Geometry, { name: string }>;
+
+// Numeric ISO 3166-1 codes used by the world-atlas TopoJSON. Both padded
+// and unpadded variants of single-zero codes are included so e.g. Australia
+// matches ("036" / "36").
+const DEFAULT_HIGHLIGHTED = ["124", "620", "724", "784", "036", "36"];
 
 export function WorldMap({
   width = 520,
   height = 300,
+  highlightedCountryIds = DEFAULT_HIGHLIGHTED,
 }: {
   width?: number;
   height?: number;
+  highlightedCountryIds?: string[];
 }) {
+  const HIGHLIGHTED = new Set(highlightedCountryIds);
   const topology = worldData as unknown as Topology<{
     countries: GeometryCollection<{ name: string }>;
   }>;

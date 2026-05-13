@@ -9,14 +9,28 @@ export type AdsClient = {
   slug: string;
   title: string;
   icon: string;
+  /** ADS-side consultant override. Shared clients keep their SEO consultant
+   *  separately — only ADS DPT uses this field. */
+  consultant?: string;
 };
 
 export const ADS_CLIENTS: AdsClient[] = [
-  // Shared with SEO DPT — same slug, same brief, same palette
-  { slug: "ihn", title: "IHN", icon: "🟢" },
-  { slug: "insync-design", title: "InSync Design", icon: "💎" },
+  // Shared with SEO DPT — same slug, same brief, same palette.
+  // ADS-side consultant differs from SEO-side.
+  { slug: "ihn", title: "IHN", icon: "🟢", consultant: "Germano C." },
+  {
+    slug: "insync-design",
+    title: "InSync Design",
+    icon: "💎",
+    consultant: "Germano C.",
+  },
   // ADS-only client
-  { slug: "clinica-empatia", title: "Clínica Empatia", icon: "💗" },
+  {
+    slug: "clinica-empatia",
+    title: "Clínica Empatia",
+    icon: "💗",
+    consultant: "Germano C.",
+  },
 ];
 
 export function getAdsClient(slug: string): AdsClient | null {

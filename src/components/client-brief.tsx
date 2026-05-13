@@ -15,6 +15,20 @@ import { hasAnyBriefContent } from "@/lib/client-briefs";
 
 type Kind = "dos" | "donts" | "notes";
 
+const BROADCAST_CHANNEL = "wa-client-briefs";
+const POLL_INTERVAL_MS = 30_000;
+
+function sameBrief(a: Brief, b: Brief): boolean {
+  return (
+    a.dos.length === b.dos.length &&
+    a.donts.length === b.donts.length &&
+    a.notes.length === b.notes.length &&
+    a.dos.every((v, i) => v === b.dos[i]) &&
+    a.donts.every((v, i) => v === b.donts[i]) &&
+    a.notes.every((v, i) => v === b.notes[i])
+  );
+}
+
 export function ClientBrief({
   brief: initial,
   slug,
@@ -28,9 +42,48 @@ export function ClientBrief({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const lastSavedRef = useRef<Brief>(initial);
+  const savingRef = useRef(false);
+
+  // Cross-tab instant sync via BroadcastChannel.
+  useEffect(() => {
+    if (typeof BroadcastChannel === "undefined") return;
+    const ch = new BroadcastChannel(BROADCAST_CHANNEL);
+    ch.onmessage = (e: MessageEvent) => {
+      const msg = e.data as { slug?: string; brief?: Brief } | undefined;
+      if (!msg || msg.slug !== slug || !msg.brief) return;
+      if (savingRef.current) return; // don't clobber an in-flight save
+      if (sameBrief(msg.brief, lastSavedRef.current)) return;
+      lastSavedRef.current = msg.brief;
+      setBrief(msg.brief);
+    };
+    return () => ch.close();
+  }, [slug]);
+
+  // Cross-device backstop: poll every 30s.
+  useEffect(() => {
+    const id = window.setInterval(async () => {
+      if (savingRef.current) return;
+      try {
+        const res = await fetch(`/api/briefs/${slug}`, {
+          cache: "no-store",
+        });
+        if (!res.ok) return;
+        const fresh = (await res.json()) as Brief;
+        if (savingRef.current) return; // re-check after async
+        if (!sameBrief(fresh, lastSavedRef.current)) {
+          lastSavedRef.current = fresh;
+          setBrief(fresh);
+        }
+      } catch {
+        /* ignore network blips */
+      }
+    }, POLL_INTERVAL_MS);
+    return () => window.clearInterval(id);
+  }, [slug]);
 
   async function persist(next: Brief) {
     setSaving(true);
+    savingRef.current = true;
     setError(null);
     try {
       const res = await fetch(`/api/briefs/${slug}`, {
@@ -45,11 +98,18 @@ export function ClientBrief({
       const saved = (await res.json()) as Brief;
       lastSavedRef.current = saved;
       setBrief(saved);
+      // Broadcast to other tabs (same browser) for instant sync.
+      if (typeof BroadcastChannel !== "undefined") {
+        const ch = new BroadcastChannel(BROADCAST_CHANNEL);
+        ch.postMessage({ slug, brief: saved });
+        ch.close();
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Save failed");
       setBrief(lastSavedRef.current);
     } finally {
       setSaving(false);
+      savingRef.current = false;
     }
   }
 

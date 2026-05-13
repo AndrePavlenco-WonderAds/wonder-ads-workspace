@@ -11,6 +11,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: 21,
+    date: "2026-05-14",
+    title: "ADS DPT polish + real-time brief sync",
+    highlights: [
+      "World map on the ADS DPT header — Canada · Portugal · Australia highlighted.",
+      "Typewriter prompt 'What are we working on today, boss?' under the count badge.",
+      "All 3 ADS clients now attributed to Germano C. (per-department consultant; the same client keeps its SEO-side consultant on /seo).",
+      "Real-time brief sync across tabs via BroadcastChannel — add a Do on /seo/ihn and it appears instantly on /ads/ihn.",
+      "30s polling backstop covers cross-device sync without burning the Upstash free tier.",
+    ],
+  },
+  {
     version: 20,
     date: "2026-05-13",
     title: "Editable Client Brief, synced across departments",

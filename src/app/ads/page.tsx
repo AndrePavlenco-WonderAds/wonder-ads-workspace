@@ -2,6 +2,8 @@ import { Megaphone } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { DepartmentHeader } from "@/components/department-header";
 import { ClientCard } from "@/components/client-card";
+import { WorldMap } from "@/components/world-map";
+import { TypewriterPrompt } from "@/components/typewriter-prompt";
 import { ADS_CLIENTS } from "@/lib/ads-clients";
 import { getClientPalette } from "@/lib/client-colors";
 import { getClientTier } from "@/lib/client-tiers";
@@ -10,6 +12,9 @@ import { getConsultantForSlug } from "@/lib/client-overrides";
 export const metadata = {
   title: "ADS DPT — Wonder Ads Workspace",
 };
+
+// ISO numeric codes — Canada, Portugal, Australia (padded + unpadded for AU).
+const ADS_HIGHLIGHTED_COUNTRIES = ["124", "620", "036", "36"];
 
 export default function AdsPage() {
   return (
@@ -20,6 +25,10 @@ export default function AdsPage() {
         Icon={Megaphone}
         count={ADS_CLIENTS.length}
         countLabel="clients"
+        rightSlot={
+          <WorldMap highlightedCountryIds={ADS_HIGHLIGHTED_COUNTRIES} />
+        }
+        extra={<TypewriterPrompt text="What are we working on today, boss?" />}
       />
 
       <section className="mt-12 sm:mt-16" aria-label="Clients">
@@ -35,7 +44,7 @@ export default function AdsPage() {
               title={c.title}
               icon={c.icon}
               href={`/ads/${c.slug}`}
-              consultant={getConsultantForSlug(c.slug)}
+              consultant={c.consultant ?? getConsultantForSlug(c.slug)}
               palette={getClientPalette(c.slug)}
               tier={getClientTier(c.slug)}
               index={i}
