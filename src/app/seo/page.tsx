@@ -8,7 +8,7 @@ import { TypewriterPrompt } from "@/components/typewriter-prompt";
 import { getSeoClients, type NotionClient } from "@/lib/notion";
 import { CONSULTANT_ORDER } from "@/lib/client-overrides";
 import { TIER_RANK } from "@/lib/client-tiers";
-import { getClientLogo } from "@/lib/client-meta";
+import { getClientLogo, getLogoBgMode } from "@/lib/client-meta";
 
 export const metadata = {
   title: "SEO DPT — Wonder Ads Workspace",
@@ -85,6 +85,7 @@ export default async function SeoPage() {
                         title={c.title}
                         icon={c.icon}
                         logo={getClientLogo(c.slug)}
+                        logoBgMode={getLogoBgMode(c.slug)}
                         href={`/seo/${c.slug}`}
                         consultant={c.consultant}
                         palette={c.palette}

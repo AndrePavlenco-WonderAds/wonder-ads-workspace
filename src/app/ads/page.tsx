@@ -7,7 +7,7 @@ import { ADS_CLIENTS } from "@/lib/ads-clients";
 import { getClientPalette } from "@/lib/client-colors";
 import { getClientTier } from "@/lib/client-tiers";
 import { getConsultantForSlug } from "@/lib/client-overrides";
-import { getClientLogo } from "@/lib/client-meta";
+import { getClientLogo, getLogoBgMode } from "@/lib/client-meta";
 
 export const metadata = {
   title: "ADS DPT — Wonder Ads Workspace",
@@ -43,6 +43,7 @@ export default function AdsPage() {
               title={c.title}
               icon={c.icon}
               logo={getClientLogo(c.slug)}
+              logoBgMode={getLogoBgMode(c.slug)}
               href={`/ads/${c.slug}`}
               consultant={c.consultant ?? getConsultantForSlug(c.slug)}
               palette={getClientPalette(c.slug)}

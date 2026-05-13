@@ -10,6 +10,7 @@ import {
   getClientWebsite,
   displayDomain,
   getClientLogo,
+  getLogoBgMode,
 } from "@/lib/client-meta";
 import { getClientPalette, paletteToGradient } from "@/lib/client-colors";
 
@@ -43,6 +44,7 @@ export default async function AdsClientPage({
   const brief = await getBriefForSlug(slug);
   const website = getClientWebsite(slug);
   const logo = getClientLogo(slug);
+  const logoBgMode = getLogoBgMode(slug);
   const gradient = paletteToGradient(getClientPalette(slug));
 
   return (
@@ -63,6 +65,7 @@ export default async function AdsClientPage({
             alt={`${client.title} logo`}
             gradient={gradient}
             size="lg"
+            bgMode={logoBgMode}
           />
         </div>
 

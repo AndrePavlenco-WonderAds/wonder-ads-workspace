@@ -26,6 +26,18 @@ export function getClientLogo(slug: string): string | null {
   return CLIENT_LOGOS[slug] ?? null;
 }
 
+/** White-on-transparent logos that need a dark chip background to be visible. */
+export type LogoBgMode = "white" | "dark";
+
+const LOGO_BG_OVERRIDES: Record<string, LogoBgMode> = {
+  "b-life": "dark",
+  "monte-mar": "dark",
+};
+
+export function getLogoBgMode(slug: string): LogoBgMode {
+  return LOGO_BG_OVERRIDES[slug] ?? "white";
+}
+
 export const CLIENT_WEBSITES: Record<string, string> = {
   "insync-design": "https://insyncdesign.com.au/",
   ihn: "https://instituteofholisticnutrition.com/",

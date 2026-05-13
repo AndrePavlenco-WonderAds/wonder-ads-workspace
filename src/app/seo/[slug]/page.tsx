@@ -11,6 +11,7 @@ import {
   getClientWebsite,
   displayDomain,
   getClientLogo,
+  getLogoBgMode,
 } from "@/lib/client-meta";
 import { getClientPalette, paletteToGradient } from "@/lib/client-colors";
 
@@ -63,6 +64,7 @@ export default async function ClientPage({
   const notionUrl = `https://www.notion.so/${client.id.replace(/-/g, "")}`;
   const website = getClientWebsite(slug);
   const logo = getClientLogo(slug);
+  const logoBgMode = getLogoBgMode(slug);
   const gradient = paletteToGradient(getClientPalette(slug));
 
   return (
@@ -78,6 +80,7 @@ export default async function ClientPage({
               alt={`${client.title} logo`}
               gradient={gradient}
               size="lg"
+              bgMode={logoBgMode}
             />
           </div>
 

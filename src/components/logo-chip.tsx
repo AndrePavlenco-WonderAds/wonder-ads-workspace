@@ -1,20 +1,23 @@
 import Image from "next/image";
+import type { LogoBgMode } from "@/lib/client-meta";
 
-/** A square chip that renders either a real brand logo (white background +
- *  brand-coloured glow behind, so any logo's contrast works), or falls back
- *  to an emoji on a gradient chip when no logo is available. */
+/** A square chip that renders either a real brand logo (white or dark
+ *  background + brand-coloured glow behind, so any logo's contrast works),
+ *  or falls back to an emoji on a gradient chip when no logo is available. */
 export function LogoChip({
   logo,
   emoji,
   alt,
   gradient,
   size = "md",
+  bgMode = "white",
 }: {
   logo: string | null;
   emoji: string | null;
   alt: string;
   gradient: string;
   size?: "md" | "lg";
+  bgMode?: LogoBgMode;
 }) {
   const isLarge = size === "lg";
   const dim = isLarge ? "h-16 w-16" : "h-11 w-11";
@@ -44,6 +47,9 @@ export function LogoChip({
     );
   }
 
+  const chipBg = bgMode === "dark" ? "bg-[#10131a]" : "bg-white";
+  const chipRing = bgMode === "dark" ? "ring-white/12" : "ring-white/20";
+
   return (
     <div className="relative">
       <div
@@ -52,7 +58,7 @@ export function LogoChip({
         style={{ background: gradient }}
       />
       <div
-        className={`flex ${dim} ${pad} items-center justify-center rounded-xl bg-white ring-1 ring-white/20 shadow-[0_8px_28px_-6px_rgba(0,0,0,0.55)]`}
+        className={`flex ${dim} ${pad} items-center justify-center rounded-xl ${chipBg} ring-1 ${chipRing} shadow-[0_8px_28px_-6px_rgba(0,0,0,0.55)]`}
       >
         <Image
           src={logo}

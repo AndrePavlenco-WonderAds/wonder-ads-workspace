@@ -11,6 +11,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: 27,
+    date: "2026-05-14",
+    title: "Logo chip contrast fix for B-Life and Monte Mar",
+    highlights: [
+      "B-Life and Monte Mar logos are white-on-transparent — invisible on the white chip in v26. Both now render on a dark near-black chip so the white marks are visible.",
+      "New LOGO_BG_OVERRIDES map + getLogoBgMode helper — easy to flip any other client to a dark chip if needed.",
+      "Brand-coloured glow behind each chip still shows the per-client palette.",
+    ],
+  },
+  {
     version: 26,
     date: "2026-05-14",
     title: "Real brand logos on every client card and project page",
