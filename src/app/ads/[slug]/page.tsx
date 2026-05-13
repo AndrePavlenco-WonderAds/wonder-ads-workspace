@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { ClientBrief } from "@/components/client-brief";
-import { getClientBrief } from "@/lib/client-briefs";
+import { getBriefForSlug } from "@/lib/briefs-storage";
 import { ADS_CLIENTS, getAdsClient } from "@/lib/ads-clients";
 
 export async function generateStaticParams() {
@@ -33,7 +33,7 @@ export default async function AdsClientPage({
   const client = getAdsClient(slug);
   if (!client) notFound();
 
-  const brief = getClientBrief(slug);
+  const brief = await getBriefForSlug(slug);
 
   return (
     <PageShell>
@@ -71,7 +71,11 @@ export default async function AdsClientPage({
       </section>
 
       <section className="animate-fade-up mt-10 sm:mt-14">
-        <ClientBrief brief={brief} clientName={client.title} />
+        <ClientBrief
+          brief={brief}
+          slug={slug}
+          clientName={client.title}
+        />
       </section>
 
       <section className="animate-fade-up mt-12 sm:mt-16">

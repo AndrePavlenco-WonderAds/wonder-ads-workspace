@@ -14,6 +14,7 @@
     "@notionhq/client": "^5.21.0",
     "@types/d3-geo": "^3.1.0",
     "@types/topojson-specification": "^1.0.5",
+    "@vercel/kv": "^3.0.0",
     "ai": "^6.0.180",
     "d3-geo": "^3.1.1",
     "lucide-react": "^1.14.0",

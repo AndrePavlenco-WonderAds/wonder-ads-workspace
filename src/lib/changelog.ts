@@ -11,6 +11,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: 20,
+    date: "2026-05-13",
+    title: "Editable Client Brief, synced across departments",
+    highlights: [
+      "Do's, Don'ts, and Notes are now editable in the app — '+ Add' button, click any item to edit inline, hover to delete.",
+      "Persistence backed by Vercel KV (Upstash Redis). Optimistic UI snaps instantly while the server confirms in the background.",
+      "Shared clients (IHN, InSync Design) sync across /seo and /ads automatically — edits to either side update the same record.",
+      "Server-side fallback: when the KV record is empty, the static defaults from client-briefs.ts still render.",
+    ],
+  },
+  {
     version: 19,
     date: "2026-05-13",
     title: "Client page header — icon and title side-by-side",
