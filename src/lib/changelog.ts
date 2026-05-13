@@ -11,6 +11,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: 17,
+    date: "2026-05-13",
+    title: "Client Brief on every SEO project page",
+    highlights: [
+      "New Do's and Don'ts panels on every /seo/[slug] page — emerald for Do's, rose for Don'ts.",
+      "Notes panel underneath when there are general instructions for the client.",
+      "Briefs live in src/lib/client-briefs.ts — easy to edit and version-controlled.",
+      "Single source of truth that v18 (per-project chat) and ADS DPT will both read from.",
+    ],
+  },
+  {
     version: 16,
     date: "2026-05-13",
     title: "Typewriter prompt copy fix",

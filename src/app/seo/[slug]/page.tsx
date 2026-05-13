@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, ExternalLink } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { NotionRenderer } from "@/components/notion-renderer";
+import { ClientBrief } from "@/components/client-brief";
+import { getClientBrief } from "@/lib/client-briefs";
 import {
   getClientBySlug,
   getPageBlocks,
@@ -55,6 +57,7 @@ export default async function ClientPage({
   if (!client) notFound();
 
   const blocks = await getPageBlocks(client.id);
+  const brief = getClientBrief(slug);
   const notionUrl = `https://www.notion.so/${client.id.replace(/-/g, "")}`;
 
   return (
@@ -97,6 +100,10 @@ export default async function ClientPage({
       </section>
 
       <section className="animate-fade-up mt-10 sm:mt-14">
+        <ClientBrief brief={brief} clientName={client.title} />
+      </section>
+
+      <section className="animate-fade-up mt-12 sm:mt-16">
         {blocks.length === 0 ? (
           <p className="text-sm text-white/55">
             This page is empty in Notion.
