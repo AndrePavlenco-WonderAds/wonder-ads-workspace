@@ -11,6 +11,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: 18,
+    date: "2026-05-13",
+    title: "ADS DPT clients + cross-department brief sync",
+    highlights: [
+      "Replaced the ADS DPT 'Channels' list with a Clients section: IHN, InSync Design, Clínica Empatia.",
+      "Each ADS client now has its own /ads/[slug] page (mirrors /seo/[slug]).",
+      "Briefs are shared by slug — IHN and InSync Design show the same Do's/Don'ts on both the SEO and ADS pages. Edit once, both update.",
+      "Added Clínica Empatia (ADS-only) with a thematic peach→rose→magenta palette and 💗 icon.",
+    ],
+  },
+  {
     version: 17,
     date: "2026-05-13",
     title: "Client Brief on every SEO project page",

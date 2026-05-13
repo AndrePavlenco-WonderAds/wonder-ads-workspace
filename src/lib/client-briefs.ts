@@ -30,6 +30,9 @@ const BRIEFS: Record<string, ClientBrief> = {
   "fisio-restelo": EMPTY,
   "safe-away": EMPTY,
   "clinica-em-casa": EMPTY,
+
+  // ADS-only clients
+  "clinica-empatia": EMPTY,
 };
 
 export function getClientBrief(slug: string): ClientBrief {

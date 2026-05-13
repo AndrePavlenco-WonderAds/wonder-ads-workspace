@@ -25,6 +25,9 @@ const TIERS: Record<string, ClientTier> = {
   "a-domingos": "growth",
   "b-life": "growth",
   "white-clinic": "growth",
+
+  // ADS-only clients
+  "clinica-empatia": "core",
 };
 
 /** Sort rank used to order cards inside a consultant column (top→bottom). */

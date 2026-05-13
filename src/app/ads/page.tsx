@@ -1,27 +1,15 @@
-import {
-  Megaphone,
-  Sparkles,
-  BarChart3,
-  Image as ImageIcon,
-} from "lucide-react";
-import { SiGoogle, SiMeta, SiTiktok, SiLinkedin } from "@/components/brand-icons";
+import { Megaphone } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { DepartmentHeader } from "@/components/department-header";
-import { ProjectGrid } from "@/components/project-grid";
-import type { Project } from "@/components/project-card";
+import { ClientCard } from "@/components/client-card";
+import { ADS_CLIENTS } from "@/lib/ads-clients";
+import { getClientPalette } from "@/lib/client-colors";
+import { getClientTier } from "@/lib/client-tiers";
+import { getConsultantForSlug } from "@/lib/client-overrides";
 
 export const metadata = {
   title: "ADS DPT — Wonder Ads Workspace",
 };
-
-const ADS_PROJECTS: Project[] = [
-  { title: "Google Ads", tagline: "Search, Performance Max, Display.", Icon: SiGoogle },
-  { title: "Meta Ads", tagline: "Facebook + Instagram performance campaigns.", Icon: SiMeta },
-  { title: "TikTok Ads", tagline: "Video-first campaigns & creator collabs.", Icon: SiTiktok },
-  { title: "LinkedIn Ads", tagline: "B2B targeting & lead-gen forms.", Icon: SiLinkedin },
-  { title: "Creative Production", tagline: "Static, video & UGC ad creative.", Icon: ImageIcon },
-  { title: "Campaign Reporting", tagline: "ROAS, CAC, attribution & dashboards.", Icon: BarChart3 },
-];
 
 export default function AdsPage() {
   return (
@@ -30,11 +18,31 @@ export default function AdsPage() {
         title="ADS DPT"
         tagline="Paid media, performance campaigns and creative. Strategy, launch plans, creative briefs and active campaign monitoring all live here."
         Icon={Megaphone}
+        count={ADS_CLIENTS.length}
+        countLabel="clients"
       />
 
-      <div className="mt-12 sm:mt-16">
-        <ProjectGrid projects={ADS_PROJECTS} label="Channels" />
-      </div>
+      <section className="mt-12 sm:mt-16" aria-label="Clients">
+        <header className="mb-5 flex items-baseline justify-between">
+          <h2 className="text-sm font-medium uppercase tracking-[0.18em] text-white/55">
+            Clients
+          </h2>
+        </header>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {ADS_CLIENTS.map((c, i) => (
+            <ClientCard
+              key={c.slug}
+              title={c.title}
+              icon={c.icon}
+              href={`/ads/${c.slug}`}
+              consultant={getConsultantForSlug(c.slug)}
+              palette={getClientPalette(c.slug)}
+              tier={getClientTier(c.slug)}
+              index={i}
+            />
+          ))}
+        </div>
+      </section>
     </PageShell>
   );
 }

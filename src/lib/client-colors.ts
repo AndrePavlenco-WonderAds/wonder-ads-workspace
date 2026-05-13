@@ -42,6 +42,8 @@ const PALETTES: Record<string, ClientPalette> = {
   "safe-away": { from: "#66C6C2", via: "#5897FB", to: "#007AFF" },
   // Portugal — clinicaemcasa.pt — light blue → primary blue → deep
   "clinica-em-casa": { from: "#95D3EA", via: "#1C5CFF", to: "#2A5296" },
+  // ADS-only — Clínica Empatia — warm peach → rose → deep magenta
+  "clinica-empatia": { from: "#FFCDB2", via: "#FF8FA3", to: "#C9184A" },
 };
 
 const DEFAULT_PALETTE: ClientPalette = {
