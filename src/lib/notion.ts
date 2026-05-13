@@ -2,6 +2,7 @@ import { Client } from "@notionhq/client";
 import { cache } from "react";
 import { getClientPalette, type ClientPalette } from "./client-colors";
 import { TITLE_OVERRIDES, getConsultantForSlug } from "./client-overrides";
+import { getClientTier, type ClientTier } from "./client-tiers";
 
 const SEO_SPACE_PAGE_ID = "aa162d6cc35b458e8f5e8452406593a0";
 const SEO_PROJECTS_COLUMN_LIST_ID = "23cc892b-a7ef-487e-8b85-9fdc36074aa1";
@@ -15,6 +16,7 @@ export type NotionClient = {
   icon: string | null;
   consultant: string;
   palette: ClientPalette;
+  tier: ClientTier;
 };
 
 export function slugify(s: string): string {
@@ -69,6 +71,7 @@ export const getSeoClients = cache(async (): Promise<NotionClient[]> => {
         icon,
         consultant: getConsultantForSlug(slug),
         palette: getClientPalette(slug),
+        tier: getClientTier(slug),
       });
     }
   }

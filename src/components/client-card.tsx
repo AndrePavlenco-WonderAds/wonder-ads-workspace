@@ -2,6 +2,8 @@ import Link from "next/link";
 import { ArrowUpRight, UserRound } from "lucide-react";
 import type { ClientPalette } from "@/lib/client-colors";
 import { paletteToGradient } from "@/lib/client-colors";
+import type { ClientTier } from "@/lib/client-tiers";
+import { TierBadge } from "./tier-badge";
 
 export type ClientCardProps = {
   title: string;
@@ -9,6 +11,7 @@ export type ClientCardProps = {
   href: string;
   consultant: string;
   palette: ClientPalette;
+  tier: ClientTier;
   index?: number;
 };
 
@@ -18,10 +21,10 @@ export function ClientCard({
   href,
   consultant,
   palette,
+  tier,
   index = 0,
 }: ClientCardProps) {
   const gradient = paletteToGradient(palette);
-  const gradientSoft = paletteToGradient(palette, 135);
 
   return (
     <Link
@@ -36,7 +39,7 @@ export function ClientCard({
       <div
         aria-hidden
         className="pointer-events-none absolute -right-12 -top-12 h-32 w-32 rounded-full opacity-15 blur-2xl transition-all duration-500 group-hover:opacity-55"
-        style={{ background: gradientSoft, animationDelay: `${index * 0.04}s` }}
+        style={{ background: gradient, animationDelay: `${index * 0.04}s` }}
       />
       <div
         aria-hidden
@@ -71,10 +74,13 @@ export function ClientCard({
         <h3 className="text-base font-semibold tracking-tight text-white">
           {title}
         </h3>
-        <p className="mt-1.5 flex items-center gap-1.5 text-xs">
-          <UserRound className="h-3 w-3 text-white/50" />
-          <span className="font-medium text-white/75">{consultant}</span>
-        </p>
+        <div className="mt-2 flex items-center justify-between gap-2">
+          <p className="flex items-center gap-1.5 text-xs">
+            <UserRound className="h-3 w-3 text-white/50" />
+            <span className="font-medium text-white/75">{consultant}</span>
+          </p>
+          <TierBadge tier={tier} />
+        </div>
       </div>
     </Link>
   );

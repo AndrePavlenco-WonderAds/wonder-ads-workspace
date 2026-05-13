@@ -5,6 +5,7 @@ import { KpisCard } from "@/components/kpis-card";
 import { ClientCard } from "@/components/client-card";
 import { WorldMap } from "@/components/world-map";
 import { getSeoClients, type NotionClient } from "@/lib/notion";
+import { CONSULTANT_ORDER } from "@/lib/client-overrides";
 
 export const metadata = {
   title: "SEO DPT — Wonder Ads Workspace",
@@ -28,6 +29,16 @@ export default async function SeoPage() {
     notionError = "NOTION_API_KEY not set";
   }
 
+  // Group clients by consultant.
+  const grouped: Record<string, NotionClient[]> = {};
+  for (const c of clients) {
+    (grouped[c.consultant] ??= []).push(c);
+  }
+  const consultantColumns = CONSULTANT_ORDER.map((name) => ({
+    name,
+    clients: grouped[name] ?? [],
+  })).filter((col) => col.clients.length > 0);
+
   return (
     <PageShell>
       <DepartmentHeader
@@ -40,27 +51,33 @@ export default async function SeoPage() {
       />
 
       <div className="mt-12 grid grid-cols-1 gap-10 lg:mt-16 lg:grid-cols-[1fr_420px]">
-        <section aria-label="Clients" className="order-2 lg:order-1">
-          <header className="mb-5 flex items-baseline justify-between">
-            <h2 className="text-sm font-medium uppercase tracking-[0.18em] text-white/55">
-              Clients
-            </h2>
-          </header>
-
+        <section aria-label="Clients by Head Consultant" className="order-2 lg:order-1">
           {notionError ? (
             <NotionFallback message={notionError} />
           ) : (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {clients.map((c, i) => (
-                <ClientCard
-                  key={c.id}
-                  title={c.title}
-                  icon={c.icon}
-                  href={`/seo/${c.slug}`}
-                  consultant={c.consultant}
-                  palette={c.palette}
-                  index={i}
-                />
+            <div className="grid grid-cols-1 gap-x-5 gap-y-8 sm:grid-cols-2 lg:grid-cols-4">
+              {consultantColumns.map((col) => (
+                <div key={col.name} className="space-y-4">
+                  <h3 className="flex items-baseline gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-white/55">
+                    <span>{col.name}</span>
+                    <span className="text-white/30">·</span>
+                    <span className="text-white/40">{col.clients.length}</span>
+                  </h3>
+                  <div className="space-y-4">
+                    {col.clients.map((c, i) => (
+                      <ClientCard
+                        key={c.id}
+                        title={c.title}
+                        icon={c.icon}
+                        href={`/seo/${c.slug}`}
+                        consultant={c.consultant}
+                        palette={c.palette}
+                        tier={c.tier}
+                        index={i}
+                      />
+                    ))}
+                  </div>
+                </div>
               ))}
             </div>
           )}

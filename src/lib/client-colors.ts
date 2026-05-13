@@ -13,11 +13,7 @@ const PALETTES: Record<string, ClientPalette> = {
   // Australia — insyncdesign.com.au — yellow + teal accent on dark
   "insync-design": { from: "#FFD900", to: "#108474" },
   // Canada — instituteofholisticnutrition.com — terracotta + olive (earthy)
-  "institute-of-holistic-nutrition": {
-    from: "#D0552C",
-    via: "#A37033",
-    to: "#455616",
-  },
+  ihn: { from: "#D0552C", via: "#A37033", to: "#455616" },
   // Lisbon — aegerprima.pt — orange + purple + navy
   "aeger-prima": { from: "#EF8722", via: "#573996", to: "#003388" },
   // Cascais — b-life.clinic — clean medical cyan / deep blue
@@ -35,7 +31,7 @@ const PALETTES: Record<string, ClientPalette> = {
   // Cascais — montemar.pt — sea blue + warm gold (coastal)
   "monte-mar": { from: "#FFBF00", via: "#8ECFD7", to: "#4B4B49" },
   // Lisbon — corridadotempo.pt — yellow/orange + near-black (high contrast)
-  "corrida-do-tempo": { from: "#F9B600", via: "#F6A800", to: "#222221" },
+  cdt: { from: "#F9B600", via: "#F6A800", to: "#222221" },
   // Nazaré — seayourself.pt — purple-blue + ocean blue
   "sea-yourself": { from: "#5D4FFF", via: "#4A90E2", to: "#2C5282" },
   // Dubai — hdslearning.com — sky to deep blue

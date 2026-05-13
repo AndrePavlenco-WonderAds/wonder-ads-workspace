@@ -91,7 +91,7 @@ body {
   color: transparent;
 }
 
-/* Richer 5-stop gradient with subtle shimmer — used on hero titles. */
+/* Richer 5-stop gradient with subtle shimmer — used on the count badge. */
 .brand-gradient-text-rich {
   background: linear-gradient(
     110deg,
@@ -107,6 +107,21 @@ body {
   background-clip: text;
   color: transparent;
   animation: gradient-shimmer 9s linear infinite;
+}
+
+/* Static version of the rich gradient (no shimmer) — used on hero titles. */
+.brand-gradient-text-rich-static {
+  background: linear-gradient(
+    110deg,
+    #5C6FFF 0%,
+    #8A4DF8 25%,
+    #C535C9 50%,
+    #FF6FB6 75%,
+    #FFC15E 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 @keyframes gradient-shimmer {
