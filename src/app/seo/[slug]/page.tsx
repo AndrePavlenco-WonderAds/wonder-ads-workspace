@@ -4,9 +4,15 @@ import { ArrowLeft, ExternalLink } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { ClientBrief } from "@/components/client-brief";
 import { SeoProjectContainers } from "@/components/seo-project-containers";
+import { LogoChip } from "@/components/logo-chip";
 import { getBriefForSlug } from "@/lib/briefs-storage";
 import { getClientBySlug, getSeoClients } from "@/lib/notion";
-import { getClientWebsite, displayDomain } from "@/lib/client-meta";
+import {
+  getClientWebsite,
+  displayDomain,
+  getClientLogo,
+} from "@/lib/client-meta";
+import { getClientPalette, paletteToGradient } from "@/lib/client-colors";
 
 export const revalidate = 60;
 
@@ -56,6 +62,8 @@ export default async function ClientPage({
   const brief = await getBriefForSlug(slug);
   const notionUrl = `https://www.notion.so/${client.id.replace(/-/g, "")}`;
   const website = getClientWebsite(slug);
+  const logo = getClientLogo(slug);
+  const gradient = paletteToGradient(getClientPalette(slug));
 
   return (
     <PageShell>
@@ -63,17 +71,13 @@ export default async function ClientPage({
 
       <section className="animate-fade-up mt-10 flex flex-wrap items-start justify-between gap-5 sm:mt-14">
         <div className="flex items-center gap-5">
-          <div className="relative shrink-0">
-            <div
-              className="brand-gradient-bg flex h-16 w-16 items-center justify-center rounded-2xl text-3xl shadow-[0_10px_40px_-8px_rgba(120,61,245,0.7)]"
-              aria-hidden
-            >
-              <span className="leading-none">{client.icon ?? "🌐"}</span>
-            </div>
-            <div
-              aria-hidden
-              className="absolute inset-0 -z-10 rounded-2xl opacity-60 blur-2xl"
-              style={{ background: "var(--brand-gradient)" }}
+          <div className="shrink-0">
+            <LogoChip
+              logo={logo}
+              emoji={client.icon}
+              alt={`${client.title} logo`}
+              gradient={gradient}
+              size="lg"
             />
           </div>
 

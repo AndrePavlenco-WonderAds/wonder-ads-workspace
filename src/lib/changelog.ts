@@ -11,6 +11,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: 26,
+    date: "2026-05-14",
+    title: "Real brand logos on every client card and project page",
+    highlights: [
+      "Swapped the Notion emoji icons for each client's actual brand logo. Logos pulled directly from each client's website (apple-touch-icon → og:image → nav <img> in that order) and saved into /public/logos.",
+      "All 16 SEO clients now show their real mark: Monte Mar got the proper SVG, Clínica Mimus, IHN, White Clinic, etc. all show their brand identity.",
+      "New LogoChip component: white background + per-client brand-gradient glow behind. Contrast is universal — any logo's colours show cleanly.",
+      "Cards on /seo, /ads, plus the icon chip on every /seo/[slug] and /ads/[slug] page all use it.",
+      "Clínica Empatia (no website yet) keeps the 💗 emoji on a gradient chip until you provide a logo.",
+    ],
+  },
+  {
     version: 25,
     date: "2026-05-14",
     title: "Website URL on project pages + 3-pane SEO project workspace",

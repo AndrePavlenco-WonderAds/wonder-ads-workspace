@@ -5,11 +5,13 @@ import { paletteToGradient } from "@/lib/client-colors";
 import type { ClientTier } from "@/lib/client-tiers";
 import type { AdChannel } from "@/lib/ads-clients";
 import { TierBadge } from "./tier-badge";
+import { LogoChip } from "./logo-chip";
 import { SiGoogle, SiMeta } from "./brand-icons";
 
 export type ClientCardProps = {
   title: string;
   icon: string | null;
+  logo?: string | null;
   href: string;
   consultant: string;
   palette: ClientPalette;
@@ -21,6 +23,7 @@ export type ClientCardProps = {
 export function ClientCard({
   title,
   icon,
+  logo = null,
   href,
   consultant,
   palette,
@@ -52,20 +55,13 @@ export function ClientCard({
       />
 
       <div className="relative flex items-start justify-between">
-        <div className="relative">
-          <div
-            className="flex h-11 w-11 items-center justify-center rounded-xl text-lg shadow-[0_8px_28px_-6px_rgba(0,0,0,0.5)] ring-1 ring-white/10 transition-transform duration-500 group-hover:scale-110"
-            style={{ background: gradient }}
-            aria-hidden
-          >
-            <span className="leading-none drop-shadow-[0_1px_4px_rgba(0,0,0,0.45)]">
-              {icon ?? "🌐"}
-            </span>
-          </div>
-          <div
-            aria-hidden
-            className="absolute inset-0 -z-10 rounded-xl opacity-45 blur-lg transition-opacity duration-500 group-hover:opacity-80"
-            style={{ background: gradient }}
+        <div className="transition-transform duration-500 group-hover:scale-110">
+          <LogoChip
+            logo={logo}
+            emoji={icon}
+            alt={`${title} logo`}
+            gradient={gradient}
+            size="md"
           />
         </div>
         <ArrowUpRight

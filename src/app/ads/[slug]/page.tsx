@@ -3,9 +3,15 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, ExternalLink } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { ClientBrief } from "@/components/client-brief";
+import { LogoChip } from "@/components/logo-chip";
 import { getBriefForSlug } from "@/lib/briefs-storage";
 import { ADS_CLIENTS, getAdsClient } from "@/lib/ads-clients";
-import { getClientWebsite, displayDomain } from "@/lib/client-meta";
+import {
+  getClientWebsite,
+  displayDomain,
+  getClientLogo,
+} from "@/lib/client-meta";
+import { getClientPalette, paletteToGradient } from "@/lib/client-colors";
 
 export async function generateStaticParams() {
   return ADS_CLIENTS.map((c) => ({ slug: c.slug }));
@@ -36,6 +42,8 @@ export default async function AdsClientPage({
 
   const brief = await getBriefForSlug(slug);
   const website = getClientWebsite(slug);
+  const logo = getClientLogo(slug);
+  const gradient = paletteToGradient(getClientPalette(slug));
 
   return (
     <PageShell>
@@ -48,17 +56,13 @@ export default async function AdsClientPage({
       </Link>
 
       <section className="animate-fade-up mt-10 flex items-center gap-5 sm:mt-14">
-        <div className="relative shrink-0">
-          <div
-            className="brand-gradient-bg flex h-16 w-16 items-center justify-center rounded-2xl text-3xl shadow-[0_10px_40px_-8px_rgba(120,61,245,0.7)]"
-            aria-hidden
-          >
-            <span className="leading-none">{client.icon}</span>
-          </div>
-          <div
-            aria-hidden
-            className="absolute inset-0 -z-10 rounded-2xl opacity-60 blur-2xl"
-            style={{ background: "var(--brand-gradient)" }}
+        <div className="shrink-0">
+          <LogoChip
+            logo={logo}
+            emoji={client.icon}
+            alt={`${client.title} logo`}
+            gradient={gradient}
+            size="lg"
           />
         </div>
 

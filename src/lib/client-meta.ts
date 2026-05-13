@@ -1,6 +1,31 @@
 // Per-client metadata that isn't in Notion (yet).
 // Keyed by slug — same slugs as everywhere else (briefs, palettes, tiers).
 
+/** Real brand logo, fetched from each client's website and saved in /public/logos.
+ *  Used in place of the Notion emoji on cards + project pages. */
+export const CLIENT_LOGOS: Record<string, string> = {
+  "insync-design": "/logos/insync-design.png",
+  ihn: "/logos/ihn.png",
+  "aeger-prima": "/logos/aeger-prima.png",
+  "b-life": "/logos/b-life.png",
+  "a-domingos": "/logos/a-domingos.png",
+  "senior-resort": "/logos/senior-resort.png",
+  "clinica-mimus": "/logos/clinica-mimus.png",
+  wonderads: "/logos/wonderads.png",
+  "monte-mar": "/logos/monte-mar.svg",
+  cdt: "/logos/cdt.png",
+  "sea-yourself": "/logos/sea-yourself.png",
+  "hds-learning": "/logos/hds-learning.png",
+  "white-clinic": "/logos/white-clinic.png",
+  "fisio-restelo": "/logos/fisio-restelo.png",
+  "safe-away": "/logos/safe-away.png",
+  "clinica-em-casa": "/logos/clinica-em-casa.png",
+};
+
+export function getClientLogo(slug: string): string | null {
+  return CLIENT_LOGOS[slug] ?? null;
+}
+
 export const CLIENT_WEBSITES: Record<string, string> = {
   "insync-design": "https://insyncdesign.com.au/",
   ihn: "https://instituteofholisticnutrition.com/",
