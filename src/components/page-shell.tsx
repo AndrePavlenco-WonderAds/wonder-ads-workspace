@@ -26,7 +26,7 @@ export function PageShell({ children }: { children: ReactNode }) {
 
         <footer className="mt-16 flex flex-wrap items-center justify-between gap-3 text-xs text-white/40 sm:mt-20">
           <span>© {new Date().getFullYear()} Wonder Ads. All Rights Reserved.</span>
-          <span className="font-mono">workspace.v12</span>
+          <span className="font-mono">workspace.v13</span>
         </footer>
       </main>
     </div>

@@ -51,19 +51,11 @@ export function DepartmentHeader({
             <h1
               className={
                 large
-                  ? "text-5xl font-bold leading-[0.95] tracking-tight sm:text-6xl lg:text-7xl"
-                  : "text-4xl font-semibold leading-[1.05] tracking-tight sm:text-5xl"
+                  ? "text-5xl font-bold leading-[0.95] tracking-tight text-white sm:text-6xl lg:text-7xl"
+                  : "text-4xl font-semibold leading-[1.05] tracking-tight text-white sm:text-5xl"
               }
             >
-              <span
-                className={
-                  large
-                    ? "brand-gradient-text-rich-static"
-                    : "brand-gradient-text"
-                }
-              >
-                {title}
-              </span>
+              {title}
             </h1>
             <p
               className={
@@ -95,16 +87,16 @@ export function DepartmentHeader({
 function CountBadge({ value, label }: { value: number; label: string }) {
   return (
     <span
-      className="animate-count-pop group/badge inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.06] px-3 py-1.5 backdrop-blur-md transition-all duration-300 hover:scale-105 hover:border-white/30 hover:bg-white/[0.1] hover:shadow-[0_8px_30px_-8px_rgba(120,61,245,0.7)]"
+      className="animate-count-pop group/badge inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.06] px-3 py-1.5 text-white backdrop-blur-md transition-all duration-300 hover:scale-105 hover:border-white/30 hover:bg-white/[0.1]"
     >
       <span
         aria-hidden
         className="brand-gradient-bg h-2 w-2 rounded-full shadow-[0_0_10px_rgba(197,53,201,0.85)] transition-transform duration-300 group-hover/badge:scale-125"
       />
-      <span className="brand-gradient-text-rich text-base font-bold leading-none tracking-tight">
+      <span className="text-base font-bold leading-none tracking-tight">
         {value}
       </span>
-      <span className="brand-gradient-text-rich text-base font-medium uppercase tracking-[0.18em] leading-none">
+      <span className="text-base font-medium uppercase tracking-[0.18em] leading-none text-white/75">
         {label}
       </span>
     </span>

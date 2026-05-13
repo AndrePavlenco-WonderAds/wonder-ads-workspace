@@ -7,6 +7,9 @@ export const TITLE_OVERRIDES: Record<string, string> = {
   "Corrida do Tempo": "CDT",
 };
 
+/** Slugs to hide from the workspace (client offboarded, etc). */
+export const EXCLUDED_SLUGS = new Set<string>(["c-saccor"]);
+
 const LUANA = new Set([
   "aeger-prima",
   "a-domingos",
@@ -37,12 +40,11 @@ export function getConsultantForSlug(slug: string): string {
   if (LUANA.has(slug)) return "Luana N.";
   if (FRAN_R.has(slug)) return "Fran. R.";
   if (YENISEY.has(slug)) return "Yenisey";
-  return "André";
+  return "Unassigned";
 }
 
 /** Display order used for grouping client cards into columns. */
 export const CONSULTANT_ORDER = [
-  "André",
   "Fran. R.",
   "Yenisey",
   "Luana N.",

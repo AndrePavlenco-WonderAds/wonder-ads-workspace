@@ -1,7 +1,11 @@
 import { Client } from "@notionhq/client";
 import { cache } from "react";
 import { getClientPalette, type ClientPalette } from "./client-colors";
-import { TITLE_OVERRIDES, getConsultantForSlug } from "./client-overrides";
+import {
+  EXCLUDED_SLUGS,
+  TITLE_OVERRIDES,
+  getConsultantForSlug,
+} from "./client-overrides";
 import { getClientTier, type ClientTier } from "./client-tiers";
 
 const SEO_SPACE_PAGE_ID = "aa162d6cc35b458e8f5e8452406593a0";
@@ -64,6 +68,7 @@ export const getSeoClients = cache(async (): Promise<NotionClient[]> => {
           ? page.icon.emoji
           : null;
       const slug = slugify(title);
+      if (EXCLUDED_SLUGS.has(slug)) continue;
       clients.push({
         id: block.id,
         title,

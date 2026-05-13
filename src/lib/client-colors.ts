@@ -22,8 +22,6 @@ const PALETTES: Record<string, ClientPalette> = {
   "a-domingos": { from: "#4FB2E5", via: "#2F6E89", to: "#322382" },
   // Cadaval — senior-resort.pt — green tones
   "senior-resort": { from: "#6FE6B2", via: "#00DD80", to: "#009C61" },
-  // Oeiras — clinicasacoor.pt — yellow + cool grey-blue
-  "c-saccor": { from: "#FAD033", via: "#989DBA", to: "#50596C" },
   // Ermesinde — mimus.pt — coral pink + teal
   "clinica-mimus": { from: "#FF8A8B", via: "#3EC7C5", to: "#404040" },
   // Wonder Ads itself — keep brand gradient

@@ -6,6 +6,7 @@ import { ClientCard } from "@/components/client-card";
 import { WorldMap } from "@/components/world-map";
 import { getSeoClients, type NotionClient } from "@/lib/notion";
 import { CONSULTANT_ORDER } from "@/lib/client-overrides";
+import { TIER_RANK } from "@/lib/client-tiers";
 
 export const metadata = {
   title: "SEO DPT — Wonder Ads Workspace",
@@ -29,11 +30,16 @@ export default async function SeoPage() {
     notionError = "NOTION_API_KEY not set";
   }
 
-  // Group clients by consultant.
+  // Group clients by consultant, then sort each column by tier
+  // (growth → core → lite).
   const grouped: Record<string, NotionClient[]> = {};
   for (const c of clients) {
     (grouped[c.consultant] ??= []).push(c);
   }
+  for (const list of Object.values(grouped)) {
+    list.sort((a, b) => TIER_RANK[a.tier] - TIER_RANK[b.tier]);
+  }
+
   const consultantColumns = CONSULTANT_ORDER.map((name) => ({
     name,
     clients: grouped[name] ?? [],
@@ -51,18 +57,24 @@ export default async function SeoPage() {
       />
 
       <div className="mt-12 grid grid-cols-1 gap-10 lg:mt-16 lg:grid-cols-[1fr_420px]">
-        <section aria-label="Clients by Head Consultant" className="order-2 lg:order-1">
+        <section
+          aria-label="Clients by Head Consultant"
+          className="order-2 lg:order-1"
+        >
           {notionError ? (
             <NotionFallback message={notionError} />
           ) : (
-            <div className="grid grid-cols-1 gap-x-5 gap-y-8 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
               {consultantColumns.map((col) => (
-                <div key={col.name} className="space-y-4">
-                  <h3 className="flex items-baseline gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-white/55">
-                    <span>{col.name}</span>
-                    <span className="text-white/30">·</span>
-                    <span className="text-white/40">{col.clients.length}</span>
-                  </h3>
+                <div key={col.name} className="space-y-5">
+                  <header className="flex items-baseline justify-between border-b border-white/8 pb-3">
+                    <h3 className="flex items-baseline gap-2 text-sm font-semibold uppercase tracking-[0.18em] text-white/70">
+                      <span>{col.name}</span>
+                    </h3>
+                    <span className="text-xs font-medium uppercase tracking-[0.18em] text-white/35">
+                      {col.clients.length}
+                    </span>
+                  </header>
                   <div className="space-y-4">
                     {col.clients.map((c, i) => (
                       <ClientCard

@@ -11,9 +11,9 @@ const TIERS: Record<string, ClientTier> = {
   "safe-away": "lite",
   "clinica-em-casa": "lite",
 
-  // 2. Core — most clients
+  // 2. Core
   ihn: "core",
-  "c-saccor": "core",
+  "aeger-prima": "core",
   "senior-resort": "core",
   "clinica-mimus": "core",
   "monte-mar": "core",
@@ -25,7 +25,13 @@ const TIERS: Record<string, ClientTier> = {
   "a-domingos": "growth",
   "b-life": "growth",
   "white-clinic": "growth",
-  "aeger-prima": "core",
+};
+
+/** Sort rank used to order cards inside a consultant column (top→bottom). */
+export const TIER_RANK: Record<ClientTier, number> = {
+  growth: 0,
+  core: 1,
+  lite: 2,
 };
 
 export function getClientTier(slug: string): ClientTier {
