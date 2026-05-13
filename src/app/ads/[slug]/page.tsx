@@ -77,18 +77,6 @@ export default async function AdsClientPage({
           clientName={client.title}
         />
       </section>
-
-      <section className="animate-fade-up mt-12 sm:mt-16">
-        <div className="brand-gradient-border rounded-2xl bg-white/[0.035] p-8 backdrop-blur-md sm:p-12">
-          <p className="text-sm uppercase tracking-[0.2em] text-white/40">
-            Coming soon
-          </p>
-          <p className="mt-3 max-w-xl text-lg text-white/70 sm:text-xl">
-            Campaign briefs, creative, performance and reporting for{" "}
-            {client.title} will live here.
-          </p>
-        </div>
-      </section>
     </PageShell>
   );
 }

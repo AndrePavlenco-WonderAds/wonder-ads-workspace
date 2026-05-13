@@ -11,6 +11,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: 23,
+    date: "2026-05-14",
+    title: "Clean client pages — drop Notion content list & ADS placeholder",
+    highlights: [
+      "Removed the auto-rendered Notion sub-pages list from every /seo/[slug] page (Reports, Backlinks, etc. — those Notion-tagged rows).",
+      "Removed the 'Coming soon' placeholder from every /ads/[slug] page.",
+      "Each project page is now: header + Client Brief, with empty space ready for custom containers next.",
+      "'Open in Notion' link on SEO pages kept for quick jumps back to the source page.",
+    ],
+  },
+  {
     version: 22,
     date: "2026-05-14",
     title: "Fix stale brief render + ADS DPT header polish",

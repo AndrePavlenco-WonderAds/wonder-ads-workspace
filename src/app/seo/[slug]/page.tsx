@@ -2,14 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ExternalLink } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
-import { NotionRenderer } from "@/components/notion-renderer";
 import { ClientBrief } from "@/components/client-brief";
 import { getBriefForSlug } from "@/lib/briefs-storage";
-import {
-  getClientBySlug,
-  getPageBlocks,
-  getSeoClients,
-} from "@/lib/notion";
+import { getClientBySlug, getSeoClients } from "@/lib/notion";
 
 export const revalidate = 60;
 
@@ -56,7 +51,6 @@ export default async function ClientPage({
   const client = await getClientBySlug(slug);
   if (!client) notFound();
 
-  const blocks = await getPageBlocks(client.id);
   const brief = await getBriefForSlug(slug);
   const notionUrl = `https://www.notion.so/${client.id.replace(/-/g, "")}`;
 
@@ -106,16 +100,6 @@ export default async function ClientPage({
           slug={slug}
           clientName={client.title}
         />
-      </section>
-
-      <section className="animate-fade-up mt-12 sm:mt-16">
-        {blocks.length === 0 ? (
-          <p className="text-sm text-white/55">
-            This page is empty in Notion.
-          </p>
-        ) : (
-          <NotionRenderer blocks={blocks} childSlugBase={`/seo/${slug}`} />
-        )}
       </section>
     </PageShell>
   );
