@@ -3,7 +3,9 @@ import { ArrowUpRight, UserRound } from "lucide-react";
 import type { ClientPalette } from "@/lib/client-colors";
 import { paletteToGradient } from "@/lib/client-colors";
 import type { ClientTier } from "@/lib/client-tiers";
+import type { AdChannel } from "@/lib/ads-clients";
 import { TierBadge } from "./tier-badge";
+import { SiGoogle, SiMeta } from "./brand-icons";
 
 export type ClientCardProps = {
   title: string;
@@ -12,6 +14,7 @@ export type ClientCardProps = {
   consultant: string;
   palette: ClientPalette;
   tier: ClientTier;
+  channels?: AdChannel[];
   index?: number;
 };
 
@@ -22,6 +25,7 @@ export function ClientCard({
   consultant,
   palette,
   tier,
+  channels,
   index = 0,
 }: ClientCardProps) {
   const gradient = paletteToGradient(palette);
@@ -81,7 +85,43 @@ export function ClientCard({
           </p>
           <TierBadge tier={tier} />
         </div>
+        {channels && channels.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {channels.map((c) => (
+              <ChannelTag key={c} channel={c} />
+            ))}
+          </div>
+        )}
       </div>
     </Link>
+  );
+}
+
+function ChannelTag({ channel }: { channel: AdChannel }) {
+  if (channel === "google") {
+    return (
+      <span
+        className="inline-flex items-center gap-1.5 rounded-full border border-white/20 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-white shadow-[0_4px_18px_-6px_rgba(234,67,53,0.4)]"
+        style={{
+          background:
+            "linear-gradient(135deg, #4285F4 0%, #EA4335 35%, #FBBC05 65%, #34A853 100%)",
+        }}
+      >
+        <SiGoogle className="h-3 w-3" />
+        Google Ads
+      </span>
+    );
+  }
+  return (
+    <span
+      className="inline-flex items-center gap-1.5 rounded-full border border-white/20 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-white shadow-[0_4px_18px_-6px_rgba(8,102,255,0.55)]"
+      style={{
+        background:
+          "linear-gradient(135deg, #0866FF 0%, #1877F2 50%, #00C6FF 100%)",
+      }}
+    >
+      <SiMeta className="h-3 w-3" />
+      Meta Ads
+    </span>
   );
 }

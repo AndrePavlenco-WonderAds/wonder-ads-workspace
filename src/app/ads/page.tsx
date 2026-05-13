@@ -44,7 +44,8 @@ export default function AdsPage() {
               href={`/ads/${c.slug}`}
               consultant={c.consultant ?? getConsultantForSlug(c.slug)}
               palette={getClientPalette(c.slug)}
-              tier={getClientTier(c.slug)}
+              tier={c.tier ?? getClientTier(c.slug)}
+              channels={c.channels}
               index={i}
             />
           ))}

@@ -11,6 +11,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: 24,
+    date: "2026-05-14",
+    title: "ADS DPT: Core tier override + channel tags",
+    highlights: [
+      "All ADS DPT clients now show as 'Core' tier on the listing — per-department override so InSync Design stays 'Lite' on SEO.",
+      "Each ADS card gets two channel tags: 'Google Ads' (multicolor gradient) and 'Meta Ads' (Meta-blue gradient).",
+      "Per-client channel array — easy to drop one for a future client without code surgery.",
+    ],
+  },
+  {
     version: 23,
     date: "2026-05-14",
     title: "Clean client pages — drop Notion content list & ADS placeholder",

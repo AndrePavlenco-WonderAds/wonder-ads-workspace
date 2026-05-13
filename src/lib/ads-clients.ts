@@ -5,6 +5,10 @@
 // existing per-slug lookups (client-briefs / client-colors / client-tiers /
 // client-overrides).
 
+import type { ClientTier } from "./client-tiers";
+
+export type AdChannel = "google" | "meta";
+
 export type AdsClient = {
   slug: string;
   title: string;
@@ -12,17 +16,33 @@ export type AdsClient = {
   /** ADS-side consultant override. Shared clients keep their SEO consultant
    *  separately — only ADS DPT uses this field. */
   consultant?: string;
+  /** ADS-side tier override. Same client can have a different tier on the
+   *  SEO side (which reads from client-tiers.ts). */
+  tier?: ClientTier;
+  /** Paid-media channels this client runs. */
+  channels?: AdChannel[];
 };
+
+const ALL_CHANNELS: AdChannel[] = ["google", "meta"];
 
 export const ADS_CLIENTS: AdsClient[] = [
   // Shared with SEO DPT — same slug, same brief, same palette.
-  // ADS-side consultant differs from SEO-side.
-  { slug: "ihn", title: "IHN", icon: "🟢", consultant: "Germano C." },
+  // ADS-side consultant + tier differ from SEO-side.
+  {
+    slug: "ihn",
+    title: "IHN",
+    icon: "🟢",
+    consultant: "Germano C.",
+    tier: "core",
+    channels: ALL_CHANNELS,
+  },
   {
     slug: "insync-design",
     title: "InSync Design",
     icon: "💎",
     consultant: "Germano C.",
+    tier: "core",
+    channels: ALL_CHANNELS,
   },
   // ADS-only client
   {
@@ -30,6 +50,8 @@ export const ADS_CLIENTS: AdsClient[] = [
     title: "Clínica Empatia",
     icon: "💗",
     consultant: "Germano C.",
+    tier: "core",
+    channels: ALL_CHANNELS,
   },
 ];
 
