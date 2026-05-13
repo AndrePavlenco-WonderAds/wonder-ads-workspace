@@ -11,6 +11,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: 16,
+    date: "2026-05-13",
+    title: "Typewriter prompt copy fix",
+    highlights: [
+      "Fixed missing 'we' in the typewriter prompt: now reads 'What are we working on today, boss?'.",
+    ],
+  },
+  {
     version: 15,
     date: "2026-05-13",
     title: "Typewriter prompt on SEO DPT",

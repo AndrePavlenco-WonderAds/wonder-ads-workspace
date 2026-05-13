@@ -54,7 +54,7 @@ export default async function SeoPage() {
         count={clients.length || undefined}
         countLabel="clients"
         rightSlot={<WorldMap />}
-        extra={<TypewriterPrompt text="What are working on today, boss?" />}
+        extra={<TypewriterPrompt text="What are we working on today, boss?" />}
         large
       />
 
