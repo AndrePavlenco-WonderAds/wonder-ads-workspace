@@ -11,6 +11,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: 44,
+    date: "2026-05-14",
+    title: "Clock & footer polish",
+    highlights: [
+      "The 'Working on this for' timer now counts seconds too (HH:MM:SS).",
+      "Header clock shows a single, smaller milliseconds digit.",
+      "Footer now points to andre@wonder-ads.com for bug reports and feedback.",
+    ],
+  },
+  {
     version: 43,
     date: "2026-05-14",
     title: "Header clock, session timer & protected changelog",

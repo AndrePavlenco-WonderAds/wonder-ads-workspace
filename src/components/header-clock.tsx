@@ -38,11 +38,12 @@ export function HeaderClock({
   const hh = pad(now.getHours());
   const mm = pad(now.getMinutes());
   const ss = pad(now.getSeconds());
-  const ms = pad(now.getMilliseconds(), 3);
+  const ms = Math.floor(now.getMilliseconds() / 100); // single digit (0–9)
 
-  const totalMin = Math.floor((now.getTime() - startRef.current) / 60_000);
-  const wh = pad(Math.floor(totalMin / 60));
-  const wm = pad(totalMin % 60);
+  const totalSec = Math.floor((now.getTime() - startRef.current) / 1_000);
+  const wh = pad(Math.floor(totalSec / 3_600));
+  const wm = pad(Math.floor(totalSec / 60) % 60);
+  const ws = pad(totalSec % 60);
 
   return (
     <div className="flex flex-col items-end gap-1 font-mono">
@@ -53,7 +54,7 @@ export function HeaderClock({
         <span aria-hidden className="brand-gradient-bg h-px w-4" />
         <span className="text-sm tabular-nums text-white/85">
           {hh}:{mm}:{ss}
-          <span className="brand-gradient-text">.{ms}</span>
+          <span className="brand-gradient-text text-[11px]">.{ms}</span>
         </span>
       </div>
       {sessionTimer && (
@@ -63,7 +64,7 @@ export function HeaderClock({
           </span>
           <span aria-hidden className="h-px w-4 bg-white/20" />
           <span className="text-sm tabular-nums text-white/70">
-            {wh}:{wm}
+            {wh}:{wm}:{ws}
           </span>
         </div>
       )}

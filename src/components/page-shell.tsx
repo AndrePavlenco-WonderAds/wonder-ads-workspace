@@ -38,8 +38,17 @@ export function PageShell({
       >
         {children}
 
-        <footer className="mt-16 flex flex-wrap items-center justify-between gap-3 text-xs text-white/40 sm:mt-20">
+        <footer className="mt-16 flex flex-wrap items-center justify-between gap-x-5 gap-y-2 text-xs text-white/40 sm:mt-20">
           <span>© {new Date().getFullYear()} Wonder Ads. All Rights Reserved.</span>
+          <span>
+            Found a bug or have feedback? Email{" "}
+            <a
+              href="mailto:andre@wonder-ads.com"
+              className="text-white/55 underline-offset-2 transition hover:text-white hover:underline"
+            >
+              andre@wonder-ads.com
+            </a>
+          </span>
           <Link
             href="/changelog"
             className="font-mono transition hover:text-white"
