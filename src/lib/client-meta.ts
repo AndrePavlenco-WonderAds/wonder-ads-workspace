@@ -19,7 +19,7 @@ export const CLIENT_LOGOS: Record<string, string> = {
   "white-clinic": "/logos/white-clinic.png",
   "fisio-restelo": "/logos/fisio-restelo.png",
   "safe-away": "/logos/safe-away.png",
-  "clinica-em-casa": "/logos/clinica-em-casa.png",
+  "clinica-em-casa": "/logos/clinica-em-casa.svg",
 };
 
 export function getClientLogo(slug: string): string | null {
@@ -34,8 +34,9 @@ const LOGO_BG_OVERRIDES: Record<string, LogoBgMode> = {
   "b-life": "dark",
   "monte-mar": "dark",
   wonderads: "dark",
-  ihn: { custom: "#F9B600" },
-  cdt: { custom: "#F9B600" },
+  // CDT's logo asset sits on #F6A800 — match the chip exactly. IHN follows.
+  ihn: { custom: "#F6A800" },
+  cdt: { custom: "#F6A800" },
   "senior-resort": { custom: "#4B5320" },
 };
 
@@ -50,7 +51,6 @@ export type LogoSizing = "normal" | "tight";
 
 const LOGO_SIZING_OVERRIDES: Record<string, LogoSizing> = {
   "white-clinic": "tight",
-  "clinica-em-casa": "tight",
   "b-life": "tight",
 };
 

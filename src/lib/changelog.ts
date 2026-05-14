@@ -11,6 +11,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: 29,
+    date: "2026-05-14",
+    title: "Logo chip fixes — Clínica em Casa SVG + exact CDT orange",
+    highlights: [
+      "Clínica em Casa: swapped the framed apple-touch-icon for the clean SVG icon-logo — no more weird inner border on the white chip.",
+      "CDT + IHN chip orange corrected to #F6A800 — the exact orange sampled from CDT's own logo asset.",
+    ],
+  },
+  {
     version: 28,
     date: "2026-05-14",
     title: "Per-client logo chip — new colours, tighter padding, better sources",
