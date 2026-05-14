@@ -10,6 +10,12 @@ import type { KeywordData, KeywordRow } from "./keywords";
 
 const SCOPES = ["https://www.googleapis.com/auth/webmasters.readonly"];
 
+// Domain-wide delegation: when set, the service account impersonates this
+// Workspace user (e.g. seo@wonder-ads.com) instead of acting as itself. That
+// user already owns every client's Search Console property, so no per-client
+// access grant is needed. Leave unset to use the service account directly.
+const IMPERSONATE_SUBJECT = process.env.GOOGLE_IMPERSONATE_SUBJECT || undefined;
+
 /** Per-client Search Console property override. Only needed when the client's
  *  property isn't a domain property, or its domain differs from the marketing
  *  site in CLIENT_WEBSITES. Values are either:
@@ -69,6 +75,7 @@ async function getAccessToken(sa: ServiceAccount): Promise<string> {
     email: sa.client_email,
     key: sa.private_key,
     scopes: SCOPES,
+    subject: IMPERSONATE_SUBJECT,
   });
   const { token } = await jwt.getAccessToken();
   if (!token) throw new Error("Failed to obtain a Google access token");

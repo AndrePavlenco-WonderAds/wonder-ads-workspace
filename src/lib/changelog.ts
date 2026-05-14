@@ -11,6 +11,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: 33,
+    date: "2026-05-14",
+    title: "Search Console via domain-wide delegation",
+    highlights: [
+      "Tracked Keywords now authenticates by impersonating a Workspace user that already owns every client property — no per-client access grant needed in Search Console.",
+    ],
+  },
+  {
     version: 32,
     date: "2026-05-14",
     title: "Live keyword rankings + full-width project layout",
