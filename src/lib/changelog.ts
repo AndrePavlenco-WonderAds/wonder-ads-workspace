@@ -11,6 +11,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: 41,
+    date: "2026-05-14",
+    title: "SEO Actions playbook + section nav",
+    highlights: [
+      "New Actions section on every SEO project — four pillars (On-Page, Off-Page, Local SEO, Content) of one-click workflows, animated as you scroll in.",
+      "Replaced 'Open in Notion' with a numbered section nav (Do's & Don'ts · Data & Quick Actions · Actions) that tracks your scroll position and jumps to a section on click.",
+    ],
+  },
+  {
     version: 40,
     date: "2026-05-14",
     title: "Richer GA4 trend chart + project prompts",

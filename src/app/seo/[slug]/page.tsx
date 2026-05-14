@@ -6,6 +6,8 @@ import { ClientBrief } from "@/components/client-brief";
 import { ClientFiles } from "@/components/client-files";
 import { TypewriterPrompt } from "@/components/typewriter-prompt";
 import { SeoProjectContainers } from "@/components/seo-project-containers";
+import { SeoActions } from "@/components/seo-actions";
+import { ProjectSectionNav } from "@/components/project-section-nav";
 import { LogoChip } from "@/components/logo-chip";
 import { getBriefForSlug } from "@/lib/briefs-storage";
 import { isSharedWithSeo } from "@/lib/ads-clients";
@@ -65,7 +67,6 @@ export default async function ClientPage({
   if (!client) notFound();
 
   const brief = await getBriefForSlug(slug);
-  const notionUrl = `https://www.notion.so/${client.id.replace(/-/g, "")}`;
   const website = getClientWebsite(slug);
   const logo = getClientLogo(slug);
   const logoBgMode = getLogoBgMode(slug);
@@ -126,17 +127,13 @@ export default async function ClientPage({
           </div>
         </div>
 
-        <a
-          href={notionUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 text-sm text-white/55 transition hover:text-white"
-        >
-          Open in Notion <ExternalLink className="h-3.5 w-3.5" />
-        </a>
+        <ProjectSectionNav />
       </section>
 
-      <div className="animate-fade-up mt-10 grid grid-cols-1 gap-6 sm:mt-14 lg:grid-cols-[3fr_2fr]">
+      <div
+        id="section-brief"
+        className="animate-fade-up mt-10 grid scroll-mt-8 grid-cols-1 gap-6 sm:mt-14 lg:grid-cols-[3fr_2fr]"
+      >
         <ClientBrief
           brief={brief}
           slug={slug}
@@ -145,8 +142,15 @@ export default async function ClientPage({
         <ClientFiles slug={slug} clientName={client.title} />
       </div>
 
-      <section className="animate-fade-up mt-10 sm:mt-14">
+      <section
+        id="section-data"
+        className="animate-fade-up mt-10 scroll-mt-8 sm:mt-14"
+      >
         <SeoProjectContainers slug={slug} clientName={client.title} />
+      </section>
+
+      <section className="animate-fade-up mt-10 sm:mt-14">
+        <SeoActions clientName={client.title} />
       </section>
     </PageShell>
   );
