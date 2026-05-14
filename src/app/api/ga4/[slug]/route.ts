@@ -1,12 +1,26 @@
 import { NextResponse } from "next/server";
 import { getGa4Data } from "@/lib/ga4";
+import { GA4_CHANNELS, type Ga4Channel } from "@/lib/analytics";
 
 export async function GET(
-  _req: Request,
+  req: Request,
   context: { params: Promise<{ slug: string }> },
 ) {
   const { slug } = await context.params;
-  const data = await getGa4Data(slug);
+  const url = new URL(req.url);
+
+  const daysParam = Number(url.searchParams.get("days"));
+  const days =
+    Number.isFinite(daysParam) && daysParam > 0
+      ? Math.min(Math.round(daysParam), 480)
+      : 28;
+
+  const channelParam = url.searchParams.get("channel");
+  const channel: Ga4Channel = GA4_CHANNELS.some((c) => c.value === channelParam)
+    ? (channelParam as Ga4Channel)
+    : "all";
+
+  const data = await getGa4Data(slug, days, channel);
   // Only cache successful responses — caching a transient error (e.g. an auth
   // blip during delegation propagation) would freeze it for the whole TTL.
   const cacheControl =

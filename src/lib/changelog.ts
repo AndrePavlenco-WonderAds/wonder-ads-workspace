@@ -11,6 +11,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: 39,
+    date: "2026-05-14",
+    title: "Expanded GA4 Metrics panel",
+    highlights: [
+      "GA4 panel now has a date-range picker (7 days–12 months) and a channel filter — view all traffic or just Organic Search, Direct, Paid, Social, etc.",
+      "Ten SEO metrics: users, new users, sessions, pageviews, pages/session, engagement, bounce rate, time per user, conversions and conversion rate — each with trend vs the previous period.",
+    ],
+  },
+  {
     version: 38,
     date: "2026-05-14",
     title: "Don't cache failed analytics responses",

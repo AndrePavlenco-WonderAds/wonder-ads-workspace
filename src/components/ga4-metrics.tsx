@@ -8,7 +8,20 @@ import {
   Minus,
   Loader2,
 } from "lucide-react";
-import type { Ga4Data, Ga4Metric } from "@/lib/analytics";
+import {
+  GA4_CHANNELS,
+  type Ga4Channel,
+  type Ga4Data,
+  type Ga4Metric,
+} from "@/lib/analytics";
+
+const RANGE_OPTIONS = [
+  { days: 7, label: "Last 7 days" },
+  { days: 28, label: "Last 28 days" },
+  { days: 90, label: "Last 3 months" },
+  { days: 180, label: "Last 6 months" },
+  { days: 365, label: "Last 12 months" },
+] as const;
 
 export function Ga4Metrics({
   slug,
@@ -18,10 +31,13 @@ export function Ga4Metrics({
   clientName: string;
 }) {
   const [data, setData] = useState<Ga4Data | null>(null);
+  const [days, setDays] = useState(28);
+  const [channel, setChannel] = useState<Ga4Channel>("all");
 
   useEffect(() => {
     let cancelled = false;
-    fetch(`/api/ga4/${slug}`)
+    setData(null);
+    fetch(`/api/ga4/${slug}?days=${days}&channel=${encodeURIComponent(channel)}`)
       .then((r) => r.json())
       .then((d) => {
         if (!cancelled) setData(d as Ga4Data);
@@ -33,9 +49,12 @@ export function Ga4Metrics({
     return () => {
       cancelled = true;
     };
-  }, [slug]);
+  }, [slug, days, channel]);
 
   const loading = data === null;
+  const metrics = data?.status === "ok" ? data.metrics : PLACEHOLDER_METRICS;
+  const channelLabel =
+    channel === "all" ? "all traffic" : `${channel.toLowerCase()} traffic`;
 
   return (
     <article className="brand-gradient-border relative overflow-hidden rounded-2xl bg-white/[0.035] p-5 backdrop-blur-md">
@@ -60,15 +79,41 @@ export function Ga4Metrics({
       </header>
 
       <p className="relative mt-3 text-xs text-white/55">
-        Traffic and conversions for {clientName} — last 30 days.
+        {data?.status === "ok"
+          ? `${clientName} — ${channelLabel}, vs the previous period.`
+          : `Traffic and conversions for ${clientName}.`}
       </p>
 
+      <div className="relative mt-2 flex items-center gap-2">
+        <select
+          value={channel}
+          onChange={(e) => setChannel(e.target.value as Ga4Channel)}
+          aria-label="Traffic channel"
+          className="flex-1 rounded-lg border border-white/12 bg-white/[0.04] px-2 py-1 text-[11px] font-medium text-white/70 outline-none transition hover:border-white/25 focus:border-white/30 [&>option]:bg-[#10131a] [&>option]:text-white"
+        >
+          {GA4_CHANNELS.map((c) => (
+            <option key={c.value} value={c.value}>
+              {c.label}
+            </option>
+          ))}
+        </select>
+        <select
+          value={days}
+          onChange={(e) => setDays(Number(e.target.value))}
+          aria-label="Date range"
+          className="flex-1 rounded-lg border border-white/12 bg-white/[0.04] px-2 py-1 text-[11px] font-medium text-white/70 outline-none transition hover:border-white/25 focus:border-white/30 [&>option]:bg-[#10131a] [&>option]:text-white"
+        >
+          {RANGE_OPTIONS.map((o) => (
+            <option key={o.days} value={o.days}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
       <div className="relative mt-4 grid grid-cols-2 gap-2.5">
-        {(data?.status === "ok"
-          ? data.metrics
-          : PLACEHOLDER_METRICS
-        ).map((m) => (
-          <MetricCell key={m.key} metric={m} loading={loading} />
+        {metrics.map((metric) => (
+          <MetricCell key={metric.key} metric={metric} loading={loading} />
         ))}
       </div>
 
@@ -94,23 +139,24 @@ export function Ga4Metrics({
 }
 
 const PLACEHOLDER_METRICS: Ga4Metric[] = [
-  { key: "users", label: "Users (30d)", value: 0, previous: 0, format: "number" },
-  { key: "sessions", label: "Sessions", value: 0, previous: 0, format: "number" },
-  {
-    key: "engagement",
-    label: "Engagement",
-    value: 0,
-    previous: 0,
-    format: "percent",
-  },
-  {
-    key: "conversions",
-    label: "Conversions",
-    value: 0,
-    previous: 0,
-    format: "number",
-  },
-];
+  "Users",
+  "New Users",
+  "Sessions",
+  "Pageviews",
+  "Pages / Session",
+  "Engagement",
+  "Bounce Rate",
+  "Time / User",
+  "Conversions",
+  "Conv. Rate",
+].map((label) => ({
+  key: label,
+  label,
+  value: 0,
+  previous: 0,
+  format: "number" as const,
+  higherIsBetter: true,
+}));
 
 function MetricCell({
   metric,
@@ -120,13 +166,22 @@ function MetricCell({
   loading: boolean;
 }) {
   const delta = metric.value - metric.previous;
+  const dir = delta > 0 ? "up" : delta < 0 ? "down" : "flat";
+  const good =
+    delta === 0 ? null : metric.higherIsBetter ? delta > 0 : delta < 0;
   const pct =
     metric.previous > 0 ? Math.round((delta / metric.previous) * 100) : null;
-  const dir = delta > 0 ? "up" : delta < 0 ? "down" : "flat";
+
+  const color =
+    good === null
+      ? "text-white/30"
+      : good
+        ? "text-emerald-400/80"
+        : "text-rose-400/80";
 
   return (
     <div className="rounded-xl border border-white/8 bg-white/[0.025] p-3">
-      <p className="text-[10px] font-medium uppercase tracking-[0.15em] text-white/40">
+      <p className="truncate text-[10px] font-medium uppercase tracking-[0.15em] text-white/40">
         {metric.label}
       </p>
       <div className="mt-1.5 flex items-end justify-between gap-2">
@@ -139,13 +194,7 @@ function MetricCell({
         </span>
         {!loading && (
           <span
-            className={`inline-flex items-center gap-0.5 text-[10px] font-bold ${
-              dir === "up"
-                ? "text-emerald-400/80"
-                : dir === "down"
-                  ? "text-rose-400/80"
-                  : "text-white/30"
-            }`}
+            className={`inline-flex items-center gap-0.5 text-[10px] font-bold ${color}`}
           >
             {dir === "up" && <TrendingUp className="h-3.5 w-3.5" />}
             {dir === "down" && <TrendingDown className="h-3.5 w-3.5" />}
@@ -159,12 +208,22 @@ function MetricCell({
 }
 
 function formatValue(metric: Ga4Metric): string {
-  if (metric.format === "percent") {
-    return `${(metric.value * 100).toFixed(1)}%`;
+  switch (metric.format) {
+    case "percent":
+      return `${(metric.value * 100).toFixed(1)}%`;
+    case "decimal":
+      return metric.value.toFixed(1);
+    case "duration": {
+      const s = Math.round(metric.value);
+      if (s >= 60) return `${Math.floor(s / 60)}m ${s % 60}s`;
+      return `${s}s`;
+    }
+    default: {
+      const n = metric.value;
+      if (n >= 10_000) return `${(n / 1000).toFixed(1)}k`;
+      return Math.round(n).toLocaleString();
+    }
   }
-  const n = metric.value;
-  if (n >= 10_000) return `${(n / 1000).toFixed(1)}k`;
-  return Math.round(n).toLocaleString();
 }
 
 function Sparkline({ values }: { values: number[] }) {
@@ -172,7 +231,6 @@ function Sparkline({ values }: { values: number[] }) {
   const H = 50;
 
   if (values.length < 2) {
-    // Flat ghost line when there's no data yet.
     return (
       <svg
         viewBox={`0 0 ${W} ${H}`}

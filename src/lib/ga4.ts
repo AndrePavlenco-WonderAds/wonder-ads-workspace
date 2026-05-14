@@ -7,7 +7,7 @@
 
 import { CLIENT_WEBSITES } from "./client-meta";
 import { getGoogleAccessToken, googleAuthConfigured } from "./google-auth";
-import type { Ga4Data, Ga4Metric } from "./analytics";
+import type { Ga4Channel, Ga4Data, Ga4Metric } from "./analytics";
 
 const SCOPES = ["https://www.googleapis.com/auth/analytics.readonly"];
 
@@ -153,31 +153,128 @@ async function runReport(
   return json.rows ?? [];
 }
 
-const METRIC_DEFS: {
-  name: string;
-  key: Ga4Metric["key"];
-  label: string;
-  format: Ga4Metric["format"];
-}[] = [
-  { name: "totalUsers", key: "users", label: "Users (30d)", format: "number" },
-  { name: "sessions", key: "sessions", label: "Sessions", format: "number" },
-  {
-    name: "engagementRate",
-    key: "engagement",
-    label: "Engagement",
-    format: "percent",
-  },
-  {
-    name: "keyEvents",
-    key: "conversions",
-    label: "Conversions",
-    format: "number",
-  },
-];
+// Raw GA4 metrics pulled per request (the v1beta runReport cap is 10).
+const RAW_METRICS = [
+  "totalUsers",
+  "newUsers",
+  "sessions",
+  "screenPageViews",
+  "screenPageViewsPerSession",
+  "engagementRate",
+  "bounceRate",
+  "userEngagementDuration",
+  "keyEvents",
+  "sessionKeyEventRate",
+] as const;
 
-/** 30-day GA4 metrics for a client (vs the prior 30 days) plus a daily
- *  sessions trend for the sparkline. */
-export async function getGa4Data(slug: string): Promise<Ga4Data> {
+/** Map a row's metricValues array onto the RAW_METRICS names. */
+function rawMap(values: { value?: string }[] | undefined): Record<string, number> {
+  const out: Record<string, number> = {};
+  RAW_METRICS.forEach((name, i) => {
+    out[name] = Number(values?.[i]?.value ?? 0);
+  });
+  return out;
+}
+
+/** The display metrics shown in the panel — some direct, one derived. */
+function buildMetrics(
+  cur: Record<string, number>,
+  prev: Record<string, number>,
+): Ga4Metric[] {
+  const timePerUser = (r: Record<string, number>) =>
+    r.totalUsers > 0 ? r.userEngagementDuration / r.totalUsers : 0;
+
+  return [
+    m("users", "Users", cur.totalUsers, prev.totalUsers, "number", true),
+    m("newUsers", "New Users", cur.newUsers, prev.newUsers, "number", true),
+    m("sessions", "Sessions", cur.sessions, prev.sessions, "number", true),
+    m(
+      "pageviews",
+      "Pageviews",
+      cur.screenPageViews,
+      prev.screenPageViews,
+      "number",
+      true,
+    ),
+    m(
+      "pagesPerSession",
+      "Pages / Session",
+      cur.screenPageViewsPerSession,
+      prev.screenPageViewsPerSession,
+      "decimal",
+      true,
+    ),
+    m(
+      "engagement",
+      "Engagement",
+      cur.engagementRate,
+      prev.engagementRate,
+      "percent",
+      true,
+    ),
+    m(
+      "bounceRate",
+      "Bounce Rate",
+      cur.bounceRate,
+      prev.bounceRate,
+      "percent",
+      false,
+    ),
+    m(
+      "timePerUser",
+      "Time / User",
+      timePerUser(cur),
+      timePerUser(prev),
+      "duration",
+      true,
+    ),
+    m(
+      "conversions",
+      "Conversions",
+      cur.keyEvents,
+      prev.keyEvents,
+      "number",
+      true,
+    ),
+    m(
+      "convRate",
+      "Conv. Rate",
+      cur.sessionKeyEventRate,
+      prev.sessionKeyEventRate,
+      "percent",
+      true,
+    ),
+  ];
+}
+
+function m(
+  key: string,
+  label: string,
+  value: number,
+  previous: number,
+  format: Ga4Metric["format"],
+  higherIsBetter: boolean,
+): Ga4Metric {
+  return { key, label, value, previous, format, higherIsBetter };
+}
+
+function channelFilter(channel: Ga4Channel) {
+  if (channel === "all") return undefined;
+  return {
+    filter: {
+      fieldName: "sessionDefaultChannelGroup",
+      stringFilter: { value: channel, matchType: "EXACT" },
+    },
+  };
+}
+
+/** GA4 metrics for a client over the last `days` days (vs the prior equal
+ *  window), optionally scoped to one channel, plus a daily sessions trend. */
+export async function getGa4Data(
+  slug: string,
+  days = 28,
+  channel: Ga4Channel = "all",
+): Promise<Ga4Data> {
   if (!googleAuthConfigured) return { status: "not-configured" };
 
   try {
@@ -185,19 +282,23 @@ export async function getGa4Data(slug: string): Promise<Ga4Data> {
     const propertyId = await resolvePropertyId(slug, token);
     if (!propertyId) return { status: "no-property" };
 
+    const filter = channelFilter(channel);
+
     const [totalsRows, trendRows] = await Promise.all([
       runReport(token, propertyId, {
         dateRanges: [
-          { startDate: "30daysAgo", endDate: "yesterday" },
-          { startDate: "60daysAgo", endDate: "31daysAgo" },
+          { startDate: `${days}daysAgo`, endDate: "yesterday" },
+          { startDate: `${2 * days}daysAgo`, endDate: `${days + 1}daysAgo` },
         ],
-        metrics: METRIC_DEFS.map((m) => ({ name: m.name })),
+        metrics: RAW_METRICS.map((name) => ({ name })),
+        ...(filter ? { dimensionFilter: filter } : {}),
       }),
       runReport(token, propertyId, {
-        dateRanges: [{ startDate: "30daysAgo", endDate: "yesterday" }],
+        dateRanges: [{ startDate: `${days}daysAgo`, endDate: "yesterday" }],
         dimensions: [{ name: "date" }],
         metrics: [{ name: "sessions" }],
         orderBys: [{ dimension: { dimensionName: "date" } }],
+        ...(filter ? { dimensionFilter: filter } : {}),
       }),
     ]);
 
@@ -208,22 +309,16 @@ export async function getGa4Data(slug: string): Promise<Ga4Data> {
     const previous = totalsRows.find(
       (r) => r.dimensionValues?.[0]?.value === "date_range_1",
     );
-    const cur = current?.metricValues ?? [];
-    const prev = previous?.metricValues ?? [];
 
-    const metrics: Ga4Metric[] = METRIC_DEFS.map((def, i) => ({
-      key: def.key,
-      label: def.label,
-      format: def.format,
-      value: Number(cur[i]?.value ?? 0),
-      previous: Number(prev[i]?.value ?? 0),
-    }));
-
+    const metrics = buildMetrics(
+      rawMap(current?.metricValues),
+      rawMap(previous?.metricValues),
+    );
     const trend = trendRows.map((r) =>
       Number(r.metricValues?.[0]?.value ?? 0),
     );
 
-    return { status: "ok", propertyId, metrics, trend };
+    return { status: "ok", propertyId, metrics, trend, days, channel };
   } catch (err) {
     return {
       status: "error",
