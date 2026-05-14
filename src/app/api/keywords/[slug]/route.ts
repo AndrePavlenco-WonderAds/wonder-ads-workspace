@@ -12,8 +12,13 @@ export async function GET(
       ? Math.min(Math.round(daysParam), 480)
       : 28;
   const data = await getKeywordData(slug, days);
+  // Only cache successful responses — caching a transient error (e.g. an auth
+  // blip during delegation propagation) would freeze it for the whole TTL.
+  const cacheControl =
+    data.status === "ok"
+      ? "public, s-maxage=3600, max-age=600"
+      : "no-store";
   return NextResponse.json(data, {
-    // GSC data only refreshes daily — let the browser/CDN cache for an hour.
-    headers: { "Cache-Control": "public, s-maxage=3600, max-age=600" },
+    headers: { "Cache-Control": cacheControl },
   });
 }

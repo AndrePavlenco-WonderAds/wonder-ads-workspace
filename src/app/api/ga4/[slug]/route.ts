@@ -7,8 +7,13 @@ export async function GET(
 ) {
   const { slug } = await context.params;
   const data = await getGa4Data(slug);
+  // Only cache successful responses — caching a transient error (e.g. an auth
+  // blip during delegation propagation) would freeze it for the whole TTL.
+  const cacheControl =
+    data.status === "ok"
+      ? "public, s-maxage=3600, max-age=600"
+      : "no-store";
   return NextResponse.json(data, {
-    // GA4 data refreshes through the day — cache for an hour at the edge.
-    headers: { "Cache-Control": "public, s-maxage=3600, max-age=600" },
+    headers: { "Cache-Control": cacheControl },
   });
 }

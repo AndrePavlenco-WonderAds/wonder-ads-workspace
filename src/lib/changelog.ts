@@ -11,6 +11,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: 38,
+    date: "2026-05-14",
+    title: "Don't cache failed analytics responses",
+    highlights: [
+      "GA4 and keyword API routes no longer CDN-cache error responses — a transient auth blip could otherwise freeze a panel on 'Access needed' for an hour.",
+    ],
+  },
+  {
     version: 37,
     date: "2026-05-14",
     title: "Live GA4 Metrics on SEO projects",
