@@ -11,6 +11,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: 34,
+    date: "2026-05-14",
+    title: "Auto-detect each client's Search Console property",
+    highlights: [
+      "Tracked Keywords now looks up each client's actual Search Console property instead of assuming a domain property — so clients on URL-prefix properties (e.g. White Clinic, IHN) resolve correctly too.",
+    ],
+  },
+  {
     version: 33,
     date: "2026-05-14",
     title: "Search Console via domain-wide delegation",

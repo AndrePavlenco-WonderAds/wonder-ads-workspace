@@ -1,8 +1,13 @@
 // Google Search Console integration for the Tracked Keywords panel.
 //
-// Auth model: a single Google Cloud *service account*. Its JSON key lives in
-// the GOOGLE_SERVICE_ACCOUNT_JSON env var. Each client grants that service
-// account read access to their Search Console property — no per-user OAuth.
+// Auth model: a single Google Cloud *service account* with domain-wide
+// delegation. Its JSON key lives in GOOGLE_SERVICE_ACCOUNT_JSON; it
+// impersonates GOOGLE_IMPERSONATE_SUBJECT — a Workspace user who already
+// has access to every client's Search Console property.
+//
+// Property resolution is automatic: we list the properties that user can
+// see and match each client by domain, so it works whether the client's
+// property is a domain property ("sc-domain:…") or a URL-prefix one.
 
 import { JWT } from "google-auth-library";
 import { CLIENT_WEBSITES } from "./client-meta";
@@ -11,20 +16,14 @@ import type { KeywordData, KeywordRow } from "./keywords";
 const SCOPES = ["https://www.googleapis.com/auth/webmasters.readonly"];
 
 // Domain-wide delegation: when set, the service account impersonates this
-// Workspace user (e.g. seo@wonder-ads.com) instead of acting as itself. That
-// user already owns every client's Search Console property, so no per-client
-// access grant is needed. Leave unset to use the service account directly.
+// Workspace user instead of acting as itself.
 const IMPERSONATE_SUBJECT = process.env.GOOGLE_IMPERSONATE_SUBJECT || undefined;
 
-/** Per-client Search Console property override. Only needed when the client's
- *  property isn't a domain property, or its domain differs from the marketing
- *  site in CLIENT_WEBSITES. Values are either:
- *    - "sc-domain:example.com"      → domain property (the modern default)
- *    - "https://www.example.com/"   → URL-prefix property (exact, with slash)
- *  Slugs not listed here default to "sc-domain:<site domain>". */
-const GSC_PROPERTY_OVERRIDES: Record<string, string> = {
-  // "white-clinic": "https://whiteclinic.pt/",
-};
+/** Per-client Search Console property override. Rarely needed — only when a
+ *  client's property domain differs from their marketing site, or domain
+ *  matching otherwise picks the wrong property. Value is the exact property
+ *  string, e.g. "sc-domain:example.com" or "https://www.example.com/". */
+const GSC_PROPERTY_OVERRIDES: Record<string, string> = {};
 
 function domainFromUrl(url: string): string | null {
   try {
@@ -32,17 +31,6 @@ function domainFromUrl(url: string): string | null {
   } catch {
     return null;
   }
-}
-
-/** The Search Console property string for a client, or null if we have no
- *  website on file and no override. */
-export function getGscProperty(slug: string): string | null {
-  const override = GSC_PROPERTY_OVERRIDES[slug];
-  if (override) return override;
-  const site = CLIENT_WEBSITES[slug];
-  if (!site) return null;
-  const domain = domainFromUrl(site);
-  return domain ? `sc-domain:${domain}` : null;
 }
 
 export const gscConfigured = Boolean(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
@@ -87,6 +75,48 @@ function isoDaysAgo(n: number): string {
   const d = new Date();
   d.setUTCDate(d.getUTCDate() - n);
   return d.toISOString().slice(0, 10);
+}
+
+type SiteEntry = { siteUrl: string; permissionLevel: string };
+
+let cachedSites: { sites: SiteEntry[]; expires: number } | null = null;
+
+/** All Search Console properties the impersonated user can access. */
+async function listSites(token: string): Promise<SiteEntry[]> {
+  if (cachedSites && cachedSites.expires > Date.now()) return cachedSites.sites;
+  const res = await fetch(
+    "https://searchconsole.googleapis.com/webmasters/v3/sites",
+    { headers: { Authorization: `Bearer ${token}` } },
+  );
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(
+      `Search Console site list responded ${res.status}. ${text.slice(0, 180)}`,
+    );
+  }
+  const json = (await res.json()) as { siteEntry?: SiteEntry[] };
+  const sites = json.siteEntry ?? [];
+  cachedSites = { sites, expires: Date.now() + 10 * 60_000 };
+  return sites;
+}
+
+/** Find the Search Console property for a domain. Prefers a domain property,
+ *  then a URL-prefix property on the same host (www or bare). */
+function matchProperty(domain: string, sites: SiteEntry[]): string | null {
+  const usable = sites.filter(
+    (s) => s.permissionLevel && s.permissionLevel !== "siteUnverifiedUser",
+  );
+  const domainProp = usable.find((s) => s.siteUrl === `sc-domain:${domain}`);
+  if (domainProp) return domainProp.siteUrl;
+  const urlProp = usable.find((s) => {
+    if (!s.siteUrl.startsWith("http")) return false;
+    try {
+      return new URL(s.siteUrl).hostname.replace(/^www\./, "") === domain;
+    } catch {
+      return false;
+    }
+  });
+  return urlProp?.siteUrl ?? null;
 }
 
 type GscApiRow = {
@@ -139,11 +169,20 @@ export async function getKeywordData(slug: string): Promise<KeywordData> {
   const sa = loadServiceAccount();
   if (!sa) return { status: "not-configured" };
 
-  const siteUrl = getGscProperty(slug);
-  if (!siteUrl) return { status: "no-property" };
+  const override = GSC_PROPERTY_OVERRIDES[slug];
+  const site = CLIENT_WEBSITES[slug];
+  const domain = site ? domainFromUrl(site) : null;
+  if (!override && !domain) return { status: "no-property" };
 
   try {
     const token = await getAccessToken(sa);
+
+    let siteUrl: string | null = override ?? null;
+    if (!siteUrl && domain) {
+      const sites = await listSites(token);
+      siteUrl = matchProperty(domain, sites);
+    }
+    if (!siteUrl) return { status: "no-property" };
 
     const end = isoDaysAgo(3);
     const start = isoDaysAgo(3 + 27);

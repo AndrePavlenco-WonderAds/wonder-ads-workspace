@@ -216,7 +216,7 @@ function messageFor(
     case "not-configured":
       return "Google Search Console isn't connected on this deployment yet — add the GOOGLE_SERVICE_ACCOUNT_JSON environment variable to enable live keyword data.";
     case "no-property":
-      return "No Search Console property is mapped for this client. Add their site to CLIENT_WEBSITES (or a GSC_PROPERTY_OVERRIDES entry) so rankings can be fetched.";
+      return "No Search Console property found for this client's domain that the connected account can access. Make sure the property exists and that account has access to it.";
     case "error":
       return `Couldn't reach Search Console for this client. Most likely the service account hasn't been granted access to the property yet. (${data.message})`;
   }
