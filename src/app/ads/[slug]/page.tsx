@@ -53,7 +53,7 @@ export default async function AdsClientPage({
   const shared = client.sharedWithSeo === true;
 
   return (
-    <PageShell wide>
+    <PageShell wide sessionTimer>
       <Link
         href="/ads"
         className="animate-fade-up group inline-flex w-fit items-center gap-2 text-sm text-white/55 transition hover:text-white"

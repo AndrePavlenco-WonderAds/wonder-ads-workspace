@@ -1,22 +1,39 @@
 import Link from "next/link";
 import { ArrowLeft, Sparkles } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
+import { ChangelogGate } from "@/components/changelog-gate";
 import { CHANGELOG, type ChangelogEntry } from "@/lib/changelog";
+import { isChangelogUnlocked } from "@/lib/changelog-auth";
 
 export const metadata = {
   title: "Changelog — Wonder Ads Workspace",
 };
 
-export default function ChangelogPage() {
+function BackToWorkspace() {
+  return (
+    <Link
+      href="/"
+      className="animate-fade-up group inline-flex w-fit items-center gap-2 text-sm text-white/55 transition hover:text-white"
+    >
+      <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
+      Back to workspace
+    </Link>
+  );
+}
+
+export default async function ChangelogPage() {
+  if (!(await isChangelogUnlocked())) {
+    return (
+      <PageShell>
+        <BackToWorkspace />
+        <ChangelogGate />
+      </PageShell>
+    );
+  }
+
   return (
     <PageShell>
-      <Link
-        href="/"
-        className="animate-fade-up group inline-flex w-fit items-center gap-2 text-sm text-white/55 transition hover:text-white"
-      >
-        <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
-        Back to workspace
-      </Link>
+      <BackToWorkspace />
 
       <section className="animate-fade-up mt-10 flex flex-col items-start gap-6 sm:mt-14">
         <div className="relative">

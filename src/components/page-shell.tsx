@@ -2,16 +2,21 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { BackgroundDecor } from "./background-decor";
 import { WonderAdsLogo } from "./wonder-ads-logo";
+import { HeaderClock } from "./header-clock";
 import { getCurrentVersion } from "@/lib/changelog";
 
 export function PageShell({
   children,
   wide = false,
+  sessionTimer = false,
 }: {
   children: ReactNode;
   /** Full-bleed layout — used by project pages so the brief + files split
    *  has room to breathe. Defaults to the standard max-w-7xl container. */
   wide?: boolean;
+  /** Show the "Working on this for" timer in the header — used on project
+   *  pages so consultants can see how long they've been on a client. */
+  sessionTimer?: boolean;
 }) {
   const version = getCurrentVersion();
   const widthClass = wide ? "max-w-none" : "max-w-7xl";
@@ -23,16 +28,9 @@ export function PageShell({
         className={`relative z-30 mx-auto flex w-full ${widthClass} items-center justify-between px-6 py-6 sm:px-10 sm:py-8`}
       >
         <WonderAdsLogo />
-        <nav className="hidden gap-8 text-sm text-white/60 sm:flex">
-          <a
-            href="https://wonder-ads.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="transition hover:text-white"
-          >
-            wonder-ads.com
-          </a>
-        </nav>
+        <div className="hidden sm:block">
+          <HeaderClock sessionTimer={sessionTimer} />
+        </div>
       </header>
 
       <main

@@ -75,7 +75,7 @@ export default async function ClientPage({
   const shared = isSharedWithSeo(slug);
 
   return (
-    <PageShell wide>
+    <PageShell wide sessionTimer>
       <BackLink />
 
       <section className="animate-fade-up mt-10 flex flex-wrap items-start justify-between gap-5 sm:mt-14">

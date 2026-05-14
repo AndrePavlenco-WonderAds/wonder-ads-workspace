@@ -11,6 +11,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: 43,
+    date: "2026-05-14",
+    title: "Header clock, session timer & protected changelog",
+    highlights: [
+      "The header now shows a live local-time clock with milliseconds in place of the wonder-ads.com link.",
+      "On SEO and ADS project pages, a 'Working on this for' timer counts up from when you opened the client.",
+      "The changelog page is now behind a superadmin password.",
+    ],
+  },
+  {
     version: 42,
     date: "2026-05-14",
     title: "Bigger client logo on project pages",
