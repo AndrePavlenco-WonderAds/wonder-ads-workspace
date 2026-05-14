@@ -12,6 +12,7 @@ import {
   displayDomain,
   getClientLogo,
   getLogoBgMode,
+  getLogoSizing,
 } from "@/lib/client-meta";
 import { getClientPalette, paletteToGradient } from "@/lib/client-colors";
 
@@ -65,6 +66,7 @@ export default async function ClientPage({
   const website = getClientWebsite(slug);
   const logo = getClientLogo(slug);
   const logoBgMode = getLogoBgMode(slug);
+  const logoSizing = getLogoSizing(slug);
   const gradient = paletteToGradient(getClientPalette(slug));
 
   return (
@@ -81,6 +83,7 @@ export default async function ClientPage({
               gradient={gradient}
               size="lg"
               bgMode={logoBgMode}
+              sizing={logoSizing}
             />
           </div>
 

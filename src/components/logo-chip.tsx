@@ -1,9 +1,11 @@
 import Image from "next/image";
-import type { LogoBgMode } from "@/lib/client-meta";
+import type { CSSProperties } from "react";
+import type { LogoBgMode, LogoSizing } from "@/lib/client-meta";
 
-/** A square chip that renders either a real brand logo (white or dark
- *  background + brand-coloured glow behind, so any logo's contrast works),
- *  or falls back to an emoji on a gradient chip when no logo is available. */
+/** A square chip that renders either a real brand logo (white, dark, or
+ *  brand-tinted background + brand-coloured glow behind, so any logo's
+ *  contrast works), or falls back to an emoji on a gradient chip when no
+ *  logo is available. */
 export function LogoChip({
   logo,
   emoji,
@@ -11,6 +13,7 @@ export function LogoChip({
   gradient,
   size = "md",
   bgMode = "white",
+  sizing = "normal",
 }: {
   logo: string | null;
   emoji: string | null;
@@ -18,10 +21,13 @@ export function LogoChip({
   gradient: string;
   size?: "md" | "lg";
   bgMode?: LogoBgMode;
+  sizing?: LogoSizing;
 }) {
   const isLarge = size === "lg";
   const dim = isLarge ? "h-16 w-16" : "h-11 w-11";
-  const pad = isLarge ? "p-2" : "p-1.5";
+  const normalPad = isLarge ? "p-2" : "p-1.5";
+  const tightPad = isLarge ? "p-1" : "p-0.5";
+  const pad = sizing === "tight" ? tightPad : normalPad;
   const text = isLarge ? "text-3xl" : "text-lg";
   const imgPx = isLarge ? 64 : 44;
 
@@ -47,8 +53,18 @@ export function LogoChip({
     );
   }
 
-  const chipBg = bgMode === "dark" ? "bg-[#10131a]" : "bg-white";
-  const chipRing = bgMode === "dark" ? "ring-white/12" : "ring-white/20";
+  // Resolve chip background.
+  let chipClass = "bg-white";
+  let chipStyle: CSSProperties = {};
+  let ringClass = "ring-white/20";
+  if (bgMode === "dark") {
+    chipClass = "bg-[#10131a]";
+    ringClass = "ring-white/12";
+  } else if (typeof bgMode === "object" && bgMode.custom) {
+    chipClass = "";
+    chipStyle = { background: bgMode.custom };
+    ringClass = "ring-white/20";
+  }
 
   return (
     <div className="relative">
@@ -58,7 +74,8 @@ export function LogoChip({
         style={{ background: gradient }}
       />
       <div
-        className={`flex ${dim} ${pad} items-center justify-center rounded-xl ${chipBg} ring-1 ${chipRing} shadow-[0_8px_28px_-6px_rgba(0,0,0,0.55)]`}
+        className={`flex ${dim} ${pad} items-center justify-center rounded-xl ${chipClass} ring-1 ${ringClass} shadow-[0_8px_28px_-6px_rgba(0,0,0,0.55)]`}
+        style={chipStyle}
       >
         <Image
           src={logo}

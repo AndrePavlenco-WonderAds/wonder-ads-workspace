@@ -4,7 +4,7 @@ import type { ClientPalette } from "@/lib/client-colors";
 import { paletteToGradient } from "@/lib/client-colors";
 import type { ClientTier } from "@/lib/client-tiers";
 import type { AdChannel } from "@/lib/ads-clients";
-import type { LogoBgMode } from "@/lib/client-meta";
+import type { LogoBgMode, LogoSizing } from "@/lib/client-meta";
 import { TierBadge } from "./tier-badge";
 import { LogoChip } from "./logo-chip";
 import { SiGoogle, SiMeta } from "./brand-icons";
@@ -14,6 +14,7 @@ export type ClientCardProps = {
   icon: string | null;
   logo?: string | null;
   logoBgMode?: LogoBgMode;
+  logoSizing?: LogoSizing;
   href: string;
   consultant: string;
   palette: ClientPalette;
@@ -27,6 +28,7 @@ export function ClientCard({
   icon,
   logo = null,
   logoBgMode = "white",
+  logoSizing = "normal",
   href,
   consultant,
   palette,
@@ -66,6 +68,7 @@ export function ClientCard({
             gradient={gradient}
             size="md"
             bgMode={logoBgMode}
+            sizing={logoSizing}
           />
         </div>
         <ArrowUpRight

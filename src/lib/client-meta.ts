@@ -7,7 +7,7 @@ export const CLIENT_LOGOS: Record<string, string> = {
   "insync-design": "/logos/insync-design.png",
   ihn: "/logos/ihn.png",
   "aeger-prima": "/logos/aeger-prima.png",
-  "b-life": "/logos/b-life.png",
+  "b-life": "/logos/b-life.webp",
   "a-domingos": "/logos/a-domingos.png",
   "senior-resort": "/logos/senior-resort.png",
   "clinica-mimus": "/logos/clinica-mimus.png",
@@ -26,16 +26,36 @@ export function getClientLogo(slug: string): string | null {
   return CLIENT_LOGOS[slug] ?? null;
 }
 
-/** White-on-transparent logos that need a dark chip background to be visible. */
-export type LogoBgMode = "white" | "dark";
+/** Per-client chip background. "white" is the default; "dark" suits white logos;
+ *  a custom hex/CSS colour is used for brand-tinted chips. */
+export type LogoBgMode = "white" | "dark" | { custom: string };
 
 const LOGO_BG_OVERRIDES: Record<string, LogoBgMode> = {
   "b-life": "dark",
   "monte-mar": "dark",
+  wonderads: "dark",
+  ihn: { custom: "#F9B600" },
+  cdt: { custom: "#F9B600" },
+  "senior-resort": { custom: "#4B5320" },
 };
 
 export function getLogoBgMode(slug: string): LogoBgMode {
   return LOGO_BG_OVERRIDES[slug] ?? "white";
+}
+
+/** Per-client logo padding inside the chip. "tight" gives the logo more
+ *  visual real-estate (used when the source asset has lots of internal
+ *  whitespace). */
+export type LogoSizing = "normal" | "tight";
+
+const LOGO_SIZING_OVERRIDES: Record<string, LogoSizing> = {
+  "white-clinic": "tight",
+  "clinica-em-casa": "tight",
+  "b-life": "tight",
+};
+
+export function getLogoSizing(slug: string): LogoSizing {
+  return LOGO_SIZING_OVERRIDES[slug] ?? "normal";
 }
 
 export const CLIENT_WEBSITES: Record<string, string> = {

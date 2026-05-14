@@ -11,6 +11,20 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: 28,
+    date: "2026-05-14",
+    title: "Per-client logo chip — new colours, tighter padding, better sources",
+    highlights: [
+      "B-Life: swapped to the official green 'B♥LIFE' logo (no 'Care'). 900px wide, tight padding so it fills the chip.",
+      "Clínica Mimus: re-fetched the 2025 logo — proper mark now visible.",
+      "White Clinic and Clínica em Casa: tight padding so the logo fills the chip instead of sitting in a sea of whitespace.",
+      "IHN + CDT: chip background is now CDT-brand orange (#F9B600).",
+      "WonderAds: chip background is now dark (#10131a) so the butterfly pops.",
+      "Senior Resort: chip background is now army green (#4B5320).",
+      "LogoBgMode now accepts a custom hex colour; LogoSizing supports 'tight' for clients with sparse logos.",
+    ],
+  },
+  {
     version: 27,
     date: "2026-05-14",
     title: "Logo chip contrast fix for B-Life and Monte Mar",
