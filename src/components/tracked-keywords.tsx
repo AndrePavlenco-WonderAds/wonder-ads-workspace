@@ -10,6 +10,14 @@ import {
 } from "lucide-react";
 import type { KeywordData } from "@/lib/keywords";
 
+const RANGE_OPTIONS = [
+  { days: 7, label: "Last 7 days" },
+  { days: 28, label: "Last 28 days" },
+  { days: 90, label: "Last 3 months" },
+  { days: 180, label: "Last 6 months" },
+  { days: 365, label: "Last 12 months" },
+] as const;
+
 export function TrackedKeywords({
   slug,
   clientName,
@@ -18,10 +26,12 @@ export function TrackedKeywords({
   clientName: string;
 }) {
   const [data, setData] = useState<KeywordData | null>(null);
+  const [days, setDays] = useState(28);
 
   useEffect(() => {
     let cancelled = false;
-    fetch(`/api/keywords/${slug}`)
+    setData(null);
+    fetch(`/api/keywords/${slug}?days=${days}`)
       .then((r) => r.json())
       .then((d) => {
         if (!cancelled) setData(d as KeywordData);
@@ -33,10 +43,13 @@ export function TrackedKeywords({
     return () => {
       cancelled = true;
     };
-  }, [slug]);
+  }, [slug, days]);
 
   const loading = data === null;
   const ok = data?.status === "ok";
+  const rangeLabel =
+    RANGE_OPTIONS.find((o) => o.days === days)?.label.toLowerCase() ??
+    `last ${days} days`;
 
   return (
     <article className="brand-gradient-border relative overflow-hidden rounded-2xl bg-white/[0.035] p-5 backdrop-blur-md">
@@ -60,46 +73,62 @@ export function TrackedKeywords({
         <StatusPill data={data} />
       </header>
 
-      <p className="relative mt-3 text-xs text-white/55">
-        {ok
-          ? `Top Google queries for ${clientName} — last 28 days.`
-          : `Live ranking positions for ${clientName}.`}
-      </p>
+      <div className="relative mt-3 flex items-center justify-between gap-2">
+        <p className="text-xs text-white/55">
+          {ok
+            ? `Top Google queries for ${clientName}.`
+            : `Live ranking positions for ${clientName}.`}
+        </p>
+        <select
+          value={days}
+          onChange={(e) => setDays(Number(e.target.value))}
+          aria-label="Date range"
+          className="shrink-0 rounded-lg border border-white/12 bg-white/[0.04] px-2 py-1 text-[11px] font-medium text-white/70 outline-none transition hover:border-white/25 focus:border-white/30 [&>option]:bg-[#10131a] [&>option]:text-white"
+        >
+          {RANGE_OPTIONS.map((o) => (
+            <option key={o.days} value={o.days}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+      </div>
 
       {loading && <SkeletonRows />}
 
       {data?.status === "ok" &&
         (data.rows.length === 0 ? (
           <p className="relative mt-4 rounded-xl border border-white/8 bg-white/[0.025] px-3 py-4 text-center text-[11px] text-white/40">
-            No Search Console data for this property in the last 28 days.
+            No Search Console data for this property in the {rangeLabel}.
           </p>
         ) : (
-          <ul className="relative mt-4 space-y-1.5">
-            {data.rows.map((row) => (
-              <li
-                key={row.query}
-                className="flex items-center gap-3 rounded-xl border border-white/8 bg-white/[0.025] px-3 py-2"
-              >
-                <span
-                  aria-hidden
-                  className="brand-gradient-bg h-1.5 w-1.5 shrink-0 rounded-full"
-                />
-                <span
-                  className="flex-1 truncate text-sm font-medium text-white/85"
-                  title={row.query}
+          <div className="relative mt-4 max-h-[340px] overflow-y-auto pr-1">
+            <ul className="space-y-1.5">
+              {data.rows.map((row) => (
+                <li
+                  key={row.query}
+                  className="flex items-center gap-3 rounded-xl border border-white/8 bg-white/[0.025] px-3 py-2"
                 >
-                  {row.query}
-                </span>
-                <span
-                  className="text-[10px] font-semibold uppercase tracking-[0.12em] text-white/45"
-                  title={`Average position · ${row.clicks} clicks · ${row.impressions} impressions`}
-                >
-                  #{row.position}
-                </span>
-                <ChangeBadge change={row.change} />
-              </li>
-            ))}
-          </ul>
+                  <span
+                    aria-hidden
+                    className="brand-gradient-bg h-1.5 w-1.5 shrink-0 rounded-full"
+                  />
+                  <span
+                    className="flex-1 truncate text-sm font-medium text-white/85"
+                    title={row.query}
+                  >
+                    {row.query}
+                  </span>
+                  <span
+                    className="text-[10px] font-semibold uppercase tracking-[0.12em] text-white/45"
+                    title={`Average position · ${row.clicks} clicks · ${row.impressions} impressions`}
+                  >
+                    #{row.position}
+                  </span>
+                  <ChangeBadge change={row.change} />
+                </li>
+              ))}
+            </ul>
+          </div>
         ))}
 
       {data && data.status !== "ok" && (

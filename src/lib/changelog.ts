@@ -11,6 +11,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: 35,
+    date: "2026-05-14",
+    title: "Keyword date ranges + project layout polish",
+    highlights: [
+      "Tracked Keywords has a date-range picker (7 days up to 12 months) and the list now scrolls — up to 50 keywords per client.",
+      "Client Files panel stretches to match the brief column height.",
+      "Moved the 'Synced across SEO & ADS' tag up to the client header, next to the website link.",
+    ],
+  },
+  {
     version: 34,
     date: "2026-05-14",
     title: "Auto-detect each client's Search Console property",

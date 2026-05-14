@@ -203,7 +203,10 @@ export function ClientFiles({
   const uploading = progress !== null;
 
   return (
-    <section aria-label={`Client files for ${clientName}`} className="relative">
+    <section
+      aria-label={`Client files for ${clientName}`}
+      className="relative flex h-full flex-col"
+    >
       <header className="mb-5 flex flex-wrap items-center gap-2">
         <FolderOpen className="h-4 w-4 text-white/55" strokeWidth={2.25} />
         <h2 className="text-sm font-medium uppercase tracking-[0.18em] text-white/55">
@@ -261,14 +264,18 @@ export function ClientFiles({
         />
       )}
 
-      <div className="brand-gradient-border rounded-2xl bg-white/[0.035] p-5 backdrop-blur-md">
+      <div className="brand-gradient-border flex flex-1 flex-col rounded-2xl bg-white/[0.035] p-5 backdrop-blur-md">
         {!loaded ? (
-          <p className="py-6 text-center text-sm text-white/35">Loading…</p>
+          <div className="flex flex-1 items-center justify-center">
+            <p className="text-sm text-white/35">Loading…</p>
+          </div>
         ) : files.length === 0 ? (
-          <p className="py-8 text-center text-sm text-white/40">
-            No files yet — upload images or videos, or paste a Google Drive
-            link. Files stay in sync across the SEO &amp; ADS departments.
-          </p>
+          <div className="flex flex-1 items-center justify-center">
+            <p className="max-w-xs text-center text-sm text-white/40">
+              No files yet — upload images or videos, or paste a Google Drive
+              link. Files stay in sync across the SEO &amp; ADS departments.
+            </p>
+          </div>
         ) : (
           <ul className="grid grid-cols-2 gap-3 lg:grid-cols-3">
             {files.map((file) => (

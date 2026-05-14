@@ -163,9 +163,12 @@ async function queryRange(
 const round1 = (n: number) => Math.round(n * 10) / 10;
 
 /** Top search queries for a client's site, with position change vs the
- *  previous window. Search Console data lags ~2–3 days, so the window ends
- *  3 days back. */
-export async function getKeywordData(slug: string): Promise<KeywordData> {
+ *  previous window of equal length. Search Console data lags ~2–3 days, so
+ *  the window ends 3 days back. `days` is the window length. */
+export async function getKeywordData(
+  slug: string,
+  days = 28,
+): Promise<KeywordData> {
   const sa = loadServiceAccount();
   if (!sa) return { status: "not-configured" };
 
@@ -185,13 +188,13 @@ export async function getKeywordData(slug: string): Promise<KeywordData> {
     if (!siteUrl) return { status: "no-property" };
 
     const end = isoDaysAgo(3);
-    const start = isoDaysAgo(3 + 27);
-    const prevEnd = isoDaysAgo(3 + 28);
-    const prevStart = isoDaysAgo(3 + 28 + 27);
+    const start = isoDaysAgo(3 + days - 1);
+    const prevEnd = isoDaysAgo(3 + days);
+    const prevStart = isoDaysAgo(3 + days + days - 1);
 
     const [current, previous] = await Promise.all([
-      queryRange(token, siteUrl, start, end, 10),
-      queryRange(token, siteUrl, prevStart, prevEnd, 200).catch(
+      queryRange(token, siteUrl, start, end, 50),
+      queryRange(token, siteUrl, prevStart, prevEnd, 1000).catch(
         () => [] as GscApiRow[],
       ),
     ]);
