@@ -6,6 +6,12 @@ import type { LogoBgMode, LogoSizing } from "@/lib/client-meta";
  *  brand-tinted background + brand-coloured glow behind, so any logo's
  *  contrast works), or falls back to an emoji on a gradient chip when no
  *  logo is available. */
+const SIZES = {
+  md: { dim: "h-11 w-11", normalPad: "p-1.5", tightPad: "p-0.5", text: "text-lg", imgPx: 44 },
+  lg: { dim: "h-16 w-16", normalPad: "p-2", tightPad: "p-1", text: "text-3xl", imgPx: 64 },
+  xl: { dim: "h-28 w-28", normalPad: "p-3", tightPad: "p-1.5", text: "text-5xl", imgPx: 112 },
+} as const;
+
 export function LogoChip({
   logo,
   emoji,
@@ -19,17 +25,15 @@ export function LogoChip({
   emoji: string | null;
   alt: string;
   gradient: string;
-  size?: "md" | "lg";
+  size?: "md" | "lg" | "xl";
   bgMode?: LogoBgMode;
   sizing?: LogoSizing;
 }) {
-  const isLarge = size === "lg";
-  const dim = isLarge ? "h-16 w-16" : "h-11 w-11";
-  const normalPad = isLarge ? "p-2" : "p-1.5";
-  const tightPad = isLarge ? "p-1" : "p-0.5";
-  const pad = sizing === "tight" ? tightPad : normalPad;
-  const text = isLarge ? "text-3xl" : "text-lg";
-  const imgPx = isLarge ? 64 : 44;
+  const s = SIZES[size];
+  const dim = s.dim;
+  const pad = sizing === "tight" ? s.tightPad : s.normalPad;
+  const text = s.text;
+  const imgPx = s.imgPx;
 
   if (!logo) {
     // Emoji fallback — keep the original gradient chip look.

@@ -11,6 +11,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: 42,
+    date: "2026-05-14",
+    title: "Bigger client logo on project pages",
+    highlights: [
+      "The client logo chip on SEO and ADS project pages is larger, balancing the header with the tags and prompt beside it.",
+    ],
+  },
+  {
     version: 41,
     date: "2026-05-14",
     title: "SEO Actions playbook + section nav",

@@ -86,7 +86,7 @@ export default async function ClientPage({
               emoji={client.icon}
               alt={`${client.title} logo`}
               gradient={gradient}
-              size="lg"
+              size="xl"
               bgMode={logoBgMode}
               sizing={logoSizing}
             />

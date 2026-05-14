@@ -69,7 +69,7 @@ export default async function AdsClientPage({
             emoji={client.icon}
             alt={`${client.title} logo`}
             gradient={gradient}
-            size="lg"
+            size="xl"
             bgMode={logoBgMode}
             sizing={logoSizing}
           />
