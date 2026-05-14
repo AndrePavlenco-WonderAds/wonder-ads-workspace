@@ -8,7 +8,7 @@ import {
   Minus,
   Loader2,
 } from "lucide-react";
-import type { KeywordData } from "@/lib/keywords";
+import type { KeywordData, KeywordRow } from "@/lib/keywords";
 
 const RANGE_OPTIONS = [
   { days: 7, label: "Last 7 days" },
@@ -17,6 +17,26 @@ const RANGE_OPTIONS = [
   { days: 180, label: "Last 6 months" },
   { days: 365, label: "Last 12 months" },
 ] as const;
+
+type SortKey = "traffic" | "position" | "growth";
+
+const SORT_OPTIONS: { value: SortKey; label: string }[] = [
+  { value: "traffic", label: "Top traffic" },
+  { value: "position", label: "Best position" },
+  { value: "growth", label: "Recent growth" },
+];
+
+function sortRows<T extends KeywordRow>(rows: T[], sort: SortKey): T[] {
+  if (sort === "traffic") return rows;
+  const sorted = [...rows];
+  if (sort === "position") {
+    sorted.sort((a, b) => a.position - b.position);
+  } else {
+    // Recent growth — biggest position improvement first, nulls last.
+    sorted.sort((a, b) => (b.change ?? -Infinity) - (a.change ?? -Infinity));
+  }
+  return sorted;
+}
 
 export function TrackedKeywords({
   slug,
@@ -27,6 +47,7 @@ export function TrackedKeywords({
 }) {
   const [data, setData] = useState<KeywordData | null>(null);
   const [days, setDays] = useState(28);
+  const [sort, setSort] = useState<SortKey>("traffic");
 
   useEffect(() => {
     let cancelled = false;
@@ -73,17 +94,30 @@ export function TrackedKeywords({
         <StatusPill data={data} />
       </header>
 
-      <div className="relative mt-3 flex items-center justify-between gap-2">
-        <p className="text-xs text-white/55">
-          {ok
-            ? `Top Google queries for ${clientName}.`
-            : `Live ranking positions for ${clientName}.`}
-        </p>
+      <p className="relative mt-3 text-xs text-white/55">
+        {ok
+          ? `Top Google queries for ${clientName}.`
+          : `Live ranking positions for ${clientName}.`}
+      </p>
+
+      <div className="relative mt-2 flex items-center gap-2">
+        <select
+          value={sort}
+          onChange={(e) => setSort(e.target.value as SortKey)}
+          aria-label="Sort keywords"
+          className="flex-1 rounded-lg border border-white/12 bg-white/[0.04] px-2 py-1 text-[11px] font-medium text-white/70 outline-none transition hover:border-white/25 focus:border-white/30 [&>option]:bg-[#10131a] [&>option]:text-white"
+        >
+          {SORT_OPTIONS.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </select>
         <select
           value={days}
           onChange={(e) => setDays(Number(e.target.value))}
           aria-label="Date range"
-          className="shrink-0 rounded-lg border border-white/12 bg-white/[0.04] px-2 py-1 text-[11px] font-medium text-white/70 outline-none transition hover:border-white/25 focus:border-white/30 [&>option]:bg-[#10131a] [&>option]:text-white"
+          className="flex-1 rounded-lg border border-white/12 bg-white/[0.04] px-2 py-1 text-[11px] font-medium text-white/70 outline-none transition hover:border-white/25 focus:border-white/30 [&>option]:bg-[#10131a] [&>option]:text-white"
         >
           {RANGE_OPTIONS.map((o) => (
             <option key={o.days} value={o.days}>
@@ -101,9 +135,9 @@ export function TrackedKeywords({
             No Search Console data for this property in the {rangeLabel}.
           </p>
         ) : (
-          <div className="relative mt-4 max-h-[340px] overflow-y-auto pr-1">
+          <div className="relative mt-4 max-h-[680px] overflow-y-auto pr-1">
             <ul className="space-y-1.5">
-              {data.rows.map((row) => (
+              {sortRows(data.rows, sort).map((row) => (
                 <li
                   key={row.query}
                   className="flex items-center gap-3 rounded-xl border border-white/8 bg-white/[0.025] px-3 py-2"

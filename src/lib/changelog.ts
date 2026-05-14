@@ -11,6 +11,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: 36,
+    date: "2026-05-14",
+    title: "Sort & taller keyword list",
+    highlights: [
+      "Tracked Keywords can be sorted by top traffic, best position, or recent growth.",
+      "Doubled the keyword list's scroll height so more rows are visible at once.",
+    ],
+  },
+  {
     version: 35,
     date: "2026-05-14",
     title: "Keyword date ranges + project layout polish",
