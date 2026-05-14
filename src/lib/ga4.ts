@@ -314,9 +314,10 @@ export async function getGa4Data(
       rawMap(current?.metricValues),
       rawMap(previous?.metricValues),
     );
-    const trend = trendRows.map((r) =>
-      Number(r.metricValues?.[0]?.value ?? 0),
-    );
+    const trend = trendRows.map((r) => ({
+      date: r.dimensionValues?.[0]?.value ?? "",
+      sessions: Number(r.metricValues?.[0]?.value ?? 0),
+    }));
 
     return { status: "ok", propertyId, metrics, trend, days, channel };
   } catch (err) {

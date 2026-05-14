@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, type MouseEvent } from "react";
 import {
   BarChart3,
   TrendingUp,
@@ -13,6 +13,7 @@ import {
   type Ga4Channel,
   type Ga4Data,
   type Ga4Metric,
+  type Ga4TrendPoint,
 } from "@/lib/analytics";
 
 const RANGE_OPTIONS = [
@@ -32,7 +33,8 @@ export function Ga4Metrics({
 }) {
   const [data, setData] = useState<Ga4Data | null>(null);
   const [days, setDays] = useState(28);
-  const [channel, setChannel] = useState<Ga4Channel>("all");
+  // SEO projects care about organic traffic first — default the filter to it.
+  const [channel, setChannel] = useState<Ga4Channel>("Organic Search");
 
   useEffect(() => {
     let cancelled = false;
@@ -118,7 +120,7 @@ export function Ga4Metrics({
       </div>
 
       <div className="relative mt-4">
-        <Sparkline values={data?.status === "ok" ? data.trend : []} />
+        <TrendChart points={data?.status === "ok" ? data.trend : []} />
       </div>
 
       {data && data.status !== "ok" && (
@@ -226,67 +228,171 @@ function formatValue(metric: Ga4Metric): string {
   }
 }
 
-function Sparkline({ values }: { values: number[] }) {
-  const W = 200;
-  const H = 50;
+function formatGa4Date(yyyymmdd: string): string {
+  if (yyyymmdd.length !== 8) return yyyymmdd;
+  const y = Number(yyyymmdd.slice(0, 4));
+  const m = Number(yyyymmdd.slice(4, 6)) - 1;
+  const d = Number(yyyymmdd.slice(6, 8));
+  return new Date(y, m, d).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  });
+}
 
-  if (values.length < 2) {
+const VB_W = 800;
+const VB_H = 200;
+const PAD = { l: 8, r: 8, t: 12, b: 10 };
+
+function TrendChart({ points }: { points: Ga4TrendPoint[] }) {
+  const [hover, setHover] = useState<number | null>(null);
+
+  if (points.length < 2) {
     return (
-      <svg
-        viewBox={`0 0 ${W} ${H}`}
-        className="h-12 w-full"
-        preserveAspectRatio="none"
-        aria-hidden
-      >
-        <path
-          d={`M0 ${H / 2} L${W} ${H / 2}`}
-          stroke="#34D399"
-          strokeWidth="1.25"
-          strokeOpacity="0.25"
-          fill="none"
-        />
-      </svg>
+      <div>
+        <p className="mb-1.5 text-[11px] font-medium uppercase tracking-[0.15em] text-white/40">
+          Daily Sessions
+        </p>
+        <div className="flex h-24 items-center justify-center rounded-xl border border-white/8 bg-white/[0.02]">
+          <span className="text-[11px] text-white/30">
+            No trend data for this range.
+          </span>
+        </div>
+      </div>
     );
   }
 
-  const max = Math.max(...values);
-  const min = Math.min(...values);
-  const range = max - min || 1;
-  const step = W / (values.length - 1);
-  const points = values.map((v, i) => {
-    const x = i * step;
-    const y = H - ((v - min) / range) * (H - 4) - 2;
-    return [x, y] as const;
-  });
-  const line = points
-    .map(([x, y], i) => `${i === 0 ? "M" : "L"}${x.toFixed(1)} ${y.toFixed(1)}`)
+  const n = points.length;
+  const values = points.map((p) => p.sessions);
+  const max = Math.max(...values, 1);
+  const peak = Math.max(...values);
+  const total = values.reduce((a, b) => a + b, 0);
+
+  const plotW = VB_W - PAD.l - PAD.r;
+  const plotH = VB_H - PAD.t - PAD.b;
+  const x = (i: number) => PAD.l + (i / (n - 1)) * plotW;
+  const y = (v: number) => PAD.t + (1 - v / max) * plotH;
+
+  const linePts = points.map((p, i) => [x(i), y(p.sessions)] as const);
+  const line = linePts
+    .map(([px, py], i) => `${i === 0 ? "M" : "L"}${px.toFixed(1)} ${py.toFixed(1)}`)
     .join(" ");
-  const area = `${line} L${W} ${H} L0 ${H} Z`;
+  const baseline = VB_H - PAD.b;
+  const area = `${line} L${x(n - 1).toFixed(1)} ${baseline} L${x(0).toFixed(1)} ${baseline} Z`;
+  const gridYs = [0, 0.5, 1].map((f) => PAD.t + (1 - f) * plotH);
+
+  function handleMove(e: MouseEvent<SVGSVGElement>) {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const frac = (e.clientX - rect.left) / rect.width;
+    const plotFrac = Math.min(
+      1,
+      Math.max(0, (frac * VB_W - PAD.l) / plotW),
+    );
+    setHover(Math.round(plotFrac * (n - 1)));
+  }
+
+  const hi = hover !== null && hover >= 0 && hover < n ? hover : null;
+  const tipLeft =
+    hi !== null
+      ? Math.min(90, Math.max(10, (hi / (n - 1)) * 100))
+      : 0;
 
   return (
-    <svg
-      viewBox={`0 0 ${W} ${H}`}
-      className="h-12 w-full"
-      preserveAspectRatio="none"
-      aria-hidden
-    >
-      <defs>
-        <linearGradient id="ga4-spark-fill" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#34D399" stopOpacity="0.22" />
-          <stop offset="1" stopColor="#34D399" stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      <path d={area} fill="url(#ga4-spark-fill)" />
-      <path
-        d={line}
-        stroke="#34D399"
-        strokeWidth="1.5"
-        strokeOpacity="0.8"
-        fill="none"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
+    <div>
+      <div className="mb-1.5 flex items-baseline justify-between gap-2">
+        <span className="text-[11px] font-medium uppercase tracking-[0.15em] text-white/40">
+          Daily Sessions
+        </span>
+        <span className="text-[11px] text-white/35">
+          Peak {peak.toLocaleString()} · Total {total.toLocaleString()}
+        </span>
+      </div>
+
+      <div className="relative">
+        <svg
+          viewBox={`0 0 ${VB_W} ${VB_H}`}
+          className="w-full cursor-crosshair"
+          onMouseMove={handleMove}
+          onMouseLeave={() => setHover(null)}
+        >
+          <defs>
+            <linearGradient id="ga4-trend-fill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stopColor="#34D399" stopOpacity="0.3" />
+              <stop offset="1" stopColor="#34D399" stopOpacity="0" />
+            </linearGradient>
+          </defs>
+
+          {gridYs.map((gy, i) => (
+            <line
+              key={i}
+              x1={PAD.l}
+              x2={VB_W - PAD.r}
+              y1={gy}
+              y2={gy}
+              stroke="#ffffff"
+              strokeOpacity="0.07"
+              strokeWidth="1"
+            />
+          ))}
+
+          <path d={area} fill="url(#ga4-trend-fill)" />
+          <path
+            d={line}
+            stroke="#34D399"
+            strokeWidth="2.5"
+            strokeOpacity="0.9"
+            fill="none"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+
+          {hi !== null && (
+            <line
+              x1={x(hi)}
+              x2={x(hi)}
+              y1={PAD.t}
+              y2={baseline}
+              stroke="#6EE7B7"
+              strokeOpacity="0.5"
+              strokeWidth="1.5"
+            />
+          )}
+
+          {linePts.map(([px, py], i) => (
+            <circle
+              key={i}
+              cx={px}
+              cy={py}
+              r={hi === i ? 5 : 2.25}
+              fill={hi === i ? "#6EE7B7" : "#34D399"}
+              fillOpacity={hi === i ? 1 : 0.5}
+            />
+          ))}
+        </svg>
+
+        {hi !== null && (
+          <div
+            className="pointer-events-none absolute top-0 z-10 -translate-x-1/2 rounded-lg border border-white/15 bg-[#10131a] px-2 py-1 text-center shadow-[0_8px_24px_-6px_rgba(0,0,0,0.7)]"
+            style={{ left: `${tipLeft}%` }}
+          >
+            <p className="text-[10px] font-medium text-white/50">
+              {formatGa4Date(points[hi].date)}
+            </p>
+            <p className="text-xs font-bold text-white">
+              {points[hi].sessions.toLocaleString()}
+              <span className="ml-1 font-normal text-white/45">sessions</span>
+            </p>
+          </div>
+        )}
+      </div>
+
+      <div className="mt-1 flex justify-between text-[10px] text-white/35">
+        <span>{formatGa4Date(points[0].date)}</span>
+        {n > 2 && (
+          <span>{formatGa4Date(points[Math.floor(n / 2)].date)}</span>
+        )}
+        <span>{formatGa4Date(points[n - 1].date)}</span>
+      </div>
+    </div>
   );
 }
 

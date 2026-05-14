@@ -31,7 +31,9 @@ export default function AdsPage() {
         rightSlot={
           <WorldMap highlightedCountryIds={ADS_HIGHLIGHTED_COUNTRIES} />
         }
-        extra={<TypewriterPrompt text="What are we working on today, boss?" />}
+        extra={
+          <TypewriterPrompt text="Which project are we working on now, boss?" />
+        }
       />
 
       <section className="mt-12 sm:mt-16" aria-label="Clients">

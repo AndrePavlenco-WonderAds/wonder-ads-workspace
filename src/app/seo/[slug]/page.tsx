@@ -4,6 +4,7 @@ import { ArrowLeft, ExternalLink, RefreshCw } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { ClientBrief } from "@/components/client-brief";
 import { ClientFiles } from "@/components/client-files";
+import { TypewriterPrompt } from "@/components/typewriter-prompt";
 import { SeoProjectContainers } from "@/components/seo-project-containers";
 import { LogoChip } from "@/components/logo-chip";
 import { getBriefForSlug } from "@/lib/briefs-storage";
@@ -119,6 +120,9 @@ export default async function ClientPage({
             <h1 className="mt-2 text-4xl font-semibold leading-[1.05] tracking-tight sm:text-5xl">
               <span className="brand-gradient-text">{client.title}</span>
             </h1>
+            <div className="mt-3">
+              <TypewriterPrompt text="What are we working on now, boss?" />
+            </div>
           </div>
         </div>
 

@@ -37,13 +37,16 @@ export const GA4_CHANNELS: { value: Ga4Channel; label: string }[] = [
   { value: "Email", label: "Email" },
 ];
 
+/** One day of the sessions trend. `date` is GA4's "YYYYMMDD" string. */
+export type Ga4TrendPoint = { date: string; sessions: number };
+
 export type Ga4Data =
   | {
       status: "ok";
       propertyId: string;
       metrics: Ga4Metric[];
-      /** Daily sessions across the window — drives the sparkline. */
-      trend: number[];
+      /** Daily sessions across the window — drives the trend chart. */
+      trend: Ga4TrendPoint[];
       days: number;
       channel: Ga4Channel;
     }

@@ -11,6 +11,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: 40,
+    date: "2026-05-14",
+    title: "Richer GA4 trend chart + project prompts",
+    highlights: [
+      "GA4 trend chart is bigger and now interactive — gridlines, date axis, peak/total, and a hover tooltip showing each day's sessions.",
+      "GA4 panel on SEO projects defaults to the Organic Search channel.",
+      "Every project page now shows the animated 'What are we working on now, boss?' prompt under the client name.",
+      "Department pages now ask 'Which project are we working on now, boss?'",
+    ],
+  },
+  {
     version: 39,
     date: "2026-05-14",
     title: "Expanded GA4 Metrics panel",

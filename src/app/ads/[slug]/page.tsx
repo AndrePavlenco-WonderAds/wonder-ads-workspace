@@ -4,6 +4,7 @@ import { ArrowLeft, ExternalLink, RefreshCw } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { ClientBrief } from "@/components/client-brief";
 import { ClientFiles } from "@/components/client-files";
+import { TypewriterPrompt } from "@/components/typewriter-prompt";
 import { LogoChip } from "@/components/logo-chip";
 import { getBriefForSlug } from "@/lib/briefs-storage";
 import { ADS_CLIENTS, getAdsClient } from "@/lib/ads-clients";
@@ -103,6 +104,9 @@ export default async function AdsClientPage({
           <h1 className="mt-2 text-4xl font-semibold leading-[1.05] tracking-tight text-white sm:text-5xl">
             {client.title}
           </h1>
+          <div className="mt-3">
+            <TypewriterPrompt text="What are we working on now, boss?" />
+          </div>
         </div>
       </section>
 
