@@ -270,7 +270,7 @@ export function ClientFiles({
             link. Files stay in sync across the SEO &amp; ADS departments.
           </p>
         ) : (
-          <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+          <ul className="grid grid-cols-2 gap-3 lg:grid-cols-3">
             {files.map((file) => (
               <FileTile
                 key={file.id}

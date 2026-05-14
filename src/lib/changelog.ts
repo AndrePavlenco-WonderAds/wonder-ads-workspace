@@ -11,6 +11,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: 32,
+    date: "2026-05-14",
+    title: "Live keyword rankings + full-width project layout",
+    highlights: [
+      "Tracked Keywords now pulls live data from Google Search Console — top queries, average position, and 28-day position change.",
+      "Project pages are full-width: Client Brief (Do's, Don'ts, Notes) on the left, Client Files on the right.",
+      "Shared clients show a 'Synced across SEO & ADS' note on the brief so it's clear edits land in both departments.",
+    ],
+  },
+  {
     version: 31,
     date: "2026-05-14",
     title: "Client Files + White Clinic in ADS DPT",

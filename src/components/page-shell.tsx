@@ -4,13 +4,24 @@ import { BackgroundDecor } from "./background-decor";
 import { WonderAdsLogo } from "./wonder-ads-logo";
 import { getCurrentVersion } from "@/lib/changelog";
 
-export function PageShell({ children }: { children: ReactNode }) {
+export function PageShell({
+  children,
+  wide = false,
+}: {
+  children: ReactNode;
+  /** Full-bleed layout — used by project pages so the brief + files split
+   *  has room to breathe. Defaults to the standard max-w-7xl container. */
+  wide?: boolean;
+}) {
   const version = getCurrentVersion();
+  const widthClass = wide ? "max-w-none" : "max-w-7xl";
   return (
     <div className="relative min-h-screen overflow-hidden bg-[color:var(--background)] text-[color:var(--foreground)]">
       <BackgroundDecor />
 
-      <header className="relative z-30 mx-auto flex w-full max-w-7xl items-center justify-between px-6 py-6 sm:px-10 sm:py-8">
+      <header
+        className={`relative z-30 mx-auto flex w-full ${widthClass} items-center justify-between px-6 py-6 sm:px-10 sm:py-8`}
+      >
         <WonderAdsLogo />
         <nav className="hidden gap-8 text-sm text-white/60 sm:flex">
           <a
@@ -24,7 +35,9 @@ export function PageShell({ children }: { children: ReactNode }) {
         </nav>
       </header>
 
-      <main className="relative z-20 mx-auto flex w-full max-w-7xl flex-col px-6 pb-20 pt-6 sm:px-10 sm:pb-24">
+      <main
+        className={`relative z-20 mx-auto flex w-full ${widthClass} flex-col px-6 pb-20 pt-6 sm:px-10 sm:pb-24`}
+      >
         {children}
 
         <footer className="mt-16 flex flex-wrap items-center justify-between gap-3 text-xs text-white/40 sm:mt-20">

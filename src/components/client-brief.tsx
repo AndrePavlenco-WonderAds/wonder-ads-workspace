@@ -9,6 +9,7 @@ import {
   Plus,
   X,
   Loader2,
+  RefreshCw,
 } from "lucide-react";
 import type { ClientBrief as Brief } from "@/lib/client-briefs";
 
@@ -32,10 +33,14 @@ export function ClientBrief({
   brief: initial,
   slug,
   clientName,
+  sharedAcrossDepts = false,
 }: {
   brief: Brief;
   slug: string;
   clientName: string;
+  /** When true, this client exists in both the SEO and ADS departments —
+   *  show a note that the brief is kept in sync between them. */
+  sharedAcrossDepts?: boolean;
 }) {
   const [brief, setBrief] = useState<Brief>(initial);
   const [saving, setSaving] = useState(false);
@@ -178,6 +183,15 @@ export function ClientBrief({
         <h2 className="text-sm font-medium uppercase tracking-[0.18em] text-white/55">
           Client Brief
         </h2>
+        {sharedAcrossDepts && (
+          <span
+            className="inline-flex items-center gap-1 rounded-full border border-white/12 bg-white/[0.04] px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.13em] text-white/45"
+            title="Do's, Don'ts and Notes are kept in sync between the SEO and ADS departments for this client."
+          >
+            <RefreshCw className="h-2.5 w-2.5" />
+            Synced across SEO &amp; ADS
+          </span>
+        )}
         {saving && (
           <span className="ml-auto inline-flex items-center gap-1.5 text-[11px] text-white/45">
             <Loader2 className="h-3 w-3 animate-spin" />

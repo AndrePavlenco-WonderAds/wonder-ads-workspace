@@ -13,6 +13,7 @@ import {
   Minus,
   type LucideIcon,
 } from "lucide-react";
+import { TrackedKeywords } from "./tracked-keywords";
 
 type QuickAction = {
   Icon: LucideIcon;
@@ -54,8 +55,10 @@ const QUICK_ACTIONS: QuickAction[] = [
 ];
 
 export function SeoProjectContainers({
+  slug,
   clientName,
 }: {
+  slug: string;
   clientName: string;
 }) {
   return (
@@ -65,7 +68,7 @@ export function SeoProjectContainers({
     >
       <QuickActions />
       <Ga4Placeholder clientName={clientName} />
-      <KeywordsPlaceholder clientName={clientName} />
+      <TrackedKeywords slug={slug} clientName={clientName} />
     </section>
   );
 }
@@ -252,64 +255,3 @@ function Sparkline() {
   );
 }
 
-function KeywordsPlaceholder({ clientName }: { clientName: string }) {
-  const rows = [
-    { rank: 1, change: 2 },
-    { rank: 2, change: 0 },
-    { rank: 3, change: -1 },
-    { rank: 4, change: 5 },
-    { rank: 5, change: -2 },
-  ];
-
-  return (
-    <article className="brand-gradient-border relative overflow-hidden rounded-2xl bg-white/[0.035] p-5 backdrop-blur-md">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -right-20 -top-20 h-48 w-48 rounded-full bg-amber-500/40 opacity-20 blur-3xl"
-      />
-      <PanelHeader Icon={Search} title="Tracked Keywords" status="pending" />
-      <p className="mt-3 text-xs text-white/55">
-        Live ranking positions for {clientName}.
-      </p>
-      <ul className="relative mt-4 space-y-1.5">
-        {rows.map((r, i) => (
-          <li
-            key={i}
-            className="flex items-center gap-3 rounded-xl border border-white/8 bg-white/[0.025] px-3 py-2"
-          >
-            <span
-              aria-hidden
-              className="brand-gradient-bg h-1.5 w-1.5 shrink-0 rounded-full opacity-40"
-            />
-            <span className="flex-1 truncate text-sm font-medium text-white/40">
-              ————————
-            </span>
-            <span className="text-[10px] font-medium uppercase tracking-[0.15em] text-white/35">
-              #{r.rank}
-            </span>
-            {r.change > 0 && (
-              <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-emerald-400/60">
-                <TrendingUp className="h-3 w-3" />
-                {r.change}
-              </span>
-            )}
-            {r.change < 0 && (
-              <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-rose-400/60">
-                <TrendingDown className="h-3 w-3" />
-                {Math.abs(r.change)}
-              </span>
-            )}
-            {r.change === 0 && (
-              <span className="inline-flex items-center text-[10px] font-bold text-white/30">
-                <Minus className="h-3 w-3" />
-              </span>
-            )}
-          </li>
-        ))}
-      </ul>
-      <p className="relative mt-3 text-[11px] text-white/35">
-        Connecting via DataForSEO — coming in a future version.
-      </p>
-    </article>
-  );
-}

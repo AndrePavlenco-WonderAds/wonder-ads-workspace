@@ -53,7 +53,7 @@ export default async function ClientPage({
 
   if (!process.env.NOTION_API_KEY) {
     return (
-      <PageShell>
+      <PageShell wide>
         <BackLink />
         <NotConfigured />
       </PageShell>
@@ -73,7 +73,7 @@ export default async function ClientPage({
   const shared = isSharedWithSeo(slug);
 
   return (
-    <PageShell>
+    <PageShell wide>
       <BackLink />
 
       <section className="animate-fade-up mt-10 flex flex-wrap items-start justify-between gap-5 sm:mt-14">
@@ -123,20 +123,18 @@ export default async function ClientPage({
         </a>
       </section>
 
-      <section className="animate-fade-up mt-10 sm:mt-14">
+      <div className="animate-fade-up mt-10 grid grid-cols-1 gap-6 sm:mt-14 lg:grid-cols-[3fr_2fr]">
         <ClientBrief
           brief={brief}
           slug={slug}
           clientName={client.title}
+          sharedAcrossDepts={shared}
         />
-      </section>
-
-      <section className="animate-fade-up mt-10 sm:mt-14">
-        <SeoProjectContainers clientName={client.title} />
-      </section>
-
-      <section className="animate-fade-up mt-10 sm:mt-14">
         <ClientFiles slug={slug} clientName={client.title} />
+      </div>
+
+      <section className="animate-fade-up mt-10 sm:mt-14">
+        <SeoProjectContainers slug={slug} clientName={client.title} />
       </section>
     </PageShell>
   );

@@ -52,7 +52,7 @@ export default async function AdsClientPage({
   const shared = client.sharedWithSeo === true;
 
   return (
-    <PageShell>
+    <PageShell wide>
       <Link
         href="/ads"
         className="animate-fade-up group inline-flex w-fit items-center gap-2 text-sm text-white/55 transition hover:text-white"
@@ -97,17 +97,15 @@ export default async function AdsClientPage({
         </div>
       </section>
 
-      <section className="animate-fade-up mt-10 sm:mt-14">
+      <div className="animate-fade-up mt-10 grid grid-cols-1 gap-6 sm:mt-14 lg:grid-cols-[3fr_2fr]">
         <ClientBrief
           brief={brief}
           slug={slug}
           clientName={client.title}
+          sharedAcrossDepts={shared}
         />
-      </section>
-
-      <section className="animate-fade-up mt-10 sm:mt-14">
         <ClientFiles slug={slug} clientName={client.title} />
-      </section>
+      </div>
     </PageShell>
   );
 }
