@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, ExternalLink } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { ClientBrief } from "@/components/client-brief";
+import { ClientFiles } from "@/components/client-files";
 import { LogoChip } from "@/components/logo-chip";
 import { getBriefForSlug } from "@/lib/briefs-storage";
 import { ADS_CLIENTS, getAdsClient } from "@/lib/ads-clients";
@@ -48,6 +49,7 @@ export default async function AdsClientPage({
   const logoBgMode = getLogoBgMode(slug);
   const logoSizing = getLogoSizing(slug);
   const gradient = paletteToGradient(getClientPalette(slug));
+  const shared = client.sharedWithSeo === true;
 
   return (
     <PageShell>
@@ -75,7 +77,7 @@ export default async function AdsClientPage({
         <div>
           <div className="flex flex-wrap items-center gap-2">
             <span className="inline-flex items-center rounded-full border border-white/15 bg-white/5 px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-[0.18em] text-white/70">
-              ADS DPT · Client
+              {shared ? "SEO & ADS Client" : "ADS DPT · Client"}
             </span>
             {website && (
               <a
@@ -101,6 +103,10 @@ export default async function AdsClientPage({
           slug={slug}
           clientName={client.title}
         />
+      </section>
+
+      <section className="animate-fade-up mt-10 sm:mt-14">
+        <ClientFiles slug={slug} clientName={client.title} />
       </section>
     </PageShell>
   );

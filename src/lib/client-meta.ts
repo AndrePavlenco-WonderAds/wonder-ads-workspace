@@ -31,7 +31,6 @@ export function getClientLogo(slug: string): string | null {
 export type LogoBgMode = "white" | "dark" | { custom: string };
 
 const LOGO_BG_OVERRIDES: Record<string, LogoBgMode> = {
-  "b-life": "dark",
   "monte-mar": "dark",
   wonderads: "dark",
   // CDT's logo asset sits on #F6A800 — match the chip exactly. IHN follows.

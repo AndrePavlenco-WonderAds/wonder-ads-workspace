@@ -21,6 +21,9 @@ export type AdsClient = {
   tier?: ClientTier;
   /** Paid-media channels this client runs. */
   channels?: AdChannel[];
+  /** True when this client also exists in the SEO DPT — drives the
+   *  "SEO & ADS Client" badge and keeps briefs + files in sync. */
+  sharedWithSeo?: boolean;
 };
 
 const ALL_CHANNELS: AdChannel[] = ["google", "meta"];
@@ -35,6 +38,7 @@ export const ADS_CLIENTS: AdsClient[] = [
     consultant: "Germano C.",
     tier: "core",
     channels: ALL_CHANNELS,
+    sharedWithSeo: true,
   },
   {
     slug: "insync-design",
@@ -43,6 +47,15 @@ export const ADS_CLIENTS: AdsClient[] = [
     consultant: "Germano C.",
     tier: "core",
     channels: ALL_CHANNELS,
+    sharedWithSeo: true,
+  },
+  {
+    slug: "white-clinic",
+    title: "White Clinic",
+    icon: "🦷",
+    consultant: "Germano C.",
+    channels: ALL_CHANNELS,
+    sharedWithSeo: true,
   },
   // ADS-only client
   {
@@ -57,4 +70,9 @@ export const ADS_CLIENTS: AdsClient[] = [
 
 export function getAdsClient(slug: string): AdsClient | null {
   return ADS_CLIENTS.find((c) => c.slug === slug) ?? null;
+}
+
+/** True when a client is present in both the SEO and ADS departments. */
+export function isSharedWithSeo(slug: string): boolean {
+  return getAdsClient(slug)?.sharedWithSeo === true;
 }

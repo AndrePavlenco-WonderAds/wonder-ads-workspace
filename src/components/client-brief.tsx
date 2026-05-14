@@ -11,7 +11,6 @@ import {
   Loader2,
 } from "lucide-react";
 import type { ClientBrief as Brief } from "@/lib/client-briefs";
-import { hasAnyBriefContent } from "@/lib/client-briefs";
 
 type Kind = "dos" | "donts" | "notes";
 
@@ -169,8 +168,6 @@ export function ClientBrief({
     persist(next);
   }
 
-  const hasContent = hasAnyBriefContent(brief);
-
   return (
     <section
       aria-label={`Client brief for ${clientName}`}
@@ -181,11 +178,6 @@ export function ClientBrief({
         <h2 className="text-sm font-medium uppercase tracking-[0.18em] text-white/55">
           Client Brief
         </h2>
-        {!hasContent && (
-          <span className="ml-2 rounded-full border border-white/15 bg-white/[0.04] px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.15em] text-white/45">
-            Not set
-          </span>
-        )}
         {saving && (
           <span className="ml-auto inline-flex items-center gap-1.5 text-[11px] text-white/45">
             <Loader2 className="h-3 w-3 animate-spin" />

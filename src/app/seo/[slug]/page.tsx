@@ -3,9 +3,11 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, ExternalLink } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { ClientBrief } from "@/components/client-brief";
+import { ClientFiles } from "@/components/client-files";
 import { SeoProjectContainers } from "@/components/seo-project-containers";
 import { LogoChip } from "@/components/logo-chip";
 import { getBriefForSlug } from "@/lib/briefs-storage";
+import { isSharedWithSeo } from "@/lib/ads-clients";
 import { getClientBySlug, getSeoClients } from "@/lib/notion";
 import {
   getClientWebsite,
@@ -68,6 +70,7 @@ export default async function ClientPage({
   const logoBgMode = getLogoBgMode(slug);
   const logoSizing = getLogoSizing(slug);
   const gradient = paletteToGradient(getClientPalette(slug));
+  const shared = isSharedWithSeo(slug);
 
   return (
     <PageShell>
@@ -90,7 +93,7 @@ export default async function ClientPage({
           <div>
             <div className="flex flex-wrap items-center gap-2">
               <span className="inline-flex items-center rounded-full border border-white/15 bg-white/5 px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-[0.18em] text-white/70">
-                SEO DPT · Client
+                {shared ? "SEO & ADS Client" : "SEO DPT · Client"}
               </span>
               {website && (
                 <a
@@ -130,6 +133,10 @@ export default async function ClientPage({
 
       <section className="animate-fade-up mt-10 sm:mt-14">
         <SeoProjectContainers clientName={client.title} />
+      </section>
+
+      <section className="animate-fade-up mt-10 sm:mt-14">
+        <ClientFiles slug={slug} clientName={client.title} />
       </section>
     </PageShell>
   );

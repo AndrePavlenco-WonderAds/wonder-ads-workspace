@@ -11,6 +11,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: 31,
+    date: "2026-05-14",
+    title: "Client Files + White Clinic in ADS DPT",
+    highlights: [
+      "New Client Files panel on every project page — upload images/videos or paste Google Drive links. Stays in sync across the SEO & ADS departments, just like the brief.",
+      "White Clinic added to the ADS DPT (Germano C., Google + Meta).",
+      "Shared clients now show a 'SEO & ADS Client' badge on their project page instead of a single-department tag.",
+      "B-Life logo chip moved to a white background.",
+      "Removed the redundant 'Not set' tag from the Client Brief header.",
+    ],
+  },
+  {
     version: 30,
     date: "2026-05-14",
     title: "Homepage department order",
