@@ -9,15 +9,11 @@
 // see and match each client by domain, so it works whether the client's
 // property is a domain property ("sc-domain:…") or a URL-prefix one.
 
-import { JWT } from "google-auth-library";
 import { CLIENT_WEBSITES } from "./client-meta";
+import { getGoogleAccessToken, googleAuthConfigured } from "./google-auth";
 import type { KeywordData, KeywordRow } from "./keywords";
 
 const SCOPES = ["https://www.googleapis.com/auth/webmasters.readonly"];
-
-// Domain-wide delegation: when set, the service account impersonates this
-// Workspace user instead of acting as itself.
-const IMPERSONATE_SUBJECT = process.env.GOOGLE_IMPERSONATE_SUBJECT || undefined;
 
 /** Per-client Search Console property override. Rarely needed — only when a
  *  client's property domain differs from their marketing site, or domain
@@ -33,43 +29,7 @@ function domainFromUrl(url: string): string | null {
   }
 }
 
-export const gscConfigured = Boolean(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
-
-type ServiceAccount = { client_email: string; private_key: string };
-
-function loadServiceAccount(): ServiceAccount | null {
-  const raw = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
-  if (!raw) return null;
-  try {
-    const parsed = JSON.parse(raw) as Partial<ServiceAccount>;
-    if (!parsed.client_email || !parsed.private_key) return null;
-    return {
-      client_email: parsed.client_email,
-      // Vercel may store the key with literal "\n" — normalise to newlines.
-      private_key: parsed.private_key.replace(/\\n/g, "\n"),
-    };
-  } catch {
-    return null;
-  }
-}
-
-let cachedToken: { token: string; expires: number } | null = null;
-
-async function getAccessToken(sa: ServiceAccount): Promise<string> {
-  if (cachedToken && cachedToken.expires > Date.now() + 60_000) {
-    return cachedToken.token;
-  }
-  const jwt = new JWT({
-    email: sa.client_email,
-    key: sa.private_key,
-    scopes: SCOPES,
-    subject: IMPERSONATE_SUBJECT,
-  });
-  const { token } = await jwt.getAccessToken();
-  if (!token) throw new Error("Failed to obtain a Google access token");
-  cachedToken = { token, expires: Date.now() + 50 * 60_000 };
-  return token;
-}
+export const gscConfigured = googleAuthConfigured;
 
 function isoDaysAgo(n: number): string {
   const d = new Date();
@@ -169,8 +129,7 @@ export async function getKeywordData(
   slug: string,
   days = 28,
 ): Promise<KeywordData> {
-  const sa = loadServiceAccount();
-  if (!sa) return { status: "not-configured" };
+  if (!googleAuthConfigured) return { status: "not-configured" };
 
   const override = GSC_PROPERTY_OVERRIDES[slug];
   const site = CLIENT_WEBSITES[slug];
@@ -178,7 +137,7 @@ export async function getKeywordData(
   if (!override && !domain) return { status: "no-property" };
 
   try {
-    const token = await getAccessToken(sa);
+    const token = await getGoogleAccessToken(SCOPES);
 
     let siteUrl: string | null = override ?? null;
     if (!siteUrl && domain) {

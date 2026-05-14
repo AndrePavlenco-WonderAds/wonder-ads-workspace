@@ -11,6 +11,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: 37,
+    date: "2026-05-14",
+    title: "Live GA4 Metrics on SEO projects",
+    highlights: [
+      "GA4 Metrics panel now pulls real Google Analytics 4 data — users, sessions, engagement, conversions, with 30-day trend arrows and a live sparkline.",
+      "Each client's GA4 property is auto-detected by website domain; reuses the same Google service account as Search Console.",
+    ],
+  },
+  {
     version: 36,
     date: "2026-05-14",
     title: "Sort & taller keyword list",
