@@ -11,6 +11,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: 30,
+    date: "2026-05-14",
+    title: "Homepage department order",
+    highlights: [
+      "Swapped WEB and ADS on the homepage grid — order is now SEO · ADS · WEB · COMMERCIAL.",
+    ],
+  },
+  {
     version: 29,
     date: "2026-05-14",
     title: "Logo chip fixes — Clínica em Casa SVG + exact CDT orange",

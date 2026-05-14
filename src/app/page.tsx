@@ -24,16 +24,16 @@ const DEPARTMENTS: Department[] = [
     Icon: Search,
   },
   {
-    title: "WEB DPT",
-    tagline: "High-converting websites, landing pages & dev work.",
-    href: "/web",
-    Icon: Code2,
-  },
-  {
     title: "ADS DPT",
     tagline: "Paid media, performance campaigns & creative.",
     href: "/ads",
     Icon: Megaphone,
+  },
+  {
+    title: "WEB DPT",
+    tagline: "High-converting websites, landing pages & dev work.",
+    href: "/web",
+    Icon: Code2,
   },
   {
     title: "COMMERCIAL DPT",
