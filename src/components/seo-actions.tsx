@@ -3,10 +3,11 @@
 import { useEffect, useRef, useState } from "react";
 import {
   Zap,
-  Code2,
-  Share2,
+  FileText,
+  Globe,
   MapPin,
   PenLine,
+  Gauge,
   ArrowRight,
   Sparkles,
   type LucideIcon,
@@ -17,14 +18,22 @@ type Pillar = {
   Icon: LucideIcon;
   blurb: string;
   actions: string[];
+  fullWidth?: boolean;
 };
 
 // The SEO action playbook. Each action will wire to SEO Claude in a later
 // version — for now they're the catalogue of one-click workflows.
 const PILLARS: Pillar[] = [
   {
+    name: "Overall SEO",
+    Icon: Gauge,
+    blurb: "High-level audits and strategic research.",
+    actions: ["SEO Audit", "Keyword Research"],
+    fullWidth: true,
+  },
+  {
     name: "On-Page SEO",
-    Icon: Code2,
+    Icon: FileText,
     blurb: "Optimise what's on the page itself.",
     actions: [
       "Generate Header Tags",
@@ -37,7 +46,7 @@ const PILLARS: Pillar[] = [
   },
   {
     name: "Off-Page SEO",
-    Icon: Share2,
+    Icon: Globe,
     blurb: "Build authority from outside the site.",
     actions: [
       "Find Backlink Directories",
@@ -55,8 +64,7 @@ const PILLARS: Pillar[] = [
       "GMB Profile Audit",
       "GMB Posts Creation",
       "Local Citation Check",
-      "Review Response Drafts",
-      "Local Keyword Research",
+      "GMB Reviews Responder",
     ],
   },
   {
@@ -66,7 +74,7 @@ const PILLARS: Pillar[] = [
     actions: [
       "Write Blog Article",
       "Content Calendar",
-      "Topic Cluster Plan",
+      "Blog Roadmap",
       "Refresh Existing Content",
       "FAQ Section Generator",
     ],
@@ -136,7 +144,11 @@ function PillarCard({
 }) {
   const { Icon } = pillar;
   return (
-    <article className="brand-gradient-border relative overflow-hidden rounded-2xl bg-white/[0.035] p-5 backdrop-blur-md">
+    <article
+      className={`brand-gradient-border relative overflow-hidden rounded-2xl bg-white/[0.035] p-5 backdrop-blur-md${
+        pillar.fullWidth ? " md:col-span-2" : ""
+      }`}
+    >
       <div
         aria-hidden
         className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full opacity-20 blur-3xl"
@@ -161,11 +173,13 @@ function PillarCard({
         </span>
       </header>
 
-      <ol className="relative mt-4 space-y-2">
-        <span
-          aria-hidden
-          className="pointer-events-none absolute bottom-4 left-[26px] top-4 w-px bg-gradient-to-b from-white/5 via-white/20 to-white/5"
-        />
+      <ol
+        className={`mt-4 ${
+          pillar.fullWidth
+            ? "grid grid-cols-1 gap-2 md:grid-cols-2"
+            : "space-y-2"
+        }`}
+      >
         {pillar.actions.map((action, ai) => (
           <li key={action}>
             <button

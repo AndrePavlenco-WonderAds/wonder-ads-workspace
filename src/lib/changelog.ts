@@ -11,6 +11,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: 45,
+    date: "2026-05-15",
+    title: "SEO actions reorg",
+    highlights: [
+      "New full-width 'Overall SEO' container at the top of every client's Actions, holding SEO Audit and Keyword Research.",
+      "Keyword Research moved out of Local SEO into Overall SEO.",
+      "Renamed Topic Cluster Plan → Blog Roadmap, and Review Response Drafts → GMB Reviews Responder.",
+      "Refreshed pillar icons: On-Page SEO now uses a page icon, Off-Page SEO uses a globe.",
+      "Removed the vertical guide line behind action rows for a cleaner look.",
+    ],
+  },
+  {
     version: 44,
     date: "2026-05-14",
     title: "Clock & footer polish",
