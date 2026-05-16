@@ -11,6 +11,19 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: 48,
+    date: "2026-05-16",
+    title: "SEO Audit goes live — real PageSpeed + HTML measurements",
+    highlights: [
+      "SEO Audit now runs Google PageSpeed Insights (mobile + desktop) and a live HTML crawl of the target page before SEO Claude analyses it. Cites the exact Lighthouse scores, Core Web Vitals, failed audits and on-page facts.",
+      "Tool progress streams to the page in real time (page fetch, PSI mobile, PSI desktop) so you see what's happening, then the analysis streams underneath.",
+      "Mobile + desktop PSI run in parallel to stay inside the 60s function budget.",
+      "Action pages now show a 'Live tools' chip row when an action runs real measurements (Page HTML, PSI Mobile, PSI Desktop).",
+      "Add PAGESPEED_API_KEY to Vercel env to lift the shared-IP rate limit (free key at console.cloud.google.com → enable PageSpeed Insights API).",
+      "Action pages load instantly — Notion client lookups now use Next.js cross-request cache (hourly revalidate) and a loading.tsx skeleton fills the gap on cold navigation.",
+    ],
+  },
+  {
     version: 47,
     date: "2026-05-16",
     title: "SEO Claude per client — every action is now functional",

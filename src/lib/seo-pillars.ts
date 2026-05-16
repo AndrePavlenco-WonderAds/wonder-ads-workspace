@@ -21,11 +21,20 @@ export type ActionField = {
   defaultValue?: string;
 };
 
+export type ActionToolName =
+  | "crawl-page"
+  | "pagespeed-mobile"
+  | "pagespeed-desktop";
+
 export type ActionDef = {
   slug: string;
   label: string;
   blurb: string;
   fields: ActionField[];
+  /** Optional live-data tools to run before the LLM generation. */
+  tools?: ActionToolName[];
+  /** Which input field carries the URL the tools should target. Default "pageUrl". */
+  toolUrlField?: string;
 };
 
 export type Pillar = {
@@ -64,9 +73,16 @@ export const PILLARS: Pillar[] = [
         slug: "seo-audit",
         label: "SEO Audit",
         blurb:
-          "Full-stack audit: technical, on-page, content, off-page signals.",
+          "Live PageSpeed + on-page HTML pulled in real time, analysed by SEO Claude.",
+        tools: ["crawl-page", "pagespeed-mobile", "pagespeed-desktop"],
+        toolUrlField: "pageUrl",
         fields: [
-          URL_FIELD,
+          {
+            ...URL_FIELD,
+            required: true,
+            helpText:
+              "We'll fetch this page live + run Google PageSpeed Insights (mobile + desktop) before SEO Claude analyses it.",
+          },
           {
             key: "focus",
             label: "Focus",

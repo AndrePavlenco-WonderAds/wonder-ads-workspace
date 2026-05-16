@@ -1,5 +1,6 @@
 import { Client } from "@notionhq/client";
 import { cache } from "react";
+import { unstable_cache } from "next/cache";
 import { getClientPalette, type ClientPalette } from "./client-colors";
 import {
   EXCLUDED_SLUGS,
@@ -48,41 +49,55 @@ async function listChildren(blockId: string) {
   return out as Array<{ id: string; type: string; [k: string]: unknown }>;
 }
 
-export const getSeoClients = cache(async (): Promise<NotionClient[]> => {
-  const columns = await listChildren(SEO_PROJECTS_COLUMN_LIST_ID);
-  const clients: NotionClient[] = [];
+// Heavy lift: list every SEO project from Notion. Wrapped in unstable_cache so
+// the result is shared across requests (per-request React cache wasn't enough —
+// every direct hit on /seo/<client>/actions/<action> was paying the full Notion
+// roundtrip). React.cache() still wraps the public export below to dedupe
+// concurrent calls within a single request.
+const _fetchSeoClients = unstable_cache(
+  async (): Promise<NotionClient[]> => {
+    const columns = await listChildren(SEO_PROJECTS_COLUMN_LIST_ID);
+    const clients: NotionClient[] = [];
 
-  for (const column of columns) {
-    if (column.type !== "column") continue;
-    const items = await listChildren(column.id);
-    for (const block of items) {
-      if (block.type !== "child_page") continue;
-      const rawTitle = (
-        (block as unknown as { child_page: { title: string } }).child_page.title
-      ).trim();
-      if (!rawTitle) continue;
-      const title = TITLE_OVERRIDES[rawTitle] ?? rawTitle;
-      const page = await notion.pages.retrieve({ page_id: block.id });
-      const icon =
-        "icon" in page && page.icon && page.icon.type === "emoji"
-          ? page.icon.emoji
-          : null;
-      const slug = slugify(title);
-      if (EXCLUDED_SLUGS.has(slug)) continue;
-      clients.push({
-        id: block.id,
-        title,
-        slug,
-        icon,
-        consultant: getConsultantForSlug(slug),
-        palette: getClientPalette(slug),
-        tier: getClientTier(slug),
-      });
+    for (const column of columns) {
+      if (column.type !== "column") continue;
+      const items = await listChildren(column.id);
+      for (const block of items) {
+        if (block.type !== "child_page") continue;
+        const rawTitle = (
+          (block as unknown as { child_page: { title: string } }).child_page
+            .title
+        ).trim();
+        if (!rawTitle) continue;
+        const title = TITLE_OVERRIDES[rawTitle] ?? rawTitle;
+        const page = await notion.pages.retrieve({ page_id: block.id });
+        const icon =
+          "icon" in page && page.icon && page.icon.type === "emoji"
+            ? page.icon.emoji
+            : null;
+        const slug = slugify(title);
+        if (EXCLUDED_SLUGS.has(slug)) continue;
+        clients.push({
+          id: block.id,
+          title,
+          slug,
+          icon,
+          consultant: getConsultantForSlug(slug),
+          palette: getClientPalette(slug),
+          tier: getClientTier(slug),
+        });
+      }
     }
-  }
 
-  return clients;
-});
+    return clients;
+  },
+  ["seo-clients"],
+  { revalidate: 3600, tags: ["seo-clients"] },
+);
+
+export const getSeoClients = cache(
+  (): Promise<NotionClient[]> => _fetchSeoClients(),
+);
 
 export const getClientBySlug = cache(
   async (slug: string): Promise<NotionClient | null> => {

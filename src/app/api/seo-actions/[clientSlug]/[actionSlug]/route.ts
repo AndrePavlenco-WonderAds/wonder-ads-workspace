@@ -1,14 +1,27 @@
 import { anthropic } from "@ai-sdk/anthropic";
 import { streamText } from "ai";
 import { NextResponse } from "next/server";
-import { findAction } from "@/lib/seo-pillars";
+import { findAction, type ActionToolName } from "@/lib/seo-pillars";
 import { getBriefForSlug } from "@/lib/briefs-storage";
 import { getClientWebsite } from "@/lib/client-meta";
 import { getClientBySlug } from "@/lib/notion";
 import { buildSeoClaudeSystemPrompt } from "@/lib/seo-claude-prompt";
 import { appendHistory } from "@/lib/action-history";
+import {
+  runPageSpeed,
+  formatPsiForPrompt,
+  type PsiResult,
+  type PsiStrategy,
+} from "@/lib/seo-tools/pagespeed";
+import {
+  crawlPage,
+  formatCrawlForPrompt,
+  type CrawlResult,
+} from "@/lib/seo-tools/crawler";
 
-export const maxDuration = 120;
+// Vercel Hobby caps at 60s. Two PSI calls + crawl + Claude streaming has to
+// fit inside that — we run the PSI calls in parallel to stay under the cap.
+export const maxDuration = 60;
 export const runtime = "nodejs";
 
 const MODEL_ID = "claude-sonnet-4-6";
@@ -21,6 +34,17 @@ function formatInputs(inputs: Record<string, string>): string {
     lines.push(`**${key}:**\n${value}`);
   }
   return lines.length === 0 ? "_(no inputs provided)_" : lines.join("\n\n");
+}
+
+function normaliseUrl(input: string | undefined): string | null {
+  const raw = (input ?? "").trim();
+  if (!raw) return null;
+  const withScheme = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+  try {
+    return new URL(withScheme).toString();
+  } catch {
+    return null;
+  }
 }
 
 export async function POST(
@@ -51,7 +75,7 @@ export async function POST(
       inputs = body.inputs;
     }
   } catch {
-    /* no body is fine */
+    /* empty body is fine */
   }
 
   let clientName = clientSlug;
@@ -62,7 +86,7 @@ export async function POST(
     /* fall back to slug */
   }
 
-  const [brief] = await Promise.all([getBriefForSlug(clientSlug)]);
+  const brief = await getBriefForSlug(clientSlug);
 
   const system = buildSeoClaudeSystemPrompt({
     client: {
@@ -75,29 +99,157 @@ export async function POST(
     pillar: entry.pillar,
   });
 
-  const userPrompt = `Run the action now.
+  const tools = entry.action.tools ?? [];
+  const toolUrlField = entry.action.toolUrlField ?? "pageUrl";
+  const targetUrl = tools.length > 0 ? normaliseUrl(inputs[toolUrlField]) : null;
 
-# Inputs from the consultant
-${formatInputs(inputs)}`;
+  const encoder = new TextEncoder();
 
-  const result = streamText({
-    model: anthropic(MODEL_ID),
-    system,
-    prompt: userPrompt,
-    onError: ({ error }) => {
-      console.error("SEO action stream failed:", error);
-    },
-    onFinish: async ({ text }) => {
-      if (!text) return;
-      await appendHistory({
-        clientSlug,
-        actionSlug,
-        inputs,
-        output: text,
-        model: MODEL_ID,
+  const stream = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      const send = (s: string) => controller.enqueue(encoder.encode(s));
+
+      let factPack = "";
+
+      // ---------- Tool phase ----------
+      if (tools.length > 0) {
+        if (!targetUrl) {
+          send(
+            `> ⚠️ No URL provided in **${toolUrlField}** — running without live tools.\n\n`,
+          );
+        } else {
+          send(`> 🔧 Running live tools against \`${targetUrl}\`\n`);
+
+          const toolResults = await Promise.allSettled(
+            tools.map((t) => runTool(t, targetUrl)),
+          );
+
+          const pieces: string[] = [];
+          tools.forEach((toolName, i) => {
+            const res = toolResults[i];
+            const meta = TOOL_META[toolName];
+            if (res.status === "fulfilled") {
+              send(
+                `> ✓ **${meta.label}** — ${res.value.summary} (${res.value.ms} ms)\n`,
+              );
+              pieces.push(res.value.markdown);
+            } else {
+              const message =
+                res.reason instanceof Error
+                  ? res.reason.message
+                  : String(res.reason);
+              send(
+                `> ❌ **${meta.label}** failed: ${message.slice(0, 240)}\n`,
+              );
+            }
+          });
+
+          factPack = pieces.join("\n\n");
+          send("\n---\n\n");
+        }
+      }
+
+      // ---------- Generation phase ----------
+      const userPrompt = [
+        factPack
+          ? `# Live tool measurements (use these as primary evidence)\n${factPack}`
+          : "",
+        `# Inputs from the consultant\n${formatInputs(inputs)}`,
+        `Run the action now. When live measurements are present, cite the exact numbers, name the failing audits by their title, and prioritise findings by real impact rather than abstract best practice.`,
+      ]
+        .filter(Boolean)
+        .join("\n\n");
+
+      const result = streamText({
+        model: anthropic(MODEL_ID),
+        system,
+        prompt: userPrompt,
+        onError: ({ error }) => {
+          console.error("SEO action stream failed:", error);
+          try {
+            send(
+              `\n\n> ❌ SEO Claude stream errored: ${
+                error instanceof Error ? error.message : String(error)
+              }\n`,
+            );
+          } catch {
+            /* controller may already be closed */
+          }
+        },
       });
+
+      let modelText = "";
+      try {
+        for await (const chunk of result.textStream) {
+          modelText += chunk;
+          send(chunk);
+        }
+      } catch (err) {
+        console.error("stream consume failed:", err);
+      }
+
+      // ---------- Persist ----------
+      if (modelText.trim()) {
+        try {
+          await appendHistory({
+            clientSlug,
+            actionSlug,
+            inputs,
+            output: modelText,
+            model: MODEL_ID,
+          });
+        } catch (err) {
+          console.error("history append failed:", err);
+        }
+      }
+
+      controller.close();
+    },
+    cancel() {
+      // request was aborted by the client; nothing else to clean up
     },
   });
 
-  return result.toTextStreamResponse();
+  return new Response(stream, {
+    headers: {
+      "content-type": "text/plain; charset=utf-8",
+      "cache-control": "no-store",
+      "x-accel-buffering": "no",
+    },
+  });
+}
+
+// ---------- Tool dispatch ----------
+
+type ToolRun = { markdown: string; summary: string; ms: number };
+
+const TOOL_META: Record<ActionToolName, { label: string }> = {
+  "crawl-page": { label: "Fetch page HTML" },
+  "pagespeed-mobile": { label: "PageSpeed Insights — mobile" },
+  "pagespeed-desktop": { label: "PageSpeed Insights — desktop" },
+};
+
+async function runTool(name: ActionToolName, url: string): Promise<ToolRun> {
+  const started = Date.now();
+  switch (name) {
+    case "crawl-page": {
+      const r: CrawlResult = await crawlPage(url);
+      return {
+        markdown: formatCrawlForPrompt(r),
+        summary: `HTTP ${r.status}, ${(r.bytes / 1024).toFixed(0)} KB, ${r.h1.length} H1, ${r.imageCount} images, ${r.jsonLdTypes.length} schema types`,
+        ms: Date.now() - started,
+      };
+    }
+    case "pagespeed-mobile":
+    case "pagespeed-desktop": {
+      const strategy: PsiStrategy = name === "pagespeed-mobile" ? "mobile" : "desktop";
+      const r: PsiResult = await runPageSpeed(url, strategy);
+      const scores = `Perf ${r.scores.performance ?? "—"} · SEO ${r.scores.seo ?? "—"} · A11y ${r.scores.accessibility ?? "—"} · BP ${r.scores.bestPractices ?? "—"}`;
+      return {
+        markdown: formatPsiForPrompt(r),
+        summary: scores,
+        ms: Date.now() - started,
+      };
+    }
+  }
 }

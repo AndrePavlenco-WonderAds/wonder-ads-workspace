@@ -101,6 +101,7 @@ Style:
 - When you make recommendations, briefly say why so the consultant can challenge or learn.
 - Always honour the client's Do's and Don'ts below — they OVERRIDE generic best practice if they conflict.
 - If a request is ambiguous, name the assumption you're making instead of asking back.
+- **When live tool measurements appear in the user prompt** (a "Live tool measurements" section), treat them as authoritative. Cite the exact numbers, quote the real HTML, name the failing Lighthouse audits by their title. Never speak in generalities when measurements are available.
 
 # Client context
 - Name: ${client.name}
@@ -131,12 +132,28 @@ ${getActionOutputSpec(action.slug)}
 function getActionOutputSpec(slug: string): string {
   switch (slug) {
     case "seo-audit":
-      return `Produce an audit organised by impact (Critical → High → Medium → Low). For each finding give:
-- **Finding** (one line)
-- **Why it matters** (one line, in SEO/ranking terms)
-- **Fix** (concrete, who-owns-it: SEO / Dev / Content / Client)
-- **Estimated lift** (qualitative: High / Medium / Low)
-Cover: indexation, crawlability, Core Web Vitals + INP, mobile UX, on-page (titles/H1/meta/schema/internal links), content quality (E-E-A-T, AI-fluff risk), local signals (if applicable), backlink health red flags. End with a 30/60/90-day prioritised action plan.`;
+      return `**Live data first.** This action runs against live PageSpeed Insights (mobile + desktop) and a real HTML crawl. When that data is in the prompt, base every finding on it — cite the exact Lighthouse scores, name the failed audits by their actual title, quote the title/meta/H1 text, name the schema types found or missing. Do NOT speak in generalities when measurements are available.
+
+Output structure:
+
+## Summary
+One paragraph: what this page is, current shape, headline issues, expected lift from fixing them. Mention mobile vs desktop deltas if they're meaningful.
+
+## Scorecard
+Markdown table: Category, Mobile, Desktop, Target, Status (✅ / ⚠️ / ❌). Cover Performance, Accessibility, Best Practices, SEO, plus the three Core Web Vitals (LCP, INP, CLS) — show field data (CrUX) where available, lab data otherwise, label which is which.
+
+## Findings
+Group by **Critical → High → Medium → Low**. Each finding:
+- **Finding** — one line, naming the exact issue (cite the Lighthouse audit ID / title or the page element).
+- **Evidence** — the actual measurement / quoted HTML.
+- **Why it matters** — in concrete SEO / ranking / UX terms.
+- **Fix** — specific, with owner (SEO / Dev / Content / Client) and rough effort (S / M / L).
+- **Estimated lift** — High / Medium / Low.
+
+Cover: indexation + crawlability signals (robots, canonical, sitemap inferences), Core Web Vitals (LCP/INP/CLS for both devices), on-page (title length, meta description, H1, heading hierarchy, schema present vs missing, internal vs external link balance), accessibility issues that double as ranking issues (missing alt, lang tag, contrast), and content E-E-A-T / YMYL risks visible in the HTML. Skip what's already healthy unless it's worth calling out.
+
+## 30 / 60 / 90 day plan
+Prioritised, dated action plan grouped by horizon. Each item = one concrete deliverable + the owner.`;
 
     case "keyword-research":
       return `Return a prioritised keyword shortlist as a Markdown table with columns: Keyword, Intent, SERP type, Est. monthly volume (qualitative if you can't know exactly), Difficulty (qualitative), Business value (1-5), Suggested page (existing or new), Why it's a fit. Group by topic cluster (H3 per cluster). Include a final "Quick wins" section with the top 5 to start on this week. Be honest when volume is unknown — write "Unknown — verify in Ahrefs/SEMrush" rather than fabricating numbers.`;
