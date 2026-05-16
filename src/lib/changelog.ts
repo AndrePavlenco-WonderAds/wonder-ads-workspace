@@ -11,6 +11,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: 50,
+    date: "2026-05-16",
+    title: "Friendlier action errors",
+    highlights: [
+      "Action runner now parses server error responses and shows only the human message instead of dumping the raw JSON envelope.",
+    ],
+  },
+  {
     version: 49,
     date: "2026-05-16",
     title: "SEO Audit goes site-wide — sitemap, sample crawl & Search Console",

@@ -103,7 +103,16 @@ export function ActionRunner({
 
       if (!res.ok) {
         const text = await res.text().catch(() => "");
-        throw new Error(text || `HTTP ${res.status}`);
+        // Server returns `{ error: "..." }` on validation/config failures —
+        // surface the human message, not the raw JSON.
+        let message = text || `HTTP ${res.status}`;
+        try {
+          const parsed = JSON.parse(text) as { error?: unknown };
+          if (typeof parsed?.error === "string") message = parsed.error;
+        } catch {
+          /* not JSON, keep raw text */
+        }
+        throw new Error(message);
       }
 
       const reader = res.body?.getReader();
