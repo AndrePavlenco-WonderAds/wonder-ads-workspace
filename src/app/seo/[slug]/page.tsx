@@ -146,11 +146,11 @@ export default async function ClientPage({
         id="section-data"
         className="animate-fade-up mt-10 scroll-mt-8 sm:mt-14"
       >
-        <SeoProjectContainers slug={slug} clientName={client.title} />
+        <SeoProjectContainers slug={slug} clientName={client.title} clientSlug={slug} />
       </section>
 
       <section className="animate-fade-up mt-10 sm:mt-14">
-        <SeoActions clientName={client.title} />
+        <SeoActions clientName={client.title} clientSlug={slug} />
       </section>
     </PageShell>
   );

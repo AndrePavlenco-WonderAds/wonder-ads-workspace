@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import {
   ArrowRight,
@@ -18,7 +19,7 @@ import {
   useQuickActions,
 } from "@/lib/quick-actions-store";
 
-export function QuickActionsPanel() {
+export function QuickActionsPanel({ clientSlug }: { clientSlug: string }) {
   const pinned = useQuickActions();
   const [editing, setEditing] = useState(false);
 
@@ -69,13 +70,19 @@ export function QuickActionsPanel() {
       {editing ? (
         <EditList pinned={pinned} />
       ) : (
-        <DisplayList pinned={pinned} />
+        <DisplayList pinned={pinned} clientSlug={clientSlug} />
       )}
     </article>
   );
 }
 
-function DisplayList({ pinned }: { pinned: string[] }) {
+function DisplayList({
+  pinned,
+  clientSlug,
+}: {
+  pinned: string[];
+  clientSlug: string;
+}) {
   if (pinned.length === 0) {
     return (
       <div className="mt-4 rounded-xl border border-dashed border-white/10 bg-white/[0.02] px-4 py-6 text-center text-xs text-white/45">
@@ -85,34 +92,32 @@ function DisplayList({ pinned }: { pinned: string[] }) {
   }
   return (
     <ul className="relative mt-4 space-y-1.5">
-      {pinned.map((label) => {
-        const entry = findAction(label);
+      {pinned.map((slug) => {
+        const entry = findAction(slug);
         if (!entry) return null;
         const { Icon } = entry.pillar;
         return (
-          <li key={label}>
-            <button
-              type="button"
-              disabled
-              title="Coming soon — wired to SEO Claude in the next version"
-              className="group flex w-full cursor-not-allowed items-center gap-3 rounded-xl border border-white/8 bg-white/[0.025] px-3 py-2.5 text-left transition disabled:opacity-90"
+          <li key={slug}>
+            <Link
+              href={`/seo/${clientSlug}/actions/${entry.action.slug}`}
+              className="group flex w-full items-center gap-3 rounded-xl border border-white/8 bg-white/[0.025] px-3 py-2.5 text-left transition hover:border-[color:var(--brand-purple)]/45 hover:bg-white/[0.05]"
             >
               <span
                 aria-hidden
-                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white/[0.06] ring-1 ring-white/10"
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white/[0.06] ring-1 ring-white/10 transition group-hover:bg-[color:var(--brand-purple)]/25 group-hover:ring-[color:var(--brand-purple)]/45"
               >
-                <Icon className="h-3.5 w-3.5 text-white/75" strokeWidth={2.25} />
+                <Icon className="h-3.5 w-3.5 text-white/75 transition group-hover:text-white" strokeWidth={2.25} />
               </span>
               <span className="flex-1 min-w-0">
                 <span className="block truncate text-sm font-medium text-white">
-                  {label}
+                  {entry.action.label}
                 </span>
                 <span className="block truncate text-[11px] text-white/50">
                   {entry.pillar.name}
                 </span>
               </span>
-              <ArrowRight className="h-3.5 w-3.5 shrink-0 text-white/30" aria-hidden />
-            </button>
+              <ArrowRight className="h-3.5 w-3.5 shrink-0 text-white/30 transition group-hover:translate-x-0.5 group-hover:text-white/60" aria-hidden />
+            </Link>
           </li>
         );
       })}
@@ -145,13 +150,13 @@ function EditList({ pinned }: { pinned: string[] }) {
                 </span>
               </div>
               <ul className="space-y-1 pl-1">
-                {pillar.actions.map((label) => {
-                  const isPinned = pinned.includes(label);
+                {pillar.actions.map((action) => {
+                  const isPinned = pinned.includes(action.slug);
                   return (
-                    <li key={label}>
+                    <li key={action.slug}>
                       <button
                         type="button"
-                        onClick={() => toggleQuickAction(label)}
+                        onClick={() => toggleQuickAction(action.slug)}
                         className={`flex w-full items-center gap-2.5 rounded-lg border px-2.5 py-1.5 text-left text-xs transition ${
                           isPinned
                             ? "border-[color:var(--brand-purple)]/45 bg-[color:var(--brand-purple)]/15 text-white"
@@ -168,7 +173,7 @@ function EditList({ pinned }: { pinned: string[] }) {
                         >
                           <Check className="h-3 w-3" strokeWidth={3} />
                         </span>
-                        <span className="flex-1 truncate">{label}</span>
+                        <span className="flex-1 truncate">{action.label}</span>
                       </button>
                     </li>
                   );
@@ -198,13 +203,13 @@ function PinnedReorder({ pinned }: { pinned: string[] }) {
         Pinned ({pinned.length})
       </p>
       <ul className="space-y-1">
-        {pinned.map((label, idx) => {
-          const entry = findAction(label);
+        {pinned.map((slug, idx) => {
+          const entry = findAction(slug);
           if (!entry) return null;
           const { Icon } = entry.pillar;
           return (
             <li
-              key={label}
+              key={slug}
               className="flex items-center gap-2 rounded-lg border border-white/8 bg-white/[0.03] px-2 py-1.5"
             >
               <span
@@ -214,13 +219,13 @@ function PinnedReorder({ pinned }: { pinned: string[] }) {
                 <Icon className="h-3 w-3 text-white/75" strokeWidth={2.25} />
               </span>
               <span className="flex-1 truncate text-xs text-white/85">
-                {label}
+                {entry.action.label}
               </span>
               <button
                 type="button"
                 aria-label="Move up"
                 disabled={idx === 0}
-                onClick={() => moveQuickAction(label, -1)}
+                onClick={() => moveQuickAction(slug, -1)}
                 className="rounded p-1 text-white/45 transition hover:bg-white/[0.06] hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
               >
                 <ArrowUp className="h-3 w-3" strokeWidth={2.5} />
@@ -229,15 +234,15 @@ function PinnedReorder({ pinned }: { pinned: string[] }) {
                 type="button"
                 aria-label="Move down"
                 disabled={idx === pinned.length - 1}
-                onClick={() => moveQuickAction(label, 1)}
+                onClick={() => moveQuickAction(slug, 1)}
                 className="rounded p-1 text-white/45 transition hover:bg-white/[0.06] hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
               >
                 <ArrowDown className="h-3 w-3" strokeWidth={2.5} />
               </button>
               <button
                 type="button"
-                aria-label={`Remove ${label}`}
-                onClick={() => toggleQuickAction(label)}
+                aria-label={`Remove ${entry.action.label}`}
+                onClick={() => toggleQuickAction(slug)}
                 className="rounded p-1 text-white/45 transition hover:bg-white/[0.06] hover:text-white"
               >
                 <X className="h-3 w-3" strokeWidth={2.5} />

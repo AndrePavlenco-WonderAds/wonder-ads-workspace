@@ -11,6 +11,19 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: 47,
+    date: "2026-05-16",
+    title: "SEO Claude per client — every action is now functional",
+    highlights: [
+      "Every one of the 22 SEO actions now has its own page at /seo/<client>/actions/<action>, with a live streaming output and full history of past generations.",
+      "Spawned a 'SEO Claude — <client>' persona per client. Every generation is conditioned on that client's Do's, Don'ts, and Notes — and a built-in 2025–2026 SEO best-practice playbook (E-E-A-T, AI Overviews readiness, YMYL guardrails, local pack, link earning).",
+      "Per-action input forms collect just what each action needs (e.g. Write Blog Article asks for topic + primary/secondary keywords + word count; GMB Reviews Responder asks for the review text + sentiment).",
+      "Past generations are persisted to Vercel KV (last 30 per client per action) — expand any entry to review, copy, or delete it.",
+      "Quick Actions and the pillar action cards now link directly to each action's page. Pinning is by slug under the hood (storage v2).",
+      "Action output renders as full Markdown — headings, tables, lists, and fenced JSON-LD blocks for schema generations.",
+    ],
+  },
+  {
     version: 46,
     date: "2026-05-16",
     title: "Editable Quick Actions & polish",

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { Zap, ArrowRight, Pin, PinOff } from "lucide-react";
 import { PILLARS, type Pillar } from "@/lib/seo-pillars";
@@ -8,7 +9,13 @@ import {
   useQuickActions,
 } from "@/lib/quick-actions-store";
 
-export function SeoActions({ clientName }: { clientName: string }) {
+export function SeoActions({
+  clientName,
+  clientSlug,
+}: {
+  clientName: string;
+  clientSlug: string;
+}) {
   const ref = useRef<HTMLElement | null>(null);
   const [shown, setShown] = useState(false);
   const pinned = useQuickActions();
@@ -42,8 +49,8 @@ export function SeoActions({ clientName }: { clientName: string }) {
           Actions
         </h2>
         <span className="text-xs text-white/35">
-          One-click SEO workflows for {clientName} — tap the pin to add an
-          action to Quick Actions.
+          One-click SEO workflows for {clientName} — click any action to run
+          it. Tap the pin to add it to Quick Actions.
         </span>
       </header>
 
@@ -55,6 +62,7 @@ export function SeoActions({ clientName }: { clientName: string }) {
             shown={shown}
             pillarIndex={pi}
             pinned={pinned}
+            clientSlug={clientSlug}
           />
         ))}
       </div>
@@ -67,11 +75,13 @@ function PillarCard({
   shown,
   pillarIndex,
   pinned,
+  clientSlug,
 }: {
   pillar: Pillar;
   shown: boolean;
   pillarIndex: number;
   pinned: string[];
+  clientSlug: string;
 }) {
   const { Icon } = pillar;
   return (
@@ -112,12 +122,12 @@ function PillarCard({
         }`}
       >
         {pillar.actions.map((action, ai) => {
-          const isPinned = pinned.includes(action);
+          const isPinned = pinned.includes(action.slug);
           return (
-            <li key={action} className="relative">
-              <button
-                type="button"
-                title="Coming soon — wired to SEO Claude"
+            <li key={action.slug} className="relative">
+              <Link
+                href={`/seo/${clientSlug}/actions/${action.slug}`}
+                title={action.blurb}
                 style={{
                   transitionDelay: shown
                     ? `${pillarIndex * 90 + ai * 70}ms`
@@ -139,17 +149,14 @@ function PillarCard({
                   />
                 </span>
                 <span className="flex-1 truncate text-sm font-medium text-white/85 transition group-hover:text-white">
-                  {action}
+                  {action.label}
                 </span>
-                <PinButton
-                  label={action}
-                  isPinned={isPinned}
-                />
+                <PinButton slug={action.slug} label={action.label} isPinned={isPinned} />
                 <ArrowRight
                   className="h-3.5 w-3.5 shrink-0 text-white/25 transition group-hover:translate-x-0.5 group-hover:text-white/60"
                   aria-hidden
                 />
-              </button>
+              </Link>
             </li>
           );
         })}
@@ -159,9 +166,11 @@ function PillarCard({
 }
 
 function PinButton({
+  slug,
   label,
   isPinned,
 }: {
+  slug: string;
   label: string;
   isPinned: boolean;
 }) {
@@ -170,21 +179,25 @@ function PinButton({
       role="button"
       tabIndex={0}
       aria-label={
-        isPinned ? `Remove ${label} from Quick Actions` : `Pin ${label} to Quick Actions`
+        isPinned
+          ? `Remove ${label} from Quick Actions`
+          : `Pin ${label} to Quick Actions`
       }
       title={
-        isPinned ? "Pinned to Quick Actions — click to remove" : "Pin to Quick Actions"
+        isPinned
+          ? "Pinned to Quick Actions — click to remove"
+          : "Pin to Quick Actions"
       }
       onClick={(e) => {
         e.preventDefault();
         e.stopPropagation();
-        toggleQuickAction(label);
+        toggleQuickAction(slug);
       }}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
           e.stopPropagation();
-          toggleQuickAction(label);
+          toggleQuickAction(slug);
         }
       }}
       className={`flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-full border transition ${

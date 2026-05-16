@@ -3,26 +3,26 @@
 import { useSyncExternalStore } from "react";
 import { ALL_ACTIONS } from "./seo-pillars";
 
-const KEY = "wa:quick-actions:v1";
+const KEY = "wa:quick-actions:v2";
 
-const DEFAULT_LABELS: string[] = [
-  "Write Blog Article",
-  "Meta Title & Description",
-  "Keyword Research",
-  "SEO Audit",
-  "Find Backlink Directories",
-  "Schema Markup (JSON-LD)",
+const DEFAULT_SLUGS: string[] = [
+  "write-blog-article",
+  "meta-title-description",
+  "keyword-research",
+  "seo-audit",
+  "backlink-directories",
+  "schema-markup",
 ];
 
-const VALID_LABELS = new Set(ALL_ACTIONS.map((a) => a.label));
+const VALID_SLUGS = new Set(ALL_ACTIONS.map((a) => a.action.slug));
 
-function sanitize(labels: unknown): string[] {
-  if (!Array.isArray(labels)) return DEFAULT_LABELS;
+function sanitize(slugs: unknown): string[] {
+  if (!Array.isArray(slugs)) return DEFAULT_SLUGS;
   const seen = new Set<string>();
   const out: string[] = [];
-  for (const item of labels) {
+  for (const item of slugs) {
     if (typeof item !== "string") continue;
-    if (!VALID_LABELS.has(item)) continue;
+    if (!VALID_SLUGS.has(item)) continue;
     if (seen.has(item)) continue;
     seen.add(item);
     out.push(item);
@@ -35,14 +35,14 @@ let cache: string[] | null = null;
 function read(): string[] {
   if (cache) return cache;
   if (typeof window === "undefined") {
-    cache = DEFAULT_LABELS;
+    cache = DEFAULT_SLUGS;
     return cache;
   }
   try {
     const raw = window.localStorage.getItem(KEY);
-    cache = raw ? sanitize(JSON.parse(raw)) : DEFAULT_LABELS;
+    cache = raw ? sanitize(JSON.parse(raw)) : DEFAULT_SLUGS;
   } catch {
-    cache = DEFAULT_LABELS;
+    cache = DEFAULT_SLUGS;
   }
   return cache;
 }
@@ -68,31 +68,31 @@ function subscribe(cb: () => void) {
   };
 }
 
-export function setQuickActions(labels: string[]) {
-  const next = sanitize(labels);
+export function setQuickActions(slugs: string[]) {
+  const next = sanitize(slugs);
   cache = next;
   if (typeof window !== "undefined") {
     try {
       window.localStorage.setItem(KEY, JSON.stringify(next));
     } catch {
-      /* storage might be unavailable; ignore */
+      /* storage might be unavailable */
     }
   }
   emit();
 }
 
-export function toggleQuickAction(label: string) {
+export function toggleQuickAction(slug: string) {
   const current = read();
-  if (current.includes(label)) {
-    setQuickActions(current.filter((l) => l !== label));
+  if (current.includes(slug)) {
+    setQuickActions(current.filter((s) => s !== slug));
   } else {
-    setQuickActions([...current, label]);
+    setQuickActions([...current, slug]);
   }
 }
 
-export function moveQuickAction(label: string, direction: -1 | 1) {
+export function moveQuickAction(slug: string, direction: -1 | 1) {
   const current = read();
-  const idx = current.indexOf(label);
+  const idx = current.indexOf(slug);
   if (idx === -1) return;
   const target = idx + direction;
   if (target < 0 || target >= current.length) return;
@@ -102,9 +102,5 @@ export function moveQuickAction(label: string, direction: -1 | 1) {
 }
 
 export function useQuickActions(): string[] {
-  return useSyncExternalStore(subscribe, read, () => DEFAULT_LABELS);
-}
-
-export function isQuickAction(label: string, list: string[]): boolean {
-  return list.includes(label);
+  return useSyncExternalStore(subscribe, read, () => DEFAULT_SLUGS);
 }
