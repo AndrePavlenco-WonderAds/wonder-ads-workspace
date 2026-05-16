@@ -11,6 +11,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: 51,
+    date: "2026-05-16",
+    title: "SEO Audit crawls 2× more pages",
+    highlights: [
+      "Sample crawl cap bumped from 12 → 25 pages so small/mid sites get fully (or almost fully) covered. Concurrency raised 5 → 8 so it stays fast.",
+      "Progress label now shows the ratio — 'Sample crawl — 25 of 54 pages' instead of just '12 pages' — so you can see how much of the site we actually hit.",
+    ],
+  },
+  {
     version: 50,
     date: "2026-05-16",
     title: "Friendlier action errors",

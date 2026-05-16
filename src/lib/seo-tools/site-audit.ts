@@ -88,7 +88,7 @@ export async function runSiteAudit(
   // ---- Step 1: sitemap discovery (sequential — its output feeds the crawl) ----
   fire({ type: "start", tool: "sitemap", label: "Sitemap discovery" });
   const sitemapStep = await timed<SitemapDiscovery>(() =>
-    discoverSitemap(siteOrigin, { maxUrls: 12 }),
+    discoverSitemap(siteOrigin, { maxUrls: 25 }),
   );
   let sitemap: SitemapDiscovery;
   if (sitemapStep.ok && sitemapStep.value) {
@@ -127,14 +127,19 @@ export async function runSiteAudit(
   const samplePages = uniqueByNormalisedUrl([
     inputUrl,
     ...sitemap.sampledUrls,
-  ]).slice(0, 12);
+  ]).slice(0, 25);
+
+  const sampleLabel =
+    sitemap.totalUrls > 0
+      ? `Sample crawl — ${samplePages.length} of ${sitemap.totalUrls} pages`
+      : `Sample crawl — ${samplePages.length} pages`;
 
   // ---- Step 2: parallel — homepage crawl, sample crawl, PSI x2, GSC ----
   fire({ type: "start", tool: "crawl-home", label: "Homepage HTML" });
   fire({
     type: "start",
     tool: "crawl-sample",
-    label: `Sample crawl (${samplePages.length} pages)`,
+    label: sampleLabel,
   });
   fire({ type: "start", tool: "psi-mobile", label: "PageSpeed — mobile" });
   fire({ type: "start", tool: "psi-desktop", label: "PageSpeed — desktop" });
@@ -148,7 +153,7 @@ export async function runSiteAudit(
     gscStep,
   ] = await Promise.all([
     timed<CrawlResult>(() => crawlPage(inputUrl)),
-    timed<MultiCrawlEntry[]>(() => crawlMany(samplePages, { concurrency: 5 })),
+    timed<MultiCrawlEntry[]>(() => crawlMany(samplePages, { concurrency: 8 })),
     timed<PsiResult>(() => runPageSpeed(inputUrl, "mobile")),
     timed<PsiResult>(() => runPageSpeed(inputUrl, "desktop")),
     timed<SiteAuditGscData>(() => getSiteAuditData(clientSlug, 28)),
@@ -158,16 +163,10 @@ export async function runSiteAudit(
   emitStepDone(fire, "crawl-home", "Homepage HTML", homepageStep, (r) =>
     `HTTP ${r.status}, ${(r.bytes / 1024).toFixed(0)} KB, ${r.h1.length} H1, ${r.jsonLdTypes.length} schema types`,
   );
-  emitStepDone(
-    fire,
-    "crawl-sample",
-    `Sample crawl (${samplePages.length} pages)`,
-    sampleStep,
-    (entries) => {
-      const ok = entries.filter((e) => e.ok).length;
-      return `${ok}/${entries.length} pages successful`;
-    },
-  );
+  emitStepDone(fire, "crawl-sample", sampleLabel, sampleStep, (entries) => {
+    const ok = entries.filter((e) => e.ok).length;
+    return `${ok}/${entries.length} pages successful`;
+  });
   emitStepDone(fire, "psi-mobile", "PageSpeed — mobile", psiMobileStep, (r) =>
     `Perf ${r.scores.performance ?? "—"} · SEO ${r.scores.seo ?? "—"} · A11y ${r.scores.accessibility ?? "—"} · BP ${r.scores.bestPractices ?? "—"}`,
   );
