@@ -27,7 +27,8 @@ export type ActionToolName =
   | "pagespeed-desktop"
   | "sitemap-discovery"
   | "crawl-sample"
-  | "gsc-site-data";
+  | "gsc-site-data"
+  | "dataforseo-domain";
 
 export type ActionDef = {
   slug: string;
@@ -84,6 +85,7 @@ export const PILLARS: Pillar[] = [
           "pagespeed-mobile",
           "pagespeed-desktop",
           "gsc-site-data",
+          "dataforseo-domain",
         ],
         toolUrlField: "pageUrl",
         fields: [

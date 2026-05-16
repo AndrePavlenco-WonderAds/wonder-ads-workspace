@@ -7,6 +7,7 @@ import type { ActionDef, ActionToolName } from "@/lib/seo-pillars";
 import type { HistoryEntry } from "@/lib/action-history";
 import { pendingKey } from "./action-runner";
 import { MarkdownView } from "./markdown-view";
+import { DomainDashboard } from "./domain-dashboard";
 
 type Status = "loading" | "ready" | "generating" | "done" | "error" | "missing";
 
@@ -45,9 +46,22 @@ export function ResultRunner({
   );
 
   const expectedToolSteps = useMemo(() => {
-    if (action.slug === "seo-audit") return 6; // sitemap + crawl-home + crawl-sample + psi×2 + gsc
+    if (action.slug === "seo-audit") return 7; // sitemap + crawl-home + crawl-sample + psi×2 + gsc + dataforseo
     return action.tools?.length ?? 0;
   }, [action.slug, action.tools]);
+
+  // The result card should only show the analysis, not the tool-progress
+  // blockquotes — those are transient build output. The separator (`---`)
+  // emitted by the API marks the boundary.
+  const analysisText = useMemo(() => {
+    const sep = "\n---\n\n";
+    const idx = output.indexOf(sep);
+    if (idx >= 0) return output.slice(idx + sep.length);
+    // No separator yet: if everything we have is progress blockquotes, treat
+    // the analysis as empty (we're still in the tool phase).
+    if (output.trim().startsWith(">")) return "";
+    return output;
+  }, [output]);
 
   // Auto-trigger print dialog in print mode once content is in.
   useEffect(() => {
@@ -195,6 +209,7 @@ export function ResultRunner({
         "sitemap-discovery": "Sitemap",
         "crawl-sample": "Sample crawl",
         "gsc-site-data": "Search Console",
+        "dataforseo-domain": "DataforSEO",
       };
       const remaining = action.tools.filter(
         (t) => !output.includes(`> ✓ **${toolNames[t]}`),
@@ -212,22 +227,54 @@ export function ResultRunner({
       <div className="bg-white text-black">
         <style>{`
           @media print {
-            @page { margin: 18mm 14mm; }
+            @page { margin: 16mm 14mm; }
+            .no-print { display: none !important; }
+            h2 { break-before: page; }
+            h2:first-of-type { break-before: avoid; }
+            table { break-inside: avoid; }
           }
-          .print-doc h1, .print-doc h2, .print-doc h3, .print-doc h4 { color: #0a0a0a; }
-          .print-doc { color: #0a0a0a; }
-          .print-doc a { color: #5b34c9; }
-          .print-doc table { border-collapse: collapse; width: 100%; }
-          .print-doc th, .print-doc td { border-bottom: 1px solid #d4d4d4; padding: 6px 8px; }
-          .print-doc pre { background: #f5f5f5; padding: 12px; border-radius: 6px; overflow: auto; }
-          .print-doc code { background: #f0f0f0; padding: 1px 4px; border-radius: 3px; }
-          .print-doc blockquote { border-left: 3px solid #5b34c9; padding-left: 12px; color: #555; }
+          html, body { background: white !important; }
+          .print-doc { color: #1a1a1a; font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+          .print-doc h1 { font-size: 24px; font-weight: 700; color: #0a0a0a; margin: 0 0 6px; }
+          .print-doc h2 { font-size: 18px; font-weight: 700; color: #0a0a0a; margin: 24px 0 8px; padding-bottom: 4px; border-bottom: 1px solid #d4d4d4; }
+          .print-doc h3 { font-size: 14px; font-weight: 700; color: #1a1a1a; margin: 16px 0 6px; }
+          .print-doc h4 { font-size: 13px; font-weight: 700; color: #1a1a1a; margin: 12px 0 4px; }
+          .print-doc p, .print-doc li { font-size: 12px; line-height: 1.5; }
+          .print-doc strong { font-weight: 700; color: #0a0a0a; }
+          .print-doc a { color: #5b34c9; text-decoration: none; }
+          .print-doc table { border-collapse: collapse; width: 100%; margin: 8px 0; font-size: 11px; }
+          .print-doc th { text-align: left; padding: 6px 8px; border-bottom: 2px solid #1a1a1a; font-weight: 700; }
+          .print-doc td { border-bottom: 1px solid #e5e5e5; padding: 6px 8px; vertical-align: top; }
+          .print-doc pre { background: #f5f5f5; padding: 10px; border-radius: 4px; overflow: auto; font-size: 10.5px; }
+          .print-doc code { background: #f0f0f0; padding: 1px 4px; border-radius: 3px; font-size: 11px; }
+          .print-doc blockquote { border-left: 3px solid #5b34c9; padding-left: 10px; color: #555; margin: 10px 0; }
+          .print-meta { color: #777; font-size: 11px; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid #e5e5e5; }
+          .print-empty { color: #888; padding: 40px 0; text-align: center; }
         `}</style>
         <div className="print-doc mx-auto max-w-3xl p-6">
-          {output ? (
-            <MarkdownView source={output} />
+          {analysisText ? (
+            <>
+              <h1>{action.label}</h1>
+              <div className="print-meta">
+                {resultId} · generated{" "}
+                {new Date().toLocaleString(undefined, {
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                })}
+              </div>
+              <MarkdownView source={analysisText} />
+            </>
           ) : (
-            <p>No result available for printing.</p>
+            <div className="print-empty">
+              <p>
+                <strong>This result hasn&apos;t been saved yet.</strong>
+              </p>
+              <p>
+                Wait for generation to finish in the original tab — once you see
+                the &quot;Done&quot; status there, refresh this page.
+              </p>
+            </div>
           )}
         </div>
       </div>
@@ -286,6 +333,11 @@ export function ResultRunner({
         </article>
       )}
 
+      {/* Domain dashboard (SEO Audit only) */}
+      {action.slug === "seo-audit" && (
+        <DomainDashboard metrics={existing?.metrics ?? null} />
+      )}
+
       {/* Output */}
       <article className="brand-gradient-border relative overflow-hidden rounded-2xl bg-white/[0.035] p-5 backdrop-blur-md">
         <header className="mb-4 flex flex-wrap items-center gap-2">
@@ -323,24 +375,39 @@ export function ResultRunner({
               >
                 Copy
               </button>
-              <a
-                href={`?print=true`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/[0.04] px-2 py-1 text-[11px] text-white/65 transition hover:border-white/25 hover:text-white"
-              >
-                <Download className="h-3 w-3" />
-                Download PDF
-              </a>
+              {status === "done" ? (
+                <a
+                  href={`?print=true`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/[0.04] px-2 py-1 text-[11px] text-white/65 transition hover:border-white/25 hover:text-white"
+                >
+                  <Download className="h-3 w-3" />
+                  Download PDF
+                </a>
+              ) : (
+                <span
+                  title="Available once generation finishes (KV save needs to complete first)"
+                  className="inline-flex cursor-not-allowed items-center gap-1 rounded-md border border-white/8 bg-white/[0.02] px-2 py-1 text-[11px] text-white/30"
+                >
+                  <Download className="h-3 w-3" />
+                  Download PDF (finishing…)
+                </span>
+              )}
             </div>
           )}
         </header>
 
-        {output ? (
-          <MarkdownView source={output} />
+        {analysisText ? (
+          <MarkdownView source={analysisText} />
+        ) : status === "generating" ? (
+          <div className="rounded-xl border border-dashed border-white/10 bg-white/[0.015] px-4 py-8 text-center text-xs text-white/40">
+            Tools are running — SEO Claude will start writing the report once
+            the live data is in.
+          </div>
         ) : (
           <div className="rounded-xl border border-dashed border-white/10 bg-white/[0.015] px-4 py-8 text-center text-xs text-white/40">
-            Waiting for output…
+            No analysis yet.
           </div>
         )}
       </article>

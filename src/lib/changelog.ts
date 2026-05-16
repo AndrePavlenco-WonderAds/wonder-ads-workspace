@@ -11,6 +11,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: 53,
+    date: "2026-05-16",
+    title: "Domain dashboard, deeper audit prompt, PDF fixes",
+    highlights: [
+      "Audit result page now leads with a Semrush-style Domain dashboard — Authority Score, Organic Keywords (+ top-3/top-10 counts), Estimated Organic Traffic, Referring Domains, and a Top Ranked Keywords table with position + intent + volume + ETV.",
+      "Powered by DataforSEO (pay-per-use, ~$0.007 per audit). Set DATAFORSEO_LOGIN + DATAFORSEO_PASSWORD in Vercel env to activate — until then the dashboard shows a 'Connect' CTA.",
+      "SEO Audit prompt completely rewritten: 10 priority issues (was 3), proper executive summary (verdict + 2-3 paragraphs), Quick wins + Strategic bets sections, Scorecard now has a 'What it means' column for non-SEO readers.",
+      "Tool-progress noise hidden from the result card — the saved analysis renders clean, the progress bar shows the steps.",
+      "PDF download fixed: button only enables once KV save completes (was opening empty page), and the print stylesheet is now properly typeset (page breaks per H2, smaller table fonts, real margins).",
+    ],
+  },
+  {
     version: 52,
     date: "2026-05-16",
     title: "Result pages, depth selector, progress bar, PDF download",

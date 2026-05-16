@@ -190,6 +190,8 @@ function toolChipLabel(t: string): string {
       return "Sample crawl";
     case "gsc-site-data":
       return "Search Console";
+    case "dataforseo-domain":
+      return "DataforSEO";
     default:
       return t;
   }

@@ -32,6 +32,12 @@ import {
   formatGscSiteAuditForPrompt,
   type SiteAuditGscData,
 } from "../gsc";
+import {
+  fetchDomainMetrics,
+  formatDomainMetricsForPrompt,
+  dataforSeoConfigured,
+  type DomainMetrics,
+} from "./dataforseo";
 
 export type ToolProgressEvent =
   | { type: "info"; message: string }
@@ -42,12 +48,14 @@ export type ToolProgressEvent =
 export type SiteAuditFactPack = {
   markdown: string;
   events: ToolProgressEvent[];
+  metrics: DomainMetrics | null;
   meta: {
     siteUrl: string;
     pagesCrawled: number;
     psiMobileOk: boolean;
     psiDesktopOk: boolean;
     gscStatus: SiteAuditGscData["status"];
+    domainIntelOk: boolean;
   };
 };
 
@@ -163,6 +171,13 @@ export async function runSiteAudit(
   fire({ type: "start", tool: "psi-mobile", label: "PageSpeed — mobile" });
   fire({ type: "start", tool: "psi-desktop", label: "PageSpeed — desktop" });
   fire({ type: "start", tool: "gsc", label: "Search Console" });
+  fire({
+    type: "start",
+    tool: "dataforseo",
+    label: dataforSeoConfigured
+      ? "Domain intelligence (DataforSEO)"
+      : "Domain intelligence (DataforSEO — not configured)",
+  });
 
   const [
     homepageStep,
@@ -170,6 +185,7 @@ export async function runSiteAudit(
     psiMobileStep,
     psiDesktopStep,
     gscStep,
+    domainStep,
   ] = await Promise.all([
     timed<CrawlResult>(() => crawlPage(inputUrl)),
     timed<MultiCrawlEntry[]>(() =>
@@ -178,6 +194,7 @@ export async function runSiteAudit(
     timed<PsiResult>(() => runPageSpeed(inputUrl, "mobile")),
     timed<PsiResult>(() => runPageSpeed(inputUrl, "desktop")),
     timed<SiteAuditGscData>(() => getSiteAuditData(clientSlug, 28)),
+    timed<DomainMetrics | null>(() => fetchDomainMetrics(inputUrl)),
   ]);
 
   // Report each step
@@ -203,6 +220,17 @@ export async function runSiteAudit(
     if (d.status !== "ok") return d.status;
     return `${d.totals.clicks} clicks / ${d.totals.impressions} impressions / pos ${d.totals.position.toFixed(1)}`;
   });
+  emitStepDone(
+    fire,
+    "dataforseo",
+    "Domain intelligence (DataforSEO)",
+    domainStep,
+    (d) => {
+      if (!d) return "not configured (skipped)";
+      const partial = d.errors.length > 0 ? ` · ${d.errors.length} sub-error(s)` : "";
+      return `Rank ${d.rank ?? "—"} · ${d.organicKeywords ?? "—"} kw · ${d.referringDomains ?? "—"} ref domains${partial}`;
+    },
+  );
 
   // ---- Step 3: compose fact pack ----
   const factParts: string[] = [];
@@ -258,15 +286,31 @@ export async function runSiteAudit(
     factParts.push(`## Search Console pull failed: ${gscStep.error}`);
   }
 
+  const metrics = domainStep.ok && domainStep.value ? domainStep.value : null;
+  if (metrics) {
+    factParts.push("");
+    factParts.push(formatDomainMetricsForPrompt(metrics));
+  } else if (!dataforSeoConfigured) {
+    factParts.push("");
+    factParts.push(
+      `## Domain intelligence\n_Not configured (DATAFORSEO_LOGIN + DATAFORSEO_PASSWORD missing). When connected, this section provides domain authority, organic keyword footprint, backlink profile, and top ranked keywords._`,
+    );
+  } else if (domainStep.error) {
+    factParts.push("");
+    factParts.push(`## Domain intelligence pull failed: ${domainStep.error}`);
+  }
+
   return {
     markdown: factParts.join("\n"),
     events,
+    metrics,
     meta: {
       siteUrl: siteOrigin,
       pagesCrawled: sampleStep.value?.filter((e) => e.ok).length ?? 0,
       psiMobileOk: psiMobileStep.ok,
       psiDesktopOk: psiDesktopStep.ok,
       gscStatus: gscStep.value?.status ?? "error",
+      domainIntelOk: metrics !== null,
     },
   };
 }

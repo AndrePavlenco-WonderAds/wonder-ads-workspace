@@ -18,7 +18,7 @@ export function MarkdownView({ source }: { source: string }) {
           h2: (props) => (
             <h2
               {...props}
-              className="mt-5 mb-2 text-lg font-semibold tracking-tight text-white first:mt-0"
+              className="mt-8 mb-3 border-b border-white/10 pb-1.5 text-lg font-semibold tracking-tight text-white first:mt-0"
             />
           ),
           h3: (props) => (

@@ -22,6 +22,7 @@ import {
   runSiteAudit,
   type SiteAuditDepth,
 } from "@/lib/seo-tools/site-audit";
+import type { DomainMetrics } from "@/lib/seo-tools/dataforseo";
 
 // Vercel Hobby caps at 60s.
 export const maxDuration = 60;
@@ -120,6 +121,7 @@ export async function POST(
       const send = (s: string) => controller.enqueue(encoder.encode(s));
 
       let factPack = "";
+      let auditMetrics: DomainMetrics | null = null;
 
       // ---------- Tool phase ----------
       if (tools.length > 0) {
@@ -151,6 +153,7 @@ export async function POST(
               { depth },
             );
             factPack = pack.markdown;
+            auditMetrics = pack.metrics;
           } catch (err) {
             const message = err instanceof Error ? err.message : String(err);
             send(`> ❌ Site audit orchestrator crashed: ${message.slice(0, 240)}\n`);
@@ -161,7 +164,7 @@ export async function POST(
           send(`> 🔧 Running live tools against \`${targetUrl}\`\n`);
           const dispatchable = tools.filter((t) => t in TOOL_META) as Exclude<
             ActionToolName,
-            "sitemap-discovery" | "crawl-sample" | "gsc-site-data"
+            "sitemap-discovery" | "crawl-sample" | "gsc-site-data" | "dataforseo-domain"
           >[];
           const toolResults = await Promise.allSettled(
             dispatchable.map((t) => runGenericTool(t, targetUrl)),
@@ -237,6 +240,7 @@ export async function POST(
             inputs,
             output: modelText,
             model: MODEL_ID,
+            ...(auditMetrics ? { metrics: auditMetrics } : {}),
           });
         } catch (err) {
           console.error("history append failed:", err);
@@ -286,7 +290,7 @@ const TOOL_META: Partial<Record<ActionToolName, { label: string }>> = {
 async function runGenericTool(
   name: Exclude<
     ActionToolName,
-    "sitemap-discovery" | "crawl-sample" | "gsc-site-data"
+    "sitemap-discovery" | "crawl-sample" | "gsc-site-data" | "dataforseo-domain"
   >,
   url: string,
 ): Promise<ToolRun> {

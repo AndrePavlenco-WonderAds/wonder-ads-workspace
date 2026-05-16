@@ -1,4 +1,5 @@
 import { kv } from "@vercel/kv";
+import type { DomainMetrics } from "./seo-tools/dataforseo";
 
 const KEY_PREFIX = "action-history:";
 const MAX_ENTRIES = 30;
@@ -15,6 +16,10 @@ export type HistoryEntry = {
   inputs: Record<string, string>;
   output: string;
   model: string;
+  /** Structured metrics persisted alongside the markdown — currently only
+   *  populated for SEO Audit when DataforSEO is configured. Powers the
+   *  dashboard cards on the result page. */
+  metrics?: DomainMetrics;
 };
 
 function key(clientSlug: string, actionSlug: string): string {
