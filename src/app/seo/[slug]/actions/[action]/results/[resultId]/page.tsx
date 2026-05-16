@@ -1,0 +1,127 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
+import { PageShell } from "@/components/page-shell";
+import { LogoChip } from "@/components/logo-chip";
+import { ResultRunner } from "@/components/result-runner";
+import { findAction } from "@/lib/seo-pillars";
+import { getClientBySlug } from "@/lib/notion";
+import { getHistoryEntry } from "@/lib/action-history";
+import {
+  getClientLogo,
+  getLogoBgMode,
+  getLogoSizing,
+} from "@/lib/client-meta";
+import { getClientPalette, paletteToGradient } from "@/lib/client-colors";
+
+export const dynamic = "force-dynamic";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string; action: string; resultId: string }>;
+}) {
+  const { slug, action, resultId } = await params;
+  const entry = findAction(action);
+  const client = await getClientBySlug(slug).catch(() => null);
+  if (!entry || !client) return { title: "Result — Wonder Ads Workspace" };
+  return {
+    title: `${entry.action.label} · ${resultId} · ${client.title} — Wonder Ads`,
+  };
+}
+
+export default async function ResultPage({
+  params,
+}: {
+  params: Promise<{ slug: string; action: string; resultId: string }>;
+}) {
+  const { slug, action: actionSlug, resultId } = await params;
+
+  const entry = findAction(actionSlug);
+  if (!entry) notFound();
+
+  const client = await getClientBySlug(slug).catch(() => null);
+  if (!client) notFound();
+
+  const logo = getClientLogo(slug);
+  const logoBgMode = getLogoBgMode(slug);
+  const logoSizing = getLogoSizing(slug);
+  const gradient = paletteToGradient(getClientPalette(slug));
+  const existing = await getHistoryEntry(slug, actionSlug, resultId);
+
+  const { action, pillar } = entry;
+  const { Icon: PillarIcon } = pillar;
+
+  const generatedDate = existing
+    ? new Date(existing.createdAt).toLocaleString(undefined, {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : null;
+
+  return (
+    <PageShell wide>
+      <div className="mt-6 flex items-center gap-4">
+        <Link
+          href={`/seo/${slug}/actions/${actionSlug}`}
+          className="inline-flex items-center gap-1 text-xs text-white/55 transition hover:text-white"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" />
+          Back to {action.label}
+        </Link>
+      </div>
+
+      <header className="animate-fade-up mt-6">
+        <div className="flex items-center gap-2.5 text-[11px] font-medium uppercase tracking-[0.18em] text-white/55">
+          <LogoChip
+            logo={logo}
+            emoji={client.icon}
+            alt={`${client.title} logo`}
+            gradient={gradient}
+            size="md"
+            bgMode={logoBgMode}
+            sizing={logoSizing}
+          />
+          <Link href={`/seo/${slug}`} className="transition hover:text-white">
+            {client.title}
+          </Link>
+          <span className="text-white/25">·</span>
+          <span className="inline-flex items-center gap-1.5">
+            <PillarIcon className="h-3 w-3" strokeWidth={2.25} />
+            {pillar.name}
+          </span>
+          <span className="text-white/25">·</span>
+          <Link
+            href={`/seo/${slug}/actions/${actionSlug}`}
+            className="transition hover:text-white"
+          >
+            {action.label}
+          </Link>
+        </div>
+        <h1 className="mt-3 text-2xl font-semibold leading-tight tracking-tight sm:text-3xl">
+          <span className="brand-gradient-text">{action.label}</span>
+          <span className="ml-2 font-mono text-base text-white/45">
+            · {resultId}
+          </span>
+        </h1>
+        {generatedDate && (
+          <p className="mt-1 text-xs text-white/45">
+            Generated {generatedDate} · model {existing!.model}
+          </p>
+        )}
+      </header>
+
+      <section className="mt-8">
+        <ResultRunner
+          clientSlug={slug}
+          action={action}
+          resultId={resultId}
+          existing={existing}
+        />
+      </section>
+    </PageShell>
+  );
+}

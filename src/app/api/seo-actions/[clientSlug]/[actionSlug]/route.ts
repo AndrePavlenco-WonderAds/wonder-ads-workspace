@@ -18,7 +18,10 @@ import {
   formatCrawlForPrompt,
   type CrawlResult,
 } from "@/lib/seo-tools/crawler";
-import { runSiteAudit } from "@/lib/seo-tools/site-audit";
+import {
+  runSiteAudit,
+  type SiteAuditDepth,
+} from "@/lib/seo-tools/site-audit";
 
 // Vercel Hobby caps at 60s.
 export const maxDuration = 60;
@@ -69,10 +72,17 @@ export async function POST(
   }
 
   let inputs: Record<string, string> = {};
+  let resultId: string | undefined;
   try {
-    const body = (await req.json()) as { inputs?: Record<string, string> };
+    const body = (await req.json()) as {
+      inputs?: Record<string, string>;
+      resultId?: string;
+    };
     if (body.inputs && typeof body.inputs === "object") {
       inputs = body.inputs;
+    }
+    if (typeof body.resultId === "string" && body.resultId.length > 0) {
+      resultId = body.resultId;
     }
   } catch {
     /* empty body is fine */
@@ -120,20 +130,26 @@ export async function POST(
         } else if (entry.action.slug === "seo-audit") {
           // Site-wide audit: orchestrated tool flow with progress events.
           send(`> 🔧 Running site-wide audit against \`${new URL(targetUrl).origin}\`\n`);
+          const depth = parseDepth(inputs.depth);
           try {
-            const pack = await runSiteAudit(targetUrl, clientSlug, (e) => {
-              if (e.type === "start") {
-                send(`> ⏳ **${e.label}**…\n`);
-              } else if (e.type === "done") {
-                send(`> ✓ **${e.label}** — ${e.summary} (${e.ms} ms)\n`);
-              } else if (e.type === "error") {
-                send(
-                  `> ❌ **${e.label}** failed: ${e.message.slice(0, 240)} (${e.ms} ms)\n`,
-                );
-              } else {
-                send(`> ${e.message}\n`);
-              }
-            });
+            const pack = await runSiteAudit(
+              targetUrl,
+              clientSlug,
+              (e) => {
+                if (e.type === "start") {
+                  send(`> ⏳ **${e.label}**…\n`);
+                } else if (e.type === "done") {
+                  send(`> ✓ **${e.label}** — ${e.summary} (${e.ms} ms)\n`);
+                } else if (e.type === "error") {
+                  send(
+                    `> ❌ **${e.label}** failed: ${e.message.slice(0, 240)} (${e.ms} ms)\n`,
+                  );
+                } else {
+                  send(`> ${e.message}\n`);
+                }
+              },
+              { depth },
+            );
             factPack = pack.markdown;
           } catch (err) {
             const message = err instanceof Error ? err.message : String(err);
@@ -215,6 +231,7 @@ export async function POST(
       if (modelText.trim()) {
         try {
           await appendHistory({
+            id: resultId,
             clientSlug,
             actionSlug,
             inputs,
@@ -240,6 +257,20 @@ export async function POST(
       "x-accel-buffering": "no",
     },
   });
+}
+
+function parseDepth(raw: string | undefined): SiteAuditDepth {
+  switch ((raw ?? "").toLowerCase()) {
+    case "quick":
+      return "Quick";
+    case "deep":
+      return "Deep";
+    case "all":
+      return "All";
+    case "standard":
+    default:
+      return "Standard";
+  }
 }
 
 // ---------- Generic tool dispatch (used by non-orchestrated actions) ----------

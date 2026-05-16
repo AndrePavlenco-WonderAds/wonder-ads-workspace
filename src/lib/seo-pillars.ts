@@ -97,6 +97,15 @@ export const PILLARS: Pillar[] = [
               "Defaults to this client's website. We'll discover the sitemap, crawl a sample of pages, run PageSpeed Insights on the homepage, and pull Search Console — then SEO Claude analyses the whole site.",
           },
           {
+            key: "depth",
+            label: "Crawl depth",
+            type: "select",
+            options: ["Quick", "Standard", "Deep", "All"],
+            defaultValue: "Standard",
+            helpText:
+              "Quick = 10 pages, Standard = 25, Deep = 50, All = up to 100. Deeper audits give richer findings but push the 60s function limit.",
+          },
+          {
             key: "focus",
             label: "Focus",
             type: "select",

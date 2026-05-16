@@ -72,11 +72,26 @@ async function timed<T>(fn: () => Promise<T>): Promise<StepResult<T>> {
   }
 }
 
+export type SiteAuditDepth = "Quick" | "Standard" | "Deep" | "All";
+
+const DEPTH_SETTINGS: Record<
+  SiteAuditDepth,
+  { maxPages: number; concurrency: number }
+> = {
+  Quick: { maxPages: 10, concurrency: 6 },
+  Standard: { maxPages: 25, concurrency: 8 },
+  Deep: { maxPages: 50, concurrency: 10 },
+  All: { maxPages: 100, concurrency: 12 },
+};
+
 export async function runSiteAudit(
   inputUrl: string,
   clientSlug: string,
   emit: (event: ToolProgressEvent) => void,
+  opts: { depth?: SiteAuditDepth } = {},
 ): Promise<SiteAuditFactPack> {
+  const depth: SiteAuditDepth = opts.depth ?? "Standard";
+  const { maxPages, concurrency } = DEPTH_SETTINGS[depth];
   const events: ToolProgressEvent[] = [];
   function fire(event: ToolProgressEvent) {
     events.push(event);
@@ -86,9 +101,13 @@ export async function runSiteAudit(
   const siteOrigin = new URL(inputUrl).origin;
 
   // ---- Step 1: sitemap discovery (sequential — its output feeds the crawl) ----
+  fire({
+    type: "info",
+    message: `Depth: ${depth} — sampling up to ${maxPages} pages`,
+  });
   fire({ type: "start", tool: "sitemap", label: "Sitemap discovery" });
   const sitemapStep = await timed<SitemapDiscovery>(() =>
-    discoverSitemap(siteOrigin, { maxUrls: 25 }),
+    discoverSitemap(siteOrigin, { maxUrls: maxPages }),
   );
   let sitemap: SitemapDiscovery;
   if (sitemapStep.ok && sitemapStep.value) {
@@ -127,7 +146,7 @@ export async function runSiteAudit(
   const samplePages = uniqueByNormalisedUrl([
     inputUrl,
     ...sitemap.sampledUrls,
-  ]).slice(0, 25);
+  ]).slice(0, maxPages);
 
   const sampleLabel =
     sitemap.totalUrls > 0
@@ -153,7 +172,9 @@ export async function runSiteAudit(
     gscStep,
   ] = await Promise.all([
     timed<CrawlResult>(() => crawlPage(inputUrl)),
-    timed<MultiCrawlEntry[]>(() => crawlMany(samplePages, { concurrency: 8 })),
+    timed<MultiCrawlEntry[]>(() =>
+      crawlMany(samplePages, { concurrency }),
+    ),
     timed<PsiResult>(() => runPageSpeed(inputUrl, "mobile")),
     timed<PsiResult>(() => runPageSpeed(inputUrl, "desktop")),
     timed<SiteAuditGscData>(() => getSiteAuditData(clientSlug, 28)),

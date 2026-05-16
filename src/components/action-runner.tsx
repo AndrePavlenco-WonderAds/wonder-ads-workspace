@@ -1,27 +1,28 @@
 "use client";
 
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { useEffect, useState, useCallback } from "react";
 import {
   Clock,
   Loader2,
   Play,
   Trash2,
-  ChevronDown,
-  ChevronUp,
-  Square,
   Sparkles,
 } from "lucide-react";
 import type { ActionDef } from "@/lib/seo-pillars";
 import type { HistoryEntry } from "@/lib/action-history";
-import { MarkdownView } from "./markdown-view";
+import { makeResultId } from "@/lib/action-history";
 
-type Status = "idle" | "streaming" | "done" | "error";
+const PENDING_PREFIX = "wa:pending-gen:";
+
+export function pendingKey(
+  clientSlug: string,
+  actionSlug: string,
+  resultId: string,
+): string {
+  return `${PENDING_PREFIX}${clientSlug}:${actionSlug}:${resultId}`;
+}
 
 export function ActionRunner({
   clientSlug,
@@ -34,6 +35,7 @@ export function ActionRunner({
   action: ActionDef;
   defaults?: Record<string, string>;
 }) {
+  const router = useRouter();
   const [values, setValues] = useState<Record<string, string>>(() => {
     const init: Record<string, string> = {};
     for (const f of action.fields) {
@@ -41,18 +43,11 @@ export function ActionRunner({
     }
     return init;
   });
-  const [output, setOutput] = useState("");
-  const [status, setStatus] = useState<Status>("idle");
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [historyLoading, setHistoryLoading] = useState(true);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
-  const abortRef = useRef<AbortController | null>(null);
+  const [navigating, setNavigating] = useState(false);
 
-  const apiBase = useMemo(
-    () => `/api/seo-actions/${clientSlug}/${action.slug}`,
-    [clientSlug, action.slug],
-  );
+  const apiBase = `/api/seo-actions/${clientSlug}/${action.slug}`;
 
   const loadHistory = useCallback(async () => {
     setHistoryLoading(true);
@@ -80,72 +75,23 @@ export function ActionRunner({
     setValues((v) => ({ ...v, [key]: value }));
   }
 
-  function stop() {
-    abortRef.current?.abort();
-  }
-
-  async function run() {
-    if (status === "streaming") return;
-    setOutput("");
-    setStatus("streaming");
-    setErrorMsg(null);
-
-    const controller = new AbortController();
-    abortRef.current = controller;
-
+  function run() {
+    if (navigating || requiredMissing) return;
+    setNavigating(true);
+    const resultId = makeResultId();
     try {
-      const res = await fetch(apiBase, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ inputs: values }),
-        signal: controller.signal,
-      });
-
-      if (!res.ok) {
-        const text = await res.text().catch(() => "");
-        // Server returns `{ error: "..." }` on validation/config failures —
-        // surface the human message, not the raw JSON.
-        let message = text || `HTTP ${res.status}`;
-        try {
-          const parsed = JSON.parse(text) as { error?: unknown };
-          if (typeof parsed?.error === "string") message = parsed.error;
-        } catch {
-          /* not JSON, keep raw text */
-        }
-        throw new Error(message);
-      }
-
-      const reader = res.body?.getReader();
-      if (!reader) throw new Error("No response body");
-
-      const decoder = new TextDecoder();
-      let acc = "";
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        acc += decoder.decode(value, { stream: true });
-        setOutput(acc);
-      }
-      acc += decoder.decode();
-      setOutput(acc);
-      setStatus("done");
-      // give KV a beat to persist before refetching
-      setTimeout(() => loadHistory(), 400);
+      sessionStorage.setItem(
+        pendingKey(clientSlug, action.slug, resultId),
+        JSON.stringify(values),
+      );
     } catch (err) {
-      if ((err as Error).name === "AbortError") {
-        setStatus("idle");
-        return;
-      }
-      console.error("run failed:", err);
-      setErrorMsg((err as Error).message || "Generation failed.");
-      setStatus("error");
-    } finally {
-      abortRef.current = null;
+      console.error("sessionStorage write failed:", err);
     }
+    router.push(`/seo/${clientSlug}/actions/${action.slug}/results/${resultId}`);
   }
 
   async function deleteEntry(id: string) {
-    if (!confirm("Delete this past generation?")) return;
+    if (!confirm("Delete this past result?")) return;
     try {
       await fetch(`${apiBase}/history?id=${encodeURIComponent(id)}`, {
         method: "DELETE",
@@ -156,108 +102,57 @@ export function ActionRunner({
     }
   }
 
-  const isStreaming = status === "streaming";
-
   return (
-    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_360px]">
-      {/* Main column: form + output */}
-      <div className="space-y-5">
-        <article className="brand-gradient-border relative overflow-hidden rounded-2xl bg-white/[0.035] p-5 backdrop-blur-md">
-          <header className="mb-4 flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-white/65" strokeWidth={2.25} />
-            <h2 className="text-sm font-semibold tracking-tight text-white">
-              New generation for {clientName}
-            </h2>
-          </header>
+    <div className="space-y-6">
+      <article className="brand-gradient-border relative overflow-hidden rounded-2xl bg-white/[0.035] p-5 backdrop-blur-md">
+        <header className="mb-4 flex items-center gap-2">
+          <Sparkles className="h-4 w-4 text-white/65" strokeWidth={2.25} />
+          <h2 className="text-sm font-semibold tracking-tight text-white">
+            New generation for {clientName}
+          </h2>
+        </header>
 
-          <div className="space-y-4">
-            {action.fields.map((f) => (
-              <FieldRow
-                key={f.key}
-                field={f}
-                value={values[f.key] ?? ""}
-                onChange={(v) => setField(f.key, v)}
-                disabled={isStreaming}
-              />
-            ))}
-          </div>
+        <div className="space-y-4">
+          {action.fields.map((f) => (
+            <FieldRow
+              key={f.key}
+              field={f}
+              value={values[f.key] ?? ""}
+              onChange={(v) => setField(f.key, v)}
+              disabled={navigating}
+            />
+          ))}
+        </div>
 
-          <div className="mt-5 flex items-center gap-3">
-            <button
-              type="button"
-              onClick={run}
-              disabled={isStreaming || requiredMissing}
-              className="brand-gradient-bg inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white shadow-[0_6px_24px_-4px_rgba(120,61,245,0.6)] transition-all hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:scale-100"
-            >
-              {isStreaming ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Play className="h-4 w-4" strokeWidth={2.5} />
-              )}
-              {isStreaming ? "Generating…" : "Generate"}
-            </button>
-            {isStreaming && (
-              <button
-                type="button"
-                onClick={stop}
-                className="inline-flex items-center gap-2 rounded-lg border border-white/15 bg-white/[0.04] px-3 py-2 text-xs font-medium text-white/75 transition hover:border-white/30 hover:text-white"
-              >
-                <Square className="h-3 w-3" />
-                Stop
-              </button>
+        <div className="mt-5 flex items-center gap-3">
+          <button
+            type="button"
+            onClick={run}
+            disabled={navigating || requiredMissing}
+            className="brand-gradient-bg inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white shadow-[0_6px_24px_-4px_rgba(120,61,245,0.6)] transition-all hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:scale-100"
+          >
+            {navigating ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Play className="h-4 w-4" strokeWidth={2.5} />
             )}
-            {requiredMissing && !isStreaming && (
-              <span className="text-xs text-white/40">
-                Fill in the required fields to generate.
-              </span>
-            )}
-          </div>
-
-          {errorMsg && (
-            <div className="mt-4 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-300">
-              {errorMsg}
-            </div>
+            {navigating ? "Opening result page…" : "Generate"}
+          </button>
+          {requiredMissing && !navigating && (
+            <span className="text-xs text-white/40">
+              Fill in the required fields to generate.
+            </span>
           )}
-        </article>
+        </div>
+      </article>
 
-        <article className="brand-gradient-border relative overflow-hidden rounded-2xl bg-white/[0.035] p-5 backdrop-blur-md">
-          <header className="mb-4 flex items-center justify-between">
-            <h2 className="text-sm font-semibold tracking-tight text-white">
-              {status === "idle"
-                ? "Output will appear here"
-                : status === "streaming"
-                  ? "Live output"
-                  : "Latest output"}
-            </h2>
-            {output && (
-              <button
-                type="button"
-                onClick={() => navigator.clipboard.writeText(output)}
-                className="rounded-md border border-white/10 bg-white/[0.04] px-2 py-1 text-[11px] text-white/65 transition hover:border-white/25 hover:text-white"
-              >
-                Copy
-              </button>
-            )}
-          </header>
-
-          {output ? (
-            <MarkdownView source={output} />
-          ) : (
-            <div className="rounded-xl border border-dashed border-white/10 bg-white/[0.015] px-4 py-8 text-center text-xs text-white/40">
-              Run the action to see the live, streaming output here.
-            </div>
-          )}
-        </article>
-      </div>
-
-      {/* Sidebar: history */}
-      <aside className="space-y-3">
-        <header className="flex items-center gap-2">
+      <section>
+        <header className="mb-3 flex items-center gap-2">
           <Clock className="h-4 w-4 text-white/55" strokeWidth={2.25} />
           <h2 className="text-sm font-medium uppercase tracking-[0.18em] text-white/55">
-            History
+            Past results
           </h2>
-          <span className="ml-auto text-[10px] font-semibold uppercase tracking-[0.18em] text-white/30">
+          <span className="ml-2 text-[10px] font-bold uppercase tracking-[0.18em] text-white/30">
             {history.length}
           </span>
         </header>
@@ -267,94 +162,77 @@ export function ActionRunner({
             Loading…
           </div>
         ) : history.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-white/10 bg-white/[0.015] px-3 py-6 text-center text-xs text-white/40">
-            No past generations yet.
+          <div className="rounded-xl border border-dashed border-white/10 bg-white/[0.015] px-3 py-8 text-center text-xs text-white/40">
+            No past results yet. Generate one above — each run gets its own
+            page you can come back to or share.
           </div>
         ) : (
-          <ul className="space-y-2">
+          <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {history.map((e) => {
-              const isOpen = expandedId === e.id;
               const date = new Date(e.createdAt);
               return (
                 <li
                   key={e.id}
-                  className="rounded-xl border border-white/10 bg-white/[0.025]"
+                  className="brand-gradient-border group relative overflow-hidden rounded-xl bg-white/[0.025]"
                 >
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setExpandedId(isOpen ? null : e.id)
-                    }
-                    className="flex w-full items-center gap-2 px-3 py-2 text-left"
+                  <Link
+                    href={`/seo/${clientSlug}/actions/${action.slug}/results/${e.id}`}
+                    className="block p-3 transition group-hover:bg-white/[0.04]"
                   >
-                    <span className="flex-1 truncate text-xs text-white/75">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-mono text-[11px] text-white/55">
+                        {e.id}
+                      </span>
+                      <span className="text-[10px] uppercase tracking-[0.13em] text-white/35">
+                        {e.model.replace("claude-", "")}
+                      </span>
+                    </div>
+                    <div className="mt-1 text-sm font-medium text-white">
                       {date.toLocaleString(undefined, {
+                        year: "numeric",
                         month: "short",
                         day: "numeric",
                         hour: "2-digit",
                         minute: "2-digit",
                       })}
-                    </span>
-                    <span className="text-[10px] uppercase tracking-[0.13em] text-white/40">
-                      {e.model.replace("claude-", "")}
-                    </span>
-                    {isOpen ? (
-                      <ChevronUp className="h-3.5 w-3.5 text-white/45" />
-                    ) : (
-                      <ChevronDown className="h-3.5 w-3.5 text-white/45" />
-                    )}
-                  </button>
-                  {isOpen && (
-                    <div className="space-y-3 border-t border-white/8 px-3 py-3">
-                      <details>
-                        <summary className="cursor-pointer text-[10px] font-bold uppercase tracking-[0.18em] text-white/45 hover:text-white/70">
-                          Inputs
-                        </summary>
-                        <dl className="mt-2 space-y-1 text-[12px]">
-                          {Object.entries(e.inputs).map(([k, v]) =>
-                            v && v.trim() ? (
-                              <div key={k}>
-                                <dt className="text-white/45">{k}</dt>
-                                <dd className="text-white/80 whitespace-pre-wrap">
-                                  {v}
-                                </dd>
-                              </div>
-                            ) : null,
-                          )}
-                        </dl>
-                      </details>
-                      <div className="rounded-lg border border-white/8 bg-black/20 p-3">
-                        <MarkdownView source={e.output} />
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            navigator.clipboard.writeText(e.output)
-                          }
-                          className="rounded-md border border-white/10 bg-white/[0.04] px-2 py-1 text-[11px] text-white/65 hover:border-white/25 hover:text-white"
-                        >
-                          Copy
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => deleteEntry(e.id)}
-                          className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/[0.04] px-2 py-1 text-[11px] text-white/50 hover:border-red-400/40 hover:text-red-300"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                          Delete
-                        </button>
-                      </div>
                     </div>
-                  )}
+                    <div className="mt-2 line-clamp-2 text-[11px] text-white/55">
+                      {firstLineOfMarkdown(e.output) || "—"}
+                    </div>
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={(ev) => {
+                      ev.preventDefault();
+                      ev.stopPropagation();
+                      deleteEntry(e.id);
+                    }}
+                    aria-label={`Delete ${e.id}`}
+                    className="absolute right-2 top-2 hidden rounded-md border border-white/10 bg-black/30 p-1 text-white/50 transition hover:border-red-400/40 hover:text-red-300 group-hover:block"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </button>
                 </li>
               );
             })}
           </ul>
         )}
-      </aside>
+      </section>
     </div>
   );
+}
+
+function firstLineOfMarkdown(s: string): string {
+  if (!s) return "";
+  // Skip our tool-progress blockquotes + headings; find the first paragraph.
+  for (const raw of s.split("\n")) {
+    const line = raw.trim();
+    if (!line) continue;
+    if (line.startsWith(">") || line.startsWith("#") || line.startsWith("---"))
+      continue;
+    return line.replace(/[*_`]/g, "").slice(0, 160);
+  }
+  return s.slice(0, 160);
 }
 
 function FieldRow({

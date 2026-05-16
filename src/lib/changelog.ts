@@ -11,6 +11,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: 52,
+    date: "2026-05-16",
+    title: "Result pages, depth selector, progress bar, PDF download",
+    highlights: [
+      "Each generation now creates its own permanent page at /seo/<client>/actions/<action>/results/<resultId> (resultId = YYYY-MM-DD-HHMM-xx). Bookmark it, share it, come back to it.",
+      "SEO Audit gets a Crawl depth selector — Quick (10 pages) / Standard (25) / Deep (50) / All (up to 100). Concurrency scales with depth so the audit stays fast.",
+      "Real progress bar (%) on the result page — counts tool steps as they complete, then time-based estimate during SEO Claude's writing phase.",
+      "Download PDF button on every result page — opens a print-styled view that auto-triggers your browser's Save-as-PDF dialog.",
+      "Action page is now form + a 'Past results' grid (cards link to each result page) — the sidebar history is gone.",
+    ],
+  },
+  {
     version: 51,
     date: "2026-05-16",
     title: "SEO Audit crawls 2× more pages",
