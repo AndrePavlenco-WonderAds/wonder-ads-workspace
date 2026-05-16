@@ -11,6 +11,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: 46,
+    date: "2026-05-16",
+    title: "Editable Quick Actions & polish",
+    highlights: [
+      "Quick Actions is now editable in-app: click 'Edit' on the panel to add, remove, or reorder actions.",
+      "Pin / unpin any action directly from the Actions pillars below — the pin icon syncs both lists live.",
+      "Each pillar action now shows its parent pillar's icon (page, globe, map pin, pen, gauge) instead of a generic sparkle.",
+      "On shared 'SEO & ADS' clients, the website chip is now pushed to the far right of the header tags.",
+      "Quick Actions selection persists in your browser and syncs across tabs.",
+    ],
+  },
+  {
     version: 45,
     date: "2026-05-15",
     title: "SEO actions reorg",

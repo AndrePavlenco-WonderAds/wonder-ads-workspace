@@ -80,6 +80,15 @@ export default async function AdsClientPage({
             <span className="inline-flex items-center rounded-full border border-white/15 bg-white/5 px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-[0.18em] text-white/70">
               {shared ? "SEO & ADS Client" : "ADS DPT · Client"}
             </span>
+            {shared && (
+              <span
+                className="inline-flex items-center gap-1 rounded-full border border-white/12 bg-white/[0.04] px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-[0.13em] text-white/45"
+                title="Do's, Don'ts and Notes are kept in sync between the SEO and ADS departments for this client."
+              >
+                <RefreshCw className="h-2.5 w-2.5" />
+                Synced across SEO &amp; ADS
+              </span>
+            )}
             {website && (
               <a
                 href={website}
@@ -90,15 +99,6 @@ export default async function AdsClientPage({
                 {displayDomain(website)}
                 <ExternalLink className="h-3 w-3" />
               </a>
-            )}
-            {shared && (
-              <span
-                className="inline-flex items-center gap-1 rounded-full border border-white/12 bg-white/[0.04] px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-[0.13em] text-white/45"
-                title="Do's, Don'ts and Notes are kept in sync between the SEO and ADS departments for this client."
-              >
-                <RefreshCw className="h-2.5 w-2.5" />
-                Synced across SEO &amp; ADS
-              </span>
             )}
           </div>
           <h1 className="mt-2 text-4xl font-semibold leading-[1.05] tracking-tight text-white sm:text-5xl">

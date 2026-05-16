@@ -1,89 +1,17 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Zap, ArrowRight, Pin, PinOff } from "lucide-react";
+import { PILLARS, type Pillar } from "@/lib/seo-pillars";
 import {
-  Zap,
-  FileText,
-  Globe,
-  MapPin,
-  PenLine,
-  Gauge,
-  ArrowRight,
-  Sparkles,
-  type LucideIcon,
-} from "lucide-react";
-
-type Pillar = {
-  name: string;
-  Icon: LucideIcon;
-  blurb: string;
-  actions: string[];
-  fullWidth?: boolean;
-};
-
-// The SEO action playbook. Each action will wire to SEO Claude in a later
-// version — for now they're the catalogue of one-click workflows.
-const PILLARS: Pillar[] = [
-  {
-    name: "Overall SEO",
-    Icon: Gauge,
-    blurb: "High-level audits and strategic research.",
-    actions: ["SEO Audit", "Keyword Research"],
-    fullWidth: true,
-  },
-  {
-    name: "On-Page SEO",
-    Icon: FileText,
-    blurb: "Optimise what's on the page itself.",
-    actions: [
-      "Generate Header Tags",
-      "Meta Title & Description",
-      "Image Alt Text",
-      "Internal Linking Suggestions",
-      "Schema Markup (JSON-LD)",
-      "Content Gap Analysis",
-    ],
-  },
-  {
-    name: "Off-Page SEO",
-    Icon: Globe,
-    blurb: "Build authority from outside the site.",
-    actions: [
-      "Find Backlink Directories",
-      "Outreach Email Drafts",
-      "Competitor Backlink Gap",
-      "Broken-Link Building",
-      "Digital PR Angles",
-    ],
-  },
-  {
-    name: "Local SEO",
-    Icon: MapPin,
-    blurb: "Win the map pack and local searches.",
-    actions: [
-      "GMB Profile Audit",
-      "GMB Posts Creation",
-      "Local Citation Check",
-      "GMB Reviews Responder",
-    ],
-  },
-  {
-    name: "Content",
-    Icon: PenLine,
-    blurb: "Plan and produce content that ranks.",
-    actions: [
-      "Write Blog Article",
-      "Content Calendar",
-      "Blog Roadmap",
-      "Refresh Existing Content",
-      "FAQ Section Generator",
-    ],
-  },
-];
+  toggleQuickAction,
+  useQuickActions,
+} from "@/lib/quick-actions-store";
 
 export function SeoActions({ clientName }: { clientName: string }) {
   const ref = useRef<HTMLElement | null>(null);
   const [shown, setShown] = useState(false);
+  const pinned = useQuickActions();
 
   useEffect(() => {
     const el = ref.current;
@@ -114,8 +42,8 @@ export function SeoActions({ clientName }: { clientName: string }) {
           Actions
         </h2>
         <span className="text-xs text-white/35">
-          One-click SEO workflows for {clientName} — wiring to SEO Claude in
-          upcoming versions.
+          One-click SEO workflows for {clientName} — tap the pin to add an
+          action to Quick Actions.
         </span>
       </header>
 
@@ -126,6 +54,7 @@ export function SeoActions({ clientName }: { clientName: string }) {
             pillar={pillar}
             shown={shown}
             pillarIndex={pi}
+            pinned={pinned}
           />
         ))}
       </div>
@@ -137,10 +66,12 @@ function PillarCard({
   pillar,
   shown,
   pillarIndex,
+  pinned,
 }: {
   pillar: Pillar;
   shown: boolean;
   pillarIndex: number;
+  pinned: string[];
 }) {
   const { Icon } = pillar;
   return (
@@ -180,42 +111,93 @@ function PillarCard({
             : "space-y-2"
         }`}
       >
-        {pillar.actions.map((action, ai) => (
-          <li key={action}>
-            <button
-              type="button"
-              title="Coming soon — wired to SEO Claude"
-              style={{
-                transitionDelay: shown
-                  ? `${pillarIndex * 90 + ai * 70}ms`
-                  : "0ms",
-              }}
-              className={`group relative flex w-full items-center gap-3 rounded-full border border-white/10 bg-white/[0.03] py-1.5 pl-1.5 pr-3 text-left transition-all duration-500 ease-out hover:border-[color:var(--brand-purple)]/45 hover:bg-white/[0.06] ${
-                shown
-                  ? "translate-y-0 opacity-100"
-                  : "translate-y-3 opacity-0"
-              }`}
-            >
-              <span
-                aria-hidden
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/[0.06] ring-1 ring-white/12 transition group-hover:bg-[color:var(--brand-purple)]/25 group-hover:ring-[color:var(--brand-purple)]/45"
+        {pillar.actions.map((action, ai) => {
+          const isPinned = pinned.includes(action);
+          return (
+            <li key={action} className="relative">
+              <button
+                type="button"
+                title="Coming soon — wired to SEO Claude"
+                style={{
+                  transitionDelay: shown
+                    ? `${pillarIndex * 90 + ai * 70}ms`
+                    : "0ms",
+                }}
+                className={`group relative flex w-full items-center gap-3 rounded-full border border-white/10 bg-white/[0.03] py-1.5 pl-1.5 pr-3 text-left transition-all duration-500 ease-out hover:border-[color:var(--brand-purple)]/45 hover:bg-white/[0.06] ${
+                  shown
+                    ? "translate-y-0 opacity-100"
+                    : "translate-y-3 opacity-0"
+                }`}
               >
-                <Sparkles
-                  className="h-3.5 w-3.5 text-white/65 transition group-hover:text-white"
-                  strokeWidth={2.25}
+                <span
+                  aria-hidden
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/[0.06] ring-1 ring-white/12 transition group-hover:bg-[color:var(--brand-purple)]/25 group-hover:ring-[color:var(--brand-purple)]/45"
+                >
+                  <Icon
+                    className="h-3.5 w-3.5 text-white/65 transition group-hover:text-white"
+                    strokeWidth={2.25}
+                  />
+                </span>
+                <span className="flex-1 truncate text-sm font-medium text-white/85 transition group-hover:text-white">
+                  {action}
+                </span>
+                <PinButton
+                  label={action}
+                  isPinned={isPinned}
                 />
-              </span>
-              <span className="flex-1 truncate text-sm font-medium text-white/85 transition group-hover:text-white">
-                {action}
-              </span>
-              <ArrowRight
-                className="h-3.5 w-3.5 shrink-0 text-white/25 transition group-hover:translate-x-0.5 group-hover:text-white/60"
-                aria-hidden
-              />
-            </button>
-          </li>
-        ))}
+                <ArrowRight
+                  className="h-3.5 w-3.5 shrink-0 text-white/25 transition group-hover:translate-x-0.5 group-hover:text-white/60"
+                  aria-hidden
+                />
+              </button>
+            </li>
+          );
+        })}
       </ol>
     </article>
+  );
+}
+
+function PinButton({
+  label,
+  isPinned,
+}: {
+  label: string;
+  isPinned: boolean;
+}) {
+  return (
+    <span
+      role="button"
+      tabIndex={0}
+      aria-label={
+        isPinned ? `Remove ${label} from Quick Actions` : `Pin ${label} to Quick Actions`
+      }
+      title={
+        isPinned ? "Pinned to Quick Actions — click to remove" : "Pin to Quick Actions"
+      }
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        toggleQuickAction(label);
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          e.stopPropagation();
+          toggleQuickAction(label);
+        }
+      }}
+      className={`flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-full border transition ${
+        isPinned
+          ? "border-[color:var(--brand-purple)]/55 bg-[color:var(--brand-purple)]/25 text-white"
+          : "border-white/10 bg-white/[0.04] text-white/35 hover:border-white/30 hover:text-white/80"
+      }`}
+    >
+      {isPinned ? (
+        <Pin className="h-3 w-3" strokeWidth={2.25} />
+      ) : (
+        <PinOff className="h-3 w-3" strokeWidth={2.25} />
+      )}
+    </span>
   );
 }
