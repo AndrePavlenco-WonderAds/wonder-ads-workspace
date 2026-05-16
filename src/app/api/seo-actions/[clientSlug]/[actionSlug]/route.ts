@@ -18,9 +18,9 @@ import {
   formatCrawlForPrompt,
   type CrawlResult,
 } from "@/lib/seo-tools/crawler";
+import { runSiteAudit } from "@/lib/seo-tools/site-audit";
 
-// Vercel Hobby caps at 60s. Two PSI calls + crawl + Claude streaming has to
-// fit inside that — we run the PSI calls in parallel to stay under the cap.
+// Vercel Hobby caps at 60s.
 export const maxDuration = 60;
 export const runtime = "nodejs";
 
@@ -117,20 +117,46 @@ export async function POST(
           send(
             `> ⚠️ No URL provided in **${toolUrlField}** — running without live tools.\n\n`,
           );
+        } else if (entry.action.slug === "seo-audit") {
+          // Site-wide audit: orchestrated tool flow with progress events.
+          send(`> 🔧 Running site-wide audit against \`${new URL(targetUrl).origin}\`\n`);
+          try {
+            const pack = await runSiteAudit(targetUrl, clientSlug, (e) => {
+              if (e.type === "start") {
+                send(`> ⏳ **${e.label}**…\n`);
+              } else if (e.type === "done") {
+                send(`> ✓ **${e.label}** — ${e.summary} (${e.ms} ms)\n`);
+              } else if (e.type === "error") {
+                send(
+                  `> ❌ **${e.label}** failed: ${e.message.slice(0, 240)} (${e.ms} ms)\n`,
+                );
+              } else {
+                send(`> ${e.message}\n`);
+              }
+            });
+            factPack = pack.markdown;
+          } catch (err) {
+            const message = err instanceof Error ? err.message : String(err);
+            send(`> ❌ Site audit orchestrator crashed: ${message.slice(0, 240)}\n`);
+          }
+          send("\n---\n\n");
         } else {
+          // Generic per-tool parallel dispatch.
           send(`> 🔧 Running live tools against \`${targetUrl}\`\n`);
-
+          const dispatchable = tools.filter((t) => t in TOOL_META) as Exclude<
+            ActionToolName,
+            "sitemap-discovery" | "crawl-sample" | "gsc-site-data"
+          >[];
           const toolResults = await Promise.allSettled(
-            tools.map((t) => runTool(t, targetUrl)),
+            dispatchable.map((t) => runGenericTool(t, targetUrl)),
           );
-
           const pieces: string[] = [];
-          tools.forEach((toolName, i) => {
+          dispatchable.forEach((toolName, i) => {
             const res = toolResults[i];
-            const meta = TOOL_META[toolName];
+            const label = TOOL_META[toolName]?.label ?? toolName;
             if (res.status === "fulfilled") {
               send(
-                `> ✓ **${meta.label}** — ${res.value.summary} (${res.value.ms} ms)\n`,
+                `> ✓ **${label}** — ${res.value.summary} (${res.value.ms} ms)\n`,
               );
               pieces.push(res.value.markdown);
             } else {
@@ -138,12 +164,9 @@ export async function POST(
                 res.reason instanceof Error
                   ? res.reason.message
                   : String(res.reason);
-              send(
-                `> ❌ **${meta.label}** failed: ${message.slice(0, 240)}\n`,
-              );
+              send(`> ❌ **${label}** failed: ${message.slice(0, 240)}\n`);
             }
           });
-
           factPack = pieces.join("\n\n");
           send("\n---\n\n");
         }
@@ -219,17 +242,23 @@ export async function POST(
   });
 }
 
-// ---------- Tool dispatch ----------
+// ---------- Generic tool dispatch (used by non-orchestrated actions) ----------
 
 type ToolRun = { markdown: string; summary: string; ms: number };
 
-const TOOL_META: Record<ActionToolName, { label: string }> = {
+const TOOL_META: Partial<Record<ActionToolName, { label: string }>> = {
   "crawl-page": { label: "Fetch page HTML" },
   "pagespeed-mobile": { label: "PageSpeed Insights — mobile" },
   "pagespeed-desktop": { label: "PageSpeed Insights — desktop" },
 };
 
-async function runTool(name: ActionToolName, url: string): Promise<ToolRun> {
+async function runGenericTool(
+  name: Exclude<
+    ActionToolName,
+    "sitemap-discovery" | "crawl-sample" | "gsc-site-data"
+  >,
+  url: string,
+): Promise<ToolRun> {
   const started = Date.now();
   switch (name) {
     case "crawl-page": {

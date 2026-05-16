@@ -24,7 +24,10 @@ export type ActionField = {
 export type ActionToolName =
   | "crawl-page"
   | "pagespeed-mobile"
-  | "pagespeed-desktop";
+  | "pagespeed-desktop"
+  | "sitemap-discovery"
+  | "crawl-sample"
+  | "gsc-site-data";
 
 export type ActionDef = {
   slug: string;
@@ -73,15 +76,25 @@ export const PILLARS: Pillar[] = [
         slug: "seo-audit",
         label: "SEO Audit",
         blurb:
-          "Live PageSpeed + on-page HTML pulled in real time, analysed by SEO Claude.",
-        tools: ["crawl-page", "pagespeed-mobile", "pagespeed-desktop"],
+          "Site-wide audit — sitemap, sample crawl, PageSpeed and Search Console pulled live.",
+        tools: [
+          "sitemap-discovery",
+          "crawl-page",
+          "crawl-sample",
+          "pagespeed-mobile",
+          "pagespeed-desktop",
+          "gsc-site-data",
+        ],
         toolUrlField: "pageUrl",
         fields: [
           {
-            ...URL_FIELD,
+            key: "pageUrl",
+            label: "Website URL",
+            type: "text",
             required: true,
+            placeholder: "https://client-site.com/",
             helpText:
-              "We'll fetch this page live + run Google PageSpeed Insights (mobile + desktop) before SEO Claude analyses it.",
+              "Defaults to this client's website. We'll discover the sitemap, crawl a sample of pages, run PageSpeed Insights on the homepage, and pull Search Console — then SEO Claude analyses the whole site.",
           },
           {
             key: "focus",

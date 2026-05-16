@@ -132,28 +132,46 @@ ${getActionOutputSpec(action.slug)}
 function getActionOutputSpec(slug: string): string {
   switch (slug) {
     case "seo-audit":
-      return `**Live data first.** This action runs against live PageSpeed Insights (mobile + desktop) and a real HTML crawl. When that data is in the prompt, base every finding on it — cite the exact Lighthouse scores, name the failed audits by their actual title, quote the title/meta/H1 text, name the schema types found or missing. Do NOT speak in generalities when measurements are available.
+      return `**This is a SITE-WIDE audit.** Live data already in the prompt:
+- Sitemap discovery (robots.txt status, registered sitemaps, sampled URL list).
+- Homepage HTML crawl (title, meta, H1, schema, links, images, OG/Twitter, hreflang).
+- A sample of other pages crawled (up to 12 — title/meta/H1/word count/images/schema per page).
+- Google PageSpeed Insights — mobile + desktop — Lighthouse scores, CrUX field data + lab CWV, top failing audits.
+- Google Search Console — site totals + delta vs prev 28 days, top pages, top queries with position movement, registered sitemaps with errors/warnings.
 
-Output structure:
+**Rules**
+- Cite real numbers and quote real HTML. Never speak in generalities when a measurement is in front of you. If something is missing in the fact pack, say "not measured" and what would need to be checked.
+- Look across pages — flag patterns ("3 of 12 sampled pages have an empty H1", "every product page is missing schema").
+- Cross-reference: if GSC shows a high-impression / low-CTR query, name the page that's ranking and the meta description that's killing CTR.
+- Honour the client's Do's and Don'ts.
+
+**Output structure**
 
 ## Summary
-One paragraph: what this page is, current shape, headline issues, expected lift from fixing them. Mention mobile vs desktop deltas if they're meaningful.
+One short paragraph: site identity, what shape it's in, the 3 issues that would move the needle most, expected impact tier.
 
 ## Scorecard
-Markdown table: Category, Mobile, Desktop, Target, Status (✅ / ⚠️ / ❌). Cover Performance, Accessibility, Best Practices, SEO, plus the three Core Web Vitals (LCP, INP, CLS) — show field data (CrUX) where available, lab data otherwise, label which is which.
+Markdown table — Category, Mobile, Desktop, Target, Status (✅ / ⚠️ / ❌). Cover Performance, Accessibility, Best Practices, SEO categories, plus LCP / INP / CLS (label field vs lab). Add an extra row each for: **Indexation health** (sitemap submitted, errors, GSC indexed pages vs sampled), **Search visibility trend** (clicks/impressions/CTR delta vs prev 28d), **Schema coverage** (homepage + % of sampled pages with at least one schema).
+
+## Search Console signals
+- **Trend** — clicks/impressions/CTR/avg position deltas, named.
+- **Top winning pages** — 3–5 pages, what they're winning on, opportunities (e.g. CTR low for the impression volume → meta description issue).
+- **Top losing pages or queries** — anything with a falling position (▼) worth investigating.
+- **Indexation** — sitemap errors, gap between submitted and indexed, mismatch between sampled site URLs and what shows in top-pages.
 
 ## Findings
-Group by **Critical → High → Medium → Low**. Each finding:
-- **Finding** — one line, naming the exact issue (cite the Lighthouse audit ID / title or the page element).
-- **Evidence** — the actual measurement / quoted HTML.
-- **Why it matters** — in concrete SEO / ranking / UX terms.
+Group by **Critical → High → Medium → Low**. For each:
+- **Finding** — one line, naming the exact issue (cite the Lighthouse audit title, the page URL + element, or the GSC trend).
+- **Evidence** — the measurement / quoted HTML / GSC numbers.
+- **Scope** — affects [homepage / all sampled pages / N of the sampled pages / search visibility / etc.].
+- **Why it matters** — in concrete SEO / ranking / UX / revenue terms.
 - **Fix** — specific, with owner (SEO / Dev / Content / Client) and rough effort (S / M / L).
 - **Estimated lift** — High / Medium / Low.
 
-Cover: indexation + crawlability signals (robots, canonical, sitemap inferences), Core Web Vitals (LCP/INP/CLS for both devices), on-page (title length, meta description, H1, heading hierarchy, schema present vs missing, internal vs external link balance), accessibility issues that double as ranking issues (missing alt, lang tag, contrast), and content E-E-A-T / YMYL risks visible in the HTML. Skip what's already healthy unless it's worth calling out.
+Cover the full stack: indexation + crawlability (robots, sitemap, canonicals across pages), Core Web Vitals (both devices), site-wide on-page (title/meta/H1 hygiene patterns, schema coverage, heading hierarchy), content depth (word count distribution, thin-content risks for YMYL), accessibility issues that double as ranking issues, and visible content E-E-A-T / YMYL risks. Don't pad with healthy findings — call them out only when worth noting.
 
 ## 30 / 60 / 90 day plan
-Prioritised, dated action plan grouped by horizon. Each item = one concrete deliverable + the owner.`;
+Prioritised plan grouped by horizon. Each item: one concrete deliverable, owner, and the metric it's expected to move.`;
 
     case "keyword-research":
       return `Return a prioritised keyword shortlist as a Markdown table with columns: Keyword, Intent, SERP type, Est. monthly volume (qualitative if you can't know exactly), Difficulty (qualitative), Business value (1-5), Suggested page (existing or new), Why it's a fit. Group by topic cluster (H3 per cluster). Include a final "Quick wins" section with the top 5 to start on this week. Be honest when volume is unknown — write "Unknown — verify in Ahrefs/SEMrush" rather than fabricating numbers.`;

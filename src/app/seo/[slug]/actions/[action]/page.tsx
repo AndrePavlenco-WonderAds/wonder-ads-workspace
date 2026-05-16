@@ -11,6 +11,7 @@ import {
   getClientLogo,
   getLogoBgMode,
   getLogoSizing,
+  getClientWebsite,
 } from "@/lib/client-meta";
 import { getClientPalette, paletteToGradient } from "@/lib/client-colors";
 
@@ -50,12 +51,18 @@ export default async function ActionPage({
   const logoBgMode = getLogoBgMode(slug);
   const logoSizing = getLogoSizing(slug);
   const gradient = paletteToGradient(getClientPalette(slug));
+  const website = getClientWebsite(slug);
 
   const { action, pillar } = entry;
   const { Icon: PillarIcon } = pillar;
 
   const briefHasContent =
     brief.dos.length + brief.donts.length + brief.notes.length > 0;
+
+  // Per-action defaults computed from client context. Extend as new actions
+  // benefit from prefilled inputs (e.g. blog audience from client tier).
+  const defaults: Record<string, string> = {};
+  if (action.slug === "seo-audit" && website) defaults.pageUrl = website;
 
   return (
     <PageShell wide>
@@ -69,59 +76,48 @@ export default async function ActionPage({
         </Link>
       </div>
 
-      <header className="animate-fade-up mt-6 flex flex-wrap items-start gap-5">
-        <div className="shrink-0">
+      <header className="animate-fade-up mt-6">
+        <div className="flex items-center gap-2.5 text-[11px] font-medium uppercase tracking-[0.18em] text-white/55">
           <LogoChip
             logo={logo}
             emoji={client.icon}
             alt={`${client.title} logo`}
             gradient={gradient}
-            size="lg"
+            size="md"
             bgMode={logoBgMode}
             sizing={logoSizing}
           />
+          <Link
+            href={`/seo/${slug}`}
+            className="transition hover:text-white"
+          >
+            {client.title}
+          </Link>
+          <span className="text-white/25">·</span>
+          <span className="inline-flex items-center gap-1.5">
+            <PillarIcon className="h-3 w-3" strokeWidth={2.25} />
+            {pillar.name}
+          </span>
         </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <Link
-              href={`/seo/${slug}`}
-              className="text-[11px] font-medium uppercase tracking-[0.18em] text-white/55 transition hover:text-white"
-            >
-              {client.title}
-            </Link>
-            <span className="text-white/30">·</span>
-            <span className="inline-flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-[0.13em] text-white/55">
-              <PillarIcon className="h-3 w-3" strokeWidth={2.25} />
-              {pillar.name}
+        <h1 className="mt-3 text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">
+          <span className="brand-gradient-text">{action.label}</span>
+        </h1>
+        <p className="mt-2 max-w-xl text-sm text-white/55">{action.blurb}</p>
+        {action.tools && action.tools.length > 0 && (
+          <div className="mt-3 flex flex-wrap items-center gap-1.5">
+            <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/40">
+              Live tools
             </span>
-          </div>
-          <h1 className="mt-2 text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">
-            <span className="brand-gradient-text">{action.label}</span>
-          </h1>
-          <p className="mt-2 max-w-2xl text-sm text-white/55">
-            {action.blurb} SEO Claude — {client.title} runs this action with
-            your client&apos;s brief in context.
-          </p>
-          {action.tools && action.tools.length > 0 && (
-            <div className="mt-3 flex flex-wrap items-center gap-1.5">
-              <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/40">
-                Live tools
+            {action.tools.map((t) => (
+              <span
+                key={t}
+                className="inline-flex items-center rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2 py-0.5 text-[10px] font-medium text-emerald-200"
+              >
+                {toolChipLabel(t)}
               </span>
-              {action.tools.map((t) => (
-                <span
-                  key={t}
-                  className="inline-flex items-center rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2 py-0.5 text-[10px] font-medium text-emerald-200"
-                >
-                  {t === "crawl-page"
-                    ? "Page HTML"
-                    : t === "pagespeed-mobile"
-                      ? "PSI Mobile"
-                      : "PSI Desktop"}
-                </span>
-              ))}
-            </div>
-          )}
-        </div>
+            ))}
+          </div>
+        )}
       </header>
 
       {briefHasContent && (
@@ -145,6 +141,7 @@ export default async function ActionPage({
           clientSlug={slug}
           clientName={client.title}
           action={action}
+          defaults={defaults}
         />
       </section>
 
@@ -177,6 +174,25 @@ export default async function ActionPage({
       </nav>
     </PageShell>
   );
+}
+
+function toolChipLabel(t: string): string {
+  switch (t) {
+    case "crawl-page":
+      return "Page HTML";
+    case "pagespeed-mobile":
+      return "PSI Mobile";
+    case "pagespeed-desktop":
+      return "PSI Desktop";
+    case "sitemap-discovery":
+      return "Sitemap";
+    case "crawl-sample":
+      return "Sample crawl";
+    case "gsc-site-data":
+      return "Search Console";
+    default:
+      return t;
+  }
 }
 
 function BriefColumn({

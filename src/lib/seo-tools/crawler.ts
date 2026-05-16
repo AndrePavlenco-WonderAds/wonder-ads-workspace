@@ -300,3 +300,75 @@ function quote(s: string | null): string {
   if (!s) return "(empty)";
   return `"${s.length > 220 ? s.slice(0, 217) + "…" : s}"`;
 }
+
+// ---- Multi-page crawl ----
+
+export type MultiCrawlEntry =
+  | { url: string; ok: true; result: CrawlResult }
+  | { url: string; ok: false; error: string };
+
+/** Crawl many URLs with bounded concurrency. Per-URL failures are reported,
+ *  not thrown, so a single 404 doesn't kill a site-wide audit. */
+export async function crawlMany(
+  urls: string[],
+  opts: { concurrency?: number; signal?: AbortSignal } = {},
+): Promise<MultiCrawlEntry[]> {
+  const concurrency = Math.max(1, opts.concurrency ?? 6);
+  const out: MultiCrawlEntry[] = new Array(urls.length);
+  let cursor = 0;
+
+  async function worker() {
+    while (true) {
+      const i = cursor++;
+      if (i >= urls.length) return;
+      const url = urls[i];
+      try {
+        const result = await crawlPage(url, { signal: opts.signal });
+        out[i] = { url, ok: true, result };
+      } catch (err) {
+        out[i] = {
+          url,
+          ok: false,
+          error: err instanceof Error ? err.message : String(err),
+        };
+      }
+    }
+  }
+
+  await Promise.all(
+    Array.from({ length: Math.min(concurrency, urls.length) }, () => worker()),
+  );
+  return out;
+}
+
+/** Compact per-page snapshot used in the site-wide audit fact pack — picks
+ *  only the on-page signals worth comparing across pages. */
+export function formatPageSummaryRow(entry: MultiCrawlEntry): string {
+  if (!entry.ok) {
+    return `- ❌ ${entry.url} → ${entry.error.slice(0, 140)}`;
+  }
+  const r = entry.result;
+  const titleLen = r.titleLength;
+  const metaLen = r.metaDescriptionLength;
+  const altMissing = r.imagesMissingAlt;
+  const schemas =
+    r.jsonLdTypes.length === 0
+      ? "no schema"
+      : r.jsonLdTypes.map((s) => s.type).slice(0, 4).join("+");
+  return `- HTTP ${r.status} · ${r.finalUrl}
+  - Title (${titleLen}): ${quote(r.title)}
+  - Meta (${metaLen}): ${quote(r.metaDescription)}
+  - H1s: ${r.h1.length === 0 ? "none" : r.h1.map(quote).join(" | ")}
+  - Words: ${r.wordCount} · Images: ${r.imageCount} (${altMissing} missing alt) · Links: ${r.internalLinkCount}/${r.externalLinkCount} (int/ext)
+  - Schema: ${schemas}
+  - Canonical: ${r.canonical ?? "(absent)"} · Robots: ${r.metaRobots ?? "(absent)"}`;
+}
+
+export function formatMultiCrawlForPrompt(
+  entries: MultiCrawlEntry[],
+): string {
+  const lines: string[] = [];
+  lines.push(`## Sample pages crawl (${entries.length} URLs)`);
+  for (const e of entries) lines.push(formatPageSummaryRow(e));
+  return lines.join("\n");
+}

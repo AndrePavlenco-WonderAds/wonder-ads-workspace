@@ -11,6 +11,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: 49,
+    date: "2026-05-16",
+    title: "SEO Audit goes site-wide — sitemap, sample crawl & Search Console",
+    highlights: [
+      "SEO Audit is now site-wide: discovers the sitemap, samples up to 12 representative pages, crawls them all, runs PageSpeed (mobile + desktop) on the homepage, and pulls Search Console (28-day clicks/impressions/CTR/position + delta vs prev, top pages, top queries with movement, registered sitemaps + errors).",
+      "Website URL field is pre-filled with the current client's domain so you can just hit Generate.",
+      "Action page header tightened — small inline logo + breadcrumb, shorter blurb, no more orphaned big logo next to a wall of text.",
+      "Live-tool chip row now lists Sitemap, Sample crawl, PSI Mobile, PSI Desktop, Search Console so you know exactly what's about to run.",
+      "Tool progress streams to the page step by step (✓ Sitemap discovery — 189 URLs, 5 sitemap(s)), then SEO Claude's site-wide analysis follows — scorecard table (mobile vs desktop), Search Console signals, findings grouped by impact, 30/60/90 plan.",
+    ],
+  },
+  {
     version: 48,
     date: "2026-05-16",
     title: "SEO Audit goes live — real PageSpeed + HTML measurements",

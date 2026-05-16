@@ -27,15 +27,17 @@ export function ActionRunner({
   clientSlug,
   clientName,
   action,
+  defaults,
 }: {
   clientSlug: string;
   clientName: string;
   action: ActionDef;
+  defaults?: Record<string, string>;
 }) {
   const [values, setValues] = useState<Record<string, string>>(() => {
     const init: Record<string, string> = {};
     for (const f of action.fields) {
-      init[f.key] = f.defaultValue ?? "";
+      init[f.key] = defaults?.[f.key] ?? f.defaultValue ?? "";
     }
     return init;
   });
