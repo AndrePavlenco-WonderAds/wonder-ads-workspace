@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "68.6",
+    date: "2026-05-17",
+    title: "Per-client Onboarding Form upload (feeds AI actions)",
+    highlights: [
+      "New **Onboarding Form** panel on every client page (above Brief + Client Files). Single-slot upload for the doc the client filled out during onboarding — main keywords to focus on, target audience, services, geo, brand voice, etc.",
+      "Accepts **PDF, DOC, DOCX, TXT, MD** up to 200 MB via Vercel Blob (same client-direct upload path used for client files — no Vercel function size limit).",
+      "Persisted in Vercel KV at `onboarding:{slug}` so it survives across all preview deployments and team members. Replace/Remove actions wired up.",
+      "Sets up **Keyword Research** (next action) — the AI will read this doc to anchor the keyword universe on what the client actually cares about, not just what they currently rank for.",
+    ],
+  },
+  {
     version: "68.5",
     date: "2026-05-17",
     title: "PDF polish: brand-gradient Download button, readable tables, consultant + site on cover",

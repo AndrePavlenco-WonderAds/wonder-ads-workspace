@@ -16,6 +16,12 @@ const ALLOWED_CONTENT_TYPES = [
   "video/mp4",
   "video/webm",
   "video/quicktime",
+  // Onboarding form documents (used by <OnboardingForm/>).
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "text/plain",
+  "text/markdown",
 ];
 
 const MAX_SIZE_BYTES = 200 * 1024 * 1024; // 200 MB

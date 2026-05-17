@@ -4,6 +4,7 @@ import { ArrowLeft, ExternalLink, RefreshCw } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { ClientBrief } from "@/components/client-brief";
 import { ClientFiles } from "@/components/client-files";
+import { OnboardingForm } from "@/components/onboarding-form";
 import { TypewriterPrompt } from "@/components/typewriter-prompt";
 import { SeoProjectContainers } from "@/components/seo-project-containers";
 import { SeoActions } from "@/components/seo-actions";
@@ -130,9 +131,13 @@ export default async function ClientPage({
         <ProjectSectionNav />
       </section>
 
+      <div className="animate-fade-up mt-10 sm:mt-14">
+        <OnboardingForm slug={slug} clientName={client.title} />
+      </div>
+
       <div
         id="section-brief"
-        className="animate-fade-up mt-10 grid scroll-mt-8 grid-cols-1 gap-6 sm:mt-14 lg:grid-cols-[3fr_2fr]"
+        className="animate-fade-up mt-6 grid scroll-mt-8 grid-cols-1 gap-6 lg:grid-cols-[3fr_2fr]"
       >
         <ClientBrief
           brief={brief}
