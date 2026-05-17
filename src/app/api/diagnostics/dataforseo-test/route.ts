@@ -88,6 +88,9 @@ export async function GET(req: Request) {
 
   const url = new URL(req.url);
   const target = url.searchParams.get("target") || "whiteclinic.pt";
+  const seed = url.searchParams.get("seed") || "dentista";
+  const locationCode = Number(url.searchParams.get("location_code") || "2620");
+  const languageCode = url.searchParams.get("language_code") || "pt";
 
   const auth = Buffer.from(
     `${process.env.DATAFORSEO_LOGIN}:${process.env.DATAFORSEO_PASSWORD}`,
@@ -97,6 +100,8 @@ export async function GET(req: Request) {
     rankOverview,
     backlinksSummary,
     rankedKeywords,
+    keywordSuggestions,
+    keywordIdeas,
     llmAggregated,
     llmTopPages,
   ] = await Promise.all([
@@ -111,10 +116,36 @@ export async function GET(req: Request) {
       [
         {
           target,
-          location_code: 2620,
-          language_code: "pt",
+          location_code: locationCode,
+          language_code: languageCode,
           limit: 5,
           order_by: ["ranked_serp_element.serp_item.etv,desc"],
+        },
+      ],
+      auth,
+    ),
+    hit(
+      "/dataforseo_labs/google/keyword_suggestions/live",
+      [
+        {
+          keyword: seed,
+          location_code: locationCode,
+          language_code: languageCode,
+          limit: 10,
+          include_seed_keyword: true,
+        },
+      ],
+      auth,
+    ),
+    hit(
+      "/dataforseo_labs/google/keyword_ideas/live",
+      [
+        {
+          keywords: [seed],
+          location_code: locationCode,
+          language_code: languageCode,
+          limit: 10,
+          order_by: ["keyword_info.search_volume,desc"],
         },
       ],
       auth,
@@ -164,9 +195,14 @@ export async function GET(req: Request) {
   return NextResponse.json(
     {
       target,
+      seed,
+      locationCode,
+      languageCode,
       rankOverview,
       backlinksSummary,
       rankedKeywords,
+      keywordSuggestions,
+      keywordIdeas,
       llmAggregated,
       llmTopPages,
     },

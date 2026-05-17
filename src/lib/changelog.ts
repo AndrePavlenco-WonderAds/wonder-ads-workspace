@@ -13,6 +13,19 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "69.6",
+    date: "2026-05-17",
+    title: "Sticky header + verbose DataforSEO diagnostics + dual-endpoint pulls + smoke test",
+    highlights: [
+      "**Sticky page header** with backdrop blur — the back button now stays visible at all times no matter how far you've scrolled. The `#section-actions` anchor was scrolling the header off-screen so 'Back to SEO DPT' looked missing.",
+      "**Per-seed call log** in the progress stream — every DataforSEO `keyword_suggestions` / `keyword_ideas` call is now logged with the seed, endpoint, count returned, and status code. Easy to see exactly which seeds worked, which returned empty, and which errored.",
+      "**Dual-endpoint pulls** — for each expansion seed, run BOTH `keyword_suggestions` AND `keyword_ideas` in parallel. They have different DataforSEO query mechanics and one often returns data where the other doesn't. Up to 12 parallel calls per run, capped to stay under the function budget.",
+      "**Smoke test fallback** — if `suggestions + ideas` still equals 0 after all expansion calls, one canonical language-specific seed is tried (`dentista` for PT/ES/IT, `dentiste` for FR, `zahnarzt` for DE, `dentist` for EN). If even THAT returns 0, a 🚨 'DataforSEO connectivity / subscription issue' warning is surfaced in the progress stream with a deep link to the diagnostics endpoint.",
+      "**dfsPost is now lenient on no-results status codes** — DataforSEO returning `40400` / `40500` means 'no items found' (a valid empty response, not an error). Previously these were thrown as errors; now they return empty + the status code is logged in diagnostics for visibility.",
+      "**`/api/diagnostics/dataforseo-test` extended** — now also tests `keyword_suggestions/live` + `keyword_ideas/live` (with `?seed=` / `?location_code=` / `?language_code=` query params). Use this to verify the DataforSEO Labs subscription covers the keyword expansion endpoints.",
+    ],
+  },
+  {
     version: "69.5",
     date: "2026-05-17",
     title: "Persistent back nav + real keyword-shortage fix (per-seed suggestions + emergency fallback)",

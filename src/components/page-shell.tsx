@@ -34,7 +34,7 @@ export function PageShell({
       <BackgroundDecor />
 
       <header
-        className={`relative z-30 mx-auto flex w-full ${widthClass} items-center justify-between gap-4 px-6 py-6 sm:px-10 sm:py-8`}
+        className={`sticky top-0 z-30 mx-auto flex w-full ${widthClass} items-center justify-between gap-4 border-b border-white/5 bg-[color:var(--background)]/85 px-6 py-4 backdrop-blur-md sm:px-10 sm:py-5`}
       >
         <div className="flex items-center gap-4">
           <WonderAdsLogo />

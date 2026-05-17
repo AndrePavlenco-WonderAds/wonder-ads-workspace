@@ -169,7 +169,34 @@ export async function POST(
         send(
           `> ✓ **DataforSEO** — ${pack.suggestions.length} suggestions · ${pack.ideas.length} ideas · ${pack.domainExisting.length} already-ranking · ${pack.competitors.length} competitor footprint(s) → **${totalKeywords} keywords total** (${ms} ms)\n`,
         );
-        if (totalKeywords < 30) {
+        // Verbose per-call diagnostics — surfaces every seed we tried and
+        // what each endpoint returned. Critical for debugging "thin
+        // universe" cases (which seed worked, which didn't, status codes).
+        if (pack.diagnostics && pack.diagnostics.length > 0) {
+          send(`> **Per-seed call log:**\n`);
+          for (const d of pack.diagnostics) {
+            const status = d.apiStatus != null ? ` [status ${d.apiStatus}]` : "";
+            if (d.error) {
+              send(
+                `>   ❌ \`${d.endpoint}\` seed=\`${d.seed.slice(0, 50)}\` → error: ${d.error.slice(0, 160)}${status}\n`,
+              );
+            } else {
+              send(
+                `>   ${d.count > 0 ? "✓" : "○"} \`${d.endpoint}\` seed=\`${d.seed.slice(0, 50)}\` → ${d.count} keywords${status}\n`,
+              );
+            }
+          }
+        }
+        // Detect smoke-test result. If even the canonical "dentista" probe
+        // returned 0, the issue is DataforSEO subscription / connectivity,
+        // not our seed strategy.
+        const smoke = pack.diagnostics?.find((d) => d.endpoint === "smoke-test");
+        if (smoke && smoke.count === 0) {
+          send(
+            `> 🚨 **DataforSEO connectivity / subscription issue suspected.** Even a canonical generic seed (\`${smoke.seed}\`) returned 0 keywords from \`keyword_suggestions/live\`. Run \`/api/diagnostics/dataforseo-test?target=${target ?? "whiteclinic.pt"}\` from the browser to verify the subscription tier covers Labs keyword endpoints.\n`,
+          );
+        }
+        if (totalKeywords < 30 && !smoke) {
           send(
             `> ⚠️ **Thin universe (${totalKeywords} keywords).** Likely causes: (a) the domain has very few rankings in this geo, (b) the seed topic is too narrow/branded, or (c) DataforSEO's data is sparse for this market. Consider broadening the geo (try the national-level target) or providing a more generic seed topic.\n`,
           );

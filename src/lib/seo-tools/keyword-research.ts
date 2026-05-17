@@ -54,6 +54,17 @@ export type KwResearchPack = {
    *  the seed theme. Empty when no competitors are provided. */
   competitors: CompetitorKeywords[];
   errors: { source: string; message: string }[];
+  /** Per-seed diagnostic log — every keyword_suggestions / keyword_ideas
+   *  call we made, the seed, the count returned, and any error. Surfaced
+   *  in the prep route's progress stream so consultants can see exactly
+   *  what was tried when results are thin. */
+  diagnostics: {
+    seed: string;
+    endpoint: "suggestions" | "ideas" | "smoke-test";
+    count: number;
+    error?: string;
+    apiStatus?: number;
+  }[];
   /** When the original (city) target returned no data and we retried with
    *  the parent country, this records the original attempt so the prompt
    *  can flag it to Claude. */
@@ -101,7 +112,7 @@ function isConfigured(): boolean {
 async function dfsPost<TBody, TResp>(
   path: string,
   body: TBody,
-): Promise<TResp> {
+): Promise<{ data: TResp; taskStatus: number | null; taskMessage: string | null }> {
   const auth = Buffer.from(
     `${process.env.DATAFORSEO_LOGIN}:${process.env.DATAFORSEO_PASSWORD}`,
   ).toString("base64");
@@ -124,12 +135,22 @@ async function dfsPost<TBody, TResp>(
     tasks?: { status_code?: number; status_message?: string }[];
   };
   const task = json.tasks?.[0];
-  if (task?.status_code && task.status_code >= 40000) {
+  const taskStatus = task?.status_code ?? null;
+  const taskMessage = task?.status_message ?? null;
+  // Only throw on REAL errors. 40400 / 40500 mean "no results" — those are
+  // valid empty responses, not failures. The caller surfaces the status
+  // code in diagnostics so consultants can see why a seed was empty.
+  // 40100 = auth, 40200 = forbidden, 40000-40099 = bad request: throw.
+  if (
+    taskStatus !== null &&
+    taskStatus >= 40000 &&
+    taskStatus < 40400
+  ) {
     throw new Error(
-      `DataforSEO ${path} task error ${task.status_code}: ${task.status_message ?? "unknown"}`,
+      `DataforSEO ${path} task error ${taskStatus}: ${taskMessage ?? "unknown"}`,
     );
   }
-  return json as TResp;
+  return { data: json as TResp, taskStatus, taskMessage };
 }
 
 type KeywordInfoBlob = {
@@ -176,7 +197,7 @@ async function fetchKeywordSuggestions(
   locationCode: number,
   languageCode: string,
   limit: number,
-): Promise<KwIdea[]> {
+): Promise<{ items: KwIdea[]; taskStatus: number | null }> {
   const body = [
     {
       keyword: seed,
@@ -190,14 +211,17 @@ async function fetchKeywordSuggestions(
   type Resp = {
     tasks?: { result?: { items?: KeywordInfoBlob[] }[] }[];
   };
-  const res = await dfsPost<typeof body, Resp>(
+  const { data, taskStatus } = await dfsPost<typeof body, Resp>(
     "/dataforseo_labs/google/keyword_suggestions/live",
     body,
   );
-  const items = res.tasks?.[0]?.result?.[0]?.items ?? [];
-  return items
-    .map((it) => mapItem(it, "suggestions"))
-    .filter((x): x is KwIdea => x !== null);
+  const items = data.tasks?.[0]?.result?.[0]?.items ?? [];
+  return {
+    items: items
+      .map((it) => mapItem(it, "suggestions"))
+      .filter((x): x is KwIdea => x !== null),
+    taskStatus,
+  };
 }
 
 async function fetchKeywordIdeas(
@@ -205,7 +229,7 @@ async function fetchKeywordIdeas(
   locationCode: number,
   languageCode: string,
   limit: number,
-): Promise<KwIdea[]> {
+): Promise<{ items: KwIdea[]; taskStatus: number | null }> {
   const body = [
     {
       keywords: seeds.slice(0, 20),
@@ -218,14 +242,38 @@ async function fetchKeywordIdeas(
   type Resp = {
     tasks?: { result?: { items?: KeywordInfoBlob[] }[] }[];
   };
-  const res = await dfsPost<typeof body, Resp>(
+  const { data, taskStatus } = await dfsPost<typeof body, Resp>(
     "/dataforseo_labs/google/keyword_ideas/live",
     body,
   );
-  const items = res.tasks?.[0]?.result?.[0]?.items ?? [];
-  return items
-    .map((it) => mapItem(it, "ideas"))
-    .filter((x): x is KwIdea => x !== null);
+  const items = data.tasks?.[0]?.result?.[0]?.items ?? [];
+  return {
+    items: items
+      .map((it) => mapItem(it, "ideas"))
+      .filter((x): x is KwIdea => x !== null),
+    taskStatus,
+  };
+}
+
+/** Language-keyed smoke-test seed — used to verify the keyword_suggestions
+ *  endpoint is actually returning data for this geo + language combination.
+ *  If even THIS returns 0, the DataforSEO subscription / connectivity is
+ *  the problem, not our seeds. */
+function smokeTestSeed(languageCode: string): string {
+  switch (languageCode) {
+    case "pt":
+      return "dentista";
+    case "es":
+      return "dentista";
+    case "fr":
+      return "dentiste";
+    case "it":
+      return "dentista";
+    case "de":
+      return "zahnarzt";
+    default:
+      return "dentist";
+  }
 }
 
 async function fetchDomainExistingKeywords(
@@ -262,11 +310,11 @@ async function fetchDomainExistingKeywords(
       }[];
     }[];
   };
-  const res = await dfsPost<typeof body, Resp>(
+  const { data } = await dfsPost<typeof body, Resp>(
     "/dataforseo_labs/google/ranked_keywords/live",
     body,
   );
-  const items = res.tasks?.[0]?.result?.[0]?.items ?? [];
+  const items = data.tasks?.[0]?.result?.[0]?.items ?? [];
   return items
     .map((it) => {
       if (!it.keyword_data) return null;
@@ -511,14 +559,13 @@ async function runOnce(
     }
   });
 
-  // --- STAGE 2: per-seed keyword_suggestions in parallel ---
-  // v69.5 fix: keyword_ideas with multi-seed returns near-empty for narrow
-  // domains (DataforSEO seems to take the intersection of related ideas
-  // across seeds — when seeds are diverse, the intersection is tiny).
-  // Per-seed keyword_suggestions returns 50-300 keywords per seed and is
-  // the right tool for expansion. We call it for: the user's seed (if any)
-  // + the top non-branded expansion seeds from the domain footprint +
-  // each competitor's strongest keyword.
+  // --- STAGE 2: per-seed expansion — run BOTH suggestions AND ideas ---
+  // v69.6 change: for each expansion seed, hit BOTH keyword_suggestions
+  // AND keyword_ideas. They use different DataforSEO query mechanics and
+  // returning differently for the same seed is common. Trying both
+  // maximises the chance of getting data, and we surface per-call counts
+  // in the diagnostics array so the consultant can see exactly what each
+  // endpoint returned.
   const clientName = opts.clientName ?? clientSlug;
   const expansionSeeds = pickExpansionSeeds(domainExisting, clientName, 4);
   const competitorSeeds = competitors
@@ -526,46 +573,78 @@ async function runOnce(
     .filter((s) => s && s.trim().length > 2)
     .slice(0, 3);
 
-  // Per-seed suggestions. Keep the total parallel calls bounded so we
-  // don't blow the function budget — cap at 8 individual calls.
-  const userSeedCalls = seedTopic
-    ? [{ seed: seedTopic, source: "suggestions" as const }]
-    : [];
-  const expansionCalls = expansionSeeds.map((seed) => ({
-    seed,
-    source: "ideas" as const, // bucket non-user-seed expansions as "ideas"
-  }));
-  const competitorCalls = competitorSeeds.map((seed) => ({
-    seed,
-    source: "ideas" as const,
-  }));
-  const allSeedCalls = [
-    ...userSeedCalls,
-    ...expansionCalls,
-    ...competitorCalls,
-  ].slice(0, 8);
+  type SeedCall = {
+    seed: string;
+    bucket: "suggestions" | "ideas";
+    endpoint: "suggestions" | "ideas";
+  };
+  const calls: SeedCall[] = [];
+  if (seedTopic) {
+    // User's explicit seed → suggestions bucket, try both endpoints.
+    calls.push({ seed: seedTopic, bucket: "suggestions", endpoint: "suggestions" });
+    calls.push({ seed: seedTopic, bucket: "suggestions", endpoint: "ideas" });
+  }
+  for (const s of expansionSeeds) {
+    calls.push({ seed: s, bucket: "ideas", endpoint: "suggestions" });
+    calls.push({ seed: s, bucket: "ideas", endpoint: "ideas" });
+  }
+  for (const s of competitorSeeds) {
+    calls.push({ seed: s, bucket: "ideas", endpoint: "suggestions" });
+  }
+  // Cap so we don't blow the function budget. 12 parallel calls ~10-20s
+  // total. (Each DFS call returns in 0.5-2s.)
+  const boundedCalls = calls.slice(0, 12);
 
-  const perSeedResults = await Promise.allSettled(
-    allSeedCalls.map((c) =>
-      fetchKeywordSuggestions(c.seed, geo.locationCode, geo.languageCode, limit),
-    ),
+  const diagnostics: KwResearchPack["diagnostics"] = [];
+  const perCallResults = await Promise.allSettled(
+    boundedCalls.map((c) => {
+      if (c.endpoint === "suggestions") {
+        return fetchKeywordSuggestions(
+          c.seed,
+          geo.locationCode,
+          geo.languageCode,
+          limit,
+        );
+      }
+      return fetchKeywordIdeas(
+        [c.seed],
+        geo.locationCode,
+        geo.languageCode,
+        limit,
+      );
+    }),
   );
 
-  // Bucket results into suggestions (only from the user's seed) vs ideas
-  // (everything else). Dedupe within each bucket.
   const suggestionsRaw: KwIdea[] = [];
   const ideasRaw: KwIdea[] = [];
-  perSeedResults.forEach((res, i) => {
-    const call = allSeedCalls[i];
+  perCallResults.forEach((res, i) => {
+    const call = boundedCalls[i];
     if (res.status === "fulfilled") {
-      const tagged = res.value.map((k) => ({ ...k, source: call.source }));
-      if (call.source === "suggestions") suggestionsRaw.push(...tagged);
+      const { items, taskStatus } = res.value;
+      const tagged = items.map((k) => ({
+        ...k,
+        source: call.bucket === "suggestions" ? "suggestions" : "ideas",
+      })) as KwIdea[];
+      if (call.bucket === "suggestions") suggestionsRaw.push(...tagged);
       else ideasRaw.push(...tagged);
+      diagnostics.push({
+        seed: call.seed,
+        endpoint: call.endpoint,
+        count: items.length,
+        apiStatus: taskStatus ?? undefined,
+      });
     } else {
+      const message =
+        res.reason instanceof Error ? res.reason.message : String(res.reason);
+      diagnostics.push({
+        seed: call.seed,
+        endpoint: call.endpoint,
+        count: 0,
+        error: message,
+      });
       errors.push({
-        source: `keyword_suggestions:${call.seed.slice(0, 40)}`,
-        message:
-          res.reason instanceof Error ? res.reason.message : String(res.reason),
+        source: `${call.endpoint}:${call.seed.slice(0, 40)}`,
+        message,
       });
     }
   });
@@ -585,10 +664,6 @@ async function runOnce(
   let ideas = dedupeByKw(ideasRaw);
 
   // --- STAGE 3 (emergency fallback): when total < 30 keywords ---
-  // Pull single-word "topical noun" seeds from anywhere we have signal
-  // (the domain footprint, the user seed, the onboarding extracted text)
-  // and hit keyword_suggestions for each. Catches narrow domains like
-  // brand-name-only clinics where the standard 2-stage pull is thin.
   const totalSoFar =
     suggestions.length + ideas.length + domainExisting.length;
   if (totalSoFar < 30) {
@@ -608,27 +683,80 @@ async function runOnce(
       const extra: KwIdea[] = [];
       fallbackResults.forEach((res, i) => {
         if (res.status === "fulfilled") {
-          const tagged = res.value.map((k) => ({
+          const tagged = res.value.items.map((k) => ({
             ...k,
             source: "ideas" as const,
           }));
           extra.push(...tagged);
+          diagnostics.push({
+            seed: topicNouns[i],
+            endpoint: "suggestions",
+            count: res.value.items.length,
+            apiStatus: res.value.taskStatus ?? undefined,
+          });
         } else {
+          const message =
+            res.reason instanceof Error
+              ? res.reason.message
+              : String(res.reason);
+          diagnostics.push({
+            seed: topicNouns[i],
+            endpoint: "suggestions",
+            count: 0,
+            error: message,
+          });
           errors.push({
             source: `keyword_suggestions(fallback):${topicNouns[i]}`,
-            message:
-              res.reason instanceof Error
-                ? res.reason.message
-                : String(res.reason),
+            message,
           });
         }
       });
-      // Merge + dedupe (don't double-count ideas already present).
-      const existingIdeaKeys = new Set(ideas.map((k) => k.keyword.toLowerCase()));
+      const existingIdeaKeys = new Set(
+        ideas.map((k) => k.keyword.toLowerCase()),
+      );
       const newOnes = extra.filter(
         (k) => !existingIdeaKeys.has(k.keyword.toLowerCase()),
       );
       ideas = dedupeByKw([...ideas, ...newOnes]);
+    }
+  }
+
+  // --- STAGE 4 (smoke test): if STILL near zero, run one canonical
+  // language-specific seed to verify DataforSEO works at all for this
+  // geo+language. If even THIS returns 0, the issue is subscription /
+  // connectivity, not our seeds. ---
+  if (suggestions.length + ideas.length === 0) {
+    const probe = smokeTestSeed(geo.languageCode);
+    try {
+      const probed = await fetchKeywordSuggestions(
+        probe,
+        geo.locationCode,
+        geo.languageCode,
+        limit,
+      );
+      diagnostics.push({
+        seed: probe,
+        endpoint: "smoke-test",
+        count: probed.items.length,
+        apiStatus: probed.taskStatus ?? undefined,
+      });
+      const tagged = probed.items.map((k) => ({
+        ...k,
+        source: "ideas" as const,
+      }));
+      ideas = dedupeByKw([...ideas, ...tagged]);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      diagnostics.push({
+        seed: probe,
+        endpoint: "smoke-test",
+        count: 0,
+        error: message,
+      });
+      errors.push({
+        source: `smoke-test:${probe}`,
+        message,
+      });
     }
   }
 
@@ -651,6 +779,7 @@ async function runOnce(
     domainExisting: combined.domainExisting,
     competitors,
     errors,
+    diagnostics,
     fetchedAt: Date.now(),
   };
 }
