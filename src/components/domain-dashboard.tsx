@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import {
-  ExternalLink,
   TrendingUp,
   AlertTriangle,
   Trophy,
