@@ -79,7 +79,9 @@ export default async function ResultPage({
         analysisText={analysisText}
         metrics={existing?.metrics ?? null}
         vitals={existing?.vitals ?? null}
+        kwResearch={existing?.kwResearch ?? null}
         showDomainSummary={action.slug === "seo-audit"}
+        showKeywordResearchSummary={action.slug === "keyword-research"}
       />
     );
   }

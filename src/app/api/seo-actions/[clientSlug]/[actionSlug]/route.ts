@@ -27,6 +27,7 @@ import {
 } from "@/lib/seo-tools/keyword-research";
 import { getClientWebsite as getClientWebsiteForKw } from "@/lib/client-meta";
 import { getOnboardingForSlug } from "@/lib/onboarding-store";
+import { saveKwResearchPrep } from "@/lib/kw-research-prep-store";
 
 // Vercel Hobby caps at 60s.
 export const maxDuration = 60;
@@ -77,6 +78,7 @@ export async function POST(
   }
 
   let inputs: Record<string, string> = {};
+  let resultId: string | undefined;
   try {
     const body = (await req.json()) as {
       inputs?: Record<string, string>;
@@ -85,8 +87,9 @@ export async function POST(
     if (body.inputs && typeof body.inputs === "object") {
       inputs = body.inputs;
     }
-    // resultId is parsed but no longer used here — /save now owns the
-    // history write. Kept in the body shape for backward compatibility.
+    if (typeof body.resultId === "string") resultId = body.resultId;
+    // resultId is needed so the keyword-research pack saved here can be
+    // picked up by /save into the HistoryEntry.
   } catch {
     /* empty body is fine */
   }
@@ -118,6 +121,12 @@ export async function POST(
 
   const encoder = new TextEncoder();
 
+  // Captured during the tool phase, consumed during the Claude call. The PDF
+  // (when present) is attached natively to the user message so Claude reads
+  // the form's actual layout/tables, not just our regex-extracted text.
+  let onboardingPdfBuffer: Uint8Array | null = null;
+  let onboardingPdfName: string | null = null;
+
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
       const send = (s: string) => controller.enqueue(encoder.encode(s));
@@ -139,12 +148,32 @@ export async function POST(
           send(`> 🔧 Pulling keyword data from DataforSEO (seed: \`${seedTopic}\`)\n`);
           const onboarding = await getOnboardingForSlug(clientSlug);
           if (onboarding) {
+            const compNote =
+              onboarding.competitors && onboarding.competitors.length > 0
+                ? ` Found ${onboarding.competitors.length} competitor(s) named in the form — pulling their keyword footprints too.`
+                : "";
             send(
-              `> ✓ **Onboarding form** detected (${onboarding.name}) — Claude will weight named keywords heavily.\n`,
+              `> ✓ **Onboarding form** detected (${onboarding.name})${compNote}\n`,
             );
+            // Fetch the PDF once so we can attach it to the Claude call later
+            // (Anthropic native PDF support — Claude reads layout/tables).
+            if (
+              onboarding.contentType === "application/pdf" ||
+              onboarding.url.toLowerCase().endsWith(".pdf")
+            ) {
+              try {
+                const pdfRes = await fetch(onboarding.url, { cache: "no-store" });
+                if (pdfRes.ok) {
+                  onboardingPdfBuffer = new Uint8Array(await pdfRes.arrayBuffer());
+                  onboardingPdfName = onboarding.name;
+                }
+              } catch (err) {
+                console.error("PDF fetch for Claude attach failed:", err);
+              }
+            }
           } else {
             send(
-              `> ℹ️ No onboarding form on file — relying on seed topic + brief only.\n`,
+              `> ⚠️ **No onboarding form on file** — relying on seed topic + brief only. Upload one on the client page so future runs cite what the client actually wants.\n`,
             );
           }
           const startedAt = Date.now();
@@ -158,6 +187,7 @@ export async function POST(
                 | "navigational",
               target,
               perEndpointLimit: 300,
+              competitorDomains: onboarding?.competitors ?? [],
             });
             const ms = Date.now() - startedAt;
             if (!pack) {
@@ -166,15 +196,31 @@ export async function POST(
               );
             } else {
               send(
-                `> ✓ **DataforSEO** — ${pack.suggestions.length} suggestions, ${pack.ideas.length} broader ideas${pack.domainExisting.length ? `, ${pack.domainExisting.length} already-ranking` : ""} (${ms} ms)\n`,
+                `> ✓ **DataforSEO** — ${pack.suggestions.length} suggestions, ${pack.ideas.length} broader ideas${pack.domainExisting.length ? `, ${pack.domainExisting.length} already-ranking` : ""}${pack.competitors.length ? `, ${pack.competitors.length} competitor footprint(s)` : ""} (${ms} ms)\n`,
               );
               for (const e of pack.errors) {
                 send(`> ⚠️ Partial: ${e.source} — ${e.message.slice(0, 200)}\n`);
               }
+              // Persist the structured pack so /save can attach it to the
+              // HistoryEntry — KeywordResearchDashboard reads from there.
+              if (resultId) {
+                try {
+                  await saveKwResearchPrep(clientSlug, actionSlug, resultId, pack);
+                } catch (err) {
+                  console.error("kw-research prep save (non-fatal):", err);
+                }
+              }
               const parts: string[] = [formatKwPackForPrompt(pack)];
               if (onboarding) {
+                const extractedSnippet = onboarding.extractedText
+                  ? `\n\n### Extracted text from the onboarding form (for citation)\n\`\`\`\n${onboarding.extractedText.slice(0, 8000)}${onboarding.extractedText.length > 8000 ? "\n…[truncated — see attached PDF for full content]" : ""}\n\`\`\``
+                  : "";
+                const compNote =
+                  onboarding.competitors && onboarding.competitors.length > 0
+                    ? `\n- **Competitors named in the form:** ${onboarding.competitors.join(", ")}`
+                    : "";
                 parts.push(
-                  `## Onboarding form (uploaded by the consultant)\n- **File:** ${onboarding.name} (${onboarding.contentType})\n- **URL:** ${onboarding.url}\n\nThe client filled this out during onboarding. It names the specific keywords/themes/services they want to be found for. **Weight these heavily in your shortlist** — they're the commercial north-star. If the keyword data contradicts what the onboarding form names, surface that gap explicitly in the "Gaps" section.`,
+                  `## Onboarding form (uploaded by the consultant)\n- **File:** ${onboarding.name} (${onboarding.contentType})${compNote}\n\nThe client filled this out during onboarding. It names the specific keywords/themes/services they want to be found for, plus competitors to watch. **You MUST cite this form** when you reference: top services, business objectives, target audience, competitors, brand voice. Quote short excerpts where useful. **Weight client-named keywords/competitors heavily.** If the keyword data contradicts the form, surface the gap explicitly.${extractedSnippet}${onboardingPdfBuffer ? "\n\n> The full PDF is also attached to this message — read it as your primary source." : ""}`,
                 );
               }
               factPack = parts.join("\n\n");
@@ -262,10 +308,31 @@ export async function POST(
         .filter(Boolean)
         .join("\n\n");
 
+      // If we have the onboarding PDF buffered, attach it natively so Claude
+      // reads the form's actual layout/tables (Anthropic's document content
+      // type). Falls back to text-only prompt when no PDF is attached.
+      const userContent: (
+        | { type: "text"; text: string }
+        | {
+            type: "file";
+            data: Uint8Array;
+            mediaType: string;
+            filename?: string;
+          }
+      )[] = [{ type: "text", text: userPrompt }];
+      if (onboardingPdfBuffer) {
+        userContent.push({
+          type: "file",
+          data: onboardingPdfBuffer,
+          mediaType: "application/pdf",
+          filename: onboardingPdfName ?? "onboarding-form.pdf",
+        });
+      }
+
       const result = streamText({
         model: anthropic(MODEL_ID),
         system,
-        prompt: userPrompt,
+        messages: [{ role: "user", content: userContent }],
         onError: ({ error }) => {
           console.error("SEO action stream failed:", error);
           try {

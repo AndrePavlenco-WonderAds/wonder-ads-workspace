@@ -13,6 +13,20 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "68.9",
+    date: "2026-05-17",
+    title: "Keyword Research goes full-stack — native PDF, competitor section, interactive dashboard, CSV + Target Keywords",
+    highlights: [
+      "**Claude now reads the onboarding PDF natively** via Anthropic's document content type — sees the form's actual layout/tables (not just regex-extracted text). The catch-all `/run` route attaches the PDF as a `file` content block on the user message; Claude can cite specific lines.",
+      "**Prompt mandates competitor analysis.** Two new required sections in the keyword-research output: **What the client told us** (top services, objectives, audience, brand voice — quoted from the form) and **Competitor analysis** (per-competitor footprint, strongest keywords they win, gaps to attack, verdict 🎯/⚠️/⛔). Plus a hard rule: cross-reference every competitor's keywords against the client's and suggest the best gap-attacks.",
+      "**Interactive Keyword Research Dashboard** below the report — tabs (All / Suggestions / Ideas / Already-ranking / Competitors), intent filter, full-text search, sortable columns (Volume / KD / CPC / Keyword), per-row select checkboxes. Sticky header on the table. Renders 2k+ keywords smoothly.",
+      "**CSV export** — selected rows or all-filtered. File name auto-stamped with date.",
+      "**'Send to Tracked' button** — pushes selected keywords into the per-client Target Keywords list (new `target-keywords:{slug}` KV store + `/api/target-keywords/[slug]` GET/POST/DELETE). Dedupes by lowercase keyword. Returns added/skipped counts.",
+      "**Dashboard data persists** — new `kw-research-prep-store.ts` holds the raw `KwResearchPack` between `/run` and `/save`, then attaches it to the `HistoryEntry`. Reopening a result page hydrates the dashboard from history instead of re-running DataforSEO.",
+      "**PDF download for Keyword Research.** Same WonderAds-branded cover as SEO Audit (consultant, wonder-ads.com, Audited date). The body adds a printable Keyword Universe section: 4 stat cards (total keywords, total volume/mo, already-ranking count, competitors analysed) + top 25 opportunities table + top 20 already-ranking + a per-competitor table for each named competitor.",
+    ],
+  },
+  {
     version: "68.8",
     date: "2026-05-17",
     title: "Hotfix: restore Yenisey column + onboarding doc polish (heartbeat badge, PDF extraction, competitor pull)",

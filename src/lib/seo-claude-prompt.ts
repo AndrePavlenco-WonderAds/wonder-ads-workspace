@@ -247,23 +247,42 @@ Prioritised plan grouped by horizon. Each item: one concrete deliverable + owner
 - **DataforSEO Labs — Direct suggestions**: same-stem expansions of the seed topic in the client's actual market (location_code + language_code from client-geo.ts). Each row has search volume, KD, intent, CPC.
 - **DataforSEO Labs — Broader related ideas**: semantically related keywords mined from the SERP. Same metrics.
 - **Already-ranking keywords on the client's domain** (when present): keywords the domain ALREADY ranks for that match this theme — treat as quick-win optimisation targets, not greenfield.
-- **Onboarding form** (when present): the doc the client filled out at intake — main keywords they want to focus on, target audience, services, geo, brand voice. **If the onboarding form mentions specific keywords or themes, weight those heavily in your shortlist — they reflect what the client cares about commercially.**
+- **Competitor keyword footprints** (when onboarding form names competitors): for each competitor URL named in the form, the keywords they ALREADY rank for filtered to the seed theme. **This is gold — these are real, validated, ranking keywords in your geo.**
+- **Onboarding form** (when present): the doc the client filled out at intake. **This is your PRIMARY commercial input.** Read it carefully — it names main keywords/themes they want to be found for, top services, business objectives + goals, target audience, brand voice, AND competitors to watch. The full PDF is attached natively when available so you can read the form's layout and tables directly. **You MUST cite this form** for: top services, objectives, target audience, competitors, brand voice. Quote short excerpts where useful.
 - **Client brief** (Do's / Don'ts / Notes): hard constraints.
 
 **Rules**
 - **Cite real numbers** from the fact pack. Never fabricate volume/KD/CPC. If a metric is missing for a keyword, write "—" not a guess.
 - **Prioritise by Intent fit × Business value × Realistic difficulty × Search volume — in that order.** Volume alone is a vanity metric.
 - **Honour the onboarding form** if present — keywords the client explicitly named outrank generic high-volume keywords unless the data clearly contradicts (and then say why).
+- **Always cross-reference competitor footprints** when present. For each named competitor: identify keywords they rank for that the client doesn't, judge whether they're a good target for the client (intent + brand fit + difficulty), and add the best ones to the shortlist with a note like _"competitor X ranks #4 here — gap to attack"_.
 - **Cluster aggressively.** No flat keyword lists. Real consultants group by topic + intent before prioritising.
 - Tag SERP intent: \`informational\` / \`commercial\` / \`transactional\` / \`navigational\`. Use the intent field from the fact pack when populated; infer from the keyword phrasing when not.
 - Be honest about missing data: if KD is "—", write "—" not "Easy/Medium/Hard" guesses.
+- **If no onboarding form is on file**, lead the Overview with a one-line warning: "_⚠️ No onboarding form uploaded — recommendations are based on seed topic + brief only. Upload the form for sharper, commercially-anchored suggestions._"
 
 **Output structure** — produce all of these sections, in this order, exactly named:
 
 ## Overview
 One-line verdict (e.g. "**~340 viable keywords across 6 clusters; 'all-on-4 Lisbon' cluster is the highest-leverage with 7 quick wins.**").
 
-Then a short paragraph with: total addressable keyword universe (count + summed monthly volume), the dominant intent split (% informational vs commercial vs transactional), and what the onboarding form (if any) anchors us toward.
+Then a short paragraph with: total addressable keyword universe (count + summed monthly volume), the dominant intent split (% informational vs commercial vs transactional), what the onboarding form anchors us toward, and which competitor is the biggest threat in this space.
+
+## What the client told us (from the onboarding form)
+**Skip this section entirely if no onboarding form is on file.** Otherwise: 3–6 short bullets summarising what the client wrote — **top services / offers**, **business objectives & goals** (e.g. "drive booked consults for all-on-4"), **target audience**, **brand voice**, **competitors named**. Quote 1–2 short verbatim excerpts so the consultant trusts you actually read the form.
+
+## Competitor analysis
+**Skip this section entirely if no competitors are named in the onboarding form.** Otherwise, for each competitor (in order of how relevant they are to this seed):
+
+\`\`\`
+### <competitor-domain>
+**Their footprint in this theme:** N keywords, top ranks: X-Y.
+**Strongest keywords they win:** <3-5 from the competitor table>, each with (vol/KD/their position).
+**Gaps the client can attack:** <2-4 keywords where the competitor ranks but the client doesn't, with intent + your reason this is a good fit (or not)>.
+**Verdict:** 🎯 worth tracking · ⚠️ partial overlap · ⛔ different lane.
+\`\`\`
+
+End with a one-line summary: which competitor is the biggest direct threat, and which keyword gaps appear across multiple competitors (those are the must-attack clusters).
 
 ## Cluster map
 For each topic cluster (4–8 clusters total), use this H3 + table format:

@@ -7,9 +7,11 @@ import type { ActionDef, ActionToolName } from "@/lib/seo-pillars";
 import type { HistoryEntry } from "@/lib/action-history";
 import type { DomainMetrics } from "@/lib/seo-tools/dataforseo";
 import type { SiteVitals } from "@/lib/audit-prep-store";
+import type { KwResearchPack } from "@/lib/seo-tools/keyword-research";
 import { pendingKey } from "./action-runner";
 import { MarkdownView } from "./markdown-view";
 import { DomainDashboard } from "./domain-dashboard";
+import { KeywordResearchDashboard } from "./keyword-research-dashboard";
 
 type Status = "loading" | "ready" | "generating" | "done" | "error" | "missing";
 
@@ -45,6 +47,9 @@ export function ResultRunner({
   );
   const [liveVitals, setLiveVitals] = useState<SiteVitals | null>(
     existing?.vitals ?? null,
+  );
+  const [liveKwPack, setLiveKwPack] = useState<KwResearchPack | null>(
+    existing?.kwResearch ?? null,
   );
   const abortRef = useRef<AbortController | null>(null);
   const generationStartedRef = useRef(false);
@@ -214,8 +219,10 @@ export function ResultRunner({
               try {
                 const saveJson = (await saveRes.json()) as {
                   metrics?: DomainMetrics | null;
+                  kwResearch?: KwResearchPack | null;
                 };
                 if (saveJson?.metrics) setLiveMetrics(saveJson.metrics);
+                if (saveJson?.kwResearch) setLiveKwPack(saveJson.kwResearch);
               } catch {
                 /* response body may not be JSON in edge cases */
               }
@@ -382,6 +389,16 @@ export function ResultRunner({
           metrics={liveMetrics}
           vitals={liveVitals}
           generating={status === "generating"}
+        />
+      )}
+
+      {/* Keyword Research dashboard (Keyword Research only) */}
+      {action.slug === "keyword-research" && (
+        <KeywordResearchDashboard
+          pack={liveKwPack}
+          generating={status === "generating"}
+          clientSlug={clientSlug}
+          resultId={resultId}
         />
       )}
 

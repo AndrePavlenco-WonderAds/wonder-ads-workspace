@@ -15,6 +15,7 @@ import { AutoPrint } from "./auto-print";
 import type { DomainMetrics } from "@/lib/seo-tools/dataforseo";
 import type { SiteVitals } from "@/lib/audit-prep-store";
 import type { PsiResult } from "@/lib/seo-tools/pagespeed";
+import type { KwResearchPack, KwIdea } from "@/lib/seo-tools/keyword-research";
 
 export function PrintLayout({
   clientName,
@@ -25,7 +26,9 @@ export function PrintLayout({
   analysisText,
   metrics,
   vitals,
+  kwResearch,
   showDomainSummary,
+  showKeywordResearchSummary,
 }: {
   clientName: string;
   actionLabel: string;
@@ -35,7 +38,9 @@ export function PrintLayout({
   analysisText: string;
   metrics: DomainMetrics | null;
   vitals: SiteVitals | null;
+  kwResearch: KwResearchPack | null;
   showDomainSummary: boolean;
+  showKeywordResearchSummary: boolean;
 }) {
   return (
     <html lang="en">
@@ -152,6 +157,9 @@ export function PrintLayout({
             {showDomainSummary && vitals && (
               <PrintCoreWebVitals vitals={vitals} />
             )}
+            {showKeywordResearchSummary && kwResearch && (
+              <PrintKeywordResearchSummary pack={kwResearch} />
+            )}
 
             {analysisText ? (
               <MarkdownView source={analysisText} />
@@ -265,6 +273,158 @@ function PrintDomainSummary({ metrics }: { metrics: DomainMetrics }) {
       )}
     </>
   );
+}
+
+function PrintKeywordResearchSummary({ pack }: { pack: KwResearchPack }) {
+  const totalKeywords =
+    pack.suggestions.length +
+    pack.ideas.length +
+    pack.domainExisting.length +
+    pack.competitors.reduce((s, c) => s + c.keywords.length, 0);
+  const totalVolume = sumVolume([
+    ...pack.suggestions,
+    ...pack.ideas,
+    ...pack.domainExisting,
+  ]);
+  const topSuggestions = [...pack.suggestions]
+    .sort((a, b) => (b.searchVolume ?? 0) - (a.searchVolume ?? 0))
+    .slice(0, 25);
+  const topDomain = [...pack.domainExisting].slice(0, 20);
+  return (
+    <>
+      <h2>Keyword universe</h2>
+      <div className="pdf-stats">
+        <div className="pdf-stat">
+          <div className="pdf-stat-label">Total keywords</div>
+          <div className="pdf-stat-value">{fmtNum(totalKeywords)}</div>
+          <div className="pdf-stat-sub">
+            {pack.suggestions.length} suggestions · {pack.ideas.length} ideas
+          </div>
+        </div>
+        <div className="pdf-stat">
+          <div className="pdf-stat-label">Total volume / mo</div>
+          <div className="pdf-stat-value">{fmtNum(totalVolume)}</div>
+          <div className="pdf-stat-sub">
+            Across suggestions + ideas + already-ranking
+          </div>
+        </div>
+        <div className="pdf-stat">
+          <div className="pdf-stat-label">Already-ranking</div>
+          <div className="pdf-stat-value">{pack.domainExisting.length}</div>
+          <div className="pdf-stat-sub">
+            Quick-win optimisation targets on the client&apos;s domain
+          </div>
+        </div>
+        <div className="pdf-stat">
+          <div className="pdf-stat-label">Competitors analysed</div>
+          <div className="pdf-stat-value">{pack.competitors.length}</div>
+          <div className="pdf-stat-sub">
+            {pack.geo.countryLabel} · {pack.geo.languageCode}
+          </div>
+        </div>
+      </div>
+
+      {topSuggestions.length > 0 && (
+        <>
+          <h3>Top 25 keyword opportunities (by volume)</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Keyword</th>
+                <th style={{ textAlign: "right" }}>Vol/mo</th>
+                <th style={{ textAlign: "right" }}>KD</th>
+                <th>Intent</th>
+                <th style={{ textAlign: "right" }}>CPC</th>
+              </tr>
+            </thead>
+            <tbody>
+              {topSuggestions.map((k, i) => (
+                <tr key={i}>
+                  <td>{i + 1}</td>
+                  <td>{k.keyword}</td>
+                  <td style={{ textAlign: "right" }}>{fmtNum(k.searchVolume)}</td>
+                  <td style={{ textAlign: "right" }}>{k.difficulty ?? "—"}</td>
+                  <td>{k.intent ?? "—"}</td>
+                  <td style={{ textAlign: "right" }}>
+                    {k.cpc != null ? `$${k.cpc.toFixed(2)}` : "—"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
+      )}
+
+      {topDomain.length > 0 && (
+        <>
+          <h3>Already-ranking on the client&apos;s domain (top 20)</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Keyword</th>
+                <th style={{ textAlign: "right" }}>Vol/mo</th>
+                <th style={{ textAlign: "right" }}>KD</th>
+                <th>Intent</th>
+              </tr>
+            </thead>
+            <tbody>
+              {topDomain.map((k, i) => (
+                <tr key={i}>
+                  <td>{i + 1}</td>
+                  <td>{k.keyword}</td>
+                  <td style={{ textAlign: "right" }}>{fmtNum(k.searchVolume)}</td>
+                  <td style={{ textAlign: "right" }}>{k.difficulty ?? "—"}</td>
+                  <td>{k.intent ?? "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
+      )}
+
+      {pack.competitors.length > 0 && (
+        <>
+          <h3>Competitor footprints</h3>
+          {pack.competitors.map((c) => (
+            <div key={c.domain} style={{ marginBottom: "6mm" }}>
+              <p>
+                <strong>{c.domain}</strong> — {c.keywords.length} keywords in
+                theme.
+              </p>
+              {c.keywords.length > 0 && (
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Keyword</th>
+                      <th style={{ textAlign: "right" }}>Vol/mo</th>
+                      <th style={{ textAlign: "right" }}>KD</th>
+                      <th>Intent</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {c.keywords.slice(0, 12).map((k, i) => (
+                      <tr key={i}>
+                        <td>{k.keyword}</td>
+                        <td style={{ textAlign: "right" }}>{fmtNum(k.searchVolume)}</td>
+                        <td style={{ textAlign: "right" }}>{k.difficulty ?? "—"}</td>
+                        <td>{k.intent ?? "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          ))}
+        </>
+      )}
+    </>
+  );
+}
+
+function sumVolume(list: KwIdea[]): number {
+  return list.reduce((s, k) => s + (k.searchVolume ?? 0), 0);
 }
 
 function PrintCoreWebVitals({ vitals }: { vitals: SiteVitals }) {
