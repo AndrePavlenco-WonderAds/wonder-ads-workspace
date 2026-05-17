@@ -59,6 +59,7 @@ export default async function ActionPage({
 
   const briefHasContent =
     brief.dos.length + brief.donts.length + brief.notes.length > 0;
+  const showBriefPanel = action.usesBrief !== false && briefHasContent;
 
   // Per-action defaults computed from client context. Extend as new actions
   // benefit from prefilled inputs (e.g. blog audience from client tier).
@@ -109,7 +110,7 @@ export default async function ActionPage({
         )}
       </header>
 
-      {briefHasContent && (
+      {showBriefPanel && (
         <section
           aria-label="Client brief snapshot"
           className="mt-6 rounded-2xl border border-white/8 bg-white/[0.025] p-4"

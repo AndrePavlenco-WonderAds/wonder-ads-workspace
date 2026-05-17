@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ExternalLink, TrendingUp } from "lucide-react";
+import { ExternalLink, TrendingUp, AlertTriangle } from "lucide-react";
 import type { DomainMetrics } from "@/lib/seo-tools/dataforseo";
 
 type EnvDiag = {
@@ -14,7 +14,7 @@ type EnvDiag = {
 export function DomainDashboard({ metrics }: { metrics: DomainMetrics | null }) {
   const [envOk, setEnvOk] = useState<boolean | null>(null);
   useEffect(() => {
-    if (metrics) return; // only need diagnostic when metrics is missing
+    if (metrics) return;
     let cancelled = false;
     fetch("/api/diagnostics/env", { cache: "no-store" })
       .then((r) => r.json() as Promise<EnvDiag>)
@@ -53,41 +53,32 @@ export function DomainDashboard({ metrics }: { metrics: DomainMetrics | null }) 
         {envConfigured ? (
           <p className="mt-3 text-xs text-white/55">
             DataforSEO is configured in this environment, but this audit
-            result was generated before metrics started flowing (or Phase 1
-            failed before saving them). Run a new audit on the action page —
-            the dashboard will populate.{" "}
-            <a
-              href="/api/diagnostics/dataforseo-test"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-0.5 text-[color:var(--brand-purple)] hover:underline"
-            >
-              Test the API directly
-              <ExternalLink className="h-2.5 w-2.5" />
-            </a>{" "}
-            to verify credentials work.
+            result was generated before metrics started flowing. Click{" "}
+            <strong className="text-white/80">Re-generate</strong> on the
+            result toolbar above to refresh.
           </p>
         ) : (
           <p className="mt-3 text-xs text-white/55">
             Connect <strong className="text-white/80">DataforSEO</strong> to
-            see Authority Score, organic keyword count + traffic estimate,
-            referring domains, and the top ranked keywords for this site at
-            the top of every audit.{" "}
+            see domain authority, keywords, traffic estimate, and ranked
+            keywords at the top of every audit.{" "}
             <a
               href="https://app.dataforseo.com/register"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-0.5 text-[color:var(--brand-purple)] hover:underline"
             >
-              Sign up → set DATAFORSEO_LOGIN + DATAFORSEO_PASSWORD in Vercel
-              env.
-              <ExternalLink className="h-2.5 w-2.5" />
+              Sign up <ExternalLink className="h-2.5 w-2.5" />
             </a>
           </p>
         )}
       </section>
     );
   }
+
+  const backlinksErr = metrics.errors.find((e) =>
+    e.source.includes("backlinks"),
+  );
 
   return (
     <section className="space-y-3">
@@ -104,37 +95,115 @@ export function DomainDashboard({ metrics }: { metrics: DomainMetrics | null }) 
         </span>
       </header>
 
+      {/* Primary row — 4 big stats */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat
           label="Authority"
           value={metrics.rankNormalised ?? "—"}
           suffix={metrics.rankNormalised != null ? "/100" : undefined}
-          sublabel={`Rank ${metrics.rank ?? "—"} (raw)`}
+          sublabel={
+            metrics.rank != null
+              ? `Rank ${metrics.rank} (raw 0-1000)`
+              : backlinksErr
+                ? "Activate Backlinks subscription"
+                : "No backlink data"
+          }
+          accentMissing={metrics.rankNormalised == null}
         />
         <Stat
           label="Organic keywords"
           value={fmtNum(metrics.organicKeywords)}
           sublabel={
             metrics.organicCount
-              ? `Top 3: ${metrics.organicCount.top3} · Top 10: ${metrics.organicCount.top10}`
+              ? `Top 3: ${metrics.organicCount.top3} · Top 10: ${metrics.organicCount.top10} · Top 100: ${metrics.organicCount.top100}`
               : undefined
           }
         />
         <Stat
           label="Est. monthly organic traffic"
-          value={fmtNum(metrics.organicEtv)}
+          value={fmtNum(roundN(metrics.organicEtv, 0))}
           sublabel="ETV — clicks proxy"
         />
         <Stat
           label="Referring domains"
           value={fmtNum(metrics.referringDomains)}
           sublabel={
-            metrics.backlinks != null
-              ? `${fmtNum(metrics.backlinks)} backlinks · ${fmtNum(metrics.dofollow)} dofollow`
+            metrics.referringDomains != null
+              ? metrics.backlinks != null
+                ? `${fmtNum(metrics.backlinks)} total backlinks`
+                : undefined
+              : backlinksErr
+                ? "Activate Backlinks subscription"
+                : "No data"
+          }
+          accentMissing={metrics.referringDomains == null}
+        />
+      </div>
+
+      {/* Secondary row — 4 smaller stats */}
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <Stat
+          label="Total backlinks"
+          value={fmtNum(metrics.backlinks)}
+          sublabel={
+            metrics.dofollow != null && metrics.backlinks != null && metrics.backlinks > 0
+              ? `${Math.round((metrics.dofollow / metrics.backlinks) * 100)}% dofollow`
+              : undefined
+          }
+          accentMissing={metrics.backlinks == null}
+        />
+        <Stat
+          label="Broken backlinks"
+          value={fmtNum(metrics.brokenBacklinks)}
+          sublabel={
+            metrics.brokenBacklinks != null && metrics.backlinks
+              ? `${Math.round((metrics.brokenBacklinks / metrics.backlinks) * 100)}% of total`
+              : undefined
+          }
+          tone={
+            metrics.brokenBacklinks != null && metrics.brokenBacklinks > 0
+              ? "warn"
+              : "default"
+          }
+          accentMissing={metrics.brokenBacklinks == null}
+        />
+        <Stat
+          label="Paid keywords"
+          value={fmtNum(metrics.paidKeywords)}
+          sublabel={
+            metrics.paidKeywords != null && metrics.paidKeywords > 0
+              ? "Active paid campaigns"
+              : "No paid presence"
+          }
+        />
+        <Stat
+          label="Top keywords (≤10)"
+          value={metrics.organicCount?.top10 ?? "—"}
+          sublabel={
+            metrics.organicCount
+              ? `Top 3: ${metrics.organicCount.top3} · 11-100: ${metrics.organicCount.top100 - metrics.organicCount.top10}`
               : undefined
           }
         />
       </div>
+
+      {backlinksErr && (
+        <div className="flex items-start gap-2 rounded-lg border border-amber-400/30 bg-amber-400/[0.06] px-3 py-2 text-[11px] text-amber-200">
+          <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+          <div>
+            <strong>Backlinks data missing.</strong> {backlinksErr.message}.{" "}
+            <a
+              href="https://app.dataforseo.com/backlinks-subscription"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline-offset-2 hover:underline"
+            >
+              Activate the DataforSEO Backlinks subscription
+            </a>{" "}
+            to populate Authority, Referring Domains, and Backlinks cards.
+          </div>
+        </div>
+      )}
 
       {metrics.topKeywords && metrics.topKeywords.length > 0 && (
         <div className="brand-gradient-border relative overflow-hidden rounded-2xl bg-white/[0.025] p-4">
@@ -143,23 +212,25 @@ export function DomainDashboard({ metrics }: { metrics: DomainMetrics | null }) 
               Top ranked keywords
             </h3>
             <span className="text-[10px] uppercase tracking-[0.13em] text-white/35">
-              by estimated traffic
+              by estimated traffic · {metrics.topKeywords.length} shown
             </span>
           </header>
-          <div className="overflow-x-auto">
+          <div className="max-h-[480px] overflow-y-auto rounded-md border border-white/5 print:max-h-none print:overflow-visible">
             <table className="w-full text-left text-[12px]">
-              <thead className="border-b border-white/10 text-[10px] uppercase tracking-[0.08em] text-white/55">
+              <thead className="sticky top-0 z-[1] border-b border-white/10 bg-[#0a0a0f]/95 text-[10px] uppercase tracking-[0.08em] text-white/55 backdrop-blur">
                 <tr>
                   <th className="px-2 py-1.5">#</th>
                   <th className="px-2 py-1.5">Keyword</th>
                   <th className="px-2 py-1.5 text-right">Pos</th>
                   <th className="px-2 py-1.5 text-right">Volume</th>
                   <th className="px-2 py-1.5">Intent</th>
+                  <th className="px-2 py-1.5 text-right">CPC</th>
                   <th className="px-2 py-1.5 text-right">ETV</th>
+                  <th className="px-2 py-1.5">URL</th>
                 </tr>
               </thead>
               <tbody>
-                {metrics.topKeywords.slice(0, 15).map((k, i) => (
+                {metrics.topKeywords.map((k, i) => (
                   <tr key={i} className="border-b border-white/5 text-white/85">
                     <td className="px-2 py-1.5 text-white/45">{i + 1}</td>
                     <td className="px-2 py-1.5 font-medium">{k.keyword}</td>
@@ -176,8 +247,14 @@ export function DomainDashboard({ metrics }: { metrics: DomainMetrics | null }) 
                     <td className="px-2 py-1.5 text-white/55">
                       {k.intent ?? "—"}
                     </td>
+                    <td className="px-2 py-1.5 text-right text-white/60">
+                      {k.cpc != null ? `$${k.cpc.toFixed(2)}` : "—"}
+                    </td>
                     <td className="px-2 py-1.5 text-right">
-                      {fmtNum(k.estTraffic)}
+                      {fmtNum(roundN(k.estTraffic, 1))}
+                    </td>
+                    <td className="max-w-[200px] truncate px-2 py-1.5 text-[11px] text-white/45">
+                      {k.url ? relativePath(k.url, metrics.target) : "—"}
                     </td>
                   </tr>
                 ))}
@@ -185,14 +262,6 @@ export function DomainDashboard({ metrics }: { metrics: DomainMetrics | null }) 
             </table>
           </div>
         </div>
-      )}
-
-      {metrics.errors.length > 0 && (
-        <p className="text-[11px] text-yellow-300/80">
-          Partial data — {metrics.errors.length} sub-pull
-          {metrics.errors.length === 1 ? "" : "s"} failed:{" "}
-          {metrics.errors.map((e) => e.source).join(", ")}
-        </p>
       )}
     </section>
   );
@@ -203,18 +272,32 @@ function Stat({
   value,
   suffix,
   sublabel,
+  tone = "default",
+  accentMissing = false,
 }: {
   label: string;
   value: string | number;
   suffix?: string;
   sublabel?: string;
+  tone?: "default" | "warn";
+  accentMissing?: boolean;
 }) {
+  const border =
+    tone === "warn"
+      ? "border-amber-400/25"
+      : accentMissing
+        ? "border-white/8"
+        : "border-white/10";
   return (
-    <div className="brand-gradient-border relative overflow-hidden rounded-2xl bg-white/[0.025] p-4">
+    <div
+      className={`relative overflow-hidden rounded-2xl border ${border} bg-white/[0.025] p-4`}
+    >
       <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/45">
         {label}
       </div>
-      <div className="mt-1 text-2xl font-semibold tracking-tight text-white">
+      <div
+        className={`mt-1 text-2xl font-semibold tracking-tight ${accentMissing ? "text-white/40" : "text-white"}`}
+      >
         {value}
         {suffix && (
           <span className="ml-0.5 text-sm text-white/45">{suffix}</span>
@@ -234,6 +317,23 @@ function fmtNum(v: number | null | undefined): string {
   return `${(v / 1_000_000).toFixed(2)}M`;
 }
 
+function roundN(v: number | null | undefined, decimals: number): number | null {
+  if (v === null || v === undefined) return null;
+  const f = Math.pow(10, decimals);
+  return Math.round(v * f) / f;
+}
+
+function relativePath(url: string, target: string): string {
+  try {
+    const u = new URL(url);
+    const host = u.hostname.replace(/^www\./, "");
+    if (host === target) return u.pathname + u.search || "/";
+    return url;
+  } catch {
+    return url;
+  }
+}
+
 function posBadge(pos: number): string {
   if (pos <= 3) return "bg-emerald-400/15 text-emerald-200";
   if (pos <= 10) return "bg-sky-400/15 text-sky-200";
@@ -242,7 +342,6 @@ function posBadge(pos: number): string {
 }
 
 function locationName(code: number): string {
-  // DataforSEO uses Google geo codes. Adding the ones our clients sit in.
   const map: Record<number, string> = {
     2620: "Portugal",
     2840: "United States",

@@ -325,52 +325,64 @@ export function ResultRunner({
     return "Generating…";
   }, [status, output, action.tools]);
 
-  // ---- Print mode: minimal layout ----
+  // ---- Print mode: light layout with dashboard + analysis ----
   if (isPrintMode) {
     return (
       <div className="bg-white text-black">
         <style>{`
           @media print {
-            @page { margin: 16mm 14mm; }
+            @page { margin: 14mm 12mm; }
             .no-print { display: none !important; }
             h2 { break-before: page; }
             h2:first-of-type { break-before: avoid; }
             table { break-inside: avoid; }
+            .pdf-stat { break-inside: avoid; }
           }
-          html, body { background: white !important; }
-          .print-doc { color: #1a1a1a; font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
-          .print-doc h1 { font-size: 24px; font-weight: 700; color: #0a0a0a; margin: 0 0 6px; }
-          .print-doc h2 { font-size: 18px; font-weight: 700; color: #0a0a0a; margin: 24px 0 8px; padding-bottom: 4px; border-bottom: 1px solid #d4d4d4; }
-          .print-doc h3 { font-size: 14px; font-weight: 700; color: #1a1a1a; margin: 16px 0 6px; }
-          .print-doc h4 { font-size: 13px; font-weight: 700; color: #1a1a1a; margin: 12px 0 4px; }
-          .print-doc p, .print-doc li { font-size: 12px; line-height: 1.5; }
-          .print-doc strong { font-weight: 700; color: #0a0a0a; }
-          .print-doc a { color: #5b34c9; text-decoration: none; }
-          .print-doc table { border-collapse: collapse; width: 100%; margin: 8px 0; font-size: 11px; }
-          .print-doc th { text-align: left; padding: 6px 8px; border-bottom: 2px solid #1a1a1a; font-weight: 700; }
-          .print-doc td { border-bottom: 1px solid #e5e5e5; padding: 6px 8px; vertical-align: top; }
-          .print-doc pre { background: #f5f5f5; padding: 10px; border-radius: 4px; overflow: auto; font-size: 10.5px; }
-          .print-doc code { background: #f0f0f0; padding: 1px 4px; border-radius: 3px; font-size: 11px; }
-          .print-doc blockquote { border-left: 3px solid #5b34c9; padding-left: 10px; color: #555; margin: 10px 0; }
-          .print-meta { color: #777; font-size: 11px; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid #e5e5e5; }
-          .print-empty { color: #888; padding: 40px 0; text-align: center; }
+          html, body { background: white !important; color: #0a0a0a !important; }
+          .pdf-doc { color: #1a1a1a; font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+          .pdf-doc h1 { font-size: 26px; font-weight: 700; color: #0a0a0a; margin: 0 0 4px; }
+          .pdf-doc h2 { font-size: 17px; font-weight: 700; color: #0a0a0a; margin: 22px 0 8px; padding-bottom: 4px; border-bottom: 1px solid #d4d4d4; }
+          .pdf-doc h3 { font-size: 13.5px; font-weight: 700; color: #1a1a1a; margin: 14px 0 6px; }
+          .pdf-doc h4 { font-size: 12.5px; font-weight: 700; color: #1a1a1a; margin: 12px 0 4px; }
+          .pdf-doc p, .pdf-doc li { font-size: 11.5px; line-height: 1.55; }
+          .pdf-doc strong { font-weight: 700; color: #0a0a0a; }
+          .pdf-doc a { color: #5b34c9; text-decoration: none; }
+          .pdf-doc table { border-collapse: collapse; width: 100%; margin: 6px 0; font-size: 10.5px; }
+          .pdf-doc th { text-align: left; padding: 5px 6px; border-bottom: 2px solid #1a1a1a; font-weight: 700; }
+          .pdf-doc td { border-bottom: 1px solid #e5e5e5; padding: 5px 6px; vertical-align: top; }
+          .pdf-doc pre { background: #f5f5f5; padding: 9px; border-radius: 4px; overflow: auto; font-size: 10px; }
+          .pdf-doc code { background: #f0f0f0; padding: 1px 3px; border-radius: 3px; font-size: 10.5px; }
+          .pdf-doc blockquote { border-left: 3px solid #5b34c9; padding-left: 10px; color: #555; margin: 10px 0; }
+          .pdf-meta { color: #777; font-size: 11px; margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid #e5e5e5; }
+          .pdf-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 10px 0 14px; }
+          .pdf-stat { border: 1px solid #d4d4d4; border-radius: 6px; padding: 8px 10px; }
+          .pdf-stat-label { font-size: 9px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #666; }
+          .pdf-stat-value { font-size: 18px; font-weight: 700; color: #0a0a0a; margin-top: 2px; }
+          .pdf-stat-sub { font-size: 9.5px; color: #888; margin-top: 2px; }
+          .pdf-keywords { max-height: none !important; overflow: visible !important; }
+          .pdf-empty { color: #888; padding: 40px 0; text-align: center; }
         `}</style>
-        <div className="print-doc mx-auto max-w-3xl p-6">
+        <div className="pdf-doc mx-auto max-w-3xl p-6">
+          <h1>{action.label}</h1>
+          <div className="pdf-meta">
+            {resultId} · generated{" "}
+            {new Date().toLocaleString(undefined, {
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            })}
+            {liveMetrics &&
+              ` · domain: ${liveMetrics.target} · ${liveMetrics.source}`}
+          </div>
+
+          {liveMetrics && action.slug === "seo-audit" && (
+            <PrintDomainSummary metrics={liveMetrics} />
+          )}
+
           {analysisText ? (
-            <>
-              <h1>{action.label}</h1>
-              <div className="print-meta">
-                {resultId} · generated{" "}
-                {new Date().toLocaleString(undefined, {
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                })}
-              </div>
-              <MarkdownView source={analysisText} />
-            </>
+            <MarkdownView source={analysisText} />
           ) : (
-            <div className="print-empty">
+            <div className="pdf-empty">
               <p>
                 <strong>This result hasn&apos;t been saved yet.</strong>
               </p>
@@ -527,6 +539,84 @@ export function ResultRunner({
         )}
       </article>
     </div>
+  );
+}
+
+function PrintDomainSummary({ metrics }: { metrics: DomainMetrics }) {
+  const fmt = (v: number | null | undefined) =>
+    v == null
+      ? "—"
+      : v < 1000
+        ? v.toString()
+        : v < 1_000_000
+          ? `${(v / 1000).toFixed(1)}k`
+          : `${(v / 1_000_000).toFixed(2)}M`;
+  return (
+    <>
+      <h2>Domain intelligence</h2>
+      <div className="pdf-stats">
+        <div className="pdf-stat">
+          <div className="pdf-stat-label">Authority</div>
+          <div className="pdf-stat-value">
+            {metrics.rankNormalised ?? "—"}
+            {metrics.rankNormalised != null && <span style={{ fontSize: 11, color: "#888" }}>/100</span>}
+          </div>
+          {metrics.rank != null && (
+            <div className="pdf-stat-sub">Rank {metrics.rank}</div>
+          )}
+        </div>
+        <div className="pdf-stat">
+          <div className="pdf-stat-label">Organic keywords</div>
+          <div className="pdf-stat-value">{fmt(metrics.organicKeywords)}</div>
+          {metrics.organicCount && (
+            <div className="pdf-stat-sub">
+              Top 3: {metrics.organicCount.top3} · Top 10: {metrics.organicCount.top10}
+            </div>
+          )}
+        </div>
+        <div className="pdf-stat">
+          <div className="pdf-stat-label">Est. monthly traffic (ETV)</div>
+          <div className="pdf-stat-value">
+            {fmt(metrics.organicEtv != null ? Math.round(metrics.organicEtv) : null)}
+          </div>
+        </div>
+        <div className="pdf-stat">
+          <div className="pdf-stat-label">Referring domains</div>
+          <div className="pdf-stat-value">{fmt(metrics.referringDomains)}</div>
+          {metrics.backlinks != null && (
+            <div className="pdf-stat-sub">{fmt(metrics.backlinks)} backlinks</div>
+          )}
+        </div>
+      </div>
+
+      {metrics.topKeywords && metrics.topKeywords.length > 0 && (
+        <>
+          <h3>Top ranked keywords ({metrics.topKeywords.length})</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Keyword</th>
+                <th style={{ textAlign: "right" }}>Pos</th>
+                <th style={{ textAlign: "right" }}>Volume</th>
+                <th style={{ textAlign: "right" }}>ETV</th>
+              </tr>
+            </thead>
+            <tbody>
+              {metrics.topKeywords.slice(0, 30).map((k, i) => (
+                <tr key={i}>
+                  <td>{i + 1}</td>
+                  <td>{k.keyword}</td>
+                  <td style={{ textAlign: "right" }}>{k.position}</td>
+                  <td style={{ textAlign: "right" }}>{fmt(k.searchVolume)}</td>
+                  <td style={{ textAlign: "right" }}>{fmt(k.estTraffic != null ? Math.round(k.estTraffic * 10) / 10 : null)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
+      )}
+    </>
   );
 }
 

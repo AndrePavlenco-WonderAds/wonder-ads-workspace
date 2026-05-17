@@ -39,6 +39,11 @@ export type ActionDef = {
   tools?: ActionToolName[];
   /** Which input field carries the URL the tools should target. Default "pageUrl". */
   toolUrlField?: string;
+  /** Whether the client brief (Do's / Don'ts / Notes) is relevant for this
+   *  action. Defaults to true. Set false for data-driven audits that don't
+   *  generate content (SEO Audit, Keyword Research) — the brief is still
+   *  in the prompt as context but we hide the panel on the action page. */
+  usesBrief?: boolean;
 };
 
 export type Pillar = {
@@ -78,6 +83,7 @@ export const PILLARS: Pillar[] = [
         label: "SEO Audit",
         blurb:
           "Site-wide audit — sitemap, sample crawl, PageSpeed and Search Console pulled live.",
+        usesBrief: false,
         tools: [
           "sitemap-discovery",
           "crawl-page",
@@ -135,6 +141,7 @@ export const PILLARS: Pillar[] = [
         label: "Keyword Research",
         blurb:
           "Cluster a topic into intent-mapped, prioritised target keywords.",
+        usesBrief: false,
         fields: [
           {
             key: "seedTopic",

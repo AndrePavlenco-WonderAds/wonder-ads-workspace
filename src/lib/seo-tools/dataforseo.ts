@@ -88,7 +88,20 @@ async function dfsPost<TBody, TResult>(
       `DataforSEO ${path} HTTP ${res.status}${text ? `: ${text.slice(0, 200)}` : ""}`,
     );
   }
-  return (await res.json()) as DfsResult<TResult>;
+  const json = (await res.json()) as DfsResult<TResult>;
+  // DataforSEO returns HTTP 200 even on subscription / quota errors, with
+  // the real status inside tasks[].status_code. 20000-29999 = ok, anything
+  // else = error worth surfacing (e.g. 40204 "Access denied — activate
+  // Backlinks subscription").
+  const task = json.tasks?.[0];
+  if (task && typeof task.status_code === "number") {
+    if (task.status_code >= 40000) {
+      throw new Error(
+        `DataforSEO ${path}: ${task.status_code} ${task.status_message ?? "Unknown error"}`,
+      );
+    }
+  }
+  return json;
 }
 
 function hostnameFromUrl(url: string): string {
@@ -237,7 +250,7 @@ async function fetchTopKeywords(
   target: string,
   locationCode: number,
   languageCode: string,
-  limit = 15,
+  limit = 100,
 ): Promise<DomainTopKeyword[]> {
   const body = [
     {
@@ -285,7 +298,7 @@ export async function fetchDomainMetrics(
   const [rankRes, backlinksRes, kwRes] = await Promise.allSettled([
     fetchRankOverview(target, locationCode, languageCode),
     fetchBacklinksSummary(target),
-    fetchTopKeywords(target, locationCode, languageCode, 15),
+    fetchTopKeywords(target, locationCode, languageCode, 100),
   ]);
 
   const out: DomainMetrics = {

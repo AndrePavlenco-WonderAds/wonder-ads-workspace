@@ -156,10 +156,18 @@ function getActionOutputSpec(slug: string): string {
 One-line verdict, factual (e.g. "**3 Critical, 4 High issues. Mobile performance + indexation are the limiting factors.**"). Then 2 short paragraphs: site identity + current organic shape (cite GSC + DataforSEO numbers), and what's blocking growth (name the issues). No filler.
 
 ## Top 5 priority issues
-Numbered list of the **5 most impactful issues**, ranked by impact × ease. Each item is 2–3 short lines:
-1. **<Issue title>** — Severity: Critical/High/Medium · Effort: S/M/L · Lift: High/Medium/Low
-   <One-line evidence with real numbers / quoted HTML / cited audit.>
-   <One-line fix — concrete, with owner.>
+Numbered list of the **5 most impactful issues**, ranked by impact × ease. **Format each as a mini-block with blank lines between** for readability — do NOT pack everything onto one wrapping line. Use this exact template:
+
+\`\`\`
+1. 🔴 **<Issue title>**
+   **Severity:** Critical · **Effort:** S/M/L · **Lift:** High/Medium/Low
+
+   **Evidence:** <one short sentence with real numbers / quoted HTML / cited audit>.
+
+   **Fix:** <one short sentence — concrete, with owner>.
+\`\`\`
+
+Severity emoji: 🔴 Critical · 🟠 High · 🟡 Medium · 🟢 Low. Use the emoji at the start of the title for fast visual scanning.
 
 If the audit only surfaces 3 real Critical/High issues, list 3 — do not pad to 5.
 
@@ -194,13 +202,17 @@ Cover every row below — short "What it means" copy (≤ 12 words) explains the
 - **DataforSEO cross-reference** (when present) — top keywords from DataforSEO that aren't yet earning clicks in GSC (visibility opportunity), or vice-versa.
 
 ## All findings
-Group by **Critical → High → Medium → Low**. For each:
-- **Finding** — one line, naming the exact issue (cite the Lighthouse audit title, the page URL + element, or the GSC/DataforSEO trend).
-- **Evidence** — the measurement / quoted HTML / GSC numbers.
-- **Scope** — affects [homepage / all sampled pages / N of the sampled pages / search visibility / etc.].
-- **Why it matters** — in concrete SEO / ranking / UX / revenue terms.
-- **Fix** — specific, with owner (SEO / Dev / Content / Client) and rough effort (S / M / L).
-- **Estimated lift** — High / Medium / Low.
+Group by **🔴 Critical → 🟠 High → 🟡 Medium → 🟢 Low** with an H3 per group. Each finding uses the same mini-block format as the Top 5 — never inline-pack everything on one line:
+
+\`\`\`
+### 🔴 Critical
+1. **<Finding>** — Severity: Critical · Effort: S/M/L · Lift: High/Medium/Low
+
+   **Evidence:** <measurement / quoted HTML / GSC numbers>.
+   **Scope:** <homepage / N of M sampled pages / search visibility / etc.>.
+   **Why it matters:** <concrete SEO / ranking / UX / revenue impact>.
+   **Fix:** <specific action, owner: SEO/Dev/Content/Client>.
+\`\`\`
 
 Cover the full stack: indexation + crawlability, Core Web Vitals (both devices), site-wide on-page hygiene (title/meta/H1 patterns, schema coverage, heading hierarchy), content depth + YMYL thin-content risks, accessibility-as-ranking, and visible E-E-A-T / YMYL exposure. Don't pad with healthy findings — call them out only when worth noting.
 

@@ -71,7 +71,6 @@ export async function POST(
   }
 
   let inputs: Record<string, string> = {};
-  let resultId: string | undefined;
   try {
     const body = (await req.json()) as {
       inputs?: Record<string, string>;
@@ -80,9 +79,8 @@ export async function POST(
     if (body.inputs && typeof body.inputs === "object") {
       inputs = body.inputs;
     }
-    if (typeof body.resultId === "string" && body.resultId.length > 0) {
-      resultId = body.resultId;
-    }
+    // resultId is parsed but no longer used here — /save now owns the
+    // history write. Kept in the body shape for backward compatibility.
   } catch {
     /* empty body is fine */
   }

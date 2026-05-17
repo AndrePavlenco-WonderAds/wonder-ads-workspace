@@ -11,6 +11,19 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: 60,
+    date: "2026-05-17",
+    title: "Richer dashboard, full-page PDF, fixed DataforSEO error handling",
+    highlights: [
+      "Found the Authority + Referring Domains '—' bug: DataforSEO returns HTTP 200 with status_code 40204 for subscription errors, my code was silently swallowing it. Now surfaces a banner: 'Activate the DataforSEO Backlinks subscription'. Action item: activate at app.dataforseo.com/backlinks-subscription.",
+      "8 stat cards on the Domain dashboard (was 4): Authority, Organic Keywords, Est. Traffic, Referring Domains, Total Backlinks, Broken Backlinks, Paid Keywords, Top 10 Keywords. Missing values get a softer style so it's obvious what's pending data.",
+      "Top ranked keywords bumped from 15 → 100 entries, with a scrollable container (sticky header). Adds CPC + URL columns.",
+      "Full-page PDF: Download PDF now renders the Domain dashboard stats + top 30 keywords table alongside the analysis. No more analysis-only export.",
+      "Brief panel ('What SEO Claude knows about <client>') hidden on SEO Audit + Keyword Research — they're data audits, not content generation. Brief still feeds the prompt as context; it just doesn't take up screen real estate.",
+      "Analysis formatting overhauled: priority issues + findings now render as breathable mini-blocks with severity emoji (🔴 Critical / 🟠 High / 🟡 Medium / 🟢 Low). More line-height, softer inline code background, larger heading spacing.",
+    ],
+  },
+  {
     version: 59,
     date: "2026-05-17",
     title: "Dashboard populates live, before Claude finishes writing",

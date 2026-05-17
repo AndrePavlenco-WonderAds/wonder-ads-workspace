@@ -18,29 +18,29 @@ export function MarkdownView({ source }: { source: string }) {
           h2: (props) => (
             <h2
               {...props}
-              className="mt-8 mb-3 border-b border-white/10 pb-1.5 text-lg font-semibold tracking-tight text-white first:mt-0"
+              className="mt-10 mb-4 border-b border-white/10 pb-2 text-xl font-semibold tracking-tight text-white first:mt-0"
             />
           ),
           h3: (props) => (
             <h3
               {...props}
-              className="mt-4 mb-2 text-[15px] font-semibold tracking-tight text-white first:mt-0"
+              className="mt-6 mb-2.5 text-base font-semibold tracking-tight text-white first:mt-0"
             />
           ),
           h4: (props) => (
             <h4
               {...props}
-              className="mt-3 mb-2 text-sm font-semibold tracking-tight text-white/90 first:mt-0"
+              className="mt-4 mb-2 text-sm font-semibold tracking-tight text-white/90 first:mt-0"
             />
           ),
-          p: (props) => <p {...props} className="my-2.5" />,
+          p: (props) => <p {...props} className="my-3 leading-[1.7]" />,
           ul: (props) => (
-            <ul {...props} className="my-2.5 list-disc space-y-1 pl-5" />
+            <ul {...props} className="my-3 list-disc space-y-2 pl-5" />
           ),
           ol: (props) => (
-            <ol {...props} className="my-2.5 list-decimal space-y-1 pl-5" />
+            <ol {...props} className="my-3 list-decimal space-y-2.5 pl-5" />
           ),
-          li: (props) => <li {...props} className="leading-relaxed" />,
+          li: (props) => <li {...props} className="leading-[1.65]" />,
           a: (props) => (
             <a
               {...props}
@@ -74,7 +74,7 @@ export function MarkdownView({ source }: { source: string }) {
             }
             return (
               <code
-                className="rounded bg-white/[0.08] px-1 py-0.5 font-mono text-[12px] text-white/85"
+                className="rounded border border-white/8 bg-white/[0.04] px-1 py-px font-mono text-[12px] text-white/80"
                 {...rest}
               >
                 {children}
