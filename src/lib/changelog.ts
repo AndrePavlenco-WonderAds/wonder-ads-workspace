@@ -11,6 +11,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: 56,
+    date: "2026-05-17",
+    title: "Audit Phase 1 errors are now visible — plus a DataforSEO test endpoint",
+    highlights: [
+      "If Phase 1 of the SEO Audit fails (orchestrator crash, KV write fail), the error is now persisted to KV so Phase 2 surfaces a real message — 'Phase 1 failed at step <stage>: <error>' instead of the generic 'No prep data found'.",
+      "New /api/diagnostics/dataforseo-test endpoint hits DataforSEO with one cheap call and returns the upstream response (HTTP status + their internal status_code + cost). Use this to confirm credentials work outside the audit flow.",
+      "Domain dashboard now distinguishes 'Not connected' (env missing) from 'Not in this result' (env set but the audit run didn't capture metrics). Tells you which fix to apply.",
+    ],
+  },
+  {
     version: 55,
     date: "2026-05-17",
     title: "Integration diagnostics — see what's wired at a glance",

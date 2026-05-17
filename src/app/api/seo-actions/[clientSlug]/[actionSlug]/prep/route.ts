@@ -93,7 +93,13 @@ export async function POST(
         `> 🔧 Phase 1 / 2 — gathering live data for \`${new URL(targetUrl).origin}\`\n`,
       );
 
+      // Two failure modes we want to capture: (1) the orchestrator throws
+      // (rare — every step is wrapped in `timed()`), (2) saving to KV throws.
+      // Either way, persist an `{ status: "error" }` record so /run can
+      // surface a useful message instead of "No prep data found".
+      let stage: "init" | "runSiteAudit" | "save" = "init";
       try {
+        stage = "runSiteAudit";
         const pack = await runSiteAudit(
           targetUrl,
           clientSlug,
@@ -113,10 +119,9 @@ export async function POST(
           { depth },
         );
 
-        // Persist the fact pack so /run can pick it up. Must complete BEFORE
-        // controller.close() so the client sees the stream end as confirmation
-        // the data is saved.
+        stage = "save";
         await saveAuditPrep(clientSlug, actionSlug, resultId, {
+          status: "ok",
           factPack: pack.markdown,
           metrics: pack.metrics,
           preparedAt: Date.now(),
@@ -128,7 +133,24 @@ export async function POST(
         );
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
-        send(`\n> ❌ Phase 1 crashed: ${message.slice(0, 240)}\n`);
+        send(
+          `\n> ❌ Phase 1 crashed at \`${stage}\`: ${message.slice(0, 240)}\n`,
+        );
+        // Best-effort: record the failure so /run shows a real message instead
+        // of a generic "no prep" 404. Wrapped in its own try/catch because if
+        // saving the error itself fails (e.g. KV down) we don't have many
+        // options left.
+        try {
+          await saveAuditPrep(clientSlug, actionSlug, resultId, {
+            status: "error",
+            message: message.slice(0, 800),
+            stage,
+            preparedAt: Date.now(),
+            inputUrl: targetUrl,
+          });
+        } catch (saveErr) {
+          console.error("audit-prep error record save failed:", saveErr);
+        }
       }
 
       controller.close();

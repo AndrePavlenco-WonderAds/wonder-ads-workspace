@@ -1,10 +1,40 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { ExternalLink, TrendingUp } from "lucide-react";
 import type { DomainMetrics } from "@/lib/seo-tools/dataforseo";
 
+type EnvDiag = {
+  dataforseo: {
+    DATAFORSEO_LOGIN: { present: boolean; length: number };
+    DATAFORSEO_PASSWORD: { present: boolean; length: number };
+  };
+};
+
 export function DomainDashboard({ metrics }: { metrics: DomainMetrics | null }) {
+  const [envOk, setEnvOk] = useState<boolean | null>(null);
+  useEffect(() => {
+    if (metrics) return; // only need diagnostic when metrics is missing
+    let cancelled = false;
+    fetch("/api/diagnostics/env", { cache: "no-store" })
+      .then((r) => r.json() as Promise<EnvDiag>)
+      .then((d) => {
+        if (cancelled) return;
+        setEnvOk(
+          d.dataforseo.DATAFORSEO_LOGIN.present &&
+            d.dataforseo.DATAFORSEO_PASSWORD.present,
+        );
+      })
+      .catch(() => {
+        if (!cancelled) setEnvOk(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [metrics]);
+
   if (!metrics) {
+    const envConfigured = envOk === true;
     return (
       <section className="brand-gradient-border relative overflow-hidden rounded-2xl bg-white/[0.025] p-5">
         <header className="flex items-center gap-2">
@@ -13,24 +43,48 @@ export function DomainDashboard({ metrics }: { metrics: DomainMetrics | null }) 
             Domain intelligence
           </h2>
           <span className="ml-2 text-[10px] font-bold uppercase tracking-[0.18em] text-white/30">
-            Not connected
+            {envOk === null
+              ? "Checking…"
+              : envConfigured
+                ? "Not in this result"
+                : "Not connected"}
           </span>
         </header>
-        <p className="mt-3 text-xs text-white/55">
-          Connect <strong className="text-white/80">DataforSEO</strong> to see
-          Authority Score, organic keyword count + traffic estimate, referring
-          domains, and the top ranked keywords for this site at the top of
-          every audit.{" "}
-          <a
-            href="https://app.dataforseo.com/register"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-0.5 text-[color:var(--brand-purple)] hover:underline"
-          >
-            Sign up → set DATAFORSEO_LOGIN + DATAFORSEO_PASSWORD in Vercel env.
-            <ExternalLink className="h-2.5 w-2.5" />
-          </a>
-        </p>
+        {envConfigured ? (
+          <p className="mt-3 text-xs text-white/55">
+            DataforSEO is configured in this environment, but this audit
+            result was generated before metrics started flowing (or Phase 1
+            failed before saving them). Run a new audit on the action page —
+            the dashboard will populate.{" "}
+            <a
+              href="/api/diagnostics/dataforseo-test"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-0.5 text-[color:var(--brand-purple)] hover:underline"
+            >
+              Test the API directly
+              <ExternalLink className="h-2.5 w-2.5" />
+            </a>{" "}
+            to verify credentials work.
+          </p>
+        ) : (
+          <p className="mt-3 text-xs text-white/55">
+            Connect <strong className="text-white/80">DataforSEO</strong> to
+            see Authority Score, organic keyword count + traffic estimate,
+            referring domains, and the top ranked keywords for this site at
+            the top of every audit.{" "}
+            <a
+              href="https://app.dataforseo.com/register"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-0.5 text-[color:var(--brand-purple)] hover:underline"
+            >
+              Sign up → set DATAFORSEO_LOGIN + DATAFORSEO_PASSWORD in Vercel
+              env.
+              <ExternalLink className="h-2.5 w-2.5" />
+            </a>
+          </p>
+        )}
       </section>
     );
   }

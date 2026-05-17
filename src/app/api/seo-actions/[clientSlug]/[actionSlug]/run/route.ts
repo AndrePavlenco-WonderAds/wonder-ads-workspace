@@ -77,9 +77,17 @@ export async function POST(
     return NextResponse.json(
       {
         error:
-          "No prep data found for this resultId. Phase 1 may have failed or expired. Run a fresh generation.",
+          "No prep data found for this resultId. Phase 1 may have been killed by Vercel's 60s timeout before it could save (rare) — run a fresh generation.",
       },
       { status: 404 },
+    );
+  }
+  if (prep.status === "error") {
+    return NextResponse.json(
+      {
+        error: `Phase 1 failed at step "${prep.stage}": ${prep.message}. Run a fresh generation, or fix the underlying issue first.`,
+      },
+      { status: 502 },
     );
   }
 
@@ -103,8 +111,12 @@ export async function POST(
     pillar: entry.pillar,
   });
 
+  // prep is now narrowed to AuditPrep.status === "ok"
+  const factPack = prep.factPack;
+  const metrics = prep.metrics;
+
   const userPrompt = [
-    `# Live tool measurements (use these as primary evidence)\n${prep.factPack}`,
+    `# Live tool measurements (use these as primary evidence)\n${factPack}`,
     `# Inputs from the consultant\n${formatInputs(inputs)}`,
     `Run the action now. When live measurements are present, cite the exact numbers, name the failing audits by their title, and prioritise findings by real impact rather than abstract best practice.`,
   ].join("\n\n");
@@ -155,7 +167,7 @@ export async function POST(
             inputs,
             output: modelText,
             model: MODEL_ID,
-            ...(prep.metrics ? { metrics: prep.metrics } : {}),
+            ...(metrics ? { metrics } : {}),
           });
           // Prep done its job — free the KV slot.
           await clearAuditPrep(clientSlug, actionSlug, resultId);
