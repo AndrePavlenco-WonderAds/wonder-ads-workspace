@@ -35,7 +35,7 @@ import {
 import {
   fetchDomainMetrics,
   formatDomainMetricsForPrompt,
-  dataforSeoConfigured,
+  isDataforSeoConfigured,
   type DomainMetrics,
 } from "./dataforseo";
 
@@ -174,7 +174,7 @@ export async function runSiteAudit(
   fire({
     type: "start",
     tool: "dataforseo",
-    label: dataforSeoConfigured
+    label: isDataforSeoConfigured()
       ? "Domain intelligence (DataforSEO)"
       : "Domain intelligence (DataforSEO — not configured)",
   });
@@ -290,7 +290,7 @@ export async function runSiteAudit(
   if (metrics) {
     factParts.push("");
     factParts.push(formatDomainMetricsForPrompt(metrics));
-  } else if (!dataforSeoConfigured) {
+  } else if (!isDataforSeoConfigured()) {
     factParts.push("");
     factParts.push(
       `## Domain intelligence\n_Not configured (DATAFORSEO_LOGIN + DATAFORSEO_PASSWORD missing). When connected, this section provides domain authority, organic keyword footprint, backlink profile, and top ranked keywords._`,

@@ -11,6 +11,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: 55,
+    date: "2026-05-17",
+    title: "Integration diagnostics — see what's wired at a glance",
+    highlights: [
+      "New /api/diagnostics/env endpoint reports which integration env vars are present + their length (no values leak). Hit it to verify what the runtime actually sees.",
+      "Action page 'Live tools' chips are now colour-coded by status — green (configured), amber (optional, soft-degrades), red (missing). Hover for the exact env vars + a hint on what to fix.",
+      "DataforSEO check moved from a module-load constant to a per-call function so any Vercel module caching can't bake in a stale 'not configured' value.",
+    ],
+  },
+  {
     version: 54,
     date: "2026-05-17",
     title: "SEO Audit split into two phases — fits the 60s Hobby budget",

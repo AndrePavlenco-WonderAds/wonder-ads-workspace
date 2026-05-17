@@ -4,7 +4,8 @@ import { ArrowLeft } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { LogoChip } from "@/components/logo-chip";
 import { ActionRunner } from "@/components/action-runner";
-import { findAction, PILLARS } from "@/lib/seo-pillars";
+import { IntegrationChips } from "@/components/integration-chips";
+import { findAction, PILLARS, type ActionToolName } from "@/lib/seo-pillars";
 import { getBriefForSlug } from "@/lib/briefs-storage";
 import { getClientBySlug } from "@/lib/notion";
 import {
@@ -104,19 +105,7 @@ export default async function ActionPage({
         </h1>
         <p className="mt-2 max-w-xl text-sm text-white/55">{action.blurb}</p>
         {action.tools && action.tools.length > 0 && (
-          <div className="mt-3 flex flex-wrap items-center gap-1.5">
-            <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/40">
-              Live tools
-            </span>
-            {action.tools.map((t) => (
-              <span
-                key={t}
-                className="inline-flex items-center rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2 py-0.5 text-[10px] font-medium text-emerald-200"
-              >
-                {toolChipLabel(t)}
-              </span>
-            ))}
-          </div>
+          <IntegrationChips tools={action.tools as ActionToolName[]} />
         )}
       </header>
 
@@ -174,27 +163,6 @@ export default async function ActionPage({
       </nav>
     </PageShell>
   );
-}
-
-function toolChipLabel(t: string): string {
-  switch (t) {
-    case "crawl-page":
-      return "Page HTML";
-    case "pagespeed-mobile":
-      return "PSI Mobile";
-    case "pagespeed-desktop":
-      return "PSI Desktop";
-    case "sitemap-discovery":
-      return "Sitemap";
-    case "crawl-sample":
-      return "Sample crawl";
-    case "gsc-site-data":
-      return "Search Console";
-    case "dataforseo-domain":
-      return "DataforSEO";
-    default:
-      return t;
-  }
 }
 
 function BriefColumn({

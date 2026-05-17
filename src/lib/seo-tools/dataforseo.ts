@@ -14,9 +14,13 @@
 
 const API_BASE = "https://api.dataforseo.com/v3";
 
-export const dataforSeoConfigured = Boolean(
-  process.env.DATAFORSEO_LOGIN && process.env.DATAFORSEO_PASSWORD,
-);
+/** Read env at call time rather than module load so a missed redeploy or
+ *  late env injection can't bake a stale "false" into the bundle. */
+export function isDataforSeoConfigured(): boolean {
+  return Boolean(
+    process.env.DATAFORSEO_LOGIN && process.env.DATAFORSEO_PASSWORD,
+  );
+}
 
 export type DomainMetrics = {
   source: "dataforseo";
@@ -272,7 +276,7 @@ export async function fetchDomainMetrics(
   siteUrl: string,
   opts: { locationCode?: number; languageCode?: string } = {},
 ): Promise<DomainMetrics | null> {
-  if (!dataforSeoConfigured) return null;
+  if (!isDataforSeoConfigured()) return null;
   const target = hostnameFromUrl(siteUrl);
   const locationCode = opts.locationCode ?? DEFAULT_LOCATION;
   const languageCode = opts.languageCode ?? DEFAULT_LANGUAGE;
