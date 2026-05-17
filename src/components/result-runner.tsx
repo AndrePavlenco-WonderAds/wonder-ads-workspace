@@ -12,6 +12,7 @@ import {
 import type { ActionDef, ActionToolName } from "@/lib/seo-pillars";
 import type { HistoryEntry } from "@/lib/action-history";
 import { makeResultId } from "@/lib/action-history";
+import type { DomainMetrics } from "@/lib/seo-tools/dataforseo";
 import { pendingKey } from "./action-runner";
 import { MarkdownView } from "./markdown-view";
 import { DomainDashboard } from "./domain-dashboard";
@@ -57,6 +58,11 @@ export function ResultRunner({
     existing ? "done" : "loading",
   );
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  // Live metrics that appear as soon as Phase 1 saves the prep, so the
+  // dashboard populates while Claude is still writing the analysis.
+  const [liveMetrics, setLiveMetrics] = useState<DomainMetrics | null>(
+    existing?.metrics ?? null,
+  );
   const abortRef = useRef<AbortController | null>(null);
   const generationStartedRef = useRef(false);
   const genPhaseStartedAtRef = useRef<number | null>(null);
@@ -166,6 +172,19 @@ export function ResultRunner({
           // /run picks it up + sends the `---` separator + streams Claude.
           const afterPrep = await callPhase("/prep", "");
           if (controller.signal.aborted) throw new DOMException("Aborted", "AbortError");
+          // Phase 1 saved the prep — fetch metrics so the dashboard renders
+          // alongside Claude's analysis instead of waiting for /save.
+          fetch(
+            `${apiBase}/prep-data?resultId=${encodeURIComponent(resultId)}`,
+            { cache: "no-store" },
+          )
+            .then((r) => r.json())
+            .then((j: { status?: string; metrics?: DomainMetrics | null }) => {
+              if (j?.status === "ok" && j.metrics) setLiveMetrics(j.metrics);
+            })
+            .catch(() => {
+              /* non-fatal — /save will return them too */
+            });
           finalAcc = await callPhase("/run", afterPrep);
         } else {
           // Single call for actions that comfortably fit under 60s.
@@ -181,7 +200,7 @@ export function ResultRunner({
           sepIdx >= 0 ? finalAcc.slice(sepIdx + sep.length) : finalAcc;
         if (analysis.trim()) {
           try {
-            await fetch(`${apiBase}/save`, {
+            const saveRes = await fetch(`${apiBase}/save`, {
               method: "POST",
               headers: { "content-type": "application/json" },
               body: JSON.stringify({
@@ -190,6 +209,16 @@ export function ResultRunner({
                 output: analysis,
               }),
             });
+            if (saveRes.ok) {
+              try {
+                const saveJson = (await saveRes.json()) as {
+                  metrics?: DomainMetrics | null;
+                };
+                if (saveJson?.metrics) setLiveMetrics(saveJson.metrics);
+              } catch {
+                /* response body may not be JSON in edge cases */
+              }
+            }
           } catch (saveErr) {
             console.error("save failed:", saveErr);
             // Non-fatal — the user still sees the streamed output, just won't
@@ -410,7 +439,7 @@ export function ResultRunner({
 
       {/* Domain dashboard (SEO Audit only) */}
       {action.slug === "seo-audit" && (
-        <DomainDashboard metrics={existing?.metrics ?? null} />
+        <DomainDashboard metrics={liveMetrics} />
       )}
 
       {/* Output */}

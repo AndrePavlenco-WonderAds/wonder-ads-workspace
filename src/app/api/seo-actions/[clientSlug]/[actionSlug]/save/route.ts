@@ -78,7 +78,11 @@ export async function POST(
     if (actionSlug === "seo-audit") {
       await clearAuditPrep(clientSlug, actionSlug, resultId);
     }
-    return NextResponse.json({ ok: true, id: saved.id });
+    return NextResponse.json({
+      ok: true,
+      id: saved.id,
+      metrics: saved.metrics ?? null,
+    });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     return NextResponse.json(

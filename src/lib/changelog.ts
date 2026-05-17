@@ -11,6 +11,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: 59,
+    date: "2026-05-17",
+    title: "Dashboard populates live, before Claude finishes writing",
+    highlights: [
+      "Domain dashboard now appears the moment Phase 1 finishes — pulled from the saved prep — so you see Authority Score / keywords / traffic while SEO Claude is still writing the analysis underneath.",
+      "Backup path: /save also returns the metrics, so the dashboard updates if the prep-fetch missed.",
+      "New /api/seo-actions/[client]/[action]/prep-data endpoint exposes the cached prep (metrics + meta) for the client to read mid-generation.",
+    ],
+  },
+  {
     version: 58,
     date: "2026-05-17",
     title: "Fix: audits now actually persist to history",
