@@ -1,13 +1,77 @@
-// Quick smoke test for DataforSEO credentials. Hits a single cheap endpoint
-// (domain_rank_overview against a known domain) and returns the raw upstream
-// response so we can see auth / quota errors directly. Public-safe: no
-// credentials are leaked, only the API's own status + message.
+// Smoke test for DataforSEO credentials. Hits all three endpoints we use
+// in the audit (domain_rank_overview, backlinks/summary, ranked_keywords)
+// and returns each upstream response so we can see exactly what comes back.
 
 import { NextResponse } from "next/server";
 import { isDataforSeoConfigured } from "@/lib/seo-tools/dataforseo";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+type TestResult = {
+  endpoint: string;
+  ok: boolean;
+  httpStatus: number;
+  elapsedMs: number;
+  apiStatus?: { code?: number; message?: string };
+  resultCount?: number;
+  cost?: number;
+  summary?: unknown;
+  rawBodyPreview?: string;
+  error?: string;
+};
+
+async function hit(
+  path: string,
+  body: unknown,
+  auth: string,
+): Promise<TestResult> {
+  const t0 = Date.now();
+  try {
+    const res = await fetch(`https://api.dataforseo.com/v3${path}`, {
+      method: "POST",
+      headers: {
+        Authorization: `Basic ${auth}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+      cache: "no-store",
+    });
+    const text = await res.text();
+    let parsed: { status_code?: number; status_message?: string; cost?: number; tasks?: { result?: unknown[] }[] } = {};
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      /* leave empty */
+    }
+    return {
+      endpoint: path,
+      ok:
+        res.status === 200 &&
+        typeof parsed.status_code === "number" &&
+        parsed.status_code >= 20000 &&
+        parsed.status_code < 30000,
+      httpStatus: res.status,
+      elapsedMs: Date.now() - t0,
+      apiStatus: {
+        code: parsed.status_code,
+        message: parsed.status_message,
+      },
+      resultCount: parsed.tasks?.[0]?.result?.length ?? 0,
+      cost: parsed.cost,
+      summary: parsed.tasks?.[0]?.result?.[0] ?? null,
+      rawBodyPreview: text.slice(0, 600),
+    };
+  } catch (err) {
+    return {
+      endpoint: path,
+      ok: false,
+      httpStatus: 0,
+      elapsedMs: Date.now() - t0,
+      error: err instanceof Error ? err.message : String(err),
+    };
+  }
+}
 
 export async function GET(req: Request) {
   if (!isDataforSeoConfigured()) {
@@ -23,86 +87,36 @@ export async function GET(req: Request) {
   }
 
   const url = new URL(req.url);
-  const target = url.searchParams.get("target") || "wonder-ads.com";
+  const target = url.searchParams.get("target") || "whiteclinic.pt";
 
   const auth = Buffer.from(
     `${process.env.DATAFORSEO_LOGIN}:${process.env.DATAFORSEO_PASSWORD}`,
   ).toString("base64");
 
-  const t0 = Date.now();
-  let upstreamStatus = 0;
-  let upstreamBody = "";
-  try {
-    const res = await fetch(
-      "https://api.dataforseo.com/v3/dataforseo_labs/google/domain_rank_overview/live",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Basic ${auth}`,
-          "Content-Type": "application/json",
+  const [rankOverview, backlinksSummary, rankedKeywords] = await Promise.all([
+    hit(
+      "/dataforseo_labs/google/domain_rank_overview/live",
+      [{ target, location_code: 2620, language_code: "pt" }],
+      auth,
+    ),
+    hit("/backlinks/summary/live", [{ target, include_subdomains: true }], auth),
+    hit(
+      "/dataforseo_labs/google/ranked_keywords/live",
+      [
+        {
+          target,
+          location_code: 2620,
+          language_code: "pt",
+          limit: 5,
+          order_by: ["ranked_serp_element.serp_item.etv,desc"],
         },
-        body: JSON.stringify([
-          { target, location_code: 2620, language_code: "pt" },
-        ]),
-        cache: "no-store",
-      },
-    );
-    upstreamStatus = res.status;
-    upstreamBody = await res.text();
-  } catch (err) {
-    return NextResponse.json(
-      {
-        ok: false,
-        reason: "fetch-failed",
-        message: err instanceof Error ? err.message : String(err),
-        elapsedMs: Date.now() - t0,
-      },
-      { status: 200 },
-    );
-  }
-
-  // Parse DataforSEO's outer status — they always return 200 HTTP, but the
-  // body contains their own status_code (20000 = ok, 40xxx = client error).
-  let parsedSummary: unknown = null;
-  let topLevelStatus: { code?: number; message?: string } = {};
-  try {
-    const json = JSON.parse(upstreamBody);
-    topLevelStatus = {
-      code: json?.status_code,
-      message: json?.status_message,
-    };
-    parsedSummary = {
-      status_code: json?.status_code,
-      status_message: json?.status_message,
-      tasks_count: json?.tasks_count,
-      tasks_error: json?.tasks_error,
-      tasks: json?.tasks?.map((t: { id?: string; status_code?: number; status_message?: string }) => ({
-        id: t.id,
-        status_code: t.status_code,
-        status_message: t.status_message,
-      })),
-      cost: json?.cost,
-    };
-  } catch {
-    /* leave raw body */
-  }
-
-  const ok =
-    upstreamStatus === 200 &&
-    typeof topLevelStatus.code === "number" &&
-    topLevelStatus.code >= 20000 &&
-    topLevelStatus.code < 30000;
+      ],
+      auth,
+    ),
+  ]);
 
   return NextResponse.json(
-    {
-      ok,
-      target,
-      httpStatus: upstreamStatus,
-      elapsedMs: Date.now() - t0,
-      apiStatus: topLevelStatus,
-      summary: parsedSummary,
-      rawBodyPreview: upstreamBody.slice(0, 800),
-    },
+    { target, rankOverview, backlinksSummary, rankedKeywords },
     { status: 200 },
   );
 }
