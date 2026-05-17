@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "69.5",
+    date: "2026-05-17",
+    title: "Persistent back nav + real keyword-shortage fix (per-seed suggestions + emergency fallback)",
+    highlights: [
+      "**Persistent 'Back to X' pill in the page header** on every nested page (client → 'Back to SEO DPT', action → 'Back to <client>', result → 'Back to <action>'). Sits next to the WonderAds logo top-left so it's always visible without scrolling. PageShell now takes `backHref`/`backLabel` props; removed the inline back-links scattered across pages.",
+      "**🐛 Real fix for the 'still only 7 keywords' bug** — the v69.4 multi-seed `keyword_ideas` call was returning near-empty because DataforSEO appears to take the intersection of related ideas across diverse seeds (when seeds are very different, intersection is tiny). Replaced with **per-seed `keyword_suggestions` calls in parallel** (one per expansion seed, capped at 8). `keyword_suggestions` is the right tool for expansion — typically 50-300 keywords per seed. Should now consistently return 100s of keywords for any client with a website + ranked footprint.",
+      "**Stage 3 emergency fallback** — when total is still under 30 (very narrow domains), `pickTopicNouns()` mines single-word topical nouns from the domain footprint + user seed + onboarding extracted text (filtering brand tokens + EN/PT stopwords). Each noun is then run through `keyword_suggestions` for an extra expansion pass. Catches narrow-brand-only clinics.",
+      "**Thin-universe warning** in the progress stream when total < 30 — explains likely causes (sparse domain rankings, narrow seed, sparse DataforSEO market data) so the consultant can react.",
+    ],
+  },
+  {
     version: "69.4",
     date: "2026-05-17",
     title: "Keyword Research — fix '3 keywords' bug, phase-split for 60s timeout, GSC label, nav rename",

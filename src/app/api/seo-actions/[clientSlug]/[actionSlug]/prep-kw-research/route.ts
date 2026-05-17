@@ -142,6 +142,7 @@ export async function POST(
           competitorDomains: onboarding?.competitors ?? [],
           locationOverride: locationOverride ?? undefined,
           clientName,
+          extraSeedText: onboarding?.extractedText?.slice(0, 4000) ?? "",
         });
         const ms = Date.now() - startedAt;
 
@@ -168,6 +169,11 @@ export async function POST(
         send(
           `> ✓ **DataforSEO** — ${pack.suggestions.length} suggestions · ${pack.ideas.length} ideas · ${pack.domainExisting.length} already-ranking · ${pack.competitors.length} competitor footprint(s) → **${totalKeywords} keywords total** (${ms} ms)\n`,
         );
+        if (totalKeywords < 30) {
+          send(
+            `> ⚠️ **Thin universe (${totalKeywords} keywords).** Likely causes: (a) the domain has very few rankings in this geo, (b) the seed topic is too narrow/branded, or (c) DataforSEO's data is sparse for this market. Consider broadening the geo (try the national-level target) or providing a more generic seed topic.\n`,
+          );
+        }
         for (const e of pack.errors) {
           send(`> ⚠️ Partial: ${e.source} — ${e.message.slice(0, 200)}\n`);
         }

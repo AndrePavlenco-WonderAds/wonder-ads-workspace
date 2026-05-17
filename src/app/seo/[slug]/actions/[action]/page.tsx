@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { LogoChip } from "@/components/logo-chip";
 import { ActionRunner } from "@/components/action-runner";
@@ -75,18 +74,12 @@ export default async function ActionPage({
   }
 
   return (
-    <PageShell wide>
-      <div className="mt-6">
-        <Link
-          href={`/seo/${slug}#section-actions`}
-          className="inline-flex items-center gap-1 text-xs text-white/55 transition hover:text-white"
-        >
-          <ArrowLeft className="h-3.5 w-3.5" />
-          Back to {client.title}
-        </Link>
-      </div>
-
-      <header className="animate-fade-up mt-6">
+    <PageShell
+      wide
+      backHref={`/seo/${slug}#section-actions`}
+      backLabel={client.title}
+    >
+      <header className="animate-fade-up mt-2">
         <div className="flex items-center gap-2.5 text-[11px] font-medium uppercase tracking-[0.18em] text-white/55">
           <LogoChip
             logo={logo}

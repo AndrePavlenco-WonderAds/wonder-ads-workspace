@@ -1,6 +1,5 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ExternalLink, RefreshCw } from "lucide-react";
+import { ExternalLink, RefreshCw } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { ClientBrief } from "@/components/client-brief";
 import { ClientFiles } from "@/components/client-files";
@@ -58,8 +57,7 @@ export default async function ClientPage({
 
   if (!process.env.NOTION_API_KEY) {
     return (
-      <PageShell wide>
-        <BackLink />
+      <PageShell wide backHref="/seo" backLabel="SEO DPT">
         <NotConfigured />
       </PageShell>
     );
@@ -77,10 +75,8 @@ export default async function ClientPage({
   const shared = isSharedWithSeo(slug);
 
   return (
-    <PageShell wide sessionTimer>
-      <BackLink />
-
-      <section className="animate-fade-up mt-10 flex flex-wrap items-start justify-between gap-5 sm:mt-14">
+    <PageShell wide sessionTimer backHref="/seo" backLabel="SEO DPT">
+      <section className="animate-fade-up mt-4 flex flex-wrap items-start justify-between gap-5 sm:mt-8">
         <div className="flex items-center gap-5">
           <div className="shrink-0">
             <LogoChip
@@ -163,18 +159,6 @@ export default async function ClientPage({
         <SeoActions clientName={client.title} clientSlug={slug} />
       </section>
     </PageShell>
-  );
-}
-
-function BackLink() {
-  return (
-    <Link
-      href="/seo"
-      className="animate-fade-up group inline-flex w-fit items-center gap-2 text-sm text-white/55 transition hover:text-white"
-    >
-      <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
-      Back to SEO DPT
-    </Link>
   );
 }
 

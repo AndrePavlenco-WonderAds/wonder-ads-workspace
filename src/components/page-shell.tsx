@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { ArrowLeft } from "lucide-react";
 import { BackgroundDecor } from "./background-decor";
 import { WonderAdsLogo } from "./wonder-ads-logo";
 import { HeaderClock } from "./header-clock";
@@ -9,6 +10,8 @@ export function PageShell({
   children,
   wide = false,
   sessionTimer = false,
+  backHref,
+  backLabel,
 }: {
   children: ReactNode;
   /** Full-bleed layout — used by project pages so the brief + files split
@@ -17,6 +20,12 @@ export function PageShell({
   /** Show the "Working on this for" timer in the header — used on project
    *  pages so consultants can see how long they've been on a client. */
   sessionTimer?: boolean;
+  /** Optional back-navigation. When set, renders a persistent "← Back to
+   *  X" pill in the header next to the WonderAds logo. Use on every
+   *  nested page (client, action, result) so consultants always have a
+   *  visible escape hatch without scrolling. */
+  backHref?: string;
+  backLabel?: string;
 }) {
   const version = getCurrentVersion();
   const widthClass = wide ? "max-w-none" : "max-w-7xl";
@@ -25,9 +34,22 @@ export function PageShell({
       <BackgroundDecor />
 
       <header
-        className={`relative z-30 mx-auto flex w-full ${widthClass} items-center justify-between px-6 py-6 sm:px-10 sm:py-8`}
+        className={`relative z-30 mx-auto flex w-full ${widthClass} items-center justify-between gap-4 px-6 py-6 sm:px-10 sm:py-8`}
       >
-        <WonderAdsLogo />
+        <div className="flex items-center gap-4">
+          <WonderAdsLogo />
+          {backHref && backLabel && (
+            <Link
+              href={backHref}
+              className="group inline-flex items-center gap-1.5 rounded-full border border-white/12 bg-white/[0.03] px-3 py-1.5 text-xs font-medium text-white/70 transition hover:border-[color:var(--brand-purple)]/45 hover:bg-white/[0.07] hover:text-white"
+            >
+              <ArrowLeft className="h-3.5 w-3.5 transition-transform group-hover:-translate-x-0.5" />
+              <span>
+                Back to <span className="font-semibold">{backLabel}</span>
+              </span>
+            </Link>
+          )}
+        </div>
         <div className="hidden sm:block">
           <HeaderClock sessionTimer={sessionTimer} />
         </div>

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Download } from "lucide-react";
+import { Download } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { LogoChip } from "@/components/logo-chip";
 import { ResultRunner } from "@/components/result-runner";
@@ -96,15 +96,12 @@ export default async function ResultPage({
   const generatedDate = existing ? formatDateTime(existing.createdAt) : null;
 
   return (
-    <PageShell wide>
-      <div className="mt-6 flex items-center gap-4">
-        <Link
-          href={`/seo/${slug}/actions/${actionSlug}`}
-          className="inline-flex items-center gap-1 text-xs text-white/55 transition hover:text-white"
-        >
-          <ArrowLeft className="h-3.5 w-3.5" />
-          Back to {action.label}
-        </Link>
+    <PageShell
+      wide
+      backHref={`/seo/${slug}/actions/${actionSlug}`}
+      backLabel={action.label}
+    >
+      <div className="mt-2 flex items-center gap-4">
         {existing ? (
           <a
             href={`/seo/${slug}/actions/${actionSlug}/results/${resultId}?print=true`}

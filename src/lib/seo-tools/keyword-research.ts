@@ -86,6 +86,10 @@ export type KwResearchOptions = {
    *  picking non-branded expansion seeds from the domain's ranked
    *  keywords. Falls back to clientSlug when omitted. */
   clientName?: string;
+  /** Extra text (typically the onboarding form's extracted text) used by
+   *  the Stage 3 fallback to mine topical nouns when the domain footprint
+   *  is too thin. Cap to a few KB before passing. */
+  extraSeedText?: string;
 };
 
 function isConfigured(): boolean {
@@ -271,6 +275,99 @@ async function fetchDomainExistingKeywords(
     .filter((x): x is KwIdea => x !== null);
 }
 
+/** Extract single topical nouns from a text blob. Used by the Stage 3
+ *  emergency fallback to find usable seeds when the domain footprint is
+ *  too thin to expand from. Strips brand tokens, common stopwords, and
+ *  short tokens. Returns up to `count` nouns ordered by frequency. */
+function pickTopicNouns(
+  blob: string,
+  clientName: string,
+  count: number,
+): string[] {
+  if (!blob) return [];
+  const brandTokens = new Set(
+    clientName
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "")
+      .split(/\s+/)
+      .filter((t) => t.length > 2),
+  );
+  const STOP = new Set([
+    "the",
+    "and",
+    "for",
+    "with",
+    "from",
+    "this",
+    "that",
+    "are",
+    "you",
+    "your",
+    "our",
+    "what",
+    "where",
+    "when",
+    "como",
+    "para",
+    "com",
+    "dos",
+    "das",
+    "uma",
+    "umas",
+    "uns",
+    "que",
+    "qual",
+    "quais",
+    "este",
+    "esta",
+    "isso",
+    "isto",
+    "mais",
+    "menos",
+    "muito",
+    "sobre",
+    "entre",
+    "por",
+    "pelo",
+    "pela",
+    "sem",
+    "sob",
+    "ate",
+    "até",
+    "ser",
+    "ter",
+    "estar",
+    "have",
+    "has",
+    "had",
+    "los",
+    "las",
+    "que",
+    "del",
+    "una",
+    "uno",
+    "para",
+  ]);
+  const counts = new Map<string, number>();
+  const tokens = blob
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .split(/[^a-z]+/)
+    .filter(Boolean);
+  for (const t of tokens) {
+    if (t.length < 4) continue;
+    if (STOP.has(t)) continue;
+    if (brandTokens.has(t)) continue;
+    counts.set(t, (counts.get(t) ?? 0) + 1);
+  }
+  return [...counts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, count)
+    .map(([t]) => t);
+}
+
 /** Pick the best N non-branded, non-trivial keywords from the domain's
  *  ranked footprint to use as expansion seeds for keyword_ideas. Excludes
  *  the client's own brand tokens (e.g. "mimus", "clínica mimus") which
@@ -414,55 +511,125 @@ async function runOnce(
     }
   });
 
-  // --- STAGE 2: derive expansion seeds + suggestions/ideas in parallel ---
-  // We mine non-branded high-ETV keywords from the domain footprint and use
-  // them as additional seeds for keyword_ideas. This is what guarantees a
-  // broad universe even when the user's seedTopic is a low-volume branded
-  // query like "Clínica Mimus services".
+  // --- STAGE 2: per-seed keyword_suggestions in parallel ---
+  // v69.5 fix: keyword_ideas with multi-seed returns near-empty for narrow
+  // domains (DataforSEO seems to take the intersection of related ideas
+  // across seeds — when seeds are diverse, the intersection is tiny).
+  // Per-seed keyword_suggestions returns 50-300 keywords per seed and is
+  // the right tool for expansion. We call it for: the user's seed (if any)
+  // + the top non-branded expansion seeds from the domain footprint +
+  // each competitor's strongest keyword.
   const clientName = opts.clientName ?? clientSlug;
-  const expansionSeeds = pickExpansionSeeds(domainExisting, clientName, 8);
-  // Combine: the user's seed (when meaningful) + competitor top branded
-  // keywords + the domain's non-branded ranked phrases. Cap to 15 total
-  // so DataforSEO doesn't reject the array.
-  const ideaSeeds = [
-    seedTopic,
-    ...expansionSeeds,
-    ...competitors
-      .flatMap((c) => c.keywords.slice(0, 2).map((k) => k.keyword))
-      .slice(0, 5),
-  ]
-    .filter((s): s is string => Boolean(s && s.trim().length > 2))
-    .slice(0, 15);
+  const expansionSeeds = pickExpansionSeeds(domainExisting, clientName, 4);
+  const competitorSeeds = competitors
+    .flatMap((c) => c.keywords.slice(0, 2).map((k) => k.keyword))
+    .filter((s) => s && s.trim().length > 2)
+    .slice(0, 3);
 
-  const [sugRes, ideasRes] = await Promise.allSettled([
-    seedTopic
-      ? fetchKeywordSuggestions(seedTopic, geo.locationCode, geo.languageCode, limit)
-      : Promise.resolve<KwIdea[]>([]),
-    ideaSeeds.length > 0
-      ? fetchKeywordIdeas(ideaSeeds, geo.locationCode, geo.languageCode, limit)
-      : Promise.resolve<KwIdea[]>([]),
-  ]);
+  // Per-seed suggestions. Keep the total parallel calls bounded so we
+  // don't blow the function budget — cap at 8 individual calls.
+  const userSeedCalls = seedTopic
+    ? [{ seed: seedTopic, source: "suggestions" as const }]
+    : [];
+  const expansionCalls = expansionSeeds.map((seed) => ({
+    seed,
+    source: "ideas" as const, // bucket non-user-seed expansions as "ideas"
+  }));
+  const competitorCalls = competitorSeeds.map((seed) => ({
+    seed,
+    source: "ideas" as const,
+  }));
+  const allSeedCalls = [
+    ...userSeedCalls,
+    ...expansionCalls,
+    ...competitorCalls,
+  ].slice(0, 8);
 
-  const suggestions =
-    sugRes.status === "fulfilled" ? sugRes.value : [];
-  if (sugRes.status === "rejected") {
-    errors.push({
-      source: "keyword_suggestions",
-      message:
-        sugRes.reason instanceof Error
-          ? sugRes.reason.message
-          : String(sugRes.reason),
-    });
+  const perSeedResults = await Promise.allSettled(
+    allSeedCalls.map((c) =>
+      fetchKeywordSuggestions(c.seed, geo.locationCode, geo.languageCode, limit),
+    ),
+  );
+
+  // Bucket results into suggestions (only from the user's seed) vs ideas
+  // (everything else). Dedupe within each bucket.
+  const suggestionsRaw: KwIdea[] = [];
+  const ideasRaw: KwIdea[] = [];
+  perSeedResults.forEach((res, i) => {
+    const call = allSeedCalls[i];
+    if (res.status === "fulfilled") {
+      const tagged = res.value.map((k) => ({ ...k, source: call.source }));
+      if (call.source === "suggestions") suggestionsRaw.push(...tagged);
+      else ideasRaw.push(...tagged);
+    } else {
+      errors.push({
+        source: `keyword_suggestions:${call.seed.slice(0, 40)}`,
+        message:
+          res.reason instanceof Error ? res.reason.message : String(res.reason),
+      });
+    }
+  });
+
+  function dedupeByKw(list: KwIdea[]): KwIdea[] {
+    const seen = new Set<string>();
+    const out: KwIdea[] = [];
+    for (const k of list) {
+      const id = k.keyword.toLowerCase().trim();
+      if (!id || seen.has(id)) continue;
+      seen.add(id);
+      out.push(k);
+    }
+    return out;
   }
-  const ideas = ideasRes.status === "fulfilled" ? ideasRes.value : [];
-  if (ideasRes.status === "rejected") {
-    errors.push({
-      source: "keyword_ideas",
-      message:
-        ideasRes.reason instanceof Error
-          ? ideasRes.reason.message
-          : String(ideasRes.reason),
-    });
+  const suggestions = dedupeByKw(suggestionsRaw);
+  let ideas = dedupeByKw(ideasRaw);
+
+  // --- STAGE 3 (emergency fallback): when total < 30 keywords ---
+  // Pull single-word "topical noun" seeds from anywhere we have signal
+  // (the domain footprint, the user seed, the onboarding extracted text)
+  // and hit keyword_suggestions for each. Catches narrow domains like
+  // brand-name-only clinics where the standard 2-stage pull is thin.
+  const totalSoFar =
+    suggestions.length + ideas.length + domainExisting.length;
+  if (totalSoFar < 30) {
+    const topicNouns = pickTopicNouns(
+      [...domainExisting.map((k) => k.keyword), seedTopic, opts.extraSeedText ?? ""]
+        .filter(Boolean)
+        .join(" "),
+      clientName,
+      4,
+    );
+    if (topicNouns.length > 0) {
+      const fallbackResults = await Promise.allSettled(
+        topicNouns.map((seed) =>
+          fetchKeywordSuggestions(seed, geo.locationCode, geo.languageCode, limit),
+        ),
+      );
+      const extra: KwIdea[] = [];
+      fallbackResults.forEach((res, i) => {
+        if (res.status === "fulfilled") {
+          const tagged = res.value.map((k) => ({
+            ...k,
+            source: "ideas" as const,
+          }));
+          extra.push(...tagged);
+        } else {
+          errors.push({
+            source: `keyword_suggestions(fallback):${topicNouns[i]}`,
+            message:
+              res.reason instanceof Error
+                ? res.reason.message
+                : String(res.reason),
+          });
+        }
+      });
+      // Merge + dedupe (don't double-count ideas already present).
+      const existingIdeaKeys = new Set(ideas.map((k) => k.keyword.toLowerCase()));
+      const newOnes = extra.filter(
+        (k) => !existingIdeaKeys.has(k.keyword.toLowerCase()),
+      );
+      ideas = dedupeByKw([...ideas, ...newOnes]);
+    }
   }
 
   let combined = { suggestions, ideas, domainExisting };
