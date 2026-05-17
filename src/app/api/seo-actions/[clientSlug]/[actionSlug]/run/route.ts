@@ -11,11 +11,7 @@ import { getBriefForSlug } from "@/lib/briefs-storage";
 import { getClientWebsite } from "@/lib/client-meta";
 import { getClientBySlug } from "@/lib/notion";
 import { buildSeoClaudeSystemPrompt } from "@/lib/seo-claude-prompt";
-import { appendHistory } from "@/lib/action-history";
-import {
-  loadAuditPrep,
-  clearAuditPrep,
-} from "@/lib/audit-prep-store";
+import { loadAuditPrep } from "@/lib/audit-prep-store";
 
 export const maxDuration = 60;
 export const runtime = "nodejs";
@@ -113,7 +109,6 @@ export async function POST(
 
   // prep is now narrowed to AuditPrep.status === "ok"
   const factPack = prep.factPack;
-  const metrics = prep.metrics;
 
   const userPrompt = [
     `# Live tool measurements (use these as primary evidence)\n${factPack}`,
@@ -148,32 +143,16 @@ export async function POST(
         },
       });
 
-      let modelText = "";
+      // Stream Claude — DO NOT persist here. The client calls /save with the
+      // full accumulated output once the stream ends; that decouples the KV
+      // write from the 60s function budget so we never lose results to a
+      // mid-stream timeout.
       try {
         for await (const chunk of result.textStream) {
-          modelText += chunk;
           send(chunk);
         }
       } catch (err) {
         console.error("stream consume failed:", err);
-      }
-
-      if (modelText.trim()) {
-        try {
-          await appendHistory({
-            id: resultId,
-            clientSlug,
-            actionSlug,
-            inputs,
-            output: modelText,
-            model: MODEL_ID,
-            ...(metrics ? { metrics } : {}),
-          });
-          // Prep done its job — free the KV slot.
-          await clearAuditPrep(clientSlug, actionSlug, resultId);
-        } catch (err) {
-          console.error("history append failed:", err);
-        }
       }
 
       controller.close();

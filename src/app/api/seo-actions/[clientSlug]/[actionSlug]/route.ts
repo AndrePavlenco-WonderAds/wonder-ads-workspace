@@ -6,7 +6,6 @@ import { getBriefForSlug } from "@/lib/briefs-storage";
 import { getClientWebsite } from "@/lib/client-meta";
 import { getClientBySlug } from "@/lib/notion";
 import { buildSeoClaudeSystemPrompt } from "@/lib/seo-claude-prompt";
-import { appendHistory } from "@/lib/action-history";
 import {
   runPageSpeed,
   formatPsiForPrompt,
@@ -22,7 +21,6 @@ import {
   runSiteAudit,
   type SiteAuditDepth,
 } from "@/lib/seo-tools/site-audit";
-import type { DomainMetrics } from "@/lib/seo-tools/dataforseo";
 
 // Vercel Hobby caps at 60s.
 export const maxDuration = 60;
@@ -121,7 +119,6 @@ export async function POST(
       const send = (s: string) => controller.enqueue(encoder.encode(s));
 
       let factPack = "";
-      let auditMetrics: DomainMetrics | null = null;
 
       // ---------- Tool phase ----------
       if (tools.length > 0) {
@@ -153,7 +150,6 @@ export async function POST(
               { depth },
             );
             factPack = pack.markdown;
-            auditMetrics = pack.metrics;
           } catch (err) {
             const message = err instanceof Error ? err.message : String(err);
             send(`> ❌ Site audit orchestrator crashed: ${message.slice(0, 240)}\n`);
@@ -220,31 +216,16 @@ export async function POST(
         },
       });
 
-      let modelText = "";
+      // Stream Claude — the client calls /save with the accumulated output
+      // once the stream ends. Keeping the KV write out of this function
+      // means a long Claude run can't kill persistence by hitting Vercel's
+      // 60s budget mid-stream.
       try {
         for await (const chunk of result.textStream) {
-          modelText += chunk;
           send(chunk);
         }
       } catch (err) {
         console.error("stream consume failed:", err);
-      }
-
-      // ---------- Persist ----------
-      if (modelText.trim()) {
-        try {
-          await appendHistory({
-            id: resultId,
-            clientSlug,
-            actionSlug,
-            inputs,
-            output: modelText,
-            model: MODEL_ID,
-            ...(auditMetrics ? { metrics: auditMetrics } : {}),
-          });
-        } catch (err) {
-          console.error("history append failed:", err);
-        }
       }
 
       controller.close();

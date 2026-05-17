@@ -11,6 +11,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: 58,
+    date: "2026-05-17",
+    title: "Fix: audits now actually persist to history",
+    highlights: [
+      "Critical fix — every audit until now was being lost on save. Vercel was killing the function before the KV write completed, so 'past results' were just transient streamed state that vanished on refresh.",
+      "Save moved to a separate /save endpoint that runs in ~100ms instead of competing with the Claude stream for the 60s budget. Past results grids now actually populate, result URLs are bookmarkable, PDFs survive a refresh.",
+      "Same fix applied to the catch-all route for non-audit actions.",
+    ],
+  },
+  {
     version: 57,
     date: "2026-05-17",
     title: "Audit: 5 priority issues, objective tone, Re-generate button",

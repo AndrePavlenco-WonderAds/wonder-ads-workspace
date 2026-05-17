@@ -159,17 +159,47 @@ export function ResultRunner({
       }
 
       try {
+        let finalAcc: string;
         if (action.slug === "seo-audit") {
           // Two-phase: tools first (under 60s), then Claude (under 60s).
           // /prep saves the fact pack to KV before the stream closes;
           // /run picks it up + sends the `---` separator + streams Claude.
           const afterPrep = await callPhase("/prep", "");
           if (controller.signal.aborted) throw new DOMException("Aborted", "AbortError");
-          await callPhase("/run", afterPrep);
+          finalAcc = await callPhase("/run", afterPrep);
         } else {
           // Single call for actions that comfortably fit under 60s.
-          await callPhase("", "");
+          finalAcc = await callPhase("", "");
         }
+
+        // Persist the analysis. /run and the catch-all route no longer save
+        // inline (Vercel was killing the function before the KV write could
+        // complete). Save here as a quick separate request.
+        const sep = SEPARATOR;
+        const sepIdx = finalAcc.indexOf(sep);
+        const analysis =
+          sepIdx >= 0 ? finalAcc.slice(sepIdx + sep.length) : finalAcc;
+        if (analysis.trim()) {
+          try {
+            await fetch(`${apiBase}/save`, {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({
+                resultId,
+                inputs: formInputs,
+                output: analysis,
+              }),
+            });
+          } catch (saveErr) {
+            console.error("save failed:", saveErr);
+            // Non-fatal — the user still sees the streamed output, just won't
+            // survive a refresh. Surface a soft warning.
+            setErrorMsg(
+              "Generated successfully but couldn't persist to history. Refresh-survival isn't guaranteed.",
+            );
+          }
+        }
+
         setStatus("done");
       } catch (err) {
         if ((err as Error).name === "AbortError") {
