@@ -3,13 +3,29 @@
 // the CHANGELOG array (the page renders in order, so position 0 = latest).
 
 export type ChangelogEntry = {
-  version: number;
+  /** Number or "68.1" string. While polishing SEO Audit we use minor
+   *  versions (68.1, 68.2, …) instead of bumping the major. */
+  version: number | string;
   date: string; // ISO YYYY-MM-DD
   title: string;
   highlights: string[];
 };
 
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: "68.1",
+    date: "2026-05-17",
+    title: "PDF fix, branded cover, CWV panel, DD/MM/YYYY dates",
+    highlights: [
+      "**PDF rendering fix.** The previous PDF came out blank because Chrome's print engine drops background colours by default. Added `print-color-adjust: exact` so the cover gradient + every brand element prints reliably.",
+      "**Branded PDF cover redesigned.** Top-left: WonderAds butterfly + 'WonderAds' wordmark (matching the app header). Top-right: 'SEO Department · Audit Report'. Astronaut in the bottom-right corner, **no rotation** now. Body pages get a slim WA-branded header so they're not blank white anymore.",
+      "**Core Web Vitals panel** on the dashboard. Real-user (CrUX) field data for LCP / INP / CLS + FCP + TTFB, mobile + desktop side-by-side, colour-coded per Google's good / needs-improvement / poor thresholds. Lighthouse scores chips inline (Perf / SEO / A11y / BP).",
+      "**Dates everywhere are now DD/MM/YYYY.** New `src/lib/dates.ts` helpers (`formatDate`, `formatDateTime`, `formatDateLong`); all existing call sites migrated.",
+      "**Stop button removed** during an audit — DataforSEO + PSI charges are already incurred, so it was misleading.",
+      "**Quick Actions persistence** rewritten with a simpler localStorage-first store. Adds explicit `console.error` if a save ever fails (private mode / disabled storage), so silent reverts to default are now diagnosable.",
+      "**Versioning convention while polishing SEO Audit:** minor versions (v68.1, v68.2, …) until the action is complete, then v69.",
+    ],
+  },
   {
     version: 68,
     date: "2026-05-17",
@@ -719,6 +735,6 @@ export const CHANGELOG: ChangelogEntry[] = [
   },
 ];
 
-export function getCurrentVersion(): number {
+export function getCurrentVersion(): number | string {
   return CHANGELOG[0]?.version ?? 1;
 }

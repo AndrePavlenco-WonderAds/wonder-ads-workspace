@@ -41,6 +41,7 @@ export async function GET(
     found: true,
     status: "ok",
     metrics: prep.metrics,
+    vitals: prep.vitals ?? null,
     preparedAt: prep.preparedAt,
     inputUrl: prep.inputUrl,
   });

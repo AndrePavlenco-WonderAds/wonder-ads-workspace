@@ -56,12 +56,14 @@ export async function POST(
   }
 
   // For seo-audit, pull the saved prep so we can persist its metrics +
-  // free the slot. For other actions, prep won't exist and that's fine.
+  // vitals, then free the slot. For other actions, prep won't exist.
   let metrics = undefined;
+  let vitals = undefined;
   if (actionSlug === "seo-audit") {
     const prep = await loadAuditPrep(clientSlug, actionSlug, resultId);
     if (prep && prep.status === "ok") {
       metrics = prep.metrics ?? undefined;
+      vitals = prep.vitals ?? undefined;
     }
   }
 
@@ -74,6 +76,7 @@ export async function POST(
       output,
       model,
       ...(metrics ? { metrics } : {}),
+      ...(vitals ? { vitals } : {}),
     });
     if (actionSlug === "seo-audit") {
       await clearAuditPrep(clientSlug, actionSlug, resultId);

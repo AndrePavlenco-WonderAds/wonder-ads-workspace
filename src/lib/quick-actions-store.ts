@@ -1,11 +1,11 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { useEffect, useState } from "react";
 import { ALL_ACTIONS } from "./seo-pillars";
 
 const KEY = "wa:quick-actions:v2";
 
-const DEFAULT_SLUGS: string[] = [
+const DEFAULT_SLUGS: readonly string[] = [
   "write-blog-article",
   "meta-title-description",
   "keyword-research",
@@ -17,7 +17,7 @@ const DEFAULT_SLUGS: string[] = [
 const VALID_SLUGS = new Set(ALL_ACTIONS.map((a) => a.action.slug));
 
 function sanitize(slugs: unknown): string[] {
-  if (!Array.isArray(slugs)) return DEFAULT_SLUGS;
+  if (!Array.isArray(slugs)) return [...DEFAULT_SLUGS];
   const seen = new Set<string>();
   const out: string[] = [];
   for (const item of slugs) {
@@ -30,59 +30,38 @@ function sanitize(slugs: unknown): string[] {
   return out;
 }
 
-let cache: string[] | null = null;
-
-function read(): string[] {
-  if (cache) return cache;
-  if (typeof window === "undefined") {
-    cache = DEFAULT_SLUGS;
-    return cache;
-  }
+/** Read straight from localStorage. Returns DEFAULT_SLUGS when no record
+ *  exists, an empty array when the saved record is intentionally empty. */
+function readFromStorage(): string[] {
+  if (typeof window === "undefined") return [...DEFAULT_SLUGS];
   try {
     const raw = window.localStorage.getItem(KEY);
-    cache = raw ? sanitize(JSON.parse(raw)) : DEFAULT_SLUGS;
-  } catch {
-    cache = DEFAULT_SLUGS;
+    if (raw === null) return [...DEFAULT_SLUGS];
+    return sanitize(JSON.parse(raw));
+  } catch (err) {
+    console.error("[quick-actions] read failed:", err);
+    return [...DEFAULT_SLUGS];
   }
-  return cache;
 }
 
-const listeners = new Set<() => void>();
-
-function emit() {
-  for (const cb of listeners) cb();
-}
-
-function subscribe(cb: () => void) {
-  listeners.add(cb);
-  const onStorage = (e: StorageEvent) => {
-    if (e.key === KEY) {
-      cache = null;
-      cb();
-    }
-  };
-  window.addEventListener("storage", onStorage);
-  return () => {
-    listeners.delete(cb);
-    window.removeEventListener("storage", onStorage);
-  };
-}
+const listeners = new Set<(value: string[]) => void>();
 
 export function setQuickActions(slugs: string[]) {
   const next = sanitize(slugs);
-  cache = next;
   if (typeof window !== "undefined") {
     try {
       window.localStorage.setItem(KEY, JSON.stringify(next));
-    } catch {
-      /* storage might be unavailable */
+    } catch (err) {
+      // Surface storage failures (private mode / quota / disabled) so the
+      // user sees a console hint instead of silent reverts.
+      console.error("[quick-actions] localStorage save failed:", err);
     }
   }
-  emit();
+  for (const cb of listeners) cb(next);
 }
 
 export function toggleQuickAction(slug: string) {
-  const current = read();
+  const current = readFromStorage();
   if (current.includes(slug)) {
     setQuickActions(current.filter((s) => s !== slug));
   } else {
@@ -91,7 +70,7 @@ export function toggleQuickAction(slug: string) {
 }
 
 export function moveQuickAction(slug: string, direction: -1 | 1) {
-  const current = read();
+  const current = readFromStorage();
   const idx = current.indexOf(slug);
   if (idx === -1) return;
   const target = idx + direction;
@@ -102,5 +81,30 @@ export function moveQuickAction(slug: string, direction: -1 | 1) {
 }
 
 export function useQuickActions(): string[] {
-  return useSyncExternalStore(subscribe, read, () => DEFAULT_SLUGS);
+  // useState initializer reads on mount. SSR returns DEFAULTs, client first
+  // render re-reads from localStorage via the useEffect below to pick up the
+  // saved order even if hydration started with DEFAULTs.
+  const [value, setValue] = useState<string[]>(() => readFromStorage());
+
+  useEffect(() => {
+    // After hydration, force-sync from storage. Handles the case where SSR
+    // rendered DEFAULTs but the client has a different saved order.
+    const fresh = readFromStorage();
+    setValue(fresh);
+
+    const cb = (next: string[]) => setValue(next);
+    listeners.add(cb);
+
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === KEY) setValue(readFromStorage());
+    };
+    window.addEventListener("storage", onStorage);
+
+    return () => {
+      listeners.delete(cb);
+      window.removeEventListener("storage", onStorage);
+    };
+  }, []);
+
+  return value;
 }

@@ -2,10 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Loader2, Square, AlertTriangle } from "lucide-react";
+import { Loader2, AlertTriangle } from "lucide-react";
 import type { ActionDef, ActionToolName } from "@/lib/seo-pillars";
 import type { HistoryEntry } from "@/lib/action-history";
 import type { DomainMetrics } from "@/lib/seo-tools/dataforseo";
+import type { SiteVitals } from "@/lib/audit-prep-store";
+import { formatDateLong } from "@/lib/dates";
 import { pendingKey } from "./action-runner";
 import { MarkdownView } from "./markdown-view";
 import { DomainDashboard } from "./domain-dashboard";
@@ -42,6 +44,9 @@ export function ResultRunner({
   // dashboard populates while Claude is still writing the analysis.
   const [liveMetrics, setLiveMetrics] = useState<DomainMetrics | null>(
     existing?.metrics ?? null,
+  );
+  const [liveVitals, setLiveVitals] = useState<SiteVitals | null>(
+    existing?.vitals ?? null,
   );
   const abortRef = useRef<AbortController | null>(null);
   const generationStartedRef = useRef(false);
@@ -168,9 +173,18 @@ export function ResultRunner({
             { cache: "no-store" },
           )
             .then((r) => r.json())
-            .then((j: { status?: string; metrics?: DomainMetrics | null }) => {
-              if (j?.status === "ok" && j.metrics) setLiveMetrics(j.metrics);
-            })
+            .then(
+              (j: {
+                status?: string;
+                metrics?: DomainMetrics | null;
+                vitals?: SiteVitals | null;
+              }) => {
+                if (j?.status === "ok") {
+                  if (j.metrics) setLiveMetrics(j.metrics);
+                  if (j.vitals) setLiveVitals(j.vitals);
+                }
+              },
+            )
             .catch(() => {
               /* non-fatal — /save will return them too */
             });
@@ -264,9 +278,6 @@ export function ResultRunner({
     return () => clearInterval(i);
   }, [status]);
 
-  function stop() {
-    abortRef.current?.abort();
-  }
 
   // Progress calculation
   const progress = useMemo(() => {
@@ -316,11 +327,7 @@ export function ResultRunner({
 
   // ---- Print mode: branded WonderAds PDF layout ----
   if (isPrintMode) {
-    const generatedDateStr = new Date().toLocaleDateString(undefined, {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
+    const generatedDateStr = formatDateLong(new Date());
     return (
       <PrintLayout
         clientName={clientName}
@@ -354,16 +361,9 @@ export function ResultRunner({
             <span className="ml-auto text-xs font-mono text-white/55">
               {progress}%
             </span>
-            {status === "generating" && (
-              <button
-                type="button"
-                onClick={stop}
-                className="inline-flex items-center gap-1 rounded-md border border-white/15 bg-white/[0.04] px-2 py-1 text-[11px] font-medium text-white/75 transition hover:border-white/30 hover:text-white"
-              >
-                <Square className="h-3 w-3" />
-                Stop
-              </button>
-            )}
+            {/* Stop removed — DataforSEO + PSI bills are already incurred
+                once an audit starts, so 'stop' was misleading. Users can
+                close the tab if they really want to walk away. */}
           </header>
           <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-white/[0.06]">
             <div
@@ -390,6 +390,7 @@ export function ResultRunner({
       {action.slug === "seo-audit" && (
         <DomainDashboard
           metrics={liveMetrics}
+          vitals={liveVitals}
           generating={status === "generating"}
         />
       )}
@@ -470,12 +471,12 @@ function PrintLayout({
   showDomainSummary: boolean;
 }) {
   return (
-    <div className="bg-white text-black">
+    <div className="pdf-root">
       <style>{`
         /* Page setup — A4 with WA running footer + page numbers */
         @page {
           size: A4;
-          margin: 18mm 16mm 22mm 16mm;
+          margin: 22mm 16mm 22mm 16mm;
           @bottom-left {
             content: "Wonder Ads · SEO Department · seo@wonder-ads.com";
             font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
@@ -501,78 +502,172 @@ function PrintLayout({
           h3, h4 { break-after: avoid; }
           table { break-inside: avoid; }
           .pdf-stat, .pdf-section-card { break-inside: avoid; }
+          /* Force backgrounds + colors to print — Chrome defaults to skipping
+             these otherwise, which is exactly what was making the cover render
+             as a blank white page. */
+          *, *::before, *::after {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
         }
-        html, body { background: white !important; color: #0a0a0a !important; }
+        html, body, .pdf-root {
+          background: white !important;
+          color: #0a0a0a !important;
+          margin: 0;
+          padding: 0;
+        }
 
-        /* Cover page */
+        /* --- Brand header on every body page (positioned so it lands above
+              the natural top margin on each printed page) --- */
+        .pdf-page-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 4mm 0 3mm;
+          margin-bottom: 6mm;
+          border-bottom: 1px solid #ececec;
+        }
+        .pdf-page-header-brand {
+          display: flex;
+          align-items: center;
+          gap: 2.5mm;
+        }
+        .pdf-page-header-logo {
+          width: 8mm; height: 8mm;
+        }
+        .pdf-page-header-wordmark {
+          font-size: 11pt; font-weight: 700; color: #0a0a0a;
+          letter-spacing: -0.01em;
+        }
+        .pdf-page-header-wordmark .gradient {
+          background: linear-gradient(135deg, #343ED7 0%, #783DF5 53.65%, #C535C9 100%);
+          -webkit-background-clip: text;
+          background-clip: text;
+          -webkit-text-fill-color: transparent;
+          color: transparent;
+        }
+        .pdf-page-header-meta {
+          text-align: right;
+          font-size: 8pt;
+          letter-spacing: 0.16em;
+          text-transform: uppercase;
+          font-weight: 700;
+          color: #5b34c9;
+        }
+        .pdf-page-header-meta .small {
+          display: block;
+          margin-top: 1mm;
+          color: #888;
+          letter-spacing: 0.1em;
+          font-weight: 500;
+          font-size: 7.5pt;
+        }
+
+        /* --- Cover page --- */
         .pdf-cover {
           position: relative;
           height: 100vh;
           min-height: 297mm;
-          padding: 32mm 28mm;
+          padding: 22mm 22mm 22mm 22mm;
           color: white;
           background: linear-gradient(135deg, #343ED7 0%, #783DF5 53.65%, #C535C9 100%);
           overflow: hidden;
           display: flex;
           flex-direction: column;
         }
-        .pdf-cover-logo {
-          width: 120px;
-          height: auto;
+        .pdf-cover-top {
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
+          gap: 12mm;
+        }
+        .pdf-cover-brand {
+          display: flex;
+          align-items: center;
+          gap: 4mm;
+        }
+        .pdf-cover-brand-logo {
+          width: 18mm; height: 18mm;
+        }
+        .pdf-cover-brand-wordmark {
+          font-size: 22pt;
+          font-weight: 800;
+          letter-spacing: -0.015em;
+          line-height: 1;
+        }
+        .pdf-cover-brand-wordmark .wonder { color: white; }
+        .pdf-cover-brand-wordmark .ads {
+          background: linear-gradient(135deg, #C535C9 0%, #ff8ae6 100%);
+          -webkit-background-clip: text;
+          background-clip: text;
+          -webkit-text-fill-color: transparent;
+          color: transparent;
+        }
+        .pdf-cover-dept {
+          text-align: right;
+          font-size: 10pt;
+          letter-spacing: 0.22em;
+          text-transform: uppercase;
+          font-weight: 700;
+          color: rgba(255,255,255,0.9);
+        }
+        .pdf-cover-dept .small {
+          display: block;
+          margin-top: 1mm;
+          font-size: 8.5pt;
+          letter-spacing: 0.18em;
+          color: rgba(255,255,255,0.6);
+          font-weight: 500;
+        }
+        .pdf-cover-body {
+          margin-top: auto;
+          padding-bottom: 8mm;
         }
         .pdf-cover-eyebrow {
-          margin-top: 28mm;
           font-size: 11pt;
           letter-spacing: 0.22em;
           text-transform: uppercase;
           font-weight: 600;
-          color: rgba(255,255,255,0.8);
+          color: rgba(255,255,255,0.85);
         }
         .pdf-cover-title {
-          margin-top: 6mm;
-          font-size: 48pt;
+          margin-top: 5mm;
+          font-size: 56pt;
           font-weight: 800;
-          line-height: 1.05;
-          letter-spacing: -0.01em;
+          line-height: 1.02;
+          letter-spacing: -0.015em;
+          color: white;
         }
         .pdf-cover-subtitle {
           margin-top: 4mm;
-          font-size: 16pt;
+          font-size: 17pt;
           font-weight: 500;
           color: rgba(255,255,255,0.9);
         }
         .pdf-cover-meta {
-          margin-top: auto;
-          padding-top: 12mm;
+          margin-top: 12mm;
+          padding-top: 6mm;
           font-size: 10.5pt;
-          color: rgba(255,255,255,0.85);
-          line-height: 1.6;
-          border-top: 1px solid rgba(255,255,255,0.25);
+          color: rgba(255,255,255,0.9);
+          line-height: 1.7;
+          border-top: 1px solid rgba(255,255,255,0.3);
+          max-width: 110mm;
         }
         .pdf-cover-meta strong { color: white; font-weight: 700; }
         .pdf-cover-astronaut {
           position: absolute;
-          right: -8mm;
-          bottom: -8mm;
-          width: 92mm;
+          right: -6mm;
+          bottom: -6mm;
+          width: 88mm;
           height: auto;
-          opacity: 0.95;
           filter: drop-shadow(0 12px 24px rgba(0,0,0,0.35));
-          transform: rotate(-6deg);
           pointer-events: none;
         }
-        .pdf-cover-watermark {
-          position: absolute;
-          right: 28mm;
-          top: 28mm;
-          font-size: 9pt;
-          letter-spacing: 0.2em;
-          text-transform: uppercase;
-          font-weight: 600;
-          color: rgba(255,255,255,0.5);
-        }
 
-        /* Body document */
+        /* --- Body document --- */
+        .pdf-body-wrapper {
+          padding: 12mm 16mm 4mm;
+        }
         .pdf-doc {
           color: #1a1a1a;
           font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -616,8 +711,7 @@ function PrintLayout({
           overflow: auto; font-size: 8.5pt; line-height: 1.5;
           font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
         }
-        /* CRITICAL — inline code: NO background fill on print. The grey
-           boxes were what made the previous output look broken. */
+        /* Inline code: brand-purple text, no boxy background. */
         .pdf-doc code {
           background: transparent;
           border: none;
@@ -633,14 +727,7 @@ function PrintLayout({
         }
         .pdf-doc hr { border: none; border-top: 1px solid #e0e0e0; margin: 6mm 0; }
 
-        /* Domain intelligence summary */
-        .pdf-section-card {
-          background: #fafafa;
-          border: 1px solid #ececec;
-          border-radius: 2mm;
-          padding: 5mm;
-          margin: 6mm 0;
-        }
+        /* --- Domain intelligence summary --- */
         .pdf-stats {
           display: grid; grid-template-columns: repeat(4, 1fr); gap: 3mm;
           margin: 0 0 4mm;
@@ -661,61 +748,60 @@ function PrintLayout({
         .pdf-stat-sub {
           font-size: 7.5pt; color: #777; margin-top: 1mm;
         }
-
-        .pdf-cover-page-content {
-          padding: 18mm 16mm 4mm;
-        }
         .pdf-empty {
           color: #888; padding: 60mm 0; text-align: center;
         }
-        .pdf-toc {
-          margin-top: 6mm;
-          padding: 5mm 6mm;
-          background: #f8f7fc;
-          border-left: 3px solid #783DF5;
-          font-size: 10pt;
-        }
-        .pdf-toc-title {
-          font-weight: 700; color: #2a1a5a; margin-bottom: 2mm;
-          text-transform: uppercase; letter-spacing: 0.13em; font-size: 8pt;
-        }
-        .pdf-toc-list {
-          margin: 0; padding: 0; list-style: none;
-        }
-        .pdf-toc-list li { padding: 0.8mm 0; color: #4a4a4a; }
       `}</style>
 
-      {/* Cover page */}
+      {/* --- Cover page --- */}
       <div className="pdf-cover">
-        <span className="pdf-cover-watermark">Wonder Ads · SEO Department</span>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="/branding/wonder-ads-logo.png"
-          alt="Wonder Ads"
-          className="pdf-cover-logo"
-        />
-        <div className="pdf-cover-eyebrow">SEO Audit · {clientName}</div>
-        <h1 className="pdf-cover-title">{actionLabel}</h1>
-        <div className="pdf-cover-subtitle">
-          {metrics?.target ? metrics.target : ""}
-        </div>
-        <div className="pdf-cover-meta">
-          <div>
-            <strong>Generated:</strong> {generatedDate}
-          </div>
-          <div>
-            <strong>Report ID:</strong>{" "}
-            <span style={{ fontFamily: "ui-monospace, monospace" }}>
-              {resultId}
+        <div className="pdf-cover-top">
+          <div className="pdf-cover-brand">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/wonder-ads-butterfly.png"
+              alt=""
+              aria-hidden="true"
+              className="pdf-cover-brand-logo"
+            />
+            <span className="pdf-cover-brand-wordmark">
+              <span className="wonder">Wonder</span>
+              <span className="ads">Ads</span>
             </span>
           </div>
-          <div>
-            <strong>Questions?</strong>{" "}
-            <a href="mailto:seo@wonder-ads.com" style={{ color: "white" }}>
-              seo@wonder-ads.com
-            </a>
+          <div className="pdf-cover-dept">
+            SEO Department
+            <span className="small">Audit Report</span>
           </div>
         </div>
+
+        <div className="pdf-cover-body">
+          <div className="pdf-cover-eyebrow">
+            {actionLabel} · {clientName}
+          </div>
+          <h1 className="pdf-cover-title">{actionLabel}</h1>
+          <div className="pdf-cover-subtitle">
+            {metrics?.target ? metrics.target : ""}
+          </div>
+          <div className="pdf-cover-meta">
+            <div>
+              <strong>Generated:</strong> {generatedDate}
+            </div>
+            <div>
+              <strong>Report ID:</strong>{" "}
+              <span style={{ fontFamily: "ui-monospace, monospace" }}>
+                {resultId}
+              </span>
+            </div>
+            <div>
+              <strong>Questions?</strong>{" "}
+              <a href="mailto:seo@wonder-ads.com" style={{ color: "white" }}>
+                seo@wonder-ads.com
+              </a>
+            </div>
+          </div>
+        </div>
+
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src="/branding/astronaut.png"
@@ -725,9 +811,33 @@ function PrintLayout({
         />
       </div>
 
-      {/* Body */}
-      <div className="pdf-cover-page-content">
+      {/* --- Body pages --- */}
+      <div className="pdf-body-wrapper">
         <div className="pdf-doc">
+          {/* Header that repeats visually on every body page (the @page footer
+              handles per-page WA + page number; this one is just for the top
+              of the body section). */}
+          <div className="pdf-page-header">
+            <div className="pdf-page-header-brand">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/wonder-ads-butterfly.png"
+                alt=""
+                aria-hidden="true"
+                className="pdf-page-header-logo"
+              />
+              <span className="pdf-page-header-wordmark">
+                Wonder<span className="gradient">Ads</span>
+              </span>
+            </div>
+            <div className="pdf-page-header-meta">
+              SEO Department
+              <span className="small">
+                {actionLabel} · {clientName}
+              </span>
+            </div>
+          </div>
+
           {showDomainSummary && metrics && (
             <PrintDomainSummary metrics={metrics} />
           )}

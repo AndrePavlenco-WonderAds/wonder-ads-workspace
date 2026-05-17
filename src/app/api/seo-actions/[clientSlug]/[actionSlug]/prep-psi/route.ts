@@ -63,7 +63,7 @@ export async function POST(
       );
 
       try {
-        const { markdown } = await runPsiPhase(prep.inputUrl, (e) => {
+        const { markdown, mobile, desktop } = await runPsiPhase(prep.inputUrl, (e) => {
           if (e.type === "start") {
             send(`> ⏳ **${e.label}**…\n`);
           } else if (e.type === "done") {
@@ -85,6 +85,7 @@ export async function POST(
           status: "ok",
           factPack: combined,
           metrics: prep.metrics,
+          vitals: { mobile, desktop },
           preparedAt: Date.now(),
           inputUrl: prep.inputUrl,
         });

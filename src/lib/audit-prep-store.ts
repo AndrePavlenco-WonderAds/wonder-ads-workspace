@@ -5,6 +5,12 @@
 
 import { kv } from "@vercel/kv";
 import type { DomainMetrics } from "./seo-tools/dataforseo";
+import type { PsiResult } from "./seo-tools/pagespeed";
+
+export type SiteVitals = {
+  mobile?: PsiResult | null;
+  desktop?: PsiResult | null;
+};
 
 const PREFIX = "audit-prep:";
 const TTL_SECONDS = 3600;
@@ -14,6 +20,7 @@ export type AuditPrep =
       status: "ok";
       factPack: string;
       metrics: DomainMetrics | null;
+      vitals?: SiteVitals;
       preparedAt: number;
       inputUrl: string;
     }

@@ -1,5 +1,6 @@
 import { kv } from "@vercel/kv";
 import type { DomainMetrics } from "./seo-tools/dataforseo";
+import type { SiteVitals } from "./audit-prep-store";
 
 const KEY_PREFIX = "action-history:";
 const MAX_ENTRIES = 30;
@@ -20,6 +21,9 @@ export type HistoryEntry = {
    *  populated for SEO Audit when DataforSEO is configured. Powers the
    *  dashboard cards on the result page. */
   metrics?: DomainMetrics;
+  /** PageSpeed Insights — mobile + desktop. Includes lab and CrUX field
+   *  data. Powers the Core Web Vitals card on the dashboard. */
+  vitals?: SiteVitals;
 };
 
 function key(clientSlug: string, actionSlug: string): string {

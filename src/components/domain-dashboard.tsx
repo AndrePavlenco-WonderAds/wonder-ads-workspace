@@ -27,7 +27,10 @@ import type {
   LlmMentionsWindow,
   DomainTopKeyword,
 } from "@/lib/seo-tools/dataforseo";
+import type { PsiResult } from "@/lib/seo-tools/pagespeed";
+import type { SiteVitals } from "@/lib/audit-prep-store";
 import { countryFromCode } from "@/lib/client-geo";
+import { formatDate } from "@/lib/dates";
 
 type EnvDiag = {
   dataforseo: {
@@ -38,9 +41,11 @@ type EnvDiag = {
 
 export function DomainDashboard({
   metrics,
+  vitals,
   generating = false,
 }: {
   metrics: DomainMetrics | null;
+  vitals?: SiteVitals | null;
   /** True while the parent audit is still running. Drives the loading state
    *  so the dashboard doesn't tell the user to "re-generate" mid-run. */
   generating?: boolean;
@@ -138,7 +143,7 @@ export function DomainDashboard({
           {countryFromCode(metrics.locationCode)} · {metrics.languageCode}
         </span>
         <span className="ml-auto text-[10px] text-white/30">
-          DataforSEO · {new Date(metrics.fetchedAt).toLocaleDateString()}
+          DataforSEO · {formatDate(metrics.fetchedAt)}
         </span>
       </header>
 
@@ -274,6 +279,10 @@ export function DomainDashboard({
           </div>
         </div>
       ) : null}
+
+      {vitals && (vitals.mobile || vitals.desktop) && (
+        <CoreWebVitalsPanel vitals={vitals} />
+      )}
 
       {metrics.llmMentions && (
         <AiVisibilityPanel mentions={metrics.llmMentions} />
@@ -449,6 +458,225 @@ function Stat({
           {sublabel}
         </div>
       )}
+    </div>
+  );
+}
+
+// ---- Core Web Vitals panel ----
+//
+// Renders Google's CrUX (real-user) field data when available, with
+// lab-data fallback. Each metric is colour-coded per Google's thresholds:
+// good (green) / needs improvement (amber) / poor (red).
+
+function CoreWebVitalsPanel({ vitals }: { vitals: SiteVitals }) {
+  const mobile = vitals.mobile ?? null;
+  const desktop = vitals.desktop ?? null;
+  return (
+    <div className="relative overflow-hidden rounded-2xl border border-sky-400/25 bg-gradient-to-br from-sky-500/[0.06] via-white/[0.02] to-transparent p-5">
+      <header className="mb-2 flex flex-wrap items-baseline gap-2">
+        <Activity
+          className="h-4 w-4 text-sky-300"
+          strokeWidth={2.25}
+        />
+        <h3 className="text-sm font-medium uppercase tracking-[0.18em] text-white/75">
+          Core Web Vitals
+        </h3>
+        <span className="rounded-md border border-white/8 bg-white/[0.04] px-1.5 py-0.5 text-[10px] uppercase tracking-[0.13em] text-white/60">
+          PageSpeed Insights · CrUX field data
+        </span>
+      </header>
+      <p className="mb-4 text-[11.5px] leading-snug text-white/55">
+        Real-user performance measured by Google&apos;s Chrome User Experience
+        Report (28-day p75 of actual visitors). When field data is missing
+        for a metric, falls back to a single Lighthouse lab run — shown with
+        a <em>lab</em> tag.
+      </p>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <CwvCard label="📱 Mobile" psi={mobile} />
+        <CwvCard label="🖥 Desktop" psi={desktop} />
+      </div>
+    </div>
+  );
+}
+
+function CwvCard({
+  label,
+  psi,
+}: {
+  label: string;
+  psi: PsiResult | null;
+}) {
+  if (!psi) {
+    return (
+      <div className="rounded-xl border border-white/8 bg-black/15 p-4">
+        <h4 className="mb-2 text-[12px] font-semibold tracking-tight text-white/70">
+          {label}
+        </h4>
+        <p className="text-[11px] text-white/40">
+          Not measured (PageSpeed call failed or was skipped due to timeout).
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-xl border border-white/8 bg-black/15 p-4">
+      <header className="mb-3 flex items-baseline justify-between gap-2">
+        <h4 className="text-[12px] font-semibold tracking-tight text-white">
+          {label}
+        </h4>
+        <div className="flex items-center gap-1.5 text-[10px] text-white/45">
+          <ScoreChip label="Perf" value={psi.scores.performance} />
+          <ScoreChip label="SEO" value={psi.scores.seo} />
+          <ScoreChip label="A11y" value={psi.scores.accessibility} />
+          <ScoreChip label="BP" value={psi.scores.bestPractices} />
+        </div>
+      </header>
+      <div className="grid grid-cols-3 gap-2">
+        <CwvMetric
+          label="LCP"
+          fieldMs={psi.fieldData.lcpMs}
+          labMs={psi.labData.lcpMs}
+          good={2500}
+          poor={4000}
+          unit="ms"
+          tooltip="Largest Contentful Paint — when the main content loads"
+        />
+        <CwvMetric
+          label="INP"
+          fieldMs={psi.fieldData.inpMs}
+          labMs={psi.labData.inpMs}
+          good={200}
+          poor={500}
+          unit="ms"
+          tooltip="Interaction to Next Paint — responsiveness to user input"
+        />
+        <CwvMetric
+          label="CLS"
+          fieldMs={psi.fieldData.cls}
+          labMs={psi.labData.cls}
+          good={0.1}
+          poor={0.25}
+          unit=""
+          tooltip="Cumulative Layout Shift — how much the page jumps around"
+          decimals={3}
+        />
+      </div>
+      <div className="mt-2.5 grid grid-cols-2 gap-2 border-t border-white/5 pt-2.5">
+        <CwvMetric
+          label="FCP"
+          fieldMs={psi.fieldData.fcpMs}
+          labMs={psi.labData.fcpMs}
+          good={1800}
+          poor={3000}
+          unit="ms"
+          tooltip="First Contentful Paint — when the first text/image appears"
+          subtle
+        />
+        <CwvMetric
+          label="TTFB"
+          fieldMs={psi.fieldData.ttfbMs}
+          labMs={psi.labData.ttfbMs}
+          good={800}
+          poor={1800}
+          unit="ms"
+          tooltip="Time to First Byte — server response speed"
+          subtle
+        />
+      </div>
+    </div>
+  );
+}
+
+function ScoreChip({
+  label,
+  value,
+}: {
+  label: string;
+  value: number | null;
+}) {
+  if (value === null) return null;
+  const tone =
+    value >= 90
+      ? "bg-emerald-400/15 text-emerald-200"
+      : value >= 50
+        ? "bg-amber-400/15 text-amber-200"
+        : "bg-rose-400/15 text-rose-200";
+  return (
+    <span className={`rounded px-1.5 py-0.5 ${tone}`}>
+      {label} {value}
+    </span>
+  );
+}
+
+function CwvMetric({
+  label,
+  fieldMs,
+  labMs,
+  good,
+  poor,
+  unit,
+  tooltip,
+  decimals = 0,
+  subtle = false,
+}: {
+  label: string;
+  fieldMs: number | null;
+  labMs: number | null;
+  good: number;
+  poor: number;
+  unit: string;
+  tooltip: string;
+  decimals?: number;
+  subtle?: boolean;
+}) {
+  const usingField = fieldMs !== null;
+  const value = usingField ? fieldMs : labMs;
+  const valueStr =
+    value === null
+      ? "—"
+      : decimals > 0
+        ? value.toFixed(decimals)
+        : Math.round(value).toString();
+  const tier =
+    value === null
+      ? "none"
+      : value <= good
+        ? "good"
+        : value <= poor
+          ? "warn"
+          : "bad";
+  const dot =
+    tier === "good"
+      ? "bg-emerald-400"
+      : tier === "warn"
+        ? "bg-amber-400"
+        : tier === "bad"
+          ? "bg-rose-400"
+          : "bg-white/20";
+  return (
+    <div
+      title={tooltip}
+      className={`rounded-lg border border-white/8 ${subtle ? "bg-white/[0.015]" : "bg-white/[0.025]"} px-2.5 py-2`}
+    >
+      <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.13em] text-white/55">
+        <span className={`h-1.5 w-1.5 rounded-full ${dot}`} />
+        {label}
+        {!usingField && value !== null && (
+          <span className="ml-auto rounded bg-white/[0.06] px-1 py-px text-[8.5px] font-medium text-white/45">
+            lab
+          </span>
+        )}
+      </div>
+      <div
+        className={`mt-1 ${subtle ? "text-base" : "text-xl"} font-semibold text-white`}
+      >
+        {valueStr}
+        {value !== null && unit && (
+          <span className="ml-0.5 text-[10px] text-white/45">{unit}</span>
+        )}
+      </div>
     </div>
   );
 }

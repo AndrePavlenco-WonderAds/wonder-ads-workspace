@@ -95,6 +95,7 @@ export async function POST(
           status: "ok",
           factPack: combinedFactPack,
           metrics,
+          vitals: prep.vitals, // preserve PSI vitals collected by /prep-psi
           preparedAt: Date.now(),
           inputUrl: prep.inputUrl,
         });

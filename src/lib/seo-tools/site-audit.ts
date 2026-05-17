@@ -355,7 +355,11 @@ export async function runSiteAudit(
 export async function runPsiPhase(
   inputUrl: string,
   emit: (event: ToolProgressEvent) => void,
-): Promise<{ markdown: string }> {
+): Promise<{
+  markdown: string;
+  mobile: PsiResult | null;
+  desktop: PsiResult | null;
+}> {
   emit({ type: "start", tool: "psi-mobile", label: "PageSpeed — mobile" });
   emit({ type: "start", tool: "psi-desktop", label: "PageSpeed — desktop" });
 
@@ -391,18 +395,21 @@ export async function runPsiPhase(
   );
 
   const parts: string[] = [];
-  if (psiMobileStep.ok && psiMobileStep.value) {
-    parts.push(formatPsiForPrompt(psiMobileStep.value));
+  const mobile = psiMobileStep.ok && psiMobileStep.value ? psiMobileStep.value : null;
+  const desktop =
+    psiDesktopStep.ok && psiDesktopStep.value ? psiDesktopStep.value : null;
+  if (mobile) {
+    parts.push(formatPsiForPrompt(mobile));
   } else if (!psiMobileStep.ok && "error" in psiMobileStep && psiMobileStep.error) {
     parts.push(`## PageSpeed mobile failed: ${psiMobileStep.error.slice(0, 280)}`);
   }
-  if (psiDesktopStep.ok && psiDesktopStep.value) {
-    parts.push(formatPsiForPrompt(psiDesktopStep.value));
+  if (desktop) {
+    parts.push(formatPsiForPrompt(desktop));
   } else if (!psiDesktopStep.ok && "error" in psiDesktopStep && psiDesktopStep.error) {
     parts.push(`## PageSpeed desktop failed: ${psiDesktopStep.error.slice(0, 280)}`);
   }
 
-  return { markdown: parts.join("\n\n") };
+  return { markdown: parts.join("\n\n"), mobile, desktop };
 }
 
 /** Phase 3 — DataforSEO Labs + LLM Mentions. Returns markdown + metrics. */

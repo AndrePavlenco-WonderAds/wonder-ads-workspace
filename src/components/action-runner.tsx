@@ -13,6 +13,7 @@ import {
 import type { ActionDef } from "@/lib/seo-pillars";
 import type { HistoryEntry } from "@/lib/action-history";
 import { makeResultId } from "@/lib/action-history";
+import { formatDateTime } from "@/lib/dates";
 
 const PENDING_PREFIX = "wa:pending-gen:";
 
@@ -188,13 +189,7 @@ export function ActionRunner({
                       </span>
                     </div>
                     <div className="mt-1 text-sm font-medium text-white">
-                      {date.toLocaleString(undefined, {
-                        year: "numeric",
-                        month: "short",
-                        day: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
+                      {formatDateTime(date)}
                     </div>
                     <div className="mt-2 line-clamp-2 text-[11px] text-white/55">
                       {firstLineOfMarkdown(e.output) || "—"}

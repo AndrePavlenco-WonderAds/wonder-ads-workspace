@@ -13,6 +13,7 @@ import {
   getLogoSizing,
 } from "@/lib/client-meta";
 import { getClientPalette, paletteToGradient } from "@/lib/client-colors";
+import { formatDateTime } from "@/lib/dates";
 
 export const dynamic = "force-dynamic";
 
@@ -52,15 +53,7 @@ export default async function ResultPage({
   const { action, pillar } = entry;
   const { Icon: PillarIcon } = pillar;
 
-  const generatedDate = existing
-    ? new Date(existing.createdAt).toLocaleString(undefined, {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      })
-    : null;
+  const generatedDate = existing ? formatDateTime(existing.createdAt) : null;
 
   return (
     <PageShell wide>
