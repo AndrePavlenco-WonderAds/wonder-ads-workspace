@@ -97,12 +97,17 @@ export async function runSiteAudit(
   inputUrl: string,
   clientSlug: string,
   emit: (event: ToolProgressEvent) => void,
-  opts: { depth?: SiteAuditDepth; skipDataforSeo?: boolean } = {},
+  opts: {
+    depth?: SiteAuditDepth;
+    skipDataforSeo?: boolean;
+    skipPsi?: boolean;
+  } = {},
 ): Promise<SiteAuditFactPack> {
   const depth: SiteAuditDepth = opts.depth ?? "Standard";
   const { maxPages, concurrency } = DEPTH_SETTINGS[depth];
   const geo = getClientGeo(clientSlug);
   const skipDataforSeo = opts.skipDataforSeo ?? false;
+  const skipPsi = opts.skipPsi ?? false;
   const events: ToolProgressEvent[] = [];
   function fire(event: ToolProgressEvent) {
     events.push(event);
@@ -171,8 +176,10 @@ export async function runSiteAudit(
     tool: "crawl-sample",
     label: sampleLabel,
   });
-  fire({ type: "start", tool: "psi-mobile", label: "PageSpeed — mobile" });
-  fire({ type: "start", tool: "psi-desktop", label: "PageSpeed — desktop" });
+  if (!skipPsi) {
+    fire({ type: "start", tool: "psi-mobile", label: "PageSpeed — mobile" });
+    fire({ type: "start", tool: "psi-desktop", label: "PageSpeed — desktop" });
+  }
   fire({ type: "start", tool: "gsc", label: "Search Console" });
   if (!skipDataforSeo) {
     fire({
@@ -196,8 +203,12 @@ export async function runSiteAudit(
     timed<MultiCrawlEntry[]>(() =>
       crawlMany(samplePages, { concurrency }),
     ),
-    timed<PsiResult>(() => runPageSpeed(inputUrl, "mobile")),
-    timed<PsiResult>(() => runPageSpeed(inputUrl, "desktop")),
+    skipPsi
+      ? Promise.resolve({ ok: true as const, value: null, ms: 0 })
+      : timed<PsiResult>(() => runPageSpeed(inputUrl, "mobile")),
+    skipPsi
+      ? Promise.resolve({ ok: true as const, value: null, ms: 0 })
+      : timed<PsiResult>(() => runPageSpeed(inputUrl, "desktop")),
     timed<SiteAuditGscData>(() => getSiteAuditData(clientSlug, 28)),
     skipDataforSeo
       ? Promise.resolve({ ok: true as const, value: null, ms: 0 })
@@ -217,17 +228,19 @@ export async function runSiteAudit(
     const ok = entries.filter((e) => e.ok).length;
     return `${ok}/${entries.length} pages successful`;
   });
-  emitStepDone(fire, "psi-mobile", "PageSpeed — mobile", psiMobileStep, (r) =>
-    `Perf ${r.scores.performance ?? "—"} · SEO ${r.scores.seo ?? "—"} · A11y ${r.scores.accessibility ?? "—"} · BP ${r.scores.bestPractices ?? "—"}`,
-  );
-  emitStepDone(
-    fire,
-    "psi-desktop",
-    "PageSpeed — desktop",
-    psiDesktopStep,
-    (r) =>
-      `Perf ${r.scores.performance ?? "—"} · SEO ${r.scores.seo ?? "—"} · A11y ${r.scores.accessibility ?? "—"} · BP ${r.scores.bestPractices ?? "—"}`,
-  );
+  if (!skipPsi) {
+    emitStepDone(fire, "psi-mobile", "PageSpeed — mobile", psiMobileStep, (r) =>
+      r ? `Perf ${r.scores.performance ?? "—"} · SEO ${r.scores.seo ?? "—"} · A11y ${r.scores.accessibility ?? "—"} · BP ${r.scores.bestPractices ?? "—"}` : "skipped",
+    );
+    emitStepDone(
+      fire,
+      "psi-desktop",
+      "PageSpeed — desktop",
+      psiDesktopStep,
+      (r) =>
+        r ? `Perf ${r.scores.performance ?? "—"} · SEO ${r.scores.seo ?? "—"} · A11y ${r.scores.accessibility ?? "—"} · BP ${r.scores.bestPractices ?? "—"}` : "skipped",
+    );
+  }
   emitStepDone(fire, "gsc", "Search Console", gscStep, (d) => {
     if (d.status !== "ok") return d.status;
     return `${d.totals.clicks} clicks / ${d.totals.impressions} impressions / pos ${d.totals.position.toFixed(1)}`;
@@ -272,24 +285,26 @@ export async function runSiteAudit(
     factParts.push(`## Sample crawl failed: ${sampleStep.error}`);
   }
 
-  if (psiMobileStep.ok && psiMobileStep.value) {
-    factParts.push("");
-    factParts.push(formatPsiForPrompt(psiMobileStep.value));
-  } else if (psiMobileStep.error) {
-    factParts.push("");
-    factParts.push(
-      `## PageSpeed mobile failed: ${psiMobileStep.error.slice(0, 280)}`,
-    );
-  }
+  if (!skipPsi) {
+    if (psiMobileStep.ok && psiMobileStep.value) {
+      factParts.push("");
+      factParts.push(formatPsiForPrompt(psiMobileStep.value));
+    } else if (!psiMobileStep.ok && "error" in psiMobileStep && psiMobileStep.error) {
+      factParts.push("");
+      factParts.push(
+        `## PageSpeed mobile failed: ${psiMobileStep.error.slice(0, 280)}`,
+      );
+    }
 
-  if (psiDesktopStep.ok && psiDesktopStep.value) {
-    factParts.push("");
-    factParts.push(formatPsiForPrompt(psiDesktopStep.value));
-  } else if (psiDesktopStep.error) {
-    factParts.push("");
-    factParts.push(
-      `## PageSpeed desktop failed: ${psiDesktopStep.error.slice(0, 280)}`,
-    );
+    if (psiDesktopStep.ok && psiDesktopStep.value) {
+      factParts.push("");
+      factParts.push(formatPsiForPrompt(psiDesktopStep.value));
+    } else if (!psiDesktopStep.ok && "error" in psiDesktopStep && psiDesktopStep.error) {
+      factParts.push("");
+      factParts.push(
+        `## PageSpeed desktop failed: ${psiDesktopStep.error.slice(0, 280)}`,
+      );
+    }
   }
 
   if (gscStep.ok && gscStep.value) {
@@ -331,17 +346,20 @@ export async function runSiteAudit(
   };
 }
 
-/** Phase 2 standalone — runs ONLY the DataforSEO Labs + LLM Mentions calls.
- *  Used when the site audit is split across two prep phases so each fits
- *  inside Vercel's 60s function budget on Hobby. Returns the additional
- *  fact-pack markdown to append to the existing prep + the structured
- *  metrics record. */
-export async function runDataforSeoPhase(
+/** Phase 2 — runs the slow stuff in parallel: PSI (mobile + desktop) and
+ *  DataforSEO (Labs + LLM Mentions). Splitting these out of Phase 1 means
+ *  heavy English-language sites (IHN, 500+ URL sitemap, slow WordPress)
+ *  don't blow the 60s Vercel budget. Returns markdown to append to the
+ *  existing prep fact pack + structured metrics. */
+export async function runHeavyPhase(
   inputUrl: string,
   clientSlug: string,
   emit: (event: ToolProgressEvent) => void,
 ): Promise<{ markdown: string; metrics: DomainMetrics | null }> {
   const geo = getClientGeo(clientSlug);
+
+  emit({ type: "start", tool: "psi-mobile", label: "PageSpeed — mobile" });
+  emit({ type: "start", tool: "psi-desktop", label: "PageSpeed — desktop" });
   emit({
     type: "start",
     tool: "dataforseo",
@@ -350,57 +368,68 @@ export async function runDataforSeoPhase(
       : "Domain intelligence (DataforSEO — not configured)",
   });
 
-  const started = Date.now();
-  let metrics: DomainMetrics | null = null;
-  let error: string | null = null;
-  try {
-    metrics = await fetchDomainMetrics(inputUrl, {
-      locationCode: geo.locationCode,
-      languageCode: geo.languageCode,
-    });
-  } catch (err) {
-    error = err instanceof Error ? err.message : String(err);
-  }
-  const ms = Date.now() - started;
+  const [psiMobileStep, psiDesktopStep, dfsStep] = await Promise.all([
+    timed<PsiResult>(() => runPageSpeed(inputUrl, "mobile")),
+    timed<PsiResult>(() => runPageSpeed(inputUrl, "desktop")),
+    timed<DomainMetrics | null>(() =>
+      fetchDomainMetrics(inputUrl, {
+        locationCode: geo.locationCode,
+        languageCode: geo.languageCode,
+      }),
+    ),
+  ]);
 
-  if (error) {
-    emit({
-      type: "error",
-      tool: "dataforseo",
-      label: "Domain intelligence (DataforSEO)",
-      ms,
-      message: error.slice(0, 300),
-    });
-  } else if (!metrics) {
-    emit({
-      type: "done",
-      tool: "dataforseo",
-      label: "Domain intelligence (DataforSEO)",
-      ms,
-      summary: "not configured (skipped)",
-    });
-  } else {
-    const partial =
-      metrics.errors.length > 0 ? ` · ${metrics.errors.length} sub-error(s)` : "";
-    emit({
-      type: "done",
-      tool: "dataforseo",
-      label: "Domain intelligence (DataforSEO)",
-      ms,
-      summary: `Rank ${metrics.rank ?? "—"} · ${metrics.organicKeywords ?? "—"} kw · ${metrics.referringDomains ?? "—"} ref domains${partial}`,
-    });
+  emitStepDone(emit, "psi-mobile", "PageSpeed — mobile", psiMobileStep, (r) =>
+    r
+      ? `Perf ${r.scores.performance ?? "—"} · SEO ${r.scores.seo ?? "—"} · A11y ${r.scores.accessibility ?? "—"} · BP ${r.scores.bestPractices ?? "—"}`
+      : "skipped",
+  );
+  emitStepDone(
+    emit,
+    "psi-desktop",
+    "PageSpeed — desktop",
+    psiDesktopStep,
+    (r) =>
+      r
+        ? `Perf ${r.scores.performance ?? "—"} · SEO ${r.scores.seo ?? "—"} · A11y ${r.scores.accessibility ?? "—"} · BP ${r.scores.bestPractices ?? "—"}`
+        : "skipped",
+  );
+  emitStepDone(
+    emit,
+    "dataforseo",
+    "Domain intelligence (DataforSEO)",
+    dfsStep,
+    (d) => {
+      if (!d) return "not configured (skipped)";
+      const partial = d.errors.length > 0 ? ` · ${d.errors.length} sub-error(s)` : "";
+      return `Rank ${d.rank ?? "—"} · ${d.organicKeywords ?? "—"} kw · ${d.referringDomains ?? "—"} ref domains${partial}`;
+    },
+  );
+
+  const parts: string[] = [];
+  if (psiMobileStep.ok && psiMobileStep.value) {
+    parts.push(formatPsiForPrompt(psiMobileStep.value));
+  } else if (!psiMobileStep.ok && "error" in psiMobileStep && psiMobileStep.error) {
+    parts.push(`## PageSpeed mobile failed: ${psiMobileStep.error.slice(0, 280)}`);
+  }
+  if (psiDesktopStep.ok && psiDesktopStep.value) {
+    parts.push(formatPsiForPrompt(psiDesktopStep.value));
+  } else if (!psiDesktopStep.ok && "error" in psiDesktopStep && psiDesktopStep.error) {
+    parts.push(`## PageSpeed desktop failed: ${psiDesktopStep.error.slice(0, 280)}`);
   }
 
-  let markdown = "";
+  const metrics = dfsStep.ok && dfsStep.value ? dfsStep.value : null;
   if (metrics) {
-    markdown = formatDomainMetricsForPrompt(metrics);
+    parts.push(formatDomainMetricsForPrompt(metrics));
   } else if (!isDataforSeoConfigured()) {
-    markdown = `## Domain intelligence\n_Not configured (DATAFORSEO_LOGIN + DATAFORSEO_PASSWORD missing)._`;
-  } else if (error) {
-    markdown = `## Domain intelligence pull failed: ${error}`;
+    parts.push(
+      `## Domain intelligence\n_Not configured (DATAFORSEO_LOGIN + DATAFORSEO_PASSWORD missing)._`,
+    );
+  } else if (!dfsStep.ok && "error" in dfsStep && dfsStep.error) {
+    parts.push(`## Domain intelligence pull failed: ${dfsStep.error}`);
   }
 
-  return { markdown, metrics };
+  return { markdown: parts.join("\n\n"), metrics };
 }
 
 function emitStepDone<T>(

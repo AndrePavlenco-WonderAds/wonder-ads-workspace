@@ -120,7 +120,7 @@ export async function POST(
               send(`> ${e.message}\n`);
             }
           },
-          { depth, skipDataforSeo: true },
+          { depth, skipDataforSeo: true, skipPsi: true },
         );
 
         stage = "save";
@@ -133,7 +133,7 @@ export async function POST(
         });
 
         send(
-          `\n> ✅ **Phase 1 complete** — site data saved. Fetching domain intelligence…\n`,
+          `\n> ✅ **Phase 1 complete** — site data saved. Running PageSpeed + Domain intelligence…\n`,
         );
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);

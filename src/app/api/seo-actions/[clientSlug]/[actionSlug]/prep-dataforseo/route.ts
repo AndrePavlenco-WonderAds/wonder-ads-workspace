@@ -6,7 +6,7 @@
 
 import { NextResponse } from "next/server";
 import { findAction } from "@/lib/seo-pillars";
-import { runDataforSeoPhase } from "@/lib/seo-tools/site-audit";
+import { runHeavyPhase } from "@/lib/seo-tools/site-audit";
 import { loadAuditPrep, saveAuditPrep } from "@/lib/audit-prep-store";
 
 export const maxDuration = 60;
@@ -65,11 +65,11 @@ export async function POST(
       const send = (s: string) => controller.enqueue(encoder.encode(s));
 
       send(
-        `\n> 🔧 Phase 2 / 3 — domain intelligence for \`${new URL(prep.inputUrl).origin}\`\n`,
+        `\n> 🔧 Phase 2 / 3 — PageSpeed + domain intelligence for \`${new URL(prep.inputUrl).origin}\`\n`,
       );
 
       try {
-        const { markdown, metrics } = await runDataforSeoPhase(
+        const { markdown, metrics } = await runHeavyPhase(
           prep.inputUrl,
           clientSlug,
           (e) => {
