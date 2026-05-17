@@ -38,6 +38,7 @@ import {
   isDataforSeoConfigured,
   type DomainMetrics,
 } from "./dataforseo";
+import { getClientGeo } from "../client-geo";
 
 export type ToolProgressEvent =
   | { type: "info"; message: string }
@@ -100,6 +101,7 @@ export async function runSiteAudit(
 ): Promise<SiteAuditFactPack> {
   const depth: SiteAuditDepth = opts.depth ?? "Standard";
   const { maxPages, concurrency } = DEPTH_SETTINGS[depth];
+  const geo = getClientGeo(clientSlug);
   const events: ToolProgressEvent[] = [];
   function fire(event: ToolProgressEvent) {
     events.push(event);
@@ -175,7 +177,7 @@ export async function runSiteAudit(
     type: "start",
     tool: "dataforseo",
     label: isDataforSeoConfigured()
-      ? "Domain intelligence (DataforSEO)"
+      ? `Domain intelligence (DataforSEO — ${geo.countryLabel})`
       : "Domain intelligence (DataforSEO — not configured)",
   });
 
@@ -194,7 +196,12 @@ export async function runSiteAudit(
     timed<PsiResult>(() => runPageSpeed(inputUrl, "mobile")),
     timed<PsiResult>(() => runPageSpeed(inputUrl, "desktop")),
     timed<SiteAuditGscData>(() => getSiteAuditData(clientSlug, 28)),
-    timed<DomainMetrics | null>(() => fetchDomainMetrics(inputUrl)),
+    timed<DomainMetrics | null>(() =>
+      fetchDomainMetrics(inputUrl, {
+        locationCode: geo.locationCode,
+        languageCode: geo.languageCode,
+      }),
+    ),
   ]);
 
   // Report each step

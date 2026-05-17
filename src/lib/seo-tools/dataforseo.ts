@@ -127,10 +127,10 @@ function hostnameFromUrl(url: string): string {
   }
 }
 
-// Defaults: Portugal (Lisbon). Override per-call if a client targets a
-// different geo.
+// Defaults: Portugal (Lisbon). Real per-client geo comes from client-geo.ts;
+// these only kick in if a caller doesn't pass opts.locationCode / languageCode.
 const DEFAULT_LOCATION = 2620; // Portugal
-const DEFAULT_LANGUAGE = "pt"; // Portuguese; switch to "en" for ihn/insync-design
+const DEFAULT_LANGUAGE = "pt";
 
 type RankOverviewResult = {
   items?: {
@@ -265,8 +265,11 @@ async function fetchTopKeywords(
   target: string,
   locationCode: number,
   languageCode: string,
-  limit = 100,
+  limit = 200,
 ): Promise<DomainTopKeyword[]> {
+  // No rank_group filter — return the full ranked footprint up to limit so
+  // the dashboard can show keywords ranking on page 2-10 too. Sorted by ETV
+  // (estimated traffic value) so the most impactful keywords land first.
   const body = [
     {
       target,
@@ -274,9 +277,6 @@ async function fetchTopKeywords(
       language_code: languageCode,
       limit,
       order_by: ["ranked_serp_element.serp_item.etv,desc"],
-      filters: [
-        ["ranked_serp_element.serp_item.rank_group", "<=", 50],
-      ],
     },
   ];
   const res = await dfsPost<typeof body, RankedKeywordsResult>(
@@ -313,8 +313,8 @@ export async function fetchDomainMetrics(
   const [rankRes, backlinksRes, kwRes, mentionsRes] = await Promise.allSettled([
     fetchRankOverview(target, locationCode, languageCode),
     fetchBacklinksSummary(target),
-    fetchTopKeywords(target, locationCode, languageCode, 100),
-    fetchLlmMentions(target),
+    fetchTopKeywords(target, locationCode, languageCode, 200),
+    fetchLlmMentions(target, locationCode, languageCode),
   ]);
 
   const out: DomainMetrics = {
@@ -403,11 +403,13 @@ async function fetchOneMentionsPlatform(
   domain: string,
   platform: "google" | "chatgpt",
   endpoint: "aggregated_metrics" | "top_pages",
+  locationCode: number,
+  languageCode: string,
 ): Promise<LlmMentionsApiResult | null> {
   const body = [
     {
-      language_code: "en",
-      location_code: 2840, // US — LLM training data leans English/US
+      language_code: languageCode,
+      location_code: locationCode,
       platform,
       target: [
         {
@@ -427,13 +429,18 @@ async function fetchOneMentionsPlatform(
   return res.tasks?.[0]?.result?.[0] ?? null;
 }
 
-async function fetchLlmMentions(domain: string): Promise<LlmMentions> {
-  // Query google + chatgpt in parallel — most actionable AI surfaces for our
-  // Health & Wellness clients. (~$0.04 total in DataforSEO costs per audit.)
+async function fetchLlmMentions(
+  domain: string,
+  locationCode: number,
+  languageCode: string,
+): Promise<LlmMentions> {
+  // Query google + chatgpt in parallel — most actionable AI surfaces.
+  // Geo + language match the client's market (set in client-geo.ts) so a
+  // Portuguese clinic gets PT data, IHN gets Canada/EN, etc.
   const [googleAgg, googleTopPages, chatgptAgg] = await Promise.all([
-    fetchOneMentionsPlatform(domain, "google", "aggregated_metrics"),
-    fetchOneMentionsPlatform(domain, "google", "top_pages"),
-    fetchOneMentionsPlatform(domain, "chatgpt", "aggregated_metrics").catch(
+    fetchOneMentionsPlatform(domain, "google", "aggregated_metrics", locationCode, languageCode),
+    fetchOneMentionsPlatform(domain, "google", "top_pages", locationCode, languageCode),
+    fetchOneMentionsPlatform(domain, "chatgpt", "aggregated_metrics", locationCode, languageCode).catch(
       () => null,
     ),
   ]);
@@ -530,7 +537,7 @@ export function formatDomainMetricsForPrompt(m: DomainMetrics): string {
   if (m.llmMentions) {
     const lm = m.llmMentions;
     lines.push("");
-    lines.push("**AI visibility (DataforSEO LLM Mentions, US/EN window):**");
+    lines.push("**AI visibility (DataforSEO LLM Mentions):**");
     lines.push(
       `- Total brand mentions in LLM responses: ${lm.totalMentions} (across ${lm.perPlatform.map((p) => p.platform).join(", ")})`,
     );

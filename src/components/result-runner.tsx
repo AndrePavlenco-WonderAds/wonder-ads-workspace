@@ -451,7 +451,10 @@ export function ResultRunner({
 
       {/* Domain dashboard (SEO Audit only) */}
       {action.slug === "seo-audit" && (
-        <DomainDashboard metrics={liveMetrics} />
+        <DomainDashboard
+          metrics={liveMetrics}
+          generating={status === "generating"}
+        />
       )}
 
       {/* Output */}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   TrendingUp,
   AlertTriangle,
@@ -15,11 +15,18 @@ import {
   Globe2,
   Target,
   Award,
+  Loader2,
+  ChevronLeft,
+  ChevronRight,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 import type {
   DomainMetrics,
   LlmMentions,
+  DomainTopKeyword,
 } from "@/lib/seo-tools/dataforseo";
+import { countryFromCode } from "@/lib/client-geo";
 
 type EnvDiag = {
   dataforseo: {
@@ -28,7 +35,15 @@ type EnvDiag = {
   };
 };
 
-export function DomainDashboard({ metrics }: { metrics: DomainMetrics | null }) {
+export function DomainDashboard({
+  metrics,
+  generating = false,
+}: {
+  metrics: DomainMetrics | null;
+  /** True while the parent audit is still running. Drives the loading state
+   *  so the dashboard doesn't tell the user to "re-generate" mid-run. */
+  generating?: boolean;
+}) {
   const [envOk, setEnvOk] = useState<boolean | null>(null);
   useEffect(() => {
     if (metrics) return;
@@ -51,6 +66,28 @@ export function DomainDashboard({ metrics }: { metrics: DomainMetrics | null }) 
   }, [metrics]);
 
   if (!metrics) {
+    // While an audit is running, we know DataforSEO is being queried — just
+    // show a loading state rather than the post-mortem "re-generate" CTA.
+    if (generating) {
+      return (
+        <section className="relative overflow-hidden rounded-2xl border border-violet-400/20 bg-gradient-to-br from-violet-500/[0.05] to-white/[0.015] p-5">
+          <header className="flex items-center gap-2">
+            <Loader2 className="h-4 w-4 animate-spin text-violet-300" />
+            <h2 className="text-sm font-semibold tracking-tight text-white">
+              Domain intelligence
+            </h2>
+            <span className="ml-2 text-[10px] font-bold uppercase tracking-[0.18em] text-violet-200/80">
+              Loading…
+            </span>
+          </header>
+          <p className="mt-3 text-xs text-white/55">
+            Pulling live DataforSEO metrics (Domain Rank, organic keywords,
+            backlinks, LLM mentions). They&apos;ll appear here the moment
+            Phase&nbsp;1 completes.
+          </p>
+        </section>
+      );
+    }
     const envConfigured = envOk === true;
     return (
       <section className="brand-gradient-border relative overflow-hidden rounded-2xl bg-white/[0.025] p-5">
@@ -90,8 +127,11 @@ export function DomainDashboard({ metrics }: { metrics: DomainMetrics | null }) 
         <h2 className="text-sm font-medium uppercase tracking-[0.18em] text-white/65">
           Domain intelligence
         </h2>
-        <span className="font-mono text-[10px] text-white/40">
-          {metrics.target} · {locationName(metrics.locationCode)}
+        <span className="font-mono text-[11px] text-white/55">
+          {metrics.target}
+        </span>
+        <span className="rounded-md border border-white/8 bg-white/[0.04] px-1.5 py-0.5 text-[10px] uppercase tracking-[0.13em] text-white/60">
+          {countryFromCode(metrics.locationCode)} · {metrics.languageCode}
         </span>
         <span className="ml-auto text-[10px] text-white/30">
           DataforSEO · {new Date(metrics.fetchedAt).toLocaleDateString()}
@@ -382,7 +422,9 @@ function Stat({
         {value}
       </div>
       {sublabel && (
-        <div className="mt-0.5 text-[11px] text-white/45">{sublabel}</div>
+        <div className="mt-1 text-[11.5px] leading-snug text-white/55">
+          {sublabel}
+        </div>
       )}
     </div>
   );
@@ -401,11 +443,8 @@ function AiVisibilityPanel({ mentions }: { mentions: LlmMentions }) {
         <h3 className="text-sm font-medium uppercase tracking-[0.18em] text-white/75">
           AI visibility
         </h3>
-        <span className="font-mono text-[10px] text-white/40">
-          LLM Mentions · US/EN window
-        </span>
-        <span className="ml-auto inline-flex items-center gap-1 rounded-full border border-violet-400/30 bg-violet-500/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.13em] text-violet-200">
-          NEW
+        <span className="rounded-md border border-white/8 bg-white/[0.04] px-1.5 py-0.5 text-[10px] uppercase tracking-[0.13em] text-white/60">
+          DataforSEO LLM Mentions
         </span>
       </header>
 
@@ -507,77 +546,263 @@ function AiVisibilityPanel({ mentions }: { mentions: LlmMentions }) {
   );
 }
 
-// ---- Top keywords table ----
+// ---- Top keywords table with sort + pagination ----
+
+type SortKey = "etv" | "position" | "searchVolume" | "cpc" | "keyword";
+type SortDir = "asc" | "desc";
 
 function TopKeywordsTable({
   keywords,
   targetDomain,
 }: {
-  keywords: DomainMetrics["topKeywords"];
+  keywords: DomainTopKeyword[];
   targetDomain: string;
 }) {
-  if (!keywords || keywords.length === 0) return null;
+  const [sortKey, setSortKey] = useState<SortKey>("etv");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const [page, setPage] = useState(0);
+  const pageSize = 25;
+
+  const sorted = useMemo(() => {
+    function valueFor(k: DomainTopKeyword): number | string {
+      switch (sortKey) {
+        case "keyword":
+          return k.keyword ?? "";
+        case "position":
+          return k.position ?? Number.MAX_SAFE_INTEGER;
+        case "searchVolume":
+          return k.searchVolume ?? 0;
+        case "cpc":
+          return k.cpc ?? 0;
+        case "etv":
+          return k.estTraffic ?? 0;
+      }
+    }
+    const copy = [...keywords];
+    copy.sort((a, b) => {
+      const av = valueFor(a);
+      const bv = valueFor(b);
+      let cmp = 0;
+      if (typeof av === "number" && typeof bv === "number") cmp = av - bv;
+      else cmp = String(av).localeCompare(String(bv));
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+    return copy;
+  }, [keywords, sortKey, sortDir]);
+
+  const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
+  const safePage = Math.min(page, totalPages - 1);
+  const slice = sorted.slice(safePage * pageSize, (safePage + 1) * pageSize);
+
+  function toggleSort(key: SortKey) {
+    if (sortKey === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      // Sensible defaults: text asc, numbers desc (highest first).
+      setSortDir(key === "keyword" ? "asc" : "desc");
+    }
+    setPage(0);
+  }
+
+  if (keywords.length === 0) return null;
+
   return (
     <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.025] p-4">
-      <header className="mb-3 flex items-center gap-2">
-        <Search
-          className="h-3.5 w-3.5 text-sky-300"
-          strokeWidth={2.25}
-        />
+      <header className="mb-3 flex flex-wrap items-center gap-2">
+        <Search className="h-3.5 w-3.5 text-sky-300" strokeWidth={2.25} />
         <h3 className="text-sm font-semibold tracking-tight text-white">
           Top ranked keywords
         </h3>
-        <span className="text-[10px] uppercase tracking-[0.13em] text-white/35">
-          by estimated traffic · {keywords.length} shown
+        <span className="text-[10px] uppercase tracking-[0.13em] text-white/40">
+          {keywords.length} keywords · sorted by{" "}
+          <strong className="text-white/70">{sortLabel(sortKey)}</strong>{" "}
+          {sortDir === "desc" ? "↓" : "↑"}
         </span>
       </header>
-      <div className="max-h-[520px] overflow-y-auto rounded-md border border-white/5 print:max-h-none print:overflow-visible">
+
+      <div className="overflow-x-auto rounded-md border border-white/5">
         <table className="w-full text-left text-[12px]">
-          <thead className="sticky top-0 z-[1] border-b border-white/10 bg-[#0a0a0f]/95 text-[10px] uppercase tracking-[0.08em] text-white/55 backdrop-blur">
+          <thead className="border-b border-white/10 bg-white/[0.025] text-[10px] uppercase tracking-[0.08em] text-white/55">
             <tr>
-              <th className="px-2 py-1.5">#</th>
-              <th className="px-2 py-1.5">Keyword</th>
-              <th className="px-2 py-1.5 text-right">Pos</th>
-              <th className="px-2 py-1.5 text-right">Volume</th>
-              <th className="px-2 py-1.5">Intent</th>
-              <th className="px-2 py-1.5 text-right">CPC</th>
-              <th className="px-2 py-1.5 text-right">ETV</th>
-              <th className="px-2 py-1.5">URL</th>
+              <th className="px-2 py-2">#</th>
+              <ThSort
+                label="Keyword"
+                onClick={() => toggleSort("keyword")}
+                active={sortKey === "keyword"}
+                dir={sortDir}
+              />
+              <ThSort
+                label="Pos"
+                align="right"
+                onClick={() => toggleSort("position")}
+                active={sortKey === "position"}
+                dir={sortDir}
+              />
+              <ThSort
+                label="Volume"
+                align="right"
+                onClick={() => toggleSort("searchVolume")}
+                active={sortKey === "searchVolume"}
+                dir={sortDir}
+              />
+              <th className="px-2 py-2">Intent</th>
+              <ThSort
+                label="CPC"
+                align="right"
+                onClick={() => toggleSort("cpc")}
+                active={sortKey === "cpc"}
+                dir={sortDir}
+              />
+              <ThSort
+                label="ETV"
+                align="right"
+                onClick={() => toggleSort("etv")}
+                active={sortKey === "etv"}
+                dir={sortDir}
+              />
+              <th className="px-2 py-2">URL</th>
             </tr>
           </thead>
           <tbody>
-            {keywords.map((k, i) => (
-              <tr
-                key={i}
-                className="border-b border-white/5 text-white/85 transition hover:bg-white/[0.025]"
-              >
-                <td className="px-2 py-1.5 text-white/45">{i + 1}</td>
-                <td className="px-2 py-1.5 font-medium">{k.keyword}</td>
-                <td className="px-2 py-1.5 text-right">
-                  <span
-                    className={`inline-block rounded px-1.5 py-0.5 text-[11px] ${posBadge(k.position)}`}
-                  >
-                    {k.position}
-                  </span>
-                </td>
-                <td className="px-2 py-1.5 text-right">{fmtNum(k.searchVolume)}</td>
-                <td className="px-2 py-1.5 text-white/55">{k.intent ?? "—"}</td>
-                <td className="px-2 py-1.5 text-right text-white/60">
-                  {k.cpc != null ? `$${k.cpc.toFixed(2)}` : "—"}
-                </td>
-                <td className="px-2 py-1.5 text-right">
-                  {fmtNum(roundN(k.estTraffic, 1))}
-                </td>
-                <td className="max-w-[200px] truncate px-2 py-1.5 text-[11px] text-white/45">
-                  {k.url ? relativePath(k.url, targetDomain) : "—"}
-                </td>
-              </tr>
-            ))}
+            {slice.map((k, i) => {
+              const absIdx = safePage * pageSize + i + 1;
+              return (
+                <tr
+                  key={absIdx}
+                  className="border-b border-white/5 text-white/85 transition hover:bg-white/[0.025]"
+                >
+                  <td className="px-2 py-1.5 text-white/45">{absIdx}</td>
+                  <td className="px-2 py-1.5 font-medium">{k.keyword}</td>
+                  <td className="px-2 py-1.5 text-right">
+                    <span
+                      className={`inline-block rounded px-1.5 py-0.5 text-[11px] ${posBadge(k.position)}`}
+                    >
+                      {k.position}
+                    </span>
+                  </td>
+                  <td className="px-2 py-1.5 text-right">
+                    {fmtNum(k.searchVolume)}
+                  </td>
+                  <td className="px-2 py-1.5 text-white/55">
+                    {k.intent ?? "—"}
+                  </td>
+                  <td className="px-2 py-1.5 text-right text-white/60">
+                    {k.cpc != null ? `$${k.cpc.toFixed(2)}` : "—"}
+                  </td>
+                  <td className="px-2 py-1.5 text-right">
+                    {fmtNum(roundN(k.estTraffic, 1))}
+                  </td>
+                  <td className="max-w-[220px] truncate px-2 py-1.5 text-[11px] text-white/45">
+                    {k.url ? relativePath(k.url, targetDomain) : "—"}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
+
+      {/* Pagination controls */}
+      {totalPages > 1 && (
+        <footer className="mt-3 flex items-center justify-between gap-2 text-[11px] text-white/55">
+          <span>
+            Showing{" "}
+            <strong className="text-white/80">
+              {safePage * pageSize + 1}–{Math.min(sorted.length, (safePage + 1) * pageSize)}
+            </strong>{" "}
+            of <strong className="text-white/80">{sorted.length}</strong>
+          </span>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setPage(0)}
+              disabled={safePage === 0}
+              className="rounded-md border border-white/8 bg-white/[0.04] px-2 py-1 transition hover:border-white/25 hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
+            >
+              First
+            </button>
+            <button
+              type="button"
+              onClick={() => setPage((p) => Math.max(0, p - 1))}
+              disabled={safePage === 0}
+              aria-label="Previous page"
+              className="flex h-7 w-7 items-center justify-center rounded-md border border-white/8 bg-white/[0.04] transition hover:border-white/25 hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
+            >
+              <ChevronLeft className="h-3.5 w-3.5" />
+            </button>
+            <span className="px-1 font-mono text-[11px] text-white/70">
+              {safePage + 1} / {totalPages}
+            </span>
+            <button
+              type="button"
+              onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+              disabled={safePage >= totalPages - 1}
+              aria-label="Next page"
+              className="flex h-7 w-7 items-center justify-center rounded-md border border-white/8 bg-white/[0.04] transition hover:border-white/25 hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
+            >
+              <ChevronRight className="h-3.5 w-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setPage(totalPages - 1)}
+              disabled={safePage >= totalPages - 1}
+              className="rounded-md border border-white/8 bg-white/[0.04] px-2 py-1 transition hover:border-white/25 hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
+            >
+              Last
+            </button>
+          </div>
+        </footer>
+      )}
     </div>
   );
+}
+
+function ThSort({
+  label,
+  onClick,
+  active,
+  dir,
+  align = "left",
+}: {
+  label: string;
+  onClick: () => void;
+  active: boolean;
+  dir: SortDir;
+  align?: "left" | "right";
+}) {
+  return (
+    <th className={`px-2 py-2 ${align === "right" ? "text-right" : "text-left"}`}>
+      <button
+        type="button"
+        onClick={onClick}
+        className={`inline-flex items-center gap-1 transition hover:text-white ${active ? "text-white" : "text-white/55"}`}
+      >
+        {label}
+        {active &&
+          (dir === "desc" ? (
+            <ArrowDown className="h-3 w-3" />
+          ) : (
+            <ArrowUp className="h-3 w-3" />
+          ))}
+      </button>
+    </th>
+  );
+}
+
+function sortLabel(k: SortKey): string {
+  switch (k) {
+    case "etv":
+      return "ETV";
+    case "position":
+      return "Position";
+    case "searchVolume":
+      return "Volume";
+    case "cpc":
+      return "CPC";
+    case "keyword":
+      return "Keyword";
+  }
 }
 
 function fmtNum(v: number | null | undefined): string {
@@ -611,17 +836,3 @@ function posBadge(pos: number): string {
   return "bg-white/[0.06] text-white/55";
 }
 
-function locationName(code: number): string {
-  const map: Record<number, string> = {
-    2620: "Portugal",
-    2840: "United States",
-    2826: "United Kingdom",
-    2724: "Spain",
-    2250: "France",
-    2276: "Germany",
-    2124: "Canada",
-    2380: "Italy",
-    2056: "Belgium",
-  };
-  return map[code] ?? `geo ${code}`;
-}

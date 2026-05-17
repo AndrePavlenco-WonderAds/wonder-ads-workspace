@@ -11,6 +11,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: 62,
+    date: "2026-05-17",
+    title: "Per-client geo, sortable keywords, dashboard polish",
+    highlights: [
+      "Per-client geo + language config — DataforSEO and LLM Mentions queries now run against the client's actual market. White Clinic = Portugal/PT, IHN = Canada/EN, InSync Design = Australia/EN, HDS Learning = Brazil/PT. No more US/EN data for Portuguese clinics.",
+      "Top keywords table: 200 keywords (was 40), sortable headers (click Keyword / Pos / Volume / CPC / ETV), button pagination (First / ← / 1/8 / → / Last) — no more mouse-scroll, no more 40-keyword cap.",
+      "Dashboard during a running audit: shows a clear 'Loading domain intelligence…' state instead of the post-mortem 're-generate' message.",
+      "Polish: dropped the 'NEW' chip on AI Visibility, softened the LLM Mentions chip and sublabel readability, country shown as a tag (Portugal · pt) instead of small grey text.",
+    ],
+  },
+  {
     version: 61,
     date: "2026-05-17",
     title: "AI Visibility panel + colour-tiered Authority + Backlinks live",
