@@ -346,37 +346,19 @@ export async function runSiteAudit(
   };
 }
 
-/** Phase 2 — runs the slow stuff in parallel: PSI (mobile + desktop) and
- *  DataforSEO (Labs + LLM Mentions). Splitting these out of Phase 1 means
- *  heavy English-language sites (IHN, 500+ URL sitemap, slow WordPress)
- *  don't blow the 60s Vercel budget. Returns markdown to append to the
- *  existing prep fact pack + structured metrics. */
-export async function runHeavyPhase(
+/** Phase 2 — PageSpeed Insights only (mobile + desktop). Split apart from
+ *  DataforSEO because both can take 30-50s on heavy sites and combining
+ *  them blew the 60s Vercel function budget for IHN. */
+export async function runPsiPhase(
   inputUrl: string,
-  clientSlug: string,
   emit: (event: ToolProgressEvent) => void,
-): Promise<{ markdown: string; metrics: DomainMetrics | null }> {
-  const geo = getClientGeo(clientSlug);
-
+): Promise<{ markdown: string }> {
   emit({ type: "start", tool: "psi-mobile", label: "PageSpeed — mobile" });
   emit({ type: "start", tool: "psi-desktop", label: "PageSpeed — desktop" });
-  emit({
-    type: "start",
-    tool: "dataforseo",
-    label: isDataforSeoConfigured()
-      ? `Domain intelligence (DataforSEO — ${geo.countryLabel})`
-      : "Domain intelligence (DataforSEO — not configured)",
-  });
 
-  const [psiMobileStep, psiDesktopStep, dfsStep] = await Promise.all([
+  const [psiMobileStep, psiDesktopStep] = await Promise.all([
     timed<PsiResult>(() => runPageSpeed(inputUrl, "mobile")),
     timed<PsiResult>(() => runPageSpeed(inputUrl, "desktop")),
-    timed<DomainMetrics | null>(() =>
-      fetchDomainMetrics(inputUrl, {
-        locationCode: geo.locationCode,
-        languageCode: geo.languageCode,
-      }),
-    ),
   ]);
 
   emitStepDone(emit, "psi-mobile", "PageSpeed — mobile", psiMobileStep, (r) =>
@@ -394,17 +376,6 @@ export async function runHeavyPhase(
         ? `Perf ${r.scores.performance ?? "—"} · SEO ${r.scores.seo ?? "—"} · A11y ${r.scores.accessibility ?? "—"} · BP ${r.scores.bestPractices ?? "—"}`
         : "skipped",
   );
-  emitStepDone(
-    emit,
-    "dataforseo",
-    "Domain intelligence (DataforSEO)",
-    dfsStep,
-    (d) => {
-      if (!d) return "not configured (skipped)";
-      const partial = d.errors.length > 0 ? ` · ${d.errors.length} sub-error(s)` : "";
-      return `Rank ${d.rank ?? "—"} · ${d.organicKeywords ?? "—"} kw · ${d.referringDomains ?? "—"} ref domains${partial}`;
-    },
-  );
 
   const parts: string[] = [];
   if (psiMobileStep.ok && psiMobileStep.value) {
@@ -418,18 +389,54 @@ export async function runHeavyPhase(
     parts.push(`## PageSpeed desktop failed: ${psiDesktopStep.error.slice(0, 280)}`);
   }
 
+  return { markdown: parts.join("\n\n") };
+}
+
+/** Phase 3 — DataforSEO Labs + LLM Mentions. Returns markdown + metrics. */
+export async function runDataforSeoPhase(
+  inputUrl: string,
+  clientSlug: string,
+  emit: (event: ToolProgressEvent) => void,
+): Promise<{ markdown: string; metrics: DomainMetrics | null }> {
+  const geo = getClientGeo(clientSlug);
+  emit({
+    type: "start",
+    tool: "dataforseo",
+    label: isDataforSeoConfigured()
+      ? `Domain intelligence (DataforSEO — ${geo.countryLabel})`
+      : "Domain intelligence (DataforSEO — not configured)",
+  });
+
+  const dfsStep = await timed<DomainMetrics | null>(() =>
+    fetchDomainMetrics(inputUrl, {
+      locationCode: geo.locationCode,
+      languageCode: geo.languageCode,
+    }),
+  );
+
+  emitStepDone(
+    emit,
+    "dataforseo",
+    "Domain intelligence (DataforSEO)",
+    dfsStep,
+    (d) => {
+      if (!d) return "not configured (skipped)";
+      const partial = d.errors.length > 0 ? ` · ${d.errors.length} sub-error(s)` : "";
+      return `Rank ${d.rank ?? "—"} · ${d.organicKeywords ?? "—"} kw · ${d.referringDomains ?? "—"} ref domains${partial}`;
+    },
+  );
+
   const metrics = dfsStep.ok && dfsStep.value ? dfsStep.value : null;
+  let markdown = "";
   if (metrics) {
-    parts.push(formatDomainMetricsForPrompt(metrics));
+    markdown = formatDomainMetricsForPrompt(metrics);
   } else if (!isDataforSeoConfigured()) {
-    parts.push(
-      `## Domain intelligence\n_Not configured (DATAFORSEO_LOGIN + DATAFORSEO_PASSWORD missing)._`,
-    );
+    markdown = `## Domain intelligence\n_Not configured (DATAFORSEO_LOGIN + DATAFORSEO_PASSWORD missing)._`;
   } else if (!dfsStep.ok && "error" in dfsStep && dfsStep.error) {
-    parts.push(`## Domain intelligence pull failed: ${dfsStep.error}`);
+    markdown = `## Domain intelligence pull failed: ${dfsStep.error}`;
   }
 
-  return { markdown: parts.join("\n\n"), metrics };
+  return { markdown, metrics };
 }
 
 function emitStepDone<T>(

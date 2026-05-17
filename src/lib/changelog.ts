@@ -11,6 +11,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: 67,
+    date: "2026-05-17",
+    title: "Audit split into 4 phases — PSI gets its own budget",
+    highlights: [
+      "Phase split now: /prep (sitemap + crawl + GSC), /prep-psi (PSI mobile + desktop), /prep-dataforseo (Labs + LLM Mentions), /run (Claude). Each fits comfortably under the 60s Vercel cap.",
+      "Heavy English-language sites (IHN, 506 URLs, slow WordPress) were busting v66's combined PSI+DataforSEO phase. Now each runs in isolation with full headroom.",
+      "Full audit wall-clock time slightly longer (~3 mins) but every phase is stable — no more 'No prep data found' on bigger clients.",
+    ],
+  },
+  {
     version: 66,
     date: "2026-05-17",
     title: "Audit split into 3 phases — fixes IHN timeout",

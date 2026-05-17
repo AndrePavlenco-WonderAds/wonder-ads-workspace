@@ -1,12 +1,11 @@
-// Phase 2 of the split SEO Audit: runs ONLY the DataforSEO Labs + LLM
-// Mentions calls. Reads the prep record saved by /prep (Phase 1), runs
-// DataforSEO with historical_serp_mode + limit 1000, appends its fact-pack
-// section + metrics to the prep record. Each phase fits cleanly under
-// Vercel's 60s function budget.
+// Phase 2 of the split SEO Audit: PageSpeed Insights (mobile + desktop).
+// Split apart from DataforSEO because both can independently take 30-50s
+// on heavy sites and combining them was blowing Vercel's 60s function
+// budget for big EN-language clients like IHN.
 
 import { NextResponse } from "next/server";
 import { findAction } from "@/lib/seo-pillars";
-import { runDataforSeoPhase } from "@/lib/seo-tools/site-audit";
+import { runPsiPhase } from "@/lib/seo-tools/site-audit";
 import { loadAuditPrep, saveAuditPrep } from "@/lib/audit-prep-store";
 
 export const maxDuration = 60;
@@ -43,18 +42,13 @@ export async function POST(
   const prep = await loadAuditPrep(clientSlug, actionSlug, resultId);
   if (!prep) {
     return NextResponse.json(
-      {
-        error:
-          "Phase 1 prep not found. Run /prep first (it should have run before this).",
-      },
+      { error: "Phase 1 prep not found. Run /prep first." },
       { status: 404 },
     );
   }
   if (prep.status === "error") {
     return NextResponse.json(
-      {
-        error: `Phase 1 failed (${prep.stage}): ${prep.message}. Re-run from scratch.`,
-      },
+      { error: `Phase 1 failed (${prep.stage}): ${prep.message}.` },
       { status: 502 },
     );
   }
@@ -65,47 +59,42 @@ export async function POST(
       const send = (s: string) => controller.enqueue(encoder.encode(s));
 
       send(
-        `\n> 🔧 Phase 3 / 4 — domain intelligence for \`${new URL(prep.inputUrl).origin}\`\n`,
+        `\n> 🔧 Phase 2 / 4 — PageSpeed Insights for \`${new URL(prep.inputUrl).origin}\`\n`,
       );
 
       try {
-        const { markdown, metrics } = await runDataforSeoPhase(
-          prep.inputUrl,
-          clientSlug,
-          (e) => {
-            if (e.type === "start") {
-              send(`> ⏳ **${e.label}**…\n`);
-            } else if (e.type === "done") {
-              send(`> ✓ **${e.label}** — ${e.summary} (${e.ms} ms)\n`);
-            } else if (e.type === "error") {
-              send(
-                `> ❌ **${e.label}** failed: ${e.message.slice(0, 240)} (${e.ms} ms)\n`,
-              );
-            } else {
-              send(`> ${e.message}\n`);
-            }
-          },
-        );
+        const { markdown } = await runPsiPhase(prep.inputUrl, (e) => {
+          if (e.type === "start") {
+            send(`> ⏳ **${e.label}**…\n`);
+          } else if (e.type === "done") {
+            send(`> ✓ **${e.label}** — ${e.summary} (${e.ms} ms)\n`);
+          } else if (e.type === "error") {
+            send(
+              `> ❌ **${e.label}** failed: ${e.message.slice(0, 240)} (${e.ms} ms)\n`,
+            );
+          } else {
+            send(`> ${e.message}\n`);
+          }
+        });
 
-        const combinedFactPack = markdown
+        const combined = markdown
           ? `${prep.factPack}\n\n${markdown}`
           : prep.factPack;
 
         await saveAuditPrep(clientSlug, actionSlug, resultId, {
           status: "ok",
-          factPack: combinedFactPack,
-          metrics,
+          factPack: combined,
+          metrics: prep.metrics,
           preparedAt: Date.now(),
           inputUrl: prep.inputUrl,
         });
 
         send(
-          `\n> ✅ **Phase 3 complete** — fact pack ready. Starting analysis…\n`,
+          `\n> ✅ **Phase 2 complete** — PSI saved. Fetching domain intelligence…\n`,
         );
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
-        send(`\n> ❌ Phase 3 crashed: ${message.slice(0, 240)}\n`);
-        // Don't overwrite prep on error — previous phase data is still valid.
+        send(`\n> ❌ Phase 2 crashed: ${message.slice(0, 240)}\n`);
       }
 
       controller.close();

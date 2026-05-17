@@ -169,16 +169,19 @@ export function ResultRunner({
       try {
         let finalAcc: string;
         if (action.slug === "seo-audit") {
-          // Three-phase split so each fits inside Vercel's 60s function
+          // Four-phase split so each fits inside Vercel's 60s function
           // budget on Hobby:
-          //   /prep            — sitemap + crawl + PSI + GSC
+          //   /prep            — sitemap + homepage crawl + sample crawl + GSC
+          //   /prep-psi        — PageSpeed Insights mobile + desktop
           //   /prep-dataforseo — DataforSEO Labs + LLM Mentions
           //   /run             — Claude streams the analysis
           const afterPrep = await callPhase("/prep", "");
           if (controller.signal.aborted) throw new DOMException("Aborted", "AbortError");
-          const afterPrepDfs = await callPhase("/prep-dataforseo", afterPrep);
+          const afterPsi = await callPhase("/prep-psi", afterPrep);
           if (controller.signal.aborted) throw new DOMException("Aborted", "AbortError");
-          // Phase 2 saved the metrics — fetch so the dashboard renders
+          const afterDfs = await callPhase("/prep-dataforseo", afterPsi);
+          if (controller.signal.aborted) throw new DOMException("Aborted", "AbortError");
+          // Phase 3 saved the metrics — fetch so the dashboard renders
           // alongside Claude's analysis instead of waiting for /save.
           fetch(
             `${apiBase}/prep-data?resultId=${encodeURIComponent(resultId)}`,
@@ -191,7 +194,7 @@ export function ResultRunner({
             .catch(() => {
               /* non-fatal — /save will return them too */
             });
-          finalAcc = await callPhase("/run", afterPrepDfs);
+          finalAcc = await callPhase("/run", afterDfs);
         } else {
           // Single call for actions that comfortably fit under 60s.
           finalAcc = await callPhase("", "");

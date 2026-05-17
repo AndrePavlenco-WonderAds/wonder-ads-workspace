@@ -90,7 +90,7 @@ export async function POST(
       const send = (s: string) => controller.enqueue(encoder.encode(s));
 
       send(
-        `> 🔧 Phase 1 / 3 — gathering site data for \`${new URL(targetUrl).origin}\`\n`,
+        `> 🔧 Phase 1 / 4 — gathering site data for \`${new URL(targetUrl).origin}\`\n`,
       );
 
       // Two failure modes we want to capture: (1) the orchestrator throws
@@ -133,7 +133,7 @@ export async function POST(
         });
 
         send(
-          `\n> ✅ **Phase 1 complete** — site data saved. Running PageSpeed + Domain intelligence…\n`,
+          `\n> ✅ **Phase 1 complete** — site data saved. Running PageSpeed…\n`,
         );
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
