@@ -11,6 +11,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: 61,
+    date: "2026-05-17",
+    title: "AI Visibility panel + colour-tiered Authority + Backlinks live",
+    highlights: [
+      "Backlinks data now flows (you activated the subscription) — Authority Score, Total Backlinks, Referring Domains, Broken Backlinks populate properly. Whiteclinic: Authority 25/100, 4.8k backlinks, 320 referring domains.",
+      "Brand-new AI Visibility panel powered by DataforSEO LLM Mentions API — total brand mentions in Google AI Overview / AI Mode + ChatGPT, AI search volume, top cited pages from this domain, and co-cited competitor + source domains.",
+      "Authority card now uses a colour-tiered gradient (rose → amber → sky → emerald) so you see at a glance whether a client is weak / developing / established / strong.",
+      "Every stat card has an icon + coloured accent (Trophy / Search / Activity / Link / DollarSign / Sparkles / Bot / Globe2). Visual scan time dropped meaningfully.",
+      "SEO Claude prompt now references AI visibility data and calls out specific opportunities (pages cited 0×, competitors we lose to in LLM answers).",
+    ],
+  },
+  {
     version: 60,
     date: "2026-05-17",
     title: "Richer dashboard, full-page PDF, fixed DataforSEO error handling",

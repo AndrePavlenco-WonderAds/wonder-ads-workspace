@@ -142,6 +142,7 @@ function getActionOutputSpec(slug: string): string {
 - Google PageSpeed Insights — mobile + desktop — Lighthouse scores, CrUX field data + lab CWV, top failing audits.
 - Google Search Console — site totals + delta vs prev 28 days, top pages, top queries with position movement, registered sitemaps with errors/warnings.
 - **Domain Intelligence** (when DataforSEO is connected) — Domain Rank / Authority Score, organic keyword count, organic traffic estimate, referring-domain count, backlink count, top ranked keywords with positions, intents, and search volumes.
+- **AI Visibility** (DataforSEO LLM Mentions) — total brand mentions in LLM responses across platforms (Google AI Overview / AI Mode, ChatGPT), AI search volume (queries that could trigger us), top cited pages from our domain, co-cited competitor / source domains. This is the "is the brand visible in AI answers" signal — increasingly critical as AI Overviews eat into clicks.
 
 **Rules**
 - Cite real numbers and quote real HTML. Never speak in generalities when a measurement is in front of you. If something is missing in the fact pack, say "not measured" and what would need to be checked.
@@ -193,6 +194,7 @@ Cover every row below — short "What it means" copy (≤ 12 words) explains the
 - Schema coverage (% of sampled pages with at least one schema type)
 - Domain authority (when DataforSEO data is present — score + ref domains)
 - Organic keyword footprint (when DataforSEO data is present — total + top-3/top-10 counts)
+- AI visibility (when LLM Mentions data is present — total mentions + per-platform breakdown + AI search volume coverage)
 
 ## Search Console signals
 - **Trend** — clicks/impressions/CTR/avg position deltas (named, with numbers).
@@ -200,6 +202,7 @@ Cover every row below — short "What it means" copy (≤ 12 words) explains the
 - **Top losing pages or queries** — anything with a falling position (▼) worth investigating.
 - **Indexation** — sitemap errors, gap between submitted and indexed, mismatch between sampled site URLs and top-pages.
 - **DataforSEO cross-reference** (when present) — top keywords from DataforSEO that aren't yet earning clicks in GSC (visibility opportunity), or vice-versa.
+- **AI visibility cross-reference** (when LLM Mentions present) — which of our pages are getting cited by Google AI / ChatGPT, what queries are driving those mentions, and which competitor / source domains co-appear in the same LLM answers. Call out specific opportunities: pages cited 0× that should be cited, competitor domains we lose to repeatedly.
 
 ## All findings
 Group by **🔴 Critical → 🟠 High → 🟡 Medium → 🟢 Low** with an H3 per group. Each finding uses the same mini-block format as the Top 5 — never inline-pack everything on one line:

@@ -43,8 +43,23 @@ export type DomainMetrics = {
   dofollow?: number;
   // Top keywords
   topKeywords?: DomainTopKeyword[];
+  // AI visibility (DataforSEO LLM Mentions API)
+  llmMentions?: LlmMentions;
   // Errors per sub-pull (so we can show partial data)
   errors: { source: string; message: string }[];
+};
+
+export type LlmMentions = {
+  /** Total brand mentions across the chosen LLM platforms in the window. */
+  totalMentions: number;
+  /** Mentions per platform (google = AI Overview / AI Mode / SGE, chatgpt = ChatGPT). */
+  perPlatform: { platform: string; mentions: number; aiSearchVolume: number }[];
+  /** Total AI search volume — queries that could trigger a mention. */
+  aiSearchVolume: number;
+  /** Other domains cited alongside us — competitors / authoritative sources. */
+  coCitedDomains: { domain: string; mentions: number; aiSearchVolume: number }[];
+  /** Specific cited pages from our domain (LLM citations / source URLs). */
+  topCitedPages: { url: string; mentions: number; aiSearchVolume: number }[];
 };
 
 export type DomainTopKeyword = {
@@ -295,10 +310,11 @@ export async function fetchDomainMetrics(
   const languageCode = opts.languageCode ?? DEFAULT_LANGUAGE;
 
   const errors: { source: string; message: string }[] = [];
-  const [rankRes, backlinksRes, kwRes] = await Promise.allSettled([
+  const [rankRes, backlinksRes, kwRes, mentionsRes] = await Promise.allSettled([
     fetchRankOverview(target, locationCode, languageCode),
     fetchBacklinksSummary(target),
     fetchTopKeywords(target, locationCode, languageCode, 100),
+    fetchLlmMentions(target),
   ]);
 
   const out: DomainMetrics = {
@@ -343,8 +359,135 @@ export async function fetchDomainMetrics(
           : String(kwRes.reason),
     });
   }
+  if (mentionsRes.status === "fulfilled") {
+    out.llmMentions = mentionsRes.value;
+  } else {
+    errors.push({
+      source: "llm-mentions",
+      message:
+        mentionsRes.reason instanceof Error
+          ? mentionsRes.reason.message
+          : String(mentionsRes.reason),
+    });
+  }
 
   return out;
+}
+
+// ---- LLM Mentions (DataforSEO AI Optimization API) ----
+
+type LlmMentionsApiGroupElement = {
+  type?: string;
+  key?: string;
+  mentions?: number;
+  ai_search_volume?: number;
+  impressions?: number | null;
+};
+
+type LlmMentionsApiTotals = {
+  platform?: LlmMentionsApiGroupElement[];
+  sources_domain?: LlmMentionsApiGroupElement[] | null;
+};
+
+type LlmMentionsApiItem = {
+  key?: string;
+  platform?: LlmMentionsApiGroupElement[];
+};
+
+type LlmMentionsApiResult = {
+  total?: LlmMentionsApiTotals;
+  items?: LlmMentionsApiItem[] | null;
+};
+
+async function fetchOneMentionsPlatform(
+  domain: string,
+  platform: "google" | "chatgpt",
+  endpoint: "aggregated_metrics" | "top_pages",
+): Promise<LlmMentionsApiResult | null> {
+  const body = [
+    {
+      language_code: "en",
+      location_code: 2840, // US — LLM training data leans English/US
+      platform,
+      target: [
+        {
+          domain,
+          search_filter: "include",
+          search_scope: ["any"],
+          include_subdomains: false,
+        },
+      ],
+      ...(endpoint === "top_pages" ? { limit: 10 } : { internal_list_limit: 10 }),
+    },
+  ];
+  const res = await dfsPost<typeof body, LlmMentionsApiResult>(
+    `/ai_optimization/llm_mentions/${endpoint}/live`,
+    body,
+  );
+  return res.tasks?.[0]?.result?.[0] ?? null;
+}
+
+async function fetchLlmMentions(domain: string): Promise<LlmMentions> {
+  // Query google + chatgpt in parallel — most actionable AI surfaces for our
+  // Health & Wellness clients. (~$0.04 total in DataforSEO costs per audit.)
+  const [googleAgg, googleTopPages, chatgptAgg] = await Promise.all([
+    fetchOneMentionsPlatform(domain, "google", "aggregated_metrics"),
+    fetchOneMentionsPlatform(domain, "google", "top_pages"),
+    fetchOneMentionsPlatform(domain, "chatgpt", "aggregated_metrics").catch(
+      () => null,
+    ),
+  ]);
+
+  const perPlatform: LlmMentions["perPlatform"] = [];
+  function addPlatform(label: string, agg: LlmMentionsApiResult | null) {
+    const platformTotals = agg?.total?.platform?.[0];
+    perPlatform.push({
+      platform: label,
+      mentions: platformTotals?.mentions ?? 0,
+      aiSearchVolume: platformTotals?.ai_search_volume ?? 0,
+    });
+  }
+  addPlatform("google", googleAgg);
+  addPlatform("chatgpt", chatgptAgg);
+
+  const totalMentions = perPlatform.reduce((s, p) => s + p.mentions, 0);
+  const aiSearchVolume = perPlatform.reduce(
+    (s, p) => s + p.aiSearchVolume,
+    0,
+  );
+
+  // Co-cited domains from the google aggregated response, excluding our own.
+  const sources = googleAgg?.total?.sources_domain ?? [];
+  const coCitedDomains = sources
+    .filter((s) => s.key && s.key !== domain && s.key !== `www.${domain}`)
+    .slice(0, 15)
+    .map((s) => ({
+      domain: s.key ?? "",
+      mentions: s.mentions ?? 0,
+      aiSearchVolume: s.ai_search_volume ?? 0,
+    }));
+
+  // Top cited pages from our own domain (from top_pages endpoint items).
+  const items = googleTopPages?.items ?? [];
+  const topCitedPages = items.slice(0, 10).map((it) => ({
+    url: cleanTextFragment(it.key ?? ""),
+    mentions: it.platform?.[0]?.mentions ?? 0,
+    aiSearchVolume: it.platform?.[0]?.ai_search_volume ?? 0,
+  }));
+
+  return {
+    totalMentions,
+    aiSearchVolume,
+    perPlatform,
+    coCitedDomains,
+    topCitedPages,
+  };
+}
+
+function cleanTextFragment(url: string): string {
+  // DataforSEO returns URLs with #:~:text=... fragments. Strip for display.
+  const i = url.indexOf("#:~:text=");
+  return i >= 0 ? url.slice(0, i) : url;
 }
 
 export function formatDomainMetricsForPrompt(m: DomainMetrics): string {
@@ -382,6 +525,31 @@ export function formatDomainMetricsForPrompt(m: DomainMetrics): string {
         `| ${i + 1} | ${k.keyword} | ${k.position} | ${k.searchVolume ?? "—"} | ${k.intent ?? "—"} | ${k.estTraffic ?? "—"} | ${k.url ? k.url.replace(m.target, "") : "—"} |`,
       );
     });
+  }
+
+  if (m.llmMentions) {
+    const lm = m.llmMentions;
+    lines.push("");
+    lines.push("**AI visibility (DataforSEO LLM Mentions, US/EN window):**");
+    lines.push(
+      `- Total brand mentions in LLM responses: ${lm.totalMentions} (across ${lm.perPlatform.map((p) => p.platform).join(", ")})`,
+    );
+    lines.push(`- Total AI search volume: ${lm.aiSearchVolume}`);
+    for (const p of lm.perPlatform) {
+      lines.push(
+        `  - ${p.platform}: ${p.mentions} mentions · ${p.aiSearchVolume} AI search volume`,
+      );
+    }
+    if (lm.topCitedPages.length > 0) {
+      lines.push(`- Top cited pages from this domain:`);
+      for (const p of lm.topCitedPages.slice(0, 5))
+        lines.push(`  - ${p.url} (${p.mentions} mentions)`);
+    }
+    if (lm.coCitedDomains.length > 0) {
+      lines.push(`- Co-cited / competitor domains in same LLM answers:`);
+      for (const d of lm.coCitedDomains.slice(0, 8))
+        lines.push(`  - ${d.domain} (${d.mentions} mentions, ${d.aiSearchVolume} ASV)`);
+    }
   }
 
   if (m.errors.length > 0) {
