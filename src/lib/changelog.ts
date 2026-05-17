@@ -11,6 +11,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: 65,
+    date: "2026-05-17",
+    title: "Way deeper keyword pull from DataforSEO",
+    highlights: [
+      "Bumped DataforSEO ranked_keywords limit from 200 → 1000 (the API max).",
+      "Added historical_serp_mode: 'all' so we capture keywords this domain ranks for live AND has ranked for recently — closes the gap with Semrush exports that include lost/historical rankings.",
+      "Added load_rank_absolute for absolute SERP positions alongside group rank.",
+      "Each keyword now carries a 'status' field (live / lost) so future UI can distinguish current rankings from reclaim opportunities.",
+    ],
+  },
+  {
     version: 64,
     date: "2026-05-17",
     title: "AI Visibility: dual-window (Local + Global English)",

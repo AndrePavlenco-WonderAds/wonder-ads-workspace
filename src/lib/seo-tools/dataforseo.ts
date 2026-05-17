@@ -85,6 +85,8 @@ export type DomainTopKeyword = {
   intent: string | null;
   estTraffic: number | null;
   url: string | null;
+  /** "live" = currently ranking. "lost" = ranked here recently but no longer. */
+  status?: "live" | "lost" | string;
 };
 
 type DfsResult<T> = {
@@ -194,7 +196,11 @@ type RankedKeywordItem = {
       url?: string;
       etv?: number;
     };
+    serp_item_types?: string[];
+    last_updated_time?: string;
+    serp_item_status?: string;
   };
+  serp_item_status?: string;
 };
 
 type RankedKeywordsResult = {
@@ -279,17 +285,24 @@ async function fetchTopKeywords(
   target: string,
   locationCode: number,
   languageCode: string,
-  limit = 200,
+  limit = 1000,
 ): Promise<DomainTopKeyword[]> {
-  // No rank_group filter — return the full ranked footprint up to limit so
-  // the dashboard can show keywords ranking on page 2-10 too. Sorted by ETV
-  // (estimated traffic value) so the most impactful keywords land first.
+  // Maximise coverage:
+  //   - limit: 1000 (DataforSEO's max per call)
+  //   - historical_serp_mode: "all" — includes currently-live + recently-lost
+  //     rankings. For an audit, both are actionable (lost = reclaim
+  //     opportunities, live = optimisation opportunities).
+  //   - load_rank_absolute: true — adds absolute position alongside the
+  //     rank_group, useful when comparing to Semrush exports.
+  // No rank_group filter — return the full footprint.
   const body = [
     {
       target,
       location_code: locationCode,
       language_code: languageCode,
       limit,
+      historical_serp_mode: "all",
+      load_rank_absolute: true,
       order_by: ["ranked_serp_element.serp_item.etv,desc"],
     },
   ];
@@ -310,6 +323,7 @@ async function fetchTopKeywords(
       intent: kw?.keyword_info?.search_intent_info?.main_intent ?? null,
       estTraffic: serp?.etv ?? null,
       url: serp?.url ?? null,
+      status: it.serp_item_status ?? it.ranked_serp_element?.serp_item_status,
     };
   });
 }
