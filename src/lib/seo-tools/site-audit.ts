@@ -97,11 +97,12 @@ export async function runSiteAudit(
   inputUrl: string,
   clientSlug: string,
   emit: (event: ToolProgressEvent) => void,
-  opts: { depth?: SiteAuditDepth } = {},
+  opts: { depth?: SiteAuditDepth; skipDataforSeo?: boolean } = {},
 ): Promise<SiteAuditFactPack> {
   const depth: SiteAuditDepth = opts.depth ?? "Standard";
   const { maxPages, concurrency } = DEPTH_SETTINGS[depth];
   const geo = getClientGeo(clientSlug);
+  const skipDataforSeo = opts.skipDataforSeo ?? false;
   const events: ToolProgressEvent[] = [];
   function fire(event: ToolProgressEvent) {
     events.push(event);
@@ -173,13 +174,15 @@ export async function runSiteAudit(
   fire({ type: "start", tool: "psi-mobile", label: "PageSpeed — mobile" });
   fire({ type: "start", tool: "psi-desktop", label: "PageSpeed — desktop" });
   fire({ type: "start", tool: "gsc", label: "Search Console" });
-  fire({
-    type: "start",
-    tool: "dataforseo",
-    label: isDataforSeoConfigured()
-      ? `Domain intelligence (DataforSEO — ${geo.countryLabel})`
-      : "Domain intelligence (DataforSEO — not configured)",
-  });
+  if (!skipDataforSeo) {
+    fire({
+      type: "start",
+      tool: "dataforseo",
+      label: isDataforSeoConfigured()
+        ? `Domain intelligence (DataforSEO — ${geo.countryLabel})`
+        : "Domain intelligence (DataforSEO — not configured)",
+    });
+  }
 
   const [
     homepageStep,
@@ -196,12 +199,14 @@ export async function runSiteAudit(
     timed<PsiResult>(() => runPageSpeed(inputUrl, "mobile")),
     timed<PsiResult>(() => runPageSpeed(inputUrl, "desktop")),
     timed<SiteAuditGscData>(() => getSiteAuditData(clientSlug, 28)),
-    timed<DomainMetrics | null>(() =>
-      fetchDomainMetrics(inputUrl, {
-        locationCode: geo.locationCode,
-        languageCode: geo.languageCode,
-      }),
-    ),
+    skipDataforSeo
+      ? Promise.resolve({ ok: true as const, value: null, ms: 0 })
+      : timed<DomainMetrics | null>(() =>
+          fetchDomainMetrics(inputUrl, {
+            locationCode: geo.locationCode,
+            languageCode: geo.languageCode,
+          }),
+        ),
   ]);
 
   // Report each step
@@ -227,17 +232,19 @@ export async function runSiteAudit(
     if (d.status !== "ok") return d.status;
     return `${d.totals.clicks} clicks / ${d.totals.impressions} impressions / pos ${d.totals.position.toFixed(1)}`;
   });
-  emitStepDone(
-    fire,
-    "dataforseo",
-    "Domain intelligence (DataforSEO)",
-    domainStep,
-    (d) => {
-      if (!d) return "not configured (skipped)";
-      const partial = d.errors.length > 0 ? ` · ${d.errors.length} sub-error(s)` : "";
-      return `Rank ${d.rank ?? "—"} · ${d.organicKeywords ?? "—"} kw · ${d.referringDomains ?? "—"} ref domains${partial}`;
-    },
-  );
+  if (!skipDataforSeo) {
+    emitStepDone(
+      fire,
+      "dataforseo",
+      "Domain intelligence (DataforSEO)",
+      domainStep,
+      (d) => {
+        if (!d) return "not configured (skipped)";
+        const partial = d.errors.length > 0 ? ` · ${d.errors.length} sub-error(s)` : "";
+        return `Rank ${d.rank ?? "—"} · ${d.organicKeywords ?? "—"} kw · ${d.referringDomains ?? "—"} ref domains${partial}`;
+      },
+    );
+  }
 
   // ---- Step 3: compose fact pack ----
   const factParts: string[] = [];
@@ -294,17 +301,19 @@ export async function runSiteAudit(
   }
 
   const metrics = domainStep.ok && domainStep.value ? domainStep.value : null;
-  if (metrics) {
-    factParts.push("");
-    factParts.push(formatDomainMetricsForPrompt(metrics));
-  } else if (!isDataforSeoConfigured()) {
-    factParts.push("");
-    factParts.push(
-      `## Domain intelligence\n_Not configured (DATAFORSEO_LOGIN + DATAFORSEO_PASSWORD missing). When connected, this section provides domain authority, organic keyword footprint, backlink profile, and top ranked keywords._`,
-    );
-  } else if (domainStep.error) {
-    factParts.push("");
-    factParts.push(`## Domain intelligence pull failed: ${domainStep.error}`);
+  if (!skipDataforSeo) {
+    if (metrics) {
+      factParts.push("");
+      factParts.push(formatDomainMetricsForPrompt(metrics));
+    } else if (!isDataforSeoConfigured()) {
+      factParts.push("");
+      factParts.push(
+        `## Domain intelligence\n_Not configured (DATAFORSEO_LOGIN + DATAFORSEO_PASSWORD missing). When connected, this section provides domain authority, organic keyword footprint, backlink profile, and top ranked keywords._`,
+      );
+    } else if (!domainStep.ok && "error" in domainStep && domainStep.error) {
+      factParts.push("");
+      factParts.push(`## Domain intelligence pull failed: ${domainStep.error}`);
+    }
   }
 
   return {
@@ -320,6 +329,78 @@ export async function runSiteAudit(
       domainIntelOk: metrics !== null,
     },
   };
+}
+
+/** Phase 2 standalone — runs ONLY the DataforSEO Labs + LLM Mentions calls.
+ *  Used when the site audit is split across two prep phases so each fits
+ *  inside Vercel's 60s function budget on Hobby. Returns the additional
+ *  fact-pack markdown to append to the existing prep + the structured
+ *  metrics record. */
+export async function runDataforSeoPhase(
+  inputUrl: string,
+  clientSlug: string,
+  emit: (event: ToolProgressEvent) => void,
+): Promise<{ markdown: string; metrics: DomainMetrics | null }> {
+  const geo = getClientGeo(clientSlug);
+  emit({
+    type: "start",
+    tool: "dataforseo",
+    label: isDataforSeoConfigured()
+      ? `Domain intelligence (DataforSEO — ${geo.countryLabel})`
+      : "Domain intelligence (DataforSEO — not configured)",
+  });
+
+  const started = Date.now();
+  let metrics: DomainMetrics | null = null;
+  let error: string | null = null;
+  try {
+    metrics = await fetchDomainMetrics(inputUrl, {
+      locationCode: geo.locationCode,
+      languageCode: geo.languageCode,
+    });
+  } catch (err) {
+    error = err instanceof Error ? err.message : String(err);
+  }
+  const ms = Date.now() - started;
+
+  if (error) {
+    emit({
+      type: "error",
+      tool: "dataforseo",
+      label: "Domain intelligence (DataforSEO)",
+      ms,
+      message: error.slice(0, 300),
+    });
+  } else if (!metrics) {
+    emit({
+      type: "done",
+      tool: "dataforseo",
+      label: "Domain intelligence (DataforSEO)",
+      ms,
+      summary: "not configured (skipped)",
+    });
+  } else {
+    const partial =
+      metrics.errors.length > 0 ? ` · ${metrics.errors.length} sub-error(s)` : "";
+    emit({
+      type: "done",
+      tool: "dataforseo",
+      label: "Domain intelligence (DataforSEO)",
+      ms,
+      summary: `Rank ${metrics.rank ?? "—"} · ${metrics.organicKeywords ?? "—"} kw · ${metrics.referringDomains ?? "—"} ref domains${partial}`,
+    });
+  }
+
+  let markdown = "";
+  if (metrics) {
+    markdown = formatDomainMetricsForPrompt(metrics);
+  } else if (!isDataforSeoConfigured()) {
+    markdown = `## Domain intelligence\n_Not configured (DATAFORSEO_LOGIN + DATAFORSEO_PASSWORD missing)._`;
+  } else if (error) {
+    markdown = `## Domain intelligence pull failed: ${error}`;
+  }
+
+  return { markdown, metrics };
 }
 
 function emitStepDone<T>(

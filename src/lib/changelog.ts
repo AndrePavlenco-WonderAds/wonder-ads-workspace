@@ -11,6 +11,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: 66,
+    date: "2026-05-17",
+    title: "Audit split into 3 phases — fixes IHN timeout",
+    highlights: [
+      "SEO Audit now runs in three phases instead of two. Each phase has its own 60s function budget so the deeper DataforSEO pull (limit 1000 + historical_serp_mode) can't kill Phase 1 anymore — which was happening on heavy English-language sites like IHN.",
+      "Phase 1 = sitemap + crawl + PageSpeed + Search Console. Phase 2 = DataforSEO Labs + LLM Mentions. Phase 3 = SEO Claude analysis. From the UI it still looks like one continuous run.",
+      "Same per-phase fact-pack-to-KV pattern as before, just split: /prep saves Phase 1 data, /prep-dataforseo appends Phase 2, /run reads the merged result.",
+    ],
+  },
+  {
     version: 65,
     date: "2026-05-17",
     title: "Way deeper keyword pull from DataforSEO",

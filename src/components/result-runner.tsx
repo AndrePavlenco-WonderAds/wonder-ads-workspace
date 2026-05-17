@@ -74,7 +74,9 @@ export function ResultRunner({
   );
 
   const expectedToolSteps = useMemo(() => {
-    if (action.slug === "seo-audit") return 7; // sitemap + crawl-home + crawl-sample + psi×2 + gsc + dataforseo
+    // Phase 1 emits 6 done events (sitemap + crawl-home + crawl-sample +
+    // psi mobile + psi desktop + GSC). Phase 2 emits 1 more (DataforSEO).
+    if (action.slug === "seo-audit") return 7;
     return action.tools?.length ?? 0;
   }, [action.slug, action.tools]);
 
@@ -167,12 +169,16 @@ export function ResultRunner({
       try {
         let finalAcc: string;
         if (action.slug === "seo-audit") {
-          // Two-phase: tools first (under 60s), then Claude (under 60s).
-          // /prep saves the fact pack to KV before the stream closes;
-          // /run picks it up + sends the `---` separator + streams Claude.
+          // Three-phase split so each fits inside Vercel's 60s function
+          // budget on Hobby:
+          //   /prep            — sitemap + crawl + PSI + GSC
+          //   /prep-dataforseo — DataforSEO Labs + LLM Mentions
+          //   /run             — Claude streams the analysis
           const afterPrep = await callPhase("/prep", "");
           if (controller.signal.aborted) throw new DOMException("Aborted", "AbortError");
-          // Phase 1 saved the prep — fetch metrics so the dashboard renders
+          const afterPrepDfs = await callPhase("/prep-dataforseo", afterPrep);
+          if (controller.signal.aborted) throw new DOMException("Aborted", "AbortError");
+          // Phase 2 saved the metrics — fetch so the dashboard renders
           // alongside Claude's analysis instead of waiting for /save.
           fetch(
             `${apiBase}/prep-data?resultId=${encodeURIComponent(resultId)}`,
@@ -185,7 +191,7 @@ export function ResultRunner({
             .catch(() => {
               /* non-fatal — /save will return them too */
             });
-          finalAcc = await callPhase("/run", afterPrep);
+          finalAcc = await callPhase("/run", afterPrepDfs);
         } else {
           // Single call for actions that comfortably fit under 60s.
           finalAcc = await callPhase("", "");

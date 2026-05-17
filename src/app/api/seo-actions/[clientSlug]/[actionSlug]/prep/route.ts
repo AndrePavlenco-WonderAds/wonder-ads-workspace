@@ -90,7 +90,7 @@ export async function POST(
       const send = (s: string) => controller.enqueue(encoder.encode(s));
 
       send(
-        `> 🔧 Phase 1 / 2 — gathering live data for \`${new URL(targetUrl).origin}\`\n`,
+        `> 🔧 Phase 1 / 3 — gathering site data for \`${new URL(targetUrl).origin}\`\n`,
       );
 
       // Two failure modes we want to capture: (1) the orchestrator throws
@@ -100,6 +100,10 @@ export async function POST(
       let stage: "init" | "runSiteAudit" | "save" = "init";
       try {
         stage = "runSiteAudit";
+        // Phase 1 skips DataforSEO — that runs in /prep-dataforseo so each
+        // phase fits comfortably under Vercel's 60s function budget. The
+        // DataforSEO call alone with historical_serp_mode + limit 1000 can
+        // take 20-40s on big EN-language sites (e.g. IHN).
         const pack = await runSiteAudit(
           targetUrl,
           clientSlug,
@@ -116,20 +120,20 @@ export async function POST(
               send(`> ${e.message}\n`);
             }
           },
-          { depth },
+          { depth, skipDataforSeo: true },
         );
 
         stage = "save";
         await saveAuditPrep(clientSlug, actionSlug, resultId, {
           status: "ok",
           factPack: pack.markdown,
-          metrics: pack.metrics,
+          metrics: null, // populated by /prep-dataforseo
           preparedAt: Date.now(),
           inputUrl: targetUrl,
         });
 
         send(
-          `\n> ✅ **Phase 1 complete** — fact pack saved. Starting analysis…\n`,
+          `\n> ✅ **Phase 1 complete** — site data saved. Fetching domain intelligence…\n`,
         );
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
