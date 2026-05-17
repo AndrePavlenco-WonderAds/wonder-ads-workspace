@@ -1,17 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import {
-  Download,
-  Loader2,
-  Square,
-  AlertTriangle,
-  RefreshCw,
-} from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import { Loader2, Square, AlertTriangle } from "lucide-react";
 import type { ActionDef, ActionToolName } from "@/lib/seo-pillars";
 import type { HistoryEntry } from "@/lib/action-history";
-import { makeResultId } from "@/lib/action-history";
 import type { DomainMetrics } from "@/lib/seo-tools/dataforseo";
 import { pendingKey } from "./action-runner";
 import { MarkdownView } from "./markdown-view";
@@ -23,32 +16,19 @@ const SEPARATOR = "\n---\n\n";
 
 export function ResultRunner({
   clientSlug,
+  clientName,
   action,
   resultId,
   existing,
 }: {
   clientSlug: string;
+  clientName: string;
   action: ActionDef;
   resultId: string;
   existing: HistoryEntry | null;
 }) {
   const searchParams = useSearchParams();
-  const router = useRouter();
   const isPrintMode = searchParams?.get("print") === "true";
-
-  function regenerateWithSameInputs() {
-    if (Object.keys(inputs).length === 0) return;
-    const newId = makeResultId();
-    try {
-      sessionStorage.setItem(
-        pendingKey(clientSlug, action.slug, newId),
-        JSON.stringify(inputs),
-      );
-    } catch (err) {
-      console.error("sessionStorage write failed:", err);
-    }
-    router.push(`/seo/${clientSlug}/actions/${action.slug}/results/${newId}`);
-  }
 
   const [output, setOutput] = useState(existing?.output ?? "");
   const [inputs, setInputs] = useState<Record<string, string>>(
@@ -334,75 +314,23 @@ export function ResultRunner({
     return "Generating…";
   }, [status, output, action.tools]);
 
-  // ---- Print mode: light layout with dashboard + analysis ----
+  // ---- Print mode: branded WonderAds PDF layout ----
   if (isPrintMode) {
+    const generatedDateStr = new Date().toLocaleDateString(undefined, {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
     return (
-      <div className="bg-white text-black">
-        <style>{`
-          @media print {
-            @page { margin: 14mm 12mm; }
-            .no-print { display: none !important; }
-            h2 { break-before: page; }
-            h2:first-of-type { break-before: avoid; }
-            table { break-inside: avoid; }
-            .pdf-stat { break-inside: avoid; }
-          }
-          html, body { background: white !important; color: #0a0a0a !important; }
-          .pdf-doc { color: #1a1a1a; font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
-          .pdf-doc h1 { font-size: 26px; font-weight: 700; color: #0a0a0a; margin: 0 0 4px; }
-          .pdf-doc h2 { font-size: 17px; font-weight: 700; color: #0a0a0a; margin: 22px 0 8px; padding-bottom: 4px; border-bottom: 1px solid #d4d4d4; }
-          .pdf-doc h3 { font-size: 13.5px; font-weight: 700; color: #1a1a1a; margin: 14px 0 6px; }
-          .pdf-doc h4 { font-size: 12.5px; font-weight: 700; color: #1a1a1a; margin: 12px 0 4px; }
-          .pdf-doc p, .pdf-doc li { font-size: 11.5px; line-height: 1.55; }
-          .pdf-doc strong { font-weight: 700; color: #0a0a0a; }
-          .pdf-doc a { color: #5b34c9; text-decoration: none; }
-          .pdf-doc table { border-collapse: collapse; width: 100%; margin: 6px 0; font-size: 10.5px; }
-          .pdf-doc th { text-align: left; padding: 5px 6px; border-bottom: 2px solid #1a1a1a; font-weight: 700; }
-          .pdf-doc td { border-bottom: 1px solid #e5e5e5; padding: 5px 6px; vertical-align: top; }
-          .pdf-doc pre { background: #f5f5f5; padding: 9px; border-radius: 4px; overflow: auto; font-size: 10px; }
-          .pdf-doc code { background: #f0f0f0; padding: 1px 3px; border-radius: 3px; font-size: 10.5px; }
-          .pdf-doc blockquote { border-left: 3px solid #5b34c9; padding-left: 10px; color: #555; margin: 10px 0; }
-          .pdf-meta { color: #777; font-size: 11px; margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid #e5e5e5; }
-          .pdf-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 10px 0 14px; }
-          .pdf-stat { border: 1px solid #d4d4d4; border-radius: 6px; padding: 8px 10px; }
-          .pdf-stat-label { font-size: 9px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #666; }
-          .pdf-stat-value { font-size: 18px; font-weight: 700; color: #0a0a0a; margin-top: 2px; }
-          .pdf-stat-sub { font-size: 9.5px; color: #888; margin-top: 2px; }
-          .pdf-keywords { max-height: none !important; overflow: visible !important; }
-          .pdf-empty { color: #888; padding: 40px 0; text-align: center; }
-        `}</style>
-        <div className="pdf-doc mx-auto max-w-3xl p-6">
-          <h1>{action.label}</h1>
-          <div className="pdf-meta">
-            {resultId} · generated{" "}
-            {new Date().toLocaleString(undefined, {
-              year: "numeric",
-              month: "long",
-              day: "numeric",
-            })}
-            {liveMetrics &&
-              ` · domain: ${liveMetrics.target} · ${liveMetrics.source}`}
-          </div>
-
-          {liveMetrics && action.slug === "seo-audit" && (
-            <PrintDomainSummary metrics={liveMetrics} />
-          )}
-
-          {analysisText ? (
-            <MarkdownView source={analysisText} />
-          ) : (
-            <div className="pdf-empty">
-              <p>
-                <strong>This result hasn&apos;t been saved yet.</strong>
-              </p>
-              <p>
-                Wait for generation to finish in the original tab — once you see
-                the &quot;Done&quot; status there, refresh this page.
-              </p>
-            </div>
-          )}
-        </div>
-      </div>
+      <PrintLayout
+        clientName={clientName}
+        actionLabel={action.label}
+        resultId={resultId}
+        generatedDate={generatedDateStr}
+        analysisText={analysisText}
+        metrics={liveMetrics}
+        showDomainSummary={action.slug === "seo-audit"}
+      />
     );
   }
 
@@ -494,47 +422,9 @@ export function ResultRunner({
               </dl>
             </details>
           )}
-          {output && (
-            <div className="ml-auto flex items-center gap-2">
-              {status === "done" && Object.keys(inputs).length > 0 && (
-                <button
-                  type="button"
-                  onClick={regenerateWithSameInputs}
-                  title="Run this exact audit again with the same inputs"
-                  className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/[0.04] px-2 py-1 text-[11px] text-white/65 transition hover:border-white/25 hover:text-white"
-                >
-                  <RefreshCw className="h-3 w-3" />
-                  Re-generate
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={() => navigator.clipboard.writeText(output)}
-                className="rounded-md border border-white/10 bg-white/[0.04] px-2 py-1 text-[11px] text-white/65 transition hover:border-white/25 hover:text-white"
-              >
-                Copy
-              </button>
-              {status === "done" ? (
-                <a
-                  href={`?print=true`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/[0.04] px-2 py-1 text-[11px] text-white/65 transition hover:border-white/25 hover:text-white"
-                >
-                  <Download className="h-3 w-3" />
-                  Download PDF
-                </a>
-              ) : (
-                <span
-                  title="Available once generation finishes (KV save needs to complete first)"
-                  className="inline-flex cursor-not-allowed items-center gap-1 rounded-md border border-white/8 bg-white/[0.02] px-2 py-1 text-[11px] text-white/30"
-                >
-                  <Download className="h-3 w-3" />
-                  Download PDF (finishing…)
-                </span>
-              )}
-            </div>
-          )}
+          {/* Download PDF lives at the top of the page now. Copy + Re-generate
+              were removed per UX feedback — the result page is itself the
+              persistent artefact. */}
         </header>
 
         {analysisText ? (
@@ -550,6 +440,313 @@ export function ResultRunner({
           </div>
         )}
       </article>
+    </div>
+  );
+}
+
+// ---- Branded PDF layout ----
+//
+// Renders a print-only document with a cover page, a Domain Intelligence
+// summary, and the SEO Claude analysis. WA logo + astronaut on the cover,
+// running footer on every page with seo@wonder-ads.com contact + page
+// numbers. Triggered when ?print=true is on the result URL — auto-fires
+// window.print() once the page lays out.
+
+function PrintLayout({
+  clientName,
+  actionLabel,
+  resultId,
+  generatedDate,
+  analysisText,
+  metrics,
+  showDomainSummary,
+}: {
+  clientName: string;
+  actionLabel: string;
+  resultId: string;
+  generatedDate: string;
+  analysisText: string;
+  metrics: DomainMetrics | null;
+  showDomainSummary: boolean;
+}) {
+  return (
+    <div className="bg-white text-black">
+      <style>{`
+        /* Page setup — A4 with WA running footer + page numbers */
+        @page {
+          size: A4;
+          margin: 18mm 16mm 22mm 16mm;
+          @bottom-left {
+            content: "Wonder Ads · SEO Department · seo@wonder-ads.com";
+            font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+            font-size: 8.5pt;
+            color: #777;
+          }
+          @bottom-right {
+            content: counter(page) " / " counter(pages);
+            font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+            font-size: 8.5pt;
+            color: #777;
+          }
+        }
+        @page :first {
+          margin: 0;
+          @bottom-left { content: none; }
+          @bottom-right { content: none; }
+        }
+        @media print {
+          .no-print { display: none !important; }
+          .pdf-cover { break-after: page; }
+          h2 { break-after: avoid; break-inside: avoid; }
+          h3, h4 { break-after: avoid; }
+          table { break-inside: avoid; }
+          .pdf-stat, .pdf-section-card { break-inside: avoid; }
+        }
+        html, body { background: white !important; color: #0a0a0a !important; }
+
+        /* Cover page */
+        .pdf-cover {
+          position: relative;
+          height: 100vh;
+          min-height: 297mm;
+          padding: 32mm 28mm;
+          color: white;
+          background: linear-gradient(135deg, #343ED7 0%, #783DF5 53.65%, #C535C9 100%);
+          overflow: hidden;
+          display: flex;
+          flex-direction: column;
+        }
+        .pdf-cover-logo {
+          width: 120px;
+          height: auto;
+        }
+        .pdf-cover-eyebrow {
+          margin-top: 28mm;
+          font-size: 11pt;
+          letter-spacing: 0.22em;
+          text-transform: uppercase;
+          font-weight: 600;
+          color: rgba(255,255,255,0.8);
+        }
+        .pdf-cover-title {
+          margin-top: 6mm;
+          font-size: 48pt;
+          font-weight: 800;
+          line-height: 1.05;
+          letter-spacing: -0.01em;
+        }
+        .pdf-cover-subtitle {
+          margin-top: 4mm;
+          font-size: 16pt;
+          font-weight: 500;
+          color: rgba(255,255,255,0.9);
+        }
+        .pdf-cover-meta {
+          margin-top: auto;
+          padding-top: 12mm;
+          font-size: 10.5pt;
+          color: rgba(255,255,255,0.85);
+          line-height: 1.6;
+          border-top: 1px solid rgba(255,255,255,0.25);
+        }
+        .pdf-cover-meta strong { color: white; font-weight: 700; }
+        .pdf-cover-astronaut {
+          position: absolute;
+          right: -8mm;
+          bottom: -8mm;
+          width: 92mm;
+          height: auto;
+          opacity: 0.95;
+          filter: drop-shadow(0 12px 24px rgba(0,0,0,0.35));
+          transform: rotate(-6deg);
+          pointer-events: none;
+        }
+        .pdf-cover-watermark {
+          position: absolute;
+          right: 28mm;
+          top: 28mm;
+          font-size: 9pt;
+          letter-spacing: 0.2em;
+          text-transform: uppercase;
+          font-weight: 600;
+          color: rgba(255,255,255,0.5);
+        }
+
+        /* Body document */
+        .pdf-doc {
+          color: #1a1a1a;
+          font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+          max-width: 178mm;
+          margin: 0 auto;
+        }
+        .pdf-doc h1 { font-size: 24pt; font-weight: 700; color: #0a0a0a; margin: 0 0 4mm; letter-spacing: -0.01em; }
+        .pdf-doc h2 {
+          font-size: 14pt; font-weight: 700; color: #0a0a0a;
+          margin: 12mm 0 4mm; padding: 0 0 2mm;
+          border-bottom: 2px solid #783DF5;
+          display: inline-block;
+          padding-right: 8mm;
+        }
+        .pdf-doc h3 { font-size: 12pt; font-weight: 700; color: #1a1a1a; margin: 8mm 0 2mm; }
+        .pdf-doc h4 { font-size: 10.5pt; font-weight: 700; color: #1a1a1a; margin: 5mm 0 2mm; }
+        .pdf-doc p, .pdf-doc li {
+          font-size: 10pt; line-height: 1.6; color: #2a2a2a;
+        }
+        .pdf-doc strong { font-weight: 700; color: #0a0a0a; }
+        .pdf-doc em { font-style: italic; color: #4a4a4a; }
+        .pdf-doc a { color: #5b34c9; text-decoration: none; }
+        .pdf-doc ul, .pdf-doc ol { margin: 3mm 0; padding-left: 7mm; }
+        .pdf-doc li { margin: 1.5mm 0; }
+        .pdf-doc table {
+          border-collapse: collapse; width: 100%; margin: 4mm 0;
+          font-size: 9pt;
+        }
+        .pdf-doc th {
+          text-align: left; padding: 2mm 3mm;
+          background: #f3f0fa; color: #2a1a5a; font-weight: 700;
+          border-bottom: 1.5pt solid #5b34c9;
+        }
+        .pdf-doc td {
+          border-bottom: 0.5pt solid #e5e5e5;
+          padding: 2mm 3mm; vertical-align: top;
+        }
+        .pdf-doc pre {
+          background: #fafafa; padding: 4mm; border-radius: 1mm;
+          border: 1px solid #ececec;
+          overflow: auto; font-size: 8.5pt; line-height: 1.5;
+          font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        }
+        /* CRITICAL — inline code: NO background fill on print. The grey
+           boxes were what made the previous output look broken. */
+        .pdf-doc code {
+          background: transparent;
+          border: none;
+          padding: 0;
+          font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+          font-size: 9.5pt;
+          color: #5b34c9;
+          font-weight: 500;
+        }
+        .pdf-doc blockquote {
+          border-left: 3px solid #783DF5; padding: 1mm 4mm;
+          color: #555; margin: 4mm 0; font-style: italic;
+        }
+        .pdf-doc hr { border: none; border-top: 1px solid #e0e0e0; margin: 6mm 0; }
+
+        /* Domain intelligence summary */
+        .pdf-section-card {
+          background: #fafafa;
+          border: 1px solid #ececec;
+          border-radius: 2mm;
+          padding: 5mm;
+          margin: 6mm 0;
+        }
+        .pdf-stats {
+          display: grid; grid-template-columns: repeat(4, 1fr); gap: 3mm;
+          margin: 0 0 4mm;
+        }
+        .pdf-stat {
+          border: 1px solid #d4d4d4; border-left: 3px solid #783DF5;
+          border-radius: 1.5mm; padding: 3mm 4mm;
+          background: white;
+        }
+        .pdf-stat-label {
+          font-size: 7.5pt; font-weight: 700;
+          letter-spacing: 0.14em; text-transform: uppercase; color: #666;
+        }
+        .pdf-stat-value {
+          font-size: 16pt; font-weight: 700; color: #0a0a0a;
+          margin-top: 1mm; line-height: 1.1;
+        }
+        .pdf-stat-sub {
+          font-size: 7.5pt; color: #777; margin-top: 1mm;
+        }
+
+        .pdf-cover-page-content {
+          padding: 18mm 16mm 4mm;
+        }
+        .pdf-empty {
+          color: #888; padding: 60mm 0; text-align: center;
+        }
+        .pdf-toc {
+          margin-top: 6mm;
+          padding: 5mm 6mm;
+          background: #f8f7fc;
+          border-left: 3px solid #783DF5;
+          font-size: 10pt;
+        }
+        .pdf-toc-title {
+          font-weight: 700; color: #2a1a5a; margin-bottom: 2mm;
+          text-transform: uppercase; letter-spacing: 0.13em; font-size: 8pt;
+        }
+        .pdf-toc-list {
+          margin: 0; padding: 0; list-style: none;
+        }
+        .pdf-toc-list li { padding: 0.8mm 0; color: #4a4a4a; }
+      `}</style>
+
+      {/* Cover page */}
+      <div className="pdf-cover">
+        <span className="pdf-cover-watermark">Wonder Ads · SEO Department</span>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/branding/wonder-ads-logo.png"
+          alt="Wonder Ads"
+          className="pdf-cover-logo"
+        />
+        <div className="pdf-cover-eyebrow">SEO Audit · {clientName}</div>
+        <h1 className="pdf-cover-title">{actionLabel}</h1>
+        <div className="pdf-cover-subtitle">
+          {metrics?.target ? metrics.target : ""}
+        </div>
+        <div className="pdf-cover-meta">
+          <div>
+            <strong>Generated:</strong> {generatedDate}
+          </div>
+          <div>
+            <strong>Report ID:</strong>{" "}
+            <span style={{ fontFamily: "ui-monospace, monospace" }}>
+              {resultId}
+            </span>
+          </div>
+          <div>
+            <strong>Questions?</strong>{" "}
+            <a href="mailto:seo@wonder-ads.com" style={{ color: "white" }}>
+              seo@wonder-ads.com
+            </a>
+          </div>
+        </div>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/branding/astronaut.png"
+          alt=""
+          aria-hidden="true"
+          className="pdf-cover-astronaut"
+        />
+      </div>
+
+      {/* Body */}
+      <div className="pdf-cover-page-content">
+        <div className="pdf-doc">
+          {showDomainSummary && metrics && (
+            <PrintDomainSummary metrics={metrics} />
+          )}
+
+          {analysisText ? (
+            <MarkdownView source={analysisText} />
+          ) : (
+            <div className="pdf-empty">
+              <p>
+                <strong>This result hasn&apos;t been saved yet.</strong>
+              </p>
+              <p>
+                Wait for generation to finish in the original tab — once you see
+                the &quot;Done&quot; status there, refresh this page.
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

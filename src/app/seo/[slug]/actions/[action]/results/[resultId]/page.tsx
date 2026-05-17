@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Download } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { LogoChip } from "@/components/logo-chip";
 import { ResultRunner } from "@/components/result-runner";
@@ -72,6 +72,17 @@ export default async function ResultPage({
           <ArrowLeft className="h-3.5 w-3.5" />
           Back to {action.label}
         </Link>
+        {existing && (
+          <a
+            href={`/seo/${slug}/actions/${actionSlug}/results/${resultId}?print=true`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="ml-auto inline-flex items-center gap-1.5 rounded-md border border-white/12 bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-white/75 transition hover:border-white/30 hover:bg-white/[0.08] hover:text-white"
+          >
+            <Download className="h-3.5 w-3.5" />
+            Download PDF
+          </a>
+        )}
       </div>
 
       <header className="animate-fade-up mt-6">
@@ -117,6 +128,7 @@ export default async function ResultPage({
       <section className="mt-8">
         <ResultRunner
           clientSlug={slug}
+          clientName={client.title}
           action={action}
           resultId={resultId}
           existing={existing}

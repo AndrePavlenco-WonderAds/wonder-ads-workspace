@@ -662,7 +662,7 @@ function MentionsWindowCard({
 
 // ---- Top keywords table with sort + pagination ----
 
-type SortKey = "etv" | "position" | "searchVolume" | "cpc" | "keyword";
+type SortKey = "etv" | "position" | "searchVolume" | "cpc" | "competition" | "keyword";
 type SortDir = "asc" | "desc";
 
 function TopKeywordsTable({
@@ -688,6 +688,8 @@ function TopKeywordsTable({
           return k.searchVolume ?? 0;
         case "cpc":
           return k.cpc ?? 0;
+        case "competition":
+          return k.competition ?? 0;
         case "etv":
           return k.estTraffic ?? 0;
       }
@@ -769,6 +771,13 @@ function TopKeywordsTable({
                 dir={sortDir}
               />
               <ThSort
+                label="KD"
+                align="right"
+                onClick={() => toggleSort("competition")}
+                active={sortKey === "competition"}
+                dir={sortDir}
+              />
+              <ThSort
                 label="ETV"
                 align="right"
                 onClick={() => toggleSort("etv")}
@@ -803,6 +812,11 @@ function TopKeywordsTable({
                   </td>
                   <td className="px-2 py-1.5 text-right text-white/60">
                     {k.cpc != null ? `$${k.cpc.toFixed(2)}` : "—"}
+                  </td>
+                  <td className="px-2 py-1.5 text-right text-white/60">
+                    {k.competition != null
+                      ? `${Math.round(k.competition * 100)}%`
+                      : "—"}
                   </td>
                   <td className="px-2 py-1.5 text-right">
                     {fmtNum(roundN(k.estTraffic, 1))}
@@ -914,6 +928,8 @@ function sortLabel(k: SortKey): string {
       return "Volume";
     case "cpc":
       return "CPC";
+    case "competition":
+      return "KD";
     case "keyword":
       return "Keyword";
   }

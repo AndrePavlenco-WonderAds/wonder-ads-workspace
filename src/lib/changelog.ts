@@ -11,6 +11,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: 68,
+    date: "2026-05-17",
+    title: "Branded PDF, top-page Download button, KD column",
+    highlights: [
+      "Download PDF button moved to the top of the result page (next to Back). Re-generate and Copy removed — the result page IS the persistent artefact.",
+      "PDF report fully rebranded as a Wonder Ads SEO Department deliverable. Full-bleed cover page with WonderAds gradient + logo + client name + report ID + generated date + seo@wonder-ads.com contact + a cameo of the WA astronaut in the corner. Running footer on every other page with the SEO Department line + page numbers.",
+      "Print typography fixed — inline code no longer renders as ugly grey boxes that broke the previous layouts. A4 page setup with proper margins (18mm top/sides, 22mm bottom for the footer).",
+      "New 'KD' column on the keywords table — Keyword Difficulty from DataforSEO's competition score (0-100%). Was returned by the API but never displayed.",
+      "Test any existing audit's PDF immediately at /seo/<client>/actions/seo-audit/results/<id>?print=true — no regeneration needed.",
+    ],
+  },
+  {
     version: 67,
     date: "2026-05-17",
     title: "Audit split into 4 phases — PSI gets its own budget",
