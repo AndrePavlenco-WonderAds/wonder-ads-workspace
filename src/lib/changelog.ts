@@ -11,6 +11,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: 54,
+    date: "2026-05-17",
+    title: "SEO Audit split into two phases — fits the 60s Hobby budget",
+    highlights: [
+      "SEO Audit now runs in two phases under the hood: /prep gathers all live data (sitemap, crawl, PSI, Search Console, DataforSEO) and stores it in KV; /run reads it and streams SEO Claude's analysis. Each phase has its own 60s budget so big audits no longer get killed mid-write.",
+      "From the UI it still looks like one continuous run — the result page streams both phases back-to-back with the same progress bar and separator.",
+      "Audit prep is cached in KV for an hour (auto-expires) so a failed analysis run can be retried without re-paying the DataforSEO + PSI bill.",
+    ],
+  },
+  {
     version: 53,
     date: "2026-05-16",
     title: "Domain dashboard, deeper audit prompt, PDF fixes",

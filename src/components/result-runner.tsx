@@ -71,6 +71,35 @@ export function ResultRunner({
     return () => clearTimeout(t);
   }, [isPrintMode, status]);
 
+  // Stream one HTTP body into the local output buffer. Returns the accumulated
+  // text + a flag so the caller can decide what to do on failure.
+  const consumeStream = useCallback(
+    async (res: Response, accStart: string): Promise<string> => {
+      const reader = res.body?.getReader();
+      if (!reader) throw new Error("No response body");
+      const decoder = new TextDecoder();
+      let acc = accStart;
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const before = acc;
+        acc += decoder.decode(value, { stream: true });
+        if (
+          genPhaseStartedAtRef.current === null &&
+          acc.includes(SEPARATOR) &&
+          !before.includes(SEPARATOR)
+        ) {
+          genPhaseStartedAtRef.current = Date.now();
+        }
+        setOutput(acc);
+      }
+      acc += decoder.decode();
+      setOutput(acc);
+      return acc;
+    },
+    [],
+  );
+
   const startGeneration = useCallback(
     async (formInputs: Record<string, string>) => {
       if (generationStartedRef.current) return;
@@ -83,14 +112,16 @@ export function ResultRunner({
       const controller = new AbortController();
       abortRef.current = controller;
 
-      try {
-        const res = await fetch(apiBase, {
+      async function callPhase(
+        path: string,
+        accStart: string,
+      ): Promise<string> {
+        const res = await fetch(`${apiBase}${path}`, {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ inputs: formInputs, resultId }),
           signal: controller.signal,
         });
-
         if (!res.ok) {
           const text = await res.text().catch(() => "");
           let message = text || `HTTP ${res.status}`;
@@ -102,29 +133,21 @@ export function ResultRunner({
           }
           throw new Error(message);
         }
+        return consumeStream(res, accStart);
+      }
 
-        const reader = res.body?.getReader();
-        if (!reader) throw new Error("No response body");
-
-        const decoder = new TextDecoder();
-        let acc = "";
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          const before = acc;
-          acc += decoder.decode(value, { stream: true });
-          // detect crossing the tool→gen separator
-          if (
-            genPhaseStartedAtRef.current === null &&
-            acc.includes(SEPARATOR) &&
-            !before.includes(SEPARATOR)
-          ) {
-            genPhaseStartedAtRef.current = Date.now();
-          }
-          setOutput(acc);
+      try {
+        if (action.slug === "seo-audit") {
+          // Two-phase: tools first (under 60s), then Claude (under 60s).
+          // /prep saves the fact pack to KV before the stream closes;
+          // /run picks it up + sends the `---` separator + streams Claude.
+          const afterPrep = await callPhase("/prep", "");
+          if (controller.signal.aborted) throw new DOMException("Aborted", "AbortError");
+          await callPhase("/run", afterPrep);
+        } else {
+          // Single call for actions that comfortably fit under 60s.
+          await callPhase("", "");
         }
-        acc += decoder.decode();
-        setOutput(acc);
         setStatus("done");
       } catch (err) {
         if ((err as Error).name === "AbortError") {
@@ -138,7 +161,7 @@ export function ResultRunner({
         abortRef.current = null;
       }
     },
-    [apiBase, resultId],
+    [apiBase, resultId, action.slug, consumeStream],
   );
 
   // On mount: if no existing result, check sessionStorage for pending inputs
