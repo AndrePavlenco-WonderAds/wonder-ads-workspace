@@ -4,8 +4,9 @@ import { useEffect, useState } from "react";
 
 const SECTIONS = [
   { id: "section-brief", n: "01", label: "Do's & Don'ts" },
-  { id: "section-data", n: "02", label: "Data & Quick Actions" },
-  { id: "section-actions", n: "03", label: "Actions" },
+  { id: "section-target-keywords", n: "02", label: "Keyword Research" },
+  { id: "section-data", n: "03", label: "Data & Quick Actions" },
+  { id: "section-actions", n: "04", label: "SEO Actions" },
 ];
 
 /** Numbered section nav for a project page — highlights the section in view

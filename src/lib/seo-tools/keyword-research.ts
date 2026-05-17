@@ -82,6 +82,10 @@ export type KwResearchOptions = {
    *  specific city (e.g. "Lisbon" for a Lisbon-focused dental clinic
    *  campaign) without rewriting the client's default. */
   locationOverride?: LocationTarget;
+  /** Human-readable client name. Used to identify brand tokens when
+   *  picking non-branded expansion seeds from the domain's ranked
+   *  keywords. Falls back to clientSlug when omitted. */
+  clientName?: string;
 };
 
 function isConfigured(): boolean {
@@ -222,14 +226,16 @@ async function fetchKeywordIdeas(
 
 async function fetchDomainExistingKeywords(
   target: string,
-  seedTopic: string,
   locationCode: number,
   languageCode: string,
   limit: number,
 ): Promise<KwIdea[]> {
-  // Pull the domain's ranked keywords, then filter to those that semantically
-  // match the seed theme so we surface the existing footprint relevant to
-  // this research run. (Cheap filter — Claude does the real clustering.)
+  // Pull the domain's full ranked-keyword footprint sorted by ETV. We DON'T
+  // filter by seed words here — that was the v69.3 bug that returned only 3
+  // keywords for Clínica Mimus, because the auto-derived seed "Clínica
+  // Mimus services" gated everything not containing those tokens. The
+  // domain's full footprint is the most reliable foundation for any
+  // research run; Claude does the topical filtering downstream.
   const body = [
     {
       target,
@@ -257,22 +263,48 @@ async function fetchDomainExistingKeywords(
     body,
   );
   const items = res.tasks?.[0]?.result?.[0]?.items ?? [];
-  const seedWords = seedTopic
-    .toLowerCase()
-    .split(/[\s,/]+/)
-    .filter((w) => w.length > 3);
   return items
     .map((it) => {
       if (!it.keyword_data) return null;
-      const mapped = mapItem(it.keyword_data, "ranked");
-      return mapped;
+      return mapItem(it.keyword_data, "ranked");
     })
-    .filter((x): x is KwIdea => x !== null)
-    .filter((k) => {
-      if (seedWords.length === 0) return true;
-      const kw = k.keyword.toLowerCase();
-      return seedWords.some((w) => kw.includes(w));
-    });
+    .filter((x): x is KwIdea => x !== null);
+}
+
+/** Pick the best N non-branded, non-trivial keywords from the domain's
+ *  ranked footprint to use as expansion seeds for keyword_ideas. Excludes
+ *  the client's own brand tokens (e.g. "mimus", "clínica mimus") which
+ *  would just return more branded variants. */
+function pickExpansionSeeds(
+  ranked: KwIdea[],
+  clientName: string,
+  count: number,
+): string[] {
+  const brandTokens = new Set(
+    clientName
+      .toLowerCase()
+      .split(/\s+/)
+      .filter((t) => t.length > 2),
+  );
+  const seen = new Set<string>();
+  const picked: string[] = [];
+  for (const k of ranked) {
+    const kw = k.keyword.toLowerCase().trim();
+    if (!kw || kw.length < 4) continue;
+    if (seen.has(kw)) continue;
+    // Skip pure-brand or branded-only keywords. "mimus" alone → skip.
+    // "mimus clínica" → skip. "implantes dentários lisboa" → keep.
+    const tokens = kw.split(/\s+/);
+    const nonBrandTokens = tokens.filter((t) => !brandTokens.has(t));
+    if (nonBrandTokens.length === 0) continue;
+    // Single-word keywords are usually too generic to expand productively
+    // ("psicologia" → low signal); prefer 2+ word phrases.
+    if (tokens.length < 2) continue;
+    seen.add(kw);
+    picked.push(k.keyword);
+    if (picked.length >= count) break;
+  }
+  return picked;
 }
 
 export async function runKeywordResearch(
@@ -337,44 +369,25 @@ async function runOnce(
     .slice(0, 5);
 
   const errors: { source: string; message: string }[] = [];
-  const [sugRes, ideasRes, domainRes, ...compResults] = await Promise.allSettled([
-    fetchKeywordSuggestions(seedTopic, geo.locationCode, geo.languageCode, limit),
-    fetchKeywordIdeas([seedTopic], geo.locationCode, geo.languageCode, limit),
+
+  // --- STAGE 1: domain ranked (foundation) + competitors, in parallel ---
+  // Domain ranked is unfiltered now (v69.4 fix — was returning 3 keywords
+  // for Clínica Mimus because the seed-word filter gated everything). This
+  // is the most reliable signal for any research run.
+  const [domainRes, ...compResults] = await Promise.allSettled([
     opts.target
       ? fetchDomainExistingKeywords(
           opts.target,
-          seedTopic,
           geo.locationCode,
           geo.languageCode,
           500,
         )
       : Promise.resolve<KwIdea[]>([]),
     ...competitorDomains.map((d) =>
-      fetchDomainExistingKeywords(d, seedTopic, geo.locationCode, geo.languageCode, 300),
+      fetchDomainExistingKeywords(d, geo.locationCode, geo.languageCode, 300),
     ),
   ]);
 
-  const suggestions =
-    sugRes.status === "fulfilled" ? sugRes.value : [];
-  if (sugRes.status === "rejected") {
-    errors.push({
-      source: "keyword_suggestions",
-      message:
-        sugRes.reason instanceof Error
-          ? sugRes.reason.message
-          : String(sugRes.reason),
-    });
-  }
-  const ideas = ideasRes.status === "fulfilled" ? ideasRes.value : [];
-  if (ideasRes.status === "rejected") {
-    errors.push({
-      source: "keyword_ideas",
-      message:
-        ideasRes.reason instanceof Error
-          ? ideasRes.reason.message
-          : String(ideasRes.reason),
-    });
-  }
   const domainExisting =
     domainRes.status === "fulfilled" ? domainRes.value : [];
   if (domainRes.status === "rejected") {
@@ -400,6 +413,57 @@ async function runOnce(
       });
     }
   });
+
+  // --- STAGE 2: derive expansion seeds + suggestions/ideas in parallel ---
+  // We mine non-branded high-ETV keywords from the domain footprint and use
+  // them as additional seeds for keyword_ideas. This is what guarantees a
+  // broad universe even when the user's seedTopic is a low-volume branded
+  // query like "Clínica Mimus services".
+  const clientName = opts.clientName ?? clientSlug;
+  const expansionSeeds = pickExpansionSeeds(domainExisting, clientName, 8);
+  // Combine: the user's seed (when meaningful) + competitor top branded
+  // keywords + the domain's non-branded ranked phrases. Cap to 15 total
+  // so DataforSEO doesn't reject the array.
+  const ideaSeeds = [
+    seedTopic,
+    ...expansionSeeds,
+    ...competitors
+      .flatMap((c) => c.keywords.slice(0, 2).map((k) => k.keyword))
+      .slice(0, 5),
+  ]
+    .filter((s): s is string => Boolean(s && s.trim().length > 2))
+    .slice(0, 15);
+
+  const [sugRes, ideasRes] = await Promise.allSettled([
+    seedTopic
+      ? fetchKeywordSuggestions(seedTopic, geo.locationCode, geo.languageCode, limit)
+      : Promise.resolve<KwIdea[]>([]),
+    ideaSeeds.length > 0
+      ? fetchKeywordIdeas(ideaSeeds, geo.locationCode, geo.languageCode, limit)
+      : Promise.resolve<KwIdea[]>([]),
+  ]);
+
+  const suggestions =
+    sugRes.status === "fulfilled" ? sugRes.value : [];
+  if (sugRes.status === "rejected") {
+    errors.push({
+      source: "keyword_suggestions",
+      message:
+        sugRes.reason instanceof Error
+          ? sugRes.reason.message
+          : String(sugRes.reason),
+    });
+  }
+  const ideas = ideasRes.status === "fulfilled" ? ideasRes.value : [];
+  if (ideasRes.status === "rejected") {
+    errors.push({
+      source: "keyword_ideas",
+      message:
+        ideasRes.reason instanceof Error
+          ? ideasRes.reason.message
+          : String(ideasRes.reason),
+    });
+  }
 
   let combined = { suggestions, ideas, domainExisting };
   if (opts.intent && opts.intent !== "all") {

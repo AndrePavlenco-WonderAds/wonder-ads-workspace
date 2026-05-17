@@ -220,6 +220,7 @@ export async function POST(
               perEndpointLimit: 300,
               competitorDomains: onboarding?.competitors ?? [],
               locationOverride: locationOverride ?? undefined,
+              clientName,
             });
             const ms = Date.now() - startedAt;
             if (!pack) {

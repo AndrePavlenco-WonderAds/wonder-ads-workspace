@@ -197,6 +197,14 @@ export function ResultRunner({
               /* non-fatal — /save will return them too */
             });
           finalAcc = await callPhase("/run", afterDfs);
+        } else if (action.slug === "keyword-research") {
+          // Two-phase split — Phase 1 saved the DataforSEO pack, Phase 2
+          // streams Claude with the PDF attached natively. Single-phase
+          // was running into the 60s ceiling on clients with big onboarding
+          // PDFs + 5 competitor pulls + Claude's long structured output.
+          const afterPrepKw = await callPhase("/prep-kw-research", "");
+          if (controller.signal.aborted) throw new DOMException("Aborted", "AbortError");
+          finalAcc = await callPhase("/run-kw-research", afterPrepKw);
         } else {
           // Single call for actions that comfortably fit under 60s.
           finalAcc = await callPhase("", "");

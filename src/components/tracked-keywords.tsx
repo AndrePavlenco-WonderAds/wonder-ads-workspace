@@ -87,17 +87,22 @@ export function TrackedKeywords({
           >
             <Search className="h-3.5 w-3.5 text-white" strokeWidth={2.25} />
           </span>
-          <h3 className="text-sm font-semibold tracking-tight text-white">
-            Tracked Keywords
-          </h3>
+          <div>
+            <h3 className="text-sm font-semibold tracking-tight text-white">
+              Tracked Keywords
+            </h3>
+            <p className="mt-0.5 text-[10px] font-medium uppercase tracking-[0.14em] text-white/35">
+              Live · Google Search Console
+            </p>
+          </div>
         </div>
         <StatusPill data={data} />
       </header>
 
       <p className="relative mt-3 text-xs text-white/55">
         {ok
-          ? `Top Google queries for ${clientName}.`
-          : `Live ranking positions for ${clientName}.`}
+          ? `Top Google queries for ${clientName} pulled live from GSC.`
+          : `Live ranking positions for ${clientName} pulled from Google Search Console.`}
       </p>
 
       <div className="relative mt-2 flex items-center gap-2">

@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "69.4",
+    date: "2026-05-17",
+    title: "Keyword Research — fix '3 keywords' bug, phase-split for 60s timeout, GSC label, nav rename",
+    highlights: [
+      "**🐛 FIX: the 'only 3 keywords' bug** — Clínica Mimus and any other client with a brand-name auto-seed was returning a tiny shortlist because the seed-word filter on DataforSEO `ranked_keywords` only kept rows containing the seed tokens. Two-stage rebuild: (1) pull the domain's **full unfiltered ranked footprint** (up to 500 keywords) as the foundation, then (2) mine the top **8 non-branded high-ETV keywords** from that footprint + competitor top branded queries to seed `keyword_ideas` for broad expansion. Brand tokens (e.g. 'mimus') are explicitly excluded from expansion seeds.",
+      "**⏱ Phase-split for the 60s timeout** — Claude was getting cut off mid-sentence on heavy runs (big onboarding PDF + 5 competitors). Split into `/prep-kw-research` (DataforSEO + onboarding fetch, saves pack to KV) → `/run-kw-research` (loads pack, attaches PDF natively, streams Claude). Each phase gets its own 60s budget. Mirrors the SEO Audit 4-phase pattern. Progress block now shows `Phase 1 / 2 — pulling keyword data` then `Phase 2` for Claude.",
+      "**🔎 Tracked Keywords now labels its data source** — added 'Live · Google Search Console' uppercase subtitle under the title and clarified the body copy: 'Top Google queries for X pulled live from GSC.' Hard to confuse with the curated Target Keywords list now.",
+      "**🧭 Project section nav updated** — inserted **02 Keyword Research** between 01 Do's & Don'ts and Data & Quick Actions (now 03). Renamed last item to **SEO Actions** (was 'Actions'). The 02 entry scrolls to the Target Keywords panel I shipped in v69.1.",
+    ],
+  },
+  {
     version: "69.3",
     date: "2026-05-17",
     title: "Keyword Research polish — already-targeted badges, PDF re-extract, graceful geo fallback",
