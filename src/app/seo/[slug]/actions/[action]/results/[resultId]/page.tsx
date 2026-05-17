@@ -100,7 +100,7 @@ export default async function ResultPage({
           <ArrowLeft className="h-3.5 w-3.5" />
           Back to {action.label}
         </Link>
-        {existing && (
+        {existing ? (
           <a
             href={`/seo/${slug}/actions/${actionSlug}/results/${resultId}?print=true`}
             target="_blank"
@@ -110,6 +110,14 @@ export default async function ResultPage({
             <Download className="h-3.5 w-3.5" />
             Download PDF
           </a>
+        ) : (
+          <span
+            title="Becomes active once the audit completes and the result is saved."
+            className="ml-auto inline-flex cursor-not-allowed items-center gap-1.5 rounded-md border border-white/8 bg-white/[0.02] px-3 py-1.5 text-xs font-medium text-white/35"
+          >
+            <Download className="h-3.5 w-3.5" />
+            Download available soon
+          </span>
         )}
       </div>
 

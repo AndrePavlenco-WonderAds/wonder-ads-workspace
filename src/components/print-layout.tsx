@@ -217,26 +217,35 @@ function PrintDomainSummary({ metrics }: { metrics: DomainMetrics }) {
               </tr>
             </thead>
             <tbody>
-              {metrics.topKeywords.slice(0, 30).map((k, i) => (
-                <tr key={i}>
-                  <td>{i + 1}</td>
-                  <td>{k.keyword}</td>
-                  <td style={{ textAlign: "right" }}>{k.position}</td>
-                  <td style={{ textAlign: "right" }}>{fmtNum(k.searchVolume)}</td>
-                  <td style={{ textAlign: "right" }}>
-                    {k.competition != null
-                      ? `${Math.round(k.competition * 100)}%`
-                      : "—"}
-                  </td>
-                  <td style={{ textAlign: "right" }}>
-                    {fmtNum(
-                      k.estTraffic != null
-                        ? Math.round(k.estTraffic * 10) / 10
-                        : null,
-                    )}
-                  </td>
-                </tr>
-              ))}
+              {[...metrics.topKeywords]
+                .sort(
+                  (a, b) =>
+                    (a.position ?? Number.MAX_SAFE_INTEGER) -
+                    (b.position ?? Number.MAX_SAFE_INTEGER),
+                )
+                .slice(0, 30)
+                .map((k, i) => (
+                  <tr key={i}>
+                    <td>{i + 1}</td>
+                    <td>{k.keyword}</td>
+                    <td style={{ textAlign: "right" }}>{k.position}</td>
+                    <td style={{ textAlign: "right" }}>
+                      {fmtNum(k.searchVolume)}
+                    </td>
+                    <td style={{ textAlign: "right" }}>
+                      {k.competition != null
+                        ? `${Math.round(k.competition * 100)}%`
+                        : "—"}
+                    </td>
+                    <td style={{ textAlign: "right" }}>
+                      {fmtNum(
+                        k.estTraffic != null
+                          ? Math.round(k.estTraffic * 10) / 10
+                          : null,
+                      )}
+                    </td>
+                  </tr>
+                ))}
             </tbody>
           </table>
         </>

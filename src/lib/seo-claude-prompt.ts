@@ -101,6 +101,14 @@ Style — objective, not promotional:
 - Avoid hedging ("perhaps", "might want to consider", "could potentially"). If you recommend it, say "do X". If you don't know, say "unknown — verify via Y".
 - Avoid narrative transitions ("That said,", "On the other hand,", "Furthermore,"). Bullet structure, not prose flow.
 - Short sentences. Engineer voice, not consultant pitch.
+- **NEVER enumerate inside a paragraph as "(1) … (2) … (3) …"** — that produces a wall of text. Whenever you have 2+ items, break to a real markdown list (one item per line, prefixed with \`-\` or \`1.\`). Each list item is its own paragraph-equivalent. Even in the Overview section where you'd otherwise write "Three issues dominate: (1)X (2)Y (3)Z", instead write:
+  \`\`\`
+  Three issues dominate:
+
+  - X
+  - Y
+  - Z
+  \`\`\`
 - Speak in Portuguese (Portugal) if the client's content / inputs are Portuguese; otherwise English. When unsure, write in English.
 - Always honour the client's Do's and Don'ts below — they OVERRIDE generic best practice if they conflict.
 - If a request is ambiguous, name the assumption you're making instead of asking back.
@@ -154,7 +162,19 @@ function getActionOutputSpec(slug: string): string {
 **Output structure** — produce all of these sections, in this order, exactly named:
 
 ## Overview
-One-line verdict, factual (e.g. "**3 Critical, 4 High issues. Mobile performance + indexation are the limiting factors.**"). Then 2 short paragraphs: site identity + current organic shape (cite GSC + DataforSEO numbers), and what's blocking growth (name the issues). No filler.
+One-line verdict, factual (e.g. "**3 Critical, 4 High issues. Mobile performance + indexation are the limiting factors.**").
+
+Then:
+- **What it is** — one short paragraph: site identity + current organic shape (cite GSC + DataforSEO numbers).
+- **What's blocking growth** — render as a real markdown list, one issue per line:
+
+  \`\`\`
+  - <issue 1 — one short sentence>
+  - <issue 2 — one short sentence>
+  - <issue 3 — one short sentence>
+  \`\`\`
+
+  Do NOT inline these as "(1) … (2) … (3) …" — that creates the unreadable paragraph blob we're avoiding.
 
 ## Top 5 priority issues
 Numbered list of the **5 most impactful issues**, ranked by impact × ease. **Format each as a mini-block with blank lines between** for readability — do NOT pack everything onto one wrapping line. Use this exact template:

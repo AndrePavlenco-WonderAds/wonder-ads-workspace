@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "68.4",
+    date: "2026-05-17",
+    title: "Always-visible PDF button, keyword sort by rank, no more wall-of-text",
+    highlights: [
+      "Download PDF button now always renders top-right of the result page. Disabled with 'Download available soon' while the audit is running; enables to 'Download PDF' the moment the result saves.",
+      "Keywords table default sort changed to **Position ascending** (top rankings first) — the most actionable order for an SEO consultant.",
+      "Dropped the **CPC column** from the keywords table — irrelevant for organic SEO work.",
+      "Prompt update: SEO Claude can no longer enumerate inside paragraphs as '(1) X (2) Y (3) Z'. Multi-item lists must be rendered as real markdown lists, one item per line. Kills the wall-of-text Overview blocks.",
+    ],
+  },
+  {
     version: "68.3",
     date: "2026-05-17",
     title: "Quick Actions order persists across all deployments",

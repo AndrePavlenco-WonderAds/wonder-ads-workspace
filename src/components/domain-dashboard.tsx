@@ -890,7 +890,7 @@ function MentionsWindowCard({
 
 // ---- Top keywords table with sort + pagination ----
 
-type SortKey = "etv" | "position" | "searchVolume" | "cpc" | "competition" | "keyword";
+type SortKey = "etv" | "position" | "searchVolume" | "competition" | "keyword";
 type SortDir = "asc" | "desc";
 
 function TopKeywordsTable({
@@ -900,8 +900,10 @@ function TopKeywordsTable({
   keywords: DomainTopKeyword[];
   targetDomain: string;
 }) {
-  const [sortKey, setSortKey] = useState<SortKey>("etv");
-  const [sortDir, setSortDir] = useState<SortDir>("desc");
+  // Default to top rankings first (position asc) — the highest-ranked
+  // keywords are the ones the team wants to see at a glance.
+  const [sortKey, setSortKey] = useState<SortKey>("position");
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [page, setPage] = useState(0);
   const pageSize = 25;
 
@@ -914,8 +916,6 @@ function TopKeywordsTable({
           return k.position ?? Number.MAX_SAFE_INTEGER;
         case "searchVolume":
           return k.searchVolume ?? 0;
-        case "cpc":
-          return k.cpc ?? 0;
         case "competition":
           return k.competition ?? 0;
         case "etv":
@@ -992,13 +992,6 @@ function TopKeywordsTable({
               />
               <th className="px-2 py-2">Intent</th>
               <ThSort
-                label="CPC"
-                align="right"
-                onClick={() => toggleSort("cpc")}
-                active={sortKey === "cpc"}
-                dir={sortDir}
-              />
-              <ThSort
                 label="KD"
                 align="right"
                 onClick={() => toggleSort("competition")}
@@ -1037,9 +1030,6 @@ function TopKeywordsTable({
                   </td>
                   <td className="px-2 py-1.5 text-white/55">
                     {k.intent ?? "—"}
-                  </td>
-                  <td className="px-2 py-1.5 text-right text-white/60">
-                    {k.cpc != null ? `$${k.cpc.toFixed(2)}` : "—"}
                   </td>
                   <td className="px-2 py-1.5 text-right text-white/60">
                     {k.competition != null
@@ -1154,8 +1144,6 @@ function sortLabel(k: SortKey): string {
       return "Position";
     case "searchVolume":
       return "Volume";
-    case "cpc":
-      return "CPC";
     case "competition":
       return "KD";
     case "keyword":
