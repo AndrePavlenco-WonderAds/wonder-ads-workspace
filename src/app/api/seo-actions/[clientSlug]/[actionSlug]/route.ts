@@ -28,6 +28,7 @@ import {
 import { getClientWebsite as getClientWebsiteForKw } from "@/lib/client-meta";
 import { getOnboardingForSlug } from "@/lib/onboarding-store";
 import { saveKwResearchPrep } from "@/lib/kw-research-prep-store";
+import { findLocationTarget } from "@/lib/location-targets";
 
 // Vercel Hobby caps at 60s.
 export const maxDuration = 60;
@@ -165,6 +166,13 @@ export async function POST(
           const target = website
             ? new URL(/^https?:\/\//i.test(website) ? website : `https://${website}`).hostname.replace(/^www\./, "")
             : undefined;
+          const locationOverride =
+            findLocationTarget(inputs.geo) ?? null;
+          if (locationOverride) {
+            send(
+              `> 🌍 Geo: **${locationOverride.label}** (${locationOverride.languageCode}, code ${locationOverride.locationCode})${locationOverride.localModifier ? ` — Claude will localise keywords with **${locationOverride.localModifier}**` : ""}\n`,
+            );
+          }
           send(`> 🔧 Pulling keyword data from DataforSEO (seed: \`${seedTopic}\`)\n`);
           if (onboarding) {
             const compNote =
@@ -211,6 +219,7 @@ export async function POST(
               target,
               perEndpointLimit: 300,
               competitorDomains: onboarding?.competitors ?? [],
+              locationOverride: locationOverride ?? undefined,
             });
             const ms = Date.now() - startedAt;
             if (!pack) {
@@ -234,6 +243,11 @@ export async function POST(
                 }
               }
               const parts: string[] = [formatKwPackForPrompt(pack)];
+              if (locationOverride && locationOverride.scope !== "country") {
+                parts.push(
+                  `## Geo localisation rule (HARD CONSTRAINT)\nThis run is targeting **${locationOverride.label}** specifically. The local-language modifier for this market is **"${locationOverride.localModifier}"** (e.g. "${exampleLocalised(locationOverride)}").\n\n**MANDATORY:** every keyword you recommend that benefits from local intent MUST include either the local modifier OR a naturally-localised equivalent in the market language. Examples:\n- For Lisbon (PT): "dentista lisboa", "clínica dentária em lisboa", "all-on-4 lisboa"\n- For NYC (EN): "dentist NYC", "best dental clinic Manhattan", "Invisalign New York"\n- For São Paulo (PT-BR): "dentista são paulo", "clínica odontológica sp"\n\nDo NOT pad every keyword blindly — informational queries ("o que é all-on-4") often work without a city modifier. Use judgement: would a real searcher in **${locationOverride.label}** type the modifier? If yes, include it.`,
+                );
+              }
               if (onboarding) {
                 const extractedSnippet = onboarding.extractedText
                   ? `\n\n### Extracted text from the onboarding form (for citation)\n\`\`\`\n${onboarding.extractedText.slice(0, 8000)}${onboarding.extractedText.length > 8000 ? "\n…[truncated — see attached PDF for full content]" : ""}\n\`\`\``
@@ -396,6 +410,24 @@ export async function POST(
       "x-accel-buffering": "no",
     },
   });
+}
+
+/** Build a short illustrative localised keyword for the prompt so Claude
+ *  has a concrete pattern to mirror. We use a generic "dentist" stem
+ *  because the agency's roster is heavily Health & Wellness (clinics),
+ *  but the example translates the LANGUAGE rather than the noun, so the
+ *  pattern works for any vertical. */
+function exampleLocalised(loc: {
+  languageCode: string;
+  localModifier: string;
+}): string {
+  const lang = loc.languageCode;
+  if (lang === "pt") return `dentista ${loc.localModifier.toLowerCase()}`;
+  if (lang === "es") return `dentista ${loc.localModifier.toLowerCase()}`;
+  if (lang === "fr") return `dentiste ${loc.localModifier.toLowerCase()}`;
+  if (lang === "it") return `dentista ${loc.localModifier.toLowerCase()}`;
+  if (lang === "de") return `zahnarzt ${loc.localModifier.toLowerCase()}`;
+  return `dentist ${loc.localModifier}`;
 }
 
 function parseDepth(raw: string | undefined): SiteAuditDepth {

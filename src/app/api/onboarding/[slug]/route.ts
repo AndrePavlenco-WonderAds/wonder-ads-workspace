@@ -75,13 +75,22 @@ export async function PUT(
     // Run text extraction inline. Worst case it adds ~3s on a 100-page PDF;
     // the upload itself is already complete (Vercel Blob direct-upload),
     // so the user just waits for KV write + extraction here.
-    let extracted: { text: string; competitors: string[] } = {
+    let extracted: {
+      text: string;
+      competitors: string[];
+      suggestedSeed: string | null;
+    } = {
       text: "",
       competitors: [],
+      suggestedSeed: null,
     };
     try {
       const result = await extractFromUrl(clean.url, clean.contentType);
-      extracted = { text: result.text, competitors: result.competitors };
+      extracted = {
+        text: result.text,
+        competitors: result.competitors,
+        suggestedSeed: result.suggestedSeed,
+      };
     } catch (err) {
       console.error("onboarding extraction failed (non-fatal):", err);
     }
@@ -89,6 +98,7 @@ export async function PUT(
       ...clean,
       extractedText: extracted.text || null,
       competitors: extracted.competitors,
+      suggestedSeed: extracted.suggestedSeed,
       extractedAt: extracted.text ? Date.now() : null,
     };
     const saved = await saveOnboardingForSlug(slug, withExtraction);

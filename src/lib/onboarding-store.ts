@@ -25,6 +25,10 @@ export type OnboardingDoc = {
   /** Competitor URLs/domains the client named in the form (regex-mined from
    *  extractedText). Used to fetch each competitor's keyword footprint. */
   competitors?: string[];
+  /** Best-guess seed topic mined from the form (e.g. the "main services"
+   *  or "primary keywords" field). Pre-populates the Keyword Research
+   *  seedTopic field so consultants don't start from an empty box. */
+  suggestedSeed?: string | null;
   /** Epoch ms when extraction last ran. Lets us skip re-extracting on every
    *  read. */
   extractedAt?: number | null;

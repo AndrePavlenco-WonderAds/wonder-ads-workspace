@@ -13,6 +13,19 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "69.1",
+    date: "2026-05-17",
+    title: "Keyword Research polish — city geo targeting, Target Keywords panel, smart seed fill, group-by, history seed display",
+    highlights: [
+      "**Geo Target is now city-aware.** Replaced the free-text country field with a curated grouped select covering **30+ country and city targets** across Portugal (Lisbon, Porto, Algarve, Coimbra, Braga, Madeira), Spain (Madrid, Barcelona, Valencia), Brazil (São Paulo, Rio, BH), UK, US, Canada, Australia, France, Germany, Italy, Belgium. Each entry carries the real DataforSEO `location_code` so volumes get scoped to that market.",
+      "**Localised keyword instruction baked into the prompt.** When a city target is selected, Claude receives a hard rule telling it to bake the local modifier (Lisboa, NYC, Berlin, Roma, etc.) into recommended keywords where intent demands. Example: target Lisbon → 'dentista lisboa', 'all-on-4 lisboa'. The geo + language code also flow through every DataforSEO call.",
+      "**Target Keywords panel** on every client page below the brief/files grid. Surfaces everything queued via the dashboard's 'Send to Tracked' button: sortable by keyword/volume/KD/added-date, intent chips, deep-link back to the kw-research run, manual Add (one per line or comma-separated), remove, CSV export, refresh.",
+      "**Smart seed-topic auto-fill.** PDF extraction now mines the onboarding form for 'primary keywords' / 'main services' / 'business focus' fields (EN + PT). The matched phrase is stored as `suggestedSeed` on the OnboardingDoc and pre-populates the Keyword Research form's seed field. No more starting from a blank box when the client already told us what to focus on.",
+      "**Dashboard 'Group by' control** — None / Intent / Source. Inserts sticky group headers with per-bucket select-all checkbox so consultants can bulk-select an entire intent or competitor footprint in one click.",
+      "**Past results cards** for Keyword Research now show **seed + geo + intent** as a chip + summary line instead of the first markdown sentence — way more scannable when comparing past runs.",
+    ],
+  },
+  {
     version: 69,
     date: "2026-05-17",
     title: "Keyword Research phase — conditional seed topic, onboarding-aware form, pillar-organised footer",

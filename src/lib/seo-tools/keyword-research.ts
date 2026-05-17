@@ -11,6 +11,7 @@
 // the SEO Audit.
 
 import { getClientGeo } from "../client-geo";
+import type { LocationTarget } from "../location-targets";
 
 const API_BASE = "https://api.dataforseo.com/v3";
 
@@ -67,6 +68,11 @@ export type KwResearchOptions = {
    *  ranked_keywords filtered to the seed theme. Capped to 5 to keep the
    *  call within Vercel's 60s budget. */
   competitorDomains?: string[];
+  /** Per-run override for the geo target. When omitted, falls back to
+   *  getClientGeo(clientSlug). Use this to sharpen a research run to a
+   *  specific city (e.g. "Lisbon" for a Lisbon-focused dental clinic
+   *  campaign) without rewriting the client's default. */
+  locationOverride?: LocationTarget;
 };
 
 function isConfigured(): boolean {
@@ -266,7 +272,14 @@ export async function runKeywordResearch(
   opts: KwResearchOptions = {},
 ): Promise<KwResearchPack | null> {
   if (!isConfigured()) return null;
-  const geo = getClientGeo(clientSlug);
+  const defaultGeo = getClientGeo(clientSlug);
+  const geo = opts.locationOverride
+    ? {
+        locationCode: opts.locationOverride.locationCode,
+        languageCode: opts.locationOverride.languageCode,
+        countryLabel: opts.locationOverride.label,
+      }
+    : defaultGeo;
   const limit = opts.perEndpointLimit ?? 300;
   const competitorDomains = (opts.competitorDomains ?? [])
     .map((d) => d.toLowerCase().replace(/^https?:\/\//, "").replace(/^www\./, "").split("/")[0])

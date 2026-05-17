@@ -5,6 +5,7 @@ import { PageShell } from "@/components/page-shell";
 import { ClientBrief } from "@/components/client-brief";
 import { ClientFiles } from "@/components/client-files";
 import { OnboardingForm } from "@/components/onboarding-form";
+import { TargetKeywordsPanel } from "@/components/target-keywords-panel";
 import { TypewriterPrompt } from "@/components/typewriter-prompt";
 import { SeoProjectContainers } from "@/components/seo-project-containers";
 import { SeoActions } from "@/components/seo-actions";
@@ -145,6 +146,10 @@ export default async function ClientPage({
           clientName={client.title}
         />
         <ClientFiles slug={slug} clientName={client.title} />
+      </div>
+
+      <div className="animate-fade-up mt-6">
+        <TargetKeywordsPanel slug={slug} clientName={client.title} />
       </div>
 
       <section

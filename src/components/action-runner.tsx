@@ -16,6 +16,7 @@ import type { ActionDef } from "@/lib/seo-pillars";
 import type { HistoryEntry } from "@/lib/action-history";
 import { makeResultId } from "@/lib/action-history";
 import { formatDateTime } from "@/lib/dates";
+import { groupLocationTargets } from "@/lib/location-targets";
 
 const PENDING_PREFIX = "wa:pending-gen:";
 
@@ -243,6 +244,7 @@ export function ActionRunner({
           <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {history.map((e) => {
               const date = new Date(e.createdAt);
+              const summary = summariseHistoryEntry(e, action.slug);
               return (
                 <li
                   key={e.id}
@@ -263,8 +265,13 @@ export function ActionRunner({
                     <div className="mt-1 text-sm font-medium text-white">
                       {formatDateTime(date)}
                     </div>
-                    <div className="mt-2 line-clamp-2 text-[11px] text-white/55">
-                      {firstLineOfMarkdown(e.output) || "—"}
+                    {summary.tag && (
+                      <div className="mt-1.5 inline-flex items-center gap-1.5 rounded-full border border-[color:var(--brand-purple)]/30 bg-[color:var(--brand-purple)]/[0.08] px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.1em] text-[#c9a8ff]">
+                        {summary.tag}
+                      </div>
+                    )}
+                    <div className="mt-2 line-clamp-2 text-[11px] text-white/65">
+                      {summary.body || "—"}
                     </div>
                   </Link>
                   <button
@@ -379,6 +386,29 @@ function firstLineOfMarkdown(s: string): string {
   return s.slice(0, 160);
 }
 
+/** Per-action summary for the past-results card. Keyword Research surfaces
+ *  the seed + geo so consultants can scan history; other actions fall back
+ *  to the first markdown line of the analysis. */
+function summariseHistoryEntry(
+  e: HistoryEntry,
+  actionSlug: string,
+): { tag: string | null; body: string } {
+  if (actionSlug === "keyword-research") {
+    const seed = (e.inputs?.seedTopic ?? "").trim();
+    const geo = (e.inputs?.geo ?? "").trim();
+    const intent = (e.inputs?.intent ?? "").trim();
+    const tag = geo || null;
+    const bits: string[] = [];
+    if (seed) bits.push(`Seed: ${seed}`);
+    if (intent && intent.toLowerCase() !== "all intents")
+      bits.push(`Intent: ${intent}`);
+    if (bits.length === 0)
+      bits.push(firstLineOfMarkdown(e.output) || "Onboarding-driven run");
+    return { tag, body: bits.join(" · ") };
+  }
+  return { tag: null, body: firstLineOfMarkdown(e.output) };
+}
+
 function FieldRow({
   field,
   value,
@@ -422,6 +452,34 @@ function FieldRow({
             <option key={opt} value={opt} className="bg-[#0a0a0f]">
               {opt}
             </option>
+          ))}
+        </select>
+      ) : field.type === "location" ? (
+        <select
+          id={id}
+          value={value}
+          disabled={disabled}
+          onChange={(e) => onChange(e.currentTarget.value)}
+          className="w-full rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-white focus:border-white/25 focus:outline-none disabled:opacity-50"
+        >
+          {groupLocationTargets().map(({ country, entries }) => (
+            <optgroup
+              key={country}
+              label={country}
+              className="bg-[#0a0a0f] text-white"
+            >
+              {entries.map((t) => (
+                <option
+                  key={t.locationCode}
+                  value={t.label}
+                  className="bg-[#0a0a0f]"
+                >
+                  {t.scope === "country"
+                    ? `${t.label}`
+                    : `  ${t.label}${t.localModifier && t.label !== t.localModifier ? ` (${t.localModifier})` : ""}`}
+                </option>
+              ))}
+            </optgroup>
           ))}
         </select>
       ) : (

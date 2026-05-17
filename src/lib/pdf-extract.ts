@@ -26,6 +26,11 @@ export type ExtractResult = {
   competitors: string[];
   /** Approximate page count for PDFs. null for other formats. */
   pageCount: number | null;
+  /** Best-guess seed topic mined from "main services" / "primary
+   *  keywords" / "principais serviços" fields. Used to pre-populate the
+   *  Keyword Research form's seedTopic field so consultants don't start
+   *  from a blank box. Null when nothing reasonable was found. */
+  suggestedSeed: string | null;
 };
 
 export async function extractFromUrl(
@@ -49,11 +54,17 @@ export async function extractFromUrl(
       text,
       competitors: mineCompetitors(text),
       pageCount: null,
+      suggestedSeed: mineSuggestedSeed(text),
     };
   }
   // DOC/DOCX — leave extraction unimplemented for now. Claude can still see
   // the doc via the URL; we just won't have text in the prompt.
-  return { text: "", competitors: [], pageCount: null };
+  return {
+    text: "",
+    competitors: [],
+    pageCount: null,
+    suggestedSeed: null,
+  };
 }
 
 async function extractPdf(url: string): Promise<ExtractResult> {
@@ -82,7 +93,50 @@ async function extractPdf(url: string): Promise<ExtractResult> {
     text: text.trim(),
     competitors: mineCompetitors(text),
     pageCount,
+    suggestedSeed: mineSuggestedSeed(text),
   };
+}
+
+/** Heuristic seed extractor — looks for the answers in the standard onboarding
+ *  form fields (EN + PT) and returns the most useful one to pre-populate
+ *  the seedTopic field with. Returns null when nothing clear is found.
+ *
+ *  Priority order: primary keywords > main services > business focus. */
+export function mineSuggestedSeed(text: string): string | null {
+  if (!text) return null;
+  const candidates: { label: string; pattern: RegExp; max: number }[] = [
+    // EN + PT: explicit primary/target keyword fields take priority.
+    {
+      label: "primary-keywords",
+      pattern:
+        /(?:primary\s+keyword|target\s+keyword|main\s+keyword|palavras?[-\s]?chave\s+(?:principa(?:l|is)|alvo))\s*:?\s*([^\n]{2,200})/i,
+      max: 200,
+    },
+    // Main services / top services.
+    {
+      label: "main-services",
+      pattern:
+        /(?:main\s+services|top\s+services|principa(?:l|is)\s+servi(?:ç|c)os?)\s*:?\s*([^\n]{2,200})/i,
+      max: 200,
+    },
+    // What's the business about / focus area.
+    {
+      label: "business-focus",
+      pattern:
+        /(?:business\s+focus|focus\s+area|área\s+de\s+foco|qual\s+(?:é|e)\s+o\s+foco)\s*:?\s*([^\n]{2,160})/i,
+      max: 160,
+    },
+  ];
+  for (const c of candidates) {
+    const m = text.match(c.pattern);
+    if (!m || !m[1]) continue;
+    const raw = m[1].trim().replace(/[.;,]\s*$/, "");
+    if (raw.length < 3) continue;
+    // Tidy: collapse repeated whitespace, cap length.
+    const tidy = raw.replace(/\s+/g, " ").slice(0, c.max).trim();
+    if (tidy.length >= 3) return tidy;
+  }
+  return null;
 }
 
 /** Look for explicit "competitors" sections in the form; fall back to all

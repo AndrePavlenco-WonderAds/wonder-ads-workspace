@@ -24,6 +24,7 @@ type IntentFilter =
   | "navigational";
 type SortKey = "volume" | "keyword" | "kd" | "cpc";
 type SortDir = "asc" | "desc";
+type GroupBy = "none" | "intent" | "source";
 
 type EnrichedIdea = KwIdea & {
   /** Origin label used when source === "all". */
@@ -53,6 +54,7 @@ export function KeywordResearchDashboard({
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [sendStatus, setSendStatus] = useState<SendStatus>("idle");
   const [sendMessage, setSendMessage] = useState<string | null>(null);
+  const [groupBy, setGroupBy] = useState<GroupBy>("none");
 
   const enriched = useMemo(() => enrichIdeas(pack), [pack]);
   const filtered = useMemo(
@@ -255,11 +257,24 @@ export function KeywordResearchDashboard({
             <option value="navigational">Navigational</option>
           </select>
         </span>
+        <span className="inline-flex items-center gap-1.5">
+          <label className="text-white/45">Group by</label>
+          <select
+            value={groupBy}
+            onChange={(e) => setGroupBy(e.target.value as GroupBy)}
+            className="rounded-md border border-white/10 bg-white/[0.03] px-2 py-1 text-xs text-white outline-none focus:border-white/30"
+          >
+            <option value="none">None</option>
+            <option value="intent">Intent</option>
+            <option value="source">Source</option>
+          </select>
+        </span>
         <button
           type="button"
           onClick={() => {
             setQuery("");
             setIntent("all");
+            setGroupBy("none");
           }}
           className="ml-auto text-[11px] text-white/45 transition hover:text-white"
         >
@@ -351,54 +366,7 @@ export function KeywordResearchDashboard({
                 </td>
               </tr>
             ) : (
-              filtered.map((k) => {
-                const id = rowKey(k);
-                const checked = selected.has(id);
-                return (
-                  <tr
-                    key={id}
-                    className="border-b border-white/5 transition hover:bg-white/[0.025]"
-                  >
-                    <td className="px-3 py-2">
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={() => {
-                          setSelected((prev) => {
-                            const next = new Set(prev);
-                            if (next.has(id)) next.delete(id);
-                            else next.add(id);
-                            return next;
-                          });
-                        }}
-                        className="accent-[#783DF5]"
-                      />
-                    </td>
-                    <td className="px-3 py-2 text-white">{k.keyword}</td>
-                    <td className="px-3 py-2 text-right text-white/80">
-                      {fmtNum(k.searchVolume)}
-                    </td>
-                    <td className="px-3 py-2 text-right text-white/80">
-                      {k.difficulty ?? "—"}
-                    </td>
-                    <td className="px-3 py-2">
-                      <IntentChip intent={k.intent} />
-                    </td>
-                    <td className="px-3 py-2 text-right text-white/70">
-                      {k.cpc != null ? `$${k.cpc.toFixed(2)}` : "—"}
-                    </td>
-                    <td className="px-3 py-2 text-white/55">
-                      {k.competitorDomain ? (
-                        <span className="inline-flex items-center gap-1 rounded-full border border-amber-400/30 bg-amber-500/10 px-2 py-0.5 text-[10px] text-amber-200">
-                          {k.competitorDomain}
-                        </span>
-                      ) : (
-                        <span className="text-[11px]">{k.origin}</span>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })
+              renderGroupedRows(filtered, groupBy, selected, setSelected)
             )}
           </tbody>
         </table>
@@ -600,6 +568,137 @@ function SortableTh({
           ))}
       </button>
     </th>
+  );
+}
+
+function renderGroupedRows(
+  filtered: EnrichedIdea[],
+  groupBy: GroupBy,
+  selected: Set<string>,
+  setSelected: React.Dispatch<React.SetStateAction<Set<string>>>,
+): React.ReactNode {
+  if (groupBy === "none") {
+    return filtered.map((k) => (
+      <KwRow
+        key={rowKey(k)}
+        kw={k}
+        checked={selected.has(rowKey(k))}
+        onToggle={() => toggleSelected(setSelected, rowKey(k))}
+      />
+    ));
+  }
+  // Bucket by the chosen dimension, preserving filtered order within each
+  // bucket. "Other" catches null intents.
+  const order: string[] = [];
+  const buckets = new Map<string, EnrichedIdea[]>();
+  for (const k of filtered) {
+    const bucketKey =
+      groupBy === "intent"
+        ? (k.intent ?? "other")
+        : k.competitorDomain ?? k.origin;
+    if (!buckets.has(bucketKey)) {
+      buckets.set(bucketKey, []);
+      order.push(bucketKey);
+    }
+    buckets.get(bucketKey)!.push(k);
+  }
+  return order.flatMap((label) => {
+    const rows = buckets.get(label)!;
+    const groupKeys = rows.map((r) => rowKey(r));
+    const allChecked = groupKeys.every((id) => selected.has(id));
+    return [
+      <tr
+        key={`__group-${label}`}
+        className="bg-white/[0.025] text-white/65"
+      >
+        <td className="px-3 py-2">
+          <input
+            type="checkbox"
+            checked={allChecked}
+            onChange={(e) => {
+              setSelected((prev) => {
+                const next = new Set(prev);
+                if (e.target.checked) groupKeys.forEach((id) => next.add(id));
+                else groupKeys.forEach((id) => next.delete(id));
+                return next;
+              });
+            }}
+            className="accent-[#783DF5]"
+          />
+        </td>
+        <td
+          colSpan={6}
+          className="px-3 py-2 text-[10.5px] font-semibold uppercase tracking-[0.12em]"
+        >
+          {label} <span className="text-white/40">({rows.length})</span>
+        </td>
+      </tr>,
+      ...rows.map((k) => (
+        <KwRow
+          key={rowKey(k)}
+          kw={k}
+          checked={selected.has(rowKey(k))}
+          onToggle={() => toggleSelected(setSelected, rowKey(k))}
+        />
+      )),
+    ];
+  });
+}
+
+function toggleSelected(
+  setSelected: React.Dispatch<React.SetStateAction<Set<string>>>,
+  id: string,
+) {
+  setSelected((prev) => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    return next;
+  });
+}
+
+function KwRow({
+  kw,
+  checked,
+  onToggle,
+}: {
+  kw: EnrichedIdea;
+  checked: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <tr className="border-b border-white/5 transition hover:bg-white/[0.025]">
+      <td className="px-3 py-2">
+        <input
+          type="checkbox"
+          checked={checked}
+          onChange={onToggle}
+          className="accent-[#783DF5]"
+        />
+      </td>
+      <td className="px-3 py-2 text-white">{kw.keyword}</td>
+      <td className="px-3 py-2 text-right text-white/80">
+        {fmtNum(kw.searchVolume)}
+      </td>
+      <td className="px-3 py-2 text-right text-white/80">
+        {kw.difficulty ?? "—"}
+      </td>
+      <td className="px-3 py-2">
+        <IntentChip intent={kw.intent} />
+      </td>
+      <td className="px-3 py-2 text-right text-white/70">
+        {kw.cpc != null ? `$${kw.cpc.toFixed(2)}` : "—"}
+      </td>
+      <td className="px-3 py-2 text-white/55">
+        {kw.competitorDomain ? (
+          <span className="inline-flex items-center gap-1 rounded-full border border-amber-400/30 bg-amber-500/10 px-2 py-0.5 text-[10px] text-amber-200">
+            {kw.competitorDomain}
+          </span>
+        ) : (
+          <span className="text-[11px]">{kw.origin}</span>
+        )}
+      </td>
+    </tr>
   );
 }
 

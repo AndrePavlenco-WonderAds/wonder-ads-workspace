@@ -7,7 +7,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-export type ActionFieldType = "text" | "textarea" | "select";
+export type ActionFieldType = "text" | "textarea" | "select" | "location";
 
 export type ActionField = {
   key: string;
@@ -155,9 +155,10 @@ export const PILLARS: Pillar[] = [
           {
             key: "geo",
             label: "Geo target",
-            type: "text",
-            defaultValue: "Portugal",
-            placeholder: "Country, region, or city",
+            type: "location",
+            defaultValue: "Portugal (national)",
+            helpText:
+              "Country or city. City targets sharpen DataforSEO volumes to that market AND tell Claude to bake the local modifier into recommended keywords (e.g. 'Dentista Lisboa' for Lisbon).",
           },
           {
             key: "intent",
@@ -360,8 +361,8 @@ export const PILLARS: Pillar[] = [
           {
             key: "geo",
             label: "Geo target",
-            type: "text",
-            defaultValue: "Portugal",
+            type: "location",
+            defaultValue: "Portugal (national)",
           },
         ],
       },
@@ -533,8 +534,8 @@ export const PILLARS: Pillar[] = [
           {
             key: "geo",
             label: "Geo target",
-            type: "text",
-            defaultValue: "Portugal",
+            type: "location",
+            defaultValue: "Portugal (national)",
           },
         ],
       },
