@@ -136,17 +136,36 @@ export async function POST(
       // ---------- Tool phase ----------
       if (entry.action.slug === "keyword-research") {
         // Orchestrated flow for Keyword Research: pull DataforSEO Labs data
-        // + read the onboarding form (if uploaded). Then hand off to Claude.
-        const seedTopic = (inputs.seedTopic ?? "").trim();
+        // + read the onboarding form (if uploaded and the consultant opted
+        // to use it). Then hand off to Claude.
+        const useOnboardingFlag =
+          (inputs.useOnboarding ?? "true").toLowerCase() !== "false";
+        let seedTopic = (inputs.seedTopic ?? "").trim();
+        // Load onboarding first — its content (top services, etc.) can
+        // back-fill an empty seedTopic when the consultant opted to use it.
+        const onboarding = useOnboardingFlag
+          ? await getOnboardingForSlug(clientSlug)
+          : null;
+        if (!seedTopic && onboarding) {
+          // Derive a sensible default seed when the consultant left the box
+          // blank: client name + " services" anchors DataforSEO on the
+          // brand's actual market footprint. Claude still reads the full
+          // onboarding PDF natively for nuanced focus.
+          seedTopic = `${clientName} services`;
+          send(
+            `> ℹ️ No seed topic provided — defaulting to \`${seedTopic}\` and letting the onboarding form drive focus.\n`,
+          );
+        }
         if (!seedTopic) {
-          send(`> ⚠️ No **seedTopic** provided — running without keyword data.\n\n`);
+          send(
+            `> ⚠️ No **seedTopic** provided AND no onboarding form available — Claude can't anchor this research. Add a seed topic OR upload the onboarding form on the client page.\n\n`,
+          );
         } else {
           const website = getClientWebsiteForKw(clientSlug);
           const target = website
             ? new URL(/^https?:\/\//i.test(website) ? website : `https://${website}`).hostname.replace(/^www\./, "")
             : undefined;
           send(`> 🔧 Pulling keyword data from DataforSEO (seed: \`${seedTopic}\`)\n`);
-          const onboarding = await getOnboardingForSlug(clientSlug);
           if (onboarding) {
             const compNote =
               onboarding.competitors && onboarding.competitors.length > 0
@@ -171,9 +190,13 @@ export async function POST(
                 console.error("PDF fetch for Claude attach failed:", err);
               }
             }
-          } else {
+          } else if (useOnboardingFlag) {
             send(
               `> ⚠️ **No onboarding form on file** — relying on seed topic + brief only. Upload one on the client page so future runs cite what the client actually wants.\n`,
+            );
+          } else {
+            send(
+              `> ℹ️ Onboarding form excluded by request (\`useOnboarding=false\`) — running on pure DataforSEO + seed topic.\n`,
             );
           }
           const startedAt = Date.now();

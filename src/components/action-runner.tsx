@@ -1,15 +1,17 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import {
   Clock,
   Loader2,
   Play,
   Trash2,
   Sparkles,
+  ClipboardList,
+  AlertCircle,
 } from "lucide-react";
+import Link from "next/link";
 import type { ActionDef } from "@/lib/seo-pillars";
 import type { HistoryEntry } from "@/lib/action-history";
 import { makeResultId } from "@/lib/action-history";
@@ -30,13 +32,24 @@ export function ActionRunner({
   clientName,
   action,
   defaults,
+  hasOnboarding = false,
+  onboardingName = null,
+  onboardingCompetitorCount = 0,
 }: {
   clientSlug: string;
   clientName: string;
   action: ActionDef;
   defaults?: Record<string, string>;
+  /** True when an onboarding form has been uploaded for this client.
+   *  Currently consumed only by keyword-research, which uses it to relax
+   *  the seedTopic required-flag and show the "Use data from onboarding
+   *  form" toggle. */
+  hasOnboarding?: boolean;
+  onboardingName?: string | null;
+  onboardingCompetitorCount?: number;
 }) {
   const router = useRouter();
+  const isKwResearch = action.slug === "keyword-research";
   const [values, setValues] = useState<Record<string, string>>(() => {
     const init: Record<string, string> = {};
     for (const f of action.fields) {
@@ -44,6 +57,12 @@ export function ActionRunner({
     }
     return init;
   });
+  // For keyword-research only: whether to feed the onboarding doc to Claude.
+  // Default ON when present (it's the strongest signal we have). User can
+  // untick to run a clean keyword-data-only research.
+  const [useOnboarding, setUseOnboarding] = useState<boolean>(
+    isKwResearch && hasOnboarding,
+  );
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [historyLoading, setHistoryLoading] = useState(true);
   const [navigating, setNavigating] = useState(false);
@@ -68,9 +87,19 @@ export function ActionRunner({
     loadHistory();
   }, [loadHistory]);
 
-  const requiredMissing = action.fields
-    .filter((f) => f.required)
-    .some((f) => !(values[f.key] ?? "").trim());
+  // Field-level required override: for keyword-research, the seedTopic
+  // field is required UNLESS the consultant is using the onboarding form
+  // (which provides its own focus signals — services, objectives, competitors).
+  const requiredKeys = useMemo(() => {
+    const base = action.fields.filter((f) => f.required).map((f) => f.key);
+    if (isKwResearch && useOnboarding) {
+      return base.filter((k) => k !== "seedTopic");
+    }
+    return base;
+  }, [action.fields, isKwResearch, useOnboarding]);
+  const requiredMissing = requiredKeys.some(
+    (key) => !(values[key] ?? "").trim(),
+  );
 
   function setField(key: string, value: string) {
     setValues((v) => ({ ...v, [key]: value }));
@@ -80,10 +109,17 @@ export function ActionRunner({
     if (navigating || requiredMissing) return;
     setNavigating(true);
     const resultId = makeResultId();
+    // Carry the onboarding-toggle through to the API via a synthetic input.
+    // The route reads inputs.useOnboarding to decide whether to read the
+    // uploaded form (defaults to "yes if present" when absent).
+    const payload: Record<string, string> = { ...values };
+    if (isKwResearch && hasOnboarding) {
+      payload.useOnboarding = useOnboarding ? "true" : "false";
+    }
     try {
       sessionStorage.setItem(
         pendingKey(clientSlug, action.slug, resultId),
-        JSON.stringify(values),
+        JSON.stringify(payload),
       );
     } catch (err) {
       console.error("sessionStorage write failed:", err);
@@ -113,16 +149,52 @@ export function ActionRunner({
           </h2>
         </header>
 
+        {isKwResearch && (
+          <OnboardingBanner
+            clientSlug={clientSlug}
+            hasOnboarding={hasOnboarding}
+            onboardingName={onboardingName}
+            competitorCount={onboardingCompetitorCount}
+            useOnboarding={useOnboarding}
+            onToggle={setUseOnboarding}
+          />
+        )}
+
         <div className="space-y-4">
-          {action.fields.map((f) => (
-            <FieldRow
-              key={f.key}
-              field={f}
-              value={values[f.key] ?? ""}
-              onChange={(v) => setField(f.key, v)}
-              disabled={navigating}
-            />
-          ))}
+          {action.fields.map((f) => {
+            // For keyword-research with onboarding-in-use, soften seedTopic:
+            // no asterisk, label switches to "Additional focus (optional)",
+            // placeholder explains the new role.
+            let displayField = f;
+            if (isKwResearch && f.key === "seedTopic") {
+              if (useOnboarding) {
+                displayField = {
+                  ...f,
+                  label: "Additional focus (optional)",
+                  required: false,
+                  placeholder:
+                    "Optional — narrow the research to a specific service mentioned in the form (e.g. 'all-on-4 Lisbon').",
+                  helpText:
+                    "The onboarding form already tells Claude what to focus on. Use this to override or sharpen.",
+                };
+              } else if (!hasOnboarding) {
+                displayField = {
+                  ...f,
+                  helpText:
+                    "Required — no onboarding form on file, so Claude needs this seed to know what to focus on. Upload a form on the client page to make this optional.",
+                };
+              }
+            }
+            return (
+              <FieldRow
+                key={f.key}
+                field={displayField}
+                value={values[f.key] ?? ""}
+                onChange={(v) => setField(f.key, v)}
+                disabled={navigating}
+              />
+            );
+          })}
         </div>
 
         <div className="mt-5 flex items-center gap-3">
@@ -213,6 +285,83 @@ export function ActionRunner({
           </ul>
         )}
       </section>
+    </div>
+  );
+}
+
+function OnboardingBanner({
+  clientSlug,
+  hasOnboarding,
+  onboardingName,
+  competitorCount,
+  useOnboarding,
+  onToggle,
+}: {
+  clientSlug: string;
+  hasOnboarding: boolean;
+  onboardingName: string | null;
+  competitorCount: number;
+  useOnboarding: boolean;
+  onToggle: (v: boolean) => void;
+}) {
+  if (!hasOnboarding) {
+    return (
+      <div className="mb-4 flex items-start gap-3 rounded-xl border border-rose-400/30 bg-rose-500/[0.06] px-4 py-3">
+        <AlertCircle
+          className="mt-0.5 h-4 w-4 shrink-0 text-rose-300"
+          strokeWidth={2.25}
+        />
+        <div className="flex-1">
+          <p className="text-[12.5px] font-medium text-rose-100">
+            No onboarding form on file
+          </p>
+          <p className="mt-0.5 text-[11.5px] text-rose-200/75">
+            Without it the seed topic below is required and the research can&apos;t
+            anchor on the client&apos;s named services, objectives, or competitors.{" "}
+            <Link
+              href={`/seo/${clientSlug}#section-brief`}
+              className="font-medium text-rose-200 underline-offset-2 hover:underline"
+            >
+              Upload the form on the project page
+            </Link>{" "}
+            for sharper, commercially-anchored output.
+          </p>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="mb-4 flex items-start gap-3 rounded-xl border border-emerald-400/30 bg-emerald-500/[0.06] px-4 py-3">
+      <ClipboardList
+        className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300"
+        strokeWidth={2.25}
+      />
+      <div className="flex-1">
+        <p className="text-[12.5px] font-medium text-emerald-100">
+          Onboarding form detected
+          {onboardingName ? (
+            <span className="ml-1 font-normal text-emerald-200/75">
+              ({onboardingName})
+            </span>
+          ) : null}
+        </p>
+        <p className="mt-0.5 text-[11.5px] text-emerald-200/75">
+          Claude will read the form natively
+          {competitorCount > 0
+            ? ` and cross-reference the ${competitorCount} competitor${competitorCount === 1 ? "" : "s"} named in it`
+            : ""}
+          . The seed topic below becomes optional unless you untick this.
+        </p>
+        <label className="mt-2 inline-flex cursor-pointer items-center gap-2 text-[11.5px] text-emerald-50">
+          <input
+            type="checkbox"
+            checked={useOnboarding}
+            onChange={(e) => onToggle(e.target.checked)}
+            className="h-3.5 w-3.5 rounded border-emerald-400/40 bg-transparent text-emerald-400 accent-emerald-400 focus:ring-emerald-400"
+          />
+          <span className="font-medium">Use data from onboarding form</span>
+        </label>
+      </div>
     </div>
   );
 }

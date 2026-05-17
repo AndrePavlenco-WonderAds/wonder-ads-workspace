@@ -13,6 +13,19 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: 69,
+    date: "2026-05-17",
+    title: "Keyword Research phase — conditional seed topic, onboarding-aware form, pillar-organised footer",
+    highlights: [
+      "**Seed Topic is now conditional.** When an onboarding form is uploaded for the client, the field becomes **optional** — Claude reads the form for focus signals (services, objectives, audience, competitors). When NO form is uploaded, the field stays **required** (system needs *something* to anchor on). The change is driven by a server-side onboarding lookup, so the form reflects reality the moment you hit the page.",
+      "**'Use data from onboarding form' tickbox** sits at the top of the Keyword Research form. Defaults to ON when a form is present. Untick to run a clean DataforSEO-only research (e.g. for a discovery comparison). When ON, the seed field switches to 'Additional focus (optional)' with new placeholder + help text explaining its softer role.",
+      "**Onboarding state is surfaced in-form**: emerald banner when present (with file name + competitor count if any), rose banner with a deep link to upload when missing.",
+      "**API: `useOnboarding` flag respected.** New synthetic input drives whether the run reads the onboarding form. When ON and no seed is provided, the run auto-derives one from the client name and lets Claude drive focus from the PDF.",
+      "**'More actions for X' footer redesigned.** Was a flat chip-soup that pushed all 23 actions into one wrapping row. Now a clean **5-column grid grouped by pillar** (Overall SEO · On-Page · Off-Page · Local · Content) with the pillar icon as header, a bullet dot per action that gradient-tints on hover, and a top-right 'All actions →' link back to the project page.",
+      "**Version phase:** v68.x was the SEO Audit polish phase (concluded at v68.9). v69 opens the Keyword Research polish phase — minor versions v69.1, v69.2… as the action evolves.",
+    ],
+  },
+  {
     version: "68.9",
     date: "2026-05-17",
     title: "Keyword Research goes full-stack — native PDF, competitor section, interactive dashboard, CSV + Target Keywords",
