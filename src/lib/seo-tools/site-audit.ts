@@ -348,7 +348,10 @@ export async function runSiteAudit(
 
 /** Phase 2 — PageSpeed Insights only (mobile + desktop). Split apart from
  *  DataforSEO because both can take 30-50s on heavy sites and combining
- *  them blew the 60s Vercel function budget for IHN. */
+ *  them blew the 60s Vercel function budget for IHN. Each PSI call gets a
+ *  50s AbortController cap — if Google's PSI is taking longer (sometimes
+ *  happens with heavy WordPress), we'd rather skip that one device than
+ *  lose the whole phase. */
 export async function runPsiPhase(
   inputUrl: string,
   emit: (event: ToolProgressEvent) => void,
@@ -356,9 +359,19 @@ export async function runPsiPhase(
   emit({ type: "start", tool: "psi-mobile", label: "PageSpeed — mobile" });
   emit({ type: "start", tool: "psi-desktop", label: "PageSpeed — desktop" });
 
+  function timeBoundedPsi(
+    strategy: "mobile" | "desktop",
+  ): Promise<PsiResult> {
+    const controller = new AbortController();
+    const t = setTimeout(() => controller.abort(), 50_000);
+    return runPageSpeed(inputUrl, strategy, {
+      signal: controller.signal,
+    }).finally(() => clearTimeout(t));
+  }
+
   const [psiMobileStep, psiDesktopStep] = await Promise.all([
-    timed<PsiResult>(() => runPageSpeed(inputUrl, "mobile")),
-    timed<PsiResult>(() => runPageSpeed(inputUrl, "desktop")),
+    timed<PsiResult>(() => timeBoundedPsi("mobile")),
+    timed<PsiResult>(() => timeBoundedPsi("desktop")),
   ]);
 
   emitStepDone(emit, "psi-mobile", "PageSpeed — mobile", psiMobileStep, (r) =>
