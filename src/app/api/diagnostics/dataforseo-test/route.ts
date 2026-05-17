@@ -121,12 +121,42 @@ export async function GET(req: Request) {
     ),
     hit(
       "/ai_optimization/llm_mentions/aggregated_metrics/live",
-      [{ target: [target] }],
+      [
+        {
+          language_code: "en",
+          location_code: 2840,
+          platform: "google",
+          target: [
+            {
+              domain: target,
+              search_filter: "include",
+              search_scope: ["any"],
+              include_subdomains: false,
+            },
+          ],
+          internal_list_limit: 10,
+        },
+      ],
       auth,
     ),
     hit(
       "/ai_optimization/llm_mentions/top_pages/live",
-      [{ target: [target], limit: 10 }],
+      [
+        {
+          language_code: "en",
+          location_code: 2840,
+          platform: "google",
+          target: [
+            {
+              domain: target,
+              search_filter: "include",
+              search_scope: ["any"],
+              include_subdomains: false,
+            },
+          ],
+          limit: 10,
+        },
+      ],
       auth,
     ),
   ]);
