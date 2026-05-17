@@ -13,9 +13,16 @@ import {
   Target,
 } from "lucide-react";
 import type { KwIdea, KwResearchPack } from "@/lib/seo-tools/keyword-research";
+import type { KwCluster, KwClusterRow } from "@/lib/kw-cluster-parser";
 import type { TargetKeyword } from "@/lib/target-keywords-store";
 
-type SourceTab = "all" | "suggestions" | "ideas" | "domain" | "competitors";
+type SourceTab =
+  | "all"
+  | "suggestions"
+  | "ideas"
+  | "domain"
+  | "competitors"
+  | "clusters";
 type IntentFilter =
   | "all"
   | "informational"
@@ -24,25 +31,38 @@ type IntentFilter =
   | "navigational";
 type SortKey = "volume" | "keyword" | "kd" | "cpc";
 type SortDir = "asc" | "desc";
-type GroupBy = "none" | "intent" | "source";
+type GroupBy = "none" | "intent" | "source" | "cluster";
 
 type EnrichedIdea = KwIdea & {
   /** Origin label used when source === "all". */
-  origin: "Suggestion" | "Idea" | "Already-ranking" | string;
+  origin: "Suggestion" | "Idea" | "Already-ranking" | "AI cluster" | string;
   /** Competitor domain if origin is a competitor. */
   competitorDomain?: string;
+  /** Cluster this row belongs to (when source === "clusters"). */
+  clusterName?: string;
+  /** Priority chip from Claude's cluster table. */
+  clusterPriority?: KwClusterRow["priority"];
+  clusterPriorityRaw?: string;
+  /** Page Claude suggested for this keyword. */
+  suggestedPage?: string;
+  /** Claude's one-line rationale. */
+  why?: string;
 };
 
 type SendStatus = "idle" | "sending" | "done" | "error";
 
 export function KeywordResearchDashboard({
   pack,
+  clusters = [],
   generating,
   clientSlug,
   resultId,
   initialTargetedKeywords = [],
 }: {
   pack: KwResearchPack | null;
+  /** Clusters parsed out of Claude's keyword-research analysis. Surfaced
+   *  as a first-class data source alongside the raw DataforSEO pack. */
+  clusters?: KwCluster[];
   generating: boolean;
   clientSlug: string;
   resultId: string;
@@ -66,7 +86,7 @@ export function KeywordResearchDashboard({
     () => new Set(initialTargetedKeywords.map((k) => k.toLowerCase())),
   );
 
-  const enriched = useMemo(() => enrichIdeas(pack), [pack]);
+  const enriched = useMemo(() => enrichIdeas(pack, clusters), [pack, clusters]);
   const filtered = useMemo(
     () => filterAndSort(enriched, { tab, intent, query, sortKey, sortDir }),
     [enriched, tab, intent, query, sortKey, sortDir],
@@ -77,7 +97,7 @@ export function KeywordResearchDashboard({
     return { count: filtered.length, totalVolume };
   }, [filtered]);
 
-  if (!pack) {
+  if (!pack && clusters.length === 0) {
     return (
       <article className="brand-gradient-border rounded-2xl bg-white/[0.035] p-5 backdrop-blur-md">
         <header className="flex items-center gap-2">
@@ -103,9 +123,11 @@ export function KeywordResearchDashboard({
         <h2 className="text-sm font-semibold tracking-tight text-white">
           Keyword Universe
         </h2>
-        <span className="text-[11px] text-white/45">
-          {pack.geo.countryLabel} · {pack.geo.languageCode}
-        </span>
+        {pack && (
+          <span className="text-[11px] text-white/45">
+            {pack.geo.countryLabel} · {pack.geo.languageCode}
+          </span>
+        )}
         <span className="ml-2 inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.04] px-2.5 py-0.5 text-[11px] text-white/65">
           {totals.count.toLocaleString()} keywords ·{" "}
           {fmtNum(totals.totalVolume)} vol/mo
@@ -238,12 +260,22 @@ export function KeywordResearchDashboard({
         {(
           [
             { k: "all", label: `All (${enriched.length})` },
-            { k: "suggestions", label: `Suggestions (${pack.suggestions.length})` },
-            { k: "ideas", label: `Ideas (${pack.ideas.length})` },
-            { k: "domain", label: `Already-ranking (${pack.domainExisting.length})` },
+            {
+              k: "clusters",
+              label: `AI Clusters (${clusters.reduce((s, c) => s + c.rows.length, 0)})`,
+            },
+            {
+              k: "suggestions",
+              label: `Suggestions (${pack?.suggestions.length ?? 0})`,
+            },
+            { k: "ideas", label: `Ideas (${pack?.ideas.length ?? 0})` },
+            {
+              k: "domain",
+              label: `Already-ranking (${pack?.domainExisting.length ?? 0})`,
+            },
             {
               k: "competitors",
-              label: `Competitors (${pack.competitors.reduce((s, c) => s + c.keywords.length, 0)})`,
+              label: `Competitors (${pack?.competitors.reduce((s, c) => s + c.keywords.length, 0) ?? 0})`,
             },
           ] as { k: SourceTab; label: string }[]
         ).map(({ k, label }) => (
@@ -297,6 +329,7 @@ export function KeywordResearchDashboard({
             className="rounded-md border border-white/10 bg-white/[0.03] px-2 py-1 text-xs text-white outline-none focus:border-white/30"
           >
             <option value="none">None</option>
+            <option value="cluster">Cluster</option>
             <option value="intent">Intent</option>
             <option value="source">Source</option>
           </select>
@@ -420,8 +453,10 @@ export function KeywordResearchDashboard({
       <footer className="flex items-center justify-between border-t border-white/8 px-5 py-3 text-[11px] text-white/45">
         <span>
           Showing {totals.count.toLocaleString()} of {enriched.length.toLocaleString()} keywords ·
-          DataforSEO Labs ·{" "}
-          {new Date(pack.fetchedAt).toLocaleDateString("en-GB")}
+          DataforSEO Labs + AI Clusters
+          {pack
+            ? ` · ${new Date(pack.fetchedAt).toLocaleDateString("en-GB")}`
+            : ""}
         </span>
         <span>
           {selected.size > 0
@@ -433,22 +468,67 @@ export function KeywordResearchDashboard({
   );
 }
 
-function enrichIdeas(pack: KwResearchPack | null): EnrichedIdea[] {
-  if (!pack) return [];
+function enrichIdeas(
+  pack: KwResearchPack | null,
+  clusters: KwCluster[],
+): EnrichedIdea[] {
   const out: EnrichedIdea[] = [];
   const seen = new Set<string>(); // key by lowercase keyword + origin to allow same kw across origins
-  function add(k: KwIdea, origin: EnrichedIdea["origin"], competitorDomain?: string) {
-    const id = `${k.keyword.toLowerCase()}::${origin}::${competitorDomain ?? ""}`;
+  function add(
+    k: KwIdea,
+    origin: EnrichedIdea["origin"],
+    extras: Partial<EnrichedIdea> = {},
+  ) {
+    const id = `${k.keyword.toLowerCase()}::${origin}::${extras.competitorDomain ?? extras.clusterName ?? ""}`;
     if (seen.has(id)) return;
     seen.add(id);
-    out.push({ ...k, origin, competitorDomain });
+    out.push({ ...k, origin, ...extras });
   }
-  pack.suggestions.forEach((k) => add(k, "Suggestion"));
-  pack.ideas.forEach((k) => add(k, "Idea"));
-  pack.domainExisting.forEach((k) => add(k, "Already-ranking"));
-  pack.competitors.forEach((c) =>
-    c.keywords.forEach((k) => add(k, c.domain, c.domain)),
-  );
+  if (pack) {
+    pack.suggestions.forEach((k) => add(k, "Suggestion"));
+    pack.ideas.forEach((k) => add(k, "Idea"));
+    pack.domainExisting.forEach((k) => add(k, "Already-ranking"));
+    pack.competitors.forEach((c) =>
+      c.keywords.forEach((k) => add(k, c.domain, { competitorDomain: c.domain })),
+    );
+  }
+  // AI-cluster rows — Claude's analysed keywords (often a superset of the
+  // raw DataforSEO data because Claude infers from the onboarding form +
+  // geo). These typically have null vol/KD when DataforSEO didn't surface
+  // them, but carry rich intent/priority/page/why context.
+  for (const cluster of clusters) {
+    for (const row of cluster.rows) {
+      const intentLower = (row.intent ?? "").toLowerCase();
+      const validIntent =
+        intentLower === "informational" ||
+        intentLower === "commercial" ||
+        intentLower === "transactional" ||
+        intentLower === "navigational"
+          ? (intentLower as KwIdea["intent"])
+          : null;
+      add(
+        {
+          keyword: row.keyword,
+          searchVolume: row.volume,
+          cpc: null,
+          competition: null,
+          competitionLevel: null,
+          difficulty: row.difficulty,
+          intent: validIntent,
+          monthlyTrend: null,
+          source: "ideas",
+        },
+        "AI cluster",
+        {
+          clusterName: cluster.name,
+          clusterPriority: row.priority,
+          clusterPriorityRaw: row.priorityRaw,
+          suggestedPage: row.suggestedPage,
+          why: row.why,
+        },
+      );
+    }
+  }
   return out;
 }
 
@@ -471,6 +551,8 @@ function filterAndSort(
     out = out.filter((k) => k.origin === "Already-ranking");
   } else if (opts.tab === "competitors") {
     out = out.filter((k) => !!k.competitorDomain);
+  } else if (opts.tab === "clusters") {
+    out = out.filter((k) => k.origin === "AI cluster");
   }
   if (opts.intent !== "all") {
     out = out.filter((k) => k.intent === opts.intent);
@@ -639,10 +721,14 @@ function renderGroupedRows(
   const order: string[] = [];
   const buckets = new Map<string, EnrichedIdea[]>();
   for (const k of filtered) {
-    const bucketKey =
-      groupBy === "intent"
-        ? (k.intent ?? "other")
-        : k.competitorDomain ?? k.origin;
+    let bucketKey: string;
+    if (groupBy === "intent") {
+      bucketKey = k.intent ?? "other";
+    } else if (groupBy === "cluster") {
+      bucketKey = k.clusterName ?? "(not in a cluster)";
+    } else {
+      bucketKey = k.competitorDomain ?? k.origin;
+    }
     if (!buckets.has(bucketKey)) {
       buckets.set(bucketKey, []);
       order.push(bucketKey);

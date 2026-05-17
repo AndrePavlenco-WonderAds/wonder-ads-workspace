@@ -2,6 +2,7 @@ import { kv } from "@vercel/kv";
 import type { DomainMetrics } from "./seo-tools/dataforseo";
 import type { SiteVitals } from "./audit-prep-store";
 import type { KwResearchPack } from "./seo-tools/keyword-research";
+import type { KwCluster } from "./kw-cluster-parser";
 
 const KEY_PREFIX = "action-history:";
 const MAX_ENTRIES = 30;
@@ -29,6 +30,11 @@ export type HistoryEntry = {
    *  competitor results. Populated for Keyword Research runs. Powers the
    *  interactive KeywordResearchDashboard component. */
   kwResearch?: KwResearchPack;
+  /** Clusters parsed out of Claude's keyword-research analysis. Each
+   *  cluster has its keyword rows with intent, priority, suggested page,
+   *  why. Surfaced in the dashboard as a first-class data source
+   *  alongside the raw DataforSEO data. */
+  kwClusters?: KwCluster[];
 };
 
 function key(clientSlug: string, actionSlug: string): string {

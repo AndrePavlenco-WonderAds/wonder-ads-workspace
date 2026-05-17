@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "69.7",
+    date: "2026-05-17",
+    title: "Claude clusters in the dashboard table + auto-continuation when Claude is cut off",
+    highlights: [
+      "**🎯 Claude's clusters now feed the dashboard table.** New `kw-cluster-parser.ts` parses the `## Cluster map` section out of Claude's markdown — every cluster's keyword rows (with intent, priority, suggested page, why) become first-class rows in the dashboard alongside the raw DataforSEO data. So when Claude analyses 45 keywords across 6 clusters, all 45 show up in the table — not just the 7 from DataforSEO.",
+      "**New 'AI Clusters' tab** in the dashboard showing only the cluster keywords, with their counts in the tab label. Also a new **'Group by: Cluster'** option that splits any tab into cluster-named buckets with select-all per cluster.",
+      "**Persisted on the HistoryEntry** as `kwClusters: KwCluster[]` — reopening the result page hydrates clusters from KV alongside the raw pack, no re-parse needed.",
+      "**🔄 Auto-continuation when Claude is cut off.** Detects when the mandatory 'Verificação final' Portuguese checklist is missing from the stream output (signals Claude hit the 60s ceiling). Automatically fires a new `/continue-kw-research` call with the last 2000 chars of the partial output asking Claude to resume from exactly where it stopped. Up to 2 continuation attempts per run, so a complex report can total ~180s of Claude work split across 3 function calls.",
+      "**New `/api/seo-actions/[slug]/keyword-research/continue-kw-research` endpoint** — same fact pack, same system prompt, same PDF attachment as `/run-kw-research`, but the user message contains the partial + instructions to continue.",
+    ],
+  },
+  {
     version: "69.6",
     date: "2026-05-17",
     title: "Sticky header + verbose DataforSEO diagnostics + dual-endpoint pulls + smoke test",

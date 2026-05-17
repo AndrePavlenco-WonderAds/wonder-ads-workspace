@@ -15,6 +15,7 @@ import {
   loadKwResearchPrep,
   clearKwResearchPrep,
 } from "@/lib/kw-research-prep-store";
+import { parseClustersFromMarkdown } from "@/lib/kw-cluster-parser";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -74,6 +75,11 @@ export async function POST(
     if (pack) kwResearch = pack;
   }
 
+  // Parse Claude's cluster tables out of the markdown so the dashboard
+  // can render them as first-class rows.
+  const kwClusters =
+    actionSlug === "keyword-research" ? parseClustersFromMarkdown(output) : [];
+
   try {
     const saved = await appendHistory({
       id: resultId,
@@ -85,6 +91,7 @@ export async function POST(
       ...(metrics ? { metrics } : {}),
       ...(vitals ? { vitals } : {}),
       ...(kwResearch ? { kwResearch } : {}),
+      ...(kwClusters.length > 0 ? { kwClusters } : {}),
     });
     if (actionSlug === "seo-audit") {
       await clearAuditPrep(clientSlug, actionSlug, resultId);
@@ -96,6 +103,7 @@ export async function POST(
       id: saved.id,
       metrics: saved.metrics ?? null,
       kwResearch: saved.kwResearch ?? null,
+      kwClusters: saved.kwClusters ?? null,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

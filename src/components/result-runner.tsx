@@ -8,6 +8,7 @@ import type { HistoryEntry } from "@/lib/action-history";
 import type { DomainMetrics } from "@/lib/seo-tools/dataforseo";
 import type { SiteVitals } from "@/lib/audit-prep-store";
 import type { KwResearchPack } from "@/lib/seo-tools/keyword-research";
+import type { KwCluster } from "@/lib/kw-cluster-parser";
 import { pendingKey } from "./action-runner";
 import { MarkdownView } from "./markdown-view";
 import { DomainDashboard } from "./domain-dashboard";
@@ -55,6 +56,9 @@ export function ResultRunner({
   );
   const [liveKwPack, setLiveKwPack] = useState<KwResearchPack | null>(
     existing?.kwResearch ?? null,
+  );
+  const [liveKwClusters, setLiveKwClusters] = useState<KwCluster[]>(
+    existing?.kwClusters ?? [],
   );
   const abortRef = useRef<AbortController | null>(null);
   const generationStartedRef = useRef(false);
@@ -204,7 +208,37 @@ export function ResultRunner({
           // PDFs + 5 competitor pulls + Claude's long structured output.
           const afterPrepKw = await callPhase("/prep-kw-research", "");
           if (controller.signal.aborted) throw new DOMException("Aborted", "AbortError");
-          finalAcc = await callPhase("/run-kw-research", afterPrepKw);
+          let runAcc = await callPhase("/run-kw-research", afterPrepKw);
+
+          // Auto-continuation: if Claude was cut off by Vercel's 60s
+          // ceiling, the mandatory "Verificação final" section will be
+          // missing. Fire a continuation call (up to 2 retries) with the
+          // partial output so Claude can finish.
+          let attempts = 0;
+          while (
+            !controller.signal.aborted &&
+            attempts < 2 &&
+            !/Verifica[çc][ãa]o\s+final/i.test(runAcc)
+          ) {
+            attempts++;
+            const partial =
+              runAcc.indexOf(SEPARATOR) >= 0
+                ? runAcc.slice(runAcc.indexOf(SEPARATOR) + SEPARATOR.length)
+                : runAcc;
+            const continueRes = await fetch(`${apiBase}/continue-kw-research`, {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({
+                resultId,
+                partial,
+                inputs: formInputs,
+              }),
+              signal: controller.signal,
+            });
+            if (!continueRes.ok) break;
+            runAcc = await consumeStream(continueRes, runAcc);
+          }
+          finalAcc = runAcc;
         } else {
           // Single call for actions that comfortably fit under 60s.
           finalAcc = await callPhase("", "");
@@ -233,9 +267,11 @@ export function ResultRunner({
                 const saveJson = (await saveRes.json()) as {
                   metrics?: DomainMetrics | null;
                   kwResearch?: KwResearchPack | null;
+                  kwClusters?: KwCluster[] | null;
                 };
                 if (saveJson?.metrics) setLiveMetrics(saveJson.metrics);
                 if (saveJson?.kwResearch) setLiveKwPack(saveJson.kwResearch);
+                if (saveJson?.kwClusters?.length) setLiveKwClusters(saveJson.kwClusters);
               } catch {
                 /* response body may not be JSON in edge cases */
               }
@@ -409,6 +445,7 @@ export function ResultRunner({
       {action.slug === "keyword-research" && (
         <KeywordResearchDashboard
           pack={liveKwPack}
+          clusters={liveKwClusters}
           generating={status === "generating"}
           clientSlug={clientSlug}
           resultId={resultId}
