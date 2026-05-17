@@ -121,12 +121,12 @@ export async function GET(req: Request) {
     ),
     hit(
       "/ai_optimization/llm_mentions/aggregated_metrics/live",
-      [{ target }],
+      [{ target: [target] }],
       auth,
     ),
     hit(
       "/ai_optimization/llm_mentions/top_pages/live",
-      [{ target, limit: 10 }],
+      [{ target: [target], limit: 10 }],
       auth,
     ),
   ]);
