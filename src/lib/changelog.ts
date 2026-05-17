@@ -13,6 +13,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "68.3",
+    date: "2026-05-17",
+    title: "Quick Actions order persists across all deployments",
+    highlights: [
+      "Quick Actions store moved from localStorage to Vercel KV. Root cause of the persistent 'my order keeps reverting' bug: Vercel preview deployments each get a unique origin (wonder-ads-workspace-<hash>-...vercel.app), so localStorage was being orphaned on every push. KV makes the order persistent across deployments, devices, and team members — one shared list for the SEO Department.",
+      "New /api/quick-actions endpoint (GET + POST). The panel still feels instant — localStorage is kept as an optimistic cache for first paint while the API call settles in the background.",
+    ],
+  },
+  {
     version: "68.2",
     date: "2026-05-17",
     title: "Print mode bypasses the app — actually renders the PDF now",

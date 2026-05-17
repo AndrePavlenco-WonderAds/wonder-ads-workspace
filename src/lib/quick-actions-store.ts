@@ -3,7 +3,16 @@
 import { useEffect, useState } from "react";
 import { ALL_ACTIONS } from "./seo-pillars";
 
-const KEY = "wa:quick-actions:v2";
+// Backing store moved from localStorage to Vercel KV (v68.3). Reason:
+// Vercel preview deployments each have a unique URL/origin, so localStorage
+// was getting orphaned on every push and the user kept seeing the default
+// order. KV makes the selection persistent across deployments, devices, and
+// team members. localStorage stays as an optimistic cache so the panel
+// renders instantly on first paint instead of flashing through the default
+// while the API call settles.
+
+const LOCAL_CACHE_KEY = "wa:quick-actions:v3";
+const API_PATH = "/api/quick-actions";
 
 const DEFAULT_SLUGS: readonly string[] = [
   "write-blog-article",
@@ -30,38 +39,78 @@ function sanitize(slugs: unknown): string[] {
   return out;
 }
 
-/** Read straight from localStorage. Returns DEFAULT_SLUGS when no record
- *  exists, an empty array when the saved record is intentionally empty. */
-function readFromStorage(): string[] {
-  if (typeof window === "undefined") return [...DEFAULT_SLUGS];
+// ---- Optimistic localStorage cache ----
+
+function cacheRead(): string[] | null {
+  if (typeof window === "undefined") return null;
   try {
-    const raw = window.localStorage.getItem(KEY);
-    if (raw === null) return [...DEFAULT_SLUGS];
+    const raw = window.localStorage.getItem(LOCAL_CACHE_KEY);
+    if (!raw) return null;
     return sanitize(JSON.parse(raw));
+  } catch {
+    return null;
+  }
+}
+
+function cacheWrite(slugs: string[]): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(LOCAL_CACHE_KEY, JSON.stringify(slugs));
+  } catch {
+    /* private mode etc. — not fatal, KV is the real source of truth */
+  }
+}
+
+// ---- In-memory mirror + listener pool ----
+
+let memoryCache: string[] | null = null;
+const listeners = new Set<(value: string[]) => void>();
+
+function notify(slugs: string[]): void {
+  memoryCache = slugs;
+  for (const cb of listeners) cb(slugs);
+}
+
+async function apiSave(slugs: string[]): Promise<void> {
+  try {
+    const res = await fetch(API_PATH, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ slugs }),
+    });
+    if (!res.ok) {
+      const txt = await res.text().catch(() => "");
+      throw new Error(`HTTP ${res.status}${txt ? `: ${txt.slice(0, 200)}` : ""}`);
+    }
   } catch (err) {
-    console.error("[quick-actions] read failed:", err);
+    console.error("[quick-actions] save failed:", err);
+  }
+}
+
+async function apiLoad(): Promise<string[]> {
+  try {
+    const res = await fetch(API_PATH, { cache: "no-store" });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = (await res.json()) as { slugs?: unknown };
+    return sanitize(data.slugs);
+  } catch (err) {
+    console.error("[quick-actions] load failed:", err);
     return [...DEFAULT_SLUGS];
   }
 }
 
-const listeners = new Set<(value: string[]) => void>();
+// ---- Public mutators ----
 
-export function setQuickActions(slugs: string[]) {
+export function setQuickActions(slugs: string[]): void {
   const next = sanitize(slugs);
-  if (typeof window !== "undefined") {
-    try {
-      window.localStorage.setItem(KEY, JSON.stringify(next));
-    } catch (err) {
-      // Surface storage failures (private mode / quota / disabled) so the
-      // user sees a console hint instead of silent reverts.
-      console.error("[quick-actions] localStorage save failed:", err);
-    }
-  }
-  for (const cb of listeners) cb(next);
+  cacheWrite(next);
+  notify(next);
+  // Fire-and-forget POST to KV
+  void apiSave(next);
 }
 
-export function toggleQuickAction(slug: string) {
-  const current = readFromStorage();
+export function toggleQuickAction(slug: string): void {
+  const current = memoryCache ?? cacheRead() ?? [...DEFAULT_SLUGS];
   if (current.includes(slug)) {
     setQuickActions(current.filter((s) => s !== slug));
   } else {
@@ -69,8 +118,8 @@ export function toggleQuickAction(slug: string) {
   }
 }
 
-export function moveQuickAction(slug: string, direction: -1 | 1) {
-  const current = readFromStorage();
+export function moveQuickAction(slug: string, direction: -1 | 1): void {
+  const current = memoryCache ?? cacheRead() ?? [...DEFAULT_SLUGS];
   const idx = current.indexOf(slug);
   if (idx === -1) return;
   const target = idx + direction;
@@ -80,29 +129,31 @@ export function moveQuickAction(slug: string, direction: -1 | 1) {
   setQuickActions(next);
 }
 
+// ---- Hook ----
+
 export function useQuickActions(): string[] {
-  // useState initializer reads on mount. SSR returns DEFAULTs, client first
-  // render re-reads from localStorage via the useEffect below to pick up the
-  // saved order even if hydration started with DEFAULTs.
-  const [value, setValue] = useState<string[]>(() => readFromStorage());
+  // First paint: read from localStorage cache (instant) so the panel doesn't
+  // flash through DEFAULT_SLUGS while the API call resolves.
+  const [value, setValue] = useState<string[]>(() => {
+    if (memoryCache) return memoryCache;
+    return cacheRead() ?? [...DEFAULT_SLUGS];
+  });
 
   useEffect(() => {
-    // After hydration, force-sync from storage. Handles the case where SSR
-    // rendered DEFAULTs but the client has a different saved order.
-    const fresh = readFromStorage();
-    setValue(fresh);
+    let cancelled = false;
+    // After mount, fetch the authoritative version from KV.
+    apiLoad().then((slugs) => {
+      if (cancelled) return;
+      memoryCache = slugs;
+      cacheWrite(slugs);
+      setValue(slugs);
+    });
 
     const cb = (next: string[]) => setValue(next);
     listeners.add(cb);
-
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === KEY) setValue(readFromStorage());
-    };
-    window.addEventListener("storage", onStorage);
-
     return () => {
+      cancelled = true;
       listeners.delete(cb);
-      window.removeEventListener("storage", onStorage);
     };
   }, []);
 
