@@ -11,6 +11,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: 63,
+    date: "2026-05-17",
+    title: "DataforSEO billing-error banner",
+    highlights: [
+      "When DataforSEO returns 40200 'Payment Required' on every call, the dashboard now shows a clear rose-coloured banner with the exact link to add credits at app.dataforseo.com/billing.",
+    ],
+  },
+  {
     version: 62,
     date: "2026-05-17",
     title: "Per-client geo, sortable keywords, dashboard polish",

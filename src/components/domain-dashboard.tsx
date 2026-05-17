@@ -116,6 +116,9 @@ export function DomainDashboard({
   const backlinksErr = metrics.errors.find((e) =>
     e.source.includes("backlinks"),
   );
+  const paymentRequired = metrics.errors.some((e) =>
+    /payment required|40200/i.test(e.message),
+  );
 
   return (
     <section className="space-y-4">
@@ -234,7 +237,26 @@ export function DomainDashboard({
         />
       </div>
 
-      {backlinksErr && (
+      {paymentRequired ? (
+        <div className="flex items-start gap-2 rounded-xl border border-rose-400/40 bg-rose-500/[0.08] px-3 py-2.5 text-[12px] text-rose-100">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-rose-300" />
+          <div>
+            <strong>DataforSEO is returning &quot;Payment Required&quot;</strong>{" "}
+            on every call — your trial credits are exhausted or there&apos;s no
+            payment method on file. Add credits at{" "}
+            <a
+              href="https://app.dataforseo.com/billing"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold underline underline-offset-2 hover:text-rose-50"
+            >
+              app.dataforseo.com/billing
+            </a>{" "}
+            and re-generate this result. (Each audit costs roughly $0.02–$0.05
+            in DataforSEO usage — pay-as-you-go.)
+          </div>
+        </div>
+      ) : backlinksErr ? (
         <div className="flex items-start gap-2 rounded-xl border border-amber-400/30 bg-amber-400/[0.06] px-3 py-2 text-[11px] text-amber-200">
           <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
           <div>
@@ -250,7 +272,7 @@ export function DomainDashboard({
             .
           </div>
         </div>
-      )}
+      ) : null}
 
       {metrics.llmMentions && (
         <AiVisibilityPanel mentions={metrics.llmMentions} />
