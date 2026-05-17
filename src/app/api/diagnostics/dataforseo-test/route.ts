@@ -93,7 +93,13 @@ export async function GET(req: Request) {
     `${process.env.DATAFORSEO_LOGIN}:${process.env.DATAFORSEO_PASSWORD}`,
   ).toString("base64");
 
-  const [rankOverview, backlinksSummary, rankedKeywords] = await Promise.all([
+  const [
+    rankOverview,
+    backlinksSummary,
+    rankedKeywords,
+    llmAggregated,
+    llmTopPages,
+  ] = await Promise.all([
     hit(
       "/dataforseo_labs/google/domain_rank_overview/live",
       [{ target, location_code: 2620, language_code: "pt" }],
@@ -113,10 +119,27 @@ export async function GET(req: Request) {
       ],
       auth,
     ),
+    hit(
+      "/ai_optimization/llm_mentions/aggregated_metrics/live",
+      [{ target }],
+      auth,
+    ),
+    hit(
+      "/ai_optimization/llm_mentions/top_pages/live",
+      [{ target, limit: 10 }],
+      auth,
+    ),
   ]);
 
   return NextResponse.json(
-    { target, rankOverview, backlinksSummary, rankedKeywords },
+    {
+      target,
+      rankOverview,
+      backlinksSummary,
+      rankedKeywords,
+      llmAggregated,
+      llmTopPages,
+    },
     { status: 200 },
   );
 }
