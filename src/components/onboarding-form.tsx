@@ -10,6 +10,7 @@ import {
   Trash2,
   RotateCw,
   Sparkles,
+  RefreshCw,
 } from "lucide-react";
 import { upload } from "@vercel/blob/client";
 import type { OnboardingDoc } from "@/lib/onboarding-store";
@@ -99,6 +100,28 @@ export function OnboardingForm({
     }
   }
 
+  async function reExtract() {
+    setBusy(true);
+    setError(null);
+    setProgress("Re-running text extraction…");
+    try {
+      const res = await fetch(`/api/onboarding/${slug}/re-extract`, {
+        method: "POST",
+      });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error(j.error ?? `Re-extract failed (${res.status})`);
+      }
+      const fresh = (await res.json()) as OnboardingDoc;
+      setDoc(fresh);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Re-extract failed");
+    } finally {
+      setBusy(false);
+      setProgress(null);
+    }
+  }
+
   async function removeDoc() {
     if (!doc) return;
     if (
@@ -166,6 +189,16 @@ export function OnboardingForm({
         <div className="ml-auto flex items-center gap-2">
           {doc && (
             <>
+              <button
+                type="button"
+                onClick={reExtract}
+                disabled={busy || uploading}
+                title="Re-run text extraction on the existing file. Use this after the extractor or prompt has been improved — pulls fresh competitor URLs + suggested seed without re-uploading."
+                className="inline-flex items-center gap-1.5 rounded-full border border-white/15 px-3 py-1.5 text-xs font-medium text-white/65 transition hover:border-[#783DF5]/45 hover:bg-[#783DF5]/10 hover:text-white disabled:opacity-50"
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+                Re-extract
+              </button>
               <button
                 type="button"
                 onClick={removeDoc}

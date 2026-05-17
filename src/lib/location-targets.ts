@@ -385,6 +385,19 @@ export const LOCATION_TARGETS: LocationTarget[] = [
   }),
 ];
 
+/** Given a city/region target, find its parent country entry — used as a
+ *  graceful fallback when DataforSEO doesn't return data for the city
+ *  code (either the code is wrong or the city is too small for Google
+ *  Keyword Planner data). */
+export function getCountryFallback(target: LocationTarget): LocationTarget | null {
+  if (target.scope === "country") return null;
+  return (
+    LOCATION_TARGETS.find(
+      (t) => t.scope === "country" && t.country === target.country,
+    ) ?? null
+  );
+}
+
 /** Resolve a free-text or label string to a LocationTarget. Returns null
  *  when no match is confident enough — caller falls back to the client's
  *  default geo (from client-geo.ts). */

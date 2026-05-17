@@ -40,11 +40,18 @@ export function KeywordResearchDashboard({
   generating,
   clientSlug,
   resultId,
+  initialTargetedKeywords = [],
 }: {
   pack: KwResearchPack | null;
   generating: boolean;
   clientSlug: string;
   resultId: string;
+  /** Lowercased keywords already in the client's Target Keywords list.
+   *  Rows whose `keyword.toLowerCase()` is in this set render with a 🎯
+   *  chip + a disabled checkbox so consultants don't re-send keywords
+   *  that are already on the tracking list. Grows locally when a send
+   *  succeeds (no need to refetch). */
+  initialTargetedKeywords?: string[];
 }) {
   const [tab, setTab] = useState<SourceTab>("all");
   const [intent, setIntent] = useState<IntentFilter>("all");
@@ -55,6 +62,9 @@ export function KeywordResearchDashboard({
   const [sendStatus, setSendStatus] = useState<SendStatus>("idle");
   const [sendMessage, setSendMessage] = useState<string | null>(null);
   const [groupBy, setGroupBy] = useState<GroupBy>("none");
+  const [targetedSet, setTargetedSet] = useState<Set<string>>(
+    () => new Set(initialTargetedKeywords.map((k) => k.toLowerCase())),
+  );
 
   const enriched = useMemo(() => enrichIdeas(pack), [pack]);
   const filtered = useMemo(
@@ -100,6 +110,14 @@ export function KeywordResearchDashboard({
           {totals.count.toLocaleString()} keywords ·{" "}
           {fmtNum(totals.totalVolume)} vol/mo
         </span>
+        {targetedSet.size > 0 && (
+          <span
+            className="inline-flex items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-200"
+            title="Keywords already on this client's Target Keywords list — disabled in the table so you can't re-send them."
+          >
+            🎯 {targetedSet.size} already targeted
+          </span>
+        )}
         <div className="ml-auto flex items-center gap-2">
           <button
             type="button"
@@ -137,6 +155,20 @@ export function KeywordResearchDashboard({
                     ? `Added ${j.added}; ${j.skipped} already on the list`
                     : `Added ${j.added} target keyword${j.added === 1 ? "" : "s"}`,
                 );
+                // Optimistically grow the targeted set so the rows we just
+                // sent immediately render with the 🎯 chip + disabled
+                // checkbox. No refetch needed.
+                setTargetedSet((prev) => {
+                  const next = new Set(prev);
+                  picked.forEach((k) => next.add(k.keyword.toLowerCase()));
+                  return next;
+                });
+                // Clear selection of the rows we just shipped.
+                setSelected((prev) => {
+                  const next = new Set(prev);
+                  picked.forEach((k) => next.delete(rowKey(k)));
+                  return next;
+                });
                 setTimeout(() => setSendStatus("idle"), 4000);
               } catch (err) {
                 setSendStatus("error");
@@ -292,15 +324,22 @@ export function KeywordResearchDashboard({
                   type="checkbox"
                   checked={
                     filtered.length > 0 &&
-                    filtered.every((k) => selected.has(rowKey(k)))
+                    filtered
+                      .filter(
+                        (k) => !targetedSet.has(k.keyword.toLowerCase()),
+                      )
+                      .every((k) => selected.has(rowKey(k)))
                   }
                   onChange={(e) => {
                     setSelected((prev) => {
                       const next = new Set(prev);
+                      const selectable = filtered.filter(
+                        (k) => !targetedSet.has(k.keyword.toLowerCase()),
+                      );
                       if (e.target.checked) {
-                        filtered.forEach((k) => next.add(rowKey(k)));
+                        selectable.forEach((k) => next.add(rowKey(k)));
                       } else {
-                        filtered.forEach((k) => next.delete(rowKey(k)));
+                        selectable.forEach((k) => next.delete(rowKey(k)));
                       }
                       return next;
                     });
@@ -366,7 +405,13 @@ export function KeywordResearchDashboard({
                 </td>
               </tr>
             ) : (
-              renderGroupedRows(filtered, groupBy, selected, setSelected)
+              renderGroupedRows(
+                filtered,
+                groupBy,
+                selected,
+                setSelected,
+                targetedSet,
+              )
             )}
           </tbody>
         </table>
@@ -576,6 +621,7 @@ function renderGroupedRows(
   groupBy: GroupBy,
   selected: Set<string>,
   setSelected: React.Dispatch<React.SetStateAction<Set<string>>>,
+  targetedSet: Set<string>,
 ): React.ReactNode {
   if (groupBy === "none") {
     return filtered.map((k) => (
@@ -583,6 +629,7 @@ function renderGroupedRows(
         key={rowKey(k)}
         kw={k}
         checked={selected.has(rowKey(k))}
+        targeted={targetedSet.has(k.keyword.toLowerCase())}
         onToggle={() => toggleSelected(setSelected, rowKey(k))}
       />
     ));
@@ -604,8 +651,13 @@ function renderGroupedRows(
   }
   return order.flatMap((label) => {
     const rows = buckets.get(label)!;
-    const groupKeys = rows.map((r) => rowKey(r));
-    const allChecked = groupKeys.every((id) => selected.has(id));
+    const selectableInGroup = rows.filter(
+      (r) => !targetedSet.has(r.keyword.toLowerCase()),
+    );
+    const groupKeys = selectableInGroup.map((r) => rowKey(r));
+    const allChecked =
+      groupKeys.length > 0 && groupKeys.every((id) => selected.has(id));
+    const targetedInGroup = rows.length - selectableInGroup.length;
     return [
       <tr
         key={`__group-${label}`}
@@ -615,6 +667,7 @@ function renderGroupedRows(
           <input
             type="checkbox"
             checked={allChecked}
+            disabled={groupKeys.length === 0}
             onChange={(e) => {
               setSelected((prev) => {
                 const next = new Set(prev);
@@ -623,7 +676,7 @@ function renderGroupedRows(
                 return next;
               });
             }}
-            className="accent-[#783DF5]"
+            className="accent-[#783DF5] disabled:opacity-30"
           />
         </td>
         <td
@@ -631,6 +684,11 @@ function renderGroupedRows(
           className="px-3 py-2 text-[10.5px] font-semibold uppercase tracking-[0.12em]"
         >
           {label} <span className="text-white/40">({rows.length})</span>
+          {targetedInGroup > 0 && (
+            <span className="ml-2 inline-flex items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-500/10 px-2 py-0.5 text-[9px] font-medium normal-case tracking-normal text-emerald-200">
+              {targetedInGroup} 🎯 already targeted
+            </span>
+          )}
         </td>
       </tr>,
       ...rows.map((k) => (
@@ -638,6 +696,7 @@ function renderGroupedRows(
           key={rowKey(k)}
           kw={k}
           checked={selected.has(rowKey(k))}
+          targeted={targetedSet.has(k.keyword.toLowerCase())}
           onToggle={() => toggleSelected(setSelected, rowKey(k))}
         />
       )),
@@ -660,23 +719,49 @@ function toggleSelected(
 function KwRow({
   kw,
   checked,
+  targeted,
   onToggle,
 }: {
   kw: EnrichedIdea;
   checked: boolean;
+  targeted: boolean;
   onToggle: () => void;
 }) {
   return (
-    <tr className="border-b border-white/5 transition hover:bg-white/[0.025]">
+    <tr
+      className={
+        targeted
+          ? "border-b border-white/5 bg-emerald-500/[0.04] transition"
+          : "border-b border-white/5 transition hover:bg-white/[0.025]"
+      }
+    >
       <td className="px-3 py-2">
         <input
           type="checkbox"
-          checked={checked}
+          checked={checked && !targeted}
+          disabled={targeted}
           onChange={onToggle}
-          className="accent-[#783DF5]"
+          className="accent-[#783DF5] disabled:cursor-not-allowed disabled:opacity-30"
+          title={
+            targeted
+              ? "Already in this client's Target Keywords list"
+              : undefined
+          }
         />
       </td>
-      <td className="px-3 py-2 text-white">{kw.keyword}</td>
+      <td className="px-3 py-2 text-white">
+        <span className="inline-flex items-center gap-1.5">
+          {kw.keyword}
+          {targeted && (
+            <span
+              className="inline-flex items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-500/15 px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-[0.1em] text-emerald-200"
+              title="Already in this client's Target Keywords list"
+            >
+              🎯 targeted
+            </span>
+          )}
+        </span>
+      </td>
       <td className="px-3 py-2 text-right text-white/80">
         {fmtNum(kw.searchVolume)}
       </td>

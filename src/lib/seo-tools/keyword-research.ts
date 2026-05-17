@@ -11,7 +11,7 @@
 // the SEO Audit.
 
 import { getClientGeo } from "../client-geo";
-import type { LocationTarget } from "../location-targets";
+import { getCountryFallback, type LocationTarget } from "../location-targets";
 
 const API_BASE = "https://api.dataforseo.com/v3";
 
@@ -54,6 +54,15 @@ export type KwResearchPack = {
    *  the seed theme. Empty when no competitors are provided. */
   competitors: CompetitorKeywords[];
   errors: { source: string; message: string }[];
+  /** When the original (city) target returned no data and we retried with
+   *  the parent country, this records the original attempt so the prompt
+   *  can flag it to Claude. */
+  fallbackInfo?: {
+    triedLabel: string;
+    triedCode: number;
+    fellBackTo: string;
+    reason: string;
+  };
   fetchedAt: number;
 };
 
@@ -272,6 +281,47 @@ export async function runKeywordResearch(
   opts: KwResearchOptions = {},
 ): Promise<KwResearchPack | null> {
   if (!isConfigured()) return null;
+  const firstPack = await runOnce(seedTopic, clientSlug, opts);
+  if (!firstPack) return null;
+
+  // Graceful fallback: when the consultant picked a city-level target but
+  // DataforSEO returned no data (likely a bad city code OR a city too
+  // small for Google Keyword Planner), retry with the parent country.
+  // Some keyword data is more useful than none.
+  const cityTarget = opts.locationOverride;
+  const empty =
+    firstPack.suggestions.length === 0 &&
+    firstPack.ideas.length === 0 &&
+    firstPack.domainExisting.length === 0;
+  if (cityTarget && cityTarget.scope !== "country" && empty) {
+    const fallback = getCountryFallback(cityTarget);
+    if (fallback) {
+      const retry = await runOnce(seedTopic, clientSlug, {
+        ...opts,
+        locationOverride: fallback,
+      });
+      if (retry) {
+        retry.fallbackInfo = {
+          triedLabel: cityTarget.label,
+          triedCode: cityTarget.locationCode,
+          fellBackTo: fallback.label,
+          reason:
+            firstPack.errors.length > 0
+              ? firstPack.errors[0].message.slice(0, 200)
+              : "Zero keywords returned at city resolution — likely a bad city code or city too small for Google Keyword Planner data.",
+        };
+        return retry;
+      }
+    }
+  }
+  return firstPack;
+}
+
+async function runOnce(
+  seedTopic: string,
+  clientSlug: string,
+  opts: KwResearchOptions,
+): Promise<KwResearchPack | null> {
   const defaultGeo = getClientGeo(clientSlug);
   const geo = opts.locationOverride
     ? {
@@ -409,6 +459,11 @@ export function formatKwPackForPrompt(pack: KwResearchPack): string {
   lines.push(
     `- **Seed topic:** ${pack.seedTopic}\n- **Geo:** ${pack.geo.countryLabel} (location_code ${pack.geo.locationCode}, language ${pack.geo.languageCode})\n- **Pulled:** ${new Date(pack.fetchedAt).toISOString()}`,
   );
+  if (pack.fallbackInfo) {
+    lines.push(
+      `\n> ⚠️ **Geo fallback applied.** The original target **${pack.fallbackInfo.triedLabel}** (code ${pack.fallbackInfo.triedCode}) returned no data, so DataforSEO was re-queried with **${pack.fallbackInfo.fellBackTo}**. Reason: ${pack.fallbackInfo.reason}\n> Tell the consultant in the Overview that **city-level data is unavailable for this geo** and recommendations are at country resolution. Where local intent matters, still bake the original city's modifier into recommended keywords — the consultant chose that city for a reason.`,
+    );
+  }
   if (pack.errors.length > 0) {
     lines.push(`- **Partial errors:**`);
     for (const e of pack.errors) lines.push(`  - ${e.source}: ${e.message}`);

@@ -22,12 +22,17 @@ export function ResultRunner({
   action,
   resultId,
   existing,
+  targetedKeywords = [],
 }: {
   clientSlug: string;
   clientName: string; // kept in the prop type for API stability; not used post print-mode extraction
   action: ActionDef;
   resultId: string;
   existing: HistoryEntry | null;
+  /** Lowercased keywords currently in the client's Target Keywords list.
+   *  Passed through to KeywordResearchDashboard so rows already on the
+   *  list render with a 🎯 badge and can't be re-sent. */
+  targetedKeywords?: string[];
 }) {
   const searchParams = useSearchParams();
   const isPrintMode = searchParams?.get("print") === "true";
@@ -399,6 +404,7 @@ export function ResultRunner({
           generating={status === "generating"}
           clientSlug={clientSlug}
           resultId={resultId}
+          initialTargetedKeywords={targetedKeywords}
         />
       )}
 

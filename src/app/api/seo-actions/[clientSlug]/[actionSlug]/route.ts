@@ -227,6 +227,11 @@ export async function POST(
                 `> ❌ DataforSEO not configured — set DATAFORSEO_LOGIN + DATAFORSEO_PASSWORD in Vercel env.\n`,
               );
             } else {
+              if (pack.fallbackInfo) {
+                send(
+                  `> ⚠️ **Geo fallback:** \`${pack.fallbackInfo.triedLabel}\` returned no data → re-queried with \`${pack.fallbackInfo.fellBackTo}\`. ${pack.fallbackInfo.reason.slice(0, 200)}\n`,
+                );
+              }
               send(
                 `> ✓ **DataforSEO** — ${pack.suggestions.length} suggestions, ${pack.ideas.length} broader ideas${pack.domainExisting.length ? `, ${pack.domainExisting.length} already-ranking` : ""}${pack.competitors.length ? `, ${pack.competitors.length} competitor footprint(s)` : ""} (${ms} ms)\n`,
               );

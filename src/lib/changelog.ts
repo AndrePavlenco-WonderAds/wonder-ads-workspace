@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "69.3",
+    date: "2026-05-17",
+    title: "Keyword Research polish — already-targeted badges, PDF re-extract, graceful geo fallback",
+    highlights: [
+      "**'🎯 Already targeted' badge** on every row in the Keyword Research dashboard whose keyword already lives in the client's Target Keywords list. Checkbox is disabled, row tinted emerald, header surfaces a count chip. Group-by view shows per-bucket disabled-count too. Sending a batch optimistically grows the targeted set so the rows we just shipped become disabled immediately — no refetch.",
+      "**'Re-extract' button** on the Onboarding Form panel. POST to `/api/onboarding/[slug]/re-extract` re-runs the PDF text extractor + competitor miner + suggestedSeed heuristic on the existing file, no re-upload needed. Useful as the extractor heuristics improve over time.",
+      "**Graceful geo fallback** when a city target returns zero data from DataforSEO (bad city code or city too small for Google Keyword Planner). `runKeywordResearch` automatically retries with the parent country, records the attempt in `KwResearchPack.fallbackInfo`, and surfaces it in two places: a `> ⚠️ Geo fallback:` line in the progress stream AND a prompt-level instruction telling Claude to note in the Overview that 'city-level data is unavailable for this geo' while still baking the original city's modifier into recommended keywords.",
+    ],
+  },
+  {
     version: "69.2",
     date: "2026-05-17",
     title: "Keyword Research — mandatory Pre-flight Checklist + hard brief compliance",

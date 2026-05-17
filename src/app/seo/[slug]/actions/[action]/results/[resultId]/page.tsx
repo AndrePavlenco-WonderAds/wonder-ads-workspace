@@ -16,6 +16,7 @@ import {
 import { getClientPalette, paletteToGradient } from "@/lib/client-colors";
 import { getConsultantForSlug } from "@/lib/client-overrides";
 import { formatDateTime, formatDateLong } from "@/lib/dates";
+import { listTargetKeywords } from "@/lib/target-keywords-store";
 
 export const dynamic = "force-dynamic";
 
@@ -172,6 +173,11 @@ export default async function ResultPage({
           action={action}
           resultId={resultId}
           existing={existing}
+          targetedKeywords={
+            action.slug === "keyword-research"
+              ? (await listTargetKeywords(slug)).map((k) => k.keyword)
+              : []
+          }
         />
       </section>
     </PageShell>
