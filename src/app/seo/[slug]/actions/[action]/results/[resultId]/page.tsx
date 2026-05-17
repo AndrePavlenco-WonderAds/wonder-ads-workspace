@@ -14,6 +14,7 @@ import {
   getLogoSizing,
 } from "@/lib/client-meta";
 import { getClientPalette, paletteToGradient } from "@/lib/client-colors";
+import { getConsultantForSlug } from "@/lib/client-overrides";
 import { formatDateTime, formatDateLong } from "@/lib/dates";
 
 export const dynamic = "force-dynamic";
@@ -74,6 +75,7 @@ export default async function ResultPage({
         generatedDate={
           existing ? formatDateLong(existing.createdAt) : formatDateLong(new Date())
         }
+        consultant={getConsultantForSlug(slug)}
         analysisText={analysisText}
         metrics={existing?.metrics ?? null}
         vitals={existing?.vitals ?? null}
@@ -105,7 +107,7 @@ export default async function ResultPage({
             href={`/seo/${slug}/actions/${actionSlug}/results/${resultId}?print=true`}
             target="_blank"
             rel="noopener noreferrer"
-            className="ml-auto inline-flex items-center gap-1.5 rounded-md border border-white/12 bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-white/75 transition hover:border-white/30 hover:bg-white/[0.08] hover:text-white"
+            className="ml-auto inline-flex items-center gap-2 rounded-md bg-gradient-to-br from-[#343ED7] via-[#783DF5] to-[#C535C9] px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-[#783DF5]/25 transition hover:brightness-110 hover:shadow-[#783DF5]/40"
           >
             <Download className="h-3.5 w-3.5" />
             Download PDF
@@ -113,7 +115,7 @@ export default async function ResultPage({
         ) : (
           <span
             title="Becomes active once the audit completes and the result is saved."
-            className="ml-auto inline-flex cursor-not-allowed items-center gap-1.5 rounded-md border border-white/8 bg-white/[0.02] px-3 py-1.5 text-xs font-medium text-white/35"
+            className="ml-auto inline-flex cursor-not-allowed items-center gap-2 rounded-md border border-white/15 bg-white/[0.04] px-4 py-2 text-xs font-semibold text-white/50"
           >
             <Download className="h-3.5 w-3.5" />
             Download available soon

@@ -21,6 +21,7 @@ export function PrintLayout({
   actionLabel,
   resultId,
   generatedDate,
+  consultant,
   analysisText,
   metrics,
   vitals,
@@ -30,6 +31,7 @@ export function PrintLayout({
   actionLabel: string;
   resultId: string;
   generatedDate: string;
+  consultant: string;
   analysisText: string;
   metrics: DomainMetrics | null;
   vitals: SiteVitals | null;
@@ -83,7 +85,10 @@ export function PrintLayout({
             <div className="pdf-cover-subtitle">{metrics?.target ?? ""}</div>
             <div className="pdf-cover-meta">
               <div>
-                <strong>Generated:</strong> {generatedDate}
+                <strong>Audited:</strong> {generatedDate}
+              </div>
+              <div>
+                <strong>Head SEO Consultant:</strong> {consultant}
               </div>
               <div>
                 <strong>Report ID:</strong>{" "}
@@ -95,6 +100,14 @@ export function PrintLayout({
                 <strong>Questions?</strong>{" "}
                 <a href="mailto:seo@wonder-ads.com" style={{ color: "white" }}>
                   seo@wonder-ads.com
+                </a>
+              </div>
+              <div className="pdf-cover-site">
+                <a
+                  href="https://wonder-ads.com"
+                  style={{ color: "white", textDecoration: "none" }}
+                >
+                  wonder-ads.com
                 </a>
               </div>
             </div>
@@ -513,6 +526,13 @@ const PRINT_STYLES = `
     max-width: 110mm;
   }
   .pdf-cover-meta strong { color: white; font-weight: 700; }
+  .pdf-cover-site {
+    margin-top: 4mm;
+    font-size: 11pt;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: rgba(255,255,255,0.98);
+  }
   .pdf-cover-astronaut {
     position: absolute;
     right: -6mm;
@@ -600,4 +620,35 @@ const PRINT_STYLES = `
   }
   .pdf-stat-sub { font-size: 7.5pt; color: #777; margin-top: 1mm; }
   .pdf-empty { color: #888; padding: 60mm 0; text-align: center; }
+
+  /* MarkdownView ships with Tailwind text-white/85 + text-white/80 inline on
+     its wrapper, headings, cells, etc — those override the .pdf-doc colors
+     and make the whole body white-on-white when printed. Force everything
+     inside .seo-markdown back to dark with !important so the PDF is
+     actually readable. */
+  .pdf-doc .seo-markdown,
+  .pdf-doc .seo-markdown p,
+  .pdf-doc .seo-markdown li,
+  .pdf-doc .seo-markdown td,
+  .pdf-doc .seo-markdown th,
+  .pdf-doc .seo-markdown blockquote,
+  .pdf-doc .seo-markdown em { color: #2a2a2a !important; }
+  .pdf-doc .seo-markdown h1,
+  .pdf-doc .seo-markdown h2,
+  .pdf-doc .seo-markdown h3,
+  .pdf-doc .seo-markdown h4,
+  .pdf-doc .seo-markdown strong { color: #0a0a0a !important; }
+  .pdf-doc .seo-markdown a { color: #5b34c9 !important; }
+  .pdf-doc .seo-markdown code {
+    color: #5b34c9 !important;
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+  }
+  .pdf-doc .seo-markdown th {
+    background: #f3f0fa !important;
+    color: #2a1a5a !important;
+  }
+  .pdf-doc .seo-markdown thead { border-bottom: 1.5pt solid #5b34c9 !important; }
+  .pdf-doc .seo-markdown td { border-bottom: 0.5pt solid #e5e5e5 !important; }
 `;

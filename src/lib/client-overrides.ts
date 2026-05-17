@@ -39,13 +39,13 @@ const YENISEY = new Set([
 export function getConsultantForSlug(slug: string): string {
   if (LUANA.has(slug)) return "Luana N.";
   if (FRAN_R.has(slug)) return "Fran. R.";
-  if (YENISEY.has(slug)) return "Yenisey";
+  if (YENISEY.has(slug)) return "Yenisey R.";
   return "Unassigned";
 }
 
 /** Display order used for grouping client cards into columns. */
 export const CONSULTANT_ORDER = [
   "Fran. R.",
-  "Yenisey",
+  "Yenisey R.",
   "Luana N.",
 ] as const;

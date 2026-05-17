@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "68.5",
+    date: "2026-05-17",
+    title: "PDF polish: brand-gradient Download button, readable tables, consultant + site on cover",
+    highlights: [
+      "**Download PDF** button now uses the WonderAds purple→pink gradient with shadow — pops off the page instead of fading into the dark UI.",
+      "**Cover page** now includes **Head SEO Consultant** (auto-resolved per client via the SEO DPT consultant map) and a prominent **wonder-ads.com** link under the meta block.",
+      "Renamed **'Generated:' → 'Audited:'** on the cover meta — more accurate language for an audit report.",
+      "Fixed the **white-on-white tables** in the PDF body (e.g. the 'What it means' table). MarkdownView's `text-white/85` was beating the print CSS — added scoped `!important` overrides for everything inside `.seo-markdown` so cells, headings, links, and code render dark on the white PDF.",
+      "Renamed **Yenisey → Yenisey R.** across the SEO DPT (column header + consultant resolver) to match the Fran. R. / Luana N. naming pattern.",
+    ],
+  },
+  {
     version: "68.4",
     date: "2026-05-17",
     title: "Always-visible PDF button, keyword sort by rank, no more wall-of-text",
