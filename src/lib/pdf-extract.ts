@@ -1,0 +1,151 @@
+// Server-side text extraction for the Onboarding Form.
+//
+// Uses `unpdf` — a serverless-friendly fork of PDF.js without the legacy
+// build-tool baggage. Works on Vercel Functions out of the box.
+//
+// For non-PDF text formats (txt, md) we just fetch + decode. DOC/DOCX is
+// not text-extracted today — those files are still passed to Claude via
+// the doc URL but won't populate extractedText.
+
+const COMPETITOR_FIELD_HINTS = [
+  /competitor[s]?:?[\s\S]{0,400}/i,
+  /main\s+competitor[s]?:?[\s\S]{0,400}/i,
+  /concorrente[s]?:?[\s\S]{0,400}/i, // PT
+  /principa(?:l|is)\s+concorrente[s]?:?[\s\S]{0,400}/i, // PT
+];
+
+const URL_REGEX =
+  /https?:\/\/[^\s,;)<>"'\]]+|(?:^|[^a-zA-Z0-9-])(www\.[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)+(?:\/[^\s,;)<>"'\]]*)?)/g;
+const BARE_DOMAIN_REGEX =
+  /(?:^|[\s,])([a-zA-Z0-9-]+\.(?:com|net|org|io|co|pt|es|fr|de|it|uk|us|br|ca|au|nz|info|biz|app|ai|dev|nl|be|ch|se|no|dk|fi|pl|cz|gr|tr|jp|cn|kr|in|mx|ar|cl|co|pe|ve))(?:\/|\b)/gi;
+
+export type ExtractResult = {
+  text: string;
+  /** Competitor URLs/domains mined from "competitor" fields if present;
+   *  otherwise falls back to all URLs found in the doc capped to 10. */
+  competitors: string[];
+  /** Approximate page count for PDFs. null for other formats. */
+  pageCount: number | null;
+};
+
+export async function extractFromUrl(
+  url: string,
+  contentType: string,
+): Promise<ExtractResult> {
+  if (
+    contentType === "application/pdf" ||
+    url.toLowerCase().endsWith(".pdf")
+  ) {
+    return extractPdf(url);
+  }
+  if (
+    contentType === "text/plain" ||
+    contentType === "text/markdown" ||
+    /\.(txt|md)$/i.test(url)
+  ) {
+    const res = await fetch(url, { cache: "no-store" });
+    const text = await res.text();
+    return {
+      text,
+      competitors: mineCompetitors(text),
+      pageCount: null,
+    };
+  }
+  // DOC/DOCX — leave extraction unimplemented for now. Claude can still see
+  // the doc via the URL; we just won't have text in the prompt.
+  return { text: "", competitors: [], pageCount: null };
+}
+
+async function extractPdf(url: string): Promise<ExtractResult> {
+  const res = await fetch(url, { cache: "no-store" });
+  if (!res.ok) {
+    throw new Error(`PDF fetch failed: HTTP ${res.status}`);
+  }
+  const buf = new Uint8Array(await res.arrayBuffer());
+
+  // Dynamic import — unpdf ships an ESM bundle that's heavy. Loading it on
+  // demand keeps the cold-start light on routes that don't need it.
+  const { extractText, getDocumentProxy } = await import("unpdf");
+
+  const pdf = await getDocumentProxy(buf);
+  const pageCount = pdf.numPages ?? null;
+
+  const result = await extractText(buf, { mergePages: true });
+  const raw = (result as { text: unknown }).text;
+  const text =
+    typeof raw === "string"
+      ? raw
+      : Array.isArray(raw)
+        ? raw.join("\n")
+        : "";
+  return {
+    text: text.trim(),
+    competitors: mineCompetitors(text),
+    pageCount,
+  };
+}
+
+/** Look for explicit "competitors" sections in the form; fall back to all
+ *  URLs found in the doc capped to 10. Deduped + lowercased. */
+export function mineCompetitors(text: string): string[] {
+  if (!text) return [];
+  const found = new Set<string>();
+
+  // First pass: explicit "competitor" fields (EN + PT). Pull URLs/domains
+  // appearing in the 400 chars after the field label.
+  for (const re of COMPETITOR_FIELD_HINTS) {
+    const m = text.match(re);
+    if (!m) continue;
+    const slice = m[0];
+    for (const u of extractUrlsAndDomains(slice)) {
+      found.add(normaliseDomain(u));
+      if (found.size >= 10) break;
+    }
+    if (found.size >= 10) break;
+  }
+
+  // Fallback / supplement: all URLs in the doc, capped to 10 if we still
+  // have room. (Helps when the form labels are non-standard.)
+  if (found.size < 10) {
+    for (const u of extractUrlsAndDomains(text)) {
+      found.add(normaliseDomain(u));
+      if (found.size >= 10) break;
+    }
+  }
+
+  // Filter out the client's own / WonderAds / Google Form noise — we don't
+  // want to ask DataforSEO about wonder-ads.com.
+  const NOISE = new Set([
+    "wonder-ads.com",
+    "wonderads.com",
+    "docs.google.com",
+    "google.com",
+    "forms.gle",
+    "gmail.com",
+  ]);
+  return Array.from(found).filter((d) => !NOISE.has(d));
+}
+
+function extractUrlsAndDomains(slice: string): string[] {
+  const out: string[] = [];
+  const u1 = slice.matchAll(URL_REGEX);
+  for (const m of u1) {
+    const raw = (m[0] || m[1] || "").trim();
+    if (raw) out.push(raw);
+  }
+  const u2 = slice.matchAll(BARE_DOMAIN_REGEX);
+  for (const m of u2) {
+    const raw = (m[1] || "").trim();
+    if (raw) out.push(raw);
+  }
+  return out;
+}
+
+function normaliseDomain(raw: string): string {
+  let s = raw.toLowerCase().trim();
+  s = s.replace(/^https?:\/\//, "");
+  s = s.replace(/^www\./, "");
+  s = s.split("/")[0];
+  s = s.replace(/[.,;:!?)>\]]+$/, "");
+  return s;
+}

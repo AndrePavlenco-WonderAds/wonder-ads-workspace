@@ -6,7 +6,10 @@ import { ClientCard } from "@/components/client-card";
 import { WorldMap } from "@/components/world-map";
 import { TypewriterPrompt } from "@/components/typewriter-prompt";
 import { getSeoClients, type NotionClient } from "@/lib/notion";
-import { CONSULTANT_ORDER } from "@/lib/client-overrides";
+import {
+  CONSULTANT_ORDER,
+  getConsultantForSlug,
+} from "@/lib/client-overrides";
 import { TIER_RANK } from "@/lib/client-tiers";
 import {
   getClientLogo,
@@ -38,9 +41,17 @@ export default async function SeoPage() {
 
   // Group clients by consultant, then sort each column by tier
   // (growth → core → lite).
+  // IMPORTANT: re-resolve consultant from slug at render time rather than
+  // trusting c.consultant — getSeoClients() is wrapped in unstable_cache
+  // (1h TTL) and the cached value can lag behind code-level consultant
+  // renames in client-overrides.ts. Re-resolving here means any consultant
+  // rename ships instantly, even before the cache evicts. The bug it fixes:
+  // renaming "Yenisey" → "Yenisey R." dropped 5 clients off the board
+  // because the cached consultant string didn't match the new column name.
   const grouped: Record<string, NotionClient[]> = {};
   for (const c of clients) {
-    (grouped[c.consultant] ??= []).push(c);
+    const consultant = getConsultantForSlug(c.slug);
+    (grouped[consultant] ??= []).push({ ...c, consultant });
   }
   for (const list of Object.values(grouped)) {
     list.sort((a, b) => TIER_RANK[a.tier] - TIER_RANK[b.tier]);

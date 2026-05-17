@@ -238,6 +238,25 @@ body {
   animation: count-pop 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 
+/* Heartbeat — used by the Onboarding-form MISSING badge so it's impossible
+   to miss that a client hasn't filed their intake doc yet. Two-beat pattern
+   matches a real heartbeat: lub-dub. */
+@keyframes heartbeat {
+  0%, 28%, 100% { transform: scale(1); }
+  14% { transform: scale(1.08); }
+  42% { transform: scale(1.04); }
+}
+.animate-heartbeat {
+  transform-origin: center;
+  animation: heartbeat 1.4s ease-in-out infinite;
+  box-shadow: 0 0 0 0 rgba(244, 63, 94, 0.45);
+}
+@keyframes heartbeat-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(244, 63, 94, 0.0); }
+  14% { box-shadow: 0 0 0 8px rgba(244, 63, 94, 0); }
+}
+.animate-heartbeat::after { content: ""; }
+
 /* Respect prefers-reduced-motion */
 @media (prefers-reduced-motion: reduce) {
   .animate-orb-pulse,
@@ -246,7 +265,8 @@ body {
   .animate-fade-up,
   .animate-ping-slow,
   .animate-count-pop,
-  .animate-caret-blink {
+  .animate-caret-blink,
+  .animate-heartbeat {
     animation: none;
   }
 }

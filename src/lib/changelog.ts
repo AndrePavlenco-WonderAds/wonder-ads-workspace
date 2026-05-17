@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "68.8",
+    date: "2026-05-17",
+    title: "Hotfix: restore Yenisey column + onboarding doc polish (heartbeat badge, PDF extraction, competitor pull)",
+    highlights: [
+      "**HOTFIX — SEO DPT Yenisey column restored.** Renaming Yenisey → Yenisey R. in v68.5 dropped 5 clients off the board (White Clinic, IHN, Fisio Restelo, Monte Mar, CDT) because `getSeoClients()` is wrapped in a 1h `unstable_cache` that still held the old 'Yenisey' string. Two fixes: (a) re-resolve consultant from slug at render time in `/seo` so any future rename ships instantly without waiting on the cache, (b) bumped the cache key to `seo-clients-v2` so the stale entry evicts on next request.",
+      "**Onboarding badge is now state-driven.** Green chip when uploaded, **red + heartbeat-pulsing chip when missing** — impossible to forget a client's intake doc. Heartbeat respects `prefers-reduced-motion`.",
+      "**PDF text extraction wired in** via `unpdf` (serverless-friendly PDF.js fork). Runs server-side on upload; extracted text + auto-mined competitor URLs are stored alongside the doc in KV. AI actions can now cite specific lines from the client's intake form.",
+      "**Competitor keyword pull** added to Keyword Research. For each competitor URL/domain found in the onboarding form, DataforSEO pulls `ranked_keywords` filtered to the seed theme and injects them into the prompt as a per-competitor table. Claude is instructed to cross-reference and surface gaps.",
+    ],
+  },
+  {
     version: "68.7",
     date: "2026-05-17",
     title: "Keyword Research scaffold — DataforSEO Labs + onboarding-aware",

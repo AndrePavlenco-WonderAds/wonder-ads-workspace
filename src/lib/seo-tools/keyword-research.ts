@@ -35,6 +35,11 @@ export type KwIdea = {
   source: "suggestions" | "ideas" | "ranked";
 };
 
+export type CompetitorKeywords = {
+  domain: string;
+  keywords: KwIdea[];
+};
+
 export type KwResearchPack = {
   seedTopic: string;
   geo: { locationCode: number; languageCode: string; countryLabel: string };
@@ -44,6 +49,9 @@ export type KwResearchPack = {
   ideas: KwIdea[];
   /** Keywords the domain already ranks for that match the seed theme. */
   domainExisting: KwIdea[];
+  /** Keywords each competitor (from onboarding form) ranks for, filtered to
+   *  the seed theme. Empty when no competitors are provided. */
+  competitors: CompetitorKeywords[];
   errors: { source: string; message: string }[];
   fetchedAt: number;
 };
@@ -55,6 +63,10 @@ export type KwResearchOptions = {
   perEndpointLimit?: number;
   /** Optional domain target for ranked_keywords pull. */
   target?: string;
+  /** Competitor domains (from the onboarding form). For each, we pull
+   *  ranked_keywords filtered to the seed theme. Capped to 5 to keep the
+   *  call within Vercel's 60s budget. */
+  competitorDomains?: string[];
 };
 
 function isConfigured(): boolean {
@@ -256,9 +268,13 @@ export async function runKeywordResearch(
   if (!isConfigured()) return null;
   const geo = getClientGeo(clientSlug);
   const limit = opts.perEndpointLimit ?? 300;
+  const competitorDomains = (opts.competitorDomains ?? [])
+    .map((d) => d.toLowerCase().replace(/^https?:\/\//, "").replace(/^www\./, "").split("/")[0])
+    .filter(Boolean)
+    .slice(0, 5);
 
   const errors: { source: string; message: string }[] = [];
-  const [sugRes, ideasRes, domainRes] = await Promise.allSettled([
+  const [sugRes, ideasRes, domainRes, ...compResults] = await Promise.allSettled([
     fetchKeywordSuggestions(seedTopic, geo.locationCode, geo.languageCode, limit),
     fetchKeywordIdeas([seedTopic], geo.locationCode, geo.languageCode, limit),
     opts.target
@@ -270,6 +286,9 @@ export async function runKeywordResearch(
           500,
         )
       : Promise.resolve<KwIdea[]>([]),
+    ...competitorDomains.map((d) =>
+      fetchDomainExistingKeywords(d, seedTopic, geo.locationCode, geo.languageCode, 300),
+    ),
   ]);
 
   const suggestions =
@@ -305,6 +324,20 @@ export async function runKeywordResearch(
     });
   }
 
+  const competitors: CompetitorKeywords[] = [];
+  competitorDomains.forEach((domain, i) => {
+    const res = compResults[i];
+    if (res?.status === "fulfilled") {
+      competitors.push({ domain, keywords: res.value });
+    } else if (res?.status === "rejected") {
+      errors.push({
+        source: `competitor:${domain}`,
+        message:
+          res.reason instanceof Error ? res.reason.message : String(res.reason),
+      });
+    }
+  });
+
   let combined = { suggestions, ideas, domainExisting };
   if (opts.intent && opts.intent !== "all") {
     const filterByIntent = (list: KwIdea[]) =>
@@ -322,6 +355,7 @@ export async function runKeywordResearch(
     suggestions: combined.suggestions,
     ideas: combined.ideas,
     domainExisting: combined.domainExisting,
+    competitors,
     errors,
     fetchedAt: Date.now(),
   };
@@ -407,6 +441,24 @@ export function formatKwPackForPrompt(pack: KwResearchPack): string {
     lines.push(
       `\n> The above are keywords the domain ALREADY ranks for. Treat these as **optimisation/expansion** targets (often quick wins) rather than greenfield.`,
     );
+  }
+
+  // Competitor keywords (per-competitor section)
+  if (pack.competitors.length > 0) {
+    lines.push(`\n### Competitor keyword footprints (from the onboarding form)`);
+    lines.push(
+      `> The client named the following competitors in their onboarding form. For each we pulled the keywords they ALREADY rank for in the client's geo, filtered to the seed theme. **Cross-reference these against the client's own footprint to find:** (a) high-value keywords competitors win that the client doesn't, (b) clusters worth attacking, (c) opportunities the onboarding form didn't name but the data clearly supports.`,
+    );
+    for (const c of pack.competitors) {
+      const top = dedupeByKeyword(c.keywords).slice(0, 30);
+      lines.push(`\n#### ${c.domain} (${top.length} shown / ${c.keywords.length} total)`);
+      if (top.length === 0) {
+        lines.push(`_No keywords matched the seed theme for this competitor._`);
+        continue;
+      }
+      lines.push(TBL_HEADER);
+      for (const k of top) lines.push(fmtIdeaRow(k));
+    }
   }
 
   return lines.join("\n");

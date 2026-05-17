@@ -91,7 +91,11 @@ const _fetchSeoClients = unstable_cache(
 
     return clients;
   },
-  ["seo-clients"],
+  // v2 cache key — bumped after the "Yenisey" → "Yenisey R." rename so any
+  // stale unstable_cache entries from before the rename get evicted on the
+  // next request instead of waiting up to an hour. Bump again whenever the
+  // shape of NotionClient or any of its derived fields changes meaningfully.
+  ["seo-clients-v2"],
   { revalidate: 3600, tags: ["seo-clients"] },
 );
 

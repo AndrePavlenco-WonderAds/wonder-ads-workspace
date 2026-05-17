@@ -6,6 +6,10 @@ import {
   onboardingStorageConfigured,
   type OnboardingDoc,
 } from "@/lib/onboarding-store";
+import { extractFromUrl } from "@/lib/pdf-extract";
+
+export const maxDuration = 60;
+export const runtime = "nodejs";
 
 const MAX_NAME_LENGTH = 200;
 const ALLOWED_CONTENT_TYPES = new Set([
@@ -68,7 +72,26 @@ export async function PUT(
     );
   }
   try {
-    const saved = await saveOnboardingForSlug(slug, clean);
+    // Run text extraction inline. Worst case it adds ~3s on a 100-page PDF;
+    // the upload itself is already complete (Vercel Blob direct-upload),
+    // so the user just waits for KV write + extraction here.
+    let extracted: { text: string; competitors: string[] } = {
+      text: "",
+      competitors: [],
+    };
+    try {
+      const result = await extractFromUrl(clean.url, clean.contentType);
+      extracted = { text: result.text, competitors: result.competitors };
+    } catch (err) {
+      console.error("onboarding extraction failed (non-fatal):", err);
+    }
+    const withExtraction: OnboardingDoc = {
+      ...clean,
+      extractedText: extracted.text || null,
+      competitors: extracted.competitors,
+      extractedAt: extracted.text ? Date.now() : null,
+    };
+    const saved = await saveOnboardingForSlug(slug, withExtraction);
     return NextResponse.json(saved);
   } catch (err) {
     console.error("onboarding save failed", err);

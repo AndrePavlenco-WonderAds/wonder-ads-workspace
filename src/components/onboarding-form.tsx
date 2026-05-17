@@ -133,13 +133,23 @@ export function OnboardingForm({
         <h2 className="text-sm font-medium uppercase tracking-[0.18em] text-white/55">
           Onboarding Form
         </h2>
-        <span
-          title="This document feeds the Keyword Research action and other AI tools."
-          className="inline-flex items-center gap-1 rounded-full border border-[#783DF5]/30 bg-[#783DF5]/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-[#c9a8ff]"
-        >
-          <Sparkles className="h-2.5 w-2.5" />
-          Feeds AI actions
-        </span>
+        {loaded && (
+          <span
+            title={
+              doc
+                ? "This document is feeding the Keyword Research action and other AI tools."
+                : "MISSING — upload the client's onboarding form so AI actions can cite the keywords/competitors the client named."
+            }
+            className={
+              doc
+                ? "inline-flex items-center gap-1 rounded-full border border-emerald-400/40 bg-emerald-500/15 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-emerald-300"
+                : "animate-heartbeat inline-flex items-center gap-1 rounded-full border border-rose-400/50 bg-rose-500/15 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-rose-300"
+            }
+          >
+            <Sparkles className="h-2.5 w-2.5" />
+            {doc ? "Feeds AI actions" : "Missing — feeds AI actions"}
+          </span>
+        )}
 
         {(busy || uploading) && (
           <span className="inline-flex items-center gap-1.5 text-[11px] text-white/45">

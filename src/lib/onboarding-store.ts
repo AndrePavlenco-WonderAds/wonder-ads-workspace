@@ -18,6 +18,16 @@ export type OnboardingDoc = {
   sizeBytes: number | null;
   /** Epoch ms when this was uploaded. */
   uploadedAt: number;
+  /** Plain-text extraction of the doc (PDF → text via unpdf, or the raw
+   *  TXT/MD content). Populated server-side after upload. AI actions read
+   *  this to anchor on what the client actually wrote. */
+  extractedText?: string | null;
+  /** Competitor URLs/domains the client named in the form (regex-mined from
+   *  extractedText). Used to fetch each competitor's keyword footprint. */
+  competitors?: string[];
+  /** Epoch ms when extraction last ran. Lets us skip re-extracting on every
+   *  read. */
+  extractedAt?: number | null;
 };
 
 export const onboardingStorageConfigured = Boolean(
