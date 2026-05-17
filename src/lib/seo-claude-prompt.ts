@@ -252,13 +252,19 @@ Prioritised plan grouped by horizon. Each item: one concrete deliverable + owner
 - **Client brief** (Do's / Don'ts / Notes): hard constraints.
 
 **Rules**
+- **BRIEF COMPLIANCE IS NON-NEGOTIABLE.** Before recommending any keyword, scan the **Client Do's / Don'ts / Notes** at the top of this system prompt. Every recommendation must:
+  - **Respect the Do's** — these are the preferred angles/services/positioning. Bias the shortlist toward keywords that align with them.
+  - **NEVER violate a Don't** — if a keyword would make the client uncomfortable, push a service they don't want amplified, or break a stated rule (e.g. avoiding price-led queries, avoiding a competitor's branded term), **drop it from the shortlist entirely**. No exceptions, no "with a caveat".
+  - **Integrate the Notes** — Notes are context the team has gathered (operational quirks, audience nuances, branding constraints, geo specifics, language preferences). Every cluster/quick-win recommendation must be filtered through them. When a Note materially shapes a recommendation, name it inline: _"Per client Note: …"_.
 - **Cite real numbers** from the fact pack. Never fabricate volume/KD/CPC. If a metric is missing for a keyword, write "—" not a guess.
 - **Prioritise by Intent fit × Business value × Realistic difficulty × Search volume — in that order.** Volume alone is a vanity metric.
+- **Reject generic keywords.** Single-word or pure-category keywords like "psicologia", "tratamento", "dental", "wellness" are vanity terms — they have huge volume but zero intent and no realistic chance of ranking for a single clinic. **Never** include them in the shortlist unless the client is a national leader actively defending that term. If found in suggestions/ideas, filter them out silently.
 - **Honour the onboarding form** if present — keywords the client explicitly named outrank generic high-volume keywords unless the data clearly contradicts (and then say why).
-- **Always cross-reference competitor footprints** when present. For each named competitor: identify keywords they rank for that the client doesn't, judge whether they're a good target for the client (intent + brand fit + difficulty), and add the best ones to the shortlist with a note like _"competitor X ranks #4 here — gap to attack"_.
+- **Always cross-reference competitor footprints** when present. For each named competitor: identify keywords they rank for that the client doesn't, judge whether they're a good target for the client (intent + brand fit + difficulty + brief compliance), and add the best ones to the shortlist with a note like _"competitor X ranks #4 here — gap to attack"_.
 - **Cluster aggressively.** No flat keyword lists. Real consultants group by topic + intent before prioritising.
 - Tag SERP intent: \`informational\` / \`commercial\` / \`transactional\` / \`navigational\`. Use the intent field from the fact pack when populated; infer from the keyword phrasing when not.
 - Be honest about missing data: if KD is "—", write "—" not "Easy/Medium/Hard" guesses.
+- **YMYL/legal compliance** — Health & Wellness clients can't promise cures, guaranteed outcomes, or medical advice. Reject keywords like "cure for X", "guaranteed treatment Y", or anything that would force the page to make a claim the client can't legally make.
 - **If no onboarding form is on file**, lead the Overview with a one-line warning: "_⚠️ No onboarding form uploaded — recommendations are based on seed topic + brief only. Upload the form for sharper, commercially-anchored suggestions._"
 
 **Output structure** — produce all of these sections, in this order, exactly named:
@@ -318,7 +324,28 @@ Bias toward: (a) keywords the domain already ranks 4–20 for (rank-pushing > gr
 - **Where the domain already ranks 4–20 but isn't earning click share** (meta-description / title-tag fixes are quick wins — flag the keyword + the page).
 
 ## Tracking shortlist
-The 15–25 keywords that should go into Tracked Keywords this quarter. Bullet list. Each: \`keyword (current rank if known, or "new")\`.`;
+The 15–25 keywords that should go into Tracked Keywords this quarter. Bullet list. Each: \`keyword (current rank if known, or "new")\`.
+
+## Pre-flight checklist (MANDATORY — output this exact section)
+Before the consultant trusts this report, you must self-verify against the rules below. Emit this section **verbatim in Portuguese** (the consultant runs Portuguese ops), with each box ticked **only if you can honestly confirm it**. If you can't tick a box, leave it as \`[ ]\` and add a one-line explanation underneath naming the offending keyword(s) so the consultant can review.
+
+\`\`\`
+### Verificação final
+
+Antes de avançar, confirma:
+
+- [ ] Não há keywords genéricas ("psicologia", "tratamento", "dental", "wellness", etc.) na shortlist.
+- [ ] Todas as keywords têm intenção clara (informational / commercial / transactional / navigational).
+- [ ] O volume de pesquisa faz sentido para o local + serviço (ex: "all-on-4 lisboa" com 200/mo é credível; "all-on-4 lisboa" com 50k/mo não é — sinaliza).
+- [ ] Nada viola regras legais YMYL (sem promessas de cura, sem garantias de resultado, sem aconselhamento médico individual).
+- [ ] Todas as recomendações respeitam os **Do's** do client brief.
+- [ ] **Zero violações** dos **Don'ts** do client brief — keywords que entrariam em conflito foram **removidas** (não suavizadas).
+- [ ] As **Notes** do client brief foram integradas; onde uma Note moldou uma recomendação, está citada inline com _"Per client Note: …"_.
+\`\`\`
+
+After the checklist, add a single line in either language:
+- All boxes ticked → \`✅ Pronto para entrega — todas as verificações passam.\`
+- One or more unticked → \`⚠️ Revisão necessária — N item(s) acima precisam de validação do consultor antes de partilhar com o cliente.\``;
 
     case "header-tags":
       return `Output an H1 + H2/H3 outline as a nested list. Every heading must:

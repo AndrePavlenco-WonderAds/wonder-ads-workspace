@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "69.2",
+    date: "2026-05-17",
+    title: "Keyword Research — mandatory Pre-flight Checklist + hard brief compliance",
+    highlights: [
+      "**SEO Claude now ends every Keyword Research report with a Pre-flight Checklist** (Verificação final) in Portuguese — the exact verification list Andre uses to sign off on a report. Each box is ticked only if Claude can honestly confirm it; unticked boxes get a one-line explanation naming the offending keywords for consultant review.",
+      "**Hard brief compliance** elevated from soft guidance to a non-negotiable rule. Every keyword recommendation must pass three gates: respect the **Do's**, **NEVER violate a Don't** (offending keywords are dropped, not softened), and **integrate the Notes** (when a Note shapes a recommendation, it's cited inline with _'Per client Note: …'_).",
+      "**Generic-keyword filter** added — single-word/category terms like 'psicologia', 'tratamento', 'dental', 'wellness' are now explicitly rejected unless the client is a national leader defending the term. Silent filter on suggestions/ideas; no more vanity-volume noise in the shortlist.",
+      "**YMYL/legal compliance rule** — keywords that would force the client to make medical claims they can't legally make (cure-for-X, guaranteed-treatment-Y) are dropped automatically.",
+      "Self-check ends with either `✅ Pronto para entrega — todas as verificações passam.` or `⚠️ Revisão necessária — N item(s) above precisam de validação do consultor antes de partilhar com o cliente.`",
+    ],
+  },
+  {
     version: "69.1",
     date: "2026-05-17",
     title: "Keyword Research polish — city geo targeting, Target Keywords panel, smart seed fill, group-by, history seed display",
