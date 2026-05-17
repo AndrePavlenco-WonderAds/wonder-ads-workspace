@@ -4,6 +4,7 @@ import { ArrowLeft, Download } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { LogoChip } from "@/components/logo-chip";
 import { ResultRunner } from "@/components/result-runner";
+import { PrintLayout } from "@/components/print-layout";
 import { findAction } from "@/lib/seo-pillars";
 import { getClientBySlug } from "@/lib/notion";
 import { getHistoryEntry } from "@/lib/action-history";
@@ -13,7 +14,7 @@ import {
   getLogoSizing,
 } from "@/lib/client-meta";
 import { getClientPalette, paletteToGradient } from "@/lib/client-colors";
-import { formatDateTime } from "@/lib/dates";
+import { formatDateTime, formatDateLong } from "@/lib/dates";
 
 export const dynamic = "force-dynamic";
 
@@ -33,10 +34,14 @@ export async function generateMetadata({
 
 export default async function ResultPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string; action: string; resultId: string }>;
+  searchParams: Promise<{ print?: string }>;
 }) {
   const { slug, action: actionSlug, resultId } = await params;
+  const { print } = await searchParams;
+  const printMode = print === "true";
 
   const entry = findAction(actionSlug);
   if (!entry) notFound();
@@ -44,13 +49,43 @@ export default async function ResultPage({
   const client = await getClientBySlug(slug).catch(() => null);
   if (!client) notFound();
 
+  const existing = await getHistoryEntry(slug, actionSlug, resultId);
+  const { action, pillar } = entry;
+
+  // -- PRINT MODE: bypass PageShell entirely. Render the branded WonderAds
+  //    PDF document straight from the server. The PrintLayout component
+  //    renders <html>/<body> itself so the app chrome can't sneak in. --
+  if (printMode) {
+    // Strip the tool-progress blockquote prefix from the analysis (if any).
+    const sep = "\n---\n\n";
+    const raw = existing?.output ?? "";
+    const sepIdx = raw.indexOf(sep);
+    const analysisText =
+      sepIdx >= 0
+        ? raw.slice(sepIdx + sep.length)
+        : raw.trim().startsWith(">")
+          ? ""
+          : raw;
+    return (
+      <PrintLayout
+        clientName={client.title}
+        actionLabel={action.label}
+        resultId={resultId}
+        generatedDate={
+          existing ? formatDateLong(existing.createdAt) : formatDateLong(new Date())
+        }
+        analysisText={analysisText}
+        metrics={existing?.metrics ?? null}
+        vitals={existing?.vitals ?? null}
+        showDomainSummary={action.slug === "seo-audit"}
+      />
+    );
+  }
+
   const logo = getClientLogo(slug);
   const logoBgMode = getLogoBgMode(slug);
   const logoSizing = getLogoSizing(slug);
   const gradient = paletteToGradient(getClientPalette(slug));
-  const existing = await getHistoryEntry(slug, actionSlug, resultId);
-
-  const { action, pillar } = entry;
   const { Icon: PillarIcon } = pillar;
 
   const generatedDate = existing ? formatDateTime(existing.createdAt) : null;

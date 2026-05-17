@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "68.2",
+    date: "2026-05-17",
+    title: "Print mode bypasses the app — actually renders the PDF now",
+    highlights: [
+      "The previous PDF was capturing the entire app page (back link, dark UI, Download PDF button) and adding the print layout on top — the cover never filled the page and body pages came out blank white. Fixed by rendering the print layout server-side, directly from page.tsx, when ?print=true. PageShell is bypassed entirely.",
+      "PrintLayout returns its own <html><body> so Next.js skips the root layout chrome on print routes. Every page now has the brand header with WonderAds + SEO Department + the action/client breadcrumb.",
+      "AutoPrint helper waits for images (logo + astronaut) to load before firing window.print() so the PDF never goes out with missing imagery.",
+      "Core Web Vitals table added to the printable report — mobile + desktop side-by-side with field/lab data.",
+      "Cover gradient now full-bleed at proper A4 width (210mm) — no more cropped right edge.",
+    ],
+  },
+  {
     version: "68.1",
     date: "2026-05-17",
     title: "PDF fix, branded cover, CWV panel, DD/MM/YYYY dates",
