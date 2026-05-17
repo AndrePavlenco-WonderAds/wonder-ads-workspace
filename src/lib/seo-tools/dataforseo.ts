@@ -49,7 +49,12 @@ export type DomainMetrics = {
   errors: { source: string; message: string }[];
 };
 
-export type LlmMentions = {
+export type LlmMentionsWindow = {
+  /** Human-friendly label, e.g. "Portugal · pt" or "United States · en (global English baseline)". */
+  label: string;
+  /** Geo + language used for the underlying DataforSEO queries. */
+  locationCode: number;
+  languageCode: string;
   /** Total brand mentions across the chosen LLM platforms in the window. */
   totalMentions: number;
   /** Mentions per platform (google = AI Overview / AI Mode / SGE, chatgpt = ChatGPT). */
@@ -60,6 +65,15 @@ export type LlmMentions = {
   coCitedDomains: { domain: string; mentions: number; aiSearchVolume: number }[];
   /** Specific cited pages from our domain (LLM citations / source URLs). */
   topCitedPages: { url: string; mentions: number; aiSearchVolume: number }[];
+};
+
+export type LlmMentions = {
+  /** Primary window — always queried in the client's actual market geo. */
+  primary: LlmMentionsWindow;
+  /** Global English baseline (US/en). Omitted when primary already IS US/en
+   *  to avoid duplicate work. Gives broader signal for non-EN clients where
+   *  the LLM corpus is sparse in their language. */
+  global?: LlmMentionsWindow;
 };
 
 export type DomainTopKeyword = {
@@ -429,14 +443,16 @@ async function fetchOneMentionsPlatform(
   return res.tasks?.[0]?.result?.[0] ?? null;
 }
 
-async function fetchLlmMentions(
+const US_LOCATION = 2840;
+const EN_LANGUAGE = "en";
+
+async function fetchOneMentionsWindow(
   domain: string,
   locationCode: number,
   languageCode: string,
-): Promise<LlmMentions> {
+  label: string,
+): Promise<LlmMentionsWindow> {
   // Query google + chatgpt in parallel — most actionable AI surfaces.
-  // Geo + language match the client's market (set in client-geo.ts) so a
-  // Portuguese clinic gets PT data, IHN gets Canada/EN, etc.
   const [googleAgg, googleTopPages, chatgptAgg] = await Promise.all([
     fetchOneMentionsPlatform(domain, "google", "aggregated_metrics", locationCode, languageCode),
     fetchOneMentionsPlatform(domain, "google", "top_pages", locationCode, languageCode),
@@ -445,11 +461,11 @@ async function fetchLlmMentions(
     ),
   ]);
 
-  const perPlatform: LlmMentions["perPlatform"] = [];
-  function addPlatform(label: string, agg: LlmMentionsApiResult | null) {
+  const perPlatform: LlmMentionsWindow["perPlatform"] = [];
+  function addPlatform(name: string, agg: LlmMentionsApiResult | null) {
     const platformTotals = agg?.total?.platform?.[0];
     perPlatform.push({
-      platform: label,
+      platform: name,
       mentions: platformTotals?.mentions ?? 0,
       aiSearchVolume: platformTotals?.ai_search_volume ?? 0,
     });
@@ -463,7 +479,6 @@ async function fetchLlmMentions(
     0,
   );
 
-  // Co-cited domains from the google aggregated response, excluding our own.
   const sources = googleAgg?.total?.sources_domain ?? [];
   const coCitedDomains = sources
     .filter((s) => s.key && s.key !== domain && s.key !== `www.${domain}`)
@@ -474,7 +489,6 @@ async function fetchLlmMentions(
       aiSearchVolume: s.ai_search_volume ?? 0,
     }));
 
-  // Top cited pages from our own domain (from top_pages endpoint items).
   const items = googleTopPages?.items ?? [];
   const topCitedPages = items.slice(0, 10).map((it) => ({
     url: cleanTextFragment(it.key ?? ""),
@@ -483,12 +497,67 @@ async function fetchLlmMentions(
   }));
 
   return {
+    label,
+    locationCode,
+    languageCode,
     totalMentions,
     aiSearchVolume,
     perPlatform,
     coCitedDomains,
     topCitedPages,
   };
+}
+
+async function fetchLlmMentions(
+  domain: string,
+  locationCode: number,
+  languageCode: string,
+): Promise<LlmMentions> {
+  // Always query the client's market as primary. When the market isn't
+  // already US/en, also query US/en as a "global English baseline" — the
+  // LLM Mentions index is densest in EN and a non-EN client can still have
+  // meaningful English-language AI visibility worth tracking.
+  const primaryLabel = `${labelForGeo(locationCode)} · ${languageCode}`;
+  const isAlreadyGlobalEn =
+    locationCode === US_LOCATION && languageCode === EN_LANGUAGE;
+
+  if (isAlreadyGlobalEn) {
+    const primary = await fetchOneMentionsWindow(
+      domain,
+      locationCode,
+      languageCode,
+      primaryLabel,
+    );
+    return { primary };
+  }
+
+  const [primary, global] = await Promise.all([
+    fetchOneMentionsWindow(domain, locationCode, languageCode, primaryLabel),
+    fetchOneMentionsWindow(
+      domain,
+      US_LOCATION,
+      EN_LANGUAGE,
+      "Global English (US · en)",
+    ).catch(() => null),
+  ]);
+  return { primary, ...(global ? { global } : {}) };
+}
+
+function labelForGeo(code: number): string {
+  const map: Record<number, string> = {
+    2620: "Portugal",
+    2840: "United States",
+    2826: "United Kingdom",
+    2724: "Spain",
+    2250: "France",
+    2276: "Germany",
+    2124: "Canada",
+    2380: "Italy",
+    2056: "Belgium",
+    2036: "Australia",
+    2076: "Brazil",
+  };
+  return map[code] ?? `geo ${code}`;
 }
 
 function cleanTextFragment(url: string): string {
@@ -538,24 +607,39 @@ export function formatDomainMetricsForPrompt(m: DomainMetrics): string {
     const lm = m.llmMentions;
     lines.push("");
     lines.push("**AI visibility (DataforSEO LLM Mentions):**");
-    lines.push(
-      `- Total brand mentions in LLM responses: ${lm.totalMentions} (across ${lm.perPlatform.map((p) => p.platform).join(", ")})`,
+    function dumpWindow(label: string, w: LlmMentionsWindow) {
+      lines.push("");
+      lines.push(`### ${label} — ${w.label}`);
+      lines.push(`- Total brand mentions: ${w.totalMentions}`);
+      lines.push(`- Total AI search volume: ${w.aiSearchVolume}`);
+      for (const p of w.perPlatform) {
+        lines.push(
+          `  - ${p.platform}: ${p.mentions} mentions · ${p.aiSearchVolume} AI search volume`,
+        );
+      }
+      if (w.topCitedPages.length > 0) {
+        lines.push(`- Top cited pages from this domain:`);
+        for (const p of w.topCitedPages.slice(0, 5))
+          lines.push(`  - ${p.url} (${p.mentions} mentions)`);
+      }
+      if (w.coCitedDomains.length > 0) {
+        lines.push(`- Co-cited / competitor domains in same LLM answers:`);
+        for (const d of w.coCitedDomains.slice(0, 8))
+          lines.push(
+            `  - ${d.domain} (${d.mentions} mentions, ${d.aiSearchVolume} ASV)`,
+          );
+      }
+    }
+    dumpWindow(
+      "Local AI visibility",
+      lm.primary,
     );
-    lines.push(`- Total AI search volume: ${lm.aiSearchVolume}`);
-    for (const p of lm.perPlatform) {
+    if (lm.global) {
+      lines.push("");
       lines.push(
-        `  - ${p.platform}: ${p.mentions} mentions · ${p.aiSearchVolume} AI search volume`,
+        `_Note: the local window may show fewer mentions because DataforSEO's LLM corpus is densest for English/US queries. The global English window is a broader baseline._`,
       );
-    }
-    if (lm.topCitedPages.length > 0) {
-      lines.push(`- Top cited pages from this domain:`);
-      for (const p of lm.topCitedPages.slice(0, 5))
-        lines.push(`  - ${p.url} (${p.mentions} mentions)`);
-    }
-    if (lm.coCitedDomains.length > 0) {
-      lines.push(`- Co-cited / competitor domains in same LLM answers:`);
-      for (const d of lm.coCitedDomains.slice(0, 8))
-        lines.push(`  - ${d.domain} (${d.mentions} mentions, ${d.aiSearchVolume} ASV)`);
+      dumpWindow("Global English AI visibility", lm.global);
     }
   }
 

@@ -11,6 +11,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: 64,
+    date: "2026-05-17",
+    title: "AI Visibility: dual-window (Local + Global English)",
+    highlights: [
+      "AI Visibility panel now shows TWO windows side by side: Local (client's actual market — e.g. Portugal/pt for White Clinic) and Global English (US/en baseline). Each window has its own stats, top cited pages, and co-cited competitors.",
+      "Plain-language explanations baked into the UI: 'Local = audience that buys from this client. Global English = wider US/en signal — useful when local is sparse since the LLM corpus is densest in English.'",
+      "Every stat card in the AI Visibility section has a one-line sublabel explaining what it means (no more guessing what 'ASV' or 'mentions' mean).",
+      "When local mentions = 0, the panel now explicitly tells you to check the Global English baseline — instead of staring at a depressing 0.",
+      "Audits where the client is already US/en (none right now, but future-proofed) only query once. Other clients pay ~$0.04 extra in DataforSEO for the second window — well worth it.",
+    ],
+  },
+  {
     version: 63,
     date: "2026-05-17",
     title: "DataforSEO billing-error banner",
