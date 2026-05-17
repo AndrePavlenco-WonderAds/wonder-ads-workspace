@@ -13,6 +13,19 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "68.7",
+    date: "2026-05-17",
+    title: "Keyword Research scaffold — DataforSEO Labs + onboarding-aware",
+    highlights: [
+      "Keyword Research action now wires three DataforSEO Labs endpoints in parallel: **keyword_suggestions/live** (same-stem expansions of the seed), **keyword_ideas/live** (broader semantic ideas), and **ranked_keywords/live** filtered to the seed theme (what the domain already ranks for — quick wins).",
+      "All queries respect the per-client **geo + language** from `client-geo.ts` — Portugal/pt for clinics, Canada/en for IHN, etc. — so the keyword universe matches the client's actual market.",
+      "**Onboarding form auto-injected** into the prompt when uploaded. Claude is instructed to weight the keywords/themes the client named heavily, and to call out gaps between what the client says they want and what the keyword data backs up.",
+      "Brand-new Claude output spec for keyword research: **Overview · Cluster map** (H3 per cluster with table, intent, KD range, combined volume) · **Quick wins (top 10)** · **Strategic bets** · **Gaps the data reveals** · **Tracking shortlist** for the Tracked Keywords dashboard.",
+      "Priority emoji tags: 🟢 Quick win · 🟡 Strategic · 🔵 Long bet · ⚪ Watch. Intent labels: informational / commercial / transactional / navigational.",
+      "Surfaces partial errors per endpoint (e.g. 'keyword_ideas subscription not enabled') without nuking the whole run.",
+    ],
+  },
+  {
     version: "68.6",
     date: "2026-05-17",
     title: "Per-client Onboarding Form upload (feeds AI actions)",

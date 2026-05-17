@@ -21,6 +21,12 @@ import {
   runSiteAudit,
   type SiteAuditDepth,
 } from "@/lib/seo-tools/site-audit";
+import {
+  runKeywordResearch,
+  formatKwPackForPrompt,
+} from "@/lib/seo-tools/keyword-research";
+import { getClientWebsite as getClientWebsiteForKw } from "@/lib/client-meta";
+import { getOnboardingForSlug } from "@/lib/onboarding-store";
 
 // Vercel Hobby caps at 60s.
 export const maxDuration = 60;
@@ -119,7 +125,67 @@ export async function POST(
       let factPack = "";
 
       // ---------- Tool phase ----------
-      if (tools.length > 0) {
+      if (entry.action.slug === "keyword-research") {
+        // Orchestrated flow for Keyword Research: pull DataforSEO Labs data
+        // + read the onboarding form (if uploaded). Then hand off to Claude.
+        const seedTopic = (inputs.seedTopic ?? "").trim();
+        if (!seedTopic) {
+          send(`> ⚠️ No **seedTopic** provided — running without keyword data.\n\n`);
+        } else {
+          const website = getClientWebsiteForKw(clientSlug);
+          const target = website
+            ? new URL(/^https?:\/\//i.test(website) ? website : `https://${website}`).hostname.replace(/^www\./, "")
+            : undefined;
+          send(`> 🔧 Pulling keyword data from DataforSEO (seed: \`${seedTopic}\`)\n`);
+          const onboarding = await getOnboardingForSlug(clientSlug);
+          if (onboarding) {
+            send(
+              `> ✓ **Onboarding form** detected (${onboarding.name}) — Claude will weight named keywords heavily.\n`,
+            );
+          } else {
+            send(
+              `> ℹ️ No onboarding form on file — relying on seed topic + brief only.\n`,
+            );
+          }
+          const startedAt = Date.now();
+          try {
+            const pack = await runKeywordResearch(seedTopic, clientSlug, {
+              intent: (inputs.intent?.toLowerCase().replace(/\s+/g, "") ?? "all") as
+                | "all"
+                | "informational"
+                | "commercial"
+                | "transactional"
+                | "navigational",
+              target,
+              perEndpointLimit: 300,
+            });
+            const ms = Date.now() - startedAt;
+            if (!pack) {
+              send(
+                `> ❌ DataforSEO not configured — set DATAFORSEO_LOGIN + DATAFORSEO_PASSWORD in Vercel env.\n`,
+              );
+            } else {
+              send(
+                `> ✓ **DataforSEO** — ${pack.suggestions.length} suggestions, ${pack.ideas.length} broader ideas${pack.domainExisting.length ? `, ${pack.domainExisting.length} already-ranking` : ""} (${ms} ms)\n`,
+              );
+              for (const e of pack.errors) {
+                send(`> ⚠️ Partial: ${e.source} — ${e.message.slice(0, 200)}\n`);
+              }
+              const parts: string[] = [formatKwPackForPrompt(pack)];
+              if (onboarding) {
+                parts.push(
+                  `## Onboarding form (uploaded by the consultant)\n- **File:** ${onboarding.name} (${onboarding.contentType})\n- **URL:** ${onboarding.url}\n\nThe client filled this out during onboarding. It names the specific keywords/themes/services they want to be found for. **Weight these heavily in your shortlist** — they're the commercial north-star. If the keyword data contradicts what the onboarding form names, surface that gap explicitly in the "Gaps" section.`,
+                );
+              }
+              factPack = parts.join("\n\n");
+            }
+          } catch (err) {
+            const message = err instanceof Error ? err.message : String(err);
+            send(`> ❌ Keyword research crashed: ${message.slice(0, 240)}\n`);
+          }
+          send("\n---\n\n");
+        }
+      } else if (tools.length > 0) {
         if (!targetUrl) {
           send(
             `> ⚠️ No URL provided in **${toolUrlField}** — running without live tools.\n\n`,

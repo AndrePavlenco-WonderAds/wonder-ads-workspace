@@ -243,7 +243,63 @@ Cover the full stack: indexation + crawlability, Core Web Vitals (both devices),
 Prioritised plan grouped by horizon. Each item: one concrete deliverable + owner + the metric it's expected to move.`;
 
     case "keyword-research":
-      return `Return a prioritised keyword shortlist as a Markdown table with columns: Keyword, Intent, SERP type, Est. monthly volume (qualitative if you can't know exactly), Difficulty (qualitative), Business value (1-5), Suggested page (existing or new), Why it's a fit. Group by topic cluster (H3 per cluster). Include a final "Quick wins" section with the top 5 to start on this week. Be honest when volume is unknown — write "Unknown — verify in Ahrefs/SEMrush" rather than fabricating numbers.`;
+      return `**This is a STRATEGIC keyword research action.** Live data already in the prompt:
+- **DataforSEO Labs — Direct suggestions**: same-stem expansions of the seed topic in the client's actual market (location_code + language_code from client-geo.ts). Each row has search volume, KD, intent, CPC.
+- **DataforSEO Labs — Broader related ideas**: semantically related keywords mined from the SERP. Same metrics.
+- **Already-ranking keywords on the client's domain** (when present): keywords the domain ALREADY ranks for that match this theme — treat as quick-win optimisation targets, not greenfield.
+- **Onboarding form** (when present): the doc the client filled out at intake — main keywords they want to focus on, target audience, services, geo, brand voice. **If the onboarding form mentions specific keywords or themes, weight those heavily in your shortlist — they reflect what the client cares about commercially.**
+- **Client brief** (Do's / Don'ts / Notes): hard constraints.
+
+**Rules**
+- **Cite real numbers** from the fact pack. Never fabricate volume/KD/CPC. If a metric is missing for a keyword, write "—" not a guess.
+- **Prioritise by Intent fit × Business value × Realistic difficulty × Search volume — in that order.** Volume alone is a vanity metric.
+- **Honour the onboarding form** if present — keywords the client explicitly named outrank generic high-volume keywords unless the data clearly contradicts (and then say why).
+- **Cluster aggressively.** No flat keyword lists. Real consultants group by topic + intent before prioritising.
+- Tag SERP intent: \`informational\` / \`commercial\` / \`transactional\` / \`navigational\`. Use the intent field from the fact pack when populated; infer from the keyword phrasing when not.
+- Be honest about missing data: if KD is "—", write "—" not "Easy/Medium/Hard" guesses.
+
+**Output structure** — produce all of these sections, in this order, exactly named:
+
+## Overview
+One-line verdict (e.g. "**~340 viable keywords across 6 clusters; 'all-on-4 Lisbon' cluster is the highest-leverage with 7 quick wins.**").
+
+Then a short paragraph with: total addressable keyword universe (count + summed monthly volume), the dominant intent split (% informational vs commercial vs transactional), and what the onboarding form (if any) anchors us toward.
+
+## Cluster map
+For each topic cluster (4–8 clusters total), use this H3 + table format:
+
+\`\`\`
+### <Cluster name> — <one-line cluster thesis>
+**Intent:** Commercial · **Difficulty range:** 18–42 · **Combined volume/mo:** 12.4k · **Pages it would feed:** 2 (existing /service-X, new /pillar-Y)
+
+| Keyword | Vol/mo | KD | Intent | Priority | Suggested page | Why |
+|---|---:|---:|---|---|---|---|
+| ... |
+\`\`\`
+
+The **Priority** column is one of: **🟢 Quick win** (already ranking 4-20 OR low KD high intent fit) · **🟡 Strategic** (worth investing in a new pillar/cluster) · **🔵 Long bet** (high KD but defensible / brand) · **⚪ Watch** (track for changes; don't action yet).
+
+Include 6–15 keywords per cluster — pick the most representative, not a wall.
+
+## Quick wins (top 10 to ship this month)
+Numbered list — one per line, lifted from the clusters above. Format:
+
+\`\`\`
+1. **<keyword>** (Vol X · KD Y · Intent Z) — action: <one short sentence>. Target page: <slug or "new">.
+\`\`\`
+
+Bias toward: (a) keywords the domain already ranks 4–20 for (rank-pushing > greenfield), (b) low-KD commercial keywords aligned with onboarding-form themes.
+
+## Strategic bets (this quarter)
+3–5 larger plays — new pillar pages, topical cluster builds, or content-format pivots (e.g. "build a comparison hub for *all-on-4 vs implants*"). Each: the bet + cluster it serves + success metric + rough effort (S/M/L).
+
+## Gaps the data reveals
+- **What the client's onboarding form names that no keyword data backs up** (warn them — the keyword they care about may not have search demand).
+- **What the keyword data shows demand for that the onboarding form ignores** (potential expansion).
+- **Where the domain already ranks 4–20 but isn't earning click share** (meta-description / title-tag fixes are quick wins — flag the keyword + the page).
+
+## Tracking shortlist
+The 15–25 keywords that should go into Tracked Keywords this quarter. Bullet list. Each: \`keyword (current rank if known, or "new")\`.`;
 
     case "header-tags":
       return `Output an H1 + H2/H3 outline as a nested list. Every heading must:
