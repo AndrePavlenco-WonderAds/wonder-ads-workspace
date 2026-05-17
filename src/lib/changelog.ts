@@ -11,6 +11,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: 57,
+    date: "2026-05-17",
+    title: "Audit: 5 priority issues, objective tone, Re-generate button",
+    highlights: [
+      "SEO Audit now lists the top 5 priority issues (was 10). If only 3 real Critical/High issues exist, it lists 3 — no padding.",
+      "Tone rewritten to be objective and engineer-voiced: no evaluative language ('excellent', 'concerning'), no hedging, no narrative transitions. State measurement, gap, fix.",
+      "Every result page has a one-click Re-generate button — reuses the same inputs to spawn a fresh result page. Use it when an audit ran before an integration was wired (e.g. DataforSEO) and you want to refresh.",
+    ],
+  },
+  {
     version: 56,
     date: "2026-05-17",
     title: "Audit Phase 1 errors are now visible — plus a DataforSEO test endpoint",

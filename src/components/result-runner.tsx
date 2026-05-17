@@ -1,10 +1,17 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
-import { Download, Loader2, Square, AlertTriangle } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import {
+  Download,
+  Loader2,
+  Square,
+  AlertTriangle,
+  RefreshCw,
+} from "lucide-react";
 import type { ActionDef, ActionToolName } from "@/lib/seo-pillars";
 import type { HistoryEntry } from "@/lib/action-history";
+import { makeResultId } from "@/lib/action-history";
 import { pendingKey } from "./action-runner";
 import { MarkdownView } from "./markdown-view";
 import { DomainDashboard } from "./domain-dashboard";
@@ -25,7 +32,22 @@ export function ResultRunner({
   existing: HistoryEntry | null;
 }) {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const isPrintMode = searchParams?.get("print") === "true";
+
+  function regenerateWithSameInputs() {
+    if (Object.keys(inputs).length === 0) return;
+    const newId = makeResultId();
+    try {
+      sessionStorage.setItem(
+        pendingKey(clientSlug, action.slug, newId),
+        JSON.stringify(inputs),
+      );
+    } catch (err) {
+      console.error("sessionStorage write failed:", err);
+    }
+    router.push(`/seo/${clientSlug}/actions/${action.slug}/results/${newId}`);
+  }
 
   const [output, setOutput] = useState(existing?.output ?? "");
   const [inputs, setInputs] = useState<Record<string, string>>(
@@ -391,6 +413,17 @@ export function ResultRunner({
           )}
           {output && (
             <div className="ml-auto flex items-center gap-2">
+              {status === "done" && Object.keys(inputs).length > 0 && (
+                <button
+                  type="button"
+                  onClick={regenerateWithSameInputs}
+                  title="Run this exact audit again with the same inputs"
+                  className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/[0.04] px-2 py-1 text-[11px] text-white/65 transition hover:border-white/25 hover:text-white"
+                >
+                  <RefreshCw className="h-3 w-3" />
+                  Re-generate
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => navigator.clipboard.writeText(output)}
