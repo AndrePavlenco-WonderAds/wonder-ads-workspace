@@ -244,7 +244,7 @@ Prioritised plan grouped by horizon. Each item: one concrete deliverable + owner
 
     case "keyword-research":
       return `**This is a STRATEGIC keyword research action.** Live data already in the prompt:
-- **DataforSEO Labs — Direct suggestions**: same-stem expansions of the seed topic in the client's actual market (location_code + language_code from client-geo.ts). Each row has search volume, KD, intent, CPC.
+- **DataforSEO Labs — Direct suggestions**: same-stem expansions of the seed topic in the client's actual market (location_code + language_code from client-geo.ts). Each row has search volume, KD, intent. CPC is intentionally excluded — Wonder Ads SEO is organic-only, paid bids are not a ranking signal here.
 - **DataforSEO Labs — Broader related ideas**: semantically related keywords mined from the SERP. Same metrics.
 - **Already-ranking keywords on the client's domain** (when present): keywords the domain ALREADY ranks for that match this theme — treat as quick-win optimisation targets, not greenfield.
 - **Competitor keyword footprints** (when onboarding form names competitors): for each competitor URL named in the form, the keywords they ALREADY rank for filtered to the seed theme. **This is gold — these are real, validated, ranking keywords in your geo.**
@@ -256,7 +256,7 @@ Prioritised plan grouped by horizon. Each item: one concrete deliverable + owner
   - **Respect the Do's** — these are the preferred angles/services/positioning. Bias the shortlist toward keywords that align with them.
   - **NEVER violate a Don't** — if a keyword would make the client uncomfortable, push a service they don't want amplified, or break a stated rule (e.g. avoiding price-led queries, avoiding a competitor's branded term), **drop it from the shortlist entirely**. No exceptions, no "with a caveat".
   - **Integrate the Notes** — Notes are context the team has gathered (operational quirks, audience nuances, branding constraints, geo specifics, language preferences). Every cluster/quick-win recommendation must be filtered through them. When a Note materially shapes a recommendation, name it inline: _"Per client Note: …"_.
-- **Cite real numbers** from the fact pack. Never fabricate volume/KD/CPC. If a metric is missing for a keyword, write "—" not a guess.
+- **Cite real numbers** from the fact pack. Never fabricate volume/KD. If a metric is missing for a keyword, write "—" not a guess.
 - **Prioritise by Intent fit × Business value × Realistic difficulty × Search volume — in that order.** Volume alone is a vanity metric.
 - **Reject generic keywords.** Single-word or pure-category keywords like "psicologia", "tratamento", "dental", "wellness" are vanity terms — they have huge volume but zero intent and no realistic chance of ranking for a single clinic. **Never** include them in the shortlist unless the client is a national leader actively defending that term. If found in suggestions/ideas, filter them out silently.
 - **Honour the onboarding form** if present — keywords the client explicitly named outrank generic high-volume keywords unless the data clearly contradicts (and then say why).

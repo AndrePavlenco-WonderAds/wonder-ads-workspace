@@ -12,6 +12,7 @@ export function PageShell({
   sessionTimer = false,
   backHref,
   backLabel,
+  transparentHeader = false,
 }: {
   children: ReactNode;
   /** Full-bleed layout — used by project pages so the brief + files split
@@ -26,15 +27,24 @@ export function PageShell({
    *  visible escape hatch without scrolling. */
   backHref?: string;
   backLabel?: string;
+  /** Landing-page variant — drops the header's bottom border and
+   *  background panel so the logo + clock sit cleanly on the starfield
+   *  instead of inside a card-like strip. Used only on the department
+   *  chooser. Header stays non-sticky in this mode (the page is short
+   *  and the sticky strip looked floating/unfinished). */
+  transparentHeader?: boolean;
 }) {
   const version = getCurrentVersion();
   const widthClass = wide ? "max-w-none" : "max-w-7xl";
+  const headerChrome = transparentHeader
+    ? "relative bg-transparent"
+    : "sticky top-0 z-30 border-b border-white/5 bg-[color:var(--background)]/85 backdrop-blur-md";
   return (
     <div className="relative min-h-screen overflow-hidden bg-[color:var(--background)] text-[color:var(--foreground)]">
       <BackgroundDecor />
 
       <header
-        className={`sticky top-0 z-30 mx-auto flex w-full ${widthClass} items-center justify-between gap-4 border-b border-white/5 bg-[color:var(--background)]/85 px-6 py-4 backdrop-blur-md sm:px-10 sm:py-5`}
+        className={`mx-auto flex w-full ${widthClass} items-center justify-between gap-4 px-6 py-4 sm:px-10 sm:py-5 ${headerChrome}`}
       >
         <div className="flex items-center gap-4">
           <WonderAdsLogo />

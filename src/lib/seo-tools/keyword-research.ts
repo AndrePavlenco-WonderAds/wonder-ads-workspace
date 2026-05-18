@@ -255,6 +255,103 @@ async function fetchKeywordIdeas(
   };
 }
 
+/** Bulk enrich an arbitrary list of keywords with search volume + KD via
+ *  `keyword_overview/live`. DataforSEO Labs returns far better KD coverage
+ *  on this endpoint than on the per-seed `suggestions/ideas` endpoints,
+ *  which often return KD=0 for low-volume locale-specific keywords. Use
+ *  this after the initial fetches to backfill missing KD/volume on every
+ *  pack row, and again at save-time to fill the AI cluster rows that
+ *  Claude inferred without DataforSEO data.
+ *
+ *  Endpoint accepts up to 700 keywords per call; we batch in chunks of 200
+ *  to keep individual responses small. Returns a map keyed by the
+ *  lowercased keyword string. */
+export async function enrichKeywordsBulk(
+  keywords: string[],
+  locationCode: number,
+  languageCode: string,
+): Promise<
+  Map<string, { searchVolume: number | null; difficulty: number | null; intent: KwIntent }>
+> {
+  const out = new Map<
+    string,
+    { searchVolume: number | null; difficulty: number | null; intent: KwIntent }
+  >();
+  if (!isConfigured() || keywords.length === 0) return out;
+  const unique = Array.from(
+    new Set(keywords.map((k) => k.trim()).filter(Boolean)),
+  );
+  const CHUNK = 200;
+  type Resp = {
+    tasks?: { result?: { items?: KeywordInfoBlob[] }[] }[];
+  };
+  for (let i = 0; i < unique.length; i += CHUNK) {
+    const chunk = unique.slice(i, i + CHUNK);
+    const body = [
+      {
+        keywords: chunk,
+        location_code: locationCode,
+        language_code: languageCode,
+        include_serp_info: false,
+      },
+    ];
+    try {
+      const { data } = await dfsPost<typeof body, Resp>(
+        "/dataforseo_labs/google/keyword_overview/live",
+        body,
+      );
+      const items = data.tasks?.[0]?.result?.[0]?.items ?? [];
+      for (const it of items) {
+        const kw = it.keyword?.trim().toLowerCase();
+        if (!kw) continue;
+        const intent =
+          (it.keyword_info?.search_intent_info?.main_intent as KwIntent) ??
+          null;
+        out.set(kw, {
+          searchVolume: it.keyword_info?.search_volume ?? null,
+          difficulty: it.keyword_properties?.keyword_difficulty ?? null,
+          intent,
+        });
+      }
+    } catch {
+      // Swallow — enrichment is best-effort. Rows without enriched data
+      // keep their original (possibly null) values.
+    }
+  }
+  return out;
+}
+
+/** Apply a bulk-enrichment map to a KwIdea list in place — fills missing
+ *  searchVolume / difficulty / intent only (never overwrites a value the
+ *  per-seed endpoints already returned, since those are typically more
+ *  accurate for the seed context). */
+function applyEnrichment(
+  list: KwIdea[],
+  enrichment: Map<
+    string,
+    { searchVolume: number | null; difficulty: number | null; intent: KwIntent }
+  >,
+): KwIdea[] {
+  return list.map((k) => {
+    const hit = enrichment.get(k.keyword.toLowerCase());
+    if (!hit) return k;
+    return {
+      ...k,
+      searchVolume:
+        k.searchVolume === null || k.searchVolume === undefined
+          ? hit.searchVolume
+          : k.searchVolume,
+      difficulty:
+        // KD=0 is almost always "DataforSEO didn't compute it" rather than
+        // a real value, so treat 0 as missing and let enrichment fill it.
+        k.difficulty === null || k.difficulty === undefined || k.difficulty === 0
+          ? hit.difficulty
+          : k.difficulty,
+      intent: k.intent ?? hit.intent,
+    };
+  });
+}
+
 /** Language-keyed smoke-test seed — used to verify the keyword_suggestions
  *  endpoint is actually returning data for this geo + language combination.
  *  If even THIS returns 0, the DataforSEO subscription / connectivity is
@@ -771,6 +868,43 @@ async function runOnce(
     };
   }
 
+  // --- STAGE 5: bulk KD/volume enrichment ---
+  // The per-seed Labs endpoints return KD=0 for most low-volume locale
+  // keywords (DataforSEO doesn't compute KD on every row of /suggestions
+  // or /ideas). The bulk /keyword_overview/live endpoint returns proper
+  // KD for the same keywords. We fire one enrichment pass over every
+  // keyword in the pack so KD is real, not a misleading 0, and so any row
+  // missing volume gets filled in.
+  const needsEnrichment = [
+    ...combined.suggestions,
+    ...combined.ideas,
+    ...combined.domainExisting,
+    ...competitors.flatMap((c) => c.keywords),
+  ]
+    .filter(
+      (k) =>
+        k.difficulty === null ||
+        k.difficulty === 0 ||
+        k.searchVolume === null ||
+        k.searchVolume === undefined,
+    )
+    .map((k) => k.keyword);
+  if (needsEnrichment.length > 0) {
+    const enrichment = await enrichKeywordsBulk(
+      needsEnrichment,
+      geo.locationCode,
+      geo.languageCode,
+    );
+    combined = {
+      suggestions: applyEnrichment(combined.suggestions, enrichment),
+      ideas: applyEnrichment(combined.ideas, enrichment),
+      domainExisting: applyEnrichment(combined.domainExisting, enrichment),
+    };
+    for (const c of competitors) {
+      c.keywords = applyEnrichment(c.keywords, enrichment);
+    }
+  }
+
   return {
     seedTopic,
     geo,
@@ -797,8 +931,7 @@ function fmtIdeaRow(k: KwIdea): string {
   const vol = fmtNum(k.searchVolume);
   const kd = k.difficulty != null ? `${k.difficulty}` : "—";
   const intent = k.intent ?? "—";
-  const cpc = k.cpc != null ? `$${k.cpc.toFixed(2)}` : "—";
-  return `| ${k.keyword} | ${vol} | ${kd} | ${intent} | ${cpc} |`;
+  return `| ${k.keyword} | ${vol} | ${kd} | ${intent} |`;
 }
 
 function dedupeByKeyword(list: KwIdea[]): KwIdea[] {
@@ -829,7 +962,7 @@ export function formatKwPackForPrompt(pack: KwResearchPack): string {
     for (const e of pack.errors) lines.push(`  - ${e.source}: ${e.message}`);
   }
 
-  const TBL_HEADER = `| Keyword | Vol/mo | KD | Intent | CPC |\n|---|---:|---:|---|---:|`;
+  const TBL_HEADER = `| Keyword | Vol/mo | KD | Intent |\n|---|---:|---:|---|`;
 
   // Suggestions (top 100 by volume)
   const topSuggestions = dedupeByKeyword(pack.suggestions)

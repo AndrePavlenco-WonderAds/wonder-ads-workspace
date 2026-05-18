@@ -16,9 +16,12 @@ import {
   clearKwResearchPrep,
 } from "@/lib/kw-research-prep-store";
 import { parseClustersFromMarkdown } from "@/lib/kw-cluster-parser";
+import { enrichKeywordsBulk } from "@/lib/seo-tools/keyword-research";
 
 export const runtime = "nodejs";
-export const maxDuration = 30;
+// Bumped from 30s — the AI-cluster keyword enrichment fires a
+// /keyword_overview/live call which adds ~2-5s on top of the KV write.
+export const maxDuration = 60;
 
 const MODEL_ID = "claude-sonnet-4-6";
 
@@ -79,6 +82,42 @@ export async function POST(
   // can render them as first-class rows.
   const kwClusters =
     actionSlug === "keyword-research" ? parseClustersFromMarkdown(output) : [];
+
+  // Enrich every cluster keyword with real DataforSEO volume/KD. Claude
+  // infers a much wider keyword universe than DataforSEO surfaces in the
+  // per-seed pulls (often 40-60 keywords vs 7-15 raw rows), so most
+  // cluster rows arrive with vol=null, KD=null. One bulk
+  // /keyword_overview/live call backfills both — same geo as the pack so
+  // volumes match the consultant's market.
+  if (kwClusters.length > 0 && kwResearch) {
+    const allClusterKeywords = kwClusters.flatMap((c) =>
+      c.rows.map((r) => r.keyword),
+    );
+    if (allClusterKeywords.length > 0) {
+      const enrichment = await enrichKeywordsBulk(
+        allClusterKeywords,
+        kwResearch.geo.locationCode,
+        kwResearch.geo.languageCode,
+      );
+      for (const cluster of kwClusters) {
+        for (const row of cluster.rows) {
+          const hit = enrichment.get(row.keyword.toLowerCase());
+          if (!hit) continue;
+          if ((row.volume === null || row.volume === undefined) && hit.searchVolume !== null) {
+            row.volume = hit.searchVolume;
+            row.volumeText = hit.searchVolume.toString();
+          }
+          if (
+            (row.difficulty === null || row.difficulty === undefined || row.difficulty === 0) &&
+            hit.difficulty !== null
+          ) {
+            row.difficulty = hit.difficulty;
+            row.difficultyText = hit.difficulty.toString();
+          }
+        }
+      }
+    }
+  }
 
   try {
     const saved = await appendHistory({

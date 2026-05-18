@@ -8,6 +8,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
+import { TypewriterHeading } from "@/components/typewriter-heading";
 
 type Department = {
   title: string;
@@ -45,14 +46,14 @@ const DEPARTMENTS: Department[] = [
 
 export default function Home() {
   return (
-    <PageShell>
+    <PageShell transparentHeader>
       <section className="mx-auto mb-10 max-w-3xl text-center sm:mb-14">
         <span className="animate-fade-up inline-flex items-center rounded-full border border-[color:var(--border)] bg-white/5 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.18em] text-white/70 backdrop-blur">
           Wonder Ads Workspace
         </span>
-        <h1 className="animate-fade-up mt-6 text-balance text-4xl font-semibold leading-[1.05] tracking-tight sm:text-6xl">
-          Choose a <span className="brand-gradient-text">Department</span>
-        </h1>
+        <div className="animate-fade-up">
+          <TypewriterHeading prefix="Choose Your " highlight="Department" />
+        </div>
       </section>
 
       <HubSection />

@@ -29,7 +29,7 @@ type IntentFilter =
   | "commercial"
   | "transactional"
   | "navigational";
-type SortKey = "volume" | "keyword" | "kd" | "cpc";
+type SortKey = "volume" | "keyword" | "kd";
 type SortDir = "asc" | "desc";
 type GroupBy = "none" | "intent" | "source" | "cluster";
 
@@ -121,7 +121,7 @@ export function KeywordResearchDashboard({
       <header className="flex flex-wrap items-center gap-3 border-b border-white/8 px-5 py-4">
         <Sparkles className="h-4 w-4 text-white/55" strokeWidth={2.25} />
         <h2 className="text-sm font-semibold tracking-tight text-white">
-          Keyword Universe
+          Keyword Data for {formatKwHeaderDate(pack?.fetchedAt)}
         </h2>
         {pack && (
           <span className="text-[11px] text-white/45">
@@ -413,17 +413,6 @@ export function KeywordResearchDashboard({
                 align="right"
               />
               <Th>Intent</Th>
-              <SortableTh
-                label="CPC"
-                k="cpc"
-                sortKey={sortKey}
-                sortDir={sortDir}
-                onSort={(k, d) => {
-                  setSortKey(k);
-                  setSortDir(d);
-                }}
-                align="right"
-              />
               <Th>Source</Th>
             </tr>
           </thead>
@@ -431,7 +420,7 @@ export function KeywordResearchDashboard({
             {filtered.length === 0 ? (
               <tr>
                 <td
-                  colSpan={7}
+                  colSpan={6}
                   className="px-3 py-10 text-center text-white/35"
                 >
                   No keywords match these filters.
@@ -468,34 +457,72 @@ export function KeywordResearchDashboard({
   );
 }
 
+/** Collapse accent/plural variants of the same Portuguese (or English)
+ *  keyword to a single canonical key. Examples that should all collapse:
+ *
+ *    clinica ermesinde  /  clínica ermesinde
+ *    clinicas ermesinde /  clínicas ermesinde
+ *    clínica dos jerónimos (variante acentuada)  /  clínica dos jerónimos
+ *
+ *  Strips accents, parenthetical asides, punctuation, and a trailing
+ *  plural 's' on each token (only when it doesn't change the word's
+ *  meaning, i.e. token length > 4 and the token isn't an -ss / -us word). */
+function normalizeKwForDedup(s: string): string {
+  return s
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/\s*\([^)]*\)\s*/g, " ")
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .split(" ")
+    .map((t) => {
+      if (t.length > 4 && t.endsWith("s") && !t.endsWith("ss") && !t.endsWith("us")) {
+        return t.slice(0, -1);
+      }
+      return t;
+    })
+    .join(" ");
+}
+
+/** Score a row by how informative it is. The row with the highest score
+ *  for a given dedup key wins (used to pick which variant survives the
+ *  collapse). */
+function rowScore(k: EnrichedIdea): number {
+  let s = 0;
+  if (k.searchVolume !== null && k.searchVolume !== undefined && k.searchVolume > 0)
+    s += 1000 + Math.min(k.searchVolume, 100000);
+  if (k.difficulty !== null && k.difficulty !== undefined && k.difficulty > 0)
+    s += 100;
+  if (k.intent) s += 50;
+  if (k.clusterName) s += 25; // cluster context is worth keeping
+  if (k.why) s += 10;
+  // Prefer the accented form (more correct Portuguese spelling) when
+  // everything else ties.
+  if (/[áàâãéèêíïóôõúüç]/i.test(k.keyword)) s += 5;
+  return s;
+}
+
 function enrichIdeas(
   pack: KwResearchPack | null,
   clusters: KwCluster[],
 ): EnrichedIdea[] {
-  const out: EnrichedIdea[] = [];
-  const seen = new Set<string>(); // key by lowercase keyword + origin to allow same kw across origins
-  function add(
-    k: KwIdea,
-    origin: EnrichedIdea["origin"],
-    extras: Partial<EnrichedIdea> = {},
-  ) {
-    const id = `${k.keyword.toLowerCase()}::${origin}::${extras.competitorDomain ?? extras.clusterName ?? ""}`;
-    if (seen.has(id)) return;
-    seen.add(id);
-    out.push({ ...k, origin, ...extras });
-  }
+  const raw: EnrichedIdea[] = [];
   if (pack) {
-    pack.suggestions.forEach((k) => add(k, "Suggestion"));
-    pack.ideas.forEach((k) => add(k, "Idea"));
-    pack.domainExisting.forEach((k) => add(k, "Already-ranking"));
+    pack.suggestions.forEach((k) =>
+      raw.push({ ...k, origin: "Suggestion" }),
+    );
+    pack.ideas.forEach((k) => raw.push({ ...k, origin: "Idea" }));
+    pack.domainExisting.forEach((k) =>
+      raw.push({ ...k, origin: "Already-ranking" }),
+    );
     pack.competitors.forEach((c) =>
-      c.keywords.forEach((k) => add(k, c.domain, { competitorDomain: c.domain })),
+      c.keywords.forEach((k) =>
+        raw.push({ ...k, origin: c.domain, competitorDomain: c.domain }),
+      ),
     );
   }
-  // AI-cluster rows — Claude's analysed keywords (often a superset of the
-  // raw DataforSEO data because Claude infers from the onboarding form +
-  // geo). These typically have null vol/KD when DataforSEO didn't surface
-  // them, but carry rich intent/priority/page/why context.
   for (const cluster of clusters) {
     for (const row of cluster.rows) {
       const intentLower = (row.intent ?? "").toLowerCase();
@@ -506,30 +533,89 @@ function enrichIdeas(
         intentLower === "navigational"
           ? (intentLower as KwIdea["intent"])
           : null;
-      add(
-        {
-          keyword: row.keyword,
-          searchVolume: row.volume,
-          cpc: null,
-          competition: null,
-          competitionLevel: null,
-          difficulty: row.difficulty,
-          intent: validIntent,
-          monthlyTrend: null,
-          source: "ideas",
-        },
-        "AI cluster",
-        {
-          clusterName: cluster.name,
-          clusterPriority: row.priority,
-          clusterPriorityRaw: row.priorityRaw,
-          suggestedPage: row.suggestedPage,
-          why: row.why,
-        },
-      );
+      raw.push({
+        keyword: row.keyword,
+        searchVolume: row.volume,
+        cpc: null,
+        competition: null,
+        competitionLevel: null,
+        difficulty: row.difficulty,
+        intent: validIntent,
+        monthlyTrend: null,
+        source: "ideas",
+        origin: "AI cluster",
+        clusterName: cluster.name,
+        clusterPriority: row.priority,
+        clusterPriorityRaw: row.priorityRaw,
+        suggestedPage: row.suggestedPage,
+        why: row.why,
+      });
     }
   }
+
+  // Collapse accent/plural variants AND duplicates across origins. Keep
+  // ONE row per normalized keyword — the most informative one. Merge
+  // missing fields from the losers (e.g. cluster context from an AI row,
+  // search volume from a DataforSEO row).
+  const groups = new Map<string, EnrichedIdea[]>();
+  for (const row of raw) {
+    const key = normalizeKwForDedup(row.keyword);
+    if (!key) continue;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(row);
+  }
+  const out: EnrichedIdea[] = [];
+  for (const [, rows] of groups) {
+    if (rows.length === 1) {
+      out.push(rows[0]);
+      continue;
+    }
+    const sorted = [...rows].sort((a, b) => rowScore(b) - rowScore(a));
+    const winner = { ...sorted[0] };
+    // Merge: fill missing fields on the winner from any loser that has
+    // them. We don't overwrite, we only fill nulls.
+    for (let i = 1; i < sorted.length; i++) {
+      const loser = sorted[i];
+      if ((winner.searchVolume === null || winner.searchVolume === undefined) && loser.searchVolume != null)
+        winner.searchVolume = loser.searchVolume;
+      if (
+        (winner.difficulty === null || winner.difficulty === undefined || winner.difficulty === 0) &&
+        loser.difficulty != null &&
+        loser.difficulty > 0
+      )
+        winner.difficulty = loser.difficulty;
+      if (!winner.intent && loser.intent) winner.intent = loser.intent;
+      if (!winner.clusterName && loser.clusterName) {
+        winner.clusterName = loser.clusterName;
+        winner.clusterPriority = loser.clusterPriority;
+        winner.clusterPriorityRaw = loser.clusterPriorityRaw;
+        winner.suggestedPage = loser.suggestedPage;
+        winner.why = loser.why;
+      }
+    }
+    out.push(winner);
+  }
   return out;
+}
+
+const MONTH_NAMES_EN_GB = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
+function formatKwHeaderDate(ts: number | null | undefined): string {
+  const d = ts ? new Date(ts) : new Date();
+  return `${MONTH_NAMES_EN_GB[d.getMonth()]} | ${d.getFullYear()}`;
 }
 
 function filterAndSort(
@@ -570,8 +656,6 @@ function filterAndSort(
         return ((a.difficulty ?? Number.MAX_SAFE_INTEGER) -
           (b.difficulty ?? Number.MAX_SAFE_INTEGER)) *
           dirMul;
-      case "cpc":
-        return ((a.cpc ?? 0) - (b.cpc ?? 0)) * dirMul;
       case "volume":
       default:
         return ((a.searchVolume ?? 0) - (b.searchVolume ?? 0)) * dirMul;
@@ -597,7 +681,6 @@ function exportCsv(
     "search_volume",
     "keyword_difficulty",
     "intent",
-    "cpc",
     "source",
     "competitor_domain",
   ];
@@ -609,7 +692,6 @@ function exportCsv(
         r.searchVolume ?? "",
         r.difficulty ?? "",
         r.intent ?? "",
-        r.cpc ?? "",
         csvEscape(r.origin),
         csvEscape(r.competitorDomain ?? ""),
       ].join(","),
@@ -766,7 +848,7 @@ function renderGroupedRows(
           />
         </td>
         <td
-          colSpan={6}
+          colSpan={5}
           className="px-3 py-2 text-[10.5px] font-semibold uppercase tracking-[0.12em]"
         >
           {label} <span className="text-white/40">({rows.length})</span>
@@ -856,9 +938,6 @@ function KwRow({
       </td>
       <td className="px-3 py-2">
         <IntentChip intent={kw.intent} />
-      </td>
-      <td className="px-3 py-2 text-right text-white/70">
-        {kw.cpc != null ? `$${kw.cpc.toFixed(2)}` : "—"}
       </td>
       <td className="px-3 py-2 text-white/55">
         {kw.competitorDomain ? (

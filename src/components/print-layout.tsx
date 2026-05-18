@@ -335,7 +335,6 @@ function PrintKeywordResearchSummary({ pack }: { pack: KwResearchPack }) {
                 <th style={{ textAlign: "right" }}>Vol/mo</th>
                 <th style={{ textAlign: "right" }}>KD</th>
                 <th>Intent</th>
-                <th style={{ textAlign: "right" }}>CPC</th>
               </tr>
             </thead>
             <tbody>
@@ -346,9 +345,6 @@ function PrintKeywordResearchSummary({ pack }: { pack: KwResearchPack }) {
                   <td style={{ textAlign: "right" }}>{fmtNum(k.searchVolume)}</td>
                   <td style={{ textAlign: "right" }}>{k.difficulty ?? "—"}</td>
                   <td>{k.intent ?? "—"}</td>
-                  <td style={{ textAlign: "right" }}>
-                    {k.cpc != null ? `$${k.cpc.toFixed(2)}` : "—"}
-                  </td>
                 </tr>
               ))}
             </tbody>

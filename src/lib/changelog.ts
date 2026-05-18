@@ -13,6 +13,19 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "69.8",
+    date: "2026-05-18",
+    title: "KR polish: real KD, no CPC, dedup near-identical variants, monthly header + chooser typewriter",
+    highlights: [
+      "**🎯 Real Keyword Difficulty everywhere.** The per-seed `keyword_suggestions` / `keyword_ideas` Labs endpoints return KD=0 for most low-volume locale keywords (DataforSEO doesn't compute KD on every row). New bulk `/keyword_overview/live` enrichment fires after the initial fetches and backfills KD on every row in the pack. Also fills missing `searchVolume` so every keyword has a vol/mo figure — no more `—` placeholders for AI-cluster keywords.",
+      "**AI-cluster keywords enriched at save time.** When Claude infers a 40-60 keyword universe across 6 clusters from the onboarding form + geo, those rows now also get enriched with DataforSEO volume + KD via the same bulk endpoint inside `/api/seo-actions/[slug]/[action]/save` (maxDuration bumped 30s → 60s to accommodate). So the dashboard table shows real vol/mo and KD on cluster rows instead of `—`.",
+      "**🧹 Near-identical variants collapse to one row.** New `normalizeKwForDedup` strips Portuguese accents, plural `s` suffixes, parenthetical asides (`(variante acentuada)`), and punctuation — then groups by the normalized key and keeps the most informative row (highest volume + accented spelling preferred). So `clínica ermesinde` / `clinica ermesinde` / `clínicas ermesinde` / `clinicas ermesinde` become **one** row instead of four. Merges missing fields from the losers (cluster context, volume, intent) into the winner.",
+      "**No more CPC column.** Wonder Ads SEO is organic-only — CPC was misleading noise on a paid-traffic metric. Dropped from the dashboard table, the CSV export header, the PDF report, the markdown fact pack sent to Claude, and the system prompt instructions.",
+      "**Keyword Universe → Keyword Data for {Month} | {Year}.** Header badge now anchors the data freshness explicitly to the month it was pulled (e.g. `Keyword Data for May | 2026`), so consultants don't accidentally treat 6-month-old research as current.",
+      "**Department chooser polish.** Header no longer sits inside a card-like sticky strip — on the landing page it's transparent and floats over the starfield. The `Choose a Department` heading is now `Choose Your Department` and types in with a brand-coloured caret (respects `prefers-reduced-motion`).",
+    ],
+  },
+  {
     version: "69.7",
     date: "2026-05-17",
     title: "Claude clusters in the dashboard table + auto-continuation when Claude is cut off",
