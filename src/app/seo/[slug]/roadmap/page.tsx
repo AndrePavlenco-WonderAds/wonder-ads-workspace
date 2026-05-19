@@ -11,10 +11,7 @@ import {
   getLogoSizing,
 } from "@/lib/client-meta";
 import { getClientPalette, paletteToGradient } from "@/lib/client-colors";
-import {
-  computeWarnings,
-  getCurrentRoadmap,
-} from "@/lib/roadmap-store";
+import { computeWarnings, ensureRoadmap } from "@/lib/roadmap-store";
 
 export const dynamic = "force-dynamic";
 
@@ -46,13 +43,10 @@ export default async function RoadmapPage({
   const logoSizing = getLogoSizing(slug);
   const gradient = paletteToGradient(getClientPalette(slug));
 
-  const roadmap = await getCurrentRoadmap(slug);
-  const initialWarnings = roadmap
-    ? computeWarnings(roadmap).filter(
-        (w) =>
-          !new Set(roadmap.dismissedWarnings.map((d) => d.id)).has(w.id),
-      )
-    : [];
+  const roadmap = await ensureRoadmap(slug);
+  const initialWarnings = computeWarnings(roadmap).filter(
+    (w) => !new Set(roadmap.dismissedWarnings.map((d) => d.id)).has(w.id),
+  );
 
   return (
     <PageShell wide backHref={`/seo/${slug}`} backLabel={client.title}>

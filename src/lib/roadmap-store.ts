@@ -86,6 +86,38 @@ export async function getCurrentRoadmap(slug: string): Promise<Roadmap | null> {
   }
 }
 
+/** Like getCurrentRoadmap but always returns a usable Roadmap — when no
+ *  roadmap is on file yet, an empty one (12 blank weeks, today as
+ *  startDate, no tasks) is created and persisted so the board renders
+ *  immediately. Consultants click Generate to have Claude fill it in,
+ *  but the grid works manually without any AI call too. */
+export async function ensureRoadmap(slug: string): Promise<Roadmap> {
+  const existing = await getCurrentRoadmap(slug);
+  if (existing) return existing;
+  const now = new Date();
+  const today = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
+  )
+    .toISOString()
+    .slice(0, 10);
+  const blank: Roadmap = {
+    id: newRoadmapId(),
+    clientSlug: slug,
+    startDate: today,
+    generatedAt: Date.now(),
+    tasks: [],
+    dismissedWarnings: [],
+  };
+  if (roadmapStorageConfigured) {
+    try {
+      await kv.set(currentKey(slug), blank);
+    } catch (err) {
+      console.error("roadmap blank-init failed:", err);
+    }
+  }
+  return blank;
+}
+
 export async function saveCurrentRoadmap(roadmap: Roadmap): Promise<Roadmap> {
   if (!roadmapStorageConfigured) return roadmap;
   await kv.set(currentKey(roadmap.clientSlug), roadmap);

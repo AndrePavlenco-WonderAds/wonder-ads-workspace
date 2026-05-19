@@ -85,7 +85,7 @@ const GENERATE_PHASES = [
 type Props = {
   clientSlug: string;
   clientName: string;
-  initialRoadmap: Roadmap | null;
+  initialRoadmap: Roadmap;
   initialWarnings: RoadmapWarning[];
 };
 
@@ -95,7 +95,7 @@ export function RoadmapBoard({
   initialRoadmap,
   initialWarnings,
 }: Props) {
-  const [roadmap, setRoadmap] = useState<Roadmap | null>(initialRoadmap);
+  const [roadmap, setRoadmap] = useState<Roadmap>(initialRoadmap);
   const [warnings, setWarnings] = useState<RoadmapWarning[]>(initialWarnings);
   const [saving, setSaving] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -103,8 +103,8 @@ export function RoadmapBoard({
   const [generateMessage, setGenerateMessage] = useState<string>("");
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [generatePanelOpen, setGeneratePanelOpen] = useState(false);
-  const [generateStartDate, setGenerateStartDate] = useState(() =>
-    initialRoadmap?.startDate ?? defaultStartDateISO(),
+  const [generateStartDate, setGenerateStartDate] = useState(
+    initialRoadmap.startDate,
   );
   const [generateFocus, setGenerateFocus] = useState("");
   const [generateConstraints, setGenerateConstraints] = useState("");
@@ -113,7 +113,6 @@ export function RoadmapBoard({
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const skipNextSave = useRef(true);
   useEffect(() => {
-    if (!roadmap) return;
     if (skipNextSave.current) {
       skipNextSave.current = false;
       return;
@@ -127,23 +126,18 @@ export function RoadmapBoard({
     };
   }, [roadmap]);
 
-  const week = useMemo(
-    () => (roadmap ? currentWeekIndex(roadmap) : 0),
-    [roadmap],
-  );
+  const week = useMemo(() => currentWeekIndex(roadmap), [roadmap]);
   const tasksByWeek = useMemo(() => {
     const map = new Map<number, RoadmapTask[]>();
     for (let w = 1; w <= 12; w++) map.set(w, []);
-    if (roadmap) {
-      for (const t of roadmap.tasks) {
-        const bucket = map.get(t.week) ?? [];
-        bucket.push(t);
-        map.set(t.week, bucket);
-      }
-      for (const [w, list] of map) {
-        list.sort((a, b) => a.order - b.order);
-        map.set(w, list);
-      }
+    for (const t of roadmap.tasks) {
+      const bucket = map.get(t.week) ?? [];
+      bucket.push(t);
+      map.set(t.week, bucket);
+    }
+    for (const [w, list] of map) {
+      list.sort((a, b) => a.order - b.order);
+      map.set(w, list);
     }
     return map;
   }, [roadmap]);
@@ -216,7 +210,6 @@ export function RoadmapBoard({
   const updateTask = useCallback(
     (taskId: string, patch: Partial<RoadmapTask>) => {
       setRoadmap((prev) => {
-        if (!prev) return prev;
         const now = Date.now();
         const tasks = prev.tasks.map((t) => {
           if (t.id !== taskId) return t;
@@ -232,14 +225,13 @@ export function RoadmapBoard({
     [],
   );
   const deleteTask = useCallback((taskId: string) => {
-    setRoadmap((prev) => {
-      if (!prev) return prev;
-      return { ...prev, tasks: prev.tasks.filter((t) => t.id !== taskId) };
-    });
+    setRoadmap((prev) => ({
+      ...prev,
+      tasks: prev.tasks.filter((t) => t.id !== taskId),
+    }));
   }, []);
   const addTask = useCallback((week: number) => {
     setRoadmap((prev) => {
-      if (!prev) return prev;
       const maxOrder = prev.tasks
         .filter((t) => t.week === week)
         .reduce((m, t) => Math.max(m, t.order), 0);
@@ -259,51 +251,20 @@ export function RoadmapBoard({
     });
   }, []);
   const dismissWarning = useCallback((id: string) => {
-    setRoadmap((prev) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        dismissedWarnings: [
-          ...prev.dismissedWarnings,
-          { id, dismissedAt: Date.now() },
-        ],
-      };
-    });
+    setRoadmap((prev) => ({
+      ...prev,
+      dismissedWarnings: [
+        ...prev.dismissedWarnings,
+        { id, dismissedAt: Date.now() },
+      ],
+    }));
     setWarnings((prev) => prev.filter((w) => w.id !== id));
   }, []);
   const updateStartDate = useCallback((next: string) => {
-    setRoadmap((prev) => (prev ? { ...prev, startDate: next } : prev));
+    setRoadmap((prev) => ({ ...prev, startDate: next }));
   }, []);
 
-  // ----- Empty state (no roadmap yet) -----
-  if (!roadmap) {
-    return (
-      <div className="brand-gradient-border rounded-2xl bg-white/[0.035] p-8 backdrop-blur-md">
-        <div className="flex items-center gap-3">
-          <Sparkles className="h-5 w-5 text-[color:var(--brand-purple)]" />
-          <h2 className="text-lg font-semibold text-white">
-            No roadmap yet for {clientName}
-          </h2>
-        </div>
-        <p className="mt-2 text-sm text-white/65">
-          Generate a 12-week plan from {clientName}&apos;s context — every task is editable after.
-        </p>
-        <GeneratePanel
-          startDate={generateStartDate}
-          setStartDate={setGenerateStartDate}
-          focus={generateFocus}
-          setFocus={setGenerateFocus}
-          constraints={generateConstraints}
-          setConstraints={setGenerateConstraints}
-          generating={generating}
-          generate={generate}
-          error={generateError}
-          progressMessage={generateMessage}
-          mode="create"
-        />
-      </div>
-    );
-  }
+  const isEmpty = roadmap.tasks.length === 0;
 
   return (
     <div className="space-y-5">
@@ -344,8 +305,8 @@ export function RoadmapBoard({
               : "Past the 12-week horizon"}
         </span>
         <span className="text-[11px] text-white/45">
-          {roadmap.tasks.length} tasks · generated{" "}
-          {formatDate(roadmap.generatedAt)}
+          {roadmap.tasks.length} task{roadmap.tasks.length === 1 ? "" : "s"}
+          {!isEmpty && ` · generated ${formatDate(roadmap.generatedAt)}`}
         </span>
         <span className="ml-auto inline-flex items-center gap-3">
           {saving && (
@@ -356,10 +317,18 @@ export function RoadmapBoard({
           <button
             type="button"
             onClick={() => setGeneratePanelOpen((p) => !p)}
-            className="inline-flex items-center gap-1.5 rounded-md border border-white/15 bg-white/[0.04] px-3 py-1.5 text-[11px] font-medium text-white/85 transition hover:border-white/30 hover:bg-white/[0.08] hover:text-white"
+            className={
+              isEmpty
+                ? "inline-flex items-center gap-1.5 rounded-md bg-gradient-to-br from-[#343ED7] via-[#783DF5] to-[#C535C9] px-3 py-1.5 text-[11px] font-semibold text-white shadow-md shadow-[#783DF5]/25 transition hover:brightness-110"
+                : "inline-flex items-center gap-1.5 rounded-md border border-white/15 bg-white/[0.04] px-3 py-1.5 text-[11px] font-medium text-white/85 transition hover:border-white/30 hover:bg-white/[0.08] hover:text-white"
+            }
           >
-            <RefreshCw className="h-3.5 w-3.5" />
-            Regenerate
+            {isEmpty ? (
+              <Sparkles className="h-3.5 w-3.5" />
+            ) : (
+              <RefreshCw className="h-3.5 w-3.5" />
+            )}
+            {isEmpty ? "Fill with AI" : "Regenerate"}
             <ChevronDown
               className={`h-3 w-3 transition ${generatePanelOpen ? "rotate-180" : ""}`}
             />
@@ -379,7 +348,7 @@ export function RoadmapBoard({
           generate={generate}
           error={generateError}
           progressMessage={generateMessage}
-          mode="regenerate"
+          mode={isEmpty ? "create" : "regenerate"}
         />
       )}
 
@@ -799,16 +768,6 @@ function tryParseJson<T>(raw: string): T | null {
   }
 }
 
-function defaultStartDateISO(): string {
-  // Default to today — week 1 starts whenever the consultant wants it to.
-  // (We used to round up to next Monday, but the consultant flagged that
-  // as an artificial constraint.)
-  const now = new Date();
-  const d = new Date(
-    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
-  );
-  return d.toISOString().slice(0, 10);
-}
 
 async function persistRoadmap(
   roadmap: Roadmap,

@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "70.4",
+    date: "2026-05-19",
+    title: "Roadmap: pre-built grid always renders; AI just fills it (no more FUNCTION_INVOCATION_TIMEOUT)",
+    highlights: [
+      "**🧱 Board always exists.** Opening `/seo/[slug]/roadmap` now calls `ensureRoadmap(slug)` — if no roadmap is on file yet, a blank one (12 empty weeks, today as start date, no tasks) is created and persisted on the fly. The 'No roadmap yet for {client}' empty state is **gone**. You see all 12 weeks immediately and can hand-add tasks without any AI call.",
+      "**⚡ Generate now runs on Haiku 4.5, not Sonnet.** Sonnet was consistently running 45-60s on the structured-output call and tripping Vercel's 60s function ceiling (`FUNCTION_INVOCATION_TIMEOUT`). Haiku 4.5 produces task names + sequencing of the same quality in ~10-20s. Combined with a tighter schema (dropped the `description` field — consultants type those inline when they edit a card anyway) + a lower task target (3-4 per week, 36-48 total instead of 60-70), the call now lands comfortably under the budget.",
+      "**✂️ Schema + prompt diet.** Onboarding context capped 3k → 2k chars. maxOutputTokens 3500 → 2200. Design-rules block rewritten in shorthand. Same task-quality output for half the token budget.",
+      "**🎯 Smarter top-bar button.** When the board is empty (no AI generation yet), the button shows `✨ Fill with AI` in brand gradient — visually distinct from the standard `Regenerate` (which appears only after the board has tasks). Same expanding panel underneath; the wording matches what's actually happening.",
+    ],
+  },
+  {
     version: "70.3",
     date: "2026-05-19",
     title: "Roadmap: structured-output generation (no more JSON parse failures), any-day start, mind-map polish",

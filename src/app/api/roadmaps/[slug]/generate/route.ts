@@ -32,7 +32,11 @@ import {
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-const MODEL_ID = "claude-sonnet-4-6";
+// Haiku 4.5 — significantly faster than Sonnet for structured planning
+// output. Sonnet was running 45-60s for this schema and tripping Vercel's
+// 60s function ceiling. Haiku keeps the response quality good enough for
+// task naming/sequencing while running 10-20s typical.
+const MODEL_ID = "claude-haiku-4-5-20251001";
 
 const RoadmapTaskSchema = z.object({
   week: z
@@ -40,37 +44,28 @@ const RoadmapTaskSchema = z.object({
     .int()
     .min(1)
     .max(12)
-    .describe(
-      "Which week column the task belongs to. Integer between 1 and 12 inclusive.",
-    ),
+    .describe("Week column 1-12 inclusive."),
   title: z
     .string()
     .min(2)
     .max(120)
     .describe(
-      "Short imperative task title — what the consultant or team will actually do. Examples: 'Website Deep Audit', 'Prepare EEAT Author Signature for Blog', '2 Blog Articles (cluster: all-on-4)', 'GMB Post 1'. No vague verbs like 'improve SEO'.",
-    ),
-  description: z
-    .string()
-    .max(800)
-    .optional()
-    .describe(
-      "Optional 1-2 sentences of implementation context the consultant will read. Skip when the title alone is enough.",
+      "Short imperative task title — what the team will actually do. Examples: 'Website Deep Audit', '2 Blog Articles (all-on-4 cluster)', 'GMB Post 1', 'Scan and Optimize Header Tags'. No vague verbs like 'improve SEO'. Description is left blank — consultant fills in after.",
     ),
   pillar: z
     .enum(["technical", "on-page", "off-page", "local", "content", "research"])
     .describe(
-      "Which SEO pillar this task belongs to. Mix pillars across each week (not all tasks of one pillar in one week).",
+      "SEO pillar this task belongs to. Mix pillars across each week (not all tasks of one pillar in one week).",
     ),
 });
 
 const RoadmapSchema = z.object({
   tasks: z
     .array(RoadmapTaskSchema)
-    .min(20)
-    .max(90)
+    .min(24)
+    .max(50)
     .describe(
-      "All tasks across the 12 weeks. Aim for 4-7 tasks per week (50-70 total). Sequence: weeks 1-2 = audit + tracking setup + tech hygiene; weeks 3-8 = on-page + content + local + off-page execution; weeks 9-12 = strategic plays + measurement. Every week must have at least 3 tasks.",
+      "Tasks across the 12 weeks. 3-4 per week average (36-48 total). Sequence: weeks 1-2 = audit + tracking setup + tech hygiene; weeks 3-8 = on-page + content + local + off-page execution; weeks 9-12 = strategic plays + measurement. Every week must have at least 3 tasks.",
     ),
 });
 
@@ -127,7 +122,7 @@ export async function POST(
   const historyBlock = formatHistory(history);
   const targetsBlock = formatTargets(targets);
   const onboardingBlock = onboarding?.extractedText
-    ? `## Onboarding form (extracted text)\n\`\`\`\n${onboarding.extractedText.slice(0, 3000)}${onboarding.extractedText.length > 3000 ? "\n…[truncated]" : ""}\n\`\`\``
+    ? `## Onboarding form (extracted text)\n\`\`\`\n${onboarding.extractedText.slice(0, 2000)}${onboarding.extractedText.length > 2000 ? "\n…[truncated]" : ""}\n\`\`\``
     : "";
   const previousBlock = previous
     ? `## Previous roadmap (just ran out / being replaced)\nStart date: ${previous.startDate}\nTasks (only those already 'implemented' should be credited as done):\n${previous.tasks
@@ -152,14 +147,14 @@ export async function POST(
     historyBlock,
     targetsBlock,
     previousBlock,
-    "\n## Design rules (apply to the schema you fill out)",
-    "- Sequence foundational work first. Week 1-2 = deep site audit + tracking setup (GA4 / GSC / GMB / Clarity if missing) + content/EEAT scaffolding.",
-    "- Weeks 3-8: real production work — content (1-3 articles/week), backlink batches, GMB posts (weekly), on-page optimisation passes, landing pages.",
-    "- Weeks 9-12: AI search readiness, entity/schema work, follow-up linkbuilding, content insights, GMB reports.",
-    "- Every week needs at least 3 tasks. Aim 4-7 / week average. Mix pillars within each week.",
-    "- Be specific. Bad: 'Improve SEO'. Good: 'Scan and Optimize all Image Alt Tags', 'GMB Reviews Responder — April batch', '2 Blog Articles (all-on-4 cluster)'.",
-    "- Honour the client's Do's / Don'ts and any consultant constraints above. Don't propose anything the client said no to.",
-    "- If the previous roadmap shows an audit was just shipped, don't propose another one in week 1 — propose what comes next (e.g. ship the audit fixes).",
+    "\n## Design rules",
+    "- Weeks 1-2: deep audit + GA4/GSC/GMB tracking setup + EEAT scaffolding.",
+    "- Weeks 3-8: content (1-2 articles/week), backlink batches, weekly GMB posts, on-page passes, landing pages.",
+    "- Weeks 9-12: AI/entity/schema work, follow-up linkbuilding, content insights, reports.",
+    "- Every week has at least 3 tasks. Aim 3-4 per week (36-48 total). Mix pillars within each week.",
+    "- Be specific. Bad: 'Improve SEO'. Good: 'Scan and Optimize Image Alt Tags', 'GMB Reviews Responder — April batch', '2 Blog Articles (all-on-4 cluster)'.",
+    "- Honour Do's / Don'ts and consultant constraints.",
+    "- If the previous roadmap just shipped an audit, propose the next step instead.",
   ]
     .filter(Boolean)
     .join("\n");
@@ -173,8 +168,9 @@ export async function POST(
       schema: RoadmapSchema,
       system,
       prompt: userPrompt,
-      // Sized to fit ~70 task rows comfortably under Vercel's 60s budget.
-      maxOutputTokens: 3500,
+      // Sized for ~48 short tasks (week/title/pillar only). Haiku at this
+      // budget runs ~10-20s typical, well under Vercel's 60s ceiling.
+      maxOutputTokens: 2200,
     });
     parsed = result.object;
   } catch (err) {
@@ -194,7 +190,6 @@ export async function POST(
     id: newTaskId(),
     week: t.week,
     title: t.title.trim().slice(0, 240),
-    description: t.description?.trim() || undefined,
     status: "not_started",
     pillar: t.pillar,
     order: order++,
