@@ -1,14 +1,17 @@
 // Generate a fresh 12-week SEO roadmap for a client.
 //
-// Uses Claude with a JSON-only response so the output drops straight into
-// our `Roadmap` state. Grounds in the same context as the `client-roadmap`
+// Uses Anthropic via the AI SDK's `generateObject` with a Zod schema so
+// the output is *guaranteed* valid JSON matching our `Roadmap` shape —
+// no more loose parsing or "Claude returned prose around the JSON"
+// failure modes. Grounds in the same context as the `client-roadmap`
 // markdown action: brief + onboarding + recent action history + target
 // keywords. The previous current roadmap is archived before the new one
 // is written.
 
 import { NextResponse } from "next/server";
 import { anthropic } from "@ai-sdk/anthropic";
-import { generateText } from "ai";
+import { generateObject } from "ai";
+import { z } from "zod";
 import { getBriefForSlug } from "@/lib/briefs-storage";
 import { getClientBySlug } from "@/lib/notion";
 import { getClientWebsite } from "@/lib/client-meta";
@@ -22,11 +25,7 @@ import {
   newRoadmapId,
   newTaskId,
   nextMondayISO,
-  ROADMAP_PILLARS,
-  ROADMAP_STATUSES,
   type Roadmap,
-  type RoadmapPillar,
-  type RoadmapStatus,
   type RoadmapTask,
 } from "@/lib/roadmap-store";
 
@@ -35,21 +34,50 @@ export const maxDuration = 60;
 
 const MODEL_ID = "claude-sonnet-4-6";
 
+const RoadmapTaskSchema = z.object({
+  week: z
+    .number()
+    .int()
+    .min(1)
+    .max(12)
+    .describe(
+      "Which week column the task belongs to. Integer between 1 and 12 inclusive.",
+    ),
+  title: z
+    .string()
+    .min(2)
+    .max(120)
+    .describe(
+      "Short imperative task title — what the consultant or team will actually do. Examples: 'Website Deep Audit', 'Prepare EEAT Author Signature for Blog', '2 Blog Articles (cluster: all-on-4)', 'GMB Post 1'. No vague verbs like 'improve SEO'.",
+    ),
+  description: z
+    .string()
+    .max(800)
+    .optional()
+    .describe(
+      "Optional 1-2 sentences of implementation context the consultant will read. Skip when the title alone is enough.",
+    ),
+  pillar: z
+    .enum(["technical", "on-page", "off-page", "local", "content", "research"])
+    .describe(
+      "Which SEO pillar this task belongs to. Mix pillars across each week (not all tasks of one pillar in one week).",
+    ),
+});
+
+const RoadmapSchema = z.object({
+  tasks: z
+    .array(RoadmapTaskSchema)
+    .min(20)
+    .max(90)
+    .describe(
+      "All tasks across the 12 weeks. Aim for 4-7 tasks per week (50-70 total). Sequence: weeks 1-2 = audit + tracking setup + tech hygiene; weeks 3-8 = on-page + content + local + off-page execution; weeks 9-12 = strategic plays + measurement. Every week must have at least 3 tasks.",
+    ),
+});
+
 type GenerateBody = {
-  startDate?: string; // YYYY-MM-DD
+  startDate?: string;
   strategicFocus?: string;
   constraints?: string;
-};
-
-type ClaudeTask = {
-  week?: number;
-  title?: string;
-  description?: string;
-  pillar?: string;
-};
-
-type ClaudeRoadmap = {
-  tasks?: ClaudeTask[];
 };
 
 export async function POST(
@@ -90,7 +118,8 @@ export async function POST(
   ]);
 
   const startDate =
-    typeof body.startDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(body.startDate)
+    typeof body.startDate === "string" &&
+    /^\d{4}-\d{2}-\d{2}$/.test(body.startDate)
       ? body.startDate
       : nextMondayISO();
 
@@ -101,17 +130,16 @@ export async function POST(
     ? `## Onboarding form (extracted text)\n\`\`\`\n${onboarding.extractedText.slice(0, 3000)}${onboarding.extractedText.length > 3000 ? "\n…[truncated]" : ""}\n\`\`\``
     : "";
   const previousBlock = previous
-    ? `## Previous roadmap (just ran out / being replaced)\nStartDate: ${previous.startDate}\nTasks (only ones already implemented are still credit-worthy):\n${previous.tasks
+    ? `## Previous roadmap (just ran out / being replaced)\nStart date: ${previous.startDate}\nTasks (only those already 'implemented' should be credited as done):\n${previous.tasks
         .map(
-          (t) =>
-            `- W${t.week} · [${t.status}] ${t.title} (${t.pillar})`,
+          (t) => `- W${t.week} · [${t.status}] ${t.title} (${t.pillar})`,
         )
         .join("\n")}\n\nUse this to AVOID re-proposing work that's already done. Build on top of it.`
     : "";
 
   const userPrompt = [
     `# Generate a fresh 12-week SEO roadmap for **${client.title}**`,
-    `Start date (Monday of week 1): **${startDate}**`,
+    `Start date (week 1 begins): **${startDate}**`,
     `Website: ${getClientWebsite(slug) ?? "(none on file)"}`,
     body.strategicFocus?.trim()
       ? `\n## Strategic focus from the consultant\n${body.strategicFocus.trim()}`
@@ -124,53 +152,31 @@ export async function POST(
     historyBlock,
     targetsBlock,
     previousBlock,
-    "\n## Required output format\nReturn ONLY a JSON object — no prose, no markdown fences. Schema:",
-    "```json",
-    JSON.stringify(
-      {
-        tasks: [
-          {
-            week: "1-12 (integer)",
-            title:
-              "Short imperative task title (max ~80 chars). Examples: 'Website Deep Audit', 'Prepare EEAT Author Signature for Blog', 'Scan and Optimize Header Tags', 'GMB Post 1'.",
-            description:
-              "Optional 1-2 sentences of implementation notes the consultant will read. Skip if obvious from the title.",
-            pillar:
-              "one of: technical · on-page · off-page · local · content · research",
-          },
-        ],
-      },
-      null,
-      2,
-    ),
-    "```",
-    "\n## Roadmap design rules",
-    "- Produce 4–7 tasks per week column on average. Aim for 50–70 total tasks across the 12 weeks.",
-    "- Sequence foundational work first: Week 1-2 = deep audit + tracking setup + GA4/GSC/GMB hygiene. Week 3+ = the work itself.",
-    "- Mix pillars within each week (rarely all tasks of one pillar in one week).",
-    "- Be specific. Bad: 'Improve SEO'. Good: 'Scan and Optimize all Image Alt Tags' / 'GMB Reviews Responder — March batch' / '2 Blog Articles (cluster: all-on-4)'.",
-    "- For Month 3 (weeks 9-12), it's OK for tasks to be lighter / more strategic — but every week must still have at least 3 tasks.",
-    "- Honour the brief Do's / Don'ts and any constraints the consultant supplied. Don't propose anything the client said no to.",
-    "- If the previous roadmap shows an audit was already shipped, don't propose another one in week 1 — propose the next logical step.",
-    "- Output ONLY the JSON object. No commentary, no markdown fences.",
+    "\n## Design rules (apply to the schema you fill out)",
+    "- Sequence foundational work first. Week 1-2 = deep site audit + tracking setup (GA4 / GSC / GMB / Clarity if missing) + content/EEAT scaffolding.",
+    "- Weeks 3-8: real production work — content (1-3 articles/week), backlink batches, GMB posts (weekly), on-page optimisation passes, landing pages.",
+    "- Weeks 9-12: AI search readiness, entity/schema work, follow-up linkbuilding, content insights, GMB reports.",
+    "- Every week needs at least 3 tasks. Aim 4-7 / week average. Mix pillars within each week.",
+    "- Be specific. Bad: 'Improve SEO'. Good: 'Scan and Optimize all Image Alt Tags', 'GMB Reviews Responder — April batch', '2 Blog Articles (all-on-4 cluster)'.",
+    "- Honour the client's Do's / Don'ts and any consultant constraints above. Don't propose anything the client said no to.",
+    "- If the previous roadmap shows an audit was just shipped, don't propose another one in week 1 — propose what comes next (e.g. ship the audit fixes).",
   ]
     .filter(Boolean)
     .join("\n");
 
-  const system = `You are an internal SEO planning assistant at Wonder Ads (Health & Wellness growth agency). You build operational 12-week roadmaps for one client at a time. Output strict JSON matching the schema. Tasks should read like real action items a consultant would assign in a standup — short, specific, sequenced.`;
+  const system = `You are an internal SEO planning assistant at Wonder Ads (Health & Wellness growth agency). You build operational 12-week roadmaps for one client at a time. Tasks should read like real action items a consultant would assign in a standup — short, specific, sequenced. Match exactly the schema you're given.`;
 
-  let raw: string;
+  let parsed: z.infer<typeof RoadmapSchema>;
   try {
-    const result = await generateText({
+    const result = await generateObject({
       model: anthropic(MODEL_ID),
+      schema: RoadmapSchema,
       system,
       prompt: userPrompt,
-      // Sized to fit ~60 task rows comfortably. Lower than the 4000 we
-      // tried first because Claude was occasionally running long enough
-      // that the response collided with Vercel's 60s function budget.
-      maxOutputTokens: 3000,
+      // Sized to fit ~70 task rows comfortably under Vercel's 60s budget.
+      maxOutputTokens: 3500,
     });
-    raw = result.text ?? "";
+    parsed = result.object;
   } catch (err) {
     return NextResponse.json(
       {
@@ -182,44 +188,26 @@ export async function POST(
     );
   }
 
-  const parsed = parseJsonLoose<ClaudeRoadmap>(raw);
-  if (!parsed || !Array.isArray(parsed.tasks) || parsed.tasks.length === 0) {
-    return NextResponse.json(
-      {
-        error:
-          "Claude did not return parseable roadmap JSON. Try regenerating.",
-        debug: raw.slice(0, 500),
-      },
-      { status: 502 },
-    );
-  }
-
   const now = Date.now();
   let order = 0;
-  const tasks: RoadmapTask[] = [];
-  for (const t of parsed.tasks) {
-    if (!t.title || typeof t.title !== "string") continue;
-    const week = Math.max(1, Math.min(12, Math.floor(Number(t.week) || 1)));
-    const pillar = isPillar(t.pillar) ? t.pillar : "technical";
-    tasks.push({
-      id: newTaskId(),
-      week,
-      title: t.title.trim().slice(0, 240),
-      description:
-        typeof t.description === "string" && t.description.trim()
-          ? t.description.trim().slice(0, 2000)
-          : undefined,
-      status: "not_started" as RoadmapStatus,
-      pillar,
-      order: order++,
-      statusChangedAt: now,
-      createdAt: now,
-    });
-  }
+  const tasks: RoadmapTask[] = parsed.tasks.map((t) => ({
+    id: newTaskId(),
+    week: t.week,
+    title: t.title.trim().slice(0, 240),
+    description: t.description?.trim() || undefined,
+    status: "not_started",
+    pillar: t.pillar,
+    order: order++,
+    statusChangedAt: now,
+    createdAt: now,
+  }));
 
   if (tasks.length === 0) {
     return NextResponse.json(
-      { error: "No valid tasks parsed from Claude response." },
+      {
+        error:
+          "Claude returned an empty task list. Try regenerating, or add a Strategic focus to anchor the plan.",
+      },
       { status: 502 },
     );
   }
@@ -244,7 +232,9 @@ function formatBrief(brief: {
 }): string {
   const parts: string[] = [];
   if (brief.dos.length > 0) {
-    parts.push(`### Client Do's\n${brief.dos.map((d) => `- ${d}`).join("\n")}`);
+    parts.push(
+      `### Client Do's\n${brief.dos.map((d) => `- ${d}`).join("\n")}`,
+    );
   }
   if (brief.donts.length > 0) {
     parts.push(
@@ -292,35 +282,3 @@ function formatTargets(
   );
   return `## Tracked target keywords (top ${top.length} by volume)\n${lines.join("\n")}`;
 }
-
-function parseJsonLoose<T>(raw: string): T | null {
-  if (!raw) return null;
-  const cleaned = raw
-    .replace(/^[\s\S]*?(\{)/, "$1") // strip anything before the first '{'
-    .replace(/```/g, "")
-    .trim();
-  try {
-    return JSON.parse(cleaned) as T;
-  } catch {
-    // Last-ditch: trim trailing comma garbage and re-parse.
-    const end = cleaned.lastIndexOf("}");
-    if (end > 0) {
-      try {
-        return JSON.parse(cleaned.slice(0, end + 1)) as T;
-      } catch {
-        /* fall through */
-      }
-    }
-    return null;
-  }
-}
-
-function isPillar(v: unknown): v is RoadmapPillar {
-  return (
-    typeof v === "string" &&
-    (ROADMAP_PILLARS as readonly string[]).includes(v)
-  );
-}
-
-// Silence unused warning — kept exported for future use.
-void ROADMAP_STATUSES;

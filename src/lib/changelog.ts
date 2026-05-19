@@ -13,6 +13,20 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "70.3",
+    date: "2026-05-19",
+    title: "Roadmap: structured-output generation (no more JSON parse failures), any-day start, mind-map polish",
+    highlights: [
+      "**✅ JSON parse failures eliminated.** Roadmap generation switched from `generateText` + loose regex parsing to **`generateObject` + Zod schema** via the AI SDK. Anthropic is now invoked with a strict schema (12-week task array, week 1-12, pillar enum), and the SDK guarantees the response matches it. The `Claude did not return parseable roadmap JSON` error is gone — there's no parsing step left to fail.",
+      "**📅 Any-day start date.** Dropped the artificial `(Monday of week 1)` constraint. Start date input now reads `(any day — week 1 begins here)`. Default flipped from next-Monday to today. The current-week math already worked for any start day; the label was the only thing forcing a Monday.",
+      "**🗺️ Mind-map visual polish on the board.**",
+      "- Month headers now centre between two connector lines (`──── MONTH 1 ────`) — the same tree-from-above look as the user's reference mind-map.",
+      "- Top bar shows the client name as a brand-coloured chip, then a date-picker pill (`Starts 27/04/2026`), then the current-week badge.",
+      "- Grid spacing tightened (`space-y-8` between months) so the 12 weeks read as 3 distinct blocks.",
+      "**🧱 Plumbing.** Removed the no-longer-needed `parseJsonLoose` helper, `ClaudeRoadmap` type, and `ROADMAP_STATUSES` unused-export silencer. The route is ~80 lines shorter and entirely type-safe end-to-end.",
+    ],
+  },
+  {
     version: "70.2",
     date: "2026-05-19",
     title: "Roadmap polish: progress UX, JSON crash fix, tighter prompt, simpler empty-state copy",

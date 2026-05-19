@@ -309,23 +309,32 @@ export function RoadmapBoard({
     <div className="space-y-5">
       {/* Top bar */}
       <div className="brand-gradient-border flex flex-wrap items-center gap-3 rounded-xl bg-white/[0.03] px-4 py-3 text-sm text-white/75 backdrop-blur-md">
-        <span className="inline-flex items-center gap-2">
-          <Calendar className="h-4 w-4 text-white/55" />
-          <span className="text-[11px] uppercase tracking-[0.13em] text-white/55">
-            Start
+        <span
+          className="inline-flex items-center gap-2 rounded-full border border-[color:var(--brand-purple)]/45 bg-[color:var(--brand-purple)]/15 px-3 py-1 text-[11px] font-semibold text-white"
+          title="Client this roadmap is for"
+        >
+          {clientName}
+        </span>
+        <label
+          className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.04] px-3 py-1 text-[11px] text-white/75"
+          title="Starting date — week 1 begins here. Editable inline."
+        >
+          <Calendar className="h-3.5 w-3.5 text-white/55" />
+          <span className="text-[10px] uppercase tracking-[0.13em] text-white/55">
+            Starts
           </span>
           <input
             type="date"
             value={roadmap.startDate}
             onChange={(e) => updateStartDate(e.target.value)}
-            className="rounded-md border border-white/10 bg-white/[0.03] px-2 py-1 text-xs text-white outline-none focus:border-white/30"
+            className="border-0 bg-transparent p-0 text-[11px] text-white outline-none [color-scheme:dark]"
           />
-        </span>
+        </label>
         <span
           className={
             week >= 1 && week <= 12
-              ? "inline-flex items-center gap-2 rounded-full border border-[color:var(--brand-purple)]/45 bg-[color:var(--brand-purple)]/15 px-2.5 py-0.5 text-[11px] font-medium text-white"
-              : "inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.04] px-2.5 py-0.5 text-[11px] font-medium text-white/65"
+              ? "inline-flex items-center gap-2 rounded-full border border-[color:var(--brand-purple)]/55 bg-[color:var(--brand-purple)]/25 px-3 py-1 text-[11px] font-semibold text-white"
+              : "inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.04] px-3 py-1 text-[11px] font-medium text-white/65"
           }
         >
           {week >= 1 && week <= 12
@@ -335,7 +344,8 @@ export function RoadmapBoard({
               : "Past the 12-week horizon"}
         </span>
         <span className="text-[11px] text-white/45">
-          Generated {formatDate(roadmap.generatedAt)} · {roadmap.tasks.length} tasks
+          {roadmap.tasks.length} tasks · generated{" "}
+          {formatDate(roadmap.generatedAt)}
         </span>
         <span className="ml-auto inline-flex items-center gap-3">
           {saving && (
@@ -405,17 +415,19 @@ export function RoadmapBoard({
         </ul>
       )}
 
-      {/* Months + weeks */}
-      <div className="space-y-6">
+      {/* Months + weeks — month label centred with horizontal connector
+          like the mind-map, weeks underneath in a 4-up grid. */}
+      <div className="space-y-8">
         {MONTHS.map((m) => (
           <div key={m.name}>
-            <div className="mb-2 flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/55">
-              <span className="rounded-md bg-[color:var(--brand-purple)]/20 px-2 py-0.5 text-white">
+            <div className="relative flex items-center">
+              <span className="h-px flex-1 bg-white/10" />
+              <span className="brand-gradient-border mx-3 rounded-md bg-[color:var(--brand-purple)]/25 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-white">
                 {m.name}
               </span>
-              <span className="h-px flex-1 bg-white/8" />
+              <span className="h-px flex-1 bg-white/10" />
             </div>
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
               {m.weeks.map((w) => {
                 const tasks = tasksByWeek.get(w) ?? [];
                 const isCurrent = w === week;
@@ -482,7 +494,7 @@ function GeneratePanel({
       <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
         <label className="block text-xs">
           <span className="text-[11px] uppercase tracking-[0.13em] text-white/55">
-            Start date (Monday of week 1)
+            Start date (any day — week 1 begins here)
           </span>
           <input
             type="date"
@@ -788,13 +800,13 @@ function tryParseJson<T>(raw: string): T | null {
 }
 
 function defaultStartDateISO(): string {
+  // Default to today — week 1 starts whenever the consultant wants it to.
+  // (We used to round up to next Monday, but the consultant flagged that
+  // as an artificial constraint.)
   const now = new Date();
   const d = new Date(
     Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
   );
-  const dow = d.getUTCDay();
-  const offset = dow === 1 ? 0 : (8 - dow) % 7;
-  d.setUTCDate(d.getUTCDate() + offset);
   return d.toISOString().slice(0, 10);
 }
 
