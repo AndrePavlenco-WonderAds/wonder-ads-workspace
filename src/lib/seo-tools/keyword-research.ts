@@ -109,6 +109,28 @@ function isConfigured(): boolean {
   );
 }
 
+/** Collapse accent / plural variants of the same keyword to a single
+ *  canonical key so we can copy volume + KD between variants when only
+ *  one of them came back with data from DataforSEO. Mirrors the
+ *  client-side `normalizeKwForDedup` in `keyword-research-dashboard.tsx`. */
+export function normalizeKwKey(s: string): string {
+  return s
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/\s*\([^)]*\)\s*/g, " ")
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .split(" ")
+    .map((t) =>
+      t.length > 4 && t.endsWith("s") && !t.endsWith("ss") && !t.endsWith("us")
+        ? t.slice(0, -1)
+        : t,
+    )
+    .join(" ");
+}
+
 async function dfsPost<TBody, TResp>(
   path: string,
   body: TBody,
@@ -319,6 +341,168 @@ export async function enrichKeywordsBulk(
     }
   }
   return out;
+}
+
+/** Fallback enrichment: `bulk_keyword_difficulty/live` — DataforSEO Labs'
+ *  KD-only endpoint with the broadest coverage. We use it AFTER
+ *  `keyword_overview/live` for rows that still have null/0 KD, because
+ *  KD coverage on this endpoint is significantly better for long-tail and
+ *  branded keywords. Max 1000 keywords per call. */
+export async function enrichKdBulk(
+  keywords: string[],
+  locationCode: number,
+  languageCode: string,
+): Promise<Map<string, number | null>> {
+  const out = new Map<string, number | null>();
+  if (!isConfigured() || keywords.length === 0) return out;
+  const unique = Array.from(
+    new Set(keywords.map((k) => k.trim()).filter(Boolean)),
+  );
+  const CHUNK = 1000;
+  type Resp = {
+    tasks?: {
+      result?: {
+        items?: { keyword?: string; keyword_difficulty?: number | null }[];
+      }[];
+    }[];
+  };
+  for (let i = 0; i < unique.length; i += CHUNK) {
+    const chunk = unique.slice(i, i + CHUNK);
+    const body = [
+      {
+        keywords: chunk,
+        location_code: locationCode,
+        language_code: languageCode,
+      },
+    ];
+    try {
+      const { data } = await dfsPost<typeof body, Resp>(
+        "/dataforseo_labs/google/bulk_keyword_difficulty/live",
+        body,
+      );
+      const items = data.tasks?.[0]?.result?.[0]?.items ?? [];
+      for (const it of items) {
+        const kw = it.keyword?.trim().toLowerCase();
+        if (!kw) continue;
+        out.set(kw, it.keyword_difficulty ?? null);
+      }
+    } catch {
+      // best-effort
+    }
+  }
+  return out;
+}
+
+/** Fallback enrichment: `keywords_data/google_ads/search_volume/live` —
+ *  Google Ads (Keyword Planner) volume directly. Often returns volume
+ *  for long-tail / branded / locale-specific keywords that
+ *  `keyword_overview/live` doesn't cover. Max 700 keywords per call. */
+export async function enrichVolumeFromGoogleAds(
+  keywords: string[],
+  locationCode: number,
+  languageCode: string,
+): Promise<Map<string, number | null>> {
+  const out = new Map<string, number | null>();
+  if (!isConfigured() || keywords.length === 0) return out;
+  const unique = Array.from(
+    new Set(keywords.map((k) => k.trim()).filter(Boolean)),
+  );
+  const CHUNK = 700;
+  type Resp = {
+    tasks?: {
+      result?: {
+        keyword?: string;
+        search_volume?: number | null;
+      }[];
+    }[];
+  };
+  for (let i = 0; i < unique.length; i += CHUNK) {
+    const chunk = unique.slice(i, i + CHUNK);
+    const body = [
+      {
+        keywords: chunk,
+        location_code: locationCode,
+        language_code: languageCode,
+        search_partners: false,
+      },
+    ];
+    try {
+      const { data } = await dfsPost<typeof body, Resp>(
+        "/keywords_data/google_ads/search_volume/live",
+        body,
+      );
+      const items = data.tasks?.[0]?.result ?? [];
+      for (const it of items) {
+        const kw = it.keyword?.trim().toLowerCase();
+        if (!kw) continue;
+        out.set(kw, it.search_volume ?? null);
+      }
+    } catch {
+      // best-effort
+    }
+  }
+  return out;
+}
+
+/** Comprehensive enrichment — runs `keyword_overview/live` (broad data),
+ *  then falls back to `bulk_keyword_difficulty/live` + Google Ads volume
+ *  for any keyword still missing fields, so every row arrives with both
+ *  vol/mo and KD whenever DataforSEO has the data anywhere across its
+ *  endpoints. KD=0 is treated as missing (it almost always means
+ *  "DataforSEO didn't compute it" not "this keyword is actually KD 0"). */
+export async function enrichKeywordsComprehensive(
+  keywords: string[],
+  locationCode: number,
+  languageCode: string,
+): Promise<
+  Map<string, { searchVolume: number | null; difficulty: number | null; intent: KwIntent }>
+> {
+  const map = await enrichKeywordsBulk(keywords, locationCode, languageCode);
+  const unique = Array.from(
+    new Set(keywords.map((k) => k.trim().toLowerCase()).filter(Boolean)),
+  );
+
+  const missingKd = unique.filter((kw) => {
+    const hit = map.get(kw);
+    return !hit || hit.difficulty === null || hit.difficulty === 0;
+  });
+  if (missingKd.length > 0) {
+    const kdMap = await enrichKdBulk(missingKd, locationCode, languageCode);
+    for (const [kw, kd] of kdMap) {
+      if (kd === null || kd === 0) continue;
+      const existing = map.get(kw) ?? {
+        searchVolume: null,
+        difficulty: null,
+        intent: null,
+      };
+      existing.difficulty = kd;
+      map.set(kw, existing);
+    }
+  }
+
+  const missingVol = unique.filter((kw) => {
+    const hit = map.get(kw);
+    return !hit || hit.searchVolume === null || hit.searchVolume === undefined;
+  });
+  if (missingVol.length > 0) {
+    const volMap = await enrichVolumeFromGoogleAds(
+      missingVol,
+      locationCode,
+      languageCode,
+    );
+    for (const [kw, vol] of volMap) {
+      if (vol === null) continue;
+      const existing = map.get(kw) ?? {
+        searchVolume: null,
+        difficulty: null,
+        intent: null,
+      };
+      existing.searchVolume = vol;
+      map.set(kw, existing);
+    }
+  }
+
+  return map;
 }
 
 /** Apply a bulk-enrichment map to a KwIdea list in place — fills missing
@@ -868,13 +1052,13 @@ async function runOnce(
     };
   }
 
-  // --- STAGE 5: bulk KD/volume enrichment ---
+  // --- STAGE 5: comprehensive enrichment (keyword_overview →
+  // bulk_keyword_difficulty → google_ads search_volume) ---
   // The per-seed Labs endpoints return KD=0 for most low-volume locale
   // keywords (DataforSEO doesn't compute KD on every row of /suggestions
-  // or /ideas). The bulk /keyword_overview/live endpoint returns proper
-  // KD for the same keywords. We fire one enrichment pass over every
-  // keyword in the pack so KD is real, not a misleading 0, and so any row
-  // missing volume gets filled in.
+  // or /ideas). Three-layer enrichment then ensures every row has KD and
+  // vol/mo as long as DataforSEO knows the keyword anywhere across its
+  // endpoints (Labs overview, bulk KD, Google Ads).
   const needsEnrichment = [
     ...combined.suggestions,
     ...combined.ideas,
@@ -890,7 +1074,7 @@ async function runOnce(
     )
     .map((k) => k.keyword);
   if (needsEnrichment.length > 0) {
-    const enrichment = await enrichKeywordsBulk(
+    const enrichment = await enrichKeywordsComprehensive(
       needsEnrichment,
       geo.locationCode,
       geo.languageCode,
@@ -903,6 +1087,74 @@ async function runOnce(
     for (const c of competitors) {
       c.keywords = applyEnrichment(c.keywords, enrichment);
     }
+  }
+
+  // --- STAGE 6: within-pack variant fallback ---
+  // If a keyword STILL has null volume or null/0 KD after the three API
+  // passes, copy the value from any near-duplicate variant in the same
+  // pack (e.g. "clínica ermesinde" and "clinica ermesinde" — only the
+  // accented form has data, but the unaccented form is effectively the
+  // same search). This guarantees that duplicates carry the same data,
+  // which is what the consultant sees in the dashboard.
+  const everyRow = [
+    ...combined.suggestions,
+    ...combined.ideas,
+    ...combined.domainExisting,
+    ...competitors.flatMap((c) => c.keywords),
+  ];
+  const variantIndex = new Map<
+    string,
+    { searchVolume: number | null; difficulty: number | null }
+  >();
+  for (const k of everyRow) {
+    const key = normalizeKwKey(k.keyword);
+    if (!key) continue;
+    const existing = variantIndex.get(key);
+    if (!existing) {
+      variantIndex.set(key, {
+        searchVolume: k.searchVolume,
+        difficulty:
+          k.difficulty !== null && k.difficulty !== 0 ? k.difficulty : null,
+      });
+      continue;
+    }
+    if (
+      (existing.searchVolume === null || existing.searchVolume === undefined) &&
+      k.searchVolume !== null &&
+      k.searchVolume !== undefined
+    ) {
+      existing.searchVolume = k.searchVolume;
+    }
+    if (
+      (existing.difficulty === null || existing.difficulty === 0) &&
+      k.difficulty !== null &&
+      k.difficulty !== 0
+    ) {
+      existing.difficulty = k.difficulty;
+    }
+  }
+  function fillFromVariant(k: KwIdea): KwIdea {
+    const hit = variantIndex.get(normalizeKwKey(k.keyword));
+    if (!hit) return k;
+    return {
+      ...k,
+      searchVolume:
+        k.searchVolume === null || k.searchVolume === undefined
+          ? hit.searchVolume
+          : k.searchVolume,
+      difficulty:
+        k.difficulty === null || k.difficulty === 0
+          ? hit.difficulty
+          : k.difficulty,
+    };
+  }
+  combined = {
+    suggestions: combined.suggestions.map(fillFromVariant),
+    ideas: combined.ideas.map(fillFromVariant),
+    domainExisting: combined.domainExisting.map(fillFromVariant),
+  };
+  for (const c of competitors) {
+    c.keywords = c.keywords.map(fillFromVariant);
   }
 
   return {

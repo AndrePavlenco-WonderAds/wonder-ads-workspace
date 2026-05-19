@@ -14,8 +14,8 @@ import {
 import Link from "next/link";
 import type { ActionDef } from "@/lib/seo-pillars";
 import type { HistoryEntry } from "@/lib/action-history";
-import { makeResultId } from "@/lib/action-history";
-import { formatDateTime } from "@/lib/dates";
+import { makeResultId, formatDisplayResultId } from "@/lib/action-history";
+import { formatDate } from "@/lib/dates";
 import { groupLocationTargets } from "@/lib/location-targets";
 
 const PENDING_PREFIX = "wa:pending-gen:";
@@ -256,14 +256,14 @@ export function ActionRunner({
                   >
                     <div className="flex items-center justify-between gap-2">
                       <span className="font-mono text-[11px] text-white/55">
-                        {e.id}
+                        {formatDisplayResultId(e.id)}
                       </span>
                       <span className="text-[10px] uppercase tracking-[0.13em] text-white/35">
                         {e.model.replace("claude-", "")}
                       </span>
                     </div>
                     <div className="mt-1 text-sm font-medium text-white">
-                      {formatDateTime(date)}
+                      {formatDate(date)}
                     </div>
                     {summary.tag && (
                       <div className="mt-1.5 inline-flex items-center gap-1.5 rounded-full border border-[color:var(--brand-purple)]/30 bg-[color:var(--brand-purple)]/[0.08] px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.1em] text-[#c9a8ff]">

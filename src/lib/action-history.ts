@@ -56,6 +56,17 @@ export function makeResultId(when: Date = new Date()): string {
   return `${date}-${hh}${mm}-${suffix}`;
 }
 
+/** Display-only version of a result id — strips the HHMM block so we
+ *  don't disclose the minute the run was kicked off. The full id with
+ *  HHMM is preserved in URLs + storage; this is only used in places
+ *  the consultant or the client sees (cover page, result header,
+ *  history list). */
+export function formatDisplayResultId(id: string): string {
+  const m = id.match(/^(\d{4}-\d{2}-\d{2})-\d{3,4}-([a-z0-9]+)$/i);
+  if (m) return `${m[1]}-${m[2]}`;
+  return id;
+}
+
 export async function listHistory(
   clientSlug: string,
   actionSlug: string,

@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "69.9",
+    date: "2026-05-19",
+    title: "Deliverables: consultant emails, no leaked timestamps, DOCX export, 3-layer KW enrichment",
+    highlights: [
+      "**📧 Consultant email replaces seo@wonder-ads.com on every deliverable.** PDF cover line + running footer + DOCX cover now pull from `getConsultantEmailForSlug(slug)` — Luana's clients → `luana@`, Fran's → `fran@`, Yenisey's → `yeni@`. Unassigned slugs still fall back to the shared inbox. Replies land in the inbox of the person actually managing the project.",
+      "**🕒 Generated-date no longer leaks the minute the run kicked off.** Result-page header shows date only (`DD/MM/YYYY`) instead of `DD/MM/YYYY HH:mm`. PDF cover's Report ID drops the `HHMM` block — what was `2026-05-19-1610-ab` displays as `2026-05-19-ab`. Same on the action's history grid. The full id with `HHMM` is preserved in URLs + storage so existing bookmarks still work.",
+      "**🎯 Three-layer KW enrichment — every keyword now arrives with vol/mo AND KD.** Stage 5 now runs `keyword_overview/live` → `bulk_keyword_difficulty/live` → `keywords_data/google_ads/search_volume/live` in sequence, hitting each only for rows still missing the field. Stage 6 then copies values between accent/plural variants inside the same pack so duplicates can't disagree (e.g. `clínica ermesinde` and `clinica ermesinde` end up with the same vol + KD). Save route uses the same comprehensive enricher for AI-cluster keywords. KD=0 is treated as missing throughout.",
+      "**📝 Download DOCX next to Download PDF on every action result.** New `/api/seo-actions/[slug]/[action]/results/[id]/docx` route renders the same markdown analysis Claude produced into a Word document with a branded cover page (logo wordmark, dept, title, client, audited date, head consultant, consultant email, report id). Built with the `docx` npm package; markdown → DOCX conversion walks the mdast tree from `remark-parse` + `remark-gfm` so headings, lists, tables, bold/italic, links, blockquotes, code blocks all survive. Consultants can now tweak wording before sending without retyping the report.",
+    ],
+  },
+  {
     version: "69.8",
     date: "2026-05-18",
     title: "KR polish: real KD, no CPC, dedup near-identical variants, monthly header + chooser typewriter",

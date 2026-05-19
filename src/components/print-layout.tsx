@@ -12,6 +12,7 @@
 
 import { MarkdownView } from "./markdown-view";
 import { AutoPrint } from "./auto-print";
+import { formatDisplayResultId } from "@/lib/action-history";
 import type { DomainMetrics } from "@/lib/seo-tools/dataforseo";
 import type { SiteVitals } from "@/lib/audit-prep-store";
 import type { PsiResult } from "@/lib/seo-tools/pagespeed";
@@ -23,6 +24,7 @@ export function PrintLayout({
   resultId,
   generatedDate,
   consultant,
+  consultantEmail,
   analysisText,
   metrics,
   vitals,
@@ -35,6 +37,7 @@ export function PrintLayout({
   resultId: string;
   generatedDate: string;
   consultant: string;
+  consultantEmail: string;
   analysisText: string;
   metrics: DomainMetrics | null;
   vitals: SiteVitals | null;
@@ -42,6 +45,10 @@ export function PrintLayout({
   showDomainSummary: boolean;
   showKeywordResearchSummary: boolean;
 }) {
+  // Strip the HHMM segment from the result id so the cover page doesn't
+  // disclose the minute the consultant pressed Generate. The full id is
+  // still used in the URL — this is purely a display change.
+  const displayResultId = formatDisplayResultId(resultId);
   return (
     <html lang="en">
       {/* eslint-disable-next-line @next/next/no-head-element */}
@@ -53,7 +60,10 @@ export function PrintLayout({
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <style
           dangerouslySetInnerHTML={{
-            __html: PRINT_STYLES,
+            __html: PRINT_STYLES.replace(
+              /__CONSULTANT_EMAIL__/g,
+              consultantEmail,
+            ),
           }}
         />
       </head>
@@ -98,13 +108,16 @@ export function PrintLayout({
               <div>
                 <strong>Report ID:</strong>{" "}
                 <span style={{ fontFamily: "ui-monospace, monospace" }}>
-                  {resultId}
+                  {displayResultId}
                 </span>
               </div>
               <div>
                 <strong>Questions?</strong>{" "}
-                <a href="mailto:seo@wonder-ads.com" style={{ color: "white" }}>
-                  seo@wonder-ads.com
+                <a
+                  href={`mailto:${consultantEmail}`}
+                  style={{ color: "white" }}
+                >
+                  {consultantEmail}
                 </a>
               </div>
               <div className="pdf-cover-site">
@@ -518,7 +531,7 @@ const PRINT_STYLES = `
     size: A4;
     margin: 22mm 16mm 22mm 16mm;
     @bottom-left {
-      content: "Wonder Ads · SEO Department · seo@wonder-ads.com";
+      content: "Wonder Ads · SEO Department · __CONSULTANT_EMAIL__";
       font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
       font-size: 8.5pt;
       color: #777;

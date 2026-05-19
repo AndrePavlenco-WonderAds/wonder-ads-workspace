@@ -43,6 +43,16 @@ export function getConsultantForSlug(slug: string): string {
   return "Unassigned";
 }
 
+/** Returns the work email of the Head Consultant for a given client slug.
+ *  Used on PDF/DOCX deliverables so replies land in the inbox of the
+ *  consultant actually managing the project (not the shared seo@ alias). */
+export function getConsultantEmailForSlug(slug: string): string {
+  if (LUANA.has(slug)) return "luana@wonder-ads.com";
+  if (FRAN_R.has(slug)) return "fran@wonder-ads.com";
+  if (YENISEY.has(slug)) return "yeni@wonder-ads.com";
+  return "seo@wonder-ads.com";
+}
+
 /** Display order used for grouping client cards into columns. */
 export const CONSULTANT_ORDER = [
   "Fran. R.",

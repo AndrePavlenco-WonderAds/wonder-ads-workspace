@@ -7,15 +7,18 @@ import { ResultRunner } from "@/components/result-runner";
 import { PrintLayout } from "@/components/print-layout";
 import { findAction } from "@/lib/seo-pillars";
 import { getClientBySlug } from "@/lib/notion";
-import { getHistoryEntry } from "@/lib/action-history";
+import { getHistoryEntry, formatDisplayResultId } from "@/lib/action-history";
 import {
   getClientLogo,
   getLogoBgMode,
   getLogoSizing,
 } from "@/lib/client-meta";
 import { getClientPalette, paletteToGradient } from "@/lib/client-colors";
-import { getConsultantForSlug } from "@/lib/client-overrides";
-import { formatDateTime, formatDateLong } from "@/lib/dates";
+import {
+  getConsultantForSlug,
+  getConsultantEmailForSlug,
+} from "@/lib/client-overrides";
+import { formatDate, formatDateLong } from "@/lib/dates";
 import { listTargetKeywords } from "@/lib/target-keywords-store";
 
 export const dynamic = "force-dynamic";
@@ -77,6 +80,7 @@ export default async function ResultPage({
           existing ? formatDateLong(existing.createdAt) : formatDateLong(new Date())
         }
         consultant={getConsultantForSlug(slug)}
+        consultantEmail={getConsultantEmailForSlug(slug)}
         analysisText={analysisText}
         metrics={existing?.metrics ?? null}
         vitals={existing?.vitals ?? null}
@@ -93,7 +97,7 @@ export default async function ResultPage({
   const gradient = paletteToGradient(getClientPalette(slug));
   const { Icon: PillarIcon } = pillar;
 
-  const generatedDate = existing ? formatDateTime(existing.createdAt) : null;
+  const generatedDate = existing ? formatDate(existing.createdAt) : null;
 
   return (
     <PageShell
@@ -101,17 +105,27 @@ export default async function ResultPage({
       backHref={`/seo/${slug}/actions/${actionSlug}`}
       backLabel={action.label}
     >
-      <div className="mt-2 flex items-center gap-4">
+      <div className="mt-2 flex items-start gap-4">
         {existing ? (
-          <a
-            href={`/seo/${slug}/actions/${actionSlug}/results/${resultId}?print=true`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="ml-auto inline-flex items-center gap-2 rounded-md bg-gradient-to-br from-[#343ED7] via-[#783DF5] to-[#C535C9] px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-[#783DF5]/25 transition hover:brightness-110 hover:shadow-[#783DF5]/40"
-          >
-            <Download className="h-3.5 w-3.5" />
-            Download PDF
-          </a>
+          <div className="ml-auto flex flex-col items-stretch gap-2">
+            <a
+              href={`/seo/${slug}/actions/${actionSlug}/results/${resultId}?print=true`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center gap-2 rounded-md bg-gradient-to-br from-[#343ED7] via-[#783DF5] to-[#C535C9] px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-[#783DF5]/25 transition hover:brightness-110 hover:shadow-[#783DF5]/40"
+            >
+              <Download className="h-3.5 w-3.5" />
+              Download PDF
+            </a>
+            <a
+              href={`/api/seo-actions/${slug}/${actionSlug}/results/${resultId}/docx`}
+              className="inline-flex items-center justify-center gap-2 rounded-md border border-white/20 bg-white/[0.04] px-4 py-2 text-xs font-semibold text-white/85 transition hover:border-white/35 hover:bg-white/[0.08] hover:text-white"
+              title="Download as a Word document so you can edit before sending."
+            >
+              <Download className="h-3.5 w-3.5" />
+              Download DOCX
+            </a>
+          </div>
         ) : (
           <span
             title="Becomes active once the audit completes and the result is saved."
@@ -153,7 +167,7 @@ export default async function ResultPage({
         <h1 className="mt-3 text-2xl font-semibold leading-tight tracking-tight sm:text-3xl">
           <span className="brand-gradient-text">{action.label}</span>
           <span className="ml-2 font-mono text-base text-white/45">
-            · {resultId}
+            · {formatDisplayResultId(resultId)}
           </span>
         </h1>
         {generatedDate && (

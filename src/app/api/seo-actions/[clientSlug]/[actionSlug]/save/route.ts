@@ -16,7 +16,7 @@ import {
   clearKwResearchPrep,
 } from "@/lib/kw-research-prep-store";
 import { parseClustersFromMarkdown } from "@/lib/kw-cluster-parser";
-import { enrichKeywordsBulk } from "@/lib/seo-tools/keyword-research";
+import { enrichKeywordsComprehensive } from "@/lib/seo-tools/keyword-research";
 
 export const runtime = "nodejs";
 // Bumped from 30s — the AI-cluster keyword enrichment fires a
@@ -86,15 +86,16 @@ export async function POST(
   // Enrich every cluster keyword with real DataforSEO volume/KD. Claude
   // infers a much wider keyword universe than DataforSEO surfaces in the
   // per-seed pulls (often 40-60 keywords vs 7-15 raw rows), so most
-  // cluster rows arrive with vol=null, KD=null. One bulk
-  // /keyword_overview/live call backfills both — same geo as the pack so
-  // volumes match the consultant's market.
+  // cluster rows arrive with vol=null, KD=null. The comprehensive
+  // enricher tries three DataforSEO endpoints (Labs overview, bulk KD,
+  // Google Ads volume) so cluster rows arrive with both fields populated
+  // wherever DataforSEO has the data.
   if (kwClusters.length > 0 && kwResearch) {
     const allClusterKeywords = kwClusters.flatMap((c) =>
       c.rows.map((r) => r.keyword),
     );
     if (allClusterKeywords.length > 0) {
-      const enrichment = await enrichKeywordsBulk(
+      const enrichment = await enrichKeywordsComprehensive(
         allClusterKeywords,
         kwResearch.geo.locationCode,
         kwResearch.geo.languageCode,
