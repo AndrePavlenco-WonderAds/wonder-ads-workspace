@@ -347,6 +347,95 @@ After the checklist, add a single line in either language:
 - All boxes ticked → \`✅ Pronto para entrega — todas as verificações passam.\`
 - One or more unticked → \`⚠️ Revisão necessária — N item(s) acima precisam de validação do consultor antes de partilhar com o cliente.\``;
 
+    case "monthly-report":
+      return `**This is a CLIENT-FACING monthly report.** The audience is the client (not internal). Live data already in the prompt (when available):
+- **Recent action history** — what we ran on this client across every SEO action in the past few weeks (audits, keyword research, content, GMB work, etc.), each with a date + short excerpt of what the analysis said.
+- **Target keyword shortlist** — what the consultant has actively tracking right now.
+- **Onboarding form** — what the client told us at intake (business goals, services, audience).
+- **Inputs from the consultant** — \`reportingPeriod\`, \`highlights\`, \`nextMonthFocus\`. The highlights field is gold: it carries metric movements the consultant wants spotlighted.
+
+**Rules**
+- Write FOR THE CLIENT. Plain language, no internal jargon. Translate "schema markup" into "structured-data tags that help Google understand the page", "KD" into "competition score", etc.
+- Cite real evidence from the history pack. Quote 1–2 short excerpts from past analyses when they back up a claim.
+- Use the consultant's \`highlights\` field verbatim where it lands — that's their voice; respect it.
+- Honour the brief: never break a Don't, lean into Do's. The notes about audience tone apply double for client-facing copy.
+- Lead with results, not effort. Don't open with "we did X tasks"; open with "what changed".
+- **Honesty over polish.** If the data shows nothing moved, say so — propose what to do about it. Never fabricate numbers.
+- **Speak Portuguese (Portugal)** when the client's content / brief / onboarding is Portuguese; otherwise English.
+
+**Output structure** — produce exactly these sections, in this order:
+
+## Resumo do mês  *(or "Summary of the month")*
+2–3 sentences. Lead with the single biggest result or the biggest blocker. Mention the reporting period explicitly (e.g. "Período: 1–30 de Abril 2026").
+
+## O que se fez  *(or "What we did")*
+Bullet list. Group the recent history entries into themes (technical fixes, content shipped, link-earning activity, local SEO work, keyword research). Each bullet: what was done + a one-line outcome / next-step. Cite history dates inline (e.g. "_(SEO Audit, 12 Apr)_").
+
+## O que mexeu  *(or "What moved")*
+Numbered list of 3–6 concrete metric movements. Format each:
+
+\`\`\`
+1. **<Metric name>** — <before → after> (<delta in absolute terms + % where it makes sense>).
+   - Why we think it moved: <one short sentence tied to the action history>.
+\`\`\`
+
+If \`highlights\` carries explicit numbers, use those — don't invent figures the data doesn't support. If you don't have concrete numbers, say so explicitly: "Pendente: o consultor deve preencher números do GSC/GA aqui."
+
+## Foco do próximo período  *(or "Focus for the next period")*
+3–5 bullets. Each bullet: the bet + the metric it's expected to move + the expected timeline (this week / this month / this quarter). Anchor in the consultant's \`nextMonthFocus\` field — that's the steer.
+
+## Pedidos ao cliente  *(or "Asks of the client")*
+Short bullet list of what the consultant needs from the client to keep momentum (asset approvals, GMB access, content reviews, NAP confirmations). Skip the section entirely if there are no asks — never pad.
+
+End with one closing line that points to the consultant's email for questions (the cover page already has it, but a reminder lands well in the body).`;
+
+    case "client-roadmap":
+      return `**This is an SEO ROADMAP** the consultant can edit and share with the client. Audience is the consultant first, but it must read well enough that the client can be walked through it in a meeting. Live data already in the prompt (when available):
+- **Recent action history** — what we've done so far. Used to AVOID repeating what's already shipped and to highlight what's logically next.
+- **Target keyword shortlist** — anchors the roadmap to the keywords the consultant is actively tracking.
+- **Onboarding form** — business objectives, services, audience, competitors named.
+- **Inputs from the consultant** — \`horizon\` (3 / 6 / 12 months), \`strategicFocus\` (steer), \`constraints\` (budget, bandwidth, blackouts).
+
+**Rules**
+- The roadmap **must reflect what's already been done** — don't propose another SEO Audit if one ran last month; propose the next logical step (e.g. shipping the fixes that audit surfaced).
+- Anchor each initiative to a concrete business goal from the onboarding form. Quote the form briefly when it justifies a bet.
+- Sequencing matters: foundational work (indexation, schema, sitemap) before content scale; on-page before link-earning; quick wins before pillar pages. Reflect that ordering in the timeline.
+- Every initiative must have a measurable success criterion — not "improve SEO", but "rank top-10 for 'X' in this geo", "+30% organic clicks YoY", "10 referring domains gained".
+- Honour \`constraints\`: if the consultant says "no link-building Q3", DON'T put a link-building campaign there.
+- Honour the brief Do's / Don'ts the same way other actions do.
+- **Speak Portuguese (Portugal)** when the client / brief / onboarding is in Portuguese; otherwise English.
+
+**Output structure** — produce exactly these sections, in this order:
+
+## Tese  *(or "Thesis")*
+2–3 sentences. The story of where this client is now → where this roadmap takes them → why this sequence beats alternatives. Reference the horizon (3 / 6 / 12 months) explicitly.
+
+## Marcos por trimestre  *(or "Milestones by quarter")*
+For each quarter inside the horizon, produce an H3 section. Inside each, a table:
+
+\`\`\`
+### Q1 — <quarter dates>
+| Iniciativa | Pilar SEO | Esforço | Métrica de sucesso | Responsável | Notas |
+|---|---|---|---|---|---|
+| ... |
+\`\`\`
+
+Pilar SEO column values: \`On-Page\`, \`Off-Page\`, \`Local\`, \`Conteúdo\`, \`Técnico\`, \`Investigação\` (or English equivalents). Esforço: \`S\` / \`M\` / \`L\`. Responsável: \`SEO\`, \`Dev\`, \`Conteúdo\`, \`Cliente\`. 4–8 initiatives per quarter.
+
+## Riscos e dependências  *(or "Risks & dependencies")*
+Bullet list. Each: the risk + which initiative it affects + the mitigation. Include any explicit \`constraints\` the consultant entered.
+
+## Quick wins (próximas 4 semanas)  *(or "Quick wins — next 4 weeks")*
+Numbered list of 3–6 things shippable within 4 weeks. Each: action + expected impact + owner. Bias toward optimisations the consultant can ship without client approval (e.g. metadata fixes, schema rollouts).
+
+## Métricas de leitura  *(or "Reading metrics")*
+4–6 metrics the client will see move when the roadmap is on-track (e.g. organic clicks, top-10 keywords count, GMB calls, referring domains, AI Overview mentions). Each: starting value (if known from history) + target by end-of-horizon + how it will be measured.
+
+## Pedido de validação  *(or "Validation request")*
+3–5 bullets of what the consultant needs the client to sign off on before kick-off (budget approval, content team capacity, GMB access, etc.). Each one needs a yes/no decision so the meeting can move fast. **Skip this section if it would be empty — never pad.**
+
+End with a one-line note that the consultant will edit this draft (e.g. in DOCX) before sending — that's a signal to keep the structure clean and the language reviewable.`;
+
     case "header-tags":
       return `Output an H1 + H2/H3 outline as a nested list. Every heading must:
 - Map to a specific search intent / sub-question

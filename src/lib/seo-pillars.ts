@@ -137,6 +137,70 @@ export const PILLARS: Pillar[] = [
         ],
       },
       {
+        slug: "monthly-report",
+        label: "Monthly Report",
+        blurb:
+          "Client-facing monthly synthesis — what was done, what moved, what's next.",
+        usesBrief: true,
+        fields: [
+          {
+            key: "reportingPeriod",
+            label: "Reporting period",
+            type: "select",
+            options: ["Last 28 days", "Last full month", "Last quarter"],
+            defaultValue: "Last full month",
+          },
+          {
+            key: "highlights",
+            label: "Highlights / numbers to spotlight",
+            type: "textarea",
+            rows: 5,
+            placeholder:
+              "Anything you want to spotlight — ranking moves, traffic delta, content shipped, links earned. The system already pulls recent action history + brief; add what the data won't show.",
+          },
+          {
+            key: "nextMonthFocus",
+            label: "What's the focus for next month?",
+            type: "textarea",
+            rows: 3,
+            placeholder:
+              "The angle the next period should push — keep it short, one or two sentences.",
+          },
+        ],
+      },
+      {
+        slug: "client-roadmap",
+        label: "Client SEO Roadmap",
+        blurb:
+          "AI-drafted SEO roadmap aligned to brief + onboarding — consultant edits in DOCX before sharing.",
+        usesBrief: true,
+        fields: [
+          {
+            key: "horizon",
+            label: "Horizon",
+            type: "select",
+            options: ["3 months", "6 months", "12 months"],
+            defaultValue: "6 months",
+          },
+          {
+            key: "strategicFocus",
+            label: "Strategic focus (optional)",
+            type: "textarea",
+            rows: 4,
+            placeholder:
+              "Anything that overrides defaults — e.g. \"push local SEO hard for the new Lisbon clinic\" or \"start a link-building sprint in Q3\".",
+          },
+          {
+            key: "constraints",
+            label: "Constraints (optional)",
+            type: "textarea",
+            rows: 3,
+            placeholder:
+              "Budget, team bandwidth, blackout periods, anything that shapes timing.",
+          },
+        ],
+      },
+      {
         slug: "keyword-research",
         label: "Keyword Research",
         blurb:

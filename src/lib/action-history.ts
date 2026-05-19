@@ -67,6 +67,29 @@ export function formatDisplayResultId(id: string): string {
   return id;
 }
 
+/** Fetch the N most-recent history entries across every action slug
+ *  registered in PILLARS for a single client. Used by the Monthly Report
+ *  and Client Roadmap actions to ground Claude in what's actually been
+ *  done on this account. Sorted newest-first. */
+export async function listRecentHistoryAcrossActions(
+  clientSlug: string,
+  actionSlugs: string[],
+  limit = 20,
+): Promise<HistoryEntry[]> {
+  if (!historyConfigured) return [];
+  const all: HistoryEntry[] = [];
+  for (const slug of actionSlugs) {
+    try {
+      const entries = await listHistory(clientSlug, slug);
+      all.push(...entries);
+    } catch {
+      // best-effort
+    }
+  }
+  all.sort((a, b) => b.createdAt - a.createdAt);
+  return all.slice(0, limit);
+}
+
 export async function listHistory(
   clientSlug: string,
   actionSlug: string,

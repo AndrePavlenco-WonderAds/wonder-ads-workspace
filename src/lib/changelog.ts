@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "70.0",
+    date: "2026-05-19",
+    title: "Monthly Report + Client SEO Roadmap actions under Overall SEO",
+    highlights: [
+      "**📊 Monthly Report action.** New `/seo/[slug]/actions/monthly-report` action under Overall SEO. Fields: reporting period (28d / last full month / quarter), highlights to spotlight, next-month focus. Grounding pack pulls **recent action history across every SEO action for the client** (last 15 entries — audits, KW research, content, GMB work) so Claude writes from what was actually done, not generic templates. Output: client-facing markdown in EN/PT-PT depending on the brief, with sections for `Resumo do mês`, `O que se fez`, `O que mexeu`, `Foco do próximo período`, `Pedidos ao cliente`. PDF + DOCX exports via the same pipeline the other actions use.",
+      "**🗺️ Client SEO Roadmap action.** New `/seo/[slug]/actions/client-roadmap` action under Overall SEO. Fields: horizon (3/6/12 months), strategic focus, constraints (blackouts, bandwidth, budget). Grounds in **recent action history + target keyword shortlist + onboarding form** so the roadmap doesn't propose work that's already shipped. Output: thesis → quarter-by-quarter milestone tables (initiative · pilar · esforço · métrica · responsável) → risks → 4-week quick wins → reading metrics → validation asks. Generate-then-edit workflow: consultant downloads DOCX, tweaks language, sends.",
+      "**🧩 Cross-action history aggregator.** New `listRecentHistoryAcrossActions(clientSlug, slugs, limit)` walks every action slug's KV bucket and returns the N most-recent entries sorted newest-first. Used by both new actions; opens the door for future synthesis-driven actions that need to know everything that's been done on an account.",
+      "**📝 Prompt specs added to `seo-claude-prompt.ts`.** Per-action output spec for both new actions follows the same template the other Overall-SEO actions use — explicit sections, structured tables, hard rules around honesty, brief compliance, language match (PT-PT when client materials are Portuguese), no fabricated metrics. Roadmap explicitly checks the history pack so it never re-proposes work already in flight.",
+    ],
+  },
+  {
     version: "69.9",
     date: "2026-05-19",
     title: "Deliverables: consultant emails, no leaked timestamps, DOCX export, 3-layer KW enrichment",

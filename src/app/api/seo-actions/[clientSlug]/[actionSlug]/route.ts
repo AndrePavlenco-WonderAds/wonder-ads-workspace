@@ -1,7 +1,9 @@
 import { anthropic } from "@ai-sdk/anthropic";
 import { streamText } from "ai";
 import { NextResponse } from "next/server";
-import { findAction, type ActionToolName } from "@/lib/seo-pillars";
+import { findAction, ALL_ACTIONS, type ActionToolName } from "@/lib/seo-pillars";
+import { listRecentHistoryAcrossActions } from "@/lib/action-history";
+import { listTargetKeywords } from "@/lib/target-keywords-store";
 import { getBriefForSlug } from "@/lib/briefs-storage";
 import { getClientWebsite } from "@/lib/client-meta";
 import { getClientBySlug } from "@/lib/notion";
@@ -273,6 +275,87 @@ export async function POST(
             send(`> ❌ Keyword research crashed: ${message.slice(0, 240)}\n`);
           }
           send("\n---\n\n");
+        }
+      } else if (
+        entry.action.slug === "monthly-report" ||
+        entry.action.slug === "client-roadmap"
+      ) {
+        // Both new Overall-SEO actions need the same grounding pack: what
+        // was done recently on this client (history across every action),
+        // what's being tracked (target keywords), and what the client
+        // told us at intake (onboarding form). No live data — these are
+        // synthesis-driven, not measurement-driven.
+        const allSlugs = Array.from(
+          new Set(ALL_ACTIONS.map((a) => a.action.slug)),
+        );
+        try {
+          const [recent, targets, onboarding] = await Promise.all([
+            listRecentHistoryAcrossActions(clientSlug, allSlugs, 15),
+            listTargetKeywords(clientSlug),
+            getOnboardingForSlug(clientSlug),
+          ]);
+          const pieces: string[] = [];
+          if (recent.length > 0) {
+            send(
+              `> ✓ **Recent action history** — ${recent.length} entries pulled across all actions for grounding.\n`,
+            );
+            const lines = recent.map((e) => {
+              const when = new Date(e.createdAt).toISOString().slice(0, 10);
+              const action = ALL_ACTIONS.find(
+                (a) => a.action.slug === e.actionSlug,
+              );
+              const label = action?.action.label ?? e.actionSlug;
+              const inputSummary = Object.entries(e.inputs ?? {})
+                .filter(([, v]) => (v ?? "").trim().length > 0)
+                .slice(0, 3)
+                .map(([k, v]) => `${k}=${String(v).slice(0, 60)}`)
+                .join(" · ");
+              const outputExcerpt = (e.output ?? "")
+                .replace(/\s+/g, " ")
+                .slice(0, 240);
+              return `- **${when}** · ${label}${inputSummary ? ` (${inputSummary})` : ""}\n  > ${outputExcerpt}…`;
+            });
+            pieces.push(
+              `## Recent action history (last ${recent.length}, newest first)\n${lines.join("\n")}`,
+            );
+          } else {
+            send(
+              `> ℹ️ No prior action history on file for this client yet — Claude will work from brief + onboarding only.\n`,
+            );
+          }
+          if (targets.length > 0) {
+            send(
+              `> ✓ **${targets.length} target keywords** loaded for context.\n`,
+            );
+            const topTargets = targets
+              .sort(
+                (a, b) =>
+                  (b.searchVolume ?? 0) - (a.searchVolume ?? 0),
+              )
+              .slice(0, 25);
+            const tkLines = topTargets.map(
+              (t) =>
+                `- ${t.keyword} (vol/mo ${t.searchVolume ?? "—"} · KD ${t.difficulty ?? "—"} · intent ${t.intent ?? "—"})`,
+            );
+            pieces.push(
+              `## Target keyword shortlist (top ${topTargets.length} by volume)\n${tkLines.join("\n")}`,
+            );
+          }
+          if (onboarding?.extractedText) {
+            send(`> ✓ **Onboarding form** loaded for context.\n`);
+            pieces.push(
+              `## Onboarding form (extracted text)\n\`\`\`\n${onboarding.extractedText.slice(0, 6000)}${onboarding.extractedText.length > 6000 ? "\n…[truncated]" : ""}\n\`\`\``,
+            );
+          }
+          if (pieces.length > 0) {
+            factPack = pieces.join("\n\n");
+            send("\n---\n\n");
+          }
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          send(
+            `> ⚠️ Context fetch failed (${message.slice(0, 200)}) — proceeding without history grounding.\n\n`,
+          );
         }
       } else if (tools.length > 0) {
         if (!targetUrl) {
