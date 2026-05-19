@@ -13,6 +13,20 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "70.1",
+    date: "2026-05-19",
+    title: "Workable 12-week SEO Roadmap board per client (with AI generation + live current-week marker)",
+    highlights: [
+      "**🗺️ New roadmap board at `/seo/[slug]/roadmap`.** 3 months × 4 weeks = 12 columns laid out exactly like the screenshot. Each column shows tasks as cards. Status-coloured backgrounds: ⚪ Not started, 🔵 In progress (sky), 🟠 Pending client review (amber), 🟢 Implemented (emerald). Each card carries a pillar chip (Technical / On-Page / Off-Page / Local / Content / Research).",
+      "**📍 Live current-week marker.** The roadmap stores a `startDate` (Monday of week 1). The board computes `currentWeekIndex` from `Date.now()` and highlights that column with a purple ring + a `▶ Week N of 12` badge in the top bar — so consultants always know exactly where they should be. Editable start date inline; the highlight slides instantly.",
+      "**🎯 Full edit in the app.** Click any card → inline form with title, description, status, pillar, and week-move dropdown. Add task per week column. Delete task. All edits auto-save 600ms after the last keystroke via PUT `/api/roadmaps/[slug]` — no Save button to click.",
+      "**🤖 AI generation grounded in everything we know.** New POST `/api/roadmaps/[slug]/generate` asks Claude for strict JSON (12 weeks × 4–7 tasks each), grounded in: client brief Do's/Don'ts/Notes, onboarding form extracted text, 15 most-recent action history entries across every action, top 20 target keywords by volume, and the previous roadmap if there is one (so it doesn't re-propose already-shipped work). Old roadmap auto-archives (kept in KV for audit).",
+      "**🚨 Warnings banner — dismissable.** Three triggers, computed server-side on every read: (a) any task pending client review for ≥ 7 days, (b) ≥ 2 tasks from past weeks still not implemented (escalates to critical at 5+), (c) the current week is empty or has nothing in flight. Each warning has a stable id; consultants dismiss with X, dismissal persists on the roadmap.",
+      "**📌 Client-page header strip.** The old typewriter `What are we working on now, boss?` prompt is replaced with a live roadmap strip: `Week N of 12 · X tasks · Y in flight · Z pending review` + chips for the first 3 current-week tasks (status dots colour-coded) + link straight to the board. When no roadmap exists, falls back to a `No roadmap yet — generate a 12-week plan` CTA.",
+      "**🧱 Plumbing for follow-ups.** New `src/lib/roadmap-store.ts` (Roadmap + RoadmapTask types, KV CRUD, archive, currentWeekIndex, weekStartDate, computeWarnings, normaliseRoadmap). Distinct from the `client-roadmap` markdown action shipped in v70.0 — that's the deliverable, this is the operational view. Both stay in the app.",
+    ],
+  },
+  {
     version: "70.0",
     date: "2026-05-19",
     title: "Monthly Report + Client SEO Roadmap actions under Overall SEO",

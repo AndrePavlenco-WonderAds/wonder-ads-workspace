@@ -5,7 +5,7 @@ import { ClientBrief } from "@/components/client-brief";
 import { ClientFiles } from "@/components/client-files";
 import { OnboardingForm } from "@/components/onboarding-form";
 import { TargetKeywordsPanel } from "@/components/target-keywords-panel";
-import { TypewriterPrompt } from "@/components/typewriter-prompt";
+import { CurrentRoadmapStrip } from "@/components/current-roadmap-strip";
 import { SeoProjectContainers } from "@/components/seo-project-containers";
 import { SeoActions } from "@/components/seo-actions";
 import { ProjectSectionNav } from "@/components/project-section-nav";
@@ -119,9 +119,7 @@ export default async function ClientPage({
             <h1 className="mt-2 text-4xl font-semibold leading-[1.05] tracking-tight sm:text-5xl">
               <span className="brand-gradient-text">{client.title}</span>
             </h1>
-            <div className="mt-3">
-              <TypewriterPrompt text="What are we working on now, boss?" />
-            </div>
+            <CurrentRoadmapStrip slug={slug} />
           </div>
         </div>
 
