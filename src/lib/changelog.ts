@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "70.2",
+    date: "2026-05-19",
+    title: "Roadmap polish: progress UX, JSON crash fix, tighter prompt, simpler empty-state copy",
+    highlights: [
+      "**📝 One-line empty-state copy.** The roadmap board's first-time state shortened from 4 lines to one: `Generate a 12-week plan from {client}'s context — every task is editable after.` Stops blocking the eye on the way to the Generate button.",
+      "**⏳ Live progress bar + paced status.** Clicking Generate now shows an indeterminate gradient progress bar with a cycling status line: `Loading client brief… → Pulling the last 15 actions… → Building the brief for Claude… → Drafting 12 weeks of tasks with Claude (usually 20–40s)… → Sequencing tasks across the grid… → Saving and archiving the previous roadmap…`. The bar is honest about being indeterminate (CSS keyframe `indeterminate` slides a brand-gradient strip across the track) — no fake percentages.",
+      "**🛡️ JSON crash fixed.** Previously, when the Vercel function exceeded its 60s budget, the platform returned a plain-text error page and the client crashed with `Unexpected token 'A', \"An error o\"… is not valid JSON`. The fetch handler now reads the response as text first, attempts JSON safely, and surfaces the raw text in the error message when parsing fails. No more confusing parse errors — you see what the server actually said.",
+      "**✂️ Tighter generate prompt to dodge the 60s ceiling.** Onboarding extract cap dropped 5k → 3k chars, history excerpts 200 → 100 chars, Claude maxOutputTokens 4000 → 3000. Same task quality (we're packing ~60 short rows, not prose); ~6-10s shaved off worst-case Claude time so the roundtrip lands comfortably under Vercel's 60s budget on Hobby.",
+    ],
+  },
+  {
     version: "70.1",
     date: "2026-05-19",
     title: "Workable 12-week SEO Roadmap board per client (with AI generation + live current-week marker)",

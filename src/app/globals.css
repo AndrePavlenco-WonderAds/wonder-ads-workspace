@@ -257,6 +257,15 @@ body {
 }
 .animate-heartbeat::after { content: ""; }
 
+/* Indeterminate progress bar — used by the Roadmap Generate panel while
+   the long-running Claude call is pending. Sliding strip across the
+   track gives a "something is happening" signal without lying about
+   completion percentage. */
+@keyframes indeterminate {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(300%); }
+}
+
 /* Respect prefers-reduced-motion */
 @media (prefers-reduced-motion: reduce) {
   .animate-orb-pulse,
@@ -266,7 +275,8 @@ body {
   .animate-ping-slow,
   .animate-count-pop,
   .animate-caret-blink,
-  .animate-heartbeat {
+  .animate-heartbeat,
+  [class*="animate-[indeterminate"] {
     animation: none;
   }
 }

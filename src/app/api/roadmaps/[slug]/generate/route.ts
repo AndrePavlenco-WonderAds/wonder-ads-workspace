@@ -98,7 +98,7 @@ export async function POST(
   const historyBlock = formatHistory(history);
   const targetsBlock = formatTargets(targets);
   const onboardingBlock = onboarding?.extractedText
-    ? `## Onboarding form (extracted text)\n\`\`\`\n${onboarding.extractedText.slice(0, 5000)}${onboarding.extractedText.length > 5000 ? "\n…[truncated]" : ""}\n\`\`\``
+    ? `## Onboarding form (extracted text)\n\`\`\`\n${onboarding.extractedText.slice(0, 3000)}${onboarding.extractedText.length > 3000 ? "\n…[truncated]" : ""}\n\`\`\``
     : "";
   const previousBlock = previous
     ? `## Previous roadmap (just ran out / being replaced)\nStartDate: ${previous.startDate}\nTasks (only ones already implemented are still credit-worthy):\n${previous.tasks
@@ -165,7 +165,10 @@ export async function POST(
       model: anthropic(MODEL_ID),
       system,
       prompt: userPrompt,
-      maxOutputTokens: 4000,
+      // Sized to fit ~60 task rows comfortably. Lower than the 4000 we
+      // tried first because Claude was occasionally running long enough
+      // that the response collided with Vercel's 60s function budget.
+      maxOutputTokens: 3000,
     });
     raw = result.text ?? "";
   } catch (err) {
@@ -265,7 +268,7 @@ function formatHistory(
     ALL_ACTIONS.find((a) => a.action.slug === slug)?.action.label ?? slug;
   const lines = history.map((e) => {
     const when = new Date(e.createdAt).toISOString().slice(0, 10);
-    const excerpt = (e.output ?? "").replace(/\s+/g, " ").slice(0, 200);
+    const excerpt = (e.output ?? "").replace(/\s+/g, " ").slice(0, 100);
     return `- **${when}** · ${labelFor(e.actionSlug)} — ${excerpt}…`;
   });
   return `## Recent action history (last ${history.length})\n${lines.join("\n")}`;

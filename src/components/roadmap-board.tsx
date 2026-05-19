@@ -70,6 +70,18 @@ const MONTHS = [
   { name: "Month 3", weeks: [9, 10, 11, 12] },
 ];
 
+// Paced "what's happening" messages displayed while the generate call is
+// pending. The endpoint is one-shot (no server-side progress events) so
+// this is a UX-only cycle — the bar itself is indeterminate.
+const GENERATE_PHASES = [
+  "Loading client brief, onboarding form, and target keywords…",
+  "Pulling the last 15 actions we ran on this account…",
+  "Building the brief for Claude…",
+  "Drafting 12 weeks of tasks with Claude (usually 20–40s)…",
+  "Sequencing tasks across the 4-week / 3-month grid…",
+  "Saving to your workspace and archiving the previous roadmap…",
+];
+
 type Props = {
   clientSlug: string;
   clientName: string;
@@ -88,6 +100,7 @@ export function RoadmapBoard({
   const [saving, setSaving] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
+  const [generateMessage, setGenerateMessage] = useState<string>("");
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [generatePanelOpen, setGeneratePanelOpen] = useState(false);
   const [generateStartDate, setGenerateStartDate] = useState(() =>
@@ -144,6 +157,15 @@ export function RoadmapBoard({
   const generate = useCallback(async () => {
     setGenerating(true);
     setGenerateError(null);
+    setGenerateMessage(GENERATE_PHASES[0]);
+    // Cycle through realistic phase messages while we wait. The
+    // generateText call is one-shot (no server-side progress events), so
+    // this is a paced "what's happening" UX, not a true progress meter.
+    let phaseIndex = 0;
+    const phaseTimer = setInterval(() => {
+      phaseIndex = Math.min(phaseIndex + 1, GENERATE_PHASES.length - 1);
+      setGenerateMessage(GENERATE_PHASES[phaseIndex]);
+    }, 4500);
     try {
       const res = await fetch(`/api/roadmaps/${clientSlug}/generate`, {
         method: "POST",
@@ -154,12 +176,26 @@ export function RoadmapBoard({
           constraints: generateConstraints.trim() || undefined,
         }),
       });
-      const data = (await res.json()) as {
+      // Read as text first so a non-JSON error page (e.g. a Vercel
+      // function timeout) doesn't crash with "Unexpected token 'A'…".
+      const rawText = await res.text();
+      const data = tryParseJson<{
         roadmap?: Roadmap;
         error?: string;
-      };
-      if (!res.ok || !data.roadmap) {
-        throw new Error(data.error ?? `HTTP ${res.status}`);
+      }>(rawText);
+      if (!res.ok) {
+        const message =
+          data?.error ??
+          (rawText.trim().length > 0
+            ? rawText.trim().slice(0, 240)
+            : `HTTP ${res.status}`);
+        throw new Error(message);
+      }
+      if (!data?.roadmap) {
+        throw new Error(
+          data?.error ??
+            "Server returned an unexpected response. Try regenerating.",
+        );
       }
       skipNextSave.current = true;
       setRoadmap(data.roadmap);
@@ -170,7 +206,9 @@ export function RoadmapBoard({
     } catch (err) {
       setGenerateError(err instanceof Error ? err.message : String(err));
     } finally {
+      clearInterval(phaseTimer);
       setGenerating(false);
+      setGenerateMessage("");
     }
   }, [clientSlug, generateStartDate, generateFocus, generateConstraints]);
 
@@ -247,11 +285,8 @@ export function RoadmapBoard({
             No roadmap yet for {clientName}
           </h2>
         </div>
-        <p className="mt-2 max-w-xl text-sm text-white/65">
-          Generate a fresh 12-week SEO roadmap from {clientName}&apos;s brief,
-          onboarding form, target keywords, and recent action history.
-          You&apos;ll be able to edit every task — change status, move weeks,
-          rename, delete — after it&apos;s generated.
+        <p className="mt-2 text-sm text-white/65">
+          Generate a 12-week plan from {clientName}&apos;s context — every task is editable after.
         </p>
         <GeneratePanel
           startDate={generateStartDate}
@@ -263,6 +298,7 @@ export function RoadmapBoard({
           generating={generating}
           generate={generate}
           error={generateError}
+          progressMessage={generateMessage}
           mode="create"
         />
       </div>
@@ -332,6 +368,7 @@ export function RoadmapBoard({
           generating={generating}
           generate={generate}
           error={generateError}
+          progressMessage={generateMessage}
           mode="regenerate"
         />
       )}
@@ -419,6 +456,7 @@ function GeneratePanel({
   generating,
   generate,
   error,
+  progressMessage,
   mode,
 }: {
   startDate: string;
@@ -430,6 +468,7 @@ function GeneratePanel({
   generating: boolean;
   generate: () => void;
   error: string | null;
+  progressMessage: string;
   mode: "create" | "regenerate";
 }) {
   return (
@@ -489,15 +528,29 @@ function GeneratePanel({
           ) : (
             <Sparkles className="h-3.5 w-3.5" />
           )}
-          {mode === "create" ? "Generate roadmap" : "Generate new roadmap"}
+          {generating
+            ? "Generating roadmap…"
+            : mode === "create"
+              ? "Generate roadmap"
+              : "Generate new roadmap"}
         </button>
-        {mode === "regenerate" && (
+        {!generating && mode === "regenerate" && (
           <span className="text-[11px] text-white/45">
             Old roadmap will be archived. New one starts blank — you can keep
             editing right after.
           </span>
         )}
       </div>
+      {generating && (
+        <div className="mt-3 space-y-2" aria-live="polite">
+          <div className="relative h-1 w-full overflow-hidden rounded-full bg-white/[0.06]">
+            <div className="brand-gradient-bg absolute inset-y-0 left-0 w-1/3 animate-[indeterminate_1.6s_ease-in-out_infinite] rounded-full" />
+          </div>
+          {progressMessage && (
+            <p className="text-[11px] text-white/65">{progressMessage}</p>
+          )}
+        </div>
+      )}
       {error && (
         <p className="mt-2 text-xs text-rose-300">{error}</p>
       )}
@@ -723,6 +776,15 @@ function TaskCard({
       </div>
     </li>
   );
+}
+
+function tryParseJson<T>(raw: string): T | null {
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    return null;
+  }
 }
 
 function defaultStartDateISO(): string {
