@@ -7,6 +7,7 @@
 //          corrupted by a bad client.
 
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import {
   computeWarnings,
   getCurrentRoadmap,
@@ -50,6 +51,11 @@ export async function PUT(
   }
   const next = normaliseRoadmap(body, slug);
   await saveCurrentRoadmap(next);
+  // Bust the cached `/seo/[slug]` page so the CurrentRoadmapStrip
+  // refreshes immediately after a save. Otherwise the client page sits
+  // on its 60s revalidate window and keeps showing the stale "No
+  // roadmap yet" badge after a generation finishes.
+  revalidatePath(`/seo/${slug}`);
   const dismissed = new Set(next.dismissedWarnings.map((d) => d.id));
   const warnings = computeWarnings(next).filter((w) => !dismissed.has(w.id));
   return NextResponse.json({ roadmap: next, warnings });

@@ -11,7 +11,7 @@ import {
   Sparkles,
   X,
 } from "lucide-react";
-import { PILLARS, findAction } from "@/lib/seo-pillars";
+import { PILLARS, findAction, actionHref } from "@/lib/seo-pillars";
 import {
   moveQuickAction,
   setQuickActions,
@@ -99,7 +99,7 @@ function DisplayList({
         return (
           <li key={slug}>
             <Link
-              href={`/seo/${clientSlug}/actions/${entry.action.slug}`}
+              href={actionHref(clientSlug, entry.action)}
               className="group flex w-full items-center gap-3 rounded-xl border border-white/8 bg-white/[0.025] px-3 py-2.5 text-left transition hover:border-[color:var(--brand-purple)]/45 hover:bg-white/[0.05]"
             >
               <span

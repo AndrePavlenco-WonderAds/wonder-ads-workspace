@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "70.5",
+    date: "2026-05-19",
+    title: "Roadmap routing fix + Overall SEO reorder + stale-badge bust",
+    highlights: [
+      "**🔀 Roadmap pillar card now opens the live board.** The 'Client SEO Roadmap' card was navigating to `/seo/[slug]/actions/client-roadmap` (the markdown action page) instead of `/seo/[slug]/roadmap` (the live operational board). Renamed in the pillar to **Roadmap**, blurb updated to `Live 12-week operational board — Claude fills it, you edit, status moves with the work.`, and the card now links to the board. Same fix flows to the Quick Actions panel for anyone who pinned it.",
+      "**🧱 Centralised URL building so this can't drift again.** New `actionHref(clientSlug, action)` helper in `seo-pillars.ts` is now the single source of truth for every action card's URL. `ActionDef` gained an optional `href: (clientSlug) => string` override; consumers go through `actionHref()` and the override is honoured automatically. Greppable contract — if a new action ever needs a custom route, you set `href` on the def and every consumer follows.",
+      "**📋 Overall SEO actions reordered.** New order on every project page: **Roadmap → SEO Audit → Keyword Research → Monthly Report**. Matches the operational flow consultants actually walk through.",
+      "**♻️ Stale 'No roadmap yet' badge fixed.** The client page has `revalidate = 60`, so after a successful generate the `CurrentRoadmapStrip` was sitting on the cached version for up to a minute. Both `/api/roadmaps/[slug]` (PUT) and `/api/roadmaps/[slug]/generate` (POST) now call `revalidatePath('/seo/${slug}')` after saving, so the badge updates the instant the roadmap is persisted.",
+      "**🪪 Slug preserved for back-compat.** The action's internal `slug` stays `client-roadmap` so any older history entries / deep links to `/seo/[slug]/actions/client-roadmap` still resolve. Only the display label and the destination URL changed.",
+    ],
+  },
+  {
     version: "70.4",
     date: "2026-05-19",
     title: "Roadmap: pre-built grid always renders; AI just fills it (no more FUNCTION_INVOCATION_TIMEOUT)",

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { Zap, ArrowRight, Pin, PinOff } from "lucide-react";
-import { PILLARS, type Pillar } from "@/lib/seo-pillars";
+import { PILLARS, actionHref, type Pillar } from "@/lib/seo-pillars";
 import {
   toggleQuickAction,
   useQuickActions,
@@ -126,7 +126,7 @@ function PillarCard({
           return (
             <li key={action.slug} className="relative">
               <Link
-                href={`/seo/${clientSlug}/actions/${action.slug}`}
+                href={actionHref(clientSlug, action)}
                 title={action.blurb}
                 style={{
                   transitionDelay: shown

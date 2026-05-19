@@ -9,6 +9,7 @@
 // is written.
 
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { anthropic } from "@ai-sdk/anthropic";
 import { generateObject } from "ai";
 import { z } from "zod";
@@ -216,6 +217,10 @@ export async function POST(
     dismissedWarnings: [],
   };
   await archiveAndReplace(slug, next);
+  // Bust the cached `/seo/[slug]` page so the CurrentRoadmapStrip
+  // reflects the new roadmap immediately (was waiting up to 60s for the
+  // page revalidate to fire on its own).
+  revalidatePath(`/seo/${slug}`);
 
   return NextResponse.json({ roadmap: next });
 }

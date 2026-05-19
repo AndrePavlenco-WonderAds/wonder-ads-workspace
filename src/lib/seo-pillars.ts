@@ -44,7 +44,24 @@ export type ActionDef = {
    *  generate content (SEO Audit, Keyword Research) — the brief is still
    *  in the prompt as context but we hide the panel on the action page. */
   usesBrief?: boolean;
+  /** Optional override for the URL the pillar card + quick-actions panel
+   *  link to. When omitted, defaults to `/seo/[clientSlug]/actions/[slug]`.
+   *  Used for the Roadmap entry, which points at the live `/roadmap`
+   *  board instead of the markdown action page. */
+  href?: (clientSlug: string) => string;
 };
+
+/** Single source of truth for the URL an action card links to. Every
+ *  consumer that wants to navigate to an action MUST go through this —
+ *  prevents the pillar list and the quick-actions panel from drifting
+ *  out of sync on routes like `/roadmap` that don't follow the default
+ *  `/seo/[slug]/actions/[slug]` convention. */
+export function actionHref(clientSlug: string, action: ActionDef): string {
+  return (
+    action.href?.(clientSlug) ??
+    `/seo/${clientSlug}/actions/${action.slug}`
+  );
+}
 
 export type Pillar = {
   name: string;
@@ -78,6 +95,44 @@ export const PILLARS: Pillar[] = [
     blurb: "High-level audits and strategic research.",
     fullWidth: true,
     actions: [
+      {
+        // NOTE: slug stays "client-roadmap" so older history entries
+        // saved at /seo/[slug]/actions/client-roadmap still resolve. The
+        // pillar card + quick-actions panel link to the LIVE roadmap
+        // board instead (via the `href` override below) — that's the
+        // operational view consultants actually work in day-to-day.
+        slug: "client-roadmap",
+        label: "Roadmap",
+        blurb:
+          "Live 12-week operational board — Claude fills it, you edit, status moves with the work.",
+        usesBrief: true,
+        href: (clientSlug) => `/seo/${clientSlug}/roadmap`,
+        fields: [
+          {
+            key: "horizon",
+            label: "Horizon",
+            type: "select",
+            options: ["3 months", "6 months", "12 months"],
+            defaultValue: "6 months",
+          },
+          {
+            key: "strategicFocus",
+            label: "Strategic focus (optional)",
+            type: "textarea",
+            rows: 4,
+            placeholder:
+              "Anything that overrides defaults — e.g. \"push local SEO hard for the new Lisbon clinic\" or \"start a link-building sprint in Q3\".",
+          },
+          {
+            key: "constraints",
+            label: "Constraints (optional)",
+            type: "textarea",
+            rows: 3,
+            placeholder:
+              "Budget, team bandwidth, blackout periods, anything that shapes timing.",
+          },
+        ],
+      },
       {
         slug: "seo-audit",
         label: "SEO Audit",
@@ -137,70 +192,6 @@ export const PILLARS: Pillar[] = [
         ],
       },
       {
-        slug: "monthly-report",
-        label: "Monthly Report",
-        blurb:
-          "Client-facing monthly synthesis — what was done, what moved, what's next.",
-        usesBrief: true,
-        fields: [
-          {
-            key: "reportingPeriod",
-            label: "Reporting period",
-            type: "select",
-            options: ["Last 28 days", "Last full month", "Last quarter"],
-            defaultValue: "Last full month",
-          },
-          {
-            key: "highlights",
-            label: "Highlights / numbers to spotlight",
-            type: "textarea",
-            rows: 5,
-            placeholder:
-              "Anything you want to spotlight — ranking moves, traffic delta, content shipped, links earned. The system already pulls recent action history + brief; add what the data won't show.",
-          },
-          {
-            key: "nextMonthFocus",
-            label: "What's the focus for next month?",
-            type: "textarea",
-            rows: 3,
-            placeholder:
-              "The angle the next period should push — keep it short, one or two sentences.",
-          },
-        ],
-      },
-      {
-        slug: "client-roadmap",
-        label: "Client SEO Roadmap",
-        blurb:
-          "AI-drafted SEO roadmap aligned to brief + onboarding — consultant edits in DOCX before sharing.",
-        usesBrief: true,
-        fields: [
-          {
-            key: "horizon",
-            label: "Horizon",
-            type: "select",
-            options: ["3 months", "6 months", "12 months"],
-            defaultValue: "6 months",
-          },
-          {
-            key: "strategicFocus",
-            label: "Strategic focus (optional)",
-            type: "textarea",
-            rows: 4,
-            placeholder:
-              "Anything that overrides defaults — e.g. \"push local SEO hard for the new Lisbon clinic\" or \"start a link-building sprint in Q3\".",
-          },
-          {
-            key: "constraints",
-            label: "Constraints (optional)",
-            type: "textarea",
-            rows: 3,
-            placeholder:
-              "Budget, team bandwidth, blackout periods, anything that shapes timing.",
-          },
-        ],
-      },
-      {
         slug: "keyword-research",
         label: "Keyword Research",
         blurb:
@@ -236,6 +227,38 @@ export const PILLARS: Pillar[] = [
               "Navigational",
             ],
             defaultValue: "All intents",
+          },
+        ],
+      },
+      {
+        slug: "monthly-report",
+        label: "Monthly Report",
+        blurb:
+          "Client-facing monthly synthesis — what was done, what moved, what's next.",
+        usesBrief: true,
+        fields: [
+          {
+            key: "reportingPeriod",
+            label: "Reporting period",
+            type: "select",
+            options: ["Last 28 days", "Last full month", "Last quarter"],
+            defaultValue: "Last full month",
+          },
+          {
+            key: "highlights",
+            label: "Highlights / numbers to spotlight",
+            type: "textarea",
+            rows: 5,
+            placeholder:
+              "Anything you want to spotlight — ranking moves, traffic delta, content shipped, links earned. The system already pulls recent action history + brief; add what the data won't show.",
+          },
+          {
+            key: "nextMonthFocus",
+            label: "What's the focus for next month?",
+            type: "textarea",
+            rows: 3,
+            placeholder:
+              "The angle the next period should push — keep it short, one or two sentences.",
           },
         ],
       },
