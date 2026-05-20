@@ -243,6 +243,18 @@ export type DriveImageRef = {
   breadcrumb: string;
 };
 
+/** Mime types BOTH Claude vision AND mainstream browsers accept.
+ *  HEIC (iPhone) + AVIF + TIFF are excluded — Claude rejects HEIC, and
+ *  the GMB post image needs to render in the consultant's browser
+ *  anyway. Filtering at the pool stage keeps the random sample from
+ *  picking an image that would later fail vision. */
+const SAFE_IMAGE_MIMES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/gif",
+  "image/webp",
+]);
+
 /** Walk a Drive folder breadth-first up to depth 2 and return metadata
  *  for every image inside (no bytes downloaded). The result is the
  *  "image pool" the client-files mode samples from — we list once,
@@ -313,7 +325,11 @@ export async function listImageRefsInDriveFolder(
     }
     let foundHere = 0;
     for (const f of items) {
-      if (f.mimeType?.startsWith("image/")) {
+      // Filter to mime types Claude vision accepts (jpeg/png/gif/webp).
+      // HEIC iPhone photos and AVIF / TIFF / etc. would get picked but
+      // then fail downstream — better to skip them here so the random
+      // sampler only ever sees usable images.
+      if (f.mimeType && SAFE_IMAGE_MIMES.has(f.mimeType)) {
         refs.push({
           fileId: f.id,
           name: f.name,

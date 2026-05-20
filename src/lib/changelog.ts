@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "71.12",
+    date: "2026-05-20",
+    title: "Filter HEIC/AVIF/TIFF out of the image pool",
+    highlights: [
+      "**🧹 Pool now only sees vision-safe mime types.** iPhone HEIC photos were getting picked, sharp's HEIC support is platform-dependent on Vercel, and Anthropic's vision endpoint rejects HEIC outright. New `SAFE_IMAGE_MIMES` whitelist in drive-fetcher: `jpeg / png / gif / webp` only. HEIC + AVIF + TIFF are silently skipped during folder traversal so the random sampler can't pick something that would later fail downstream. Same formats Claude vision accepts AND browsers render natively for the actual GMB post image.",
+    ],
+  },
+  {
     version: "71.11",
     date: "2026-05-20",
     title: "Shrink client photos before Claude vision (was Payload Too Large)",
