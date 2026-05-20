@@ -13,6 +13,21 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "71.7",
+    date: "2026-05-20",
+    title: "GMB Posts: 'Use client's photos' mode — pick a real photo + Claude vision caption (no Gemini)",
+    highlights: [
+      "**🪧 New first question on the form: 'Where should the image come from?'** Two choices: `Use client's photos` (default) — app picks a random photo from the client's Client Files library and Claude writes a vision-grounded caption that describes/uses what's actually in the photo; OR `AI-generate (Gemini)` — the previous flow with Gemini drafting an image from brand references. Same result page, same edit / download / status flow afterwards.",
+      "**📸 No more wrong-logo problem in client-files mode.** Because the image IS the client's real photo (not a Gemini render), brand-fidelity is perfect by definition. No logo invention, no scuba-school-instead-of-clinic risk on the image side. Faster too (no image-gen API call) and free of Gemini billing.",
+      "**🎲 Random sampling across the whole library.** App walks every uploaded photo + every image inside every Drive folder link (recursive depth 2, same auth as v71.5) and builds a single flat pool. Fisher-Yates shuffle picks N — gives consultants visual variety across runs without exposing a picker UI.",
+      "**🧠 Claude Haiku vision per image.** For each picked image, the route sends a per-post call with the image bytes attached as a vision content part. Claude SEES the photo and writes a caption that contextualises what's visible (people, setting, mood) rather than generic templated copy. Same Zod schema (caption / CTA / target keywords / reasoning), minus the now-unneeded `imagePrompt`.",
+      "**🛟 Pool-size guardrail.** If the library has fewer images than the requested post count, the route generates as many posts as photos available and surfaces a warning at the top of the result (`Only 2 image(s) available — generating 2 posts instead of the requested 3`). No silent under-delivery.",
+      "**📦 Drive images get re-hosted on Vercel Blob.** Picked Drive photos are downloaded once + saved to Blob using the same path scheme Gemini-generated images use, so the result-page card has a stable public URL and per-image Download / batch ZIP both keep working unchanged.",
+      "**🪪 Image-source chip on every card.** Bottom-left of the image: `📸 Client photo` (emerald) or `✨ AI image` (brand purple). Hover for the source filename (`Client photo from Sessão 9 → IMG_5612.jpg`).",
+      "**🪛 Plumbing.** drive-fetcher gained `listImageRefsInDriveFolder` (list-only) + `downloadDriveImageById` (download-only) on top of the existing all-in-one helper, so the route can list once, sample N, download N. GmbPost gained `imageSource` + `imageOrigin` fields (optional for back-compat with v71.0-71.6 entries).",
+    ],
+  },
+  {
     version: "71.6",
     date: "2026-05-20",
     title: "Drive FOLDER support — paste a folder link, app uses the photos inside",

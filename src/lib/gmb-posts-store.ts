@@ -26,6 +26,12 @@ export const GMB_POST_STATUSES = [
 ] as const;
 export type GmbPostStatus = (typeof GMB_POST_STATUSES)[number];
 
+/** Where the image on a GMB post came from. `client-files` = picked
+ *  from the client's uploads / Drive library; `ai-generated` = produced
+ *  by Gemini using client references. Drives the chip on the card. */
+export const GMB_IMAGE_SOURCES = ["client-files", "ai-generated"] as const;
+export type GmbImageSource = (typeof GMB_IMAGE_SOURCES)[number];
+
 export const GMB_CTAS = [
   "Learn more",
   "Book",
@@ -101,6 +107,12 @@ export type GmbPost = {
   cta: GmbCta;
   ctaUrl: string | null;
   imageUrl: string | null;
+  /** Where this image came from — Drives the chip on the card. */
+  imageSource?: GmbImageSource;
+  /** When imageSource = client-files, the original filename / Drive
+   *  path the image was picked from. Useful so consultants can trace
+   *  which photo Gemini didn't touch. */
+  imageOrigin?: string;
   /** The prompt the image generator used — handy for "regenerate" + debugging. */
   imagePrompt: string;
   /** When image generation fails, the exact error message from Gemini /

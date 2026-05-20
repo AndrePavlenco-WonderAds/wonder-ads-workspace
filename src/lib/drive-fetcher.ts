@@ -235,6 +235,85 @@ export async function fetchImageBytes(url: string): Promise<DriveFile | null> {
   }
 }
 
+export type DriveImageRef = {
+  fileId: string;
+  name: string;
+  mimeType: string;
+  /** Breadcrumb path for diagnostics — e.g. "Sessão 9 → IMG_5612.jpg". */
+  breadcrumb: string;
+};
+
+/** Walk a Drive folder breadth-first up to depth 2 and return metadata
+ *  for every image inside (no bytes downloaded). The result is the
+ *  "image pool" the client-files mode samples from — we list once,
+ *  pick N, download only N. */
+export async function listImageRefsInDriveFolder(
+  folderId: string,
+  opts: { maxDepth?: number; rootLabel?: string } = {},
+): Promise<{ refs: DriveImageRef[]; error: string | null }> {
+  if (!googleAuthConfigured) {
+    return {
+      refs: [],
+      error:
+        "Drive auth not configured — set GOOGLE_SERVICE_ACCOUNT_JSON and grant the drive.readonly scope.",
+    };
+  }
+  let token: string;
+  try {
+    token = await getGoogleAccessToken([DRIVE_READONLY_SCOPE]);
+  } catch (err) {
+    return {
+      refs: [],
+      error: `Drive auth failed: ${err instanceof Error ? err.message.slice(0, 200) : String(err)}`,
+    };
+  }
+  const refs: DriveImageRef[] = [];
+  const maxDepth = opts.maxDepth ?? 2;
+  const rootLabel = opts.rootLabel ?? "Drive";
+  // Breadth-first traversal, each queue entry carrying the path so we
+  // can build a breadcrumb for diagnostics.
+  const queue: { id: string; depth: number; path: string }[] = [
+    { id: folderId, depth: 0, path: rootLabel },
+  ];
+  while (queue.length > 0) {
+    const { id, depth, path } = queue.shift()!;
+    const listed = await listDriveFolderContents(id, token);
+    for (const f of listed) {
+      if (f.mimeType?.startsWith("image/")) {
+        refs.push({
+          fileId: f.id,
+          name: f.name,
+          mimeType: f.mimeType,
+          breadcrumb: `${path} → ${f.name}`,
+        });
+      } else if (
+        f.mimeType === "application/vnd.google-apps.folder" &&
+        depth < maxDepth
+      ) {
+        queue.push({ id: f.id, depth: depth + 1, path: `${path}/${f.name}` });
+      }
+    }
+  }
+  return { refs, error: null };
+}
+
+/** Download a single Drive image by id. Handles auth + mime gate.
+ *  Used by both the AI-generated reference flow (downloads as many as
+ *  the cap allows) and the client-files mode (downloads only what was
+ *  picked after sampling). */
+export async function downloadDriveImageById(
+  ref: DriveImageRef,
+): Promise<DriveFile | null> {
+  if (!ref.mimeType.startsWith("image/")) return null;
+  let token: string;
+  try {
+    token = await getGoogleAccessToken([DRIVE_READONLY_SCOPE]);
+  } catch {
+    return null;
+  }
+  return downloadDriveFileById(ref.fileId, token, ref.name, ref.mimeType);
+}
+
 /** List + download images inside a Drive folder. Recurses into
  *  sub-folders up to a small depth (consultants nest by session / month
  *  in practice, so depth 2 covers Mimus's "FOTOS / Sessão 9 / file.jpg"

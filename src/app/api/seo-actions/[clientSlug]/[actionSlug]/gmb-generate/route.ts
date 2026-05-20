@@ -23,9 +23,15 @@ import { listTargetKeywords } from "@/lib/target-keywords-store";
 import { getFilesForSlug } from "@/lib/files-storage";
 import {
   fetchImageBytes,
+  fetchDriveFile,
   extractDriveFolderId,
+  extractDriveFileId,
   fetchImagesFromDriveFolder,
+  listImageRefsInDriveFolder,
+  downloadDriveImageById,
+  type DriveImageRef,
 } from "@/lib/drive-fetcher";
+import type { ClientFile } from "@/lib/client-files";
 import {
   runMiniSiteAudit,
   formatMiniSiteAuditForPrompt,
@@ -118,15 +124,6 @@ export async function POST(
       { status: 503 },
     );
   }
-  if (!imageGenConfigured) {
-    return NextResponse.json(
-      {
-        error:
-          "GEMINI_API_KEY is not configured. Add it under Vercel → Settings → Environment Variables (the .env.local.example file has a comment with the link to grab one from Google AI Studio).",
-      },
-      { status: 503 },
-    );
-  }
 
   let body: {
     inputs?: Record<string, string>;
@@ -142,6 +139,18 @@ export async function POST(
   const theme = (inputs.theme ?? "").trim();
   const details = (inputs.details ?? "").trim();
   const ctaUrlDefault = (inputs.ctaUrl ?? "").trim();
+  const imageSource = parseImageSource(inputs.imageSource);
+
+  // AI mode requires the Gemini key; client-files mode doesn't.
+  if (imageSource === "ai-generated" && !imageGenConfigured) {
+    return NextResponse.json(
+      {
+        error:
+          "GEMINI_API_KEY is not configured. Either pick \"Use client's photos\" instead, or add the key under Vercel → Settings → Environment Variables (see .env.local.example for the link).",
+      },
+      { status: 503 },
+    );
+  }
 
   const encoder = new TextEncoder();
   const stream = new ReadableStream<Uint8Array>({
@@ -219,6 +228,191 @@ export async function POST(
           });
         }
 
+        // ---- Pre-pick branch: client-files OR AI-generate ----
+        const resultId = newGmbResultId();
+        let posts: GmbPost[] = [];
+        const referencesUsed: import("@/lib/gmb-posts-store").GmbReferenceFile[] = [];
+
+        if (imageSource === "client-files") {
+          // ===== CLIENT-FILES MODE =====
+          // App picks N images from the client's library and Claude writes
+          // a vision-grounded caption for each. No Gemini call.
+          send({
+            event: "progress",
+            phase: "files",
+            message: `Collecting images from ${files.length} Client Files entr${files.length === 1 ? "y" : "ies"}…`,
+          });
+          const pool = await buildImagePool(files, referencesUsed);
+          console.info(
+            `[gmb-generate] client-files pool: ${pool.length} candidate images`,
+          );
+          if (pool.length === 0) {
+            send({
+              event: "error",
+              message:
+                "No images available in this client's library. Upload brand photos in Client Files OR add a Drive folder link (and share it with seo@wonder-ads.com or anyone-with-link), then retry. Switch to AI-generate mode if you'd rather have new images created.",
+            });
+            controller.close();
+            return;
+          }
+          // Random-sample up to postCount.
+          const picked = shuffle([...pool]).slice(0, postCount);
+          const actualCount = picked.length;
+          if (actualCount < postCount) {
+            send({
+              event: "progress",
+              phase: "files",
+              message: `⚠️ Only ${actualCount} image(s) available in the library — generating ${actualCount} post(s) instead of the requested ${postCount}. Upload more brand photos to lift the cap.`,
+            });
+          } else {
+            send({
+              event: "progress",
+              phase: "files",
+              message: `✓ Picked ${actualCount} random image(s) from the library of ${pool.length}.`,
+              filesCount: actualCount,
+            });
+          }
+
+          // Per-post Claude vision caption. Sequential rather than parallel
+          // so we don't slam the Anthropic API and so progress events
+          // remain meaningful. Each call is ~3-6s with Haiku 4.5 → total
+          // 9-18s for 3 posts, well under the 60s budget.
+          send({
+            event: "progress",
+            phase: "captions",
+            message: `Writing ${actualCount} caption(s) with Claude (vision)…`,
+          });
+          const now = Date.now();
+          for (let i = 0; i < picked.length; i++) {
+            const entry = picked[i];
+            // Download bytes for vision input.
+            const bytes = await entry.fetch();
+            if (!bytes) {
+              referencesUsed.push({
+                name: entry.breadcrumb,
+                url: entry.originUrl,
+                status: "failed",
+                reason: "Picked image couldn't be downloaded — auth or quota issue.",
+              });
+              continue;
+            }
+            // Re-host Drive images to Blob so the card has a stable URL.
+            // Uploads already have a stable URL — pass-through.
+            let blobUrl: string;
+            if (entry.publicUrl) {
+              blobUrl = entry.publicUrl;
+            } else {
+              blobUrl = await saveGmbImageToBlob({
+                bytes: bytes.bytes,
+                mimeType: bytes.mimeType,
+                clientSlug,
+                resultId,
+                index: i,
+              });
+            }
+            // Claude vision call for the matching caption.
+            try {
+              const captionResult = await generateObject({
+                model: anthropic(CAPTION_MODEL),
+                schema: SinglePostSchema,
+                system: clientFilesSystemPrompt(geo.languageCode),
+                messages: [
+                  {
+                    role: "user",
+                    content: [
+                      {
+                        type: "image",
+                        image: bytes.bytes,
+                        mediaType: bytes.mimeType,
+                      },
+                      {
+                        type: "text",
+                        text: buildClientFilesPrompt({
+                          clientName: client.title,
+                          website,
+                          brief,
+                          onboardingText: onboarding?.extractedText ?? null,
+                          targets,
+                          postType: postTypeInput,
+                          theme,
+                          details,
+                          ctaUrlDefault,
+                          siteAuditBlock,
+                          languageCode: geo.languageCode,
+                          imageFilename: bytes.filename,
+                          postIndex: i,
+                          totalPosts: actualCount,
+                        }),
+                      },
+                    ],
+                  },
+                ],
+                maxOutputTokens: 1200,
+              });
+              const cap = captionResult.object;
+              posts.push({
+                id: newGmbPostId(),
+                postType: cap.postType,
+                caption: cap.caption,
+                cta: (cap.cta ?? null) as GmbCta,
+                ctaUrl: cap.ctaUrl || ctaUrlDefault || website || null,
+                imageUrl: blobUrl,
+                imageError: null,
+                imageSource: "client-files",
+                imageOrigin: entry.breadcrumb,
+                imagePrompt: `[client photo: ${entry.breadcrumb}]`,
+                targetKeywords: cap.targetKeywords ?? [],
+                reasoning: cap.reasoning,
+                status: "draft",
+                createdAt: now,
+                updatedAt: now,
+              });
+              referencesUsed.push({
+                name: entry.breadcrumb,
+                url: entry.originUrl,
+                status: "used",
+              });
+            } catch (err) {
+              const msg = err instanceof Error ? err.message : String(err);
+              console.error(
+                `[gmb-generate] client-files caption failed for ${entry.breadcrumb}:`,
+                err,
+              );
+              referencesUsed.push({
+                name: entry.breadcrumb,
+                url: entry.originUrl,
+                status: "failed",
+                reason: `Claude caption call failed: ${msg.slice(0, 160)}`,
+              });
+            }
+          }
+          // Persist
+          send({
+            event: "progress",
+            phase: "saving",
+            message: "Saving posts to your workspace…",
+          });
+          const result: GmbPostsResult = {
+            id: resultId,
+            clientSlug,
+            createdAt: now,
+            inputs: {
+              postCount,
+              postType: postTypeInput,
+              theme: theme || undefined,
+              ctaUrlDefault: ctaUrlDefault || undefined,
+            },
+            referencesUsed,
+            posts,
+          };
+          await saveGmbResult(result);
+          revalidatePath(`/seo/${clientSlug}/actions/gmb-posts`);
+          send({ event: "result", resultId, postsCount: posts.length });
+          controller.close();
+          return;
+        }
+
+        // ===== AI-GENERATED MODE (original flow) =====
         // ---- Fetch reference images ----
         send({
           event: "progress",
@@ -231,9 +425,8 @@ export async function POST(
         // Track every candidate's fate for the result page diagnostic so
         // consultants can see exactly which Drive links / uploads were
         // pulled in and which got rejected (private Drive link, non-image
-        // mime, fetch failure, etc.).
-        const referencesUsed: import("@/lib/gmb-posts-store").GmbReferenceFile[] =
-          [];
+        // mime, fetch failure, etc.). The `referencesUsed` array was
+        // already declared above the branch.
         const referenceImages: ReferenceImage[] = [];
         for (const f of candidateFiles) {
           if (referenceImages.length >= MAX_REFERENCE_IMAGES) {
@@ -397,7 +590,7 @@ Output STRICT JSON matching the schema. Caption MAX 1500 characters. Do NOT incl
         const drafts = draft.posts.slice(0, postCount);
 
         // ---- Generate images in parallel via Gemini ----
-        const resultId = newGmbResultId();
+        // `resultId` declared up above the branch is reused here.
         send({
           event: "progress",
           phase: "images",
@@ -446,7 +639,8 @@ Output STRICT JSON matching the schema. Caption MAX 1500 characters. Do NOT incl
           message: "Saving posts to your workspace…",
         });
         const now = Date.now();
-        const posts: GmbPost[] = drafts.map((d, idx) => ({
+        // Reuse the `posts` accumulator declared above the branch.
+        posts = drafts.map((d, idx) => ({
           id: newGmbPostId(),
           postType: d.postType,
           caption: d.caption,
@@ -454,6 +648,7 @@ Output STRICT JSON matching the schema. Caption MAX 1500 characters. Do NOT incl
           ctaUrl: d.ctaUrl || ctaUrlDefault || website || null,
           imageUrl: imageResults[idx].url,
           imageError: imageResults[idx].error,
+          imageSource: "ai-generated",
           imagePrompt: d.imagePrompt,
           targetKeywords: d.targetKeywords ?? [],
           reasoning: d.reasoning,
@@ -522,6 +717,16 @@ function parsePostType(raw: string | undefined): GmbPostType {
   const v = (raw ?? "").trim();
   if ((GMB_POST_TYPES as readonly string[]).includes(v)) return v as GmbPostType;
   return "Update";
+}
+
+/** Map the form's human-readable imageSource label to the internal
+ *  enum. Defaults to client-files (the consultant's preferred path). */
+function parseImageSource(
+  raw: string | undefined,
+): "client-files" | "ai-generated" {
+  const v = (raw ?? "").trim().toLowerCase();
+  if (v.startsWith("ai") || v.includes("gemini")) return "ai-generated";
+  return "client-files";
 }
 
 function buildPrompt(opts: {
@@ -620,4 +825,210 @@ function formatBrief(brief: {
   }
   if (parts.length === 0) return "";
   return `## Client brief\n${parts.join("\n\n")}`;
+}
+
+// ===== Client-files mode helpers =====
+
+type PoolEntry = {
+  /** Breadcrumb path for diagnostics — "Sessão 9 → IMG_5612.jpg". */
+  breadcrumb: string;
+  /** Original Client File link / blob URL — kept so the diagnostic row
+   *  can link back to the source even when the actual image lives
+   *  somewhere else (Drive). */
+  originUrl: string;
+  /** Stable public URL if the image is already on Vercel Blob.
+   *  null when it'll need to be re-hosted after picking. */
+  publicUrl: string | null;
+  /** Lazy download — only invoked for the picked images, not the whole
+   *  pool. Returns null on auth/fetch failure. */
+  fetch: () => Promise<{
+    bytes: Uint8Array;
+    mimeType: string;
+    filename: string;
+  } | null>;
+};
+
+/** Schema for the per-image vision-grounded caption in client-files
+ *  mode. Mirrors the batch schema minus `imagePrompt` (the image is
+ *  already provided). */
+const SinglePostSchema = z.object({
+  postType: z.enum(GMB_POST_TYPES),
+  caption: z.string().min(40).max(1500),
+  cta: z
+    .enum(["Learn more", "Book", "Order online", "Buy", "Sign up", "Call now"])
+    .nullable(),
+  ctaUrl: z.string().nullable(),
+  targetKeywords: z.array(z.string()).min(0).max(5),
+  reasoning: z.string().min(10).max(200),
+});
+
+/** Build a flat pool of image candidates from a client's library. Each
+ *  pool entry has a lazy `fetch` so we only download the images we
+ *  actually pick. Records every entry that DIDN'T make it into the
+ *  pool (via `referencesUsed`) so the result page diagnostic stays
+ *  accurate. */
+async function buildImagePool(
+  files: ClientFile[],
+  referencesUsed: import("@/lib/gmb-posts-store").GmbReferenceFile[],
+): Promise<PoolEntry[]> {
+  const pool: PoolEntry[] = [];
+  for (const f of files) {
+    if (f.kind === "image") {
+      // Vercel Blob upload — public URL, stable. No re-host needed.
+      pool.push({
+        breadcrumb: f.name,
+        originUrl: f.url,
+        publicUrl: f.url,
+        fetch: async () => {
+          try {
+            const res = await fetch(f.url);
+            if (!res.ok) return null;
+            const buf = new Uint8Array(await res.arrayBuffer());
+            return {
+              bytes: buf,
+              mimeType:
+                res.headers.get("content-type") ?? "application/octet-stream",
+              filename: f.name,
+            };
+          } catch {
+            return null;
+          }
+        },
+      });
+      continue;
+    }
+    if (f.kind !== "link") {
+      referencesUsed.push({
+        name: f.name,
+        url: f.url,
+        status: "skipped",
+        reason: `kind '${f.kind}' isn't an image candidate`,
+      });
+      continue;
+    }
+    // Drive folder
+    const folderId = extractDriveFolderId(f.url);
+    if (folderId) {
+      const { refs, error } = await listImageRefsInDriveFolder(folderId, {
+        rootLabel: f.name,
+      });
+      if (error || refs.length === 0) {
+        referencesUsed.push({
+          name: f.name,
+          url: f.url,
+          status: "failed",
+          reason:
+            error ??
+            "Drive folder has no image files (looked recursively up to depth 2)",
+        });
+        continue;
+      }
+      for (const ref of refs) {
+        pool.push({
+          breadcrumb: ref.breadcrumb,
+          originUrl: f.url,
+          publicUrl: null,
+          fetch: () => downloadDriveImageById(ref),
+        });
+      }
+      continue;
+    }
+    // Drive single file
+    if (extractDriveFileId(f.url)) {
+      pool.push({
+        breadcrumb: f.name,
+        originUrl: f.url,
+        publicUrl: null,
+        fetch: () => fetchDriveFile(f.url),
+      });
+      continue;
+    }
+    // Other URL (public CDN, etc.)
+    pool.push({
+      breadcrumb: f.name,
+      originUrl: f.url,
+      publicUrl: f.url,
+      fetch: () => fetchImageBytes(f.url),
+    });
+  }
+  return pool;
+}
+
+/** Fisher–Yates shuffle for random sampling. */
+function shuffle<T>(arr: T[]): T[] {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+function clientFilesSystemPrompt(languageCode: string): string {
+  return `You are an in-house GMB content strategist for Wonder Ads (Health & Wellness growth agency). You're given ONE real photo of the client (already chosen — you don't get to pick) plus the client's brief, onboarding form, target keywords, and site audit. Your job is to write a Google Business Profile post caption that:
+
+- describes / contextualises what's IN the image (so the caption matches the photo a reader is looking at);
+- reads like a real local business update — not promotional, not AI-stocky;
+- weaves 1–2 target keywords naturally for local SEO (no stuffing);
+- matches the client's brand voice from the brief + onboarding + site audit;
+- NEVER makes medical claims for YMYL clinics, NEVER promises outcomes;
+- ${languageInstructionFor(languageCode)}.
+
+**ABSOLUTE RULE — read the Site Audit before writing.** The user prompt contains a "## Site audit" block describing what the business actually does. NEVER infer business type from the brand name. If the brief + onboarding + audit don't give you a confident read, write a SAFE generic local-business caption.
+
+Output STRICT JSON matching the schema. Caption MAX 1500 characters. No hashtags. No markdown.`;
+}
+
+function buildClientFilesPrompt(opts: {
+  clientName: string;
+  website: string | null;
+  brief: { dos: string[]; donts: string[]; notes: string[] };
+  onboardingText: string | null;
+  targets: { keyword: string; searchVolume?: number | null }[];
+  postType: GmbPostType;
+  theme: string;
+  details: string;
+  ctaUrlDefault: string;
+  siteAuditBlock: string;
+  languageCode: string;
+  imageFilename: string;
+  postIndex: number;
+  totalPosts: number;
+}): string {
+  const briefBlock = formatBrief(opts.brief);
+  const onboardingBlock = opts.onboardingText
+    ? `## Onboarding form excerpt\n\`\`\`\n${opts.onboardingText.slice(0, 2000)}${opts.onboardingText.length > 2000 ? "\n…[truncated]" : ""}\n\`\`\``
+    : "";
+  const targetsBlock =
+    opts.targets.length > 0
+      ? `## Tracked target keywords (top 15 by volume)\n${[...opts.targets]
+          .sort((a, b) => (b.searchVolume ?? 0) - (a.searchVolume ?? 0))
+          .slice(0, 15)
+          .map((t) => `- ${t.keyword}`)
+          .join("\n")}`
+      : "";
+  return [
+    `# Write a GMB post caption for **${opts.clientName}**`,
+    `Image (attached above): \`${opts.imageFilename}\` — this is a real photo from the client. Look at it.`,
+    `This is post ${opts.postIndex + 1} of ${opts.totalPosts} in this batch. Default post type: **${opts.postType}** (you can change if the photo clearly suggests a different type).`,
+    `Website: ${opts.website ?? "(none on file)"}.`,
+    opts.theme ? `\n## Theme / focus\n${opts.theme}` : "",
+    opts.details ? `\n## Hard facts that MUST appear literally\n${opts.details}` : "",
+    opts.ctaUrlDefault
+      ? `\n## Default CTA URL\n${opts.ctaUrlDefault}`
+      : `\n## Default CTA URL\n_(none set — use the website URL above)_`,
+    opts.siteAuditBlock,
+    briefBlock,
+    onboardingBlock,
+    targetsBlock,
+    `\n## Rules`,
+    `- **Read the Site Audit first** before writing. Brand name is NEVER the source of truth — the audit is.`,
+    `- **Look at the image** and ground the caption in what's actually visible: who/what/where in the photo. The caption should make sense alongside this specific image.`,
+    `- Caption max 1500 chars, plain text, no markdown.`,
+    `- Weave 1–2 target keywords naturally — no stuffing.`,
+    `- NEVER make medical claims / promise outcomes for YMYL clinics.`,
+    `- ${languageInstructionFor(opts.languageCode)}.`,
+    `- For \`reasoning\`: ONE sentence on why this angle (so the consultant scanning the grid can see at a glance).`,
+  ]
+    .filter(Boolean)
+    .join("\n");
 }

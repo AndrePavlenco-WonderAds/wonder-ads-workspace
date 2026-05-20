@@ -579,8 +579,18 @@ export const PILLARS: Pillar[] = [
         slug: "gmb-posts",
         label: "GMB Posts Creation",
         blurb:
-          "Generates 1–3 on-brand Google Posts — image (using uploaded client files as reference) + caption with target keywords + CTA.",
+          "Generates 1–3 on-brand Google Posts. Pick whether the image comes from the client's own photos (faster, always on-brand) or is AI-generated (more flexible). Caption + CTA always come from Claude.",
         fields: [
+          {
+            key: "imageSource",
+            label: "Where should the image come from?",
+            type: "select",
+            required: true,
+            options: ["Use client's photos", "AI-generate (Gemini)"],
+            defaultValue: "Use client's photos",
+            helpText:
+              "Client's photos: app picks a random image from uploads + Drive folders and Claude writes a caption that matches it. AI-generate: Gemini creates a new image using the client's photos as brand reference.",
+          },
           {
             key: "postCount",
             label: "How many posts?",

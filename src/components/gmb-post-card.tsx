@@ -137,9 +137,29 @@ export function GmbPostCard({
         >
           {meta.label}
         </span>
-        <span className="absolute left-3 top-3 inline-flex items-center rounded-full border border-white/20 bg-black/40 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-white">
+        <span className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full border border-white/20 bg-black/40 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-white">
           {draft.postType}
         </span>
+        {/* Image-source chip in the bottom-left of the image. Lets
+            consultants tell at a glance whether they're looking at a
+            real client photo or an AI-generated render. */}
+        {draft.imageSource && (
+          <span
+            className={
+              draft.imageSource === "client-files"
+                ? "absolute bottom-3 left-3 inline-flex items-center gap-1 rounded-full border border-emerald-400/45 bg-emerald-500/20 px-2 py-0.5 text-[10px] font-medium text-emerald-50 backdrop-blur-sm"
+                : "absolute bottom-3 left-3 inline-flex items-center gap-1 rounded-full border border-[color:var(--brand-purple)]/55 bg-[color:var(--brand-purple)]/25 px-2 py-0.5 text-[10px] font-medium text-white backdrop-blur-sm"
+            }
+            title={
+              draft.imageSource === "client-files"
+                ? `Client photo from ${draft.imageOrigin ?? "the library"}`
+                : "AI-generated image (Gemini)"
+            }
+          >
+            {draft.imageSource === "client-files" ? "📸" : "✨"}
+            {draft.imageSource === "client-files" ? "Client photo" : "AI image"}
+          </span>
+        )}
       </div>
 
       {/* Body */}
