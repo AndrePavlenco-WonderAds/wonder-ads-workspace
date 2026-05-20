@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "71.2",
+    date: "2026-05-20",
+    title: "GMB Posts: kill the \"Nothing generated\" flash, surface actual Gemini errors, remove CTA helper line",
+    highlights: [
+      "**🪲 \"Nothing generated for this URL\" flash on Generate — fixed.** Root cause: `GmbPostsRunner`'s mount effect was double-firing (Strict Mode in dev + `startGeneration` dep churn from progressPct state updates). First fire correctly consumed sessionStorage and started generation; second fire saw the now-empty key and flipped status to `missing` — clobbering the in-flight generating UI. Fix: idempotent ref guard (`kickoffRef`) so the consume side-effect runs exactly once; also stabilised `startGeneration` by removing `progressPct` from its deps and using the functional setter form.",
+      "**🪟 Actual Gemini error surfaced on every failed card.** Image-gen errors are now stored per-post (`GmbPost.imageError`) and the card renders the exact string the SDK / Gemini returned underneath the failure icon. So instead of the useless generic message, you'll see things like `promptBlockReason=SAFETY · finishReason=RECITATION` or `model returned no image bytes. Likely your API key tier doesn't have image generation enabled…` — enough to know whether it's a quota, a safety filter, or a missing permission.",
+      "**🪵 Server-side logging.** Each Gemini call now logs the response shape (candidatesCount, finishReason, part types, promptFeedback) to Vercel function logs — strip the image bytes first so the logs stay readable. Useful for the dev tab: open the function for `/api/seo-actions/[client]/gmb-posts/gmb-generate` and you'll see exactly what Gemini returned for the failed call.",
+      "**🧪 responseModalities now requests `[IMAGE, TEXT]`.** Some Gemini API versions reject IMAGE-only configs with \"modality IMAGE not supported alone\". Requesting both keeps the model honest about returning bytes while staying compatible across SDK versions.",
+      "**🧼 Removed CTA helper text.** The \"Where the CTA button should send people. Defaults to the client's homepage when blank.\" line under the Default CTA URL field is gone — the label + placeholder already explain it.",
+    ],
+  },
+  {
     version: "71.1",
     date: "2026-05-20",
     title: "GMB Posts fixes: mandatory site audit, working image gen, contact-page prefill, PT-PT CTAs",

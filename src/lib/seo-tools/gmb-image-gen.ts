@@ -72,15 +72,49 @@ export async function generateGmbImage(opts: {
     try {
       const response = await ai.models.generateContent({
         model,
-        contents: [{ role: "user", parts }],
+        // SDK auto-wraps a Part[] into a single user-role Content.
+        // Avoid the explicit { role: "user", parts } shape because
+        // @google/genai's union types inferred it as Part[] not
+        // Content[] and choked on the `role` key.
+        contents: parts,
         // CRITICAL: without responseModalities including IMAGE, the
         // model returns text-only describing what the image would look
-        // like — not bytes. v71.0 was missing this; that's why every
-        // generation came back with "Image generation failed".
+        // like — not bytes. We include TEXT too because some Gemini
+        // versions reject IMAGE-only configs with "Modality IMAGE not
+        // supported alone".
         config: {
-          responseModalities: [Modality.IMAGE],
+          responseModalities: [Modality.IMAGE, Modality.TEXT],
         },
       });
+      // Log full response shape to Vercel logs so we can diagnose
+      // permission/region/safety issues. Strip the actual image bytes
+      // before logging — they're huge and noisy.
+      console.info(
+        `[gmb-image-gen] ${model} →`,
+        JSON.stringify(
+          {
+            promptFeedback: response.promptFeedback,
+            candidatesCount: response.candidates?.length ?? 0,
+            firstCandidate: response.candidates?.[0]
+              ? {
+                  finishReason: response.candidates[0].finishReason,
+                  partsCount: response.candidates[0].content?.parts?.length,
+                  partTypes: response.candidates[0].content?.parts?.map((p) => {
+                    const part = p as {
+                      text?: string;
+                      inlineData?: { mimeType?: string };
+                    };
+                    if (part.text) return "text";
+                    if (part.inlineData) return `image:${part.inlineData.mimeType ?? "?"}`;
+                    return "unknown";
+                  }),
+                }
+              : null,
+          },
+          null,
+          0,
+        ).slice(0, 800),
+      );
       const candidateParts = response.candidates?.[0]?.content?.parts ?? [];
       for (const part of candidateParts) {
         const inline = (part as {
@@ -93,15 +127,31 @@ export async function generateGmbImage(opts: {
           };
         }
       }
-      // Got a response but no image bytes — try the next model.
+      // Got a response but no image bytes — capture as much diagnostic
+      // info as possible before trying the next model. Three common
+      // root causes:
+      // 1. Safety filter blocked the prompt (promptFeedback.blockReason).
+      // 2. Model finished early (finishReason: SAFETY / RECITATION / OTHER).
+      // 3. Model returned text-only describing what it WOULD draw
+      //    (responseModalities misconfigured / API tier doesn't allow
+      //    image gen on this key).
+      const blockReason = response.promptFeedback?.blockReason;
+      const finishReason = response.candidates?.[0]?.finishReason;
       const textPart = candidateParts
         .map((p) => (p as { text?: string }).text)
         .filter(Boolean)
         .join(" ")
         .slice(0, 200);
+      const diag: string[] = [];
+      if (blockReason) diag.push(`promptBlockReason=${blockReason}`);
+      if (finishReason && finishReason !== "STOP")
+        diag.push(`finishReason=${finishReason}`);
+      if (textPart) diag.push(`model said: "${textPart}"`);
       lastError = new Error(
-        `${model} returned no image (${candidateParts.length} parts)${
-          textPart ? `: "${textPart}"` : ""
+        `${model} returned no image bytes. ${
+          diag.length > 0
+            ? diag.join(" · ")
+            : "Likely your API key tier doesn't have image generation enabled — enable billing on the Google Cloud project linked to this key, or get a fresh key at aistudio.google.com."
         }`,
       );
     } catch (err) {

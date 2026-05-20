@@ -113,10 +113,20 @@ export function GmbPostCard({
             className="h-full w-full object-cover"
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center text-center text-xs text-white/45">
+          <div className="flex h-full w-full items-center justify-center px-5 text-center text-xs text-white/55">
             <div>
-              <Sparkles className="mx-auto h-5 w-5 text-[color:var(--brand-purple)]" />
-              <p className="mt-2">Image generation failed — caption is still usable.</p>
+              <Sparkles className="mx-auto h-5 w-5 text-rose-300" />
+              <p className="mt-3 font-medium text-white/85">
+                Image generation failed
+              </p>
+              {draft.imageError && (
+                <p className="mt-1.5 select-text text-[10.5px] leading-snug text-rose-300/85">
+                  {draft.imageError}
+                </p>
+              )}
+              <p className="mt-3 text-[10px] uppercase tracking-[0.12em] text-white/40">
+                caption is still usable
+              </p>
             </div>
           </div>
         )}

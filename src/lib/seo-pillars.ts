@@ -620,8 +620,6 @@ export const PILLARS: Pillar[] = [
             label: "Default CTA URL (optional)",
             type: "text",
             placeholder: "https://client-site.com/book",
-            helpText:
-              "Where the CTA button should send people. Defaults to the client's homepage when blank.",
           },
         ],
       },

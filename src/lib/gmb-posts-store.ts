@@ -103,6 +103,10 @@ export type GmbPost = {
   imageUrl: string | null;
   /** The prompt the image generator used — handy for "regenerate" + debugging. */
   imagePrompt: string;
+  /** When image generation fails, the exact error message from Gemini /
+   *  the SDK so consultants (and the dev tools) can diagnose. Null when
+   *  the image succeeded. */
+  imageError: string | null;
   /** Target keywords this post tries to seed. */
   targetKeywords: string[];
   /** One-line "why this angle" — useful for the consultant scanning the grid. */

@@ -330,6 +330,14 @@ Output STRICT JSON matching the schema. Caption MAX 1500 characters. Do NOT incl
               return { url, error: null as string | null };
             } catch (err) {
               const message = err instanceof Error ? err.message : String(err);
+              // Log full error to Vercel server logs so the dev tab can
+              // show it. The surfaced message on the card is the
+              // important UX signal but the stack trace + cause helps
+              // diagnose tier / quota / region / safety issues.
+              console.error(
+                `[gmb-generate] image gen failed for post ${idx}:`,
+                err,
+              );
               return { url: null as string | null, error: message };
             }
           }),
@@ -349,6 +357,7 @@ Output STRICT JSON matching the schema. Caption MAX 1500 characters. Do NOT incl
           cta: (d.cta ?? null) as GmbCta,
           ctaUrl: d.ctaUrl || ctaUrlDefault || website || null,
           imageUrl: imageResults[idx].url,
+          imageError: imageResults[idx].error,
           imagePrompt: d.imagePrompt,
           targetKeywords: d.targetKeywords ?? [],
           reasoning: d.reasoning,

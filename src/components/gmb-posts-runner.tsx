@@ -108,7 +108,7 @@ export function GmbPostsRunner({
               continue;
             }
             if (evt.event === "progress") {
-              setProgressPct(PHASE_PERCENT[evt.phase] ?? progressPct);
+              setProgressPct((cur) => PHASE_PERCENT[evt.phase] ?? cur);
               setPhaseMessage(evt.message);
             } else if (evt.event === "error") {
               throw new Error(evt.message);
@@ -147,12 +147,22 @@ export function GmbPostsRunner({
         setStatus("error");
       }
     },
-    [clientSlug, action.slug, resultId, progressPct],
+    [clientSlug, action.slug, resultId],
   );
 
-  // Mount: if no existing, look for pending inputs and kick off.
+  // Mount: if no existing, look for pending inputs and kick off ONCE.
+  // The effect MUST be idempotent — Strict Mode double-fires in dev,
+  // and `startGeneration`'s identity changes during the run (state
+  // updates inside it), so this effect can re-fire multiple times. The
+  // first run consumes sessionStorage; subsequent runs see it empty
+  // and used to flip status to "missing" — which clobbered the
+  // "generating" UI and produced the v71.1 "Nothing generated for this
+  // URL" flash. Ref guard makes the consume side-effect-once.
+  const kickoffRef = useRef(false);
   useEffect(() => {
     if (existing) return;
+    if (kickoffRef.current) return;
+    kickoffRef.current = true;
     const key = pendingKey(clientSlug, action.slug, resultId);
     const raw = sessionStorage.getItem(key);
     if (raw) {
