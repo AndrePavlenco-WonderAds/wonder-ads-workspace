@@ -69,6 +69,8 @@ export default async function ActionPage({
   // benefit from prefilled inputs (e.g. blog audience from client tier).
   const defaults: Record<string, string> = {};
   if (action.slug === "seo-audit" && website) defaults.pageUrl = website;
+  if (action.slug === "meta-title-description" && website)
+    defaults.pageUrl = website;
   if (action.slug === "keyword-research" && onboarding?.suggestedSeed) {
     defaults.seedTopic = onboarding.suggestedSeed;
   }

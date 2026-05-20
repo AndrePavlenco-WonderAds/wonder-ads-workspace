@@ -304,18 +304,38 @@ export const PILLARS: Pillar[] = [
       },
       {
         slug: "meta-title-description",
-        label: "Meta Title & Description",
-        blurb: "SERP snippets engineered for click-through.",
+        label: "Meta Titles & Descriptions",
+        titleTemplate: "Optimize Meta Tags for {client}",
+        blurb:
+          "Site-wide meta optimisation — crawls every page, pulls the current title + meta, then drafts SERP-optimized rewrites grounded in the latest Keyword Research.",
+        usesBrief: false,
         fields: [
-          URL_FIELD,
-          PRIMARY_KEYWORD,
           {
-            key: "uniqueAngle",
-            label: "Unique selling angle",
+            key: "pageUrl",
+            label: "Website URL",
+            type: "text",
+            required: true,
+            placeholder: "https://client-site.com/",
+            helpText:
+              "Defaults to this client's website. We'll discover the sitemap, crawl the pages, and propose optimised meta tags per URL.",
+          },
+          {
+            key: "depth",
+            label: "Pages to scan",
+            type: "select",
+            required: true,
+            options: ["Quick (10)", "Standard (25)", "Deep (50)"],
+            defaultValue: "Standard (25)",
+            helpText:
+              "Quick = top 10 pages, Standard = 25, Deep = 50. Pages are sampled in sitemap order. Deep takes ~40-50s.",
+          },
+          {
+            key: "focusKeywords",
+            label: "Focus keywords (optional)",
             type: "textarea",
-            rows: 2,
+            rows: 3,
             placeholder:
-              "What makes this page / offer different? Price, speed, expertise, location...",
+              "Anything the rewrites must lean into beyond what's in the latest Keyword Research — service names, geo modifiers, brand terms. Leave blank to let Claude pick purely from the KW research clusters.",
           },
         ],
       },

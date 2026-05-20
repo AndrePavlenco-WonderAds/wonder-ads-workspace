@@ -5,7 +5,9 @@ import { PageShell } from "@/components/page-shell";
 import { LogoChip } from "@/components/logo-chip";
 import { ResultRunner } from "@/components/result-runner";
 import { GmbPostsRunner } from "@/components/gmb-posts-runner";
+import { MetaTagsRunner } from "@/components/meta-tags-runner";
 import { SendToReviewButton } from "@/components/send-to-review-button";
+import { getMetaTagsResult } from "@/lib/meta-tags-store";
 import { PrintLayout } from "@/components/print-layout";
 import { getGmbResult } from "@/lib/gmb-posts-store";
 import { getClientGeo } from "@/lib/client-geo";
@@ -66,6 +68,10 @@ export default async function ResultPage({
   // available soon" placeholder).
   const gmbResult =
     action.slug === "gmb-posts" ? await getGmbResult(slug, resultId) : null;
+  const metaTagsResult =
+    action.slug === "meta-title-description"
+      ? await getMetaTagsResult(slug, resultId)
+      : null;
 
   // -- PRINT MODE: bypass PageShell entirely. Render the branded WonderAds
   //    PDF document straight from the server. The PrintLayout component
@@ -120,7 +126,11 @@ export default async function ResultPage({
             been saved, regardless of action type. Brand-gradient
             "prominent" variant so the consultant sees it immediately
             (v72.0 used the muted default and consultants missed it). */}
-        {(action.slug === "gmb-posts" ? gmbResult : existing) && (
+        {(action.slug === "gmb-posts"
+          ? gmbResult
+          : action.slug === "meta-title-description"
+            ? metaTagsResult
+            : existing) && (
           <SendToReviewButton
             variant="prominent"
             clientSlug={slug}
@@ -129,7 +139,9 @@ export default async function ResultPage({
                 ? `${gmbResult?.posts.length ?? 0} GMB post${
                     (gmbResult?.posts.length ?? 0) === 1 ? "" : "s"
                   } · ${client.title}`
-                : `${action.label} · ${client.title}`
+                : action.slug === "meta-title-description"
+                  ? `Meta tags rewrite — ${metaTagsResult?.rows.length ?? 0} page${(metaTagsResult?.rows.length ?? 0) === 1 ? "" : "s"} · ${client.title}`
+                  : `${action.label} · ${client.title}`
             }
             category={
               action.slug === "gmb-posts"
@@ -140,18 +152,16 @@ export default async function ResultPage({
                     ? "SEO Audit"
                     : action.slug === "client-roadmap"
                       ? "Roadmap"
-                      : "Other"
+                      : action.slug === "meta-title-description"
+                        ? "On-Page SEO"
+                        : "Other"
             }
             docLink={
               action.slug === "gmb-posts"
-                ? // Public preview — no app chrome, read-only, lives
-                  // under (public-review) route group so clients can't
-                  // navigate up the URL into other clients' data.
-                  `/${slug}/preview/gmb-posts/${resultId}`
-                : // Non-GMB actions all have a public DOCX export
-                  // endpoint already. That's a file download — no
-                  // navigable app chrome to escape into.
-                  `/api/seo-actions/${slug}/${actionSlug}/results/${resultId}/docx`
+                ? `/${slug}/preview/gmb-posts/${resultId}`
+                : action.slug === "meta-title-description"
+                  ? `/${slug}/preview/meta-tags/${resultId}`
+                  : `/api/seo-actions/${slug}/${actionSlug}/results/${resultId}/docx`
             }
             sourceType={action.slug}
           />
@@ -170,6 +180,36 @@ export default async function ResultPage({
           ) : (
             <span
               title="Becomes active once the GMB posts are generated."
+              className="ml-auto inline-flex cursor-not-allowed items-center gap-2 rounded-md border border-white/15 bg-white/[0.04] px-4 py-2 text-xs font-semibold text-white/50"
+            >
+              <Download className="h-3.5 w-3.5" />
+              Download available soon
+            </span>
+          )
+        ) : action.slug === "meta-title-description" ? (
+          metaTagsResult ? (
+            <div className="ml-auto flex flex-col items-stretch gap-2">
+              <a
+                href={`/api/seo-actions/${slug}/${actionSlug}/meta-export?id=${encodeURIComponent(resultId)}&format=csv`}
+                className="inline-flex items-center justify-center gap-2 rounded-md bg-gradient-to-br from-[#343ED7] via-[#783DF5] to-[#C535C9] px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-[#783DF5]/25 transition hover:brightness-110 hover:shadow-[#783DF5]/40"
+                title="CSV with one row per page — drops into Yoast / Webflow / WordPress bulk edit."
+              >
+                <Download className="h-3.5 w-3.5" />
+                Download CSV ({metaTagsResult.rows.length} page
+                {metaTagsResult.rows.length === 1 ? "" : "s"})
+              </a>
+              <a
+                href={`/api/seo-actions/${slug}/${actionSlug}/meta-export?id=${encodeURIComponent(resultId)}&format=docx`}
+                className="inline-flex items-center justify-center gap-2 rounded-md border border-white/20 bg-white/[0.04] px-4 py-2 text-xs font-semibold text-white/85 transition hover:border-white/35 hover:bg-white/[0.08] hover:text-white"
+                title="Word document with the current vs optimised table — for the client review packet."
+              >
+                <Download className="h-3.5 w-3.5" />
+                Download DOCX
+              </a>
+            </div>
+          ) : (
+            <span
+              title="Becomes active once the meta tags are generated."
               className="ml-auto inline-flex cursor-not-allowed items-center gap-2 rounded-md border border-white/15 bg-white/[0.04] px-4 py-2 text-xs font-semibold text-white/50"
             >
               <Download className="h-3.5 w-3.5" />
@@ -256,6 +296,14 @@ export default async function ResultPage({
             resultId={resultId}
             existing={gmbResult}
             languageCode={getClientGeo(slug).languageCode}
+          />
+        ) : action.slug === "meta-title-description" ? (
+          <MetaTagsRunner
+            clientSlug={slug}
+            clientName={client.title}
+            action={action}
+            resultId={resultId}
+            existing={metaTagsResult}
           />
         ) : (
           <ResultRunner

@@ -13,6 +13,24 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "73.0",
+    date: "2026-05-20",
+    title: "Meta Titles & Descriptions — site-wide crawler + Keyword-Research-grounded rewrites + approval loop",
+    highlights: [
+      "**🪧 New site-wide Meta Tags optimiser.** Replaces the old single-page action with a real workflow: enter the client URL, pick depth (Quick = 10 / Standard = 25 / Deep = 50), and the action discovers the sitemap, crawls every page, pulls the current `<title>` + `<meta description>`, then drafts SERP-optimised rewrites grounded in the **latest Keyword Research** for that client. Optional focus keywords on the form for last-minute steer.",
+      "**🔒 Blocks until Keyword Research exists.** Hard error: `No Keyword Research result found for this client. Run Keyword Research first, then come back — meta-tag optimisation depends on the keyword clusters to assign primary keywords per URL.` Forces the right sequence; prevents weak \"brief-only\" output.",
+      "**🎯 Claude auto-assigns primary + secondary keywords per URL.** Per-row generation reads the full KW cluster map + the URL + current title + H1 and picks the best-fit primary keyword (with 1-3 supporting keywords from related clusters). One-line reasoning shown next to each row. URLs with no commercial intent (/privacy, /terms, /404) explicitly get `primaryKeyword: null` so they don't get keyword-stuffed.",
+      "**📋 Per-page Current vs Optimised side-by-side.** Result page renders each URL as a card: clickable URL header + a 2-column body with `Current title / Optimised title` and `Current meta / Optimised meta`. Char-count indicators under each editable field colour-coded against the SERP sweet spots (title 30–60 / meta 120–160 — green inside, amber short, rose over). Optimised columns are inline-editable; debounced auto-save.",
+      "**🪪 Issues + secondary-keyword chips per row.** Claude flags problems on the CURRENT tags (`missing meta`, `title too long`, `brand-only title`, `no primary keyword`, etc.) as amber chips. Secondary keywords show as white chips. Header stats: how many pages were missing metas / had over-long titles — surfaces the quality of the existing site at a glance.",
+      "**🚀 Send for Approval — both batch and per-row.** Prominent `Send for Approval` button at the top of the result page (sends the whole batch). Compact `Approval` button per URL row (sends just that page). All point at the new public preview at `/<slug>/preview/meta-tags/<resultId>`.",
+      "**🪟 Public preview — same locked-down pattern as GMB Posts.** Read-only side-by-side table at `/(public-review)/[slug]/preview/meta-tags/[resultId]`. No PageShell, no app chrome, noindex/nofollow, SEO DPT badge, consultant email in footer. Client cannot edit, cannot navigate up into other clients.",
+      "**📦 CSV + DOCX exports.** Top-of-page download buttons.",
+      "  - **CSV** for the dev team: one row per page with URL, current title, optimised title, char counts, current meta, optimised meta, primary keyword, secondary keywords, reasoning, issues. Drops straight into Yoast / Webflow / WordPress bulk-edit tools.",
+      "  - **DOCX** for the client packet: heading per URL, side-by-side current vs optimised tables for both title and meta, primary keyword + reasoning per page.",
+      "**🧱 Plumbing.** New `src/lib/meta-tags-store.ts` (types + KV CRUD), 4 new API routes (`/meta-generate` NDJSON stream, `/meta-result` GET, `/meta-update` PATCH per row, `/meta-export` CSV+DOCX). New `<MetaTagsTable>` + `<MetaTagsRunner>` components. Action def updated with new `titleTemplate`, depth-select, focus-keywords textarea. Pre-fill of website URL from client metadata.",
+    ],
+  },
+  {
     version: "72.2",
     date: "2026-05-20",
     title: "Pending Review: \"Approval\" button label, public preview routes (no app leak), auto-fill approval date",
