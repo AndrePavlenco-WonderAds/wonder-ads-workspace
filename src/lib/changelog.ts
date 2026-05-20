@@ -13,6 +13,24 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "73.1",
+    date: "2026-05-20",
+    title: "Meta Tags: full sitemap coverage, top-agency-grade title rules, batch-only approval",
+    highlights: [
+      "**🪲 Sitemap was being capped at 12 URLs regardless of depth — fixed.** `discoverSitemap(url, { maxUrls })` defaults to 12; v73.0 wasn't passing the consultant's depth (25 / 50) so Mimus only ever got 12 pages. Now `maxUrls = depth.maxPages` is passed through. Mimus scan at Standard goes from 12 → 25+ pages.",
+      "**🕸️ Homepage-link fallback.** When the sitemap returns fewer URLs than the requested depth, the action now crawls the homepage's internal `<a href>` links and adds same-origin URLs to the pool until depth is hit. Catches all the doctor / service / location pages clinic sitemaps tend to omit. Skips assets (jpg/pdf/zip/css/js), external domains, anchors, mailto, tel, javascript:.",
+      "**📏 Title floor 40 chars (HARD).** Schema `min(40)` — generateObject now rejects + retries any title under 40 chars. System prompt also lists the lengthening playbook: add geo modifier / specialty / role / brand with ` | ` separator. The v73.0 \"Susana | Dentista MIMUS\" (23 chars) result is now impossible.",
+      "**📐 Top-agency-grade best practices baked into the system prompt.** Rewritten around what Backlinko / Ahrefs / Moz / Search Engine Journal treat as table stakes for 2026 Google SERPs:",
+      "  - Title 50-60 (never <40, never >65) · primary keyword in first 60% of title · brand at the end with ` | ` separator · one focus per page · every title unique · Title Case in EN / sentence case in PT-ES-FR · no ALL CAPS · no year-stamping unless the page is year-specific.",
+      "  - Meta 120-160 (never <120, never >170) · lead with value prop (first 90 chars = mobile cutoff) · primary keyword exactly once · soft CTA verb at the end localised per language · NEVER repeat the title.",
+      "  - YMYL safety: no medical claims, no outcome promises, no `garantido / sem dor / 100%`. Brief Do's / Don'ts override best practice.",
+      "**📝 Shorter blurb on the action card.** `Crawls every page, audits the current title + meta, drafts SERP-optimised rewrites from the latest Keyword Research.` — one line, scannable.",
+      "**🔘 Generate button reads what it does.** New `ActionDef.generateButtonLabel` override; meta-tags shows `Scan current Meta Tags and SEO Optimize` instead of the generic `Generate`. Reusable for any future action that benefits from a more descriptive label.",
+      "**🧹 Removed per-row Approval buttons.** Only the prominent batch `Send for Approval` button at the top stays — clients review the entire batch together on the public preview, no scattered approvals.",
+      "**📊 TITLE_IDEAL_MIN bumped 30 → 40** on the char-count indicators so the UI matches the new floor (anything under 40 shows amber `short`).",
+    ],
+  },
+  {
     version: "73.0",
     date: "2026-05-20",
     title: "Meta Titles & Descriptions — site-wide crawler + Keyword-Research-grounded rewrites + approval loop",

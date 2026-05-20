@@ -44,17 +44,17 @@ const RowSchema = z.object({
   url: z.string().describe("The page URL — copy verbatim from the input."),
   optimizedTitle: z
     .string()
-    .min(10)
-    .max(75)
+    .min(40)
+    .max(65)
     .describe(
-      "Optimised <title> tag. Aim 50–60 chars (Google truncates ~60). Primary keyword early; brand only if it fits.",
+      "Optimised <title> tag. HARD RULE: 40–60 chars (Google truncates at ~580px / ~60). NEVER below 40 — if the natural title would be shorter, ADD a geo modifier (city / region), the specialty / role, or the brand with a separator to reach ≥40. NEVER over 65. Primary keyword in the first 60% (first ~3-4 words ideally). Brand at the end with ` | ` separator (not `–`, not `:`).",
     ),
   optimizedMeta: z
     .string()
-    .min(70)
-    .max(180)
+    .min(120)
+    .max(170)
     .describe(
-      "Optimised <meta name='description'> tag. Aim 140–160 chars. Lead with the value prop, weave the primary keyword once naturally, end with a soft CTA verb.",
+      "Optimised <meta name='description'> tag. HARD RULE: 120–160 chars. NEVER below 120 — fill out with concrete value props, not filler. Lead with the value prop, weave the primary keyword exactly once (Google bolds it in SERPs), end with a soft CTA verb (Marca consulta / Saiba mais / Descubra / Book a consultation / Learn more depending on language). NEVER repeat the title verbatim.",
     ),
   primaryKeyword: z
     .string()
@@ -178,14 +178,49 @@ export async function POST(
           phase: "crawl",
           message: `Discovering sitemap for ${new URL(websiteUrl).hostname}…`,
         });
-        const sitemap = await discoverSitemap(websiteUrl);
-        // Take the homepage + sampled URLs from the sitemap. Cap to the
-        // chosen depth. Always include the homepage even if not in the
-        // sitemap (some sites exclude it).
-        const allUrls = [
-          websiteUrl,
-          ...sitemap.sampledUrls.filter((u) => u !== websiteUrl),
-        ].slice(0, depth.maxPages);
+        // CRITICAL: pass maxUrls = depth.maxPages so discoverSitemap
+        // returns ALL the URLs we need, not its 12-default. v73.0 was
+        // capping at 12 regardless of the consultant's depth pick.
+        const sitemap = await discoverSitemap(websiteUrl, {
+          maxUrls: depth.maxPages,
+        });
+        // Build the URL pool. Always include the homepage; dedupe.
+        const urlPool = new Set<string>([websiteUrl, ...sitemap.sampledUrls]);
+        send({
+          event: "progress",
+          phase: "crawl",
+          message: `✓ Sitemap returned ${sitemap.sampledUrls.length} URL${sitemap.sampledUrls.length === 1 ? "" : "s"} (of ${sitemap.totalUrls} total).`,
+        });
+        // Fallback: if the sitemap returned fewer URLs than the requested
+        // depth, walk the homepage's internal links to discover more
+        // pages. Common case for clinics on Webflow / WordPress with
+        // shallow sitemaps that don't list every doctor / service page.
+        if (urlPool.size < depth.maxPages) {
+          send({
+            event: "progress",
+            phase: "crawl",
+            message: `Sitemap returned fewer URLs than requested (${urlPool.size} < ${depth.maxPages}) — discovering additional internal links from the homepage…`,
+          });
+          try {
+            const extra = await discoverInternalLinksFromHomepage(
+              websiteUrl,
+              depth.maxPages - urlPool.size,
+            );
+            for (const u of extra) urlPool.add(u);
+            send({
+              event: "progress",
+              phase: "crawl",
+              message: `✓ Homepage crawl added ${extra.length} more URL${extra.length === 1 ? "" : "s"} (pool: ${urlPool.size}).`,
+            });
+          } catch (err) {
+            send({
+              event: "progress",
+              phase: "crawl",
+              message: `⚠️ Homepage-link fallback failed (${err instanceof Error ? err.message.slice(0, 100) : String(err)}) — continuing with sitemap URLs only.`,
+            });
+          }
+        }
+        const allUrls = Array.from(urlPool).slice(0, depth.maxPages);
         send({
           event: "progress",
           phase: "crawl",
@@ -365,18 +400,42 @@ function buildSystemPrompt(languageCode: string): string {
         : languageCode === "fr"
           ? "French (France)"
           : "English";
-  return `You are an in-house SEO copywriter for Wonder Ads (Health & Wellness growth agency). You're rewriting <title> and <meta description> tags for every page on one client's website.
+  return `You are a senior SEO copywriter at Wonder Ads (Health & Wellness growth agency, Portugal). You write <title> and <meta description> tags that follow the standards top US/UK SEO agencies (Backlinko, Ahrefs, Moz, Search Engine Journal) treat as table stakes for ranking in Google in 2026.
 
-Your output is what will go into the live HTML <head> of each page, so it has to nail:
-- **Length:** Title 50–60 chars (Google truncates ~60). Meta description 140–160 chars.
-- **Primary keyword early in the title** — first ~3 words ideally. Brand at the end only if there's room.
-- **Meta = value prop + soft CTA verb.** Lead with the benefit, weave the keyword once naturally, end with "Marca consulta" / "Descubra mais" / etc. NEVER repeat the title verbatim.
-- **YMYL safe** for health clinics: no medical claims, no outcome promises, no "garantido / sem dor / 100%".
-- **Language:** Write in ${lang}.
-- **One H1 / one focus per page.** Don't try to rank every page for everything — match the URL's actual content.
-- **Brief Do's / Don'ts / Notes are HARD RULES.** A Don't overrides best practice every time.
-- **Use the Keyword Cluster map** to assign each URL its best-fit primary keyword. Pick from the clusters; don't invent new keywords.
-- **Real-business voice.** No "Welcome to" / "Best X in Y" / generic clinic boilerplate.
+Your output goes straight into the live HTML <head>. It will be measured against:
+
+# Title tag best practices (HARD RULES — every title must satisfy ALL)
+
+1. **Length: 50–60 characters.** Google truncates at ~580px in desktop SERPs, which lands around 60 chars for Latin scripts. Aim 55. **MINIMUM 40 chars** — anything shorter wastes SERP real estate and signals low effort. NEVER below 40. If the natural title would be shorter, lengthen it by adding:
+   - a geographic modifier (city / region — most local-SEO winning move)
+   - the specialty / role / service type
+   - the brand with a clean separator ( | preferred over – or :)
+   - a value descriptor (e.g. "premium", "boutique", "personalized") ONLY when it's truthful
+2. **Primary keyword in the first 60% of the title.** Ideally in the first 3-4 words. Don't bury it after the brand.
+3. **Brand at the END, separated by " | "** (with spaces). Format: "Primary Keyword Modifier | Brand". Skip the brand only when it would push the title past 60 chars.
+4. **One focus per page.** Don't try to rank every page for everything — match what the URL is actually about (look at the H1 + current title).
+5. **Every page's title MUST be unique.** Never duplicate. If two pages serve the same intent, the URL with the better commercial intent gets the keyword; the other gets a clear differentiator.
+6. **Natural human language.** No keyword stuffing ("dentista lisboa | clínica dentária lisboa | dentistas lisboa"). No ALL CAPS. No clickbait that mis-sets intent.
+7. **Title Case in English** ("Best Dental Clinic in Lisbon"). **Sentence case in Portuguese / Spanish / French** ("Melhor clínica dentária em Lisboa") — capital only on the first word and proper nouns.
+8. **No date-stamped years unless the page is genuinely year-specific** (avoid "Dentista Lisboa 2025" unless the content updates yearly).
+
+# Meta description best practices (HARD RULES)
+
+1. **Length: 120–160 characters.** Google truncates at ~155 on desktop, ~120 on mobile. **MINIMUM 120 chars.** Don't pad; if you'd need to pad to hit 120, the page doesn't have enough to say and you should write more concrete value props.
+2. **Lead with the value prop, not "Welcome to" / "We are X".** First 90 chars are what shows on mobile — pack the benefit there.
+3. **Primary keyword exactly once, naturally.** Google bolds it in SERPs (still a CTR win). Don't stuff it.
+4. **Soft CTA verb at the end** in the page language: "Marca consulta" / "Saiba mais" / "Agende já" / "Descubra" (PT) · "Reservar" / "Más información" (ES) · "Book now" / "Learn more" / "Get a quote" (EN).
+5. **NEVER repeat the title verbatim.** The meta is the second pitch — answer "what's in it for me if I click?".
+6. **No truncation traps.** Don't put the most important info after char 155; assume mobile users only see the first 120.
+7. **Match search intent.** Service page → describe the service + outcome. Article → tease the answer. Contact → location + hours + CTA.
+
+# Cross-cutting rules
+
+- **Language:** Write in ${lang}. ALL titles + metas in the same language unless explicitly told otherwise.
+- **YMYL safety (Health/Wellness clients):** NEVER make medical claims (cure, eliminates, guarantees), NEVER promise outcomes ("sem dor", "100% garantido"), NEVER use "milagre / milagroso". Soft language: "ajudamos", "apoiamos", "acompanhamos".
+- **Brief Do's / Don'ts / Notes are HARD RULES.** A Don't ALWAYS overrides best practice. Read the Client Brief block before writing any tag.
+- **Use the Keyword Cluster map.** Pick the primary keyword from the supplied clusters. DON'T invent new keywords. If a URL has no commercial intent (/privacy, /terms, /cookies, /404), set primaryKeyword: null and write a basic non-keyword-stuffed meta.
+- **Real-business voice.** No "Welcome to", no "Best X in Y", no "Number one provider of", no AI-stocky framing. Write like a senior agency copywriter who's been doing this for 15 years.
 
 Output STRICT JSON matching the schema. One row per crawled URL — keep the URL field verbatim from the input.`;
 }
@@ -424,9 +483,10 @@ function buildPrompt(opts: {
     `\n## Rules`,
     `- Return EXACTLY ${opts.pages.length} rows — one per crawled URL.`,
     `- The \`url\` field MUST match one of the URLs above verbatim. Do NOT invent URLs.`,
-    `- Title 50–60 chars, meta 140–160 chars (write SLIGHTLY longer when the brand voice needs it; never exceed 65 / 165).`,
-    `- Pick the primary keyword from the cluster map by URL + H1 fit. Set null only for /privacy, /terms, /404 etc.`,
-    `- For \`reasoning\`: ONE sentence — what was broken, what's fixed.`,
+    `- Title: 50–60 chars target, **never below 40, never above 65**. If a natural title is shorter than 40, lengthen with geo / specialty / brand per the system rules — never submit a short title hoping the schema lets it through.`,
+    `- Meta: 120–160 chars target, **never below 120, never above 170**. Fill with concrete value props, not filler.`,
+    `- Pick the primary keyword from the cluster map by URL + H1 fit. Set null ONLY for /privacy, /terms, /cookies, /404 — every other URL gets a primary keyword.`,
+    `- For \`reasoning\`: ONE sentence — what was broken about the current tag, what's fixed.`,
     `- For \`issues\`: only flag issues that actually exist on the CURRENT tag. Don't pad.`,
   ]
     .filter(Boolean)
@@ -449,6 +509,87 @@ function formatBrief(brief: {
     parts.push(`### Notes\n${brief.notes.map((n) => `- ${n}`).join("\n")}`);
   if (parts.length === 0) return "";
   return `## Client brief\n${parts.join("\n\n")}`;
+}
+
+/** Fallback URL discovery for sites with thin or missing sitemaps:
+ *  fetch the homepage HTML, parse every `<a href>` that points at the
+ *  same origin, dedupe, and return up to `max` unique paths. Common
+ *  case for clinic Webflow / WordPress sites where the sitemap only
+ *  lists top-level pages but the homepage links to every doctor /
+ *  service / location page. */
+async function discoverInternalLinksFromHomepage(
+  homepageUrl: string,
+  max: number,
+): Promise<string[]> {
+  if (max <= 0) return [];
+  const origin = new URL(homepageUrl).origin;
+  let html: string;
+  try {
+    const res = await fetch(homepageUrl, {
+      redirect: "follow",
+      cache: "no-store",
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (compatible; WonderAdsWorkspace/1.0; +https://wonder-ads.com)",
+      },
+    });
+    if (!res.ok) return [];
+    const ct = res.headers.get("content-type") ?? "";
+    if (!ct.includes("html")) return [];
+    html = await res.text();
+  } catch {
+    return [];
+  }
+  const seen = new Set<string>();
+  const out: string[] = [];
+  // Regex over <a href="..."> — cheaper than full cheerio parse here.
+  const re = /<a\s+[^>]*?href\s*=\s*["']([^"']+)["']/gi;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(html)) !== null) {
+    const raw = m[1].trim();
+    if (!raw || raw.startsWith("#") || raw.startsWith("mailto:") || raw.startsWith("tel:") || raw.startsWith("javascript:")) {
+      continue;
+    }
+    let abs: URL;
+    try {
+      abs = new URL(raw, homepageUrl);
+    } catch {
+      continue;
+    }
+    if (abs.origin !== origin) continue;
+    // Strip fragments + most query strings (keep ?lang= etc.? for now drop all)
+    abs.hash = "";
+    // Skip non-page assets
+    const ext = abs.pathname.split(".").pop()?.toLowerCase() ?? "";
+    if (
+      [
+        "jpg",
+        "jpeg",
+        "png",
+        "gif",
+        "webp",
+        "svg",
+        "pdf",
+        "zip",
+        "mp4",
+        "css",
+        "js",
+        "xml",
+        "ico",
+        "woff",
+        "woff2",
+        "ttf",
+      ].includes(ext)
+    ) {
+      continue;
+    }
+    const url = abs.toString();
+    if (seen.has(url)) continue;
+    seen.add(url);
+    out.push(url);
+    if (out.length >= max * 2) break; // collect a bit extra; caller slices
+  }
+  return out.slice(0, max);
 }
 
 function formatClusters(clusters: KwCluster[]): string {

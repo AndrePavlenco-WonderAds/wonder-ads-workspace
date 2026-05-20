@@ -64,6 +64,8 @@ export type ActionDef = {
    *  substituted with the client name. Default:
    *  `New generation for {client}`. */
   titleTemplate?: string;
+  /** Optional override for the Generate button label. Default: `Generate`. */
+  generateButtonLabel?: string;
 };
 
 /** Single source of truth for the URL an action card links to. Every
@@ -306,8 +308,9 @@ export const PILLARS: Pillar[] = [
         slug: "meta-title-description",
         label: "Meta Titles & Descriptions",
         titleTemplate: "Optimize Meta Tags for {client}",
+        generateButtonLabel: "Scan current Meta Tags and SEO Optimize",
         blurb:
-          "Site-wide meta optimisation — crawls every page, pulls the current title + meta, then drafts SERP-optimized rewrites grounded in the latest Keyword Research.",
+          "Crawls every page, audits the current title + meta, drafts SERP-optimised rewrites from the latest Keyword Research.",
         usesBrief: false,
         fields: [
           {

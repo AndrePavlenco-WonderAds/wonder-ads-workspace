@@ -188,7 +188,9 @@ export function newMetaTagsRowId(): string {
 // SERP-display sweet spots: Google truncates ~60 chars in titles and
 // ~155-160 in meta descriptions. These constants are used by the UI to
 // colour char-count indicators.
-export const TITLE_IDEAL_MIN = 30;
+// v73.1: bumped TITLE_IDEAL_MIN from 30 → 40 to match the hard floor
+// the optimisation prompt enforces.
+export const TITLE_IDEAL_MIN = 40;
 export const TITLE_IDEAL_MAX = 60;
 export const META_IDEAL_MIN = 120;
 export const META_IDEAL_MAX = 160;

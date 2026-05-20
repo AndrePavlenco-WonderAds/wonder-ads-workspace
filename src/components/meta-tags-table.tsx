@@ -18,7 +18,6 @@ import {
   TITLE_IDEAL_MIN,
   type MetaTagsRow,
 } from "@/lib/meta-tags-store";
-import { SendToReviewButton } from "./send-to-review-button";
 
 type Props = {
   clientSlug: string;
@@ -176,16 +175,9 @@ export function MetaTagsTable({
                   saving…
                 </span>
               )}
-              {!readonly && (
-                <SendToReviewButton
-                  variant="compact"
-                  clientSlug={clientSlug}
-                  task={`Meta tags: ${row.url}`}
-                  category="On-Page SEO"
-                  docLink={`/${clientSlug}/preview/meta-tags/${resultId}`}
-                  sourceType={`meta-tags-row:${row.id}`}
-                />
-              )}
+              {/* Per-row Approval button removed in v73.1 — clients
+                  review the entire batch together via the prominent
+                  "Send for Approval" button at the top of the page. */}
             </div>
           </header>
 

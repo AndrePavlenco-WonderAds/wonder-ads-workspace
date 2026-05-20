@@ -229,7 +229,9 @@ export function ActionRunner({
             ) : (
               <Play className="h-4 w-4" strokeWidth={2.5} />
             )}
-            {navigating ? "Opening result page…" : "Generate"}
+            {navigating
+              ? "Opening result page…"
+              : (action.generateButtonLabel ?? "Generate")}
           </button>
           {requiredMissing && !navigating && (
             <span className="text-xs text-white/40">
