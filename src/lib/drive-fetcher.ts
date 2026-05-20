@@ -1,20 +1,28 @@
-// Fetch a public Google Drive file as binary data.
+// Fetch a Google Drive file as binary data.
 //
-// The consultant pastes Drive share links in the Client Files panel
-// (`Add link`). For GMB post image generation we need to feed those
-// files into Gemini as reference images, so we need the raw bytes.
+// Two paths, in order:
+//   1. Authenticated Drive API (preferred) — uses the existing
+//      seo@wonder-ads.com service-account impersonation that already
+//      powers GSC + GA4. As long as the client shares the file with
+//      seo@wonder-ads.com (which is how the agency operates by
+//      default), this works without the file ever being made public.
+//   2. Public direct-download URL (fallback) — for any file that IS
+//      anyone-with-link. Keeps working for clients who happen to share
+//      that way.
 //
-// Drive serves a viewer page at `https://drive.google.com/file/d/<id>/view`
-// — fetching THAT returns the HTML page, not the file. The trick is to
-// transform to the direct-download URL `https://drive.google.com/uc?...`
-// which streams the actual file as long as the link is shared publicly
-// (anyone-with-link). Private files 403 — we leave those to the caller.
+// The viewer page at /file/d/<id>/view returns HTML, not file bytes,
+// so we never just fetch the share URL directly — we either hit the
+// API or transform to /uc?id=<id>.
+
+import { getGoogleAccessToken, googleAuthConfigured } from "./google-auth";
 
 const DRIVE_HOSTS = new Set([
   "drive.google.com",
   "drive.usercontent.google.com",
   "www.googleapis.com",
 ]);
+
+const DRIVE_READONLY_SCOPE = "https://www.googleapis.com/auth/drive.readonly";
 
 /** Pull the Drive file id out of any of the common share-link shapes:
  *  - `https://drive.google.com/file/d/<id>/view`
@@ -53,13 +61,106 @@ export type DriveFile = {
   filename: string;
 };
 
-/** Fetch a single Drive file. Returns null on any failure (private file,
- *  not-found, quota, network). Caller decides whether to keep going
- *  without it — we don't want a single broken link to abort the whole
- *  GMB post generation. */
+/** Fetch a single Drive file. Tries authenticated Drive API first (works
+ *  for files shared with the impersonated Workspace user — typically
+ *  seo@wonder-ads.com), then falls back to the public direct-download
+ *  URL for anyone-with-link files. Returns null on any failure. */
 export async function fetchDriveFile(url: string): Promise<DriveFile | null> {
-  const direct = driveDirectDownloadUrl(url);
-  if (!direct) return null;
+  const id = extractDriveFileId(url);
+  if (!id) return null;
+
+  // 1) Authenticated path — requires GOOGLE_SERVICE_ACCOUNT_JSON +
+  //    domain-wide-delegation for the drive.readonly scope.
+  if (googleAuthConfigured) {
+    const authed = await fetchDriveFileAuthenticated(id);
+    if (authed) return authed;
+    // fall through to public path
+  }
+
+  // 2) Public path — works for anyone-with-link files only.
+  return fetchDriveFilePublic(id);
+}
+
+/** Try to download via the Drive v3 API using the impersonated
+ *  service-account token. Returns null on any failure so the caller
+ *  can fall back to the public URL. */
+async function fetchDriveFileAuthenticated(
+  fileId: string,
+): Promise<DriveFile | null> {
+  let token: string;
+  try {
+    token = await getGoogleAccessToken([DRIVE_READONLY_SCOPE]);
+  } catch (err) {
+    // Most common cause: domain-wide delegation hasn't authorized the
+    // drive.readonly scope yet (Workspace admin step). Log so the dev
+    // tab makes it visible; null tells the caller to try the public
+    // fallback.
+    console.warn(
+      `[drive-fetcher] auth token request failed (likely the drive.readonly scope isn't authorized in Workspace Admin Console domain-wide delegation): ${err instanceof Error ? err.message : String(err)}`,
+    );
+    return null;
+  }
+  try {
+    // Fetch file metadata first to get the real name + mime-type. Then
+    // GET the bytes with alt=media. supportsAllDrives covers Shared
+    // Drives in case a clinic puts files there instead of My Drive.
+    const metaUrl = `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(
+      fileId,
+    )}?fields=name,mimeType&supportsAllDrives=true`;
+    const metaRes = await fetch(metaUrl, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    });
+    if (!metaRes.ok) {
+      console.warn(
+        `[drive-fetcher] meta HTTP ${metaRes.status} for ${fileId}`,
+      );
+      return null;
+    }
+    const meta = (await metaRes.json()) as {
+      name?: string;
+      mimeType?: string;
+    };
+    // Only accept image mimes — Gemini can't use PDFs / docs / videos
+    // as reference images.
+    if (!meta.mimeType?.startsWith("image/")) {
+      console.info(
+        `[drive-fetcher] skipping ${meta.name ?? fileId}: mime=${meta.mimeType ?? "?"} is not an image`,
+      );
+      return null;
+    }
+    const mediaUrl = `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(
+      fileId,
+    )}?alt=media&supportsAllDrives=true`;
+    const mediaRes = await fetch(mediaUrl, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    });
+    if (!mediaRes.ok) {
+      console.warn(
+        `[drive-fetcher] media HTTP ${mediaRes.status} for ${fileId}`,
+      );
+      return null;
+    }
+    const buf = new Uint8Array(await mediaRes.arrayBuffer());
+    return {
+      bytes: buf,
+      mimeType: meta.mimeType,
+      filename: meta.name ?? "drive-file",
+    };
+  } catch (err) {
+    console.warn(
+      `[drive-fetcher] authenticated fetch failed for ${fileId}: ${err instanceof Error ? err.message : String(err)}`,
+    );
+    return null;
+  }
+}
+
+/** Public anyone-with-link fallback. Works for files marked as such;
+ *  returns null for private files (Drive serves the access-denied
+ *  HTML, which we detect and reject). */
+async function fetchDriveFilePublic(fileId: string): Promise<DriveFile | null> {
+  const direct = `https://drive.usercontent.google.com/download?id=${fileId}&export=download&authuser=0`;
   try {
     const res = await fetch(direct, {
       redirect: "follow",
@@ -72,7 +173,8 @@ export async function fetchDriveFile(url: string): Promise<DriveFile | null> {
       },
     });
     if (!res.ok) return null;
-    const contentType = res.headers.get("content-type") ?? "application/octet-stream";
+    const contentType =
+      res.headers.get("content-type") ?? "application/octet-stream";
     // If Drive served us the HTML virus-scan-warning page, the content-type
     // will be text/html — bail rather than feeding HTML into Gemini as a
     // reference image.
@@ -80,8 +182,14 @@ export async function fetchDriveFile(url: string): Promise<DriveFile | null> {
     const buf = new Uint8Array(await res.arrayBuffer());
     const dispo = res.headers.get("content-disposition") ?? "";
     const nameMatch = dispo.match(/filename\*?=(?:UTF-8'')?"?([^";]+)"?/i);
-    const filename = nameMatch ? decodeURIComponent(nameMatch[1]) : "drive-file";
-    return { bytes: buf, mimeType: contentType.split(";")[0].trim(), filename };
+    const filename = nameMatch
+      ? decodeURIComponent(nameMatch[1])
+      : "drive-file";
+    return {
+      bytes: buf,
+      mimeType: contentType.split(";")[0].trim(),
+      filename,
+    };
   } catch {
     return null;
   }

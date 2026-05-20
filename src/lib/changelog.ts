@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "71.5",
+    date: "2026-05-20",
+    title: "Authenticated Drive fetch — read files shared with seo@wonder-ads.com without making them public",
+    highlights: [
+      "**🔐 Drive files no longer need to be public.** Most agency clients share their Drive files with `seo@wonder-ads.com` (Viewer access) rather than flipping them to anyone-with-link. The drive-fetcher now uses the **existing** service-account + domain-wide-delegation setup (same auth that already powers GSC + GA4) to read those files directly via the Drive v3 API. Two-step strategy: try authenticated first; fall back to the public anyone-with-link path if auth fails — both paths still work.",
+      "**🧱 Shared Drives covered.** API calls pass `supportsAllDrives=true` so files clients put in a Shared Drive (not just My Drive) are reachable too.",
+      "**🎯 Image-mime gate at the metadata step.** Authenticated fetch hits `/files/{id}?fields=name,mimeType` first, rejects anything that isn't an `image/*` mime before downloading the bytes. Avoids feeding PDFs or videos into Gemini as reference images.",
+      "**📋 Failure copy updated.** When a Drive file can't be reached, the reason now reads `share it with seo@wonder-ads.com (Viewer is enough) OR make it anyone-with-link public` — actionable for either workflow.",
+      "**Setup note — one-time Workspace admin step.** For authenticated fetch to work, the service account's domain-wide-delegation entry in Google Workspace Admin Console needs `https://www.googleapis.com/auth/drive.readonly` added to its scope list. If it's not yet authorized, the fetch silently falls back to the public path (no app crash). See the post-deploy message for the exact steps.",
+    ],
+  },
+  {
     version: "71.4",
     date: "2026-05-20",
     title: "GMB Posts: references diagnostic, per-image + batch ZIP download, hard rule against invented logos",

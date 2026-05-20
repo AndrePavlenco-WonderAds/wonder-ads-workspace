@@ -252,7 +252,7 @@ export async function POST(
                 url: f.url,
                 status: "failed",
                 reason: f.url.includes("drive.google.com")
-                  ? "Drive link is private or returned the virus-scan HTML page — share publicly (anyone-with-link) and retry"
+                  ? "Drive file isn't accessible — share it with seo@wonder-ads.com (Viewer is enough) OR make it anyone-with-link public, then retry"
                   : "could not fetch as an image (private, removed, or non-image mime-type)",
               });
             }
