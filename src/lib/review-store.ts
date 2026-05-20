@@ -199,11 +199,13 @@ export const STATUS_PILL: Record<
   ReviewStatus,
   { bg: string; text: string; border: string; label: string }
 > = {
+  // Loud red with a leading "!" so the client can't ignore it.
+  // This is the main visual cue that draws attention to the table.
   "For Approval": {
-    bg: "#dbeafe",
-    text: "#1e3a8a",
-    border: "#bfdbfe",
-    label: "For Approval",
+    bg: "#fecaca",
+    text: "#7f1d1d",
+    border: "#f87171",
+    label: "! For Approval",
   },
   Approved: {
     bg: "#d1fae5",

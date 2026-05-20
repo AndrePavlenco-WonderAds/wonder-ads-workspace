@@ -11,6 +11,7 @@ import {
   Send,
   Sparkles,
 } from "lucide-react";
+import { SendToReviewButton } from "./send-to-review-button";
 import {
   GMB_CTAS,
   GMB_POST_STATUSES,
@@ -339,6 +340,18 @@ export function GmbPostCard({
                   <Pencil className="h-3 w-3" />
                   Edit
                 </button>
+                {/* Send THIS specific post (not the whole batch) to the
+                    client's pending review table. Useful when the
+                    consultant wants the client to OK one post but not
+                    the others. */}
+                <SendToReviewButton
+                  variant="compact"
+                  clientSlug={clientSlug}
+                  task={`GMB ${draft.postType}: ${draft.caption.slice(0, 100)}${draft.caption.length > 100 ? "…" : ""}`}
+                  category="GMB Posts"
+                  docLink={`/seo/${clientSlug}/actions/gmb-posts/results/${resultId}`}
+                  sourceType={`gmb-post:${draft.id}`}
+                />
                 <button
                   type="button"
                   disabled

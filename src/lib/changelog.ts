@@ -13,6 +13,23 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "72.1",
+    date: "2026-05-20",
+    title: "Pending Review polish: red For-Approval, refresh + auto-poll, per-post Send button, public-side trim",
+    highlights: [
+      "**🚨 \"For Approval\" pill is now loud red with a leading `!`.** Light blue blended into the background — clients scanned past it. Now it pops vs the calmer Approved / Changes-Requested states (red bg, dark-red text, `! For Approval` label). Used on both public + internal.",
+      "**🔄 Refresh button + auto-poll on both sides.** The table now polls `/api/reviews/[slug]` every 12 seconds while the tab is visible, merging remote changes into local state without clobbering whatever the user is currently typing. Dedicated `Refresh` button in the footer for impatient moments + `Last synced 3s ago` indicator. Polling pauses on hidden tabs (KV-quota-friendly) and re-fires immediately on visibility-regain.",
+      "**🚀 Per-post `Send` button on every GMB post card.** Next to Image / Copy / Edit you now have a compact `Send` button that ships THIS specific post (not the whole batch) to the client's pending review table. Task label = `GMB {Type}: {first 100 chars of caption}`. Solves the v72.0 gap where the consultant could only send the batch.",
+      "**✨ Top-of-page Send-to-Review button promoted to brand-gradient prominent variant.** New `prominent` variant on `SendToReviewButton` — same brand gradient + shadow as Download PDF / Download batch — so the universal Send button at the top of every result page is impossible to miss. The v72.0 muted variant was getting missed by consultants.",
+      "**📋 Public-side trim:**",
+      "  - `SEO DPT` badge added next to `Pending Review` so clients understand which department this list belongs to (relevant once ADS DPT ships their own).",
+      "  - Footer line gained `· #1 SEO Provider in Portugal` after the agency tagline.",
+      "  - `Reply to the email this link came from — we'll get back to you within one business day` replaced with the actual assigned consultant's name + email (mailto link). Pulls from `getConsultantEmailForSlug(slug)` — same mapping the PDF cover uses.",
+      "  - `Publishing date` column hidden on the client view (it's an internal scheduling field, not something the client needs to set). Still editable on the staff side.",
+      "**🔗 `Open` button on the doc-link cell.** Replaced the tiny grey ↗ arrow with a brand-gradient `Open` button next to the URL field — clients can't miss the doc link anymore.",
+    ],
+  },
+  {
     version: "72.0",
     date: "2026-05-20",
     title: "Pending Review tables — public per-client, internal mirror, Send-to-Review on every result",

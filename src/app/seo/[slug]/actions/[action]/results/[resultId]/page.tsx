@@ -117,10 +117,12 @@ export default async function ResultPage({
     >
       <div className="mt-2 flex items-start gap-4">
         {/* Send to Pending Review — appears the instant a result has
-            been saved, regardless of action type. Pre-fills the task
-            label, category, and a back-link to this page. */}
+            been saved, regardless of action type. Brand-gradient
+            "prominent" variant so the consultant sees it immediately
+            (v72.0 used the muted default and consultants missed it). */}
         {(action.slug === "gmb-posts" ? gmbResult : existing) && (
           <SendToReviewButton
+            variant="prominent"
             clientSlug={slug}
             task={
               action.slug === "gmb-posts"

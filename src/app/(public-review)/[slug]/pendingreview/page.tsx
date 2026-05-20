@@ -10,6 +10,10 @@
 import { notFound } from "next/navigation";
 import { getClientBySlug } from "@/lib/notion";
 import { getClientLogo } from "@/lib/client-meta";
+import {
+  getConsultantEmailForSlug,
+  getConsultantForSlug,
+} from "@/lib/client-overrides";
 import { listReviewItems } from "@/lib/review-store";
 import { ReviewTable } from "@/components/review-table";
 
@@ -44,6 +48,8 @@ export default async function PublicReviewPage({
   if (!client) notFound();
   const items = await listReviewItems(slug);
   const logo = getClientLogo(slug);
+  const consultantEmail = getConsultantEmailForSlug(slug);
+  const consultantName = getConsultantForSlug(slug);
 
   return (
     <main className="mx-auto min-h-screen max-w-6xl px-4 py-10 sm:px-8">
@@ -58,10 +64,27 @@ export default async function PublicReviewPage({
           />
         )}
         <div className="flex-1">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-black/45">
-            Pending Review
-          </p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-black/85 sm:text-3xl">
+          <div className="flex flex-wrap items-center gap-2">
+            <span
+              className="inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.2em]"
+              style={{
+                backgroundColor: "#e9d5ff",
+                color: "#581c87",
+              }}
+            >
+              Pending Review
+            </span>
+            <span
+              className="inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.2em]"
+              style={{
+                backgroundColor: "#dbeafe",
+                color: "#1e3a8a",
+              }}
+            >
+              SEO DPT
+            </span>
+          </div>
+          <h1 className="mt-1.5 text-2xl font-semibold tracking-tight text-black/85 sm:text-3xl">
             {client.title}
           </h1>
         </div>
@@ -81,10 +104,11 @@ export default async function PublicReviewPage({
         clientSlug={slug}
         initialItems={items}
         allowDelete={false}
+        hidePublishingDate={true}
       />
 
       {/* Footer */}
-      <footer className="mt-12 border-t border-black/8 pt-6 text-center text-[11px] text-black/40">
+      <footer className="mt-12 border-t border-black/8 pt-6 text-center text-[11px] text-black/45">
         <p>
           <span
             className="font-semibold"
@@ -99,11 +123,28 @@ export default async function PublicReviewPage({
           >
             Wonder Ads
           </span>{" "}
-          · Health &amp; Wellness Growth Agency
+          · Health &amp; Wellness Growth Agency · #1 SEO Provider in Portugal
         </p>
-        <p className="mt-1">
-          Questions? Reply to the email this link came from — we&apos;ll get
-          back to you within one business day.
+        <p className="mt-1.5">
+          Questions?{" "}
+          {consultantName && consultantName !== "Unassigned" ? (
+            <>
+              Email {consultantName} —{" "}
+              <a
+                href={`mailto:${consultantEmail}`}
+                className="font-medium text-black/65 underline-offset-2 hover:text-black/85 hover:underline"
+              >
+                {consultantEmail}
+              </a>
+            </>
+          ) : (
+            <a
+              href={`mailto:${consultantEmail}`}
+              className="font-medium text-black/65 underline-offset-2 hover:text-black/85 hover:underline"
+            >
+              {consultantEmail}
+            </a>
+          )}
         </p>
       </footer>
     </main>
