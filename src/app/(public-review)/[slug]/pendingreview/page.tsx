@@ -105,6 +105,7 @@ export default async function PublicReviewPage({
         initialItems={items}
         allowDelete={false}
         hidePublishingDate={true}
+        readonlyApprovalDate={true}
       />
 
       {/* Footer */}

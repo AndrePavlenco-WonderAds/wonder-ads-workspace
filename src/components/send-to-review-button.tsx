@@ -93,7 +93,7 @@ export function SendToReviewButton({
       title={
         state === "error" && errorMsg
           ? errorMsg
-          : "Add this to the client's Pending Review table so they can approve / reject."
+          : "Send this to the client's Pending Review table for approval."
       }
       className={`${baseClasses} ${sizeClasses}`}
       style={
@@ -113,13 +113,13 @@ export function SendToReviewButton({
         <Send className={iconSize} />
       )}
       {variant === "compact" ? (
-        state === "sent" ? "Sent" : state === "error" ? "Retry" : "Send"
+        state === "sent" ? "Sent" : state === "error" ? "Retry" : "Approval"
       ) : state === "sent" ? (
-        "Sent to review"
+        "Sent for approval"
       ) : state === "error" ? (
         "Failed — retry"
       ) : (
-        "Send to Pending Review"
+        "Send for Approval"
       )}
     </button>
   );

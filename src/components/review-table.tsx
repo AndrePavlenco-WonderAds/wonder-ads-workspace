@@ -29,11 +29,17 @@ export function ReviewTable({
   /** When true (public/client side), hide the Publishing date column.
    *  Clients don't need to set publishing dates — that's internal. */
   hidePublishingDate = false,
+  /** When true (public/client side), the Approval date column renders
+   *  as static text rather than a date input. The date auto-fills
+   *  server-side when the client flips status to Approved, so clients
+   *  never need to set it manually. */
+  readonlyApprovalDate = false,
 }: {
   clientSlug: string;
   initialItems: ReviewItem[];
   allowDelete?: boolean;
   hidePublishingDate?: boolean;
+  readonlyApprovalDate?: boolean;
 }) {
   const [items, setItems] = useState<ReviewItem[]>(initialItems);
   const [savingIds, setSavingIds] = useState<Set<string>>(new Set());
@@ -271,16 +277,26 @@ export function ReviewTable({
                 />
               </Td>
               <Td>
-                <input
-                  type="date"
-                  value={it.approvalDate ?? ""}
-                  onChange={(e) =>
-                    updateAndSave(it.id, {
-                      approvalDate: e.target.value || null,
-                    })
-                  }
-                  className="w-full rounded-md border border-black/10 bg-white px-2 py-1 text-xs text-black/75 outline-none focus:border-black/30"
-                />
+                {readonlyApprovalDate ? (
+                  <span className="text-xs text-black/65">
+                    {it.approvalDate
+                      ? formatApprovalDate(it.approvalDate)
+                      : it.status === "Approved"
+                        ? "— pending sync —"
+                        : "—"}
+                  </span>
+                ) : (
+                  <input
+                    type="date"
+                    value={it.approvalDate ?? ""}
+                    onChange={(e) =>
+                      updateAndSave(it.id, {
+                        approvalDate: e.target.value || null,
+                      })
+                    }
+                    className="w-full rounded-md border border-black/10 bg-white px-2 py-1 text-xs text-black/75 outline-none focus:border-black/30"
+                  />
+                )}
               </Td>
               {!hidePublishingDate && (
                 <Td>
@@ -359,6 +375,14 @@ export function ReviewTable({
       </div>
     </div>
   );
+}
+
+/** Format an ISO date (YYYY-MM-DD) as DD/MM/YYYY for the readonly
+ *  approval-date cell on the public side. */
+function formatApprovalDate(iso: string): string {
+  const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return iso;
+  return `${m[3]}/${m[2]}/${m[1]}`;
 }
 
 /** Short relative time for the "last synced" indicator. */

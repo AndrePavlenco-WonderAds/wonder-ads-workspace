@@ -13,6 +13,19 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "72.2",
+    date: "2026-05-20",
+    title: "Pending Review: \"Approval\" button label, public preview routes (no app leak), auto-fill approval date",
+    highlights: [
+      "**🔒 Doc link no longer leaks the internal app.** Critical fix. The v72.1 link to `/seo/<slug>/actions/gmb-posts/results/<id>` let clients climb up the URL into `/seo` (every other client's data) by hitting the back button. Replaced with two safe targets:",
+      "  - **GMB Posts** → new public preview at `/(public-review)/<slug>/preview/gmb-posts/<resultId>` — read-only post cards, no editing, no PageShell, no navigation back into the workspace. Same minimal layout the pending-review table uses (noindex/nofollow, consultant-email footer, SEO DPT badge).",
+      "  - **SEO Audit / Keyword Research / Roadmap / Monthly Report** → doc link points at the existing public DOCX endpoint (`/api/seo-actions/.../docx`) — a file download, not a navigable page.",
+      "**🏷️ \"Send\" button renamed to \"Approval\" everywhere.** Compact variant on GMB cards: `Approval` (sent state: `Sent`). Prominent variant at top of result pages: `Send for Approval` → `Sent for approval`. Same Send icon kept for visual consistency with the existing chip.",
+      "**🗓️ Approval date auto-fills server-side.** PATCH route detects when status flips to `Approved` AND the row's `approvalDate` is null, and sets it to today's date (`YYYY-MM-DD`). Doesn't clear on status flip away from Approved (preserves the original approval timestamp). Internal staff can still manually override.",
+      "**🔐 Approval-date column read-only on client side.** New `readonlyApprovalDate` prop on `ReviewTable`. Public page passes true; date renders as DD/MM/YYYY static text. Internal staff view keeps the date input editable. Clients literally cannot type wrong dates — the only interaction they have is the status pill, and the date fills automatically the moment they hit Approved.",
+    ],
+  },
+  {
     version: "72.1",
     date: "2026-05-20",
     title: "Pending Review polish: red For-Approval, refresh + auto-poll, per-post Send button, public-side trim",

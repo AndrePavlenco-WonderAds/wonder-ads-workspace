@@ -142,7 +142,17 @@ export default async function ResultPage({
                       ? "Roadmap"
                       : "Other"
             }
-            docLink={`/seo/${slug}/actions/${actionSlug}/results/${resultId}`}
+            docLink={
+              action.slug === "gmb-posts"
+                ? // Public preview — no app chrome, read-only, lives
+                  // under (public-review) route group so clients can't
+                  // navigate up the URL into other clients' data.
+                  `/${slug}/preview/gmb-posts/${resultId}`
+                : // Non-GMB actions all have a public DOCX export
+                  // endpoint already. That's a file download — no
+                  // navigable app chrome to escape into.
+                  `/api/seo-actions/${slug}/${actionSlug}/results/${resultId}/docx`
+            }
             sourceType={action.slug}
           />
         )}

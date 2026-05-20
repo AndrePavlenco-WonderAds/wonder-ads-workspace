@@ -7,6 +7,7 @@ import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import {
   deleteReviewItem,
+  listReviewItems,
   sanitiseReviewItemPatch,
   updateReviewItem,
 } from "@/lib/review-store";
@@ -30,6 +31,17 @@ export async function PATCH(
       { error: "No editable fields in patch" },
       { status: 400 },
     );
+  }
+  // Auto-fill approvalDate when the status flips TO "Approved" and
+  // the current item doesn't already have a manual approval date set.
+  // The client never sees an approval-date input — flipping the
+  // status pill is the only interaction they have, and the date
+  // appears automatically. Internal staff can still override it.
+  if (patch.status === "Approved" && !("approvalDate" in patch)) {
+    const existing = (await listReviewItems(slug)).find((r) => r.id === id);
+    if (existing && !existing.approvalDate) {
+      patch.approvalDate = new Date().toISOString().slice(0, 10);
+    }
   }
   const updated = await updateReviewItem(slug, id, patch);
   if (!updated) {

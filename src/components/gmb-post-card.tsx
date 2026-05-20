@@ -349,7 +349,7 @@ export function GmbPostCard({
                   clientSlug={clientSlug}
                   task={`GMB ${draft.postType}: ${draft.caption.slice(0, 100)}${draft.caption.length > 100 ? "…" : ""}`}
                   category="GMB Posts"
-                  docLink={`/seo/${clientSlug}/actions/gmb-posts/results/${resultId}`}
+                  docLink={`/${clientSlug}/preview/gmb-posts/${resultId}`}
                   sourceType={`gmb-post:${draft.id}`}
                 />
                 <button
