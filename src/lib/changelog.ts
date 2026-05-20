@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "71.11",
+    date: "2026-05-20",
+    title: "Shrink client photos before Claude vision (was Payload Too Large)",
+    highlights: [
+      "**🪛 Client-files mode now downscales before sending to Claude.** Full-res clinic photos (4-8MB JPEGs) were tripping Anthropic's vision payload ceiling (~5MB). New `shrinkForVisionInput` (uses the `sharp` already in the project via Next.js Image) resizes to 1024px longest edge + JPEG quality 80 with mozjpeg encoding — typical output is 150-400KB. The ORIGINAL bytes still go to Vercel Blob as the post image; the thumbnail is only for vision comprehension.",
+      "**🛟 EXIF rotation honoured.** Portrait-orientation phone photos no longer end up sideways in the caption-writing step (sharp's `.rotate()` applies the EXIF orientation flag before resizing).",
+      "**🪂 Sharp shrink failure has a fallback.** If `sharp` chokes on a weird format / corrupt file, we fall back to the original bytes and let Claude's own size check fail loud with a parseable error.",
+    ],
+  },
+  {
     version: "71.10",
     date: "2026-05-20",
     title: "Drive 403 — surface the actual Google error string",

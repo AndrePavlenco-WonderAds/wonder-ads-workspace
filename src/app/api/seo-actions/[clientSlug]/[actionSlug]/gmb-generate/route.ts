@@ -36,6 +36,7 @@ import {
   runMiniSiteAudit,
   formatMiniSiteAuditForPrompt,
 } from "@/lib/seo-tools/mini-site-audit";
+import { shrinkForVisionInput } from "@/lib/seo-tools/thumbnail";
 import { getClientGeo } from "@/lib/client-geo";
 import {
   generateGmbImage,
@@ -326,7 +327,27 @@ export async function POST(
                 index: i,
               });
             }
-            // Claude vision call for the matching caption.
+            // Claude vision call for the matching caption. Downscale
+            // first — Anthropic rejects images >~5MB and clinic photos
+            // are routinely full-res prints (4-8MB). The shrunk version
+            // is ONLY used as vision input; the post still saves the
+            // original (or its re-host) as its imageUrl.
+            let visionBytes: Uint8Array;
+            let visionMime: string;
+            try {
+              const shrunk = await shrinkForVisionInput(bytes.bytes);
+              visionBytes = shrunk.bytes;
+              visionMime = shrunk.mimeType;
+            } catch (err) {
+              // sharp failures are rare (corrupt file, unsupported
+              // format) — fall back to the original bytes and let
+              // Claude's payload-size check reject it gracefully.
+              console.warn(
+                `[gmb-generate] thumbnail shrink failed for ${entry.breadcrumb}, falling back to original: ${err instanceof Error ? err.message : String(err)}`,
+              );
+              visionBytes = bytes.bytes;
+              visionMime = bytes.mimeType;
+            }
             try {
               const captionResult = await generateObject({
                 model: anthropic(CAPTION_MODEL),
@@ -338,8 +359,8 @@ export async function POST(
                     content: [
                       {
                         type: "image",
-                        image: bytes.bytes,
-                        mediaType: bytes.mimeType,
+                        image: visionBytes,
+                        mediaType: visionMime,
                       },
                       {
                         type: "text",
