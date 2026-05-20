@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "71.9",
+    date: "2026-05-20",
+    title: "Drive listing now distinguishes 'empty folder' from 'auth-denied folder'",
+    highlights: [
+      "**🪵 listDriveFolderContents returns HTTP status.** Previously, sub-folders that 403'd silently returned an empty array — so the route couldn't tell whether the folder was empty or unreadable. Now we return `{ items, errorStatus }` and the traversal aggregates per-folder outcomes.",
+      "**🔍 listImageRefsInDriveFolder reports actionable errors.** When the recursive traversal finishes with no images, the error string now says either `Drive folder traversal completed (N folders checked, depth ≤ 2) but no image files found` OR `N sub-folder(s) couldn't be listed (auth issue). Sample errors: SubFolderX → HTTP 403. Share the folder DIRECTLY with seo@wonder-ads.com (Viewer) — 'Anyone with the link' doesn't always grant Drive API listing access for nested folders.`",
+      "**🪪 Vercel logs gained a per-traversal info line.** `[drive-fetcher] traversal of FOLDER_ID: 4 folders checked, 0 with errors, 3 contained images, 47 total image refs` — every Drive listing now leaves a one-line summary in the function logs.",
+    ],
+  },
+  {
     version: "71.8",
     date: "2026-05-20",
     title: "Empty image-pool error now lists per-entry reasons",

@@ -270,6 +270,14 @@ export async function listImageRefsInDriveFolder(
   const refs: DriveImageRef[] = [];
   const maxDepth = opts.maxDepth ?? 2;
   const rootLabel = opts.rootLabel ?? "Drive";
+  // Track per-folder outcomes so we can build an honest error message
+  // when the traversal completes with no images. Differentiates between
+  // "the folder tree is genuinely empty" and "sub-folder listings 403'd
+  // because the auth'd user doesn't have access to them".
+  let foldersChecked = 0;
+  let foldersWithErrors = 0;
+  let foldersFoundImages = 0;
+  const sampleErrors: string[] = [];
   // Breadth-first traversal, each queue entry carrying the path so we
   // can build a breadcrumb for diagnostics.
   const queue: { id: string; depth: number; path: string }[] = [
@@ -277,8 +285,17 @@ export async function listImageRefsInDriveFolder(
   ];
   while (queue.length > 0) {
     const { id, depth, path } = queue.shift()!;
-    const listed = await listDriveFolderContents(id, token);
-    for (const f of listed) {
+    const { items, errorStatus } = await listDriveFolderContents(id, token);
+    foldersChecked++;
+    if (errorStatus !== null) {
+      foldersWithErrors++;
+      if (sampleErrors.length < 3) {
+        sampleErrors.push(`${path} → HTTP ${errorStatus}`);
+      }
+      continue;
+    }
+    let foundHere = 0;
+    for (const f of items) {
       if (f.mimeType?.startsWith("image/")) {
         refs.push({
           fileId: f.id,
@@ -286,6 +303,7 @@ export async function listImageRefsInDriveFolder(
           mimeType: f.mimeType,
           breadcrumb: `${path} → ${f.name}`,
         });
+        foundHere++;
       } else if (
         f.mimeType === "application/vnd.google-apps.folder" &&
         depth < maxDepth
@@ -293,6 +311,24 @@ export async function listImageRefsInDriveFolder(
         queue.push({ id: f.id, depth: depth + 1, path: `${path}/${f.name}` });
       }
     }
+    if (foundHere > 0) foldersFoundImages++;
+  }
+  console.info(
+    `[drive-fetcher] traversal of ${folderId}: ${foldersChecked} folders checked, ${foldersWithErrors} with errors, ${foldersFoundImages} contained images, ${refs.length} total image refs`,
+  );
+  // When the pool is empty AFTER traversal, return an error message
+  // that points the consultant at the actual cause (auth vs empty).
+  if (refs.length === 0) {
+    if (foldersWithErrors > 0) {
+      return {
+        refs,
+        error: `${foldersWithErrors} sub-folder(s) couldn't be listed (auth issue). Sample errors: ${sampleErrors.join(", ")}. Share the folder DIRECTLY with seo@wonder-ads.com (Viewer) — "Anyone with the link" doesn't always grant Drive API listing access for nested folders.`,
+      };
+    }
+    return {
+      refs,
+      error: `Drive folder traversal completed (${foldersChecked} folders checked, depth ≤ ${maxDepth}) but no image files found. Either the folder has no JPG/PNG/WebP files, or images are nested deeper than ${maxDepth} levels.`,
+    };
   }
   return { refs, error: null };
 }
@@ -357,8 +393,8 @@ export async function fetchImagesFromDriveFolder(
   const queue: { id: string; depth: number }[] = [{ id: folderId, depth: 0 }];
   while (queue.length > 0) {
     const { id, depth } = queue.shift()!;
-    const listed = await listDriveFolderContents(id, token);
-    for (const f of listed) {
+    const { items } = await listDriveFolderContents(id, token);
+    for (const f of items) {
       if (f.mimeType?.startsWith("image/")) {
         allImageRefs.push(f);
       } else if (
@@ -397,11 +433,16 @@ export async function fetchImagesFromDriveFolder(
 }
 
 /** Single Drive API list call for one folder. Returns the raw file
- *  records (images + sub-folders) — the caller decides what to do. */
+ *  records (images + sub-folders) plus an HTTP error status when the
+ *  call failed — caller uses the status to distinguish "empty folder"
+ *  from "auth-denied folder". */
 async function listDriveFolderContents(
   folderId: string,
   token: string,
-): Promise<{ id: string; name: string; mimeType: string }[]> {
+): Promise<{
+  items: { id: string; name: string; mimeType: string }[];
+  errorStatus: number | null;
+}> {
   const q = `'${folderId}' in parents and trashed = false`;
   const url =
     `https://www.googleapis.com/drive/v3/files?` +
@@ -419,17 +460,17 @@ async function listDriveFolderContents(
       console.warn(
         `[drive-fetcher] folder list HTTP ${res.status} for ${folderId}`,
       );
-      return [];
+      return { items: [], errorStatus: res.status };
     }
     const data = (await res.json()) as {
       files?: { id: string; name: string; mimeType: string }[];
     };
-    return data.files ?? [];
+    return { items: data.files ?? [], errorStatus: null };
   } catch (err) {
     console.warn(
       `[drive-fetcher] folder list threw for ${folderId}: ${err instanceof Error ? err.message : String(err)}`,
     );
-    return [];
+    return { items: [], errorStatus: -1 };
   }
 }
 
