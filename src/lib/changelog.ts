@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "71.4",
+    date: "2026-05-20",
+    title: "GMB Posts: references diagnostic, per-image + batch ZIP download, hard rule against invented logos",
+    highlights: [
+      "**🚨 Hard rule against invented logos.** The v71.3 build produced a wrong/distorted Sea Yourself logo. Fixed by stripping logo-inventing licence from the image prompt: \"Do NOT generate, invent, or guess a logo or brand mark. If a logo appears clearly in a reference image attached, you may reuse THAT EXACT logo; if you can't reproduce it accurately, leave the image logo-free entirely — a clean logo-free image is FAR better than a distorted or invented logo.\" Same rule applied to text overlays. Claude's `imagePrompt` schema description also now forbids requesting logos / brand names / text in the scene description.",
+      "**🪪 References diagnostic on every result.** New `GmbPostsResult.referencesUsed[]` records every Client Files candidate's fate (used / failed / skipped) with a human reason — Drive links that 403, files with non-image mime-types, the cap-of-4-references rule, etc. Result page shows a collapsible summary: `✓ Used 3 brand references from Client Files · 1 failed` (or a prominent amber warning when 0 references loaded). Click to expand and see exactly which file failed, with the specific reason inline.",
+      "**🖼️ Per-image download on every card.** New Download button next to Copy + Edit. Hits a proxy at `/api/seo-actions/[client]/gmb-posts/gmb-download?resultId=…&postId=…` that re-streams the Vercel Blob with `content-disposition: attachment` (Blob URLs serve `inline` by default, which opens in a new tab instead of saving). Filename = `{client}-gmb-{n}-{type}.png`.",
+      "**📦 Batch ZIP download replaces \"Download available soon\".** Top-of-page button on GMB results is now `Download batch (N posts)`. Server-side `JSZip` packs every image + a `captions.txt` summary (post number, type, caption, localized CTA + URL, target keywords) into one ZIP named `{client}-gmb-batch-{resultId}.zip`. One click, one file, everything the consultant needs to schedule offline.",
+      "**🛰️ Publish-to-GMB placeholder.** Disabled \"Publish (soon)\" button on every card so consultants see the roadmap; the actual GMB Business Profile API integration is a v72 task (needs OAuth + GMB API scope wiring).",
+    ],
+  },
+  {
     version: "71.3",
     date: "2026-05-20",
     title: "GMB image gen: friendlier quota error + canonical model name",

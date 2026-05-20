@@ -59,6 +59,12 @@ export default async function ResultPage({
 
   const existing = await getHistoryEntry(slug, actionSlug, resultId);
   const { action, pillar } = entry;
+  // GMB Posts has its own KV store separate from action-history. Fetch
+  // it ahead of time so the top-of-page download button knows whether a
+  // batch is ready (replacing the otherwise-permanent "Download
+  // available soon" placeholder).
+  const gmbResult =
+    action.slug === "gmb-posts" ? await getGmbResult(slug, resultId) : null;
 
   // -- PRINT MODE: bypass PageShell entirely. Render the branded WonderAds
   //    PDF document straight from the server. The PrintLayout component
@@ -109,7 +115,27 @@ export default async function ResultPage({
       backLabel={action.label}
     >
       <div className="mt-2 flex items-start gap-4">
-        {existing ? (
+        {action.slug === "gmb-posts" ? (
+          gmbResult ? (
+            <a
+              href={`/api/seo-actions/${slug}/${actionSlug}/gmb-download?resultId=${encodeURIComponent(resultId)}&batch=1`}
+              className="ml-auto inline-flex items-center justify-center gap-2 rounded-md bg-gradient-to-br from-[#343ED7] via-[#783DF5] to-[#C535C9] px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-[#783DF5]/25 transition hover:brightness-110 hover:shadow-[#783DF5]/40"
+              title="Download every image in this batch + a captions.txt file as a ZIP."
+            >
+              <Download className="h-3.5 w-3.5" />
+              Download batch ({gmbResult.posts.length} post
+              {gmbResult.posts.length === 1 ? "" : "s"})
+            </a>
+          ) : (
+            <span
+              title="Becomes active once the GMB posts are generated."
+              className="ml-auto inline-flex cursor-not-allowed items-center gap-2 rounded-md border border-white/15 bg-white/[0.04] px-4 py-2 text-xs font-semibold text-white/50"
+            >
+              <Download className="h-3.5 w-3.5" />
+              Download available soon
+            </span>
+          )
+        ) : existing ? (
           <div className="ml-auto flex flex-col items-stretch gap-2">
             <a
               href={`/seo/${slug}/actions/${actionSlug}/results/${resultId}?print=true`}
@@ -187,7 +213,7 @@ export default async function ResultPage({
             clientName={client.title}
             action={action}
             resultId={resultId}
-            existing={await getGmbResult(slug, resultId)}
+            existing={gmbResult}
             languageCode={getClientGeo(slug).languageCode}
           />
         ) : (

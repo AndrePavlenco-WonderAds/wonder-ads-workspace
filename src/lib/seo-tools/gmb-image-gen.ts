@@ -48,12 +48,23 @@ export async function generateGmbImage(opts: {
     opts.brandPalette && opts.brandPalette.length > 0
       ? ` Brand palette to honour: ${opts.brandPalette.join(", ")}.`
       : "";
+  const hasReferences = opts.referenceImages.length > 0;
   const fullPrompt = [
     opts.prompt.trim(),
     paletteNote,
     "Output as a SQUARE image (1080x1080 ideal) suitable for posting to a Google Business Profile.",
-    "The image must look polished and professional, like a real piece of brand creative — never AI-stocky, never crowded with text overlays unless the prompt explicitly asks for them.",
-    "Honour the reference images attached to this message: match their photographic style, lighting, and brand palette. Reuse logo / brand marks visible in the references. Do NOT invent new logos.",
+    "The image must look polished and professional, like a real piece of brand creative — never AI-stocky.",
+    // HARD RULE on logos — the v71.3 build invented a wrong logo because
+    // Gemini was inferring from the brand name. Never let that happen
+    // again: only reuse logos that ACTUALLY appear in the references.
+    "**ABSOLUTE RULE — logos & text:** Do NOT generate, invent, or guess a logo or brand mark. " +
+      (hasReferences
+        ? "If a logo or brand mark appears clearly in one of the reference images attached to this message, you may reuse THAT EXACT logo. If you can't reproduce it accurately, leave the image logo-free entirely — a clean logo-free image is FAR better than a distorted or invented logo."
+        : "No reference images were attached, so produce a clean LOGO-FREE image. A wrong logo is worse than no logo."),
+    "**No text overlays** (no headlines, no captions, no slogans printed on the image) unless the prompt explicitly asks for a specific word.",
+    hasReferences
+      ? "Honour the reference images attached: match their photographic style, lighting, subject matter (real people, real spaces — not stock-style), and brand palette."
+      : "Use a clean, modern, photographic style appropriate to a healthcare / professional service business — natural lighting, real-looking subjects, no AI-stocky over-saturation.",
   ].join(" ");
 
   const parts: Array<

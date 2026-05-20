@@ -116,6 +116,16 @@ export type GmbPost = {
   updatedAt: number;
 };
 
+export type GmbReferenceFile = {
+  /** Display name of the file as stored in Client Files. */
+  name: string;
+  /** Source URL (Vercel Blob, Google Drive, etc.). */
+  url: string;
+  status: "used" | "failed" | "skipped";
+  /** Human reason when status !== "used". */
+  reason?: string;
+};
+
 export type GmbPostsResult = {
   id: string;
   clientSlug: string;
@@ -128,6 +138,10 @@ export type GmbPostsResult = {
     theme?: string;
     ctaUrlDefault?: string;
   };
+  /** Which client files were actually fed to Gemini as reference images
+   *  (and which failed). Shown on the result header so consultants know
+   *  whether the brand was anchored or the image gen ran "freehand". */
+  referencesUsed?: GmbReferenceFile[];
   posts: GmbPost[];
 };
 

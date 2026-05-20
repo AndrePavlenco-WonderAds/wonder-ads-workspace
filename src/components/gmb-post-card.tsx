@@ -4,9 +4,11 @@ import { useEffect, useState } from "react";
 import {
   Check,
   Copy,
+  Download,
   ExternalLink,
   Loader2,
   Pencil,
+  Send,
   Sparkles,
 } from "lucide-react";
 import {
@@ -286,6 +288,16 @@ export function GmbPostCard({
                 )}
               </div>
               <div className="flex items-center gap-1.5">
+                {draft.imageUrl && (
+                  <a
+                    href={`/api/seo-actions/${clientSlug}/gmb-posts/gmb-download?resultId=${encodeURIComponent(resultId)}&postId=${encodeURIComponent(draft.id)}`}
+                    title="Download this image"
+                    className="inline-flex items-center gap-1 rounded-md border border-white/15 bg-white/[0.04] px-2 py-1 text-[11px] text-white/75 transition hover:border-white/30 hover:bg-white/[0.08] hover:text-white"
+                  >
+                    <Download className="h-3 w-3" />
+                    Image
+                  </a>
+                )}
                 <button
                   type="button"
                   onClick={copyCaption}
@@ -306,6 +318,18 @@ export function GmbPostCard({
                 >
                   <Pencil className="h-3 w-3" />
                   Edit
+                </button>
+                <button
+                  type="button"
+                  disabled
+                  title="Direct publish to Google Business Profile is on the roadmap — for now download and post manually."
+                  className="inline-flex cursor-not-allowed items-center gap-1 rounded-md border border-white/10 bg-white/[0.02] px-2 py-1 text-[11px] text-white/35"
+                >
+                  <Send className="h-3 w-3" />
+                  Publish
+                  <span className="ml-0.5 rounded-full border border-white/10 bg-white/[0.04] px-1 text-[8px] uppercase tracking-[0.12em] text-white/45">
+                    soon
+                  </span>
                 </button>
               </div>
             </div>

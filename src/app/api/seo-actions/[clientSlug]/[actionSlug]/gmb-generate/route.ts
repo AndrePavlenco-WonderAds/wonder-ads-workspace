@@ -224,25 +224,74 @@ export async function POST(
         const candidateFiles = files
           .filter((f) => f.kind === "image" || f.kind === "link")
           .slice(0, 12);
-        const fetched = await Promise.all(
-          candidateFiles.map((f) => fetchImageBytes(f.url)),
+        // Track every candidate's fate for the result page diagnostic so
+        // consultants can see exactly which Drive links / uploads were
+        // pulled in and which got rejected (private Drive link, non-image
+        // mime, fetch failure, etc.).
+        const referencesUsed: import("@/lib/gmb-posts-store").GmbReferenceFile[] =
+          [];
+        const referenceImages: ReferenceImage[] = [];
+        for (const f of candidateFiles) {
+          if (referenceImages.length >= MAX_REFERENCE_IMAGES) {
+            referencesUsed.push({
+              name: f.name,
+              url: f.url,
+              status: "skipped",
+              reason: `cap of ${MAX_REFERENCE_IMAGES} reference images already reached`,
+            });
+            continue;
+          }
+          try {
+            const r = await fetchImageBytes(f.url);
+            if (r) {
+              referenceImages.push({ bytes: r.bytes, mimeType: r.mimeType });
+              referencesUsed.push({ name: f.name, url: f.url, status: "used" });
+            } else {
+              referencesUsed.push({
+                name: f.name,
+                url: f.url,
+                status: "failed",
+                reason: f.url.includes("drive.google.com")
+                  ? "Drive link is private or returned the virus-scan HTML page — share publicly (anyone-with-link) and retry"
+                  : "could not fetch as an image (private, removed, or non-image mime-type)",
+              });
+            }
+          } catch (err) {
+            referencesUsed.push({
+              name: f.name,
+              url: f.url,
+              status: "failed",
+              reason: err instanceof Error ? err.message.slice(0, 120) : "fetch error",
+            });
+          }
+        }
+        // Files with kind !== image/link (e.g. videos) get counted as
+        // skipped too, so the consultant sees the full picture.
+        for (const f of files.filter(
+          (f) => f.kind !== "image" && f.kind !== "link",
+        )) {
+          referencesUsed.push({
+            name: f.name,
+            url: f.url,
+            status: "skipped",
+            reason: `kind '${f.kind}' isn't a reference-image candidate`,
+          });
+        }
+        console.info(
+          `[gmb-generate] reference files: ${referenceImages.length} used / ${referencesUsed.filter((r) => r.status === "failed").length} failed / ${referencesUsed.filter((r) => r.status === "skipped").length} skipped (of ${files.length} total in library)`,
         );
-        const referenceImages: ReferenceImage[] = fetched
-          .filter((r): r is NonNullable<typeof r> => r !== null)
-          .slice(0, MAX_REFERENCE_IMAGES)
-          .map((r) => ({ bytes: r.bytes, mimeType: r.mimeType }));
         if (referenceImages.length === 0) {
           send({
             event: "progress",
             phase: "files",
             message:
-              "⚠️ No usable reference images found in Client Files (none uploaded or Drive links private). Image generation will work but won't be anchored to existing brand assets.",
+              "⚠️ No usable reference images found in Client Files. Image generation will work but won't be anchored to existing brand assets — upload brand photos and re-share Drive links publicly to fix.",
           });
         } else {
           send({
             event: "progress",
             phase: "files",
-            message: `✓ Loaded ${referenceImages.length} brand reference image(s).`,
+            message: `✓ Using ${referenceImages.length} brand reference image(s) (of ${candidateFiles.length} candidates).`,
             filesCount: referenceImages.length,
           });
         }
@@ -375,6 +424,7 @@ Output STRICT JSON matching the schema. Caption MAX 1500 characters. Do NOT incl
             theme: theme || undefined,
             ctaUrlDefault: ctaUrlDefault || undefined,
           },
+          referencesUsed,
           posts,
         };
         await saveGmbResult(result);
@@ -474,7 +524,7 @@ function buildPrompt(opts: {
     `- Weave 1-2 target keywords per caption naturally — no stuffing.`,
     `- NEVER make medical claims, NEVER promise outcomes for YMYL clinics.`,
     `- ${languageInstructionFor(opts.languageCode)}.`,
-    `- For \`imagePrompt\`: describe the SCENE (subject, mood, composition). Do NOT mention brand colours or logos — reference images handle that.`,
+    `- For \`imagePrompt\`: describe the SCENE — subject, mood, composition, environment, lighting. Do NOT request a logo, brand name, slogan, or any text overlay in the image; do NOT mention brand colours (the image generator handles brand from the reference images). Bias toward real-looking human / place / object scenes, never AI-stocky abstractions.`,
     `- For \`reasoning\`: ONE sentence on why this angle, for the consultant scanning the grid.`,
   ]
     .filter(Boolean)

@@ -262,6 +262,60 @@ export function GmbPostsRunner({
               </>
             )}
           </header>
+          {/* References diagnostic — surfaces which client files were
+              fed to Gemini as brand references vs which were skipped or
+              failed (private Drive links, non-image mimes, etc.). When
+              0 used, the warning is prominent because the resulting
+              images won't match the brand. */}
+          {result.referencesUsed && result.referencesUsed.length > 0 && (() => {
+            const used = result.referencesUsed.filter((r) => r.status === "used");
+            const failed = result.referencesUsed.filter((r) => r.status === "failed");
+            const skipped = result.referencesUsed.filter((r) => r.status === "skipped");
+            return (
+              <details
+                className={
+                  used.length === 0
+                    ? "mb-4 rounded-lg border border-amber-400/40 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-100"
+                    : "mb-4 rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2 text-[11px] text-white/65"
+                }
+              >
+                <summary className="cursor-pointer font-medium">
+                  {used.length === 0
+                    ? `⚠️ No brand reference images were loaded — image generation ran without anchoring to your client's files.`
+                    : `✓ Used ${used.length} brand reference${used.length === 1 ? "" : "s"} from Client Files`}
+                  {failed.length > 0 && ` · ${failed.length} failed`}
+                  {skipped.length > 0 && ` · ${skipped.length} skipped`}
+                </summary>
+                <ul className="mt-2 space-y-1">
+                  {result.referencesUsed.map((r) => (
+                    <li key={r.url} className="flex items-baseline gap-2">
+                      <span
+                        className={
+                          r.status === "used"
+                            ? "text-emerald-300"
+                            : r.status === "failed"
+                              ? "text-rose-300"
+                              : "text-white/40"
+                        }
+                      >
+                        {r.status === "used"
+                          ? "✓"
+                          : r.status === "failed"
+                            ? "✕"
+                            : "•"}
+                      </span>
+                      <span className="truncate text-white/85">{r.name}</span>
+                      {r.reason && (
+                        <span className="truncate text-white/45 italic">
+                          {r.reason}
+                        </span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            );
+          })()}
           <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
             {result.posts.map((p, i) => (
               <GmbPostCard
