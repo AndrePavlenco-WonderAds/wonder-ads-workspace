@@ -4,7 +4,9 @@ import { Download } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { LogoChip } from "@/components/logo-chip";
 import { ResultRunner } from "@/components/result-runner";
+import { GmbPostsRunner } from "@/components/gmb-posts-runner";
 import { PrintLayout } from "@/components/print-layout";
+import { getGmbResult } from "@/lib/gmb-posts-store";
 import { findAction } from "@/lib/seo-pillars";
 import { getClientBySlug } from "@/lib/notion";
 import { getHistoryEntry, formatDisplayResultId } from "@/lib/action-history";
@@ -178,18 +180,28 @@ export default async function ResultPage({
       </header>
 
       <section className="mt-8">
-        <ResultRunner
-          clientSlug={slug}
-          clientName={client.title}
-          action={action}
-          resultId={resultId}
-          existing={existing}
-          targetedKeywords={
-            action.slug === "keyword-research"
-              ? (await listTargetKeywords(slug)).map((k) => k.keyword)
-              : []
-          }
-        />
+        {action.slug === "gmb-posts" ? (
+          <GmbPostsRunner
+            clientSlug={slug}
+            clientName={client.title}
+            action={action}
+            resultId={resultId}
+            existing={await getGmbResult(slug, resultId)}
+          />
+        ) : (
+          <ResultRunner
+            clientSlug={slug}
+            clientName={client.title}
+            action={action}
+            resultId={resultId}
+            existing={existing}
+            targetedKeywords={
+              action.slug === "keyword-research"
+                ? (await listTargetKeywords(slug)).map((k) => k.keyword)
+                : []
+            }
+          />
+        )}
       </section>
     </PageShell>
   );

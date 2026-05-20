@@ -578,8 +578,19 @@ export const PILLARS: Pillar[] = [
       {
         slug: "gmb-posts",
         label: "GMB Posts Creation",
-        blurb: "Map-pack-friendly Google Posts that read like real updates.",
+        blurb:
+          "Generates 1–3 on-brand Google Posts — image (using uploaded client files as reference) + caption with target keywords + CTA.",
         fields: [
+          {
+            key: "postCount",
+            label: "How many posts?",
+            type: "select",
+            required: true,
+            options: ["1", "2", "3"],
+            defaultValue: "2",
+            helpText:
+              "1 = single hero post. 2–3 = a small content batch (different angles) you can schedule across the week.",
+          },
           {
             key: "postGoal",
             label: "Post type",
@@ -589,12 +600,28 @@ export const PILLARS: Pillar[] = [
             defaultValue: "Update",
           },
           {
-            key: "details",
-            label: "What's the news?",
+            key: "theme",
+            label: "Theme / focus (optional)",
             type: "textarea",
-            required: true,
-            rows: 4,
-            placeholder: "Dates, offer details, CTA, link.",
+            rows: 3,
+            placeholder:
+              "Anything specific you want the posts to cover this week — a service push, a clinic anniversary, a local event, a holiday tie-in. Leave blank and Claude will pick angles from the brief + onboarding.",
+          },
+          {
+            key: "details",
+            label: "Hard facts (dates, offer details, ​etc.)",
+            type: "textarea",
+            rows: 3,
+            placeholder:
+              "Dates, prices, named events, offer windows — anything the captions must state literally. Leave blank for evergreen posts.",
+          },
+          {
+            key: "ctaUrl",
+            label: "Default CTA URL (optional)",
+            type: "text",
+            placeholder: "https://client-site.com/book",
+            helpText:
+              "Where the CTA button should send people. Defaults to the client's homepage when blank.",
           },
         ],
       },

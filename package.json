@@ -10,7 +10,9 @@
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.77",
+    "@ai-sdk/google": "^3.0.75",
     "@ai-sdk/react": "^3.0.182",
+    "@google/genai": "^2.4.0",
     "@notionhq/client": "^5.21.0",
     "@types/d3-geo": "^3.1.0",
     "@types/topojson-specification": "^1.0.5",

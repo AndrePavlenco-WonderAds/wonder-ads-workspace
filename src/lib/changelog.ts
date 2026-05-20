@@ -13,6 +13,21 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "71.0",
+    date: "2026-05-20",
+    title: "GMB Posts Creation — AI captions + on-brand AI image generation grounded in client files",
+    highlights: [
+      "**🎨 Image generation grounded in the client's actual brand.** Switched the GMB Posts action from text-only to **image + caption** delivery. New `src/lib/seo-tools/gmb-image-gen.ts` wraps Google's Gemini 2.5 Flash Image (Nano Banana) and feeds it every uploaded image + every fetchable Google Drive file from the Client Files panel as reference material. The generator is explicitly told to match the references' photographic style, palette, and any visible logos — so generated images stay on-brand. Output saved to Vercel Blob, public URLs returned.",
+      "**🔗 Google Drive integration (public links).** New `src/lib/drive-fetcher.ts` extracts the Drive file id from any of the common share-link shapes (`/file/d/<id>/view`, `?id=<id>`, `usercontent.google.com/download?id=<id>`), transforms to the direct-download URL, fetches the bytes, and gates on `content-type: image/*` so the Drive virus-scan-warning HTML can't accidentally be fed into Gemini as a reference. Any Drive link with anyone-with-link sharing works on day one.",
+      "**✍️ Captions via Claude Haiku 4.5 with strict structured output.** Captions come from `generateObject` + a Zod schema (caption ≤1500 chars, CTA enum, CTA URL, target-keyword array, one-line reasoning, image prompt). Grounded in: Do's, Don'ts, Notes, onboarding form text, tracked target keywords, the consultant's theme + hard facts inputs. **Hard rules baked into the system prompt:** weave 1-2 target keywords naturally, never make medical claims, write Portuguese (Portugal) when the brief is Portuguese.",
+      "**🪟 Real progress, not cycling fake messages.** The generator streams NDJSON events as it works: `Loading client brief… → Fetching reference images (N total) → Drafting N caption(s) with Claude → Generating N on-brand image(s) via Gemini Flash Image (parallel) → Saving to your workspace…`. The progress bar locks to actual phase, the bar message reflects what's actually happening server-side.",
+      "**🪪 GMB-card preview UI with inline edit.** Each result renders as a real GMB-style card: square image, post-type chip, status chip, caption, target-keyword chips with 🎯 dots, CTA button, copy-caption, edit pencil. Click edit → caption + CTA + CTA URL + status all editable in place, character counter, save persists via `/gmb-update`. Status flows: draft → approved → published.",
+      "**1–3 different posts per generation.** Consultant picks 1, 2, or 3 in the form. Claude produces DIFFERENT angles (e.g. service highlight + offer + patient testimonial), not variants of the same idea. One generation = a week of GMB content the consultant can schedule.",
+      "**🧱 Plumbing.** New `src/lib/gmb-posts-store.ts` (types + KV CRUD + per-client index), new endpoints `/api/seo-actions/[slug]/gmb-posts/gmb-generate` (POST, streams NDJSON), `/gmb-result` (GET), `/gmb-update` (POST). Past results show up in the action's existing history grid via a `gmb-posts`-aware path in `/history`. `@google/genai` added as a dep; `GEMINI_API_KEY` documented in `.env.local.example` (free tier at aistudio.google.com).",
+      "**Setup note.** Add `GEMINI_API_KEY` to Vercel → Settings → Environment Variables (Production + Preview + Development). Without it, the generation route returns a 503 with a clear setup hint — the rest of the app stays unaffected.",
+    ],
+  },
+  {
     version: "70.5",
     date: "2026-05-19",
     title: "Roadmap routing fix + Overall SEO reorder + stale-badge bust",
