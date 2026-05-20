@@ -7,6 +7,7 @@ import { ResultRunner } from "@/components/result-runner";
 import { GmbPostsRunner } from "@/components/gmb-posts-runner";
 import { PrintLayout } from "@/components/print-layout";
 import { getGmbResult } from "@/lib/gmb-posts-store";
+import { getClientGeo } from "@/lib/client-geo";
 import { findAction } from "@/lib/seo-pillars";
 import { getClientBySlug } from "@/lib/notion";
 import { getHistoryEntry, formatDisplayResultId } from "@/lib/action-history";
@@ -187,6 +188,7 @@ export default async function ResultPage({
             action={action}
             resultId={resultId}
             existing={await getGmbResult(slug, resultId)}
+            languageCode={getClientGeo(slug).languageCode}
           />
         ) : (
           <ResultRunner

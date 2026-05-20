@@ -12,6 +12,7 @@ import {
 import {
   GMB_CTAS,
   GMB_POST_STATUSES,
+  localizeCta,
   type GmbCta,
   type GmbPost,
   type GmbPostStatus,
@@ -40,12 +41,15 @@ export function GmbPostCard({
   index,
   clientSlug,
   resultId,
+  languageCode,
   onSaved,
 }: {
   post: GmbPost;
   index: number;
   clientSlug: string;
   resultId: string;
+  /** Client's language for localizing the CTA button label. */
+  languageCode: string;
   onSaved?: (next: GmbPost) => void;
 }) {
   const [editing, setEditing] = useState(false);
@@ -264,7 +268,7 @@ export function GmbPostCard({
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1 rounded-full border border-white/20 bg-white/[0.06] px-3 py-1 font-medium text-white transition hover:bg-white/[0.12]"
                   >
-                    {draft.cta}
+                    {localizeCta(draft.cta, languageCode)}
                     <ExternalLink className="h-3 w-3" />
                   </a>
                 ) : (

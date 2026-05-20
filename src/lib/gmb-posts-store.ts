@@ -36,6 +36,64 @@ export const GMB_CTAS = [
 ] as const;
 export type GmbCta = (typeof GMB_CTAS)[number] | null;
 
+/** Localised display label for a GMB CTA. We store the English enum
+ *  value in KV (so consultants can change languages later without
+ *  losing data) and translate at render time based on the client's
+ *  language. European Portuguese specifically — agency operates in
+ *  Portugal, so "Reservar" (not "Agendar"), "Subscrever" (not "Inscrever-se" /
+ *  "Se inscrever"), etc. */
+const CTA_LABELS: Record<string, Record<NonNullable<GmbCta>, string>> = {
+  pt: {
+    "Learn more": "Saber mais",
+    Book: "Reservar",
+    "Order online": "Encomendar online",
+    Buy: "Comprar",
+    "Sign up": "Subscrever",
+    "Call now": "Ligar agora",
+  },
+  es: {
+    "Learn more": "Más información",
+    Book: "Reservar",
+    "Order online": "Pedir online",
+    Buy: "Comprar",
+    "Sign up": "Suscribirse",
+    "Call now": "Llamar ahora",
+  },
+  fr: {
+    "Learn more": "En savoir plus",
+    Book: "Réserver",
+    "Order online": "Commander en ligne",
+    Buy: "Acheter",
+    "Sign up": "S'inscrire",
+    "Call now": "Appeler",
+  },
+  it: {
+    "Learn more": "Scopri di più",
+    Book: "Prenota",
+    "Order online": "Ordina online",
+    Buy: "Acquista",
+    "Sign up": "Iscriviti",
+    "Call now": "Chiama ora",
+  },
+  de: {
+    "Learn more": "Mehr erfahren",
+    Book: "Buchen",
+    "Order online": "Online bestellen",
+    Buy: "Kaufen",
+    "Sign up": "Registrieren",
+    "Call now": "Jetzt anrufen",
+  },
+};
+
+export function localizeCta(
+  cta: GmbCta,
+  languageCode: string,
+): string | null {
+  if (!cta) return null;
+  const table = CTA_LABELS[languageCode];
+  return table?.[cta] ?? cta;
+}
+
 export type GmbPost = {
   id: string;
   postType: GmbPostType;

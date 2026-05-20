@@ -72,6 +72,15 @@ export default async function ActionPage({
   if (action.slug === "keyword-research" && onboarding?.suggestedSeed) {
     defaults.seedTopic = onboarding.suggestedSeed;
   }
+  if (action.slug === "gmb-posts" && website) {
+    // Pre-fill the CTA URL with the client's actual Contact-us page
+    // (each clinic has different slugs — /contactos for PT, /contact for
+    // EN, etc.). Detection is cached server-side per website so the
+    // first hit on this page does the probing; subsequent hits are
+    // instant.
+    const { detectContactPage } = await import("@/lib/seo-tools/contact-page");
+    defaults.ctaUrl = await detectContactPage(website);
+  }
 
   return (
     <PageShell

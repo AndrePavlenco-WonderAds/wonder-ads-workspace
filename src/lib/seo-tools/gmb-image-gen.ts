@@ -8,10 +8,16 @@
 // the multimodal image-output flow is clearer there: ask for an image,
 // receive image bytes back as a `inlineData` part on the response.
 
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, Modality } from "@google/genai";
 import { put } from "@vercel/blob";
 
-const MODEL = "gemini-2.5-flash-image-preview";
+// Gemini 2.5 Flash Image — preview ID still works; GA name is the same
+// minus the suffix. We try the GA name first, fall back to preview on
+// 404 / unknown-model errors so deployments survive Google renames.
+const PREFERRED_MODELS = [
+  "gemini-2.5-flash-image",
+  "gemini-2.5-flash-image-preview",
+];
 
 export const imageGenConfigured = Boolean(process.env.GEMINI_API_KEY);
 
@@ -61,25 +67,52 @@ export async function generateGmbImage(opts: {
     });
   }
 
-  const response = await ai.models.generateContent({
-    model: MODEL,
-    contents: [{ role: "user", parts }],
-  });
-
-  const candidateParts = response.candidates?.[0]?.content?.parts ?? [];
-  for (const part of candidateParts) {
-    const inline = (part as { inlineData?: { mimeType?: string; data?: string } })
-      .inlineData;
-    if (inline?.data) {
-      return {
-        bytes: Buffer.from(inline.data, "base64"),
-        mimeType: inline.mimeType ?? "image/png",
-      };
+  let lastError: Error | null = null;
+  for (const model of PREFERRED_MODELS) {
+    try {
+      const response = await ai.models.generateContent({
+        model,
+        contents: [{ role: "user", parts }],
+        // CRITICAL: without responseModalities including IMAGE, the
+        // model returns text-only describing what the image would look
+        // like — not bytes. v71.0 was missing this; that's why every
+        // generation came back with "Image generation failed".
+        config: {
+          responseModalities: [Modality.IMAGE],
+        },
+      });
+      const candidateParts = response.candidates?.[0]?.content?.parts ?? [];
+      for (const part of candidateParts) {
+        const inline = (part as {
+          inlineData?: { mimeType?: string; data?: string };
+        }).inlineData;
+        if (inline?.data) {
+          return {
+            bytes: Buffer.from(inline.data, "base64"),
+            mimeType: inline.mimeType ?? "image/png",
+          };
+        }
+      }
+      // Got a response but no image bytes — try the next model.
+      const textPart = candidateParts
+        .map((p) => (p as { text?: string }).text)
+        .filter(Boolean)
+        .join(" ")
+        .slice(0, 200);
+      lastError = new Error(
+        `${model} returned no image (${candidateParts.length} parts)${
+          textPart ? `: "${textPart}"` : ""
+        }`,
+      );
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+      // 404/unknown-model → try next; other errors → break immediately.
+      if (!/not found|unknown model|404/i.test(lastError.message)) {
+        throw lastError;
+      }
     }
   }
-  throw new Error(
-    `Gemini returned no image (${candidateParts.length} parts, none with image data). Try regenerating, or simplify the prompt.`,
-  );
+  throw lastError ?? new Error("Gemini image generation failed.");
 }
 
 /** Persist a generated GMB image to Vercel Blob and return its public URL.

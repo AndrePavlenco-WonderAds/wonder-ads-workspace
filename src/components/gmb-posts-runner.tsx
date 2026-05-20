@@ -41,12 +41,15 @@ export function GmbPostsRunner({
   action,
   resultId,
   existing,
+  languageCode,
 }: {
   clientSlug: string;
   clientName: string;
   action: ActionDef;
   resultId: string;
   existing: GmbPostsResult | null;
+  /** Client's language code from getClientGeo — drives CTA label localisation. */
+  languageCode: string;
 }) {
   const [status, setStatus] = useState<Status>(existing ? "done" : "loading");
   const [progressPct, setProgressPct] = useState(0);
@@ -167,49 +170,66 @@ export function GmbPostsRunner({
 
   return (
     <div className="space-y-5">
-      {(status === "generating" || status === "loading" || status === "missing" || status === "error") && (
-        <article className="brand-gradient-border relative overflow-hidden rounded-2xl bg-white/[0.035] p-5 backdrop-blur-md">
-          <header className="flex items-center gap-3">
-            {status === "generating" || status === "loading" ? (
-              <Loader2 className="h-4 w-4 animate-spin text-white/75" />
-            ) : status === "error" ? (
-              <AlertTriangle className="h-4 w-4 text-rose-300" />
-            ) : (
-              <Sparkles className="h-4 w-4 text-[color:var(--brand-purple)]" />
+      {/* Progress card — visible during loading / generating / error /
+          missing. Hidden the instant the result loads to remove the
+          confusing "No result yet + 100%" overlap that v71.0 had. */}
+      {!result &&
+        (status === "generating" ||
+          status === "loading" ||
+          status === "missing" ||
+          status === "error") && (
+          <article className="brand-gradient-border relative overflow-hidden rounded-2xl bg-white/[0.035] p-5 backdrop-blur-md">
+            <header className="flex items-center gap-3">
+              {status === "generating" || status === "loading" ? (
+                <Loader2 className="h-4 w-4 animate-spin text-white/75" />
+              ) : status === "error" ? (
+                <AlertTriangle className="h-4 w-4 text-rose-300" />
+              ) : (
+                <Sparkles className="h-4 w-4 text-[color:var(--brand-purple)]" />
+              )}
+              <span className="text-sm font-medium text-white/85">
+                {status === "generating"
+                  ? phaseMessage || "Generating posts…"
+                  : status === "error"
+                    ? "Generation failed"
+                    : status === "missing"
+                      ? "Nothing generated for this URL"
+                      : "Loading…"}
+              </span>
+              {status === "generating" && (
+                <span className="ml-auto text-xs font-mono text-white/55">
+                  {progressPct}%
+                </span>
+              )}
+            </header>
+            {status === "generating" && (
+              <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-white/[0.06]">
+                <div
+                  className="brand-gradient-bg h-full transition-all duration-500"
+                  style={{ width: `${progressPct}%` }}
+                />
+              </div>
             )}
-            <span className="text-sm font-medium text-white/85">
-              {status === "generating"
-                ? phaseMessage || "Generating posts…"
-                : status === "error"
-                  ? "Generation failed"
-                  : status === "missing"
-                    ? "No result yet"
-                    : "Loading…"}
-            </span>
-            <span className="ml-auto text-xs font-mono text-white/55">
-              {progressPct}%
-            </span>
-          </header>
-          <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-white/[0.06]">
-            <div
-              className="brand-gradient-bg h-full transition-all duration-500"
-              style={{ width: `${progressPct}%` }}
-            />
-          </div>
-          {errorMsg && (
-            <div className="mt-3 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-200">
-              {errorMsg}
-            </div>
-          )}
-          {status === "missing" && (
-            <p className="mt-3 text-xs text-white/55">
-              This result page hasn&apos;t been generated yet. Go back to the
-              action and click <span className="text-white">Generate</span> to
-              create one.
-            </p>
-          )}
-        </article>
-      )}
+            {errorMsg && (
+              <div className="mt-3 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-200">
+                {errorMsg}
+              </div>
+            )}
+            {status === "missing" && (
+              <p className="mt-3 text-xs text-white/55">
+                This page was opened directly without a generation in flight.
+                Head back to{" "}
+                <a
+                  href={`/seo/${clientSlug}/actions/${action.slug}`}
+                  className="text-white underline-offset-2 hover:underline"
+                >
+                  GMB Posts Creation
+                </a>{" "}
+                and click <span className="text-white">Generate</span>.
+              </p>
+            )}
+          </article>
+        )}
 
       {result && (
         <section>
@@ -240,6 +260,7 @@ export function GmbPostsRunner({
                 index={i}
                 clientSlug={clientSlug}
                 resultId={result.id}
+                languageCode={languageCode}
                 onSaved={(next: GmbPost) =>
                   setResult((prev) =>
                     prev

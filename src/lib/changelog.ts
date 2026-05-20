@@ -13,6 +13,19 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "71.1",
+    date: "2026-05-20",
+    title: "GMB Posts fixes: mandatory site audit, working image gen, contact-page prefill, PT-PT CTAs",
+    highlights: [
+      "**🚨 Mandatory mini site audit before every GMB generation.** This was the root cause of the Sea Yourself → scuba diving disaster (mental-health clinic got caption about underwater diving because the brand name plays on \"sea\"). New `src/lib/seo-tools/mini-site-audit.ts` fetches the homepage + auto-detects + crawls a `/about` or `/sobre` sub-page, extracts title/meta/H1/body text/nav labels, and prepends the result to the Claude prompt as the **absolute-priority source of truth**. System prompt now contains a hard rule: \"NEVER infer from the brand name — the audit overrides the name.\" Generation aborts gracefully to a safe \"local-business welcome\" pattern when the audit can't disambiguate.",
+      "**🖼️ Image generation actually works now.** Gemini was silently returning text-only descriptions instead of image bytes because the request was missing `responseModalities: [Modality.IMAGE]`. Added it. Also added a model fallback (`gemini-2.5-flash-image` → `gemini-2.5-flash-image-preview`) so a future Google rename doesn't break us. **Plus: errors now bubble up** — the progress stream surfaces the actual Gemini error message (\"quota exceeded\", \"safety filter blocked\", \"model not found\") instead of a generic \"image generation failed\".",
+      "**📌 CTA URL auto-prefills with the client's actual Contact page.** New `src/lib/seo-tools/contact-page.ts` probes 11 common contact slugs (`/contactos`, `/contact`, `/contacto`, `/contactar`, `/kontakt`, etc.) against the client's website with HEAD requests; first 200-OK wins. Cached in-process per website for 6h. Pre-fills the CTA URL field server-side via the existing `defaults` prop on ActionRunner — no consultant re-typing the same URL across 14 clients.",
+      "**🇵🇹 PT-PT (Portugal) not PT-BR — including CTA buttons.** System prompt now explicitly instructs European Portuguese with specific lexical examples (\"telemóvel\" not \"celular\", \"casa de banho\" not \"banheiro\"). CTA button labels render in the client's language at display time: Portuguese clients see `Saber mais` / `Reservar` / `Encomendar online` / `Comprar` / `Subscrever` / `Ligar agora`. ES, FR, IT, DE also wired up. Driven by `getClientGeo(slug).languageCode` — already populated for every roster client.",
+      "**🧹 Result page state copy fixed.** The confusing \"No result yet + 100% progress bar\" overlap is gone. Progress card now hides the instant the result lands. \"Missing\" state (page opened directly without a generation in flight) gets dedicated copy with a link back to the action page, not the same \"No result yet\" string the post-success state was using.",
+      "**Setup note.** No new env vars vs v71.0. If you're still seeing \"image generation failed\", check the surfaced error message — it now tells you exactly which Gemini issue triggered it.",
+    ],
+  },
+  {
     version: "71.0",
     date: "2026-05-20",
     title: "GMB Posts Creation — AI captions + on-brand AI image generation grounded in client files",

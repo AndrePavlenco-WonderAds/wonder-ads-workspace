@@ -23,6 +23,11 @@ import { listTargetKeywords } from "@/lib/target-keywords-store";
 import { getFilesForSlug } from "@/lib/files-storage";
 import { fetchImageBytes } from "@/lib/drive-fetcher";
 import {
+  runMiniSiteAudit,
+  formatMiniSiteAuditForPrompt,
+} from "@/lib/seo-tools/mini-site-audit";
+import { getClientGeo } from "@/lib/client-geo";
+import {
   generateGmbImage,
   imageGenConfigured,
   saveGmbImageToBlob,
@@ -161,6 +166,54 @@ export async function POST(
         ]);
         const website = getClientWebsite(clientSlug);
         const palette = getClientPalette(clientSlug);
+        const geo = getClientGeo(clientSlug);
+
+        // ---- Mini site audit (ABSOLUTE RULE before every generation) ----
+        // This is the fix for the "Sea Yourself → scuba diving" failure:
+        // Claude can't lean on the brand name when the brief is weak. The
+        // homepage + about-page text below becomes the source of truth
+        // about what the business actually does.
+        send({
+          event: "progress",
+          phase: "context",
+          message:
+            "Auditing the client's website so the posts ground in what the business actually does…",
+        });
+        let siteAuditBlock = "";
+        if (website) {
+          try {
+            const audit = await runMiniSiteAudit(website);
+            if (audit && (audit.title || audit.bodyExcerpt)) {
+              siteAuditBlock = formatMiniSiteAuditForPrompt(audit);
+              send({
+                event: "progress",
+                phase: "context",
+                message: `✓ Site audit ready (${audit.h1s.length} H1${audit.h1s.length === 1 ? "" : "s"}, ${audit.bodyExcerpt.length} chars of body text${audit.aboutUrl ? ", about page included" : ""}).`,
+              });
+            } else {
+              send({
+                event: "progress",
+                phase: "context",
+                message:
+                  "⚠️ Couldn't fetch the homepage — generation will rely on brief + onboarding only.",
+              });
+            }
+          } catch (err) {
+            const msg = err instanceof Error ? err.message : String(err);
+            send({
+              event: "progress",
+              phase: "context",
+              message: `⚠️ Site audit failed (${msg.slice(0, 80)}) — proceeding with brief + onboarding only.`,
+            });
+          }
+        } else {
+          send({
+            event: "progress",
+            phase: "context",
+            message:
+              "⚠️ No website on file for this client — generation will rely on brief + onboarding only.",
+          });
+        }
 
         // ---- Fetch reference images ----
         send({
@@ -212,13 +265,19 @@ export async function POST(
           theme,
           details,
           ctaUrlDefault,
+          siteAuditBlock,
+          languageCode: geo.languageCode,
         });
+        const languageDirective = languageInstructionFor(geo.languageCode);
         const system = `You are an in-house GMB content strategist for Wonder Ads (Health & Wellness growth agency). You write Google Business Profile posts that:
 - read like a real local business update — not promotional, not AI-stocky;
 - weave the client's target keywords in naturally for local SEO (no stuffing);
 - match the client's brand voice from the brief + onboarding;
 - NEVER make medical claims for YMYL clinics, NEVER promise outcomes;
-- write in Portuguese (Portugal) if the client's content is Portuguese, otherwise English.
+- ${languageDirective}.
+
+**ABSOLUTE RULE — read the Site Audit before writing anything.** The user prompt contains a "## Site audit" block with homepage + about-page text. THAT is the source of truth about what the business actually does. **NEVER infer from the brand name.** Many client names are wordplay (e.g. "Sea Yourself" is a mental-health clinic, NOT a diving school; "Aeger Prima" is a dental clinic, not a beauty brand). If the brief is weak (few/no Do's/Don'ts/Notes), lean MORE on the site audit, not less. If you cannot confidently identify the business from the site audit + brief + onboarding, write a SAFE generic local-business post (welcome, opening hours, how to find us) rather than guessing.
+
 Output STRICT JSON matching the schema. Caption MAX 1500 characters. Do NOT include hashtags. Do NOT include markdown. Do NOT include the brand name in the image prompt — the reference images handle that.`;
 
         const claudeResult = await generateObject({
@@ -312,12 +371,16 @@ Output STRICT JSON matching the schema. Caption MAX 1500 characters. Do NOT incl
         await saveGmbResult(result);
         revalidatePath(`/seo/${clientSlug}/actions/gmb-posts`);
 
-        const imageFailures = imageResults.filter((r) => r.error).length;
-        if (imageFailures > 0) {
+        const imageFailures = imageResults.filter((r) => r.error);
+        if (imageFailures.length > 0) {
+          // Surface the actual error message instead of a generic "failed"
+          // so consultants can see whether it's a quota / model name /
+          // safety filter / config issue and act on it.
+          const firstMsg = imageFailures[0].error?.slice(0, 240) ?? "unknown";
           send({
             event: "progress",
             phase: "images",
-            message: `⚠️ ${imageFailures} image generation(s) failed. The captions still saved — open the result to retry the image only.`,
+            message: `⚠️ ${imageFailures.length} image generation(s) failed. The captions still saved. First error: ${firstMsg}`,
           });
         }
         send({
@@ -366,6 +429,8 @@ function buildPrompt(opts: {
   theme: string;
   details: string;
   ctaUrlDefault: string;
+  siteAuditBlock: string;
+  languageCode: string;
 }): string {
   const briefBlock = formatBrief(opts.brief);
   const onboardingBlock = opts.onboardingText
@@ -382,6 +447,9 @@ function buildPrompt(opts: {
   return [
     `# Generate ${opts.postCount} DIFFERENT GMB post(s) for **${opts.clientName}**`,
     `Type for this batch: **${opts.postType}**. Website: ${opts.website ?? "(none on file)"}.`,
+    // Site audit FIRST — Claude reads top-down, so this is what it sees
+    // before brief/onboarding/targets. Reinforces the absolute rule.
+    opts.siteAuditBlock,
     opts.theme ? `\n## Theme / focus\n${opts.theme}` : "",
     opts.details ? `\n## Hard facts that MUST appear literally\n${opts.details}` : "",
     opts.ctaUrlDefault
@@ -391,16 +459,40 @@ function buildPrompt(opts: {
     onboardingBlock,
     targetsBlock,
     `\n## Rules`,
+    `- **Read the Site Audit above first.** What the business does is determined by the audit, NOT by the brand name.`,
     `- Produce ${opts.postCount} DIFFERENT posts (distinct angles, NOT variants of the same idea).`,
     `- Each caption max 1500 characters, plain text, no markdown.`,
     `- Weave 1-2 target keywords per caption naturally — no stuffing.`,
     `- NEVER make medical claims, NEVER promise outcomes for YMYL clinics.`,
-    `- Write in Portuguese (Portugal) when the brief / onboarding is in Portuguese, otherwise English.`,
+    `- ${languageInstructionFor(opts.languageCode)}.`,
     `- For \`imagePrompt\`: describe the SCENE (subject, mood, composition). Do NOT mention brand colours or logos — reference images handle that.`,
     `- For \`reasoning\`: ONE sentence on why this angle, for the consultant scanning the grid.`,
   ]
     .filter(Boolean)
     .join("\n");
+}
+
+/** Map ClientGeo languageCode → an unambiguous human-language directive
+ *  for the prompt. Portuguese clients get European Portuguese explicitly
+ *  (NOT Brazilian) because the agency operates in Portugal — the
+ *  vocabulary, accent marks, and verb forms differ in ways consultants
+ *  notice immediately ("você" vs "tu", "celular" vs "telemóvel" etc.). */
+function languageInstructionFor(languageCode: string): string {
+  switch (languageCode) {
+    case "pt":
+      return "Write captions and ALL string fields in **European Portuguese (Portugal, pt-PT)** — NOT Brazilian Portuguese. Use \"tu\" by default (or \"você\" only when the brand voice from the audit is explicitly formal), \"telemóvel\" not \"celular\", \"casa de banho\" not \"banheiro\", \"autocarro\" not \"ônibus\", etc.";
+    case "es":
+      return "Write captions in **European Spanish (Spain)** unless the audit shows a Latin-American audience.";
+    case "fr":
+      return "Write captions in **French (France)**.";
+    case "it":
+      return "Write captions in **Italian**.";
+    case "de":
+      return "Write captions in **German**.";
+    case "en":
+    default:
+      return "Write captions in **English**, matching the tone the audit / brief implies (UK vs US neutral)";
+  }
 }
 
 function formatBrief(brief: {
