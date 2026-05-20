@@ -13,6 +13,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "71.3",
+    date: "2026-05-20",
+    title: "GMB image gen: friendlier quota error + canonical model name",
+    highlights: [
+      "**🪙 Friendlier message when Gemini's billing isn't set up.** Gemini 2.5 Flash Image has a free-tier quota of **0** — image generation requires billing enabled on the linked Google Cloud project, even for the first request. We now detect `RESOURCE_EXHAUSTED` / `429` / `quota` strings in Gemini's error and re-throw with: `Google AI quota exhausted — Gemini image generation has NO free tier. Enable billing on the Google Cloud project this API key is linked to at https://console.cloud.google.com/billing (then regenerate; same key keeps working). At your volume the cost is ~$0.04 per image.` No more squinting at JSON to know what to do.",
+      "**📛 Canonical model name first.** Google's API returns the canonical model in its error responses as `gemini-2.5-flash-preview-image` (note: `preview-image`, not `image-preview` — they swapped the order). Now the primary model id in our fallback chain. Older aliases stay as fallbacks for back-compat if Google renames again.",
+    ],
+  },
+  {
     version: "71.2",
     date: "2026-05-20",
     title: "GMB Posts: kill the \"Nothing generated\" flash, surface actual Gemini errors, remove CTA helper line",

@@ -11,10 +11,12 @@
 import { GoogleGenAI, Modality } from "@google/genai";
 import { put } from "@vercel/blob";
 
-// Gemini 2.5 Flash Image — preview ID still works; GA name is the same
-// minus the suffix. We try the GA name first, fall back to preview on
-// 404 / unknown-model errors so deployments survive Google renames.
+// Gemini image-gen model. Canonical name first (what the API returns
+// in error messages as the resolved model), then the older aliases
+// in case Google renames again. All three currently route to the same
+// underlying model.
 const PREFERRED_MODELS = [
+  "gemini-2.5-flash-preview-image",
   "gemini-2.5-flash-image",
   "gemini-2.5-flash-image-preview",
 ];
@@ -156,6 +158,22 @@ export async function generateGmbImage(opts: {
       );
     } catch (err) {
       lastError = err instanceof Error ? err : new Error(String(err));
+      // 429 / RESOURCE_EXHAUSTED on this model is a billing setup
+      // issue — the free tier limit for Gemini 2.5 Flash Image is 0,
+      // so this fires until billing is enabled on the Google Cloud
+      // project the key is linked to. Re-throw with an actionable
+      // hint instead of opaque API text so consultants don't have to
+      // grok JSON to know what to do.
+      if (/RESOURCE_EXHAUSTED|429|quota/i.test(lastError.message)) {
+        throw new Error(
+          "Google AI quota exhausted — Gemini image generation has NO free tier. " +
+            "Enable billing on the Google Cloud project this API key is linked to at " +
+            "https://console.cloud.google.com/billing (then regenerate; same key keeps working). " +
+            "At your volume the cost is ~$0.04 per image. " +
+            "Original error: " +
+            lastError.message.slice(0, 240),
+        );
+      }
       // 404/unknown-model → try next; other errors → break immediately.
       if (!/not found|unknown model|404/i.test(lastError.message)) {
         throw lastError;
