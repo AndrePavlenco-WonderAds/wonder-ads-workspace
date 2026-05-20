@@ -88,16 +88,32 @@ export function ActionRunner({
     loadHistory();
   }, [loadHistory]);
 
+  // Build the list of CURRENTLY VISIBLE fields. Fields with `showWhen`
+  // are hidden when their conditional doesn't match — used by GMB
+  // Posts to surface Offer/Event/Product-specific inputs only when
+  // those types are selected. Hidden fields never count for required
+  // validation either.
+  const visibleFields = useMemo(() => {
+    return action.fields.filter((f) => {
+      if (!f.showWhen) return true;
+      const cur = values[f.showWhen.field] ?? "";
+      const targets = Array.isArray(f.showWhen.equals)
+        ? f.showWhen.equals
+        : [f.showWhen.equals];
+      return targets.includes(cur);
+    });
+  }, [action.fields, values]);
+
   // Field-level required override: for keyword-research, the seedTopic
   // field is required UNLESS the consultant is using the onboarding form
   // (which provides its own focus signals — services, objectives, competitors).
   const requiredKeys = useMemo(() => {
-    const base = action.fields.filter((f) => f.required).map((f) => f.key);
+    const base = visibleFields.filter((f) => f.required).map((f) => f.key);
     if (isKwResearch && useOnboarding) {
       return base.filter((k) => k !== "seedTopic");
     }
     return base;
-  }, [action.fields, isKwResearch, useOnboarding]);
+  }, [visibleFields, isKwResearch, useOnboarding]);
   const requiredMissing = requiredKeys.some(
     (key) => !(values[key] ?? "").trim(),
   );
@@ -146,7 +162,10 @@ export function ActionRunner({
         <header className="mb-4 flex items-center gap-2">
           <Sparkles className="h-4 w-4 text-white/65" strokeWidth={2.25} />
           <h2 className="text-sm font-semibold tracking-tight text-white">
-            New generation for {clientName}
+            {(action.titleTemplate ?? "New generation for {client}").replace(
+              "{client}",
+              clientName,
+            )}
           </h2>
         </header>
 
@@ -162,7 +181,7 @@ export function ActionRunner({
         )}
 
         <div className="space-y-4">
-          {action.fields.map((f) => {
+          {visibleFields.map((f) => {
             // For keyword-research with onboarding-in-use, soften seedTopic:
             // no asterisk, label switches to "Additional focus (optional)",
             // placeholder explains the new role.
@@ -439,6 +458,47 @@ function FieldRow({
           onChange={(e) => onChange(e.currentTarget.value)}
           placeholder={field.placeholder}
           className="w-full resize-y rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-white placeholder:text-white/30 focus:border-white/25 focus:outline-none disabled:opacity-50"
+        />
+      ) : field.type === "segmented" ? (
+        // Visual button group for 2–4 mutually-exclusive options.
+        // Reads/writes the same string value a `select` would — no
+        // backend change. Great for high-stakes top-of-form choices
+        // (image source, channel, etc.) where a dropdown buries the
+        // alternatives.
+        <div
+          role="radiogroup"
+          aria-labelledby={id}
+          className="flex w-full overflow-hidden rounded-lg border border-white/10 bg-white/[0.03] p-1"
+        >
+          {field.options?.map((opt) => {
+            const selected = value === opt;
+            return (
+              <button
+                key={opt}
+                type="button"
+                role="radio"
+                aria-checked={selected}
+                disabled={disabled}
+                onClick={() => onChange(opt)}
+                className={
+                  selected
+                    ? "brand-gradient-bg flex-1 rounded-md px-3 py-1.5 text-sm font-semibold text-white shadow-[0_2px_12px_-2px_rgba(120,61,245,0.55)] transition"
+                    : "flex-1 rounded-md px-3 py-1.5 text-sm font-medium text-white/60 transition hover:bg-white/[0.04] hover:text-white/85"
+                }
+              >
+                {opt}
+              </button>
+            );
+          })}
+        </div>
+      ) : field.type === "date" ? (
+        <input
+          id={id}
+          type="date"
+          value={value}
+          disabled={disabled}
+          onChange={(e) => onChange(e.currentTarget.value)}
+          className="w-full rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-white placeholder:text-white/30 focus:border-white/25 focus:outline-none disabled:opacity-50 [color-scheme:dark]"
         />
       ) : field.type === "select" ? (
         <select

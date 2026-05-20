@@ -138,7 +138,11 @@ export async function POST(
   const postCount = clampPostCount(inputs.postCount);
   const postTypeInput = parsePostType(inputs.postGoal);
   const theme = (inputs.theme ?? "").trim();
-  const details = (inputs.details ?? "").trim();
+  // Build the "Hard facts" block from the post-type-specific inputs.
+  // The form surfaces different fields for Offer / Event / Product /
+  // Update; we collapse them into a single markdown block so the
+  // prompt always sees a consistent shape.
+  const details = buildHardFactsBlock(postTypeInput, inputs);
   const ctaUrlDefault = (inputs.ctaUrl ?? "").trim();
   const imageSource = parseImageSource(inputs.imageSource);
 
@@ -764,6 +768,72 @@ function parseImageSource(
   const v = (raw ?? "").trim().toLowerCase();
   if (v.startsWith("ai") || v.includes("gemini")) return "ai-generated";
   return "client-files";
+}
+
+/** Collapse the per-post-type structured inputs (offer headline,
+ *  discount, event dates, product price, etc.) into the "Hard facts"
+ *  markdown block the Claude prompt expects. Replaces the old free-
+ *  form `details` textarea — captions can now reliably include the
+ *  literal numbers / dates / titles a real GMB post needs. */
+function buildHardFactsBlock(
+  postType: GmbPostType,
+  inputs: Record<string, string>,
+): string {
+  const lines: string[] = [];
+  const v = (k: string) => (inputs[k] ?? "").trim();
+  switch (postType) {
+    case "Offer": {
+      const title = v("offerTitle");
+      if (title) lines.push(`- **Offer headline:** ${title}`);
+      const discount = v("offerDiscount");
+      if (discount) lines.push(`- **Discount:** ${discount}`);
+      const from = v("offerValidFrom");
+      const until = v("offerValidUntil");
+      if (from && until) {
+        lines.push(`- **Valid:** ${from} → ${until}`);
+      } else if (from) {
+        lines.push(`- **Valid from:** ${from}`);
+      } else if (until) {
+        lines.push(`- **Valid until:** ${until}`);
+      }
+      const terms = v("offerTerms");
+      if (terms) lines.push(`- **Terms:** ${terms}`);
+      break;
+    }
+    case "Event": {
+      const title = v("eventTitle");
+      if (title) lines.push(`- **Event:** ${title}`);
+      const start = v("eventStart");
+      const end = v("eventEnd");
+      const time = v("eventTime");
+      if (start && end) {
+        lines.push(`- **Dates:** ${start} → ${end}${time ? ` · ${time}` : ""}`);
+      } else if (start) {
+        lines.push(`- **Date:** ${start}${time ? ` · ${time}` : ""}`);
+      }
+      const loc = v("eventLocation");
+      if (loc) lines.push(`- **Location:** ${loc}`);
+      const det = v("eventDetails");
+      if (det) lines.push(`- **Details:** ${det}`);
+      break;
+    }
+    case "Product": {
+      const name = v("productName");
+      if (name) lines.push(`- **Product / service:** ${name}`);
+      const price = v("productPrice");
+      if (price) lines.push(`- **Price:** ${price}`);
+      const hl = v("productHighlights");
+      if (hl) lines.push(`- **Highlights:** ${hl}`);
+      break;
+    }
+    case "Update":
+    default: {
+      const det = v("updateDetails");
+      if (det) lines.push(det);
+      break;
+    }
+  }
+  return lines.join("\n");
 }
 
 function buildPrompt(opts: {

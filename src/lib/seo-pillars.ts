@@ -7,7 +7,13 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-export type ActionFieldType = "text" | "textarea" | "select" | "location";
+export type ActionFieldType =
+  | "text"
+  | "textarea"
+  | "select"
+  | "location"
+  | "date"
+  | "segmented";
 
 export type ActionField = {
   key: string;
@@ -19,6 +25,11 @@ export type ActionField = {
   options?: string[];
   rows?: number;
   defaultValue?: string;
+  /** Conditional rendering: only show this field when another field
+   *  has one of the listed values. Used in GMB Posts to surface Offer-
+   *  specific / Event-specific fields only when those types are
+   *  selected. */
+  showWhen?: { field: string; equals: string | string[] };
 };
 
 export type ActionToolName =
@@ -49,6 +60,10 @@ export type ActionDef = {
    *  Used for the Roadmap entry, which points at the live `/roadmap`
    *  board instead of the markdown action page. */
   href?: (clientSlug: string) => string;
+  /** Optional title for the new-generation form. `{client}` is
+   *  substituted with the client name. Default:
+   *  `New generation for {client}`. */
+  titleTemplate?: string;
 };
 
 /** Single source of truth for the URL an action card links to. Every
@@ -578,13 +593,14 @@ export const PILLARS: Pillar[] = [
       {
         slug: "gmb-posts",
         label: "GMB Posts Creation",
+        titleTemplate: "Create GMB Posts for {client}",
         blurb:
           "Generates 1–3 on-brand Google Posts. Pick whether the image comes from the client's own photos (faster, always on-brand) or is AI-generated (more flexible). Caption + CTA always come from Claude.",
         fields: [
           {
             key: "imageSource",
             label: "Where should the image come from?",
-            type: "select",
+            type: "segmented",
             required: true,
             options: ["Use client's photos", "AI-generate (Gemini)"],
             defaultValue: "Use client's photos",
@@ -608,7 +624,10 @@ export const PILLARS: Pillar[] = [
             required: true,
             options: ["Update", "Offer", "Event", "Product"],
             defaultValue: "Update",
+            helpText:
+              "Choosing Offer / Event / Product surfaces extra fields below so the post includes real specifics (discount, dates, price).",
           },
+          // ===== Shared: theme/focus + CTA URL =====
           {
             key: "theme",
             label: "Theme / focus (optional)",
@@ -617,14 +636,125 @@ export const PILLARS: Pillar[] = [
             placeholder:
               "Anything specific you want the posts to cover this week — a service push, a clinic anniversary, a local event, a holiday tie-in. Leave blank and Claude will pick angles from the brief + onboarding.",
           },
+          // ===== Update-specific =====
           {
-            key: "details",
-            label: "Hard facts (dates, offer details, ​etc.)",
+            key: "updateDetails",
+            label: "Anything to spotlight (optional)",
             type: "textarea",
             rows: 3,
             placeholder:
-              "Dates, prices, named events, offer windows — anything the captions must state literally. Leave blank for evergreen posts.",
+              "News, milestones, hires, new equipment, opening-hours changes — anything the caption should state literally.",
+            showWhen: { field: "postGoal", equals: "Update" },
           },
+          // ===== Offer-specific =====
+          {
+            key: "offerTitle",
+            label: "Offer headline",
+            type: "text",
+            required: true,
+            placeholder: "e.g. 20% off first consultation",
+            showWhen: { field: "postGoal", equals: "Offer" },
+          },
+          {
+            key: "offerDiscount",
+            label: "Discount (amount or %)",
+            type: "text",
+            placeholder: "e.g. 20%, €30, BOGO, free with first session",
+            showWhen: { field: "postGoal", equals: "Offer" },
+          },
+          {
+            key: "offerValidFrom",
+            label: "Valid from",
+            type: "date",
+            showWhen: { field: "postGoal", equals: "Offer" },
+          },
+          {
+            key: "offerValidUntil",
+            label: "Valid until",
+            type: "date",
+            showWhen: { field: "postGoal", equals: "Offer" },
+          },
+          {
+            key: "offerTerms",
+            label: "Terms / conditions (optional)",
+            type: "textarea",
+            rows: 2,
+            placeholder:
+              "Anything that needs to be in fine print — new clients only, max 1 per person, etc.",
+            showWhen: { field: "postGoal", equals: "Offer" },
+          },
+          // ===== Event-specific =====
+          {
+            key: "eventTitle",
+            label: "Event title",
+            type: "text",
+            required: true,
+            placeholder: "e.g. Open Day · Mental Health Awareness Workshop",
+            showWhen: { field: "postGoal", equals: "Event" },
+          },
+          {
+            key: "eventStart",
+            label: "Event start (date)",
+            type: "date",
+            required: true,
+            showWhen: { field: "postGoal", equals: "Event" },
+          },
+          {
+            key: "eventEnd",
+            label: "Event end (date)",
+            type: "date",
+            showWhen: { field: "postGoal", equals: "Event" },
+          },
+          {
+            key: "eventTime",
+            label: "Event time (optional)",
+            type: "text",
+            placeholder: "e.g. 14:00–16:00",
+            showWhen: { field: "postGoal", equals: "Event" },
+          },
+          {
+            key: "eventLocation",
+            label: "Event location (optional)",
+            type: "text",
+            placeholder:
+              "Defaults to the clinic. Override if it's held elsewhere.",
+            showWhen: { field: "postGoal", equals: "Event" },
+          },
+          {
+            key: "eventDetails",
+            label: "Event details (optional)",
+            type: "textarea",
+            rows: 3,
+            placeholder:
+              "Speakers, agenda, what attendees will learn / experience, dress code, registration link.",
+            showWhen: { field: "postGoal", equals: "Event" },
+          },
+          // ===== Product-specific =====
+          {
+            key: "productName",
+            label: "Product / service name",
+            type: "text",
+            required: true,
+            placeholder: "e.g. Avaliação inicial · Pacote 6 sessões",
+            showWhen: { field: "postGoal", equals: "Product" },
+          },
+          {
+            key: "productPrice",
+            label: "Price (optional)",
+            type: "text",
+            placeholder: "e.g. €60 · Starting at €120",
+            showWhen: { field: "postGoal", equals: "Product" },
+          },
+          {
+            key: "productHighlights",
+            label: "Key highlights (optional)",
+            type: "textarea",
+            rows: 3,
+            placeholder:
+              "What makes this product/service notable — duration, who it's for, included sessions, etc.",
+            showWhen: { field: "postGoal", equals: "Product" },
+          },
+          // ===== Shared CTA =====
           {
             key: "ctaUrl",
             label: "Default CTA URL (optional)",

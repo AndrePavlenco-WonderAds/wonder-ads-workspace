@@ -13,6 +13,23 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "71.13",
+    date: "2026-05-20",
+    title: "GMB Posts form: per-post-type fields, segmented control, custom title",
+    highlights: [
+      "**🏷️ Form title is now per-action.** `ActionDef.titleTemplate` lets each action override the default `New generation for {client}`. GMB Posts opens with **`Create GMB Posts for {client}`**. Other actions keep the default.",
+      "**🎛️ Image source as a 2-way segmented control.** The dropdown that buried the choice is replaced by a button group — both options (`Use client's photos` / `AI-generate (Gemini)`) are visible at all times, current pick rendered in the brand gradient. New generic `segmented` field type added to `ActionField`; reusable for any future 2–4 option binary choice.",
+      "**📋 Structured per-post-type fields.** New `showWhen` conditional rendering on `ActionField`. Selecting a post type now surfaces the fields you'd expect on Google's own GMB post form:",
+      "  - **Offer:** offer headline · discount (amount or %) · valid-from + valid-until dates · terms",
+      "  - **Event:** event title · start date · end date · time · location · details",
+      "  - **Product:** product/service name · price · highlights",
+      "  - **Update:** free-form spotlight textarea (the previous behaviour)",
+      "Server-side `buildHardFactsBlock(postType, inputs)` collapses these into a clean markdown bullet list and inserts it into the Claude prompt's `## Hard facts that MUST appear literally` block, so captions can include the actual discount %, the actual event dates, the actual price — verbatim — instead of guessing.",
+      "**📅 New `date` field type** that renders as `<input type=\"date\">` with dark color scheme. Powers the Offer + Event date pickers.",
+      "**🧠 Required validation respects visibility.** Hidden conditional fields don't trip the `Fill in the required fields to generate` warning — the form only enforces what's actually on screen.",
+    ],
+  },
+  {
     version: "71.12",
     date: "2026-05-20",
     title: "Filter HEIC/AVIF/TIFF out of the image pool",
