@@ -29,7 +29,6 @@ import {
   fetchImagesFromDriveFolder,
   listImageRefsInDriveFolder,
   downloadDriveImageById,
-  type DriveImageRef,
 } from "@/lib/drive-fetcher";
 import type { ClientFile } from "@/lib/client-files";
 import {

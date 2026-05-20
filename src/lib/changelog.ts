@@ -13,6 +13,20 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "72.0",
+    date: "2026-05-20",
+    title: "Pending Review tables — public per-client, internal mirror, Send-to-Review on every result",
+    highlights: [
+      "**📋 Public Pending Review page per client.** New URL `/<slug>/pendingreview` (e.g. `/sea-yourself/pendingreview`) — no auth, no app chrome, no back-button into the workspace. Clients land on a clean Wonder-Ads-branded page with their clinic name + an editable table they can flip status / dates / doc links / notes on inline. Auto-save on every change.",
+      "**🪑 Editable columns + colored pills.** Task (text) · Status (colored pill: For Approval / Approved / Rejected / Changes Requested) · Category (colored pill across all SEO pillars + GMB + KW + Roadmap) · Approval date · Publishing date · Doc link (clickable). Per-row save state shown bottom-right (`All changes saved · N items` / `Saving 1 change…`).",
+      "**🚀 Send to Pending Review on every result page.** New `SendToReviewButton` component drops on every action result (SEO Audit, Keyword Research, GMB Posts, Client Roadmap, etc.). One click → appends a row to that client's review table, pre-filled with the action label, the right category, and a doc link back to the result page. Consultants stop copy-pasting URLs.",
+      "**🪞 Internal mirror at `/seo/<slug>/review`.** Same data, same component, but inside PageShell + with `Copy public link`, `Open public link in new tab`, manual add-row, and per-row delete. Consultants see exactly what the client sees and edit the same store.",
+      "**📌 Header chip on every client page.** `Pending Review · 3 for approval` chip in the client header, links to the internal mirror. Amber pill when there are items awaiting client approval; emerald pill when everything is approved.",
+      "**🔒 Privacy guardrails.** Public layout uses its own `(public-review)` route group with NO PageShell — meaning no department picker, no client list, no internal navigation leaks. Public page also has `robots: noindex, nofollow` metadata so the link never gets indexed by Google. Reserved slugs (`seo`, `ads`, `api`, etc.) return 404 to prevent accidental catch-all matches.",
+      "**🧱 Plumbing.** `review-store.ts` (types + KV CRUD + status/category pill colors + payload sanitisation for the public PUT endpoint). New API: `GET/POST /api/reviews/[slug]` and `PATCH/DELETE /api/reviews/[slug]/items/[id]`. Components: `ReviewTable` (shared), `CopyPublicLinkButton`, `AddReviewItemButton`, `SendToReviewButton`, `PendingReviewChip`.",
+    ],
+  },
+  {
     version: "71.13",
     date: "2026-05-20",
     title: "GMB Posts form: per-post-type fields, segmented control, custom title",

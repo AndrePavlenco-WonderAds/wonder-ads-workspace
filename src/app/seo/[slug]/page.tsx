@@ -6,6 +6,7 @@ import { ClientFiles } from "@/components/client-files";
 import { OnboardingForm } from "@/components/onboarding-form";
 import { TargetKeywordsPanel } from "@/components/target-keywords-panel";
 import { CurrentRoadmapStrip } from "@/components/current-roadmap-strip";
+import { PendingReviewChip } from "@/components/pending-review-chip";
 import { SeoProjectContainers } from "@/components/seo-project-containers";
 import { SeoActions } from "@/components/seo-actions";
 import { ProjectSectionNav } from "@/components/project-section-nav";
@@ -120,6 +121,9 @@ export default async function ClientPage({
               <span className="brand-gradient-text">{client.title}</span>
             </h1>
             <CurrentRoadmapStrip slug={slug} />
+            <div className="mt-2.5">
+              <PendingReviewChip slug={slug} />
+            </div>
           </div>
         </div>
 

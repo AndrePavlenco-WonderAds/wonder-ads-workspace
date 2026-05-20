@@ -5,6 +5,7 @@ import { PageShell } from "@/components/page-shell";
 import { LogoChip } from "@/components/logo-chip";
 import { ResultRunner } from "@/components/result-runner";
 import { GmbPostsRunner } from "@/components/gmb-posts-runner";
+import { SendToReviewButton } from "@/components/send-to-review-button";
 import { PrintLayout } from "@/components/print-layout";
 import { getGmbResult } from "@/lib/gmb-posts-store";
 import { getClientGeo } from "@/lib/client-geo";
@@ -115,6 +116,34 @@ export default async function ResultPage({
       backLabel={action.label}
     >
       <div className="mt-2 flex items-start gap-4">
+        {/* Send to Pending Review — appears the instant a result has
+            been saved, regardless of action type. Pre-fills the task
+            label, category, and a back-link to this page. */}
+        {(action.slug === "gmb-posts" ? gmbResult : existing) && (
+          <SendToReviewButton
+            clientSlug={slug}
+            task={
+              action.slug === "gmb-posts"
+                ? `${gmbResult?.posts.length ?? 0} GMB post${
+                    (gmbResult?.posts.length ?? 0) === 1 ? "" : "s"
+                  } · ${client.title}`
+                : `${action.label} · ${client.title}`
+            }
+            category={
+              action.slug === "gmb-posts"
+                ? "GMB Posts"
+                : action.slug === "keyword-research"
+                  ? "Keyword Research"
+                  : action.slug === "seo-audit"
+                    ? "SEO Audit"
+                    : action.slug === "client-roadmap"
+                      ? "Roadmap"
+                      : "Other"
+            }
+            docLink={`/seo/${slug}/actions/${actionSlug}/results/${resultId}`}
+            sourceType={action.slug}
+          />
+        )}
         {action.slug === "gmb-posts" ? (
           gmbResult ? (
             <a
