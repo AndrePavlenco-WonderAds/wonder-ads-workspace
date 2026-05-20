@@ -21,7 +21,11 @@ import { getClientWebsite } from "@/lib/client-meta";
 import { getOnboardingForSlug } from "@/lib/onboarding-store";
 import { listTargetKeywords } from "@/lib/target-keywords-store";
 import { getFilesForSlug } from "@/lib/files-storage";
-import { fetchImageBytes } from "@/lib/drive-fetcher";
+import {
+  fetchImageBytes,
+  extractDriveFolderId,
+  fetchImagesFromDriveFolder,
+} from "@/lib/drive-fetcher";
 import {
   runMiniSiteAudit,
   formatMiniSiteAuditForPrompt,
@@ -239,6 +243,49 @@ export async function POST(
               status: "skipped",
               reason: `cap of ${MAX_REFERENCE_IMAGES} reference images already reached`,
             });
+            continue;
+          }
+          // Drive FOLDER link: list contents, recurse into sub-folders,
+          // download up to the remaining slot count. Consultants paste
+          // folder links far more often than individual file links
+          // because Drive folders hold whole photo sessions (e.g.
+          // "Sessão 9 — Abril 2026" with 56 photos).
+          const folderId = extractDriveFolderId(f.url);
+          if (folderId) {
+            const slotsLeft = MAX_REFERENCE_IMAGES - referenceImages.length;
+            const { images, totalFound, error } = await fetchImagesFromDriveFolder(
+              folderId,
+              { maxImages: slotsLeft },
+            );
+            for (const img of images) {
+              referenceImages.push({
+                bytes: img.bytes,
+                mimeType: img.mimeType,
+              });
+              referencesUsed.push({
+                name: `${f.name} → ${img.filename}`,
+                url: f.url,
+                status: "used",
+              });
+            }
+            if (images.length === 0) {
+              referencesUsed.push({
+                name: f.name,
+                url: f.url,
+                status: "failed",
+                reason:
+                  error ??
+                  "Drive folder couldn't be listed (share with seo@wonder-ads.com or make anyone-with-link public)",
+              });
+            } else if (totalFound > images.length) {
+              // Informational: we used 4 of 47 images. Append a note to
+              // the LAST "used" row so the diagnostic surfaces this.
+              const lastIdx = referencesUsed.length - 1;
+              referencesUsed[lastIdx] = {
+                ...referencesUsed[lastIdx],
+                reason: `${images.length} of ${totalFound} images in folder used as references`,
+              };
+            }
             continue;
           }
           try {

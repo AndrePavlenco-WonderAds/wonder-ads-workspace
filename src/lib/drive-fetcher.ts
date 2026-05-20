@@ -29,7 +29,8 @@ const DRIVE_READONLY_SCOPE = "https://www.googleapis.com/auth/drive.readonly";
  *  - `https://drive.google.com/file/d/<id>/edit`
  *  - `https://drive.google.com/open?id=<id>`
  *  - `https://drive.google.com/uc?id=<id>` (already a direct link)
- *  - `https://drive.usercontent.google.com/download?id=<id>&export=...` */
+ *  - `https://drive.usercontent.google.com/download?id=<id>&export=...`
+ *  Returns null for folder URLs (use extractDriveFolderId for those). */
 export function extractDriveFileId(url: string): string | null {
   let parsed: URL;
   try {
@@ -38,6 +39,9 @@ export function extractDriveFileId(url: string): string | null {
     return null;
   }
   if (!DRIVE_HOSTS.has(parsed.hostname)) return null;
+  // Folder URLs explicitly disqualified — they have their own listing
+  // flow (you can't `?alt=media` a folder).
+  if (/\/folders\//.test(parsed.pathname)) return null;
   const idParam = parsed.searchParams.get("id");
   if (idParam && /^[\w-]{10,}$/.test(idParam)) return idParam;
   const m = parsed.pathname.match(/\/file\/d\/([\w-]{10,})/);
@@ -45,6 +49,21 @@ export function extractDriveFileId(url: string): string | null {
   const m2 = parsed.pathname.match(/\/d\/([\w-]{10,})/);
   if (m2) return m2[1];
   return null;
+}
+
+/** Pull the Drive FOLDER id out of `/drive/folders/<id>` URLs. Folders
+ *  need a different flow (list contents, recurse into sub-folders,
+ *  download each image) — they can't be fetched as bytes directly. */
+export function extractDriveFolderId(url: string): string | null {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return null;
+  }
+  if (!DRIVE_HOSTS.has(parsed.hostname)) return null;
+  const m = parsed.pathname.match(/\/folders\/([\w-]{10,})/);
+  return m ? m[1] : null;
 }
 
 /** Convert any Drive share URL into a direct-download URL that streams
@@ -198,8 +217,10 @@ async function fetchDriveFilePublic(fileId: string): Promise<DriveFile | null> {
 /** Fetch ANY image-like URL (Drive, Vercel Blob, public CDN) as bytes
  *  for use as a reference image. Returns null on any failure. Used by
  *  the GMB image generator to materialise the client file list into
- *  raw bytes Gemini can ingest. */
+ *  raw bytes Gemini can ingest. Folder URLs are NOT handled here —
+ *  use fetchImagesFromDriveFolder for those. */
 export async function fetchImageBytes(url: string): Promise<DriveFile | null> {
+  if (extractDriveFolderId(url)) return null;
   if (extractDriveFileId(url)) return fetchDriveFile(url);
   try {
     const res = await fetch(url, { cache: "no-store" });
@@ -210,6 +231,158 @@ export async function fetchImageBytes(url: string): Promise<DriveFile | null> {
     const filename = url.split("/").pop()?.split("?")[0] || "image";
     return { bytes: buf, mimeType: contentType.split(";")[0].trim(), filename };
   } catch {
+    return null;
+  }
+}
+
+/** List + download images inside a Drive folder. Recurses into
+ *  sub-folders up to a small depth (consultants nest by session / month
+ *  in practice, so depth 2 covers Mimus's "FOTOS / Sessão 9 / file.jpg"
+ *  shape without going pathological). Stops as soon as `maxImages`
+ *  images have been downloaded. Returns:
+ *    images:      successfully downloaded image files
+ *    totalFound:  total image files visible in the folder tree (so the
+ *                 result page can say "used N of M")
+ *    error:       null when at least one image came back, a string when
+ *                 nothing worked (missing scope, empty folder, etc.) */
+export async function fetchImagesFromDriveFolder(
+  folderId: string,
+  opts: { maxImages: number; maxDepth?: number } = { maxImages: 4 },
+): Promise<{
+  images: DriveFile[];
+  totalFound: number;
+  error: string | null;
+}> {
+  if (!googleAuthConfigured) {
+    return {
+      images: [],
+      totalFound: 0,
+      error:
+        "Drive auth not configured — set GOOGLE_SERVICE_ACCOUNT_JSON and grant the drive.readonly scope in Workspace Admin Console.",
+    };
+  }
+  let token: string;
+  try {
+    token = await getGoogleAccessToken([DRIVE_READONLY_SCOPE]);
+  } catch (err) {
+    return {
+      images: [],
+      totalFound: 0,
+      error: `Drive auth token request failed (the drive.readonly scope likely isn't authorized for the service account yet in Workspace Admin Console): ${err instanceof Error ? err.message.slice(0, 200) : String(err)}`,
+    };
+  }
+  const maxDepth = opts.maxDepth ?? 2;
+  const allImageRefs: { id: string; name: string; mimeType: string }[] = [];
+  // Breadth-first traversal: enumerate folders in waves so we collect
+  // images-per-folder before going deeper.
+  const queue: { id: string; depth: number }[] = [{ id: folderId, depth: 0 }];
+  while (queue.length > 0) {
+    const { id, depth } = queue.shift()!;
+    const listed = await listDriveFolderContents(id, token);
+    for (const f of listed) {
+      if (f.mimeType?.startsWith("image/")) {
+        allImageRefs.push(f);
+      } else if (
+        f.mimeType === "application/vnd.google-apps.folder" &&
+        depth < maxDepth
+      ) {
+        queue.push({ id: f.id, depth: depth + 1 });
+      }
+    }
+  }
+  if (allImageRefs.length === 0) {
+    return {
+      images: [],
+      totalFound: 0,
+      error:
+        "Drive folder contains no image files (looked recursively up to depth 2). Upload JPG/PNG/WebP photos to the folder.",
+    };
+  }
+  // Download just the first N — we don't need 47 photos when Gemini
+  // only takes 4 references. Keeps the function comfortably under the
+  // 60s Vercel ceiling.
+  const toDownload = allImageRefs.slice(0, opts.maxImages);
+  const images: DriveFile[] = [];
+  for (const ref of toDownload) {
+    const file = await downloadDriveFileById(ref.id, token, ref.name, ref.mimeType);
+    if (file) images.push(file);
+  }
+  return {
+    images,
+    totalFound: allImageRefs.length,
+    error:
+      images.length > 0
+        ? null
+        : "Listed images but couldn't download any (permission or quota issue).",
+  };
+}
+
+/** Single Drive API list call for one folder. Returns the raw file
+ *  records (images + sub-folders) — the caller decides what to do. */
+async function listDriveFolderContents(
+  folderId: string,
+  token: string,
+): Promise<{ id: string; name: string; mimeType: string }[]> {
+  const q = `'${folderId}' in parents and trashed = false`;
+  const url =
+    `https://www.googleapis.com/drive/v3/files?` +
+    `q=${encodeURIComponent(q)}` +
+    `&fields=files(id,name,mimeType)` +
+    `&pageSize=100` +
+    `&supportsAllDrives=true&includeItemsFromAllDrives=true` +
+    `&orderBy=name`;
+  try {
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    });
+    if (!res.ok) {
+      console.warn(
+        `[drive-fetcher] folder list HTTP ${res.status} for ${folderId}`,
+      );
+      return [];
+    }
+    const data = (await res.json()) as {
+      files?: { id: string; name: string; mimeType: string }[];
+    };
+    return data.files ?? [];
+  } catch (err) {
+    console.warn(
+      `[drive-fetcher] folder list threw for ${folderId}: ${err instanceof Error ? err.message : String(err)}`,
+    );
+    return [];
+  }
+}
+
+/** Download a single Drive file by id with an existing token. Used by
+ *  the folder traversal so we can reuse the cached token. */
+async function downloadDriveFileById(
+  fileId: string,
+  token: string,
+  name: string,
+  mimeType: string,
+): Promise<DriveFile | null> {
+  if (!mimeType.startsWith("image/")) return null;
+  const url = `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(
+    fileId,
+  )}?alt=media&supportsAllDrives=true`;
+  try {
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    });
+    if (!res.ok) {
+      console.warn(
+        `[drive-fetcher] media HTTP ${res.status} for ${name} (${fileId})`,
+      );
+      return null;
+    }
+    const buf = new Uint8Array(await res.arrayBuffer());
+    return { bytes: buf, mimeType, filename: name };
+  } catch (err) {
+    console.warn(
+      `[drive-fetcher] media fetch threw for ${name}: ${err instanceof Error ? err.message : String(err)}`,
+    );
     return null;
   }
 }

@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "71.6",
+    date: "2026-05-20",
+    title: "Drive FOLDER support — paste a folder link, app uses the photos inside",
+    highlights: [
+      "**📁 Drive folder links now work as Client Files references.** Previously v71.5's drive-fetcher only handled individual file URLs (`/file/d/<id>/view`). Pasting a folder URL (`/drive/folders/<id>`) failed with `Drive file isn't accessible` because folders have no bytes to download. Now: app detects folder URLs, lists every image inside via Drive API, recurses into sub-folders up to depth 2 (so `FOTOS / Sessão 9 — Abril 2026 / file.jpg` still resolves), and downloads up to MAX_REFERENCE_IMAGES (4) for Gemini.",
+      "**🔍 Diagnostic now shows folder coverage.** When a folder is used, the references-used summary appends `4 of 47 images in folder used as references` so consultants see the cap is N-not-all without having to look it up. Each picked image is listed individually as `Fotos → IMG_5612.jpg` so it's obvious WHICH images Gemini actually saw.",
+      "**⚙️ Depth + slot caps.** Listing is breadth-first so we pick images from each folder level before going deeper. Max recursion depth = 2 (covers the agency's typical session-photo nesting). Max images downloaded = remaining reference slot count (so a folder with 47 photos doesn't trigger 47 downloads when we only need 4).",
+      "**🪵 Logging.** Drive API failures (folder list HTTP error, individual file media fetch error, etc.) log to Vercel function output with the specific folder/file id, so the next time something fails the dev tab points right at it.",
+    ],
+  },
+  {
     version: "71.5",
     date: "2026-05-20",
     title: "Authenticated Drive fetch — read files shared with seo@wonder-ads.com without making them public",
