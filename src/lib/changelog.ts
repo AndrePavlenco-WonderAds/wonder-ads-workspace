@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "71.8",
+    date: "2026-05-20",
+    title: "Empty image-pool error now lists per-entry reasons",
+    highlights: [
+      "**🔎 No more inscrutable \"No images available\" toast.** When client-files mode finds zero images, the error event now lists every Client Files entry with its specific failure reason underneath: `✕ Fotos — Drive auth failed: …` or `✕ Fotos — Drive folder has no image files…`. Consultants can act immediately instead of guessing.",
+    ],
+  },
+  {
     version: "71.7",
     date: "2026-05-20",
     title: "GMB Posts: 'Use client's photos' mode — pick a real photo + Claude vision caption (no Gemini)",

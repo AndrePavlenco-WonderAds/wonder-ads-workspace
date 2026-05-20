@@ -247,10 +247,26 @@ export async function POST(
             `[gmb-generate] client-files pool: ${pool.length} candidate images`,
           );
           if (pool.length === 0) {
+            // Surface the per-entry reasons so the consultant knows
+            // exactly WHY each Client Files entry was rejected. Empty
+            // pool with no diagnostic was the failure mode that made
+            // the v71.7 first test inscrutable.
+            const failed = referencesUsed.filter((r) => r.status === "failed");
+            const skipped = referencesUsed.filter((r) => r.status === "skipped");
+            const detailLines: string[] = [];
+            for (const r of failed) {
+              detailLines.push(`✕ ${r.name} — ${r.reason ?? "no reason captured"}`);
+            }
+            for (const r of skipped) {
+              detailLines.push(`• ${r.name} — ${r.reason ?? "skipped"}`);
+            }
+            const detail =
+              detailLines.length > 0
+                ? `\n\nDetails per Client Files entry:\n${detailLines.join("\n")}`
+                : "";
             send({
               event: "error",
-              message:
-                "No images available in this client's library. Upload brand photos in Client Files OR add a Drive folder link (and share it with seo@wonder-ads.com or anyone-with-link), then retry. Switch to AI-generate mode if you'd rather have new images created.",
+              message: `No images available in this client's library.${detail}\n\nFixes: upload images in Client Files, OR share the Drive folder with seo@wonder-ads.com (Viewer is enough) AND make sure the drive.readonly scope is authorized in Workspace Admin Console domain-wide delegation. Or switch to AI-generate mode.`,
             });
             controller.close();
             return;
