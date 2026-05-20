@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "71.10",
+    date: "2026-05-20",
+    title: "Drive 403 — surface the actual Google error string",
+    highlights: [
+      "**🪪 Drive folder 403 now surfaces the message body.** Previously we just reported `HTTP 403`; the actual Google error string (`Insufficient Permission` vs `File not found` vs `The user does not have sufficient permissions for this file`) was only in Vercel logs. Now we parse the JSON `error.message` from the response body and append it to the consultant-facing diagnostic so you can immediately tell whether it's a scope-not-authorized issue or a sharing issue.",
+    ],
+  },
+  {
     version: "71.9",
     date: "2026-05-20",
     title: "Drive listing now distinguishes 'empty folder' from 'auth-denied folder'",

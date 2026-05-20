@@ -285,12 +285,29 @@ export async function listImageRefsInDriveFolder(
   ];
   while (queue.length > 0) {
     const { id, depth, path } = queue.shift()!;
-    const { items, errorStatus } = await listDriveFolderContents(id, token);
+    const { items, errorStatus, errorMessage } = await listDriveFolderContents(
+      id,
+      token,
+    );
     foldersChecked++;
     if (errorStatus !== null) {
       foldersWithErrors++;
       if (sampleErrors.length < 3) {
-        sampleErrors.push(`${path} → HTTP ${errorStatus}`);
+        // Include the parsed Drive error reason so we can tell scope vs
+        // permission issues apart in the consultant-facing message.
+        let reason = "";
+        try {
+          const parsed = JSON.parse(errorMessage ?? "") as {
+            error?: { message?: string; status?: string };
+          };
+          reason =
+            parsed.error?.message ?? parsed.error?.status ?? errorMessage ?? "";
+        } catch {
+          reason = errorMessage ?? "";
+        }
+        sampleErrors.push(
+          `${path} → HTTP ${errorStatus}${reason ? ` — ${reason.slice(0, 200)}` : ""}`,
+        );
       }
       continue;
     }
@@ -442,6 +459,7 @@ async function listDriveFolderContents(
 ): Promise<{
   items: { id: string; name: string; mimeType: string }[];
   errorStatus: number | null;
+  errorMessage?: string;
 }> {
   const q = `'${folderId}' in parents and trashed = false`;
   const url =
@@ -457,10 +475,26 @@ async function listDriveFolderContents(
       cache: "no-store",
     });
     if (!res.ok) {
+      // Capture the response body — Drive 403s come with a JSON
+      // `error.message` that tells us if it's a scope problem
+      // ("Insufficient Permission") vs a sharing problem
+      // ("File not found" / "The user does not have sufficient
+      // permissions for this file").
+      let detail = "";
+      try {
+        const body = await res.text();
+        detail = body.slice(0, 400);
+      } catch {
+        /* body unreadable */
+      }
       console.warn(
-        `[drive-fetcher] folder list HTTP ${res.status} for ${folderId}`,
+        `[drive-fetcher] folder list HTTP ${res.status} for ${folderId}: ${detail}`,
       );
-      return { items: [], errorStatus: res.status };
+      return {
+        items: [],
+        errorStatus: res.status,
+        errorMessage: detail || `HTTP ${res.status}`,
+      };
     }
     const data = (await res.json()) as {
       files?: { id: string; name: string; mimeType: string }[];
@@ -470,7 +504,11 @@ async function listDriveFolderContents(
     console.warn(
       `[drive-fetcher] folder list threw for ${folderId}: ${err instanceof Error ? err.message : String(err)}`,
     );
-    return { items: [], errorStatus: -1 };
+    return {
+      items: [],
+      errorStatus: -1,
+      errorMessage: err instanceof Error ? err.message : String(err),
+    };
   }
 }
 
