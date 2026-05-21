@@ -11,6 +11,7 @@ import {
   Loader2,
 } from "lucide-react";
 import type { ClientBrief as Brief } from "@/lib/client-briefs";
+import { AddCallNotesButton } from "./add-call-notes-button";
 
 type Kind = "dos" | "donts" | "notes";
 
@@ -178,17 +179,20 @@ export function ClientBrief({
         <h2 className="text-sm font-medium uppercase tracking-[0.18em] text-white/55">
           Client Brief
         </h2>
-        {saving && (
-          <span className="ml-auto inline-flex items-center gap-1.5 text-[11px] text-white/45">
-            <Loader2 className="h-3 w-3 animate-spin" />
-            Saving…
-          </span>
-        )}
-        {error && !saving && (
-          <span className="ml-auto rounded-full border border-rose-500/30 bg-rose-500/10 px-2 py-0.5 text-[10px] font-medium text-rose-300">
-            {error}
-          </span>
-        )}
+        <div className="ml-auto flex items-center gap-2">
+          {saving && (
+            <span className="inline-flex items-center gap-1.5 text-[11px] text-white/45">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              Saving…
+            </span>
+          )}
+          {error && !saving && (
+            <span className="rounded-full border border-rose-500/30 bg-rose-500/10 px-2 py-0.5 text-[10px] font-medium text-rose-300">
+              {error}
+            </span>
+          )}
+          <AddCallNotesButton slug={slug} clientName={clientName} />
+        </div>
       </header>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">

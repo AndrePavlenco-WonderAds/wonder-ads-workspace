@@ -1,0 +1,188 @@
+// Call Notes analyzer.
+//
+// POST /api/call-notes/[slug]
+//   body: { transcript: string, fathomUrl?: string }
+//   returns: { suggestions: [{ bucket: "dos"|"donts"|"notes", text, reasoning, source? }] }
+//
+// The transcript can be a Fathom AI summary, a raw transcript, or a
+// paste of personal call notes. Claude filters out chit-chat /
+// scheduling / pleasantries and surfaces only items that actually
+// belong in the Client Brief.
+//
+// Suggestions are EPHEMERAL — not stored. The UI shows them as cards;
+// each Accept click triggers a PUT to /api/briefs/[slug] with the
+// item appended to the right bucket.
+
+import { anthropic } from "@ai-sdk/anthropic";
+import { generateObject } from "ai";
+import { z } from "zod";
+import { NextResponse } from "next/server";
+import { getBriefForSlug } from "@/lib/briefs-storage";
+import { getClientBySlug } from "@/lib/notion";
+import { getClientGeo } from "@/lib/client-geo";
+
+export const runtime = "nodejs";
+export const maxDuration = 60;
+
+const MODEL = "claude-haiku-4-5-20251001";
+
+const SuggestionSchema = z.object({
+  bucket: z
+    .enum(["dos", "donts", "notes"])
+    .describe(
+      "Where this item belongs. dos = positive behaviours / preferences the client wants. donts = explicit prohibitions / things to avoid / past mistakes to never repeat. notes = neutral context that's worth remembering but isn't a do or don't (audience facts, business model, stakeholder names, deadlines, technical constraints).",
+    ),
+  text: z
+    .string()
+    .min(8)
+    .max(220)
+    .describe(
+      "The item as it would read on the brief. One concrete sentence. NEVER prefix with 'Do:' / 'Don't:' — that's already implied by the bucket. Write in European Portuguese for PT clients, English otherwise.",
+    ),
+  reasoning: z
+    .string()
+    .min(8)
+    .max(180)
+    .describe(
+      "ONE short sentence saying WHY this matters (anchored to the part of the call it came from). Helps the consultant decide accept/decline.",
+    ),
+  source: z
+    .string()
+    .max(240)
+    .nullable()
+    .describe(
+      "Optional verbatim quote from the call (≤200 chars) so the consultant can verify. null if paraphrased / aggregated from multiple lines.",
+    ),
+});
+
+const BatchSchema = z.object({
+  suggestions: z.array(SuggestionSchema).min(0).max(20),
+});
+
+export async function POST(
+  req: Request,
+  ctx: { params: Promise<{ slug: string }> },
+) {
+  const { slug } = await ctx.params;
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return NextResponse.json(
+      { error: "ANTHROPIC_API_KEY is not configured." },
+      { status: 503 },
+    );
+  }
+
+  let body: { transcript?: string; fathomUrl?: string };
+  try {
+    body = (await req.json()) as { transcript?: string; fathomUrl?: string };
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
+  }
+  const transcript = (body.transcript ?? "").trim();
+  const fathomUrl = (body.fathomUrl ?? "").trim();
+  if (transcript.length < 50) {
+    return NextResponse.json(
+      {
+        error:
+          "Paste the AI summary or transcript first — needs at least 50 chars to be useful.",
+      },
+      { status: 400 },
+    );
+  }
+  if (transcript.length > 60000) {
+    return NextResponse.json(
+      {
+        error:
+          "Transcript is over 60k chars — that's beyond what fits in one analysis pass. Paste the AI Summary instead (or chunk the transcript).",
+      },
+      { status: 400 },
+    );
+  }
+
+  const client = await getClientBySlug(slug).catch(() => null);
+  if (!client) {
+    return NextResponse.json({ error: "Unknown client." }, { status: 404 });
+  }
+  const existing = await getBriefForSlug(slug);
+  const geo = getClientGeo(slug);
+
+  const language =
+    geo.languageCode === "pt"
+      ? "European Portuguese (pt-PT — never Brazilian)"
+      : geo.languageCode === "es"
+        ? "European Spanish"
+        : geo.languageCode === "fr"
+          ? "French (France)"
+          : "English";
+
+  const system = `You are a senior SEO consultant at Wonder Ads reviewing a client call transcript to extract items that belong in the Client Brief.
+
+The Client Brief has THREE buckets:
+- **dos** — things the client wants done / preferences / positive behaviours / strategies they like
+- **donts** — things to NEVER do / past mistakes / explicit prohibitions / brand-voice violations
+- **notes** — neutral context worth remembering (audience, business model, stakeholders, technical constraints, deadlines, market specifics)
+
+# CRITICAL RULES
+
+1. **Filter aggressively.** A 30-minute call has maybe 5-12 brief-worthy items. The rest is scheduling, small talk, status updates, project chitchat, and recap of things already known. Skip ALL of that.
+2. **Each suggestion must be ACTIONABLE in future work.** "Will send logo on Tuesday" is NOT a brief item (it's a task). "Brand color is #FF8A8B" IS a brief item (constraint that applies forever).
+3. **Don't duplicate existing brief items.** The current brief is shown below — skip anything already covered (semantically, not just lexically).
+4. **Pick the right bucket.** If it's a preference → dos. If it's a prohibition → donts. If it's neutral context → notes. When in doubt → notes.
+5. **One concrete sentence per item.** No bullets within an item. No "and also". If two ideas, return two suggestions.
+6. **Language: write each item in ${language}.** ALL items in the same language unless the client explicitly mixes (rare).
+7. **Cap at ~10 suggestions max.** Quality over quantity. If you have 15 candidates, pick the 10 most valuable and skip the rest.
+8. **For donts, lead with the prohibited action.** ("Não usar imagens de stock com pessoas obviamente americanas." — not "Imagens de stock com pessoas obviamente americanas devem ser evitadas.")
+9. **Health/Wellness YMYL safety:** if the client mentions a medical-claim sensitivity ("don't say cure / guarantee / sem dor"), capture it as a don't.
+10. **Returns zero suggestions** if the transcript is purely scheduling / catch-up with no brief-worthy content. That's a valid output.`;
+
+  const briefDigest = formatExistingBrief(existing);
+  const prompt = `# Client: ${client.title}${fathomUrl ? `\n## Source: ${fathomUrl}` : ""}
+
+## Current Client Brief
+${briefDigest}
+
+## Call transcript / AI summary
+\`\`\`
+${transcript}
+\`\`\`
+
+Return up to ~10 highest-value Do's / Don'ts / Notes additions. Skip anything already covered above. Skip anything that's a task (deadline-bound work) — those belong in a roadmap, not the brief.`;
+
+  try {
+    const r = await generateObject({
+      model: anthropic(MODEL),
+      schema: BatchSchema,
+      system,
+      prompt,
+      maxOutputTokens: 3000,
+    });
+    return NextResponse.json({
+      suggestions: r.object.suggestions,
+      clientLanguage: geo.languageCode,
+    });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("[call-notes] generation failed:", err);
+    return NextResponse.json(
+      {
+        error: `Call-notes analysis failed: ${msg.slice(0, 200)}`,
+      },
+      { status: 500 },
+    );
+  }
+}
+
+function formatExistingBrief(brief: {
+  dos: string[];
+  donts: string[];
+  notes: string[];
+}): string {
+  const parts: string[] = [];
+  if (brief.dos.length > 0)
+    parts.push(`### Do's\n${brief.dos.map((d) => `- ${d}`).join("\n")}`);
+  if (brief.donts.length > 0)
+    parts.push(`### Don'ts\n${brief.donts.map((d) => `- ${d}`).join("\n")}`);
+  if (brief.notes.length > 0)
+    parts.push(`### Notes\n${brief.notes.map((n) => `- ${n}`).join("\n")}`);
+  if (parts.length === 0) return "_(empty — anything reasonable is fair game)_";
+  return parts.join("\n\n");
+}

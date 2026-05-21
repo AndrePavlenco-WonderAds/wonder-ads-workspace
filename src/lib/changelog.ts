@@ -13,6 +13,23 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.1",
+    date: "2026-05-21",
+    title: "Add Call Notes — paste a Fathom call, get filtered Do/Don't/Note suggestions",
+    highlights: [
+      "**📞 New `Add Call Notes` button on every Client Brief header.** Workflow: paste the Fathom AI summary (or full transcript) → Claude filters out the scheduling / chit-chat / pleasantries and surfaces only items that actually belong in the brief → each suggestion appears as a card with Accept / Decline buttons → accepted items land in the right bucket (Do's / Don'ts / Notes) instantly via the existing brief-save endpoint.",
+      "**🧠 Smart bucketing per language.** Claude reads the call in the client's language (PT-PT for Mimus, EN for IHN-CA, etc.) and writes each suggestion in the same language. Bucket rules baked into the system prompt:",
+      "  - `dos` — preferences / positive behaviours / strategies the client likes",
+      "  - `donts` — explicit prohibitions / past mistakes / brand-voice violations",
+      "  - `notes` — neutral context (audience, business model, stakeholders, constraints)",
+      "  Filters out tasks (\"will send logo Tuesday\") — those go in the roadmap, not the brief.",
+      "**🎯 De-dupes against the existing brief.** Sends the current Do's / Don'ts / Notes to Claude as context so it skips anything already covered (semantically, not just lexically).",
+      "**💡 Each suggestion has a `Why this matters` line.** Helps consultants decide accept/decline at a glance. Optional verbatim source quote shown as a blockquote when Claude could anchor the item to a specific line.",
+      "**ℹ️ Fathom transcript fetching note.** Fathom doesn't expose share-page transcripts to unauthenticated HTTP fetches — confirmed 404/500 on every endpoint, the SPA renders via authenticated XHR. So the modal asks for the AI summary text directly (paste from the right-panel of the Fathom share page). Adds ~5s vs auto-fetching but ships today without needing Fathom API setup. Field for the share URL is still there for reference/audit.",
+      "**🪜 Capped at 10 suggestions max.** Quality over quantity — Claude picks the highest-value items if more were found. Zero suggestions is a valid output if the call was purely status-update content.",
+    ],
+  },
+  {
     version: "74.0",
     date: "2026-05-21",
     title: "Public client pages now localise to European Portuguese for PT clients",
