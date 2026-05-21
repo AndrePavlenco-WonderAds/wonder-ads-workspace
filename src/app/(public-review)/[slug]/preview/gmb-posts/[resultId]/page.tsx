@@ -22,6 +22,7 @@ import {
 import { getClientGeo } from "@/lib/client-geo";
 import { getGmbResult, localizeCta } from "@/lib/gmb-posts-store";
 import { formatDate } from "@/lib/dates";
+import { pickLang, t, plural } from "@/lib/public-i18n";
 
 export const dynamic = "force-dynamic";
 
@@ -39,6 +40,11 @@ export default async function PublicGmbPreviewPage({
   const consultantEmail = getConsultantEmailForSlug(slug);
   const consultantName = getConsultantForSlug(slug);
   const languageCode = getClientGeo(slug).languageCode;
+  const lang = pickLang(slug);
+  const introHtml = t(lang, "gmbIntro", {
+    linkOpen: `<a href="/${slug}/pendingreview" class="font-medium text-black/85 underline-offset-2 hover:underline">`,
+    linkClose: "</a>",
+  });
 
   return (
     <main className="mx-auto min-h-screen max-w-5xl px-4 py-10 sm:px-8">
@@ -58,7 +64,7 @@ export default async function PublicGmbPreviewPage({
               className="inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.2em]"
               style={{ backgroundColor: "#dbeafe", color: "#1e40af" }}
             >
-              GMB Posts Preview
+              {t(lang, "gmbBadge")}
             </span>
             <span
               className="inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.2em]"
@@ -71,25 +77,20 @@ export default async function PublicGmbPreviewPage({
             {client.title}
           </h1>
           <p className="mt-1 text-xs text-black/55">
-            {result.posts.length} post{result.posts.length === 1 ? "" : "s"} ·
-            drafted {formatDate(result.createdAt)}
+            {t(lang, "gmbStats", {
+              n: result.posts.length,
+              plural: plural(result.posts.length),
+              date: formatDate(result.createdAt),
+            })}
           </p>
         </div>
       </header>
 
       {/* Intro */}
-      <p className="mb-6 max-w-2xl text-sm leading-relaxed text-black/65">
-        These are the Google Business Profile posts we&apos;ve drafted for you.
-        Each card shows the image + caption + call-to-action exactly as
-        they&apos;ll appear. To approve or request changes, head back to your{" "}
-        <a
-          href={`/${slug}/pendingreview`}
-          className="font-medium text-black/85 underline-offset-2 hover:underline"
-        >
-          Pending Review table
-        </a>
-        .
-      </p>
+      <p
+        className="mb-6 max-w-2xl text-sm leading-relaxed text-black/65"
+        dangerouslySetInnerHTML={{ __html: introHtml }}
+      />
 
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {result.posts.map((post, i) => (
@@ -168,27 +169,26 @@ export default async function PublicGmbPreviewPage({
           >
             Wonder Ads
           </span>{" "}
-          · Health &amp; Wellness Growth Agency · #1 SEO Provider in Portugal
+          · {t(lang, "footerTagline")}
         </p>
         <p className="mt-1.5">
-          Questions?{" "}
           {consultantName && consultantName !== "Unassigned" ? (
-            <>
-              Email {consultantName} —{" "}
-              <a
-                href={`mailto:${consultantEmail}`}
-                className="font-medium text-black/65 underline-offset-2 hover:text-black/85 hover:underline"
-              >
-                {consultantEmail}
-              </a>
-            </>
+            <span
+              dangerouslySetInnerHTML={{
+                __html: t(lang, "footerQuestions", {
+                  consultant: consultantName,
+                  emailLink: `<a href="mailto:${consultantEmail}" class="font-medium text-black/65 underline-offset-2 hover:text-black/85 hover:underline">${consultantEmail}</a>`,
+                }),
+              }}
+            />
           ) : (
-            <a
-              href={`mailto:${consultantEmail}`}
-              className="font-medium text-black/65 underline-offset-2 hover:text-black/85 hover:underline"
-            >
-              {consultantEmail}
-            </a>
+            <span
+              dangerouslySetInnerHTML={{
+                __html: t(lang, "footerQuestionsNoName", {
+                  emailLink: `<a href="mailto:${consultantEmail}" class="font-medium text-black/65 underline-offset-2 hover:text-black/85 hover:underline">${consultantEmail}</a>`,
+                }),
+              }}
+            />
           )}
         </p>
       </footer>

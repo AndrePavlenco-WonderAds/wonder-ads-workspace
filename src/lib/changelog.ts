@@ -13,6 +13,19 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.0",
+    date: "2026-05-21",
+    title: "Public client pages now localise to European Portuguese for PT clients",
+    highlights: [
+      "**🇵🇹 European Portuguese (pt-PT) on every client-facing public page** — switches automatically based on `getClientGeo(slug).languageCode`. PT clients (Mimus, Sea Yourself, IHN-PT, etc.) see the page in Portuguese; EN clients (IHN-CA, Insync Design, etc.) stay in English. Three pages localised:",
+      "  - **Meta Tags preview** (`/<slug>/preview/meta-tags/<resultId>`) — badge, stats line, intro paragraph, footer.",
+      "  - **GMB Posts preview** (`/<slug>/preview/gmb-posts/<resultId>`) — badge, stats line, intro paragraph, footer.",
+      "  - **Pending Review table** (`/<slug>/pendingreview`) — badge, intro line, footer.",
+      "**🧰 New `src/lib/public-i18n.ts` helper.** Centralised phrase catalog with `t(lang, key, vars)` lookup + `{name}` token substitution. Adding a fourth public page is a single import + a few `t()` calls. Adding Spanish / French later = adding a column to each phrase. Designed to scale — no per-component string trees.",
+      "**🇵🇹 PT-PT correctness baked in.** Uses Portugal vocabulary (`elaborado`, `palavras-chave`, `aprovações`) and `tu`/2nd-person, NOT Brazilian Portuguese (`elaborado em` not `criado em`, `pesquisa de palavras-chave` not `pesquisa de palavras-chave` 😉, no `você`). Footer tagline becomes `Agência de Crescimento em Saúde & Bem-estar · #1 SEO em Portugal`.",
+    ],
+  },
+  {
     version: "73.5",
     date: "2026-05-21",
     title: "Send-on-top button stack, fresh-generation bug fixed, Pending Review page feels instant",

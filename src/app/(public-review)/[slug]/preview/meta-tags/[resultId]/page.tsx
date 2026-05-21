@@ -15,6 +15,7 @@ import {
 import { getMetaTagsResult } from "@/lib/meta-tags-store";
 import { MetaTagsTable } from "@/components/meta-tags-table";
 import { formatDate } from "@/lib/dates";
+import { pickLang, t, plural } from "@/lib/public-i18n";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +32,11 @@ export default async function PublicMetaTagsPreview({
   const logo = getClientLogo(slug);
   const consultantEmail = getConsultantEmailForSlug(slug);
   const consultantName = getConsultantForSlug(slug);
+  const lang = pickLang(slug);
+  const introHtml = t(lang, "metaTagsIntro", {
+    linkOpen: `<a href="/${slug}/pendingreview" class="font-medium text-black/85 underline-offset-2 hover:underline">`,
+    linkClose: "</a>",
+  });
 
   return (
     <main className="mx-auto min-h-screen max-w-6xl px-4 py-10 sm:px-8">
@@ -50,7 +56,7 @@ export default async function PublicMetaTagsPreview({
               className="inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.2em]"
               style={{ backgroundColor: "#fee2e2", color: "#991b1b" }}
             >
-              Meta Tags Preview
+              {t(lang, "metaTagsBadge")}
             </span>
             <span
               className="inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.2em]"
@@ -63,28 +69,23 @@ export default async function PublicMetaTagsPreview({
             {client.title}
           </h1>
           <p className="mt-1 text-xs text-black/55">
-            {result.rows.length} page
-            {result.rows.length === 1 ? "" : "s"} · drafted{" "}
-            {formatDate(result.createdAt)} · depth: {result.inputs.depth}
+            {t(lang, "metaTagsStats", {
+              n: result.rows.length,
+              plural: plural(result.rows.length),
+              date: formatDate(result.createdAt),
+              depth: result.inputs.depth,
+            })}
           </p>
         </div>
       </header>
 
-      <p className="mb-6 max-w-2xl text-sm leading-relaxed text-black/65">
-        These are the optimised <strong>title tags</strong> and{" "}
-        <strong>meta descriptions</strong> we&apos;ve drafted for every page
-        on your site, based on the latest Keyword Research and your brand
-        brief. Each row shows the current tag (left) next to the proposed
-        rewrite (right, in green). To approve or request changes, head back
-        to your{" "}
-        <a
-          href={`/${slug}/pendingreview`}
-          className="font-medium text-black/85 underline-offset-2 hover:underline"
-        >
-          Pending Review table
-        </a>
-        .
-      </p>
+      <p
+        className="mb-6 max-w-2xl text-sm leading-relaxed text-black/65"
+        // Intro contains a localised link (linkOpen / linkClose) so we
+        // inject the substituted HTML. Source is hard-coded in
+        // src/lib/public-i18n.ts — no untrusted input flows in.
+        dangerouslySetInnerHTML={{ __html: introHtml }}
+      />
 
       <MetaTagsTable
         clientSlug={slug}
@@ -108,27 +109,26 @@ export default async function PublicMetaTagsPreview({
           >
             Wonder Ads
           </span>{" "}
-          · Health &amp; Wellness Growth Agency · #1 SEO Provider in Portugal
+          · {t(lang, "footerTagline")}
         </p>
         <p className="mt-1.5">
-          Questions?{" "}
           {consultantName && consultantName !== "Unassigned" ? (
-            <>
-              Email {consultantName} —{" "}
-              <a
-                href={`mailto:${consultantEmail}`}
-                className="font-medium text-black/65 underline-offset-2 hover:text-black/85 hover:underline"
-              >
-                {consultantEmail}
-              </a>
-            </>
+            <span
+              dangerouslySetInnerHTML={{
+                __html: t(lang, "footerQuestions", {
+                  consultant: consultantName,
+                  emailLink: `<a href="mailto:${consultantEmail}" class="font-medium text-black/65 underline-offset-2 hover:text-black/85 hover:underline">${consultantEmail}</a>`,
+                }),
+              }}
+            />
           ) : (
-            <a
-              href={`mailto:${consultantEmail}`}
-              className="font-medium text-black/65 underline-offset-2 hover:text-black/85 hover:underline"
-            >
-              {consultantEmail}
-            </a>
+            <span
+              dangerouslySetInnerHTML={{
+                __html: t(lang, "footerQuestionsNoName", {
+                  emailLink: `<a href="mailto:${consultantEmail}" class="font-medium text-black/65 underline-offset-2 hover:text-black/85 hover:underline">${consultantEmail}</a>`,
+                }),
+              }}
+            />
           )}
         </p>
       </footer>

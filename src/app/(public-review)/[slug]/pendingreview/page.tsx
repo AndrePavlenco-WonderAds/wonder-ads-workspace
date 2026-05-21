@@ -16,6 +16,7 @@ import {
 } from "@/lib/client-overrides";
 import { listReviewItems } from "@/lib/review-store";
 import { ReviewTable } from "@/components/review-table";
+import { pickLang, t } from "@/lib/public-i18n";
 
 export const dynamic = "force-dynamic";
 
@@ -48,6 +49,7 @@ export default async function PublicReviewPage({
   if (!client) notFound();
   const items = await listReviewItems(slug);
   const logo = getClientLogo(slug);
+  const lang = pickLang(slug);
   const consultantEmail = getConsultantEmailForSlug(slug);
   const consultantName = getConsultantForSlug(slug);
 
@@ -72,7 +74,7 @@ export default async function PublicReviewPage({
                 color: "#581c87",
               }}
             >
-              Pending Review
+              {t(lang, "pendingReviewBadge")}
             </span>
             <span
               className="inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.2em]"
@@ -91,14 +93,12 @@ export default async function PublicReviewPage({
       </header>
 
       {/* Intro line — friendly, sets expectations */}
-      <p className="mb-6 max-w-2xl text-sm leading-relaxed text-black/65">
-        This is your pending-approval list. Click any cell to edit — your
-        changes save automatically. Use{" "}
-        <strong className="text-black/85">Status</strong> to approve / reject
-        items, and{" "}
-        <strong className="text-black/85">Doc link</strong> to keep the source
-        document next to the row.
-      </p>
+      <p
+        className="mb-6 max-w-2xl text-sm leading-relaxed text-black/65"
+        dangerouslySetInnerHTML={{
+          __html: t(lang, "pendingReviewIntro"),
+        }}
+      />
 
       <ReviewTable
         clientSlug={slug}
@@ -124,27 +124,26 @@ export default async function PublicReviewPage({
           >
             Wonder Ads
           </span>{" "}
-          · Health &amp; Wellness Growth Agency · #1 SEO Provider in Portugal
+          · {t(lang, "footerTagline")}
         </p>
         <p className="mt-1.5">
-          Questions?{" "}
           {consultantName && consultantName !== "Unassigned" ? (
-            <>
-              Email {consultantName} —{" "}
-              <a
-                href={`mailto:${consultantEmail}`}
-                className="font-medium text-black/65 underline-offset-2 hover:text-black/85 hover:underline"
-              >
-                {consultantEmail}
-              </a>
-            </>
+            <span
+              dangerouslySetInnerHTML={{
+                __html: t(lang, "footerQuestions", {
+                  consultant: consultantName,
+                  emailLink: `<a href="mailto:${consultantEmail}" class="font-medium text-black/65 underline-offset-2 hover:text-black/85 hover:underline">${consultantEmail}</a>`,
+                }),
+              }}
+            />
           ) : (
-            <a
-              href={`mailto:${consultantEmail}`}
-              className="font-medium text-black/65 underline-offset-2 hover:text-black/85 hover:underline"
-            >
-              {consultantEmail}
-            </a>
+            <span
+              dangerouslySetInnerHTML={{
+                __html: t(lang, "footerQuestionsNoName", {
+                  emailLink: `<a href="mailto:${consultantEmail}" class="font-medium text-black/65 underline-offset-2 hover:text-black/85 hover:underline">${consultantEmail}</a>`,
+                }),
+              }}
+            />
           )}
         </p>
       </footer>
