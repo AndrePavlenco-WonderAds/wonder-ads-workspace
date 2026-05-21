@@ -4,6 +4,7 @@
 // /meta-generate + renders the editable table once the result lands.
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { AlertTriangle, Loader2, Sparkles } from "lucide-react";
 import { pendingKey } from "./action-runner";
 import { MetaTagsTable } from "./meta-tags-table";
@@ -42,6 +43,7 @@ export function MetaTagsRunner({
   resultId: string;
   existing: MetaTagsResult | null;
 }) {
+  const router = useRouter();
   const [status, setStatus] = useState<Status>(existing ? "done" : "loading");
   const [progressPct, setProgressPct] = useState(0);
   const [phaseMessage, setPhaseMessage] = useState<string>("");
@@ -119,6 +121,11 @@ export function MetaTagsRunner({
             setResult(data.result);
             setProgressPct(100);
             setStatus("done");
+            // Refresh the server component so the Send-for-Approval +
+            // Download buttons at the top of the page (rendered from
+            // metaTagsResult on the server) re-evaluate and appear
+            // without requiring a manual page refresh.
+            router.refresh();
           } else {
             setStatus("error");
             setErrorMsg(
@@ -135,7 +142,7 @@ export function MetaTagsRunner({
         setStatus("error");
       }
     },
-    [clientSlug, action.slug, resultId],
+    [clientSlug, action.slug, resultId, router],
   );
 
   useEffect(() => {

@@ -41,9 +41,15 @@ export default async function InternalReviewPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const client = await getClientBySlug(slug).catch(() => null);
+  // Parallelise the two awaited fetches so the request doesn't wait
+  // serially for Notion (cached, ~0ms warm but cold-start can be slow)
+  // and KV (~50ms) end-to-end. The function above already has
+  // `loading.tsx` showing an instant skeleton while this SSRs.
+  const [client, items] = await Promise.all([
+    getClientBySlug(slug).catch(() => null),
+    listReviewItems(slug),
+  ]);
   if (!client) notFound();
-  const items = await listReviewItems(slug);
   const logo = getClientLogo(slug);
   const logoBgMode = getLogoBgMode(slug);
   const logoSizing = getLogoSizing(slug);

@@ -7,10 +7,7 @@ import { ResultRunner } from "@/components/result-runner";
 import { GmbPostsRunner } from "@/components/gmb-posts-runner";
 import { MetaTagsRunner } from "@/components/meta-tags-runner";
 import { SendToReviewButton } from "@/components/send-to-review-button";
-import {
-  getMetaTagsResult,
-  listMetaTagsResults,
-} from "@/lib/meta-tags-store";
+import { getMetaTagsResult } from "@/lib/meta-tags-store";
 import { PrintLayout } from "@/components/print-layout";
 import { getGmbResult } from "@/lib/gmb-posts-store";
 import { getClientGeo } from "@/lib/client-geo";
@@ -71,27 +68,19 @@ export default async function ResultPage({
   // available soon" placeholder).
   const gmbResult =
     action.slug === "gmb-posts" ? await getGmbResult(slug, resultId) : null;
-  // Try exact ID first. For pre-v73.4 results, the meta-tags store key
-  // can differ from the URL resultId (old runs generated their own
-  // store ID server-side instead of honouring the URL). In that case
-  // fall back to the latest meta-tags result for this client — there's
-  // only one "open" run per result page so this is unambiguous.
-  let metaTagsResult =
+  // Strict exact-ID lookup. v73.4 added a "fall back to latest" path
+  // that mis-fired on fresh generations: when a NEW result page loads
+  // before the runner finishes generating, the fallback would return
+  // the PREVIOUS result and the page would render the old table. We
+  // now rely on meta-generate honouring body.resultId (also v73.4) so
+  // new runs are self-consistent end-to-end. Pre-v73.4 results that
+  // were keyed differently are no longer reachable from this page —
+  // user regenerates if they need them.
+  const metaTagsResult =
     action.slug === "meta-title-description"
       ? await getMetaTagsResult(slug, resultId)
       : null;
-  let metaTagsActualId: string | null = metaTagsResult?.id ?? null;
-  if (action.slug === "meta-title-description" && !metaTagsResult) {
-    const all = await listMetaTagsResults(slug);
-    if (all.length > 0) {
-      const latest = all.sort((a, b) => b.createdAt - a.createdAt)[0];
-      const candidate = await getMetaTagsResult(slug, latest.id);
-      if (candidate) {
-        metaTagsResult = candidate;
-        metaTagsActualId = candidate.id;
-      }
-    }
-  }
+  const metaTagsActualId: string | null = metaTagsResult?.id ?? null;
 
   // -- PRINT MODE: bypass PageShell entirely. Render the branded WonderAds
   //    PDF document straight from the server. The PrintLayout component
@@ -141,130 +130,131 @@ export default async function ResultPage({
       backHref={`/seo/${slug}/actions/${actionSlug}`}
       backLabel={action.label}
     >
-      <div className="mt-2 flex items-start gap-4">
-        {/* Send to Pending Review — appears the instant a result has
-            been saved, regardless of action type. Brand-gradient
-            "prominent" variant so the consultant sees it immediately
-            (v72.0 used the muted default and consultants missed it). */}
-        {(action.slug === "gmb-posts"
-          ? gmbResult
-          : action.slug === "meta-title-description"
-            ? metaTagsResult
-            : existing) && (
-          <SendToReviewButton
-            variant="prominent"
-            clientSlug={slug}
-            task={
-              action.slug === "gmb-posts"
-                ? `${gmbResult?.posts.length ?? 0} GMB post${
-                    (gmbResult?.posts.length ?? 0) === 1 ? "" : "s"
-                  } · ${client.title}`
-                : action.slug === "meta-title-description"
-                  ? `Meta tags rewrite — ${metaTagsResult?.rows.length ?? 0} page${(metaTagsResult?.rows.length ?? 0) === 1 ? "" : "s"} · ${client.title}`
-                  : `${action.label} · ${client.title}`
-            }
-            category={
-              action.slug === "gmb-posts"
-                ? "GMB Posts"
-                : action.slug === "keyword-research"
-                  ? "Keyword Research"
-                  : action.slug === "seo-audit"
-                    ? "SEO Audit"
-                    : action.slug === "client-roadmap"
-                      ? "Roadmap"
-                      : action.slug === "meta-title-description"
-                        ? "On-Page SEO"
-                        : "Other"
-            }
-            docLink={
-              action.slug === "gmb-posts"
-                ? `/${slug}/preview/gmb-posts/${resultId}`
-                : action.slug === "meta-title-description"
-                  ? `/${slug}/preview/meta-tags/${metaTagsActualId ?? resultId}`
-                  : `/api/seo-actions/${slug}/${actionSlug}/results/${resultId}/docx`
-            }
-            sourceType={action.slug}
-          />
-        )}
-        {action.slug === "gmb-posts" ? (
-          gmbResult ? (
-            <a
-              href={`/api/seo-actions/${slug}/${actionSlug}/gmb-download?resultId=${encodeURIComponent(resultId)}&batch=1`}
-              className="ml-auto inline-flex items-center justify-center gap-2 rounded-md bg-gradient-to-br from-[#343ED7] via-[#783DF5] to-[#C535C9] px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-[#783DF5]/25 transition hover:brightness-110 hover:shadow-[#783DF5]/40"
-              title="Download every image in this batch + a captions.txt file as a ZIP."
-            >
-              <Download className="h-3.5 w-3.5" />
-              Download batch ({gmbResult.posts.length} post
-              {gmbResult.posts.length === 1 ? "" : "s"})
-            </a>
-          ) : (
-            <span
-              title="Becomes active once the GMB posts are generated."
-              className="ml-auto inline-flex cursor-not-allowed items-center gap-2 rounded-md border border-white/15 bg-white/[0.04] px-4 py-2 text-xs font-semibold text-white/50"
-            >
-              <Download className="h-3.5 w-3.5" />
-              Download available soon
-            </span>
-          )
-        ) : action.slug === "meta-title-description" ? (
-          metaTagsResult ? (
-            <div className="ml-auto flex flex-col items-stretch gap-2">
+      <div className="mt-2 flex justify-end">
+        <div className="flex w-full max-w-[280px] flex-col items-stretch gap-2">
+          {/* Send to Pending Review on top — same column as the
+              downloads so consultants don't lose it on the left edge
+              while their eyes are tracking the result table. */}
+          {(action.slug === "gmb-posts"
+            ? gmbResult
+            : action.slug === "meta-title-description"
+              ? metaTagsResult
+              : existing) && (
+            <SendToReviewButton
+              variant="prominent"
+              clientSlug={slug}
+              task={
+                action.slug === "gmb-posts"
+                  ? `${gmbResult?.posts.length ?? 0} GMB post${
+                      (gmbResult?.posts.length ?? 0) === 1 ? "" : "s"
+                    } · ${client.title}`
+                  : action.slug === "meta-title-description"
+                    ? `Meta tags rewrite — ${metaTagsResult?.rows.length ?? 0} page${(metaTagsResult?.rows.length ?? 0) === 1 ? "" : "s"} · ${client.title}`
+                    : `${action.label} · ${client.title}`
+              }
+              category={
+                action.slug === "gmb-posts"
+                  ? "GMB Posts"
+                  : action.slug === "keyword-research"
+                    ? "Keyword Research"
+                    : action.slug === "seo-audit"
+                      ? "SEO Audit"
+                      : action.slug === "client-roadmap"
+                        ? "Roadmap"
+                        : action.slug === "meta-title-description"
+                          ? "On-Page SEO"
+                          : "Other"
+              }
+              docLink={
+                action.slug === "gmb-posts"
+                  ? `/${slug}/preview/gmb-posts/${resultId}`
+                  : action.slug === "meta-title-description"
+                    ? `/${slug}/preview/meta-tags/${metaTagsActualId ?? resultId}`
+                    : `/api/seo-actions/${slug}/${actionSlug}/results/${resultId}/docx`
+              }
+              sourceType={action.slug}
+            />
+          )}
+          {action.slug === "gmb-posts" ? (
+            gmbResult ? (
               <a
-                href={`/api/seo-actions/${slug}/${actionSlug}/meta-export?id=${encodeURIComponent(metaTagsActualId ?? resultId)}&format=csv`}
+                href={`/api/seo-actions/${slug}/${actionSlug}/gmb-download?resultId=${encodeURIComponent(resultId)}&batch=1`}
                 className="inline-flex items-center justify-center gap-2 rounded-md bg-gradient-to-br from-[#343ED7] via-[#783DF5] to-[#C535C9] px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-[#783DF5]/25 transition hover:brightness-110 hover:shadow-[#783DF5]/40"
-                title="CSV with one row per page — drops into Yoast / Webflow / WordPress bulk edit."
+                title="Download every image in this batch + a captions.txt file as a ZIP."
               >
                 <Download className="h-3.5 w-3.5" />
-                Download CSV ({metaTagsResult.rows.length} page
-                {metaTagsResult.rows.length === 1 ? "" : "s"})
+                Download batch ({gmbResult.posts.length} post
+                {gmbResult.posts.length === 1 ? "" : "s"})
+              </a>
+            ) : (
+              <span
+                title="Becomes active once the GMB posts are generated."
+                className="inline-flex cursor-not-allowed items-center justify-center gap-2 rounded-md border border-white/15 bg-white/[0.04] px-4 py-2 text-xs font-semibold text-white/50"
+              >
+                <Download className="h-3.5 w-3.5" />
+                Download available soon
+              </span>
+            )
+          ) : action.slug === "meta-title-description" ? (
+            metaTagsResult ? (
+              <>
+                <a
+                  href={`/api/seo-actions/${slug}/${actionSlug}/meta-export?id=${encodeURIComponent(metaTagsActualId ?? resultId)}&format=csv`}
+                  className="inline-flex items-center justify-center gap-2 rounded-md bg-gradient-to-br from-[#343ED7] via-[#783DF5] to-[#C535C9] px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-[#783DF5]/25 transition hover:brightness-110 hover:shadow-[#783DF5]/40"
+                  title="CSV with one row per page — drops into Yoast / Webflow / WordPress bulk edit."
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  Download CSV ({metaTagsResult.rows.length} page
+                  {metaTagsResult.rows.length === 1 ? "" : "s"})
+                </a>
+                <a
+                  href={`/api/seo-actions/${slug}/${actionSlug}/meta-export?id=${encodeURIComponent(metaTagsActualId ?? resultId)}&format=docx`}
+                  className="inline-flex items-center justify-center gap-2 rounded-md border border-white/20 bg-white/[0.04] px-4 py-2 text-xs font-semibold text-white/85 transition hover:border-white/35 hover:bg-white/[0.08] hover:text-white"
+                  title="Word document with the current vs optimised table — for the client review packet."
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  Download DOCX
+                </a>
+              </>
+            ) : (
+              <span
+                title="Becomes active once the meta tags are generated."
+                className="inline-flex cursor-not-allowed items-center justify-center gap-2 rounded-md border border-white/15 bg-white/[0.04] px-4 py-2 text-xs font-semibold text-white/50"
+              >
+                <Download className="h-3.5 w-3.5" />
+                Download available soon
+              </span>
+            )
+          ) : existing ? (
+            <>
+              <a
+                href={`/seo/${slug}/actions/${actionSlug}/results/${resultId}?print=true`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 rounded-md bg-gradient-to-br from-[#343ED7] via-[#783DF5] to-[#C535C9] px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-[#783DF5]/25 transition hover:brightness-110 hover:shadow-[#783DF5]/40"
+              >
+                <Download className="h-3.5 w-3.5" />
+                Download PDF
               </a>
               <a
-                href={`/api/seo-actions/${slug}/${actionSlug}/meta-export?id=${encodeURIComponent(metaTagsActualId ?? resultId)}&format=docx`}
+                href={`/api/seo-actions/${slug}/${actionSlug}/results/${resultId}/docx`}
                 className="inline-flex items-center justify-center gap-2 rounded-md border border-white/20 bg-white/[0.04] px-4 py-2 text-xs font-semibold text-white/85 transition hover:border-white/35 hover:bg-white/[0.08] hover:text-white"
-                title="Word document with the current vs optimised table — for the client review packet."
+                title="Download as a Word document so you can edit before sending."
               >
                 <Download className="h-3.5 w-3.5" />
                 Download DOCX
               </a>
-            </div>
+            </>
           ) : (
             <span
-              title="Becomes active once the meta tags are generated."
-              className="ml-auto inline-flex cursor-not-allowed items-center gap-2 rounded-md border border-white/15 bg-white/[0.04] px-4 py-2 text-xs font-semibold text-white/50"
+              title="Becomes active once the audit completes and the result is saved."
+              className="inline-flex cursor-not-allowed items-center justify-center gap-2 rounded-md border border-white/15 bg-white/[0.04] px-4 py-2 text-xs font-semibold text-white/50"
             >
               <Download className="h-3.5 w-3.5" />
               Download available soon
             </span>
-          )
-        ) : existing ? (
-          <div className="ml-auto flex flex-col items-stretch gap-2">
-            <a
-              href={`/seo/${slug}/actions/${actionSlug}/results/${resultId}?print=true`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center justify-center gap-2 rounded-md bg-gradient-to-br from-[#343ED7] via-[#783DF5] to-[#C535C9] px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-[#783DF5]/25 transition hover:brightness-110 hover:shadow-[#783DF5]/40"
-            >
-              <Download className="h-3.5 w-3.5" />
-              Download PDF
-            </a>
-            <a
-              href={`/api/seo-actions/${slug}/${actionSlug}/results/${resultId}/docx`}
-              className="inline-flex items-center justify-center gap-2 rounded-md border border-white/20 bg-white/[0.04] px-4 py-2 text-xs font-semibold text-white/85 transition hover:border-white/35 hover:bg-white/[0.08] hover:text-white"
-              title="Download as a Word document so you can edit before sending."
-            >
-              <Download className="h-3.5 w-3.5" />
-              Download DOCX
-            </a>
-          </div>
-        ) : (
-          <span
-            title="Becomes active once the audit completes and the result is saved."
-            className="ml-auto inline-flex cursor-not-allowed items-center gap-2 rounded-md border border-white/15 bg-white/[0.04] px-4 py-2 text-xs font-semibold text-white/50"
-          >
-            <Download className="h-3.5 w-3.5" />
-            Download available soon
-          </span>
-        )}
+          )}
+        </div>
       </div>
 
       <header className="animate-fade-up mt-6">

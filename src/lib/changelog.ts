@@ -13,6 +13,22 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "73.5",
+    date: "2026-05-21",
+    title: "Send-on-top button stack, fresh-generation bug fixed, Pending Review page feels instant",
+    highlights: [
+      "**⬆️ Send-for-Approval moved to top of the right-side button stack.** Previously it floated on the LEFT while CSV/DOCX downloads stacked on the right — split focus. Now a single right-aligned column: `Send for Approval` (brand-gradient, on top), `Download CSV`, `Download DOCX`. Same restack applies to GMB Posts + every other action's result page for consistency.",
+      "**🪲 New meta-tags generation was showing the PREVIOUS result's data — fixed.** v73.4's \"fall back to latest meta-tags result if exact ID misses\" optimisation mis-fired on fresh runs: when the page loaded BEFORE generation completed, it'd serve the previous result's 25 rows instead of waiting. Two-part fix:",
+      "  - Removed the fallback. The page now does a strict exact-ID lookup. Since v73.4 already made `meta-generate` honour `body.resultId` from the URL, new runs are self-consistent end-to-end without needing the fallback.",
+      "  - Runner now calls `router.refresh()` after generation completes, so the server-rendered Send/Download buttons at the top of the page re-evaluate against the freshly-saved result automatically — no manual page refresh needed.",
+      "**⚡ Pending Review page felt instant now (was ~10s on cold function).** Three changes:",
+      "  - New `loading.tsx` at `/seo/[slug]/review` — Next.js shows an instant skeleton (logo placeholder + title + 4 table-row shimmers) the moment the consultant clicks the chip, instead of 10s of blank screen while SSR runs.",
+      "  - Parallelised the two awaited fetches (`getClientBySlug` + `listReviewItems`) with `Promise.all` — saves one round-trip on warm requests.",
+      "  - Link prefetch on the chip already warms the shell when consultants hover; the loading boundary closes the visual gap on actual click.",
+      "  Cold function spin-up + Notion warm-up still cost ~3-5s in absolute terms, but consultants now see the page chrome immediately and the table fills in as data lands. Perceived perf is the win.",
+    ],
+  },
+  {
     version: "73.4",
     date: "2026-05-21",
     title: "Slimmer header, meta-tags result page now sendable + downloadable instantly",
