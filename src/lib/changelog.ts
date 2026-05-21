@@ -13,6 +13,20 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.4",
+    date: "2026-05-21",
+    title: "Call Notes modal layout fix · bucket switcher in edit · brief panels stop growing",
+    highlights: [
+      "**🪜 Modal layout fix.** v74.3's deck had everything inside one big scroll container — when the card grew (long reasoning, edit mode with bigger textarea) the action buttons could slip below the visible area and the keyboard hint floated awkwardly under the buttons with no breathing room. New structure: **fixed header · scrollable body (source + progress + card) · FIXED FOOTER (action buttons + keyboard hint)**. The action bar is now always within reach regardless of how tall the card grows. Modal max-height bumped 70vh → 85vh.",
+      "**🎯 Edit-before-approve now also lets you change the bucket.** New `Move to: DO'S | DON'TS | NOTES` segmented picker appears in the card header during edit. Clicking a different bucket re-themes the card colour LIVE (green / red / violet) so you can see what you're committing to. The bucket override flows through `accept(s, { text, bucket })` so the new bucket is honoured both in the brief PUT and in the in-memory suggestion list.",
+      "**📏 Brief panels stop growing with long items.** Two changes inside the Do's / Don'ts / Notes panels:",
+      "  - Each item display now line-clamps to 3 lines (CSS `-webkit-line-clamp: 3`). A `ResizeObserver` checks whether the unclamped text actually overflows — only renders the `show more` / `show less` link when there's something to reveal. No useless toggles on short items.",
+      "  - The `<ul>` containing items now has `max-h-[42vh] overflow-y-auto pr-1` — a brief with 20 items scrolls inside its panel instead of pushing Target Keywords / SEO Actions off-screen.",
+      "**✏️ Brief item editor now multi-line.** EditableRow's single-line `<input>` was cramming long items into a one-line field — the most common reason brief items got harder to read after a Call Notes session. Now uses a `<textarea>` with auto-sized rows (2-6 based on content). Cmd/Ctrl+Enter saves, Esc cancels.",
+      "**🧹 Cleaner edit textarea visual.** Removed the nested border that made the edit textarea look like a card-within-a-card. Now uses a single ring (1px static → 2px amber focus) on a soft white/[0.04] background. Reads as part of the card, not a stranger inside it.",
+    ],
+  },
+  {
     version: "74.2",
     date: "2026-05-21",
     title: "Call Notes goes link-only — paste a Fathom URL, no copy-paste needed",
