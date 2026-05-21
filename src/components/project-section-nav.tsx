@@ -7,6 +7,7 @@ const SECTIONS = [
   { id: "section-target-keywords", n: "02", label: "Keyword Research" },
   { id: "section-data", n: "03", label: "Data & Quick Actions" },
   { id: "section-actions", n: "04", label: "SEO Actions" },
+  { id: "section-accesses", n: "05", label: "Accesses" },
 ];
 
 /** Numbered section nav for a project page — highlights the section in view

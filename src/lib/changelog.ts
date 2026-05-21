@@ -13,6 +13,24 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "73.2",
+    date: "2026-05-21",
+    title: "SEO DPT icon, roadmap past-week status chip, Accesses vault, chunked meta-generation (fixes \"schema\" error)",
+    highlights: [
+      "**🪲 Meta tags: \"No object generated: response did not match schema\" — fixed.** Root cause: full-batch generateObject for 25+ pages was either truncating mid-JSON (output token ceiling) or returning one bad row that invalidated the whole array. Now chunked: pages split into batches of 10, each batch hits Claude in PARALLEL via Promise.all, with one automatic retry per chunk on failure. Three wins:",
+      "  - Each chunk's output fits comfortably under the schema validator's ceiling (no truncation).",
+      "  - A transient blip on one chunk no longer kills the whole run.",
+      "  - **Partial success**: 4/5 chunks succeeding now returns 40 rows instead of 0. The result UI surfaces a `⚠ N of M chunks failed` warning when this happens.",
+      "**🎨 SEO DPT header gets its icon.** Passed `Icon={Gauge}` to `DepartmentHeader` so the SEO landing page gets the same brand-gradient icon block ADS DPT etc. have. The plain dark header looked weak; gradient icon gives it visual anchor without bloating the layout.",
+      "**🟢🔴 Roadmap strip past-week status chip.** Next to the current-week summary, a colored chip now appears from Week 2 onwards:",
+      "  - `Weeks 1–N all done` in emerald when zero past-week tasks remain non-implemented",
+      "  - `Weeks 1–N have X tasks pending` in rose when something slipped",
+      "  Computed live from the roadmap board state — consultant sees at a glance whether the project is on-track.",
+      "  Current-week summary also reworded to `Week N of 12 · X tasks pending` (only counts non-implemented tasks; implemented ones don't need attention).",
+      "**🔐 New Accesses section on every client page.** Per-client credentials vault (host login, WordPress backend, cPanel, Mailchimp, GA4 / GSC owner — whatever the client hands us). Each entry: label, login URL, username, password, notes. Passwords MASKED by default with click-to-reveal + copy buttons. Add / edit / delete inline. Stored in KV (private to the workspace; KV encrypted at rest by Vercel/Upstash). New `Accesses` entry in the in-page section nav.",
+    ],
+  },
+  {
     version: "73.1",
     date: "2026-05-20",
     title: "Meta Tags: full sitemap coverage, top-agency-grade title rules, batch-only approval",

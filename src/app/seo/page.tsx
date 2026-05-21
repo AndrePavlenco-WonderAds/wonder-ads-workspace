@@ -1,3 +1,4 @@
+import { Gauge } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { DepartmentHeader } from "@/components/department-header";
 import { ClaudeChat } from "@/components/claude-chat";
@@ -67,6 +68,7 @@ export default async function SeoPage() {
       <DepartmentHeader
         title="SEO DPT"
         tagline="Organic growth in Google and AIs. #1 SEO & GEO Agency in Portugal."
+        Icon={Gauge}
         count={clients.length || undefined}
         countLabel="clients"
         rightSlot={<WorldMap />}

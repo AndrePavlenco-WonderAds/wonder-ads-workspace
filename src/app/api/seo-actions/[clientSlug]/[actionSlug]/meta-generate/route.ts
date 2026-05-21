@@ -247,36 +247,73 @@ export async function POST(
         });
 
         // ---- Generate phase ----
+        // Chunked generation: split the crawled pages into batches of
+        // CHUNK_SIZE and call generateObject per chunk IN PARALLEL.
+        // Three wins:
+        //   1. Each batch fits comfortably under the maxOutputTokens
+        //      ceiling — no more "response did not match schema"
+        //      truncation errors on 25+ page sites.
+        //   2. Per-chunk retry: a transient API blip / one bad row no
+        //      longer kills the entire batch.
+        //   3. Partial success: 4/5 chunks landing means consultant
+        //      gets 40 rows instead of 0.
+        const CHUNK_SIZE = 10;
+        const allPages = okCrawls.map((c) => ({
+          url: c.result.finalUrl,
+          currentTitle: c.result.title,
+          currentMeta: c.result.metaDescription,
+          h1: c.result.h1[0] ?? null,
+        }));
+        const chunks: typeof allPages[] = [];
+        for (let i = 0; i < allPages.length; i += CHUNK_SIZE) {
+          chunks.push(allPages.slice(i, i + CHUNK_SIZE));
+        }
         send({
           event: "progress",
           phase: "generate",
-          message: `Drafting optimised meta tags with Claude (Haiku 4.5 + KW clusters)…`,
-        });
-        const claudePrompt = buildPrompt({
-          clientName: client.title,
-          websiteUrl,
-          languageCode: geo.languageCode,
-          brief,
-          onboardingText: onboarding?.extractedText ?? null,
-          kwClusters: latestKw.kwClusters,
-          focusKeywords,
-          pages: okCrawls.map((c) => ({
-            url: c.result.finalUrl,
-            currentTitle: c.result.title,
-            currentMeta: c.result.metaDescription,
-            h1: c.result.h1[0] ?? null,
-          })),
+          message: `Drafting optimised meta tags with Claude (Haiku 4.5) — ${chunks.length} chunk${chunks.length === 1 ? "" : "s"} of up to ${CHUNK_SIZE} pages in parallel…`,
         });
         const system = buildSystemPrompt(geo.languageCode);
-        const claudeResult = await generateObject({
-          model: anthropic(CAPTION_MODEL),
-          schema: BatchSchema,
-          system,
-          prompt: claudePrompt,
-          // Per-row ~150 tokens × 50 rows ≈ 7500. Cap a bit higher for safety.
-          maxOutputTokens: 8000,
-        });
-        const drafts = claudeResult.object.rows;
+        const chunkResults = await Promise.all(
+          chunks.map(async (chunk, idx) =>
+            generateChunkWithRetry({
+              chunkIdx: idx,
+              chunk,
+              clientName: client.title,
+              websiteUrl,
+              languageCode: geo.languageCode,
+              brief,
+              onboardingText: onboarding?.extractedText ?? null,
+              kwClusters: latestKw.kwClusters ?? [],
+              focusKeywords,
+              system,
+            }),
+          ),
+        );
+        const drafts = chunkResults.flat();
+        const failedChunks = chunkResults.filter((r) => r.length === 0).length;
+        if (drafts.length === 0) {
+          send({
+            event: "error",
+            message:
+              "All chunks failed to generate. Likely Claude is returning schema-invalid responses for this client's URLs. Try Quick depth (10) first, or check Vercel logs for the underlying error.",
+          });
+          controller.close();
+          return;
+        }
+        if (failedChunks > 0) {
+          send({
+            event: "progress",
+            phase: "generate",
+            message: `⚠️ ${failedChunks} of ${chunks.length} chunk${chunks.length === 1 ? "" : "s"} failed — ${drafts.length}/${allPages.length} pages still optimised. Open the result to see partial output.`,
+          });
+        } else {
+          send({
+            event: "progress",
+            phase: "generate",
+            message: `✓ All ${chunks.length} chunk${chunks.length === 1 ? "" : "s"} succeeded — ${drafts.length} rows ready.`,
+          });
+        }
 
         // ---- Stitch + save ----
         send({
@@ -509,6 +546,64 @@ function formatBrief(brief: {
     parts.push(`### Notes\n${brief.notes.map((n) => `- ${n}`).join("\n")}`);
   if (parts.length === 0) return "";
   return `## Client brief\n${parts.join("\n\n")}`;
+}
+
+type ChunkPage = {
+  url: string;
+  currentTitle: string | null;
+  currentMeta: string | null;
+  h1: string | null;
+};
+
+/** Generate a single chunk of pages with one automatic retry on
+ *  failure. Returns the parsed rows array or `[]` on permanent
+ *  failure (caller fans these out + concatenates). */
+async function generateChunkWithRetry(opts: {
+  chunkIdx: number;
+  chunk: ChunkPage[];
+  clientName: string;
+  websiteUrl: string;
+  languageCode: string;
+  brief: { dos: string[]; donts: string[]; notes: string[] };
+  onboardingText: string | null;
+  kwClusters: KwCluster[];
+  focusKeywords: string;
+  system: string;
+}): Promise<z.infer<typeof RowSchema>[]> {
+  const prompt = buildPrompt({
+    clientName: opts.clientName,
+    websiteUrl: opts.websiteUrl,
+    languageCode: opts.languageCode,
+    brief: opts.brief,
+    onboardingText: opts.onboardingText,
+    kwClusters: opts.kwClusters,
+    focusKeywords: opts.focusKeywords,
+    pages: opts.chunk,
+  });
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const r = await generateObject({
+        model: anthropic(CAPTION_MODEL),
+        schema: BatchSchema,
+        system: opts.system,
+        prompt,
+        // Per-row ~200 tokens with safety; 10 rows × 200 = 2000 budget.
+        // Way under the model's 64k ceiling, so we never truncate.
+        maxOutputTokens: 3000,
+      });
+      return r.object.rows;
+    } catch (err) {
+      console.warn(
+        `[meta-generate] chunk ${opts.chunkIdx} attempt ${attempt + 1} failed:`,
+        err instanceof Error ? err.message.slice(0, 200) : String(err),
+      );
+      // On the FIRST failure pause briefly to dodge transient API
+      // throttling, then retry. On the SECOND failure give up — the
+      // caller's partial-success path handles dropped chunks.
+      if (attempt === 0) await new Promise((r) => setTimeout(r, 800));
+    }
+  }
+  return [];
 }
 
 /** Fallback URL discovery for sites with thin or missing sitemaps:

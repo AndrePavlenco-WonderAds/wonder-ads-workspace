@@ -3,6 +3,7 @@ import { ExternalLink, RefreshCw } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { ClientBrief } from "@/components/client-brief";
 import { ClientFiles } from "@/components/client-files";
+import { ClientAccesses } from "@/components/client-accesses";
 import { OnboardingForm } from "@/components/onboarding-form";
 import { TargetKeywordsPanel } from "@/components/target-keywords-panel";
 import { CurrentRoadmapStrip } from "@/components/current-roadmap-strip";
@@ -159,6 +160,10 @@ export default async function ClientPage({
 
       <section className="animate-fade-up mt-10 sm:mt-14">
         <SeoActions clientName={client.title} clientSlug={slug} />
+      </section>
+
+      <section className="animate-fade-up mt-10 sm:mt-14">
+        <ClientAccesses slug={slug} clientName={client.title} />
       </section>
     </PageShell>
   );
