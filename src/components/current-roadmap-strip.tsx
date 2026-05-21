@@ -7,25 +7,7 @@
 
 import Link from "next/link";
 import { ArrowRight, Map, Sparkles } from "lucide-react";
-import {
-  getCurrentRoadmap,
-  currentWeekIndex,
-  type RoadmapStatus,
-} from "@/lib/roadmap-store";
-
-const STATUS_DOT: Record<RoadmapStatus, string> = {
-  not_started: "bg-white/35",
-  in_progress: "bg-sky-400",
-  pending_review: "bg-amber-400",
-  implemented: "bg-emerald-400",
-};
-
-const STATUS_LABEL: Record<RoadmapStatus, string> = {
-  not_started: "Not started",
-  in_progress: "In progress",
-  pending_review: "Pending review",
-  implemented: "Implemented",
-};
+import { getCurrentRoadmap, currentWeekIndex } from "@/lib/roadmap-store";
 
 export async function CurrentRoadmapStrip({ slug }: { slug: string }) {
   const roadmap = await getCurrentRoadmap(slug);
@@ -101,25 +83,6 @@ export async function CurrentRoadmapStrip({ slug }: { slug: string }) {
               : `Weeks 1-${week - 1} have ${pastPending.length} task${pastPending.length === 1 ? "" : "s"} pending`}
           </span>
         </Link>
-      )}
-      {currentTasks.slice(0, 3).map((t) => (
-        <Link
-          key={t.id}
-          href={`/seo/${slug}/roadmap`}
-          className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.025] px-2.5 py-1 text-[11px] text-white/75 transition hover:border-white/25 hover:bg-white/[0.05] hover:text-white"
-          title={`${STATUS_LABEL[t.status]} — ${t.title}`}
-        >
-          <span
-            className={`h-1.5 w-1.5 rounded-full ${STATUS_DOT[t.status]}`}
-            aria-hidden
-          />
-          <span className="max-w-[16rem] truncate">{t.title}</span>
-        </Link>
-      ))}
-      {currentTasks.length > 3 && (
-        <span className="text-[11px] text-white/45">
-          +{currentTasks.length - 3} more
-        </span>
       )}
     </div>
   );

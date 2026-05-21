@@ -147,13 +147,24 @@ export async function POST(
     );
   }
 
-  let body: { inputs?: Record<string, string> } = {};
+  let body: { inputs?: Record<string, string>; resultId?: string } = {};
   try {
-    body = (await req.json()) as { inputs?: Record<string, string> };
+    body = (await req.json()) as {
+      inputs?: Record<string, string>;
+      resultId?: string;
+    };
   } catch {
     /* empty body is fine */
   }
   const inputs = body.inputs ?? {};
+  // Honour the resultId from the URL so the result we save matches the
+  // ID the page is rendering at. Without this, the page-level
+  // getMetaTagsResult(slug, urlResultId) lookup returns null and the
+  // Send-for-Approval + Download buttons stay disabled.
+  const incomingResultId =
+    typeof body.resultId === "string" && body.resultId.trim()
+      ? body.resultId.trim()
+      : null;
   const websiteInput = (inputs.pageUrl ?? "").trim();
   const depth = parseDepth(inputs.depth);
   const focusKeywords = (inputs.focusKeywords ?? "").trim();
@@ -363,7 +374,7 @@ export async function POST(
           message: "Saving optimised tags to your workspace…",
         });
         const now = Date.now();
-        const resultId = newMetaTagsResultId();
+        const resultId = incomingResultId ?? newMetaTagsResultId();
         // Build a lookup from URL → crawl data so we can stitch
         // current + optimised side-by-side.
         const byUrl = new Map(

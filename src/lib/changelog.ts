@@ -13,6 +13,24 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "73.4",
+    date: "2026-05-21",
+    title: "Slimmer header, meta-tags result page now sendable + downloadable instantly",
+    highlights: [
+      "**📐 Client page header trimmed.** Removed the per-task chips that piled up next to the client name (`Keyword Cluster Mapping…`, `Blog Article #1…`, `GMB Post Week 1…`). Header now shows just the two essentials:",
+      "  - `Week N of 12 · X tasks pending` (current week summary)",
+      "  - Green or red past-weeks status chip",
+      "  Individual tasks live on the roadmap board itself — clicking the summary chip jumps you there.",
+      "**🪲 Meta-tags result page was stuck on \"Download available soon\" — fixed.** Root cause: `meta-generate` was generating its own meta-tags-store ID server-side and ignoring the URL `resultId` that the runner sent in the request body. Result: the page-level `getMetaTagsResult(slug, urlResultId)` lookup always returned null → buttons stayed disabled, even after generation completed. Two-part fix:",
+      "  - `meta-generate` now honours the `resultId` from the request body and uses it as the store key. New runs are self-consistent.",
+      "  - Page falls back to `listMetaTagsResults(slug)` and grabs the latest if the exact ID misses — covers pre-v73.4 runs so existing results work too.",
+      "**📤 Send-for-Approval + downloads light up the instant generation finishes.** Same logic as GMB Posts:",
+      "  - Prominent brand-gradient `Send for Approval` button at the top of the result page, points the doc link at the public preview at `/<slug>/preview/meta-tags/<resultId>` (client-friendly, no internal app leaks).",
+      "  - `Download CSV` — one row per page, drops into Yoast / Webflow / WordPress bulk edit.",
+      "  - `Download DOCX` — Word doc with the current vs optimised table for review packets.",
+    ],
+  },
+  {
     version: "73.3",
     date: "2026-05-21",
     title: "Meta tags: lenient schema + generateText salvage layer (definitive fix for \"schema\" error)",
