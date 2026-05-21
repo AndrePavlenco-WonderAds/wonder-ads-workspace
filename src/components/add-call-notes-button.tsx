@@ -177,13 +177,22 @@ function Modal({
     }
   }
 
-  async function accept(suggestion: Suggestion, overrideText?: string) {
-    const textToSave = (overrideText ?? suggestion.text).trim();
+  async function accept(
+    suggestion: Suggestion,
+    override?: { text?: string; bucket?: Bucket },
+  ) {
+    const textToSave = (override?.text ?? suggestion.text).trim();
+    const bucketToSave = override?.bucket ?? suggestion.bucket;
     if (!textToSave) return;
     setSuggestions((cur) =>
       cur.map((s) =>
         s.id === suggestion.id
-          ? { ...s, state: "accepting", text: textToSave }
+          ? {
+              ...s,
+              state: "accepting",
+              text: textToSave,
+              bucket: bucketToSave,
+            }
           : s,
       ),
     );
@@ -197,7 +206,7 @@ function Modal({
       const brief = (await briefRes.json()) as ClientBrief;
       const next: ClientBrief = {
         ...brief,
-        [suggestion.bucket]: [...brief[suggestion.bucket], textToSave],
+        [bucketToSave]: [...brief[bucketToSave], textToSave],
       };
       const put = await fetch(`/api/briefs/${slug}`, {
         method: "PUT",
@@ -240,11 +249,12 @@ function Modal({
       onClick={onClose}
     >
       <div
-        className="brand-gradient-border w-full max-w-2xl overflow-hidden rounded-2xl bg-[#0a0a0c] shadow-[0_20px_70px_-15px_rgba(120,61,245,0.4)]"
+        className="brand-gradient-border flex w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-[#0a0a0c] shadow-[0_20px_70px_-15px_rgba(120,61,245,0.4)]"
+        style={{ maxHeight: "85vh" }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
-        <header className="flex items-center justify-between gap-4 border-b border-white/8 px-5 py-3.5">
+        {/* Header — always visible */}
+        <header className="flex shrink-0 items-center justify-between gap-4 border-b border-white/8 px-5 py-3.5">
           <div className="flex items-center gap-2">
             <PhoneCall className="h-4 w-4 text-[color:var(--brand-purple)]" />
             <h2 className="text-sm font-medium text-white">
@@ -261,9 +271,8 @@ function Modal({
           </button>
         </header>
 
-        {/* Body */}
-        <div className="max-h-[70vh] overflow-y-auto px-5 py-4">
-          {step === "paste" && (
+        {step === "paste" && (
+          <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
             <PasteView
               fathomUrl={fathomUrl}
               setFathomUrl={setFathomUrl}
@@ -275,22 +284,22 @@ function Modal({
               setShowPasteFallback={setShowPasteFallback}
               onProcess={processCall}
             />
-          )}
-          {step === "suggestions" && (
-            <SuggestionDeck
-              suggestions={suggestions}
-              sourceTitle={sourceTitle}
-              onAccept={accept}
-              onDecline={decline}
-              onBack={() => {
-                setStep("paste");
-                setSuggestions([]);
-                setSourceTitle(null);
-              }}
-              onClose={onClose}
-            />
-          )}
-        </div>
+          </div>
+        )}
+        {step === "suggestions" && (
+          <SuggestionDeck
+            suggestions={suggestions}
+            sourceTitle={sourceTitle}
+            onAccept={accept}
+            onDecline={decline}
+            onBack={() => {
+              setStep("paste");
+              setSuggestions([]);
+              setSourceTitle(null);
+            }}
+            onClose={onClose}
+          />
+        )}
       </div>
     </div>
   );
@@ -417,7 +426,8 @@ function PasteView({
 //
 // Each suggestion animates in from the right, then animates left (skip)
 // or right (approve) on action. Edit replaces the card body with a
-// textarea + Save-and-Approve / Cancel — same destination either way.
+// bucket switcher + textarea — consultant can re-bucket and rewrite
+// before approval.
 function SuggestionDeck({
   suggestions,
   sourceTitle,
@@ -428,7 +438,10 @@ function SuggestionDeck({
 }: {
   suggestions: Suggestion[];
   sourceTitle: string | null;
-  onAccept: (s: Suggestion, overrideText?: string) => void;
+  onAccept: (
+    s: Suggestion,
+    override?: { text?: string; bucket?: Bucket },
+  ) => void;
   onDecline: (id: string) => void;
   onBack: () => void;
   onClose: () => void;
@@ -449,12 +462,14 @@ function SuggestionDeck({
 
   const [editing, setEditing] = useState(false);
   const [editedText, setEditedText] = useState("");
+  const [editedBucket, setEditedBucket] = useState<Bucket>("dos");
   const [exitDir, setExitDir] = useState<"left" | "right" | null>(null);
 
   // Reset edit + animation state whenever the current card changes.
   useEffect(() => {
     setEditing(false);
     setEditedText(current?.text ?? "");
+    setEditedBucket(current?.bucket ?? "dos");
     setExitDir(null);
   }, [current?.id]);
 
@@ -482,8 +497,10 @@ function SuggestionDeck({
     if (!current) return;
     const trimmed = editedText.trim();
     if (!trimmed) return;
-    animateOutAndAct("right", () => onAccept(current, trimmed));
-  }, [animateOutAndAct, current, editedText, onAccept]);
+    animateOutAndAct("right", () =>
+      onAccept(current, { text: trimmed, bucket: editedBucket }),
+    );
+  }, [animateOutAndAct, current, editedText, editedBucket, onAccept]);
 
   // Keyboard shortcuts — disabled while editing so typing in the
   // textarea doesn't trigger swipes. Escape on edit cancels edit; on
@@ -518,7 +535,7 @@ function SuggestionDeck({
   // No suggestions at all — empty state.
   if (total === 0) {
     return (
-      <div className="py-6 text-center">
+      <div className="min-h-0 flex-1 overflow-y-auto px-5 py-8 text-center">
         <p className="text-sm text-white/75">
           No brief-worthy items found in this call.
         </p>
@@ -548,7 +565,7 @@ function SuggestionDeck({
   // All done.
   if (!current) {
     return (
-      <div className="py-8 text-center">
+      <div className="min-h-0 flex-1 overflow-y-auto px-5 py-8 text-center">
         <div className="mx-auto mb-3 inline-flex h-12 w-12 items-center justify-center rounded-full border border-emerald-400/40 bg-emerald-500/15">
           <Check className="h-6 w-6 text-emerald-300" />
         </div>
@@ -578,116 +595,122 @@ function SuggestionDeck({
   }
 
   return (
-    <div className="space-y-4">
-      {/* Progress + source */}
-      <div className="space-y-2">
-        {sourceTitle && (
-          <p className="truncate text-[11px] text-white/40">
-            <span className="text-white/65">{sourceTitle}</span>
-            <span className="ml-1.5 text-emerald-300/80">
-              · fetched from Fathom
-            </span>
-          </p>
-        )}
-        <div className="flex items-center gap-3">
-          <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-white/45">
-            {positionLabel}
-          </span>
-          <div className="relative h-1 flex-1 overflow-hidden rounded-full bg-white/[0.05]">
-            <div
-              className="absolute inset-y-0 left-0 bg-emerald-400/70 transition-all duration-300"
-              style={{ width: `${(accepted / total) * 100}%` }}
-            />
-            <div
-              className="absolute inset-y-0 bg-white/15 transition-all duration-300"
-              style={{
-                left: `${(accepted / total) * 100}%`,
-                width: `${(declined / total) * 100}%`,
-              }}
-            />
+    <>
+      {/* Scrollable body — source, progress, card */}
+      <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
+        <div className="space-y-4">
+          <div className="space-y-2">
+            {sourceTitle && (
+              <p className="truncate text-[11px] text-white/40">
+                <span className="text-white/65">{sourceTitle}</span>
+                <span className="ml-1.5 text-emerald-300/80">
+                  · fetched from Fathom
+                </span>
+              </p>
+            )}
+            <div className="flex items-center gap-3">
+              <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-white/45">
+                {positionLabel}
+              </span>
+              <div className="relative h-1 flex-1 overflow-hidden rounded-full bg-white/[0.05]">
+                <div
+                  className="absolute inset-y-0 left-0 bg-emerald-400/70 transition-all duration-300"
+                  style={{ width: `${(accepted / total) * 100}%` }}
+                />
+                <div
+                  className="absolute inset-y-0 bg-white/15 transition-all duration-300"
+                  style={{
+                    left: `${(accepted / total) * 100}%`,
+                    width: `${(declined / total) * 100}%`,
+                  }}
+                />
+              </div>
+              <span className="text-[10px] text-white/45">
+                <span className="text-emerald-300/85">{accepted}</span>
+                <span className="px-0.5">·</span>
+                <span className="text-white/45">{declined}</span>
+              </span>
+            </div>
           </div>
-          <span className="text-[10px] text-white/45">
-            <span className="text-emerald-300/85">{accepted}</span>
-            <span className="px-0.5">·</span>
-            <span className="text-white/45">{declined}</span>
-          </span>
+
+          <SuggestionDeckCard
+            suggestion={current}
+            editing={editing}
+            editedText={editedText}
+            setEditedText={setEditedText}
+            editedBucket={editedBucket}
+            setEditedBucket={setEditedBucket}
+            exitDir={exitDir}
+          />
         </div>
       </div>
 
-      {/* The card itself */}
-      <SuggestionDeckCard
-        suggestion={current}
-        editing={editing}
-        editedText={editedText}
-        setEditedText={setEditedText}
-        exitDir={exitDir}
-      />
-
-      {/* Action bar */}
-      <div className="flex items-stretch gap-2 pt-1">
-        <button
-          type="button"
-          onClick={skip}
-          disabled={editing || current.state === "accepting"}
-          className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg border border-white/15 bg-white/[0.04] px-4 py-2.5 text-xs font-semibold text-white/75 transition hover:border-rose-400/40 hover:bg-rose-500/10 hover:text-rose-100 disabled:cursor-not-allowed disabled:opacity-40"
-          title="Skip (←)"
-        >
-          <X className="h-4 w-4" />
-          Skip
-        </button>
-        {editing ? (
-          <>
-            <button
-              type="button"
-              onClick={() => setEditing(false)}
-              className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg border border-white/15 bg-white/[0.04] px-4 py-2.5 text-xs font-semibold text-white/75 transition hover:bg-white/[0.08] hover:text-white"
-            >
-              Cancel edit
-            </button>
-            <button
-              type="button"
-              onClick={saveAndApprove}
-              disabled={editedText.trim().length === 0}
-              className="flex-[1.4] inline-flex items-center justify-center gap-2 rounded-lg bg-gradient-to-br from-[#343ED7] via-[#783DF5] to-[#C535C9] px-4 py-2.5 text-xs font-semibold text-white shadow-lg shadow-[#783DF5]/25 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <Check className="h-4 w-4" />
-              Save &amp; add to brief
-            </button>
-          </>
-        ) : (
-          <>
-            <button
-              type="button"
-              onClick={() => setEditing(true)}
-              disabled={current.state === "accepting"}
-              className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg border border-amber-400/40 bg-amber-500/10 px-4 py-2.5 text-xs font-semibold text-amber-100 transition hover:bg-amber-500/20 disabled:cursor-not-allowed disabled:opacity-40"
-              title="Edit before adding (E)"
-            >
-              <PencilLine className="h-4 w-4" />
-              Edit first
-            </button>
-            <button
-              type="button"
-              onClick={approve}
-              disabled={current.state === "accepting"}
-              className="flex-[1.4] inline-flex items-center justify-center gap-2 rounded-lg bg-gradient-to-br from-emerald-500 via-emerald-500 to-emerald-600 px-4 py-2.5 text-xs font-semibold text-white shadow-lg shadow-emerald-600/30 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
-              title="Add to brief (→)"
-            >
-              {current.state === "accepting" ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
+      {/* Fixed footer — action bar + keyboard hint, ALWAYS visible */}
+      <footer className="shrink-0 border-t border-white/8 bg-[#0a0a0c] px-5 py-3.5">
+        <div className="flex items-stretch gap-2">
+          <button
+            type="button"
+            onClick={skip}
+            disabled={editing || current.state === "accepting"}
+            className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg border border-white/15 bg-white/[0.04] px-4 py-2.5 text-xs font-semibold text-white/75 transition hover:border-rose-400/40 hover:bg-rose-500/10 hover:text-rose-100 disabled:cursor-not-allowed disabled:opacity-40"
+            title="Skip (←)"
+          >
+            <X className="h-4 w-4" />
+            Skip
+          </button>
+          {editing ? (
+            <>
+              <button
+                type="button"
+                onClick={() => setEditing(false)}
+                className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg border border-white/15 bg-white/[0.04] px-4 py-2.5 text-xs font-semibold text-white/75 transition hover:bg-white/[0.08] hover:text-white"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={saveAndApprove}
+                disabled={editedText.trim().length === 0}
+                className="flex-[1.4] inline-flex items-center justify-center gap-2 rounded-lg bg-gradient-to-br from-[#343ED7] via-[#783DF5] to-[#C535C9] px-4 py-2.5 text-xs font-semibold text-white shadow-lg shadow-[#783DF5]/25 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+              >
                 <Check className="h-4 w-4" />
-              )}
-              Add to brief
-            </button>
-          </>
-        )}
-      </div>
-
-      <p className="text-center text-[10px] text-white/30">
-        ← skip · → add · E edit
-      </p>
-    </div>
+                Save &amp; add
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={() => setEditing(true)}
+                disabled={current.state === "accepting"}
+                className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg border border-amber-400/40 bg-amber-500/10 px-4 py-2.5 text-xs font-semibold text-amber-100 transition hover:bg-amber-500/20 disabled:cursor-not-allowed disabled:opacity-40"
+                title="Edit before adding (E)"
+              >
+                <PencilLine className="h-4 w-4" />
+                Edit first
+              </button>
+              <button
+                type="button"
+                onClick={approve}
+                disabled={current.state === "accepting"}
+                className="flex-[1.4] inline-flex items-center justify-center gap-2 rounded-lg bg-gradient-to-br from-emerald-500 via-emerald-500 to-emerald-600 px-4 py-2.5 text-xs font-semibold text-white shadow-lg shadow-emerald-600/30 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+                title="Add to brief (→)"
+              >
+                {current.state === "accepting" ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Check className="h-4 w-4" />
+                )}
+                Add to brief
+              </button>
+            </>
+          )}
+        </div>
+        <p className="mt-2 text-center text-[10px] text-white/30">
+          ← skip · → add · E edit
+        </p>
+      </footer>
+    </>
   );
 }
 
@@ -696,15 +719,22 @@ function SuggestionDeckCard({
   editing,
   editedText,
   setEditedText,
+  editedBucket,
+  setEditedBucket,
   exitDir,
 }: {
   suggestion: Suggestion;
   editing: boolean;
   editedText: string;
   setEditedText: (v: string) => void;
+  editedBucket: Bucket;
+  setEditedBucket: (b: Bucket) => void;
   exitDir: "left" | "right" | null;
 }) {
-  const styles = BUCKET_STYLES[suggestion.bucket];
+  // In edit mode the visual style follows the EDITED bucket (so the
+  // user sees the colour change instantly when re-bucketing).
+  const displayBucket = editing ? editedBucket : suggestion.bucket;
+  const styles = BUCKET_STYLES[displayBucket];
   const animClasses =
     exitDir === "right"
       ? "translate-x-[120%] rotate-3 opacity-0"
@@ -716,12 +746,16 @@ function SuggestionDeckCard({
       className={`relative rounded-xl border px-5 py-4 transition-all duration-200 ${styles.ring} ${animClasses}`}
     >
       <div className="flex items-center justify-between">
-        <span
-          className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] ${styles.chip}`}
-        >
-          <span className={`h-1.5 w-1.5 rounded-full ${styles.dot}`} />
-          {BUCKET_LABEL[suggestion.bucket]}
-        </span>
+        {editing ? (
+          <BucketPicker value={editedBucket} onChange={setEditedBucket} />
+        ) : (
+          <span
+            className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] ${styles.chip}`}
+          >
+            <span className={`h-1.5 w-1.5 rounded-full ${styles.dot}`} />
+            {BUCKET_LABEL[displayBucket]}
+          </span>
+        )}
         {suggestion.state === "error" && (
           <span
             className="max-w-[60%] truncate text-[10px] font-medium uppercase tracking-[0.12em] text-rose-300"
@@ -737,7 +771,7 @@ function SuggestionDeckCard({
           value={editedText}
           onChange={(e) => setEditedText(e.target.value)}
           rows={4}
-          className="mt-3 w-full resize-y rounded-lg border border-white/15 bg-white/[0.03] px-3 py-2 text-sm leading-snug text-white placeholder:text-white/30 focus:border-amber-400/50 focus:outline-none focus:ring-1 focus:ring-amber-400/30"
+          className="mt-3 w-full resize-y rounded-lg bg-white/[0.04] px-3 py-2.5 text-base leading-snug text-white placeholder:text-white/30 outline-none ring-1 ring-white/10 transition focus:ring-2 focus:ring-amber-400/40"
           autoFocus
         />
       ) : (
@@ -760,5 +794,47 @@ function SuggestionDeckCard({
         </blockquote>
       )}
     </article>
+  );
+}
+
+/** Segmented control to re-bucket a suggestion during edit. Shows the
+ *  active bucket in its own colour; the others are dimmed. Clicking any
+ *  pill swaps the active bucket — the parent card then re-themes itself
+ *  via the displayBucket prop. */
+function BucketPicker({
+  value,
+  onChange,
+}: {
+  value: Bucket;
+  onChange: (b: Bucket) => void;
+}) {
+  const buckets: Bucket[] = ["dos", "donts", "notes"];
+  return (
+    <div className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.03] p-1">
+      <span className="pl-1.5 pr-0.5 text-[9px] font-medium uppercase tracking-[0.18em] text-white/40">
+        Move to
+      </span>
+      {buckets.map((b) => {
+        const isActive = b === value;
+        const s = BUCKET_STYLES[b];
+        return (
+          <button
+            key={b}
+            type="button"
+            onClick={() => onChange(b)}
+            className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.15em] transition ${
+              isActive
+                ? `border ${s.chip}`
+                : "border border-transparent text-white/45 hover:bg-white/[0.06] hover:text-white/75"
+            }`}
+          >
+            {isActive && (
+              <span className={`h-1.5 w-1.5 rounded-full ${s.dot}`} />
+            )}
+            {BUCKET_LABEL[b]}
+          </button>
+        );
+      })}
+    </div>
   );
 }

@@ -300,7 +300,7 @@ function BriefPanel({
         </span>
       </header>
 
-      <ul className="relative mt-4 space-y-2">
+      <ul className="relative mt-4 max-h-[42vh] space-y-2 overflow-y-auto pr-1">
         {items.map((item, i) => (
           <EditableRow
             key={i}
@@ -342,7 +342,7 @@ function NotesPanel({
           Notes
         </h3>
       </header>
-      <ul className="mt-3 space-y-2">
+      <ul className="mt-3 max-h-[42vh] space-y-2 overflow-y-auto pr-1">
         {items.map((item, i) => (
           <EditableRow
             key={i}
@@ -365,6 +365,11 @@ function NotesPanel({
   );
 }
 
+/** Line-clamp + expand limit. Items longer than this many lines are
+ *  collapsed by default; click the `…show more` link to reveal the
+ *  full text inline. Clicking the text itself opens the editor. */
+const CLAMP_LINES = 3;
+
 function EditableRow({
   value,
   dotClass,
@@ -380,14 +385,21 @@ function EditableRow({
   onRemove: () => void;
   isNote?: boolean;
 }) {
+  void isNote;
   const [editing, setEditing] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const [draft, setDraft] = useState(value);
-  const inputRef = useRef<HTMLInputElement | null>(null);
+  const textRef = useRef<HTMLTextAreaElement | null>(null);
+  const measureRef = useRef<HTMLSpanElement | null>(null);
+  const [isClamped, setIsClamped] = useState(false);
 
   useEffect(() => {
-    if (editing && inputRef.current) {
-      inputRef.current.focus();
-      inputRef.current.select();
+    if (editing && textRef.current) {
+      textRef.current.focus();
+      // Move caret to end (selecting all wipes intent when the user
+      // just wants to tweak — common after Call-Notes adds).
+      const end = textRef.current.value.length;
+      textRef.current.setSelectionRange(end, end);
     }
   }, [editing]);
 
@@ -395,12 +407,29 @@ function EditableRow({
     if (!editing) setDraft(value);
   }, [value, editing]);
 
+  // Measure whether the (unclamped) text would actually overflow the
+  // clamp height — only show "show more" when there's something to
+  // show. Re-run when the text or container width changes.
+  useEffect(() => {
+    if (editing || expanded) return;
+    const el = measureRef.current;
+    if (!el) return;
+    const lineHeight = parseFloat(getComputedStyle(el).lineHeight) || 22;
+    const limit = lineHeight * CLAMP_LINES + 2;
+    const ro = new ResizeObserver(() => {
+      setIsClamped(el.scrollHeight > limit);
+    });
+    ro.observe(el);
+    setIsClamped(el.scrollHeight > limit);
+    return () => ro.disconnect();
+  }, [value, editing, expanded]);
+
   function commit() {
     setEditing(false);
-    if (draft.trim() && draft.trim() !== value) {
-      onSave(draft.trim());
-    } else if (!draft.trim()) {
-      // empty draft → revert visually; deletion happens via × button
+    const trimmed = draft.trim();
+    if (trimmed && trimmed !== value) {
+      onSave(trimmed);
+    } else if (!trimmed) {
       setDraft(value);
     }
   }
@@ -412,19 +441,22 @@ function EditableRow({
           aria-hidden
           className={`mt-2 h-1.5 w-1.5 shrink-0 rounded-full ${dotClass}`}
         />
-        <input
-          ref={inputRef}
+        <textarea
+          ref={textRef}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onBlur={commit}
           onKeyDown={(e) => {
-            if (e.key === "Enter") commit();
-            else if (e.key === "Escape") {
+            if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+              e.preventDefault();
+              commit();
+            } else if (e.key === "Escape") {
               setDraft(value);
               setEditing(false);
             }
           }}
-          className={`flex-1 rounded border-0 bg-white/[0.06] px-2 py-1 text-sm leading-relaxed text-white outline-none ring-2 ${ringClass} sm:text-base`}
+          rows={Math.min(6, Math.max(2, draft.split("\n").length))}
+          className={`flex-1 resize-y rounded border-0 bg-white/[0.06] px-2 py-1.5 text-sm leading-relaxed text-white outline-none ring-2 ${ringClass} sm:text-base`}
         />
       </li>
     );
@@ -436,14 +468,49 @@ function EditableRow({
         aria-hidden
         className={`mt-2 h-1.5 w-1.5 shrink-0 rounded-full ${dotClass}`}
       />
-      <button
-        type="button"
-        onClick={() => setEditing(true)}
-        className={`flex-1 cursor-text rounded text-left text-sm leading-relaxed text-white/85 transition hover:bg-white/[0.04] sm:text-base ${isNote ? "" : ""}`}
-        title="Click to edit"
-      >
-        {value}
-      </button>
+      <div className="min-w-0 flex-1">
+        <button
+          type="button"
+          onClick={() => setEditing(true)}
+          className="block w-full cursor-text rounded text-left text-sm leading-relaxed text-white/85 transition hover:bg-white/[0.04] sm:text-base"
+          title="Click to edit"
+        >
+          <span
+            ref={measureRef}
+            className={
+              expanded
+                ? "block whitespace-pre-wrap break-words"
+                : "block whitespace-pre-wrap break-words [display:-webkit-box] [-webkit-line-clamp:3] [-webkit-box-orient:vertical] overflow-hidden"
+            }
+          >
+            {value}
+          </span>
+        </button>
+        {isClamped && !expanded && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setExpanded(true);
+            }}
+            className="mt-0.5 text-[11px] font-medium text-white/45 underline-offset-2 transition hover:text-white/75 hover:underline"
+          >
+            show more
+          </button>
+        )}
+        {expanded && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setExpanded(false);
+            }}
+            className="mt-0.5 text-[11px] font-medium text-white/45 underline-offset-2 transition hover:text-white/75 hover:underline"
+          >
+            show less
+          </button>
+        )}
+      </div>
       <button
         type="button"
         onClick={onRemove}
