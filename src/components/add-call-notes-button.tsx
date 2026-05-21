@@ -103,6 +103,8 @@ function Modal({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [showPasteFallback, setShowPasteFallback] = useState(false);
+  const [sourceTitle, setSourceTitle] = useState<string | null>(null);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -113,8 +115,15 @@ function Modal({
   }, [onClose]);
 
   async function processCall() {
-    if (transcript.trim().length < 50) {
-      setError("Paste at least the AI summary — needs ~50 characters minimum.");
+    const linkLooksValid =
+      /^https:\/\/(www\.)?fathom\.video\/share\/[A-Za-z0-9_-]+/.test(
+        fathomUrl.trim(),
+      );
+    const transcriptReady = transcript.trim().length >= 50;
+    if (!linkLooksValid && !transcriptReady) {
+      setError(
+        "Paste a Fathom share URL OR the AI summary text (≥50 chars).",
+      );
       return;
     }
     setBusy(true);
@@ -124,14 +133,20 @@ function Modal({
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          transcript: transcript.trim(),
+          transcript: transcriptReady ? transcript.trim() : undefined,
           fathomUrl: fathomUrl.trim() || undefined,
         }),
       });
       if (!res.ok) {
         const data = (await res.json().catch(() => ({}))) as {
           error?: string;
+          code?: string;
         };
+        // If the API tells us Fathom isn't wired up, reveal the paste
+        // fallback inline so the consultant can keep working.
+        if (data.code === "no_fathom_key") {
+          setShowPasteFallback(true);
+        }
         throw new Error(data.error ?? `HTTP ${res.status}`);
       }
       const data = (await res.json()) as {
@@ -141,7 +156,10 @@ function Modal({
           reasoning: string;
           source: string | null;
         }>;
+        sourceTitle?: string | null;
+        fathomFetched?: boolean;
       };
+      setSourceTitle(data.sourceTitle ?? null);
       setSuggestions(
         data.suggestions.map((s, i) => ({
           ...s,
@@ -252,17 +270,21 @@ function Modal({
               setTranscript={setTranscript}
               busy={busy}
               error={error}
+              showPasteFallback={showPasteFallback}
+              setShowPasteFallback={setShowPasteFallback}
               onProcess={processCall}
             />
           )}
           {step === "suggestions" && (
             <SuggestionsView
               suggestions={suggestions}
+              sourceTitle={sourceTitle}
               onAccept={accept}
               onDecline={decline}
               onBack={() => {
                 setStep("paste");
                 setSuggestions([]);
+                setSourceTitle(null);
               }}
               onClose={onClose}
             />
@@ -280,6 +302,8 @@ function PasteView({
   setTranscript,
   busy,
   error,
+  showPasteFallback,
+  setShowPasteFallback,
   onProcess,
 }: {
   fathomUrl: string;
@@ -288,20 +312,26 @@ function PasteView({
   setTranscript: (v: string) => void;
   busy: boolean;
   error: string | null;
+  showPasteFallback: boolean;
+  setShowPasteFallback: (v: boolean) => void;
   onProcess: () => void;
 }) {
+  const linkLooksValid = /^https:\/\/(www\.)?fathom\.video\/share\/[A-Za-z0-9_-]+/.test(
+    fathomUrl.trim(),
+  );
+  const transcriptReady = transcript.trim().length >= 50;
+  const canProcess = busy ? false : linkLooksValid || transcriptReady;
   return (
     <div className="space-y-4">
       <p className="text-xs text-white/65 leading-relaxed">
-        Paste the <strong className="text-white/85">AI Summary</strong> (or the
-        full transcript) from the Fathom share page. Claude filters out the
-        scheduling / chit-chat parts and surfaces only items worth adding to
-        the Client Brief. Each suggestion gets an Accept / Decline button on
-        the next step.
+        Paste a <strong className="text-white/85">Fathom share URL</strong> and
+        Claude fetches the transcript + AI summary, filters out the
+        scheduling / chit-chat parts, and surfaces only items worth adding to
+        the Client Brief.
       </p>
       <div>
         <label className="block text-[10px] font-medium uppercase tracking-[0.2em] text-white/55">
-          Fathom share URL <span className="text-white/35">(optional)</span>
+          Fathom share URL
         </label>
         <input
           type="url"
@@ -310,26 +340,48 @@ function PasteView({
           placeholder="https://fathom.video/share/…"
           className="mt-1.5 w-full rounded-lg border border-white/12 bg-white/[0.03] px-3 py-2 text-xs text-white placeholder:text-white/30 focus:border-white/30 focus:outline-none focus:ring-1 focus:ring-white/20"
           disabled={busy}
+          autoFocus
         />
+        {linkLooksValid && !transcriptReady && (
+          <p className="mt-1 text-[10px] text-emerald-300/80">
+            ✓ Looks valid — hit Process call.
+          </p>
+        )}
       </div>
-      <div>
-        <label className="block text-[10px] font-medium uppercase tracking-[0.2em] text-white/55">
-          AI summary or transcript
-        </label>
-        <textarea
-          value={transcript}
-          onChange={(e) => setTranscript(e.target.value)}
-          placeholder={
-            "Paste the AI Summary text from the right panel of the Fathom share page.\n\nOr paste the full transcript — Claude will skim it."
-          }
-          rows={10}
-          className="mt-1.5 w-full resize-y rounded-lg border border-white/12 bg-white/[0.03] px-3 py-2.5 font-mono text-[11px] leading-relaxed text-white placeholder:text-white/30 focus:border-white/30 focus:outline-none focus:ring-1 focus:ring-white/20"
-          disabled={busy}
-        />
-        <p className="mt-1 text-[10px] text-white/40">
-          {transcript.length.toLocaleString()} chars · min 50, max 60,000
-        </p>
-      </div>
+
+      {!showPasteFallback && (
+        <button
+          type="button"
+          onClick={() => setShowPasteFallback(true)}
+          className="text-[11px] text-white/45 underline-offset-2 transition hover:text-white/75 hover:underline"
+        >
+          Or paste the AI summary text directly →
+        </button>
+      )}
+
+      {showPasteFallback && (
+        <div>
+          <label className="block text-[10px] font-medium uppercase tracking-[0.2em] text-white/55">
+            AI summary or transcript{" "}
+            <span className="text-white/35">(fallback)</span>
+          </label>
+          <textarea
+            value={transcript}
+            onChange={(e) => setTranscript(e.target.value)}
+            placeholder={
+              "Paste the AI Summary text from the right panel of the Fathom share page.\n\nOr paste the full transcript — Claude will skim it."
+            }
+            rows={8}
+            className="mt-1.5 w-full resize-y rounded-lg border border-white/12 bg-white/[0.03] px-3 py-2.5 font-mono text-[11px] leading-relaxed text-white placeholder:text-white/30 focus:border-white/30 focus:outline-none focus:ring-1 focus:ring-white/20"
+            disabled={busy}
+          />
+          <p className="mt-1 text-[10px] text-white/40">
+            {transcript.length.toLocaleString()} chars · min 50, max 60,000 ·
+            takes priority over the URL when filled
+          </p>
+        </div>
+      )}
+
       {error && (
         <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-200">
           {error}
@@ -339,13 +391,13 @@ function PasteView({
         <button
           type="button"
           onClick={onProcess}
-          disabled={busy || transcript.trim().length < 50}
+          disabled={!canProcess}
           className="inline-flex items-center gap-2 rounded-md bg-gradient-to-br from-[#343ED7] via-[#783DF5] to-[#C535C9] px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-[#783DF5]/25 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {busy ? (
             <>
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              Processing…
+              {transcriptReady ? "Analysing…" : "Fetching from Fathom…"}
             </>
           ) : (
             <>
@@ -361,12 +413,14 @@ function PasteView({
 
 function SuggestionsView({
   suggestions,
+  sourceTitle,
   onAccept,
   onDecline,
   onBack,
   onClose,
 }: {
   suggestions: Suggestion[];
+  sourceTitle: string | null;
   onAccept: (s: Suggestion) => void;
   onDecline: (id: string) => void;
   onBack: () => void;
@@ -403,6 +457,12 @@ function SuggestionsView({
   }
   return (
     <div className="space-y-3">
+      {sourceTitle && (
+        <p className="text-[11px] text-white/45">
+          Source: <span className="text-white/75">{sourceTitle}</span>{" "}
+          <span className="text-emerald-300/85">· fetched from Fathom</span>
+        </p>
+      )}
       {suggestions.map((s) => (
         <SuggestionCard
           key={s.id}

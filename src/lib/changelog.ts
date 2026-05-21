@@ -13,6 +13,24 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.2",
+    date: "2026-05-21",
+    title: "Call Notes goes link-only — paste a Fathom URL, no copy-paste needed",
+    highlights: [
+      "**🔗 Add Call Notes now accepts a Fathom share URL directly.** Paste `https://fathom.video/share/…` → app calls Fathom's official REST API (`GET /external/v1/meetings?include_transcript=true&include_summary=true` with `Authorization: Bearer FATHOM_API_KEY`) → paginates up to ~250 most-recent meetings → matches by `share_url` → pulls AI summary + action items + transcript → hands the lot to the existing Claude analyzer. No copy-paste needed.",
+      "**🪜 Three-stage architecture in `src/lib/fathom-api.ts`.** Designed so today's single-team-key setup graduates cleanly:",
+      "  - **Stage 1 (now)** — single `FATHOM_API_KEY` Vercel env var, generated from one team Fathom account. Whole team uses it.",
+      "  - **Stage 2 (later)** — per-user key cached in localStorage if you ever onboard consultants who don't share a Fathom workspace.",
+      "  - **Stage 3 (much later)** — full OAuth per-user when you sell this or scale past ~5 consultants.",
+      "  Swapping stages = changing where `apiKey` is read in one file. Routes + UI stay the same.",
+      "**🪲 Graceful fallback when something goes wrong.** If `FATHOM_API_KEY` is missing, the URL is malformed, Fathom rejects the key, or the recording isn't in the first ~250 meetings, the modal surfaces a clear error AND auto-reveals the paste-AI-summary fallback. No dead-ends — consultant can always finish the task.",
+      "**🛡️ Real error codes through the stack.** `FathomApiError` exposes `code: \"no_key\" | \"not_found\" | \"upstream\" | \"rate_limited\" | \"bad_url\"` + correct HTTP status (503 / 404 / 502 / 429 / 400). UI inspects `code` from the response and reacts (auto-show paste view on `no_key`, etc.).",
+      "**🧠 AI summary > raw transcript.** When the AI summary is available (which is almost always for Fathom meetings), the analyzer gets that first — it's pre-filtered for signal. Action items + transcript follow as additional context. Truncates at 59k chars (under the 60k analyzer ceiling) if the transcript is huge.",
+      "**📋 Source title shown on suggestion view.** After processing, the modal shows `Source: <meeting title> · fetched from Fathom` above the suggestion cards so consultants know what they're reviewing.",
+      "**⚡ Rate limit headroom.** Fathom's 60 calls/min limit is global per key; processing a call hits 1-5 calls (paginating to find the match). Plenty of margin for a busy day.",
+    ],
+  },
+  {
     version: "74.1",
     date: "2026-05-21",
     title: "Add Call Notes — paste a Fathom call, get filtered Do/Don't/Note suggestions",

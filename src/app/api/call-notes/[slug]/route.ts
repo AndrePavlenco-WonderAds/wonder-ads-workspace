@@ -20,6 +20,13 @@ import { NextResponse } from "next/server";
 import { getBriefForSlug } from "@/lib/briefs-storage";
 import { getClientBySlug } from "@/lib/notion";
 import { getClientGeo } from "@/lib/client-geo";
+import {
+  composeAnalyzerInput,
+  fathomConfigured,
+  FathomApiError,
+  isFathomShareUrl,
+  resolveFathomCallByShareUrl,
+} from "@/lib/fathom-api";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -77,13 +84,55 @@ export async function POST(
   } catch {
     return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
   }
-  const transcript = (body.transcript ?? "").trim();
+  let transcript = (body.transcript ?? "").trim();
   const fathomUrl = (body.fathomUrl ?? "").trim();
+
+  // Two ingestion modes:
+  //   1. URL-only — fetch via Fathom REST API (requires FATHOM_API_KEY)
+  //   2. Pasted text — fallback, no API key needed
+  // If both are provided, paste wins (consultant can override the
+  // auto-fetched transcript with their own edited notes).
+  let sourceTitle: string | null = null;
+  if (!transcript && fathomUrl) {
+    if (!fathomConfigured) {
+      return NextResponse.json(
+        {
+          error:
+            "Link-only mode needs FATHOM_API_KEY in Vercel env. Generate one at https://fathom.video/customize#api-access-header, add it to the wonder-ads-workspace project, redeploy. Until then, paste the AI summary text in the box below.",
+          code: "no_fathom_key",
+        },
+        { status: 503 },
+      );
+    }
+    if (!isFathomShareUrl(fathomUrl)) {
+      return NextResponse.json(
+        {
+          error:
+            "That doesn't look like a Fathom share URL — expected https://fathom.video/share/...",
+        },
+        { status: 400 },
+      );
+    }
+    try {
+      const call = await resolveFathomCallByShareUrl(fathomUrl);
+      transcript = composeAnalyzerInput(call);
+      sourceTitle = call.title;
+    } catch (err) {
+      if (err instanceof FathomApiError) {
+        return NextResponse.json(
+          { error: err.message, code: err.code },
+          { status: err.status },
+        );
+      }
+      throw err;
+    }
+  }
+
   if (transcript.length < 50) {
     return NextResponse.json(
       {
         error:
-          "Paste the AI summary or transcript first — needs at least 50 chars to be useful.",
+          "Paste the AI summary or transcript first (or a Fathom share URL with FATHOM_API_KEY configured) — needs at least 50 chars to be useful.",
       },
       { status: 400 },
     );
@@ -158,6 +207,8 @@ Return up to ~10 highest-value Do's / Don'ts / Notes additions. Skip anything al
     return NextResponse.json({
       suggestions: r.object.suggestions,
       clientLanguage: geo.languageCode,
+      sourceTitle,
+      fathomFetched: !body.transcript && Boolean(fathomUrl),
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
