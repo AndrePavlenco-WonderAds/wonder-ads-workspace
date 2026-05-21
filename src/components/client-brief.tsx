@@ -367,8 +367,12 @@ function NotesPanel({
 
 /** Line-clamp + expand limit. Items longer than this many lines are
  *  collapsed by default; click the `…show more` link to reveal the
- *  full text inline. Clicking the text itself opens the editor. */
-const CLAMP_LINES = 3;
+ *  full text inline. Clicking the text itself opens the editor.
+ *
+ *  Kept at 1 because the brief panels are short on vertical space —
+ *  see the side-by-side Do's/Don'ts layout — so a long item dominates
+ *  visual weight. One line + show-more keeps the list scannable. */
+const CLAMP_LINES = 1;
 
 function EditableRow({
   value,
@@ -480,7 +484,7 @@ function EditableRow({
             className={
               expanded
                 ? "block whitespace-pre-wrap break-words"
-                : "block whitespace-pre-wrap break-words [display:-webkit-box] [-webkit-line-clamp:3] [-webkit-box-orient:vertical] overflow-hidden"
+                : "line-clamp-1 block break-words"
             }
           >
             {value}

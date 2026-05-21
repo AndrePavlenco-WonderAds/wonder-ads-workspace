@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.5",
+    date: "2026-05-21",
+    title: "Brief line-clamp actually works · modal is now properly opaque · cleaner bucket picker",
+    highlights: [
+      "**🪲 `show more` / `show less` did nothing — fixed.** v74.4 tried to clamp brief items with Tailwind's arbitrary-property syntax (`[display:-webkit-box] [-webkit-line-clamp:3]`) — turns out Tailwind v4 doesn't compile that combination of arbitrary properties + vendor prefixes reliably, so the clamp CSS was never produced and the buttons toggled state with nothing to show for it. Switched to Tailwind's built-in `line-clamp-1` core utility. Brief items now show **one line** by default (per your spec), with the `show more` / `show less` toggle working correctly via a ResizeObserver that only renders the toggle when there's actually hidden text to reveal.",
+      "**🌑 Modal overlap fix — backdrop bumped + competing gradient borders removed.** Previously the modal had `bg-black/85` backdrop + a `brand-gradient-border` on the modal frame. The page's own brand-gradient-border panels (Client Brief, Client Files, Target Keywords) were leaking through the 15% transparent backdrop AND visually merging with the modal's identical gradient — felt like the modal and the page were overlapping. Two changes:",
+      "  - Backdrop now `bg-black/95 backdrop-blur-xl` — the page is essentially invisible behind the modal.",
+      "  - Modal frame uses a neutral `border-white/10` + soft purple drop shadow instead of the brand gradient. No more border-on-border clash; the modal reads as a clean floating panel.",
+      "**🎨 Bucket picker tightened.** Dropped the `Move to` label per request — edit mode now shows just the three pill toggles (`DO'S · DON'TS · NOTES`) in the card header. The active bucket re-themes the card colour live so the destination is always visually obvious without needing the label.",
+    ],
+  },
+  {
     version: "74.4",
     date: "2026-05-21",
     title: "Call Notes modal layout fix · bucket switcher in edit · brief panels stop growing",

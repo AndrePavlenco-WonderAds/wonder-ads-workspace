@@ -245,11 +245,11 @@ function Modal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 backdrop-blur-xl p-4"
       onClick={onClose}
     >
       <div
-        className="brand-gradient-border flex w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-[#0a0a0c] shadow-[0_20px_70px_-15px_rgba(120,61,245,0.4)]"
+        className="flex w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#0a0a0c] shadow-[0_25px_80px_-20px_rgba(120,61,245,0.5)]"
         style={{ maxHeight: "85vh" }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -811,9 +811,6 @@ function BucketPicker({
   const buckets: Bucket[] = ["dos", "donts", "notes"];
   return (
     <div className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.03] p-1">
-      <span className="pl-1.5 pr-0.5 text-[9px] font-medium uppercase tracking-[0.18em] text-white/40">
-        Move to
-      </span>
       {buckets.map((b) => {
         const isActive = b === value;
         const s = BUCKET_STYLES[b];
