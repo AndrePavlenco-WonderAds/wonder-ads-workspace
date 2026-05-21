@@ -13,7 +13,7 @@
 //   5. Save MetaTagsResult to KV.
 
 import { anthropic } from "@ai-sdk/anthropic";
-import { generateObject } from "ai";
+import { generateObject, generateText } from "ai";
 import { z } from "zod";
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
@@ -40,21 +40,28 @@ export const maxDuration = 60;
 
 const CAPTION_MODEL = "claude-haiku-4-5-20251001";
 
+// Schema deliberately LENIENT on lengths. The system prompt + per-prompt
+// rules push Claude toward 50-60 char titles and 120-160 char metas — but
+// if Claude returns a 32-char title for a thin page like /privacy, we
+// want the row to land (flagged as a length issue) instead of failing
+// the entire 10-page chunk's generateObject call. We post-process below
+// to auto-add length issues to `issues[]` so the consultant sees them
+// in the UI.
 const RowSchema = z.object({
   url: z.string().describe("The page URL — copy verbatim from the input."),
   optimizedTitle: z
     .string()
-    .min(40)
-    .max(65)
+    .min(5)
+    .max(120)
     .describe(
-      "Optimised <title> tag. HARD RULE: 40–60 chars (Google truncates at ~580px / ~60). NEVER below 40 — if the natural title would be shorter, ADD a geo modifier (city / region), the specialty / role, or the brand with a separator to reach ≥40. NEVER over 65. Primary keyword in the first 60% (first ~3-4 words ideally). Brand at the end with ` | ` separator (not `–`, not `:`).",
+      "Optimised <title> tag. TARGET 50–60 chars (Google truncates at ~580px). Primary keyword in the first 60%. Brand at the end with ` | ` separator. Aim for 40+ chars by adding geo modifier / specialty / brand if the natural title would be shorter.",
     ),
   optimizedMeta: z
     .string()
-    .min(120)
-    .max(170)
+    .min(20)
+    .max(300)
     .describe(
-      "Optimised <meta name='description'> tag. HARD RULE: 120–160 chars. NEVER below 120 — fill out with concrete value props, not filler. Lead with the value prop, weave the primary keyword exactly once (Google bolds it in SERPs), end with a soft CTA verb (Marca consulta / Saiba mais / Descubra / Book a consultation / Learn more depending on language). NEVER repeat the title verbatim.",
+      "Optimised <meta name='description'> tag. TARGET 120–160 chars. Lead with value prop, weave primary keyword once, end with a soft CTA verb (Marca consulta / Saiba mais / Descubra / Book a consultation / Learn more depending on language). Don't repeat the title verbatim.",
     ),
   primaryKeyword: z
     .string()
@@ -64,28 +71,62 @@ const RowSchema = z.object({
     ),
   secondaryKeywords: z
     .array(z.string())
-    .min(0)
-    .max(3)
-    .describe("1–3 supporting keywords from related clusters."),
+    .max(5)
+    .default([])
+    .describe("0–3 supporting keywords from related clusters."),
   reasoning: z
     .string()
-    .min(15)
-    .max(200)
+    .max(300)
+    .default("")
     .describe(
       "ONE sentence on WHY this rewrite — what the current tag missed, what the new one captures.",
     ),
   issues: z
     .array(z.string())
-    .min(0)
-    .max(5)
+    .max(8)
+    .default([])
     .describe(
-      "Issues spotted on the current tags. Pick from: 'missing meta', 'title too long', 'title too short', 'meta too short', 'no primary keyword', 'duplicate title', 'brand-only title'. Skip if none apply.",
+      "Issues spotted on the CURRENT tag. Examples: 'missing meta', 'title too long', 'title too short', 'meta too short', 'no primary keyword', 'duplicate title', 'brand-only title'. Skip if none apply.",
     ),
 });
 
 const BatchSchema = z.object({
   rows: z.array(RowSchema).min(1),
 });
+
+type Row = z.infer<typeof RowSchema>;
+
+const TITLE_FLOOR = 40;
+const TITLE_CEILING = 60;
+const META_FLOOR = 120;
+const META_CEILING = 160;
+
+/** Post-process a row: auto-add issues for length violations on the
+ *  OPTIMIZED output so consultants see them in the UI without us having
+ *  to reject the whole chunk. */
+function annotateRowLengths(row: Row): Row {
+  const extraIssues: string[] = [];
+  if (row.optimizedTitle.length < TITLE_FLOOR) {
+    extraIssues.push(
+      `optimized title under ${TITLE_FLOOR} chars (${row.optimizedTitle.length}) — manually lengthen`,
+    );
+  } else if (row.optimizedTitle.length > TITLE_CEILING + 5) {
+    extraIssues.push(
+      `optimized title over ${TITLE_CEILING} chars (${row.optimizedTitle.length}) — risk of SERP truncation`,
+    );
+  }
+  if (row.optimizedMeta.length < META_FLOOR) {
+    extraIssues.push(
+      `optimized meta under ${META_FLOOR} chars (${row.optimizedMeta.length}) — add more value props`,
+    );
+  } else if (row.optimizedMeta.length > META_CEILING + 10) {
+    extraIssues.push(
+      `optimized meta over ${META_CEILING} chars (${row.optimizedMeta.length}) — risk of SERP truncation`,
+    );
+  }
+  if (extraIssues.length === 0) return row;
+  return { ...row, issues: [...row.issues, ...extraIssues] };
+}
 
 export async function POST(
   req: Request,
@@ -296,7 +337,7 @@ export async function POST(
           send({
             event: "error",
             message:
-              "All chunks failed to generate. Likely Claude is returning schema-invalid responses for this client's URLs. Try Quick depth (10) first, or check Vercel logs for the underlying error.",
+              "Generation produced no rows after three retry layers (generateObject, retry, generateText salvage). Check Vercel logs for the underlying Claude error — likely an API outage, rate limit, or content-policy block on this client's URLs.",
           });
           controller.close();
           return;
@@ -329,9 +370,10 @@ export async function POST(
           okCrawls.map((c) => [c.result.finalUrl, c.result]),
         );
         const rows: MetaTagsRow[] = [];
-        for (const d of drafts) {
-          const crawl = byUrl.get(d.url);
+        for (const raw of drafts) {
+          const crawl = byUrl.get(raw.url);
           if (!crawl) continue; // skip rows for URLs Claude hallucinated
+          const d = annotateRowLengths(raw);
           rows.push({
             id: newMetaTagsRowId(),
             url: d.url,
@@ -555,9 +597,16 @@ type ChunkPage = {
   h1: string | null;
 };
 
-/** Generate a single chunk of pages with one automatic retry on
- *  failure. Returns the parsed rows array or `[]` on permanent
- *  failure (caller fans these out + concatenates). */
+/** Generate a single chunk of pages. Three-layer resilience:
+ *    1. generateObject + lenient schema (default).
+ *    2. On schema/validation failure: retry once with the same call.
+ *    3. On second failure: salvage via generateText + manual JSON parse +
+ *       Zod re-validation per row (skip bad rows, keep good ones).
+ *
+ *  This guarantees that as long as Claude returns SOMETHING parseable,
+ *  consultants get rows — they don't lose the entire chunk to one bad
+ *  field. Length issues are surfaced as `issues[]` entries by the
+ *  caller via annotateRowLengths. */
 async function generateChunkWithRetry(opts: {
   chunkIdx: number;
   chunk: ChunkPage[];
@@ -569,7 +618,7 @@ async function generateChunkWithRetry(opts: {
   kwClusters: KwCluster[];
   focusKeywords: string;
   system: string;
-}): Promise<z.infer<typeof RowSchema>[]> {
+}): Promise<Row[]> {
   const prompt = buildPrompt({
     clientName: opts.clientName,
     websiteUrl: opts.websiteUrl,
@@ -580,6 +629,7 @@ async function generateChunkWithRetry(opts: {
     focusKeywords: opts.focusKeywords,
     pages: opts.chunk,
   });
+  // Layer 1+2: generateObject with one retry.
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
       const r = await generateObject({
@@ -587,23 +637,114 @@ async function generateChunkWithRetry(opts: {
         schema: BatchSchema,
         system: opts.system,
         prompt,
-        // Per-row ~200 tokens with safety; 10 rows × 200 = 2000 budget.
-        // Way under the model's 64k ceiling, so we never truncate.
-        maxOutputTokens: 3000,
+        maxOutputTokens: 4000,
       });
       return r.object.rows;
     } catch (err) {
-      console.warn(
-        `[meta-generate] chunk ${opts.chunkIdx} attempt ${attempt + 1} failed:`,
-        err instanceof Error ? err.message.slice(0, 200) : String(err),
-      );
-      // On the FIRST failure pause briefly to dodge transient API
-      // throttling, then retry. On the SECOND failure give up — the
-      // caller's partial-success path handles dropped chunks.
-      if (attempt === 0) await new Promise((r) => setTimeout(r, 800));
+      logChunkError(opts.chunkIdx, attempt + 1, err);
+      if (attempt === 0) await new Promise((r) => setTimeout(r, 600));
     }
   }
-  return [];
+  // Layer 3: salvage via generateText + manual JSON parse. Free-form
+  // gives Claude max flexibility; we hand-validate per row so one bad
+  // row doesn't kill the lot.
+  try {
+    const salvagePrompt =
+      prompt +
+      `\n\n## OUTPUT FORMAT (CRITICAL)\nReply with ONE valid JSON object and nothing else — no prose, no markdown fences. Shape:\n\`\`\`\n{ "rows": [ { "url": "...", "optimizedTitle": "...", "optimizedMeta": "...", "primaryKeyword": "..." or null, "secondaryKeywords": ["..."], "reasoning": "...", "issues": ["..."] } ] }\n\`\`\``;
+    const r = await generateText({
+      model: anthropic(CAPTION_MODEL),
+      system: opts.system,
+      prompt: salvagePrompt,
+      maxOutputTokens: 4000,
+    });
+    const parsed = extractJsonObject(r.text);
+    if (!parsed || typeof parsed !== "object") return [];
+    const rawRows = (parsed as { rows?: unknown }).rows;
+    if (!Array.isArray(rawRows)) return [];
+    const out: Row[] = [];
+    for (const raw of rawRows) {
+      const v = RowSchema.safeParse(raw);
+      if (v.success) {
+        out.push(v.data);
+      } else {
+        console.warn(
+          `[meta-generate] chunk ${opts.chunkIdx} salvage: dropped one row`,
+          v.error.issues.slice(0, 3).map((i) => `${i.path.join(".")}=${i.message}`),
+        );
+      }
+    }
+    if (out.length > 0) {
+      console.info(
+        `[meta-generate] chunk ${opts.chunkIdx} salvaged ${out.length}/${rawRows.length} rows via generateText fallback`,
+      );
+    }
+    return out;
+  } catch (err) {
+    logChunkError(opts.chunkIdx, 3, err);
+    return [];
+  }
+}
+
+function logChunkError(chunkIdx: number, attempt: number, err: unknown) {
+  const e = err as { name?: string; message?: string; cause?: unknown };
+  const name = e?.name ?? "Error";
+  const message =
+    typeof e?.message === "string" ? e.message.slice(0, 400) : String(err);
+  console.warn(
+    `[meta-generate] chunk ${chunkIdx} attempt ${attempt} failed: ${name}: ${message}`,
+  );
+  if (e?.cause) {
+    const cause = e.cause as { message?: string };
+    if (cause?.message) {
+      console.warn(
+        `[meta-generate] chunk ${chunkIdx} cause: ${cause.message.slice(0, 400)}`,
+      );
+    }
+  }
+}
+
+/** Extract the first balanced top-level JSON object from arbitrary text.
+ *  Handles markdown fence wrappers and leading/trailing prose. */
+function extractJsonObject(text: string): unknown {
+  // Strip ```json fences if Claude wrapped them.
+  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+  const body = fenced ? fenced[1] : text;
+  // Find first { and the matching closing }
+  const start = body.indexOf("{");
+  if (start < 0) return null;
+  let depth = 0;
+  let inString = false;
+  let escape = false;
+  for (let i = start; i < body.length; i++) {
+    const ch = body[i];
+    if (escape) {
+      escape = false;
+      continue;
+    }
+    if (ch === "\\") {
+      escape = true;
+      continue;
+    }
+    if (ch === '"') {
+      inString = !inString;
+      continue;
+    }
+    if (inString) continue;
+    if (ch === "{") depth++;
+    else if (ch === "}") {
+      depth--;
+      if (depth === 0) {
+        const slice = body.slice(start, i + 1);
+        try {
+          return JSON.parse(slice);
+        } catch {
+          return null;
+        }
+      }
+    }
+  }
+  return null;
 }
 
 /** Fallback URL discovery for sites with thin or missing sitemaps:

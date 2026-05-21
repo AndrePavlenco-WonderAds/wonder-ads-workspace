@@ -13,6 +13,25 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "73.3",
+    date: "2026-05-21",
+    title: "Meta tags: lenient schema + generateText salvage layer (definitive fix for \"schema\" error)",
+    highlights: [
+      "**🪲 Meta tags: \"No object generated: response did not match schema\" — properly fixed this time.** v73.2's chunking didn't help because the underlying problem wasn't truncation — it was the Zod schema rejecting Claude's natural output (e.g. a 32-char title for a thin `/privacy` page would fail `min(40)`, killing the whole chunk's 10 rows). New three-layer defense:",
+      "  - **Layer 1 — Lenient schema.** Title accepts 5-120 chars, meta accepts 20-300 chars. System prompt still pushes for 40-60 / 120-160 — we just let imperfect outputs through instead of nuking the chunk.",
+      "  - **Layer 2 — Same call, one retry.** Existing chunked + retried `generateObject` from v73.2 still runs.",
+      "  - **Layer 3 — `generateText` + manual JSON parse salvage.** If both `generateObject` attempts fail, the chunk falls back to free-form generateText with an explicit JSON-only instruction, then we hand-parse the response (`extractJsonObject` with balanced-brace scan + `\\`\\`\\`json` fence stripping), and re-validate each row with Zod. Bad rows get dropped; good rows land. One bad row no longer takes the chunk down.",
+      "  Net result: Claude has to literally return zero parseable rows for the run to fail — and even then we get a real underlying-error log instead of a schema mismatch.",
+      "**📏 Length issues auto-flagged in `issues[]`.** Since the schema is lenient now, the consultant might see a 32-char optimized title. Server-side post-processing (`annotateRowLengths`) auto-appends to `issues[]`:",
+      "  - `optimized title under 40 chars (N) — manually lengthen` when title floor missed",
+      "  - `optimized title over 60 chars (N) — risk of SERP truncation` when title ceiling exceeded",
+      "  - Same for meta (under 120 / over 160).",
+      "  So the consultant gets the row + a clear flag of what needs touching up. Nothing silent.",
+      "**🔍 Better failure logging.** Chunk-level `logChunkError` now records `name: message` + cause (when AI SDK exposes it) so the Vercel logs make it obvious whether failures are a rate limit, content policy block, or actual schema issue. v73.2's log just said `failed:` — now it says `[meta-generate] chunk 2 attempt 2 failed: AI_NoObjectGeneratedError: response did not match schema | cause: title length must be ≥40`.",
+      "**🧪 Tested live on Mimus + one other client before shipping.** No more \"try Quick depth\" suggestion — Standard now works at Mimus's full 25-page depth.",
+    ],
+  },
+  {
     version: "73.2",
     date: "2026-05-21",
     title: "SEO DPT icon, roadmap past-week status chip, Accesses vault, chunked meta-generation (fixes \"schema\" error)",
