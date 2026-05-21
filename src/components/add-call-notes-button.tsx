@@ -14,10 +14,12 @@
 // Suggestions are EPHEMERAL — refreshing the page drops them. That's by
 // design: the only persisted artefact is the accepted brief item.
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
+  ArrowLeft,
   Check,
   Loader2,
+  PencilLine,
   PhoneCall,
   Sparkles,
   X,
@@ -175,10 +177,14 @@ function Modal({
     }
   }
 
-  async function accept(suggestion: Suggestion) {
+  async function accept(suggestion: Suggestion, overrideText?: string) {
+    const textToSave = (overrideText ?? suggestion.text).trim();
+    if (!textToSave) return;
     setSuggestions((cur) =>
       cur.map((s) =>
-        s.id === suggestion.id ? { ...s, state: "accepting" } : s,
+        s.id === suggestion.id
+          ? { ...s, state: "accepting", text: textToSave }
+          : s,
       ),
     );
     try {
@@ -191,7 +197,7 @@ function Modal({
       const brief = (await briefRes.json()) as ClientBrief;
       const next: ClientBrief = {
         ...brief,
-        [suggestion.bucket]: [...brief[suggestion.bucket], suggestion.text],
+        [suggestion.bucket]: [...brief[suggestion.bucket], textToSave],
       };
       const put = await fetch(`/api/briefs/${slug}`, {
         method: "PUT",
@@ -225,16 +231,16 @@ function Modal({
     );
   }
 
-  const pending = suggestions.filter((s) => s.state === "pending").length;
-  const accepted = suggestions.filter((s) => s.state === "accepted").length;
+  // (deck-level progress is now rendered inside SuggestionDeck — no
+  // need for a redundant header pill counter here)
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4"
       onClick={onClose}
     >
       <div
-        className="brand-gradient-border w-full max-w-2xl overflow-hidden rounded-2xl bg-[#0a0a0a] shadow-2xl"
+        className="brand-gradient-border w-full max-w-2xl overflow-hidden rounded-2xl bg-[#0a0a0c] shadow-[0_20px_70px_-15px_rgba(120,61,245,0.4)]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -244,11 +250,6 @@ function Modal({
             <h2 className="text-sm font-medium text-white">
               Add Call Notes — {clientName}
             </h2>
-            {step === "suggestions" && (
-              <span className="ml-2 inline-flex items-center gap-1 rounded-full border border-white/12 bg-white/[0.04] px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.15em] text-white/55">
-                {accepted} accepted · {pending} pending
-              </span>
-            )}
           </div>
           <button
             type="button"
@@ -276,7 +277,7 @@ function Modal({
             />
           )}
           {step === "suggestions" && (
-            <SuggestionsView
+            <SuggestionDeck
               suggestions={suggestions}
               sourceTitle={sourceTitle}
               onAccept={accept}
@@ -411,7 +412,13 @@ function PasteView({
   );
 }
 
-function SuggestionsView({
+// One-card-at-a-time review deck. Keyboard:
+//   ← skip   → approve   E edit
+//
+// Each suggestion animates in from the right, then animates left (skip)
+// or right (approve) on action. Edit replaces the card body with a
+// textarea + Save-and-Approve / Cancel — same destination either way.
+function SuggestionDeck({
   suggestions,
   sourceTitle,
   onAccept,
@@ -421,20 +428,102 @@ function SuggestionsView({
 }: {
   suggestions: Suggestion[];
   sourceTitle: string | null;
-  onAccept: (s: Suggestion) => void;
+  onAccept: (s: Suggestion, overrideText?: string) => void;
   onDecline: (id: string) => void;
   onBack: () => void;
   onClose: () => void;
 }) {
-  if (suggestions.length === 0) {
+  // Pending = not yet resolved. The deck advances by consuming from
+  // here; accepted / declined items just disappear from the visible
+  // queue, but stay in the parent's list for the final tally.
+  const pending = suggestions.filter((s) => s.state === "pending");
+  const inFlight = suggestions.find((s) => s.state === "accepting");
+  const current = inFlight ?? pending[0] ?? null;
+
+  const accepted = suggestions.filter((s) => s.state === "accepted").length;
+  const declined = suggestions.filter((s) => s.state === "declined").length;
+  const total = suggestions.length;
+  const positionLabel = current
+    ? `${accepted + declined + 1} of ${total}`
+    : `${total} of ${total}`;
+
+  const [editing, setEditing] = useState(false);
+  const [editedText, setEditedText] = useState("");
+  const [exitDir, setExitDir] = useState<"left" | "right" | null>(null);
+
+  // Reset edit + animation state whenever the current card changes.
+  useEffect(() => {
+    setEditing(false);
+    setEditedText(current?.text ?? "");
+    setExitDir(null);
+  }, [current?.id]);
+
+  const animateOutAndAct = useCallback(
+    (dir: "left" | "right", action: () => void) => {
+      if (!current) return;
+      setExitDir(dir);
+      // Match the duration-200 in the card classes.
+      window.setTimeout(action, 180);
+    },
+    [current],
+  );
+
+  const skip = useCallback(() => {
+    if (!current) return;
+    animateOutAndAct("left", () => onDecline(current.id));
+  }, [animateOutAndAct, current, onDecline]);
+
+  const approve = useCallback(() => {
+    if (!current) return;
+    animateOutAndAct("right", () => onAccept(current));
+  }, [animateOutAndAct, current, onAccept]);
+
+  const saveAndApprove = useCallback(() => {
+    if (!current) return;
+    const trimmed = editedText.trim();
+    if (!trimmed) return;
+    animateOutAndAct("right", () => onAccept(current, trimmed));
+  }, [animateOutAndAct, current, editedText, onAccept]);
+
+  // Keyboard shortcuts — disabled while editing so typing in the
+  // textarea doesn't trigger swipes. Escape on edit cancels edit; on
+  // card, parent handles the modal close.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      const tag = (e.target as HTMLElement | null)?.tagName?.toLowerCase();
+      if (tag === "textarea" || tag === "input") return;
+      if (!current) return;
+      if (editing) {
+        if (e.key === "Escape") {
+          e.stopPropagation();
+          setEditing(false);
+        }
+        return;
+      }
+      if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        skip();
+      } else if (e.key === "ArrowRight") {
+        e.preventDefault();
+        approve();
+      } else if (e.key === "e" || e.key === "E") {
+        e.preventDefault();
+        setEditing(true);
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [current, editing, skip, approve]);
+
+  // No suggestions at all — empty state.
+  if (total === 0) {
     return (
       <div className="py-6 text-center">
-        <p className="text-sm text-white/65">
+        <p className="text-sm text-white/75">
           No brief-worthy items found in this call.
         </p>
         <p className="mt-1 text-xs text-white/45">
-          Likely just scheduling / status-update content. Try pasting a different
-          call.
+          Likely just scheduling / status-update content. Try a different call.
         </p>
         <div className="mt-4 flex items-center justify-center gap-2">
           <button
@@ -442,7 +531,7 @@ function SuggestionsView({
             onClick={onBack}
             className="rounded-md border border-white/15 bg-white/[0.04] px-3 py-1.5 text-[11px] font-medium text-white/85 transition hover:bg-white/[0.08]"
           >
-            ← Try another transcript
+            ← Try another call
           </button>
           <button
             type="button"
@@ -455,123 +544,221 @@ function SuggestionsView({
       </div>
     );
   }
-  return (
-    <div className="space-y-3">
-      {sourceTitle && (
-        <p className="text-[11px] text-white/45">
-          Source: <span className="text-white/75">{sourceTitle}</span>{" "}
-          <span className="text-emerald-300/85">· fetched from Fathom</span>
+
+  // All done.
+  if (!current) {
+    return (
+      <div className="py-8 text-center">
+        <div className="mx-auto mb-3 inline-flex h-12 w-12 items-center justify-center rounded-full border border-emerald-400/40 bg-emerald-500/15">
+          <Check className="h-6 w-6 text-emerald-300" />
+        </div>
+        <h3 className="text-lg font-semibold text-white">All done</h3>
+        <p className="mt-1 text-sm text-white/65">
+          {accepted} added to brief · {declined} skipped
         </p>
-      )}
-      {suggestions.map((s) => (
-        <SuggestionCard
-          key={s.id}
-          suggestion={s}
-          onAccept={() => onAccept(s)}
-          onDecline={() => onDecline(s.id)}
-        />
-      ))}
-      <div className="flex items-center justify-between gap-2 pt-2">
-        <button
-          type="button"
-          onClick={onBack}
-          className="rounded-md border border-white/15 bg-white/[0.04] px-3 py-1.5 text-[11px] font-medium text-white/65 transition hover:bg-white/[0.08] hover:text-white"
-        >
-          ← Process another call
-        </button>
-        <button
-          type="button"
-          onClick={onClose}
-          className="rounded-md bg-gradient-to-br from-[#343ED7] via-[#783DF5] to-[#C535C9] px-3 py-1.5 text-[11px] font-semibold text-white shadow-lg shadow-[#783DF5]/25 transition hover:brightness-110"
-        >
-          Done
-        </button>
+        <div className="mt-5 flex items-center justify-center gap-2">
+          <button
+            type="button"
+            onClick={onBack}
+            className="rounded-md border border-white/15 bg-white/[0.04] px-3.5 py-2 text-xs font-medium text-white/75 transition hover:bg-white/[0.08] hover:text-white"
+          >
+            <ArrowLeft className="-mt-0.5 inline-block h-3.5 w-3.5" /> Process
+            another call
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-md bg-gradient-to-br from-[#343ED7] via-[#783DF5] to-[#C535C9] px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-[#783DF5]/25 transition hover:brightness-110"
+          >
+            Done
+          </button>
+        </div>
       </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Progress + source */}
+      <div className="space-y-2">
+        {sourceTitle && (
+          <p className="truncate text-[11px] text-white/40">
+            <span className="text-white/65">{sourceTitle}</span>
+            <span className="ml-1.5 text-emerald-300/80">
+              · fetched from Fathom
+            </span>
+          </p>
+        )}
+        <div className="flex items-center gap-3">
+          <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-white/45">
+            {positionLabel}
+          </span>
+          <div className="relative h-1 flex-1 overflow-hidden rounded-full bg-white/[0.05]">
+            <div
+              className="absolute inset-y-0 left-0 bg-emerald-400/70 transition-all duration-300"
+              style={{ width: `${(accepted / total) * 100}%` }}
+            />
+            <div
+              className="absolute inset-y-0 bg-white/15 transition-all duration-300"
+              style={{
+                left: `${(accepted / total) * 100}%`,
+                width: `${(declined / total) * 100}%`,
+              }}
+            />
+          </div>
+          <span className="text-[10px] text-white/45">
+            <span className="text-emerald-300/85">{accepted}</span>
+            <span className="px-0.5">·</span>
+            <span className="text-white/45">{declined}</span>
+          </span>
+        </div>
+      </div>
+
+      {/* The card itself */}
+      <SuggestionDeckCard
+        suggestion={current}
+        editing={editing}
+        editedText={editedText}
+        setEditedText={setEditedText}
+        exitDir={exitDir}
+      />
+
+      {/* Action bar */}
+      <div className="flex items-stretch gap-2 pt-1">
+        <button
+          type="button"
+          onClick={skip}
+          disabled={editing || current.state === "accepting"}
+          className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg border border-white/15 bg-white/[0.04] px-4 py-2.5 text-xs font-semibold text-white/75 transition hover:border-rose-400/40 hover:bg-rose-500/10 hover:text-rose-100 disabled:cursor-not-allowed disabled:opacity-40"
+          title="Skip (←)"
+        >
+          <X className="h-4 w-4" />
+          Skip
+        </button>
+        {editing ? (
+          <>
+            <button
+              type="button"
+              onClick={() => setEditing(false)}
+              className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg border border-white/15 bg-white/[0.04] px-4 py-2.5 text-xs font-semibold text-white/75 transition hover:bg-white/[0.08] hover:text-white"
+            >
+              Cancel edit
+            </button>
+            <button
+              type="button"
+              onClick={saveAndApprove}
+              disabled={editedText.trim().length === 0}
+              className="flex-[1.4] inline-flex items-center justify-center gap-2 rounded-lg bg-gradient-to-br from-[#343ED7] via-[#783DF5] to-[#C535C9] px-4 py-2.5 text-xs font-semibold text-white shadow-lg shadow-[#783DF5]/25 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <Check className="h-4 w-4" />
+              Save &amp; add to brief
+            </button>
+          </>
+        ) : (
+          <>
+            <button
+              type="button"
+              onClick={() => setEditing(true)}
+              disabled={current.state === "accepting"}
+              className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg border border-amber-400/40 bg-amber-500/10 px-4 py-2.5 text-xs font-semibold text-amber-100 transition hover:bg-amber-500/20 disabled:cursor-not-allowed disabled:opacity-40"
+              title="Edit before adding (E)"
+            >
+              <PencilLine className="h-4 w-4" />
+              Edit first
+            </button>
+            <button
+              type="button"
+              onClick={approve}
+              disabled={current.state === "accepting"}
+              className="flex-[1.4] inline-flex items-center justify-center gap-2 rounded-lg bg-gradient-to-br from-emerald-500 via-emerald-500 to-emerald-600 px-4 py-2.5 text-xs font-semibold text-white shadow-lg shadow-emerald-600/30 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+              title="Add to brief (→)"
+            >
+              {current.state === "accepting" ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Check className="h-4 w-4" />
+              )}
+              Add to brief
+            </button>
+          </>
+        )}
+      </div>
+
+      <p className="text-center text-[10px] text-white/30">
+        ← skip · → add · E edit
+      </p>
     </div>
   );
 }
 
-function SuggestionCard({
+function SuggestionDeckCard({
   suggestion,
-  onAccept,
-  onDecline,
+  editing,
+  editedText,
+  setEditedText,
+  exitDir,
 }: {
   suggestion: Suggestion;
-  onAccept: () => void;
-  onDecline: () => void;
+  editing: boolean;
+  editedText: string;
+  setEditedText: (v: string) => void;
+  exitDir: "left" | "right" | null;
 }) {
   const styles = BUCKET_STYLES[suggestion.bucket];
-  const isDone =
-    suggestion.state === "accepted" || suggestion.state === "declined";
+  const animClasses =
+    exitDir === "right"
+      ? "translate-x-[120%] rotate-3 opacity-0"
+      : exitDir === "left"
+        ? "-translate-x-[120%] -rotate-3 opacity-0"
+        : "translate-x-0 rotate-0 opacity-100";
   return (
     <article
-      className={`rounded-xl border px-4 py-3 transition ${styles.ring} ${
-        isDone ? "opacity-60" : ""
-      }`}
+      className={`relative rounded-xl border px-5 py-4 transition-all duration-200 ${styles.ring} ${animClasses}`}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <span
-              className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.15em] ${styles.chip}`}
-            >
-              <span className={`h-1.5 w-1.5 rounded-full ${styles.dot}`} />
-              {BUCKET_LABEL[suggestion.bucket]}
-            </span>
-            {suggestion.state === "accepted" && (
-              <span className="inline-flex items-center gap-1 text-[10px] font-medium uppercase tracking-[0.12em] text-emerald-300">
-                <Check className="h-3 w-3" /> Added to brief
-              </span>
-            )}
-            {suggestion.state === "declined" && (
-              <span className="text-[10px] font-medium uppercase tracking-[0.12em] text-white/40">
-                Declined
-              </span>
-            )}
-            {suggestion.state === "error" && (
-              <span className="text-[10px] font-medium uppercase tracking-[0.12em] text-rose-300">
-                {suggestion.error?.slice(0, 80) ?? "Save failed"}
-              </span>
-            )}
-          </div>
-          <p className="mt-2 text-sm leading-snug text-white">
-            {suggestion.text}
-          </p>
-          <p className="mt-1.5 text-xs leading-relaxed text-white/55">
-            {suggestion.reasoning}
-          </p>
-          {suggestion.source && (
-            <blockquote className="mt-2 border-l-2 border-white/15 pl-2.5 text-[11px] italic leading-relaxed text-white/45">
-              &ldquo;{suggestion.source}&rdquo;
-            </blockquote>
-          )}
-        </div>
-        {!isDone && (
-          <div className="flex shrink-0 items-center gap-1.5">
-            <button
-              type="button"
-              onClick={onAccept}
-              disabled={suggestion.state === "accepting"}
-              className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-emerald-400/40 bg-emerald-500/15 text-emerald-100 transition hover:bg-emerald-500/25 disabled:cursor-not-allowed disabled:opacity-60"
-              title="Add this item to the brief"
-            >
-              {suggestion.state === "accepting" ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <Check className="h-3.5 w-3.5" />
-              )}
-            </button>
-            <button
-              type="button"
-              onClick={onDecline}
-              className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-white/15 bg-white/[0.04] text-white/65 transition hover:bg-white/[0.08] hover:text-white"
-              title="Skip this suggestion"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          </div>
+      <div className="flex items-center justify-between">
+        <span
+          className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] ${styles.chip}`}
+        >
+          <span className={`h-1.5 w-1.5 rounded-full ${styles.dot}`} />
+          {BUCKET_LABEL[suggestion.bucket]}
+        </span>
+        {suggestion.state === "error" && (
+          <span
+            className="max-w-[60%] truncate text-[10px] font-medium uppercase tracking-[0.12em] text-rose-300"
+            title={suggestion.error}
+          >
+            {suggestion.error?.slice(0, 80) ?? "Save failed"}
+          </span>
         )}
       </div>
+
+      {editing ? (
+        <textarea
+          value={editedText}
+          onChange={(e) => setEditedText(e.target.value)}
+          rows={4}
+          className="mt-3 w-full resize-y rounded-lg border border-white/15 bg-white/[0.03] px-3 py-2 text-sm leading-snug text-white placeholder:text-white/30 focus:border-amber-400/50 focus:outline-none focus:ring-1 focus:ring-amber-400/30"
+          autoFocus
+        />
+      ) : (
+        <p className="mt-3 text-base leading-snug text-white">
+          {suggestion.text}
+        </p>
+      )}
+
+      {suggestion.reasoning && (
+        <p className="mt-2.5 text-xs leading-relaxed text-white/55">
+          <span className="font-medium uppercase tracking-[0.15em] text-white/40">
+            Why
+          </span>{" "}
+          · {suggestion.reasoning}
+        </p>
+      )}
+      {suggestion.source && !editing && (
+        <blockquote className="mt-2.5 border-l-2 border-white/15 pl-3 text-[11px] italic leading-relaxed text-white/40">
+          &ldquo;{suggestion.source}&rdquo;
+        </blockquote>
+      )}
     </article>
   );
 }
