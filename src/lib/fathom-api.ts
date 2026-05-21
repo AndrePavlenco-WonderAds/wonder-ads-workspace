@@ -146,8 +146,12 @@ export async function resolveFathomCallByShareUrl(
     });
     if (cursor) params.set("cursor", cursor);
 
+    // X-Api-Key is Fathom's canonical header (per the official quickstart).
+    // We also send Authorization: Bearer as a belt-and-braces fallback
+    // because some Fathom API tiers documented both — costs nothing extra.
     const res = await fetch(`${FATHOM_BASE}/meetings?${params.toString()}`, {
       headers: {
+        "X-Api-Key": key,
         Authorization: `Bearer ${key}`,
         Accept: "application/json",
       },
@@ -155,8 +159,9 @@ export async function resolveFathomCallByShareUrl(
     });
 
     if (res.status === 401 || res.status === 403) {
+      const body = await res.text().catch(() => "");
       throw new FathomApiError(
-        "Fathom rejected the API key. Check FATHOM_API_KEY in Vercel and that the key hasn't been revoked.",
+        `Fathom rejected the API key (HTTP ${res.status}). Body: ${body.slice(0, 200) || "(empty)"}. Check FATHOM_API_KEY in Vercel is the API key from fathom.video/customize#api-access-header (not a webhook key), no extra whitespace, and that the key hasn't been revoked.`,
         "upstream",
         502,
       );
