@@ -166,11 +166,20 @@ export default async function ResultPage({
                           : "Other"
               }
               docLink={
+                // What the client lands on when they click "Open" in the
+                // Pending Review table. gmb-posts + meta-tags have their
+                // own bespoke preview pages; every other text-based
+                // result (SEO Audit, Keyword Research, Client Roadmap,
+                // Monthly Report, etc.) uses the generic public report
+                // view at /(public-review)/[slug]/preview/[action]/[id].
+                // DOCX downloads stay internal-only — clients view a
+                // branded HTML report + a Download PDF button instead
+                // of being force-handed a Word document.
                 action.slug === "gmb-posts"
                   ? `/${slug}/preview/gmb-posts/${resultId}`
                   : action.slug === "meta-title-description"
                     ? `/${slug}/preview/meta-tags/${metaTagsActualId ?? resultId}`
-                    : `/api/seo-actions/${slug}/${actionSlug}/results/${resultId}/docx`
+                    : `/${slug}/preview/${actionSlug}/${resultId}`
               }
               sourceType={action.slug}
             />

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2, AlertTriangle } from "lucide-react";
 import type { ActionDef, ActionToolName } from "@/lib/seo-pillars";
 import type { HistoryEntry } from "@/lib/action-history";
@@ -37,6 +37,7 @@ export function ResultRunner({
 }) {
   const searchParams = useSearchParams();
   const isPrintMode = searchParams?.get("print") === "true";
+  const router = useRouter();
 
   const [output, setOutput] = useState(existing?.output ?? "");
   const [inputs, setInputs] = useState<Record<string, string>>(
@@ -275,6 +276,12 @@ export function ResultRunner({
               } catch {
                 /* response body may not be JSON in edge cases */
               }
+              // Refresh the server component so the Send-for-Approval +
+              // Download PDF/DOCX buttons at the top of the page
+              // (rendered server-side based on getHistoryEntry) re-evaluate
+              // and appear without requiring a manual page refresh.
+              // Mirrors the same fix in meta-tags-runner.tsx.
+              router.refresh();
             }
           } catch (saveErr) {
             console.error("save failed:", saveErr);
@@ -299,7 +306,7 @@ export function ResultRunner({
         abortRef.current = null;
       }
     },
-    [apiBase, resultId, action.slug, consumeStream],
+    [apiBase, resultId, action.slug, consumeStream, router],
   );
 
   // On mount: if no existing result, check sessionStorage for pending inputs

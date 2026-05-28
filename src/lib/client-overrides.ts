@@ -10,7 +10,9 @@ export const TITLE_OVERRIDES: Record<string, string> = {
 /** Slugs to hide from the workspace (client offboarded, etc). */
 export const EXCLUDED_SLUGS = new Set<string>(["c-saccor"]);
 
-const LUANA = new Set([
+// Luana N. → André P. handover (v74.6). André took over Luana's book; the
+// slug membership stays the same, only the consultant identity changed.
+const ANDRE = new Set([
   "aeger-prima",
   "a-domingos",
   "senior-resort",
@@ -37,7 +39,7 @@ const YENISEY = new Set([
 
 /** Returns the Head Consultant for a given client slug. */
 export function getConsultantForSlug(slug: string): string {
-  if (LUANA.has(slug)) return "Luana N.";
+  if (ANDRE.has(slug)) return "André P.";
   if (FRAN_R.has(slug)) return "Fran. R.";
   if (YENISEY.has(slug)) return "Yenisey R.";
   return "Unassigned";
@@ -47,7 +49,7 @@ export function getConsultantForSlug(slug: string): string {
  *  Used on PDF/DOCX deliverables so replies land in the inbox of the
  *  consultant actually managing the project (not the shared seo@ alias). */
 export function getConsultantEmailForSlug(slug: string): string {
-  if (LUANA.has(slug)) return "luana@wonder-ads.com";
+  if (ANDRE.has(slug)) return "andre@wonder-ads.com";
   if (FRAN_R.has(slug)) return "fran@wonder-ads.com";
   if (YENISEY.has(slug)) return "yeni@wonder-ads.com";
   return "seo@wonder-ads.com";
@@ -57,5 +59,5 @@ export function getConsultantEmailForSlug(slug: string): string {
 export const CONSULTANT_ORDER = [
   "Fran. R.",
   "Yenisey R.",
-  "Luana N.",
+  "André P.",
 ] as const;
