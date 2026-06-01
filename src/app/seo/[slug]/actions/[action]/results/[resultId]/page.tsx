@@ -163,7 +163,9 @@ export default async function ResultPage({
                         ? "Roadmap"
                         : action.slug === "meta-title-description"
                           ? "On-Page SEO"
-                          : "Other"
+                          : action.slug === "write-blog-article"
+                            ? "Content"
+                            : "Other"
               }
               docLink={
                 // What the client lands on when they click "Open" in the

@@ -4,6 +4,7 @@ import { PageShell } from "@/components/page-shell";
 import { LogoChip } from "@/components/logo-chip";
 import { ActionRunner } from "@/components/action-runner";
 import { IntegrationChips } from "@/components/integration-chips";
+import { BlogWriterStandardPanel } from "@/components/blog-writer-standard-panel";
 import { findAction, PILLARS, type ActionToolName } from "@/lib/seo-pillars";
 import { getBriefForSlug } from "@/lib/briefs-storage";
 import { getClientBySlug } from "@/lib/notion";
@@ -128,7 +129,7 @@ export default async function ActionPage({
           className="mt-6 rounded-2xl border border-white/8 bg-white/[0.025] p-4"
         >
           <h2 className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/50">
-            What SEO Claude knows about {client.title}
+            What {action.slug === "write-blog-article" ? "Blog Article Writer Pro" : "SEO Claude"} knows about {client.title}
           </h2>
           <div className="mt-3 grid grid-cols-1 gap-4 md:grid-cols-3">
             <BriefColumn title="Do's" items={brief.dos} accent="text-emerald-300/85" />
@@ -137,6 +138,8 @@ export default async function ActionPage({
           </div>
         </section>
       )}
+
+      {action.slug === "write-blog-article" && <BlogWriterStandardPanel />}
 
       <section className="mt-8">
         <ActionRunner

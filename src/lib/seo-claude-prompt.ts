@@ -1,5 +1,6 @@
 import type { ClientBrief } from "./client-briefs";
 import type { ActionDef, Pillar } from "./seo-pillars";
+import { buildBlogWriterSystemPrompt } from "./blog-writer-prompt";
 
 const SEO_PLAYBOOK = `# 2025–2026 SEO playbook (use these as first principles, not as rules to recite)
 
@@ -88,6 +89,21 @@ export function buildSeoClaudeSystemPrompt({
   action: ActionDef;
   pillar: Pillar;
 }): string {
+  // The blog writer is a SPECIALIST agent with a hard-coded language
+  // rule, a triple-checked brief, and a fixed research → reference →
+  // internal-linking → draft → self-audit process. Different persona,
+  // different output, different rules — so we short-circuit the
+  // generalist prompt and return the dedicated builder.
+  if (action.slug === "write-blog-article") {
+    return buildBlogWriterSystemPrompt({
+      client: {
+        slug: client.slug,
+        name: client.name,
+        website: client.website,
+        brief: client.brief,
+      },
+    });
+  }
   const persona = `SEO Claude — ${client.name}`;
   const websiteLine = client.website
     ? `- Website: ${client.website}`
@@ -510,15 +526,11 @@ End with a one-line note on which variant fits which type of contact.`;
 - Never violate the client's Don'ts. Never make medical claims.`;
 
     case "write-blog-article":
-      return `Write the full article in publication-ready Markdown. Structure:
-- **Suggested URL slug** (top of the file as a comment line)
-- **Meta title + meta description** (above the article, marked clearly)
-- **H1** — match the working title or improve it
-- 800–2500 words depending on the requested target — calibrate to actually cover the topic, not to hit a number
-- Lead each H2 with a direct answer (AI-Overviews-friendly), then expand with specifics, examples, named entities, and citations
-- Include at minimum: one comparison table OR list, one FAQ section (3–5 questions), 3–6 internal link anchor suggestions in the form [anchor text → /suggested-target-slug], and 2–4 outbound citations to authoritative sources
-- End with a concise CTA aligned to the page goal.
-Reading level: clear, professional, age 14+. No keyword stuffing. No AI tells ("In today's digital landscape...").`;
+      // Unreachable: buildSeoClaudeSystemPrompt short-circuits to
+      // buildBlogWriterSystemPrompt for this slug. Kept for defence so
+      // a refactor that bypasses the short-circuit still has a sane
+      // fallback.
+      return `(Blog Article Writer Pro spec — see lib/blog-writer-prompt.ts. This branch should be unreachable.)`;
 
     case "content-calendar":
       return `Output a Markdown table with one row per planned piece. Columns: Publish date (week-of), Title (working), Primary keyword, Intent, Cluster, Format (article/guide/comparison/landing/FAQ), Word target, Owner placeholder, Notes. Group rows by month with an H2 header. End with a short summary of how the clusters interlink and which pieces are the pillar pages.`;

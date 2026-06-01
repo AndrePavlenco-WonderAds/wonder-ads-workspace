@@ -855,7 +855,9 @@ export const PILLARS: Pillar[] = [
         slug: "write-blog-article",
         label: "Write Blog Article",
         blurb:
-          "Long-form, E-E-A-T-grade article aligned to a primary keyword.",
+          "Dedicated long-form writer agent. Triple-checks client brief, researches references, plans internal links, then drafts and self-audits.",
+        titleTemplate: "New article for {client}",
+        generateButtonLabel: "Brief → Research → Draft",
         fields: [
           {
             key: "topic",
@@ -874,6 +876,14 @@ export const PILLARS: Pillar[] = [
             placeholder: "One per line.",
           },
           {
+            key: "lsiKeywords",
+            label: "LSI keywords (optional)",
+            type: "textarea",
+            rows: 3,
+            placeholder:
+              "One per line. Used 1–2× each, often in H3s, so Google can disambiguate the topic.",
+          },
+          {
             key: "wordCount",
             label: "Target length",
             type: "select",
@@ -885,6 +895,29 @@ export const PILLARS: Pillar[] = [
             label: "Audience (optional)",
             type: "textarea",
             rows: 2,
+          },
+          {
+            key: "internalLinkInventory",
+            label: "Internal link inventory (optional)",
+            type: "textarea",
+            rows: 5,
+            placeholder:
+              "Paste real URLs or page titles from the client's site so the writer can plan accurate internal links. One per line. If left empty, the writer infers candidates and flags them for verification.",
+          },
+          {
+            key: "referenceFocus",
+            label: "Reference focus (optional)",
+            type: "textarea",
+            rows: 3,
+            placeholder:
+              "Specific authoritative sources or angles the client wants cited (e.g. \"SNS guidelines on lower-back pain\", \"PubMed 2024 meta-analysis on dental implants\").",
+          },
+          {
+            key: "ctaTarget",
+            label: "Primary CTA target (optional)",
+            type: "text",
+            placeholder:
+              "URL or slug for the bottom-funnel CTA — booking page, service page, lead magnet.",
           },
         ],
       },
