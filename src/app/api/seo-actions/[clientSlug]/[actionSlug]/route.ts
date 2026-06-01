@@ -276,6 +276,57 @@ export async function POST(
           }
           send("\n---\n\n");
         }
+      } else if (entry.action.slug === "write-blog-article") {
+        // Blog Article Writer Pro needs the onboarding form so it can
+        // triple-check what the client actually wants (services to push,
+        // services to avoid, audience, brand voice, competitors).
+        // Match the keyword-research flow: extract text into the fact
+        // pack AND attach the PDF natively so the agent can read the
+        // form's layout / tables / images.
+        try {
+          const onboarding = await getOnboardingForSlug(clientSlug);
+          if (onboarding) {
+            const compNote =
+              onboarding.competitors && onboarding.competitors.length > 0
+                ? ` · ${onboarding.competitors.length} competitor(s) named`
+                : "";
+            send(
+              `> ✓ **Onboarding form** loaded (${onboarding.name})${compNote} — Blog Writer will double-check it before drafting.\n`,
+            );
+            if (
+              onboarding.contentType === "application/pdf" ||
+              onboarding.url.toLowerCase().endsWith(".pdf")
+            ) {
+              try {
+                const pdfRes = await fetch(onboarding.url, { cache: "no-store" });
+                if (pdfRes.ok) {
+                  onboardingPdfBuffer = new Uint8Array(await pdfRes.arrayBuffer());
+                  onboardingPdfName = onboarding.name;
+                }
+              } catch (err) {
+                console.error("PDF fetch for Claude attach failed:", err);
+              }
+            }
+            const extractedSnippet = onboarding.extractedText
+              ? `\n\n### Extracted text from the onboarding form\n\`\`\`\n${onboarding.extractedText.slice(0, 8000)}${onboarding.extractedText.length > 8000 ? "\n…[truncated — see attached PDF for full content]" : ""}\n\`\`\``
+              : "";
+            const compLine =
+              onboarding.competitors && onboarding.competitors.length > 0
+                ? `\n- **Competitors named in the form (NEVER link to these):** ${onboarding.competitors.join(", ")}`
+                : "";
+            factPack = `## Onboarding form (uploaded by the consultant — MANDATORY READ)\n- **File:** ${onboarding.name} (${onboarding.contentType})${compLine}\n\nThe client filled this out at intake. It names the specific services to push, audience, brand voice, business objectives, and competitors to avoid. **You MUST triple-check this form** as one of the brief verification points. Quote short excerpts where useful. Do NOT mention any service the form doesn't list. Do NOT link to any competitor named here.${extractedSnippet}${onboardingPdfBuffer ? "\n\n> The full PDF is also attached natively to this message — read it as your primary source." : ""}`;
+            send("\n---\n\n");
+          } else {
+            send(
+              `> ⚠️ **No onboarding form on file** for this client — drafting from brief + inputs only. Upload one on the client page so future articles can cite what the client actually wants.\n\n`,
+            );
+          }
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          send(
+            `> ⚠️ Onboarding fetch failed (${message.slice(0, 200)}) — proceeding without it.\n\n`,
+          );
+        }
       } else if (
         entry.action.slug === "monthly-report" ||
         entry.action.slug === "client-roadmap"
@@ -455,10 +506,25 @@ export async function POST(
         });
       }
 
+      // Per-action output budget. The Blog Writer caps its tokens
+      // based on the requested word count so it can't wander past
+      // Vercel's 60s budget mid-article. Sonnet streams ~50-70 tps,
+      // so a 1500-word draft (≈ 2500 tokens at 1.65 tok/word) + the
+      // Working Notes + Brief Check appendix (~600 tokens) fits well
+      // inside the budget when we hint the ceiling explicitly.
+      let maxOutputTokens: number | undefined;
+      if (entry.action.slug === "write-blog-article") {
+        const wordTarget = parseInt(inputs.wordCount ?? "1500", 10) || 1500;
+        const articleTokens = Math.ceil(wordTarget * 1.65);
+        const overheadTokens = 800; // slug + meta + working notes + brief-check appendix
+        maxOutputTokens = Math.min(8000, articleTokens + overheadTokens);
+      }
+
       const result = streamText({
         model: anthropic(MODEL_ID),
         system,
         messages: [{ role: "user", content: userContent }],
+        ...(maxOutputTokens ? { maxOutputTokens } : {}),
         onError: ({ error }) => {
           console.error("SEO action stream failed:", error);
           try {

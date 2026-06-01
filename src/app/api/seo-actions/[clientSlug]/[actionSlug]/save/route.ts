@@ -17,6 +17,11 @@ import {
 } from "@/lib/kw-research-prep-store";
 import { parseClustersFromMarkdown } from "@/lib/kw-cluster-parser";
 import { enrichKeywordsComprehensive } from "@/lib/seo-tools/keyword-research";
+import {
+  extractExternalUrls,
+  verifyExternalUrls,
+  renderBrokenLinkWarning,
+} from "@/lib/verify-external-links";
 
 export const runtime = "nodejs";
 // Bumped from 30s — the AI-cluster keyword enrichment fires a
@@ -50,8 +55,31 @@ export async function POST(
 
   const resultId = body.resultId;
   const inputs = body.inputs ?? {};
-  const output = (body.output ?? "").trim();
+  let output = (body.output ?? "").trim();
   const model = body.model ?? MODEL_ID;
+
+  // Post-stream URL verification for the Blog Article Writer Pro.
+  // Every external markdown link is HEAD-checked in parallel; any
+  // broken link gets surfaced in a warning callout prepended to the
+  // saved output so the consultant sees it before sending the article
+  // for client review. Bounded to 6s total to protect the 60s budget.
+  if (actionSlug === "write-blog-article" && output.length > 0) {
+    try {
+      const urls = extractExternalUrls(output);
+      if (urls.length > 0) {
+        const checks = await Promise.race([
+          verifyExternalUrls(urls, { timeoutMs: 4000, concurrency: 8 }),
+          new Promise<null>((resolve) => setTimeout(() => resolve(null), 6000)),
+        ]);
+        if (checks) {
+          const warning = renderBrokenLinkWarning(checks);
+          if (warning) output = warning + output;
+        }
+      }
+    } catch (err) {
+      console.error("link verification failed (non-fatal):", err);
+    }
+  }
 
   if (!resultId) {
     return NextResponse.json({ error: "resultId required" }, { status: 400 });

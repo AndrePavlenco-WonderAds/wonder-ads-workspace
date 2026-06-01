@@ -4,7 +4,7 @@ import { PageShell } from "@/components/page-shell";
 import { LogoChip } from "@/components/logo-chip";
 import { ActionRunner } from "@/components/action-runner";
 import { IntegrationChips } from "@/components/integration-chips";
-import { BlogWriterStandardPanel } from "@/components/blog-writer-standard-panel";
+import { BlogWriterStandardButton } from "@/components/blog-writer-standard-button";
 import { findAction, PILLARS, type ActionToolName } from "@/lib/seo-pillars";
 import { getBriefForSlug } from "@/lib/briefs-storage";
 import { getClientBySlug } from "@/lib/notion";
@@ -92,35 +92,44 @@ export default async function ActionPage({
       backLabel={client.title}
     >
       <header className="animate-fade-up mt-2">
-        <div className="flex items-center gap-2.5 text-[11px] font-medium uppercase tracking-[0.18em] text-white/55">
-          <LogoChip
-            logo={logo}
-            emoji={client.icon}
-            alt={`${client.title} logo`}
-            gradient={gradient}
-            size="md"
-            bgMode={logoBgMode}
-            sizing={logoSizing}
-          />
-          <Link
-            href={`/seo/${slug}`}
-            className="transition hover:text-white"
-          >
-            {client.title}
-          </Link>
-          <span className="text-white/25">·</span>
-          <span className="inline-flex items-center gap-1.5">
-            <PillarIcon className="h-3 w-3" strokeWidth={2.25} />
-            {pillar.name}
-          </span>
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2.5 text-[11px] font-medium uppercase tracking-[0.18em] text-white/55">
+              <LogoChip
+                logo={logo}
+                emoji={client.icon}
+                alt={`${client.title} logo`}
+                gradient={gradient}
+                size="md"
+                bgMode={logoBgMode}
+                sizing={logoSizing}
+              />
+              <Link
+                href={`/seo/${slug}`}
+                className="transition hover:text-white"
+              >
+                {client.title}
+              </Link>
+              <span className="text-white/25">·</span>
+              <span className="inline-flex items-center gap-1.5">
+                <PillarIcon className="h-3 w-3" strokeWidth={2.25} />
+                {pillar.name}
+              </span>
+            </div>
+            <h1 className="mt-3 text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">
+              <span className="brand-gradient-text">{action.label}</span>
+            </h1>
+            <p className="mt-2 max-w-xl text-sm text-white/55">{action.blurb}</p>
+            {action.tools && action.tools.length > 0 && (
+              <IntegrationChips tools={action.tools as ActionToolName[]} />
+            )}
+          </div>
+          {action.slug === "write-blog-article" && (
+            <div className="shrink-0 pt-2">
+              <BlogWriterStandardButton />
+            </div>
+          )}
         </div>
-        <h1 className="mt-3 text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">
-          <span className="brand-gradient-text">{action.label}</span>
-        </h1>
-        <p className="mt-2 max-w-xl text-sm text-white/55">{action.blurb}</p>
-        {action.tools && action.tools.length > 0 && (
-          <IntegrationChips tools={action.tools as ActionToolName[]} />
-        )}
       </header>
 
       {showBriefPanel && (
@@ -138,8 +147,6 @@ export default async function ActionPage({
           </div>
         </section>
       )}
-
-      {action.slug === "write-blog-article" && <BlogWriterStandardPanel />}
 
       <section className="mt-8">
         <ActionRunner

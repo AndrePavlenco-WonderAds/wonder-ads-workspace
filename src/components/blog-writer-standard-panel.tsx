@@ -9,6 +9,8 @@ import { MarkdownView } from "./markdown-view";
 import {
   BLOG_WRITER_LANGUAGE_RULE,
   BLOG_WRITER_BRIEF_CHECK,
+  BLOG_WRITER_ONBOARDING_CHECK,
+  BLOG_WRITER_LINK_VERIFICATION,
   BLOG_WRITER_STANDARD,
   BLOG_WRITER_PROCESS,
   BLOG_WRITER_OUTPUT_FORMAT,
@@ -36,8 +38,24 @@ const SECTIONS: Array<{
     emoji: "🛡️",
     title: "Client brief — triple check",
     blurb:
-      "The agent verifies Do's / Don'ts / Notes three times — before, during, after — and self-reports.",
+      "Verifies Do's / Don'ts / Notes three times — before, during, after — and self-reports.",
     body: BLOG_WRITER_BRIEF_CHECK,
+  },
+  {
+    id: "onboarding",
+    emoji: "📋",
+    title: "Onboarding form — double check",
+    blurb:
+      "Verifies the client's onboarding form (services, audience, brand voice, competitors) before outlining AND before each CTA.",
+    body: BLOG_WRITER_ONBOARDING_CHECK,
+  },
+  {
+    id: "links",
+    emoji: "🔗",
+    title: "External links — verify before inserting",
+    blurb:
+      "Whitelist of pre-approved authoritative roots · marker for unverified URLs · automated HEAD check after streaming.",
+    body: BLOG_WRITER_LINK_VERIFICATION,
   },
   {
     id: "standard",
@@ -50,9 +68,9 @@ const SECTIONS: Array<{
   {
     id: "process",
     emoji: "🧭",
-    title: "Process — research → references → links → draft → audit",
+    title: "Process — six mandatory steps",
     blurb:
-      "Five mandatory steps. References and internal-linking are non-optional planning stages, not afterthoughts.",
+      "Brief + onboarding check → intent → references → internal-linking → draft → self-audit.",
     body: BLOG_WRITER_PROCESS,
   },
   {
