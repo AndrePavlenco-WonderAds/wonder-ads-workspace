@@ -13,6 +13,22 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.13",
+    date: "2026-06-02",
+    title: "SuperAdmin Suite · post-gate chooser landing · Projects block + new Employees block — team roster + payroll",
+    highlights: [
+      "**🧭 Post-gate chooser landing.** `/admin` no longer drops you straight into the projects table. After unlocking you land on a two-block chooser — `Projects` (FolderKanban icon, current client management) and `Employees` (Users icon, the new team roster). Each block carries a brand-gradient border, a brand-purple glow that brightens on hover, a live count badge (`N clients` / `N employees`) and an `Open …` arrow that slides on hover. Pick where you want to go.",
+      "**🚪 Gate moved to a layout.** New `src/app/admin/layout.tsx` runs `isAdminUnlocked()` once and either renders `AdminGate` or the children. Every page under `/admin/*` is automatically protected — `/admin/projects` and `/admin/employees` can't be hit directly without the cookie, no per-page boilerplate. Clean, single source of truth for the gate.",
+      "**📁 Projects moved to `/admin/projects`.** Same flat table, same multi-consultant dropdown, same € / $ toggle, same live MRR, same rose empty-state flag, same emphasis on the monthly-value column — just at a new URL. A `Back to Admin` link sits at the top so you can switch between Projects and Employees in one click.",
+      "**👥 New `/admin/employees` — the team roster + payroll.** Mirrors the Projects panel for consistency: header (with rollup tiles), table (one editable row per employee), Save/Discard per row, live `Payroll €` and `Payroll $` rollup tiles at the top with the same emerald glow when populated. Columns: `Employee` (name + email stacked), `Role` (free text), `Departments` (multi-select dropdown — SEO · ADS · Operations · Founder, each with its own coloured pill), `Starting date` (DD/MM/YYYY), `Payment cadence` (Monthly / Each 3 months / Each 6 months), `Next pay` (auto-computed), `Monthly salary` (€/$ toggle + emphasized input, rose `Needs salary` flag when empty), `Status` (Active / Onboarding / On leave / Offboarded — coloured select), `Notes`.",
+      "**➕ Add employee inline.** Top-right of the Employees panel: brand-gradient `Add employee` button toggles an inline form (Name · Email · Role) styled to match the panel's aesthetic. POST → `/api/admin/employees` validates inputs, generates a slugified id (with collision suffixes if needed), writes the record + appends to the roster index, and the row appears at the bottom of the table instantly without a refresh.",
+      "**🗑 Remove employee.** Per-row `Remove` button (or `Reset` for the canonical seed roster — they revert to default rather than disappearing). Two-click safeguard — first click flashes a rose `Confirm` state for 3s, second click fires DELETE → `/api/admin/employees/[id]`.",
+      "**🌱 Seed roster.** New `SEED_EMPLOYEES` constant in `src/lib/admin-employees-store.ts` defaults the table to the canonical agency roster — Manuel S. · Fran. R. · Yenisey R. · Germano C., each with their inferred email (firstname-handle@wonder-ads.com), role (`SEO Consultant` / `ADS Consultant`), and department. Editing any seed employee promotes them into KV; new hires get added to a dedicated `admin-employees:roster` index alongside their record.",
+      "**🛡 Two new auth-gated API routes.** `POST /api/admin/employees` adds a hire (validates email format, returns 401 without cookie). `PUT /api/admin/employees/[id]` patches a record with full per-field sanitisation (name ≤ 80 chars, email regex-checked, departments validated against the enum, currency / cadence / status validated against their enums, monthlyValue clamped non-negative + 2-decimal rounded, notes capped at 2000). `DELETE /api/admin/employees/[id]` removes the record + roster index entry.",
+      "**🧾 Footer chip still points at `/admin`.** The `SuperAdmin Suite · Log in` button in the footer continues to land on `/admin` → chooser. No deep-link change — the suite's a deliberate two-step.",
+    ],
+  },
+  {
     version: "74.12",
     date: "2026-06-02",
     title: "SuperAdmin Suite · live MRR · green tiles · monthly-value emphasized · empty cells flagged rose · Active tile removed",
