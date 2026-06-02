@@ -4,6 +4,7 @@ import { PageShell } from "@/components/page-shell";
 import { AdminPanel, type AdminClientView } from "@/components/admin-panel";
 import { getSeoClients } from "@/lib/notion";
 import { ADS_CLIENTS } from "@/lib/ads-clients";
+import { WEB_CLIENTS } from "@/lib/web-clients";
 import {
   getAdminRecords,
   defaultAdminRecord,
@@ -38,6 +39,12 @@ export default async function ProjectsAdminPage() {
     icon: c.icon,
   }));
 
+  const webClients = WEB_CLIENTS.map((c) => ({
+    slug: c.slug,
+    title: c.title,
+    icon: c.icon,
+  }));
+
   type Merged = {
     slug: string;
     title: string;
@@ -63,6 +70,19 @@ export default async function ProjectsAdminPage() {
         title: c.title,
         icon: c.icon,
         departments: new Set(["ADS"]),
+      });
+    }
+  }
+  for (const c of webClients) {
+    const existing = merged.get(c.slug);
+    if (existing) {
+      existing.departments.add("Web");
+    } else {
+      merged.set(c.slug, {
+        slug: c.slug,
+        title: c.title,
+        icon: c.icon,
+        departments: new Set(["Web"]),
       });
     }
   }

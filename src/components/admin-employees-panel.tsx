@@ -2,8 +2,9 @@
 
 // Employees panel — mirrors AdminPanel for clients but renders the
 // team roster, exposes an inline "+ Add employee" form, and rolls up
-// payroll totals per currency at the top. State lives here so MRP
-// (monthly roll-up of payroll) recomputes the instant any row saves.
+// payroll in EUR at the top. Each row also shows an Active portfolio
+// column — total monthly value the employee currently consults on +
+// active-client count, computed server-side from the projects roster.
 
 import { useCallback, useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
@@ -16,14 +17,17 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
-import { AdminEmployeeRow } from "./admin-employee-row";
+import { AdminEmployeeRow, type EmployeePortfolio } from "./admin-employee-row";
 import { formatMoney } from "@/lib/admin-clients-store";
 import type { AdminEmployeeRecord } from "@/lib/admin-employees-store";
 
 export function AdminEmployeesPanel({
   employees,
+  portfolios,
 }: {
   employees: AdminEmployeeRecord[];
+  /** Keyed by employee name (matches admin client `consultants[]`). */
+  portfolios: Record<string, EmployeePortfolio>;
 }) {
   const router = useRouter();
   const [loggingOut, setLoggingOut] = useState(false);
@@ -103,33 +107,24 @@ export function AdminEmployeesPanel({
     let total = 0;
     for (const id of order) {
       const r = records.get(id);
-      if (
-        r &&
-        r.status === "active" &&
-        r.currency === "EUR" &&
-        r.monthlyValue
-      ) {
+      if (r && r.status === "active" && r.monthlyValue) {
         total += r.monthlyValue;
       }
     }
     return total;
   }, [records, order]);
 
-  const payUsd = useMemo(() => {
+  // Total EUR currently under consultation across the whole team.
+  const portfolioEur = useMemo(() => {
     let total = 0;
     for (const id of order) {
       const r = records.get(id);
-      if (
-        r &&
-        r.status === "active" &&
-        r.currency === "USD" &&
-        r.monthlyValue
-      ) {
-        total += r.monthlyValue;
-      }
+      if (!r) continue;
+      const p = portfolios[r.name];
+      if (p) total += p.totalEur;
     }
     return total;
-  }, [records, order]);
+  }, [records, order, portfolios]);
 
   async function logout() {
     setLoggingOut(true);
@@ -246,36 +241,37 @@ export function AdminEmployeesPanel({
         </form>
       )}
 
-      {/* Roll-up tiles */}
+      {/* Roll-up tiles — EUR only. */}
       <section
         aria-label="Roll-up"
         className="mt-7 grid grid-cols-1 gap-3 sm:grid-cols-3"
       >
         <RollupTile label="Employees" value={String(totalEmployees)} />
         <RollupTile
-          label="Payroll €"
+          label="Payroll"
           value={payEur > 0 ? formatMoney(payEur, "EUR") : "—"}
           tone={payEur > 0 ? "emerald" : "neutral"}
         />
         <RollupTile
-          label="Payroll $"
-          value={payUsd > 0 ? formatMoney(payUsd, "USD") : "—"}
-          tone={payUsd > 0 ? "emerald" : "neutral"}
+          label="Active portfolio"
+          value={
+            portfolioEur > 0 ? formatMoney(portfolioEur, "EUR") : "—"
+          }
+          tone={portfolioEur > 0 ? "emerald" : "neutral"}
         />
       </section>
 
       <section aria-label="Employees" className="mt-10">
         <div className="overflow-x-auto rounded-2xl border border-white/8 bg-white/[0.02]">
-          <table className="w-full min-w-[1400px] border-collapse text-left">
+          <table className="w-full min-w-[1300px] border-collapse text-left">
             <thead>
               <tr className="border-b border-white/8 bg-black/30 text-[10px] font-bold uppercase tracking-[0.16em] text-white/50">
                 <th className="px-4 py-2.5">Employee</th>
                 <th className="px-3 py-2.5">Role</th>
                 <th className="px-3 py-2.5">Departments</th>
                 <th className="px-3 py-2.5">Starting date</th>
-                <th className="px-3 py-2.5">Payment cadence</th>
-                <th className="px-3 py-2.5">Next pay</th>
                 <th className="px-3 py-2.5">Monthly salary</th>
+                <th className="px-3 py-2.5">Active portfolio</th>
                 <th className="px-3 py-2.5">Status</th>
                 <th className="px-3 py-2.5">Notes</th>
                 <th className="px-3 py-2.5">&nbsp;</th>
@@ -285,7 +281,7 @@ export function AdminEmployeesPanel({
               {order.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={10}
+                    colSpan={9}
                     className="px-4 py-8 text-center text-[12px] text-white/40"
                   >
                     No employees yet. Click <strong>Add employee</strong> to get started.
@@ -295,10 +291,17 @@ export function AdminEmployeesPanel({
                 order.map((id) => {
                   const r = records.get(id);
                   if (!r) return null;
+                  const portfolio =
+                    portfolios[r.name] ?? {
+                      activeClients: 0,
+                      totalEur: 0,
+                      sampleTitles: [],
+                    };
                   return (
                     <AdminEmployeeRow
                       key={id}
                       initial={r}
+                      portfolio={portfolio}
                       onSaved={handleSaved}
                       onDeleted={handleDeleted}
                     />

@@ -11,15 +11,12 @@ import {
   BILLING_CADENCES,
   CLIENT_STATUSES,
   CONSULTANTS,
-  CURRENCIES,
   cadenceLabel,
   cadenceMonths,
-  currencySymbol,
   nextBillingDate,
   type AdminClientRecord,
   type BillingCadence,
   type ClientStatus,
-  type Currency,
 } from "@/lib/admin-clients-store";
 import { formatDate } from "@/lib/dates";
 
@@ -49,6 +46,7 @@ const STATUS_PILL: Record<ClientStatus, string> = {
 const DEPT_PILL: Record<string, string> = {
   SEO: "border-[#783DF5]/40 bg-[#783DF5]/12 text-[#d4c4ff]",
   ADS: "border-[#C535C9]/40 bg-[#C535C9]/12 text-[#f4c5f1]",
+  Web: "border-cyan-400/45 bg-cyan-500/12 text-cyan-200",
 };
 
 function arraysShallowEqual(a: string[], b: string[]): boolean {
@@ -349,11 +347,9 @@ export function AdminClientRow({
         </div>
       </td>
 
-      {/* Monthly value + currency — emphasized column.
+      {/* Monthly value — emphasized column, EUR-locked.
           Empty cells get a vibrant rose ring + tint so unfilled
-          clients pop on the board. Filled cells render larger /
-          bolder than the rest of the row so the money column reads
-          as the most important one. */}
+          clients pop on the board. */}
       <td className="px-3 py-3.5">
         {(() => {
           const isEmpty = draft.monthlyValue === null;
@@ -361,28 +357,15 @@ export function AdminClientRow({
             <>
               <div className="flex items-stretch gap-1">
                 <div
-                  className={`flex shrink-0 overflow-hidden rounded-md border ${
+                  className={`flex shrink-0 items-center justify-center rounded-md border px-2.5 text-[13px] font-semibold ${
                     isEmpty
-                      ? "border-rose-400/45 bg-rose-500/[0.08]"
-                      : "border-white/15 bg-white/[0.05]"
+                      ? "border-rose-400/45 bg-rose-500/[0.08] text-rose-200"
+                      : "brand-gradient-bg border-transparent text-white"
                   }`}
+                  aria-hidden
+                  title="Euros"
                 >
-                  {CURRENCIES.map((c) => (
-                    <button
-                      key={c}
-                      type="button"
-                      onClick={() => setDraft({ ...draft, currency: c })}
-                      className={`px-2 text-[13px] font-semibold transition ${
-                        draft.currency === c
-                          ? "brand-gradient-bg text-white"
-                          : "text-white/55 hover:text-white"
-                      }`}
-                      aria-pressed={draft.currency === c}
-                      title={c === "EUR" ? "Euros" : "US Dollars"}
-                    >
-                      {currencySymbol(c as Currency)}
-                    </button>
-                  ))}
+                  €
                 </div>
                 <input
                   type="number"
@@ -395,6 +378,7 @@ export function AdminClientRow({
                     setDraft({
                       ...draft,
                       monthlyValue: raw === "" ? null : Number(raw),
+                      currency: "EUR",
                     });
                   }}
                   placeholder="—"
@@ -410,7 +394,7 @@ export function AdminClientRow({
                   isEmpty ? "font-semibold text-rose-300" : "text-white/45"
                 }`}
               >
-                {isEmpty ? "Needs value" : `/ mo · ${draft.currency}`}
+                {isEmpty ? "Needs value" : "/ mo · EUR"}
               </div>
             </>
           );

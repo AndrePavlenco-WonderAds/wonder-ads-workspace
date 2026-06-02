@@ -4,6 +4,7 @@ import { PageShell } from "@/components/page-shell";
 import { AdminLanding } from "@/components/admin-landing";
 import { getSeoClients } from "@/lib/notion";
 import { ADS_CLIENTS } from "@/lib/ads-clients";
+import { WEB_CLIENTS } from "@/lib/web-clients";
 import { listEmployees, SEED_EMPLOYEES } from "@/lib/admin-employees-store";
 
 export const dynamic = "force-dynamic";
@@ -25,6 +26,7 @@ export default async function AdminPage() {
   const projectsCount = new Set([
     ...seoClients.map((c) => c.slug),
     ...ADS_CLIENTS.map((c) => c.slug),
+    ...WEB_CLIENTS.map((c) => c.slug),
   ]).size;
 
   let employees: Array<unknown> = [];

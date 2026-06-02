@@ -13,6 +13,19 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.14",
+    date: "2026-06-02",
+    title: "SuperAdmin Suite · Web DPT + Prof. Fernando Almeida · starting dates pre-populated · EUR-only · Active portfolio column",
+    highlights: [
+      "**🌐 Web DPT — Prof. Fernando Almeida joins the projects roster.** New `src/lib/web-clients.ts` exports `WEB_CLIENTS` following the same shape as `ADS_CLIENTS` (slug-shared with SEO when overlapping). Slug `prof-fernando-almeida`, icon 🎓. The Web roster gets merged into `/admin/projects` alongside SEO + ADS and the chooser-landing client count picks it up too. New `Web` dept pill — cyan tint (`border-cyan-400/45 bg-cyan-500/12 text-cyan-200`) — appears on the row badge so the three DPTs are visually distinct at a glance.",
+      "**📅 Starting dates pre-populated from the team's post-it board.** New `DEFAULT_STARTING_DATES` map in `src/lib/admin-clients-store.ts` ships 17 starting dates from the photos — always the `Starting date` value, never the `Re-starting Date` notes below it: wonderads 30/03/2026 · clínica em casa 26/02/2026 · clínica mimus 04/05/2026 · insync-design 23/01/2026 · senior-resort 26/02/2026 · safe-away 20/02/2026 · sea-yourself 14/01/2026 · a-domingos 23/02/2026 · aeger-prima 19/11/2025 · b-life 09/02/2026 · hds-learning 07/01/2026 · white-clinic 30/03/2026 · ihn 30/03/2026 · spine-center 01/06/2026 · fisio-restelo 12/02/2026 · monte-mar 23/03/2026 · cdt 23/03/2026. Defaults apply when the field is `null` on read — already-saved dates win. So fresh records land prefilled AND older records that still had `null` dates get backfilled automatically.",
+      "**💶 EUR only — USD removed from the UI.** Agency bills in euros, so the € / $ selector is gone from both the projects row AND the employees row. Each row's money block now shows a fixed € prefix (brand-gradient when filled, rose when empty — same emphasis treatment). `MRR $` rollup tile removed from `/admin/projects` (now a 2-tile grid: `Clients` · `MRR`). `Payroll $` tile removed from `/admin/employees`. `migrateRecord` coerces any stale `currency: \"USD\"` on disk to `\"EUR\"` so old saves don't poison the rollups.",
+      "**⏱ Employees: Payment cadence + Next pay columns removed.** Both were noise — everyone gets paid monthly. Table is tighter now: Employee · Role · Departments · Starting date · Monthly salary · Active portfolio · Status · Notes. Same Save/Discard pattern, same rose `Needs salary` flag, same emphasized money block.",
+      "**📊 New `Active portfolio` column in the Employees table.** Server-computed from the full client roster (SEO + ADS + Web admin records merged): for every employee whose name appears in any client's `consultants[]` array AND that client's `status === \"active\"`, we sum the monthly value + count the clients. Renders as an emerald-tinted card per row: total in EUR up top, `N active clients` underneath, full client list on hover (title attribute). Empty rows show a faint `None active` placeholder. New `Active portfolio` rollup tile at the header sums it across the whole team — emerald glow when populated.",
+      "**⚙️ Server data flow.** `/admin/employees/page.tsx` now fetches the same SEO + ADS + Web rosters as `/admin/projects` and reads every admin record so the portfolio map is consistent. Edit a client's value or consultant on `/admin/projects`, navigate to `/admin/employees`, and the portfolio reflects the change on the next render — no stale snapshots.",
+    ],
+  },
+  {
     version: "74.13",
     date: "2026-06-02",
     title: "SuperAdmin Suite · post-gate chooser landing · Projects block + new Employees block — team roster + payroll",

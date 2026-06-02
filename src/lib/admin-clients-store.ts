@@ -26,6 +26,10 @@ export const CLIENT_STATUSES = [
 ] as const;
 export type ClientStatus = (typeof CLIENT_STATUSES)[number];
 
+// Currency type is kept for forward compatibility (the field exists on
+// every record) but the UI only offers EUR now — the agency bills in
+// euros only. Any record carrying a stale USD value gets coerced to
+// EUR on read in `migrateRecord` below.
 export const CURRENCIES = ["EUR", "USD"] as const;
 export type Currency = (typeof CURRENCIES)[number];
 
@@ -40,6 +44,31 @@ export function formatMoney(amount: number, c: Currency): string {
     maximumFractionDigits: 0,
   }).format(amount);
 }
+
+/** Pre-populated starting dates pulled from the team's post-it board.
+ *  Used as a fallback when an admin record has `startingDate === null`,
+ *  so the roster lands with sane defaults the moment the SuperAdmin
+ *  Suite opens. ISO yyyy-mm-dd. Always the "Starting date" — never the
+ *  "Re-starting Date" notes that appear below it on the board. */
+export const DEFAULT_STARTING_DATES: Record<string, string> = {
+  wonderads: "2026-03-30",
+  "clinica-em-casa": "2026-02-26",
+  "clinica-mimus": "2026-05-04",
+  "insync-design": "2026-01-23",
+  "senior-resort": "2026-02-26",
+  "safe-away": "2026-02-20",
+  "sea-yourself": "2026-01-14",
+  "a-domingos": "2026-02-23",
+  "aeger-prima": "2025-11-19",
+  "b-life": "2026-02-09",
+  "hds-learning": "2026-01-07",
+  "white-clinic": "2026-03-30",
+  ihn: "2026-03-30",
+  "spine-center": "2026-06-01",
+  "fisio-restelo": "2026-02-12",
+  "monte-mar": "2026-03-23",
+  cdt: "2026-03-23",
+};
 
 /** Full agency consultant roster — drives the multi-select dropdown on
  *  every admin row. Source of truth: client-overrides.ts (SEO) + the
@@ -99,7 +128,7 @@ export function defaultAdminRecord(slug: string): AdminClientRecord {
   return {
     slug,
     billingCadence: "monthly",
-    startingDate: null,
+    startingDate: DEFAULT_STARTING_DATES[slug] ?? null,
     consultants: seed === "Unassigned" ? [] : [seed],
     status: "active",
     currency: "EUR",
@@ -140,9 +169,13 @@ function migrateRecord(
       : typeof raw.monthlyValueEur === "number"
         ? raw.monthlyValueEur
         : base.monthlyValue;
-  const currency = (CURRENCIES as readonly string[]).includes(raw.currency)
-    ? raw.currency
-    : base.currency;
+  // Agency bills in EUR only as of v74.14 — any stale USD field on
+  // disk gets coerced to EUR so the UI math + rollups stay correct.
+  const currency: Currency = "EUR";
+  // Backfill the post-it starting dates onto any record that was saved
+  // before the dates were captured (null + a slug we know).
+  const startingDate =
+    raw.startingDate ?? DEFAULT_STARTING_DATES[slug] ?? null;
   return {
     ...base,
     ...raw,
@@ -150,6 +183,7 @@ function migrateRecord(
     consultants,
     currency,
     monthlyValue,
+    startingDate,
   };
 }
 

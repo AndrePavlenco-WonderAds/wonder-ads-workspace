@@ -1,13 +1,12 @@
 "use client";
 
-// Editable row inside the Employees table — same pattern as
-// AdminClientRow. Multi-select departments dropdown, € / $ currency
-// toggle, vibrant rose flag for empty salary, save flips through
-// idle → saving → ✓ saved → idle (or error). DELETE removes the
-// employee from the roster (seed employees revert to defaults on
-// next load — they can't actually be purged from the seed file).
+// Editable row inside the Employees table — simplified for v74.14.
+// Removed: payment cadence + next pay (everyone gets paid monthly,
+// the column was noise) and the € / $ currency selector (agency
+// pays in euros only). Added: Active portfolio column showing how
+// many active clients each employee manages + total monthly value.
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Loader2,
   Save,
@@ -17,16 +16,7 @@ import {
   ChevronDown,
   Trash2,
 } from "lucide-react";
-import {
-  BILLING_CADENCES,
-  CURRENCIES,
-  cadenceLabel,
-  cadenceMonths,
-  currencySymbol,
-  nextBillingDate,
-  type BillingCadence,
-  type Currency,
-} from "@/lib/admin-clients-store";
+import { formatMoney } from "@/lib/admin-clients-store";
 import {
   EMPLOYEE_DEPARTMENTS,
   EMPLOYEE_STATUSES,
@@ -36,8 +26,16 @@ import {
 } from "@/lib/admin-employees-store";
 import { formatDate } from "@/lib/dates";
 
+export type EmployeePortfolio = {
+  activeClients: number;
+  totalEur: number;
+  /** Short list of client titles for hover/inline preview. */
+  sampleTitles: string[];
+};
+
 type Props = {
   initial: AdminEmployeeRecord;
+  portfolio: EmployeePortfolio;
   onSaved?: (record: AdminEmployeeRecord) => void;
   onDeleted?: (id: string) => void;
 };
@@ -52,6 +50,7 @@ const STATUS_PILL: Record<EmployeeStatus, string> = {
 const DEPT_PILL: Record<string, string> = {
   SEO: "border-[#783DF5]/40 bg-[#783DF5]/12 text-[#d4c4ff]",
   ADS: "border-[#C535C9]/40 bg-[#C535C9]/12 text-[#f4c5f1]",
+  Web: "border-cyan-400/45 bg-cyan-500/12 text-cyan-200",
   Operations: "border-amber-400/35 bg-amber-500/10 text-amber-200",
   Founder: "border-emerald-400/35 bg-emerald-500/10 text-emerald-200",
 };
@@ -69,7 +68,12 @@ const STATUS_LABEL: Record<EmployeeStatus, string> = {
   offboarded: "Offboarded",
 };
 
-export function AdminEmployeeRow({ initial, onSaved, onDeleted }: Props) {
+export function AdminEmployeeRow({
+  initial,
+  portfolio,
+  onSaved,
+  onDeleted,
+}: Props) {
   const [draft, setDraft] = useState<AdminEmployeeRecord>(initial);
   const [saved, setSaved] = useState<AdminEmployeeRecord>(initial);
   const [state, setState] = useState<"idle" | "saving" | "saved" | "error">(
@@ -106,16 +110,9 @@ export function AdminEmployeeRow({ initial, onSaved, onDeleted }: Props) {
     draft.role !== saved.role ||
     !arraysShallowEqual(draft.departments, saved.departments) ||
     draft.startingDate !== saved.startingDate ||
-    draft.paymentCadence !== saved.paymentCadence ||
-    draft.currency !== saved.currency ||
     draft.monthlyValue !== saved.monthlyValue ||
     draft.status !== saved.status ||
     draft.notes !== saved.notes;
-
-  const nextPay = useMemo(
-    () => nextBillingDate(draft.startingDate, draft.paymentCadence),
-    [draft.startingDate, draft.paymentCadence],
-  );
 
   function toggleDept(name: string) {
     setDraft((d) => {
@@ -142,8 +139,7 @@ export function AdminEmployeeRow({ initial, onSaved, onDeleted }: Props) {
           role: draft.role,
           departments: draft.departments,
           startingDate: draft.startingDate,
-          paymentCadence: draft.paymentCadence,
-          currency: draft.currency,
+          currency: "EUR",
           monthlyValue: draft.monthlyValue,
           status: draft.status,
           notes: draft.notes,
@@ -196,6 +192,11 @@ export function AdminEmployeeRow({ initial, onSaved, onDeleted }: Props) {
   }
 
   const isEmpty = draft.monthlyValue === null;
+  const portfolioSampleTitle =
+    portfolio.sampleTitles.slice(0, 6).join(" · ") +
+    (portfolio.sampleTitles.length > 6
+      ? ` · +${portfolio.sampleTitles.length - 6} more`
+      : "");
 
   return (
     <tr
@@ -324,64 +325,19 @@ export function AdminEmployeeRow({ initial, onSaved, onDeleted }: Props) {
         </div>
       </td>
 
-      {/* Payment cadence */}
-      <td className="px-3 py-3.5">
-        <select
-          value={draft.paymentCadence}
-          onChange={(e) =>
-            setDraft({
-              ...draft,
-              paymentCadence: e.target.value as BillingCadence,
-            })
-          }
-          className="w-full rounded-md border border-white/10 bg-white/[0.04] px-2 py-1.5 text-[12px] text-white outline-none transition focus:border-white/30"
-        >
-          {BILLING_CADENCES.map((c) => (
-            <option key={c} value={c} className="bg-[#111]">
-              {cadenceLabel(c)}
-            </option>
-          ))}
-        </select>
-        <div className="mt-1 text-[10.5px] text-white/40">
-          Every {cadenceMonths(draft.paymentCadence)} month
-          {cadenceMonths(draft.paymentCadence) === 1 ? "" : "s"}
-        </div>
-      </td>
-
-      {/* Next pay — derived */}
-      <td className="px-3 py-3.5 text-[12px]">
-        <span className="text-white/80">
-          {nextPay ? formatDate(nextPay) : "—"}
-        </span>
-        <div className="mt-1 text-[10.5px] text-white/40">Auto-computed</div>
-      </td>
-
-      {/* Monthly salary + currency (emphasized + rose-when-empty) */}
+      {/* Monthly salary — EUR only, emphasized, rose when empty */}
       <td className="px-3 py-3.5">
         <div className="flex items-stretch gap-1">
           <div
-            className={`flex shrink-0 overflow-hidden rounded-md border ${
+            className={`flex shrink-0 items-center justify-center rounded-md border px-2.5 text-[13px] font-semibold ${
               isEmpty
-                ? "border-rose-400/45 bg-rose-500/[0.08]"
-                : "border-white/15 bg-white/[0.05]"
+                ? "border-rose-400/45 bg-rose-500/[0.08] text-rose-200"
+                : "brand-gradient-bg border-transparent text-white"
             }`}
+            aria-hidden
+            title="Euros"
           >
-            {CURRENCIES.map((c) => (
-              <button
-                key={c}
-                type="button"
-                onClick={() => setDraft({ ...draft, currency: c })}
-                className={`px-2 text-[13px] font-semibold transition ${
-                  draft.currency === c
-                    ? "brand-gradient-bg text-white"
-                    : "text-white/55 hover:text-white"
-                }`}
-                aria-pressed={draft.currency === c}
-                title={c === "EUR" ? "Euros" : "US Dollars"}
-              >
-                {currencySymbol(c as Currency)}
-              </button>
-            ))}
+            €
           </div>
           <input
             type="number"
@@ -394,6 +350,7 @@ export function AdminEmployeeRow({ initial, onSaved, onDeleted }: Props) {
               setDraft({
                 ...draft,
                 monthlyValue: raw === "" ? null : Number(raw),
+                currency: "EUR",
               });
             }}
             placeholder="—"
@@ -409,8 +366,30 @@ export function AdminEmployeeRow({ initial, onSaved, onDeleted }: Props) {
             isEmpty ? "font-semibold text-rose-300" : "text-white/45"
           }`}
         >
-          {isEmpty ? "Needs salary" : `/ mo · ${draft.currency}`}
+          {isEmpty ? "Needs salary" : "/ mo · EUR"}
         </div>
+      </td>
+
+      {/* Active portfolio — who they're consulting for + their MRR */}
+      <td className="px-3 py-3.5">
+        {portfolio.activeClients === 0 ? (
+          <div className="rounded-md border border-white/8 bg-white/[0.02] px-2 py-1.5 text-[11.5px] text-white/40">
+            None active
+          </div>
+        ) : (
+          <div
+            className="rounded-md border border-emerald-400/30 bg-emerald-500/[0.06] px-2 py-1.5"
+            title={portfolioSampleTitle}
+          >
+            <div className="text-[13px] font-semibold tabular-nums text-emerald-200">
+              {formatMoney(portfolio.totalEur, "EUR")}
+            </div>
+            <div className="mt-0.5 text-[10.5px] text-white/55">
+              {portfolio.activeClients} active client
+              {portfolio.activeClients === 1 ? "" : "s"}
+            </div>
+          </div>
+        )}
       </td>
 
       {/* Status */}

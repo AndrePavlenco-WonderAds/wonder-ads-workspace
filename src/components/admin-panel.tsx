@@ -67,22 +67,6 @@ export function AdminPanel({ clients }: { clients: AdminClientView[] }) {
     return total;
   }, [clients, records]);
 
-  const mrrUsd = useMemo(() => {
-    let total = 0;
-    for (const c of clients) {
-      const r = records.get(c.slug);
-      if (
-        r &&
-        r.status === "active" &&
-        r.currency === "USD" &&
-        r.monthlyValue
-      ) {
-        total += r.monthlyValue;
-      }
-    }
-    return total;
-  }, [clients, records]);
-
   async function logout() {
     setLoggingOut(true);
     try {
@@ -123,22 +107,18 @@ export function AdminPanel({ clients }: { clients: AdminClientView[] }) {
         </button>
       </header>
 
-      {/* Roll-up tiles. MRR tiles glow emerald when populated so a
-          glance at the header tells you the agency's healthy. */}
+      {/* Roll-up tiles. MRR tile glows emerald when populated so a
+          glance at the header tells you the agency's healthy. EUR-only —
+          the agency bills in euros. */}
       <section
         aria-label="Roll-up"
-        className="mt-7 grid grid-cols-1 gap-3 sm:grid-cols-3"
+        className="mt-7 grid grid-cols-1 gap-3 sm:grid-cols-2"
       >
         <RollupTile label="Clients" value={String(totalClients)} />
         <RollupTile
-          label="MRR €"
+          label="MRR"
           value={mrrEur > 0 ? formatMoney(mrrEur, "EUR") : "—"}
           tone={mrrEur > 0 ? "emerald" : "neutral"}
-        />
-        <RollupTile
-          label="MRR $"
-          value={mrrUsd > 0 ? formatMoney(mrrUsd, "USD") : "—"}
-          tone={mrrUsd > 0 ? "emerald" : "neutral"}
         />
       </section>
 
