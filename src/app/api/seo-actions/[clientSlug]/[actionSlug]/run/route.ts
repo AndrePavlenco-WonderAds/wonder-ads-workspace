@@ -13,7 +13,8 @@ import { getClientBySlug } from "@/lib/notion";
 import { buildSeoClaudeSystemPrompt } from "@/lib/seo-claude-prompt";
 import { loadAuditPrep } from "@/lib/audit-prep-store";
 
-export const maxDuration = 60;
+// 300s — honoured on Vercel Pro, capped to 60s on Hobby.
+export const maxDuration = 300;
 export const runtime = "nodejs";
 
 const MODEL_ID = "claude-sonnet-4-6";

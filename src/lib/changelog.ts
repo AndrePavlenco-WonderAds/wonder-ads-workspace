@@ -13,6 +13,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.18",
+    date: "2026-06-02",
+    title: "Spine Center website registered app-wide · maxDuration bumped to 300s (Pro-ready, Hobby-safe)",
+    highlights: [
+      "**🌐 Spine Center website added.** `getClientWebsite(\"spine-center\")` now returns `https://www.spinecenter.pt/`. Single edit in `src/lib/client-meta.ts` flows through every consumer — action page defaults (SEO Audit, Meta Tags, Crawl-page tools), `prep` route URL field, public deliverables, DataforSEO domain queries, GMB / Contact-page detectors, and the Site Audit orchestrator. Spine Center can now run any URL-anchored action without typing the URL.",
+      "**⏱ Function timeouts bumped from 60s → 300s on the main action route + the audit /run route.** Vercel honours the new value on Pro; on Hobby it's silently capped back to 60 — no breakage either way. This is the prerequisite that unlocks the longer blog drafts the moment the workspace runs on Pro. Without the upgrade the Hobby cap still kicks in and 1200+ word articles can still be cut mid-sentence — see the note alongside this release explaining how to upgrade.",
+    ],
+  },
+  {
     version: "74.17",
     date: "2026-06-02",
     title: "Pending Review · Archive tab now visible to clients on the public page (read-only)",

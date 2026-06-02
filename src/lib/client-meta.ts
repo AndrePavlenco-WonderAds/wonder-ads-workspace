@@ -74,6 +74,7 @@ export const CLIENT_WEBSITES: Record<string, string> = {
   "fisio-restelo": "https://fisiorestelo.pt/",
   "safe-away": "https://safeaway.pt/",
   "clinica-em-casa": "https://clinicaemcasa.pt/",
+  "spine-center": "https://www.spinecenter.pt/",
   // ADS-only — not known yet
   "clinica-empatia": "",
 };
