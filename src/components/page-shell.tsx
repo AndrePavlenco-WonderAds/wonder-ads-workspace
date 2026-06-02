@@ -73,13 +73,13 @@ export function PageShell({
         <footer className="mt-16 flex flex-wrap items-center justify-between gap-x-5 gap-y-2 text-xs text-white/40 sm:mt-20">
           <span>© {new Date().getFullYear()} Wonder Ads. All Rights Reserved.</span>
           <span>
-            Found a bug or have feedback? Email{" "}
-            <a
-              href="mailto:andre@wonder-ads.com"
+            Admin Control Panel?{" "}
+            <Link
+              href="/admin"
               className="text-white/55 underline-offset-2 transition hover:text-white hover:underline"
             >
-              andre@wonder-ads.com
-            </a>
+              Login here
+            </Link>
           </span>
           <Link
             href="/changelog"
