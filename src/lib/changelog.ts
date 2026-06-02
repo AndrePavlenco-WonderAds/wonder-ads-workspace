@@ -13,6 +13,20 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.16",
+    date: "2026-06-02",
+    title: "SuperAdmin Projects · brand logos + sortable columns + Approaching billing pill + Unassigned flag + bi-monthly cycle + click-to-open portfolio",
+    highlights: [
+      "**🖼 Real brand logos on every row.** The 7×7 emoji square is gone — each `/admin/projects` row now renders the actual client logo through `LogoChip` (the same component the SEO DPT cards use). New `sm` size on `LogoChip` (h-8 w-8, p-1) keeps the row compact. Server-side, the page passes `logo` + `logoBgMode` + `logoSizing` + `gradient` per row by looking up `getClientLogo` / `getLogoBgMode` / `getLogoSizing` / `paletteToGradient`. Clients without a logo file fall back to the emoji on a brand-gradient chip — same fallback the SEO landing uses.",
+      "**📅 `Approaching` pill on rows billing within 14 days.** When the auto-computed `Next billing` date is ≤ 14 days away, the date itself flips to amber (`text-amber-200` + semibold) and the helper line underneath becomes a vibrant amber pill: `● Approaching` on `border-amber-400/55 bg-amber-500/15`. Beyond 14 days the helper line stays `Auto-computed`. So a glance at the column tells you which invoices need eyes this week.",
+      "**🚨 `Unassigned` consultant cells now flagged rose.** When a row's `consultants[]` is empty, the multi-select trigger takes the same vibrant rose treatment as empty Monthly value: rose border + rose tint + soft rose ring + rose label. Helper line below the trigger swaps from `0 consultants` to a semibold rose `Missing — assign a consultant`. Scans the table for unattributed rows in one sweep, same as how you scan for unfilled budgets.",
+      "**🔀 Sortable column headers** on `/admin/projects`. Click a header to sort ascending; click again for descending; click a third time to clear back to the server's default order. Sortable: `Client`, `Billing cadence`, `Starting date`, `Next billing`, `Consultants`, `Monthly value`, `Status`. Notes + the action column stay unsorted (they're not comparison-friendly). Sort indicator on the active header turns emerald + shows `↑` / `↓`; inactive headers show a subtle `⇅` glyph so it's obvious they're clickable. Sort runs against the LIVE records map so changes saved on one row immediately re-rank the table — no refresh.",
+      "**🗓 `bi-monthly` billing cadence option.** New `Each 2 months` option in the cadence dropdown, sitting between Monthly and Each 3 months. `cadenceMonths` returns 2 so `nextBillingDate` ticks forward 2 months at a time. The cadence enum order is `Monthly · Each 2 months · Each 3 months · Each 6 months` so the dropdown reads in increasing length.",
+      "**🖱 Active portfolio: hover → click.** The Active portfolio cell on `/admin/employees` is now click-toggled, not hover. Click opens the per-client breakdown panel; outside-click or Escape closes it. The breakdown stays open while you scan the list (no more accidental dismissal when the cursor drifts), works on keyboard via focus, works on mobile. Cell visually highlights brighter when the panel is open (`border-emerald-300/65 bg-emerald-500/[0.12]`) so it's obvious which row's panel you're looking at. Label changes from `hover for details` to `click for details` / `click to close`.",
+      "**🏷 Clearer shared-row hint.** Was `+ ADS row` (read like the row itself owned two depts). Now `· also in ADS` — a subtle dot prefix + lower-case `also in` that reads correctly: this row is SEO, the same client also has a row in ADS. Tooltip on hover: `Also tracked under ADS on its own budget row.`",
+    ],
+  },
+  {
     version: "74.15",
     date: "2026-06-02",
     title: "Pending Review archive tab · per-dept project rows · portfolio hover breakdown · payroll seeds · WONDER ADS chip removed",

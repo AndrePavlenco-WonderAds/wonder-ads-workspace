@@ -8,7 +8,7 @@
 
 import { useCallback, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { LogOut, Loader2 } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, LogOut, Loader2 } from "lucide-react";
 import { AdminClientRow } from "./admin-client-row";
 import type {
   AdminClientRecord,
@@ -16,13 +16,22 @@ import type {
 } from "@/lib/admin-clients-store";
 import {
   adminRecordKey,
+  cadenceMonths,
   formatMoney,
+  nextBillingDate,
 } from "@/lib/admin-clients-store";
+import type { LogoBgMode, LogoSizing } from "@/lib/client-meta";
 
 export type AdminClientView = {
   slug: string;
   title: string;
   icon: string | null;
+  /** Real brand-logo bundle so each row can render via LogoChip
+   *  the same way the SEO DPT cards do. */
+  logo: string | null;
+  logoBgMode: LogoBgMode;
+  logoSizing: LogoSizing;
+  gradient: string;
   /** Which department THIS row represents. */
   department: ClientDepartment;
   /** All departments the client appears in (drives the cross-dept
@@ -31,6 +40,17 @@ export type AdminClientView = {
   clientDepartments: ClientDepartment[];
   record: AdminClientRecord;
 };
+
+type SortColumn =
+  | "client"
+  | "cadence"
+  | "starting"
+  | "next"
+  | "consultants"
+  | "value"
+  | "status";
+
+type SortState = { col: SortColumn; dir: "asc" | "desc" } | null;
 
 export function AdminPanel({ clients }: { clients: AdminClientView[] }) {
   const router = useRouter();
@@ -58,6 +78,17 @@ export function AdminPanel({ clients }: { clients: AdminClientView[] }) {
     });
   }, []);
 
+  // Sortable column state. Clicking the same column cycles asc → desc →
+  // off (default order from the server). Null = the default order.
+  const [sort, setSort] = useState<SortState>(null);
+  function cycleSort(col: SortColumn) {
+    setSort((prev) => {
+      if (!prev || prev.col !== col) return { col, dir: "asc" };
+      if (prev.dir === "asc") return { col, dir: "desc" };
+      return null;
+    });
+  }
+
   const totalClients = useMemo(
     () => new Set(clients.map((c) => c.slug)).size,
     [clients],
@@ -81,6 +112,46 @@ export function AdminPanel({ clients }: { clients: AdminClientView[] }) {
     }
     return total;
   }, [clients, records]);
+
+  // Apply the active sort against the live `records` map so changes
+  // saved on one row immediately re-rank the table.
+  const sortedClients = useMemo(() => {
+    if (!sort) return clients;
+    const { col, dir } = sort;
+    const factor = dir === "asc" ? 1 : -1;
+    function value(c: AdminClientView): string | number {
+      const r = records.get(adminRecordKey(c.slug, c.department)) ?? c.record;
+      switch (col) {
+        case "client":
+          return c.title.toLowerCase();
+        case "cadence":
+          return cadenceMonths(r.billingCadence);
+        case "starting":
+          return r.startingDate ?? "9999-99-99";
+        case "next": {
+          const nb = nextBillingDate(r.startingDate, r.billingCadence);
+          return nb ? nb.getTime() : Number.POSITIVE_INFINITY;
+        }
+        case "consultants":
+          // Sort by consultant count, ties broken by first consultant
+          // name so the order is stable.
+          return `${String(r.consultants.length).padStart(3, "0")}|${
+            (r.consultants[0] ?? "").toLowerCase()
+          }`;
+        case "value":
+          return r.monthlyValue ?? Number.POSITIVE_INFINITY;
+        case "status":
+          return r.status;
+      }
+    }
+    return [...clients].sort((a, b) => {
+      const av = value(a);
+      const bv = value(b);
+      if (av < bv) return -1 * factor;
+      if (av > bv) return 1 * factor;
+      return 0;
+    });
+  }, [clients, records, sort]);
 
   async function logout() {
     setLoggingOut(true);
@@ -139,13 +210,49 @@ export function AdminPanel({ clients }: { clients: AdminClientView[] }) {
           <table className="w-full min-w-[1200px] border-collapse text-left">
             <thead>
               <tr className="border-b border-white/8 bg-black/30 text-[10px] font-bold uppercase tracking-[0.16em] text-white/50">
-                <th className="px-4 py-2.5">Client</th>
-                <th className="px-3 py-2.5">Billing cadence</th>
-                <th className="px-3 py-2.5">Starting date</th>
-                <th className="px-3 py-2.5">Next billing</th>
-                <th className="px-3 py-2.5">Consultants</th>
-                <th className="px-3 py-2.5">Monthly value</th>
-                <th className="px-3 py-2.5">Status</th>
+                <SortableTh
+                  label="Client"
+                  col="client"
+                  sort={sort}
+                  onClick={cycleSort}
+                  className="px-4"
+                />
+                <SortableTh
+                  label="Billing cadence"
+                  col="cadence"
+                  sort={sort}
+                  onClick={cycleSort}
+                />
+                <SortableTh
+                  label="Starting date"
+                  col="starting"
+                  sort={sort}
+                  onClick={cycleSort}
+                />
+                <SortableTh
+                  label="Next billing"
+                  col="next"
+                  sort={sort}
+                  onClick={cycleSort}
+                />
+                <SortableTh
+                  label="Consultants"
+                  col="consultants"
+                  sort={sort}
+                  onClick={cycleSort}
+                />
+                <SortableTh
+                  label="Monthly value"
+                  col="value"
+                  sort={sort}
+                  onClick={cycleSort}
+                />
+                <SortableTh
+                  label="Status"
+                  col="status"
+                  sort={sort}
+                  onClick={cycleSort}
+                />
                 <th className="px-3 py-2.5">Notes</th>
                 <th className="px-3 py-2.5">&nbsp;</th>
               </tr>
@@ -161,7 +268,7 @@ export function AdminPanel({ clients }: { clients: AdminClientView[] }) {
                   </td>
                 </tr>
               ) : (
-                clients.map((c) => {
+                sortedClients.map((c) => {
                   const key = adminRecordKey(c.slug, c.department);
                   const live = records.get(key) ?? c.record;
                   return (
@@ -170,6 +277,10 @@ export function AdminPanel({ clients }: { clients: AdminClientView[] }) {
                       slug={c.slug}
                       title={c.title}
                       icon={c.icon}
+                      logo={c.logo}
+                      logoBgMode={c.logoBgMode}
+                      logoSizing={c.logoSizing}
+                      gradient={c.gradient}
                       department={c.department}
                       clientDepartments={c.clientDepartments}
                       initial={live}
@@ -183,6 +294,51 @@ export function AdminPanel({ clients }: { clients: AdminClientView[] }) {
         </div>
       </section>
     </div>
+  );
+}
+
+function SortableTh({
+  label,
+  col,
+  sort,
+  onClick,
+  className = "px-3",
+}: {
+  label: string;
+  col: SortColumn;
+  sort: SortState;
+  onClick: (c: SortColumn) => void;
+  className?: string;
+}) {
+  const isActive = sort?.col === col;
+  const dir = isActive ? sort?.dir : null;
+  const ariaSort =
+    dir === "asc" ? "ascending" : dir === "desc" ? "descending" : "none";
+  return (
+    <th
+      className={`${className} py-2.5`}
+      aria-sort={ariaSort as "ascending" | "descending" | "none"}
+    >
+      <button
+        type="button"
+        onClick={() => onClick(col)}
+        className={`inline-flex items-center gap-1.5 rounded text-left text-[10px] font-bold uppercase tracking-[0.16em] transition ${
+          isActive
+            ? "text-emerald-200"
+            : "text-white/50 hover:text-white"
+        }`}
+        title={`Sort by ${label.toLowerCase()}`}
+      >
+        {label}
+        {dir === "asc" ? (
+          <ArrowUp className="h-3 w-3" />
+        ) : dir === "desc" ? (
+          <ArrowDown className="h-3 w-3" />
+        ) : (
+          <ArrowUpDown className="h-2.5 w-2.5 opacity-50" />
+        )}
+      </button>
+    </th>
   );
 }
 

@@ -7,6 +7,7 @@ import type { LogoBgMode, LogoSizing } from "@/lib/client-meta";
  *  contrast works), or falls back to an emoji on a gradient chip when no
  *  logo is available. */
 const SIZES = {
+  sm: { dim: "h-8 w-8", normalPad: "p-1", tightPad: "p-0.5", text: "text-base", imgPx: 32 },
   md: { dim: "h-11 w-11", normalPad: "p-1.5", tightPad: "p-0.5", text: "text-lg", imgPx: 44 },
   lg: { dim: "h-16 w-16", normalPad: "p-2", tightPad: "p-1", text: "text-3xl", imgPx: 64 },
   xl: { dim: "h-28 w-28", normalPad: "p-3", tightPad: "p-1.5", text: "text-5xl", imgPx: 112 },
@@ -25,7 +26,7 @@ export function LogoChip({
   emoji: string | null;
   alt: string;
   gradient: string;
-  size?: "md" | "lg" | "xl";
+  size?: "sm" | "md" | "lg" | "xl";
   bgMode?: LogoBgMode;
   sizing?: LogoSizing;
 }) {

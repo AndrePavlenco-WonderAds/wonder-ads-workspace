@@ -11,6 +11,12 @@ import {
   getAdminRecords,
   type ClientDepartment,
 } from "@/lib/admin-clients-store";
+import {
+  getClientLogo,
+  getLogoBgMode,
+  getLogoSizing,
+} from "@/lib/client-meta";
+import { getClientPalette, paletteToGradient } from "@/lib/client-colors";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -106,6 +112,10 @@ export default async function ProjectsAdminPage() {
             slug: m.slug,
             title: m.title,
             icon: m.icon,
+            logo: getClientLogo(m.slug),
+            logoBgMode: getLogoBgMode(m.slug),
+            logoSizing: getLogoSizing(m.slug),
+            gradient: paletteToGradient(getClientPalette(m.slug)),
             department: dept,
             clientDepartments: m.departments,
             record,

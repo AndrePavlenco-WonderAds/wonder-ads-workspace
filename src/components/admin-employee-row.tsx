@@ -199,10 +199,33 @@ export function AdminEmployeeRow({
   }
 
   const isEmpty = draft.monthlyValue === null;
-  // Hover popover for the Active portfolio cell — opens on enter,
-  // closes on leave. Uses React state instead of pure CSS group-hover
-  // so the popover can render above the table z-stack reliably.
+  // Click-toggled popover for the Active portfolio cell. Closes on
+  // outside-click + Escape, just like the consultants/departments
+  // dropdowns above. Was hover-triggered in v74.15 — switched to
+  // click so it's keyboard + mobile friendly and stays open while
+  // the consultant reads the list.
   const [portfolioOpen, setPortfolioOpen] = useState(false);
+  const portfolioRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!portfolioOpen) return;
+    function onDown(e: MouseEvent) {
+      if (
+        portfolioRef.current &&
+        !portfolioRef.current.contains(e.target as Node)
+      ) {
+        setPortfolioOpen(false);
+      }
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setPortfolioOpen(false);
+    }
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [portfolioOpen]);
   const sortedBreakdown = portfolio.breakdown
     .slice()
     .sort((a, b) => b.valueEur - a.valueEur);
@@ -390,16 +413,15 @@ export function AdminEmployeeRow({
             None active
           </div>
         ) : (
-          <div
-            className="relative"
-            onMouseEnter={() => setPortfolioOpen(true)}
-            onMouseLeave={() => setPortfolioOpen(false)}
-          >
+          <div ref={portfolioRef} className="relative">
             <button
               type="button"
-              onFocus={() => setPortfolioOpen(true)}
-              onBlur={() => setPortfolioOpen(false)}
-              className="block w-full rounded-md border border-emerald-400/30 bg-emerald-500/[0.06] px-2 py-1.5 text-left transition hover:border-emerald-300/55 hover:bg-emerald-500/[0.09]"
+              onClick={() => setPortfolioOpen((o) => !o)}
+              className={`block w-full rounded-md border px-2 py-1.5 text-left transition ${
+                portfolioOpen
+                  ? "border-emerald-300/65 bg-emerald-500/[0.12]"
+                  : "border-emerald-400/30 bg-emerald-500/[0.06] hover:border-emerald-300/55 hover:bg-emerald-500/[0.09]"
+              }`}
               aria-haspopup="true"
               aria-expanded={portfolioOpen}
             >
@@ -409,7 +431,9 @@ export function AdminEmployeeRow({
               <div className="mt-0.5 text-[10.5px] text-white/55">
                 {portfolio.activeClients} active client
                 {portfolio.activeClients === 1 ? "" : "s"} ·{" "}
-                <span className="text-emerald-300/80">hover for details</span>
+                <span className="text-emerald-300/80">
+                  {portfolioOpen ? "click to close" : "click for details"}
+                </span>
               </div>
             </button>
             {portfolioOpen && sortedBreakdown.length > 0 && (

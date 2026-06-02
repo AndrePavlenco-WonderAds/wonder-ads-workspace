@@ -21,10 +21,19 @@ import {
 } from "@/lib/admin-clients-store";
 import { formatDate } from "@/lib/dates";
 
+import { LogoChip } from "./logo-chip";
+import type { LogoBgMode, LogoSizing } from "@/lib/client-meta";
+
 type Props = {
   slug: string;
   title: string;
   icon: string | null;
+  /** Real brand-logo bundle — when `logo` is null the LogoChip falls
+   *  back to the emoji icon. */
+  logo: string | null;
+  logoBgMode: LogoBgMode;
+  logoSizing: LogoSizing;
+  gradient: string;
   /** Which department this row represents. */
   department: ClientDepartment;
   /** All departments the client appears in — drives the "shared with"
@@ -36,6 +45,11 @@ type Props = {
    *  recompute instantly without waiting on router.refresh(). */
   onSaved?: (record: AdminClientRecord) => void;
 };
+
+/** A billing date this close OR closer earns the amber "Approaching"
+ *  pill on the Next billing column. */
+const APPROACHING_BILLING_DAYS = 14;
+const MS_PER_DAY = 86_400_000;
 
 const STATUS_PILL: Record<ClientStatus, string> = {
   active:
@@ -64,6 +78,10 @@ export function AdminClientRow({
   slug,
   title,
   icon,
+  logo,
+  logoBgMode,
+  logoSizing,
+  gradient,
   department,
   clientDepartments,
   initial,
@@ -179,12 +197,17 @@ export function AdminClientRow({
       {/* Client */}
       <td className="px-4 py-3.5">
         <div className="flex items-start gap-2.5">
-          <span
-            aria-hidden
-            className="mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] text-sm"
-          >
-            {icon ?? "•"}
-          </span>
+          <div className="mt-0.5 shrink-0">
+            <LogoChip
+              logo={logo}
+              emoji={icon}
+              alt={`${title} logo`}
+              gradient={gradient}
+              size="sm"
+              bgMode={logoBgMode}
+              sizing={logoSizing}
+            />
+          </div>
           <div className="min-w-0">
             <div className="truncate text-[13px] font-semibold text-white">
               {title}
@@ -201,10 +224,9 @@ export function AdminClientRow({
               {sharedWith.length > 0 && (
                 <span
                   className="text-[9.5px] font-medium uppercase tracking-[0.12em] text-white/35"
-                  title={`This client also has a row under ${sharedWith.join(" + ")}.`}
+                  title={`Also tracked under ${sharedWith.join(" + ")} on its own budget row.`}
                 >
-                  + {sharedWith.join(", ")} row
-                  {sharedWith.length === 1 ? "" : "s"}
+                  · also in {sharedWith.join(", ")}
                 </span>
               )}
             </div>
@@ -255,25 +277,59 @@ export function AdminClientRow({
 
       {/* Next billing — derived */}
       <td className="px-3 py-3.5 text-[12px]">
-        <span className="text-white/80">
-          {nextBilling ? formatDate(nextBilling) : "—"}
-        </span>
-        <div className="mt-1 text-[10.5px] text-white/40">Auto-computed</div>
+        {(() => {
+          const approaching =
+            nextBilling !== null &&
+            (nextBilling.getTime() - Date.now()) / MS_PER_DAY <=
+              APPROACHING_BILLING_DAYS;
+          return (
+            <>
+              <span
+                className={
+                  approaching
+                    ? "font-semibold text-amber-200"
+                    : "text-white/80"
+                }
+              >
+                {nextBilling ? formatDate(nextBilling) : "—"}
+              </span>
+              {approaching ? (
+                <div className="mt-1 inline-flex items-center gap-1 rounded border border-amber-400/55 bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-amber-200">
+                  <span
+                    aria-hidden
+                    className="inline-flex h-1.5 w-1.5 rounded-full bg-amber-300"
+                  />
+                  Approaching
+                </div>
+              ) : (
+                <div className="mt-1 text-[10.5px] text-white/40">
+                  Auto-computed
+                </div>
+              )}
+            </>
+          );
+        })()}
       </td>
 
-      {/* Consultants — multi-select dropdown */}
+      {/* Consultants — multi-select dropdown. Flags vibrant rose when
+          no consultant is assigned so unattributed rows pop on the
+          board (same emphasis treatment as empty Monthly value). */}
       <td className="px-3 py-3.5">
         <div ref={consultantsRef} className="relative">
           <button
             type="button"
             onClick={() => setConsultantsOpen((o) => !o)}
-            className="flex w-full items-center justify-between gap-1.5 rounded-md border border-white/10 bg-white/[0.04] px-2 py-1.5 text-left text-[12px] text-white outline-none transition hover:border-white/20 focus:border-white/30"
+            className={`flex w-full items-center justify-between gap-1.5 rounded-md border px-2 py-1.5 text-left text-[12px] outline-none transition focus:border-white/30 ${
+              draft.consultants.length === 0
+                ? "border-rose-400/55 bg-rose-500/[0.08] text-rose-100 shadow-[0_0_0_1px_rgba(244,63,94,0.18)] hover:border-rose-300"
+                : "border-white/10 bg-white/[0.04] text-white hover:border-white/20"
+            }`}
             aria-haspopup="listbox"
             aria-expanded={consultantsOpen}
           >
             <span className="flex flex-1 flex-wrap items-center gap-1">
               {draft.consultants.length === 0 ? (
-                <span className="text-white/35">Unassigned</span>
+                <span className="font-semibold text-rose-200">Unassigned</span>
               ) : (
                 draft.consultants.map((c) => (
                   <span
@@ -286,8 +342,12 @@ export function AdminClientRow({
               )}
             </span>
             <ChevronDown
-              className={`h-3 w-3 shrink-0 text-white/40 transition ${
+              className={`h-3 w-3 shrink-0 transition ${
                 consultantsOpen ? "rotate-180" : ""
+              } ${
+                draft.consultants.length === 0
+                  ? "text-rose-300"
+                  : "text-white/40"
               }`}
             />
           </button>
@@ -358,9 +418,18 @@ export function AdminClientRow({
             </div>
           )}
         </div>
-        <div className="mt-1 text-[10.5px] text-white/40">
-          {draft.consultants.length}{" "}
-          {draft.consultants.length === 1 ? "consultant" : "consultants"}
+        <div
+          className={`mt-1 text-[10.5px] ${
+            draft.consultants.length === 0
+              ? "font-semibold text-rose-300"
+              : "text-white/40"
+          }`}
+        >
+          {draft.consultants.length === 0
+            ? "Missing — assign a consultant"
+            : `${draft.consultants.length} ${
+                draft.consultants.length === 1 ? "consultant" : "consultants"
+              }`}
         </div>
       </td>
 

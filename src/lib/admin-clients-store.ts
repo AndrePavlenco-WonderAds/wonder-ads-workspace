@@ -13,6 +13,7 @@ const KEY_PREFIX = "admin-client:";
 
 export const BILLING_CADENCES = [
   "monthly",
+  "bi-monthly",
   "quarterly",
   "semi-annual",
 ] as const;
@@ -370,6 +371,8 @@ export function cadenceMonths(c: BillingCadence): number {
   switch (c) {
     case "monthly":
       return 1;
+    case "bi-monthly":
+      return 2;
     case "quarterly":
       return 3;
     case "semi-annual":
@@ -383,6 +386,8 @@ export function cadenceLabel(c: BillingCadence): string {
   switch (c) {
     case "monthly":
       return "Monthly";
+    case "bi-monthly":
+      return "Each 2 months";
     case "quarterly":
       return "Each 3 months";
     case "semi-annual":
