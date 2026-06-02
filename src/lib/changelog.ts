@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.12",
+    date: "2026-06-02",
+    title: "SuperAdmin Suite · live MRR · green tiles · monthly-value emphasized · empty cells flagged rose · Active tile removed",
+    highlights: [
+      "**⚡ MRR tiles update instantly on save — no refresh needed.** Per-row records lifted into `AdminPanel` as a `Map<slug, AdminClientRecord>` (`useState` seeded from server props). Each row now receives an `onSaved(record)` callback; when the API returns 200, the row fires it AND the panel updates its map → `useMemo` recomputes MRR € + MRR $ instantly. Previously the rollup tiles were derived from immutable props so they only refreshed after a full `router.refresh()`. The Save button still flips through `idle → saving → ✓ saved → idle`; the tiles at the top just keep up now.",
+      "**💚 MRR tiles glow emerald when populated.** Green tone — `border-emerald-400/35` + `bg-emerald-500/[0.06]` + emerald label + emerald value with a soft emerald drop-shadow — fires when the tile value > 0. Tiles fall back to neutral white when the currency has no active value yet (renders `—`). Reads at a glance: green = MRR healthy, dash = nothing to count yet.",
+      "**❌ `Active` tile removed.** Was redundant with `Clients` since the active count equalled the total in practice (rare for a client to sit `paused/onboarding/offboarded` long). Three tiles now: `Clients` · `MRR €` · `MRR $` in a 3-column grid. Cleaner header, no duplicate signal.",
+      "**💶 Monthly Value column emphasized.** Larger 14px font (was 12px), `tabular-nums`, semibold, bigger 8px vertical padding (was 6px), brighter `border-white/18` + `bg-white/[0.05]` background. The € / $ currency selector picks up the same brighter treatment so it reads as one heavy money block, not a faint footnote next to the rest of the row.",
+      "**🚨 Empty Monthly Value cells flagged vibrant rose.** When `monthlyValue === null` the whole block — currency selector + number input + label below — flips to rose: `border-rose-400/55`, `bg-rose-500/[0.08]` tint, rose `placeholder:text-rose-300/70`, a soft `shadow-[0_0_0_1px_rgba(244,63,94,0.18)]` ring around the input, and the helper text underneath swaps from `/ mo · EUR` to a semibold rose `Needs value` flag. So the consultant can scan the table in one second and see which clients still need their billing amount populated.",
+    ],
+  },
+  {
     version: "74.11",
     date: "2026-06-02",
     title: "SuperAdmin Suite footer entry → real button — brand-purple chip, ShieldCheck icon, new label",

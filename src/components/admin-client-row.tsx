@@ -29,6 +29,10 @@ type Props = {
   icon: string | null;
   departments: string[]; // ["SEO"], ["ADS"], ["SEO", "ADS"], …
   initial: AdminClientRecord;
+  /** Notified after the server confirms a save. The parent panel uses
+   *  this to update its records map so the rollup tiles (MRR €, MRR $)
+   *  recompute instantly without waiting on router.refresh(). */
+  onSaved?: (record: AdminClientRecord) => void;
 };
 
 const STATUS_PILL: Record<ClientStatus, string> = {
@@ -59,6 +63,7 @@ export function AdminClientRow({
   icon,
   departments,
   initial,
+  onSaved,
 }: Props) {
   const [draft, setDraft] = useState<AdminClientRecord>(initial);
   const [saved, setSaved] = useState<AdminClientRecord>(initial);
@@ -142,6 +147,7 @@ export function AdminClientRow({
       setSaved(json.record);
       setDraft(json.record);
       setState("saved");
+      onSaved?.(json.record);
       setTimeout(() => setState("idle"), 2500);
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : String(err));
@@ -343,47 +349,72 @@ export function AdminClientRow({
         </div>
       </td>
 
-      {/* Monthly value + currency */}
+      {/* Monthly value + currency — emphasized column.
+          Empty cells get a vibrant rose ring + tint so unfilled
+          clients pop on the board. Filled cells render larger /
+          bolder than the rest of the row so the money column reads
+          as the most important one. */}
       <td className="px-3 py-3.5">
-        <div className="flex items-stretch gap-1">
-          <div className="flex shrink-0 overflow-hidden rounded-md border border-white/10 bg-white/[0.04]">
-            {CURRENCIES.map((c) => (
-              <button
-                key={c}
-                type="button"
-                onClick={() => setDraft({ ...draft, currency: c })}
-                className={`px-2 text-[12px] font-semibold transition ${
-                  draft.currency === c
-                    ? "brand-gradient-bg text-white"
-                    : "text-white/55 hover:text-white"
+        {(() => {
+          const isEmpty = draft.monthlyValue === null;
+          return (
+            <>
+              <div className="flex items-stretch gap-1">
+                <div
+                  className={`flex shrink-0 overflow-hidden rounded-md border ${
+                    isEmpty
+                      ? "border-rose-400/45 bg-rose-500/[0.08]"
+                      : "border-white/15 bg-white/[0.05]"
+                  }`}
+                >
+                  {CURRENCIES.map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => setDraft({ ...draft, currency: c })}
+                      className={`px-2 text-[13px] font-semibold transition ${
+                        draft.currency === c
+                          ? "brand-gradient-bg text-white"
+                          : "text-white/55 hover:text-white"
+                      }`}
+                      aria-pressed={draft.currency === c}
+                      title={c === "EUR" ? "Euros" : "US Dollars"}
+                    >
+                      {currencySymbol(c as Currency)}
+                    </button>
+                  ))}
+                </div>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  step="0.01"
+                  min="0"
+                  value={draft.monthlyValue ?? ""}
+                  onChange={(e) => {
+                    const raw = e.target.value;
+                    setDraft({
+                      ...draft,
+                      monthlyValue: raw === "" ? null : Number(raw),
+                    });
+                  }}
+                  placeholder="—"
+                  className={`w-full rounded-md border px-2.5 py-2 text-right text-[14px] font-semibold tabular-nums outline-none transition focus:border-white/40 ${
+                    isEmpty
+                      ? "border-rose-400/55 bg-rose-500/[0.08] text-rose-100 placeholder:text-rose-300/70 focus:border-rose-300 shadow-[0_0_0_1px_rgba(244,63,94,0.18)]"
+                      : "border-white/18 bg-white/[0.05] text-white placeholder:text-white/35"
+                  }`}
+                />
+              </div>
+              <div
+                className={`mt-1 text-right text-[10.5px] ${
+                  isEmpty ? "font-semibold text-rose-300" : "text-white/45"
                 }`}
-                aria-pressed={draft.currency === c}
-                title={c === "EUR" ? "Euros" : "US Dollars"}
               >
-                {currencySymbol(c as Currency)}
-              </button>
-            ))}
-          </div>
-          <input
-            type="number"
-            inputMode="decimal"
-            step="0.01"
-            min="0"
-            value={draft.monthlyValue ?? ""}
-            onChange={(e) => {
-              const raw = e.target.value;
-              setDraft({
-                ...draft,
-                monthlyValue: raw === "" ? null : Number(raw),
-              });
-            }}
-            placeholder="0"
-            className="w-full rounded-md border border-white/10 bg-white/[0.04] px-2 py-1.5 text-right text-[12px] text-white outline-none transition focus:border-white/30 placeholder:text-white/35"
-          />
-        </div>
-        <div className="mt-1 text-right text-[10.5px] text-white/40">
-          / mo · {draft.currency}
-        </div>
+                {isEmpty ? "Needs value" : `/ mo · ${draft.currency}`}
+              </div>
+            </>
+          );
+        })()}
       </td>
 
       {/* Status */}

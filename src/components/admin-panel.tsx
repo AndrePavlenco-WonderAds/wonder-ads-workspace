@@ -1,12 +1,12 @@
 "use client";
 
 // SuperAdmin Control Suite — single flat table of every client across
-// every department. Rows carry per-department badges (SEO / ADS / both)
-// so the list reads at a glance even without section grouping. Each
-// row is independently editable; Save persists to KV via
-// /api/admin/clients/[slug].
+// every department. The panel owns a `records` Map keyed by slug so
+// the rollup tiles recompute the instant any row saves — no refresh
+// required. Each row receives the current record + an onSaved callback
+// it fires after the API returns a 200.
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { LogOut, Loader2 } from "lucide-react";
 import { AdminClientRow } from "./admin-client-row";
@@ -25,38 +25,63 @@ export function AdminPanel({ clients }: { clients: AdminClientView[] }) {
   const router = useRouter();
   const [loggingOut, setLoggingOut] = useState(false);
 
-  const totalClients = clients.length;
-  const activeClients = useMemo(
-    () => clients.filter((c) => c.record.status === "active").length,
-    [clients],
+  // Per-slug record state — seeded from server props, updated every
+  // time a row's Save returns. Drives both the rollup tiles AND the
+  // `initial` value the row re-mounts with so the UI stays in sync.
+  const [records, setRecords] = useState<Map<string, AdminClientRecord>>(
+    () => {
+      const m = new Map<string, AdminClientRecord>();
+      for (const c of clients) m.set(c.slug, c.record);
+      return m;
+    },
   );
 
-  // Active MRR split by currency — dedupe by slug isn't needed here
-  // because the page builds a single deduped clients list.
-  const mrrEur = useMemo(
-    () =>
-      clients
-        .filter(
-          (c) =>
-            c.record.status === "active" &&
-            c.record.currency === "EUR" &&
-            c.record.monthlyValue,
-        )
-        .reduce((sum, c) => sum + (c.record.monthlyValue ?? 0), 0),
-    [clients],
+  const handleSaved = useCallback(
+    (slug: string, record: AdminClientRecord) => {
+      setRecords((prev) => {
+        const next = new Map(prev);
+        next.set(slug, record);
+        return next;
+      });
+    },
+    [],
   );
-  const mrrUsd = useMemo(
-    () =>
-      clients
-        .filter(
-          (c) =>
-            c.record.status === "active" &&
-            c.record.currency === "USD" &&
-            c.record.monthlyValue,
-        )
-        .reduce((sum, c) => sum + (c.record.monthlyValue ?? 0), 0),
-    [clients],
-  );
+
+  const totalClients = clients.length;
+
+  // Active MRR split by currency. Computed off the live `records` map
+  // so saving a row immediately updates the totals above.
+  const mrrEur = useMemo(() => {
+    let total = 0;
+    for (const c of clients) {
+      const r = records.get(c.slug);
+      if (
+        r &&
+        r.status === "active" &&
+        r.currency === "EUR" &&
+        r.monthlyValue
+      ) {
+        total += r.monthlyValue;
+      }
+    }
+    return total;
+  }, [clients, records]);
+
+  const mrrUsd = useMemo(() => {
+    let total = 0;
+    for (const c of clients) {
+      const r = records.get(c.slug);
+      if (
+        r &&
+        r.status === "active" &&
+        r.currency === "USD" &&
+        r.monthlyValue
+      ) {
+        total += r.monthlyValue;
+      }
+    }
+    return total;
+  }, [clients, records]);
 
   async function logout() {
     setLoggingOut(true);
@@ -98,20 +123,22 @@ export function AdminPanel({ clients }: { clients: AdminClientView[] }) {
         </button>
       </header>
 
-      {/* Roll-up tiles */}
+      {/* Roll-up tiles. MRR tiles glow emerald when populated so a
+          glance at the header tells you the agency's healthy. */}
       <section
         aria-label="Roll-up"
-        className="mt-7 grid grid-cols-2 gap-3 sm:grid-cols-4"
+        className="mt-7 grid grid-cols-1 gap-3 sm:grid-cols-3"
       >
         <RollupTile label="Clients" value={String(totalClients)} />
-        <RollupTile label="Active" value={String(activeClients)} />
         <RollupTile
           label="MRR €"
           value={mrrEur > 0 ? formatMoney(mrrEur, "EUR") : "—"}
+          tone={mrrEur > 0 ? "emerald" : "neutral"}
         />
         <RollupTile
           label="MRR $"
           value={mrrUsd > 0 ? formatMoney(mrrUsd, "USD") : "—"}
+          tone={mrrUsd > 0 ? "emerald" : "neutral"}
         />
       </section>
 
@@ -143,16 +170,20 @@ export function AdminPanel({ clients }: { clients: AdminClientView[] }) {
                   </td>
                 </tr>
               ) : (
-                clients.map((c) => (
-                  <AdminClientRow
-                    key={c.slug}
-                    slug={c.slug}
-                    title={c.title}
-                    icon={c.icon}
-                    departments={c.departments}
-                    initial={c.record}
-                  />
-                ))
+                clients.map((c) => {
+                  const live = records.get(c.slug) ?? c.record;
+                  return (
+                    <AdminClientRow
+                      key={c.slug}
+                      slug={c.slug}
+                      title={c.title}
+                      icon={c.icon}
+                      departments={c.departments}
+                      initial={live}
+                      onSaved={(r) => handleSaved(c.slug, r)}
+                    />
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -162,13 +193,38 @@ export function AdminPanel({ clients }: { clients: AdminClientView[] }) {
   );
 }
 
-function RollupTile({ label, value }: { label: string; value: string }) {
+function RollupTile({
+  label,
+  value,
+  tone = "neutral",
+}: {
+  label: string;
+  value: string;
+  tone?: "neutral" | "emerald";
+}) {
+  const isEmerald = tone === "emerald";
   return (
-    <div className="rounded-xl border border-white/8 bg-white/[0.025] px-4 py-3">
-      <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/45">
+    <div
+      className={`rounded-xl border px-4 py-3 transition ${
+        isEmerald
+          ? "border-emerald-400/35 bg-emerald-500/[0.06]"
+          : "border-white/8 bg-white/[0.025]"
+      }`}
+    >
+      <div
+        className={`text-[10px] font-bold uppercase tracking-[0.18em] ${
+          isEmerald ? "text-emerald-300/80" : "text-white/45"
+        }`}
+      >
         {label}
       </div>
-      <div className="mt-1 text-xl font-semibold tracking-tight text-white">
+      <div
+        className={`mt-1 text-xl font-semibold tracking-tight ${
+          isEmerald
+            ? "text-emerald-200 drop-shadow-[0_0_18px_rgba(52,211,153,0.35)]"
+            : "text-white"
+        }`}
+      >
         {value}
       </div>
     </div>
