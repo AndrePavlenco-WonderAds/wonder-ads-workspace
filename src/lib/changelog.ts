@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.11",
+    date: "2026-06-02",
+    title: "SuperAdmin Suite footer entry → real button — brand-purple chip, ShieldCheck icon, new label",
+    highlights: [
+      "**🔐 Footer entry to SuperAdmin Suite is now a real button** instead of inline link text. The plain `Admin Control Panel? Login here` line is replaced with a compact pill — `ShieldCheck` icon (brand magenta `#C535C9`) + `SuperAdmin Suite · Log in` label, brand-purple `#783DF5` border + tinted fill + soft glow. Same hover treatment as the rest of the workspace buttons (border + bg brighten, icon flips to white). Footer still keeps `© Wonder Ads` on the left and the `workspace.v##` changelog link on the right, so the chip sits in the middle and reads as a deliberate CTA — not a stray sentence. Single `<Link>` element, `aria-label=\"Log in to the SuperAdmin Control Suite\"` for screen readers.",
+    ],
+  },
+  {
     version: "74.10",
     date: "2026-06-02",
     title: "SuperAdmin Control Suite · one flat list · multi-consultant dropdown · €/$ per client · André P. → Manuel S. handover · Spine Center added",

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ShieldCheck } from "lucide-react";
 import { BackgroundDecor } from "./background-decor";
 import { WonderAdsLogo } from "./wonder-ads-logo";
 import { HeaderClock } from "./header-clock";
@@ -72,15 +72,17 @@ export function PageShell({
 
         <footer className="mt-16 flex flex-wrap items-center justify-between gap-x-5 gap-y-2 text-xs text-white/40 sm:mt-20">
           <span>© {new Date().getFullYear()} Wonder Ads. All Rights Reserved.</span>
-          <span>
-            Admin Control Panel?{" "}
-            <Link
-              href="/admin"
-              className="text-white/55 underline-offset-2 transition hover:text-white hover:underline"
-            >
-              Login here
-            </Link>
-          </span>
+          <Link
+            href="/admin"
+            className="group inline-flex items-center gap-1.5 rounded-md border border-[#783DF5]/45 bg-[#783DF5]/10 px-2.5 py-1 text-[11px] font-semibold tracking-tight text-white/90 shadow-[0_4px_18px_-6px_rgba(120,61,245,0.55)] transition hover:border-[#C535C9]/70 hover:bg-[#783DF5]/18 hover:text-white"
+            aria-label="Log in to the SuperAdmin Control Suite"
+          >
+            <ShieldCheck
+              className="h-3 w-3 text-[#C535C9] transition group-hover:text-white"
+              strokeWidth={2.5}
+            />
+            SuperAdmin Suite · Log in
+          </Link>
           <Link
             href="/changelog"
             className="font-mono transition hover:text-white"
