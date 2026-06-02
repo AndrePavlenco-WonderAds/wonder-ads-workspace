@@ -43,10 +43,16 @@ export function ReviewTable({
    *  server-side when the client flips status to Approved, so clients
    *  never need to set it manually. */
   readonlyApprovalDate = false,
-  /** When true (internal page), renders the Pending / Archive tab
-   *  switcher + per-row Archive button. The public client view never
-   *  sees archived rows. */
+  /** When true, renders the Pending / Archive tab switcher above the
+   *  table. Both the internal consultant view AND the public client
+   *  view set this to true so clients can scroll through past
+   *  decisions, but the actions that MOVE rows between tabs stay
+   *  consultant-only via `allowArchiveActions`. */
   allowArchive = false,
+  /** When true, renders the per-row Archive / Restore buttons (the
+   *  things that actually flip a row's `archived` field). Defaults
+   *  to `false` so the public client view never sees the controls. */
+  allowArchiveActions = false,
 }: {
   clientSlug: string;
   initialItems: ReviewItem[];
@@ -54,6 +60,7 @@ export function ReviewTable({
   hidePublishingDate?: boolean;
   readonlyApprovalDate?: boolean;
   allowArchive?: boolean;
+  allowArchiveActions?: boolean;
 }) {
   const [items, setItems] = useState<ReviewItem[]>(initialItems);
   const [savingIds, setSavingIds] = useState<Set<string>>(new Set());
@@ -366,7 +373,7 @@ export function ReviewTable({
                   <Th className={hidePublishingDate ? "w-[22%]" : "w-[16%]"}>
                     Doc link
                   </Th>
-                  {allowArchive && (
+                  {allowArchiveActions && (
                     <Th className="w-[6%] text-right">Archive</Th>
                   )}
                   {allowDelete && <Th className="w-[4%] text-right">·</Th>}
@@ -455,7 +462,7 @@ export function ReviewTable({
                           }
                         />
                       </Td>
-                      {allowArchive && (
+                      {allowArchiveActions && (
                         <Td className="text-right">
                           {it.archived ? (
                             <button

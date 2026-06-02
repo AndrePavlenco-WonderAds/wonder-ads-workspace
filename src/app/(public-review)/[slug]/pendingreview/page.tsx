@@ -14,7 +14,7 @@ import {
   getConsultantEmailForSlug,
   getConsultantForSlug,
 } from "@/lib/client-overrides";
-import { filterPublicItems, listReviewItems } from "@/lib/review-store";
+import { listReviewItems } from "@/lib/review-store";
 import { ReviewTable } from "@/components/review-table";
 import { pickLang, t } from "@/lib/public-i18n";
 
@@ -47,7 +47,11 @@ export default async function PublicReviewPage({
   }
   const client = await getClientBySlug(slug).catch(() => null);
   if (!client) notFound();
-  const items = filterPublicItems(await listReviewItems(slug));
+  // v74.17: archived items now ship to the public view too so the
+  // client can scroll past decisions in the Archive tab. The
+  // tab-switch UX is rendered by ReviewTable; the Pending tab still
+  // hides archived rows for display.
+  const items = await listReviewItems(slug);
   const logo = getClientLogo(slug);
   const lang = pickLang(slug);
   const consultantEmail = getConsultantEmailForSlug(slug);
@@ -106,6 +110,7 @@ export default async function PublicReviewPage({
         allowDelete={false}
         hidePublishingDate={true}
         readonlyApprovalDate={true}
+        allowArchive={true}
       />
 
       {/* Footer */}

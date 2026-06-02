@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.17",
+    date: "2026-06-02",
+    title: "Pending Review · Archive tab now visible to clients on the public page (read-only)",
+    highlights: [
+      "**🗂 Clients can browse the Archive tab on their public review page.** Same `Pending` / `Archive` tab switcher the consultant has on `/seo/[slug]/review` now renders on the unauthenticated `/<slug>/pendingreview` page too — so a client can scroll through past approvals + rejections without a consultant copy-pasting screenshots. The data has always been there in KV; v74.15 just defensively hid it from the public view. v74.17 unhides it but keeps writes consultant-only.",
+      "**🛡 Read-only on the client side.** Split the existing `allowArchive` prop on `ReviewTable` into two: `allowArchive` (controls whether the tab switcher renders) and `allowArchiveActions` (controls whether the per-row Archive / Restore buttons render). Public client view sets `allowArchive: true` only — clients can switch tabs and read the archive, but the columns + buttons that flip a row's `archived` field stay invisible to them. Internal consultant view sets both to true. Server-side guards from v74.15 are unchanged — `PATCH /api/reviews/[slug]/items/[id]` still rejects `archived: true` from any context with a status that isn't Approved or Rejected.",
+      "**🔄 SSR + poll already aligned.** The public page server-render now ships the full item list (no more `filterPublicItems()` strip on initial render); ReviewTable's auto-poll already calls `?includeArchived=1` whenever `allowArchive` is true, so the public Archive tab stays in sync without separate plumbing. Same Pending tab body the client saw before — the only thing that changed is they now have a tab toggle they can click.",
+    ],
+  },
+  {
     version: "74.16",
     date: "2026-06-02",
     title: "SuperAdmin Projects · brand logos + sortable columns + Approaching billing pill + Unassigned flag + bi-monthly cycle + click-to-open portfolio",

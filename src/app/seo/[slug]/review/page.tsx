@@ -119,6 +119,7 @@ export default async function InternalReviewPage({
             initialItems={items}
             allowDelete={true}
             allowArchive={true}
+            allowArchiveActions={true}
           />
         </div>
       </section>
