@@ -6,8 +6,10 @@ import {
   saveAdminRecord,
   BILLING_CADENCES,
   CLIENT_STATUSES,
+  CURRENCIES,
   type BillingCadence,
   type ClientStatus,
+  type Currency,
   type AdminClientRecord,
 } from "@/lib/admin-clients-store";
 
@@ -63,8 +65,21 @@ export async function PUT(
     }
   }
 
-  if (typeof body.consultant === "string") {
-    patch.consultant = body.consultant.trim().slice(0, 80);
+  if ("consultants" in body) {
+    const raw = body.consultants;
+    if (!Array.isArray(raw)) {
+      return NextResponse.json(
+        { error: "consultants must be an array of strings" },
+        { status: 400 },
+      );
+    }
+    const cleaned = raw
+      .filter((v): v is string => typeof v === "string")
+      .map((v) => v.trim().slice(0, 80))
+      .filter((v) => v.length > 0);
+    // Dedupe while preserving order — the array is small (≤ ~6 names)
+    // so a Set-based pass is fine.
+    patch.consultants = Array.from(new Set(cleaned));
   }
 
   if (typeof body.status === "string") {
@@ -78,19 +93,30 @@ export async function PUT(
     patch.status = v;
   }
 
-  if ("monthlyValueEur" in body) {
-    const raw = body.monthlyValueEur;
+  if (typeof body.currency === "string") {
+    const v = body.currency as Currency;
+    if (!(CURRENCIES as readonly string[]).includes(v)) {
+      return NextResponse.json(
+        { error: `currency must be one of ${CURRENCIES.join(", ")}` },
+        { status: 400 },
+      );
+    }
+    patch.currency = v;
+  }
+
+  if ("monthlyValue" in body) {
+    const raw = body.monthlyValue;
     if (raw === null || raw === "") {
-      patch.monthlyValueEur = null;
+      patch.monthlyValue = null;
     } else {
       const n = typeof raw === "number" ? raw : Number(raw);
       if (!Number.isFinite(n) || n < 0) {
         return NextResponse.json(
-          { error: "monthlyValueEur must be a non-negative number or null" },
+          { error: "monthlyValue must be a non-negative number or null" },
           { status: 400 },
         );
       }
-      patch.monthlyValueEur = Math.round(n * 100) / 100;
+      patch.monthlyValue = Math.round(n * 100) / 100;
     }
   }
 

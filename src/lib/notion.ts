@@ -54,10 +54,20 @@ async function listChildren(blockId: string) {
 // every direct hit on /seo/<client>/actions/<action> was paying the full Notion
 // roundtrip). React.cache() still wraps the public export below to dedupe
 // concurrent calls within a single request.
+/** Synthetic SEO clients merged into the result of `_fetchSeoClients`.
+ *  Used when a client should appear across the workspace but doesn't have
+ *  its own Notion child page yet. Each entry shares the same shape as a
+ *  Notion-sourced client so every downstream consumer (action pages,
+ *  briefs, admin board) works without conditional branching. */
+const EXTRA_SEO_CLIENTS: Array<{ title: string; icon: string }> = [
+  { title: "Spine Center", icon: "🦴" },
+];
+
 const _fetchSeoClients = unstable_cache(
   async (): Promise<NotionClient[]> => {
     const columns = await listChildren(SEO_PROJECTS_COLUMN_LIST_ID);
     const clients: NotionClient[] = [];
+    const seenSlugs = new Set<string>();
 
     for (const column of columns) {
       if (column.type !== "column") continue;
@@ -86,17 +96,35 @@ const _fetchSeoClients = unstable_cache(
           palette: getClientPalette(slug),
           tier: getClientTier(slug),
         });
+        seenSlugs.add(slug);
       }
+    }
+
+    // Append synthetic extras that should appear in the SEO roster even
+    // though they don't have a Notion child page. Skips silently if a
+    // matching slug was already pulled from Notion.
+    for (const extra of EXTRA_SEO_CLIENTS) {
+      const slug = slugify(extra.title);
+      if (seenSlugs.has(slug) || EXCLUDED_SLUGS.has(slug)) continue;
+      clients.push({
+        id: `synthetic:${slug}`,
+        title: extra.title,
+        slug,
+        icon: extra.icon,
+        consultant: getConsultantForSlug(slug),
+        palette: getClientPalette(slug),
+        tier: getClientTier(slug),
+      });
+      seenSlugs.add(slug);
     }
 
     return clients;
   },
-  // v3 cache key — bumped after the "Luana N." → "André P." handover so the
-  // freshly-renamed consultant takes effect immediately rather than waiting
-  // up to an hour for the previous v2 entry to expire. Bump again whenever
+  // v4 cache key — bumped for the "André P." → "Manuel S." handover and
+  // the addition of Spine Center to the synthetic roster. Bump whenever
   // the shape of NotionClient or any of its derived fields changes
   // meaningfully.
-  ["seo-clients-v3"],
+  ["seo-clients-v4"],
   { revalidate: 3600, tags: ["seo-clients"] },
 );
 

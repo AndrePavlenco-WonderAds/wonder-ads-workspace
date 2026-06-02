@@ -5,17 +5,21 @@
 // then a single Save button persists the patch to KV via the API.
 // Save → success pill auto-dismisses after 2.5s.
 
-import { useMemo, useState } from "react";
-import { Loader2, Save, Check, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Loader2, Save, Check, X, Users, ChevronDown } from "lucide-react";
 import {
   BILLING_CADENCES,
   CLIENT_STATUSES,
+  CONSULTANTS,
+  CURRENCIES,
   cadenceLabel,
   cadenceMonths,
+  currencySymbol,
   nextBillingDate,
   type AdminClientRecord,
   type BillingCadence,
   type ClientStatus,
+  type Currency,
 } from "@/lib/admin-clients-store";
 import { formatDate } from "@/lib/dates";
 
@@ -38,6 +42,17 @@ const STATUS_PILL: Record<ClientStatus, string> = {
     "border-rose-400/35 bg-rose-500/10 text-rose-200",
 };
 
+const DEPT_PILL: Record<string, string> = {
+  SEO: "border-[#783DF5]/40 bg-[#783DF5]/12 text-[#d4c4ff]",
+  ADS: "border-[#C535C9]/40 bg-[#C535C9]/12 text-[#f4c5f1]",
+};
+
+function arraysShallowEqual(a: string[], b: string[]): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+  return true;
+}
+
 export function AdminClientRow({
   slug,
   title,
@@ -51,19 +66,56 @@ export function AdminClientRow({
     "idle",
   );
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [consultantsOpen, setConsultantsOpen] = useState(false);
+  const consultantsRef = useRef<HTMLDivElement | null>(null);
+
+  // Close consultants dropdown on outside click + on Escape.
+  useEffect(() => {
+    if (!consultantsOpen) return;
+    function onDown(e: MouseEvent) {
+      if (
+        consultantsRef.current &&
+        !consultantsRef.current.contains(e.target as Node)
+      ) {
+        setConsultantsOpen(false);
+      }
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setConsultantsOpen(false);
+    }
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [consultantsOpen]);
 
   const dirty =
     draft.billingCadence !== saved.billingCadence ||
     draft.startingDate !== saved.startingDate ||
-    draft.consultant !== saved.consultant ||
+    !arraysShallowEqual(draft.consultants, saved.consultants) ||
     draft.status !== saved.status ||
-    draft.monthlyValueEur !== saved.monthlyValueEur ||
+    draft.currency !== saved.currency ||
+    draft.monthlyValue !== saved.monthlyValue ||
     draft.notes !== saved.notes;
 
   const nextBilling = useMemo(
     () => nextBillingDate(draft.startingDate, draft.billingCadence),
     [draft.startingDate, draft.billingCadence],
   );
+
+  function toggleConsultant(name: string) {
+    setDraft((d) => {
+      const has = d.consultants.includes(name);
+      return {
+        ...d,
+        consultants: has
+          ? d.consultants.filter((c) => c !== name)
+          : [...d.consultants, name],
+      };
+    });
+  }
 
   async function save() {
     setState("saving");
@@ -75,9 +127,10 @@ export function AdminClientRow({
         body: JSON.stringify({
           billingCadence: draft.billingCadence,
           startingDate: draft.startingDate,
-          consultant: draft.consultant,
+          consultants: draft.consultants,
           status: draft.status,
-          monthlyValueEur: draft.monthlyValueEur,
+          currency: draft.currency,
+          monthlyValue: draft.monthlyValue,
           notes: draft.notes,
         }),
       });
@@ -125,7 +178,10 @@ export function AdminClientRow({
               {departments.map((d) => (
                 <span
                   key={d}
-                  className="rounded border border-white/12 bg-white/[0.03] px-1.5 py-px text-[9.5px] font-bold uppercase tracking-[0.16em] text-white/55"
+                  className={`rounded border px-1.5 py-px text-[9.5px] font-bold uppercase tracking-[0.16em] ${
+                    DEPT_PILL[d] ??
+                    "border-white/12 bg-white/[0.03] text-white/55"
+                  }`}
                 >
                   {d}
                 </span>
@@ -184,41 +240,150 @@ export function AdminClientRow({
         <div className="mt-1 text-[10.5px] text-white/40">Auto-computed</div>
       </td>
 
-      {/* Consultant */}
+      {/* Consultants — multi-select dropdown */}
       <td className="px-3 py-3.5">
-        <input
-          type="text"
-          value={draft.consultant}
-          onChange={(e) => setDraft({ ...draft, consultant: e.target.value })}
-          placeholder="Unassigned"
-          className="w-full rounded-md border border-white/10 bg-white/[0.04] px-2 py-1.5 text-[12px] text-white outline-none transition focus:border-white/30 placeholder:text-white/35"
-        />
+        <div ref={consultantsRef} className="relative">
+          <button
+            type="button"
+            onClick={() => setConsultantsOpen((o) => !o)}
+            className="flex w-full items-center justify-between gap-1.5 rounded-md border border-white/10 bg-white/[0.04] px-2 py-1.5 text-left text-[12px] text-white outline-none transition hover:border-white/20 focus:border-white/30"
+            aria-haspopup="listbox"
+            aria-expanded={consultantsOpen}
+          >
+            <span className="flex flex-1 flex-wrap items-center gap-1">
+              {draft.consultants.length === 0 ? (
+                <span className="text-white/35">Unassigned</span>
+              ) : (
+                draft.consultants.map((c) => (
+                  <span
+                    key={c}
+                    className="rounded border border-white/15 bg-white/[0.05] px-1.5 py-0.5 text-[10.5px] text-white/85"
+                  >
+                    {c}
+                  </span>
+                ))
+              )}
+            </span>
+            <ChevronDown
+              className={`h-3 w-3 shrink-0 text-white/40 transition ${
+                consultantsOpen ? "rotate-180" : ""
+              }`}
+            />
+          </button>
+          {consultantsOpen && (
+            <div
+              role="listbox"
+              aria-multiselectable="true"
+              className="absolute left-0 right-0 top-full z-30 mt-1 rounded-md border border-white/12 bg-[#0c0c12] py-1 shadow-2xl shadow-black/60"
+            >
+              <div className="border-b border-white/8 px-2.5 py-1.5 text-[9.5px] font-bold uppercase tracking-[0.16em] text-white/45">
+                <span className="inline-flex items-center gap-1.5">
+                  <Users className="h-3 w-3" />
+                  Assign consultants
+                </span>
+              </div>
+              {CONSULTANTS.map((name) => {
+                const checked = draft.consultants.includes(name);
+                return (
+                  <button
+                    key={name}
+                    type="button"
+                    onClick={() => toggleConsultant(name)}
+                    className="flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-[12px] text-white/85 transition hover:bg-white/[0.04]"
+                    role="option"
+                    aria-selected={checked}
+                  >
+                    <span
+                      className={`flex h-3.5 w-3.5 items-center justify-center rounded border ${
+                        checked
+                          ? "brand-gradient-bg border-transparent"
+                          : "border-white/25 bg-transparent"
+                      }`}
+                    >
+                      {checked && <Check className="h-2.5 w-2.5 text-white" />}
+                    </span>
+                    <span>{name}</span>
+                  </button>
+                );
+              })}
+              {/* Honour names already saved that aren't in the canonical
+                  roster — show them as toggleable so the consultant can
+                  remove them without losing the row state. */}
+              {draft.consultants
+                .filter(
+                  (c) =>
+                    !(CONSULTANTS as readonly string[]).includes(c),
+                )
+                .map((name) => (
+                  <button
+                    key={`custom-${name}`}
+                    type="button"
+                    onClick={() => toggleConsultant(name)}
+                    className="flex w-full items-center gap-2 border-t border-white/8 px-2.5 py-1.5 text-left text-[12px] text-white/85 transition hover:bg-white/[0.04]"
+                    role="option"
+                    aria-selected
+                  >
+                    <span className="brand-gradient-bg flex h-3.5 w-3.5 items-center justify-center rounded border border-transparent">
+                      <Check className="h-2.5 w-2.5 text-white" />
+                    </span>
+                    <span>
+                      {name}
+                      <span className="ml-1 text-[9.5px] uppercase tracking-[0.14em] text-white/35">
+                        legacy
+                      </span>
+                    </span>
+                  </button>
+                ))}
+            </div>
+          )}
+        </div>
+        <div className="mt-1 text-[10.5px] text-white/40">
+          {draft.consultants.length}{" "}
+          {draft.consultants.length === 1 ? "consultant" : "consultants"}
+        </div>
       </td>
 
-      {/* Monthly value */}
+      {/* Monthly value + currency */}
       <td className="px-3 py-3.5">
-        <div className="relative">
-          <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[11px] text-white/35">
-            €
-          </span>
+        <div className="flex items-stretch gap-1">
+          <div className="flex shrink-0 overflow-hidden rounded-md border border-white/10 bg-white/[0.04]">
+            {CURRENCIES.map((c) => (
+              <button
+                key={c}
+                type="button"
+                onClick={() => setDraft({ ...draft, currency: c })}
+                className={`px-2 text-[12px] font-semibold transition ${
+                  draft.currency === c
+                    ? "brand-gradient-bg text-white"
+                    : "text-white/55 hover:text-white"
+                }`}
+                aria-pressed={draft.currency === c}
+                title={c === "EUR" ? "Euros" : "US Dollars"}
+              >
+                {currencySymbol(c as Currency)}
+              </button>
+            ))}
+          </div>
           <input
             type="number"
             inputMode="decimal"
             step="0.01"
             min="0"
-            value={draft.monthlyValueEur ?? ""}
+            value={draft.monthlyValue ?? ""}
             onChange={(e) => {
               const raw = e.target.value;
               setDraft({
                 ...draft,
-                monthlyValueEur: raw === "" ? null : Number(raw),
+                monthlyValue: raw === "" ? null : Number(raw),
               });
             }}
             placeholder="0"
-            className="w-full rounded-md border border-white/10 bg-white/[0.04] px-2 py-1.5 pr-5 text-right text-[12px] text-white outline-none transition focus:border-white/30 placeholder:text-white/35"
+            className="w-full rounded-md border border-white/10 bg-white/[0.04] px-2 py-1.5 text-right text-[12px] text-white outline-none transition focus:border-white/30 placeholder:text-white/35"
           />
         </div>
-        <div className="mt-1 text-right text-[10.5px] text-white/40">/ mo</div>
+        <div className="mt-1 text-right text-[10.5px] text-white/40">
+          / mo · {draft.currency}
+        </div>
       </td>
 
       {/* Status */}

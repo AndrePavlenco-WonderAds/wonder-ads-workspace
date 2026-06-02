@@ -16,7 +16,7 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export const metadata = {
-  title: "Admin Control Panel — Wonder Ads Workspace",
+  title: "SuperAdmin Control Suite — Wonder Ads Workspace",
 };
 
 function BackToWorkspace() {
@@ -62,83 +62,74 @@ export default async function AdminPage() {
     icon: c.icon,
   }));
 
-  // Slugs that exist in both departments — tagged with both badges.
-  const sharedSlugs = new Set(
-    adsClients
-      .filter((a) => seoClients.some((s) => s.slug === a.slug))
-      .map((a) => a.slug),
-  );
+  // Flatten into a single deduped list keyed by slug. Track which
+  // departments each client appears in so the row renders the right
+  // SEO / ADS badges.
+  type Merged = {
+    slug: string;
+    title: string;
+    icon: string | null;
+    departments: Set<string>;
+  };
+  const merged = new Map<string, Merged>();
 
-  function deptsFor(slug: string, dept: "SEO" | "ADS"): string[] {
-    if (sharedSlugs.has(slug)) return ["SEO", "ADS"];
-    return [dept];
+  for (const c of seoClients) {
+    merged.set(c.slug, {
+      slug: c.slug,
+      title: c.title,
+      icon: c.icon,
+      departments: new Set(["SEO"]),
+    });
+  }
+  for (const c of adsClients) {
+    const existing = merged.get(c.slug);
+    if (existing) {
+      existing.departments.add("ADS");
+    } else {
+      merged.set(c.slug, {
+        slug: c.slug,
+        title: c.title,
+        icon: c.icon,
+        departments: new Set(["ADS"]),
+      });
+    }
   }
 
-  const allSlugs = Array.from(
-    new Set([
-      ...seoClients.map((c) => c.slug),
-      ...adsClients.map((c) => c.slug),
-    ]),
-  );
+  const allSlugs = Array.from(merged.keys());
   const records = await getAdminRecords(allSlugs).catch(() =>
     // KV not configured locally — fall back to defaults so the page still renders.
     Object.fromEntries(allSlugs.map((s) => [s, defaultAdminRecord(s)])),
   );
 
-  const buildView = (
-    c: { slug: string; title: string; icon: string | null },
-    dept: "SEO" | "ADS",
-  ): AdminClientView => {
-    // Ensure the consultant field reflects the per-department override
-    // when admin record is still using the SEO-side default.
-    const record =
-      records[c.slug] ?? defaultAdminRecord(c.slug);
-    let consultant = record.consultant;
-    if (dept === "ADS") {
-      const adsHit = ADS_CLIENTS.find((a) => a.slug === c.slug);
-      if (adsHit?.consultant && record.consultant === getConsultantForSlug(c.slug)) {
-        // No bespoke admin override yet — bias the displayed default
-        // toward the ADS roster consultant for ADS rows.
-        consultant = adsHit.consultant;
+  const clients: AdminClientView[] = Array.from(merged.values())
+    .sort((a, b) => a.title.localeCompare(b.title))
+    .map((c) => {
+      const record = records[c.slug] ?? defaultAdminRecord(c.slug);
+      // For ADS-only rows, seed the consultant from the ADS roster
+      // when the saved record is still on the SEO-side default.
+      let consultants = record.consultants;
+      if (
+        c.departments.has("ADS") &&
+        !c.departments.has("SEO") &&
+        consultants.length === 1 &&
+        consultants[0] === getConsultantForSlug(c.slug)
+      ) {
+        const adsHit = ADS_CLIENTS.find((a) => a.slug === c.slug);
+        if (adsHit?.consultant) consultants = [adsHit.consultant];
       }
-    }
-    return {
-      slug: c.slug,
-      title: c.title,
-      icon: c.icon,
-      departments: deptsFor(c.slug, dept),
-      record: { ...record, consultant },
-    };
-  };
-
-  const sortedSeo = [...seoClients]
-    .sort((a, b) => a.title.localeCompare(b.title))
-    .map((c) => buildView(c, "SEO"));
-  const sortedAds = [...adsClients]
-    .sort((a, b) => a.title.localeCompare(b.title))
-    .map((c) => buildView(c, "ADS"));
+      return {
+        slug: c.slug,
+        title: c.title,
+        icon: c.icon,
+        departments: Array.from(c.departments).sort(),
+        record: { ...record, consultants },
+      };
+    });
 
   return (
     <PageShell wide>
       <BackToWorkspace />
-      <AdminPanel
-        departments={[
-          {
-            id: "seo",
-            name: "SEO Department",
-            blurb:
-              "Every client on the SEO roster (pulled from Notion). Shared clients also appear in ADS.",
-            clients: sortedSeo,
-          },
-          {
-            id: "ads",
-            name: "ADS Department",
-            blurb:
-              "Paid-media clients (Google + Meta). Shared clients keep one billing record across both DPTs.",
-            clients: sortedAds,
-          },
-        ]}
-      />
+      <AdminPanel clients={clients} />
     </PageShell>
   );
 }

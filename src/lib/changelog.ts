@@ -13,6 +13,20 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.10",
+    date: "2026-06-02",
+    title: "SuperAdmin Control Suite · one flat list · multi-consultant dropdown · €/$ per client · André P. → Manuel S. handover · Spine Center added",
+    highlights: [
+      "**🏷 Page renamed → `SuperAdmin Control Suite`.** Header H1 + browser title both updated. Subtitle trimmed to a single line: `Every client across every department — edit independently per row.`",
+      "**📋 One unified client list.** SEO + ADS sections collapsed into a single deduped table. Per-row badges still tell you which department(s) a client belongs to (`SEO · ADS` on shared clients, brand-purple for SEO, brand-magenta for ADS — they're not just grey anymore so the eye picks them up at a glance). Per-section blurbs + the `N clients` count badge in the right corner are gone — the rollup tiles at the top carry the totals.",
+      "**👥 Consultant field is now a multi-select dropdown.** Replaced the free-text input with a button that opens a checkbox list of the canonical roster (`Manuel S.`, `Fran. R.`, `Yenisey R.`, `Germano C.`). Pick one or many — shared SEO + ADS clients can carry their SEO consultant AND the ADS consultant on the same row. Selected consultants render as small pills inside the trigger. Dropdown closes on outside-click or Escape. Names from older saves that aren't in the canonical roster surface as toggleable `legacy` rows so you can remove them without losing the rest of the row's state.",
+      "**💱 Currency per client — EUR or USD.** Each row carries its own `€ / $` segmented toggle next to the monthly value input. Storage is `currency: \"EUR\" | \"USD\"` + `monthlyValue: number`. The header rollup splits MRR into two tiles — `MRR €` and `MRR $` — so the mixed-currency roster sums correctly without a fake FX conversion. Both tiles display `—` when their currency has no active value yet.",
+      "**🤝 André P. → Manuel S. — agency-wide handover.** Manuel takes over André's book (Aeger Prima · A. Domingos · Senior Resort · Safe Away · Clínica em Casa) following the same pattern as the Luana N. → André P. handover in v74.6. `src/lib/client-overrides.ts` — the `ANDRE` slug set renamed to `MANUEL`, `getConsultantForSlug` returns `Manuel S.`, `getConsultantEmailForSlug` returns `manuel@wonder-ads.com`. `CONSULTANT_ORDER` updated for the SEO landing-page column header. `CONSULTANTS` roster in `admin-clients-store.ts` updated. **Cache key bumped `seo-clients-v3 → seo-clients-v4`** in `src/lib/notion.ts` so the new consultant identity takes effect immediately rather than waiting an hour for the previous entry to expire.",
+      "**🔁 Auto-migrate existing admin records.** `migrateRecord` in the admin store now applies a rename map on read — any consultant string saved as `André P.` (or older legacy `Luana N.`) gets rewritten to `Manuel S.` and deduped. So clients that already had `André P.` on the admin board flip to `Manuel S.` without manual intervention, AND PDF/DOCX deliverables already in the pipeline pick up the new email/byline next time they regenerate. (Old changelog entries that mention André P. or Luana N. stay as historical record.)",
+      "**🦴 Spine Center added to the SEO DPT under Yenisey R.** New synthetic-client mechanism in `src/lib/notion.ts` — `EXTRA_SEO_CLIENTS` array appended to the result of `_fetchSeoClients` so a client can appear across `/seo`, every action page, the admin board, briefs storage, etc. without needing its own Notion child page yet. Slug `spine-center`, icon 🦴, palette + tier default through the existing per-slug lookups, attributed to Yenisey R. via the `YENISEY` set in `client-overrides.ts`. Same cache-key bump (`v4`) makes it appear immediately on next request.",
+    ],
+  },
+  {
     version: "74.9",
     date: "2026-06-02",
     title: "Admin Control Panel · gated DPT for cross-department client management — billing cadence, starting date, consultant, MRR, status, notes",

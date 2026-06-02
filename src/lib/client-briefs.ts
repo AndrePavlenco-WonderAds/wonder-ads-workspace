@@ -30,6 +30,7 @@ const BRIEFS: Record<string, ClientBrief> = {
   "fisio-restelo": EMPTY,
   "safe-away": EMPTY,
   "clinica-em-casa": EMPTY,
+  "spine-center": EMPTY,
 
   // ADS-only clients
   "clinica-empatia": EMPTY,

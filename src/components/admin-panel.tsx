@@ -1,15 +1,17 @@
 "use client";
 
-// Admin Control Panel — clean table view of every client across every
-// department. Rows are independently editable; each shows a Save
-// button when dirty and persists to KV via /api/admin/clients/[slug].
-// The header carries a logout button + a per-department MRR roll-up.
+// SuperAdmin Control Suite — single flat table of every client across
+// every department. Rows carry per-department badges (SEO / ADS / both)
+// so the list reads at a glance even without section grouping. Each
+// row is independently editable; Save persists to KV via
+// /api/admin/clients/[slug].
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { LogOut, Loader2 } from "lucide-react";
 import { AdminClientRow } from "./admin-client-row";
 import type { AdminClientRecord } from "@/lib/admin-clients-store";
+import { formatMoney } from "@/lib/admin-clients-store";
 
 export type AdminClientView = {
   slug: string;
@@ -19,40 +21,42 @@ export type AdminClientView = {
   record: AdminClientRecord;
 };
 
-type Department = {
-  id: string;
-  name: string;
-  blurb: string;
-  clients: AdminClientView[];
-};
-
-export function AdminPanel({
-  departments,
-}: {
-  departments: Department[];
-}) {
+export function AdminPanel({ clients }: { clients: AdminClientView[] }) {
   const router = useRouter();
   const [loggingOut, setLoggingOut] = useState(false);
 
-  const totalClients = useMemo(
-    () => new Set(departments.flatMap((d) => d.clients.map((c) => c.slug))).size,
-    [departments],
+  const totalClients = clients.length;
+  const activeClients = useMemo(
+    () => clients.filter((c) => c.record.status === "active").length,
+    [clients],
   );
 
-  const totalMrr = useMemo(() => {
-    const seen = new Set<string>();
-    let total = 0;
-    for (const d of departments) {
-      for (const c of d.clients) {
-        if (seen.has(c.slug)) continue;
-        seen.add(c.slug);
-        if (c.record.monthlyValueEur && c.record.status === "active") {
-          total += c.record.monthlyValueEur;
-        }
-      }
-    }
-    return total;
-  }, [departments]);
+  // Active MRR split by currency — dedupe by slug isn't needed here
+  // because the page builds a single deduped clients list.
+  const mrrEur = useMemo(
+    () =>
+      clients
+        .filter(
+          (c) =>
+            c.record.status === "active" &&
+            c.record.currency === "EUR" &&
+            c.record.monthlyValue,
+        )
+        .reduce((sum, c) => sum + (c.record.monthlyValue ?? 0), 0),
+    [clients],
+  );
+  const mrrUsd = useMemo(
+    () =>
+      clients
+        .filter(
+          (c) =>
+            c.record.status === "active" &&
+            c.record.currency === "USD" &&
+            c.record.monthlyValue,
+        )
+        .reduce((sum, c) => sum + (c.record.monthlyValue ?? 0), 0),
+    [clients],
+  );
 
   async function logout() {
     setLoggingOut(true);
@@ -70,15 +74,13 @@ export function AdminPanel({
         <div>
           <div className="flex items-center gap-2.5 text-[11px] font-medium uppercase tracking-[0.18em] text-white/55">
             <span className="brand-gradient-bg inline-flex h-1.5 w-1.5 rounded-full" />
-            Admin Panel · Wonder Ads
+            Wonder Ads
           </div>
           <h1 className="mt-3 text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">
-            <span className="brand-gradient-text">Admin Control Panel</span>
+            <span className="brand-gradient-text">SuperAdmin Control Suite</span>
           </h1>
-          <p className="mt-2 max-w-2xl text-sm text-white/55">
-            Clients grouped by department. Edit billing cadence, starting
-            date, head consultant, monthly value, status and notes —
-            changes save independently per row.
+          <p className="mt-1.5 text-[12px] text-white/45">
+            Every client across every department — edit independently per row.
           </p>
         </div>
         <button
@@ -102,93 +104,60 @@ export function AdminPanel({
         className="mt-7 grid grid-cols-2 gap-3 sm:grid-cols-4"
       >
         <RollupTile label="Clients" value={String(totalClients)} />
+        <RollupTile label="Active" value={String(activeClients)} />
         <RollupTile
-          label="Departments"
-          value={String(departments.length)}
+          label="MRR €"
+          value={mrrEur > 0 ? formatMoney(mrrEur, "EUR") : "—"}
         />
         <RollupTile
-          label="Active MRR"
-          value={
-            totalMrr > 0
-              ? new Intl.NumberFormat("en-GB", {
-                  style: "currency",
-                  currency: "EUR",
-                  maximumFractionDigits: 0,
-                }).format(totalMrr)
-              : "—"
-          }
-        />
-        <RollupTile
-          label="Engagements"
-          value={String(
-            departments.reduce(
-              (acc, d) =>
-                acc + d.clients.filter((c) => c.record.status === "active").length,
-              0,
-            ),
-          )}
+          label="MRR $"
+          value={mrrUsd > 0 ? formatMoney(mrrUsd, "USD") : "—"}
         />
       </section>
 
-      {/* Per-department tables */}
-      <div className="mt-10 space-y-12">
-        {departments.map((d) => (
-          <section key={d.id} aria-label={`${d.name} clients`}>
-            <header className="mb-4 flex flex-wrap items-end justify-between gap-3">
-              <div>
-                <h2 className="text-xs font-bold uppercase tracking-[0.18em] text-white/55">
-                  {d.name}
-                </h2>
-                <p className="mt-1 text-[12px] text-white/45">{d.blurb}</p>
-              </div>
-              <span className="text-[11px] text-white/40">
-                {d.clients.length} client{d.clients.length === 1 ? "" : "s"}
-              </span>
-            </header>
-
-            <div className="overflow-x-auto rounded-2xl border border-white/8 bg-white/[0.02]">
-              <table className="w-full min-w-[1200px] border-collapse text-left">
-                <thead>
-                  <tr className="border-b border-white/8 bg-black/30 text-[10px] font-bold uppercase tracking-[0.16em] text-white/50">
-                    <th className="px-4 py-2.5">Client</th>
-                    <th className="px-3 py-2.5">Billing cadence</th>
-                    <th className="px-3 py-2.5">Starting date</th>
-                    <th className="px-3 py-2.5">Next billing</th>
-                    <th className="px-3 py-2.5">Consultant</th>
-                    <th className="px-3 py-2.5">Monthly value</th>
-                    <th className="px-3 py-2.5">Status</th>
-                    <th className="px-3 py-2.5">Notes</th>
-                    <th className="px-3 py-2.5">&nbsp;</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {d.clients.length === 0 ? (
-                    <tr>
-                      <td
-                        colSpan={9}
-                        className="px-4 py-8 text-center text-[12px] text-white/40"
-                      >
-                        No clients in this department yet.
-                      </td>
-                    </tr>
-                  ) : (
-                    d.clients.map((c) => (
-                      <AdminClientRow
-                        key={`${d.id}:${c.slug}`}
-                        slug={c.slug}
-                        title={c.title}
-                        icon={c.icon}
-                        departments={c.departments}
-                        initial={c.record}
-                      />
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </section>
-        ))}
-      </div>
+      {/* Single flat client table */}
+      <section aria-label="Clients" className="mt-10">
+        <div className="overflow-x-auto rounded-2xl border border-white/8 bg-white/[0.02]">
+          <table className="w-full min-w-[1200px] border-collapse text-left">
+            <thead>
+              <tr className="border-b border-white/8 bg-black/30 text-[10px] font-bold uppercase tracking-[0.16em] text-white/50">
+                <th className="px-4 py-2.5">Client</th>
+                <th className="px-3 py-2.5">Billing cadence</th>
+                <th className="px-3 py-2.5">Starting date</th>
+                <th className="px-3 py-2.5">Next billing</th>
+                <th className="px-3 py-2.5">Consultants</th>
+                <th className="px-3 py-2.5">Monthly value</th>
+                <th className="px-3 py-2.5">Status</th>
+                <th className="px-3 py-2.5">Notes</th>
+                <th className="px-3 py-2.5">&nbsp;</th>
+              </tr>
+            </thead>
+            <tbody>
+              {clients.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={9}
+                    className="px-4 py-8 text-center text-[12px] text-white/40"
+                  >
+                    No clients yet.
+                  </td>
+                </tr>
+              ) : (
+                clients.map((c) => (
+                  <AdminClientRow
+                    key={c.slug}
+                    slug={c.slug}
+                    title={c.title}
+                    icon={c.icon}
+                    departments={c.departments}
+                    initial={c.record}
+                  />
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
     </div>
   );
 }

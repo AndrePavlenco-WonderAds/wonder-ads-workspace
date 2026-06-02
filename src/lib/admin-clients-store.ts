@@ -26,6 +26,40 @@ export const CLIENT_STATUSES = [
 ] as const;
 export type ClientStatus = (typeof CLIENT_STATUSES)[number];
 
+export const CURRENCIES = ["EUR", "USD"] as const;
+export type Currency = (typeof CURRENCIES)[number];
+
+export function currencySymbol(c: Currency): string {
+  return c === "EUR" ? "€" : "$";
+}
+
+export function formatMoney(amount: number, c: Currency): string {
+  return new Intl.NumberFormat(c === "EUR" ? "en-GB" : "en-US", {
+    style: "currency",
+    currency: c,
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
+
+/** Full agency consultant roster — drives the multi-select dropdown on
+ *  every admin row. Source of truth: client-overrides.ts (SEO) + the
+ *  ADS roster. Keep in sync when a new consultant joins. */
+export const CONSULTANTS = [
+  "Manuel S.",
+  "Fran. R.",
+  "Yenisey R.",
+  "Germano C.",
+] as const;
+export type Consultant = (typeof CONSULTANTS)[number];
+
+/** Renames that should auto-apply when reading an old admin record —
+ *  so a saved consultant field carrying "André P." picks up the v74.10
+ *  handover to "Manuel S." without manual cleanup. */
+const CONSULTANT_RENAMES: Record<string, string> = {
+  "André P.": "Manuel S.",
+  "Luana N.": "Manuel S.", // older legacy → handover chain
+};
+
 export type AdminClientRecord = {
   slug: string;
   /** Billing cadence — Monthly / Each 3 Months / Each 6 Months (the
@@ -35,14 +69,20 @@ export type AdminClientRecord = {
   /** ISO yyyy-mm-dd — when the engagement started. Renders DD/MM/YYYY
    *  in the UI (per Andre's preference). */
   startingDate: string | null;
-  /** Head consultant. Free text so we can name people not yet in the
-   *  overrides table. Defaults to getConsultantForSlug(slug). */
-  consultant: string;
+  /** Head consultants. A client can have one or more — typical setup
+   *  is one SEO consultant + the ADS consultant when shared. Free-form
+   *  strings (not strictly enum-typed) so the column accepts new hires
+   *  without an immediate code change; the dropdown surfaces the
+   *  canonical roster from `CONSULTANTS`. */
+  consultants: string[];
   /** Current engagement status — drives a coloured pill. */
   status: ClientStatus;
-  /** Monthly equivalent value in € (raw number, no formatting). Used
-   *  for an at-a-glance MRR roll-up at the top of the admin panel. */
-  monthlyValueEur: number | null;
+  /** Billing currency for this client. Mixed-currency rosters are
+   *  rolled up per-currency in the panel header. */
+  currency: Currency;
+  /** Monthly equivalent value (raw number in the client's currency,
+   *  no symbol). Used for the Active MRR roll-ups. */
+  monthlyValue: number | null;
   /** Free-form notes — payment quirks, special invoicing instructions,
    *  client contact preferences, etc. */
   notes: string;
@@ -55,15 +95,61 @@ export const adminStorageConfigured = Boolean(
 );
 
 export function defaultAdminRecord(slug: string): AdminClientRecord {
+  const seed = getConsultantForSlug(slug);
   return {
     slug,
     billingCadence: "monthly",
     startingDate: null,
-    consultant: getConsultantForSlug(slug),
+    consultants: seed === "Unassigned" ? [] : [seed],
     status: "active",
-    monthlyValueEur: null,
+    currency: "EUR",
+    monthlyValue: null,
     notes: "",
     updatedAt: new Date(0).toISOString(),
+  };
+}
+
+/** Legacy record shape — pre-multi-consultant / pre-currency. Used to
+ *  migrate older KV entries on read so saves from before v74.10 keep
+ *  rendering correctly. */
+type LegacyAdminRecord = AdminClientRecord & {
+  consultant?: string;
+  monthlyValueEur?: number | null;
+};
+
+function migrateRecord(
+  raw: LegacyAdminRecord,
+  slug: string,
+): AdminClientRecord {
+  const base = defaultAdminRecord(slug);
+  // Single-consultant string from pre-v74.10 records → array.
+  const rawConsultants: string[] =
+    Array.isArray(raw.consultants) && raw.consultants.length > 0
+      ? raw.consultants.filter((c) => typeof c === "string" && c.trim())
+      : typeof raw.consultant === "string" && raw.consultant.trim()
+        ? [raw.consultant.trim()]
+        : base.consultants;
+  // Apply handover renames (André P. → Manuel S., etc.) and dedupe.
+  const consultants = Array.from(
+    new Set(rawConsultants.map((c) => CONSULTANT_RENAMES[c] ?? c)),
+  );
+  // Old EUR-only value → currency-tagged value.
+  const monthlyValue =
+    typeof raw.monthlyValue === "number"
+      ? raw.monthlyValue
+      : typeof raw.monthlyValueEur === "number"
+        ? raw.monthlyValueEur
+        : base.monthlyValue;
+  const currency = (CURRENCIES as readonly string[]).includes(raw.currency)
+    ? raw.currency
+    : base.currency;
+  return {
+    ...base,
+    ...raw,
+    slug,
+    consultants,
+    currency,
+    monthlyValue,
   };
 }
 
@@ -71,9 +157,9 @@ export function defaultAdminRecord(slug: string): AdminClientRecord {
 export async function getAdminRecord(slug: string): Promise<AdminClientRecord> {
   if (!adminStorageConfigured) return defaultAdminRecord(slug);
   try {
-    const stored = await kv.get<AdminClientRecord>(`${KEY_PREFIX}${slug}`);
+    const stored = await kv.get<LegacyAdminRecord>(`${KEY_PREFIX}${slug}`);
     if (stored && typeof stored === "object" && stored.slug === slug) {
-      return { ...defaultAdminRecord(slug), ...stored };
+      return migrateRecord(stored, slug);
     }
   } catch (err) {
     console.error("admin-clients KV read failed:", err);
