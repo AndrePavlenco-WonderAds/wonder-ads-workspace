@@ -148,11 +148,7 @@ export function AdminEmployeesPanel({
 
       <header className="mt-6 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2.5 text-[11px] font-medium uppercase tracking-[0.18em] text-white/55">
-            <span className="brand-gradient-bg inline-flex h-1.5 w-1.5 rounded-full" />
-            SuperAdmin · Employees
-          </div>
-          <h1 className="mt-3 text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">
+          <h1 className="text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">
             <span className="brand-gradient-text">Team Roster</span>
           </h1>
           <p className="mt-1.5 text-[12px] text-white/45">

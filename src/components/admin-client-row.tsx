@@ -16,6 +16,7 @@ import {
   nextBillingDate,
   type AdminClientRecord,
   type BillingCadence,
+  type ClientDepartment,
   type ClientStatus,
 } from "@/lib/admin-clients-store";
 import { formatDate } from "@/lib/dates";
@@ -24,10 +25,14 @@ type Props = {
   slug: string;
   title: string;
   icon: string | null;
-  departments: string[]; // ["SEO"], ["ADS"], ["SEO", "ADS"], …
+  /** Which department this row represents. */
+  department: ClientDepartment;
+  /** All departments the client appears in — drives the "shared with"
+   *  badge so the consultant remembers the other budget rows exist. */
+  clientDepartments: ClientDepartment[];
   initial: AdminClientRecord;
   /** Notified after the server confirms a save. The parent panel uses
-   *  this to update its records map so the rollup tiles (MRR €, MRR $)
+   *  this to update its records map so the rollup tiles (MRR)
    *  recompute instantly without waiting on router.refresh(). */
   onSaved?: (record: AdminClientRecord) => void;
 };
@@ -59,10 +64,12 @@ export function AdminClientRow({
   slug,
   title,
   icon,
-  departments,
+  department,
+  clientDepartments,
   initial,
   onSaved,
 }: Props) {
+  const sharedWith = clientDepartments.filter((d) => d !== department);
   const [draft, setDraft] = useState<AdminClientRecord>(initial);
   const [saved, setSaved] = useState<AdminClientRecord>(initial);
   const [state, setState] = useState<"idle" | "saving" | "saved" | "error">(
@@ -124,19 +131,23 @@ export function AdminClientRow({
     setState("saving");
     setErrorMsg(null);
     try {
-      const res = await fetch(`/api/admin/clients/${slug}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          billingCadence: draft.billingCadence,
-          startingDate: draft.startingDate,
-          consultants: draft.consultants,
-          status: draft.status,
-          currency: draft.currency,
-          monthlyValue: draft.monthlyValue,
-          notes: draft.notes,
-        }),
-      });
+      const res = await fetch(
+        `/api/admin/clients/${slug}/${department.toLowerCase()}`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            billingCadence: draft.billingCadence,
+            startingDate: draft.startingDate,
+            consultants: draft.consultants,
+            status: draft.status,
+            currency: draft.currency,
+            monthlyValue: draft.monthlyValue,
+            notes: draft.notes,
+            clientDepartments,
+          }),
+        },
+      );
       if (!res.ok) {
         const json = (await res.json().catch(() => ({}))) as { error?: string };
         throw new Error(json.error ?? `HTTP ${res.status}`);
@@ -178,18 +189,24 @@ export function AdminClientRow({
             <div className="truncate text-[13px] font-semibold text-white">
               {title}
             </div>
-            <div className="mt-0.5 flex flex-wrap gap-1">
-              {departments.map((d) => (
+            <div className="mt-0.5 flex flex-wrap items-center gap-1">
+              <span
+                className={`rounded border px-1.5 py-px text-[9.5px] font-bold uppercase tracking-[0.16em] ${
+                  DEPT_PILL[department] ??
+                  "border-white/12 bg-white/[0.03] text-white/55"
+                }`}
+              >
+                {department}
+              </span>
+              {sharedWith.length > 0 && (
                 <span
-                  key={d}
-                  className={`rounded border px-1.5 py-px text-[9.5px] font-bold uppercase tracking-[0.16em] ${
-                    DEPT_PILL[d] ??
-                    "border-white/12 bg-white/[0.03] text-white/55"
-                  }`}
+                  className="text-[9.5px] font-medium uppercase tracking-[0.12em] text-white/35"
+                  title={`This client also has a row under ${sharedWith.join(" + ")}.`}
                 >
-                  {d}
+                  + {sharedWith.join(", ")} row
+                  {sharedWith.length === 1 ? "" : "s"}
                 </span>
-              ))}
+              )}
             </div>
           </div>
         </div>

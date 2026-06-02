@@ -7,7 +7,6 @@
 import { kv } from "@vercel/kv";
 import {
   BILLING_CADENCES,
-  CURRENCIES,
   type BillingCadence,
   type Currency,
 } from "./admin-clients-store";
@@ -74,6 +73,11 @@ type SeedEmployee = {
   emailHandle: string;
   role: string;
   departments: string[];
+  /** Default monthly salary in EUR. Populated from the agency's
+   *  current payroll so the table lands ready-to-use. */
+  monthlyValueEur?: number;
+  /** ISO yyyy-mm-dd — when the employee joined. */
+  startingDate?: string;
 };
 
 export const SEED_EMPLOYEES: SeedEmployee[] = [
@@ -83,6 +87,9 @@ export const SEED_EMPLOYEES: SeedEmployee[] = [
     emailHandle: "manuel",
     role: "SEO Consultant",
     departments: ["SEO"],
+    monthlyValueEur: 400,
+    // Manuel starts the day after this release (today is 2026-06-02).
+    startingDate: "2026-06-03",
   },
   {
     id: "fran-r",
@@ -90,6 +97,8 @@ export const SEED_EMPLOYEES: SeedEmployee[] = [
     emailHandle: "fran",
     role: "SEO Consultant",
     departments: ["SEO"],
+    monthlyValueEur: 1000,
+    startingDate: "2026-03-17",
   },
   {
     id: "yenisey-r",
@@ -97,6 +106,8 @@ export const SEED_EMPLOYEES: SeedEmployee[] = [
     emailHandle: "yeni",
     role: "SEO Consultant",
     departments: ["SEO"],
+    monthlyValueEur: 1250,
+    startingDate: "2026-04-20",
   },
   {
     id: "germano-c",
@@ -104,6 +115,8 @@ export const SEED_EMPLOYEES: SeedEmployee[] = [
     emailHandle: "germano",
     role: "ADS Consultant",
     departments: ["ADS"],
+    monthlyValueEur: 1000,
+    // Germano start date not provided yet — left null until populated.
   },
 ];
 
@@ -128,10 +141,10 @@ export function defaultEmployeeRecord(seed: SeedEmployee): AdminEmployeeRecord {
     email: emailFromHandle(seed.emailHandle),
     role: seed.role,
     departments: [...seed.departments],
-    startingDate: null,
+    startingDate: seed.startingDate ?? null,
     paymentCadence: "monthly",
     currency: "EUR",
-    monthlyValue: null,
+    monthlyValue: seed.monthlyValueEur ?? null,
     status: "active",
     notes: "",
     updatedAt: new Date(0).toISOString(),
@@ -194,20 +207,31 @@ function migrateRecord(raw: LegacyRecord): AdminEmployeeRecord {
   )
     ? raw.paymentCadence
     : ("monthly" as BillingCadence);
-  const validCurrency = (CURRENCIES as readonly string[]).includes(raw.currency)
-    ? raw.currency
-    : ("EUR" as Currency);
+  // Agency pays in euros only as of v74.15 — coerce any stale USD on
+  // disk so the rollups stay consistent.
+  const validCurrency: Currency = "EUR";
   const validStatus = (EMPLOYEE_STATUSES as readonly string[]).includes(
     raw.status,
   )
     ? raw.status
     : ("active" as EmployeeStatus);
+  // Backfill seed-employee payroll + starting dates when the saved
+  // record still has them null. Lets v74.15 ship the canonical
+  // payroll without touching the KV manually.
+  const seed = SEED_EMPLOYEES.find((s) => s.id === raw.id);
+  const monthlyValue =
+    typeof raw.monthlyValue === "number"
+      ? raw.monthlyValue
+      : (seed?.monthlyValueEur ?? null);
+  const startingDate = raw.startingDate ?? seed?.startingDate ?? null;
   return {
     ...raw,
     departments: Array.isArray(raw.departments) ? raw.departments : [],
     paymentCadence: validCadence,
     currency: validCurrency,
     status: validStatus,
+    monthlyValue,
+    startingDate,
   };
 }
 

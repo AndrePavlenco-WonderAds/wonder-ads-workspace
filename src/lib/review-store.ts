@@ -57,6 +57,14 @@ export type ReviewItem = {
   docLink: string | null;
   /** Free-form notes a consultant or client might leave. Editable. */
   notes: string | null;
+  /** True when the consultant moved the row to the Archive tab. Only
+   *  allowed once status is `Approved` or `Rejected` — enforced both
+   *  client-side (UX) and server-side (sanitiser). Public client
+   *  view never sees archived rows. Defaults to false. */
+  archived?: boolean;
+  /** Tracks WHEN the row was archived — useful for sorting the
+   *  Archive tab newest-first and for any future audit needs. */
+  archivedAt?: number | null;
   // ---- tracking (not displayed in the public table) ----
   createdAt: number;
   updatedAt: number;
@@ -185,7 +193,29 @@ export function sanitiseReviewItemPatch(
   if (typeof o.notes === "string" || o.notes === null) {
     out.notes = typeof o.notes === "string" ? o.notes.slice(0, 4000) : null;
   }
+  if (typeof o.archived === "boolean") {
+    out.archived = o.archived;
+    out.archivedAt = o.archived ? Date.now() : null;
+  }
   return out;
+}
+
+/** Items the public client view shows — never archived ones. */
+export function filterPublicItems(items: ReviewItem[]): ReviewItem[] {
+  return items.filter((i) => !i.archived);
+}
+
+/** Statuses that a row may be archived from. Anything else is a
+ *  guard error — the consultant tried to archive work that's still
+ *  in-flight. Source of truth for the rule lives here so the row
+ *  button + the API + future audit can stay in sync. */
+export const ARCHIVABLE_STATUSES: ReadonlyArray<ReviewStatus> = [
+  "Approved",
+  "Rejected",
+];
+
+export function isArchivable(status: ReviewStatus): boolean {
+  return ARCHIVABLE_STATUSES.includes(status);
 }
 
 function isIsoDateOrNull(v: unknown): boolean {

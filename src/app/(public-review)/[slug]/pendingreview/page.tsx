@@ -14,7 +14,7 @@ import {
   getConsultantEmailForSlug,
   getConsultantForSlug,
 } from "@/lib/client-overrides";
-import { listReviewItems } from "@/lib/review-store";
+import { filterPublicItems, listReviewItems } from "@/lib/review-store";
 import { ReviewTable } from "@/components/review-table";
 import { pickLang, t } from "@/lib/public-i18n";
 
@@ -47,7 +47,7 @@ export default async function PublicReviewPage({
   }
   const client = await getClientBySlug(slug).catch(() => null);
   if (!client) notFound();
-  const items = await listReviewItems(slug);
+  const items = filterPublicItems(await listReviewItems(slug));
   const logo = getClientLogo(slug);
   const lang = pickLang(slug);
   const consultantEmail = getConsultantEmailForSlug(slug);

@@ -6,10 +6,11 @@ import { getSeoClients } from "@/lib/notion";
 import { ADS_CLIENTS } from "@/lib/ads-clients";
 import { WEB_CLIENTS } from "@/lib/web-clients";
 import {
-  getAdminRecords,
+  adminRecordKey,
   defaultAdminRecord,
+  getAdminRecords,
+  type ClientDepartment,
 } from "@/lib/admin-clients-store";
-import { getConsultantForSlug } from "@/lib/client-overrides";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -38,82 +39,79 @@ export default async function ProjectsAdminPage() {
     title: c.title,
     icon: c.icon,
   }));
-
   const webClients = WEB_CLIENTS.map((c) => ({
     slug: c.slug,
     title: c.title,
     icon: c.icon,
   }));
 
+  // Merge by slug, tracking which departments each client appears in
+  // so we materialise one row per (slug, dept) pair.
   type Merged = {
     slug: string;
     title: string;
     icon: string | null;
-    departments: Set<string>;
+    departments: ClientDepartment[];
   };
   const merged = new Map<string, Merged>();
+  function ensure(c: { slug: string; title: string; icon: string | null }) {
+    const existing = merged.get(c.slug);
+    if (existing) return existing;
+    const m: Merged = { slug: c.slug, title: c.title, icon: c.icon, departments: [] };
+    merged.set(c.slug, m);
+    return m;
+  }
   for (const c of seoClients) {
-    merged.set(c.slug, {
-      slug: c.slug,
-      title: c.title,
-      icon: c.icon,
-      departments: new Set(["SEO"]),
-    });
+    const m = ensure(c);
+    if (!m.departments.includes("SEO")) m.departments.push("SEO");
   }
   for (const c of adsClients) {
-    const existing = merged.get(c.slug);
-    if (existing) {
-      existing.departments.add("ADS");
-    } else {
-      merged.set(c.slug, {
-        slug: c.slug,
-        title: c.title,
-        icon: c.icon,
-        departments: new Set(["ADS"]),
-      });
-    }
+    const m = ensure(c);
+    if (!m.departments.includes("ADS")) m.departments.push("ADS");
   }
   for (const c of webClients) {
-    const existing = merged.get(c.slug);
-    if (existing) {
-      existing.departments.add("Web");
-    } else {
-      merged.set(c.slug, {
-        slug: c.slug,
-        title: c.title,
-        icon: c.icon,
-        departments: new Set(["Web"]),
-      });
-    }
+    const m = ensure(c);
+    if (!m.departments.includes("Web")) m.departments.push("Web");
   }
 
-  const allSlugs = Array.from(merged.keys());
-  const records = await getAdminRecords(allSlugs).catch(() =>
-    Object.fromEntries(allSlugs.map((s) => [s, defaultAdminRecord(s)])),
-  );
+  // Fetch one record per (slug, dept).
+  const rows = Array.from(merged.values()).map((m) => ({
+    slug: m.slug,
+    departments: m.departments,
+  }));
+  const records = await getAdminRecords(rows).catch(() => {
+    const fallback: Record<string, ReturnType<typeof defaultAdminRecord>> = {};
+    for (const m of merged.values()) {
+      for (const d of m.departments) {
+        fallback[adminRecordKey(m.slug, d)] = defaultAdminRecord(m.slug, d);
+      }
+    }
+    return fallback;
+  });
 
+  // Materialise one AdminClientView per (slug, dept). Sort:
+  // alphabetical client name first, then SEO → ADS → Web inside a
+  // shared client so the rows are predictable.
+  const deptOrder: ClientDepartment[] = ["SEO", "ADS", "Web"];
   const clients: AdminClientView[] = Array.from(merged.values())
     .sort((a, b) => a.title.localeCompare(b.title))
-    .map((c) => {
-      const record = records[c.slug] ?? defaultAdminRecord(c.slug);
-      let consultants = record.consultants;
-      if (
-        c.departments.has("ADS") &&
-        !c.departments.has("SEO") &&
-        consultants.length === 1 &&
-        consultants[0] === getConsultantForSlug(c.slug)
-      ) {
-        const adsHit = ADS_CLIENTS.find((a) => a.slug === c.slug);
-        if (adsHit?.consultant) consultants = [adsHit.consultant];
-      }
-      return {
-        slug: c.slug,
-        title: c.title,
-        icon: c.icon,
-        departments: Array.from(c.departments).sort(),
-        record: { ...record, consultants },
-      };
-    });
+    .flatMap((m) =>
+      [...m.departments]
+        .sort((x, y) => deptOrder.indexOf(x) - deptOrder.indexOf(y))
+        .map((dept) => {
+          const key = adminRecordKey(m.slug, dept);
+          const record =
+            records[key] ?? defaultAdminRecord(m.slug, dept);
+          return {
+            slug: m.slug,
+            title: m.title,
+            icon: m.icon,
+            department: dept,
+            clientDepartments: m.departments,
+            record,
+          };
+        }),
+    );
 
   return (
     <PageShell wide>

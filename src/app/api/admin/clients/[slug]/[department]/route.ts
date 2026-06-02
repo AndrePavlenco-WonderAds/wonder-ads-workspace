@@ -1,31 +1,47 @@
-// PUT a single admin client record. Auth-gated by the admin cookie.
+// PUT a single per-(slug, department) admin client record. Auth-gated
+// by the admin cookie. Replaces the v74.13 `/api/admin/clients/[slug]`
+// endpoint which couldn't disambiguate shared SEO + ADS clients into
+// their per-department budget rows.
 
 import { NextResponse } from "next/server";
 import { isAdminUnlocked } from "@/lib/admin-auth";
 import {
   saveAdminRecord,
   BILLING_CADENCES,
+  CLIENT_DEPARTMENTS,
   CLIENT_STATUSES,
   CURRENCIES,
+  type AdminClientRecord,
   type BillingCadence,
+  type ClientDepartment,
   type ClientStatus,
   type Currency,
-  type AdminClientRecord,
 } from "@/lib/admin-clients-store";
 
 export const runtime = "nodejs";
 
 export async function PUT(
   req: Request,
-  ctx: { params: Promise<{ slug: string }> },
+  ctx: { params: Promise<{ slug: string; department: string }> },
 ) {
   if (!(await isAdminUnlocked())) {
     return NextResponse.json({ error: "Not authorised" }, { status: 401 });
   }
 
-  const { slug } = await ctx.params;
+  const { slug, department: rawDept } = await ctx.params;
   if (!slug) {
     return NextResponse.json({ error: "slug required" }, { status: 400 });
+  }
+  const department = CLIENT_DEPARTMENTS.find(
+    (d) => d.toLowerCase() === rawDept.toLowerCase(),
+  );
+  if (!department) {
+    return NextResponse.json(
+      {
+        error: `department must be one of ${CLIENT_DEPARTMENTS.join(", ")}`,
+      },
+      { status: 400 },
+    );
   }
 
   let body: Record<string, unknown>;
@@ -35,10 +51,9 @@ export async function PUT(
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  // Build a sanitised patch — only let through the fields we know about,
-  // each validated to their respective shape. Skip undefined fields so
-  // the client can submit partial patches.
-  const patch: Partial<Omit<AdminClientRecord, "slug" | "updatedAt">> = {};
+  const patch: Partial<
+    Omit<AdminClientRecord, "slug" | "department" | "updatedAt">
+  > = {};
 
   if (typeof body.billingCadence === "string") {
     const v = body.billingCadence as BillingCadence;
@@ -77,8 +92,6 @@ export async function PUT(
       .filter((v): v is string => typeof v === "string")
       .map((v) => v.trim().slice(0, 80))
       .filter((v) => v.length > 0);
-    // Dedupe while preserving order — the array is small (≤ ~6 names)
-    // so a Set-based pass is fine.
     patch.consultants = Array.from(new Set(cleaned));
   }
 
@@ -124,8 +137,24 @@ export async function PUT(
     patch.notes = body.notes.slice(0, 2000);
   }
 
+  // The caller can optionally tell us which departments this client
+  // belongs to so the legacy-record migration knows which dept owns
+  // the legacy monthlyValue. When omitted we fall back to [department]
+  // which preserves the same row's value as-is.
+  const clientDepartments =
+    Array.isArray(body.clientDepartments)
+      ? (body.clientDepartments.filter((d): d is ClientDepartment =>
+          (CLIENT_DEPARTMENTS as readonly string[]).includes(d as string),
+        ) as ClientDepartment[])
+      : [department];
+
   try {
-    const saved = await saveAdminRecord(slug, patch);
+    const saved = await saveAdminRecord(
+      slug,
+      department,
+      patch,
+      clientDepartments,
+    );
     return NextResponse.json({ ok: true, record: saved });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

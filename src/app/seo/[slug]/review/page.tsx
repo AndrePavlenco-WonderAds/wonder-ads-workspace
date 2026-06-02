@@ -50,6 +50,7 @@ export default async function InternalReviewPage({
     listReviewItems(slug),
   ]);
   if (!client) notFound();
+  const pendingCount = items.filter((it) => !it.archived).length;
   const logo = getClientLogo(slug);
   const logoBgMode = getLogoBgMode(slug);
   const logoSizing = getLogoSizing(slug);
@@ -83,7 +84,7 @@ export default async function InternalReviewPage({
             </div>
             <h1 className="mt-1 text-2xl font-semibold leading-tight tracking-tight sm:text-3xl">
               <span className="brand-gradient-text">
-                {items.length} item{items.length === 1 ? "" : "s"} pending
+                {pendingCount} item{pendingCount === 1 ? "" : "s"} pending
               </span>
             </h1>
             <p className="mt-1 text-xs text-white/55">
@@ -117,6 +118,7 @@ export default async function InternalReviewPage({
             clientSlug={slug}
             initialItems={items}
             allowDelete={true}
+            allowArchive={true}
           />
         </div>
       </section>

@@ -5,13 +5,20 @@
 // edits through PATCH /api/reviews/[slug]/items/[id] with optimistic
 // UI + debounced save for text fields, immediate save for pickers.
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { ExternalLink, RefreshCw } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Archive,
+  ArchiveRestore,
+  ExternalLink,
+  Inbox,
+  RefreshCw,
+} from "lucide-react";
 import {
   CATEGORY_PILL,
   REVIEW_CATEGORIES,
   REVIEW_STATUSES,
   STATUS_PILL,
+  isArchivable,
   type ReviewCategory,
   type ReviewItem,
   type ReviewStatus,
@@ -19,6 +26,8 @@ import {
 
 const TEXT_DEBOUNCE_MS = 600;
 const AUTO_POLL_MS = 12000;
+
+type Tab = "pending" | "archive";
 
 export function ReviewTable({
   clientSlug,
@@ -34,17 +43,26 @@ export function ReviewTable({
    *  server-side when the client flips status to Approved, so clients
    *  never need to set it manually. */
   readonlyApprovalDate = false,
+  /** When true (internal page), renders the Pending / Archive tab
+   *  switcher + per-row Archive button. The public client view never
+   *  sees archived rows. */
+  allowArchive = false,
 }: {
   clientSlug: string;
   initialItems: ReviewItem[];
   allowDelete?: boolean;
   hidePublishingDate?: boolean;
   readonlyApprovalDate?: boolean;
+  allowArchive?: boolean;
 }) {
   const [items, setItems] = useState<ReviewItem[]>(initialItems);
   const [savingIds, setSavingIds] = useState<Set<string>>(new Set());
   const [refreshing, setRefreshing] = useState(false);
   const [lastSyncedAt, setLastSyncedAt] = useState(Date.now());
+  const [tab, setTab] = useState<Tab>("pending");
+  /** Transient toast shown when the consultant tries to archive a
+   *  row that isn't Approved/Rejected. Auto-clears after 4s. */
+  const [archiveError, setArchiveError] = useState<string | null>(null);
   // Per-item per-field debounce timers for text edits. Picker / date /
   // pill changes save immediately (no debounce).
   const textTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
@@ -136,9 +154,14 @@ export function ReviewTable({
   const refresh = useCallback(async () => {
     setRefreshing(true);
     try {
-      const res = await fetch(`/api/reviews/${clientSlug}?_=${Date.now()}`, {
-        cache: "no-store",
-      });
+      const params = new URLSearchParams({ _: String(Date.now()) });
+      if (allowArchive) params.set("includeArchived", "1");
+      const res = await fetch(
+        `/api/reviews/${clientSlug}?${params.toString()}`,
+        {
+          cache: "no-store",
+        },
+      );
       if (!res.ok) return;
       const data = (await res.json()) as { items: ReviewItem[] };
       setItems((prev) => {
@@ -166,7 +189,7 @@ export function ReviewTable({
     } finally {
       setRefreshing(false);
     }
-  }, [clientSlug]);
+  }, [clientSlug, allowArchive]);
 
   // Auto-poll while the tab is visible. Pauses on hidden tabs so we
   // don't burn KV requests for backgrounded windows. Re-fires
@@ -217,6 +240,53 @@ export function ReviewTable({
     [clientSlug],
   );
 
+  /** Move a row to (or back from) the Archive tab. Guarded: archiving
+   *  is only permitted when the row's status is Approved or Rejected.
+   *  The button only renders when the guard passes, but we keep the
+   *  check here too for safety. */
+  const archiveItem = useCallback(
+    (it: ReviewItem) => {
+      if (!isArchivable(it.status)) {
+        setArchiveError(
+          `Can't archive "${it.task.slice(0, 60) || "this row"}" — status must be Approved or Rejected first.`,
+        );
+        setTimeout(() => setArchiveError(null), 4500);
+        return;
+      }
+      updateAndSave(it.id, { archived: true });
+    },
+    [updateAndSave],
+  );
+  const unarchiveItem = useCallback(
+    (id: string) => {
+      updateAndSave(id, { archived: false });
+    },
+    [updateAndSave],
+  );
+
+  // Split + count for the tab pills.
+  const pendingCount = useMemo(
+    () => items.filter((it) => !it.archived).length,
+    [items],
+  );
+  const archivedCount = useMemo(
+    () => items.filter((it) => it.archived).length,
+    [items],
+  );
+
+  /** Items to render in the body — filtered by the active tab when
+   *  archive support is enabled. The public view (allowArchive=false)
+   *  receives a list already filtered server-side. */
+  const visibleItems = useMemo(() => {
+    if (!allowArchive) return items;
+    return tab === "pending"
+      ? items.filter((it) => !it.archived)
+      : items
+          .filter((it) => it.archived)
+          // Newest-archived first inside the Archive tab.
+          .sort((a, b) => (b.archivedAt ?? 0) - (a.archivedAt ?? 0));
+  }, [items, allowArchive, tab]);
+
   if (items.length === 0) {
     return (
       <div className="rounded-2xl border border-black/10 bg-white p-10 text-center text-sm text-black/55">
@@ -230,150 +300,303 @@ export function ReviewTable({
   }
 
   return (
-    <div className="overflow-x-auto rounded-2xl border border-black/10 bg-white shadow-sm">
-      <table className="w-full border-collapse text-left text-sm">
-        <thead className="bg-[#4a5d3a] text-white">
-          <tr>
-            <Th className={hidePublishingDate ? "w-[36%]" : "w-[34%]"}>Task</Th>
-            <Th className="w-[14%]">Status</Th>
-            <Th className="w-[12%]">Category</Th>
-            <Th className="w-[10%]">Approval date</Th>
-            {!hidePublishingDate && (
-              <Th className="w-[10%]">Publishing date</Th>
-            )}
-            <Th className={hidePublishingDate ? "w-[24%]" : "w-[18%]"}>
-              Doc link
-            </Th>
-            {allowDelete && <Th className="w-[4%] text-right">·</Th>}
-          </tr>
-        </thead>
-        <tbody>
-          {items.map((it) => (
-            <tr
-              key={it.id}
-              className="border-b border-black/8 align-top last:border-0 hover:bg-black/[0.015]"
-            >
-              <Td>
-                <input
-                  type="text"
-                  value={it.task}
-                  onChange={(e) =>
-                    updateAndSaveDebounced(it.id, "task", e.target.value)
-                  }
-                  placeholder="Task name"
-                  className="w-full rounded-md border border-transparent bg-transparent px-2 py-1 text-sm font-medium text-black/85 outline-none transition focus:border-black/15 focus:bg-white"
-                />
-              </Td>
-              <Td>
-                <StatusPicker
-                  value={it.status}
-                  onChange={(s) => updateAndSave(it.id, { status: s })}
-                />
-              </Td>
-              <Td>
-                <CategoryPicker
-                  value={it.category}
-                  onChange={(c) => updateAndSave(it.id, { category: c })}
-                />
-              </Td>
-              <Td>
-                {readonlyApprovalDate ? (
-                  <span className="text-xs text-black/65">
-                    {it.approvalDate
-                      ? formatApprovalDate(it.approvalDate)
-                      : it.status === "Approved"
-                        ? "— pending sync —"
-                        : "—"}
-                  </span>
-                ) : (
-                  <input
-                    type="date"
-                    value={it.approvalDate ?? ""}
-                    onChange={(e) =>
-                      updateAndSave(it.id, {
-                        approvalDate: e.target.value || null,
-                      })
-                    }
-                    className="w-full rounded-md border border-black/10 bg-white px-2 py-1 text-xs text-black/75 outline-none focus:border-black/30"
-                  />
-                )}
-              </Td>
-              {!hidePublishingDate && (
-                <Td>
-                  <input
-                    type="date"
-                    value={it.publishingDate ?? ""}
-                    onChange={(e) =>
-                      updateAndSave(it.id, {
-                        publishingDate: e.target.value || null,
-                      })
-                    }
-                    className="w-full rounded-md border border-black/10 bg-white px-2 py-1 text-xs text-black/75 outline-none focus:border-black/30"
-                  />
-                </Td>
-              )}
-              <Td>
-                <DocLinkCell
-                  value={it.docLink}
-                  onChange={(v) =>
-                    updateAndSaveDebounced(it.id, "docLink", v)
-                  }
-                />
-              </Td>
-              {allowDelete && (
-                <Td className="text-right">
-                  <button
-                    type="button"
-                    onClick={() => deleteItem(it.id)}
-                    title="Delete row"
-                    className="rounded-md p-1.5 text-black/35 transition hover:bg-rose-50 hover:text-rose-600"
-                  >
-                    ×
-                  </button>
-                </Td>
-              )}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      {/* Footer: saving indicator + last-synced + refresh.
-          Auto-poll runs every 12s while the tab is visible so changes
-          made by the OTHER side (client vs consultant) propagate
-          without anyone having to click anything — but the manual
-          Refresh is there for impatient moments. */}
-      <div className="flex items-center justify-between gap-3 border-t border-black/8 bg-black/[0.02] px-3 py-2 text-[11px] text-black/45">
-        <span>
-          {savingIds.size > 0 ? (
-            <>
-              <span className="mr-1 inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-amber-500" />
-              Saving {savingIds.size} change{savingIds.size === 1 ? "" : "s"}…
-            </>
-          ) : (
-            <>
-              All changes saved · {items.length} item
-              {items.length === 1 ? "" : "s"}
-            </>
-          )}
-        </span>
-        <span className="flex items-center gap-2">
-          <span title={`Last synced at ${new Date(lastSyncedAt).toLocaleTimeString()}`}>
-            Last synced {formatRelativeTime(lastSyncedAt)}
-          </span>
-          <button
-            type="button"
-            onClick={refresh}
-            disabled={refreshing}
-            title="Pull the latest from the server now"
-            className="inline-flex items-center gap-1 rounded-md border border-black/10 bg-white px-2 py-1 text-[11px] font-medium text-black/65 transition hover:border-black/25 hover:text-black/85 disabled:opacity-50"
+    <div className="space-y-3">
+      {allowArchive && (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div
+            role="tablist"
+            aria-label="Review tabs"
+            className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-white/[0.04] p-1"
           >
-            <RefreshCw
-              className={`h-3 w-3 ${refreshing ? "animate-spin" : ""}`}
+            <TabButton
+              active={tab === "pending"}
+              onClick={() => setTab("pending")}
+              Icon={Inbox}
+              label="Pending"
+              count={pendingCount}
             />
-            Refresh
-          </button>
-        </span>
+            <TabButton
+              active={tab === "archive"}
+              onClick={() => setTab("archive")}
+              Icon={Archive}
+              label="Archive"
+              count={archivedCount}
+            />
+          </div>
+          {archiveError && (
+            <div
+              role="alert"
+              className="animate-fade-up inline-flex max-w-md items-start gap-2 rounded-md border border-rose-400/50 bg-rose-500/15 px-3 py-2 text-[12px] font-medium text-rose-100"
+            >
+              <Archive className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+              <span>{archiveError}</span>
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="overflow-x-auto rounded-2xl border border-black/10 bg-white shadow-sm">
+        {allowArchive && visibleItems.length === 0 ? (
+          <div className="bg-white px-6 py-10 text-center text-sm text-black/55">
+            <p className="font-medium text-black/85">
+              {tab === "pending"
+                ? "Nothing pending"
+                : "Nothing archived yet"}
+            </p>
+            <p className="mt-1.5 text-xs text-black/45">
+              {tab === "pending"
+                ? "Every row in flight has been moved to the Archive tab."
+                : "Approved or Rejected rows you archive will land here."}
+            </p>
+          </div>
+        ) : (
+          <>
+            <table className="w-full border-collapse text-left text-sm">
+              <thead className="bg-[#4a5d3a] text-white">
+                <tr>
+                  <Th className={hidePublishingDate ? "w-[34%]" : "w-[32%]"}>
+                    Task
+                  </Th>
+                  <Th className="w-[14%]">Status</Th>
+                  <Th className="w-[12%]">Category</Th>
+                  <Th className="w-[10%]">Approval date</Th>
+                  {!hidePublishingDate && (
+                    <Th className="w-[10%]">Publishing date</Th>
+                  )}
+                  <Th className={hidePublishingDate ? "w-[22%]" : "w-[16%]"}>
+                    Doc link
+                  </Th>
+                  {allowArchive && (
+                    <Th className="w-[6%] text-right">Archive</Th>
+                  )}
+                  {allowDelete && <Th className="w-[4%] text-right">·</Th>}
+                </tr>
+              </thead>
+              <tbody>
+                {visibleItems.map((it) => {
+                  const archivable = isArchivable(it.status);
+                  return (
+                    <tr
+                      key={it.id}
+                      className={`border-b border-black/8 align-top last:border-0 hover:bg-black/[0.015] ${
+                        it.archived ? "bg-black/[0.025]" : ""
+                      }`}
+                    >
+                      <Td>
+                        <input
+                          type="text"
+                          value={it.task}
+                          onChange={(e) =>
+                            updateAndSaveDebounced(
+                              it.id,
+                              "task",
+                              e.target.value,
+                            )
+                          }
+                          placeholder="Task name"
+                          className="w-full rounded-md border border-transparent bg-transparent px-2 py-1 text-sm font-medium text-black/85 outline-none transition focus:border-black/15 focus:bg-white"
+                        />
+                      </Td>
+                      <Td>
+                        <StatusPicker
+                          value={it.status}
+                          onChange={(s) => updateAndSave(it.id, { status: s })}
+                        />
+                      </Td>
+                      <Td>
+                        <CategoryPicker
+                          value={it.category}
+                          onChange={(c) =>
+                            updateAndSave(it.id, { category: c })
+                          }
+                        />
+                      </Td>
+                      <Td>
+                        {readonlyApprovalDate ? (
+                          <span className="text-xs text-black/65">
+                            {it.approvalDate
+                              ? formatApprovalDate(it.approvalDate)
+                              : it.status === "Approved"
+                                ? "— pending sync —"
+                                : "—"}
+                          </span>
+                        ) : (
+                          <input
+                            type="date"
+                            value={it.approvalDate ?? ""}
+                            onChange={(e) =>
+                              updateAndSave(it.id, {
+                                approvalDate: e.target.value || null,
+                              })
+                            }
+                            className="w-full rounded-md border border-black/10 bg-white px-2 py-1 text-xs text-black/75 outline-none focus:border-black/30"
+                          />
+                        )}
+                      </Td>
+                      {!hidePublishingDate && (
+                        <Td>
+                          <input
+                            type="date"
+                            value={it.publishingDate ?? ""}
+                            onChange={(e) =>
+                              updateAndSave(it.id, {
+                                publishingDate: e.target.value || null,
+                              })
+                            }
+                            className="w-full rounded-md border border-black/10 bg-white px-2 py-1 text-xs text-black/75 outline-none focus:border-black/30"
+                          />
+                        </Td>
+                      )}
+                      <Td>
+                        <DocLinkCell
+                          value={it.docLink}
+                          onChange={(v) =>
+                            updateAndSaveDebounced(it.id, "docLink", v)
+                          }
+                        />
+                      </Td>
+                      {allowArchive && (
+                        <Td className="text-right">
+                          {it.archived ? (
+                            <button
+                              type="button"
+                              onClick={() => unarchiveItem(it.id)}
+                              title="Move back to Pending"
+                              className="inline-flex items-center gap-1 rounded-md border border-black/10 bg-white px-2 py-1 text-[11px] font-medium text-black/65 transition hover:border-black/25 hover:bg-black/[0.04] hover:text-black/85"
+                            >
+                              <ArchiveRestore className="h-3 w-3" />
+                              Restore
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => archiveItem(it)}
+                              disabled={!archivable}
+                              title={
+                                archivable
+                                  ? "Move this row to the Archive tab"
+                                  : "Available once status is Approved or Rejected"
+                              }
+                              className={`inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] font-medium transition ${
+                                archivable
+                                  ? "border-emerald-300/60 bg-emerald-50 text-emerald-700 hover:border-emerald-400 hover:bg-emerald-100"
+                                  : "cursor-not-allowed border-black/10 bg-black/[0.03] text-black/30"
+                              }`}
+                            >
+                              <Archive className="h-3 w-3" />
+                              Archive
+                            </button>
+                          )}
+                        </Td>
+                      )}
+                      {allowDelete && (
+                        <Td className="text-right">
+                          <button
+                            type="button"
+                            onClick={() => deleteItem(it.id)}
+                            title="Delete row"
+                            className="rounded-md p-1.5 text-black/35 transition hover:bg-rose-50 hover:text-rose-600"
+                          >
+                            ×
+                          </button>
+                        </Td>
+                      )}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+            {/* Footer: saving indicator + last-synced + refresh.
+                Auto-poll runs every 12s while the tab is visible so
+                changes made by the OTHER side (client vs consultant)
+                propagate without anyone having to click anything —
+                but the manual Refresh is there for impatient moments. */}
+            <div className="flex items-center justify-between gap-3 border-t border-black/8 bg-black/[0.02] px-3 py-2 text-[11px] text-black/45">
+              <span>
+                {savingIds.size > 0 ? (
+                  <>
+                    <span className="mr-1 inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-amber-500" />
+                    Saving {savingIds.size} change
+                    {savingIds.size === 1 ? "" : "s"}…
+                  </>
+                ) : allowArchive ? (
+                  <>
+                    All changes saved · {visibleItems.length}{" "}
+                    {tab === "pending" ? "pending" : "archived"} item
+                    {visibleItems.length === 1 ? "" : "s"} ·{" "}
+                    {items.length} total
+                  </>
+                ) : (
+                  <>
+                    All changes saved · {items.length} item
+                    {items.length === 1 ? "" : "s"}
+                  </>
+                )}
+              </span>
+              <span className="flex items-center gap-2">
+                <span
+                  title={`Last synced at ${new Date(lastSyncedAt).toLocaleTimeString()}`}
+                >
+                  Last synced {formatRelativeTime(lastSyncedAt)}
+                </span>
+                <button
+                  type="button"
+                  onClick={refresh}
+                  disabled={refreshing}
+                  title="Pull the latest from the server now"
+                  className="inline-flex items-center gap-1 rounded-md border border-black/10 bg-white px-2 py-1 text-[11px] font-medium text-black/65 transition hover:border-black/25 hover:text-black/85 disabled:opacity-50"
+                >
+                  <RefreshCw
+                    className={`h-3 w-3 ${refreshing ? "animate-spin" : ""}`}
+                  />
+                  Refresh
+                </button>
+              </span>
+            </div>
+          </>
+        )}
       </div>
     </div>
+  );
+}
+
+function TabButton({
+  active,
+  onClick,
+  Icon,
+  label,
+  count,
+}: {
+  active: boolean;
+  onClick: () => void;
+  Icon: typeof Inbox;
+  label: string;
+  count: number;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      role="tab"
+      aria-selected={active}
+      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11.5px] font-semibold transition ${
+        active
+          ? "brand-gradient-bg text-white shadow-[0_4px_18px_-6px_rgba(120,61,245,0.55)]"
+          : "text-white/65 hover:bg-white/[0.06] hover:text-white"
+      }`}
+    >
+      <Icon className="h-3 w-3" />
+      {label}
+      <span
+        className={`ml-1 rounded-full px-1.5 py-px text-[10px] font-bold ${
+          active
+            ? "bg-white/20 text-white"
+            : "bg-white/10 text-white/70"
+        }`}
+      >
+        {count}
+      </span>
+    </button>
   );
 }
 

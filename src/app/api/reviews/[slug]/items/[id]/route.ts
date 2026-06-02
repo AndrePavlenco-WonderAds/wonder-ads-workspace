@@ -7,6 +7,7 @@ import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import {
   deleteReviewItem,
+  isArchivable,
   listReviewItems,
   sanitiseReviewItemPatch,
   updateReviewItem,
@@ -41,6 +42,24 @@ export async function PATCH(
     const existing = (await listReviewItems(slug)).find((r) => r.id === id);
     if (existing && !existing.approvalDate) {
       patch.approvalDate = new Date().toISOString().slice(0, 10);
+    }
+  }
+  // Server-side guard for the Archive flow. Only `Approved` or
+  // `Rejected` rows may be archived. The client-side button enforces
+  // this for UX, but a hand-rolled PATCH could bypass it — so we
+  // verify against the row's current OR patched status. Returns 422
+  // so the UI can surface the message; the body carries the reason.
+  if (patch.archived === true) {
+    const existing = (await listReviewItems(slug)).find((r) => r.id === id);
+    const effectiveStatus = patch.status ?? existing?.status;
+    if (!effectiveStatus || !isArchivable(effectiveStatus)) {
+      return NextResponse.json(
+        {
+          error:
+            "Can't archive — row must be Approved or Rejected first.",
+        },
+        { status: 422 },
+      );
     }
   }
   const updated = await updateReviewItem(slug, id, patch);

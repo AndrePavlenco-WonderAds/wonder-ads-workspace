@@ -10,14 +10,25 @@ import { useCallback, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { LogOut, Loader2 } from "lucide-react";
 import { AdminClientRow } from "./admin-client-row";
-import type { AdminClientRecord } from "@/lib/admin-clients-store";
-import { formatMoney } from "@/lib/admin-clients-store";
+import type {
+  AdminClientRecord,
+  ClientDepartment,
+} from "@/lib/admin-clients-store";
+import {
+  adminRecordKey,
+  formatMoney,
+} from "@/lib/admin-clients-store";
 
 export type AdminClientView = {
   slug: string;
   title: string;
   icon: string | null;
-  departments: string[]; // ["SEO"], ["ADS"], ["SEO", "ADS"]
+  /** Which department THIS row represents. */
+  department: ClientDepartment;
+  /** All departments the client appears in (drives the cross-dept
+   *  badge on each row + the legacy-record migration hint sent to
+   *  the API). */
+  clientDepartments: ClientDepartment[];
   record: AdminClientRecord;
 };
 
@@ -25,36 +36,40 @@ export function AdminPanel({ clients }: { clients: AdminClientView[] }) {
   const router = useRouter();
   const [loggingOut, setLoggingOut] = useState(false);
 
-  // Per-slug record state — seeded from server props, updated every
-  // time a row's Save returns. Drives both the rollup tiles AND the
-  // `initial` value the row re-mounts with so the UI stays in sync.
+  // Per-(slug, dept) record state — seeded from server props, updated
+  // every time a row's Save returns. Drives both the rollup tiles AND
+  // the row's live initial value so the UI stays in sync without
+  // router.refresh().
   const [records, setRecords] = useState<Map<string, AdminClientRecord>>(
     () => {
       const m = new Map<string, AdminClientRecord>();
-      for (const c of clients) m.set(c.slug, c.record);
+      for (const c of clients) {
+        m.set(adminRecordKey(c.slug, c.department), c.record);
+      }
       return m;
     },
   );
 
-  const handleSaved = useCallback(
-    (slug: string, record: AdminClientRecord) => {
-      setRecords((prev) => {
-        const next = new Map(prev);
-        next.set(slug, record);
-        return next;
-      });
-    },
-    [],
+  const handleSaved = useCallback((record: AdminClientRecord) => {
+    setRecords((prev) => {
+      const next = new Map(prev);
+      next.set(adminRecordKey(record.slug, record.department), record);
+      return next;
+    });
+  }, []);
+
+  const totalClients = useMemo(
+    () => new Set(clients.map((c) => c.slug)).size,
+    [clients],
   );
 
-  const totalClients = clients.length;
-
-  // Active MRR split by currency. Computed off the live `records` map
-  // so saving a row immediately updates the totals above.
+  // Active MRR — EUR only. Each per-dept row contributes its own
+  // monthlyValue independently, so shared SEO + ADS clients sum to
+  // their true total without double-counting.
   const mrrEur = useMemo(() => {
     let total = 0;
     for (const c of clients) {
-      const r = records.get(c.slug);
+      const r = records.get(adminRecordKey(c.slug, c.department));
       if (
         r &&
         r.status === "active" &&
@@ -81,12 +96,8 @@ export function AdminPanel({ clients }: { clients: AdminClientView[] }) {
     <div className="animate-fade-up mt-2">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2.5 text-[11px] font-medium uppercase tracking-[0.18em] text-white/55">
-            <span className="brand-gradient-bg inline-flex h-1.5 w-1.5 rounded-full" />
-            Wonder Ads
-          </div>
-          <h1 className="mt-3 text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">
-            <span className="brand-gradient-text">SuperAdmin Control Suite</span>
+          <h1 className="text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">
+            <span className="brand-gradient-text">Projects</span>
           </h1>
           <p className="mt-1.5 text-[12px] text-white/45">
             Every client across every department — edit independently per row.
@@ -151,16 +162,18 @@ export function AdminPanel({ clients }: { clients: AdminClientView[] }) {
                 </tr>
               ) : (
                 clients.map((c) => {
-                  const live = records.get(c.slug) ?? c.record;
+                  const key = adminRecordKey(c.slug, c.department);
+                  const live = records.get(key) ?? c.record;
                   return (
                     <AdminClientRow
-                      key={c.slug}
+                      key={key}
                       slug={c.slug}
                       title={c.title}
                       icon={c.icon}
-                      departments={c.departments}
+                      department={c.department}
+                      clientDepartments={c.clientDepartments}
                       initial={live}
-                      onSaved={(r) => handleSaved(c.slug, r)}
+                      onSaved={handleSaved}
                     />
                   );
                 })

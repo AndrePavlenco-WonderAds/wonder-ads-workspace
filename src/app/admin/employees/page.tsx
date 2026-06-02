@@ -7,8 +7,10 @@ import {
   defaultEmployeeRecord,
 } from "@/lib/admin-employees-store";
 import {
-  getAdminRecords,
+  adminRecordKey,
   defaultAdminRecord,
+  getAdminRecords,
+  type ClientDepartment,
 } from "@/lib/admin-clients-store";
 import { getSeoClients } from "@/lib/notion";
 import { ADS_CLIENTS } from "@/lib/ads-clients";
@@ -29,10 +31,10 @@ export default async function EmployeesAdminPage() {
     employees = SEED_EMPLOYEES.map(defaultEmployeeRecord);
   }
 
-  // Build the consultant → portfolio map. Source = every client admin
-  // record (SEO + ADS + Web rosters merged), filtered to `status === "active"`.
-  // Each client contributes its monthly value to every consultant listed
-  // in `consultants[]`.
+  // Build the consultant → portfolio map. Source = every per-(slug, dept)
+  // client record (SEO + ADS + Web rosters merged). Each consultant's
+  // budget reflects only the rows they own, so shared SEO + ADS
+  // clients no longer double-count toward both consultants.
   type Title = { slug: string; title: string };
   let seoClients: Title[] = [];
   try {
@@ -50,31 +52,68 @@ export default async function EmployeesAdminPage() {
     title: c.title,
   }));
   const titleBySlug = new Map<string, string>();
-  for (const c of [...seoClients, ...adsClients, ...webClients]) {
-    if (!titleBySlug.has(c.slug)) titleBySlug.set(c.slug, c.title);
+  const departmentsBySlug = new Map<string, ClientDepartment[]>();
+  function addDept(slug: string, dept: ClientDepartment) {
+    const list = departmentsBySlug.get(slug) ?? [];
+    if (!list.includes(dept)) list.push(dept);
+    departmentsBySlug.set(slug, list);
   }
-  const slugs = Array.from(titleBySlug.keys());
-  const records = await getAdminRecords(slugs).catch(() =>
-    Object.fromEntries(slugs.map((s) => [s, defaultAdminRecord(s)])),
+  for (const c of seoClients) {
+    if (!titleBySlug.has(c.slug)) titleBySlug.set(c.slug, c.title);
+    addDept(c.slug, "SEO");
+  }
+  for (const c of adsClients) {
+    if (!titleBySlug.has(c.slug)) titleBySlug.set(c.slug, c.title);
+    addDept(c.slug, "ADS");
+  }
+  for (const c of webClients) {
+    if (!titleBySlug.has(c.slug)) titleBySlug.set(c.slug, c.title);
+    addDept(c.slug, "Web");
+  }
+  const rows = Array.from(departmentsBySlug.entries()).map(
+    ([slug, departments]) => ({ slug, departments }),
   );
+  const records = await getAdminRecords(rows).catch(() => {
+    const fallback: Record<string, ReturnType<typeof defaultAdminRecord>> = {};
+    for (const row of rows) {
+      for (const d of row.departments) {
+        fallback[adminRecordKey(row.slug, d)] = defaultAdminRecord(
+          row.slug,
+          d,
+        );
+      }
+    }
+    return fallback;
+  });
 
   const portfolios: Record<string, EmployeePortfolio> = {};
-  for (const slug of slugs) {
-    const r = records[slug] ?? defaultAdminRecord(slug);
-    if (r.status !== "active") continue;
-    const title = titleBySlug.get(slug) ?? slug;
-    for (const name of r.consultants) {
-      const existing = portfolios[name] ?? {
-        activeClients: 0,
-        totalEur: 0,
-        sampleTitles: [],
-      };
-      existing.activeClients += 1;
-      if (r.currency === "EUR" && r.monthlyValue) {
-        existing.totalEur += r.monthlyValue;
+  for (const row of rows) {
+    const title = titleBySlug.get(row.slug) ?? row.slug;
+    for (const dept of row.departments) {
+      const r =
+        records[adminRecordKey(row.slug, dept)] ??
+        defaultAdminRecord(row.slug, dept);
+      if (r.status !== "active") continue;
+      const valueEur =
+        r.currency === "EUR" && r.monthlyValue ? r.monthlyValue : 0;
+      for (const name of r.consultants) {
+        const existing = portfolios[name] ?? {
+          activeClients: 0,
+          totalEur: 0,
+          breakdown: [],
+        };
+        existing.activeClients += 1;
+        existing.totalEur += valueEur;
+        existing.breakdown.push({
+          // Use a composite slug so the breakdown lists each (slug,
+          // dept) row separately even for shared clients.
+          slug: `${row.slug}:${dept.toLowerCase()}`,
+          title: row.departments.length > 1 ? `${title} · ${dept}` : title,
+          valueEur,
+          departments: [dept],
+        });
+        portfolios[name] = existing;
       }
-      existing.sampleTitles.push(title);
-      portfolios[name] = existing;
     }
   }
 

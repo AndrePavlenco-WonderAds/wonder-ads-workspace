@@ -89,8 +89,40 @@ const CONSULTANT_RENAMES: Record<string, string> = {
   "Luana N.": "Manuel S.", // older legacy → handover chain
 };
 
+/** Departments a client row can belong to. Used as a typed dimension
+ *  of the per-(slug, department) record key — kept in sync with the
+ *  pill-coloring map in admin-client-row.tsx. */
+export const CLIENT_DEPARTMENTS = ["SEO", "ADS", "Web"] as const;
+export type ClientDepartment = (typeof CLIENT_DEPARTMENTS)[number];
+
+/** Canonical department for each consultant — drives both the
+ *  consultant-default-on-create logic AND the legacy-record split
+ *  on read (a legacy record holding [Yenisey, Germano] gets
+ *  attributed Yenisey → SEO row, Germano → ADS row). */
+export const CONSULTANT_DEPARTMENT: Record<string, ClientDepartment> = {
+  "Manuel S.": "SEO",
+  "Fran. R.": "SEO",
+  "Yenisey R.": "SEO",
+  "Germano C.": "ADS",
+};
+
+/** Department a legacy single-row record's monthlyValue should be
+ *  attributed to when the client spans multiple departments. We pick
+ *  the FIRST of the client's departments in this order so the
+ *  conversion is deterministic. Lower index wins. */
+export const LEGACY_VALUE_DEPT_PRIORITY: ClientDepartment[] = [
+  "SEO",
+  "ADS",
+  "Web",
+];
+
 export type AdminClientRecord = {
   slug: string;
+  /** Which department this row belongs to. Multi-dept clients have
+   *  one row per department so each consultant team owns their own
+   *  budget slice — no more double-counting in MRR or in per-employee
+   *  Active Portfolio totals. */
+  department: ClientDepartment;
   /** Billing cadence — Monthly / Each 3 Months / Each 6 Months (the
    *  three options the user specified). Drives nextBillingDate
    *  computation downstream when starting date is set. */
@@ -123,13 +155,24 @@ export const adminStorageConfigured = Boolean(
   process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN,
 );
 
-export function defaultAdminRecord(slug: string): AdminClientRecord {
-  const seed = getConsultantForSlug(slug);
+export function defaultAdminRecord(
+  slug: string,
+  department: ClientDepartment,
+): AdminClientRecord {
+  // Seed the consultant from the canonical override map ONLY when it
+  // aligns with the row's department — otherwise leave empty so the
+  // consultant picker reflects reality (Yenisey on the SEO row of a
+  // shared client, Germano on the ADS row, etc.).
+  const seedName = getConsultantForSlug(slug);
+  const seedDept =
+    seedName !== "Unassigned" ? CONSULTANT_DEPARTMENT[seedName] : undefined;
   return {
     slug,
+    department,
     billingCadence: "monthly",
     startingDate: DEFAULT_STARTING_DATES[slug] ?? null,
-    consultants: seed === "Unassigned" ? [] : [seed],
+    consultants:
+      seedName !== "Unassigned" && seedDept === department ? [seedName] : [],
     status: "active",
     currency: "EUR",
     monthlyValue: null,
@@ -138,48 +181,61 @@ export function defaultAdminRecord(slug: string): AdminClientRecord {
   };
 }
 
-/** Legacy record shape — pre-multi-consultant / pre-currency. Used to
- *  migrate older KV entries on read so saves from before v74.10 keep
- *  rendering correctly. */
-type LegacyAdminRecord = AdminClientRecord & {
+/** Per-(slug, dept) KV key. Department is lower-cased so the key is
+ *  stable across casing nuances. */
+function recordKey(slug: string, department: ClientDepartment): string {
+  return `${KEY_PREFIX}${slug}:${department.toLowerCase()}`;
+}
+
+/** Legacy single-row key — `admin-client:<slug>`. Predates the
+ *  per-department split (v74.15). Read once per slug to migrate. */
+function legacyKey(slug: string): string {
+  return `${KEY_PREFIX}${slug}`;
+}
+
+/** Legacy record shape — pre-per-department / pre-multi-consultant /
+ *  pre-currency. Used to migrate older KV entries on read so saves
+ *  from before v74.15 keep rendering correctly. */
+type LegacyAdminRecord = Omit<AdminClientRecord, "department"> & {
+  department?: ClientDepartment;
   consultant?: string;
   monthlyValueEur?: number | null;
 };
 
-function migrateRecord(
+/** Common normalisation — currency coerced to EUR, consultants array
+ *  + renames applied, startingDate backfilled. Used by BOTH the new
+ *  per-dept reader and the legacy fallback so they share one
+ *  source of truth for the field-level cleanup. */
+function normaliseFields(
   raw: LegacyAdminRecord,
   slug: string,
+  department: ClientDepartment,
 ): AdminClientRecord {
-  const base = defaultAdminRecord(slug);
-  // Single-consultant string from pre-v74.10 records → array.
+  const base = defaultAdminRecord(slug, department);
   const rawConsultants: string[] =
     Array.isArray(raw.consultants) && raw.consultants.length > 0
       ? raw.consultants.filter((c) => typeof c === "string" && c.trim())
       : typeof raw.consultant === "string" && raw.consultant.trim()
         ? [raw.consultant.trim()]
         : base.consultants;
-  // Apply handover renames (André P. → Manuel S., etc.) and dedupe.
   const consultants = Array.from(
     new Set(rawConsultants.map((c) => CONSULTANT_RENAMES[c] ?? c)),
   );
-  // Old EUR-only value → currency-tagged value.
   const monthlyValue =
     typeof raw.monthlyValue === "number"
       ? raw.monthlyValue
       : typeof raw.monthlyValueEur === "number"
         ? raw.monthlyValueEur
         : base.monthlyValue;
-  // Agency bills in EUR only as of v74.14 — any stale USD field on
-  // disk gets coerced to EUR so the UI math + rollups stay correct.
+  // Agency bills in EUR only as of v74.14.
   const currency: Currency = "EUR";
-  // Backfill the post-it starting dates onto any record that was saved
-  // before the dates were captured (null + a slug we know).
   const startingDate =
     raw.startingDate ?? DEFAULT_STARTING_DATES[slug] ?? null;
   return {
     ...base,
     ...raw,
     slug,
+    department,
     consultants,
     currency,
     monthlyValue,
@@ -187,47 +243,122 @@ function migrateRecord(
   };
 }
 
-/** Load one admin record — KV first, defaults to a derived skeleton. */
-export async function getAdminRecord(slug: string): Promise<AdminClientRecord> {
-  if (!adminStorageConfigured) return defaultAdminRecord(slug);
-  try {
-    const stored = await kv.get<LegacyAdminRecord>(`${KEY_PREFIX}${slug}`);
-    if (stored && typeof stored === "object" && stored.slug === slug) {
-      return migrateRecord(stored, slug);
-    }
-  } catch (err) {
-    console.error("admin-clients KV read failed:", err);
-  }
-  return defaultAdminRecord(slug);
+/** Split a legacy single record into a per-dept record for the
+ *  caller-requested department.
+ *
+ *  - Consultants are filtered to those whose canonical department
+ *    matches the target dept (Yenisey/Manuel/Fran → SEO row only,
+ *    Germano → ADS row only). Unknown consultants pass through to
+ *    every dept so we don't silently drop them.
+ *  - The monthlyValue gets attributed to the LEGACY_VALUE_DEPT_PRIORITY
+ *    winner only — other dept rows of the same client get null so
+ *    the value is never double-counted in MRR. */
+function deriveFromLegacy(
+  legacy: LegacyAdminRecord,
+  slug: string,
+  department: ClientDepartment,
+  clientDepartments: ClientDepartment[],
+): AdminClientRecord {
+  const base = normaliseFields(legacy, slug, department);
+  const consultants = base.consultants.filter((name) => {
+    const canonical = CONSULTANT_DEPARTMENT[name];
+    return canonical === undefined || canonical === department;
+  });
+  // Pick the priority winner present in this client's departments.
+  const priorityWinner = LEGACY_VALUE_DEPT_PRIORITY.find((d) =>
+    clientDepartments.includes(d),
+  );
+  const monthlyValue =
+    priorityWinner === department ? base.monthlyValue : null;
+  return { ...base, consultants, monthlyValue };
 }
 
-/** Replace an admin record (merging input with defaults). */
+/** Load one admin record by (slug, department). Read order:
+ *    1. Per-dept key `admin-client:<slug>:<dept>` (current shape)
+ *    2. Legacy single-row key `admin-client:<slug>` (pre-v74.15) —
+ *       derived per `deriveFromLegacy`
+ *    3. Default skeleton
+ */
+export async function getAdminRecord(
+  slug: string,
+  department: ClientDepartment,
+  clientDepartments: ClientDepartment[] = [department],
+): Promise<AdminClientRecord> {
+  if (!adminStorageConfigured) return defaultAdminRecord(slug, department);
+  try {
+    const stored = await kv.get<LegacyAdminRecord>(
+      recordKey(slug, department),
+    );
+    if (stored && typeof stored === "object" && stored.slug === slug) {
+      return normaliseFields(stored, slug, department);
+    }
+  } catch (err) {
+    console.error("admin-clients KV read failed (per-dept):", err);
+  }
+  try {
+    const legacy = await kv.get<LegacyAdminRecord>(legacyKey(slug));
+    if (legacy && typeof legacy === "object" && legacy.slug === slug) {
+      return deriveFromLegacy(legacy, slug, department, clientDepartments);
+    }
+  } catch (err) {
+    console.error("admin-clients KV read failed (legacy):", err);
+  }
+  return defaultAdminRecord(slug, department);
+}
+
+/** Replace a per-(slug, dept) admin record (merging input with the
+ *  current persisted state). */
 export async function saveAdminRecord(
   slug: string,
-  patch: Partial<Omit<AdminClientRecord, "slug" | "updatedAt">>,
+  department: ClientDepartment,
+  patch: Partial<
+    Omit<AdminClientRecord, "slug" | "department" | "updatedAt">
+  >,
+  clientDepartments: ClientDepartment[] = [department],
 ): Promise<AdminClientRecord> {
   if (!adminStorageConfigured) {
     throw new Error("KV storage not configured on this deployment.");
   }
-  const current = await getAdminRecord(slug);
+  const current = await getAdminRecord(slug, department, clientDepartments);
   const next: AdminClientRecord = {
     ...current,
     ...patch,
     slug,
+    department,
     updatedAt: new Date().toISOString(),
   };
-  await kv.set(`${KEY_PREFIX}${slug}`, next);
+  await kv.set(recordKey(slug, department), next);
   return next;
 }
 
-/** Load every admin record for an arbitrary slug list. */
+/** Load every admin record for a list of (slug, department) pairs.
+ *  The page-level callers build the union of merged client rosters,
+ *  expand each shared client into its per-dept rows, then call this
+ *  with one entry per row. */
 export async function getAdminRecords(
-  slugs: string[],
+  rows: Array<{ slug: string; departments: ClientDepartment[] }>,
 ): Promise<Record<string, AdminClientRecord>> {
-  const entries = await Promise.all(
-    slugs.map(async (s) => [s, await getAdminRecord(s)] as const),
+  const entries: Array<[string, AdminClientRecord]> = [];
+  await Promise.all(
+    rows.map(async (row) => {
+      for (const dept of row.departments) {
+        const key = `${row.slug}::${dept}`;
+        const rec = await getAdminRecord(row.slug, dept, row.departments);
+        entries.push([key, rec]);
+      }
+    }),
   );
   return Object.fromEntries(entries);
+}
+
+/** Composite key used by callers to look up a record in the map
+ *  returned by `getAdminRecords`. Keep in sync with the format
+ *  produced inside `getAdminRecords` above. */
+export function adminRecordKey(
+  slug: string,
+  department: ClientDepartment,
+): string {
+  return `${slug}::${department}`;
 }
 
 // ---------------------------------------------------------------------------

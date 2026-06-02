@@ -7,6 +7,7 @@ import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import {
   appendReviewItem,
+  filterPublicItems,
   listReviewItems,
   REVIEW_CATEGORIES,
   REVIEW_STATUSES,
@@ -18,11 +19,18 @@ import {
 export const runtime = "nodejs";
 
 export async function GET(
-  _req: Request,
+  req: Request,
   ctx: { params: Promise<{ slug: string }> },
 ) {
   const { slug } = await ctx.params;
-  const items = await listReviewItems(slug);
+  const url = new URL(req.url);
+  // The internal review page opts in with ?includeArchived=1 so the
+  // Archive tab + auto-poll see archived rows. The public client page
+  // omits the param and gets a filtered list — clients never see
+  // archived work.
+  const includeArchived = url.searchParams.get("includeArchived") === "1";
+  const raw = await listReviewItems(slug);
+  const items = includeArchived ? raw : filterPublicItems(raw);
   return NextResponse.json({ items });
 }
 

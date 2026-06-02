@@ -29,8 +29,15 @@ import { formatDate } from "@/lib/dates";
 export type EmployeePortfolio = {
   activeClients: number;
   totalEur: number;
-  /** Short list of client titles for hover/inline preview. */
-  sampleTitles: string[];
+  /** Per-client breakdown for the hover popover. Each entry includes
+   *  the client title, monthly value (in EUR), and the list of
+   *  departments the client is on so the popover can show context. */
+  breakdown: Array<{
+    slug: string;
+    title: string;
+    valueEur: number;
+    departments: string[];
+  }>;
 };
 
 type Props = {
@@ -192,11 +199,15 @@ export function AdminEmployeeRow({
   }
 
   const isEmpty = draft.monthlyValue === null;
-  const portfolioSampleTitle =
-    portfolio.sampleTitles.slice(0, 6).join(" · ") +
-    (portfolio.sampleTitles.length > 6
-      ? ` · +${portfolio.sampleTitles.length - 6} more`
-      : "");
+  // Hover popover for the Active portfolio cell — opens on enter,
+  // closes on leave. Uses React state instead of pure CSS group-hover
+  // so the popover can render above the table z-stack reliably.
+  const [portfolioOpen, setPortfolioOpen] = useState(false);
+  const sortedBreakdown = portfolio.breakdown
+    .slice()
+    .sort((a, b) => b.valueEur - a.valueEur);
+  const billedClients = sortedBreakdown.filter((c) => c.valueEur > 0).length;
+  const unbilledClients = portfolio.activeClients - billedClients;
 
   return (
     <tr
@@ -370,7 +381,9 @@ export function AdminEmployeeRow({
         </div>
       </td>
 
-      {/* Active portfolio — who they're consulting for + their MRR */}
+      {/* Active portfolio — who they're consulting for + their MRR.
+          Hover reveals a popover with one row per client (title +
+          monthly value + dept badges) sorted by value desc. */}
       <td className="px-3 py-3.5">
         {portfolio.activeClients === 0 ? (
           <div className="rounded-md border border-white/8 bg-white/[0.02] px-2 py-1.5 text-[11.5px] text-white/40">
@@ -378,16 +391,86 @@ export function AdminEmployeeRow({
           </div>
         ) : (
           <div
-            className="rounded-md border border-emerald-400/30 bg-emerald-500/[0.06] px-2 py-1.5"
-            title={portfolioSampleTitle}
+            className="relative"
+            onMouseEnter={() => setPortfolioOpen(true)}
+            onMouseLeave={() => setPortfolioOpen(false)}
           >
-            <div className="text-[13px] font-semibold tabular-nums text-emerald-200">
-              {formatMoney(portfolio.totalEur, "EUR")}
-            </div>
-            <div className="mt-0.5 text-[10.5px] text-white/55">
-              {portfolio.activeClients} active client
-              {portfolio.activeClients === 1 ? "" : "s"}
-            </div>
+            <button
+              type="button"
+              onFocus={() => setPortfolioOpen(true)}
+              onBlur={() => setPortfolioOpen(false)}
+              className="block w-full rounded-md border border-emerald-400/30 bg-emerald-500/[0.06] px-2 py-1.5 text-left transition hover:border-emerald-300/55 hover:bg-emerald-500/[0.09]"
+              aria-haspopup="true"
+              aria-expanded={portfolioOpen}
+            >
+              <div className="text-[13px] font-semibold tabular-nums text-emerald-200">
+                {formatMoney(portfolio.totalEur, "EUR")}
+              </div>
+              <div className="mt-0.5 text-[10.5px] text-white/55">
+                {portfolio.activeClients} active client
+                {portfolio.activeClients === 1 ? "" : "s"} ·{" "}
+                <span className="text-emerald-300/80">hover for details</span>
+              </div>
+            </button>
+            {portfolioOpen && sortedBreakdown.length > 0 && (
+              <div
+                role="dialog"
+                aria-label="Active portfolio breakdown"
+                className="animate-fade-up absolute left-0 top-full z-40 mt-1 w-[300px] rounded-lg border border-emerald-400/40 bg-[#0c0c12] shadow-2xl shadow-black/70"
+              >
+                <div className="flex items-center justify-between border-b border-white/8 px-3 py-2">
+                  <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-emerald-300/85">
+                    Active portfolio
+                  </span>
+                  <span className="text-[10.5px] font-semibold tabular-nums text-emerald-200">
+                    {formatMoney(portfolio.totalEur, "EUR")}
+                  </span>
+                </div>
+                <ul className="max-h-[260px] divide-y divide-white/5 overflow-y-auto py-1">
+                  {sortedBreakdown.map((c) => (
+                    <li
+                      key={c.slug}
+                      className="flex items-start justify-between gap-3 px-3 py-2"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-[12.5px] font-medium text-white/85">
+                          {c.title}
+                        </div>
+                        <div className="mt-0.5 flex flex-wrap gap-1">
+                          {c.departments.map((d) => (
+                            <span
+                              key={d}
+                              className={`rounded border px-1.5 py-px text-[9.5px] font-bold uppercase tracking-[0.14em] ${
+                                DEPT_PILL[d] ??
+                                "border-white/15 bg-white/[0.05] text-white/65"
+                              }`}
+                            >
+                              {d}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                      <div
+                        className={`shrink-0 text-right text-[12.5px] font-semibold tabular-nums ${
+                          c.valueEur > 0 ? "text-emerald-200" : "text-white/35"
+                        }`}
+                      >
+                        {c.valueEur > 0
+                          ? formatMoney(c.valueEur, "EUR")
+                          : "—"}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+                {unbilledClients > 0 && (
+                  <div className="border-t border-white/8 px-3 py-2 text-[10.5px] text-white/40">
+                    {unbilledClients} client
+                    {unbilledClients === 1 ? "" : "s"} active without a
+                    set monthly value yet.
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
       </td>
