@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.19",
+    date: "2026-06-03",
+    title: "Roadmap generator now uploads reference photos + does an inline SEO audit on Sonnet",
+    highlights: [
+      "**📸 Reference photos on the Generate panel.** New uploader inside the SEO Roadmap's `Fill with AI` / `Regenerate` flow lets the consultant attach up to 8 photos before generation — clinic interior, GMB profile screenshot, competitor SERP, Google Search Console graph, anything visual. Files upload straight to Vercel Blob via the existing `@vercel/blob/client` token endpoint (same pattern as the onboarding form), so 25 MB phone photos don't blow the function body-size limit. Thumbnails render as you upload, with a per-file remove button and a yellow `Waiting for photo upload…` state on the Generate button while any file is still in flight.",
+      "**🧠 Claude now thinks like an SEO pro before sequencing tasks.** `/api/roadmaps/[slug]/generate` switched from Haiku 4.5 to **Sonnet 4.6** with vision input. Every generation now: (1) runs a live mini site-audit (homepage + about-page HTML, nav labels, footer, body text via the same `runMiniSiteAudit` the GMB pipeline uses), (2) attaches each uploaded photo natively as a vision message block (shrunk to 1024px JPEG via `shrinkForVisionInput` so Anthropic accepts them), (3) reads the brief / onboarding form / target keywords / last-15 actions as before. The system prompt now embeds first-principles SEO (E-E-A-T, YMYL, intent fit, sequencing, AI-Overviews readiness, local NAP discipline, what to refuse) so the plan reflects a real diagnosis instead of a template.",
+      "**📋 New `auditSummary` field on every generated Roadmap.** The Zod schema now demands a 2-5 sentence prose diagnosis alongside the task list — what the business actually does (from the audit + photos), the 2-3 biggest gaps blocking growth, and what each photo contributed. Surfaced on the Roadmap board in a new `SEO diagnosis (Claude)` card directly under the Generate panel, with the reference photos linked as thumbnails so the consultant can audit what grounded the plan. Older roadmaps generated before v74.19 simply skip the card — the field is optional on `Roadmap`.",
+      "**⏱ maxDuration on `/api/roadmaps/[slug]/generate` bumped 60s → 300s.** Sonnet + vision + a mini-audit can run 30-60s vs Haiku's 10-20s. Vercel Pro honours the full 300s; Hobby silently caps at 60s — same Pro-ready / Hobby-safe pattern as the v74.18 bump on the main action route. Photo fetch timeout per file is 8s; oversized fetches (>25MB on the wire) are skipped with a console warning instead of failing the whole generation.",
+      "**🧹 Removed two stale macOS Finder-duplicate files** (`src/components/admin-panel 2.tsx`, `src/components/admin-client-row 2.tsx`). Both were unreferenced, had diverged from the originals, and were now breaking `next build` after the v74.15 prop rename (`departments` → `department`). Deleting them restored the build.",
+    ],
+  },
+  {
     version: "74.18",
     date: "2026-06-02",
     title: "Spine Center website registered app-wide · maxDuration bumped to 300s (Pro-ready, Hobby-safe)",

@@ -6,6 +6,7 @@ import {
   Calendar,
   Check,
   ChevronDown,
+  ImagePlus,
   Info,
   Loader2,
   Pencil,
@@ -15,6 +16,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
+import { upload } from "@vercel/blob/client";
 import {
   ROADMAP_PILLARS,
   ROADMAP_STATUSES,
@@ -28,6 +30,20 @@ import {
   type RoadmapWarning,
 } from "@/lib/roadmap-store";
 import { formatDate } from "@/lib/dates";
+
+const MAX_PHOTOS = 8;
+const PHOTO_ACCEPT = "image/png,image/jpeg,image/webp,image/avif,image/gif";
+
+type UploadedPhoto = {
+  /** Stable id only used for keying + removal. */
+  id: string;
+  url: string;
+  name: string;
+  /** While the file is still uploading we keep a local preview blob URL. */
+  previewUrl: string;
+  uploading: boolean;
+  error?: string;
+};
 
 const STATUS_META: Record<
   RoadmapStatus,
@@ -76,8 +92,10 @@ const MONTHS = [
 const GENERATE_PHASES = [
   "Loading client brief, onboarding form, and target keywords…",
   "Pulling the last 15 actions we ran on this account…",
-  "Building the brief for Claude…",
-  "Drafting 12 weeks of tasks with Claude (usually 20–40s)…",
+  "Crawling the homepage + about page for a live mini-audit…",
+  "Sending your reference photos to Claude (vision)…",
+  "Diagnosing gaps like an SEO pro before sequencing tasks…",
+  "Drafting 12 weeks of tasks with Claude Sonnet (usually 30–60s)…",
   "Sequencing tasks across the 4-week / 3-month grid…",
   "Saving to your workspace and archiving the previous roadmap…",
 ];
@@ -108,6 +126,7 @@ export function RoadmapBoard({
   );
   const [generateFocus, setGenerateFocus] = useState("");
   const [generateConstraints, setGenerateConstraints] = useState("");
+  const [generatePhotos, setGeneratePhotos] = useState<UploadedPhoto[]>([]);
 
   // Debounced auto-save: any roadmap mutation triggers a PUT after 600ms.
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -161,6 +180,9 @@ export function RoadmapBoard({
       setGenerateMessage(GENERATE_PHASES[phaseIndex]);
     }, 4500);
     try {
+      const readyPhotos = generatePhotos
+        .filter((p) => !p.uploading && !p.error && p.url)
+        .map((p) => p.url);
       const res = await fetch(`/api/roadmaps/${clientSlug}/generate`, {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -168,6 +190,7 @@ export function RoadmapBoard({
           startDate: generateStartDate,
           strategicFocus: generateFocus.trim() || undefined,
           constraints: generateConstraints.trim() || undefined,
+          photos: readyPhotos.length > 0 ? readyPhotos : undefined,
         }),
       });
       // Read as text first so a non-JSON error page (e.g. a Vercel
@@ -197,6 +220,13 @@ export function RoadmapBoard({
       setGeneratePanelOpen(false);
       setGenerateFocus("");
       setGenerateConstraints("");
+      // Clean up any local preview blob URLs we minted.
+      for (const photo of generatePhotos) {
+        if (photo.previewUrl.startsWith("blob:")) {
+          URL.revokeObjectURL(photo.previewUrl);
+        }
+      }
+      setGeneratePhotos([]);
     } catch (err) {
       setGenerateError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -204,7 +234,72 @@ export function RoadmapBoard({
       setGenerating(false);
       setGenerateMessage("");
     }
-  }, [clientSlug, generateStartDate, generateFocus, generateConstraints]);
+  }, [
+    clientSlug,
+    generateStartDate,
+    generateFocus,
+    generateConstraints,
+    generatePhotos,
+  ]);
+
+  // ----- Photo upload (Vercel Blob client-upload pattern, same as
+  // OnboardingForm). Uploads happen as soon as the user picks a file
+  // so by the time they click Generate the URLs are already on Blob. -----
+  const addPhotos = useCallback(
+    async (files: FileList | null) => {
+      if (!files || files.length === 0) return;
+      const slots = Math.max(0, MAX_PHOTOS - generatePhotos.length);
+      const picked = Array.from(files).slice(0, slots);
+      if (picked.length === 0) return;
+      const initial: UploadedPhoto[] = picked.map((file) => ({
+        id: `${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
+        url: "",
+        name: file.name,
+        previewUrl: URL.createObjectURL(file),
+        uploading: true,
+      }));
+      setGeneratePhotos((prev) => [...prev, ...initial]);
+      // Upload in parallel; each settles its own slot.
+      await Promise.all(
+        picked.map(async (file, i) => {
+          const id = initial[i].id;
+          try {
+            const blob = await upload(file.name, file, {
+              access: "public",
+              handleUploadUrl: "/api/files/upload",
+            });
+            setGeneratePhotos((prev) =>
+              prev.map((p) =>
+                p.id === id ? { ...p, url: blob.url, uploading: false } : p,
+              ),
+            );
+          } catch (err) {
+            setGeneratePhotos((prev) =>
+              prev.map((p) =>
+                p.id === id
+                  ? {
+                      ...p,
+                      uploading: false,
+                      error: err instanceof Error ? err.message : "Upload failed",
+                    }
+                  : p,
+              ),
+            );
+          }
+        }),
+      );
+    },
+    [generatePhotos.length],
+  );
+  const removePhoto = useCallback((id: string) => {
+    setGeneratePhotos((prev) => {
+      const target = prev.find((p) => p.id === id);
+      if (target && target.previewUrl.startsWith("blob:")) {
+        URL.revokeObjectURL(target.previewUrl);
+      }
+      return prev.filter((p) => p.id !== id);
+    });
+  }, []);
 
   // ----- Mutators (all hit the auto-save effect by setting state) -----
   const updateTask = useCallback(
@@ -344,11 +439,21 @@ export function RoadmapBoard({
           setFocus={setGenerateFocus}
           constraints={generateConstraints}
           setConstraints={setGenerateConstraints}
+          photos={generatePhotos}
+          onAddPhotos={addPhotos}
+          onRemovePhoto={removePhoto}
           generating={generating}
           generate={generate}
           error={generateError}
           progressMessage={generateMessage}
           mode={isEmpty ? "create" : "regenerate"}
+        />
+      )}
+
+      {roadmap.auditSummary && (
+        <AuditSummaryCard
+          auditSummary={roadmap.auditSummary}
+          sourcePhotos={roadmap.sourcePhotos ?? []}
         />
       )}
 
@@ -434,6 +539,9 @@ function GeneratePanel({
   setFocus,
   constraints,
   setConstraints,
+  photos,
+  onAddPhotos,
+  onRemovePhoto,
   generating,
   generate,
   error,
@@ -446,12 +554,18 @@ function GeneratePanel({
   setFocus: (v: string) => void;
   constraints: string;
   setConstraints: (v: string) => void;
+  photos: UploadedPhoto[];
+  onAddPhotos: (files: FileList | null) => void;
+  onRemovePhoto: (id: string) => void;
   generating: boolean;
   generate: () => void;
   error: string | null;
   progressMessage: string;
   mode: "create" | "regenerate";
 }) {
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const remainingSlots = MAX_PHOTOS - photos.length;
+  const anyUploading = photos.some((p) => p.uploading);
   return (
     <div
       className={
@@ -497,10 +611,81 @@ function GeneratePanel({
           className="mt-1 w-full rounded-md border border-white/10 bg-white/[0.03] px-2.5 py-1.5 text-xs text-white outline-none placeholder:text-white/35 focus:border-white/30"
         />
       </label>
+
+      {/* Reference photos — uploaded straight to Vercel Blob and passed
+          to Claude as vision input. Optional, but the agent does sharper
+          diagnosis when it can SEE the clinic / GMB / SERP screenshots. */}
+      <div className="mt-3">
+        <div className="flex items-baseline justify-between gap-2">
+          <span className="text-[11px] uppercase tracking-[0.13em] text-white/55">
+            Reference photos (optional · up to {MAX_PHOTOS})
+          </span>
+          <span className="text-[10px] text-white/40">
+            Clinic interior · GMB screenshot · competitor SERP · GSC graph — Claude sees these natively
+          </span>
+        </div>
+        <div className="mt-2 flex flex-wrap items-stretch gap-2">
+          {photos.map((p) => (
+            <div
+              key={p.id}
+              className="group relative h-20 w-20 overflow-hidden rounded-md border border-white/10 bg-white/[0.03]"
+              title={p.name}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={p.previewUrl}
+                alt={p.name}
+                className="h-full w-full object-cover"
+              />
+              {p.uploading && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/55">
+                  <Loader2 className="h-4 w-4 animate-spin text-white" />
+                </div>
+              )}
+              {p.error && (
+                <div className="absolute inset-0 flex items-center justify-center bg-rose-900/70 px-1 text-center text-[9px] font-medium text-rose-100">
+                  {p.error.slice(0, 50)}
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={() => onRemovePhoto(p.id)}
+                aria-label={`Remove ${p.name}`}
+                className="absolute right-1 top-1 hidden rounded-full border border-white/20 bg-black/60 p-0.5 text-white/80 transition hover:border-white/50 hover:text-white group-hover:block"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          ))}
+          {remainingSlots > 0 && (
+            <button
+              type="button"
+              disabled={generating}
+              onClick={() => fileInputRef.current?.click()}
+              className="flex h-20 w-20 flex-col items-center justify-center gap-1 rounded-md border border-dashed border-white/15 bg-white/[0.02] text-[10px] text-white/55 transition hover:border-white/35 hover:bg-white/[0.05] hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <ImagePlus className="h-4 w-4" />
+              Add photo
+            </button>
+          )}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept={PHOTO_ACCEPT}
+            multiple
+            className="hidden"
+            onChange={(e) => {
+              onAddPhotos(e.target.files);
+              e.target.value = "";
+            }}
+          />
+        </div>
+      </div>
+
       <div className="mt-3 flex items-center gap-3">
         <button
           type="button"
-          disabled={generating}
+          disabled={generating || anyUploading}
           onClick={generate}
           className="inline-flex items-center gap-2 rounded-md bg-gradient-to-br from-[#343ED7] via-[#783DF5] to-[#C535C9] px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-[#783DF5]/25 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
         >
@@ -511,9 +696,11 @@ function GeneratePanel({
           )}
           {generating
             ? "Generating roadmap…"
-            : mode === "create"
-              ? "Generate roadmap"
-              : "Generate new roadmap"}
+            : anyUploading
+              ? "Waiting for photo upload…"
+              : mode === "create"
+                ? "Generate roadmap"
+                : "Generate new roadmap"}
         </button>
         {!generating && mode === "regenerate" && (
           <span className="text-[11px] text-white/45">
@@ -756,6 +943,55 @@ function TaskCard({
         </div>
       </div>
     </li>
+  );
+}
+
+function AuditSummaryCard({
+  auditSummary,
+  sourcePhotos,
+}: {
+  auditSummary: string;
+  sourcePhotos: { url: string; name: string }[];
+}) {
+  return (
+    <div className="brand-gradient-border rounded-xl bg-white/[0.025] p-4">
+      <div className="flex items-center gap-2">
+        <Sparkles className="h-3.5 w-3.5 text-[color:var(--brand-purple)]" />
+        <h3 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/75">
+          SEO diagnosis (Claude)
+        </h3>
+      </div>
+      <p className="mt-2 whitespace-pre-line text-[12.5px] leading-relaxed text-white/80">
+        {auditSummary}
+      </p>
+      {sourcePhotos.length > 0 && (
+        <div className="mt-3">
+          <p className="text-[10px] uppercase tracking-[0.13em] text-white/40">
+            Grounded in {sourcePhotos.length} reference photo
+            {sourcePhotos.length === 1 ? "" : "s"}
+          </p>
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {sourcePhotos.map((p) => (
+              <a
+                key={p.url}
+                href={p.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                title={p.name}
+                className="block h-12 w-12 overflow-hidden rounded border border-white/10 bg-white/[0.03] transition hover:border-white/30"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={p.url}
+                  alt={p.name}
+                  className="h-full w-full object-cover"
+                />
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 

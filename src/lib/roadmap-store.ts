@@ -54,6 +54,13 @@ export type RoadmapTask = {
   createdAt: number;
 };
 
+export type RoadmapSourcePhoto = {
+  /** Vercel Blob URL — same one the consultant uploaded via @vercel/blob/client. */
+  url: string;
+  /** Original file name (decoded from the URL pathname). */
+  name: string;
+};
+
 export type Roadmap = {
   id: string;
   clientSlug: string;
@@ -65,6 +72,13 @@ export type Roadmap = {
   /** Warning ids the consultant has dismissed. Recomputed on read so
    *  warnings that re-trigger from a different cause produce a fresh id. */
   dismissedWarnings: { id: string; dismissedAt: number }[];
+  /** SEO-pro diagnosis the agent wrote before sequencing tasks. Short
+   *  paragraph — surfaces what the agent saw in the site + photos.
+   *  Optional (older roadmaps generated before v74.19 won't have it). */
+  auditSummary?: string;
+  /** Reference photos the consultant uploaded for this generation —
+   *  preserved so the consultant can see what the plan was grounded in. */
+  sourcePhotos?: RoadmapSourcePhoto[];
 };
 
 function currentKey(slug: string): string {
@@ -326,6 +340,21 @@ export function normaliseRoadmap(input: unknown, clientSlug: string): Roadmap {
           )
           .slice(0, 50)
       : [],
+    auditSummary:
+      typeof raw.auditSummary === "string" && raw.auditSummary.trim()
+        ? raw.auditSummary.trim().slice(0, 2000)
+        : undefined,
+    sourcePhotos: Array.isArray(raw.sourcePhotos)
+      ? raw.sourcePhotos
+          .filter(
+            (p): p is RoadmapSourcePhoto =>
+              typeof p === "object" &&
+              p !== null &&
+              typeof (p as { url?: unknown }).url === "string" &&
+              typeof (p as { name?: unknown }).name === "string",
+          )
+          .slice(0, 8)
+      : undefined,
   };
 }
 
