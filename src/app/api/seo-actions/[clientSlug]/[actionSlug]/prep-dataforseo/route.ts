@@ -1,15 +1,18 @@
 // Phase 2 of the split SEO Audit: runs ONLY the DataforSEO Labs + LLM
 // Mentions calls. Reads the prep record saved by /prep (Phase 1), runs
 // DataforSEO with historical_serp_mode + limit 1000, appends its fact-pack
-// section + metrics to the prep record. Each phase fits cleanly under
-// Vercel's 60s function budget.
+// section + metrics to the prep record. The phase split predates Vercel
+// Pro and was originally needed to fit under the 60s ceiling; we keep it
+// because the per-phase progress reporting is still good UX.
 
 import { NextResponse } from "next/server";
 import { findAction } from "@/lib/seo-pillars";
 import { runDataforSeoPhase } from "@/lib/seo-tools/site-audit";
 import { loadAuditPrep, saveAuditPrep } from "@/lib/audit-prep-store";
 
-export const maxDuration = 60;
+// Vercel Pro — 300s. DataforSEO Labs + LLM Mentions can each take
+// 30-50s on heavy domains.
+export const maxDuration = 300;
 export const runtime = "nodejs";
 
 export async function POST(

@@ -32,10 +32,11 @@ import { getOnboardingForSlug } from "@/lib/onboarding-store";
 import { saveKwResearchPrep } from "@/lib/kw-research-prep-store";
 import { findLocationTarget } from "@/lib/location-targets";
 
-// maxDuration is set to 300s (5 min) — Vercel Pro honours the full
-// value, Hobby silently caps it at 60s. The blog writer needs the
-// headroom because 1500-word drafts can stream for 40-60s on Sonnet
-// before Vercel guillotines the function mid-sentence.
+// maxDuration 300s — Vercel Pro is now active so the full 5-minute
+// budget is honoured. The blog writer needs the headroom because
+// 1500-word drafts can stream for 40-90s on Sonnet, and the SEO Audit
+// stream + KW research stream + onboarding extraction all benefit from
+// having room rather than racing the clock.
 export const maxDuration = 300;
 export const runtime = "nodejs";
 

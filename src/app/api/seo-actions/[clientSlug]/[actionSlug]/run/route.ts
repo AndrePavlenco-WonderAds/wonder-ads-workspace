@@ -13,7 +13,7 @@ import { getClientBySlug } from "@/lib/notion";
 import { buildSeoClaudeSystemPrompt } from "@/lib/seo-claude-prompt";
 import { loadAuditPrep } from "@/lib/audit-prep-store";
 
-// 300s — honoured on Vercel Pro, capped to 60s on Hobby.
+// 300s — honoured by Vercel Pro (now active on this project).
 export const maxDuration = 300;
 export const runtime = "nodejs";
 

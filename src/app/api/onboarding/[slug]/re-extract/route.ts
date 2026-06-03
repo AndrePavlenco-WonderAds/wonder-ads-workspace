@@ -17,7 +17,9 @@ import {
 } from "@/lib/onboarding-store";
 import { extractFromUrl } from "@/lib/pdf-extract";
 
-export const maxDuration = 60;
+// Vercel Pro — 300s. Same reasoning as the parent /api/onboarding
+// route — re-extract can be slow on dense PDFs.
+export const maxDuration = 300;
 export const runtime = "nodejs";
 
 export async function POST(

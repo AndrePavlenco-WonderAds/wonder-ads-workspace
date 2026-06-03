@@ -56,7 +56,11 @@ import {
 import { getClientPalette } from "@/lib/client-colors";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+// Vercel Pro — 300s. GMB generation runs a Claude vision call per
+// picked image (3-5 images × ~10s), plus a mini site-audit. On Hobby
+// this used to fan out across multiple requests; with Pro we can do
+// the whole batch in one shot.
+export const maxDuration = 300;
 
 const CAPTION_MODEL = "claude-haiku-4-5-20251001";
 const MAX_REFERENCE_IMAGES = 4;

@@ -9,11 +9,12 @@
 // research → references → internal-linking → draft → self-audit.
 //
 // The writing standard below is the in-house Wonder Ads "Guia da
-// redação" + the SEO content guidelines, distilled and trimmed so the
-// agent has headroom inside the 60s Vercel function budget. The same
-// constants are exported so the action page can render them as the
-// user-facing "Agent rules" modal — one source of truth, agent + UI
-// never drift.
+// redação" + the SEO content guidelines. With Vercel Pro's 300s
+// function budget there's now ample headroom for full-length drafts
+// without truncation — the agent no longer needs to race the clock.
+// The same constants are exported so the action page can render them
+// as the user-facing "Agent rules" modal — one source of truth, agent
+// + UI never drift.
 
 import type { ClientBrief } from "./client-briefs";
 import { getClientGeo } from "./client-geo";
@@ -477,7 +478,7 @@ export function buildBlogWriterSystemPrompt({
 
 ${languageDirective}
 
-You have a HARD 60-second response window. Start IMMEDIATELY with the slug + meta block. No preamble. No "Here is the article". No restating these rules back.
+You have ample time to write a complete, well-crafted article (5-minute response window on Vercel Pro). Start IMMEDIATELY with the slug + meta block. No preamble. No "Here is the article". No restating these rules back. Use the headroom to ship the full draft + self-audit checklist in one pass — never truncate to save time.
 
 # Client context
 

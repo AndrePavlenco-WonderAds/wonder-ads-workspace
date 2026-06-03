@@ -1,14 +1,18 @@
 // Phase 2 of the split SEO Audit: PageSpeed Insights (mobile + desktop).
-// Split apart from DataforSEO because both can independently take 30-50s
-// on heavy sites and combining them was blowing Vercel's 60s function
-// budget for big EN-language clients like IHN.
+// Originally split from DataforSEO because both can independently take
+// 30-50s on heavy sites and combining them was blowing the legacy 60s
+// budget for big EN-language clients like IHN. With Vercel Pro at 300s
+// the split is no longer required for timing — kept for per-phase
+// progress UX.
 
 import { NextResponse } from "next/server";
 import { findAction } from "@/lib/seo-pillars";
 import { runPsiPhase } from "@/lib/seo-tools/site-audit";
 import { loadAuditPrep, saveAuditPrep } from "@/lib/audit-prep-store";
 
-export const maxDuration = 60;
+// Vercel Pro — 300s. PSI can take 30-50s per device on heavy WordPress
+// sites.
+export const maxDuration = 300;
 export const runtime = "nodejs";
 
 export async function POST(

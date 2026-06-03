@@ -36,7 +36,10 @@ import {
 } from "@/lib/meta-tags-store";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+// Vercel Pro — 300s. Bulk meta-tag generation runs one structured-
+// output call per sampled page; 30+ pages × ~3-5s used to brush
+// against the 60s cap.
+export const maxDuration = 300;
 
 const CAPTION_MODEL = "claude-haiku-4-5-20251001";
 

@@ -13,6 +13,19 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.20",
+    date: "2026-06-03",
+    title: "Vercel Pro is live · every AI route bumped to the 300s ceiling so nothing gets cut off mid-stream",
+    highlights: [
+      "**🚀 Workspace is now running on Vercel Pro.** The Hobby cap of 60s on every serverless function was the single biggest source of mid-action failures (Claude getting guillotined mid-sentence on long blog drafts, KW research relying on an auto-continuation retry, PSI for heavy sites running over the cap). Pro lifts that ceiling to 300s — and now every AI/heavy route in the workspace is configured to use the full budget.",
+      "**⏱ Routes bumped 60s → 300s:** `/api/call-notes/[slug]` · `/api/onboarding/[slug]` · `/api/onboarding/[slug]/re-extract` · `/api/seo-actions/[…]/prep` · `/api/seo-actions/[…]/prep-psi` · `/api/seo-actions/[…]/prep-dataforseo` · `/api/seo-actions/[…]/prep-kw-research` · `/api/seo-actions/[…]/run-kw-research` · `/api/seo-actions/[…]/continue-kw-research` · `/api/seo-actions/[…]/gmb-generate` · `/api/seo-actions/[…]/meta-generate` · `/api/seo-actions/[…]/save`. The /chat widget went 30s → 120s (still feels responsive because the stream emits tokens immediately; the longer ceiling exists so long-form questions don't truncate). DOCX render stays at 30s — it's pure markdown→docx, never slow.",
+      "**📝 Blog Writer no longer races a 60s clock.** The blog-writer-prompt's `HARD 60-second response window` line — which encouraged the agent to truncate output to land before the Hobby cap — was replaced with `ample time to write a complete, well-crafted article (5-minute response window on Vercel Pro)`. The agent is now explicitly told to use the headroom to ship the full draft + self-audit checklist in one pass, never to truncate to save time. This is the lever that turns the v74.18 maxDuration bump on the parent action route into actually-longer published articles.",
+      "**🔭 PSI internal abort lifted 50s → 180s.** Inside `runPsiPhase` (used by the SEO Audit), each PageSpeed Insights call now waits up to 180s for Google's PSI to come back instead of being pre-empted at 50s. Heavy WordPress sites that sometimes need 60-90s for the mobile audit now finish instead of being skipped. The per-device skip-rather-than-fail behaviour is preserved — if Google's PSI really hangs past 180s the audit still ships with the other device's data instead of erroring out.",
+      "**🧹 Comments + architecture notes refreshed across the codebase.** Every stale `Hobby 60s` / `Pro-ready, Hobby-safe` mention in routes, `result-runner.tsx`, and the blog-writer-prompt now reads accurately as `Vercel Pro — 300s`. The phase splits (SEO Audit's 4-phase, KW research's 2-phase) are kept — the per-phase progress UX they deliver is still worth it — but the comments now say so explicitly instead of pretending they're a timeout workaround.",
+      "**🛟 Why the KW research continuation endpoint stays.** `/continue-kw-research` was originally there only to recover from the 60s cap cutting Claude off before the `Verificação final` block. We're keeping it because model truncation can still happen for non-timeout reasons (max tokens, soft refusals) and the recovery path costs nothing when not needed.",
+    ],
+  },
+  {
     version: "74.19",
     date: "2026-06-03",
     title: "Roadmap generator now uploads reference photos + does an inline SEO audit on Sonnet",

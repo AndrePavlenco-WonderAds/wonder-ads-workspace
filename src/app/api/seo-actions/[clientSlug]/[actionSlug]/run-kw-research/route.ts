@@ -15,7 +15,11 @@ import { loadKwResearchPrep } from "@/lib/kw-research-prep-store";
 import { getOnboardingForSlug } from "@/lib/onboarding-store";
 import { formatKwPackForPrompt } from "@/lib/seo-tools/keyword-research";
 
-export const maxDuration = 60;
+// Vercel Pro — 300s. Long-form keyword research streams from Sonnet
+// with the onboarding PDF attached natively; the full output with the
+// mandatory `Verificação final` section now runs to completion in one
+// shot rather than relying on /continue-kw-research.
+export const maxDuration = 300;
 export const runtime = "nodejs";
 
 const MODEL_ID = "claude-sonnet-4-6";

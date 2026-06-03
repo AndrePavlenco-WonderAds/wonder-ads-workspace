@@ -29,7 +29,9 @@ import {
 } from "@/lib/fathom-api";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+// Vercel Pro — 300s ceiling. Fathom transcript summarisation can run
+// long on hour-plus calls; the legacy 60s was tight.
+export const maxDuration = 300;
 
 const MODEL = "claude-haiku-4-5-20251001";
 

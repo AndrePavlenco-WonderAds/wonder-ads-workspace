@@ -42,9 +42,9 @@ import {
   type RoadmapTask,
 } from "@/lib/roadmap-store";
 
-// 5-minute ceiling matches the rest of the heavy AI routes. Vercel Pro
-// honours the full value; Hobby silently caps at 60s — fine either way
-// because the actual budget below is conservative.
+// 5-minute ceiling matches the rest of the heavy AI routes — Vercel
+// Pro is now active so the full value is honoured. Photo fetch + sharp
+// shrink + Sonnet vision call comfortably fits.
 export const runtime = "nodejs";
 export const maxDuration = 300;
 

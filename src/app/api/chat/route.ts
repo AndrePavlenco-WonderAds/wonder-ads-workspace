@@ -1,7 +1,10 @@
 import { anthropic } from "@ai-sdk/anthropic";
 import { convertToModelMessages, streamText, type UIMessage } from "ai";
 
-export const maxDuration = 30;
+// Vercel Pro — 120s. The chat widget streams replies token-by-token,
+// so the user sees output immediately. The longer ceiling exists only
+// so a long-form question on Sonnet doesn't get cut off mid-answer.
+export const maxDuration = 120;
 
 const SEO_SYSTEM_PROMPT = `You are SEO Claude, an in-house AI consultant for the SEO department at Wonder Ads — a Health & Wellness growth agency.
 

@@ -346,12 +346,13 @@ export async function runSiteAudit(
   };
 }
 
-/** Phase 2 — PageSpeed Insights only (mobile + desktop). Split apart from
- *  DataforSEO because both can take 30-50s on heavy sites and combining
- *  them blew the 60s Vercel function budget for IHN. Each PSI call gets a
- *  50s AbortController cap — if Google's PSI is taking longer (sometimes
- *  happens with heavy WordPress), we'd rather skip that one device than
- *  lose the whole phase. */
+/** Phase 2 — PageSpeed Insights only (mobile + desktop). Originally
+ *  split from DataforSEO because both can take 30-50s on heavy sites
+ *  and combining them blew the legacy 60s Hobby function budget. With
+ *  Vercel Pro's 300s ceiling, each PSI call now gets a generous 180s
+ *  AbortController cap — Google's PSI very rarely needs longer, and
+ *  hitting it means the device is genuinely too heavy to measure (we'd
+ *  rather skip that one device than lose the whole phase). */
 export async function runPsiPhase(
   inputUrl: string,
   emit: (event: ToolProgressEvent) => void,
@@ -367,7 +368,7 @@ export async function runPsiPhase(
     strategy: "mobile" | "desktop",
   ): Promise<PsiResult> {
     const controller = new AbortController();
-    const t = setTimeout(() => controller.abort(), 50_000);
+    const t = setTimeout(() => controller.abort(), 180_000);
     return runPageSpeed(inputUrl, strategy, {
       signal: controller.signal,
     }).finally(() => clearTimeout(t));

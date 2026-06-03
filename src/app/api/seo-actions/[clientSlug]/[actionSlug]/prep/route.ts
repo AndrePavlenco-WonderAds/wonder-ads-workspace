@@ -11,7 +11,9 @@ import {
 } from "@/lib/seo-tools/site-audit";
 import { saveAuditPrep } from "@/lib/audit-prep-store";
 
-export const maxDuration = 60;
+// Vercel Pro — 300s. Sitemap discovery + multi-page crawl + GSC pull
+// can chain past 60s on big sites with 100-page samples.
+export const maxDuration = 300;
 export const runtime = "nodejs";
 
 function normaliseUrl(input: string | undefined): string | null {

@@ -1,8 +1,13 @@
 // Continuation endpoint for Keyword Research — fires when the first
 // /run-kw-research stream finishes WITHOUT the mandatory "Verificação
-// final" section (i.e. Claude was cut off by Vercel's 60s ceiling).
+// final" section (i.e. Claude truncated mid-stream for any reason).
 // We feed Claude the partial output and ask it to continue from exactly
 // where it stopped, ending with the checklist.
+//
+// With Vercel Pro's 300s ceiling, this continuation is now mostly a
+// belt-and-braces safety net rather than a routine recovery from the
+// old 60s cap — but model truncation can still happen for non-timeout
+// reasons (max tokens, soft refusals), so the path stays.
 //
 // Same fact pack + system prompt as /run-kw-research, just a different
 // user message that includes the partial.
@@ -19,7 +24,7 @@ import { loadKwResearchPrep } from "@/lib/kw-research-prep-store";
 import { getOnboardingForSlug } from "@/lib/onboarding-store";
 import { formatKwPackForPrompt } from "@/lib/seo-tools/keyword-research";
 
-export const maxDuration = 60;
+export const maxDuration = 300;
 export const runtime = "nodejs";
 
 const MODEL_ID = "claude-sonnet-4-6";

@@ -167,8 +167,11 @@ export function ResultRunner({
       try {
         let finalAcc: string;
         if (action.slug === "seo-audit") {
-          // Four-phase split so each fits inside Vercel's 60s function
-          // budget on Hobby:
+          // Four-phase split — originally needed to fit each step inside
+          // the legacy 60s Hobby function budget. With Vercel Pro now
+          // active we no longer NEED the split, but the per-phase
+          // progress UX is worth keeping; each phase reports its own
+          // tool-progress events to the client:
           //   /prep            — sitemap + homepage crawl + sample crawl + GSC
           //   /prep-psi        — PageSpeed Insights mobile + desktop
           //   /prep-dataforseo — DataforSEO Labs + LLM Mentions
@@ -204,17 +207,18 @@ export function ResultRunner({
           finalAcc = await callPhase("/run", afterDfs);
         } else if (action.slug === "keyword-research") {
           // Two-phase split — Phase 1 saved the DataforSEO pack, Phase 2
-          // streams Claude with the PDF attached natively. Single-phase
-          // was running into the 60s ceiling on clients with big onboarding
-          // PDFs + 5 competitor pulls + Claude's long structured output.
+          // streams Claude with the PDF attached natively. The split
+          // originally existed for the 60s function budget; with Vercel
+          // Pro at 300s it's now retained for the per-phase progress UX.
           const afterPrepKw = await callPhase("/prep-kw-research", "");
           if (controller.signal.aborted) throw new DOMException("Aborted", "AbortError");
           let runAcc = await callPhase("/run-kw-research", afterPrepKw);
 
-          // Auto-continuation: if Claude was cut off by Vercel's 60s
-          // ceiling, the mandatory "Verificação final" section will be
-          // missing. Fire a continuation call (up to 2 retries) with the
-          // partial output so Claude can finish.
+          // Auto-continuation: if Claude finished without the mandatory
+          // "Verificação final" section (which can happen for non-timeout
+          // reasons — max tokens, soft refusals — even on Pro), fire a
+          // continuation call (up to 2 retries) with the partial output
+          // so Claude can finish.
           let attempts = 0;
           while (
             !controller.signal.aborted &&

@@ -24,9 +24,10 @@ import {
 } from "@/lib/verify-external-links";
 
 export const runtime = "nodejs";
-// Bumped from 30s — the AI-cluster keyword enrichment fires a
-// /keyword_overview/live call which adds ~2-5s on top of the KV write.
-export const maxDuration = 60;
+// Vercel Pro — 300s. /save fires the bulk DataforSEO enrich for the
+// AI-cluster keywords inferred from the onboarding form; 40-60 keyword
+// lookups in one call can chain past the legacy 60s cap.
+export const maxDuration = 300;
 
 const MODEL_ID = "claude-sonnet-4-6";
 

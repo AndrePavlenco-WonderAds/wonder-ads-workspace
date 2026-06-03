@@ -3,10 +3,9 @@
 // KwResearchPack to KV, and stream tool-progress events back to the
 // client. Phase 2 (/run-kw-research) loads the pack and streams Claude.
 //
-// Why split: the single-phase route fits DataforSEO (15-30s) + onboarding
-// fetch (1-3s) + Claude stream (15-45s) into Vercel's 60s function budget.
-// On heavy clients (5 competitors + big onboarding form), Claude was
-// getting cut mid-sentence. Splitting gives each phase its own 60s.
+// The split predates Vercel Pro — originally needed to keep each phase
+// inside the 60s ceiling. With Pro's 300s we no longer need it for
+// timeout reasons, but the per-phase progress UX is worth keeping.
 
 import { NextResponse } from "next/server";
 import { findAction } from "@/lib/seo-pillars";
@@ -17,7 +16,9 @@ import { runKeywordResearch } from "@/lib/seo-tools/keyword-research";
 import { saveKwResearchPrep } from "@/lib/kw-research-prep-store";
 import { findLocationTarget } from "@/lib/location-targets";
 
-export const maxDuration = 60;
+// Vercel Pro — 300s. DataforSEO Labs + 5 competitor footprint pulls
+// can chain past 60s when the onboarding form names many competitors.
+export const maxDuration = 300;
 export const runtime = "nodejs";
 
 export async function POST(

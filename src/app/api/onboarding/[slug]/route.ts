@@ -8,7 +8,9 @@ import {
 } from "@/lib/onboarding-store";
 import { extractFromUrl } from "@/lib/pdf-extract";
 
-export const maxDuration = 60;
+// Vercel Pro — 300s. PDF extraction on dense multi-page onboarding
+// forms (50+ pages) can stream past the legacy 60s cap.
+export const maxDuration = 300;
 export const runtime = "nodejs";
 
 const MAX_NAME_LENGTH = 200;
