@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.21",
+    date: "2026-06-03",
+    title: "Roadmap generator no longer 502s on a slightly off-spec Claude response",
+    highlights: [
+      "**🩹 Fixed the `Claude call failed: No object generated: response did not match schema.` error** that hit Andre on the Sweet Escapes regenerate. Root cause: Sonnet 4.6 occasionally lands a hair short of the strict lower bounds in the Zod schema — 18-23 tasks instead of `min(24)`, or a 25-char `auditSummary` instead of `min(40)`, or a pillar rendered as `\"On-Page\"` instead of `\"on-page\"` — and the AI SDK then rejected the WHOLE response. Now the schema is forgiving and the route also retries once before giving up.",
+      "**📐 Schema loosened to ship near-complete responses instead of nothing.** `tasks.min(24)` → `tasks.min(12)` and `tasks.max(50)` → `tasks.max(60)` (the prompt still ASKS for 36-48 — the lower bound is now a safety net, not a guillotine). `auditSummary.min(40)` → `min(1)`, max 1200 → 2000. `title.max(120)` → `max(240)` (the post-processing was already truncating at 240 — we now accept what we'd have kept anyway).",
+      "**🏷 Pillar parser now coerces aliases.** `\"On-Page\"`, `\"on page\"`, `\"on_page\"`, `\"OffPage\"`, `\"tech\"`, `\"investigation\"`, etc. are all mapped to their canonical lowercase 6-value enum (`technical` · `on-page` · `off-page` · `local` · `content` · `research`). Anything unrecognised falls back to `technical` instead of failing the whole roadmap — worst case the consultant re-pillars a couple of tasks in the editor, which is infinitely better than getting nothing back.",
+      "**🔁 Two-attempt loop with a strict-mode retry.** First attempt runs the prompt as before. If that fails schema validation, a second attempt appends an explicit `RETRY — follow the schema EXACTLY` block reminding Sonnet of the field shapes, value constraints, and the lowercase enum. Only after the second attempt fails does the route 502 — and even then, the error message now includes the raw text snippet Claude produced so we can see what came back instead of a generic `did not match schema`.",
+      "**🔍 Server-side logging on failure.** Each failed attempt now logs `[roadmap-generate] attempt N schema mismatch. Raw text: <first 1200 chars>` + the underlying cause to Vercel logs. Future failures are diagnosable without guessing.",
+    ],
+  },
+  {
     version: "74.20",
     date: "2026-06-03",
     title: "Vercel Pro is live · every AI route bumped to the 300s ceiling so nothing gets cut off mid-stream",

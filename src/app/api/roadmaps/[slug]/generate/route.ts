@@ -18,7 +18,7 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { anthropic } from "@ai-sdk/anthropic";
-import { generateObject } from "ai";
+import { generateObject, NoObjectGeneratedError } from "ai";
 import { z } from "zod";
 import { getBriefForSlug } from "@/lib/briefs-storage";
 import { getClientBySlug } from "@/lib/notion";
@@ -60,6 +60,47 @@ const MAX_PHOTOS = 8;
 const MAX_PHOTO_BYTES = 25 * 1024 * 1024; // 25 MB per photo on the wire
 const PHOTO_FETCH_TIMEOUT_MS = 8000;
 
+// Forgiving pillar parser — Sonnet occasionally renders the same value
+// as "On-Page" / "on page" / "off_page" / "OffPage". We accept the
+// common aliases and coerce to the canonical 6-value enum; anything
+// else falls back to "technical" rather than failing the whole
+// generation. Worst case the consultant re-pillars a couple of tasks
+// in the editor — far better than getting nothing back.
+const PILLAR_CANONICAL = [
+  "technical",
+  "on-page",
+  "off-page",
+  "local",
+  "content",
+  "research",
+] as const;
+const PILLAR_ALIASES: Record<string, (typeof PILLAR_CANONICAL)[number]> = {
+  technical: "technical",
+  tech: "technical",
+  "on-page": "on-page",
+  onpage: "on-page",
+  on_page: "on-page",
+  "on page": "on-page",
+  "off-page": "off-page",
+  offpage: "off-page",
+  off_page: "off-page",
+  "off page": "off-page",
+  local: "local",
+  "local seo": "local",
+  content: "content",
+  research: "research",
+  investigation: "research",
+};
+const PillarSchema = z
+  .string()
+  .transform((raw) => {
+    const key = raw.toLowerCase().trim();
+    return PILLAR_ALIASES[key] ?? "technical";
+  })
+  .describe(
+    "SEO pillar: one of technical, on-page, off-page, local, content, research. Mix pillars within each week.",
+  );
+
 const RoadmapTaskSchema = z.object({
   week: z
     .number()
@@ -70,31 +111,32 @@ const RoadmapTaskSchema = z.object({
   title: z
     .string()
     .min(2)
-    .max(120)
+    .max(240)
     .describe(
-      "Short imperative task title — what the team will actually do. Examples: 'Website Deep Audit', '2 Blog Articles (all-on-4 cluster)', 'GMB Post 1', 'Scan and Optimize Header Tags'. No vague verbs like 'improve SEO'. Description is left blank — consultant fills in after.",
+      "Short imperative task title — what the team will actually do. Examples: 'Website Deep Audit', '2 Blog Articles (all-on-4 cluster)', 'GMB Post 1', 'Scan and Optimize Header Tags'. No vague verbs like 'improve SEO'. Aim for under 120 chars; we'll truncate gracefully at 240.",
     ),
-  pillar: z
-    .enum(["technical", "on-page", "off-page", "local", "content", "research"])
-    .describe(
-      "SEO pillar this task belongs to. Mix pillars across each week (not all tasks of one pillar in one week).",
-    ),
+  pillar: PillarSchema,
 });
 
+// Schema is intentionally permissive on lower bounds — Sonnet sometimes
+// returns 18-23 tasks or a 25-char auditSummary, and rejecting the WHOLE
+// response over that is the wrong trade-off. The prompt still ASKS for
+// 36-48 tasks; the schema just won't 502 when the model lands a hair
+// short.
 const RoadmapSchema = z.object({
   auditSummary: z
     .string()
-    .min(40)
-    .max(1200)
+    .min(1)
+    .max(2000)
     .describe(
-      "2–5 sentence SEO-audit headline: site identity inferred from the homepage, the 2-3 biggest gaps you see (technical, on-page, local, content, off-page, AI visibility), and what each uploaded photo contributed. Plain prose, no bullets. This anchors the roadmap to a real diagnosis.",
+      "2–5 sentence SEO-audit headline: site identity inferred from the homepage, the 2-3 biggest gaps you see (technical, on-page, local, content, off-page, AI visibility), and what each uploaded photo contributed. Plain prose, no bullets. This anchors the roadmap to a real diagnosis. Aim for 120-600 chars.",
     ),
   tasks: z
     .array(RoadmapTaskSchema)
-    .min(24)
-    .max(50)
+    .min(12)
+    .max(60)
     .describe(
-      "Tasks across the 12 weeks. 3-4 per week average (36-48 total). Sequence: weeks 1-2 = audit + tracking setup + tech hygiene; weeks 3-8 = on-page + content + local + off-page execution; weeks 9-12 = strategic plays + measurement. Every week must have at least 3 tasks.",
+      "Tasks across the 12 weeks. AIM for 3-4 per week (36-48 total). Sequence: weeks 1-2 = audit + tracking setup + tech hygiene; weeks 3-8 = on-page + content + local + off-page execution; weeks 9-12 = strategic plays + measurement. Every week should have at least 3 tasks; the minimum is 12 only so a near-complete response isn't rejected.",
     ),
 });
 
@@ -234,25 +276,62 @@ export async function POST(
   }
   userContent.push({ type: "text", text: userPrompt });
 
-  let parsed: z.infer<typeof RoadmapSchema>;
-  try {
-    const result = await generateObject({
-      model: anthropic(MODEL_ID),
-      schema: RoadmapSchema,
-      system,
-      messages: [{ role: "user", content: userContent }],
-      // Sized for ~48 short tasks + the auditSummary prose. Sonnet at
-      // this budget runs 25-55s typical, well under the 300s ceiling.
-      maxOutputTokens: 3000,
-    });
-    parsed = result.object;
-  } catch (err) {
+  // Two-attempt loop. Sonnet very occasionally returns a structured
+  // payload that doesn't conform — usually a stray pillar string, a
+  // missing field, or the model just running short. We do one clean
+  // attempt, then a stricter retry with an explicit "follow the schema
+  // EXACTLY" reminder before failing. On a true second-attempt failure
+  // we surface the raw text Claude produced so the consultant can see
+  // what came back instead of a generic "did not match schema".
+  let parsed: z.infer<typeof RoadmapSchema> | null = null;
+  let lastError: unknown = null;
+  let lastRawText: string | null = null;
+  for (let attempt = 1; attempt <= 2 && !parsed; attempt++) {
+    const attemptContent =
+      attempt === 1
+        ? userContent
+        : ([
+            ...userContent,
+            {
+              type: "text" as const,
+              text: "\n\n## ⚠️ RETRY — previous attempt failed schema validation\nReturn the structured object EXACTLY as specified. Required fields: `auditSummary` (string, 1-2000 chars) and `tasks` (array of 12-60 items). Each task needs `week` (integer 1-12), `title` (string 2-240 chars), and `pillar` (one of exactly these lowercase strings: `technical`, `on-page`, `off-page`, `local`, `content`, `research`). Do NOT include any other fields. Do NOT wrap the response in extra prose. Aim for 36-48 tasks total, but 12 is acceptable if you genuinely can't justify more.",
+            },
+          ] satisfies typeof userContent);
+    try {
+      const result = await generateObject({
+        model: anthropic(MODEL_ID),
+        schema: RoadmapSchema,
+        system,
+        messages: [{ role: "user", content: attemptContent }],
+        // Sized for ~48 short tasks + the auditSummary prose. Sonnet at
+        // this budget runs 25-55s typical, well under the 300s ceiling.
+        maxOutputTokens: 3000,
+      });
+      parsed = result.object;
+    } catch (err) {
+      lastError = err;
+      if (NoObjectGeneratedError.isInstance(err)) {
+        lastRawText = err.text ?? null;
+        console.error(
+          `[roadmap-generate] attempt ${attempt} schema mismatch. Raw text:`,
+          (err.text ?? "(no text)").slice(0, 1200),
+          "\nCause:",
+          err.cause,
+        );
+      } else {
+        console.error(`[roadmap-generate] attempt ${attempt} failed:`, err);
+      }
+    }
+  }
+
+  if (!parsed) {
+    const baseMessage =
+      lastError instanceof Error ? lastError.message : String(lastError);
+    const hint = lastRawText
+      ? ` Last raw output snippet: "${lastRawText.replace(/\s+/g, " ").slice(0, 200)}…". Try regenerating, or add a Strategic focus / Constraints to anchor the plan.`
+      : " Try regenerating, or add a Strategic focus / Constraints to anchor the plan.";
     return NextResponse.json(
-      {
-        error: `Claude call failed: ${
-          err instanceof Error ? err.message : String(err)
-        }`,
-      },
+      { error: `Claude call failed after 2 attempts: ${baseMessage}.${hint}` },
       { status: 502 },
     );
   }
