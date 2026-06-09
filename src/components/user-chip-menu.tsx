@@ -13,12 +13,13 @@ export function UserChipMenu({
   name,
   role,
   dept,
-  hoursLeft,
+  expiresLabel,
 }: {
   name: string;
   role: string;
   dept: string;
-  hoursLeft: number;
+  /** Pre-formatted "X days" / "Yh" — server picks the granularity. */
+  expiresLabel: string;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -81,7 +82,7 @@ export function UserChipMenu({
               </div>
             </div>
             <p className="mt-2 text-[10.5px] text-white/45">
-              Session expires in ~{hoursLeft}h
+              Session expires in ~{expiresLabel}
             </p>
           </div>
           <button

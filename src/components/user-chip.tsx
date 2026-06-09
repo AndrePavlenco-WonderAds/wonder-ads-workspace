@@ -17,18 +17,22 @@ export async function UserChip() {
   if (!session) return null;
   const display = getEmployeeDisplay(session.u);
   if (!display) return null;
-  // 48h cookie — surface session age so consultants can see when
+  // 1-week cookie — surface session age so consultants can see when
   // they'll be prompted again, without doing the maths themselves.
-  const hoursLeft = Math.max(
-    0,
-    Math.round((session.exp - Date.now()) / (60 * 60 * 1000)),
-  );
+  // Show days when there's >1 day left, hours otherwise.
+  const msLeft = Math.max(0, session.exp - Date.now());
+  const daysLeft = Math.floor(msLeft / (24 * 60 * 60 * 1000));
+  const hoursLeft = Math.round(msLeft / (60 * 60 * 1000));
+  const expiresLabel =
+    daysLeft >= 1
+      ? `${daysLeft} day${daysLeft === 1 ? "" : "s"}`
+      : `${hoursLeft}h`;
   return (
     <UserChipMenu
       name={display.name}
       role={display.role}
       dept={display.dept}
-      hoursLeft={hoursLeft}
+      expiresLabel={expiresLabel}
     />
   );
 }

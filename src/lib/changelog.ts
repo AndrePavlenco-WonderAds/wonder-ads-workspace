@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.23.1",
+    date: "2026-06-09",
+    title: "Login UX polish — 1-week sessions, browser-saveable creds, instant post-login redirect, close button on the comments drawer",
+    highlights: [
+      "**🕐 Session bumped 48h → 1 week.** `SESSION_MAX_AGE_MS` is now `7 * 24 * 60 * 60 * 1000`. Header UserChip now reads `Session expires in ~6 days` (or `~12h` on the last day) instead of always-hours. Login subtitle copy updated. Andre's desktop credentials file regenerated to match. Reason: re-auth twice a week was friction for no security gain — the cookie is HMAC-signed + `httpOnly` + `secure`, so the only real risk is a stolen device, which doesn't get worse over 7 days vs 2.",
+      "**💾 Browser password-save now works (Chrome / Safari / 1Password / iCloud Keychain).** The login form now ships with a real `action=\"/api/auth/login\"` + `method=\"POST\"` + `autoComplete=\"on\"`, and the two inputs carry `id=\"username\"` / `name=\"username\"` + `id=\"password\"` / `name=\"password\"` with `required` flags. Submit still intercepts via `preventDefault` and POSTs JSON — the static attributes exist purely so the browser password managers recognise the form and offer to save the creds. On next visit they auto-fill, no more reading off the desktop card every time.",
+      "**⚡ Post-login redirect is now instant.** The slow blue-progress-bar that Andre hit on screenshot came from `router.push(next) + router.refresh()` — Next.js first soft-navigated, fetched the destination's RSC payload, THEN re-rendered after refresh. Two roundtrips, second one unnecessary. v74.23.1 swaps both for `window.location.replace(next)`: single hard GET to the destination, the browser sends the just-set cookie on that request, the page lands. `replace` (vs `assign`) also keeps `/login` out of back-button history — hitting Back from the home page won't bounce you to the login form. Spinner stays on the Sign-in button through the whole hard nav so there's no \"did my click register?\" flicker.",
+      "**✕ Close button on the comments drawer.** When you expand a row's thread on the Pending Review table, the drawer now renders a header chip (e.g. `💬 3 COMMENTS`) with an `×` close button on the right + a `▴ Fechar comentários / Close comments` button below the composer. Previously the only way to collapse the thread was scrolling back up to the 💬 chip in the row — fine on short tables, painful on a 12-row review with a chunky thread. The button only renders when the parent passes an `onClose` (currently the ReviewTable expanded sub-row) so standalone uses of `<CommentsThread>` stay clean.",
+    ],
+  },
+  {
     version: "74.23",
     date: "2026-06-09",
     title: "Employee login gate + new SuperAdmin model (Andre · Alex · Alice only)",

@@ -32,6 +32,7 @@ import {
   Send,
   Trash2,
   X,
+  ChevronUp,
 } from "lucide-react";
 import type { ReviewComment } from "@/lib/review-store";
 import { t, type PublicLang } from "@/lib/public-i18n";
@@ -61,6 +62,12 @@ type Props = {
    *  comments arrived via auto-poll, so the component resets state if
    *  needed. Optional. */
   pollKey?: number;
+  /** Inline variant: when provided, renders a close (×) button at the
+   *  top-right of the thread + a "Fechar comentários" button at the
+   *  bottom. The parent (ReviewTable) wires it to `setOpenCommentsFor(
+   *  null)` so the user can collapse the row without scrolling back up
+   *  to the chip in the table header. */
+  onClose?: () => void;
 };
 
 const POLL_MS = 8000;
@@ -76,6 +83,7 @@ export function CommentsThread({
   allowRoleSwitch = true,
   lang = "en",
   variant = "inline",
+  onClose,
 }: Props) {
   const [comments, setComments] = useState<ReviewComment[]>(initialComments);
   const [draft, setDraft] = useState("");
@@ -309,6 +317,34 @@ export function CommentsThread({
         </header>
       )}
 
+      {/* Inline-variant header: tiny strip with the comment count + the
+          close (×) button. Only renders when the parent passes onClose
+          (i.e. the ReviewTable expanded sub-row); standalone usage
+          stays clean. */}
+      {variant === "inline" && onClose && (
+        <header className="mb-2 flex items-center justify-between gap-2">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-black/[0.04] px-2 py-0.5 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-black/55">
+            <MessageSquare className="h-3 w-3" />
+            {comments.length > 0
+              ? `${comments.length} ${
+                  comments.length === 1
+                    ? t(lang, "commentsCountSingular")
+                    : t(lang, "commentsCountPlural")
+                }`
+              : t(lang, "commentsHeading")}
+          </span>
+          <button
+            type="button"
+            onClick={onClose}
+            title={t(lang, "commentsToggleClose")}
+            aria-label={t(lang, "commentsToggleClose")}
+            className="inline-flex items-center justify-center rounded-full border border-black/10 bg-white p-1 text-black/55 transition hover:border-black/25 hover:bg-black/[0.05] hover:text-black/85"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </header>
+      )}
+
       {/* Comment list */}
       {comments.length === 0 ? (
         <p
@@ -389,9 +425,19 @@ export function CommentsThread({
             <X className="h-3 w-3" /> {errorMsg}
           </p>
         )}
-        <p className="mt-1.5 text-[10px] text-black/35">
-          ⌘/Ctrl + Enter
-        </p>
+        <div className="mt-1.5 flex items-center justify-between gap-2">
+          <p className="text-[10px] text-black/35">⌘/Ctrl + Enter</p>
+          {variant === "inline" && onClose && (
+            <button
+              type="button"
+              onClick={onClose}
+              className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10.5px] font-medium text-black/55 transition hover:bg-black/[0.05] hover:text-black/85"
+            >
+              <ChevronUp className="h-3 w-3" />
+              {t(lang, "commentsToggleClose")}
+            </button>
+          )}
+        </div>
       </div>
     </Wrapper>
   );

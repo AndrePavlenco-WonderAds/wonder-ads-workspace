@@ -5,13 +5,21 @@
 // `?next=` path (or `/` when not present). Echoes the brand-gradient
 // pill + soft glow that the rest of the workspace shell uses so the
 // gate feels like the start of the app rather than a bolt-on.
+//
+// v74.23.1: post-login redirect switched from `router.push + refresh`
+// to `window.location.replace(next)`. The two-step soft nav was the
+// "long wait" Andre hit on screenshot — Next first re-fetched the RSC
+// payload for the destination, THEN re-rendered after refresh. The
+// hard nav is one GET; the browser sends the freshly-set cookie on
+// that GET and we land instantly. The `replace` (vs `assign`) keeps
+// /login out of the back-button history so hitting "back" from the
+// home page doesn't dump the user back on the login form.
 
 import { useState, type FormEvent } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { KeyRound, Loader2, LogIn, User } from "lucide-react";
 
 export function LoginForm() {
-  const router = useRouter();
   const sp = useSearchParams();
   const next = sp.get("next") ?? "/";
   const [username, setUsername] = useState("");
@@ -33,11 +41,11 @@ export function LoginForm() {
         const json = await res.json().catch(() => ({}));
         throw new Error(json.error ?? "Wrong username or password.");
       }
-      // Hard navigation so middleware re-runs against the new cookie
-      // and any server components downstream see the auth payload on
-      // their first render rather than the next.
-      router.push(safeNextPath(next));
-      router.refresh();
+      // Hard navigation so the browser does a single GET to the
+      // destination carrying the freshly-set cookie. `loading` stays
+      // true through the redirect so the button shows the spinner the
+      // whole way — no "did my click register?" flicker.
+      window.location.replace(safeNextPath(next));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
       setLoading(false);
@@ -59,15 +67,29 @@ export function LoginForm() {
           </h1>
           <p className="mt-2 max-w-xs text-sm text-white/55">
             Sign in to access your department. Sessions stay open for
-            48 hours.
+            1 week, then ask for the password again.
           </p>
         </div>
 
-        <form onSubmit={submit} className="mt-6 space-y-3">
+        {/* Real action attribute + method so Chrome / Safari / 1Password
+            etc. recognise this as a login form and offer to save the
+            credentials. The submit handler intercepts via preventDefault
+            and POSTs JSON instead, but the static attributes are what
+            triggers the save prompt. id + name on each input are also
+            required for the save flow to pick them up. */}
+        <form
+          onSubmit={submit}
+          method="POST"
+          action="/api/auth/login"
+          autoComplete="on"
+          className="mt-6 space-y-3"
+        >
           <div className="relative">
             <User className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" />
             <input
               type="text"
+              id="username"
+              name="username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               placeholder="Username"
@@ -76,6 +98,7 @@ export function LoginForm() {
               autoCapitalize="off"
               autoCorrect="off"
               spellCheck={false}
+              required
               className="w-full rounded-xl border border-white/12 bg-white/[0.05] px-4 py-2.5 pl-10 text-sm text-white outline-none transition placeholder:text-white/35 focus:border-white/30"
             />
           </div>
@@ -83,10 +106,13 @@ export function LoginForm() {
             <KeyRound className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" />
             <input
               type="password"
+              id="password"
+              name="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Password"
               autoComplete="current-password"
+              required
               className="w-full rounded-xl border border-white/12 bg-white/[0.05] px-4 py-2.5 pl-10 text-sm text-white outline-none transition placeholder:text-white/35 focus:border-white/30"
             />
           </div>

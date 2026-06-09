@@ -605,6 +605,7 @@ export function ReviewTable({
                             }
                             lang={commentLang}
                             variant="inline"
+                            onClose={() => setOpenCommentsFor(null)}
                           />
                         </td>
                       </tr>

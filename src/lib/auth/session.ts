@@ -13,10 +13,12 @@
 
 export const SESSION_COOKIE = "wa-session";
 
-/** 48h in milliseconds — the duration the user asked for. After this
- *  the cookie's `exp` field has passed and middleware redirects to
- *  /login regardless of whether the cookie's signature is still valid. */
-export const SESSION_MAX_AGE_MS = 48 * 60 * 60 * 1000;
+/** 7 days in milliseconds — bumped from 48h in v74.23.1 so consultants
+ *  don't re-auth twice a week. After this the cookie's `exp` field
+ *  has passed and middleware redirects to /login regardless of
+ *  whether the signature is still valid. The cookie's own `maxAge`
+ *  matches so browsers also drop it from disk on expiry. */
+export const SESSION_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 export const SESSION_MAX_AGE_SECONDS = Math.floor(SESSION_MAX_AGE_MS / 1000);
 
 export type SessionPayload = {
