@@ -59,7 +59,7 @@ const CLIENTS = [
       task(1, "Corrigir erros 4XX / criar redirects", "implemented", "technical"),
       task(1, "Corrigir H1 em falta", "implemented", "technical"),
       task(1, "Instalar tag Google Analytics", "implemented", "research"),
-      task(1, "Keyword Research", "in_progress", "research"),
+      task(1, "Keyword Research", "implemented", "research"),
 
       task(2, "Criar meta descriptions em falta", "implemented", "on-page"),
       task(2, "Melhorar slow load speed & identificar problemas de CWV", "implemented", "technical"),
@@ -75,42 +75,42 @@ const CLIENTS = [
       task(3, "Check orphaned pages in sitemaps", "implemented", "technical"),
       task(3, "Copy da página Longevidade", "implemented", "content"),
 
-      task(4, "Blog Roadmap", "in_progress", "content"),
+      task(4, "Blog Roadmap", "implemented", "content"),
       task(4, "Organização do Blog por categorias", "implemented", "content"),
       task(4, "Schema markup nas páginas de serviço (início)", "implemented", "technical"),
       task(4, "GBP Audit", "implemented", "local"),
       task(4, "Configurar GPT White Clinic", "implemented", "research"),
       task(4, "Adicionar categorias secundárias no GBP", "implemented", "local"),
-      task(4, "Identificar a causa do INP > 200 em mobile", "in_progress", "technical"),
+      task(4, "Identificar a causa do INP > 200 em mobile", "implemented", "technical"),
 
       // ─ Month 2 — Week 8 is current ───────────────────────────────────────
-      task(5, "Otimizar estrutura de headings (H1, H2, H3)", "in_progress", "on-page"),
-      task(5, "E-E-A-T Author Signature para o Blog", "in_progress", "on-page"),
-      task(5, "Implementar Person Schema na página Dr. Miguel Stanley e equipa", "in_progress", "technical"),
-      task(5, "Implementar Internal Linking", "in_progress", "on-page"),
-      task(5, "Planning GBP posts", "in_progress", "local"),
+      task(5, "Otimizar estrutura de headings (H1, H2, H3)", "implemented", "on-page"),
+      task(5, "E-E-A-T Author Signature para o Blog", "implemented", "on-page"),
+      task(5, "Implementar Person Schema na página Dr. Miguel Stanley e equipa", "implemented", "technical"),
+      task(5, "Implementar Internal Linking", "implemented", "on-page"),
+      task(5, "Planning GBP posts", "pending_review", "local"),
       task(5, "Adicionar vídeos no GBP", "implemented", "local"),
 
-      task(6, "Imagens com Alt text em falta", "in_progress", "technical"),
-      task(6, "Otimização GBP", "in_progress", "local"),
+      task(6, "Imagens com Alt text em falta", "implemented", "technical"),
+      task(6, "Otimização GBP", "implemented", "local"),
       task(6, "Report mensal Maio", "implemented", "research"),
       task(6, "Blog Roadmap (ronda 2)", "pending_review", "content"),
       task(6, "Planning GBP posts (ronda 2)", "pending_review", "local"),
 
-      task(7, "Research de FAQs para páginas de serviço prioritárias pt1", "in_progress", "research"),
+      task(7, "Research de FAQs para páginas de serviço prioritárias pt1", "implemented", "research"),
       task(7, "Tradução da página medicina oral integrativa e formatação em EN", "implemented", "content"),
       task(7, "Otimizar imagens pesadas", "implemented", "technical"),
-      task(7, "Otimização GBP (ronda 2)", "in_progress", "local"),
+      task(7, "Otimização GBP (ronda 2)", "implemented", "local"),
       task(7, 'Adicionar "Longevidade" ao menu', "pending_review", "on-page"),
 
-      task(8, "Integração de keywords no conteúdo", "in_progress", "on-page"),
-      task(8, "Criação das respostas para as FAQs de serviço pt 1", "in_progress", "content"),
+      task(8, "Integração de keywords no conteúdo", "implemented", "on-page"),
+      task(8, "Criação das respostas para as FAQs de serviço pt 1", "implemented", "content"),
       task(8, "Adicionar FAQ Schema nas páginas de serviço otimizadas", "pending_review", "technical"),
       task(8, "1 blog post (EN + PT)", "not_started", "content"),
       task(8, "1 post GBP", "not_started", "local"),
 
-      // ─ Month 3 ───────────────────────────────────────────────────────────
-      task(9, "Analisar keywords em posições 5-20", "in_progress", "research"),
+      // ─ Month 3 — all gray in FigJam → all not_started ────────────────────
+      task(9, "Analisar keywords em posições 5-20", "not_started", "research"),
       task(9, "Otimizar páginas com keywords melhor posicionadas", "not_started", "on-page"),
       task(9, "Análise de gap de conteúdo vs. concorrentes", "not_started", "research"),
       task(9, "1 blog post (EN + PT)", "not_started", "content"),
@@ -123,13 +123,13 @@ const CLIENTS = [
       task(10, "1 GBP post", "not_started", "local"),
       task(10, "Report mensal Junho", "not_started", "research"),
 
-      task(11, "Melhorar CTR (titles + meta descriptions)", "in_progress", "on-page"),
+      task(11, "Melhorar CTR (titles + meta descriptions)", "not_started", "on-page"),
       task(11, "Reforçar linking interno nas páginas otimizadas", "not_started", "on-page"),
       task(11, "Audit e otimização da página do Dr. Miguel Stanley", "not_started", "on-page"),
       task(11, "1 blog post (EN + PT)", "not_started", "content"),
       task(11, "1 GBP post", "not_started", "local"),
 
-      task(12, "Reporting trimestral", "in_progress", "research"),
+      task(12, "Reporting trimestral", "not_started", "research"),
       task(12, "Analisar rankings + tráfego + leads", "not_started", "research"),
       task(12, "Revisão do GPT personalizado", "not_started", "research"),
       task(12, "1 blog post (EN + PT)", "not_started", "content"),
@@ -183,7 +183,7 @@ const CLIENTS = [
 
       task(6, "Otimizar imagens e recursos pesados", "implemented", "technical"),
       task(6, "Aplicar E-E-A-T IHN Signature nos posts relacionados", "implemented", "on-page"),
-      task(6, "Audit de conteúdo do blog", "in_progress", "content"),
+      task(6, "Audit de conteúdo do blog", "implemented", "content"),
       task(6, "Melhorar meta tags dos posts com CTR baixo", "pending_review", "on-page"),
       task(6, "1 blog post", "implemented", "content"),
       task(6, "Report mensal Maio", "implemented", "research"),
@@ -191,7 +191,7 @@ const CLIENTS = [
 
       task(7, "Adicionar ALT text em imagens", "implemented", "technical"),
       task(7, "Otimizar imagens e recursos pesados (ronda 2)", "implemented", "technical"),
-      task(7, "Adicionar internal linking nos blog posts antigos", "in_progress", "on-page"),
+      task(7, "Adicionar internal linking nos blog posts antigos", "implemented", "on-page"),
       task(7, "GBP audit", "implemented", "local"),
 
       task(8, "Research de FAQs para páginas dos cursos", "implemented", "research"),
@@ -265,7 +265,7 @@ const CLIENTS = [
       "FisioRestelo — fisioterapia em Restelo (Lisboa). Re-arranque em 20/04 com base técnica robusta: internal links broken, H1, Google Analytics, meta descriptions, low word count, orphaned pages, Image Alt Tags — Month 1 implementado. Foco actual: (1) Schema Local Business + Service; (2) GBP — feedback da Sandrina, novo planeamento, vídeos; (3) Páginas de serviço — análise de oportunidades, planeamento de novos textos, página dedicada de Escoliose; (4) Revisão AI visibility + llms.txt. Month 3: keywords em striking distance, FAQ schema, backlinks locais, citations.",
     tasks: [
       // ─ Month 1 — all green ───────────────────────────────────────────────
-      task(1, "Corrigir internal links broken", "in_progress", "on-page"),
+      task(1, "Corrigir internal links broken", "implemented", "on-page"),
       task(1, "Corrigir páginas com missing H1 heading", "implemented", "technical"),
       task(1, "Ajustar pages with multiple H1 tags", "implemented", "technical"),
       task(1, "Instalar tag Google Analytics", "implemented", "research"),
@@ -274,7 +274,7 @@ const CLIENTS = [
       task(2, "Ajustar titles demasiado longos", "implemented", "on-page"),
       task(2, "Melhorar páginas com low word count", "implemented", "content"),
 
-      task(3, "Otimizar imagens pesadas", "in_progress", "technical"),
+      task(3, "Otimizar imagens pesadas", "implemented", "technical"),
       task(3, "Identificar low HTML Ratio Pages", "implemented", "technical"),
       task(3, "Scan and Optimize all Image Alt Tags", "implemented", "technical"),
       task(3, "Corrigir orphaned pages no sitemap", "implemented", "technical"),
@@ -292,13 +292,13 @@ const CLIENTS = [
       task(5, "Aplicar texto nas páginas com pouco conteúdo", "implemented", "content"),
       task(5, "Novo planeamento GBP posts", "implemented", "local"),
 
-      task(6, "Analisar oportunidades de páginas de serviço", "in_progress", "research"),
+      task(6, "Analisar oportunidades de páginas de serviço", "implemented", "research"),
       task(6, "Melhorar ficheiro llms.txt", "implemented", "technical"),
       task(6, "1 GBP post", "implemented", "local"),
       task(6, "Report mensal Maio", "implemented", "research"),
       task(6, "Atualizar robot.txt", "implemented", "technical"),
 
-      task(7, "Revisão AI visibility", "in_progress", "research"),
+      task(7, "Revisão AI visibility", "implemented", "research"),
       task(7, "Planeamento nova página Escoliose", "implemented", "content"),
       task(7, "Planeamento otimização página testimonials", "pending_review", "content"),
       task(7, "1 blog post", "pending_review", "content"),
@@ -308,10 +308,10 @@ const CLIENTS = [
       task(8, "Planeamento novos textos páginas de serviços", "in_progress", "content"),
       task(8, "1 GBP post", "in_progress", "local"),
 
-      // ─ Month 3 ───────────────────────────────────────────────────────────
-      task(9, "Otimizar páginas com keywords posições 5-20", "in_progress", "on-page"),
-      task(9, "Adicionar FAQ schema nas páginas de serviço", "in_progress", "technical"),
-      task(9, "Melhorar CTR (titles + metas)", "in_progress", "on-page"),
+      // ─ Month 3 — all GRAY in FigJam → all not_started ───────────────────
+      task(9, "Otimizar páginas com keywords posições 5-20", "not_started", "on-page"),
+      task(9, "Adicionar FAQ schema nas páginas de serviço", "not_started", "technical"),
+      task(9, "Melhorar CTR (titles + metas)", "not_started", "on-page"),
       task(9, "1 blog post", "not_started", "content"),
       task(9, "1 GBP post", "not_started", "local"),
 
@@ -320,8 +320,8 @@ const CLIENTS = [
       task(10, "1 blog post", "not_started", "content"),
       task(10, "1 GBP post", "not_started", "local"),
 
-      task(11, "Criar backlinks locais", "in_progress", "off-page"),
-      task(11, "Revisão mensal AI visibility", "in_progress", "research"),
+      task(11, "Criar backlinks locais", "not_started", "off-page"),
+      task(11, "Revisão mensal AI visibility", "not_started", "research"),
       task(11, "Criar citations locais", "not_started", "off-page"),
 
       task(12, "Reporting trimestral", "not_started", "research"),
@@ -363,7 +363,7 @@ const CLIENTS = [
       task(4, "Redirects para corrigir páginas duplicadas", "implemented", "technical"),
 
       // ─ Month 2 — Week 8 current ──────────────────────────────────────────
-      task(5, "Auditoria dos 3 GBP", "in_progress", "local"),
+      task(5, "Auditoria dos 3 GBP", "implemented", "local"),
       task(5, "Testar keywords que ativam o Local Pack", "implemented", "research"),
       task(5, "Adicionar blog ao menu principal", "implemented", "on-page"),
       task(5, "1 blog post (PT + EN)", "implemented", "content"),
@@ -442,7 +442,7 @@ const CLIENTS = [
       task(4, "H1 multiple", "in_progress", "technical"),
 
       // ─ Month 2 — Week 8 current ──────────────────────────────────────────
-      task(5, "Melhorar Internal Linking", "in_progress", "on-page"),
+      task(5, "Melhorar Internal Linking", "implemented", "on-page"),
       task(5, "GBP Audit", "implemented", "local"),
       task(5, "1 Blog post", "implemented", "content"),
 
@@ -451,7 +451,7 @@ const CLIENTS = [
       task(6, "Report mensal Maio", "implemented", "research"),
       task(6, "Revisão das versões de idioma (/es, /pt-BR, /fr)", "in_progress", "technical"),
 
-      task(7, "Eliminar / ocultar blog posts duplicados e de teste", "in_progress", "content"),
+      task(7, "Eliminar / ocultar blog posts duplicados e de teste", "implemented", "content"),
       task(7, "Otimizar conteúdo já existente no blog", "implemented", "content"),
       task(7, "1 Blog post", "implemented", "content"),
       task(7, "1 GBP post", "implemented", "local"),
