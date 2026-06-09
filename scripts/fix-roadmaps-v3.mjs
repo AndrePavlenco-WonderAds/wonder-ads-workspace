@@ -114,9 +114,11 @@ const CLIENTS = [
       task(7, "Otimização GBP (ronda 2)", "implemented", "local"),
       task(7, 'Adicionar "Longevidade" ao menu', "implemented", "on-page"),
 
-      // Week 8 — 2 GREEN + 3 GRAY (FAQ Schema is GRAY, not violet)
-      task(8, "Integração de keywords no conteúdo", "implemented", "on-page"),
-      task(8, "Criação das respostas para as FAQs de serviço pt 1", "implemented", "content"),
+      // Week 8 — all 5 GRAY → not_started. (Y user-chips on the first
+      // two tasks tricked me into reading them as green; the box body
+      // is the same gray as the bottom three.)
+      task(8, "Integração de keywords no conteúdo", "not_started", "on-page"),
+      task(8, "Criação das respostas para as FAQs de serviço pt 1", "not_started", "content"),
       task(8, "Adicionar FAQ Schema nas páginas de serviço otimizadas", "not_started", "technical"),
       task(8, "1 blog post (EN + PT)", "not_started", "content"),
       task(8, "1 post GBP", "not_started", "local"),
