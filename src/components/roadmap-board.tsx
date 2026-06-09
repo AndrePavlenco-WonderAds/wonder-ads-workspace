@@ -65,9 +65,13 @@ const STATUS_META: Record<
     chipClass: "border-amber-400/40 bg-amber-500/15 text-amber-100",
   },
   pending_review: {
+    // v74.23.3: shifted from sky-blue to violet so the chip leans
+    // closer to the FigJam VIOLET swatch (purple-blue) instead of
+    // reading as straight cyan. Same intensity, just shifted up the
+    // hue wheel.
     label: "Pending client review",
-    bgClass: "bg-sky-500/15 border border-sky-400/40 text-white",
-    chipClass: "border-sky-400/40 bg-sky-500/15 text-sky-100",
+    bgClass: "bg-violet-500/15 border border-violet-400/45 text-white",
+    chipClass: "border-violet-400/40 bg-violet-500/20 text-violet-100",
   },
   implemented: {
     label: "Implemented",
@@ -391,6 +395,19 @@ export function RoadmapBoard({
             className="border-0 bg-transparent p-0 text-[11px] text-white outline-none [color-scheme:dark]"
           />
         </label>
+        {roadmap.onboardingDate && (
+          <span
+            className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.02] px-2.5 py-1 text-[10px] text-white/55"
+            title="When the client originally onboarded with the agency — pinned even after the roadmap is reset"
+          >
+            <span className="text-[9px] uppercase tracking-[0.13em] text-white/40">
+              Onboarded
+            </span>
+            <span className="font-medium text-white/75">
+              {formatDate(roadmap.onboardingDate)}
+            </span>
+          </span>
+        )}
         <span
           className={
             week >= 1 && week <= 12

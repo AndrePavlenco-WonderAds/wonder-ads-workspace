@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.23.3",
+    date: "2026-06-09",
+    title: "Roadmap onboardingDate field + violet pending-review tint + B-life reset to a Week-6 startDate",
+    highlights: [
+      "**📅 New `onboardingDate` field on Roadmap.** Distinct from `startDate`: when a roadmap is reset / regenerated partway through the engagement, `startDate` moves to the Monday of the new Week 1 while `onboardingDate` stays pinned to the original agency-engagement date. Surfaced as a small muted chip on the board top bar — `Onboarded · 09/02/2026` — so the consultant always has the historical anchor even after a reset. Schema-normalised in `roadmap-store.ts` so older roadmaps without it just don't render the chip; nothing breaks.",
+      "**♻️ B-life startDate reset to 2026-05-04** (the Monday 5 weeks before 2026-06-09). With the existing week formula `floor((now - start) / 7) + 1` that puts the board's current week on Week 6 — which is where B-life actually is. The original 2026-02-09 onboarding date is preserved on the new `onboardingDate` field so the chip still reads `Onboarded · 09/02/2026`. Old roadmap (the one with `startDate: 2026-02-09`) was auto-archived to `roadmap:archive:b-life` by the idempotent seed script before the overwrite, so it's recoverable if needed.",
+      "**🟪 Pending-review chip shifted from sky to violet.** v74.23.2 flipped the colours so YELLOW = ongoing and BLUE = pending review — correct mapping, but the sky-blue chip read as straight cyan, too far from the FigJam VIOLET. v74.23.3 keeps the same hue family but slides it up to `violet-500/15` (background) + `violet-400/45` (border) + `violet-100` (chip text), with chip background bumped to `/20` so the contrast against the dark workspace stays good. Closer to the FigJam swatch without losing the 'pending = cool colour' mental model.",
+    ],
+  },
+  {
     version: "74.23.2",
     date: "2026-06-09",
     title: "Roadmap board UX — status colours match FigJam, current week/month pop, SEO diagnosis collapsed, falling-behind warning breaks down the why",

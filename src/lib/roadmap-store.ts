@@ -64,8 +64,18 @@ export type RoadmapSourcePhoto = {
 export type Roadmap = {
   id: string;
   clientSlug: string;
-  /** ISO date (YYYY-MM-DD) — Monday of week 1. */
+  /** ISO date (YYYY-MM-DD) — Monday of week 1 of THIS roadmap cycle.
+   *  Distinct from `onboardingDate`: when a roadmap is regenerated /
+   *  reset partway through the engagement, `startDate` moves to the
+   *  Monday of the new Week 1 while `onboardingDate` stays pinned to
+   *  the original agency-engagement date. */
   startDate: string;
+  /** ISO date (YYYY-MM-DD) — when the client originally onboarded with
+   *  the agency. Surfaced as a small "Onboarded: DD/MM/YYYY" chip on
+   *  the board so the consultant always has the historical anchor
+   *  even after the roadmap has been reset/regenerated. Optional;
+   *  older roadmaps without it just don't show the chip. */
+  onboardingDate?: string;
   /** Epoch ms — when this roadmap was first generated. */
   generatedAt: number;
   tasks: RoadmapTask[];
@@ -345,6 +355,11 @@ export function normaliseRoadmap(input: unknown, clientSlug: string): Roadmap {
       /^\d{4}-\d{2}-\d{2}$/.test(raw.startDate)
         ? raw.startDate
         : nextMondayISO(),
+    onboardingDate:
+      typeof raw.onboardingDate === "string" &&
+      /^\d{4}-\d{2}-\d{2}$/.test(raw.onboardingDate)
+        ? raw.onboardingDate
+        : undefined,
     generatedAt:
       typeof raw.generatedAt === "number" ? raw.generatedAt : now,
     tasks: Array.isArray(raw.tasks)

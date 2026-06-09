@@ -23,7 +23,14 @@
 import { kv } from "@vercel/kv";
 
 const SLUG = "b-life";
-const START_DATE = "2026-02-09"; // Monday — matches FigJam
+// v74.23.3: B-life is currently in Week 6 (Andre confirmed). With today
+// = 2026-06-09 (Tue) and the week formula `floor((now - start) / 7) +
+// 1`, Week 1 needs to start on the Monday 5 weeks ago → 2026-05-04.
+// The roadmap was reset on that Monday; the original agency-engagement
+// date stays pinned via `onboardingDate` below so the chip on the board
+// still reads "Onboarded 09/02/2026".
+const START_DATE = "2026-05-04";
+const ONBOARDING_DATE = "2026-02-09";
 const NOW = Date.now();
 const KEY = `roadmap:current:${SLUG}`;
 const ARCHIVE_KEY = `roadmap:archive:${SLUG}`;
@@ -254,6 +261,7 @@ const ROADMAP = {
   id: `${Date.now().toString(36)}-seed`,
   clientSlug: SLUG,
   startDate: START_DATE,
+  onboardingDate: ONBOARDING_DATE,
   generatedAt: NOW,
   tasks: TASKS,
   dismissedWarnings: [],
@@ -287,7 +295,8 @@ async function main() {
   console.log(`✓ wrote ${KEY}`);
   console.log(`  ${TASKS.length} tasks across weeks 1-8`);
   console.log(`  status mix:`, byStatus);
-  console.log(`  startDate: ${START_DATE}`);
+  console.log(`  startDate:       ${START_DATE}  (Week 1 = this Monday)`);
+  console.log(`  onboardingDate:  ${ONBOARDING_DATE}  (original engagement)`);
 }
 
 main().catch((err) => {
