@@ -2,7 +2,7 @@
 // Auth-gated by the admin cookie.
 
 import { NextResponse } from "next/server";
-import { isAdminUnlocked } from "@/lib/admin-auth";
+import { isCurrentUserAdmin } from "@/lib/auth/server";
 import {
   addEmployee,
   EMPLOYEE_DEPARTMENTS,
@@ -11,7 +11,7 @@ import {
 export const runtime = "nodejs";
 
 export async function POST(req: Request) {
-  if (!(await isAdminUnlocked())) {
+  if (!(await isCurrentUserAdmin())) {
     return NextResponse.json({ error: "Not authorised" }, { status: 401 });
   }
 

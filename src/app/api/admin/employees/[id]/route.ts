@@ -2,7 +2,7 @@
 // Auth-gated by the admin cookie.
 
 import { NextResponse } from "next/server";
-import { isAdminUnlocked } from "@/lib/admin-auth";
+import { isCurrentUserAdmin } from "@/lib/auth/server";
 import {
   saveEmployeeRecord,
   deleteEmployee,
@@ -24,7 +24,7 @@ export async function PUT(
   req: Request,
   ctx: { params: Promise<{ id: string }> },
 ) {
-  if (!(await isAdminUnlocked())) {
+  if (!(await isCurrentUserAdmin())) {
     return NextResponse.json({ error: "Not authorised" }, { status: 401 });
   }
 
@@ -145,7 +145,7 @@ export async function DELETE(
   _req: Request,
   ctx: { params: Promise<{ id: string }> },
 ) {
-  if (!(await isAdminUnlocked())) {
+  if (!(await isCurrentUserAdmin())) {
     return NextResponse.json({ error: "Not authorised" }, { status: 401 });
   }
   const { id } = await ctx.params;

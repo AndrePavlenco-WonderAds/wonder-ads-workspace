@@ -7,8 +7,7 @@
 // it fires after the API returns a 200.
 
 import { useCallback, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
-import { ArrowDown, ArrowUp, ArrowUpDown, LogOut, Loader2 } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import { AdminClientRow } from "./admin-client-row";
 import type {
   AdminClientRecord,
@@ -53,8 +52,6 @@ type SortColumn =
 type SortState = { col: SortColumn; dir: "asc" | "desc" } | null;
 
 export function AdminPanel({ clients }: { clients: AdminClientView[] }) {
-  const router = useRouter();
-  const [loggingOut, setLoggingOut] = useState(false);
 
   // Per-(slug, dept) record state — seeded from server props, updated
   // every time a row's Save returns. Drives both the rollup tiles AND
@@ -153,40 +150,17 @@ export function AdminPanel({ clients }: { clients: AdminClientView[] }) {
     });
   }, [clients, records, sort]);
 
-  async function logout() {
-    setLoggingOut(true);
-    try {
-      await fetch("/api/admin-auth", { method: "DELETE" });
-      router.refresh();
-    } finally {
-      setLoggingOut(false);
-    }
-  }
-
   return (
     <div className="animate-fade-up mt-2">
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">
-            <span className="brand-gradient-text">Projects</span>
-          </h1>
-          <p className="mt-1.5 text-[12px] text-white/45">
-            Every client across every department — edit independently per row.
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={logout}
-          disabled={loggingOut}
-          className="inline-flex items-center gap-1.5 rounded-md border border-white/15 bg-white/[0.04] px-3 py-1.5 text-[11.5px] font-medium text-white/80 transition hover:border-white/30 hover:bg-white/[0.08] hover:text-white disabled:opacity-50"
-        >
-          {loggingOut ? (
-            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-          ) : (
-            <LogOut className="h-3.5 w-3.5" />
-          )}
-          Log out
-        </button>
+      <header>
+        <h1 className="text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">
+          <span className="brand-gradient-text">Projects</span>
+        </h1>
+        <p className="mt-1.5 text-[12px] text-white/45">
+          Every client across every department — edit independently per row.
+          {/* v74.23: workspace logout lives on the header UserChip — no
+              per-page button anymore. */}
+        </p>
       </header>
 
       {/* Roll-up tiles. MRR tile glows emerald when populated so a

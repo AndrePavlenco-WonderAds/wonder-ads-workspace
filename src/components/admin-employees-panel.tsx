@@ -7,9 +7,7 @@
 // active-client count, computed server-side from the projects roster.
 
 import { useCallback, useMemo, useState, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
 import {
-  LogOut,
   Loader2,
   ArrowLeft,
   UserPlus,
@@ -29,8 +27,6 @@ export function AdminEmployeesPanel({
   /** Keyed by employee name (matches admin client `consultants[]`). */
   portfolios: Record<string, EmployeePortfolio>;
 }) {
-  const router = useRouter();
-  const [loggingOut, setLoggingOut] = useState(false);
   const [records, setRecords] = useState<Map<string, AdminEmployeeRecord>>(
     () => {
       const m = new Map<string, AdminEmployeeRecord>();
@@ -126,16 +122,6 @@ export function AdminEmployeesPanel({
     return total;
   }, [records, order, portfolios]);
 
-  async function logout() {
-    setLoggingOut(true);
-    try {
-      await fetch("/api/admin-auth", { method: "DELETE" });
-      router.refresh();
-    } finally {
-      setLoggingOut(false);
-    }
-  }
-
   return (
     <div className="animate-fade-up mt-2">
       <Link
@@ -163,19 +149,6 @@ export function AdminEmployeesPanel({
           >
             {showAdd ? <X className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
             {showAdd ? "Cancel" : "Add employee"}
-          </button>
-          <button
-            type="button"
-            onClick={logout}
-            disabled={loggingOut}
-            className="inline-flex items-center gap-1.5 rounded-md border border-white/15 bg-white/[0.04] px-3 py-1.5 text-[11.5px] font-medium text-white/80 transition hover:border-white/30 hover:bg-white/[0.08] hover:text-white disabled:opacity-50"
-          >
-            {loggingOut ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <LogOut className="h-3.5 w-3.5" />
-            )}
-            Log out
           </button>
         </div>
       </header>

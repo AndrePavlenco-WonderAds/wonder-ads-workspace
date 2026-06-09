@@ -1,36 +1,36 @@
 import type { ReactNode } from "react";
-import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
-import { AdminGate } from "@/components/admin-gate";
-import { isAdminUnlocked } from "@/lib/admin-auth";
+import { AccessDenied } from "@/components/access-denied";
+import { getCurrentEmployee } from "@/lib/auth/server";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 /**
- * Admin section layout — runs the gate once for every page under
- * `/admin/*` so the children render only when the superadmin cookie
- * is valid. Eliminates per-page `if (!unlocked) return <Gate />`
- * boilerplate AND guarantees the gate can't be bypassed by hitting a
- * subpage URL directly.
+ * Admin section layout — guards every page under `/admin/*` against
+ * non-SuperAdmin users. As of v74.23 there's no password challenge:
+ * the gate is decided by the username on the workspace session cookie
+ * (set at /login). Only `andre`, `alex`, and `alice` have `isAdmin:
+ * true` in credentials.ts — everyone else gets the friendly Access
+ * Denied screen instead of the old password form.
  */
 export default async function AdminLayout({
   children,
 }: {
   children: ReactNode;
 }) {
-  if (!(await isAdminUnlocked())) {
+  const employee = await getCurrentEmployee();
+  // Middleware ensures `employee` is non-null by the time we get here —
+  // a missing session would have already been redirected to /login. If
+  // we somehow reach this with no session, treat it as denied too.
+  if (!employee || !employee.isAdmin) {
     return (
       <PageShell>
-        <Link
-          href="/"
-          className="animate-fade-up group inline-flex w-fit items-center gap-2 text-sm text-white/55 transition hover:text-white"
-        >
-          <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
-          Back to workspace
-        </Link>
-        <AdminGate />
+        <AccessDenied
+          title="SuperAdmin only"
+          description="This area is reserved for the SuperAdmin Control Suite (Andre, Alex, Alice). Consultants can't open /admin — if you need access, ping Andre directly."
+          username={employee?.username ?? null}
+        />
       </PageShell>
     );
   }

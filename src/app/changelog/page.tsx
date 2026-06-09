@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { ArrowLeft, Sparkles } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
-import { ChangelogGate } from "@/components/changelog-gate";
+import { AccessDenied } from "@/components/access-denied";
 import { CHANGELOG, type ChangelogEntry } from "@/lib/changelog";
-import { isChangelogUnlocked } from "@/lib/changelog-auth";
+import { getCurrentEmployee } from "@/lib/auth/server";
 
 export const metadata = {
   title: "Changelog — Wonder Ads Workspace",
@@ -22,11 +22,20 @@ function BackToWorkspace() {
 }
 
 export default async function ChangelogPage() {
-  if (!(await isChangelogUnlocked())) {
+  // v74.23: Changelog access is now tied to the workspace SuperAdmin
+  // flag — only andre/alex/alice see it. Other logged-in users hit
+  // Access Denied (middleware already kicked anyone unauthed out at
+  // the door). The old `superadmin` password gate is gone.
+  const employee = await getCurrentEmployee();
+  if (!employee || !employee.isAdmin) {
     return (
       <PageShell>
         <BackToWorkspace />
-        <ChangelogGate />
+        <AccessDenied
+          title="SuperAdmin only"
+          description="The changelog is reserved for the SuperAdmin Control Suite (Andre, Alex, Alice). Consultants can't open it — if you need to see the release notes, ping Andre directly."
+          username={employee?.username ?? null}
+        />
       </PageShell>
     );
   }

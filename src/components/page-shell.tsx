@@ -4,6 +4,7 @@ import { ArrowLeft, ShieldCheck } from "lucide-react";
 import { BackgroundDecor } from "./background-decor";
 import { WonderAdsLogo } from "./wonder-ads-logo";
 import { HeaderClock } from "./header-clock";
+import { UserChip } from "./user-chip";
 import { getCurrentVersion } from "@/lib/changelog";
 
 export function PageShell({
@@ -13,6 +14,7 @@ export function PageShell({
   backHref,
   backLabel,
   transparentHeader = false,
+  hideFooter = false,
 }: {
   children: ReactNode;
   /** Full-bleed layout — used by project pages so the brief + files split
@@ -33,6 +35,10 @@ export function PageShell({
    *  chooser. Header stays non-sticky in this mode (the page is short
    *  and the sticky strip looked floating/unfinished). */
   transparentHeader?: boolean;
+  /** Drop the footer (© Wonder Ads + SuperAdmin chip + workspace.v##).
+   *  Used by /login so the gate page reads as a clean entry point
+   *  rather than a doc with a busy footer. */
+  hideFooter?: boolean;
 }) {
   const version = getCurrentVersion();
   const widthClass = wide ? "max-w-none" : "max-w-7xl";
@@ -60,8 +66,13 @@ export function PageShell({
             </Link>
           )}
         </div>
-        <div className="hidden sm:block">
-          <HeaderClock sessionTimer={sessionTimer} />
+        <div className="flex items-center gap-3">
+          <div className="hidden sm:block">
+            <HeaderClock sessionTimer={sessionTimer} />
+          </div>
+          {/* Identity + session controls — server component, renders
+              null when there's no valid session (e.g. on /login). */}
+          <UserChip />
         </div>
       </header>
 
@@ -70,6 +81,7 @@ export function PageShell({
       >
         {children}
 
+        {!hideFooter && (
         <footer className="mt-16 flex flex-wrap items-center justify-between gap-x-5 gap-y-2 text-xs text-white/40 sm:mt-20">
           <span>© {new Date().getFullYear()} Wonder Ads. All Rights Reserved.</span>
           <Link
@@ -91,6 +103,7 @@ export function PageShell({
             workspace.v{version}
           </Link>
         </footer>
+        )}
       </main>
     </div>
   );

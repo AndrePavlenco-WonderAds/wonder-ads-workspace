@@ -1,14 +1,14 @@
-"use client";
-
 // Post-gate chooser inside the SuperAdmin Control Suite. Two big
 // blocks — Projects and Employees — surface the two manageable
 // rosters in the suite. Each block carries a live count + a brand
 // gradient border that pulses on hover.
+//
+// v74.23: the separate "Log out" button is gone — sign-out lives on
+// the workspace UserChip in the header now (one logout point for the
+// whole app, not three).
 
 import Link from "next/link";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { FolderKanban, Users, ArrowRight, LogOut, Loader2 } from "lucide-react";
+import { FolderKanban, Users, ArrowRight } from "lucide-react";
 
 type ChoiceBlock = {
   href: string;
@@ -26,8 +26,6 @@ export function AdminLanding({
   projectsCount: number;
   employeesCount: number;
 }) {
-  const router = useRouter();
-  const [loggingOut, setLoggingOut] = useState(false);
 
   const blocks: ChoiceBlock[] = [
     {
@@ -50,40 +48,15 @@ export function AdminLanding({
     },
   ];
 
-  async function logout() {
-    setLoggingOut(true);
-    try {
-      await fetch("/api/admin-auth", { method: "DELETE" });
-      router.refresh();
-    } finally {
-      setLoggingOut(false);
-    }
-  }
-
   return (
     <div className="animate-fade-up mt-2">
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">
-            <span className="brand-gradient-text">SuperAdmin Control Suite</span>
-          </h1>
-          <p className="mt-1.5 text-[12px] text-white/45">
-            Choose what to manage.
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={logout}
-          disabled={loggingOut}
-          className="inline-flex items-center gap-1.5 rounded-md border border-white/15 bg-white/[0.04] px-3 py-1.5 text-[11.5px] font-medium text-white/80 transition hover:border-white/30 hover:bg-white/[0.08] hover:text-white disabled:opacity-50"
-        >
-          {loggingOut ? (
-            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-          ) : (
-            <LogOut className="h-3.5 w-3.5" />
-          )}
-          Log out
-        </button>
+      <header>
+        <h1 className="text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">
+          <span className="brand-gradient-text">SuperAdmin Control Suite</span>
+        </h1>
+        <p className="mt-1.5 text-[12px] text-white/45">
+          Choose what to manage.
+        </p>
       </header>
 
       <section

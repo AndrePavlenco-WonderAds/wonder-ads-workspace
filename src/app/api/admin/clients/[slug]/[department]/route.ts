@@ -4,7 +4,7 @@
 // their per-department budget rows.
 
 import { NextResponse } from "next/server";
-import { isAdminUnlocked } from "@/lib/admin-auth";
+import { isCurrentUserAdmin } from "@/lib/auth/server";
 import {
   saveAdminRecord,
   BILLING_CADENCES,
@@ -24,7 +24,7 @@ export async function PUT(
   req: Request,
   ctx: { params: Promise<{ slug: string; department: string }> },
 ) {
-  if (!(await isAdminUnlocked())) {
+  if (!(await isCurrentUserAdmin())) {
     return NextResponse.json({ error: "Not authorised" }, { status: 401 });
   }
 
