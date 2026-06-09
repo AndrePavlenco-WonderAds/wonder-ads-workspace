@@ -1,20 +1,22 @@
 // One-off seed for B-life's roadmap — Month 1 + Month 2 (weeks 1-8).
 //
-// Pulled from Andre's hand-drawn FigJam roadmap (2026-06-09). Status
-// colours map onto the workspace's 4-state model as:
+// Re-transcribed 2026-06-09 from Andre's FigJam (close-up screenshots).
+// The first pass got the GREEN tasks wrong — I had them as `in_progress`
+// when they should have been `implemented` (the GREEN colour means DONE
+// in the FigJam legend, not "ongoing"). This file is the corrected mix.
+//
+// Status colour → workspace status:
 //
 //   GRAY    Task Not Started               → "not_started"
 //   YELLOW  Task Ongoing                   → "in_progress"
 //   VIOLET  Task Pending Clients Review    → "pending_review"
 //   GREEN   Task Done                      → "implemented"
 //
-// (The BLUE "Tier 2 client task" + ORANGE "Pending André/José decision"
-//  legend colours don't apply here — B-life is Tier 1 and nothing in
-//  Months 1-2 is internally-blocked.)
+// (Note: there are ZERO YELLOW tasks in months 1-2 of the corrected
+//  FigJam — everything is either done, awaiting client review, or not
+//  yet started.)
 //
-// Run from the repo root with the local .env.local loaded — it carries
-// the production KV REST creds, so writes go to the same cluster prod
-// reads from:
+// Run from the repo root with the local .env.local loaded:
 //
 //   node --env-file=.env.local scripts/seed-b-life-roadmap.mjs
 
@@ -26,7 +28,6 @@ const NOW = Date.now();
 const KEY = `roadmap:current:${SLUG}`;
 const ARCHIVE_KEY = `roadmap:archive:${SLUG}`;
 
-/** Build a task with stable id + timestamps. */
 function task(week, order, title, status, pillar, description = undefined) {
   return {
     id: `t_${week}_${order}_${Math.random().toString(36).slice(2, 7)}`,
@@ -43,24 +44,24 @@ function task(week, order, title, status, pillar, description = undefined) {
 
 const TASKS = [
   // ─── Month 1 ──────────────────────────────────────────────────────
-  // Week 1
-  task(1, 0, "Audit e redirect URLs 404", "in_progress", "technical"),
+  // Week 1 — all DONE (9 tasks, all GREEN in FigJam)
+  task(1, 0, "Audit e redirect URLs 404", "implemented", "technical"),
   task(
     1,
     1,
     "Landing Page para Maristela — Dia das Mães",
-    "in_progress",
+    "implemented",
     "content",
   ),
   task(
     1,
     2,
-    'Auditoria mensal das páginas "Descobertas — não indexadas" para identificar bloqueios',
-    "in_progress",
+    'Auditoria mensal das 14 páginas "Descobertas — não indexadas" para identificar bloqueios',
+    "implemented",
     "technical",
   ),
-  task(1, 3, "Blog Roadmap — expandido", "in_progress", "content"),
-  task(1, 4, "GMB Audit", "in_progress", "local"),
+  task(1, 3, "Blog Roadmap — expandido", "implemented", "content"),
+  task(1, 4, "GMB Audit", "implemented", "local"),
   task(1, 5, "Revisão e ajuste de sitemap", "implemented", "technical"),
   task(1, 6, "Revisão e ajuste de robots.txt", "implemented", "technical"),
   task(
@@ -78,113 +79,114 @@ const TASKS = [
     "content",
   ),
 
-  // Week 2
+  // Week 2 — 4 done + 1 pending review (GMB Post)
   task(
     2,
     0,
     "Mapeamento semântico (LSI) e termos relacionados a peptídeos",
-    "in_progress",
+    "implemented",
     "research",
   ),
   task(
     2,
     1,
     "Ajuste de LCP Mobile (Core Web Vitals) nas 18 URLs críticas — compressão e prioridade",
-    "in_progress",
+    "implemented",
     "technical",
   ),
   task(
     2,
     2,
     "Análise de necessidade e refresh de Meta Descriptions das Top 5 páginas para aumento de CTR",
-    "in_progress",
+    "implemented",
     "on-page",
   ),
   task(2, 3, "Blog Article", "implemented", "content"),
   task(2, 4, "GMB Post", "pending_review", "local"),
 
-  // Week 3
+  // Week 3 — 4 done + 1 pending review (GMB Post)
   task(
     3,
     0,
     "Levantamento de intenção de busca local (Cascais / Lisboa) para termos transacionais",
-    "pending_review",
+    "implemented",
     "research",
   ),
   task(
     3,
     1,
     "Correção das 7 cadeias de redirecionamento (Redirect Chains)",
-    "pending_review",
+    "implemented",
     "technical",
   ),
   task(3, 2, "Blog Article", "implemented", "content"),
   task(3, 3, "GMB Post", "pending_review", "local"),
-  task(3, 4, "Blog Article — Publicação", "pending_review", "content"),
+  task(3, 4, "Blog Article — Publicação", "implemented", "content"),
 
-  // Week 4
+  // Week 4 — 3 done + 2 pending review (GMB Post + FAQ Schema)
   task(
     4,
     0,
     "Análise de Keyword Gap vs. concorrentes",
-    "pending_review",
+    "implemented",
     "research",
   ),
-  task(4, 1, "Blog Article", "pending_review", "content"),
+  task(4, 1, "Blog Article", "implemented", "content"),
+  task(4, 2, "GMB Post", "pending_review", "local"),
   task(
     4,
-    2,
+    3,
     "Implementação de FAQ Schema na página de Full Body Scan",
     "pending_review",
     "technical",
   ),
   task(
     4,
-    3,
+    4,
     "Keyword research para topic cluster — Full Body Scan (SEMRush, PAA, fóruns)",
-    "pending_review",
+    "implemented",
     "research",
   ),
 
   // ─── Month 2 ──────────────────────────────────────────────────────
-  // Week 5
+  // Week 5 — 3 done + 2 pending review (Bio Page Dra. Joana + GMB Post)
   task(
     5,
     0,
     "Submissão de novo XML Sitemap e validação de correções no GSC",
-    "in_progress",
+    "implemented",
     "technical",
   ),
   task(
     5,
     1,
     'Levantamento de perguntas de pacientes sobre "Biomarcadores e Sangue"',
-    "in_progress",
+    "implemented",
     "research",
   ),
   task(
     5,
     2,
     "Redação e estruturação da Bio Page da Dra. Joana Costa (Experiência, Clínica)",
-    "in_progress",
+    "pending_review",
     "content",
   ),
-  task(5, 3, "Blog Article", "in_progress", "content"),
-  task(5, 4, "GMB Post", "in_progress", "local"),
+  task(5, 3, "Blog Article", "implemented", "content"),
+  task(5, 4, "GMB Post", "pending_review", "local"),
 
-  // Week 6
+  // Week 6 — 2 done + 1 pending review + 2 not started
   task(
     6,
     0,
     'Mapeamento de entidades médicas (YMYL) necessárias para rankear em "Medicina Preventiva"',
-    "in_progress",
+    "implemented",
     "content",
   ),
   task(
     6,
     1,
     "Redação e edição da Bio Page de membro da clínica",
-    "in_progress",
+    "pending_review",
     "content",
   ),
   task(6, 2, "Blog Article", "not_started", "content"),
@@ -193,11 +195,11 @@ const TASKS = [
     6,
     4,
     "Implementação de Schema Physician e MedicalOrganization",
-    "not_started",
+    "implemented",
     "technical",
   ),
 
-  // Week 7
+  // Week 7 — all NOT STARTED (4 tasks, all GRAY in FigJam)
   task(
     7,
     0,
@@ -215,7 +217,7 @@ const TASKS = [
   task(7, 2, "Blog Article", "not_started", "content"),
   task(7, 3, "GMB Post", "not_started", "local"),
 
-  // Week 8
+  // Week 8 — all NOT STARTED (4 tasks, all GRAY in FigJam)
   task(
     8,
     0,
@@ -265,9 +267,6 @@ async function main() {
     );
     process.exit(1);
   }
-  // Archive whatever's currently at roadmap:current:b-life so we never
-  // destroy work the consultant might already have entered. If there's
-  // nothing yet, the archive write is a no-op.
   const existing = await kv.get(KEY);
   if (existing) {
     const archive = (await kv.get(ARCHIVE_KEY)) ?? [];
