@@ -113,6 +113,7 @@ export default async function PublicReviewPage({
         allowArchive={true}
         commentAuthorRole="client"
         commentLang={lang}
+        tabsTheme="light"
       />
 
       {/* Footer */}

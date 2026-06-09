@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.22.1",
+    date: "2026-06-09",
+    title: "Pending / Archive tab toggle now actually visible on the client-facing review page",
+    highlights: [
+      "**👁 Bug: the Pending ↔ Archive toggle was invisible on the public client Pending Review page.** The toggle was styled for the dark workspace shell — `border-white/15 bg-white/[0.04]` on the container, `text-white/65` on the inactive tab — which renders as white-on-white against the client page's pure-white background. Clients couldn't see there was anything to click; the Archive tab might as well not have existed for them.",
+      "**🎨 New `tabsTheme` prop on `<ReviewTable>` (default `dark`).** Internal `/seo/[slug]/review` page is unchanged — it still uses the white-on-translucent treatment that reads on the dark workspace. The public `/[slug]/pendingreview` page now passes `tabsTheme=\"light\"` and gets a brand-tinted pill: violet→white→fuchsia gradient background, `border-violet-200` + soft `ring-violet-100/60` halo, inactive tabs rendered in `text-violet-900/70` over the wash (with a `hover:bg-white hover:shadow-sm` lift). Active tab keeps the existing brand-gradient pill since white-on-gradient reads against either background.",
+      "**📐 Slightly larger to feel like a deliberate UI element.** Padding bumped `px-3 py-1` → `px-3.5 py-1.5`, text `[11.5px]` → `[12px]`, icon `h-3 w-3` → `h-3.5 w-3.5`, shadow `-6px` → `-8px` blur on the active glow. Count chip flipped to `tabular-nums` so the digits don't jitter when the count crosses 9→10. Net effect: the toggle now reads as a proper control the moment a client lands on the page, instead of as a phantom element only consultants knew was there.",
+    ],
+  },
+  {
     version: "74.22",
     date: "2026-06-09",
     title: "Google-Docs-style comment threads on every Pending Review row + every public doc page",

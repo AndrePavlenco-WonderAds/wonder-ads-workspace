@@ -77,6 +77,13 @@ export function ReviewTable({
    *  page leaves this default ("en"); the public page passes the
    *  result of pickLang(slug). */
   commentLang = "en",
+  /** Color treatment for the Pending / Archive tab switcher. The
+   *  internal review page sits on the dark workspace shell where
+   *  `dark` (white-on-translucent) reads well; the public client
+   *  page sits on a pure-white background where the dark styling is
+   *  effectively invisible — pass `light` there for a brand-tinted
+   *  pill that actually pops. */
+  tabsTheme = "dark",
 }: {
   clientSlug: string;
   initialItems: ReviewItem[];
@@ -88,6 +95,7 @@ export function ReviewTable({
   commentAuthorRole?: "client" | "consultant";
   commentAuthorName?: string | null;
   commentLang?: PublicLang;
+  tabsTheme?: "dark" | "light";
 }) {
   const [items, setItems] = useState<ReviewItem[]>(initialItems);
   const [savingIds, setSavingIds] = useState<Set<string>>(new Set());
@@ -345,7 +353,14 @@ export function ReviewTable({
           <div
             role="tablist"
             aria-label="Review tabs"
-            className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-white/[0.04] p-1"
+            className={
+              tabsTheme === "light"
+                ? // Brand-tinted pill against a white page background.
+                  // The subtle violet→fuchsia wash + visible border give
+                  // the toggle weight without competing with the table.
+                  "inline-flex items-center gap-1 rounded-full border border-violet-200 bg-gradient-to-r from-violet-50 via-white to-fuchsia-50/70 p-1 shadow-sm ring-1 ring-violet-100/60"
+                : "inline-flex items-center gap-1 rounded-full border border-white/15 bg-white/[0.04] p-1"
+            }
           >
             <TabButton
               active={tab === "pending"}
@@ -353,6 +368,7 @@ export function ReviewTable({
               Icon={Inbox}
               label="Pending"
               count={pendingCount}
+              theme={tabsTheme}
             />
             <TabButton
               active={tab === "archive"}
@@ -360,6 +376,7 @@ export function ReviewTable({
               Icon={Archive}
               label="Archive"
               count={archivedCount}
+              theme={tabsTheme}
             />
           </div>
           {archiveError && (
@@ -657,32 +674,46 @@ function TabButton({
   Icon,
   label,
   count,
+  theme,
 }: {
   active: boolean;
   onClick: () => void;
   Icon: typeof Inbox;
   label: string;
   count: number;
+  theme: "dark" | "light";
 }) {
+  // Active state is identical on both themes — brand-gradient pill with
+  // white text reads cleanly against either background. Only the
+  // INACTIVE state has to flip: white-on-translucent for the dark
+  // internal shell vs. dark-violet-on-white for the public client page,
+  // where the previous dark-theme styling rendered as invisible
+  // white-on-white.
+  const inactiveBtn =
+    theme === "light"
+      ? "text-violet-900/70 hover:bg-white hover:text-violet-900 hover:shadow-sm"
+      : "text-white/65 hover:bg-white/[0.06] hover:text-white";
+  const inactiveCount =
+    theme === "light"
+      ? "bg-violet-100 text-violet-800"
+      : "bg-white/10 text-white/70";
   return (
     <button
       type="button"
       onClick={onClick}
       role="tab"
       aria-selected={active}
-      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11.5px] font-semibold transition ${
+      className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[12px] font-semibold transition ${
         active
-          ? "brand-gradient-bg text-white shadow-[0_4px_18px_-6px_rgba(120,61,245,0.55)]"
-          : "text-white/65 hover:bg-white/[0.06] hover:text-white"
+          ? "brand-gradient-bg text-white shadow-[0_6px_18px_-6px_rgba(120,61,245,0.55)]"
+          : inactiveBtn
       }`}
     >
-      <Icon className="h-3 w-3" />
+      <Icon className="h-3.5 w-3.5" />
       {label}
       <span
-        className={`ml-1 rounded-full px-1.5 py-px text-[10px] font-bold ${
-          active
-            ? "bg-white/20 text-white"
-            : "bg-white/10 text-white/70"
+        className={`ml-0.5 rounded-full px-1.5 py-px text-[10px] font-bold tabular-nums ${
+          active ? "bg-white/25 text-white" : inactiveCount
         }`}
       >
         {count}
