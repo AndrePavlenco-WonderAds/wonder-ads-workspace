@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.23.2",
+    date: "2026-06-09",
+    title: "Roadmap board UX — status colours match FigJam, current week/month pop, SEO diagnosis collapsed, falling-behind warning breaks down the why",
+    highlights: [
+      "**🎨 Status chip colours flipped to match the FigJam legend.** `in_progress` was sky-blue and `pending_review` was amber — that was the OPPOSITE of how Andre paints the FigJam (YELLOW = ongoing, BLUE/VIOLET = pending client review). Now `in_progress` is amber (yellow chip) and `pending_review` is sky-blue. Emerald (done) + white (not started) unchanged. Source of truth lives in `STATUS_META` in `roadmap-board.tsx` — both the card background AND the chip flip together so a consultant scanning the board sees the same colours their FigJam plan used.",
+      "**📍 Current week + current month now actually pop on the board.** Previously the only signal that you were in Week 6 was a tiny `NOW` pill on the column — easy to miss on a long board. v74.23.2 adds: (1) a brand-gradient 2px strip across the top of the current week column, (2) a `▶` arrow before the week title, (3) a real brand-gradient pill `● THIS WEEK` (pulsing dot) instead of the muted purple pill, (4) a much heavier brand-purple ring + outer glow on the column itself. The Month label that contains the current week ALSO switches from a thin outline pill to the full `brand-gradient-bg` pill with a pulsing white dot + `NOW` chip, and the surrounding connector lines brighten from `bg-white/10` to `bg-white/25`. Net: you can tell where you are without reading dates.",
+      "**🧠 SEO diagnosis is now collapsed by default.** The long auditSummary paragraph used to render every time the roadmap loaded — fine the first time, busy on every subsequent visit. Now it's a small `✨ SEO DIAGNOSIS (CLAUDE) · 3 photos · ▾` pill that expands the diagnosis card on click. State is per-mount (no persistence) so consultants who DO want it open click once and it stays open during the session.",
+      "**🚨 Falling-behind warning now splits the count by reason.** The old warning said `17 tasks from past weeks aren't implemented yet — catch up before adding new work.` — useful but didn't tell you whether to chase the client or do the work yourself. New version: `17 tasks from past weeks aren't done yet — 5 stuck with client (pending review) · 4 still in progress · 8 not started yet.` Still one line, same compact pill style — just the breakdown the consultant needs to triage. Severity escalates to `critical` (rose pill) at 5+ overdue tasks regardless of which bucket they're in.",
+    ],
+  },
+  {
     version: "74.23.1",
     date: "2026-06-09",
     title: "Login UX polish — 1-week sessions, browser-saveable creds, instant post-login redirect, close button on the comments drawer",

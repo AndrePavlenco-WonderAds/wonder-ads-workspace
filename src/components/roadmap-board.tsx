@@ -45,6 +45,11 @@ type UploadedPhoto = {
   error?: string;
 };
 
+// v74.23.2: status colours flipped so the board matches Andre's FigJam
+// legend. In-progress used to be sky-blue and pending-review amber — that
+// was the OPPOSITE of how the FigJam reads (YELLOW = ongoing, VIOLET/blue
+// = pending client review). Now yellow = in-progress, blue = pending
+// review. Emerald (done) + white (not started) are unchanged.
 const STATUS_META: Record<
   RoadmapStatus,
   { label: string; bgClass: string; chipClass: string }
@@ -56,13 +61,13 @@ const STATUS_META: Record<
   },
   in_progress: {
     label: "In progress",
-    bgClass: "bg-sky-500/15 border border-sky-400/40 text-white",
-    chipClass: "border-sky-400/40 bg-sky-500/15 text-sky-100",
+    bgClass: "bg-amber-500/15 border border-amber-400/45 text-white",
+    chipClass: "border-amber-400/40 bg-amber-500/15 text-amber-100",
   },
   pending_review: {
     label: "Pending client review",
-    bgClass: "bg-amber-500/15 border border-amber-400/45 text-white",
-    chipClass: "border-amber-400/40 bg-amber-500/15 text-amber-100",
+    bgClass: "bg-sky-500/15 border border-sky-400/40 text-white",
+    chipClass: "border-sky-400/40 bg-sky-500/15 text-sky-100",
   },
   implemented: {
     label: "Implemented",
@@ -451,7 +456,7 @@ export function RoadmapBoard({
       )}
 
       {roadmap.auditSummary && (
-        <AuditSummaryCard
+        <CollapsibleAuditSummary
           auditSummary={roadmap.auditSummary}
           sourcePhotos={roadmap.sourcePhotos ?? []}
         />
@@ -490,16 +495,47 @@ export function RoadmapBoard({
       )}
 
       {/* Months + weeks — month label centred with horizontal connector
-          like the mind-map, weeks underneath in a 4-up grid. */}
+          like the mind-map, weeks underneath in a 4-up grid. The month
+          that contains the current week + the current week column itself
+          get a stronger brand-gradient treatment so a consultant can
+          tell at a glance "we're in Week 6, Month 2" without doing the
+          maths from the date pills. */}
       <div className="space-y-8">
-        {MONTHS.map((m) => (
+        {MONTHS.map((m) => {
+          const monthIsCurrent = m.weeks.includes(week);
+          return (
           <div key={m.name}>
             <div className="relative flex items-center">
-              <span className="h-px flex-1 bg-white/10" />
-              <span className="brand-gradient-border mx-3 rounded-md bg-[color:var(--brand-purple)]/25 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-white">
+              <span
+                className={`h-px flex-1 ${
+                  monthIsCurrent ? "bg-white/25" : "bg-white/10"
+                }`}
+              />
+              <span
+                className={`mx-3 inline-flex items-center gap-1.5 rounded-md px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] transition ${
+                  monthIsCurrent
+                    ? "brand-gradient-bg text-white shadow-[0_8px_28px_-6px_rgba(120,61,245,0.55)] ring-2 ring-[color:var(--brand-purple)]/40"
+                    : "brand-gradient-border bg-[color:var(--brand-purple)]/15 text-white/65"
+                }`}
+              >
+                {monthIsCurrent && (
+                  <span
+                    aria-hidden
+                    className="inline-flex h-1.5 w-1.5 animate-pulse rounded-full bg-white shadow-[0_0_10px_rgba(255,255,255,0.9)]"
+                  />
+                )}
                 {m.name}
+                {monthIsCurrent && (
+                  <span className="ml-1 rounded-full bg-white/20 px-1.5 py-px text-[9px] font-bold tracking-wider">
+                    NOW
+                  </span>
+                )}
               </span>
-              <span className="h-px flex-1 bg-white/10" />
+              <span
+                className={`h-px flex-1 ${
+                  monthIsCurrent ? "bg-white/25" : "bg-white/10"
+                }`}
+              />
             </div>
             <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
               {m.weeks.map((w) => {
@@ -524,7 +560,8 @@ export function RoadmapBoard({
               })}
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
@@ -755,20 +792,49 @@ function WeekColumn({
     <div
       className={
         isCurrent
-          ? "relative rounded-xl border border-[color:var(--brand-purple)]/50 bg-[color:var(--brand-purple)]/[0.06] p-3 shadow-[0_0_0_1px_rgba(120,61,245,0.25)]"
+          ? // Current-week column: brand-purple ring + soft outer glow +
+            // a top brand-gradient strip (1px) so the column reads as
+            // "you are here" the instant the page loads. Without this
+            // the only signal was a tiny "Now" pill and a faint border
+            // that washed out on the dark workspace background.
+            "relative rounded-xl border border-[color:var(--brand-purple)]/70 bg-[color:var(--brand-purple)]/[0.10] p-3 shadow-[0_0_0_1px_rgba(120,61,245,0.45),_0_18px_48px_-18px_rgba(120,61,245,0.6)] ring-1 ring-[color:var(--brand-purple)]/35"
           : "rounded-xl border border-white/8 bg-white/[0.02] p-3"
       }
     >
+      {isCurrent && (
+        <span
+          aria-hidden
+          className="brand-gradient-bg pointer-events-none absolute inset-x-3 top-0 h-[2px] rounded-full opacity-90"
+        />
+      )}
       <div className="flex items-center justify-between">
         <div className="flex items-baseline gap-2">
-          <h3 className="text-sm font-semibold text-white">Week {week}</h3>
+          <h3
+            className={`text-sm font-semibold ${
+              isCurrent ? "text-white" : "text-white"
+            }`}
+          >
+            {isCurrent && (
+              <span
+                aria-hidden
+                className="brand-gradient-text mr-1.5 inline"
+              >
+                ▶
+              </span>
+            )}
+            Week {week}
+          </h3>
           <span className="text-[10px] uppercase tracking-[0.13em] text-white/40">
             {formatDate(weekDate)}
           </span>
         </div>
         {isCurrent && (
-          <span className="rounded-full border border-[color:var(--brand-purple)]/50 bg-[color:var(--brand-purple)]/20 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.13em] text-white">
-            Now
+          <span className="brand-gradient-bg inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-[0.14em] text-white shadow-[0_4px_14px_-4px_rgba(120,61,245,0.7)]">
+            <span
+              aria-hidden
+              className="h-1 w-1 animate-pulse rounded-full bg-white"
+            />
+            This Week
           </span>
         )}
       </div>
@@ -943,6 +1009,53 @@ function TaskCard({
         </div>
       </div>
     </li>
+  );
+}
+
+/** Wraps the auditSummary card behind a small "View SEO diagnosis"
+ *  button. Default closed — the consultant only sees the long
+ *  prose paragraph when they explicitly open it. Previously this
+ *  block was always rendered on top of the board which made the
+ *  page feel busy on every visit. */
+function CollapsibleAuditSummary({
+  auditSummary,
+  sourcePhotos,
+}: {
+  auditSummary: string;
+  sourcePhotos: { url: string; name: string }[];
+}) {
+  const [open, setOpen] = useState(false);
+  const photoCount = sourcePhotos.length;
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="group inline-flex items-center gap-2 rounded-full border border-[color:var(--brand-purple)]/30 bg-[color:var(--brand-purple)]/[0.08] px-3 py-1.5 text-[11px] font-semibold text-white/75 transition hover:border-[color:var(--brand-purple)]/55 hover:bg-[color:var(--brand-purple)]/[0.14] hover:text-white"
+      >
+        <Sparkles className="h-3 w-3 text-[color:var(--brand-purple)]" />
+        <span className="uppercase tracking-[0.16em]">
+          SEO diagnosis (Claude)
+        </span>
+        {photoCount > 0 && (
+          <span className="rounded-full bg-white/[0.08] px-1.5 py-0.5 text-[9px] font-bold tracking-wider text-white/65">
+            {photoCount} photo{photoCount === 1 ? "" : "s"}
+          </span>
+        )}
+        <ChevronDown
+          className={`h-3 w-3 transition-transform ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+      {open && (
+        <div className="animate-fade-up mt-3">
+          <AuditSummaryCard
+            auditSummary={auditSummary}
+            sourcePhotos={sourcePhotos}
+          />
+        </div>
+      )}
+    </div>
   );
 }
 

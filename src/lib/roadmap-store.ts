@@ -265,18 +265,41 @@ export function computeWarnings(
   // Falling-behind: tasks NOT in `implemented` whose week is BEFORE the
   // current week. Excludes the current week itself (those are still in
   // play). Only flags when the backlog exceeds the threshold.
+  //
+  // v74.23.2: split the message by reason so the consultant can tell at
+  // a glance "5 of these are stuck with the client, not with me" vs
+  // "12 of these I never touched". The breakdown drives whether you
+  // need to chase the client, sit down and do the work, or both.
   if (week >= 2) {
     const overdue = roadmap.tasks.filter(
       (t) => t.week < week && t.status !== "implemented",
     );
     if (overdue.length >= FALLING_BEHIND_TASK_THRESHOLD) {
+      const stuckWithClient = overdue.filter(
+        (t) => t.status === "pending_review",
+      );
+      const inFlight = overdue.filter((t) => t.status === "in_progress");
+      const untouched = overdue.filter((t) => t.status === "not_started");
+      const parts: string[] = [];
+      if (stuckWithClient.length > 0) {
+        parts.push(
+          `${stuckWithClient.length} stuck with client (pending review)`,
+        );
+      }
+      if (inFlight.length > 0) {
+        parts.push(`${inFlight.length} still in progress`);
+      }
+      if (untouched.length > 0) {
+        parts.push(`${untouched.length} not started yet`);
+      }
+      const breakdown = parts.length > 0 ? ` — ${parts.join(" · ")}.` : ".";
       out.push({
         id: `falling-behind:${overdue
           .map((t) => t.id)
           .sort()
           .join(",")}`,
         severity: overdue.length >= 5 ? "critical" : "warning",
-        message: `${overdue.length} task${overdue.length === 1 ? "" : "s"} from past weeks aren't implemented yet — catch up before adding new work.`,
+        message: `${overdue.length} task${overdue.length === 1 ? "" : "s"} from past weeks aren't done yet${breakdown}`,
         taskIds: overdue.map((t) => t.id),
       });
     }
