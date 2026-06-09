@@ -106,11 +106,10 @@ const CLIENTS = [
       task(6, "Blog Roadmap (ronda 2)", "pending_review", "content"),
       task(6, "Planning GBP posts (ronda 2)", "pending_review", "local"),
 
-      // Week 7 — 3 GREEN + 2 VIOLET (Tradução medicina oral + Imagens
-      // pesadas violet; Research/Otimização GBP/Longevidade green)
+      // Week 7 — all 5 GREEN → implemented.
       task(7, "Research de FAQs para páginas de serviço prioritárias pt1", "implemented", "research"),
-      task(7, "Tradução da página medicina oral integrativa e formatação em EN", "pending_review", "content"),
-      task(7, "Otimizar imagens pesadas", "pending_review", "technical"),
+      task(7, "Tradução da página medicina oral integrativa e formatação em EN", "implemented", "content"),
+      task(7, "Otimizar imagens pesadas", "implemented", "technical"),
       task(7, "Otimização GBP (ronda 2)", "implemented", "local"),
       task(7, 'Adicionar "Longevidade" ao menu', "implemented", "on-page"),
 
