@@ -111,6 +111,8 @@ export default async function PublicReviewPage({
         hidePublishingDate={true}
         readonlyApprovalDate={true}
         allowArchive={true}
+        commentAuthorRole="client"
+        commentLang={lang}
       />
 
       {/* Footer */}

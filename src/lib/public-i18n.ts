@@ -58,6 +58,55 @@ const phrases = {
     pt: "Dúvidas? Envia email a {emailLink}",
     en: "Questions? {emailLink}",
   },
+  // Comments thread (shown on the public review table rows + on every
+  // public preview doc page) ------------------------------------------
+  commentsHeading: { pt: "Comentários", en: "Comments" },
+  commentsHeadingWithCount: {
+    pt: "Comentários ({n})",
+    en: "Comments ({n})",
+  },
+  commentsEmpty: {
+    pt: "Sem comentários — sê o primeiro a deixar uma nota.",
+    en: "No comments yet — be the first to leave a note.",
+  },
+  commentsPlaceholder: {
+    pt: "Escreve um comentário…",
+    en: "Write a comment…",
+  },
+  commentsNamePlaceholder: { pt: "O teu nome (opcional)", en: "Your name (optional)" },
+  commentsSendButton: { pt: "Comentar", en: "Comment" },
+  commentsSending: { pt: "A enviar…", en: "Sending…" },
+  commentsResolve: { pt: "Resolver", en: "Resolve" },
+  commentsReopen: { pt: "Reabrir", en: "Re-open" },
+  commentsResolvedBadge: { pt: "Resolvido", en: "Resolved" },
+  commentsDelete: { pt: "Apagar", en: "Delete" },
+  commentsDeleteConfirm: {
+    pt: "Apagar este comentário? Não pode ser desfeito.",
+    en: "Delete this comment? This can't be undone.",
+  },
+  commentsRoleClient: { pt: "Cliente", en: "Client" },
+  commentsRoleConsultant: { pt: "Wonder Ads", en: "Wonder Ads" },
+  commentsJustNow: { pt: "agora mesmo", en: "just now" },
+  commentsMinutesAgo: { pt: "há {n} min", en: "{n}m ago" },
+  commentsHoursAgo: { pt: "há {n} h", en: "{n}h ago" },
+  commentsDaysAgo: { pt: "há {n} d", en: "{n}d ago" },
+  commentsToggleOpen: { pt: "Abrir comentários", en: "Open comments" },
+  commentsToggleClose: { pt: "Fechar comentários", en: "Close comments" },
+  commentsCountPlural: { pt: "comentários", en: "comments" },
+  commentsCountSingular: { pt: "comentário", en: "comment" },
+  // Doc-preview comments panel header
+  commentsPanelHeading: {
+    pt: "Comentários sobre este documento",
+    en: "Comments on this document",
+  },
+  commentsPanelHelp: {
+    pt: "Os teus comentários ficam ligados a esta linha na tabela de Aprovações Pendentes — o consultor vê-os automaticamente.",
+    en: "Your comments are tied to this row on the Pending Review table — the consultant sees them automatically.",
+  },
+  commentsPanelHelpNoThread: {
+    pt: "Esta vista não tem uma linha associada na tabela de Aprovações — abre o documento a partir da tabela para deixares comentários.",
+    en: "This view isn't tied to a Pending Review row yet — open the document from the table to leave comments.",
+  },
 } as const satisfies Record<string, Phrase>;
 
 export type PhraseKey = keyof typeof phrases;

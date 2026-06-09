@@ -5,12 +5,21 @@
 // edits through PATCH /api/reviews/[slug]/items/[id] with optimistic
 // UI + debounced save for text fields, immediate save for pickers.
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   Archive,
   ArchiveRestore,
   ExternalLink,
   Inbox,
+  MessageSquare,
+  MessageSquarePlus,
   RefreshCw,
 } from "lucide-react";
 import {
@@ -19,10 +28,13 @@ import {
   REVIEW_STATUSES,
   STATUS_PILL,
   isArchivable,
+  unresolvedCount,
   type ReviewCategory,
   type ReviewItem,
   type ReviewStatus,
 } from "@/lib/review-store";
+import { CommentsThread } from "@/components/comments-thread";
+import type { PublicLang } from "@/lib/public-i18n";
 
 const TEXT_DEBOUNCE_MS = 600;
 const AUTO_POLL_MS = 12000;
@@ -53,6 +65,18 @@ export function ReviewTable({
    *  things that actually flip a row's `archived` field). Defaults
    *  to `false` so the public client view never sees the controls. */
   allowArchiveActions = false,
+  /** Which side is using the table. Drives the default author on
+   *  comment posts + whether the role switcher is shown. The internal
+   *  consultant page passes "consultant"; the public/client surface
+   *  passes "client". */
+  commentAuthorRole = "client",
+  /** Internal review page passes the resolved consultant's display
+   *  name so their comments auto-attribute. */
+  commentAuthorName = null,
+  /** UI language for the comment thread strings (en/pt). The internal
+   *  page leaves this default ("en"); the public page passes the
+   *  result of pickLang(slug). */
+  commentLang = "en",
 }: {
   clientSlug: string;
   initialItems: ReviewItem[];
@@ -61,12 +85,20 @@ export function ReviewTable({
   readonlyApprovalDate?: boolean;
   allowArchive?: boolean;
   allowArchiveActions?: boolean;
+  commentAuthorRole?: "client" | "consultant";
+  commentAuthorName?: string | null;
+  commentLang?: PublicLang;
 }) {
   const [items, setItems] = useState<ReviewItem[]>(initialItems);
   const [savingIds, setSavingIds] = useState<Set<string>>(new Set());
   const [refreshing, setRefreshing] = useState(false);
   const [lastSyncedAt, setLastSyncedAt] = useState(Date.now());
   const [tab, setTab] = useState<Tab>("pending");
+  /** Which row's comments drawer is currently expanded. Only one at a
+   *  time — clicking another row collapses the previous one. Drives a
+   *  full-width sub-row under the active row that renders the
+   *  <CommentsThread> against that item's id. */
+  const [openCommentsFor, setOpenCommentsFor] = useState<string | null>(null);
   /** Transient toast shown when the consultant tries to archive a
    *  row that isn't Approved/Rejected. Auto-clears after 4s. */
   const [archiveError, setArchiveError] = useState<string | null>(null);
@@ -361,17 +393,23 @@ export function ReviewTable({
             <table className="w-full border-collapse text-left text-sm">
               <thead className="bg-[#4a5d3a] text-white">
                 <tr>
-                  <Th className={hidePublishingDate ? "w-[34%]" : "w-[32%]"}>
+                  <Th className={hidePublishingDate ? "w-[30%]" : "w-[28%]"}>
                     Task
                   </Th>
-                  <Th className="w-[14%]">Status</Th>
-                  <Th className="w-[12%]">Category</Th>
+                  <Th className="w-[13%]">Status</Th>
+                  <Th className="w-[11%]">Category</Th>
                   <Th className="w-[10%]">Approval date</Th>
                   {!hidePublishingDate && (
                     <Th className="w-[10%]">Publishing date</Th>
                   )}
-                  <Th className={hidePublishingDate ? "w-[22%]" : "w-[16%]"}>
+                  <Th className={hidePublishingDate ? "w-[20%]" : "w-[14%]"}>
                     Doc link
+                  </Th>
+                  <Th className="w-[6%] text-center">
+                    <span className="inline-flex items-center gap-1">
+                      <MessageSquare className="h-3 w-3" />
+                      Comments
+                    </span>
                   </Th>
                   {allowArchiveActions && (
                     <Th className="w-[6%] text-right">Archive</Th>
@@ -382,12 +420,23 @@ export function ReviewTable({
               <tbody>
                 {visibleItems.map((it) => {
                   const archivable = isArchivable(it.status);
+                  const isCommentsOpen = openCommentsFor === it.id;
+                  const totalComments = it.comments?.length ?? 0;
+                  const openCount = unresolvedCount(it);
+                  // Total column count for the full-width expanded
+                  // comments row — has to track every <Th> + <Td>
+                  // above so the subrow spans the whole table.
+                  const cols =
+                    6 /* task,status,category,approval,doc,comments */ +
+                    (hidePublishingDate ? 0 : 1) +
+                    (allowArchiveActions ? 1 : 0) +
+                    (allowDelete ? 1 : 0);
                   return (
+                  <Fragment key={it.id}>
                     <tr
-                      key={it.id}
-                      className={`border-b border-black/8 align-top last:border-0 hover:bg-black/[0.015] ${
+                      className={`border-b border-black/8 align-top hover:bg-black/[0.015] ${
                         it.archived ? "bg-black/[0.025]" : ""
-                      }`}
+                      } ${isCommentsOpen ? "border-b-0" : ""}`}
                     >
                       <Td>
                         <input
@@ -462,6 +511,18 @@ export function ReviewTable({
                           }
                         />
                       </Td>
+                      <Td className="text-center">
+                        <CommentsToggle
+                          open={isCommentsOpen}
+                          openCount={openCount}
+                          totalCount={totalComments}
+                          onClick={() =>
+                            setOpenCommentsFor((prev) =>
+                              prev === it.id ? null : it.id,
+                            )
+                          }
+                        />
+                      </Td>
                       {allowArchiveActions && (
                         <Td className="text-right">
                           {it.archived ? (
@@ -509,6 +570,29 @@ export function ReviewTable({
                         </Td>
                       )}
                     </tr>
+                    {isCommentsOpen && (
+                      <tr
+                        className={`border-b border-black/8 last:border-0 ${
+                          it.archived ? "bg-black/[0.025]" : "bg-black/[0.015]"
+                        }`}
+                      >
+                        <td colSpan={cols} className="px-3 pb-3 pt-1">
+                          <CommentsThread
+                            clientSlug={clientSlug}
+                            itemId={it.id}
+                            initialComments={it.comments ?? []}
+                            defaultAuthor={commentAuthorRole}
+                            defaultAuthorName={commentAuthorName}
+                            allowRoleSwitch={
+                              commentAuthorRole !== "consultant"
+                            }
+                            lang={commentLang}
+                            variant="inline"
+                          />
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
                   );
                 })}
               </tbody>
@@ -721,6 +805,58 @@ function CategoryPicker({
         ▾
       </span>
     </div>
+  );
+}
+
+function CommentsToggle({
+  open,
+  openCount,
+  totalCount,
+  onClick,
+}: {
+  open: boolean;
+  /** Unresolved comments — drives the loud red dot. */
+  openCount: number;
+  /** Total comments (including resolved) — shown as the body number. */
+  totalCount: number;
+  onClick: () => void;
+}) {
+  const hasUnresolved = openCount > 0;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={
+        totalCount === 0
+          ? "Add the first comment"
+          : open
+            ? "Hide comments"
+            : `Show ${totalCount} comment${totalCount === 1 ? "" : "s"}`
+      }
+      aria-expanded={open}
+      className={`relative inline-flex items-center gap-1 rounded-full border px-2 py-1 text-[11px] font-medium transition ${
+        open
+          ? "border-violet-400/60 bg-violet-50 text-violet-700"
+          : hasUnresolved
+            ? "border-rose-300/60 bg-rose-50 text-rose-700 hover:border-rose-400 hover:bg-rose-100"
+            : totalCount > 0
+              ? "border-black/15 bg-white text-black/65 hover:border-black/25 hover:bg-black/[0.04]"
+              : "border-dashed border-black/15 bg-white text-black/45 hover:border-black/30 hover:text-black/75"
+      }`}
+    >
+      {totalCount === 0 ? (
+        <MessageSquarePlus className="h-3 w-3" />
+      ) : (
+        <MessageSquare className="h-3 w-3" />
+      )}
+      {totalCount > 0 ? totalCount : "Add"}
+      {hasUnresolved && !open && (
+        <span
+          aria-hidden
+          className="absolute -right-1 -top-1 inline-flex h-2 w-2 rounded-full bg-rose-500 ring-2 ring-white"
+        />
+      )}
+    </button>
   );
 }
 

@@ -33,6 +33,7 @@ export function PublicReportView({
   backToPendingReviewLabel,
   backToPendingReviewHref,
   downloadPdfLabel,
+  commentsSlot,
 }: {
   clientName: string;
   clientLogo: string | null;
@@ -49,6 +50,11 @@ export function PublicReportView({
   backToPendingReviewLabel: string;
   backToPendingReviewHref: string;
   downloadPdfLabel: string;
+  /** Slot below the report body, above the footer — used to drop in
+   *  the comments thread tied to the matching Pending Review row.
+   *  Hidden when printing (the @media print CSS pulls `.no-print`
+   *  out of flow). */
+  commentsSlot?: React.ReactNode;
 }) {
   const [printing, setPrinting] = useState(false);
 
@@ -146,6 +152,9 @@ export function PublicReportView({
           </p>
         )}
       </article>
+
+      {/* ----- Comments slot (rendered by the page) ----- */}
+      {commentsSlot && <div className="no-print">{commentsSlot}</div>}
 
       {/* ----- Footer ----- */}
       <footer className="mt-12 border-t border-black/8 pt-6 text-center text-[11px] text-black/45">
@@ -258,6 +267,7 @@ const PUBLIC_REPORT_CSS = `
 }
 @media print {
   .public-report .public-report-toolbar { display: none !important; }
+  .public-report .no-print { display: none !important; }
   .public-report { max-width: none; padding: 0; }
   body { background: #fff !important; }
 }

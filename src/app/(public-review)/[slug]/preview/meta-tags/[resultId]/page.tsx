@@ -16,6 +16,8 @@ import { getMetaTagsResult } from "@/lib/meta-tags-store";
 import { MetaTagsTable } from "@/components/meta-tags-table";
 import { formatDate } from "@/lib/dates";
 import { pickLang, t, plural } from "@/lib/public-i18n";
+import { findReviewItemByDocPath, listReviewItems } from "@/lib/review-store";
+import { CommentsThread } from "@/components/comments-thread";
 
 export const dynamic = "force-dynamic";
 
@@ -33,6 +35,13 @@ export default async function PublicMetaTagsPreview({
   const consultantEmail = getConsultantEmailForSlug(slug);
   const consultantName = getConsultantForSlug(slug);
   const lang = pickLang(slug);
+  // Resolve the matching Pending Review row by docLink so the panel
+  // and the table share the same thread.
+  const items = await listReviewItems(slug);
+  const reviewItem = findReviewItemByDocPath(
+    items,
+    `/${slug}/preview/meta-tags/${resultId}`,
+  );
   const introHtml = t(lang, "metaTagsIntro", {
     linkOpen: `<a href="/${slug}/pendingreview" class="font-medium text-black/85 underline-offset-2 hover:underline">`,
     linkClose: "</a>",
@@ -93,6 +102,21 @@ export default async function PublicMetaTagsPreview({
         initialRows={result.rows}
         readonly={true}
       />
+
+      {reviewItem ? (
+        <CommentsThread
+          clientSlug={slug}
+          itemId={reviewItem.id}
+          initialComments={reviewItem.comments ?? []}
+          defaultAuthor="client"
+          lang={lang}
+          variant="panel"
+        />
+      ) : (
+        <section className="mx-auto mt-12 max-w-3xl rounded-2xl border border-dashed border-black/10 bg-white/60 p-5 text-center text-xs text-black/55 sm:p-7">
+          {t(lang, "commentsPanelHelpNoThread")}
+        </section>
+      )}
 
       <footer className="mt-12 border-t border-black/8 pt-6 text-center text-[11px] text-black/45">
         <p>

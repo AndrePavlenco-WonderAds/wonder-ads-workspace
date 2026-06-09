@@ -12,6 +12,12 @@ import { kv } from "@vercel/kv";
 
 const KEY_PREFIX = "reviews:";
 const MAX_ITEMS = 200;
+/** Cap per-item comment thread length so the KV blob doesn't grow
+ *  without bound. 200 comments per row is well past any realistic
+ *  client back-and-forth; anything older gets trimmed when we append. */
+const MAX_COMMENTS_PER_ITEM = 200;
+const MAX_COMMENT_BODY_CHARS = 4000;
+const MAX_COMMENT_AUTHOR_CHARS = 60;
 
 export const reviewStorageConfigured = Boolean(
   process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN,
@@ -39,6 +45,30 @@ export const REVIEW_CATEGORIES = [
 ] as const;
 export type ReviewCategory = (typeof REVIEW_CATEGORIES)[number];
 
+/** A single message on a row's comment thread. Behaves like a
+ *  Google-Docs side-thread: anyone with the share link can post (same
+ *  trust model as the rest of the public review surface — the URL is
+ *  the access control). Posts can be resolved (✓) to gray them out
+ *  without deletion so the audit trail survives. */
+export type ReviewComment = {
+  id: string;
+  /** Whether the author is approving from the client side or replying
+   *  from the agency side. Drives bubble alignment + colour. */
+  author: "client" | "consultant";
+  /** Optional display name. The internal table prefills the
+   *  consultant's resolved name from `client-overrides`; the public
+   *  side asks the visitor once and remembers it in localStorage. */
+  authorName: string | null;
+  /** Free-form body. No markdown processing yet — plain text + line
+   *  breaks (clients paste short notes, not essays). */
+  body: string;
+  createdAt: number;
+  /** When set, the thread renders this comment as a strike-through with
+   *  a "Resolved" pill — same affordance Google Docs uses. */
+  resolvedAt?: number | null;
+  resolvedBy?: "client" | "consultant" | null;
+};
+
 export type ReviewItem = {
   id: string;
   /** What the client is approving. Editable. */
@@ -57,6 +87,10 @@ export type ReviewItem = {
   docLink: string | null;
   /** Free-form notes a consultant or client might leave. Editable. */
   notes: string | null;
+  /** Comment thread for this row — both sides post here and the table
+   *  auto-poll fans new ones in within ~12s. Optional / defaulted to
+   *  `[]` so existing KV rows from before v74.22 don't break on read. */
+  comments?: ReviewComment[];
   /** True when the consultant moved the row to the Archive tab. Only
    *  allowed once status is `Approved` or `Rejected` — enforced both
    *  client-side (UX) and server-side (sanitiser). Public client
@@ -151,6 +185,172 @@ export async function deleteReviewItem(
 
 export function newReviewItemId(): string {
   return `r_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+export function newCommentId(): string {
+  return `c_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+// ---- Comments ----
+
+/** Append a new comment to a row's thread. Returns the created
+ *  comment + the updated item. Returns null if the row doesn't exist. */
+export async function appendReviewComment(
+  slug: string,
+  itemId: string,
+  partial: Omit<ReviewComment, "id" | "createdAt">,
+): Promise<{ comment: ReviewComment; item: ReviewItem } | null> {
+  if (!reviewStorageConfigured) return null;
+  const current = await listReviewItems(slug);
+  const idx = current.findIndex((r) => r.id === itemId);
+  if (idx < 0) return null;
+  const comment: ReviewComment = {
+    ...partial,
+    id: newCommentId(),
+    createdAt: Date.now(),
+  };
+  const existing = current[idx].comments ?? [];
+  // Newest at the END (chronological top-down feed, like a chat). Cap
+  // the thread length defensively.
+  const nextComments = [...existing, comment].slice(-MAX_COMMENTS_PER_ITEM);
+  const updated: ReviewItem = {
+    ...current[idx],
+    comments: nextComments,
+    updatedAt: Date.now(),
+  };
+  current[idx] = updated;
+  await kv.set(key(slug), current);
+  return { comment, item: updated };
+}
+
+/** Patch a single comment — used for resolve/unresolve. Returns the
+ *  updated comment + item, or null if either is missing. */
+export async function updateReviewComment(
+  slug: string,
+  itemId: string,
+  commentId: string,
+  patch: Partial<Pick<ReviewComment, "body" | "resolvedAt" | "resolvedBy">>,
+): Promise<{ comment: ReviewComment; item: ReviewItem } | null> {
+  if (!reviewStorageConfigured) return null;
+  const current = await listReviewItems(slug);
+  const idx = current.findIndex((r) => r.id === itemId);
+  if (idx < 0) return null;
+  const comments = current[idx].comments ?? [];
+  const cIdx = comments.findIndex((c) => c.id === commentId);
+  if (cIdx < 0) return null;
+  const nextComments = [...comments];
+  nextComments[cIdx] = { ...nextComments[cIdx], ...patch };
+  const updated: ReviewItem = {
+    ...current[idx],
+    comments: nextComments,
+    updatedAt: Date.now(),
+  };
+  current[idx] = updated;
+  await kv.set(key(slug), current);
+  return { comment: nextComments[cIdx], item: updated };
+}
+
+export async function deleteReviewComment(
+  slug: string,
+  itemId: string,
+  commentId: string,
+): Promise<ReviewItem | null> {
+  if (!reviewStorageConfigured) return null;
+  const current = await listReviewItems(slug);
+  const idx = current.findIndex((r) => r.id === itemId);
+  if (idx < 0) return null;
+  const comments = current[idx].comments ?? [];
+  const nextComments = comments.filter((c) => c.id !== commentId);
+  if (nextComments.length === comments.length) return null;
+  const updated: ReviewItem = {
+    ...current[idx],
+    comments: nextComments,
+    updatedAt: Date.now(),
+  };
+  current[idx] = updated;
+  await kv.set(key(slug), current);
+  return updated;
+}
+
+/** Sanitiser for POST /comments body. Same trust model as the rest of
+ *  the public review API — the URL is the access control. We whitelist
+ *  fields, clamp lengths, and reject anything that doesn't look right. */
+export function sanitiseNewCommentBody(raw: unknown): Omit<
+  ReviewComment,
+  "id" | "createdAt"
+> | null {
+  if (!raw || typeof raw !== "object") return null;
+  const o = raw as Record<string, unknown>;
+  const body = typeof o.body === "string" ? o.body.trim() : "";
+  if (!body) return null;
+  const author: ReviewComment["author"] =
+    o.author === "consultant" ? "consultant" : "client";
+  const authorNameRaw = typeof o.authorName === "string" ? o.authorName.trim() : "";
+  return {
+    body: body.slice(0, MAX_COMMENT_BODY_CHARS),
+    author,
+    authorName: authorNameRaw
+      ? authorNameRaw.slice(0, MAX_COMMENT_AUTHOR_CHARS)
+      : null,
+    resolvedAt: null,
+    resolvedBy: null,
+  };
+}
+
+/** Find the most recent review row whose docLink points at the given
+ *  public-preview path. Used by the preview/[action]/gmb-posts/
+ *  meta-tags pages to look up "their" review item without anyone
+ *  having to pass the id through the URL — the docLink already does.
+ *
+ *  We match the URL's PATH only (ignoring query / hash / origin) so
+ *  the lookup tolerates `?thread=…` decorations, trailing slashes,
+ *  and absolute-vs-relative variants on either side. Returns null
+ *  when nothing matches, in which case the caller renders a friendly
+ *  "open from the table" hint instead of the thread. */
+export function findReviewItemByDocPath(
+  items: ReviewItem[],
+  expectedPath: string,
+): ReviewItem | null {
+  const want = normalisePathForMatch(expectedPath);
+  if (!want) return null;
+  // Newest-first iteration so duplicates resolve to the latest row.
+  const candidates = items
+    .filter(
+      (i) =>
+        typeof i.docLink === "string" &&
+        i.docLink.length > 0 &&
+        normalisePathForMatch(i.docLink) === want,
+    )
+    .sort((a, b) => b.createdAt - a.createdAt);
+  return candidates[0] ?? null;
+}
+
+function normalisePathForMatch(input: string): string {
+  let s = input;
+  try {
+    // Accept absolute URLs (https://wonder-ads-workspace.vercel.app/foo/bar?x=1)
+    // and bare paths (/foo/bar). The URL constructor needs an origin
+    // for the bare case, so we supply a placeholder.
+    const u = new URL(input, "https://w.invalid");
+    s = u.pathname;
+  } catch {
+    // Fallback: strip query / hash by hand.
+    const q = s.indexOf("?");
+    if (q >= 0) s = s.slice(0, q);
+    const h = s.indexOf("#");
+    if (h >= 0) s = s.slice(0, h);
+  }
+  // Strip trailing slash for stable comparison.
+  if (s.length > 1 && s.endsWith("/")) s = s.slice(0, -1);
+  return s.toLowerCase();
+}
+
+/** Count of unresolved comments on a row — drives the table badge. */
+export function unresolvedCount(item: ReviewItem): number {
+  if (!item.comments) return 0;
+  let n = 0;
+  for (const c of item.comments) if (!c.resolvedAt) n++;
+  return n;
 }
 
 // ---- Validation + sanitisation ----

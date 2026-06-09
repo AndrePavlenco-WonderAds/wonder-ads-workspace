@@ -23,6 +23,8 @@ import { getClientGeo } from "@/lib/client-geo";
 import { getGmbResult, localizeCta } from "@/lib/gmb-posts-store";
 import { formatDate } from "@/lib/dates";
 import { pickLang, t, plural } from "@/lib/public-i18n";
+import { findReviewItemByDocPath, listReviewItems } from "@/lib/review-store";
+import { CommentsThread } from "@/components/comments-thread";
 
 export const dynamic = "force-dynamic";
 
@@ -41,6 +43,14 @@ export default async function PublicGmbPreviewPage({
   const consultantName = getConsultantForSlug(slug);
   const languageCode = getClientGeo(slug).languageCode;
   const lang = pickLang(slug);
+  // Look up the Pending Review row that points at this preview URL —
+  // its id keys the comment thread, so notes left here show up next
+  // to the row in the table (and vice versa).
+  const items = await listReviewItems(slug);
+  const reviewItem = findReviewItemByDocPath(
+    items,
+    `/${slug}/preview/gmb-posts/${resultId}`,
+  );
   const introHtml = t(lang, "gmbIntro", {
     linkOpen: `<a href="/${slug}/pendingreview" class="font-medium text-black/85 underline-offset-2 hover:underline">`,
     linkClose: "</a>",
@@ -152,6 +162,22 @@ export default async function PublicGmbPreviewPage({
           </article>
         ))}
       </div>
+
+      {/* Comments — tied to the matching Pending Review row by docLink */}
+      {reviewItem ? (
+        <CommentsThread
+          clientSlug={slug}
+          itemId={reviewItem.id}
+          initialComments={reviewItem.comments ?? []}
+          defaultAuthor="client"
+          lang={lang}
+          variant="panel"
+        />
+      ) : (
+        <section className="mx-auto mt-12 max-w-3xl rounded-2xl border border-dashed border-black/10 bg-white/60 p-5 text-center text-xs text-black/55 sm:p-7">
+          {t(lang, "commentsPanelHelpNoThread")}
+        </section>
+      )}
 
       {/* Footer */}
       <footer className="mt-12 border-t border-black/8 pt-6 text-center text-[11px] text-black/45">

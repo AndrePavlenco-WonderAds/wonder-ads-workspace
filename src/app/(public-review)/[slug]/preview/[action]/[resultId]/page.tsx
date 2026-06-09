@@ -26,6 +26,8 @@ import { findAction } from "@/lib/seo-pillars";
 import { formatDate } from "@/lib/dates";
 import { pickLang, t } from "@/lib/public-i18n";
 import { PublicReportView } from "@/components/public-report-view";
+import { findReviewItemByDocPath, listReviewItems } from "@/lib/review-store";
+import { CommentsThread } from "@/components/comments-thread";
 
 export const dynamic = "force-dynamic";
 
@@ -69,6 +71,31 @@ export default async function PublicActionPreviewPage({
     emailLink: `<a href="mailto:${consultantEmail}" class="font-medium text-black/65 underline-offset-2 hover:text-black/85 hover:underline">${consultantEmail}</a>`,
   });
 
+  // Comments are tied to the Pending Review row whose docLink points
+  // at this exact preview URL — so notes left here show up next to
+  // the row in the table, and vice versa. If no row matches (consultant
+  // sent the link without going through SendToReview), we render a
+  // friendly hint instead.
+  const items = await listReviewItems(slug);
+  const reviewItem = findReviewItemByDocPath(
+    items,
+    `/${slug}/preview/${actionSlug}/${resultId}`,
+  );
+  const commentsSlot = reviewItem ? (
+    <CommentsThread
+      clientSlug={slug}
+      itemId={reviewItem.id}
+      initialComments={reviewItem.comments ?? []}
+      defaultAuthor="client"
+      lang={lang}
+      variant="panel"
+    />
+  ) : (
+    <section className="mx-auto mt-12 max-w-3xl rounded-2xl border border-dashed border-black/10 bg-white/60 p-5 text-center text-xs text-black/55 sm:p-7">
+      {t(lang, "commentsPanelHelpNoThread")}
+    </section>
+  );
+
   return (
     <PublicReportView
       clientName={client.title}
@@ -89,6 +116,7 @@ export default async function PublicActionPreviewPage({
       }
       backToPendingReviewHref={`/${slug}/pendingreview`}
       downloadPdfLabel={lang === "pt" ? "Descarregar PDF" : "Download PDF"}
+      commentsSlot={commentsSlot}
     />
   );
 }
