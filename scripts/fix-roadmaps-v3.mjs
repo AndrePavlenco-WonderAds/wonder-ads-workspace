@@ -91,9 +91,9 @@ const CLIENTS = [
       task(4, "Identificar a causa do INP > 200 em mobile", "implemented", "technical"),
 
       // ─ Month 2 — Week 8 current ──────────────────────────────────────────
-      // Week 5 — 5 GREEN + 1 VIOLET (Planning GBP posts)
+      // Week 5 — 4 GREEN + 2 VIOLET (EEAT Author Signature + Planning GBP)
       task(5, "Otimizar estrutura de headings (H1, H2, H3)", "implemented", "on-page"),
-      task(5, "E-E-A-T Author Signature para o Blog", "implemented", "on-page"),
+      task(5, "E-E-A-T Author Signature para o Blog", "pending_review", "on-page"),
       task(5, "Implementar Person Schema na página Dr. Miguel Stanley e equipa", "implemented", "technical"),
       task(5, "Implementar Internal Linking", "implemented", "on-page"),
       task(5, "Planning GBP posts", "pending_review", "local"),
@@ -106,17 +106,18 @@ const CLIENTS = [
       task(6, "Blog Roadmap (ronda 2)", "pending_review", "content"),
       task(6, "Planning GBP posts (ronda 2)", "pending_review", "local"),
 
-      // Week 7 — 4 GREEN + 1 VIOLET (Longevidade ao menu)
+      // Week 7 — 3 GREEN + 2 VIOLET (Tradução medicina oral + Imagens
+      // pesadas violet; Research/Otimização GBP/Longevidade green)
       task(7, "Research de FAQs para páginas de serviço prioritárias pt1", "implemented", "research"),
-      task(7, "Tradução da página medicina oral integrativa e formatação em EN", "implemented", "content"),
-      task(7, "Otimizar imagens pesadas", "implemented", "technical"),
+      task(7, "Tradução da página medicina oral integrativa e formatação em EN", "pending_review", "content"),
+      task(7, "Otimizar imagens pesadas", "pending_review", "technical"),
       task(7, "Otimização GBP (ronda 2)", "implemented", "local"),
-      task(7, 'Adicionar "Longevidade" ao menu', "pending_review", "on-page"),
+      task(7, 'Adicionar "Longevidade" ao menu', "implemented", "on-page"),
 
-      // Week 8 — 2 GREEN + 1 VIOLET + 2 GRAY
+      // Week 8 — 2 GREEN + 3 GRAY (FAQ Schema is GRAY, not violet)
       task(8, "Integração de keywords no conteúdo", "implemented", "on-page"),
       task(8, "Criação das respostas para as FAQs de serviço pt 1", "implemented", "content"),
-      task(8, "Adicionar FAQ Schema nas páginas de serviço otimizadas", "pending_review", "technical"),
+      task(8, "Adicionar FAQ Schema nas páginas de serviço otimizadas", "not_started", "technical"),
       task(8, "1 blog post (EN + PT)", "not_started", "content"),
       task(8, "1 post GBP", "not_started", "local"),
 
