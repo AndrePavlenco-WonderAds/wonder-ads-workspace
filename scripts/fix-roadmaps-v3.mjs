@@ -64,11 +64,11 @@ const CLIENTS = [
       task(1, "Instalar tag Google Analytics", "implemented", "research"),
       task(1, "Keyword Research", "implemented", "research"),
 
-      // Week 2 — only 1 GREEN ("Melhorar slow load"), the other 5 are
-      // light-violet → pending_review.
+      // Week 2 — 2 GREEN (Melhorar slow load + Criar ficheiro llms.txt),
+      // other 4 are light-violet → pending_review.
       task(2, "Criar meta descriptions em falta", "pending_review", "on-page"),
       task(2, "Melhorar slow load speed & identificar problemas de CWV", "implemented", "technical"),
-      task(2, "Criar ficheiro llms.txt", "pending_review", "technical"),
+      task(2, "Criar ficheiro llms.txt", "implemented", "technical"),
       task(2, "Corrigir duplicate title tags", "pending_review", "on-page"),
       task(2, "Corrigir duplicate meta descriptions", "pending_review", "on-page"),
       task(2, "Reduzir title tags muito longas", "pending_review", "on-page"),
@@ -81,14 +81,14 @@ const CLIENTS = [
       task(3, "Check orphaned pages in sitemaps", "implemented", "technical"),
       task(3, "Copy da página Longevidade", "pending_review", "content"),
 
-      // Week 4 — 5 GREEN + 2 VIOLET (Blog Roadmap + INP > 200)
+      // Week 4 — 5 GREEN + 2 VIOLET (Blog Roadmap + Organização do Blog)
       task(4, "Blog Roadmap", "pending_review", "content"),
-      task(4, "Organização do Blog por categorias", "implemented", "content"),
+      task(4, "Organização do Blog por categorias", "pending_review", "content"),
       task(4, "Schema markup nas páginas de serviço (início)", "implemented", "technical"),
       task(4, "GBP Audit", "implemented", "local"),
       task(4, "Configurar GPT White Clinic", "implemented", "research"),
       task(4, "Adicionar categorias secundárias no GBP", "implemented", "local"),
-      task(4, "Identificar a causa do INP > 200 em mobile", "pending_review", "technical"),
+      task(4, "Identificar a causa do INP > 200 em mobile", "implemented", "technical"),
 
       // ─ Month 2 — Week 8 current ──────────────────────────────────────────
       // Week 5 — 5 GREEN + 1 VIOLET (Planning GBP posts)
