@@ -6,6 +6,7 @@ import { getSeoClients } from "@/lib/notion";
 import { ADS_CLIENTS } from "@/lib/ads-clients";
 import { WEB_CLIENTS } from "@/lib/web-clients";
 import { listEmployees, SEED_EMPLOYEES } from "@/lib/admin-employees-store";
+import { countRoadmaps } from "@/lib/roadmap-admin-helpers";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -37,6 +38,11 @@ export default async function AdminPage() {
   }
   const employeesCount = employees.length || SEED_EMPLOYEES.length;
 
+  // Roadmaps card count — clients with a roadmap on file. Falls back
+  // to 0 silently if Notion or KV is unavailable so the landing page
+  // still renders.
+  const roadmapsCount = await countRoadmaps();
+
   return (
     <PageShell>
       <Link
@@ -49,6 +55,7 @@ export default async function AdminPage() {
       <AdminLanding
         projectsCount={projectsCount}
         employeesCount={employeesCount}
+        roadmapsCount={roadmapsCount}
       />
     </PageShell>
   );

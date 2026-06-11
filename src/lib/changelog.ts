@@ -13,6 +13,22 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.27",
+    date: "2026-06-11",
+    title: "SuperAdmin → Roadmaps — per-consultant SEO project tracker showing weeks elapsed, tasks done, pending approvals, and overdue backlog at a glance",
+    highlights: [
+      "**🧭 New SuperAdmin block: Roadmaps.** Sits alongside Projects and Employees on `/admin`, same card pattern (brand-gradient border, Lucide `Compass` icon, count badge in the corner). Count is the live number of SEO clients with a roadmap on file — pulls every `roadmap:current:<slug>` from KV in parallel, falls back to 0 silently if Notion / KV is unavailable so the landing page never breaks.",
+      "**👥 `/admin/roadmaps` — one section per consultant.** Groups every SEO client by Head Consultant (re-resolved live from slug via `getConsultantForSlug`, never trusting cached `consultant` fields — sidesteps the v74.x cached-rename trap). Sections render in the canonical `CONSULTANT_ORDER` (Fran. R. → Yenisey R. → Manuel S.), each headed with the consultant name, work email (mailto), client count, % with roadmap, average current week, and roll-ups for pending approvals + overdue across past weeks.",
+      "**📊 Per-client card shows exactly what Andre asked for.** For every client in a consultant's book: client name + slug, health pill (`On track` / `Falling behind` / `Critical` / `Not started` / `No roadmap yet`), a brand-gradient progress bar showing `Week N of 12`, total `done / total` tasks, then three stat tiles in a row — **Done past weeks** (emerald), **For approval** (violet — stuck with client), **Overdue tasks** (white/amber/rose by severity) with a sub-line showing how many distinct past weeks the overdue work spans. Onboarded date + Cycle-start date footer chip when the roadmap has them. Click anywhere on the card → opens `/seo/<slug>/roadmap` for that consultant to fix it.",
+      "**🚦 Health thresholds match the existing in-board warnings** so the SuperAdmin view never disagrees with what the consultant sees on their own board: `critical` = 5+ overdue past-week tasks (same as `computeWarnings` rose-pill threshold), `behind` = 2+ overdue (same as `FALLING_BEHIND_TASK_THRESHOLD`), `on-track` otherwise. `not-started` for week-0 roadmaps; `no-roadmap` when the slug has no `roadmap:current:` record at all (still rendered so Andre can spot gaps in the consultant's book).",
+      "**🪜 Roster totals strip across the top:** SEO clients · With roadmap · Consultants active · Pending client approval · Overdue tasks. The last two flip colour when non-zero (amber for any waiting, rose when overdue ≥ 10) so the page reads at a glance even before scrolling into individual sections.",
+      "**🧠 Sort logic inside each consultant section: critical → behind → no-roadmap → not-started → on-track**, then alphabetical by client title within each bucket. So the consultant's most-bleeding clients are always at the top of their column and Andre never has to hunt.",
+      "**🏗 Architecture stays clean.** `src/lib/roadmap-admin-helpers.ts` is the single source of truth — exports `getRoadmapAdminSummary()` (full grouped data + totals) and `countRoadmaps()` (lightweight for the landing badge). `src/app/admin/roadmaps/page.tsx` is a thin server component (gated by the existing `/admin/layout.tsx` admin-only guard, no new boilerplate). `src/components/admin-roadmaps-panel.tsx` is the pure-presentational panel. Adding new card types or per-consultant slices later is a one-file change.",
+      "**🗓 DD/MM/YYYY dates everywhere** — uses `formatDate()` from `src/lib/dates.ts`, never inline `toLocaleDateString` (per the existing app convention).",
+      "**🧪 Verified on localhost** with all 17 SEO slugs across the 3 SEO consultants — A. Domingos rendered correctly as `On track · Week 2 of 12 · 8/51 done · 6 done past weeks · 0 for approval · 0 overdue · Cycle start 03/06/2026`. Page weight ~328kb HTML, server-render time ~1.5s on the first hit (cached afterwards for the same request cycle).",
+    ],
+  },
+  {
     version: "74.26.2",
     date: "2026-06-11",
     title: "Meta Tags diagnostics now actually stick on screen — bundled into the final error AND rendered in a sticky block in the runner UI",

@@ -1,14 +1,15 @@
-// Post-gate chooser inside the SuperAdmin Control Suite. Two big
-// blocks — Projects and Employees — surface the two manageable
+// Post-gate chooser inside the SuperAdmin Control Suite. Three big
+// blocks — Projects, Employees, Roadmaps — surface the manageable
 // rosters in the suite. Each block carries a live count + a brand
 // gradient border that pulses on hover.
 //
 // v74.23: the separate "Log out" button is gone — sign-out lives on
 // the workspace UserChip in the header now (one logout point for the
 // whole app, not three).
+// v74.27: added Roadmaps block — per-consultant SEO project tracker.
 
 import Link from "next/link";
-import { FolderKanban, Users, ArrowRight } from "lucide-react";
+import { FolderKanban, Users, Compass, ArrowRight } from "lucide-react";
 
 type ChoiceBlock = {
   href: string;
@@ -22,9 +23,11 @@ type ChoiceBlock = {
 export function AdminLanding({
   projectsCount,
   employeesCount,
+  roadmapsCount,
 }: {
   projectsCount: number;
   employeesCount: number;
+  roadmapsCount: number;
 }) {
 
   const blocks: ChoiceBlock[] = [
@@ -46,6 +49,15 @@ export function AdminLanding({
       badge: employeesCount === 1 ? "employee" : "employees",
       Icon: Users,
     },
+    {
+      href: "/admin/roadmaps",
+      title: "Roadmaps",
+      blurb:
+        "SEO consultants' projects grouped by who runs them. See which week each engagement is in, what's done, what's stuck waiting on the client, and where past-week tasks are piling up.",
+      count: roadmapsCount,
+      badge: roadmapsCount === 1 ? "roadmap" : "roadmaps",
+      Icon: Compass,
+    },
   ];
 
   return (
@@ -61,7 +73,7 @@ export function AdminLanding({
 
       <section
         aria-label="Manageable rosters"
-        className="mt-10 grid grid-cols-1 gap-5 md:grid-cols-2"
+        className="mt-10 grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3"
       >
         {blocks.map((b) => {
           const { Icon } = b;
