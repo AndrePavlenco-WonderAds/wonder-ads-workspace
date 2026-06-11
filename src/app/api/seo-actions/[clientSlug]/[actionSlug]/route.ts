@@ -31,6 +31,12 @@ import { getClientWebsite as getClientWebsiteForKw } from "@/lib/client-meta";
 import { getOnboardingForSlug } from "@/lib/onboarding-store";
 import { saveKwResearchPrep } from "@/lib/kw-research-prep-store";
 import { findLocationTarget } from "@/lib/location-targets";
+import {
+  getLiveClientContext,
+  formatLiveClientContextBlock,
+  summariseLiveContextForProgress,
+  type FormatLiveContextOptions,
+} from "@/lib/live-client-context";
 
 // maxDuration 300s — Vercel Pro is now active so the full 5-minute
 // budget is honoured. The blog writer needs the headroom because
@@ -475,6 +481,54 @@ export async function POST(
           });
           factPack = pieces.join("\n\n");
           send("\n---\n\n");
+        }
+      }
+
+      // ---------- Live client context augmentation ----------
+      // Every action should consult the four live consultant tables
+      // (Brief, Onboarding form, Target Keywords, Geo) before generating
+      // output. Brief is already injected through buildSeoClaudeSystemPrompt
+      // above. The other three are added to factPack here so they land
+      // in the user message as authoritative live evidence.
+      //
+      // Per-action overrides describe what each specialised branch above
+      // has ALREADY pulled — we skip those sections to avoid duplication
+      // with the existing factPack content.
+      const liveContextOverride: Record<string, FormatLiveContextOptions | "skip"> = {
+        // KW research GENERATES target keywords; the onboarding PDF is
+        // attached natively above. Its existing branch + system prompt
+        // already cover everything live.
+        "keyword-research": "skip",
+        // Both Overall-SEO synthesis actions load onboarding + target
+        // keywords + recent history themselves.
+        "monthly-report": "skip",
+        "client-roadmap": "skip",
+        // Blog Writer already loads the onboarding form (and attaches the
+        // PDF natively). It does NOT currently consult Target Keywords —
+        // adding them as a focused block sharpens the article angle.
+        "write-blog-article": { skipOnboarding: true },
+      };
+
+      const override = liveContextOverride[entry.action.slug];
+      if (override !== "skip") {
+        try {
+          const liveCtx = await getLiveClientContext(clientSlug);
+          const block = formatLiveClientContextBlock(liveCtx, override ?? {});
+          if (block) {
+            send(
+              `> ✓ **${summariseLiveContextForProgress(liveCtx, override ?? {})}** — read live before generating.\n\n`,
+            );
+            factPack = factPack ? `${factPack}\n\n---\n\n${block}` : block;
+          } else {
+            send(
+              `> ℹ️ ${summariseLiveContextForProgress(liveCtx, override ?? {})}.\n\n`,
+            );
+          }
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          send(
+            `> ⚠️ Live client context fetch failed (${message.slice(0, 200)}) — proceeding with brief + inputs only.\n\n`,
+          );
         }
       }
 
