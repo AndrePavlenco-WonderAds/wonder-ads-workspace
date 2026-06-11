@@ -13,6 +13,19 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.26.1",
+    date: "2026-06-11",
+    title: "Meta Tags chunk-failure diagnostics now stream to the consultant — no more 'check Vercel logs' for retry layer errors",
+    highlights: [
+      "**🔍 Every meta-generate retry failure now emits a streaming `🔍` diagnostic line.** Until v74.26.1 the three retry layers in `generateChunkWithRetry` (generateObject → retry → generateText salvage) logged failures via `console.warn` only — diagnostics landed in Vercel logs but the consultant on the action page just saw `Generation produced no rows after three retry layers (generateObject, retry, generateText salvage). Check Vercel logs for the underlying Claude error.` That meant every failed run required Andre to context-switch into Vercel just to see whether it was an Anthropic overload, a schema mismatch, or a content-policy block — and the user couldn't see what was happening at all.",
+      "**🩺 New `formatDiagnostic(err)` helper probes the AI SDK error shape and surfaces every useful field on one line:** error `name` (`AI_APICallError` / `AI_NoObjectGeneratedError` / `AI_TypeValidationError`), `statusCode` (HTTP 429 rate limit, 529 overloaded, 400 bad request), `responseBody` excerpt (first 240 chars — contains Anthropic's `\"type\":\"overloaded_error\"` markers and the human-readable message), and for schema failures the first 2 Zod issues (e.g. `rows.0.optimizedTitle: String must contain at least 5 character(s)`). Plus the raw model output head (first 160 chars) when Claude returned prose instead of JSON.",
+      "**🪜 Per-layer diagnostics — you can now tell exactly which layer failed.** Each retry attempt streams its own diagnostic: `chunk 2 · generateObject attempt 1 → AI_APICallError | HTTP 529 | body: {\"type\":\"error\",\"error\":{\"type\":\"overloaded_error\"…`. The salvage layer emits its own three flavours of detail: (a) `recovered 8/10 rows (2 rows dropped: rows.0.url=Required; rows.1.optimizedTitle=String too short)` on partial success, (b) `no valid JSON in 3,421-char response. Head: \"I cannot generate meta tags for…\"` when Claude refused, (c) `8 rows in JSON, ALL failed Zod (top reasons: …)` when JSON parsed but every row was bad.",
+      "**🚨 Final error message now points at the diagnostic lines** instead of Vercel: `Generation produced no rows after three retry layers across ALL 3 chunks. The 🔍 diagnostic lines above name the underlying error for each layer (HTTP status, Anthropic error type, Zod issue, raw model excerpt). Most common cause is Anthropic API overload (HTTP 529 overloaded_error) — retry in a minute. If the diagnostics show schema/Zod issues instead, the prompt may need tightening; ping Claude.` Tells the consultant what to do next based on what the diagnostics revealed.",
+      "**🪵 Vercel-side logs unchanged** — the existing `console.warn(\"[meta-generate] chunk N attempt M failed: …\")` calls are kept, now with the formatted diagnostic appended. So Vercel logs still have everything for offline debugging, AND the consultant sees it live in the action stream. No information loss either way.",
+      "**No behaviour change.** The retry logic + salvage parser + Zod schema are byte-for-byte identical to v74.26. Only the error-reporting surface area changed. Existing successful runs see no new output.",
+    ],
+  },
+  {
     version: "74.26",
     date: "2026-06-11",
     title: "Onboarding PDF extraction unblocked — 14/15 forms backfilled with 155k chars of content + competitor lists",

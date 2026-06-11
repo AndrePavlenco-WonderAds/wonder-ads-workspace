@@ -353,6 +353,13 @@ export async function POST(
           message: `Drafting optimised meta tags with Claude (Haiku 4.5) — ${chunks.length} chunk${chunks.length === 1 ? "" : "s"} of up to ${CHUNK_SIZE} pages in parallel…`,
         });
         const system = buildSystemPrompt(geo.languageCode);
+        // Stream the chunk-level diagnostics back as progress events so
+        // the consultant sees exactly which layer failed and why (HTTP
+        // status, Anthropic error type, Zod issue, raw model output
+        // excerpt) without having to read Vercel logs.
+        const emitDiagnostic = (line: string) => {
+          send({ event: "progress", phase: "generate", message: `🔍 ${line}` });
+        };
         const chunkResults = await Promise.all(
           chunks.map(async (chunk, idx) =>
             generateChunkWithRetry({
@@ -366,6 +373,7 @@ export async function POST(
               kwClusters,
               focusKeywords,
               system,
+              onDiagnostic: emitDiagnostic,
             }),
           ),
         );
@@ -375,7 +383,7 @@ export async function POST(
           send({
             event: "error",
             message:
-              "Generation produced no rows after three retry layers (generateObject, retry, generateText salvage). Check Vercel logs for the underlying Claude error — likely an API outage, rate limit, or content-policy block on this client's URLs.",
+              `Generation produced no rows after three retry layers across ALL ${chunks.length} chunk${chunks.length === 1 ? "" : "s"}. The 🔍 diagnostic lines above name the underlying error for each layer (HTTP status, Anthropic error type, Zod issue, raw model excerpt). Most common cause is Anthropic API overload (HTTP 529 overloaded_error) — retry in a minute. If the diagnostics show schema/Zod issues instead, the prompt may need tightening; ping Claude.`,
           });
           controller.close();
           return;
@@ -651,7 +659,15 @@ type ChunkPage = {
  *  This guarantees that as long as Claude returns SOMETHING parseable,
  *  consultants get rows — they don't lose the entire chunk to one bad
  *  field. Length issues are surfaced as `issues[]` entries by the
- *  caller via annotateRowLengths. */
+ *  caller via annotateRowLengths.
+ *
+ *  v74.26.1: every retry failure now streams a one-line diagnostic to
+ *  the consultant via `onDiagnostic` (NDJSON progress event) so the next
+ *  failed run tells us exactly which layer is choking — Anthropic
+ *  overload, schema validation, salvage JSON parse, etc. Console logs
+ *  are kept for the Vercel side. */
+type DiagnosticEmitter = (line: string) => void;
+
 async function generateChunkWithRetry(opts: {
   chunkIdx: number;
   chunk: ChunkPage[];
@@ -663,6 +679,7 @@ async function generateChunkWithRetry(opts: {
   kwClusters: KwCluster[];
   focusKeywords: string;
   system: string;
+  onDiagnostic?: DiagnosticEmitter;
 }): Promise<Row[]> {
   const prompt = buildPrompt({
     clientName: opts.clientName,
@@ -686,7 +703,11 @@ async function generateChunkWithRetry(opts: {
       });
       return r.object.rows;
     } catch (err) {
-      logChunkError(opts.chunkIdx, attempt + 1, err);
+      const diag = formatDiagnostic(err);
+      logChunkError(opts.chunkIdx, attempt + 1, err, diag);
+      opts.onDiagnostic?.(
+        `chunk ${opts.chunkIdx} · generateObject attempt ${attempt + 1} → ${diag}`,
+      );
       if (attempt === 0) await new Promise((r) => setTimeout(r, 600));
     }
   }
@@ -704,40 +725,142 @@ async function generateChunkWithRetry(opts: {
       maxOutputTokens: 4000,
     });
     const parsed = extractJsonObject(r.text);
-    if (!parsed || typeof parsed !== "object") return [];
+    if (!parsed || typeof parsed !== "object") {
+      const head = r.text.replace(/\s+/g, " ").slice(0, 200);
+      opts.onDiagnostic?.(
+        `chunk ${opts.chunkIdx} · generateText salvage → no valid JSON in ${r.text.length}-char response. Head: "${head}…"`,
+      );
+      return [];
+    }
     const rawRows = (parsed as { rows?: unknown }).rows;
-    if (!Array.isArray(rawRows)) return [];
+    if (!Array.isArray(rawRows)) {
+      opts.onDiagnostic?.(
+        `chunk ${opts.chunkIdx} · generateText salvage → JSON had no \`rows\` array. Got keys: [${Object.keys(parsed as object).join(", ")}]`,
+      );
+      return [];
+    }
     const out: Row[] = [];
+    const dropReasons: string[] = [];
     for (const raw of rawRows) {
       const v = RowSchema.safeParse(raw);
       if (v.success) {
         out.push(v.data);
       } else {
+        const detail = v.error.issues
+          .slice(0, 2)
+          .map((i) => `${i.path.join(".")}=${i.message}`)
+          .join("; ");
+        dropReasons.push(detail);
         console.warn(
-          `[meta-generate] chunk ${opts.chunkIdx} salvage: dropped one row`,
-          v.error.issues.slice(0, 3).map((i) => `${i.path.join(".")}=${i.message}`),
+          `[meta-generate] chunk ${opts.chunkIdx} salvage: dropped one row — ${detail}`,
         );
       }
     }
     if (out.length > 0) {
+      const dropped = rawRows.length - out.length;
+      const droppedNote =
+        dropped > 0
+          ? ` (${dropped} row${dropped === 1 ? "" : "s"} dropped: ${dropReasons.slice(0, 2).join(" / ")})`
+          : "";
+      opts.onDiagnostic?.(
+        `chunk ${opts.chunkIdx} · generateText salvage → recovered ${out.length}/${rawRows.length} rows${droppedNote}`,
+      );
       console.info(
         `[meta-generate] chunk ${opts.chunkIdx} salvaged ${out.length}/${rawRows.length} rows via generateText fallback`,
+      );
+    } else {
+      opts.onDiagnostic?.(
+        `chunk ${opts.chunkIdx} · generateText salvage → ${rawRows.length} rows in JSON, ALL failed Zod (top reasons: ${dropReasons.slice(0, 3).join(" / ")})`,
       );
     }
     return out;
   } catch (err) {
-    logChunkError(opts.chunkIdx, 3, err);
+    const diag = formatDiagnostic(err);
+    logChunkError(opts.chunkIdx, 3, err, diag);
+    opts.onDiagnostic?.(
+      `chunk ${opts.chunkIdx} · generateText salvage → ${diag}`,
+    );
     return [];
   }
 }
 
-function logChunkError(chunkIdx: number, attempt: number, err: unknown) {
+/** Format any error from the AI SDK (or below) into a one-line diagnostic
+ *  with the useful fields surfaced: name, HTTP status, response body
+ *  excerpt, Zod issues. Designed for the streaming progress log so a
+ *  consultant looking at the failed run can tell whether it was an
+ *  Anthropic overload (HTTP 529), a rate limit (429), a schema mismatch
+ *  (NoObjectGeneratedError + ZodIssue list), or something else. */
+function formatDiagnostic(err: unknown): string {
+  if (!err || typeof err !== "object") return String(err);
+  const e = err as {
+    name?: string;
+    message?: string;
+    statusCode?: number;
+    responseBody?: string;
+    url?: string;
+    cause?: unknown;
+    text?: string;
+    response?: unknown;
+  };
+  const name = e.name ?? "Error";
+  const parts: string[] = [name];
+
+  if (typeof e.statusCode === "number") {
+    parts.push(`HTTP ${e.statusCode}`);
+  }
+  // Anthropic provider errors carry the JSON body verbatim. The first
+  // 240 chars contain the error type ("overloaded_error", "rate_limit_error",
+  // "invalid_request_error", etc) and the human message.
+  if (typeof e.responseBody === "string" && e.responseBody.length > 0) {
+    parts.push(`body: ${e.responseBody.slice(0, 240).replace(/\s+/g, " ")}`);
+  }
+  if (typeof e.message === "string" && e.message.length > 0) {
+    parts.push(`message: ${e.message.slice(0, 240).replace(/\s+/g, " ")}`);
+  }
+  // AI SDK NoObjectGeneratedError → cause is the schema-validation error
+  // with a `.issues` array of Zod issues. Pull the first 2 so we see
+  // which field tripped (e.g. `rows.0.optimizedTitle=String must contain
+  // at least 5 character(s)`).
+  if (e.cause && typeof e.cause === "object") {
+    const cause = e.cause as {
+      message?: string;
+      issues?: { path?: (string | number)[]; message?: string }[];
+    };
+    if (Array.isArray(cause.issues) && cause.issues.length > 0) {
+      const top = cause.issues
+        .slice(0, 2)
+        .map(
+          (i) =>
+            `${(i.path ?? []).join(".") || "(root)"}: ${i.message ?? "?"}`,
+        )
+        .join("; ");
+      parts.push(`zod: ${top}`);
+    } else if (typeof cause.message === "string" && cause.message.length > 0) {
+      parts.push(`cause: ${cause.message.slice(0, 240).replace(/\s+/g, " ")}`);
+    }
+  }
+  // For NoObjectGeneratedError, the `.text` field is the raw model output
+  // that failed to parse. Useful when Claude returned prose instead of JSON
+  // or wrapped the JSON in markdown.
+  if (typeof e.text === "string" && e.text.length > 0) {
+    const head = e.text.slice(0, 160).replace(/\s+/g, " ");
+    parts.push(`raw head: "${head}${e.text.length > 160 ? "…" : ""}"`);
+  }
+  return parts.join(" | ");
+}
+
+function logChunkError(
+  chunkIdx: number,
+  attempt: number,
+  err: unknown,
+  diag?: string,
+) {
   const e = err as { name?: string; message?: string; cause?: unknown };
   const name = e?.name ?? "Error";
   const message =
     typeof e?.message === "string" ? e.message.slice(0, 400) : String(err);
   console.warn(
-    `[meta-generate] chunk ${chunkIdx} attempt ${attempt} failed: ${name}: ${message}`,
+    `[meta-generate] chunk ${chunkIdx} attempt ${attempt} failed: ${name}: ${message}${diag ? ` (diag: ${diag.slice(0, 400)})` : ""}`,
   );
   if (e?.cause) {
     const cause = e.cause as { message?: string };
