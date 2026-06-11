@@ -81,7 +81,19 @@ async function extractPdf(url: string): Promise<ExtractResult> {
   const pdf = await getDocumentProxy(buf);
   const pageCount = pdf.numPages ?? null;
 
-  const result = await extractText(buf, { mergePages: true });
+  // Pass the PDFDocumentProxy to extractText, NOT the raw buffer.
+  //
+  // The raw-buffer code path goes through worker postMessage which uses
+  // Node's structuredClone — that throws `Unable to deserialize cloned
+  // data` on Node 20.6.1+ (and on Vercel runtime), and the throw is
+  // swallowed by the upload route's "non-fatal" try/catch, leaving every
+  // onboarding record with empty extractedText. Caught 2026-06-11 when
+  // an audit found 15/15 onboarding forms in KV had textChars=0.
+  //
+  // Passing the proxy reuses the already-loaded document and skips the
+  // problematic worker round-trip. Verified end-to-end on IHN's 15-page
+  // 202kb PDF: 0 chars → 18,981 chars extracted in ~290ms.
+  const result = await extractText(pdf, { mergePages: true });
   const raw = (result as { text: unknown }).text;
   const text =
     typeof raw === "string"
@@ -167,15 +179,38 @@ export function mineCompetitors(text: string): string[] {
     }
   }
 
-  // Filter out the client's own / WonderAds / Google Form noise — we don't
-  // want to ask DataforSEO about wonder-ads.com.
+  // Filter out the client's own / WonderAds / Google Form / social-media
+  // noise — we don't want to ask DataforSEO about facebook.com or have
+  // Claude treat drive.google.com (the form's storage host) as a real
+  // competitor. v74.26 backfill turned up the social-media + g-suite
+  // domains as a recurring source of false-positive "competitors".
   const NOISE = new Set([
     "wonder-ads.com",
     "wonderads.com",
+    // Google ecosystem (the form lives on these).
     "docs.google.com",
     "google.com",
     "forms.gle",
     "gmail.com",
+    "drive.google.com",
+    "accounts.google.com",
+    "goo.gl",
+    // Major social platforms — almost never a real competitor for the
+    // health/wellness roster (clients link to their OWN profiles).
+    "facebook.com",
+    "fb.com",
+    "instagram.com",
+    "linkedin.com",
+    "youtube.com",
+    "youtu.be",
+    "twitter.com",
+    "x.com",
+    "tiktok.com",
+    "pinterest.com",
+    "whatsapp.com",
+    "wa.me",
+    "telegram.org",
+    "t.me",
   ]);
   return Array.from(found).filter((d) => !NOISE.has(d));
 }

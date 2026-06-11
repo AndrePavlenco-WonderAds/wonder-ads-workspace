@@ -66,15 +66,19 @@ export type FormatLiveContextOptions = {
    *  the prompt focused on the strongest commercial keywords without
    *  flooding Claude with the long tail. */
   targetKeywordsCap?: number;
-  /** How much of the onboarding extracted text to inline. Default 4000
-   *  chars — Anthropic SDK lets us go higher but most actions don't
-   *  need it; blog-writer-style actions that want full text already
-   *  attach the PDF natively. */
+  /** How much of the onboarding extracted text to inline. Default
+   *  12000 chars — enough to fit the entire form for ~10/15 clients
+   *  (the average extracted form is ~10k chars after the v74.26
+   *  extraction backfill) and the meaty middle of the larger ones.
+   *  Costs ~3k tokens per call, which is well inside budget. Was 4000
+   *  before v74.26 — too conservative once extraction actually worked.
+   *  Blog-writer-style actions that want the full PDF still attach it
+   *  natively for layout fidelity. */
   onboardingExcerptChars?: number;
 };
 
 const DEFAULT_TK_CAP = 25;
-const DEFAULT_ONBOARDING_CHARS = 4000;
+const DEFAULT_ONBOARDING_CHARS = 12000;
 
 /** Format the live client context as a markdown block for the factPack.
  *  Returns null when there's nothing useful (no onboarding + no target
