@@ -13,6 +13,19 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.26.2",
+    date: "2026-06-11",
+    title: "Meta Tags diagnostics now actually stick on screen — bundled into the final error AND rendered in a sticky block in the runner UI",
+    highlights: [
+      "**🪶 v74.26.1 added the diagnostics but they disappeared on screen.** Each `🔍` line streamed as a `progress` event, and the runner UI did `setPhaseMessage(evt.message)` — meaning every new event overwrote the previous one. By the time the run ended, all the diagnostic lines had been replaced by the final `\"Crawling 9 pages…\"` or similar, and the user just saw the generic error without any of the underlying reasons.",
+      "**🪢 Server-side: diagnostics are now captured into a buffer AND appended to the final error message.** The `emitDiagnostic` callback in `meta-generate/route.ts` now does two things: stream the line as a progress event (existing v74.26.1 behaviour), AND push it onto a `diagnostics: string[]` buffer. When the run fails with `drafts.length === 0`, the final error message includes a `Diagnostics for each failed retry layer:` block listing every line. So even if the UI throws away the live progress events, the saved error text has everything inline — which means navigation, refresh, and re-render all preserve it.",
+      "**👀 UI-side: `<MetaTagsRunner>` now keeps a sticky `diagnostics: string[]` state.** Progress events whose message starts with `🔍 ` are sliced and appended to that state (in addition to the existing `phaseMessage` overwrite). When `status === 'error'` and the buffer is non-empty, the failure block renders a `🔍 Diagnostics (N retry layers)` panel below the error message — bulleted, monospace, breakable so long Anthropic response bodies don't overflow the column. So you see the full retry-layer history without having to read the error string itself.",
+      "**🪟 Error message div now renders newlines** (`whitespace-pre-wrap` + `leading-relaxed`) so the server-side diagnostic block (newline-separated bullets) renders correctly. v74.26.1's error text collapsed everything to a single line.",
+      "**🕊 When no diagnostics were captured at all** (the failure happened before any retry layer reported back — which itself is a tell that the whole `Promise.all` call rejected early, e.g. a model-not-found or an env-var issue), the error appends a soft note: `(No diagnostics captured — almost certainly an Anthropic API outage; retry in a minute.)` so the consultant isn't left guessing.",
+      "**No behaviour change** — same retry logic, same Zod schema, same prompt. Only the surfacing of the existing diagnostics changed.",
+    ],
+  },
+  {
     version: "74.26.1",
     date: "2026-06-11",
     title: "Meta Tags chunk-failure diagnostics now stream to the consultant — no more 'check Vercel logs' for retry layer errors",

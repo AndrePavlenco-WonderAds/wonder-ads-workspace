@@ -353,11 +353,18 @@ export async function POST(
           message: `Drafting optimised meta tags with Claude (Haiku 4.5) — ${chunks.length} chunk${chunks.length === 1 ? "" : "s"} of up to ${CHUNK_SIZE} pages in parallel…`,
         });
         const system = buildSystemPrompt(geo.languageCode);
-        // Stream the chunk-level diagnostics back as progress events so
-        // the consultant sees exactly which layer failed and why (HTTP
-        // status, Anthropic error type, Zod issue, raw model output
-        // excerpt) without having to read Vercel logs.
+        // Stream the chunk-level diagnostics back as progress events AND
+        // capture them in a buffer so the final error message can include
+        // the full list. The streaming alone is not enough: the runner
+        // UI shows only the latest progress event, so each 🔍 line
+        // overwrites the previous one and disappears the moment the next
+        // arrives — when the run ends the consultant only sees the
+        // generic "no rows" error, not the diagnostics. Folding them
+        // into the error message ensures they survive page navigation
+        // and the UI re-render.
+        const diagnostics: string[] = [];
         const emitDiagnostic = (line: string) => {
+          diagnostics.push(line);
           send({ event: "progress", phase: "generate", message: `🔍 ${line}` });
         };
         const chunkResults = await Promise.all(
@@ -380,10 +387,14 @@ export async function POST(
         const drafts = chunkResults.flat();
         const failedChunks = chunkResults.filter((r) => r.length === 0).length;
         if (drafts.length === 0) {
+          const diagBlock =
+            diagnostics.length > 0
+              ? `\n\nDiagnostics for each failed retry layer:\n${diagnostics.map((d) => `• ${d}`).join("\n")}`
+              : "\n\n(No diagnostics captured — the failure happened before any retry layer reported back. Almost certainly an Anthropic API outage; retry in a minute.)";
           send({
             event: "error",
             message:
-              `Generation produced no rows after three retry layers across ALL ${chunks.length} chunk${chunks.length === 1 ? "" : "s"}. The 🔍 diagnostic lines above name the underlying error for each layer (HTTP status, Anthropic error type, Zod issue, raw model excerpt). Most common cause is Anthropic API overload (HTTP 529 overloaded_error) — retry in a minute. If the diagnostics show schema/Zod issues instead, the prompt may need tightening; ping Claude.`,
+              `Generation produced no rows after three retry layers across ALL ${chunks.length} chunk${chunks.length === 1 ? "" : "s"}. Most common cause is Anthropic API overload (HTTP 529 overloaded_error) — retry in a minute. If the diagnostics below show schema/Zod issues instead, the prompt may need tightening.${diagBlock}`,
           });
           controller.close();
           return;

@@ -48,6 +48,13 @@ export function MetaTagsRunner({
   const [progressPct, setProgressPct] = useState(0);
   const [phaseMessage, setPhaseMessage] = useState<string>("");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  // Accumulator for `🔍` diagnostic events emitted by meta-generate's
+  // chunk-retry diagnostics (v74.26.2). Phase progress events overwrite
+  // `phaseMessage`, but these are sticky — they survive the next event
+  // and render in the failure block so the consultant can see WHY each
+  // chunk-retry layer failed (HTTP 529, Zod issue, refusal, etc.)
+  // without having to read Vercel logs.
+  const [diagnostics, setDiagnostics] = useState<string[]>([]);
   const [result, setResult] = useState<MetaTagsResult | null>(existing);
   const startedRef = useRef(false);
   const kickoffRef = useRef(false);
@@ -103,6 +110,12 @@ export function MetaTagsRunner({
             if (evt.event === "progress") {
               setProgressPct((cur) => PHASE_PERCENT[evt.phase] ?? cur);
               setPhaseMessage(evt.message);
+              // Sticky-accumulate diagnostic lines (🔍 prefix from the
+              // server) so they survive subsequent progress events.
+              if (evt.message.startsWith("🔍 ")) {
+                const line = evt.message.slice(2).trim();
+                setDiagnostics((cur) => [...cur, line]);
+              }
             } else if (evt.event === "error") {
               throw new Error(evt.message);
             } else if (evt.event === "result") {
@@ -204,8 +217,26 @@ export function MetaTagsRunner({
               </div>
             )}
             {errorMsg && (
-              <div className="mt-3 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-200">
+              <div className="mt-3 whitespace-pre-wrap rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs leading-relaxed text-rose-200">
                 {errorMsg}
+              </div>
+            )}
+            {status === "error" && diagnostics.length > 0 && (
+              <div className="mt-3 rounded-lg border border-white/12 bg-white/[0.03] p-3">
+                <div className="mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/65">
+                  <span aria-hidden="true">🔍</span>
+                  <span>
+                    Diagnostics ({diagnostics.length} retry layer
+                    {diagnostics.length === 1 ? "" : "s"})
+                  </span>
+                </div>
+                <ul className="space-y-1.5 font-mono text-[11px] leading-relaxed text-white/75">
+                  {diagnostics.map((d, i) => (
+                    <li key={i} className="break-all">
+                      <span className="text-white/40">•</span> {d}
+                    </li>
+                  ))}
+                </ul>
               </div>
             )}
             {status === "missing" && (
