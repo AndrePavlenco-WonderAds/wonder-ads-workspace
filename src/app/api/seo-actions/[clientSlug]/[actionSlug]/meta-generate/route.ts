@@ -25,6 +25,10 @@ import { getOnboardingForSlug } from "@/lib/onboarding-store";
 import { getClientGeo } from "@/lib/client-geo";
 import { listHistory } from "@/lib/action-history";
 import type { KwCluster } from "@/lib/kw-cluster-parser";
+import {
+  listTargetKeywords,
+  type TargetKeyword,
+} from "@/lib/target-keywords-store";
 import { discoverSitemap } from "@/lib/seo-tools/sitemap";
 import { crawlMany } from "@/lib/seo-tools/crawler";
 import {
@@ -203,20 +207,40 @@ export async function POST(
           return;
         }
 
-        const [brief, onboarding, kwHistory] = await Promise.all([
+        const [brief, onboarding, kwHistory, targetKeywords] = await Promise.all([
           getBriefForSlug(clientSlug),
           getOnboardingForSlug(clientSlug),
           listHistory(clientSlug, "keyword-research"),
+          listTargetKeywords(clientSlug),
         ]);
         const geo = getClientGeo(clientSlug);
 
-        // ---- KW research dependency (BLOCK if missing) ----
+        // ---- Keyword source resolution ----
+        // The Target Keywords table is the canonical live source — what
+        // the consultant has committed to ranking for RIGHT NOW. The
+        // Keyword Research history is a frozen snapshot from the last
+        // run. We prefer the live list; fall back to history clusters
+        // if Target Keywords is empty; error only when BOTH are empty.
         const latestKw = kwHistory[0];
-        if (!latestKw || !latestKw.kwClusters || latestKw.kwClusters.length === 0) {
+        const historyClusters: KwCluster[] = latestKw?.kwClusters ?? [];
+        let kwClusters: KwCluster[];
+        let kwSourceLabel: string;
+        if (targetKeywords.length > 0) {
+          kwClusters = clustersFromTargetKeywords(targetKeywords);
+          const enrichedCount = targetKeywords.filter(
+            (k) =>
+              (k.searchVolume !== null && k.searchVolume !== undefined) ||
+              (k.difficulty !== null && k.difficulty !== undefined),
+          ).length;
+          kwSourceLabel = `Target Keywords table (${targetKeywords.length} live keyword${targetKeywords.length === 1 ? "" : "s"}, ${enrichedCount} enriched)`;
+        } else if (historyClusters.length > 0) {
+          kwClusters = historyClusters;
+          kwSourceLabel = `Keyword Research from ${new Date(latestKw!.createdAt).toISOString().slice(0, 10)} (${historyClusters.length} cluster${historyClusters.length === 1 ? "" : "s"}, ${historyClusters.reduce((s, c) => s + c.rows.length, 0)} keywords)`;
+        } else {
           send({
             event: "error",
             message:
-              "No Keyword Research result found for this client. Run Keyword Research first, then come back — meta-tag optimisation depends on the keyword clusters to assign primary keywords per URL.",
+              "No keywords found for this client. Add target keywords to the Target Keywords table on the client page, or run Keyword Research — then come back. Meta-tag optimisation needs a keyword universe to assign primary keywords per URL.",
           });
           controller.close();
           return;
@@ -224,7 +248,7 @@ export async function POST(
         send({
           event: "progress",
           phase: "kw",
-          message: `✓ Found Keyword Research from ${new Date(latestKw.createdAt).toISOString().slice(0, 10)} — ${latestKw.kwClusters.length} cluster(s), ${latestKw.kwClusters.reduce((s, c) => s + c.rows.length, 0)} keywords total.`,
+          message: `✓ Keyword source: ${kwSourceLabel}.`,
         });
 
         // ---- Crawl phase ----
@@ -339,7 +363,7 @@ export async function POST(
               languageCode: geo.languageCode,
               brief,
               onboardingText: onboarding?.extractedText ?? null,
-              kwClusters: latestKw.kwClusters ?? [],
+              kwClusters,
               focusKeywords,
               system,
             }),
@@ -437,7 +461,14 @@ export async function POST(
             depth: depth.label,
             focusKeywords: focusKeywords || undefined,
           },
-          kwResearchSourceId: latestKw.id,
+          // Keep this field for backwards compat with existing results.
+          // When the keyword source was the live Target Keywords table
+          // (not a historical KW research), we store the marker string
+          // "target-keywords:<count>" so the result page can disambiguate.
+          kwResearchSourceId:
+            targetKeywords.length > 0
+              ? `target-keywords:${targetKeywords.length}`
+              : (latestKw?.id ?? ""),
           stats,
           rows,
         };
@@ -853,4 +884,67 @@ function formatClusters(clusters: KwCluster[]): string {
     return `### ${c.name}\n${lines.join("\n")}`;
   });
   return `## Keyword Research clusters (the ONLY source of truth for primary keywords)\n${blocks.join("\n\n")}`;
+}
+
+/** Synthesize a KwCluster[] from the live Target Keywords list so the
+ *  meta-generate prompt builder can consume them without any branching.
+ *  Keywords are grouped by intent (commercial / transactional /
+ *  informational / navigational / unclassified) so Claude still sees a
+ *  cluster shape with topical buckets — which is what the prompt asks it
+ *  to pick a primary keyword from. */
+function clustersFromTargetKeywords(items: TargetKeyword[]): KwCluster[] {
+  type Bucket =
+    | "commercial"
+    | "transactional"
+    | "informational"
+    | "navigational"
+    | "unclassified";
+  const order: Bucket[] = [
+    "commercial",
+    "transactional",
+    "informational",
+    "navigational",
+    "unclassified",
+  ];
+  const buckets = new Map<Bucket, TargetKeyword[]>();
+  for (const k of items) {
+    const bucket: Bucket = k.intent ?? "unclassified";
+    const arr = buckets.get(bucket) ?? [];
+    arr.push(k);
+    buckets.set(bucket, arr);
+  }
+  const clusters: KwCluster[] = [];
+  for (const bucket of order) {
+    const arr = buckets.get(bucket);
+    if (!arr || arr.length === 0) continue;
+    // Sort by volume desc within the bucket so Claude sees the strongest
+    // keywords first in the truncated 15-row preview.
+    arr.sort((a, b) => (b.searchVolume ?? -1) - (a.searchVolume ?? -1));
+    const label =
+      bucket === "unclassified"
+        ? "Other target keywords"
+        : `${bucket.charAt(0).toUpperCase()}${bucket.slice(1)} intent`;
+    const rowIntent: string | null = bucket === "unclassified" ? null : bucket;
+    clusters.push({
+      name: label,
+      thesis: `Live keywords from the Target Keywords table (${arr.length}).`,
+      meta: {
+        intent: bucket === "unclassified" ? undefined : bucket,
+        combinedVolume: undefined,
+      },
+      rows: arr.map((k) => ({
+        keyword: k.keyword,
+        volumeText: k.searchVolume != null ? String(k.searchVolume) : "—",
+        volume: k.searchVolume ?? null,
+        difficultyText: k.difficulty != null ? String(k.difficulty) : "—",
+        difficulty: k.difficulty ?? null,
+        intent: rowIntent,
+        priority: null,
+        priorityRaw: "",
+        suggestedPage: "",
+        why: "",
+      })),
+    });
+  }
+  return clusters;
 }

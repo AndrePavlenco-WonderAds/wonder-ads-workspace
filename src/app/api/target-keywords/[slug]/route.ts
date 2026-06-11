@@ -6,8 +6,15 @@ import {
   targetKwStorageConfigured,
   type TargetKeyword,
 } from "@/lib/target-keywords-store";
+import { getClientGeo } from "@/lib/client-geo";
+import { enrichKeywordsComprehensive } from "@/lib/seo-tools/keyword-research";
 
 export const runtime = "nodejs";
+// DataForSEO enrichment on manual adds can pull from 3 endpoints
+// (Labs overview → bulk KD → Google Ads volume) — for a 30-keyword
+// paste this comfortably fits under 60s, but a 200-keyword paste at the
+// MAX_TARGETS ceiling could brush 90s. Match the meta-generate cap.
+export const maxDuration = 300;
 
 const ALLOWED_INTENTS = new Set([
   "informational",
@@ -81,6 +88,46 @@ export async function POST(
       { error: "No valid keywords in payload" },
       { status: 400 },
     );
+  }
+  // Enrich any keyword still missing vol/KD/intent against DataForSEO,
+  // using the client's geo. Manual adds always arrive bare from the panel
+  // and would otherwise render as "—" forever; pushes from Keyword
+  // Research already carry enrichment so they fall through untouched.
+  // Best-effort — if DataForSEO is down, we save the bare keywords
+  // rather than 500ing the add.
+  const needEnrichment = incoming.filter(
+    (k) =>
+      k.searchVolume === null || k.searchVolume === undefined ||
+      k.difficulty === null || k.difficulty === undefined ||
+      k.intent === null || k.intent === undefined,
+  );
+  if (needEnrichment.length > 0) {
+    const geo = getClientGeo(slug);
+    try {
+      const enrichment = await enrichKeywordsComprehensive(
+        needEnrichment.map((k) => k.keyword),
+        geo.locationCode,
+        geo.languageCode,
+      );
+      for (const k of incoming) {
+        const hit = enrichment.get(k.keyword.toLowerCase());
+        if (!hit) continue;
+        if (k.searchVolume === null || k.searchVolume === undefined) {
+          k.searchVolume = hit.searchVolume;
+        }
+        if (
+          k.difficulty === null || k.difficulty === undefined ||
+          k.difficulty === 0
+        ) {
+          k.difficulty = hit.difficulty;
+        }
+        if ((k.intent === null || k.intent === undefined) && hit.intent) {
+          k.intent = hit.intent;
+        }
+      }
+    } catch (err) {
+      console.warn("target-keywords enrichment failed (saving bare):", err);
+    }
   }
   try {
     const result = await addTargetKeywords(slug, incoming);

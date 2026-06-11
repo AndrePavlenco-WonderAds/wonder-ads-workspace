@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.24",
+    date: "2026-06-11",
+    title: "Live tables for actions — manual target keywords auto-enrich from DataForSEO + Meta Tags reads the live Target Keywords table",
+    highlights: [
+      "**🔍 Manually-added Target Keywords now auto-enrich from DataForSEO.** Until v74.24, hitting the **+ Add** button on a client's Target Keywords table stored the bare keyword string and rendered `—` in every other column (Vol/mo, KD, Intent) forever. Spotted on the IHN board where a 11-keyword Canada-targeted manual paste came back empty in every metric column. Fix: the `POST /api/target-keywords/<slug>` handler now calls `enrichKeywordsComprehensive()` against any incoming keyword that's missing `searchVolume`, `difficulty`, or `intent` — same 3-endpoint chain (DataForSEO Labs `keyword_overview` → `bulk_keyword_difficulty` → Google Ads volume) that the bulk Keyword Research save uses. Geo comes from `getClientGeo(slug)` so IHN runs against Canada (2124, en), Insync Design against Australia (2036, en), HDS Learning against Brazil (2076, pt), everyone else against Portugal (2620, pt). Best-effort: if DataForSEO is down or rate-limits, the keyword still saves bare rather than the add 500ing — so the user never loses input.",
+      "**🧠 Meta Tags now reads the LIVE Target Keywords table — no more 'No Keyword Research result found'.** v73.x hard-blocked the Meta Titles & Descriptions action with `No Keyword Research result found for this client. Run Keyword Research first…` whenever the consultant hadn't run a Keyword Research action yet. That broke the IHN flow: 11 keywords were sitting RIGHT THERE in the Target Keywords table (added manually) and the action refused to use them because they hadn't come from a historical Keyword Research result artifact. v74.24 inverts the source-of-truth: the action now reads `listTargetKeywords(slug)` FIRST (the live editorial wish-list the consultant maintains), falls back to the last Keyword Research history clusters only if Target Keywords is empty, and only errors when BOTH are empty. When Target Keywords is the source, the rows get grouped by intent (Commercial → Transactional → Informational → Navigational → Other) into a synthetic `KwCluster[]` so the existing Claude prompt builder consumes them unchanged. The progress log now reads `✓ Keyword source: Target Keywords table (11 live keywords, 11 enriched).` instead of `✓ Found Keyword Research from 2026-05-12…`.",
+      "**🪪 Live-tables principle for actions, stated explicitly.** Every existing action already pulled Brief (Do's/Don'ts/Notes), Onboarding form, and Geo fresh per request via `getBriefForSlug` / `getOnboardingForSlug` / `getClientGeo` — those have always been live. Keyword Research was the lone exception that read from a frozen historical result artifact. After v74.24, all four consultant-managed surfaces (Do's/Don'ts, Notes, Onboarding, Target Keywords) are pulled live per request for every action that consumes them. The principle: actions read what the table currently says, never what the app generated last time.",
+      "**🧹 Removed `src/lib/changelog 2.ts`** — another Finder-duplicate snuck in via `git add -A` since the v74.23 push (same pattern as a642f65). One-line cleanup so the workspace bundle doesn't ship two changelog modules.",
+    ],
+  },
+  {
     version: "74.23.3",
     date: "2026-06-09",
     title: "Roadmap onboardingDate field + violet pending-review tint + B-life reset to a Week-6 startDate",
