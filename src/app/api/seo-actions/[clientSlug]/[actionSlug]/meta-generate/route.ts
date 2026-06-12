@@ -29,6 +29,11 @@ import {
   listTargetKeywords,
   type TargetKeyword,
 } from "@/lib/target-keywords-store";
+import {
+  loadClientFilesWithExtraction,
+  formatClientFilesBlock,
+  type LiveClientFile,
+} from "@/lib/live-client-context";
 import { discoverSitemap } from "@/lib/seo-tools/sitemap";
 import { crawlMany } from "@/lib/seo-tools/crawler";
 import {
@@ -207,13 +212,25 @@ export async function POST(
           return;
         }
 
-        const [brief, onboarding, kwHistory, targetKeywords] = await Promise.all([
-          getBriefForSlug(clientSlug),
-          getOnboardingForSlug(clientSlug),
-          listHistory(clientSlug, "keyword-research"),
-          listTargetKeywords(clientSlug),
-        ]);
+        const [brief, onboarding, kwHistory, targetKeywords, clientFiles] =
+          await Promise.all([
+            getBriefForSlug(clientSlug),
+            getOnboardingForSlug(clientSlug),
+            listHistory(clientSlug, "keyword-research"),
+            listTargetKeywords(clientSlug),
+            loadClientFilesWithExtraction(clientSlug),
+          ]);
         const geo = getClientGeo(clientSlug);
+        if (clientFiles.length > 0) {
+          const extracted = clientFiles.filter(
+            (f) => f.extractedText !== null,
+          ).length;
+          send({
+            event: "progress",
+            phase: "context",
+            message: `✓ Client Files library: ${clientFiles.length} file(s), ${extracted} with extracted text — inlined into the Claude prompt.`,
+          });
+        }
 
         // ---- Keyword source resolution ----
         // The Target Keywords table is the canonical live source — what
@@ -378,6 +395,7 @@ export async function POST(
               brief,
               onboardingText: onboarding?.extractedText ?? null,
               kwClusters,
+              clientFiles,
               focusKeywords,
               system,
               onDiagnostic: emitDiagnostic,
@@ -590,6 +608,7 @@ function buildPrompt(opts: {
   brief: { dos: string[]; donts: string[]; notes: string[] };
   onboardingText: string | null;
   kwClusters: KwCluster[];
+  clientFiles: LiveClientFile[];
   focusKeywords: string;
   pages: {
     url: string;
@@ -603,6 +622,11 @@ function buildPrompt(opts: {
     ? `## Onboarding form excerpt\n\`\`\`\n${opts.onboardingText.slice(0, 2000)}${opts.onboardingText.length > 2000 ? "\n…[truncated]" : ""}\n\`\`\``
     : "";
   const clusterBlock = formatClusters(opts.kwClusters);
+  // Client Files library — when the consultant has uploaded files (brand
+  // guidelines, brief decks, audit notes, etc.), include them so Claude
+  // can ground meta-tag copy on the client's own material.
+  const clientFilesBlock =
+    opts.clientFiles.length > 0 ? formatClientFilesBlock(opts.clientFiles) : "";
   const focusBlock = opts.focusKeywords
     ? `\n## Extra focus keywords from the consultant\n${opts.focusKeywords}\n\n_These take priority over the KW cluster map when they conflict._`
     : "";
@@ -617,6 +641,7 @@ function buildPrompt(opts: {
     `Website: ${opts.websiteUrl}.`,
     briefBlock,
     onboardingBlock,
+    clientFilesBlock,
     clusterBlock,
     focusBlock,
     `\n## Pages crawled (${opts.pages.length})`,
@@ -688,6 +713,7 @@ async function generateChunkWithRetry(opts: {
   brief: { dos: string[]; donts: string[]; notes: string[] };
   onboardingText: string | null;
   kwClusters: KwCluster[];
+  clientFiles: LiveClientFile[];
   focusKeywords: string;
   system: string;
   onDiagnostic?: DiagnosticEmitter;
@@ -699,6 +725,7 @@ async function generateChunkWithRetry(opts: {
     brief: opts.brief,
     onboardingText: opts.onboardingText,
     kwClusters: opts.kwClusters,
+    clientFiles: opts.clientFiles,
     focusKeywords: opts.focusKeywords,
     pages: opts.chunk,
   });

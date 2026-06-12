@@ -8,7 +8,12 @@ import {
 
 const MAX_FILES = 200;
 const MAX_NAME_LENGTH = 200;
-const VALID_KINDS: readonly ClientFileKind[] = ["image", "video", "link"];
+const VALID_KINDS: readonly ClientFileKind[] = [
+  "image",
+  "video",
+  "document",
+  "link",
+];
 
 function sanitizeFiles(arr: unknown): ClientFile[] {
   if (!Array.isArray(arr)) return [];

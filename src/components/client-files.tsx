@@ -10,6 +10,7 @@ import {
   Loader2,
   Image as ImageIcon,
   Film,
+  FileText,
   ExternalLink,
 } from "lucide-react";
 import { upload } from "@vercel/blob/client";
@@ -247,7 +248,11 @@ export function ClientFiles({
             ref={fileInputRef}
             type="file"
             multiple
-            accept="image/*,video/mp4,video/webm,video/quicktime"
+            // v74.28 — accept any file the user picks. The OS file
+            // picker will show everything without the historical
+            // image/video filter, and the upload route's wildcard
+            // allowlist (image/* video/* audio/* application/* text/*)
+            // lets the server-side token cover it too.
             className="hidden"
             onChange={(e) => {
               handleUploadFiles(e.target.files);
@@ -271,9 +276,12 @@ export function ClientFiles({
           </div>
         ) : files.length === 0 ? (
           <div className="flex flex-1 items-center justify-center">
-            <p className="max-w-xs text-center text-sm text-white/40">
-              No files yet — upload images or videos, or paste a Google Drive
-              link. Files stay in sync across the SEO &amp; ADS departments.
+            <p className="max-w-sm text-center text-sm text-white/40">
+              No files yet — upload anything from your computer (images,
+              videos, PDFs, Word docs, spreadsheets, CSVs, archives,
+              etc.) or paste a Google Drive link. Files stay in sync
+              across the SEO &amp; ADS departments and every SEO action
+              reads them as live context.
             </p>
           </div>
         ) : (
@@ -327,6 +335,21 @@ function FileTile({
           preload="metadata"
           className="aspect-[4/3] w-full bg-black object-contain"
         />
+      ) : file.kind === "document" ? (
+        <a
+          href={file.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex aspect-[4/3] w-full flex-col items-center justify-center gap-2 bg-white/[0.02] transition hover:bg-white/[0.05]"
+        >
+          <span className="brand-gradient-bg flex h-9 w-9 items-center justify-center rounded-lg shadow-[0_4px_18px_-4px_rgba(120,61,245,0.55)]">
+            <FileText className="h-4 w-4 text-white" strokeWidth={2.25} />
+          </span>
+          <span className="inline-flex items-center gap-1 text-[11px] text-white/45">
+            Open document
+            <ExternalLink className="h-3 w-3" />
+          </span>
+        </a>
       ) : (
         <a
           href={file.url}
@@ -350,6 +373,9 @@ function FileTile({
         )}
         {file.kind === "video" && (
           <Film className="h-3 w-3 shrink-0 text-white/40" />
+        )}
+        {file.kind === "document" && (
+          <FileText className="h-3 w-3 shrink-0 text-white/40" />
         )}
         {file.kind === "link" && (
           <LinkIcon className="h-3 w-3 shrink-0 text-white/40" />

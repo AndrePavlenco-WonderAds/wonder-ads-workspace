@@ -6,22 +6,25 @@ import { NextResponse } from "next/server";
 // so it isn't bound by the serverless request-body size limit (mp4s welcome).
 // The file list itself is persisted separately via /api/files/[slug].
 
+// v74.28 — open the gate to all common business file types. This
+// route is auth-gated behind the workspace login (middleware), so
+// the allowlist is a defense-in-depth filter against accidental
+// uploads (executables, system files) rather than a hard security
+// boundary. Wildcards cover the long tail of variants Vercel Blob
+// sees in the wild without us having to enumerate every MIME type.
+//
+// Categories included:
+//   image/*        — png/jpeg/gif/webp/avif/svg/heic/heif/etc.
+//   video/*        — mp4/webm/quicktime/avi/mkv/etc.
+//   audio/*        — mp3/wav/ogg/m4a/etc. (rare for SEO, useful for podcasts)
+//   application/*  — PDF, DOCX, XLSX, PPTX, ZIP, JSON, octet-stream, etc.
+//   text/*         — plain, markdown, csv, html, xml, yaml, etc.
 const ALLOWED_CONTENT_TYPES = [
-  "image/png",
-  "image/jpeg",
-  "image/gif",
-  "image/webp",
-  "image/avif",
-  "image/svg+xml",
-  "video/mp4",
-  "video/webm",
-  "video/quicktime",
-  // Onboarding form documents (used by <OnboardingForm/>).
-  "application/pdf",
-  "application/msword",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  "text/plain",
-  "text/markdown",
+  "image/*",
+  "video/*",
+  "audio/*",
+  "application/*",
+  "text/*",
 ];
 
 const MAX_SIZE_BYTES = 200 * 1024 * 1024; // 200 MB
