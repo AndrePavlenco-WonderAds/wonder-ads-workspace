@@ -79,6 +79,31 @@ body {
   background-size: 100% 100%;
 }
 
+/* Form control used across the Web Dept board + project pages. Dark
+   field with a subtle border that picks up the brand purple on focus. */
+.modal-input {
+  width: 100%;
+  border-radius: 0.625rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  padding: 0.55rem 0.7rem;
+  font-size: 0.875rem;
+  color: #fff;
+  outline: none;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+.modal-input::placeholder {
+  color: rgba(255, 255, 255, 0.35);
+}
+.modal-input:focus {
+  border-color: rgba(120, 61, 245, 0.6);
+  background: rgba(255, 255, 255, 0.06);
+}
+.modal-input option {
+  background: #15131f;
+  color: #fff;
+}
+
 /* Brand gradient utilities */
 .brand-gradient-bg {
   background: var(--brand-gradient);

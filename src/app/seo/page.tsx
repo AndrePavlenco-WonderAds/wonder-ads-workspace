@@ -1,5 +1,8 @@
 import { Gauge } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
+import { AccessDenied } from "@/components/access-denied";
+import { getCurrentEmployee } from "@/lib/auth/server";
+import { accessibleDepts } from "@/lib/auth/credentials";
 import { DepartmentHeader } from "@/components/department-header";
 import { ClaudeChat } from "@/components/claude-chat";
 import { KpisCard } from "@/components/kpis-card";
@@ -26,6 +29,21 @@ export const metadata = {
 export const revalidate = 60;
 
 export default async function SeoPage() {
+  // Dept gate — Web-only designers (Mike/Gustavo/Renan) can't open SEO.
+  // SEO consultants + SuperAdmins pass; see accessibleDepts().
+  const employee = await getCurrentEmployee();
+  if (!employee || !accessibleDepts(employee).includes("seo")) {
+    return (
+      <PageShell>
+        <AccessDenied
+          title="No SEO access"
+          description="The SEO department is open to SEO consultants and SuperAdmins. Web designers have access to the Web department instead."
+          username={employee?.username}
+        />
+      </PageShell>
+    );
+  }
+
   let clients: NotionClient[] = [];
   let notionError: string | null = null;
 

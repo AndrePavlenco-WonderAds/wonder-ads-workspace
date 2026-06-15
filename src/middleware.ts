@@ -56,6 +56,7 @@ export const config = {
     // (The legacy /api/admin-auth + /api/changelog-auth endpoints
     //  were removed in v74.23 — session-based gating handles both.)
     "/api/admin/:path*",
+    "/api/web/:path*",
     "/api/call-notes/:path*",
     "/api/roadmaps/:path*",
     "/api/seo-actions/:path*",

@@ -13,6 +13,23 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.29",
+    date: "2026-06-16",
+    title:
+      "WEB DPT is now a real product — Kanban project board, project pages, role-based access, activity log, and a per-project encrypted credential vault",
+    highlights: [
+      "**🗂 The placeholder is gone — WEB DPT is a working board.** The old six 'capabilities' cards (Landing Pages, WordPress Sites, …) are replaced by a live Kanban board backed by Vercel KV. Five columns in pipeline order — **Negotiation / Not Started → In Progress → Client Feedback → Migration → Done** — and every web project is a card you drag freely between them. The column the card sits in IS the project's status, so moving a card to 'Done' is the status change. Empty columns show a 'Drop a card here' hint; each column header carries a live count.",
+      "**🪪 Card front shows everything at a glance.** Project name, a coloured status tag (matching the column), priority chip (Low/Med/High, white→amber→rose), client name, assigned web designer, start date, target launch date, and a 'Updated …' timestamp on every card. Create new projects from the **+ New project** button — a modal captures name, client, assignee, priority, starting column, start + launch dates.",
+      "**📄 Each card opens a dedicated project page (`/web/<id>`).** Full detail view with: an editable **Project details** card (name, client, designer, priority, status, dates — all editable in place, 'last updated' stamped on save); a **Status updates & comments** thread where the team posts timestamped updates, each tagged with the author from their session (authorship is server-stamped — it can't be spoofed from the client); and the full asset vault on the right. Projects can be created, edited, reassigned, moved, and deleted entirely inside the app.",
+      "**🔐 Per-project asset & credential storage.** Every project page stores: freeform **Notes**, **Do's & Don'ts** (two-colour list editor), **Branding kit** (link + uploaded files), **Onboarding web form** (link + files), general **Files & attachments** (upload-from-computer via Vercel Blob, any file type), **Other resources** (labelled links), and an **Access credentials** vault.",
+      "**🛡 Credentials are encrypted at rest, masked, and role-gated.** WordPress / hosting / FTP / domain / database logins are stored AES-256-GCM-encrypted in KV — the plaintext password NEVER leaves the server in the projects API, only a `hasSecret` flag does. Secrets render as `•••••••••••` with a **Reveal** button that calls a dedicated server endpoint to decrypt one credential on demand; every reveal is written to the activity log as a security trail (who unmasked which credential, when). The encryption key is derived from the existing `AUTH_SIGNING_SECRET` via scrypt, so there's nothing new to provision on Vercel.",
+      "**👥 Role-based department access.** New `accessibleDepts()` rule in the credential table: **SEO consultants can access both the Web Dept and the SEO Dept**; **Web designers can access the Web Dept only**; SuperAdmins + Founder see everything. The SEO landing page now shows a 'No SEO access' card to Web-only users, and the Web pages + every `/api/web/*` route enforce Web access (web designers, SEO consultants, admins).",
+      "**🧑‍🎨 Three web designer accounts created — Mike, Gustavo, and Renan.** Added to the login table with scrypt-hashed passwords (Web Dept only). They can be assigned to projects from the board's assignee dropdown alongside the SEO consultants. Andre has the plain passwords to hand out.",
+      "**📜 Activity log (`/web/activity`).** A history view across ALL web projects: status moves between columns, field edits, new comments, asset/credential changes, project creation + deletion — each with the actor's name, a human-readable message, a timestamp, and a link back to the project. Capped to the most recent 500 events.",
+      "**🧱 Under the hood.** New `web-projects-store.ts` (KV CRUD + activity log, every write run through a `normaliseProject` sanitiser so a bad payload can't corrupt the blob), `web-creds.ts` (the AES-256-GCM helper), and a client-safe `web-shared.ts` (enums, labels, status/priority colours, browser-facing types — kept free of server imports so 'use client' components can import it). The public serializer strips ciphertext before anything crosses to the browser.",
+    ],
+  },
+  {
     version: "74.28",
     date: "2026-06-12",
     title: "Client Files panel accepts ANY file type + every SEO action now reads the library as live context",

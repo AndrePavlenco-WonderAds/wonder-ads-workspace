@@ -92,7 +92,89 @@ export const EMPLOYEE_CREDENTIALS: EmployeeCredential[] = [
     salt: "bb6622826ccaefd1b6f0a9ba4283b69c",
     hash: "416eece1b238b1dd4175b548cfa7ada44f4c12343fe49191cbf6c73329b63ed960f32b94e5966156917504dfc04ad4af72cbc4b42e090a5678d991f895b6dcf6",
   },
+  // Web designers — added v74.29. Web Dept only (see accessibleDepts):
+  // they get /web but NOT /seo. Plain passwords were generated once and
+  // handed to Andre out-of-band; only the scrypt salt+hash live here.
+  {
+    username: "mike",
+    name: "Mike",
+    role: "Web Designer",
+    dept: "Web",
+    salt: "dcd10c8208accd64222497f003f20480",
+    hash: "c1f1ee60a2f04d0c0f784b912e8830aaf7ef3094f3d159ec68c07558fcd5306b52879c6be7d1c8e1781c4bc73fa7cb6b47cb4acbc50f10b3b19fe0ed5efdaeee",
+  },
+  {
+    username: "gustavo",
+    name: "Gustavo",
+    role: "Web Designer",
+    dept: "Web",
+    salt: "142c5cf298fdcfeed6c09fc336953c0c",
+    hash: "c1c57ffdd6dc7abd9b4e20b0697bb9507093f8d0fa02e7c688da565888e91418fe8111f6b7f7e64da4c9961c458c618f015009baad34633351930c90a344851e",
+  },
+  {
+    username: "renan",
+    name: "Renan",
+    role: "Web Designer",
+    dept: "Web",
+    salt: "763d35ff3e7121fb2ac9a8b645edb90c",
+    hash: "d37be5f7ba8db4b3425ec5e98349e8ab0877a2457af125f738837d03dcd63332c5be39cca2025c4fd19b9b45badcf959e1c2f8d2b4e66f80bebf72d0ff9c61f3",
+  },
 ];
+
+/** Department slugs used across the workspace router. */
+export const DEPARTMENTS = ["seo", "ads", "web", "commercial"] as const;
+export type DeptSlug = (typeof DEPARTMENTS)[number];
+
+/** Which department dashboards a credential row may open.
+ *
+ *  - SuperAdmins + Founder ("All") → every department.
+ *  - SEO consultants → SEO **and** Web (they brief/QA the web builds).
+ *  - Web designers → Web only.
+ *  - ADS / Commercial → their own department only.
+ *
+ *  Source of truth for the per-dept page gates. Demoting someone is a
+ *  code-deploy away — nothing about access lives in the cookie. */
+export function accessibleDepts(
+  row: Pick<EmployeeCredential, "dept" | "isAdmin"> | null | undefined,
+): DeptSlug[] {
+  if (!row) return [];
+  if (row.isAdmin) return [...DEPARTMENTS];
+  switch (row.dept) {
+    case "All":
+    case "Founder":
+      return [...DEPARTMENTS];
+    case "SEO":
+      return ["seo", "web"];
+    case "Web":
+      return ["web"];
+    case "ADS":
+      return ["ads"];
+    case "Commercial":
+      return ["commercial"];
+    default:
+      return [];
+  }
+}
+
+/** True when the user behind `username` may open the `dept` dashboard. */
+export function canAccessDept(
+  username: string | null | undefined,
+  dept: DeptSlug,
+): boolean {
+  if (!username) return false;
+  const row = findEmployeeByUsername(username);
+  return accessibleDepts(row).includes(dept);
+}
+
+/** People a Web project can be assigned to — anyone with Web access who
+ *  isn't a pure SuperAdmin (founder/Alex/Alice run the suite, they're not
+ *  the ones building sites). Resolves to the web designers + SEO
+ *  consultants. Used to populate the assignee dropdown on the board. */
+export function getWebAssignees(): { username: string; name: string }[] {
+  return EMPLOYEE_CREDENTIALS.filter(
+    (c) => !c.isAdmin && accessibleDepts(c).includes("web"),
+  ).map((c) => ({ username: c.username, name: c.name }));
+}
 
 /** Return the credential row for a username, normalised to lowercase
  *  + trimmed so trailing whitespace from a copy/paste doesn't lock
