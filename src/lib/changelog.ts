@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.32",
+    date: "2026-06-16",
+    title: "Refine results with follow-up instructions — edit part of an output without regenerating the whole thing",
+    highlights: [
+      "**✏️ New 'Ajustar resultado' panel on every text result** (Write Blog Article, FAQ generator, content gap, outreach email, SEO Audit analysis, and every other prose action). Type a plain-language instruction — «reescreve apenas a secção X», «troca o link do CTA», «encurta a meta description» — and Claude returns the full document with ONLY that change applied; everything else is preserved verbatim. No more choosing between regenerating from scratch (and losing the good parts) or hand-editing Markdown.",
+      "**↩️ Undo** — every refine keeps the prior version one click away («Desfazer último ajuste»).",
+      "**🔒 Safe by design.** Refines stream the edited document live, then save in `refine` mode: the original run's structured data (audit metrics, Core Web Vitals, keyword pack/clusters) and the generated date are preserved, and a text tweak never re-triggers a DataforSEO keyword bill. ⌘/Ctrl+Enter to apply.",
+      "Backed by a new `/refine` route with a surgical-editor system prompt (change only what's asked, keep the original language, output only the document).",
+    ],
+  },
+  {
     version: "74.31.4",
     date: "2026-06-16",
     title: "Fix: Client Brief items showed a pointless 'show more' even when fully visible",

@@ -106,12 +106,18 @@ export async function listHistory(
 }
 
 export async function appendHistory(
-  entry: Omit<HistoryEntry, "id" | "createdAt"> & { id?: string },
+  entry: Omit<HistoryEntry, "id" | "createdAt"> & {
+    id?: string;
+    /** Preserve a prior timestamp (e.g. when a follow-up refine rewrites
+     *  the output in place — the "Generated" date should stay pinned to
+     *  the original run, not jump to the edit time). Defaults to now. */
+    createdAt?: number;
+  },
 ): Promise<HistoryEntry> {
   const full: HistoryEntry = {
     ...entry,
     id: entry.id ?? newId(),
-    createdAt: Date.now(),
+    createdAt: entry.createdAt ?? Date.now(),
   };
   if (!historyConfigured) return full;
   try {

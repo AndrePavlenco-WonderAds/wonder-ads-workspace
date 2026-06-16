@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Loader2, AlertTriangle } from "lucide-react";
+import { Loader2, AlertTriangle, Wand2, Undo2 } from "lucide-react";
 import type { ActionDef, ActionToolName } from "@/lib/seo-pillars";
 import type { HistoryEntry } from "@/lib/action-history";
 import type { DomainMetrics } from "@/lib/seo-tools/dataforseo";
@@ -48,6 +48,14 @@ export function ResultRunner({
     existing ? "done" : "loading",
   );
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  // Follow-up refine ("ajustar parte do resultado") state. Lets the
+  // consultant apply a targeted edit to an existing result without
+  // regenerating the whole thing.
+  const [refineInstruction, setRefineInstruction] = useState("");
+  const [refining, setRefining] = useState(false);
+  const [refineError, setRefineError] = useState<string | null>(null);
+  /** Output before the last refine — powers the Undo button. */
+  const [prevOutput, setPrevOutput] = useState<string | null>(null);
   // Live metrics that appear as soon as Phase 1 saves the prep, so the
   // dashboard populates while Claude is still writing the analysis.
   const [liveMetrics, setLiveMetrics] = useState<DomainMetrics | null>(
@@ -306,6 +314,97 @@ export function ResultRunner({
     [apiBase, resultId, action.slug, consumeStream, router],
   );
 
+  // Apply a follow-up edit to the existing result: stream the surgically
+  // edited full document into the output buffer, then persist it (refine
+  // mode preserves the original run's structured data + date).
+  const applyRefine = useCallback(async () => {
+    const instruction = refineInstruction.trim();
+    if (!instruction || refining) return;
+    setRefining(true);
+    setRefineError(null);
+    const before = output;
+    try {
+      const res = await fetch(`${apiBase}/refine`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ resultId, instruction }),
+      });
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        let message = text || `HTTP ${res.status}`;
+        try {
+          const parsed = JSON.parse(text) as { error?: unknown };
+          if (typeof parsed?.error === "string") message = parsed.error;
+        } catch {
+          /* not JSON */
+        }
+        throw new Error(message);
+      }
+      const refined = (await consumeStream(res, "")).trim();
+      const analysis = extractAnalysis(refined);
+      if (!analysis.trim()) throw new Error("Refine produced empty output.");
+      const saveRes = await fetch(`${apiBase}/save`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          resultId,
+          inputs,
+          output: analysis,
+          refine: true,
+        }),
+      });
+      if (!saveRes.ok) {
+        setRefineError(
+          "Ajuste aplicado, mas não foi possível guardar — atualiza para confirmar.",
+        );
+      }
+      setPrevOutput(before); // enable Undo back to the pre-refine version
+      setRefineInstruction("");
+      router.refresh();
+    } catch (err) {
+      setOutput(before); // roll the live buffer back on failure
+      setRefineError((err as Error).message || "Não foi possível ajustar.");
+    } finally {
+      setRefining(false);
+    }
+  }, [
+    apiBase,
+    resultId,
+    inputs,
+    output,
+    refineInstruction,
+    refining,
+    consumeStream,
+    router,
+  ]);
+
+  // Revert the last refine — restore the previous output + persist it.
+  const undoRefine = useCallback(async () => {
+    if (prevOutput === null || refining) return;
+    setRefining(true);
+    setRefineError(null);
+    const restore = prevOutput;
+    try {
+      setOutput(restore);
+      await fetch(`${apiBase}/save`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          resultId,
+          inputs,
+          output: extractAnalysis(restore),
+          refine: true,
+        }),
+      });
+      setPrevOutput(null);
+      router.refresh();
+    } catch {
+      setRefineError("Não foi possível desfazer — tenta novamente.");
+    } finally {
+      setRefining(false);
+    }
+  }, [apiBase, resultId, inputs, prevOutput, refining, router]);
+
   // On mount: if no existing result, check sessionStorage for pending inputs
   // and kick off generation. If neither, mark as missing.
   useEffect(() => {
@@ -503,6 +602,78 @@ export function ResultRunner({
           </div>
         )}
       </article>
+
+      {/* Follow-up refine — apply a targeted edit to the result above
+          without regenerating everything. Only shown once there's a real
+          saved analysis to edit. */}
+      {status === "done" && analysisText.trim() && (
+        <article className="rounded-2xl border border-white/10 bg-white/[0.025] p-5 backdrop-blur-md">
+          <header className="mb-2 flex items-center gap-2">
+            <Wand2 className="h-4 w-4 text-[color:var(--brand-magenta)]" />
+            <h2 className="text-sm font-semibold tracking-tight text-white">
+              Ajustar resultado
+            </h2>
+          </header>
+          <p className="mb-3 text-[12px] leading-relaxed text-white/50">
+            Diz o que queres mudar e o resto do documento é preservado. Ex:{" "}
+            <span className="text-white/70">
+              «reescreve apenas a secção X»
+            </span>
+            ,{" "}
+            <span className="text-white/70">«troca o link do CTA»</span>,{" "}
+            <span className="text-white/70">
+              «encurta a meta description»
+            </span>
+            .
+          </p>
+          <textarea
+            value={refineInstruction}
+            onChange={(e) => setRefineInstruction(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+                e.preventDefault();
+                applyRefine();
+              }
+            }}
+            rows={2}
+            disabled={refining}
+            placeholder="Que ajuste queres fazer?"
+            className="w-full resize-y rounded-xl border border-white/12 bg-white/[0.04] px-3 py-2.5 text-sm text-white outline-none transition focus:border-[color:var(--brand-purple)]/60 focus:bg-white/[0.06] disabled:opacity-60"
+          />
+          {refineError && (
+            <div className="mt-2 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-200">
+              {refineError}
+            </div>
+          )}
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <button
+              onClick={applyRefine}
+              disabled={refining || !refineInstruction.trim()}
+              className="brand-gradient-bg inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition hover:scale-[1.01] disabled:opacity-60"
+            >
+              {refining ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Wand2 className="h-4 w-4" />
+              )}
+              Aplicar ajuste
+            </button>
+            {prevOutput !== null && (
+              <button
+                onClick={undoRefine}
+                disabled={refining}
+                className="inline-flex items-center gap-2 rounded-xl border border-white/12 px-3.5 py-2.5 text-sm font-medium text-white/70 transition hover:border-white/30 hover:text-white disabled:opacity-60"
+              >
+                <Undo2 className="h-4 w-4" />
+                Desfazer último ajuste
+              </button>
+            )}
+            <span className="ml-auto text-[11px] text-white/35">
+              ⌘/Ctrl + Enter
+            </span>
+          </div>
+        </article>
+      )}
     </div>
   );
 }
