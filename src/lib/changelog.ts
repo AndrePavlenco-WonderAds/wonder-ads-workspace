@@ -13,6 +13,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.31.4",
+    date: "2026-06-16",
+    title: "Fix: Client Brief items showed a pointless 'show more' even when fully visible",
+    highlights: [
+      "**🐛 Fix — the `show more` / `show less` toggle on Do's / Don'ts / Notes appeared even when the whole item was already on screen.** The item span carried both `line-clamp-1` and `block` classes; `display:block` overrode the `display:-webkit-box` that line-clamp needs, so the text never actually collapsed — yet the overflow measurement still fired and rendered a toggle that did nothing.",
+      "**✅ Fix:** dropped the per-item 1-line clamp and the toggle entirely. Brief items now always show their full text; the panels already scroll (`max-h` + overflow) so long lists stay tidy without hiding content behind a click.",
+    ],
+  },
+  {
     version: "74.31.3",
     date: "2026-06-16",
     title: "Fix: PDF / public preview / DOCX were cutting the start of SEO deliverables at the first `---` rule",

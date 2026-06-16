@@ -365,15 +365,6 @@ function NotesPanel({
   );
 }
 
-/** Line-clamp + expand limit. Items longer than this many lines are
- *  collapsed by default; click the `…show more` link to reveal the
- *  full text inline. Clicking the text itself opens the editor.
- *
- *  Kept at 1 because the brief panels are short on vertical space —
- *  see the side-by-side Do's/Don'ts layout — so a long item dominates
- *  visual weight. One line + show-more keeps the list scannable. */
-const CLAMP_LINES = 1;
-
 function EditableRow({
   value,
   dotClass,
@@ -391,11 +382,8 @@ function EditableRow({
 }) {
   void isNote;
   const [editing, setEditing] = useState(false);
-  const [expanded, setExpanded] = useState(false);
   const [draft, setDraft] = useState(value);
   const textRef = useRef<HTMLTextAreaElement | null>(null);
-  const measureRef = useRef<HTMLSpanElement | null>(null);
-  const [isClamped, setIsClamped] = useState(false);
 
   useEffect(() => {
     if (editing && textRef.current) {
@@ -410,23 +398,6 @@ function EditableRow({
   useEffect(() => {
     if (!editing) setDraft(value);
   }, [value, editing]);
-
-  // Measure whether the (unclamped) text would actually overflow the
-  // clamp height — only show "show more" when there's something to
-  // show. Re-run when the text or container width changes.
-  useEffect(() => {
-    if (editing || expanded) return;
-    const el = measureRef.current;
-    if (!el) return;
-    const lineHeight = parseFloat(getComputedStyle(el).lineHeight) || 22;
-    const limit = lineHeight * CLAMP_LINES + 2;
-    const ro = new ResizeObserver(() => {
-      setIsClamped(el.scrollHeight > limit);
-    });
-    ro.observe(el);
-    setIsClamped(el.scrollHeight > limit);
-    return () => ro.disconnect();
-  }, [value, editing, expanded]);
 
   function commit() {
     setEditing(false);
@@ -479,41 +450,10 @@ function EditableRow({
           className="block w-full cursor-text rounded text-left text-sm leading-relaxed text-white/85 transition hover:bg-white/[0.04] sm:text-base"
           title="Click to edit"
         >
-          <span
-            ref={measureRef}
-            className={
-              expanded
-                ? "block whitespace-pre-wrap break-words"
-                : "line-clamp-1 block break-words"
-            }
-          >
+          <span className="block whitespace-pre-wrap break-words">
             {value}
           </span>
         </button>
-        {isClamped && !expanded && (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              setExpanded(true);
-            }}
-            className="mt-0.5 text-[11px] font-medium text-white/45 underline-offset-2 transition hover:text-white/75 hover:underline"
-          >
-            show more
-          </button>
-        )}
-        {expanded && (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              setExpanded(false);
-            }}
-            className="mt-0.5 text-[11px] font-medium text-white/45 underline-offset-2 transition hover:text-white/75 hover:underline"
-          >
-            show less
-          </button>
-        )}
       </div>
       <button
         type="button"
