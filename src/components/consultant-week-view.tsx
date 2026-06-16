@@ -10,6 +10,7 @@ import {
   CalendarRange,
   CheckCircle2,
   Clock,
+  FolderOpen,
   ListTodo,
 } from "lucide-react";
 import type {
@@ -23,23 +24,23 @@ const HEALTH_CHIP: Record<
   { label: string; className: string }
 > = {
   "on-track": {
-    label: "On track",
+    label: "No bom caminho",
     className: "border-emerald-400/30 bg-emerald-500/10 text-emerald-200",
   },
   behind: {
-    label: "Falling behind",
+    label: "A ficar para trás",
     className: "border-amber-400/30 bg-amber-500/10 text-amber-200",
   },
   critical: {
-    label: "Critical",
+    label: "Crítico",
     className: "border-rose-400/40 bg-rose-500/15 text-rose-200",
   },
   "not-started": {
-    label: "Not started",
+    label: "Não iniciado",
     className: "border-white/15 bg-white/[0.04] text-white/65",
   },
   "no-roadmap": {
-    label: "No roadmap yet",
+    label: "Sem roadmap",
     className: "border-violet-400/30 bg-violet-500/10 text-violet-200",
   },
 };
@@ -48,31 +49,31 @@ const STATUS_META: Record<
   RoadmapStatus,
   { label: string; dot: string; text: string }
 > = {
-  not_started: { label: "To do", dot: "bg-white/45", text: "text-white/85" },
+  not_started: { label: "Por fazer", dot: "bg-white/45", text: "text-white/85" },
   in_progress: {
-    label: "In progress",
+    label: "Em curso",
     dot: "bg-amber-400",
     text: "text-amber-100",
   },
   pending_review: {
-    label: "For approval",
+    label: "Em aprovação",
     dot: "bg-violet-400",
     text: "text-violet-100",
   },
   implemented: {
-    label: "Done",
+    label: "Concluído",
     dot: "bg-emerald-400",
     text: "text-emerald-200/70",
   },
 };
 
 const PILLAR_LABEL: Record<RoadmapPillar, string> = {
-  technical: "Technical",
+  technical: "Técnico",
   "on-page": "On-Page",
   "off-page": "Off-Page",
   local: "Local",
-  content: "Content",
-  research: "Research",
+  content: "Conteúdo",
+  research: "Pesquisa",
 };
 
 export function ConsultantWeekView({ view }: { view: ConsultantWeekView }) {
@@ -83,49 +84,50 @@ export function ConsultantWeekView({ view }: { view: ConsultantWeekView }) {
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         <Stat
           icon={CalendarRange}
-          label="Projects"
+          label="Projetos"
           value={`${t.withRoadmap}/${t.clients}`}
-          sub="with a roadmap"
+          sub="com roadmap"
         />
         <Stat
           icon={ListTodo}
-          label="This week"
+          label="Esta semana"
           value={t.thisWeekTasks}
-          sub="tasks scheduled"
+          sub="tarefas agendadas"
           accent="brand"
         />
         <Stat
           icon={Clock}
-          label="To tackle"
+          label="Por fazer"
           value={t.thisWeekRemaining}
-          sub="not done yet"
+          sub="ainda por concluir"
           accent={t.thisWeekRemaining > 0 ? "amber" : "emerald"}
         />
         <Stat
           icon={AlertTriangle}
-          label="Overdue"
+          label="Em atraso"
           value={t.overdue}
-          sub="past weeks"
+          sub="semanas anteriores"
           accent={t.overdue >= 5 ? "rose" : t.overdue > 0 ? "amber" : "muted"}
         />
         <Stat
           icon={CheckCircle2}
-          label="For approval"
+          label="Em aprovação"
           value={t.pendingApproval}
-          sub="with the client"
+          sub="com o cliente"
           accent={t.pendingApproval > 0 ? "violet" : "muted"}
         />
       </div>
 
       {view.notionUnavailable && (
         <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
-          ⚠️ Notion is unreachable right now — some projects may be missing.
+          ⚠️ O Notion está indisponível neste momento — alguns projetos podem
+          não aparecer.
         </div>
       )}
 
       {view.clients.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.02] px-6 py-16 text-center text-sm text-white/45">
-          No clients assigned to you yet.
+          Ainda não tens clientes atribuídos.
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 xl:grid-cols-3">
@@ -178,14 +180,14 @@ function ClientWeekCard({ client }: { client: ConsultantWeekClient }) {
         <>
           <div className="mt-4 flex items-baseline justify-between text-[11px] text-white/55">
             <span>
-              Week{" "}
+              Semana{" "}
               <span className="font-semibold text-white/85">
                 {client.currentWeek}
               </span>{" "}
-              of 12
+              de 12
             </span>
             <span>
-              {client.doneTasks}/{client.totalTasks} done
+              {client.doneTasks}/{client.totalTasks} concluídas
             </span>
           </div>
           <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-white/[0.07]">
@@ -199,19 +201,19 @@ function ClientWeekCard({ client }: { client: ConsultantWeekClient }) {
           <div className="mt-4">
             <div className="mb-2 flex items-center justify-between">
               <h3 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/50">
-                This week
+                Esta semana
               </h3>
               <span className="text-[11px] text-white/40">
                 {remaining > 0
-                  ? `${remaining} to do`
+                  ? `${remaining} por fazer`
                   : client.thisWeekTasks.length > 0
-                    ? "all done ✓"
+                    ? "tudo feito ✓"
                     : "—"}
               </span>
             </div>
             {client.thisWeekTasks.length === 0 ? (
               <p className="rounded-lg border border-dashed border-white/10 bg-white/[0.015] px-3 py-4 text-center text-[12px] text-white/35">
-                Nothing scheduled for week {client.currentWeek}.
+                Nada agendado para a semana {client.currentWeek}.
               </p>
             ) : (
               <ol className="space-y-1.5">
@@ -257,37 +259,51 @@ function ClientWeekCard({ client }: { client: ConsultantWeekClient }) {
             )}
           </div>
 
-          {/* Secondary nudges */}
+          {/* Secondary nudges — these come from PAST weeks, not this one. */}
           {(client.overduePastWeeks > 0 || client.pendingApproval > 0) && (
-            <div className="mt-3 flex flex-wrap items-center gap-2 text-[10.5px]">
-              {client.overduePastWeeks > 0 && (
-                <span className="inline-flex items-center gap-1 rounded-full border border-amber-400/30 bg-amber-500/10 px-2 py-0.5 text-amber-200">
-                  <AlertTriangle className="h-3 w-3" />
-                  {client.overduePastWeeks} overdue
-                </span>
-              )}
-              {client.pendingApproval > 0 && (
-                <span className="inline-flex items-center gap-1 rounded-full border border-violet-400/30 bg-violet-500/10 px-2 py-0.5 text-violet-200">
-                  <CheckCircle2 className="h-3 w-3" />
-                  {client.pendingApproval} for approval
-                </span>
-              )}
+            <div className="mt-3">
+              <p className="mb-1 text-[9.5px] font-medium uppercase tracking-[0.14em] text-white/30">
+                De semanas anteriores
+              </p>
+              <div className="flex flex-wrap items-center gap-2 text-[10.5px]">
+                {client.overduePastWeeks > 0 && (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-amber-400/30 bg-amber-500/10 px-2 py-0.5 text-amber-200">
+                    <AlertTriangle className="h-3 w-3" />
+                    {client.overduePastWeeks} em atraso
+                  </span>
+                )}
+                {client.pendingApproval > 0 && (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-violet-400/30 bg-violet-500/10 px-2 py-0.5 text-violet-200">
+                    <CheckCircle2 className="h-3 w-3" />
+                    {client.pendingApproval} em aprovação
+                  </span>
+                )}
+              </div>
             </div>
           )}
         </>
       ) : (
         <p className="mt-4 rounded-lg border border-dashed border-white/10 bg-white/[0.015] px-3 py-5 text-center text-[12px] text-white/40">
-          No roadmap generated yet.
+          Ainda sem roadmap gerado.
         </p>
       )}
 
-      <Link
-        href={`/seo/${client.slug}/roadmap`}
-        className="group mt-4 inline-flex items-center justify-end gap-1.5 text-[12px] font-medium text-white/55 transition hover:text-white"
-      >
-        Open board
-        <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
-      </Link>
+      <div className="mt-4 flex items-center justify-end gap-4 border-t border-white/[0.06] pt-3">
+        <Link
+          href={`/seo/${client.slug}`}
+          className="group inline-flex items-center gap-1.5 text-[12px] font-medium text-white/50 transition hover:text-white"
+        >
+          <FolderOpen className="h-3.5 w-3.5" />
+          Ficha do cliente
+        </Link>
+        <Link
+          href={`/seo/${client.slug}/roadmap`}
+          className="group inline-flex items-center gap-1.5 text-[12px] font-medium text-white/55 transition hover:text-white"
+        >
+          Abrir roadmap
+          <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+        </Link>
+      </div>
     </article>
   );
 }

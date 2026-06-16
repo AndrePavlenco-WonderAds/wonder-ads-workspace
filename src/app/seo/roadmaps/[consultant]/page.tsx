@@ -17,7 +17,7 @@ import { accessibleDepts } from "@/lib/auth/credentials";
 import { CONSULTANT_ORDER } from "@/lib/client-overrides";
 import { slugify } from "@/lib/notion";
 import { getConsultantWeekView } from "@/lib/roadmap-admin-helpers";
-import { formatDateLong } from "@/lib/dates";
+import { formatDate } from "@/lib/dates";
 
 export const dynamic = "force-dynamic";
 
@@ -36,7 +36,9 @@ export async function generateMetadata({
   const { consultant } = await params;
   const name = consultantFromSlug(consultant);
   return {
-    title: name ? `${name} — My Week · Wonder Ads` : "My Week · Wonder Ads",
+    title: name
+      ? `${name} — A Minha Semana · Wonder Ads`
+      : "A Minha Semana · Wonder Ads",
   };
 }
 
@@ -62,8 +64,8 @@ export default async function ConsultantWeekPage({
     return (
       <PageShell backHref="/seo" backLabel="SEO DPT">
         <AccessDenied
-          title="Private overview"
-          description={`This weekly overview belongs to ${consultantName}. Only ${consultantName} and the SuperAdmins can open it.`}
+          title="Visão privada"
+          description={`Esta visão semanal pertence a ${consultantName}. Apenas ${consultantName} e os SuperAdmins a podem abrir.`}
           backHref="/seo"
           backLabel="SEO DPT"
           username={employee?.username ?? null}
@@ -85,25 +87,25 @@ export default async function ConsultantWeekPage({
           <span aria-hidden>👋</span>
         </h1>
         <p className="mt-2 max-w-2xl text-sm text-white/55">
-          {formatDateLong(new Date())} ·{" "}
+          {formatDate(new Date())} ·{" "}
           {view.totals.thisWeekRemaining > 0 ? (
             <>
-              You have{" "}
+              Tens{" "}
               <span className="font-semibold text-white/85">
-                {view.totals.thisWeekRemaining} task
+                {view.totals.thisWeekRemaining} tarefa
                 {view.totals.thisWeekRemaining === 1 ? "" : "s"}
               </span>{" "}
-              to tackle this week across{" "}
+              para fazer esta semana em{" "}
               <span className="font-semibold text-white/85">
-                {view.clients.filter((c) => c.hasRoadmap).length} project
+                {view.clients.filter((c) => c.hasRoadmap).length} projeto
                 {view.clients.filter((c) => c.hasRoadmap).length === 1
                   ? ""
                   : "s"}
               </span>
-              . Top of each card = do it first.
+              . No topo de cada cartão está o que fazer primeiro.
             </>
           ) : (
-            <>You&apos;re all caught up on this week&apos;s tasks. Nice. 🎯</>
+            <>Estás em dia com as tarefas desta semana. Boa. 🎯</>
           )}
         </p>
       </header>
