@@ -5,9 +5,16 @@ import { useEffect } from "react";
 /** Tiny client helper that fires window.print() once the printable
  *  document has laid out + images have a chance to load. Lives in its
  *  own file so the surrounding PrintLayout can stay a Server Component
- *  and be returned directly from page.tsx without any client roundtrip. */
-export function AutoPrint() {
+ *  and be returned directly from page.tsx without any client roundtrip.
+ *
+ *  `pdfTitle` is set as `document.title` before printing so the browser's
+ *  "Save as PDF" defaults to a clean filename ("Action - Client - Wonder
+ *  Ads") instead of the raw URL. Needed because PrintLayout renders a
+ *  nested <html>/<title> the browser ignores — only the real
+ *  document.title drives the saved-PDF filename. */
+export function AutoPrint({ pdfTitle }: { pdfTitle?: string }) {
   useEffect(() => {
+    if (pdfTitle) document.title = pdfTitle;
     // Wait for images (logo, astronaut) to actually load — otherwise Chrome
     // prints with missing imagery.
     const ready = () =>
@@ -41,6 +48,6 @@ export function AutoPrint() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [pdfTitle]);
   return null;
 }

@@ -58,7 +58,7 @@ export function PrintLayout({
       {/* eslint-disable-next-line @next/next/no-head-element */}
       <head>
         <title>
-          {actionLabel} · {clientName} · Wonder Ads
+          {actionLabel} - {clientName} - Wonder Ads
         </title>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -72,7 +72,7 @@ export function PrintLayout({
         />
       </head>
       <body>
-        <AutoPrint />
+        <AutoPrint pdfTitle={`${actionLabel} - ${clientName} - Wonder Ads`} />
 
         {/* --- Cover page (full-bleed, no margins) --- */}
         <div className="pdf-cover">

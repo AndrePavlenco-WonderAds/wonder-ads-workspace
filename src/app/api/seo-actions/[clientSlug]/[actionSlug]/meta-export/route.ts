@@ -39,9 +39,14 @@ export async function GET(
     return NextResponse.json({ error: "Result not found" }, { status: 404 });
   }
   const client = await getClientBySlug(clientSlug).catch(() => null);
+  // Branded, human filename: "Meta Tags - Client - Wonder Ads.<ext>".
   const safeClient = (client?.title ?? clientSlug)
-    .replace(/[^a-zA-Z0-9-]+/g, "_")
-    .slice(0, 40);
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-zA-Z0-9 ()-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 50);
 
   if (format === "csv") {
     const header = [
@@ -79,7 +84,7 @@ export async function GET(
         ].join(","),
       );
     }
-    const filename = `${safeClient}-meta-tags-${result.id}.csv`;
+    const filename = `Meta Tags - ${safeClient} - Wonder Ads.csv`;
     return new NextResponse(lines.join("\n"), {
       status: 200,
       headers: {
@@ -156,7 +161,7 @@ export async function GET(
     sections: [{ children: blocks }],
   });
   const buffer = await Packer.toBuffer(doc);
-  const filename = `${safeClient}-meta-tags-${result.id}.docx`;
+  const filename = `Meta Tags - ${safeClient} - Wonder Ads.docx`;
   return new NextResponse(new Uint8Array(buffer), {
     status: 200,
     headers: {

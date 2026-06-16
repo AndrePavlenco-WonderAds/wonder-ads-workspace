@@ -13,6 +13,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.33.1",
+    date: "2026-06-16",
+    title: "Downloads now have clean, branded filenames — 'Action - Client - Wonder Ads'",
+    highlights: [
+      "**🏷 PDFs were saving with the raw URL as the filename** (e.g. `wonder-ads-workspace.vercel.app_seo_ihn_actions_faq-section-generator_results_…`) with no mention of the company. Root cause: the print document renders a nested `<title>` the browser ignores, so 'Save as PDF' fell back to the URL.",
+      "**✅ Fix:** every download now names the file **`Action - Client - Wonder Ads`**. Applied to the PDF (internal Download PDF + the client-preview Download PDF, by setting `document.title` before printing), the DOCX export, the Meta Tags CSV/DOCX, and the GMB Posts ZIP. Filenames are accent-stripped + sanitised so they're valid everywhere. e.g. *FAQ Section Generator - IHN - Wonder Ads.pdf*.",
+    ],
+  },
+  {
     version: "74.33",
     date: "2026-06-16",
     title: "Send the SEO Roadmap to the client for approval — read-only, PDF-style",

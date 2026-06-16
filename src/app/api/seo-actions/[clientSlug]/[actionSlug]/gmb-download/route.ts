@@ -38,8 +38,12 @@ export async function GET(
 
   const client = await getClientBySlug(clientSlug).catch(() => null);
   const safeClient = (client?.title ?? clientSlug)
-    .replace(/[^a-zA-Z0-9-]+/g, "_")
-    .slice(0, 40);
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-zA-Z0-9 ()-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 50);
   const languageCode = getClientGeo(clientSlug).languageCode;
 
   // ---------- Batch mode: ZIP everything ----------
@@ -88,7 +92,7 @@ export async function GET(
     zip.file("captions.txt", captions.join("\n"));
 
     const zipBytes = await zip.generateAsync({ type: "uint8array" });
-    const filename = `${safeClient}-gmb-batch-${resultId}.zip`;
+    const filename = `GMB Posts - ${safeClient} - Wonder Ads.zip`;
     return new NextResponse(zipBytes as unknown as BodyInit, {
       status: 200,
       headers: {

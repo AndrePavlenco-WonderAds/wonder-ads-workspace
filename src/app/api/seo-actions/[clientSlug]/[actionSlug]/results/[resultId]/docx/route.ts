@@ -193,8 +193,17 @@ export async function GET(
 
   const buffer = await Packer.toBuffer(doc);
 
-  const safeClient = client.title.replace(/[^a-zA-Z0-9_-]+/g, "_").slice(0, 40);
-  const filename = `${safeClient}-${action.slug}-${displayResultId}.docx`;
+  // Human, branded filename: "Action - Client - Wonder Ads.docx". Strip
+  // diacritics + any char that isn't filename-safe so the
+  // Content-Disposition header (ASCII) stays valid across browsers.
+  const safe = (s: string) =>
+    s
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "")
+      .replace(/[^a-zA-Z0-9 ()_-]+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  const filename = `${safe(action.label)} - ${safe(client.title)} - Wonder Ads.docx`;
 
   return new NextResponse(new Uint8Array(buffer), {
     status: 200,

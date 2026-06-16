@@ -81,13 +81,20 @@ export function PublicReportView({
 
   function handlePrint() {
     setPrinting(true);
+    // Name the saved PDF "Action - Client - Wonder Ads" instead of the raw
+    // URL — browsers default the Save-as-PDF filename to document.title.
+    const prevTitle = document.title;
+    document.title = `${actionLabel} - ${clientName} - Wonder Ads`;
     // Give React a tick to apply the .printing class (which hides nav/buttons
     // via the global print CSS below) before opening the dialog.
     requestAnimationFrame(() => {
       window.print();
       // The print dialog blocks synchronously in some browsers; reset
       // state once the user dismisses it.
-      setTimeout(() => setPrinting(false), 500);
+      setTimeout(() => {
+        setPrinting(false);
+        document.title = prevTitle;
+      }, 500);
     });
   }
 
