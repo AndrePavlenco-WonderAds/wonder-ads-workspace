@@ -1,5 +1,3 @@
-import Link from "next/link";
-import { Code2, History } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { DepartmentHeader } from "@/components/department-header";
 import { AccessDenied } from "@/components/access-denied";
@@ -40,17 +38,7 @@ export default async function WebPage() {
     <PageShell wide>
       <DepartmentHeader
         title="WEB DPT"
-        tagline="The live project board for every website build — from negotiation to launch. Drag projects across the pipeline, track client feedback, and keep every asset and access credential in one place."
-        Icon={Code2}
-        rightSlot={
-          <Link
-            href="/web/activity"
-            className="group inline-flex items-center gap-2 rounded-xl border border-white/12 bg-white/[0.03] px-4 py-2.5 text-sm font-medium text-white/75 transition hover:border-white/30 hover:bg-white/[0.07] hover:text-white"
-          >
-            <History className="h-4 w-4" />
-            Activity log
-          </Link>
-        }
+        tagline="Departamento Web Design & Development. Agência #1 de SEO em Lisboa"
       />
 
       <WebBoard

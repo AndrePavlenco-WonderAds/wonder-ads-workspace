@@ -13,6 +13,20 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.30",
+    date: "2026-06-16",
+    title:
+      "WEB DPT board polish — search, employee filters, Refresh, default start date, and a Claude-powered Generate Backlog (Slack-ready, Portuguese)",
+    highlights: [
+      "**🔎 Search + employee filters.** A search bar at the top of the board filters projects by name or client as you type. Next to it, quick filter chips — **All · Mike · Gustavo · Renan** — narrow the board to one designer's projects. The chips list ONLY the three web designers; SEO consultants (who can open the dept but don't build sites) are no longer offered as assignees or filters.",
+      "**🔄 Refresh button** re-pulls the board from KV without a full page reload, so you see teammates' latest moves instantly.",
+      "**🧾 Generate Backlog (new).** A board action that drafts the weekly Slack backlog for you. It reads every project's most recent comments + notes and asks Claude (Sonnet 4.6) to compose a Portuguese, Slack-ready post — grouped by client, one line per project/page, with `@Mention` (full names: Mike Nobre / Gustavo Rotini / Renan Alves / André Pavlenco) and the right status emoji (:white_check_mark: / :large_green_circle: / :large_yellow_circle: / :red_circle: / :double_vertical_bar: / :rotating_light:). It auto-prepends `Backlog web DD.MM` and appends the fixed bilingual footer. The result opens in an editable box — tweak anything, then one-click **Copy**. **Regenerate** re-drafts from the latest data.",
+      "**🗓 New projects default to today's start date** instead of an empty field.",
+      "**🅰 Card titles are bigger + bolder** so the project name is the first thing you read and easy to scan.",
+      "**🎨 Header cleanup.** Dropped the icon tile and switched the tagline to *“Departamento Web Design & Development. Agência #1 de SEO em Lisboa”*. Activity log now sits with the other action buttons in the top-right toolbar.",
+    ],
+  },
+  {
     version: "74.29",
     date: "2026-06-16",
     title:

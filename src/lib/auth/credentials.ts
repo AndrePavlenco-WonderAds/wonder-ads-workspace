@@ -30,12 +30,17 @@ export type EmployeeCredential = {
   /** Hex-encoded scrypt output — N=16384 (Node default), r=8, p=1,
    *  keyLength=64 → 128 hex chars. */
   hash: string;
+  /** Full name as it appears in Slack (e.g. "Mike Nobre"). Used to build
+   *  `@mentions` in the Web Dept Generate-Backlog output. Falls back to
+   *  `name` when absent. */
+  fullName?: string;
 };
 
 export const EMPLOYEE_CREDENTIALS: EmployeeCredential[] = [
   {
     username: "andre",
     name: "André Pavlenco",
+    fullName: "André Pavlenco",
     role: "Founder",
     dept: "All",
     isAdmin: true,
@@ -45,6 +50,7 @@ export const EMPLOYEE_CREDENTIALS: EmployeeCredential[] = [
   {
     username: "alex",
     name: "Alex",
+    fullName: "Alex",
     role: "SuperAdmin",
     dept: "All",
     isAdmin: true,
@@ -98,6 +104,7 @@ export const EMPLOYEE_CREDENTIALS: EmployeeCredential[] = [
   {
     username: "mike",
     name: "Mike",
+    fullName: "Mike Nobre",
     role: "Web Designer",
     dept: "Web",
     salt: "dcd10c8208accd64222497f003f20480",
@@ -106,6 +113,7 @@ export const EMPLOYEE_CREDENTIALS: EmployeeCredential[] = [
   {
     username: "gustavo",
     name: "Gustavo",
+    fullName: "Gustavo Rotini",
     role: "Web Designer",
     dept: "Web",
     salt: "142c5cf298fdcfeed6c09fc336953c0c",
@@ -114,6 +122,7 @@ export const EMPLOYEE_CREDENTIALS: EmployeeCredential[] = [
   {
     username: "renan",
     name: "Renan",
+    fullName: "Renan Alves",
     role: "Web Designer",
     dept: "Web",
     salt: "763d35ff3e7121fb2ac9a8b645edb90c",
@@ -166,14 +175,29 @@ export function canAccessDept(
   return accessibleDepts(row).includes(dept);
 }
 
-/** People a Web project can be assigned to — anyone with Web access who
- *  isn't a pure SuperAdmin (founder/Alex/Alice run the suite, they're not
- *  the ones building sites). Resolves to the web designers + SEO
- *  consultants. Used to populate the assignee dropdown on the board. */
-export function getWebAssignees(): { username: string; name: string }[] {
-  return EMPLOYEE_CREDENTIALS.filter(
-    (c) => !c.isAdmin && accessibleDepts(c).includes("web"),
-  ).map((c) => ({ username: c.username, name: c.name }));
+/** People a Web project can be assigned to — the web designers only
+ *  (dept === "Web": Mike, Gustavo, Renan). SEO consultants can OPEN the
+ *  Web Dept but they aren't the ones building sites, so they're kept out
+ *  of the assignee dropdown + the board's employee filters. */
+export function getWebAssignees(): {
+  username: string;
+  name: string;
+  fullName: string;
+}[] {
+  return EMPLOYEE_CREDENTIALS.filter((c) => c.dept === "Web").map((c) => ({
+    username: c.username,
+    name: c.name,
+    fullName: c.fullName ?? c.name,
+  }));
+}
+
+/** Slack-style mention name for a username (full name when known, e.g.
+ *  "Mike Nobre"). Used by the Generate-Backlog action so cards mention
+ *  people the way they appear in Slack. */
+export function getMentionName(username: string | null | undefined): string {
+  if (!username) return "Equipa";
+  const row = findEmployeeByUsername(username);
+  return row?.fullName ?? row?.name ?? username;
 }
 
 /** Return the credential row for a username, normalised to lowercase
