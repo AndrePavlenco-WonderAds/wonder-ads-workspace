@@ -15,6 +15,8 @@ type Department = {
   tagline: string;
   href: string;
   Icon: LucideIcon;
+  /** When true the card links to an external tool and opens in a new tab. */
+  external?: boolean;
 };
 
 const DEPARTMENTS: Department[] = [
@@ -39,8 +41,9 @@ const DEPARTMENTS: Department[] = [
   {
     title: "COMMERCIAL DPT",
     tagline: "Sales pipeline, partnerships & client success.",
-    href: "/commercial",
+    href: "https://sales-dashboard-production-a11b.up.railway.app/",
     Icon: Handshake,
+    external: true,
   },
 ];
 
@@ -98,6 +101,8 @@ function DepartmentCard({
   return (
     <Link
       href={dept.href}
+      target={dept.external ? "_blank" : undefined}
+      rel={dept.external ? "noopener noreferrer" : undefined}
       className="brand-gradient-border animate-fade-up group relative flex flex-col gap-6 rounded-2xl bg-white/[0.035] p-6 backdrop-blur-md transition-all duration-500 hover:-translate-y-1 hover:bg-white/[0.06] sm:p-7"
       style={{ animationDelay: `${0.1 + index * 0.08}s` }}
     >

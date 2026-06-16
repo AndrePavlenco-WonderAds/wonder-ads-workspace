@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.33.2",
+    date: "2026-06-16",
+    title: "Commercial DPT card now opens the Sales Dashboard in a new tab",
+    highlights: [
+      "**🤝 The Commercial DPT card on the workspace home now links straight to the external Sales Dashboard** (`sales-dashboard-production-a11b.up.railway.app`) and opens it in a new tab, instead of the placeholder internal page. The card's ↗ arrow already signalled an outbound link.",
+    ],
+  },
+  {
     version: "74.33.1",
     date: "2026-06-16",
     title: "Downloads now have clean, branded filenames — 'Action - Client - Wonder Ads'",
