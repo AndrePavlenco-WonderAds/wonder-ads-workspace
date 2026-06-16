@@ -32,6 +32,11 @@ const BRIEFS: Record<string, ClientBrief> = {
   "clinica-em-casa": EMPTY,
   "spine-center": EMPTY,
 
+  // André Pereira's clients (v74.31). Do's/Don'ts/Notes to be generated
+  // from their onboarding forms once those PDFs are provided.
+  "sentir-saude": EMPTY,
+  "clinica-fernando-almeida": EMPTY,
+
   // ADS-only clients
   "clinica-empatia": EMPTY,
 

@@ -4,7 +4,6 @@ import { AccessDenied } from "@/components/access-denied";
 import { getCurrentEmployee } from "@/lib/auth/server";
 import { accessibleDepts } from "@/lib/auth/credentials";
 import { DepartmentHeader } from "@/components/department-header";
-import { ClaudeChat } from "@/components/claude-chat";
 import { KpisCard } from "@/components/kpis-card";
 import { ClientCard } from "@/components/client-card";
 import { WorldMap } from "@/components/world-map";
@@ -96,15 +95,12 @@ export default async function SeoPage() {
         large
       />
 
-      <div className="mt-12 grid grid-cols-1 gap-10 lg:mt-16 lg:grid-cols-[1fr_420px]">
-        <section
-          aria-label="Clients by Head Consultant"
-          className="order-2 lg:order-1"
-        >
+      <div className="mt-12 lg:mt-16">
+        <section aria-label="Clients by Head Consultant">
           {notionError ? (
             <NotionFallback message={notionError} />
           ) : (
-            <div className="grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {consultantColumns.map((col) => (
                 <div key={col.name} className="space-y-5">
                   <header className="flex items-baseline justify-between border-b border-white/8 pb-3">
@@ -137,12 +133,6 @@ export default async function SeoPage() {
             </div>
           )}
         </section>
-        <div className="order-1 lg:order-2 lg:sticky lg:top-6 lg:self-start">
-          <ClaudeChat
-            department="seo"
-            placeholder="Ask SEO Claude — strategy, audits, briefs..."
-          />
-        </div>
       </div>
 
       <section aria-label="SEO DPT KPIs" className="mt-12 sm:mt-16">

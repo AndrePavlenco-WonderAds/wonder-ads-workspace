@@ -20,6 +20,8 @@ export const CLIENT_LOGOS: Record<string, string> = {
   "fisio-restelo": "/logos/fisio-restelo.png",
   "safe-away": "/logos/safe-away.png",
   "clinica-em-casa": "/logos/clinica-em-casa.svg",
+  "sentir-saude": "/logos/sentir-saude.png",
+  "clinica-fernando-almeida": "/logos/clinica-fernando-almeida.png",
 };
 
 export function getClientLogo(slug: string): string | null {
@@ -33,6 +35,8 @@ export type LogoBgMode = "white" | "dark" | { custom: string };
 const LOGO_BG_OVERRIDES: Record<string, LogoBgMode> = {
   "monte-mar": "dark",
   wonderads: "dark",
+  // FA's logo asset ships on its own dark charcoal panel.
+  "clinica-fernando-almeida": "dark",
   // CDT's logo asset sits on #F6A800 — match the chip exactly. IHN follows.
   ihn: { custom: "#F6A800" },
   cdt: { custom: "#F6A800" },
@@ -75,6 +79,8 @@ export const CLIENT_WEBSITES: Record<string, string> = {
   "safe-away": "https://safeaway.pt/",
   "clinica-em-casa": "https://clinicaemcasa.pt/",
   "spine-center": "https://www.spinecenter.pt/",
+  "sentir-saude": "https://www.sentirsaude.pt/",
+  "clinica-fernando-almeida": "https://www.clinicasdentariasfa.pt/",
   // ADS-only — not known yet
   "clinica-empatia": "",
 };

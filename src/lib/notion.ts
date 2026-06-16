@@ -61,6 +61,9 @@ async function listChildren(blockId: string) {
  *  briefs, admin board) works without conditional branching. */
 const EXTRA_SEO_CLIENTS: Array<{ title: string; icon: string }> = [
   { title: "Spine Center", icon: "🦴" },
+  // André Pereira's first two clients (v74.31) — not in Notion yet.
+  { title: "Sentir Saúde", icon: "💆" },
+  { title: "Clínica Fernando Almeida", icon: "🦷" },
 ];
 
 const _fetchSeoClients = unstable_cache(
@@ -120,11 +123,11 @@ const _fetchSeoClients = unstable_cache(
 
     return clients;
   },
-  // v4 cache key — bumped for the "André P." → "Manuel S." handover and
-  // the addition of Spine Center to the synthetic roster. Bump whenever
-  // the shape of NotionClient or any of its derived fields changes
-  // meaningfully.
-  ["seo-clients-v4"],
+  // v5 cache key — bumped for André Pereira joining as a new consultant
+  // and the addition of Sentir Saúde + Clínica Fernando Almeida to the
+  // synthetic roster (v74.31). Bump whenever the shape of NotionClient or
+  // any of its derived fields changes meaningfully.
+  ["seo-clients-v5"],
   { revalidate: 3600, tags: ["seo-clients"] },
 );
 

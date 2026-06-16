@@ -118,6 +118,15 @@ export const SEED_EMPLOYEES: SeedEmployee[] = [
     monthlyValueEur: 1000,
     // Germano start date not provided yet — left null until populated.
   },
+  {
+    id: "andre-pereira",
+    name: "André Pereira",
+    emailHandle: "andre.pereira",
+    role: "SEO Consultant",
+    departments: ["SEO"],
+    // Monthly rate not provided yet — left null until populated.
+    startingDate: "2026-06-15",
+  },
 ];
 
 export function slugifyEmployee(name: string): string {

@@ -40,11 +40,16 @@ const YENISEY = new Set([
   "spine-center",
 ]);
 
+// André Pereira — new SEO consultant (v74.31). His first book:
+// Sentir Saúde + Clínica Fernando Almeida (both onboarded 15/06/2026).
+const ANDRE_PEREIRA = new Set(["sentir-saude", "clinica-fernando-almeida"]);
+
 /** Returns the Head Consultant for a given client slug. */
 export function getConsultantForSlug(slug: string): string {
   if (MANUEL.has(slug)) return "Manuel S.";
   if (FRAN_R.has(slug)) return "Fran. R.";
   if (YENISEY.has(slug)) return "Yenisey R.";
+  if (ANDRE_PEREIRA.has(slug)) return "André Pereira";
   return "Unassigned";
 }
 
@@ -55,6 +60,7 @@ export function getConsultantEmailForSlug(slug: string): string {
   if (MANUEL.has(slug)) return "manuel@wonder-ads.com";
   if (FRAN_R.has(slug)) return "fran@wonder-ads.com";
   if (YENISEY.has(slug)) return "yeni@wonder-ads.com";
+  if (ANDRE_PEREIRA.has(slug)) return "andre.pereira@wonder-ads.com";
   return "seo@wonder-ads.com";
 }
 
@@ -63,4 +69,5 @@ export const CONSULTANT_ORDER = [
   "Fran. R.",
   "Yenisey R.",
   "Manuel S.",
+  "André Pereira",
 ] as const;

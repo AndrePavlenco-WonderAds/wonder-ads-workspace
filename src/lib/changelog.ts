@@ -13,6 +13,21 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.31",
+    date: "2026-06-16",
+    title:
+      "New SEO consultant André Pereira + his first two clients (Sentir Saúde, Clínica Fernando Almeida); SEO Claude chat retired from the board",
+    highlights: [
+      "**🧑‍💼 André Pereira joins as a new SEO consultant.** Added everywhere the roster lives: a login account (`andre-pereira`, SEO dept), a **fourth column on the SEO board**, the SuperAdmin **Employees** roster (start date 15/06/2026), the admin **Clients** consultant dropdown, the **Roadmaps** per-consultant tracker, and the deliverable-email map (`andre.pereira@wonder-ads.com`) so his clients' PDFs/DOCX reply-to lands in his inbox. Distinct from the founder account `andre` (André Pavlenco).",
+      "**🆕 Two new SEO clients onboarded under André Pereira — both Growth tier, started 15/06/2026:**",
+      "**• Sentir Saúde** (sentirsaude.pt) — Fisioterapia Avançada e Osteopatia. Real brand logo pulled from their site, blue→navy brand palette, website wired up, and the **WordPress admin access** stored in the client's credentials vault (`wp-admin`, seo@wonder-ads.com).",
+      "**• Clínica Fernando Almeida** (clinicasdentariasfa.pt) — Clínicas Dentárias Prof. Dr. Fernando Almeida. Logo pulled from the site (rendered on its dark brand panel), website wired up.",
+      "**🧩 Both added as synthetic SEO clients** (via `EXTRA_SEO_CLIENTS`) so they appear across the whole workspace — board, client pages, action runners, admin — without needing a Notion child page yet. SEO-clients cache key bumped to v5 so they show immediately.",
+      "**🤖 SEO Claude chat retired from the board.** Removed the in-house AI chat widget from the SEO department page per request; the client columns now span the full width (up to 4 across on large screens). The `/api/chat` backend is untouched.",
+      "**📋 Do's / Don'ts / Notes + onboarding forms for the two new clients are pending** — the onboarding PDFs couldn't be located, so the briefs are seeded empty and will be generated once the forms are provided.",
+    ],
+  },
+  {
     version: "74.30",
     date: "2026-06-16",
     title:

@@ -44,6 +44,10 @@ const PALETTES: Record<string, ClientPalette> = {
   "clinica-em-casa": { from: "#95D3EA", via: "#1C5CFF", to: "#2A5296" },
   // ADS-only — Clínica Empatia — warm peach → rose → deep magenta
   "clinica-empatia": { from: "#FFCDB2", via: "#FF8FA3", to: "#C9184A" },
+  // sentirsaude.pt — light azure → blue → deep navy (logo gradient)
+  "sentir-saude": { from: "#3FA9DC", via: "#1C6FB0", to: "#16314F" },
+  // clinicasdentariasfa.pt — playful multicolour mark on charcoal
+  "clinica-fernando-almeida": { from: "#E84B8A", via: "#F49B0B", to: "#2B2D33" },
 };
 
 const DEFAULT_PALETTE: ClientPalette = {

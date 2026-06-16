@@ -91,6 +91,17 @@ export const EMPLOYEE_CREDENTIALS: EmployeeCredential[] = [
     hash: "8ac86c5d9126362012ff5dedf8b7240c344ee4184967ab7fcf325ca4db77f0ac7063318d7cecf5ae8e1defd7836dcada185adb91ca49435ac984af81968cb691",
   },
   {
+    // André Pereira — new SEO consultant (v74.31). Distinct person from
+    // "andre" (André Pavlenco, the founder); username is andre-pereira.
+    username: "andre-pereira",
+    name: "André Pereira",
+    fullName: "André Pereira",
+    role: "SEO Consultant",
+    dept: "SEO",
+    salt: "6ec1a1e90e4e37f85489011710bc48d7",
+    hash: "82a7a60d6f6352edbb5b352f797ef1b1d1849c8711a919c979f0750158f2c655eb5ab4abf94783d2989789512bccf81dcb27a0d0bddeda03cc71fd0b7eef6d2f",
+  },
+  {
     username: "germano-c",
     name: "Germano C.",
     role: "ADS Consultant",

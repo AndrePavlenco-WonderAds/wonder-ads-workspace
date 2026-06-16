@@ -97,6 +97,7 @@ const EMAIL_BY_CONSULTANT: Record<string, string> = {
   "Fran. R.": "fran@wonder-ads.com",
   "Yenisey R.": "yeni@wonder-ads.com",
   "Manuel S.": "manuel@wonder-ads.com",
+  "André Pereira": "andre.pereira@wonder-ads.com",
 };
 
 function classifyHealth(

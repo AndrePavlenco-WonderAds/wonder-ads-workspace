@@ -69,6 +69,8 @@ export const DEFAULT_STARTING_DATES: Record<string, string> = {
   "fisio-restelo": "2026-02-12",
   "monte-mar": "2026-03-23",
   cdt: "2026-03-23",
+  "sentir-saude": "2026-06-15",
+  "clinica-fernando-almeida": "2026-06-15",
 };
 
 /** Full agency consultant roster — drives the multi-select dropdown on
@@ -79,6 +81,7 @@ export const CONSULTANTS = [
   "Fran. R.",
   "Yenisey R.",
   "Germano C.",
+  "André Pereira",
 ] as const;
 export type Consultant = (typeof CONSULTANTS)[number];
 
@@ -105,6 +108,7 @@ export const CONSULTANT_DEPARTMENT: Record<string, ClientDepartment> = {
   "Fran. R.": "SEO",
   "Yenisey R.": "SEO",
   "Germano C.": "ADS",
+  "André Pereira": "SEO",
 };
 
 /** Department a legacy single-row record's monthlyValue should be
