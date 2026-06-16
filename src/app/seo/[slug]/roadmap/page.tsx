@@ -4,6 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { LogoChip } from "@/components/logo-chip";
 import { RoadmapBoard } from "@/components/roadmap-board";
+import { SendToReviewButton } from "@/components/send-to-review-button";
 import { getClientBySlug } from "@/lib/notion";
 import {
   getClientLogo,
@@ -78,6 +79,16 @@ export default async function RoadmapPage({
             </h1>
           </div>
         </div>
+        {roadmap.tasks.length > 0 && (
+          <SendToReviewButton
+            variant="prominent"
+            clientSlug={slug}
+            task={`SEO Roadmap (12 weeks) · ${client.title}`}
+            category="Roadmap"
+            docLink={`/${slug}/preview/roadmap`}
+            sourceType="roadmap"
+          />
+        )}
       </header>
 
       <section className="mt-6">

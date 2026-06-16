@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.33",
+    date: "2026-06-16",
+    title: "Send the SEO Roadmap to the client for approval — read-only, PDF-style",
+    highlights: [
+      "**📋 New 'Send for approval' button on the SEO Roadmap board.** Until now a generated 12-week roadmap lived only on the internal editable board — there was no way to share it with the client or archive a snapshot. Now the consultant clicks **Send for approval** and it lands in the client's Pending Review table like any other deliverable.",
+      "**🔒 The client sees a read-only document, not the editable board.** Opening it shows a clean, branded report — the 12 weeks grouped by month, every task with its pillar + status, the SEO diagnosis up top — with a **Download PDF** button. No drag, no add-task, no editing; it reads like a PDF. Built on the same client-report chrome every other deliverable uses (`PublicReportView`), so comments/approval and the look-and-feel are consistent.",
+      "**🇵🇹 Localised** — Portuguese for PT clients (Por iniciar / Em curso / Em aprovação / Concluído, Semana, Mês), English otherwise. The plan reflects the live roadmap, so re-sending after progress shows the updated statuses.",
+    ],
+  },
+  {
     version: "74.32.2",
     date: "2026-06-16",
     title: "Fix: SuperAdmin → Roadmaps was double-counting 'for approval' tasks as 'overdue'",
