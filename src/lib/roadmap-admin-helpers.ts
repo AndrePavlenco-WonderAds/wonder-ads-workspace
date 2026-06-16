@@ -132,7 +132,15 @@ function statsForRoadmap(roadmap: Roadmap, now: number = Date.now()) {
       if (t.week >= currentWeek) continue;
       if (t.status === "implemented") {
         donePastWeeks++;
+      } else if (t.status === "pending_review") {
+        // "For approval" — sitting with the client for sign-off. It's
+        // already counted in `pendingApproval` (the purple block) and is
+        // NOT the consultant's backlog, so it must NOT also land in the
+        // red "Overdue" block. Excluding it here is the fix for the
+        // double-count: red = genuinely-stuck work only (not_started /
+        // in_progress), purple = for-approval, green = done.
       } else {
+        // not_started / in_progress in a past week → genuinely overdue.
         overduePastWeeks++;
         overdueWeeks.add(t.week);
       }

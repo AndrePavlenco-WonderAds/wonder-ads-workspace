@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.32.2",
+    date: "2026-06-16",
+    title: "Fix: SuperAdmin → Roadmaps was double-counting 'for approval' tasks as 'overdue'",
+    highlights: [
+      "**🐛 The red 'Overdue tasks' block was inflated.** It counted every past-week task that wasn't `implemented` — which swept in the `pending_review` (For approval) tasks too. So a task waiting on the client showed up in BOTH the purple 'For approval' block AND the red 'Overdue' block. On White Clinic that meant Overdue read 14 when only 3 tasks were actually the consultant's backlog (the other 11 were sitting with the client for sign-off).",
+      "**✅ Fix:** the three blocks are now mutually exclusive — 🟢 Done = `implemented`, 🟣 For approval = `pending_review`, 🔴 Overdue = past-week `not_started` / `in_progress` only. The consultant health pill (On track / Falling behind / Critical) is now driven by real backlog, not client-side waiting.",
+      "Verified across all 18 live roadmaps — the correction removed the for-approval double-count on every card (e.g. hds-learning 10→0, sea-yourself 10→0, ihn 6→0, monte-mar 9→5, white-clinic 14→3). No data changed — only the counting.",
+    ],
+  },
+  {
     version: "74.32.1",
     date: "2026-06-16",
     title: "Client preview now shows the full dashboard (Domain Intelligence + Core Web Vitals), not just the written analysis",
