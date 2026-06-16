@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.31.1",
+    date: "2026-06-16",
+    title:
+      "Sentir Saúde & Clínica Fernando Almeida — onboarding briefs generated (Do's / Don'ts / Notes) from their forms",
+    highlights: [
+      "**📋 Do's / Don'ts / Notes drafted for both of André Pereira's new clients**, generated from their 2025/2026 onboarding questionnaires and seeded into `client-briefs.ts` — they now render in the Brief panel on each client's `/seo` page for André to review and refine.",
+      "**Sentir Saúde** — captured the MBST / Premium Recovery strategic focus, the 3 clinical pillars (sem-cirurgia, fisioterapia pélvica, pediátrica), the national+international targeting, the forbidden sensationalist vocabulary, and the brand's tone + anchor sentence.",
+      "**Clínica Fernando Almeida** — captured the service+area keyword structure (Gaia + Lisboa), the Google-reviews priority, the GA/GSC-not-yet-set-up gap, the planned WordPress migration to coordinate with the Web team, and the «empréstimo»/«barato» words to avoid.",
+      "Onboarding form PDFs attached to each client's Onboarding panel so the keyword-research action reads them as live context.",
+    ],
+  },
+  {
     version: "74.31",
     date: "2026-06-16",
     title:
