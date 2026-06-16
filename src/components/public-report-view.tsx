@@ -47,6 +47,7 @@ export function PublicReportView({
   kwResearch = null,
   showDomainSummary = false,
   showKeywordResearchSummary = false,
+  bodySlot,
 }: {
   clientName: string;
   clientLogo: string | null;
@@ -76,6 +77,11 @@ export function PublicReportView({
    *  Hidden when printing (the @media print CSS pulls `.no-print`
    *  out of flow). */
   commentsSlot?: React.ReactNode;
+  /** Custom report body. When provided it replaces the markdown
+   *  `analysisText` rendering — used by deliverables that want a richer,
+   *  bespoke layout (e.g. the SEO Roadmap's week cards) while keeping the
+   *  shared branded chrome (header, Download PDF, comments, footer). */
+  bodySlot?: React.ReactNode;
 }) {
   const [printing, setPrinting] = useState(false);
 
@@ -167,7 +173,10 @@ export function PublicReportView({
         </div>
       </header>
 
-      {/* ----- Body: structured dashboard (when present) + markdown ----- */}
+      {/* ----- Body: custom slot, or structured dashboard + markdown ----- */}
+      {bodySlot ? (
+        <div className="report-body">{bodySlot}</div>
+      ) : (
       <article className="report-body">
         {showDomainSummary && metrics && <DomainSummary metrics={metrics} />}
         {showDomainSummary && vitals && (
@@ -187,6 +196,7 @@ export function PublicReportView({
           </p>
         )}
       </article>
+      )}
 
       {/* ----- Comments slot (rendered by the page) ----- */}
       {commentsSlot && <div className="no-print">{commentsSlot}</div>}

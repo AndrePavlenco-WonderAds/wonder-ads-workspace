@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.35",
+    date: "2026-06-16",
+    title: "Roadmap approval — richer presentation, no internal diagnosis, + send just the current month",
+    highlights: [
+      "**🎨 The roadmap approval page got a proper redesign.** Instead of a plain markdown list, the client now sees a branded month → week → task layout: each week is a card with a gradient week badge + date, every task shown with its pillar chip and a colour-coded status pill, and the current week highlighted. Far more presentable when it lands in their inbox.",
+      "**🧹 Removed the internal SEO diagnosis** from the client-facing roadmap — they just see the plan, as requested.",
+      "**📅 New 'Send current month' button** on the roadmap board, next to 'Send full roadmap'. It sends only the 4 weeks of the month you're currently in — handy for month-by-month sign-off — as its own read-only preview the client opens from Pending Review.",
+      "Both use the same shared report chrome (Download PDF, comments, footer) now that PublicReportView accepts a custom body.",
+    ],
+  },
+  {
     version: "74.34.1",
     date: "2026-06-16",
     title: "Send Target Keywords to the client for approval (read-only, alongside the CSV)",

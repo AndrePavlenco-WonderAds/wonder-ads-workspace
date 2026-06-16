@@ -80,14 +80,26 @@ export default async function RoadmapPage({
           </div>
         </div>
         {roadmap.tasks.length > 0 && (
-          <SendToReviewButton
-            variant="prominent"
-            clientSlug={slug}
-            task={`SEO Roadmap (12 weeks) · ${client.title}`}
-            category="Roadmap"
-            docLink={`/${slug}/preview/roadmap`}
-            sourceType="roadmap"
-          />
+          <div className="flex flex-wrap items-center gap-2">
+            <SendToReviewButton
+              variant="default"
+              clientSlug={slug}
+              task={`SEO Roadmap — current month · ${client.title}`}
+              category="Roadmap"
+              docLink={`/${slug}/preview/roadmap/current-month`}
+              sourceType="roadmap-month"
+              label="Send current month"
+            />
+            <SendToReviewButton
+              variant="prominent"
+              clientSlug={slug}
+              task={`SEO Roadmap (12 weeks) · ${client.title}`}
+              category="Roadmap"
+              docLink={`/${slug}/preview/roadmap`}
+              sourceType="roadmap"
+              label="Send full roadmap"
+            />
+          </div>
         )}
       </header>
 

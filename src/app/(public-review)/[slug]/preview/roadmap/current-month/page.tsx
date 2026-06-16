@@ -1,14 +1,7 @@
-// Public, read-only preview of a client's 12-week SEO Roadmap.
-//
-// The internal board at /seo/[slug]/roadmap is fully editable (drag,
-// add, regenerate). This page renders the SAME roadmap as a branded,
-// read-only document for the client — sent via "Send for approval" on
-// the board, opened from the Pending Review table. The client reads the
-// plan + a Download PDF button; they can't touch the tasks.
-//
-// Reuses PublicReportView's branded chrome (header, Download PDF,
-// comments, footer) via its bodySlot, with a rich month/week-card layout
-// (RoadmapReportBody) — no internal SEO diagnosis, just the plan.
+// Public, read-only preview of just the CURRENT MONTH of a client's SEO
+// roadmap (the 4 weeks the consultant is working through right now). Sent
+// via "Send current month" on the roadmap board. Same branded chrome +
+// rich week-card layout as the full roadmap preview.
 
 import { notFound } from "next/navigation";
 import { getClientBySlug } from "@/lib/notion";
@@ -27,7 +20,15 @@ import { CommentsThread } from "@/components/comments-thread";
 
 export const dynamic = "force-dynamic";
 
-export default async function PublicRoadmapPreviewPage({
+/** Current month (1–3) + its 4 week numbers, from the live current week. */
+function currentMonth(week: number): { month: number; weeks: number[] } {
+  const clampedWeek = Math.min(12, Math.max(1, week || 1));
+  const month = Math.ceil(clampedWeek / 4); // 1–3
+  const start = (month - 1) * 4 + 1;
+  return { month, weeks: [start, start + 1, start + 2, start + 3] };
+}
+
+export default async function PublicRoadmapMonthPreviewPage({
   params,
 }: {
   params: Promise<{ slug: string }>;
@@ -41,24 +42,24 @@ export default async function PublicRoadmapPreviewPage({
   if (!roadmap) notFound();
 
   const lang = pickLang(slug);
-  const currentWeek = currentWeekIndex(roadmap);
+  const cw = currentWeekIndex(roadmap);
+  const { month, weeks } = currentMonth(cw);
 
   const logo = getClientLogo(slug);
   const consultantEmail = getConsultantEmailForSlug(slug);
   const consultantName = getConsultantForSlug(slug);
-  const actionLabel = lang === "pt" ? "Roadmap SEO — 12 semanas" : "SEO Roadmap — 12 weeks";
+  const actionLabel =
+    lang === "pt" ? `Roadmap SEO — Mês ${month}` : `SEO Roadmap — Month ${month}`;
 
   const footerQuestionsHtml = t(lang, "footerQuestions", {
     consultant: consultantName,
     emailLink: `<a href="mailto:${consultantEmail}" class="font-medium text-black/65 underline-offset-2 hover:text-black/85 hover:underline">${consultantEmail}</a>`,
   });
 
-  // Comments tie to the Pending Review row whose docLink points at this
-  // exact URL — `/${slug}/preview/roadmap`.
   const items = await listReviewItems(slug);
   const reviewItem = findReviewItemByDocPath(
     items,
-    `/${slug}/preview/roadmap`,
+    `/${slug}/preview/roadmap/current-month`,
   );
   const commentsSlot = reviewItem ? (
     <CommentsThread
@@ -88,12 +89,12 @@ export default async function PublicRoadmapPreviewPage({
       bodySlot={
         <RoadmapReportBody
           roadmap={roadmap}
-          weeks={[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]}
-          currentWeek={currentWeek}
+          weeks={weeks}
+          currentWeek={cw}
           lang={lang}
         />
       }
-      badgeLabel={lang === "pt" ? "Plano" : "Plan"}
+      badgeLabel={lang === "pt" ? "Plano do mês" : "Month plan"}
       footerTagline={t(lang, "footerTagline")}
       footerQuestionsHtml={footerQuestionsHtml}
       backToPendingReviewLabel={

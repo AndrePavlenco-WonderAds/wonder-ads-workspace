@@ -15,10 +15,15 @@ export function SendToReviewButton({
   docLink,
   sourceType,
   variant = "default",
+  label,
 }: {
   clientSlug: string;
   task: string;
   category: ReviewCategory;
+  /** Override the idle button text (e.g. "Send full roadmap"). Sent/error
+   *  states keep their own wording. Ignored for the `compact` variant,
+   *  which stays icon-led + tiny. */
+  label?: string;
   /** External URL the review row should link to. Usually the result
    *  page (PDF for SEO Audit, KW dashboard for Keyword Research,
    *  GMB batch view for GMB Posts, etc.). When the docLink is a
@@ -119,7 +124,7 @@ export function SendToReviewButton({
       ) : state === "error" ? (
         "Failed — retry"
       ) : (
-        "Send for Approval"
+        label ?? "Send for Approval"
       )}
     </button>
   );
