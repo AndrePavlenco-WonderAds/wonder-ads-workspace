@@ -15,6 +15,7 @@ import {
   getCurrentRoadmap,
   type Roadmap,
   type RoadmapStatus,
+  type RoadmapPillar,
 } from "./roadmap-store";
 import { getConsultantForSlug, CONSULTANT_ORDER } from "./client-overrides";
 import { EXCLUDED_SLUGS } from "./client-overrides";
@@ -321,4 +322,154 @@ export async function countRoadmaps(): Promise<number> {
   } catch {
     return 0;
   }
+}
+
+// ---------------------------------------------------------------------------
+// Per-consultant "my week" view — powers /seo/roadmaps/[consultant].
+// Same per-client stats as the admin summary, PLUS the actual tasks for
+// the current week of each roadmap so the consultant can see exactly what
+// to do first/second across all their projects this week.
+// ---------------------------------------------------------------------------
+
+export type WeekTask = {
+  id: string;
+  title: string;
+  description?: string;
+  pillar: RoadmapPillar;
+  status: RoadmapStatus;
+};
+
+export type ConsultantWeekClient = {
+  slug: string;
+  title: string;
+  hasRoadmap: boolean;
+  currentWeek: number;
+  totalTasks: number;
+  doneTasks: number;
+  health: ConsultantClientRow["health"];
+  /** Tasks whose week === currentWeek, in the consultant's own order. */
+  thisWeekTasks: WeekTask[];
+  thisWeekDone: number;
+  overduePastWeeks: number;
+  pendingApproval: number;
+};
+
+export type ConsultantWeekView = {
+  consultant: string;
+  email: string | null;
+  clients: ConsultantWeekClient[];
+  totals: {
+    clients: number;
+    withRoadmap: number;
+    thisWeekTasks: number;
+    thisWeekRemaining: number;
+    overdue: number;
+    pendingApproval: number;
+  };
+  notionUnavailable: boolean;
+};
+
+export async function getConsultantWeekView(
+  consultantName: string,
+  now: number = Date.now(),
+): Promise<ConsultantWeekView> {
+  let seoClients: { slug: string; title: string }[] = [];
+  let notionUnavailable = false;
+  try {
+    const fetched = await getSeoClients();
+    seoClients = fetched
+      .filter(
+        (c) =>
+          !EXCLUDED_SLUGS.has(c.slug) &&
+          getConsultantForSlug(c.slug) === consultantName,
+      )
+      .map((c) => ({ slug: c.slug, title: c.title }));
+  } catch {
+    notionUnavailable = true;
+  }
+
+  const roadmaps = await Promise.all(
+    seoClients.map(async (c) => ({
+      client: c,
+      roadmap: await getCurrentRoadmap(c.slug),
+    })),
+  );
+
+  const clients: ConsultantWeekClient[] = roadmaps.map(({ client, roadmap }) => {
+    if (!roadmap) {
+      return {
+        slug: client.slug,
+        title: client.title,
+        hasRoadmap: false,
+        currentWeek: 0,
+        totalTasks: 0,
+        doneTasks: 0,
+        health: "no-roadmap",
+        thisWeekTasks: [],
+        thisWeekDone: 0,
+        overduePastWeeks: 0,
+        pendingApproval: 0,
+      };
+    }
+    const s = statsForRoadmap(roadmap, now);
+    const cw = s.currentWeek;
+    const inWeek = roadmap.tasks
+      .filter((t) => t.week === cw)
+      .sort((a, b) => a.order - b.order);
+    return {
+      slug: client.slug,
+      title: client.title,
+      hasRoadmap: true,
+      currentWeek: cw,
+      totalTasks: s.totalTasks,
+      doneTasks: s.doneTasks,
+      health: classifyHealth(true, cw, s.overduePastWeeks),
+      thisWeekTasks: inWeek.map((t) => ({
+        id: t.id,
+        title: t.title,
+        description: t.description,
+        pillar: t.pillar,
+        status: t.status,
+      })),
+      thisWeekDone: inWeek.filter((t) => t.status === "implemented").length,
+      overduePastWeeks: s.overduePastWeeks,
+      pendingApproval: s.pendingApproval,
+    };
+  });
+
+  // Surface the projects that still have work THIS week first, then by
+  // health severity, then alphabetically — so the consultant's eye lands
+  // on what to do first.
+  const healthRank: Record<ConsultantClientRow["health"], number> = {
+    critical: 0,
+    behind: 1,
+    "no-roadmap": 2,
+    "not-started": 3,
+    "on-track": 4,
+  };
+  const remaining = (c: ConsultantWeekClient) =>
+    c.thisWeekTasks.filter((t) => t.status !== "implemented").length;
+  clients.sort((a, b) => {
+    const ar = remaining(a) > 0 ? 0 : 1;
+    const br = remaining(b) > 0 ? 0 : 1;
+    if (ar !== br) return ar - br;
+    const h = healthRank[a.health] - healthRank[b.health];
+    if (h !== 0) return h;
+    return a.title.localeCompare(b.title);
+  });
+
+  return {
+    consultant: consultantName,
+    email: EMAIL_BY_CONSULTANT[consultantName] ?? null,
+    clients,
+    totals: {
+      clients: clients.length,
+      withRoadmap: clients.filter((c) => c.hasRoadmap).length,
+      thisWeekTasks: clients.reduce((s, c) => s + c.thisWeekTasks.length, 0),
+      thisWeekRemaining: clients.reduce((s, c) => s + remaining(c), 0),
+      overdue: clients.reduce((s, c) => s + c.overduePastWeeks, 0),
+      pendingApproval: clients.reduce((s, c) => s + c.pendingApproval, 0),
+    },
+    notionUnavailable,
+  };
 }

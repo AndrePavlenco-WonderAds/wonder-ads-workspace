@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { ArrowUpRight } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { AccessDenied } from "@/components/access-denied";
 import { getCurrentEmployee } from "@/lib/auth/server";
@@ -7,7 +9,7 @@ import { KpisCard } from "@/components/kpis-card";
 import { ClientCard } from "@/components/client-card";
 import { WorldMap } from "@/components/world-map";
 import { TypewriterPrompt } from "@/components/typewriter-prompt";
-import { getSeoClients, type NotionClient } from "@/lib/notion";
+import { getSeoClients, slugify, type NotionClient } from "@/lib/notion";
 import {
   CONSULTANT_ORDER,
   getConsultantForSlug,
@@ -103,7 +105,20 @@ export default async function SeoPage() {
                 <div key={col.name} className="space-y-5">
                   <header className="flex items-baseline justify-between border-b border-white/8 pb-3">
                     <h3 className="flex items-baseline gap-2 text-sm font-semibold uppercase tracking-[0.18em] text-white/70">
-                      <span>{col.name}</span>
+                      {employee.isAdmin || employee.name === col.name ? (
+                        <Link
+                          href={`/seo/roadmaps/${slugify(col.name)}`}
+                          className="group inline-flex items-baseline gap-1.5 text-white/80 transition hover:text-white"
+                          title={`Open ${col.name}'s weekly roadmap overview`}
+                        >
+                          <span className="underline-offset-4 decoration-white/30 group-hover:underline">
+                            {col.name}
+                          </span>
+                          <ArrowUpRight className="h-3 w-3 self-center opacity-0 transition group-hover:opacity-70" />
+                        </Link>
+                      ) : (
+                        <span>{col.name}</span>
+                      )}
                     </h3>
                     <span className="text-xs font-medium uppercase tracking-[0.18em] text-white/35">
                       {col.clients.length}

@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.34",
+    date: "2026-06-16",
+    title: "Consultants get a private 'My Week' overview — this week's tasks across all their roadmaps",
+    highlights: [
+      "**🗓 New per-consultant weekly overview.** On the SEO board, a consultant now clicks their own name (column header) to open a private page showing EVERY one of their projects' roadmaps in one place — and, crucially, the tasks due THIS week across all of them, ordered so the top of each card is what to do first.",
+      "**👋 Personal + time-aware.** The page greets you by name based on your local clock — *Good Morning / Good Afternoon / Good Evening, <name>* — and leads with a one-line summary (\"You have N tasks to tackle this week across M projects\").",
+      "**📊 Pro card per project** (mirrors the SuperAdmin suite, with detail): health pill, Week N of 12 progress bar, and the numbered list of this week's tasks — each with its pillar + status (To do / In progress / For approval / Done). Plus quick badges for any overdue or for-approval work, and an Open-board jump.",
+      "**🔒 Locked down.** Only the consultant themselves and the three SuperAdmins can open a given consultant's overview; everyone else gets Access Denied. The name is only clickable for the owner (admins see all).",
+    ],
+  },
+  {
     version: "74.33.2",
     date: "2026-06-16",
     title: "Commercial DPT card now opens the Sales Dashboard in a new tab",
