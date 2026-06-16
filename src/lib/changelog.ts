@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.32.1",
+    date: "2026-06-16",
+    title: "Client preview now shows the full dashboard (Domain Intelligence + Core Web Vitals), not just the written analysis",
+    highlights: [
+      "**📊 The public client-preview page was missing the data dashboard.** When a result was sent to the Pending Review table, the client saw only the written analysis — the **Domain Intelligence** cards (authority, organic keywords, ETV, referring domains, top-ranked keywords), the **Core Web Vitals** table, and (for Keyword Research) the **Keyword universe** — were all absent, even though the PDF and the internal result page show them. The preview looked stripped-down vs. what was actually produced.",
+      "**✅ Fix:** the preview now renders the same structured summaries the PDF does, above the analysis, in a clean light theme. Extracted the three summary blocks into a shared `report-summaries.tsx` used by BOTH the PDF (`PrintLayout`) and the client preview (`PublicReportView`) so they can never drift apart again.",
+      "SEO Audit previews get Domain Intelligence + Core Web Vitals; Keyword Research previews get the Keyword universe summary. Existing results show it immediately — no regeneration needed.",
+    ],
+  },
+  {
     version: "74.32",
     date: "2026-06-16",
     title: "Refine results with follow-up instructions — edit part of an output without regenerating the whole thing",

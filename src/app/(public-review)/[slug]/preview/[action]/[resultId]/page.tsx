@@ -111,6 +111,11 @@ export default async function PublicActionPreviewPage({
       backToPendingReviewHref={`/${slug}/pendingreview`}
       downloadPdfLabel={lang === "pt" ? "Descarregar PDF" : "Download PDF"}
       commentsSlot={commentsSlot}
+      metrics={history.metrics ?? null}
+      vitals={history.vitals ?? null}
+      kwResearch={history.kwResearch ?? null}
+      showDomainSummary={actionSlug === "seo-audit"}
+      showKeywordResearchSummary={actionSlug === "keyword-research"}
     />
   );
 }

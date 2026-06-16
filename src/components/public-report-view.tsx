@@ -17,6 +17,14 @@ import { useState } from "react";
 import { Download, ArrowLeft } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import {
+  DomainSummary,
+  CoreWebVitalsSummary,
+  KeywordUniverseSummary,
+} from "./report-summaries";
+import type { DomainMetrics } from "@/lib/seo-tools/dataforseo";
+import type { SiteVitals } from "@/lib/audit-prep-store";
+import type { KwResearchPack } from "@/lib/seo-tools/keyword-research";
 
 export function PublicReportView({
   clientName,
@@ -34,6 +42,11 @@ export function PublicReportView({
   backToPendingReviewHref,
   downloadPdfLabel,
   commentsSlot,
+  metrics = null,
+  vitals = null,
+  kwResearch = null,
+  showDomainSummary = false,
+  showKeywordResearchSummary = false,
 }: {
   clientName: string;
   clientLogo: string | null;
@@ -44,6 +57,14 @@ export function PublicReportView({
   consultantEmail: string;
   analysisText: string;
   badgeLabel: string;
+  /** Structured data shown above the written analysis — so the client
+   *  sees the same dashboard the PDF + internal page show, not just prose.
+   *  Audit: metrics + vitals; Keyword Research: the keyword pack. */
+  metrics?: DomainMetrics | null;
+  vitals?: SiteVitals | null;
+  kwResearch?: KwResearchPack | null;
+  showDomainSummary?: boolean;
+  showKeywordResearchSummary?: boolean;
   footerTagline: string;
   /** Pre-substituted HTML for the footer "Questions?" line. */
   footerQuestionsHtml: string;
@@ -139,8 +160,15 @@ export function PublicReportView({
         </div>
       </header>
 
-      {/* ----- Body: markdown analysis ----- */}
+      {/* ----- Body: structured dashboard (when present) + markdown ----- */}
       <article className="report-body">
+        {showDomainSummary && metrics && <DomainSummary metrics={metrics} />}
+        {showDomainSummary && vitals && (
+          <CoreWebVitalsSummary vitals={vitals} />
+        )}
+        {showKeywordResearchSummary && kwResearch && (
+          <KeywordUniverseSummary pack={kwResearch} />
+        )}
         {analysisText.trim() ? (
           <ReactMarkdown remarkPlugins={[remarkGfm]}>
             {analysisText}
@@ -264,6 +292,46 @@ const PUBLIC_REPORT_CSS = `
   border: 0;
   border-top: 1px solid rgba(0, 0, 0, 0.1);
   margin: 1.5rem 0;
+}
+/* Structured-summary stat cards (Domain intelligence / Keyword universe /
+   Core Web Vitals) — shared markup from report-summaries.tsx, styled here
+   for the light client-facing preview. */
+.public-report .report-body .pdf-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.75rem;
+  margin: 0.5rem 0 1.5rem;
+}
+.public-report .report-body .pdf-stat {
+  border: 1px solid #e0e0e0;
+  border-left: 3px solid #783df5;
+  border-radius: 8px;
+  padding: 0.75rem 0.9rem;
+  background: #fff;
+}
+.public-report .report-body .pdf-stat-label {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #666;
+}
+.public-report .report-body .pdf-stat-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #0a0a0a;
+  margin-top: 0.2rem;
+  line-height: 1.1;
+}
+.public-report .report-body .pdf-stat-sub {
+  font-size: 0.68rem;
+  color: #777;
+  margin-top: 0.2rem;
+}
+@media (max-width: 640px) {
+  .public-report .report-body .pdf-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 @media print {
   .public-report .public-report-toolbar { display: none !important; }
