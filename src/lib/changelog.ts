@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.31.3",
+    date: "2026-06-16",
+    title: "Fix: PDF / public preview / DOCX were cutting the start of SEO deliverables at the first `---` rule",
+    highlights: [
+      "**🐛 Critical fix — the opening section of results was disappearing on export.** The PDF download, the public client-preview page, and the DOCX export all stripped the tool-progress prefix by slicing at the FIRST `\\n---\\n\\n` in the saved text. But SEO Audits, blog articles, the FAQ generator and most other actions use `---` as section rules INSIDE the analysis — so the slice cut everything before the first rule (e.g. the entire **Overview** of an audit). On the Sentir Saúde audit it was dropping the first ~1,700 characters.",
+      "**✅ Fix:** new shared `extractAnalysis()` helper that only treats a `---` as the tool→analysis boundary when everything before it is genuine tool-progress blockquotes (`> …`). A `---` with real content before it (a heading, prose) is left untouched, so the full document survives. Applied in all four places that render a result — the live result page, the PDF print view, the public preview, and the DOCX export — replacing the duplicated buggy logic with one source of truth.",
+      "Existing saved results are fixed retroactively — nothing needs regenerating; the parser was the only thing at fault, the stored text was always complete.",
+    ],
+  },
+  {
     version: "74.31.2",
     date: "2026-06-16",
     title: "SEO board polish — full consultant names, PT tagline, header icon removed, FA → Core",

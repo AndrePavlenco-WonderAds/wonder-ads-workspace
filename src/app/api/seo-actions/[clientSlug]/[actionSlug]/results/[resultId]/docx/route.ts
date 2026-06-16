@@ -18,6 +18,7 @@ import {
 import { findAction } from "@/lib/seo-pillars";
 import { getClientBySlug } from "@/lib/notion";
 import { getHistoryEntry, formatDisplayResultId } from "@/lib/action-history";
+import { extractAnalysis } from "@/lib/strip-tool-progress";
 import {
   getConsultantForSlug,
   getConsultantEmailForSlug,
@@ -59,17 +60,9 @@ export async function GET(
   const generatedDate = formatDateLong(existing.createdAt);
   const displayResultId = formatDisplayResultId(resultId);
 
-  // Strip the tool-progress blockquote prefix from the analysis (matches
-  // the PDF route's behaviour in results/[resultId]/page.tsx).
-  const sep = "\n---\n\n";
-  const raw = existing.output ?? "";
-  const sepIdx = raw.indexOf(sep);
-  const analysisText =
-    sepIdx >= 0
-      ? raw.slice(sepIdx + sep.length)
-      : raw.trim().startsWith(">")
-        ? ""
-        : raw;
+  // Strip the tool-progress blockquote prefix from the analysis without
+  // cutting at "---" section rules inside it (see extractAnalysis).
+  const analysisText = extractAnalysis(existing.output);
 
   const coverBlocks: Paragraph[] = [
     new Paragraph({

@@ -28,10 +28,9 @@ import { pickLang, t } from "@/lib/public-i18n";
 import { PublicReportView } from "@/components/public-report-view";
 import { findReviewItemByDocPath, listReviewItems } from "@/lib/review-store";
 import { CommentsThread } from "@/components/comments-thread";
+import { extractAnalysis } from "@/lib/strip-tool-progress";
 
 export const dynamic = "force-dynamic";
-
-const SEPARATOR = "\n---\n\n";
 
 export default async function PublicActionPreviewPage({
   params,
@@ -50,14 +49,9 @@ export default async function PublicActionPreviewPage({
   if (!history) notFound();
 
   // Strip the tool-progress blockquote prefix that the runner emits
-  // before Claude's analysis. Same logic as PrintLayout's printMode.
-  const sepIdx = history.output.indexOf(SEPARATOR);
-  const analysisText =
-    sepIdx >= 0
-      ? history.output.slice(sepIdx + SEPARATOR.length)
-      : history.output.trim().startsWith(">")
-        ? ""
-        : history.output;
+  // before Claude's analysis — without cutting at "---" section rules
+  // inside the analysis itself (see extractAnalysis).
+  const analysisText = extractAnalysis(history.output);
 
   const logo = getClientLogo(slug);
   const consultantEmail = getConsultantEmailForSlug(slug);

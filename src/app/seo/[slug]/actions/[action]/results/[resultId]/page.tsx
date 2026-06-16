@@ -14,6 +14,7 @@ import { getClientGeo } from "@/lib/client-geo";
 import { findAction } from "@/lib/seo-pillars";
 import { getClientBySlug } from "@/lib/notion";
 import { getHistoryEntry, formatDisplayResultId } from "@/lib/action-history";
+import { extractAnalysis } from "@/lib/strip-tool-progress";
 import {
   getClientLogo,
   getLogoBgMode,
@@ -86,16 +87,9 @@ export default async function ResultPage({
   //    PDF document straight from the server. The PrintLayout component
   //    renders <html>/<body> itself so the app chrome can't sneak in. --
   if (printMode) {
-    // Strip the tool-progress blockquote prefix from the analysis (if any).
-    const sep = "\n---\n\n";
-    const raw = existing?.output ?? "";
-    const sepIdx = raw.indexOf(sep);
-    const analysisText =
-      sepIdx >= 0
-        ? raw.slice(sepIdx + sep.length)
-        : raw.trim().startsWith(">")
-          ? ""
-          : raw;
+    // Strip the tool-progress blockquote prefix from the analysis without
+    // cutting at "---" section rules inside it (see extractAnalysis).
+    const analysisText = extractAnalysis(existing?.output);
     return (
       <PrintLayout
         clientName={client.title}

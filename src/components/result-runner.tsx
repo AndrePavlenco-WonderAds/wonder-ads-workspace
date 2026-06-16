@@ -10,6 +10,7 @@ import type { SiteVitals } from "@/lib/audit-prep-store";
 import type { KwResearchPack } from "@/lib/seo-tools/keyword-research";
 import type { KwCluster } from "@/lib/kw-cluster-parser";
 import { pendingKey } from "./action-runner";
+import { extractAnalysis } from "@/lib/strip-tool-progress";
 import { MarkdownView } from "./markdown-view";
 import { DomainDashboard } from "./domain-dashboard";
 import { KeywordResearchDashboard } from "./keyword-research-dashboard";
@@ -81,15 +82,7 @@ export function ResultRunner({
   // The result card should only show the analysis, not the tool-progress
   // blockquotes — those are transient build output. The separator (`---`)
   // emitted by the API marks the boundary.
-  const analysisText = useMemo(() => {
-    const sep = "\n---\n\n";
-    const idx = output.indexOf(sep);
-    if (idx >= 0) return output.slice(idx + sep.length);
-    // No separator yet: if everything we have is progress blockquotes, treat
-    // the analysis as empty (we're still in the tool phase).
-    if (output.trim().startsWith(">")) return "";
-    return output;
-  }, [output]);
+  const analysisText = useMemo(() => extractAnalysis(output), [output]);
 
   // Auto-trigger print dialog in print mode once content is in.
   useEffect(() => {
