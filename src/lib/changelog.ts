@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.34.1",
+    date: "2026-06-16",
+    title: "Send Target Keywords to the client for approval (read-only, alongside the CSV)",
+    highlights: [
+      "**🎯 New 'Send for approval' button on the Target Keywords panel** (next to Refresh / CSV / Add). Besides exporting the CSV, you can now push the keyword list straight to the client's Pending Review table — the client opens it like any other deliverable.",
+      "**🔒 Client-facing read-only view.** It renders the keyword targets as a clean, branded table (Keyword · Vol/mo · Difficulty · Intent, biggest opportunities first) with a Download PDF button — no editing, same chrome as the other previews. Localised PT/EN.",
+      "Tidied up: the Target Keywords CSV now downloads as *Target Keywords - Client - Wonder Ads.csv* to match the rest of the deliverables.",
+    ],
+  },
+  {
     version: "74.34",
     date: "2026-06-16",
     title: "Consultants get a private 'My Week' overview — this week's tasks across all their roadmaps",

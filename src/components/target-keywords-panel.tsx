@@ -12,6 +12,7 @@ import {
 import Link from "next/link";
 import type { TargetKeyword } from "@/lib/target-keywords-store";
 import { formatDateLong } from "@/lib/dates";
+import { SendToReviewButton } from "./send-to-review-button";
 
 type SortKey = "addedAt" | "keyword" | "volume" | "kd";
 type SortDir = "asc" | "desc";
@@ -148,7 +149,7 @@ export function TargetKeywordsPanel({
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${slug}-target-keywords-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `Target Keywords - ${clientName} - Wonder Ads.csv`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -219,6 +220,16 @@ export function TargetKeywordsPanel({
             <Download className="h-3 w-3" />
             CSV
           </button>
+          {items.length > 0 && (
+            <SendToReviewButton
+              variant="compact"
+              clientSlug={slug}
+              task={`Target Keywords (${items.length}) · ${clientName}`}
+              category="Keyword Research"
+              docLink={`/${slug}/preview/target-keywords`}
+              sourceType="target-keywords"
+            />
+          )}
           <button
             type="button"
             onClick={() => setAdding((v) => !v)}
