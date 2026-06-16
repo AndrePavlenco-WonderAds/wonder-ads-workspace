@@ -46,9 +46,9 @@ const ANDRE_PEREIRA = new Set(["sentir-saude", "clinica-fernando-almeida"]);
 
 /** Returns the Head Consultant for a given client slug. */
 export function getConsultantForSlug(slug: string): string {
-  if (MANUEL.has(slug)) return "Manuel S.";
-  if (FRAN_R.has(slug)) return "Fran. R.";
-  if (YENISEY.has(slug)) return "Yenisey R.";
+  if (MANUEL.has(slug)) return "Manuel Silva";
+  if (FRAN_R.has(slug)) return "Fran. Rosa";
+  if (YENISEY.has(slug)) return "Yenisey Rodriguez";
   if (ANDRE_PEREIRA.has(slug)) return "André Pereira";
   return "Unassigned";
 }
@@ -66,8 +66,8 @@ export function getConsultantEmailForSlug(slug: string): string {
 
 /** Display order used for grouping client cards into columns. */
 export const CONSULTANT_ORDER = [
-  "Fran. R.",
-  "Yenisey R.",
-  "Manuel S.",
+  "Fran. Rosa",
+  "Yenisey Rodriguez",
+  "Manuel Silva",
   "André Pereira",
 ] as const;

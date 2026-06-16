@@ -33,7 +33,7 @@ export type EmployeeDepartment = (typeof EMPLOYEE_DEPARTMENTS)[number];
 export type AdminEmployeeRecord = {
   /** Stable identifier — slugified at creation, never changes after. */
   id: string;
-  /** Display name (e.g. "Manuel S."). */
+  /** Display name (e.g. "Manuel Silva"). */
   name: string;
   /** Work email — defaults to `${first.toLowerCase()}@wonder-ads.com`. */
   email: string;
@@ -83,7 +83,7 @@ type SeedEmployee = {
 export const SEED_EMPLOYEES: SeedEmployee[] = [
   {
     id: "manuel-s",
-    name: "Manuel S.",
+    name: "Manuel Silva",
     emailHandle: "manuel",
     role: "SEO Consultant",
     departments: ["SEO"],
@@ -93,7 +93,7 @@ export const SEED_EMPLOYEES: SeedEmployee[] = [
   },
   {
     id: "fran-r",
-    name: "Fran. R.",
+    name: "Fran. Rosa",
     emailHandle: "fran",
     role: "SEO Consultant",
     departments: ["SEO"],
@@ -102,7 +102,7 @@ export const SEED_EMPLOYEES: SeedEmployee[] = [
   },
   {
     id: "yenisey-r",
-    name: "Yenisey R.",
+    name: "Yenisey Rodriguez",
     emailHandle: "yeni",
     role: "SEO Consultant",
     departments: ["SEO"],

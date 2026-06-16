@@ -77,20 +77,26 @@ export const DEFAULT_STARTING_DATES: Record<string, string> = {
  *  every admin row. Source of truth: client-overrides.ts (SEO) + the
  *  ADS roster. Keep in sync when a new consultant joins. */
 export const CONSULTANTS = [
-  "Manuel S.",
-  "Fran. R.",
-  "Yenisey R.",
+  "Manuel Silva",
+  "Fran. Rosa",
+  "Yenisey Rodriguez",
   "Germano C.",
   "André Pereira",
 ] as const;
 export type Consultant = (typeof CONSULTANTS)[number];
 
 /** Renames that should auto-apply when reading an old admin record —
- *  so a saved consultant field carrying "André P." picks up the v74.10
- *  handover to "Manuel S." without manual cleanup. */
+ *  so a saved consultant field carrying an old short form picks up the
+ *  current full name without manual cleanup. v74.31.2: the three SEO
+ *  consultants moved from short ("Fran. R.") to full names ("Fran.
+ *  Rosa"); the André P. / Luana N. entries preserve the older v74.10
+ *  handover chain into Manuel. */
 const CONSULTANT_RENAMES: Record<string, string> = {
-  "André P.": "Manuel S.",
-  "Luana N.": "Manuel S.", // older legacy → handover chain
+  "Manuel S.": "Manuel Silva",
+  "Fran. R.": "Fran. Rosa",
+  "Yenisey R.": "Yenisey Rodriguez",
+  "André P.": "Manuel Silva",
+  "Luana N.": "Manuel Silva", // older legacy → handover chain
 };
 
 /** Departments a client row can belong to. Used as a typed dimension
@@ -104,9 +110,9 @@ export type ClientDepartment = (typeof CLIENT_DEPARTMENTS)[number];
  *  on read (a legacy record holding [Yenisey, Germano] gets
  *  attributed Yenisey → SEO row, Germano → ADS row). */
 export const CONSULTANT_DEPARTMENT: Record<string, ClientDepartment> = {
-  "Manuel S.": "SEO",
-  "Fran. R.": "SEO",
-  "Yenisey R.": "SEO",
+  "Manuel Silva": "SEO",
+  "Fran. Rosa": "SEO",
+  "Yenisey Rodriguez": "SEO",
   "Germano C.": "ADS",
   "André Pereira": "SEO",
 };

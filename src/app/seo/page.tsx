@@ -1,4 +1,3 @@
-import { Gauge } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { AccessDenied } from "@/components/access-denied";
 import { getCurrentEmployee } from "@/lib/auth/server";
@@ -84,8 +83,7 @@ export default async function SeoPage() {
     <PageShell>
       <DepartmentHeader
         title="SEO DPT"
-        tagline="Organic growth in Google and AIs. #1 SEO & GEO Agency in Portugal."
-        Icon={Gauge}
+        tagline="Crescimento orgânico no Google e nas IAs. Agência #1 de SEO & GEO em Portugal."
         count={clients.length || undefined}
         countLabel="clients"
         rightSlot={<WorldMap />}

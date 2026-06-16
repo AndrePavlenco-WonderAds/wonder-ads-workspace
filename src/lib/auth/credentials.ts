@@ -68,7 +68,7 @@ export const EMPLOYEE_CREDENTIALS: EmployeeCredential[] = [
   },
   {
     username: "manuel-s",
-    name: "Manuel S.",
+    name: "Manuel Silva",
     role: "SEO Consultant",
     dept: "SEO",
     salt: "336026cc21c409c4aebdfb8148c8d0a5",
@@ -76,7 +76,7 @@ export const EMPLOYEE_CREDENTIALS: EmployeeCredential[] = [
   },
   {
     username: "fran-r",
-    name: "Fran. R.",
+    name: "Fran. Rosa",
     role: "SEO Consultant",
     dept: "SEO",
     salt: "0fc7b7960beb67ac252a908ef770b6ed",
@@ -84,7 +84,7 @@ export const EMPLOYEE_CREDENTIALS: EmployeeCredential[] = [
   },
   {
     username: "yenisey-r",
-    name: "Yenisey R.",
+    name: "Yenisey Rodriguez",
     role: "SEO Consultant",
     dept: "SEO",
     salt: "830074dc1e56d7cbaf74665b26467711",

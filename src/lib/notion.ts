@@ -127,7 +127,7 @@ const _fetchSeoClients = unstable_cache(
   // and the addition of Sentir Saúde + Clínica Fernando Almeida to the
   // synthetic roster (v74.31). Bump whenever the shape of NotionClient or
   // any of its derived fields changes meaningfully.
-  ["seo-clients-v5"],
+  ["seo-clients-v6"],
   { revalidate: 3600, tags: ["seo-clients"] },
 );
 

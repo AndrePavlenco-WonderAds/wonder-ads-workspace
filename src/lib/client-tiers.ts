@@ -26,7 +26,7 @@ const TIERS: Record<string, ClientTier> = {
   "b-life": "growth",
   "white-clinic": "growth",
   "sentir-saude": "growth",
-  "clinica-fernando-almeida": "growth",
+  "clinica-fernando-almeida": "core",
 
   // ADS-only clients
   "clinica-empatia": "core",

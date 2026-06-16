@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.31.2",
+    date: "2026-06-16",
+    title: "SEO board polish — full consultant names, PT tagline, header icon removed, FA → Core",
+    highlights: [
+      "**🧑‍🤝‍🧑 Consultant columns now show full names** — Fran. R. → **Fran. Rosa**, Yenisey R. → **Yenisey Rodriguez**, Manuel S. → **Manuel Silva**. Renamed consistently everywhere the name is used as identity (board grouping, admin Clients + Employees, Roadmaps, login chip, deliverable emails), with auto-migration so existing admin records carrying the old short names map across cleanly.",
+      "**🇵🇹 SEO tagline translated to PT-PT:** «Crescimento orgânico no Google e nas IAs. Agência #1 de SEO & GEO em Portugal.»",
+      "**🧹 Removed the gauge icon tile** from the top of the SEO department header for a cleaner look (matches the Web board).",
+      "**🏷 Clínica Fernando Almeida moved from Growth → Core tier.**",
+    ],
+  },
+  {
     version: "74.31.1",
     date: "2026-06-16",
     title:

@@ -94,9 +94,9 @@ export type RoadmapAdminSummary = {
 };
 
 const EMAIL_BY_CONSULTANT: Record<string, string> = {
-  "Fran. R.": "fran@wonder-ads.com",
-  "Yenisey R.": "yeni@wonder-ads.com",
-  "Manuel S.": "manuel@wonder-ads.com",
+  "Fran. Rosa": "fran@wonder-ads.com",
+  "Yenisey Rodriguez": "yeni@wonder-ads.com",
+  "Manuel Silva": "manuel@wonder-ads.com",
   "André Pereira": "andre.pereira@wonder-ads.com",
 };
 
