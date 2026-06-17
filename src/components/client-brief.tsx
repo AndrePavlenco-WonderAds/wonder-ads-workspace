@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import type { ClientBrief as Brief } from "@/lib/client-briefs";
 import { AddCallNotesButton } from "./add-call-notes-button";
+import { SendToReviewButton } from "./send-to-review-button";
 
 type Kind = "dos" | "donts" | "notes";
 
@@ -190,6 +191,18 @@ export function ClientBrief({
             <span className="rounded-full border border-rose-500/30 bg-rose-500/10 px-2 py-0.5 text-[10px] font-medium text-rose-300">
               {error}
             </span>
+          )}
+          {(brief.dos.length > 0 ||
+            brief.donts.length > 0 ||
+            brief.notes.length > 0) && (
+            <SendToReviewButton
+              variant="compact"
+              clientSlug={slug}
+              task={`Brief (Do's / Don'ts / Notes) · ${clientName}`}
+              category="Brief"
+              docLink={`/${slug}/preview/brief`}
+              sourceType="brief"
+            />
           )}
           <AddCallNotesButton slug={slug} clientName={clientName} />
         </div>

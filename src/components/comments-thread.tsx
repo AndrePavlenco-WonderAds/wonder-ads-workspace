@@ -53,9 +53,15 @@ type Props = {
   /** Pre-filled display name. Internal table fills with the resolved
    *  consultant name from `getConsultantForSlug`. */
   defaultAuthorName?: string | null;
-  /** Whether the role switcher is shown. The internal page hides it
-   *  (consultant only) for clarity. */
+  /** Whether the role switcher is shown. Both surfaces show it now so a
+   *  consultant can mark a comment as the Client's when relaying their
+   *  feedback. */
   allowRoleSwitch?: boolean;
+  /** Whether the chosen role/name is remembered in localStorage. The
+   *  public client surfaces remember it (so a returning visitor keeps
+   *  their side); the internal table does NOT — it should always default
+   *  to Wonder Ads and never inherit a public visitor's stored choice. */
+  rememberRole?: boolean;
   lang?: PublicLang;
   variant?: Variant;
   /** Inline variant: parent passes a key that changes when the row's
@@ -81,6 +87,7 @@ export function CommentsThread({
   defaultAuthor,
   defaultAuthorName,
   allowRoleSwitch = true,
+  rememberRole = true,
   lang = "en",
   variant = "inline",
   onClose,
@@ -100,7 +107,7 @@ export function CommentsThread({
   // internal page never reads from storage (its defaultAuthor wins).
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if (allowRoleSwitch) {
+    if (allowRoleSwitch && rememberRole) {
       const storedRole = window.localStorage.getItem(
         `${ROLE_STORAGE_PREFIX}${clientSlug}`,
       );
@@ -160,13 +167,13 @@ export function CommentsThread({
 
   const persistRole = useCallback(
     (role: Author, name: string) => {
-      if (typeof window === "undefined") return;
+      if (typeof window === "undefined" || !rememberRole) return;
       window.localStorage.setItem(`${ROLE_STORAGE_PREFIX}${clientSlug}`, role);
       if (name) {
         window.localStorage.setItem(`${NAME_STORAGE_PREFIX}${clientSlug}`, name);
       }
     },
-    [clientSlug],
+    [clientSlug, rememberRole],
   );
 
   const submit = useCallback(async () => {

@@ -600,9 +600,15 @@ export function ReviewTable({
                             initialComments={it.comments ?? []}
                             defaultAuthor={commentAuthorRole}
                             defaultAuthorName={commentAuthorName}
-                            allowRoleSwitch={
-                              commentAuthorRole !== "consultant"
-                            }
+                            // Always show the Client / Wonder Ads toggle so
+                            // a consultant can mark a comment as the
+                            // client's when relaying their feedback. Don't
+                            // remember the choice in localStorage on the
+                            // internal table — it should always start on
+                            // Wonder Ads (the consultant), never inherit a
+                            // public visitor's stored side.
+                            allowRoleSwitch
+                            rememberRole={false}
                             lang={commentLang}
                             variant="inline"
                             onClose={() => setOpenCommentsFor(null)}

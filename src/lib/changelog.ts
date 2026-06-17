@@ -13,6 +13,25 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.36",
+    date: "2026-06-17",
+    title: "Comment as Client or Wonder Ads on the internal review table + send the Client Brief for approval",
+    highlights: [
+      "**💬 The Client / Wonder Ads toggle now shows when commenting on the internal Pending Review table.** Previously a consultant was locked to 'Wonder Ads'; now you can flip the toggle to leave a comment as the Client's (e.g. when relaying their feedback verbally). It still defaults to Wonder Ads and never inherits a public visitor's stored choice.",
+      "**📋 New 'Send for approval' on the Client Brief.** Just like Keyword Research + Target Keywords, you can now push the **Do's / Don'ts / Notes** straight to the client's Pending Review table — they open a clean, branded read-only version (with Download PDF + comments). Localised PT/EN; the button appears once the brief has content.",
+    ],
+  },
+  {
+    version: "74.35.1",
+    date: "2026-06-17",
+    title: "Consultant 'My Week' page polished — Portuguese, animated greeting, clearer cards",
+    highlights: [
+      "**🇵🇹 Fully in European Portuguese.** The whole per-consultant weekly overview (`/seo/roadmaps/<consultant>`) is now PT-PT — labels, stats, statuses, empty states.",
+      "**⌨️ Animated greeting.** *Bom dia / Boa tarde / Boa noite, <nome>* now types itself out with a blinking caret, on the viewer's local clock.",
+      "**🏷 Clearer cards.** The overdue + for-approval badges are grouped under a small *'De semanas anteriores'* label, and each card gains a **Ficha do cliente** link next to **Abrir roadmap**.",
+    ],
+  },
+  {
     version: "74.35",
     date: "2026-06-16",
     title: "Roadmap approval — richer presentation, no internal diagnosis, + send just the current month",
