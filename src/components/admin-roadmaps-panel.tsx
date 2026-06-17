@@ -17,6 +17,7 @@ import {
   Calendar,
   Mail,
   ArrowRight,
+  ClipboardCheck,
 } from "lucide-react";
 import type {
   ConsultantClientRow,
@@ -235,10 +236,7 @@ function ClientCard({ client }: { client: ConsultantClientRow }) {
       ? Math.min(100, Math.round((Math.min(client.currentWeek, 12) / 12) * 100))
       : 0;
   return (
-    <Link
-      href={`/seo/${client.slug}/roadmap`}
-      className="group relative flex flex-col rounded-xl border border-white/10 bg-white/[0.025] p-4 transition hover:border-white/25 hover:bg-white/[0.05]"
-    >
+    <article className="relative flex flex-col rounded-xl border border-white/10 bg-white/[0.025] p-4 transition hover:border-white/20">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold text-white">
@@ -356,15 +354,27 @@ function ClientCard({ client }: { client: ConsultantClientRow }) {
         </>
       ) : (
         <div className="mt-4 rounded-md border border-dashed border-white/12 bg-white/[0.025] px-3 py-3 text-[11px] text-white/55">
-          No roadmap on file yet — click to open the board and generate one.
+          No roadmap on file yet — open the board to generate one.
         </div>
       )}
 
-      <div className="mt-3 inline-flex items-center gap-1 self-end text-[10.5px] font-semibold text-white/55 transition group-hover:gap-2 group-hover:text-white">
-        Open board
-        <ArrowRight className="h-3 w-3 transition group-hover:translate-x-0.5" />
+      <div className="mt-3 flex items-center justify-end gap-4 border-t border-white/8 pt-2.5">
+        <Link
+          href={`/seo/${client.slug}/review`}
+          className="group/r inline-flex items-center gap-1.5 text-[10.5px] font-semibold text-white/55 transition hover:text-white"
+        >
+          <ClipboardCheck className="h-3 w-3" />
+          Pending review
+        </Link>
+        <Link
+          href={`/seo/${client.slug}/roadmap`}
+          className="group/b inline-flex items-center gap-1.5 text-[10.5px] font-semibold text-white/55 transition hover:text-white"
+        >
+          Open board
+          <ArrowRight className="h-3 w-3 transition group-hover/b:translate-x-0.5" />
+        </Link>
       </div>
-    </Link>
+    </article>
   );
 }
 

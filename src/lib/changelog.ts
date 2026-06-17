@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.36.1",
+    date: "2026-06-17",
+    title: "SuperAdmin → Roadmaps: jump to each client's Pending Review from the card",
+    highlights: [
+      "**🔗 Each client card now has a 'Pending review' link next to 'Open board'** — one click from the Roadmaps overview straight to that client's internal Pending Review table (`/seo/<slug>/review`). The card footer now carries both links instead of the whole card being a single link to the board.",
+    ],
+  },
+  {
     version: "74.36",
     date: "2026-06-17",
     title: "Comment as Client or Wonder Ads on the internal review table + send the Client Brief for approval",
