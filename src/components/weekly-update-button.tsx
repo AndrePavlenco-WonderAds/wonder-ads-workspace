@@ -7,6 +7,7 @@
 // needed, and copies it straight into WhatsApp.
 
 import { useCallback, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   Check,
   Copy,
@@ -36,6 +37,20 @@ export function WeeklyUpdateButton({
   const [result, setResult] = useState<Result | null>(null);
   const [draft, setDraft] = useState("");
   const [copied, setCopied] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  // Portals can only target document.body after mount (no body during SSR).
+  useEffect(() => setMounted(true), []);
+
+  // Lock background scroll while the full-screen modal is open.
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [open]);
 
   const generate = useCallback(async () => {
     setLoading(true);
@@ -100,9 +115,11 @@ export function WeeklyUpdateButton({
         </span>
       </button>
 
-      {open && (
+      {open &&
+        mounted &&
+        createPortal(
         <div
-          className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 p-4 backdrop-blur-sm sm:items-center"
+          className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-black/75 p-4 backdrop-blur-sm sm:items-center"
           onClick={() => setOpen(false)}
         >
           <div
@@ -216,8 +233,9 @@ export function WeeklyUpdateButton({
               próxima semana). Revê antes de enviar.
             </p>
           </div>
-        </div>
-      )}
+        </div>,
+          document.body,
+        )}
     </>
   );
 }

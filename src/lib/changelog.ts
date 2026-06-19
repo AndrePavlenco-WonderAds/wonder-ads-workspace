@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.37.1",
+    date: "2026-06-19",
+    title: "Fix: Weekly Update modal now opens as a true full-screen popup",
+    highlights: [
+      "**🐛 The 'Gerar Weekly Update' modal was rendering clipped inside the page header** (a transformed ancestor was breaking `position: fixed`). It now renders through a portal to `document.body` as a proper full-screen, centred overlay with background-scroll lock.",
+    ],
+  },
+  {
     version: "74.37",
     date: "2026-06-19",
     title: "Roadmap: one-click 'Gerar Weekly Update' — WhatsApp ponto de situação for the client",
