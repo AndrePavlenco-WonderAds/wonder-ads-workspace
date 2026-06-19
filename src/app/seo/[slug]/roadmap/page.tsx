@@ -5,6 +5,7 @@ import { PageShell } from "@/components/page-shell";
 import { LogoChip } from "@/components/logo-chip";
 import { RoadmapBoard } from "@/components/roadmap-board";
 import { SendToReviewButton } from "@/components/send-to-review-button";
+import { WeeklyUpdateButton } from "@/components/weekly-update-button";
 import { getClientBySlug } from "@/lib/notion";
 import {
   getClientLogo,
@@ -81,6 +82,7 @@ export default async function RoadmapPage({
         </div>
         {roadmap.tasks.length > 0 && (
           <div className="flex flex-wrap items-center gap-2">
+            <WeeklyUpdateButton clientSlug={slug} clientName={client.title} />
             <SendToReviewButton
               variant="default"
               clientSlug={slug}

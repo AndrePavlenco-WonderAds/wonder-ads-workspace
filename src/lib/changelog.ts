@@ -13,6 +13,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.37",
+    date: "2026-06-19",
+    title: "Roadmap: one-click 'Gerar Weekly Update' — WhatsApp ponto de situação for the client",
+    highlights: [
+      "**🟢 New 'Gerar Weekly Update' button (with a NEW! tag) on every client's roadmap board**, next to *Send current month* / *Send full roadmap*. It opens a modal that turns the roadmap into a short, ready-to-send **WhatsApp message in European Portuguese** — *Boa tarde! Segue o ponto de situação desta semana (SEO)…* — that the consultant copies straight into WhatsApp.",
+      "**🧠 Pulled live from the roadmap where you are.** Claude reads what was **implemented this week**, what's **pending this week** (woven in as a soft caveat, like the real messages), and what's **planned for next week** — then rephrases the technical task titles into friendly, jargon-free client bullets. Editable before copying; Regenerar for a fresh take.",
+    ],
+  },
+  {
     version: "74.36.1",
     date: "2026-06-17",
     title: "SuperAdmin → Roadmaps: jump to each client's Pending Review from the card",
