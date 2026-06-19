@@ -13,6 +13,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.37.2",
+    date: "2026-06-19",
+    title: "Weekly Update: only-good-news rule + 'Regenerar com instruções'",
+    highlights: [
+      "**🚫 The Weekly Update message is now strictly positive.** It never mentions pending, unfinished or delayed work and never uses 'confirmamos' / 'ainda não foi possível' / 'em falta' — only what was **completed this week** and what's **planned for next week**. The pending tasks are no longer fed to the model at all, so that phrasing can't leak in.",
+      "**✍️ New 'Regenerar com instruções' button** next to *Regenerar*. Opens a box where the consultant adds extra context or tone tweaks (e.g. *'destaca o novo artigo do blog; tom mais caloroso'*) and regenerates the message following them — without ever breaking the only-good-news rule.",
+    ],
+  },
+  {
     version: "74.37.1",
     date: "2026-06-19",
     title: "Fix: Weekly Update modal now opens as a true full-screen popup",

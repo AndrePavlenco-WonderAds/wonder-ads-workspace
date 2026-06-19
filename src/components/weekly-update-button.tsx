@@ -15,6 +15,7 @@ import {
   MessageCircle,
   RefreshCw,
   Sparkles,
+  Wand2,
   X,
 } from "lucide-react";
 
@@ -38,6 +39,8 @@ export function WeeklyUpdateButton({
   const [draft, setDraft] = useState("");
   const [copied, setCopied] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [showInstructions, setShowInstructions] = useState(false);
+  const [instructions, setInstructions] = useState("");
 
   // Portals can only target document.body after mount (no body during SSR).
   useEffect(() => setMounted(true), []);
@@ -52,14 +55,18 @@ export function WeeklyUpdateButton({
     };
   }, [open]);
 
-  const generate = useCallback(async () => {
+  const generate = useCallback(async (extraInstructions?: string) => {
     setLoading(true);
     setError(null);
     try {
       const res = await fetch(`/api/roadmaps/${clientSlug}/weekly-update`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: "{}",
+        body: JSON.stringify(
+          extraInstructions && extraInstructions.trim()
+            ? { instructions: extraInstructions.trim() }
+            : {},
+        ),
       });
       const data = (await res.json()) as Result & { error?: string };
       if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
@@ -191,16 +198,64 @@ export function WeeklyUpdateButton({
               </>
             )}
 
-            <div className="mt-4 flex items-center justify-end gap-2">
+            {result && showInstructions && (
+              <div className="mt-3 rounded-lg border border-white/12 bg-white/[0.02] p-3">
+                <label className="block text-[11px] font-medium uppercase tracking-[0.1em] text-white/55">
+                  Instruções para a IA (opcional)
+                </label>
+                <textarea
+                  value={instructions}
+                  onChange={(e) => setInstructions(e.target.value)}
+                  rows={3}
+                  placeholder="ex.: destaca o novo artigo do blog; tom mais caloroso; menciona a campanha de Verão; não fales de redes sociais…"
+                  className="mt-1.5 w-full resize-y rounded-md border border-white/12 bg-white/[0.03] px-2.5 py-2 text-[12px] text-white/90 outline-none placeholder:text-white/35 focus:border-white/30"
+                />
+                <div className="mt-2 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => void generate(instructions)}
+                    disabled={loading || !instructions.trim()}
+                    className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-[11px] font-semibold text-white shadow-lg shadow-[#783DF5]/25 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+                    style={{
+                      background:
+                        "linear-gradient(135deg, #343ED7 0%, #783DF5 53.65%, #C535C9 100%)",
+                    }}
+                  >
+                    {loading ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Sparkles className="h-3.5 w-3.5" />
+                    )}
+                    Gerar com estas instruções
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
               {result && (
                 <button
                   type="button"
-                  onClick={generate}
+                  onClick={() => void generate()}
                   disabled={loading}
                   className="inline-flex items-center gap-1.5 rounded-md border border-white/15 bg-white/[0.04] px-3 py-1.5 text-[11px] font-medium text-white/85 transition hover:border-white/30 hover:bg-white/[0.08] hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
                   Regenerar
+                </button>
+              )}
+              {result && (
+                <button
+                  type="button"
+                  onClick={() => setShowInstructions((s) => !s)}
+                  className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-[11px] font-medium transition ${
+                    showInstructions
+                      ? "border-[color:var(--brand-purple)]/60 bg-[color:var(--brand-purple)]/15 text-white"
+                      : "border-white/15 bg-white/[0.04] text-white/85 hover:border-white/30 hover:bg-white/[0.08] hover:text-white"
+                  }`}
+                >
+                  <Wand2 className="h-3.5 w-3.5" />
+                  Regenerar com instruções
                 </button>
               )}
               <button
@@ -229,8 +284,8 @@ export function WeeklyUpdateButton({
 
             <p className="mt-3 flex items-center gap-1.5 text-[10px] text-white/40">
               <Sparkles className="h-3 w-3" />
-              Gerado a partir do roadmap (feito esta semana · pendente ·
-              próxima semana). Revê antes de enviar.
+              Gerado a partir do roadmap (concluído esta semana · próxima
+              semana). Revê antes de enviar.
             </p>
           </div>
         </div>,

@@ -45,7 +45,7 @@ function describeTask(t: RoadmapTask): string {
 }
 
 export async function POST(
-  _req: Request,
+  req: Request,
   ctx: { params: Promise<{ slug: string }> },
 ) {
   const { slug } = await ctx.params;
@@ -55,6 +55,19 @@ export async function POST(
       { error: "ANTHROPIC_API_KEY is not configured." },
       { status: 400 },
     );
+  }
+
+  // Optional free-form instructions the consultant types in the
+  // "Regenerar com instruções" box (extra context, tone tweaks, things
+  // to emphasise). Never overrides the hard content rules below.
+  let instructions = "";
+  try {
+    const body = (await req.json()) as { instructions?: unknown };
+    if (typeof body?.instructions === "string") {
+      instructions = body.instructions.trim().slice(0, 2000);
+    }
+  } catch {
+    /* empty / non-JSON body is fine */
   }
 
   const [client, roadmap] = await Promise.all([
@@ -114,7 +127,12 @@ export async function POST(
     "Escreves SEMPRE em português de Portugal, num tom profissional mas próximo e simpático.",
     "Traduzes tarefas técnicas de SEO para benefícios simples que um cliente sem conhecimentos técnicos percebe — nada de jargão (sem 'schema', 'meta tags' cru, 'crawl', etc.; explica o efeito prático).",
     "Nunca inventas trabalho que não está nas listas fornecidas.",
+    "REGRA ABSOLUTA: a mensagem é SEMPRE positiva. NUNCA mencionas trabalho por concluir, em falta, atrasado, pendente, parcial ou não terminado. NUNCA usas expressões como 'ainda não', 'não foi possível', 'em falta', 'por concluir', 'pendente', 'assim que estiver pronto', 'voltamos a enviar', nem a palavra 'confirmamos'. Falas apenas do que JÁ foi concluído e do que vai ser feito a seguir.",
   ].join(" ");
+
+  const instructionsBlock = instructions
+    ? `\n\nInstruções adicionais do consultor (segue-as, MAS nunca quebrando as regras acima):\n${instructions}`
+    : "";
 
   const prompt = `Cliente: ${clientName}
 Semana atual do roadmap: ${week} de 12.
@@ -142,15 +160,13 @@ Obrigada!
 Regras:
 - Cada bullet é uma frase clara, orientada ao benefício para o cliente, sem jargão técnico.
 - Agrupa/funde tarefas semelhantes num só bullet quando fizer sentido (não repitas).
-- As tarefas "PENDENTES desta semana" (abaixo) NÃO levam um bullet próprio: se forem relevantes, menciona-as com um tom suave dentro da secção "O que foi feito esta semana" (ex.: "Ainda não foi possível concluir todos os ajustes, mas assim que estiverem prontos voltamos a enviar para validação."). Se não forem relevantes para o cliente, ignora-as.
-- Se uma secção não tiver tarefas, escreve um único bullet honesto e adequado (ex.: na próxima semana, "Damos continuidade ao trabalho planeado.").
-- Devolve APENAS o texto da mensagem, sem comentários nem marcações de código.
+- "O que foi feito esta semana" lista APENAS trabalho concluído, em tom afirmativo (ex.: "Publicámos…", "Otimizámos…", "Organizámos…"). Não acrescentes ressalvas nem o que falta.
+- "Na próxima semana" descreve o trabalho planeado em tom afirmativo (ex.: "Vamos publicar…", "Iremos otimizar…").
+- Se a secção "O que foi feito esta semana" não tiver tarefas concluídas, escreve um único bullet neutro e positivo sobre o avanço dos trabalhos planeados, SEM qualquer menção a atraso ou ao que falta (ex.: "Demos continuidade aos trabalhos de SEO previstos para esta fase.").
+- Devolve APENAS o texto da mensagem, sem comentários nem marcações de código.${instructionsBlock}
 
-=== FEITO ESTA SEMANA (status: implementado) ===
+=== FEITO ESTA SEMANA (concluído — usar como bullets) ===
 ${listOrNone(implementedThisWeek)}
-
-=== PENDENTE DESTA SEMANA (ainda não implementado — usar como ressalva suave, não como bullets) ===
-${listOrNone(pendingThisWeek)}
 
 === PROGRAMADO PARA A PRÓXIMA SEMANA ===
 ${listOrNone(plannedNextWeek)}`;
