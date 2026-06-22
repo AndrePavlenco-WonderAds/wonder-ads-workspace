@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.37.3",
+    date: "2026-06-22",
+    title: "Fix: Pending Review table no longer clips the Task/Doc name on mobile",
+    highlights: [
+      "**📱 The Pending Review table now scrolls horizontally on phones instead of squashing the columns.** The table had no min-width, so on a narrow screen the left **Task** column collapsed to ~100px and the name got cut off. Added a `min-w-[920px]` so columns keep readable widths and the existing horizontal-scroll wrapper actually engages. Applies to both the internal consultant view and the client's public review page.",
+    ],
+  },
+  {
     version: "74.37.2",
     date: "2026-06-19",
     title: "Weekly Update: only-good-news rule + 'Regenerar com instruções'",

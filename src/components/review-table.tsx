@@ -407,7 +407,7 @@ export function ReviewTable({
           </div>
         ) : (
           <>
-            <table className="w-full border-collapse text-left text-sm">
+            <table className="w-full min-w-[920px] border-collapse text-left text-sm">
               <thead className="bg-[#4a5d3a] text-white">
                 <tr>
                   <Th className={hidePublishingDate ? "w-[30%]" : "w-[28%]"}>
