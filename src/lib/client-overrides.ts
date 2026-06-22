@@ -42,7 +42,12 @@ const YENISEY = new Set([
 
 // André Pereira — new SEO consultant (v74.31). His first book:
 // Sentir Saúde + Clínica Fernando Almeida (both onboarded 15/06/2026).
-const ANDRE_PEREIRA = new Set(["sentir-saude", "clinica-fernando-almeida"]);
+// CuidaMais added v74.38.
+const ANDRE_PEREIRA = new Set([
+  "sentir-saude",
+  "clinica-fernando-almeida",
+  "cuidamais",
+]);
 
 /** Returns the Head Consultant for a given client slug. */
 export function getConsultantForSlug(slug: string): string {

@@ -13,6 +13,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.38",
+    date: "2026-06-22",
+    title: "New client: CuidaMais (André Pereira)",
+    highlights: [
+      "**➕ CuidaMais (Cuida+) added to the SEO roster**, assigned to **André Pereira**. Portuguese e-commerce for orthopedic / rehab / mobility products — website `cuidamais.pt`. Wired across the workspace: roster (synthetic SEO client + cache bump), consultant mapping, website, brand palette and an empty brief ready to fill.",
+      "**💶 Billing set up in the SuperAdmin board:** semestral cadence, **9 600 € for 6 months paid upfront** (1 600 €/month equivalent), EUR, active. Starting date left blank until confirmed.",
+    ],
+  },
+  {
     version: "74.37.3",
     date: "2026-06-22",
     title: "Fix: Pending Review table no longer clips the Task/Doc name on mobile",

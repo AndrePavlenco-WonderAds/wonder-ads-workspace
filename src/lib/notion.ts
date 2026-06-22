@@ -64,6 +64,9 @@ const EXTRA_SEO_CLIENTS: Array<{ title: string; icon: string }> = [
   // André Pereira's first two clients (v74.31) — not in Notion yet.
   { title: "Sentir Saúde", icon: "💆" },
   { title: "Clínica Fernando Almeida", icon: "🦷" },
+  // CuidaMais (Cuida+) — André Pereira (v74.38). Portuguese e-commerce
+  // for orthopedic / rehab / mobility products. Not in Notion yet.
+  { title: "CuidaMais", icon: "🩺" },
 ];
 
 const _fetchSeoClients = unstable_cache(
@@ -126,8 +129,9 @@ const _fetchSeoClients = unstable_cache(
   // v5 cache key — bumped for André Pereira joining as a new consultant
   // and the addition of Sentir Saúde + Clínica Fernando Almeida to the
   // synthetic roster (v74.31). Bump whenever the shape of NotionClient or
-  // any of its derived fields changes meaningfully.
-  ["seo-clients-v6"],
+  // any of its derived fields changes meaningfully. v7: added CuidaMais
+  // (v74.38).
+  ["seo-clients-v7"],
   { revalidate: 3600, tags: ["seo-clients"] },
 );
 

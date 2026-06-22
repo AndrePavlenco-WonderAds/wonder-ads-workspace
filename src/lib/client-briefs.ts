@@ -31,6 +31,7 @@ const BRIEFS: Record<string, ClientBrief> = {
   "safe-away": EMPTY,
   "clinica-em-casa": EMPTY,
   "spine-center": EMPTY,
+  cuidamais: EMPTY,
 
   // André Pereira's clients (v74.31). Do's/Don'ts/Notes generated from
   // their onboarding forms (2025/2026) — draft for André to review/refine.

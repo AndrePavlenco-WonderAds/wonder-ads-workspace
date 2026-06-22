@@ -81,6 +81,7 @@ export const CLIENT_WEBSITES: Record<string, string> = {
   "spine-center": "https://www.spinecenter.pt/",
   "sentir-saude": "https://www.sentirsaude.pt/",
   "clinica-fernando-almeida": "https://www.clinicasdentariasfa.pt/",
+  cuidamais: "https://cuidamais.pt/",
   // ADS-only — not known yet
   "clinica-empatia": "",
 };

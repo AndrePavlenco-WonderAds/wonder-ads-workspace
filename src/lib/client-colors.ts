@@ -48,6 +48,9 @@ const PALETTES: Record<string, ClientPalette> = {
   "sentir-saude": { from: "#3FA9DC", via: "#1C6FB0", to: "#16314F" },
   // clinicasdentariasfa.pt — playful multicolour mark on charcoal
   "clinica-fernando-almeida": { from: "#E84B8A", via: "#F49B0B", to: "#2B2D33" },
+  // cuidamais.pt — clean health blues (placeholder; refine once the
+  // brand logo/colours are confirmed).
+  cuidamais: { from: "#4FC3E8", via: "#1E88E5", to: "#0D3B66" },
 };
 
 const DEFAULT_PALETTE: ClientPalette = {
