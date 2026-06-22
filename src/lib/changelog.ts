@@ -13,6 +13,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.38.1",
+    date: "2026-06-22",
+    title: "CuidaMais: real logo + brand colours + starting date",
+    highlights: [
+      "**🎨 CuidaMais now uses its real brand assets** — the «cuida+» wordmark logo pulled from cuidamais.pt and a brand palette built from the real colours (green #0A8015 + navy), replacing the placeholder.",
+      "**📅 Starting date set to Monday 29/06/2026.**",
+    ],
+  },
+  {
     version: "74.38",
     date: "2026-06-22",
     title: "New client: CuidaMais (André Pereira)",

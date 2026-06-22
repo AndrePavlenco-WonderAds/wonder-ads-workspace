@@ -22,6 +22,7 @@ export const CLIENT_LOGOS: Record<string, string> = {
   "clinica-em-casa": "/logos/clinica-em-casa.svg",
   "sentir-saude": "/logos/sentir-saude.png",
   "clinica-fernando-almeida": "/logos/clinica-fernando-almeida.png",
+  cuidamais: "/logos/cuidamais.png",
 };
 
 export function getClientLogo(slug: string): string | null {
