@@ -12,11 +12,7 @@ import { anthropic } from "@ai-sdk/anthropic";
 import { generateText } from "ai";
 import { NextResponse } from "next/server";
 import { getCurrentEmployee } from "@/lib/auth/server";
-import {
-  accessibleDepts,
-  getMentionName,
-  linkifySlackMentions,
-} from "@/lib/auth/credentials";
+import { accessibleDepts, getMentionName } from "@/lib/auth/credentials";
 import {
   getAllProjects,
   webStorageConfigured,
@@ -178,8 +174,10 @@ export async function POST() {
     );
   }
 
-  // Turn "@Full Name" into real Slack mentions (<@MEMBERID>) for anyone
-  // whose member id is configured — so pasting auto-links them.
-  const backlog = linkifySlackMentions(`${title}\n\n${body}\n\n${FOOTER}`);
+  // Keep the text human-readable ("@Full Name") so the Copy flow looks
+  // clean. Real Slack mention tokens (<@MEMBERID>) only render when the
+  // message is SENT via the webhook — not when pasted — so the linkify
+  // happens server-side in /api/web/backlog/send instead.
+  const backlog = `${title}\n\n${body}\n\n${FOOTER}`;
   return NextResponse.json({ backlog });
 }

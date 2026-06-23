@@ -13,6 +13,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.42",
+    date: "2026-06-23",
+    title: "Backlog: botão 'Enviar para o Slack' com menções reais",
+    highlights: [
+      "**📨 Novo botão 'Enviar para o Slack' no Generate backlog.** As menções (`@nome`) só ficam clicáveis quando a mensagem é *enviada* via Slack — coladas à mão aparecem sempre como texto. O botão publica o backlog direto no canal da equipa Web, convertendo `@Nome → menção real` e `@channel → broadcast`.",
+      "**👀 O texto fica legível para copiar** — o Copy passa a mostrar `@Gustavo Rotini` (e não `<@U…>`); a conversão para menções acontece só no envio direto.",
+    ],
+  },
+  {
     version: "74.41.2",
     date: "2026-06-23",
     title: "Generate backlog resiliente a sobrecarga da IA",

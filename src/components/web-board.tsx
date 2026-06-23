@@ -13,6 +13,7 @@ import {
   Plus,
   RefreshCw,
   Search,
+  Send,
   Ticket,
   User2,
   X,
@@ -753,6 +754,9 @@ function BacklogModal({ onClose }: { onClose: () => void }) {
   const [text, setText] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [sendState, setSendState] = useState<
+    "idle" | "sending" | "sent" | "error"
+  >("idle");
 
   const generate = useCallback(async () => {
     setLoading(true);
@@ -782,6 +786,26 @@ function BacklogModal({ onClose }: { onClose: () => void }) {
       setTimeout(() => setCopied(false), 2000);
     } catch {
       setErr("Couldn't copy — select the text and copy manually.");
+    }
+  };
+
+  const sendToSlack = async () => {
+    setSendState("sending");
+    setErr(null);
+    try {
+      const res = await fetch("/api/web/backlog/send", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ text }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Falhou o envio.");
+      setSendState("sent");
+      setTimeout(() => setSendState("idle"), 4000);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Falhou o envio para o Slack.");
+      setSendState("error");
+      setTimeout(() => setSendState("idle"), 4000);
     }
   };
 
@@ -825,7 +849,11 @@ function BacklogModal({ onClose }: { onClose: () => void }) {
           />
         )}
 
-        <div className="mt-4 flex items-center justify-end gap-2">
+        <div className="mt-2 text-[11px] text-white/40">
+          As menções (@nome) só ficam clicáveis quando envias direto para o
+          Slack — coladas à mão aparecem como texto.
+        </div>
+        <div className="mt-3 flex flex-wrap items-center justify-end gap-2">
           <button
             onClick={generate}
             disabled={loading}
@@ -837,14 +865,36 @@ function BacklogModal({ onClose }: { onClose: () => void }) {
           <button
             onClick={copy}
             disabled={loading || !text}
-            className="brand-gradient-bg inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition hover:scale-[1.01] disabled:opacity-60"
+            className="inline-flex items-center gap-2 rounded-xl border border-white/12 px-3.5 py-2.5 text-sm font-medium text-white/80 transition hover:border-white/30 hover:text-white disabled:opacity-60"
           >
-            {copied ? (
+            {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+            {copied ? "Copied!" : "Copy"}
+          </button>
+          <button
+            onClick={sendToSlack}
+            disabled={loading || !text || sendState === "sending" || sendState === "sent"}
+            className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition hover:scale-[1.01] disabled:opacity-60 ${
+              sendState === "sent"
+                ? "bg-emerald-500/80"
+                : sendState === "error"
+                  ? "bg-rose-500/80"
+                  : "brand-gradient-bg"
+            }`}
+          >
+            {sendState === "sending" ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : sendState === "sent" ? (
               <Check className="h-4 w-4" />
             ) : (
-              <Copy className="h-4 w-4" />
+              <Send className="h-4 w-4" />
             )}
-            {copied ? "Copied!" : "Copy"}
+            {sendState === "sending"
+              ? "A enviar…"
+              : sendState === "sent"
+                ? "Enviado!"
+                : sendState === "error"
+                  ? "Falhou — tentar de novo"
+                  : "Enviar para o Slack"}
           </button>
         </div>
       </div>
