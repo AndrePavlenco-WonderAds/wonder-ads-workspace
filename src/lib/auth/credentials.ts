@@ -230,12 +230,13 @@ export function getMentionName(username: string | null | undefined): string {
  *  TODO(andre): paste the real IDs below. Empty = falls back to plain
  *  "@Full Name" text (current behaviour, no regression). */
 export const SLACK_USER_IDS: Record<string, string> = {
-  // andre: "U0XXXXXXX",
-  // "andre-pereira": "U0XXXXXXX",
-  // mike: "U0XXXXXXX",
-  // gustavo: "U0XXXXXXX",
-  // renan: "U0XXXXXXX",
-  // cylas: "U0XXXXXXX",
+  andre: "U05QPJZHE56",
+  "andre-pereira": "U0BBED0K6NA",
+  "yenisey-r": "U0ATWS0CH0V",
+  mike: "U0ACN1V6Y74",
+  gustavo: "U07R9FV85GR",
+  renan: "U0AF149CU0P",
+  // cylas: "U0XXXXXXX", // pending — Slack member id not provided yet
 };
 
 /** Slack member id for a username, or null when not configured. */

@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.41.1",
+    date: "2026-06-23",
+    title: "Backlog: menções de Slack reais ativas",
+    highlights: [
+      "**🔗 Os Slack member IDs foram configurados** (André Pavlenco, André Pereira, Yenisey, Mike, Gustavo, Renan) — o Generate backlog passa a gerar menções **clicáveis** ao colar no Slack. *(Falta só o Cylas.)*",
+    ],
+  },
+  {
     version: "74.41",
     date: "2026-06-23",
     title: "Tickets no board (arrastáveis), Slack só para novos, backlog em bold + menções",
