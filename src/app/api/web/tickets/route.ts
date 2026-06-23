@@ -120,8 +120,12 @@ export async function POST(req: Request) {
 
 async function notifyCreated(t: WebTicket, origin: string) {
   const link = `${origin}/web/tickets/${t.id}`;
+  const newLink = `${origin}/web/tickets/new`;
   const prio = TICKET_PRIORITY_META[t.priority];
-  const header = `${prio.emoji} Novo ticket Web ${ticketRef(t)} — ${t.title}`;
+  const header = `${prio.emoji} Novo ticket para o DPT Web (${ticketRef(t)}) — ${t.title}`;
+  const assignee = t.assigneeName ?? "Por atribuir";
+  const quote = (s: string) =>
+    `>${s.slice(0, 500).replace(/\n/g, "\n>")}`;
   await postToWebSlack({
     text: header,
     blocks: [
@@ -132,20 +136,32 @@ async function notifyCreated(t: WebTicket, origin: string) {
       {
         type: "section",
         fields: [
-          { type: "mrkdwn", text: `*Departamento:*\n${REQUESTING_DEPT_LABEL[t.requestingDept]}` },
+          {
+            type: "mrkdwn",
+            text: `*Departamento Que Abriu o Ticket:*\n${REQUESTING_DEPT_LABEL[t.requestingDept]}`,
+          },
           { type: "mrkdwn", text: `*Prioridade:*\n${prio.label}` },
           { type: "mrkdwn", text: `*Categoria:*\n${TICKET_CATEGORY_LABEL[t.category]}` },
           { type: "mrkdwn", text: `*Autor:*\n${t.authorName}` },
+          { type: "mrkdwn", text: `*Designer atribuído:*\n${assignee}` },
+          ...(t.project
+            ? [{ type: "mrkdwn", text: `*Projeto / Cliente:*\n${t.project}` }]
+            : []),
         ],
       },
       ...(t.description
         ? [
             {
               type: "section",
-              text: {
-                type: "mrkdwn",
-                text: `>${t.description.slice(0, 280).replace(/\n/g, "\n>")}`,
-              },
+              text: { type: "mrkdwn", text: `*Descrição*\n${quote(t.description)}` },
+            },
+          ]
+        : []),
+      ...(t.accesses
+        ? [
+            {
+              type: "section",
+              text: { type: "mrkdwn", text: `*Acessos*\n${quote(t.accesses)}` },
             },
           ]
         : []),
@@ -154,9 +170,14 @@ async function notifyCreated(t: WebTicket, origin: string) {
         elements: [
           {
             type: "button",
-            text: { type: "plain_text", text: "Abrir ticket" },
+            text: { type: "plain_text", text: "Visualizar este ticket" },
             url: link,
             style: "primary",
+          },
+          {
+            type: "button",
+            text: { type: "plain_text", text: "Abrir um novo ticket" },
+            url: newLink,
           },
         ],
       },

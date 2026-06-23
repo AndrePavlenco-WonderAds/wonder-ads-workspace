@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.40.1",
+    date: "2026-06-23",
+    title: "Mensagem de Slack do novo ticket mais completa",
+    highlights: [
+      "**🔔 A notificação de novo ticket no Slack foi melhorada:** título passa a *Novo ticket para o DPT Web (#N) — <título>*; o campo de departamento agora diz **Departamento Que Abriu o Ticket**; mostra o **Designer atribuído** (o nome se foi forçada a atribuição, senão *Por atribuir*); a **Descrição** e os **Acessos** ganham um rótulo próprio por cima; e os botões passam a **Visualizar este ticket** + **Abrir um novo ticket**.",
+    ],
+  },
+  {
     version: "74.40",
     date: "2026-06-23",
     title: "Tickets Web: refinamentos do formulário, entrada na home e integração no board",
