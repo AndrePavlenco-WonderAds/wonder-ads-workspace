@@ -25,6 +25,10 @@ export type ActionField = {
   options?: string[];
   rows?: number;
   defaultValue?: string;
+  /** Render the field label underlined — used to draw the eye to a
+   *  high-priority optional input (e.g. the KW research strategic
+   *  "Comments / Additions" box). */
+  underline?: boolean;
   /** Conditional rendering: only show this field when another field
    *  has one of the listed values. Used in GMB Posts to surface Offer-
    *  specific / Event-specific fields only when those types are
@@ -244,6 +248,18 @@ export const PILLARS: Pillar[] = [
               "Navigational",
             ],
             defaultValue: "All intents",
+          },
+          {
+            key: "comments",
+            label: "Comments or Additions to Consider",
+            type: "textarea",
+            required: false,
+            underline: true,
+            rows: 3,
+            placeholder:
+              "Contexto estratégico (opcional, mas tido em conta ANTES de qualquer API): serviços/produtos a priorizar, oportunidades sazonais, concorrentes a vigiar, tópicos a excluir, serviços que mais faturam…",
+            helpText:
+              "Lido primeiro e usado em todo o research — influencia a expansão de keywords e o scoring de prioridade.",
           },
         ],
       },

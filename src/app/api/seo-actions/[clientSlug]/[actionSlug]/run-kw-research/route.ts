@@ -144,11 +144,31 @@ export async function POST(
   }
   const factPack = parts.join("\n\n");
 
+  // OWNED DATA FIRST — the consultant's strategic comments, then the
+  // client's real GSC/GA4 performance, presented BEFORE the external
+  // DataforSEO universe so the AI anchors on owned baselines and lets
+  // them outweigh raw search demand in the Opportunity Score.
+  const ownedBlocks: string[] = [];
+  if (pack.comments) {
+    ownedBlocks.push(
+      `## Comentários / adições do consultor (CONTEXTO ESTRATÉGICO PRIORITÁRIO — lê primeiro)\n${pack.comments}\n\nEstas indicações têm prioridade: influenciam que keywords/clusters priorizar e o scoring. Respeita exclusões e prioridades de receita aqui mencionadas.`,
+    );
+  }
+  if (pack.ownedGscText) ownedBlocks.push(pack.ownedGscText);
+  if (pack.ownedGa4Text) ownedBlocks.push(pack.ownedGa4Text);
+  const ownedContext =
+    ownedBlocks.length > 0
+      ? `# Dados próprios do cliente (PRIMEIRO — baseline de oportunidade)\n${ownedBlocks.join("\n\n")}`
+      : "";
+
   const userPrompt = [
+    ownedContext,
     `# Live tool measurements (use these as primary evidence)\n${factPack}`,
     `# Inputs from the consultant\n${formatInputs(inputs)}`,
-    `Run the action now. Cite real numbers, honour the brief Do's/Don'ts/Notes, and end with the mandatory Pre-flight checklist section in Portuguese.`,
-  ].join("\n\n");
+    `Run the action now. Prioritiza SEMPRE os dados próprios (GSC/GA4) sobre o universo externo, cita números reais, honra o brief Do's/Don'ts/Notes, e termina com a secção obrigatória "Pre-flight checklist" + "Verificação final" em português.`,
+  ]
+    .filter(Boolean)
+    .join("\n\n");
 
   const encoder = new TextEncoder();
 

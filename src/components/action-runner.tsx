@@ -448,7 +448,9 @@ function FieldRow({
         htmlFor={id}
         className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.13em] text-white/65"
       >
-        {field.label}
+        <span className={field.underline ? "underline decoration-[color:var(--brand-purple)]/70 decoration-2 underline-offset-4" : undefined}>
+          {field.label}
+        </span>
         {field.required && <span className="text-red-300/80">*</span>}
       </label>
       {field.type === "textarea" ? (

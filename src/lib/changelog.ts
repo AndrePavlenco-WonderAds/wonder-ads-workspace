@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.44",
+    date: "2026-06-23",
+    title: "Keyword Research v2 — dados próprios primeiro (GSC + GA4) + Opportunity Score",
+    highlights: [
+      "**📝 Novo campo 'Comments or Additions to Consider'** (sublinhado, opcional) no formulário de Keyword Research — contexto estratégico processado ANTES de qualquer API: serviços a priorizar, sazonalidade, concorrentes, exclusões, serviços que mais faturam. Influencia a expansão de keywords E o scoring.",
+      "**📊 Dados próprios primeiro.** O pipeline passa a puxar **GSC** (queries em que já se rankeia, posições 4–20, impressões altas/CTR baixo) e **GA4** (engagement, conversões) ANTES do DataforSEO, e injeta-os no prompt como baseline de oportunidade. Ordem: Form → Comentários → GSC → GA4 → DataforSEO → síntese.",
+      "**🔌 Pré-flight ao DataforSEO** — valida as credenciais antes de gastar a chamada e falha com mensagem clara.",
+      "**🎯 Opportunity Score + tabela enriquecida.** O output ganha uma tabela mestre priorizada com colunas *Current Rank · GSC Clicks · CTR · Conversion Value · Opportunity Score · Priority*, com a fórmula ponderada (Search Demand × Conversion Potential × Ranking Feasibility × Business Relevance × Existing Authority) e secções de Quick wins (CTR/página-2/canibalização) + New opportunities.",
+    ],
+  },
+  {
     version: "74.43",
     date: "2026-06-23",
     title: "Enviar o changelog para o Slack pelo bot do workspace",

@@ -15,6 +15,13 @@ import { getOnboardingForSlug } from "@/lib/onboarding-store";
 import { runKeywordResearch } from "@/lib/seo-tools/keyword-research";
 import { saveKwResearchPrep } from "@/lib/kw-research-prep-store";
 import { findLocationTarget } from "@/lib/location-targets";
+import {
+  getSiteAuditData,
+  formatGscSiteAuditForPrompt,
+  gscConfigured,
+} from "@/lib/gsc";
+import { getGa4Data, formatGa4ForKwPrompt } from "@/lib/ga4";
+import { isDataforSeoConfigured } from "@/lib/seo-tools/dataforseo";
 
 // Vercel Pro — 300s. DataforSEO Labs + 5 competitor footprint pulls
 // can chain past 60s when the onboarding form names many competitors.
@@ -130,6 +137,77 @@ export async function POST(
           return;
         }
 
+        // ---- Strategic comments — processed BEFORE any external API ----
+        const comments = (inputs.comments ?? "").trim();
+        if (comments) {
+          send(
+            `> 📝 **Comments / additions** registados como contexto estratégico (processados antes das APIs):\n>   _${comments.slice(0, 220).replace(/\n/g, " ")}${comments.length > 220 ? "…" : ""}_\n`,
+          );
+        }
+
+        // ---- Pre-flight: DataforSEO connection check ----
+        if (!isDataforSeoConfigured()) {
+          send(
+            `> ❌ **Pré-flight falhou:** DataforSEO não está configurado (DATAFORSEO_LOGIN + DATAFORSEO_PASSWORD). Sem isto não há universo de keywords.\n`,
+          );
+          controller.close();
+          return;
+        }
+        send(`> ✓ Pré-flight: credenciais DataforSEO presentes.\n`);
+
+        // ---- OWNED DATA FIRST: GSC + GA4 before any external pull ----
+        let ownedGscText: string | undefined;
+        let ownedGa4Text: string | undefined;
+        send(`> 📊 **Dados próprios primeiro** (GSC + GA4)…\n`);
+        if (gscConfigured) {
+          try {
+            const gsc = await getSiteAuditData(clientSlug, 28);
+            if (gsc.status === "ok") {
+              ownedGscText = formatGscSiteAuditForPrompt(gsc);
+              send(
+                `>   ✓ GSC — ${gsc.topQueries.length} queries · ${gsc.topPages.length} páginas (baseline de oportunidade).\n`,
+              );
+            } else {
+              send(
+                `>   ○ GSC indisponível para este cliente (${gsc.status}).\n`,
+              );
+            }
+          } catch (e) {
+            send(
+              `>   ⚠️ GSC indisponível: ${(e instanceof Error ? e.message : String(e)).slice(0, 120)}\n`,
+            );
+          }
+        } else {
+          send(`>   ○ GSC não configurado neste ambiente.\n`);
+        }
+        try {
+          const ga4 = await getGa4Data(clientSlug, 28, "all");
+          const t = formatGa4ForKwPrompt(ga4);
+          if (t) {
+            ownedGa4Text = t;
+            send(`>   ✓ GA4 — sinais comportamentais carregados.\n`);
+          } else {
+            send(
+              `>   ○ GA4 indisponível (${ga4.status}) — research segue sem sinais de conversão.\n`,
+            );
+          }
+        } catch (e) {
+          send(
+            `>   ⚠️ GA4 indisponível: ${(e instanceof Error ? e.message : String(e)).slice(0, 120)}\n`,
+          );
+        }
+
+        // Comments + owned form text feed the expansion-seed picker so the
+        // external pull is already shaped by client context.
+        const extraSeedText = [
+          comments,
+          onboarding?.extractedText?.slice(0, 4000) ?? "",
+        ]
+          .filter(Boolean)
+          .join("\n\n")
+          .slice(0, 5000);
+
+        send(`> 🔌 A consultar DataforSEO (universo externo)…\n`);
         const startedAt = Date.now();
         const pack = await runKeywordResearch(seedTopic, clientSlug, {
           intent: (inputs.intent?.toLowerCase().replace(/\s+/g, "") ?? "all") as
@@ -143,7 +221,7 @@ export async function POST(
           competitorDomains: onboarding?.competitors ?? [],
           locationOverride: locationOverride ?? undefined,
           clientName,
-          extraSeedText: onboarding?.extractedText?.slice(0, 4000) ?? "",
+          extraSeedText,
         });
         const ms = Date.now() - startedAt;
 
@@ -205,6 +283,12 @@ export async function POST(
         for (const e of pack.errors) {
           send(`> ⚠️ Partial: ${e.source} — ${e.message.slice(0, 200)}\n`);
         }
+
+        // Attach owned-data context (built first) + the consultant's
+        // comments so Phase 2 injects them ahead of the external universe.
+        pack.comments = comments || undefined;
+        pack.ownedGscText = ownedGscText;
+        pack.ownedGa4Text = ownedGa4Text;
 
         // Persist the structured pack for Phase 2 + /save.
         await saveKwResearchPrep(clientSlug, actionSlug, resultId, pack);

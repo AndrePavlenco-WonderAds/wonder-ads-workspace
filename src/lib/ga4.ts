@@ -328,3 +328,51 @@ export async function getGa4Data(
     };
   }
 }
+
+/** Format one metric's value for prompt text. */
+function fmtMetric(m: Ga4Metric): string {
+  switch (m.format) {
+    case "percent":
+      return `${(m.value * 100).toFixed(1)}%`;
+    case "decimal":
+      return m.value.toFixed(2);
+    case "duration": {
+      const s = Math.round(m.value);
+      return s >= 60 ? `${Math.floor(s / 60)}m ${s % 60}s` : `${s}s`;
+    }
+    default:
+      return Math.round(m.value).toLocaleString("en-GB");
+  }
+}
+
+/** Compact GA4 behavioural summary for the Keyword Research prompt. Used
+ *  as owned-data context (engagement, conversions, bounce) so the AI can
+ *  weigh conversion potential — not just search demand. Returns null when
+ *  GA4 isn't available for this client so callers can skip the section. */
+export function formatGa4ForKwPrompt(data: Ga4Data): string | null {
+  if (data.status !== "ok") return null;
+  const pick = (key: string) => data.metrics.find((m) => m.key === key);
+  const lines: string[] = [
+    `## GA4 behavioural data (organic + all channels, last ${data.days} days) — OWNED DATA`,
+  ];
+  for (const key of [
+    "users",
+    "sessions",
+    "engagement",
+    "bounceRate",
+    "convRate",
+    "conversions",
+  ]) {
+    const m = pick(key);
+    if (m) {
+      const dir = m.previous
+        ? ` (era ${fmtMetric({ ...m, value: m.previous })})`
+        : "";
+      lines.push(`- **${m.label}:** ${fmtMetric(m)}${dir}`);
+    }
+  }
+  lines.push(
+    "Use estes sinais comportamentais para ponderar o *Conversion Potential* no Opportunity Score — não só a procura de pesquisa.",
+  );
+  return lines.join("\n");
+}

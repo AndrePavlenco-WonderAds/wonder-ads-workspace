@@ -74,6 +74,12 @@ export type KwResearchPack = {
     fellBackTo: string;
     reason: string;
   };
+  /** Owned-data context — built in prep BEFORE the DataforSEO universe so
+   *  the AI anchors on the client's real performance first. Pre-formatted
+   *  prompt blocks (GSC + GA4) plus the consultant's strategic comments. */
+  comments?: string;
+  ownedGscText?: string;
+  ownedGa4Text?: string;
   fetchedAt: number;
 };
 

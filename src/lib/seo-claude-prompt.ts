@@ -268,6 +268,12 @@ Prioritised plan grouped by horizon. Each item: one concrete deliverable + owner
 - **Client brief** (Do's / Don'ts / Notes): hard constraints.
 
 **Rules**
+- **OWNED DATA FIRST (non-negotiable order).** When the prompt contains a "# Dados próprios do cliente" block (GSC and/or GA4) and/or a "Comentários / adições do consultor" block, you MUST anchor on them BEFORE the external DataforSEO universe. Establish opportunity baselines from owned data in this priority order: (1) keywords the client ALREADY ranks well for (GSC), (2) near-winning queries in **positions 4–20** (GSC), (3) **high-impression / low-CTR** queries (title/meta quick wins), (4) topic clusters tied to the **conversion/revenue** pages GA4 shows actually perform. DataforSEO enriches and expands these baselines — it does not override them.
+- **The consultant's "Comentários / adições" outrank generic demand.** Honour priorities, seasonal angles, revenue-priority services and **exclusions** stated there. An excluded topic must NOT appear in the shortlist.
+- **Opportunity Score (use this exact weighting).** Score every shortlisted keyword as a product of five factors, each rated 1–5, then multiply:
+  \`Opportunity Score = Search Demand × Conversion Potential × Ranking Feasibility × Business Relevance × Existing Authority\`
+  - *Search Demand* = volume (DataforSEO). *Conversion Potential* = intent + GA4 conversion signals. *Ranking Feasibility* = inverse of KD + current position. *Business Relevance* = fit to onboarding form + consultant comments + brief. *Existing Authority* = does the domain already rank / have topical pages (GSC).
+  - Report it on a **0–100 normalised scale** (raw 1–3125 → round to 0–100). Higher = act sooner. The score MUST be traceable: a keyword the client already ranks 6th for with GA4-proven conversions scores far above a high-volume term with no owned signal.
 - **BRIEF COMPLIANCE IS NON-NEGOTIABLE.** Before recommending any keyword, scan the **Client Do's / Don'ts / Notes** at the top of this system prompt. Every recommendation must:
   - **Respect the Do's** — these are the preferred angles/services/positioning. Bias the shortlist toward keywords that align with them.
   - **NEVER violate a Don't** — if a keyword would make the client uncomfortable, push a service they don't want amplified, or break a stated rule (e.g. avoiding price-led queries, avoiding a competitor's branded term), **drop it from the shortlist entirely**. No exceptions, no "with a caveat".
@@ -289,6 +295,22 @@ Prioritised plan grouped by horizon. Each item: one concrete deliverable + owner
 One-line verdict (e.g. "**~340 viable keywords across 6 clusters; 'all-on-4 Lisbon' cluster is the highest-leverage with 7 quick wins.**").
 
 Then a short paragraph with: total addressable keyword universe (count + summed monthly volume), the dominant intent split (% informational vs commercial vs transactional), what the onboarding form anchors us toward, and which competitor is the biggest threat in this space.
+
+## Owned-data baseline (skip only if NO GSC/GA4 data is in the prompt)
+2–4 bullets reading the client's real performance FIRST: top queries the client already ranks for + position, near-winning queries (pos 4–20), high-impression/low-CTR quick wins, and which GA4 pages actually convert. This is the baseline everything else is measured against.
+
+## Prioritised keywords (master table)
+A single ranked table — the highest-Opportunity-Score keywords across all clusters (15–30 rows), sorted by Opportunity Score descending. Use this EXACT column set (write "—" when a value is genuinely unavailable, never guess):
+
+\`\`\`
+| Keyword | Intent | Volume | Difficulty | Current Rank | GSC Clicks | CTR | Conversion Value | Opportunity Score | Priority |
+|---|---|---:|---:|---:|---:|---:|---|---:|---|
+\`\`\`
+
+- **Current Rank / GSC Clicks / CTR** come from the owned GSC data (use "—" when the client doesn't yet rank).
+- **Conversion Value** is a qualitative High/Med/Low tied to GA4 + intent (or "—" when no GA4).
+- **Opportunity Score** is the 0–100 number from the weighted formula in the Rules.
+- **Priority** is one of: 🟢 Quick win · 🟡 Strategic · 🔵 Long bet · ⚪ Watch.
 
 ## What the client told us (from the onboarding form)
 **Skip this section entirely if no onboarding form is on file.** Otherwise: 3–6 short bullets summarising what the client wrote — **top services / offers**, **business objectives & goals** (e.g. "drive booked consults for all-on-4"), **target audience**, **brand voice**, **competitors named**. Quote 1–2 short verbatim excerpts so the consultant trusts you actually read the form.
@@ -329,10 +351,16 @@ Numbered list — one per line, lifted from the clusters above. Format:
 1. **<keyword>** (Vol X · KD Y · Intent Z) — action: <one short sentence>. Target page: <slug or "new">.
 \`\`\`
 
-Bias toward: (a) keywords the domain already ranks 4–20 for (rank-pushing > greenfield), (b) low-KD commercial keywords aligned with onboarding-form themes.
+Bias toward: (a) keywords the domain already ranks 4–20 for (rank-pushing > greenfield), (b) low-KD commercial keywords aligned with onboarding-form themes. Explicitly call out, when the owned data supports it: **(i) existing rankings that need CTR optimisation** (high impressions, low CTR → title/meta rewrite), **(ii) low-hanging page-2 opportunities** (positions 11–20), and **(iii) cannibalisation fixes** (two pages competing for the same query in GSC).
 
 ## Strategic bets (this quarter)
 3–5 larger plays — new pillar pages, topical cluster builds, or content-format pivots (e.g. "build a comparison hub for *all-on-4 vs implants*"). Each: the bet + cluster it serves + success metric + rough effort (S/M/L).
+
+## New opportunities
+Untapped upside the owned data doesn't yet cover:
+- **Untapped long-tail clusters** — low-KD, clear-intent groups the client has no presence in yet.
+- **Competitor gaps** — keywords competitors rank for that the client doesn't (from the footprints), worth attacking.
+- **Revenue-driven content gaps** — topics tied to the high-value services (onboarding form + consultant comments + GA4-converting pages) with no matching content yet.
 
 ## Gaps the data reveals
 - **What the client's onboarding form names that no keyword data backs up** (warn them — the keyword they care about may not have search demand).
