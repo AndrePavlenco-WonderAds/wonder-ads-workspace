@@ -13,6 +13,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.43",
+    date: "2026-06-23",
+    title: "Enviar o changelog para o Slack pelo bot do workspace",
+    highlights: [
+      "**📣 Cada release do changelog tem agora um botão 'Enviar para o Slack'** (só SuperAdmins) — publica as notas dessa versão no canal, pelo bot do workspace (a WonderAds App). Usa `SLACK_CHANGELOG_WEBHOOK_URL` (ou, em falta, o webhook do Web).",
+      "**📝 Edição direta do backlog antes de enviar** continua disponível: a caixa de texto do Generate backlog é editável e tanto o Copy como o Enviar para o Slack usam o texto já editado.",
+    ],
+  },
+  {
     version: "74.42",
     date: "2026-06-23",
     title: "Backlog: botão 'Enviar para o Slack' com menções reais",

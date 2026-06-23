@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowLeft, Sparkles } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { AccessDenied } from "@/components/access-denied";
+import { ChangelogSlackButton } from "@/components/changelog-slack-button";
 import { CHANGELOG, type ChangelogEntry } from "@/lib/changelog";
 import { getCurrentEmployee } from "@/lib/auth/server";
 
@@ -143,7 +144,7 @@ function Entry({
           {formatDate(entry.date)}
         </time>
         {isLatest && (
-          <span className="ml-auto inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/[0.05] px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/80">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/[0.05] px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/80">
             <span
               aria-hidden
               className="brand-gradient-bg h-1.5 w-1.5 rounded-full shadow-[0_0_10px_rgba(197,53,201,0.85)]"
@@ -151,6 +152,7 @@ function Entry({
             Latest
           </span>
         )}
+        <ChangelogSlackButton version={String(entry.version)} />
       </header>
 
       <h2 className="relative mt-4 text-xl font-semibold tracking-tight text-white sm:text-2xl">
