@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.41.2",
+    date: "2026-06-23",
+    title: "Generate backlog resiliente a sobrecarga da IA",
+    highlights: [
+      "**🛡️ O 'Generate backlog' deixa de falhar quando a IA está sobrecarregada (erro 'Overloaded').** Agora faz mais tentativas com backoff e, se o modelo principal continuar em baixo, recorre automaticamente a um modelo de reserva — só mostra erro se ambos falharem, e nesse caso com uma mensagem clara a sugerir Regenerar.",
+    ],
+  },
+  {
     version: "74.41.1",
     date: "2026-06-23",
     title: "Backlog: menções de Slack reais ativas",

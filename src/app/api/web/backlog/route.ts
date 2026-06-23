@@ -27,7 +27,42 @@ import {
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
+// Primary model + a fallback used when the primary is Overloaded (529).
+// Anthropic returns transient "Overloaded" errors under load; we retry
+// the primary with backoff, then fall back to a lighter model so the
+// consultant still gets a usable backlog instead of a hard failure.
 const MODEL = "claude-sonnet-4-6";
+const FALLBACK_MODEL = "claude-haiku-4-5-20251001";
+
+/** Generate the backlog body, resilient to transient overload. Retries
+ *  the primary model (with the SDK's exponential backoff), then tries
+ *  the fallback model once before giving up. */
+async function generateBacklogBody(
+  system: string,
+  prompt: string,
+): Promise<string> {
+  try {
+    const { text } = await generateText({
+      model: anthropic(MODEL),
+      system,
+      prompt,
+      maxRetries: 4,
+    });
+    return text.trim();
+  } catch (primaryErr) {
+    console.warn(
+      "[backlog] primary model failed, trying fallback:",
+      primaryErr instanceof Error ? primaryErr.message : primaryErr,
+    );
+    const { text } = await generateText({
+      model: anthropic(FALLBACK_MODEL),
+      system,
+      prompt,
+      maxRetries: 3,
+    });
+    return text.trim();
+  }
+}
 
 // Pinned bilingual footer the team appends to every backlog thread.
 const FOOTER = `:warning: Attention all colleagues — please react with :eyes: once you have reviewed your items (mandatory).
@@ -126,21 +161,20 @@ export async function POST() {
 
   let body: string;
   try {
-    const { text } = await generateText({
-      model: anthropic(MODEL),
-      system: SYSTEM,
-      prompt: `Compõe o corpo do backlog web a partir dos projetos abaixo. Agrupa por cliente, uma linha por projeto/página, com a menção do responsável e o emoji de estado adequado segundo os comentários mais recentes.\n\n${buildProjectContext(sorted)}`,
-    });
-    body = text.trim();
+    body = await generateBacklogBody(
+      SYSTEM,
+      `Compõe o corpo do backlog web a partir dos projetos abaixo. Agrupa por cliente, uma linha por projeto/página, com a menção do responsável e o emoji de estado adequado segundo os comentários mais recentes.\n\n${buildProjectContext(sorted)}`,
+    );
   } catch (err) {
+    const raw = err instanceof Error ? err.message : String(err);
+    const overloaded = /overload|529|rate|capacity/i.test(raw);
     return NextResponse.json(
       {
-        error:
-          err instanceof Error
-            ? `Falha ao gerar o backlog: ${err.message}`
-            : "Falha ao gerar o backlog.",
+        error: overloaded
+          ? "Os servidores de IA estão temporariamente sobrecarregados. Espera uns segundos e clica em Regenerar."
+          : `Falha ao gerar o backlog: ${raw}`,
       },
-      { status: 500 },
+      { status: overloaded ? 503 : 500 },
     );
   }
 
