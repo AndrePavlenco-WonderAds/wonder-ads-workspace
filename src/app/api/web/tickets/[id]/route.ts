@@ -161,8 +161,10 @@ export async function PATCH(
   await saveTicket(next);
 
   if (statusChanged) {
+    // Await so the Slack call isn't killed when the serverless function
+    // freezes after responding (same fix as the create route).
     const origin = new URL(req.url).origin;
-    void notifyStatus(next, prev.status, employee.name, origin);
+    await notifyStatus(next, prev.status, employee.name, origin);
   }
 
   return NextResponse.json({ ticket: next });

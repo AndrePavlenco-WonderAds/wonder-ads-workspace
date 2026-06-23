@@ -19,15 +19,22 @@ export async function postToWebSlack(payload: {
 }): Promise<boolean> {
   const url = process.env.SLACK_WEB_WEBHOOK_URL;
   if (!url) return false;
+  // Hard 5s timeout so a slow/hanging Slack call can never block the
+  // ticket write that's awaiting it.
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 5000);
   try {
     const res = await fetch(url, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(payload),
+      signal: ctrl.signal,
     });
     return res.ok;
   } catch (err) {
     console.error("[slack] post failed:", err);
     return false;
+  } finally {
+    clearTimeout(timer);
   }
 }

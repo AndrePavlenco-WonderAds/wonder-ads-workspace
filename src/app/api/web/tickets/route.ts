@@ -110,10 +110,12 @@ export async function POST(req: Request) {
   );
   await saveTicket(ticket);
 
-  // Fire-and-await Slack (never throws). Build the direct link from the
-  // request origin so it works across previews + prod without an env.
+  // Await Slack before responding. On Vercel a fire-and-forget promise
+  // can be killed when the function freezes after the response returns —
+  // which is exactly why an earlier ticket's notification never arrived.
+  // postToWebSlack never throws and is quick, so awaiting is safe.
   const origin = new URL(req.url).origin;
-  void notifyCreated(ticket, origin);
+  await notifyCreated(ticket, origin);
 
   return NextResponse.json({ ticket }, { status: 201 });
 }

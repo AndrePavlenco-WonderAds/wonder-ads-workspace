@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.40.2",
+    date: "2026-06-23",
+    title: "Fix: notificações de Slack dos tickets agora chegam sempre",
+    highlights: [
+      "**🐛 A mensagem de Slack ao criar (e ao mudar de estado) um ticket nem sempre era enviada.** A chamada era *fire-and-forget* e, em serverless, a função podia congelar logo após responder — matando o envio a meio. Agora é aguardada antes da resposta, com um timeout de 5s para nunca bloquear a criação do ticket.",
+    ],
+  },
+  {
     version: "74.40.1",
     date: "2026-06-23",
     title: "Mensagem de Slack do novo ticket mais completa",
