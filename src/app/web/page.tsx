@@ -13,12 +13,7 @@ import {
   getAllTickets,
   ticketsStorageConfigured,
 } from "@/lib/web-tickets-store";
-import {
-  OPEN_STATUSES,
-  TICKET_PRIORITY_META,
-  TICKET_STATUS_META,
-  type TicketStatus,
-} from "@/lib/web-tickets-shared";
+import { TICKET_PRIORITY_META } from "@/lib/web-tickets-shared";
 import type { BoardTicket } from "@/components/web-board";
 
 export const metadata = {
@@ -45,11 +40,12 @@ export default async function WebPage() {
   const projects = webStorageConfigured ? await getAllProjects() : [];
   const assignees = getWebAssignees();
 
-  // Open tickets surface in the board's "Not Started" column so the team
-  // sees incoming requests where they triage work — even when unassigned.
+  // Tickets are first-class on the board, mapped onto its columns. We
+  // surface everything except fully-closed (archived) tickets so the
+  // team can drag them through the same Kanban as projects.
   const tickets = ticketsStorageConfigured ? await getAllTickets() : [];
   const openTickets: BoardTicket[] = tickets
-    .filter((t) => (OPEN_STATUSES as TicketStatus[]).includes(t.status))
+    .filter((t) => t.status !== "closed")
     .map((t) => ({
       id: t.id,
       seq: t.seq,
@@ -58,7 +54,7 @@ export default async function WebPage() {
       priorityLabel: TICKET_PRIORITY_META[t.priority].label,
       priorityTag: TICKET_PRIORITY_META[t.priority].tag,
       assigneeName: t.assigneeName,
-      statusLabel: TICKET_STATUS_META[t.status].label,
+      status: t.status,
     }));
 
   return (

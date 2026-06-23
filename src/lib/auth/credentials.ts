@@ -222,6 +222,52 @@ export function getMentionName(username: string | null | undefined): string {
   return row?.fullName ?? row?.name ?? username;
 }
 
+/** Slack member IDs per username. A plain "@Full Name" pasted into Slack
+ *  does NOT auto-link — only the `<@MEMBERID>` token does. Fill these in
+ *  (Slack profile → ⋯ → "Copy member ID") so the Generate-Backlog output
+ *  produces real, clickable mentions when pasted.
+ *
+ *  TODO(andre): paste the real IDs below. Empty = falls back to plain
+ *  "@Full Name" text (current behaviour, no regression). */
+export const SLACK_USER_IDS: Record<string, string> = {
+  // andre: "U0XXXXXXX",
+  // "andre-pereira": "U0XXXXXXX",
+  // mike: "U0XXXXXXX",
+  // gustavo: "U0XXXXXXX",
+  // renan: "U0XXXXXXX",
+  // cylas: "U0XXXXXXX",
+};
+
+/** Slack member id for a username, or null when not configured. */
+export function getSlackUserId(
+  username: string | null | undefined,
+): string | null {
+  if (!username) return null;
+  return SLACK_USER_IDS[username.trim().toLowerCase()] ?? null;
+}
+
+/** Rewrite a generated backlog so that "@Full Name" / "@name" tokens for
+ *  known employees become real Slack mention tokens `<@MEMBERID>` — but
+ *  ONLY for people whose member id is configured in SLACK_USER_IDS.
+ *  Everyone else keeps the plain "@Name" text. */
+export function linkifySlackMentions(text: string): string {
+  let out = text;
+  for (const c of EMPLOYEE_CREDENTIALS) {
+    const id = SLACK_USER_IDS[c.username];
+    if (!id) continue;
+    const names = [c.fullName, c.name].filter(
+      (n): n is string => Boolean(n),
+    );
+    for (const name of names) {
+      // Replace "@Name" (word-boundary-ish) with <@ID>. Escape regex
+      // metacharacters in the name.
+      const esc = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      out = out.replace(new RegExp(`@${esc}`, "g"), `<@${id}>`);
+    }
+  }
+  return out;
+}
+
 /** Return the credential row for a username, normalised to lowercase
  *  + trimmed so trailing whitespace from a copy/paste doesn't lock
  *  someone out. */

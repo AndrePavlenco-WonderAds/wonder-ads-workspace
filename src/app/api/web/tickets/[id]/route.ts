@@ -2,8 +2,8 @@
 //   GET    → fetch one ticket.
 //   PATCH  → update fields (status / priority / assignee / title / desc /
 //            attachments) OR append a comment ({ comment: "..." }).
-//            Records a history event for each meaningful change and fires
-//            a Slack notification when the status changes.
+//            Records a history event for each meaningful change. Status
+//            changes do NOT notify Slack (only new-ticket creation does).
 //   DELETE → remove the ticket (author or any Web-dept member / admin).
 
 import { NextResponse } from "next/server";
@@ -19,11 +19,9 @@ import {
 import {
   TICKET_PRIORITY_META,
   TICKET_STATUS_META,
-  ticketRef,
   type TicketEvent,
   type WebTicket,
 } from "@/lib/web-tickets-shared";
-import { postToWebSlack } from "@/lib/slack";
 
 export const runtime = "nodejs";
 
@@ -160,12 +158,9 @@ export async function PATCH(
   );
   await saveTicket(next);
 
-  if (statusChanged) {
-    // Await so the Slack call isn't killed when the serverless function
-    // freezes after responding (same fix as the create route).
-    const origin = new URL(req.url).origin;
-    await notifyStatus(next, prev.status, employee.name, origin);
-  }
+  // Note: status changes do NOT notify Slack — only new-ticket creation
+  // does (see POST /api/web/tickets). The team didn't want the channel
+  // pinged on every status move.
 
   return NextResponse.json({ ticket: next });
 }
@@ -192,37 +187,4 @@ export async function DELETE(
   if (!ticketsStorageConfigured) return NextResponse.json({ ok: true });
   await deleteTicket(id);
   return NextResponse.json({ ok: true });
-}
-
-async function notifyStatus(
-  t: WebTicket,
-  from: WebTicket["status"],
-  actorName: string,
-  origin: string,
-) {
-  const meta = TICKET_STATUS_META[t.status];
-  const link = `${origin}/web/tickets/${t.id}`;
-  const header = `${meta.dot ? "🔔" : ""} Ticket ${ticketRef(t)} — ${t.title}`.trim();
-  await postToWebSlack({
-    text: `${header} → ${meta.label}`,
-    blocks: [
-      {
-        type: "section",
-        text: {
-          type: "mrkdwn",
-          text: `*${header}*\nEstado: *${TICKET_STATUS_META[from].label}* → *${meta.label}*  ·  por ${actorName}`,
-        },
-      },
-      {
-        type: "actions",
-        elements: [
-          {
-            type: "button",
-            text: { type: "plain_text", text: "Abrir ticket" },
-            url: link,
-          },
-        ],
-      },
-    ],
-  });
 }

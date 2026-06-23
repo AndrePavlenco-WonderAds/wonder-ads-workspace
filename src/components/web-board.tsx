@@ -26,12 +26,13 @@ import {
   type WebPriority,
   type WebStatus,
 } from "@/lib/web-shared";
+import type { TicketStatus } from "@/lib/web-tickets-shared";
 import { formatDate, formatDateTime } from "@/lib/dates";
 
 type Assignee = { username: string; name: string };
 
-/** Compact open ticket surfaced in the board's "Not Started" column so
- *  the Web team sees incoming requests right where they triage work. */
+/** Open ticket surfaced on the board as a first-class, draggable card —
+ *  same chrome as a project, mapped onto the 5 board columns. */
 export type BoardTicket = {
   id: string;
   seq: number;
@@ -40,8 +41,36 @@ export type BoardTicket = {
   priorityLabel: string;
   priorityTag: string;
   assigneeName: string | null;
-  statusLabel: string;
+  /** Ticket status (own enum) — mapped to a board column for placement. */
+  status: TicketStatus;
 };
+
+// Ticket-status ↔ board-column mapping. Tickets keep their own status
+// enum but live on the same 5-column Kanban as projects.
+const TICKET_TO_COLUMN: Record<TicketStatus, WebStatus> = {
+  new: "negotiation",
+  triage: "negotiation",
+  in_dev: "in_progress",
+  waiting: "client_feedback",
+  done: "done",
+  closed: "done",
+};
+const COLUMN_TO_TICKET: Record<WebStatus, TicketStatus> = {
+  negotiation: "new",
+  in_progress: "in_dev",
+  client_feedback: "waiting",
+  migration: "in_dev",
+  done: "done",
+};
+/** Where a ticket should sit. */
+function ticketColumn(s: TicketStatus): WebStatus {
+  return TICKET_TO_COLUMN[s];
+}
+/** Resulting ticket status when dropped on a column — a no-op when the
+ *  ticket already belongs to that column (preserves triage/closed). */
+function ticketStatusForColumn(col: WebStatus, current: TicketStatus): TicketStatus {
+  return TICKET_TO_COLUMN[current] === col ? current : COLUMN_TO_TICKET[col];
+}
 
 /** Today's date as yyyy-mm-dd in the user's local timezone — used as the
  *  default start date when creating a project. */
@@ -65,7 +94,9 @@ export function WebBoard({
   openTickets?: BoardTicket[];
 }) {
   const [projects, setProjects] = useState<PublicWebProject[]>(initialProjects);
+  const [tickets, setTickets] = useState<BoardTicket[]>(openTickets);
   const [dragId, setDragId] = useState<string | null>(null);
+  const [dragTicketId, setDragTicketId] = useState<string | null>(null);
   const [overCol, setOverCol] = useState<WebStatus | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [showBacklog, setShowBacklog] = useState(false);
@@ -102,6 +133,59 @@ export function WebBoard({
     for (const s of WEB_STATUSES) byStatus[s].sort((a, b) => a.order - b.order);
     return byStatus;
   }, [filtered]);
+
+  // Tickets placed in their mapped column, honouring the same filters.
+  const ticketsByColumn = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const byCol: Record<WebStatus, BoardTicket[]> = {
+      negotiation: [],
+      in_progress: [],
+      client_feedback: [],
+      migration: [],
+      done: [],
+    };
+    for (const t of tickets) {
+      if (
+        assigneeFilter &&
+        !assignees.some(
+          (a) => a.username === assigneeFilter && a.name === t.assigneeName,
+        )
+      )
+        continue;
+      if (
+        q &&
+        !`#${t.seq} ${t.title} ${t.project}`.toLowerCase().includes(q)
+      )
+        continue;
+      byCol[ticketColumn(t.status)].push(t);
+    }
+    return byCol;
+  }, [tickets, query, assigneeFilter, assignees]);
+
+  const moveTicket = useCallback(
+    async (id: string, col: WebStatus) => {
+      const ticket = tickets.find((t) => t.id === id);
+      if (!ticket) return;
+      const nextStatus = ticketStatusForColumn(col, ticket.status);
+      if (nextStatus === ticket.status) return;
+      const prev = ticket;
+      setTickets((list) =>
+        list.map((t) => (t.id === id ? { ...t, status: nextStatus } : t)),
+      );
+      try {
+        const res = await fetch(`/api/web/tickets/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: nextStatus }),
+        });
+        if (!res.ok) throw new Error("Save failed");
+      } catch {
+        setTickets((list) => list.map((t) => (t.id === id ? prev : t)));
+        setError("Não foi possível mover o ticket — tenta de novo.");
+      }
+    },
+    [tickets],
+  );
 
   const moveTo = useCallback(
     async (id: string, status: WebStatus) => {
@@ -269,8 +353,10 @@ export function WebBoard({
                 if (e.currentTarget === e.target) setOverCol(null);
               }}
               onDrop={() => {
-                if (dragId) moveTo(dragId, status);
+                if (dragTicketId) moveTicket(dragTicketId, status);
+                else if (dragId) moveTo(dragId, status);
                 setDragId(null);
+                setDragTicketId(null);
                 setOverCol(null);
               }}
               className={`flex min-h-[140px] flex-col rounded-2xl border bg-white/[0.02] p-3 transition ${
@@ -280,32 +366,8 @@ export function WebBoard({
               }`}
             >
               {(() => {
-                // Tickets only live in the "Not Started" column. Honour the
-                // same search/assignee filters as the project cards.
-                const colTickets =
-                  status === "negotiation"
-                    ? openTickets.filter((t) => {
-                        if (assigneeFilter && !t.assigneeName) return false;
-                        if (
-                          assigneeFilter &&
-                          !assignees.some(
-                            (a) =>
-                              a.username === assigneeFilter &&
-                              a.name === t.assigneeName,
-                          )
-                        )
-                          return false;
-                        const q = query.trim().toLowerCase();
-                        if (
-                          q &&
-                          !`#${t.seq} ${t.title} ${t.project}`
-                            .toLowerCase()
-                            .includes(q)
-                        )
-                          return false;
-                        return true;
-                      })
-                    : [];
+                const colTickets = ticketsByColumn[status];
+                const total = cards.length + colTickets.length;
                 return (
                   <>
                     <div className="mb-3 flex items-center justify-between px-1">
@@ -316,13 +378,21 @@ export function WebBoard({
                         </h2>
                       </div>
                       <span className="rounded-full bg-white/[0.06] px-2 py-0.5 text-[11px] font-medium text-white/55">
-                        {cards.length + colTickets.length}
+                        {total}
                       </span>
                     </div>
 
                     <div className="flex flex-1 flex-col gap-2.5">
                       {colTickets.map((t) => (
-                        <TicketMiniCard key={t.id} ticket={t} />
+                        <TicketCard
+                          key={t.id}
+                          ticket={t}
+                          onDragStart={() => setDragTicketId(t.id)}
+                          onDragEnd={() => {
+                            setDragTicketId(null);
+                            setOverCol(null);
+                          }}
+                        />
                       ))}
                       {cards.map((p) => (
                         <BoardCard
@@ -335,7 +405,7 @@ export function WebBoard({
                           }}
                         />
                       ))}
-                      {cards.length === 0 && colTickets.length === 0 && (
+                      {total === 0 && (
                         <p className="px-1 py-6 text-center text-[11px] text-white/30">
                           {query || assigneeFilter
                             ? "No matches"
@@ -386,42 +456,54 @@ function FilterChip({
   );
 }
 
-/** Compact card for an incoming ticket, shown in the Not Started column.
- *  Visually distinct from project cards (TICKET badge + brand-tinted
- *  border) and links to the ticket detail page — not draggable. */
-function TicketMiniCard({ ticket }: { ticket: BoardTicket }) {
+/** Draggable ticket card — same chrome as a project card so tickets are
+ *  first-class on the board. A small "TICKET #n" marker distinguishes it
+ *  (clicking opens the ticket detail; dragging changes its status). */
+function TicketCard({
+  ticket,
+  onDragStart,
+  onDragEnd,
+}: {
+  ticket: BoardTicket;
+  onDragStart: () => void;
+  onDragEnd: () => void;
+}) {
   return (
     <Link
       href={`/web/tickets/${ticket.id}`}
-      className="group block rounded-xl border border-[color:var(--brand-purple)]/35 bg-[color:var(--brand-purple)]/[0.08] p-3 transition hover:border-[color:var(--brand-purple)]/60 hover:bg-[color:var(--brand-purple)]/[0.14]"
+      draggable
+      onDragStart={(e) => {
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("text/plain", ticket.id);
+        onDragStart();
+      }}
+      onDragEnd={onDragEnd}
+      className="group block cursor-grab rounded-xl border border-white/10 bg-white/[0.04] p-3 transition hover:border-white/25 hover:bg-white/[0.07] active:cursor-grabbing"
     >
+      <div className="mb-1 flex items-center gap-1.5">
+        <Ticket className="h-3 w-3 text-[color:var(--brand-magenta)]" />
+        <span className="text-[9px] font-bold uppercase tracking-[0.12em] text-white/45">
+          Ticket #{ticket.seq}
+        </span>
+      </div>
       <div className="flex items-start justify-between gap-2">
-        <div className="flex items-center gap-1.5">
-          <Ticket className="h-3.5 w-3.5 text-[color:var(--brand-magenta)]" />
-          <span className="text-[9px] font-bold uppercase tracking-[0.12em] text-white/55">
-            Ticket #{ticket.seq}
-          </span>
-        </div>
+        <h3 className="text-[15px] font-bold leading-snug tracking-tight text-white">
+          {ticket.title}
+        </h3>
         <span
-          className={`shrink-0 rounded-full border px-1.5 py-0.5 text-[9.5px] font-semibold uppercase tracking-wide ${ticket.priorityTag}`}
+          className={`mt-0.5 shrink-0 rounded-full border px-1.5 py-0.5 text-[9.5px] font-semibold uppercase tracking-wide ${ticket.priorityTag}`}
         >
           {ticket.priorityLabel}
         </span>
       </div>
-      <h3 className="mt-1.5 text-[14px] font-bold leading-snug tracking-tight text-white">
-        {ticket.title}
-      </h3>
       {ticket.project && (
         <p className="mt-1 text-[11.5px] font-medium text-white/50">
           {ticket.project}
         </p>
       )}
-      <div className="mt-2 flex items-center justify-between text-[10.5px] text-white/45">
-        <span className="inline-flex items-center gap-1">
-          <User2 className="h-3 w-3" />
-          {ticket.assigneeName ?? "Por atribuir"}
-        </span>
-        <span>{ticket.statusLabel}</span>
+      <div className="mt-2 flex items-center gap-1 border-t border-white/8 pt-2 text-[10.5px] text-white/45">
+        <User2 className="h-3 w-3" />
+        {ticket.assigneeName ?? "Por atribuir"}
       </div>
     </Link>
   );

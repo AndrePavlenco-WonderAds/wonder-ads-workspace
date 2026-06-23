@@ -12,7 +12,11 @@ import { anthropic } from "@ai-sdk/anthropic";
 import { generateText } from "ai";
 import { NextResponse } from "next/server";
 import { getCurrentEmployee } from "@/lib/auth/server";
-import { accessibleDepts, getMentionName } from "@/lib/auth/credentials";
+import {
+  accessibleDepts,
+  getMentionName,
+  linkifySlackMentions,
+} from "@/lib/auth/credentials";
 import {
   getAllProjects,
   webStorageConfigured,
@@ -37,7 +41,7 @@ const SYSTEM = `És o assistente do Departamento Web da Wonder Ads (agência de 
 O backlog é SEMPRE em português de Portugal e está pronto a colar no Slack (usa códigos de emoji do Slack como :white_check_mark:, não emojis unicode).
 
 REGRAS DE FORMATO (segue exatamente):
-- Agrupa por cliente. O nome do cliente é uma linha isolada (sem bullet), seguida das linhas dos projetos/páginas desse cliente.
+- Agrupa por cliente. O nome do cliente é uma linha isolada (sem bullet) e SEMPRE a *negrito* (envolve-o em asteriscos, ex.: *Clínica Fernando Almeida*), seguida das linhas dos projetos/páginas desse cliente.
 - Cada projeto/página é UMA linha: descreve a página/tarefa, uma seta "->" ou "-", a(s) menção(ões) @Nome Completo de quem é responsável, uma frase curta sobre o estado mais recente (baseada nos comentários/notas mais recentes), e termina com UM emoji de estado.
 - Usa as menções com o NOME COMPLETO fornecido (ex.: @Mike Nobre, @Gustavo Rotini, @Renan Alves, @André Pavlenco). Nunca inventes nomes.
 - Deixa uma linha em branco entre clientes.
@@ -96,7 +100,10 @@ export async function POST() {
   const now = new Date();
   const dd = String(now.getDate()).padStart(2, "0");
   const mm = String(now.getMonth() + 1).padStart(2, "0");
-  const title = `Backlog web ${dd}.${mm}`;
+  // Bold title. (Slack mrkdwn has no underline token — true underline
+  // can't survive a copy/paste; bold is the strongest emphasis Slack
+  // renders from pasted text.)
+  const title = `*Backlog web ${dd}.${mm}*`;
 
   if (projects.length === 0) {
     return NextResponse.json({
@@ -137,6 +144,8 @@ export async function POST() {
     );
   }
 
-  const backlog = `${title}\n\n${body}\n\n${FOOTER}`;
+  // Turn "@Full Name" into real Slack mentions (<@MEMBERID>) for anyone
+  // whose member id is configured — so pasting auto-links them.
+  const backlog = linkifySlackMentions(`${title}\n\n${body}\n\n${FOOTER}`);
   return NextResponse.json({ backlog });
 }

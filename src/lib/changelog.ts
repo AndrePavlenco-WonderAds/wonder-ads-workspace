@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.41",
+    date: "2026-06-23",
+    title: "Tickets no board (arrastáveis), Slack só para novos, backlog em bold + menções",
+    highlights: [
+      "**🔕 O Slack só notifica TICKETS NOVOS.** As mudanças de estado deixaram de enviar mensagem para o canal — menos ruído.",
+      "**🗂️ Tickets passam a ser cartões de 1ª classe no board Web:** mesma forma dos projetos, **arrastáveis entre colunas** (o estado muda em conformidade) e mapeados nas mesmas 5 colunas (Not Started → In Progress → Client Feedback → Done).",
+      "**📋 Generate backlog:** o **nome do cliente** vai sempre a *negrito* e o **título 'Backlog web DD.MM'** também. *(Nota: o Slack não suporta sublinhado em texto colado — só negrito sobrevive ao copy-paste.)*",
+      "**🔗 Menções reais no backlog:** os nomes passam a virar menções clicáveis no Slack — assim que os Slack member IDs forem configurados (ver `SLACK_USER_IDS`). Sem IDs, mantém-se o texto simples (sem regressão).",
+    ],
+  },
+  {
     version: "74.40.2",
     date: "2026-06-23",
     title: "Fix: notificações de Slack dos tickets agora chegam sempre",
