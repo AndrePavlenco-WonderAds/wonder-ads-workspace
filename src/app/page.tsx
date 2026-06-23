@@ -5,6 +5,7 @@ import {
   Megaphone,
   Handshake,
   ArrowUpRight,
+  TicketPlus,
   type LucideIcon,
 } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
@@ -60,6 +61,23 @@ export default function Home() {
       </section>
 
       <HubSection />
+
+      {/* Global Web ticket entry — anyone, from any department, can file a
+          request for the Web team without entering the department. */}
+      <section className="animate-fade-up mx-auto mt-8 flex w-full max-w-5xl justify-center">
+        <Link
+          href="/web/tickets/new"
+          className="group inline-flex items-center gap-2.5 rounded-full border border-[color:var(--border)] bg-white/[0.04] px-5 py-2.5 text-sm font-medium text-white/80 backdrop-blur-md transition-all duration-300 hover:-translate-y-0.5 hover:border-white/30 hover:bg-white/[0.08] hover:text-white"
+        >
+          <span className="brand-gradient-bg flex h-7 w-7 items-center justify-center rounded-full shadow-[0_6px_20px_-6px_rgba(120,61,245,0.6)]">
+            <TicketPlus className="h-4 w-4 text-white" strokeWidth={2.2} />
+          </span>
+          Criar Ticket para Web
+          <span className="rounded-full bg-white/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white/70 transition group-hover:bg-white/20">
+            Sem entrar no dpt
+          </span>
+        </Link>
+      </section>
     </PageShell>
   );
 }

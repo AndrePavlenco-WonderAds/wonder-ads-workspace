@@ -13,6 +13,7 @@ import {
   Plus,
   RefreshCw,
   Search,
+  Ticket,
   User2,
   X,
 } from "lucide-react";
@@ -196,6 +197,13 @@ export function WebBoard({
           >
             <History className="h-4 w-4" />
             Activity log
+          </Link>
+          <Link
+            href="/web/tickets"
+            className="inline-flex items-center gap-2 rounded-xl border border-white/12 bg-white/[0.03] px-3.5 py-2.5 text-sm font-medium text-white/75 transition hover:border-white/30 hover:bg-white/[0.07] hover:text-white"
+          >
+            <Ticket className="h-4 w-4" />
+            Tickets
           </Link>
           <button
             onClick={() => setShowBacklog(true)}

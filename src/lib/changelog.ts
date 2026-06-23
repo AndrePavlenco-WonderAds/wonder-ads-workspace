@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.39",
+    date: "2026-06-22",
+    title: "Sistema global de Tickets para o Departamento Web",
+    highlights: [
+      "**🎫 'Criar Ticket para Web' na página inicial** — qualquer colaborador, de qualquer departamento, pode reportar um pedido à equipa de Web sem entrar no departamento. Formulário com título, descrição, categoria (Bug / Nova funcionalidade / Alteração / Melhoria / Outro), prioridade (Baixa→Urgente), departamento requerente, autor + data automáticos e anexos (upload direto para o Blob).",
+      "**📋 Gestão de tickets em `/web/tickets`** — tabela com todos os tickets, estado, prioridade, responsável, datas, com pesquisa, filtros e ordenação; estado/prioridade/responsável editáveis inline. Estados: Novo · Em análise · Em desenvolvimento · A aguardar informação · Concluído · Fechado.",
+      "**📊 Dashboard integrado** — KPIs (novos, pendentes, urgentes, concluídos, tempo médio de resolução) + breakdown por prioridade, por departamento e carga por pessoa.",
+      "**🧵 Detalhe do ticket** com comentários internos e histórico/auditoria de cada alteração; o autor vê sempre o seu ticket, a equipa de Web vê todos.",
+      "**💬 Integração com Slack** — ao criar um ticket (e em cada mudança de estado) é enviada uma notificação ao canal da equipa de Web com nº, título, departamento, prioridade, autor e link direto. Ativa-se com `SLACK_WEB_WEBHOOK_URL`; sem essa env é um no-op silencioso.",
+    ],
+  },
+  {
     version: "74.38.1",
     date: "2026-06-22",
     title: "CuidaMais: real logo + brand colours + starting date",
