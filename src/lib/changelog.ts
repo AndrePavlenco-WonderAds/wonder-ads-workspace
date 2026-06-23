@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.45",
+    date: "2026-06-23",
+    title: "Keyword Research — upload de ficheiros por-run + camada de backtesting",
+    highlights: [
+      "**📎 Upload de ficheiros no formulário de KW Research.** Anexa listas de keywords, exports de concorrentes, planos ou briefings (CSV/TXT/MD/PDF) — são lidos, indexados e integrados no contexto **antes** das APIs externas (User Input → File Analysis → AI Context → External Data).",
+      "**🔁 Backtesting / confidence layer.** Novo botão **Backtest** na ação de KW Research: compara as previsões do DataforSEO da última pesquisa com o desempenho **real no GSC** (impressões, cliques, CTR, posição) e calcula uma **confiança 0–100**, sinalizando volumes sobre-estimados, long-tail sub-estimado e quick wins de CTR.",
+      "**🧠 Loop de aprendizagem.** O resultado do backtest é guardado e **injetado automaticamente na próxima KW Research**, para o scoring ponderar a precisão passada (ex.: desconfiar de volumes altos sem histórico real).",
+    ],
+  },
+  {
     version: "74.44",
     date: "2026-06-23",
     title: "Keyword Research v2 — dados próprios primeiro (GSC + GA4) + Opportunity Score",

@@ -546,6 +546,8 @@ function FieldRow({
             </optgroup>
           ))}
         </select>
+      ) : field.type === "files" ? (
+        <FilesInput value={value} onChange={onChange} disabled={disabled} />
       ) : (
         <input
           id={id}
@@ -560,6 +562,118 @@ function FieldRow({
       {field.helpText && (
         <p className="text-[11px] text-white/40">{field.helpText}</p>
       )}
+    </div>
+  );
+}
+
+/** Per-run supporting files. Uploads straight to Vercel Blob and stores
+ *  a JSON array of {name,url,contentType} as the field's string value, so
+ *  the existing inputs:Record<string,string> plumbing carries it through
+ *  to the prep route untouched. */
+type UploadedRef = { name: string; url: string; contentType: string };
+
+function FilesInput({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  disabled?: boolean;
+}) {
+  const files: UploadedRef[] = useMemo(() => {
+    try {
+      const parsed = JSON.parse(value || "[]");
+      return Array.isArray(parsed) ? (parsed as UploadedRef[]) : [];
+    } catch {
+      return [];
+    }
+  }, [value]);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const setFiles = useCallback(
+    (next: UploadedRef[]) => onChange(JSON.stringify(next)),
+    [onChange],
+  );
+
+  const addFiles = useCallback(
+    async (list: FileList | null) => {
+      if (!list || list.length === 0) return;
+      setBusy(true);
+      setErr(null);
+      try {
+        const { upload } = await import("@vercel/blob/client");
+        const picked = Array.from(list).slice(0, 10 - files.length);
+        const uploaded: UploadedRef[] = [];
+        for (const file of picked) {
+          const blob = await upload(file.name, file, {
+            access: "public",
+            handleUploadUrl: "/api/files/upload",
+          });
+          uploaded.push({
+            name: file.name,
+            url: blob.url,
+            contentType: file.type || "application/octet-stream",
+          });
+        }
+        setFiles([...files, ...uploaded]);
+      } catch (e) {
+        setErr(e instanceof Error ? e.message : "Falha no upload.");
+      } finally {
+        setBusy(false);
+      }
+    },
+    [files, setFiles],
+  );
+
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap gap-2">
+        {files.map((f, i) => (
+          <span
+            key={f.url}
+            className="inline-flex max-w-[220px] items-center gap-1.5 rounded-lg border border-white/12 bg-white/[0.04] px-2.5 py-1.5 text-[11px] text-white/80"
+            title={f.name}
+          >
+            <ClipboardList className="h-3.5 w-3.5 shrink-0 text-white/45" />
+            <span className="truncate">{f.name}</span>
+            <button
+              type="button"
+              onClick={() => setFiles(files.filter((_, j) => j !== i))}
+              disabled={disabled}
+              aria-label="Remover"
+              className="text-white/40 transition hover:text-white"
+            >
+              ×
+            </button>
+          </span>
+        ))}
+        <label
+          className={`inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-dashed border-white/15 bg-white/[0.02] px-3 py-1.5 text-[11px] text-white/60 transition hover:border-white/35 hover:text-white ${
+            disabled || files.length >= 10 ? "pointer-events-none opacity-50" : ""
+          }`}
+        >
+          {busy ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <Sparkles className="h-3.5 w-3.5" />
+          )}
+          {busy ? "A carregar…" : "Anexar ficheiros"}
+          <input
+            type="file"
+            multiple
+            accept=".csv,.txt,.md,.pdf,.tsv,text/csv,text/plain,application/pdf"
+            className="hidden"
+            disabled={disabled || files.length >= 10}
+            onChange={(e) => {
+              void addFiles(e.target.files);
+              e.target.value = "";
+            }}
+          />
+        </label>
+      </div>
+      {err && <p className="text-[11px] text-rose-300">{err}</p>}
     </div>
   );
 }

@@ -13,7 +13,8 @@ export type ActionFieldType =
   | "select"
   | "location"
   | "date"
-  | "segmented";
+  | "segmented"
+  | "files";
 
 export type ActionField = {
   key: string;
@@ -260,6 +261,14 @@ export const PILLARS: Pillar[] = [
               "Contexto estratégico (opcional, mas tido em conta ANTES de qualquer API): serviços/produtos a priorizar, oportunidades sazonais, concorrentes a vigiar, tópicos a excluir, serviços que mais faturam…",
             helpText:
               "Lido primeiro e usado em todo o research — influencia a expansão de keywords e o scoring de prioridade.",
+          },
+          {
+            key: "files",
+            label: "Ficheiros de apoio",
+            type: "files",
+            required: false,
+            helpText:
+              "Listas de keywords, exports de concorrentes, planos de conteúdo, briefings (CSV, TXT, MD, PDF). São lidos e integrados no contexto ANTES das APIs externas.",
           },
         ],
       },

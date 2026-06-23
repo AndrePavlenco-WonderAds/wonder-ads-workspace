@@ -22,6 +22,9 @@ import {
 } from "@/lib/gsc";
 import { getGa4Data, formatGa4ForKwPrompt } from "@/lib/ga4";
 import { isDataforSeoConfigured } from "@/lib/seo-tools/dataforseo";
+import { extractFromUrl } from "@/lib/pdf-extract";
+import { getKwBacktest } from "@/lib/kw-backtest-store";
+import { formatBacktestForPrompt } from "@/lib/seo-tools/kw-backtest";
 
 // Vercel Pro — 300s. DataforSEO Labs + 5 competitor footprint pulls
 // can chain past 60s when the onboarding form names many competitors.
@@ -145,6 +148,51 @@ export async function POST(
           );
         }
 
+        // ---- Uploaded files — parsed + indexed BEFORE external APIs ----
+        let uploadedFilesText: string | undefined;
+        try {
+          const refs = JSON.parse(inputs.files || "[]") as {
+            name?: string;
+            url?: string;
+            contentType?: string;
+          }[];
+          const valid = Array.isArray(refs)
+            ? refs.filter((r) => r && typeof r.url === "string").slice(0, 10)
+            : [];
+          if (valid.length > 0) {
+            send(`> 📎 **Ficheiros de apoio** (${valid.length}) — a ler e indexar antes das APIs…\n`);
+            const blocks: string[] = [];
+            for (const r of valid) {
+              try {
+                const res = await extractFromUrl(
+                  r.url as string,
+                  r.contentType ?? "",
+                );
+                const text = (res.text ?? "").trim();
+                if (text) {
+                  blocks.push(
+                    `### ${r.name ?? r.url}\n${text.slice(0, 6000)}${text.length > 6000 ? "\n…[truncado]" : ""}`,
+                  );
+                  send(`>   ✓ \`${r.name ?? r.url}\` — ${text.length} caract. lidos.\n`);
+                } else {
+                  send(
+                    `>   ○ \`${r.name ?? r.url}\` — sem texto extraível (anexado na mesma).\n`,
+                  );
+                }
+              } catch (e) {
+                send(
+                  `>   ⚠️ \`${r.name ?? r.url}\` — falha a ler: ${(e instanceof Error ? e.message : String(e)).slice(0, 100)}\n`,
+                );
+              }
+            }
+            if (blocks.length > 0) {
+              uploadedFilesText = blocks.join("\n\n").slice(0, 16000);
+            }
+          }
+        } catch {
+          /* malformed files JSON — ignore */
+        }
+
         // ---- Pre-flight: DataforSEO connection check ----
         if (!isDataforSeoConfigured()) {
           send(
@@ -197,15 +245,17 @@ export async function POST(
           );
         }
 
-        // Comments + owned form text feed the expansion-seed picker so the
-        // external pull is already shaped by client context.
+        // Comments + uploaded files + owned form text feed the expansion-
+        // seed picker so the external pull is already shaped by client
+        // context (User Input → File Analysis → AI Context → External Data).
         const extraSeedText = [
           comments,
+          uploadedFilesText ?? "",
           onboarding?.extractedText?.slice(0, 4000) ?? "",
         ]
           .filter(Boolean)
           .join("\n\n")
-          .slice(0, 5000);
+          .slice(0, 8000);
 
         send(`> 🔌 A consultar DataforSEO (universo externo)…\n`);
         const startedAt = Date.now();
@@ -289,6 +339,21 @@ export async function POST(
         pack.comments = comments || undefined;
         pack.ownedGscText = ownedGscText;
         pack.ownedGa4Text = ownedGa4Text;
+        pack.uploadedFilesText = uploadedFilesText;
+
+        // Learning loop: inject the last backtest's confidence summary so
+        // the AI down-weights historically over-estimated volumes etc.
+        try {
+          const backtest = await getKwBacktest(clientSlug);
+          if (backtest) {
+            pack.backtestText = formatBacktestForPrompt(backtest);
+            send(
+              `> 🔁 Backtest anterior carregado — confiança DataforSEO ${backtest.confidenceScore}/100 (a ponderar o scoring).\n`,
+            );
+          }
+        } catch {
+          /* non-fatal */
+        }
 
         // Persist the structured pack for Phase 2 + /save.
         await saveKwResearchPrep(clientSlug, actionSlug, resultId, pack);

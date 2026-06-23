@@ -80,6 +80,13 @@ export type KwResearchPack = {
   comments?: string;
   ownedGscText?: string;
   ownedGa4Text?: string;
+  /** Concatenated text extracted from per-run uploaded files (keyword
+   *  lists, competitor exports, content plans, briefings). Built in prep
+   *  before the external pull. */
+  uploadedFilesText?: string;
+  /** Confidence summary from the last backtest (DataforSEO predictions vs
+   *  real GSC) — injected so future weighting learns from past accuracy. */
+  backtestText?: string;
   fetchedAt: number;
 };
 

@@ -5,6 +5,7 @@ import { LogoChip } from "@/components/logo-chip";
 import { ActionRunner } from "@/components/action-runner";
 import { IntegrationChips } from "@/components/integration-chips";
 import { BlogWriterStandardButton } from "@/components/blog-writer-standard-button";
+import { KwBacktestButton } from "@/components/kw-backtest-button";
 import { findAction, PILLARS, type ActionToolName } from "@/lib/seo-pillars";
 import { getBriefForSlug } from "@/lib/briefs-storage";
 import { getClientBySlug } from "@/lib/notion";
@@ -127,6 +128,11 @@ export default async function ActionPage({
           {action.slug === "write-blog-article" && (
             <div className="shrink-0 pt-2">
               <BlogWriterStandardButton />
+            </div>
+          )}
+          {action.slug === "keyword-research" && (
+            <div className="shrink-0 pt-2">
+              <KwBacktestButton slug={slug} />
             </div>
           )}
         </div>

@@ -336,6 +336,59 @@ async function listSitemaps(
 }
 
 /** All the Search Console signals the site-wide audit needs in one call. */
+/** Query-level performance rows for backtesting — pulls up to `rowLimit`
+ *  queries with clicks/impressions/ctr/position so a past keyword research
+ *  can be checked against what the site actually earned. Window ends ~3
+ *  days back (GSC lag). */
+export type QueryPerfRow = {
+  query: string;
+  clicks: number;
+  impressions: number;
+  ctr: number;
+  position: number;
+};
+export type QueryPerformance =
+  | { status: "ok"; siteUrl: string; days: number; rows: QueryPerfRow[] }
+  | { status: "not-configured" }
+  | { status: "no-property" }
+  | { status: "error"; message: string };
+
+export async function getQueryPerformance(
+  slug: string,
+  days = 90,
+  rowLimit = 1000,
+): Promise<QueryPerformance> {
+  if (!googleAuthConfigured) return { status: "not-configured" };
+  const override = GSC_PROPERTY_OVERRIDES[slug];
+  const site = CLIENT_WEBSITES[slug];
+  const domain = site ? domainFromUrl(site) : null;
+  if (!override && !domain) return { status: "no-property" };
+  try {
+    const token = await getGoogleAccessToken(SCOPES);
+    let siteUrl: string | null = override ?? null;
+    if (!siteUrl && domain) {
+      siteUrl = matchProperty(domain, await listSites(token));
+    }
+    if (!siteUrl) return { status: "no-property" };
+    const end = isoDaysAgo(3);
+    const start = isoDaysAgo(3 + days - 1);
+    const raw = await queryRange(token, siteUrl, start, end, rowLimit);
+    const rows: QueryPerfRow[] = raw.map((r) => ({
+      query: r.keys[0] ?? "",
+      clicks: r.clicks,
+      impressions: r.impressions,
+      ctr: r.ctr,
+      position: round1(r.position),
+    }));
+    return { status: "ok", siteUrl, days, rows };
+  } catch (err) {
+    return {
+      status: "error",
+      message: err instanceof Error ? err.message : "GSC query failed",
+    };
+  }
+}
+
 export async function getSiteAuditData(
   slug: string,
   days = 28,

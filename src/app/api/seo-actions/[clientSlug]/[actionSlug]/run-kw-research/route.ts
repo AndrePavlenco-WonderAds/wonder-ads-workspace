@@ -149,9 +149,15 @@ export async function POST(
   // DataforSEO universe so the AI anchors on owned baselines and lets
   // them outweigh raw search demand in the Opportunity Score.
   const ownedBlocks: string[] = [];
+  if (pack.backtestText) ownedBlocks.push(pack.backtestText);
   if (pack.comments) {
     ownedBlocks.push(
       `## Comentários / adições do consultor (CONTEXTO ESTRATÉGICO PRIORITÁRIO — lê primeiro)\n${pack.comments}\n\nEstas indicações têm prioridade: influenciam que keywords/clusters priorizar e o scoring. Respeita exclusões e prioridades de receita aqui mencionadas.`,
+    );
+  }
+  if (pack.uploadedFilesText) {
+    ownedBlocks.push(
+      `## Ficheiros de apoio carregados pelo consultor (lê e integra — keyword lists, exports de concorrentes, planos)\n${pack.uploadedFilesText}`,
     );
   }
   if (pack.ownedGscText) ownedBlocks.push(pack.ownedGscText);

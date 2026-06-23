@@ -46,7 +46,9 @@ export async function extractFromUrl(
   if (
     contentType === "text/plain" ||
     contentType === "text/markdown" ||
-    /\.(txt|md)$/i.test(url)
+    contentType === "text/csv" ||
+    contentType === "text/tab-separated-values" ||
+    /\.(txt|md|csv|tsv)$/i.test(url)
   ) {
     const res = await fetch(url, { cache: "no-store" });
     const text = await res.text();
