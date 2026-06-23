@@ -139,6 +139,17 @@ export const EMPLOYEE_CREDENTIALS: EmployeeCredential[] = [
     salt: "763d35ff3e7121fb2ac9a8b645edb90c",
     hash: "d37be5f7ba8db4b3425ec5e98349e8ab0877a2457af125f738837d03dcd63332c5be39cca2025c4fd19b9b45badcf959e1c2f8d2b4e66f80bebf72d0ff9c61f3",
   },
+  {
+    // Cylas — 4th web designer (v74.40). Temp password generated
+    // out-of-band ("cylas-web-2026") — Andre to rotate to a real one.
+    username: "cylas",
+    name: "Cylas",
+    fullName: "Cylas",
+    role: "Web Designer",
+    dept: "Web",
+    salt: "e6877b670567eb571892c306e349a3c6",
+    hash: "cebf6a2effe99af74ffe71655f70d72fbd4d52ec369c9101168d0902b9e0567ebb9a916e1c282b33d4d6a9a1e27cf50d7867f6469fdb56ffcd3a8c8529d3c7e0",
+  },
 ];
 
 /** Department slugs used across the workspace router. */

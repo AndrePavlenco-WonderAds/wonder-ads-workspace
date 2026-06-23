@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.40",
+    date: "2026-06-23",
+    title: "Tickets Web: refinamentos do formulário, entrada na home e integração no board",
+    highlights: [
+      "**🎟️ Botão 'Criar ticket DPT WEB' agora acoplado ao card WEB DPT na página inicial** — mais visível e integrado, sem deixar de ser acessível a qualquer pessoa sem entrar no departamento.",
+      "**📝 Formulário afinado:** categoria começa em **Melhoria**; **DPT Pedinte** sem 'Web' e com **Administração** em vez de 'Outro'; novos campos **Acessos** (logins/URLs para a equipa) e **Projeto / Cliente** (com sugestões dos clientes existentes); cabeçalho passa a **DPT Web** sem subtítulo.",
+      "**✅ Submissão simplificada:** ao criar, aparece uma confirmação de sucesso e o utilizador volta à **página inicial** para escolher o departamento (já não cai na página do ticket).",
+      "**🧑‍💻 'Forçar atribuição'** no formulário — opcionalmente atribui o ticket logo a um web dev (Mike, Renan, Gustavo ou **Cylas**, novo na equipa).",
+      "**📋 Integração no board Web:** a coluna passa a chamar-se **Not Started** e os tickets abertos aparecem automaticamente nela (mesmo por atribuir), com badge TICKET, para a equipa triar onde já trabalha.",
+    ],
+  },
+  {
     version: "74.39",
     date: "2026-06-22",
     title: "Sistema global de Tickets para o Departamento Web",

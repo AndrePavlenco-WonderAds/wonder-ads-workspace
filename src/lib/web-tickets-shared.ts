@@ -116,21 +116,24 @@ export const TICKET_PRIORITY_META: Record<
   },
 };
 
-// ---- Requesting department ----
+// ---- Requesting department ("DPT Pedinte") ----
 export const REQUESTING_DEPTS = [
   "seo",
   "ads",
-  "web",
   "commercial",
-  "other",
+  "administracao",
 ] as const;
 export type RequestingDept = (typeof REQUESTING_DEPTS)[number];
 
-export const REQUESTING_DEPT_LABEL: Record<RequestingDept, string> = {
+/** String-keyed so legacy tickets saved with the old "web" / "other"
+ *  values still render a sensible label. */
+export const REQUESTING_DEPT_LABEL: Record<string, string> = {
   seo: "SEO",
   ads: "ADS",
-  web: "Web",
   commercial: "Comercial",
+  administracao: "Administração",
+  // legacy values (pre-v74.40)
+  web: "Web",
   other: "Outro",
 };
 
@@ -177,6 +180,10 @@ export type WebTicket = {
   category: TicketCategory;
   priority: TicketPriority;
   requestingDept: RequestingDept;
+  /** Project / client this request relates to (free text, e.g. "WonderAds"). */
+  project: string;
+  /** Access credentials / links the requester pasted in (free text). */
+  accesses: string;
   authorUsername: string;
   authorName: string;
   status: TicketStatus;

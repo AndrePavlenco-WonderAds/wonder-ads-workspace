@@ -101,6 +101,17 @@ export function TicketDetail({
             )}
           </p>
 
+          {ticket.accesses && (
+            <div className="mt-4 rounded-lg border border-white/10 bg-white/[0.02] p-3">
+              <p className="mb-1 text-[11px] font-medium uppercase tracking-[0.13em] text-white/50">
+                Acessos
+              </p>
+              <p className="whitespace-pre-line break-words text-[13px] text-white/75">
+                {ticket.accesses}
+              </p>
+            </div>
+          )}
+
           {ticket.attachments.length > 0 && (
             <div className="mt-4 border-t border-white/8 pt-3">
               <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.13em] text-white/50">
@@ -225,6 +236,7 @@ export function TicketDetail({
         </div>
 
         <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-4 text-[12px] text-white/60">
+          {ticket.project && <Meta label="Projeto" value={ticket.project} />}
           <Meta label="Autor" value={ticket.authorName} />
           <Meta label="Criado" value={formatDateTime(ticket.createdAt)} />
           <Meta label="Atualizado" value={formatDateTime(ticket.updatedAt)} />

@@ -30,6 +30,19 @@ import { formatDate, formatDateTime } from "@/lib/dates";
 
 type Assignee = { username: string; name: string };
 
+/** Compact open ticket surfaced in the board's "Not Started" column so
+ *  the Web team sees incoming requests right where they triage work. */
+export type BoardTicket = {
+  id: string;
+  seq: number;
+  title: string;
+  project: string;
+  priorityLabel: string;
+  priorityTag: string;
+  assigneeName: string | null;
+  statusLabel: string;
+};
+
 /** Today's date as yyyy-mm-dd in the user's local timezone — used as the
  *  default start date when creating a project. */
 function todayISO(): string {
@@ -43,10 +56,13 @@ export function WebBoard({
   initialProjects,
   assignees,
   storageConfigured,
+  openTickets = [],
 }: {
   initialProjects: PublicWebProject[];
   assignees: Assignee[];
   storageConfigured: boolean;
+  /** Open tickets to pin at the top of the "Not Started" column. */
+  openTickets?: BoardTicket[];
 }) {
   const [projects, setProjects] = useState<PublicWebProject[]>(initialProjects);
   const [dragId, setDragId] = useState<string | null>(null);
@@ -263,36 +279,73 @@ export function WebBoard({
                   : meta.column
               }`}
             >
-              <div className="mb-3 flex items-center justify-between px-1">
-                <div className="flex items-center gap-2">
-                  <span className={`h-2 w-2 rounded-full ${meta.dot}`} />
-                  <h2 className="text-[13px] font-semibold tracking-tight text-white/90">
-                    {meta.short}
-                  </h2>
-                </div>
-                <span className="rounded-full bg-white/[0.06] px-2 py-0.5 text-[11px] font-medium text-white/55">
-                  {cards.length}
-                </span>
-              </div>
+              {(() => {
+                // Tickets only live in the "Not Started" column. Honour the
+                // same search/assignee filters as the project cards.
+                const colTickets =
+                  status === "negotiation"
+                    ? openTickets.filter((t) => {
+                        if (assigneeFilter && !t.assigneeName) return false;
+                        if (
+                          assigneeFilter &&
+                          !assignees.some(
+                            (a) =>
+                              a.username === assigneeFilter &&
+                              a.name === t.assigneeName,
+                          )
+                        )
+                          return false;
+                        const q = query.trim().toLowerCase();
+                        if (
+                          q &&
+                          !`#${t.seq} ${t.title} ${t.project}`
+                            .toLowerCase()
+                            .includes(q)
+                        )
+                          return false;
+                        return true;
+                      })
+                    : [];
+                return (
+                  <>
+                    <div className="mb-3 flex items-center justify-between px-1">
+                      <div className="flex items-center gap-2">
+                        <span className={`h-2 w-2 rounded-full ${meta.dot}`} />
+                        <h2 className="text-[13px] font-semibold tracking-tight text-white/90">
+                          {meta.short}
+                        </h2>
+                      </div>
+                      <span className="rounded-full bg-white/[0.06] px-2 py-0.5 text-[11px] font-medium text-white/55">
+                        {cards.length + colTickets.length}
+                      </span>
+                    </div>
 
-              <div className="flex flex-1 flex-col gap-2.5">
-                {cards.map((p) => (
-                  <BoardCard
-                    key={p.id}
-                    project={p}
-                    onDragStart={() => setDragId(p.id)}
-                    onDragEnd={() => {
-                      setDragId(null);
-                      setOverCol(null);
-                    }}
-                  />
-                ))}
-                {cards.length === 0 && (
-                  <p className="px-1 py-6 text-center text-[11px] text-white/30">
-                    {query || assigneeFilter ? "No matches" : "Drop a card here"}
-                  </p>
-                )}
-              </div>
+                    <div className="flex flex-1 flex-col gap-2.5">
+                      {colTickets.map((t) => (
+                        <TicketMiniCard key={t.id} ticket={t} />
+                      ))}
+                      {cards.map((p) => (
+                        <BoardCard
+                          key={p.id}
+                          project={p}
+                          onDragStart={() => setDragId(p.id)}
+                          onDragEnd={() => {
+                            setDragId(null);
+                            setOverCol(null);
+                          }}
+                        />
+                      ))}
+                      {cards.length === 0 && colTickets.length === 0 && (
+                        <p className="px-1 py-6 text-center text-[11px] text-white/30">
+                          {query || assigneeFilter
+                            ? "No matches"
+                            : "Drop a card here"}
+                        </p>
+                      )}
+                    </div>
+                  </>
+                );
+              })()}
             </div>
           );
         })}
@@ -330,6 +383,47 @@ function FilterChip({
     >
       {label}
     </button>
+  );
+}
+
+/** Compact card for an incoming ticket, shown in the Not Started column.
+ *  Visually distinct from project cards (TICKET badge + brand-tinted
+ *  border) and links to the ticket detail page — not draggable. */
+function TicketMiniCard({ ticket }: { ticket: BoardTicket }) {
+  return (
+    <Link
+      href={`/web/tickets/${ticket.id}`}
+      className="group block rounded-xl border border-[color:var(--brand-purple)]/35 bg-[color:var(--brand-purple)]/[0.08] p-3 transition hover:border-[color:var(--brand-purple)]/60 hover:bg-[color:var(--brand-purple)]/[0.14]"
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-center gap-1.5">
+          <Ticket className="h-3.5 w-3.5 text-[color:var(--brand-magenta)]" />
+          <span className="text-[9px] font-bold uppercase tracking-[0.12em] text-white/55">
+            Ticket #{ticket.seq}
+          </span>
+        </div>
+        <span
+          className={`shrink-0 rounded-full border px-1.5 py-0.5 text-[9.5px] font-semibold uppercase tracking-wide ${ticket.priorityTag}`}
+        >
+          {ticket.priorityLabel}
+        </span>
+      </div>
+      <h3 className="mt-1.5 text-[14px] font-bold leading-snug tracking-tight text-white">
+        {ticket.title}
+      </h3>
+      {ticket.project && (
+        <p className="mt-1 text-[11.5px] font-medium text-white/50">
+          {ticket.project}
+        </p>
+      )}
+      <div className="mt-2 flex items-center justify-between text-[10.5px] text-white/45">
+        <span className="inline-flex items-center gap-1">
+          <User2 className="h-3 w-3" />
+          {ticket.assigneeName ?? "Por atribuir"}
+        </span>
+        <span>{ticket.statusLabel}</span>
+      </div>
+    </Link>
   );
 }
 

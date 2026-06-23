@@ -14,7 +14,7 @@ export const WEB_STATUSES = [
 export type WebStatus = (typeof WEB_STATUSES)[number];
 
 export const WEB_STATUS_LABEL: Record<WebStatus, string> = {
-  negotiation: "Negotiation / Not Started",
+  negotiation: "Not Started",
   in_progress: "In Progress",
   client_feedback: "Client Feedback",
   migration: "Migration",
@@ -27,8 +27,8 @@ export const WEB_STATUS_META: Record<
   { label: string; short: string; dot: string; tag: string; column: string }
 > = {
   negotiation: {
-    label: "Negotiation / Not Started",
-    short: "Negotiation",
+    label: "Not Started",
+    short: "Not Started",
     dot: "bg-white/55",
     tag: "border-white/20 bg-white/[0.06] text-white/75",
     column: "border-white/12",

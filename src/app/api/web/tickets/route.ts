@@ -5,6 +5,7 @@
 
 import { NextResponse } from "next/server";
 import { getCurrentEmployee } from "@/lib/auth/server";
+import { getEmployeeDisplay, getWebAssignees } from "@/lib/auth/credentials";
 import {
   getAllTickets,
   nextTicketSeq,
@@ -60,16 +61,39 @@ export async function POST(req: Request) {
     );
   }
 
+  // Optional forced assignment — only honour a username that is a real
+  // Web designer (Mike / Renan / Gustavo / Cylas).
+  const webUsernames = new Set(getWebAssignees().map((a) => a.username));
+  const forcedUser =
+    typeof o.assigneeUsername === "string" && webUsernames.has(o.assigneeUsername)
+      ? o.assigneeUsername
+      : null;
+  const forcedName = forcedUser
+    ? getEmployeeDisplay(forcedUser)?.name ?? forcedUser
+    : null;
+
   const seq = await nextTicketSeq();
   const id = newTicketId();
-  const createdEvent: TicketEvent = {
-    id: `ev_${Math.random().toString(36).slice(2, 8)}`,
-    kind: "created",
-    actorUsername: employee.username,
-    actorName: employee.name,
-    message: `Ticket criado por ${employee.name}.`,
-    at: Date.now(),
-  };
+  const history: TicketEvent[] = [
+    {
+      id: `ev_${Math.random().toString(36).slice(2, 8)}`,
+      kind: "created",
+      actorUsername: employee.username,
+      actorName: employee.name,
+      message: `Ticket criado por ${employee.name}.`,
+      at: Date.now(),
+    },
+  ];
+  if (forcedUser) {
+    history.push({
+      id: `ev_${Math.random().toString(36).slice(2, 9)}`,
+      kind: "assigned",
+      actorUsername: employee.username,
+      actorName: employee.name,
+      message: `Atribuição forçada a ${forcedName}.`,
+      at: Date.now(),
+    });
+  }
 
   const ticket = normaliseTicket(
     {
@@ -77,8 +101,9 @@ export async function POST(req: Request) {
       authorUsername: employee.username,
       authorName: employee.name,
       status: "new",
-      assigneeUsername: null,
-      history: [createdEvent],
+      assigneeUsername: forcedUser,
+      assigneeName: forcedName,
+      history,
     },
     id,
     seq,

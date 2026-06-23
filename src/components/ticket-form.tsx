@@ -14,6 +14,7 @@ import {
   Loader2,
   Paperclip,
   Send,
+  UserPlus,
   X,
 } from "lucide-react";
 import {
@@ -49,18 +50,28 @@ function kindFromType(type: string): Upl["kind"] {
 export function TicketForm({
   authorName,
   defaultDept,
+  webDevs,
+  clients,
 }: {
   authorName: string;
   /** Pre-select the requesting dept from the author's home department. */
   defaultDept: RequestingDept;
+  /** Web designers a ticket can be force-assigned to on creation. */
+  webDevs: { username: string; name: string }[];
+  /** Known project/client names for the datalist autocomplete. */
+  clients: string[];
 }) {
   const router = useRouter();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [category, setCategory] = useState<TicketCategory>("change");
+  const [accesses, setAccesses] = useState("");
+  const [project, setProject] = useState("");
+  const [category, setCategory] = useState<TicketCategory>("improvement");
   const [priority, setPriority] = useState<TicketPriority>("medium");
   const [requestingDept, setRequestingDept] =
     useState<RequestingDept>(defaultDept);
+  const [forceAssign, setForceAssign] = useState(false);
+  const [assignee, setAssignee] = useState<string>(webDevs[0]?.username ?? "");
   const [files, setFiles] = useState<Upl[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -133,25 +144,45 @@ export function TicketForm({
         body: JSON.stringify({
           title: title.trim(),
           description: description.trim(),
+          accesses: accesses.trim(),
+          project: project.trim(),
           category,
           priority,
           requestingDept,
           attachments,
+          assigneeUsername: forceAssign ? assignee : null,
         }),
       });
       const data = (await res.json()) as {
-        ticket?: { id: string };
+        ticket?: { id: string; seq: number };
         error?: string;
       };
       if (!res.ok || !data.ticket) {
         throw new Error(data.error ?? `HTTP ${res.status}`);
       }
-      router.push(`/web/tickets/${data.ticket.id}`);
+      // Simple success confirmation, then back to the home page where the
+      // user picks which department to enter.
+      window.alert(
+        `✅ Ticket #${data.ticket.seq} criado com sucesso! A equipa de Web foi notificada.`,
+      );
+      router.push("/");
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
       setSubmitting(false);
     }
-  }, [title, description, category, priority, requestingDept, files, router]);
+  }, [
+    title,
+    description,
+    accesses,
+    project,
+    category,
+    priority,
+    requestingDept,
+    forceAssign,
+    assignee,
+    files,
+    router,
+  ]);
 
   const anyUploading = files.some((f) => f.uploading);
 
@@ -182,6 +213,41 @@ export function TicketForm({
             placeholder="O que é preciso? Contexto, links, passos para reproduzir (se for um bug)…"
             className="mt-1.5 w-full resize-y rounded-lg border border-white/12 bg-white/[0.04] px-3 py-2.5 text-sm text-white outline-none placeholder:text-white/35 focus:border-white/30"
           />
+        </label>
+
+        {/* Acessos — small field for the requester to paste any access
+            (logins, URLs, painel, FTP…) the Web team will need. */}
+        <label className="mt-4 block text-xs">
+          <span className="text-[11px] font-medium uppercase tracking-[0.13em] text-white/55">
+            Acessos (opcional)
+          </span>
+          <textarea
+            value={accesses}
+            onChange={(e) => setAccesses(e.target.value)}
+            rows={2}
+            placeholder="Logins, URLs do painel/WordPress, FTP… o que a equipa precisa para avançar."
+            className="mt-1.5 w-full resize-y rounded-lg border border-white/12 bg-white/[0.04] px-3 py-2.5 text-sm text-white outline-none placeholder:text-white/35 focus:border-white/30"
+          />
+        </label>
+
+        {/* Projeto / Cliente */}
+        <label className="mt-4 block text-xs">
+          <span className="text-[11px] font-medium uppercase tracking-[0.13em] text-white/55">
+            Projeto / Cliente
+          </span>
+          <input
+            type="text"
+            list="ticket-clients"
+            value={project}
+            onChange={(e) => setProject(e.target.value)}
+            placeholder="ex.: WonderAds"
+            className="mt-1.5 w-full rounded-lg border border-white/12 bg-white/[0.04] px-3 py-2.5 text-sm text-white outline-none placeholder:text-white/35 focus:border-white/30"
+          />
+          <datalist id="ticket-clients">
+            {clients.map((c) => (
+              <option key={c} value={c} />
+            ))}
+          </datalist>
         </label>
 
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -280,6 +346,39 @@ export function TicketForm({
               }}
             />
           </div>
+        </div>
+
+        {/* Forçar atribuição — optional. Off by default (tickets land
+            unassigned in the Web board's Not Started column); turn on to
+            pin the ticket to a specific web dev on creation. */}
+        <div className="mt-4">
+          <button
+            type="button"
+            onClick={() => setForceAssign((v) => !v)}
+            className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-[12px] font-medium transition ${
+              forceAssign
+                ? "border-[color:var(--brand-purple)]/60 bg-[color:var(--brand-purple)]/15 text-white"
+                : "border-white/15 bg-white/[0.04] text-white/80 hover:border-white/30 hover:text-white"
+            }`}
+          >
+            <UserPlus className="h-4 w-4" />
+            Forçar atribuição
+          </button>
+          {forceAssign && (
+            <div className="mt-2 max-w-xs">
+              <Select
+                value={assignee}
+                onChange={setAssignee}
+                options={webDevs.map((d) => ({
+                  value: d.username,
+                  label: d.name,
+                }))}
+              />
+              <p className="mt-1 text-[10.5px] text-white/40">
+                O ticket é atribuído já a este web dev.
+              </p>
+            </div>
+          )}
         </div>
 
         <div className="mt-5 flex items-center gap-3 border-t border-white/8 pt-4">

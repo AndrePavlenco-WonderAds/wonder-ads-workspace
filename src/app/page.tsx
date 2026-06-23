@@ -61,23 +61,6 @@ export default function Home() {
       </section>
 
       <HubSection />
-
-      {/* Global Web ticket entry — anyone, from any department, can file a
-          request for the Web team without entering the department. */}
-      <section className="animate-fade-up mx-auto mt-8 flex w-full max-w-5xl justify-center">
-        <Link
-          href="/web/tickets/new"
-          className="group inline-flex items-center gap-2.5 rounded-full border border-[color:var(--border)] bg-white/[0.04] px-5 py-2.5 text-sm font-medium text-white/80 backdrop-blur-md transition-all duration-300 hover:-translate-y-0.5 hover:border-white/30 hover:bg-white/[0.08] hover:text-white"
-        >
-          <span className="brand-gradient-bg flex h-7 w-7 items-center justify-center rounded-full shadow-[0_6px_20px_-6px_rgba(120,61,245,0.6)]">
-            <TicketPlus className="h-4 w-4 text-white" strokeWidth={2.2} />
-          </span>
-          Criar Ticket para Web
-          <span className="rounded-full bg-white/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white/70 transition group-hover:bg-white/20">
-            Sem entrar no dpt
-          </span>
-        </Link>
-      </section>
     </PageShell>
   );
 }
@@ -100,10 +83,44 @@ function HubSection() {
 
       <div className="relative z-10 grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-10">
         {DEPARTMENTS.map((dept, i) => (
-          <DepartmentCard key={dept.title} dept={dept} index={i} />
+          <div key={dept.title} className="flex flex-col">
+            <DepartmentCard dept={dept} index={i} />
+            {dept.href === "/web" && <WebTicketButton index={i} />}
+          </div>
         ))}
       </div>
     </section>
+  );
+}
+
+/** Attached "Criar ticket DPT WEB" entry that sits directly under the
+ *  WEB DPT card. Lets anyone, from any department, file a Web request
+ *  without entering the department. */
+function WebTicketButton({ index }: { index: number }) {
+  return (
+    <Link
+      href="/web/tickets/new"
+      className="brand-gradient-border animate-fade-up group mt-3 flex items-center gap-3 rounded-2xl bg-white/[0.03] px-5 py-3.5 backdrop-blur-md transition-all duration-300 hover:-translate-y-0.5 hover:bg-white/[0.06]"
+      style={{ animationDelay: `${0.16 + index * 0.08}s` }}
+    >
+      <span className="brand-gradient-bg flex h-9 w-9 shrink-0 items-center justify-center rounded-xl shadow-[0_8px_24px_-6px_rgba(120,61,245,0.6)] transition-transform duration-300 group-hover:scale-110">
+        <TicketPlus className="h-4 w-4 text-white" strokeWidth={2.2} />
+      </span>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-semibold text-white">
+            Criar ticket DPT WEB
+          </span>
+          <span className="rounded-full bg-white/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white/65 transition group-hover:bg-white/20">
+            Sem entrar no dpt
+          </span>
+        </div>
+        <p className="text-[11.5px] text-white/45">
+          Reporta um bug, pedido ou melhoria à equipa de Web.
+        </p>
+      </div>
+      <ArrowUpRight className="h-4 w-4 shrink-0 text-white/40 transition-all duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-white" />
+    </Link>
   );
 }
 

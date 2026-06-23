@@ -288,6 +288,7 @@ export function TicketsBoard({
                   </Link>
                   <div className="text-[10.5px] text-white/40">
                     {TICKET_CATEGORY_LABEL[t.category]} · {t.authorName}
+                    {t.project && ` · ${t.project}`}
                     {t.comments.length > 0 && ` · 💬 ${t.comments.length}`}
                     {t.attachments.length > 0 && ` · 📎 ${t.attachments.length}`}
                   </div>
