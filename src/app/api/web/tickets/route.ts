@@ -5,7 +5,11 @@
 
 import { NextResponse } from "next/server";
 import { getCurrentEmployee } from "@/lib/auth/server";
-import { getEmployeeDisplay, getWebAssignees } from "@/lib/auth/credentials";
+import {
+  getEmployeeDisplay,
+  getSlackUserId,
+  getWebAssignees,
+} from "@/lib/auth/credentials";
 import {
   getAllTickets,
   nextTicketSeq,
@@ -125,11 +129,17 @@ async function notifyCreated(t: WebTicket, origin: string) {
   const newLink = `${origin}/web/tickets/new`;
   const prio = TICKET_PRIORITY_META[t.priority];
   const header = `${prio.emoji} Novo ticket para o DPT Web (${ticketRef(t)}) — ${t.title}`;
+  // Tag the assigned designer with a real Slack mention (<@U…>) so they get
+  // pinged. Falls back to the plain name when no Slack id is configured.
+  const assigneeSlackId = getSlackUserId(t.assigneeUsername);
   const assignee = t.assigneeName ?? "Por atribuir";
+  const assigneeField = assigneeSlackId
+    ? `<@${assigneeSlackId}>`
+    : assignee;
   const quote = (s: string) =>
     `>${s.slice(0, 500).replace(/\n/g, "\n>")}`;
   await postToWebSlack({
-    text: header,
+    text: assigneeSlackId ? `${header} — <@${assigneeSlackId}>` : header,
     blocks: [
       {
         type: "section",
@@ -145,7 +155,7 @@ async function notifyCreated(t: WebTicket, origin: string) {
           { type: "mrkdwn", text: `*Prioridade:*\n${prio.label}` },
           { type: "mrkdwn", text: `*Categoria:*\n${TICKET_CATEGORY_LABEL[t.category]}` },
           { type: "mrkdwn", text: `*Autor:*\n${t.authorName}` },
-          { type: "mrkdwn", text: `*Designer atribuído:*\n${assignee}` },
+          { type: "mrkdwn", text: `*Designer atribuído:*\n${assigneeField}` },
           ...(t.project
             ? [{ type: "mrkdwn", text: `*Projeto / Cliente:*\n${t.project}` }]
             : []),

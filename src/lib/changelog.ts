@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.46",
+    date: "2026-06-24",
+    title: "Tickets Web — designer atribuído é mencionado (@) no Slack",
+    highlights: [
+      "**🔔 Tag do designer no Slack.** Ao abrir um novo ticket para o DPT Web, o **designer atribuído** passa a ser mencionado com `@` real (`<@U…>`) na notificação do Slack — recebe ping direto em vez de só ver o nome em texto. Se o membro ainda não tiver Slack id configurado, mantém o nome simples (sem regressão).",
+    ],
+  },
+  {
     version: "74.45",
     date: "2026-06-23",
     title: "Keyword Research — upload de ficheiros por-run + camada de backtesting",
