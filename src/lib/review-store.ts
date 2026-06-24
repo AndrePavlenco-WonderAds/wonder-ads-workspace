@@ -148,7 +148,10 @@ export async function appendReviewItem(
   };
   if (!reviewStorageConfigured) return item;
   const current = await listReviewItems(slug);
-  const next = [item, ...current].slice(0, MAX_ITEMS);
+  // Append new rows at the BOTTOM (end) so they show up after the existing
+  // ones, not as a new first row. slice(-MAX_ITEMS) keeps the newest when
+  // the cap is hit (the oldest at the top are dropped).
+  const next = [...current, item].slice(-MAX_ITEMS);
   await kv.set(key(slug), next);
   return item;
 }

@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.48",
+    date: "2026-06-24",
+    title: "SEO — novas linhas das Pending Review aparecem no fim",
+    highlights: [
+      "**⬇️ Linhas novas vão para o fundo.** Nas tabelas de **Pending Review** (todos os clientes SEO), uma linha nova — adicionada manualmente pelo consultor ou automaticamente (Enviar para aprovação) — passa a aparecer **no fim** da lista, a seguir às existentes, em vez de ser inserida como 1ª linha no topo.",
+    ],
+  },
+  {
     version: "74.47",
     date: "2026-06-24",
     title: "WEB DPT — Registo central de clientes (perfis reutilizáveis + hub)",

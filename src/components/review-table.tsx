@@ -214,9 +214,9 @@ export function ReviewTable({
       setItems((prev) => {
         const byIdServer = new Map(data.items.map((i) => [i.id, i]));
         const merged: ReviewItem[] = [];
-        // Preserve order from the server (newest-first) but if the
-        // local copy of a row is dirty, keep the local one to avoid
-        // wiping the user's in-flight edits.
+        // Preserve order from the server (insertion order, newest at the
+        // bottom) but if the local copy of a row is dirty, keep the local
+        // one to avoid wiping the user's in-flight edits.
         for (const serverItem of data.items) {
           const localItem = prev.find((p) => p.id === serverItem.id);
           if (localItem && dirtyIds.current.has(serverItem.id)) {
@@ -226,9 +226,10 @@ export function ReviewTable({
           }
         }
         // Any local item not on the server is a freshly-added row the
-        // server doesn't know about yet (race) — keep it.
+        // server doesn't know about yet (race) — keep it at the bottom,
+        // matching the append-at-end ordering.
         for (const p of prev) {
-          if (!byIdServer.has(p.id)) merged.unshift(p);
+          if (!byIdServer.has(p.id)) merged.push(p);
         }
         return merged;
       });
