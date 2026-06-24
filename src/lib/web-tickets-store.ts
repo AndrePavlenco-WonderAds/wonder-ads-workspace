@@ -10,6 +10,7 @@
 // corrupt the blob.
 
 import { kv } from "@vercel/kv";
+import { slugify } from "./web-shared";
 import {
   OPEN_STATUSES,
   RESOLVED_STATUSES,
@@ -133,6 +134,7 @@ export function normaliseTicket(
     priority: oneOf(o.priority, TICKET_PRIORITIES, "medium"),
     requestingDept: oneOf(o.requestingDept, REQUESTING_DEPTS, "administracao"),
     project: str(o.project).trim(),
+    clientSlug: slugify(str(o.clientSlug).trim() || str(o.project)),
     accesses: str(o.accesses).trim(),
     authorUsername: prev?.authorUsername ?? str(o.authorUsername),
     authorName: prev?.authorName ?? (str(o.authorName) || "Alguém"),

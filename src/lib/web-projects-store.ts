@@ -19,6 +19,8 @@ import {
   WEB_CRED_KINDS,
   WEB_PRIORITIES,
   WEB_STATUSES,
+  slugify,
+  type PublicWebAssets,
   type PublicWebProject,
   type WebActivity,
   type WebAssetFile,
@@ -92,6 +94,7 @@ export type WebProject = {
   id: string;
   name: string;
   clientName: string;
+  clientSlug: string;
   assigneeUsername: string;
   assigneeName: string;
   status: WebStatus;
@@ -193,7 +196,7 @@ function normaliseCredential(
   };
 }
 
-function normaliseAssets(
+export function normaliseAssets(
   v: unknown,
   prev?: WebProjectAssets,
 ): WebProjectAssets {
@@ -257,6 +260,9 @@ export function normaliseProject(
     id,
     name: str(o.name).trim() || "Untitled project",
     clientName: str(o.clientName).trim(),
+    // Explicit slug wins; otherwise derive from the client name so legacy
+    // records (saved before the registry existed) still join their client.
+    clientSlug: slugify(str(o.clientSlug).trim() || str(o.clientName)),
     assigneeUsername: str(o.assigneeUsername).trim(),
     assigneeName: str(o.assigneeName).trim() || "Unassigned",
     status: oneOf(o.status, WEB_STATUSES, "negotiation"),
@@ -277,17 +283,21 @@ export function normaliseProject(
 // Public serialization — strip ciphertext before crossing to the client.
 // ---------------------------------------------------------------------------
 
-export function toPublicProject(p: WebProject): PublicWebProject {
+/** Strip credential ciphertext from an asset bundle, replacing each
+ *  secret with a `hasSecret` flag. Shared by projects + the client
+ *  registry so neither ever leaks a `secretEnc` to the browser. */
+export function toPublicAssets(assets: WebProjectAssets): PublicWebAssets {
   return {
-    ...p,
-    assets: {
-      ...p.assets,
-      credentials: p.assets.credentials.map((c) => {
-        const { secretEnc, ...rest } = c;
-        return { ...rest, hasSecret: Boolean(secretEnc) };
-      }),
-    },
+    ...assets,
+    credentials: assets.credentials.map((c) => {
+      const { secretEnc, ...rest } = c;
+      return { ...rest, hasSecret: Boolean(secretEnc) };
+    }),
   };
+}
+
+export function toPublicProject(p: WebProject): PublicWebProject {
+  return { ...p, assets: toPublicAssets(p.assets) };
 }
 
 // ---------------------------------------------------------------------------

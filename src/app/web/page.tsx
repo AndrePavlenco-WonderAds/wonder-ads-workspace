@@ -13,8 +13,11 @@ import {
   getAllTickets,
   ticketsStorageConfigured,
 } from "@/lib/web-tickets-store";
+import { getAllClients } from "@/lib/web-clients-store";
 import { TICKET_PRIORITY_META } from "@/lib/web-tickets-shared";
+import { slugify } from "@/lib/web-shared";
 import type { BoardTicket } from "@/components/web-board";
+import type { ClientOption } from "@/components/client-combobox";
 
 export const metadata = {
   title: "WEB DPT — Wonder Ads Workspace",
@@ -39,6 +42,28 @@ export default async function WebPage() {
 
   const projects = webStorageConfigured ? await getAllProjects() : [];
   const assignees = getWebAssignees();
+
+  // Client options for the create-project combobox: registered profiles
+  // first, then any client name seen on a project that isn't registered
+  // yet (so the picker is useful even before the registry is populated).
+  const clients = webStorageConfigured ? await getAllClients() : [];
+  const clientOptions: ClientOption[] = clients.map((c) => ({
+    slug: c.slug,
+    name: c.name,
+    defaultAssigneeUsername: c.defaultAssigneeUsername || undefined,
+    defaultAssigneeName: c.defaultAssigneeName || undefined,
+    registered: true,
+  }));
+  const registeredSlugs = new Set(clients.map((c) => c.slug));
+  for (const p of projects) {
+    const nameTrimmed = p.clientName?.trim();
+    if (!nameTrimmed) continue;
+    const slug = p.clientSlug || slugify(nameTrimmed);
+    if (registeredSlugs.has(slug)) continue;
+    registeredSlugs.add(slug);
+    clientOptions.push({ slug, name: nameTrimmed, registered: false });
+  }
+  clientOptions.sort((a, b) => a.name.localeCompare(b.name));
 
   // Tickets are first-class on the board, mapped onto its columns. We
   // surface everything except fully-closed (archived) tickets so the
@@ -69,6 +94,7 @@ export default async function WebPage() {
         assignees={assignees}
         storageConfigured={webStorageConfigured}
         openTickets={openTickets}
+        clientOptions={clientOptions}
       />
     </PageShell>
   );

@@ -16,8 +16,10 @@ import {
   Send,
   Ticket,
   User2,
+  Users,
   X,
 } from "lucide-react";
+import { ClientCombobox, type ClientOption } from "@/components/client-combobox";
 import {
   WEB_PRIORITIES,
   WEB_PRIORITY_META,
@@ -87,12 +89,16 @@ export function WebBoard({
   assignees,
   storageConfigured,
   openTickets = [],
+  clientOptions = [],
 }: {
   initialProjects: PublicWebProject[];
   assignees: Assignee[];
   storageConfigured: boolean;
   /** Open tickets to pin at the top of the "Not Started" column. */
   openTickets?: BoardTicket[];
+  /** Known clients (registry + project-derived) for the create-project
+   *  combobox. */
+  clientOptions?: ClientOption[];
 }) {
   const [projects, setProjects] = useState<PublicWebProject[]>(initialProjects);
   const [tickets, setTickets] = useState<BoardTicket[]>(openTickets);
@@ -306,6 +312,13 @@ export function WebBoard({
             <Ticket className="h-4 w-4" />
             Tickets
           </Link>
+          <Link
+            href="/web/clients"
+            className="inline-flex items-center gap-2 rounded-xl border border-white/12 bg-white/[0.03] px-3.5 py-2.5 text-sm font-medium text-white/75 transition hover:border-white/30 hover:bg-white/[0.07] hover:text-white"
+          >
+            <Users className="h-4 w-4" />
+            Clientes
+          </Link>
           <button
             onClick={() => setShowBacklog(true)}
             className="inline-flex items-center gap-2 rounded-xl border border-[color:var(--brand-purple)]/45 bg-[#783DF5]/10 px-3.5 py-2.5 text-sm font-medium text-white/90 transition hover:bg-[#783DF5]/18 hover:text-white"
@@ -425,6 +438,7 @@ export function WebBoard({
       {showCreate && (
         <CreateProjectModal
           assignees={assignees}
+          clientOptions={clientOptions}
           onClose={() => setShowCreate(false)}
           onCreated={onCreated}
         />
@@ -585,15 +599,19 @@ function BoardCard({
 
 function CreateProjectModal({
   assignees,
+  clientOptions,
   onClose,
   onCreated,
 }: {
   assignees: Assignee[];
+  clientOptions: ClientOption[];
   onClose: () => void;
   onCreated: (p: PublicWebProject) => void;
 }) {
   const [name, setName] = useState("");
   const [clientName, setClientName] = useState("");
+  const [clientSlug, setClientSlug] = useState("");
+  const [matchedClient, setMatchedClient] = useState<ClientOption | null>(null);
   const [assignee, setAssignee] = useState(assignees[0]?.username ?? "");
   const [priority, setPriority] = useState<WebPriority>("medium");
   const [status, setStatus] = useState<WebStatus>("negotiation");
@@ -618,6 +636,7 @@ function CreateProjectModal({
         body: JSON.stringify({
           name,
           clientName,
+          clientSlug,
           assigneeUsername: assignee,
           assigneeName,
           priority,
@@ -661,12 +680,35 @@ function CreateProjectModal({
             />
           </Field>
           <Field label="Client name">
-            <input
+            <ClientCombobox
+              options={clientOptions}
               value={clientName}
-              onChange={(e) => setClientName(e.target.value)}
+              inputClassName="modal-input pr-9"
+              onChange={(v) => {
+                setClientName(v);
+                setClientSlug("");
+                setMatchedClient(null);
+              }}
+              onPick={(opt) => {
+                setMatchedClient(opt);
+                if (opt) {
+                  setClientSlug(opt.slug);
+                  // Pre-select the client's preferred designer.
+                  if (opt.defaultAssigneeUsername) {
+                    setAssignee(opt.defaultAssigneeUsername);
+                  }
+                } else {
+                  setClientSlug("");
+                }
+              }}
               placeholder="e.g. Acme Clinic"
-              className="modal-input"
             />
+            {matchedClient?.registered && (
+              <p className="mt-1.5 text-[11px] text-emerald-300/80">
+                Perfil encontrado — acessos, branding e notas deste cliente
+                vão preencher o projeto automaticamente.
+              </p>
+            )}
           </Field>
           <div className="grid grid-cols-2 gap-4">
             <Field label="Assigned to">

@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.47",
+    date: "2026-06-24",
+    title: "WEB DPT — Registo central de clientes (perfis reutilizáveis + hub)",
+    highlights: [
+      "**🗂️ Registo fixo de clientes.** Cada cliente passa a ter um perfil guardado: designer padrão, notas, **acessos/credenciais** (cofre encriptado), branding kit e links úteis — tudo num só sítio, para deixar de se reintroduzir os dados a cada projeto.",
+      "**🔎 Sugestão automática ao criar projeto.** O campo de cliente (no modal de novo projeto e no formulário de tickets) passou a ser um **combobox** que sugere perfis à medida que escreves; ao escolher um cliente existente, o projeto nasce já com o designer e o cofre do cliente preenchidos.",
+      "**👤 Hub do cliente.** Nova área **WEB DPT → Clientes** (`/web/clients`) com a lista de todos os clientes e, por cliente, uma página que centraliza o perfil editável + **todos os projetos e tickets** desse cliente.",
+      "**🌱 Auto-seed.** Os clientes já existentes nos projetos aparecem logo nas sugestões e na lista (marcados como 'perfil por completar'); ficam guardados como perfil quando os editas ou crias um projeto novo para eles.",
+    ],
+  },
+  {
     version: "74.46",
     date: "2026-06-24",
     title: "Tickets Web — designer atribuído é mencionado (@) no Slack",

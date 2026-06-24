@@ -28,6 +28,7 @@ import {
   type TicketCategory,
   type TicketPriority,
 } from "@/lib/web-tickets-shared";
+import { ClientCombobox, type ClientOption } from "@/components/client-combobox";
 
 const MAX_FILES = 10;
 
@@ -58,14 +59,15 @@ export function TicketForm({
   defaultDept: RequestingDept;
   /** Web designers a ticket can be force-assigned to on creation. */
   webDevs: { username: string; name: string }[];
-  /** Known project/client names for the datalist autocomplete. */
-  clients: string[];
+  /** Known clients (registry + project-derived) for the combobox. */
+  clients: ClientOption[];
 }) {
   const router = useRouter();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [accesses, setAccesses] = useState("");
   const [project, setProject] = useState("");
+  const [clientSlug, setClientSlug] = useState("");
   const [category, setCategory] = useState<TicketCategory>("improvement");
   const [priority, setPriority] = useState<TicketPriority>("medium");
   const [requestingDept, setRequestingDept] =
@@ -146,6 +148,7 @@ export function TicketForm({
           description: description.trim(),
           accesses: accesses.trim(),
           project: project.trim(),
+          clientSlug,
           category,
           priority,
           requestingDept,
@@ -175,6 +178,7 @@ export function TicketForm({
     description,
     accesses,
     project,
+    clientSlug,
     category,
     priority,
     requestingDept,
@@ -235,19 +239,18 @@ export function TicketForm({
           <span className="text-[11px] font-medium uppercase tracking-[0.13em] text-white/55">
             Projeto / Cliente
           </span>
-          <input
-            type="text"
-            list="ticket-clients"
-            value={project}
-            onChange={(e) => setProject(e.target.value)}
-            placeholder="ex.: WonderAds"
-            className="mt-1.5 w-full rounded-lg border border-white/12 bg-white/[0.04] px-3 py-2.5 text-sm text-white outline-none placeholder:text-white/35 focus:border-white/30"
-          />
-          <datalist id="ticket-clients">
-            {clients.map((c) => (
-              <option key={c} value={c} />
-            ))}
-          </datalist>
+          <div className="mt-1.5">
+            <ClientCombobox
+              options={clients}
+              value={project}
+              onChange={(v) => {
+                setProject(v);
+                setClientSlug("");
+              }}
+              onPick={(opt) => setClientSlug(opt ? opt.slug : "")}
+              placeholder="ex.: WonderAds"
+            />
+          </div>
         </label>
 
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">

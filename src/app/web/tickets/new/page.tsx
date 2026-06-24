@@ -9,7 +9,10 @@ import {
   getAllProjects,
   webStorageConfigured,
 } from "@/lib/web-projects-store";
+import { getAllClients } from "@/lib/web-clients-store";
+import { slugify } from "@/lib/web-shared";
 import type { RequestingDept } from "@/lib/web-tickets-shared";
+import type { ClientOption } from "@/components/client-combobox";
 
 export const metadata = {
   title: "Criar Ticket para Web — Wonder Ads Workspace",
@@ -51,14 +54,28 @@ export default async function NewTicketPage() {
     username: a.username,
     name: a.name,
   }));
-  const projects = webStorageConfigured ? await getAllProjects() : [];
-  const clients = Array.from(
-    new Set(
-      projects
-        .map((p) => p.clientName?.trim())
-        .filter((c): c is string => Boolean(c)),
-    ),
-  ).sort();
+  const [projects, registry] = webStorageConfigured
+    ? await Promise.all([getAllProjects(), getAllClients()])
+    : [[], []];
+
+  // Registry profiles first, then any client name seen on a project that
+  // isn't a saved profile yet — same merge as the project board.
+  const clients: ClientOption[] = registry.map((c) => ({
+    slug: c.slug,
+    name: c.name,
+    defaultAssigneeName: c.defaultAssigneeName || undefined,
+    registered: true,
+  }));
+  const seen = new Set(registry.map((c) => c.slug));
+  for (const p of projects) {
+    const name = p.clientName?.trim();
+    if (!name) continue;
+    const slug = p.clientSlug || slugify(name);
+    if (seen.has(slug)) continue;
+    seen.add(slug);
+    clients.push({ slug, name, registered: false });
+  }
+  clients.sort((a, b) => a.name.localeCompare(b.name));
 
   return (
     <PageShell>

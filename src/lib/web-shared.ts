@@ -100,6 +100,19 @@ export const WEB_CRED_KIND_LABEL: Record<WebCredKind, string> = {
   other: "Other",
 };
 
+/** Browser-safe slug helper — kept in sync with notion.ts `slugify` so a
+ *  client's slug is identical whether derived on the server or client.
+ *  This is the universal cross-record key for the Web client registry. */
+export function slugify(s: string): string {
+  return s
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
 // ---- Shared (browser-safe) record shapes ----
 
 export type WebComment = {
@@ -153,6 +166,10 @@ export type PublicWebProject = {
   id: string;
   name: string;
   clientName: string;
+  /** Slug of the client registry record this project belongs to. Derived
+   *  from clientName when not set explicitly (slugify), so legacy projects
+   *  still join the right client. */
+  clientSlug: string;
   assigneeUsername: string;
   assigneeName: string;
   status: WebStatus;
@@ -161,6 +178,21 @@ export type PublicWebProject = {
   deadline: string | null;
   order: number;
   comments: WebComment[];
+  assets: PublicWebAssets;
+  createdAt: number;
+  updatedAt: number;
+};
+
+/** Browser-facing client registry record — the canonical, reusable
+ *  profile for a client. Credential ciphertext is stripped from `assets`
+ *  exactly like a project (see PublicWebAssets). */
+export type PublicWebClient = {
+  slug: string;
+  name: string;
+  /** Default web designer for this client — pre-selected when creating a
+   *  new project for them. */
+  defaultAssigneeUsername: string;
+  defaultAssigneeName: string;
   assets: PublicWebAssets;
   createdAt: number;
   updatedAt: number;

@@ -182,6 +182,9 @@ export type WebTicket = {
   requestingDept: RequestingDept;
   /** Project / client this request relates to (free text, e.g. "WonderAds"). */
   project: string;
+  /** Slug of the client registry record (derived from `project` when not
+   *  set), so a client hub can list every ticket for that client. */
+  clientSlug: string;
   /** Access credentials / links the requester pasted in (free text). */
   accesses: string;
   authorUsername: string;
