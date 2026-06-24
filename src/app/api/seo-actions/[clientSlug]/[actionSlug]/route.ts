@@ -5,7 +5,11 @@ import { findAction, ALL_ACTIONS, type ActionToolName } from "@/lib/seo-pillars"
 import { listRecentHistoryAcrossActions } from "@/lib/action-history";
 import { listTargetKeywords } from "@/lib/target-keywords-store";
 import { getBriefForSlug } from "@/lib/briefs-storage";
-import { getClientWebsite } from "@/lib/client-meta";
+import { getClientWebsite, displayDomain } from "@/lib/client-meta";
+import {
+  buildInternalLinkCandidates,
+  formatInternalLinkCandidatesForPrompt,
+} from "@/lib/seo-tools/internal-linking";
 import { getClientBySlug } from "@/lib/notion";
 import { buildSeoClaudeSystemPrompt } from "@/lib/seo-claude-prompt";
 import {
@@ -335,6 +339,54 @@ export async function POST(
           const message = err instanceof Error ? err.message : String(err);
           send(
             `> ⚠️ Onboarding fetch failed (${message.slice(0, 200)}) — proceeding without it.\n\n`,
+          );
+        }
+
+        // Sitemap-grounded internal linking. Pull the client's real
+        // sitemap, crawl the most promising pages, and keep only those
+        // with ≥75% topical familiarity to this article — so the writer
+        // links to verified, genuinely-related pages instead of inventing
+        // URLs. Fully best-effort: any failure just falls back to the
+        // consultant's pasted inventory / no internal links.
+        try {
+          const website = getClientWebsite(clientSlug);
+          if (website) {
+            send(
+              `> 🔗 A analisar o sitemap de ${displayDomain(website)} para internal linking (mínimo 75% de relevância)…\n`,
+            );
+            const linkRes = await buildInternalLinkCandidates({
+              siteUrl: website,
+              seed: {
+                primaryKeyword: inputs.primaryKeyword,
+                topic: inputs.topic,
+                secondaryKeywords: inputs.secondaryKeywords,
+                lsiKeywords: inputs.lsiKeywords,
+                audience: inputs.audience,
+              },
+              max: 12,
+              minScore: 75,
+              signal: AbortSignal.timeout(22000),
+            });
+            const block = formatInternalLinkCandidatesForPrompt(linkRes);
+            factPack = factPack ? `${factPack}\n\n---\n\n${block}` : block;
+            if (linkRes.ok && linkRes.candidates.length > 0) {
+              send(
+                `> ✓ ${linkRes.candidates.length} página(s) com ≥75% de relevância (de ${linkRes.crawled} analisadas) — vão alimentar o internal linking.\n\n`,
+              );
+            } else {
+              send(
+                `> ⚠️ ${linkRes.reason ?? "Sem páginas internas com ≥75% de relevância"} — o artigo NÃO vai inventar links internos.\n\n`,
+              );
+            }
+          } else {
+            send(
+              `> ⚠️ Sem website no ficheiro para este cliente — sem internal linking a partir do sitemap. Cola URLs reais no campo "internalLinkInventory" se quiseres links internos.\n\n`,
+            );
+          }
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          send(
+            `> ⚠️ Análise de sitemap falhou (${message.slice(0, 200)}) — a prosseguir sem internal linking automático.\n\n`,
           );
         }
       } else if (

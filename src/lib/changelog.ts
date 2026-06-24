@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.49",
+    date: "2026-06-24",
+    title: "SEO Blog Writer — internal linking a partir do sitemap real (gate de 75%)",
+    highlights: [
+      "**🔗 Internal linking grounded no sitemap do cliente.** Antes de redigir, a app puxa o **sitemap real** do site do cliente, faz crawl das páginas mais promissoras e mede a **familiaridade topical** de cada uma com o artigo a escrever.",
+      "**🎯 Regra dos 75% (topical authority).** Só passam para o redator as páginas com **≥75% de relevância** ao tema do artigo — exatamente como recomenda o Google para autoridade topical. As restantes são descartadas.",
+      "**🚫 Fim dos links inventados.** O redator passa a poder linkar APENAS para páginas verificadas (do sitemap) ou para URLs que o consultor colou no campo de inventário. Se nenhuma página atingir os 75%, o artigo **não inventa** links internos — regista uma nota em vez disso.",
+      "**🪶 Best-effort e transparente.** Se o sitemap não existir ou não for bom, o gerador faz fallback ao inventário do consultor sem falhar; o progresso mostra quantas páginas ≥75% foram encontradas e cada link traz a sua % de match nas Working Notes.",
+    ],
+  },
+  {
     version: "74.48",
     date: "2026-06-24",
     title: "SEO — novas linhas das Pending Review aparecem no fim",

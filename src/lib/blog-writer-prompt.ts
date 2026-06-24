@@ -207,17 +207,34 @@ Never pad.
 - Prefer ≥ 4 items, each ≤ ~10 words.
 - A list is ALWAYS preceded by a short introductory paragraph.
 
-## Internal linking (4–6 per 1000 words minimum)
+## Internal linking — VERIFIED TARGETS ONLY (topical-authority rule)
 
-- Up to 10–15 acceptable for list-style articles or deep-inventory
-  clients.
+The user message may contain a **"Verified internal-link candidates"**
+fact block: real pages pulled LIVE from the client's sitemap and crawled,
+each scored for topical familiarity with THIS article. Every page listed
+there already clears the **75% topical-relevance bar** (Google's
+topical-authority / relevance best practice — only link pages that are
+genuinely about a related topic).
+
+- **You may ONLY create an internal link to:** (a) a URL in that Verified
+  candidates block, or (b) a URL the consultant pasted in the
+  "internalLinkInventory" input. **NEVER invent, guess, or infer any other
+  internal URL** — no "[suggested — verify]" internal links anymore.
+- If the fact block says no candidates reached 75% AND the consultant
+  pasted no inventory → **skip internal linking** and add one Working Note
+  saying so. An article with zero (honest) internal links beats one with
+  fabricated or off-topic links.
+- Target volume: 4–6 per 1000 words when enough verified candidates
+  exist; up to 10–15 for list-style / deep-inventory articles — but
+  **never exceed the number of verified candidates available**, and never
+  pad with weak links just to hit a count.
+- Pick the most contextually relevant target for each link; prefer higher
+  match %; spread links through the body.
 - Anchor rule: ~80% exact-match or close-variant of the destination's
-  primary keyword; ~20% natural variants / benefit phrasing.
+  topic; ~20% natural variants / benefit phrasing.
 - **Never** "click here", "saiba mais aqui", "read more".
 - **Never** link to the same destination twice in the same article.
 - **Never** put a link inside a heading.
-- Acceptable targets: blog posts, service pages, landing pages, home,
-  FAQs, case studies, downloadable resources, tools, contact.
 
 ## External linking (1–5 per 1000 words, biased toward 2–3)
 
@@ -300,12 +317,16 @@ publishing).
   primary-source citation. Never invent statistics.
 
 ## 4. Internal linking plan (MANDATORY — never skip)
-- Use the "Internal link inventory" the consultant pasted in the
-  form. If empty, infer 4–6 plausible existing pages on the client's
-  site AND mark them as "[suggested — consultant to verify URL
-  exists]".
-- For each: source paragraph + anchor text (descriptive, exact-match
-  or close variant) + destination URL or slug + the reason.
+- Read the "Verified internal-link candidates" fact block (real sitemap
+  pages, each already ≥75% topical match). These + any consultant-pasted
+  "internalLinkInventory" URLs are the ONLY allowed internal targets.
+- **Never invent or infer an internal URL.** If neither source has a
+  usable page, skip internal linking and note it — do not fabricate.
+- Choose the most contextually relevant targets, mapping each to the
+  paragraph where it fits naturally.
+- For each planned link record: source paragraph + anchor text
+  (descriptive, exact-match or close variant) + destination URL + its
+  match % (from the fact block). Put this list in Working Notes.
 
 ## 5. Draft + bake links in
 - Write the article in publication-ready Markdown.
