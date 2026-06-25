@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.57",
+    date: "2026-06-25",
+    title: "Creatives Studio — geração de IMAGENS reais (Gemini Flash Image), on-brand",
+    highlights: [
+      "**🖼️ Gerar imagem.** O Creatives Studio passa a gerar **imagens reais** com o mesmo motor da action de GMB Posts do SEO (Gemini Flash Image) — de acordo com o brief/diretrizes que dás antes de começar.",
+      "**🎨 On-brand automático.** As imagens usam a **paleta da marca** e até **4 referências** das fotos do cliente (Files + Vault) para ficarem no estilo certo; sem inventar logótipos.",
+      "**💾 Guardar.** As imagens geradas aparecem numa galeria — podes **abrir/descarregar**, **guardar no Campaign Vault** (como criativo) e **guardar na história** (junto com o conceito + copy). O histórico mostra as imagens.",
+      "**Nota:** requer `GEMINI_API_KEY` (a mesma já usada na action de GMB). Sem ela, o botão devolve um aviso claro em vez de falhar.",
+    ],
+  },
+  {
     version: "74.56",
     date: "2026-06-25",
     title: "ADS DPT — Creatives Studio (Claude Creatives Pro Max) + reports em inglês para clientes ingleses",

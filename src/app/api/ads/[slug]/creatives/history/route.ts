@@ -41,6 +41,11 @@ export async function POST(
     body.platform === "google" || body.platform === "meta"
       ? body.platform
       : "all";
+  const images = Array.isArray(body.images)
+    ? body.images.filter(
+        (u): u is string => typeof u === "string" && /^https?:\/\//i.test(u),
+      )
+    : [];
   try {
     const entry = await addCreative(slug, {
       title: s(body.title) || "Criativo",
@@ -50,6 +55,7 @@ export async function POST(
       platform,
       format: s(body.format),
       content: s(body.content),
+      images,
     });
     return NextResponse.json({ ok: true, entry });
   } catch (err) {

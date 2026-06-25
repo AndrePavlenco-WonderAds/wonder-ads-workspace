@@ -23,6 +23,8 @@ export type CreativeEntry = {
   format: string;
   /** The agent's produced concept (markdown/plain text). */
   content: string;
+  /** Generated creative image URLs (Vercel Blob), if any. */
+  images: string[];
   createdAt: number;
 };
 
@@ -48,6 +50,11 @@ function sanitize(arr: unknown): CreativeEntry[] {
         e.platform === "google" || e.platform === "meta" ? e.platform : "all",
       format: s(e.format, 80),
       content: s(e.content, 20000),
+      images: Array.isArray(e.images)
+        ? e.images
+            .filter((u): u is string => typeof u === "string" && /^https?:\/\//i.test(u))
+            .slice(0, 12)
+        : [],
       createdAt: typeof e.createdAt === "number" ? e.createdAt : Date.now(),
     });
     if (out.length >= MAX_ENTRIES) break;

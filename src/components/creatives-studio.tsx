@@ -21,6 +21,10 @@ import {
   X,
   Lightbulb,
   Image as ImageIcon,
+  ImagePlus,
+  Download,
+  FolderLock,
+  Check,
 } from "lucide-react";
 import type { CreativeEntry } from "@/lib/ads/ads-creatives-store";
 import { formatDateTime } from "@/lib/dates";
@@ -54,9 +58,75 @@ export function CreativesStudio({
   const [history, setHistory] = useState<CreativeEntry[]>(initialHistory);
   const [saving, setSaving] = useState(false);
   const [viewing, setViewing] = useState<CreativeEntry | null>(null);
+  const [images, setImages] = useState<string[]>([]);
+  const [imgBusy, setImgBusy] = useState(false);
+  const [imgError, setImgError] = useState<string | null>(null);
+  const [savedToVault, setSavedToVault] = useState<Set<string>>(new Set());
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const isLoading = status === "submitted" || status === "streaming";
+
+  function imagePrompt(): string {
+    return [
+      idea && `Conceito: ${idea}`,
+      direction && `Direção visual: ${direction}`,
+      copy &&
+        `Contexto da copy (NÃO escrever na imagem a não ser que seja pedido): ${copy}`,
+      format && `Formato: ${format}`,
+      `Plataforma: ${platform}`,
+    ]
+      .filter(Boolean)
+      .join(". ");
+  }
+
+  async function generateImage() {
+    if (imgBusy) return;
+    const prompt = imagePrompt();
+    if (!prompt.replace(/Plataforma:.*/, "").trim()) {
+      setImgError("Preenche o brief (ideia / direção visual) antes de gerar.");
+      return;
+    }
+    setImgBusy(true);
+    setImgError(null);
+    try {
+      const res = await fetch(`/api/ads/${slug}/creatives/image`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt }),
+      });
+      const json = (await res.json()) as { url?: string; error?: string };
+      if (!res.ok || !json.url) throw new Error(json.error ?? `HTTP ${res.status}`);
+      setImages((prev) => [json.url as string, ...prev]);
+    } catch (err) {
+      setImgError(err instanceof Error ? err.message : "Falha a gerar imagem");
+    } finally {
+      setImgBusy(false);
+    }
+  }
+
+  async function addImageToVault(url: string) {
+    try {
+      const cur = await fetch(`/api/ads/${slug}/vault`, { cache: "no-store" });
+      const curJson = cur.ok ? ((await cur.json()) as { items: unknown[] }) : { items: [] };
+      const item = {
+        id: crypto.randomUUID(),
+        kind: "creative",
+        title: (idea.trim().split("\n")[0] || "Criativo gerado").slice(0, 120),
+        description: "Imagem gerada no Creatives Studio",
+        url,
+        platform: platform === "all" ? null : platform,
+        addedAt: Date.now(),
+      };
+      const res = await fetch(`/api/ads/${slug}/vault`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify([item, ...(curJson.items ?? [])]),
+      });
+      if (res.ok) setSavedToVault((p) => new Set(p).add(url));
+    } catch {
+      /* ignore */
+    }
+  }
 
   useEffect(() => {
     scrollRef.current?.scrollTo({
@@ -103,7 +173,7 @@ export function CreativesStudio({
   }, [messages]);
 
   async function saveToHistory() {
-    if (!lastAssistant.trim() || saving) return;
+    if ((!lastAssistant.trim() && images.length === 0) || saving) return;
     setSaving(true);
     try {
       const title =
@@ -119,6 +189,7 @@ export function CreativesStudio({
           platform,
           format,
           content: lastAssistant,
+          images,
         }),
       });
       if (res.ok) {
@@ -206,8 +277,26 @@ export function CreativesStudio({
               ) : (
                 <Wand2 className="h-4 w-4" />
               )}
-              Gerar criativo
+              Gerar conceito + copy
             </button>
+            <button
+              type="button"
+              onClick={generateImage}
+              disabled={imgBusy}
+              className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-[#783DF5]/45 bg-[#783DF5]/12 px-4 py-2.5 text-[13px] font-semibold text-[#e0d4ff] transition hover:border-[#783DF5]/80 hover:bg-[#783DF5]/22 hover:text-white disabled:opacity-50"
+            >
+              {imgBusy ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <ImagePlus className="h-4 w-4" />
+              )}
+              Gerar imagem
+            </button>
+            {imgError && (
+              <p className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-1.5 text-[11px] text-rose-300">
+                {imgError}
+              </p>
+            )}
           </div>
         </div>
 
@@ -377,6 +466,68 @@ export function CreativesStudio({
         </form>
       </div>
 
+      {/* Generated images gallery (full-width) */}
+      {(images.length > 0 || imgBusy) && (
+        <section className="lg:col-span-2">
+          <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-4 sm:p-5">
+            <div className="mb-3 flex items-center gap-2">
+              <ImageIcon className="h-4 w-4 text-[#d4c4ff]" />
+              <h2 className="text-[13.5px] font-semibold text-white">
+                Imagens geradas
+              </h2>
+              <span className="text-[11px] text-white/40">
+                geradas com Gemini Flash Image · on-brand
+              </span>
+            </div>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+              {imgBusy && (
+                <div className="flex aspect-square items-center justify-center rounded-xl border border-white/10 bg-white/[0.03]">
+                  <span className="inline-flex flex-col items-center gap-2 text-white/45">
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    <span className="text-[11px]">A gerar…</span>
+                  </span>
+                </div>
+              )}
+              {images.map((url) => (
+                <div
+                  key={url}
+                  className="group relative overflow-hidden rounded-xl border border-white/10 bg-black/30"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={url} alt="Criativo gerado" className="aspect-square w-full object-cover" />
+                  <div className="absolute inset-x-0 bottom-0 flex items-center gap-1.5 bg-gradient-to-t from-black/80 to-transparent p-2 opacity-0 transition group-hover:opacity-100">
+                    <a
+                      href={url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      download
+                      className="inline-flex items-center gap-1 rounded-md border border-white/20 bg-black/40 px-2 py-1 text-[10.5px] font-medium text-white transition hover:bg-black/70"
+                    >
+                      <Download className="h-3 w-3" /> Abrir
+                    </a>
+                    <button
+                      type="button"
+                      onClick={() => addImageToVault(url)}
+                      className="inline-flex items-center gap-1 rounded-md border border-white/20 bg-black/40 px-2 py-1 text-[10.5px] font-medium text-white transition hover:bg-black/70"
+                    >
+                      {savedToVault.has(url) ? (
+                        <>
+                          <Check className="h-3 w-3 text-emerald-300" /> No Vault
+                        </>
+                      ) : (
+                        <>
+                          <FolderLock className="h-3 w-3" /> Vault
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
       {viewing && (
         <div
           className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm"
@@ -405,9 +556,25 @@ export function CreativesStudio({
               </button>
             </header>
             <div className="overflow-y-auto px-5 py-4">
-              <pre className="whitespace-pre-wrap font-sans text-[13px] leading-relaxed text-white/85">
-                {viewing.content}
-              </pre>
+              {viewing.images.length > 0 && (
+                <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  {viewing.images.map((url) => (
+                    <a key={url} href={url} target="_blank" rel="noopener noreferrer">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={url}
+                        alt="Criativo"
+                        className="aspect-square w-full rounded-lg border border-white/10 object-cover"
+                      />
+                    </a>
+                  ))}
+                </div>
+              )}
+              {viewing.content && (
+                <pre className="whitespace-pre-wrap font-sans text-[13px] leading-relaxed text-white/85">
+                  {viewing.content}
+                </pre>
+              )}
             </div>
           </div>
         </div>
