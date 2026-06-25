@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.52",
+    date: "2026-06-25",
+    title: "Próximas ações — janelas sem duplicados + concluir com tick e animação",
+    highlights: [
+      "**🚫 Sem duplicados.** As ações deixam de aparecer nos dois blocos: dentro de **7 dias** aparece **só à esquerda**; entre **8 e 30 dias** aparece **só à direita** (atrasadas continuam no bloco urgente).",
+      "**✅ Tick para concluir.** Cada ação tem uma **checkbox**; ao marcar, sai da lista com uma **animação** (check verde + colapso) e fica **concluída** — guardado em KV, por isso desaparece em todos os ecrãs. Um rodapé '**N concluídas**' permite ver e **reabrir** se for engano.",
+      "**👋 Saudação animada.** O título da página de Clients passa a **'How is business, {nome}?'** com **animação de escrita** sempre que abres a página.",
+    ],
+  },
+  {
     version: "74.51.1",
     date: "2026-06-25",
     title: "Overview Calendário — grelha mais clara e legível",

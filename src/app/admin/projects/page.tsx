@@ -3,6 +3,7 @@ import { ArrowLeft } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { AdminPanel } from "@/components/admin-panel";
 import { buildAdminClientViews } from "@/lib/admin-roster";
+import { getCurrentEmployee } from "@/lib/auth/server";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -12,7 +13,11 @@ export const metadata = {
 };
 
 export default async function ProjectsAdminPage() {
-  const clients = await buildAdminClientViews();
+  const [clients, employee] = await Promise.all([
+    buildAdminClientViews(),
+    getCurrentEmployee(),
+  ]);
+  const firstName = employee?.name?.trim().split(/\s+/)[0] ?? "";
 
   return (
     <PageShell wide>
@@ -23,7 +28,7 @@ export default async function ProjectsAdminPage() {
         <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
         Back to Admin
       </Link>
-      <AdminPanel clients={clients} />
+      <AdminPanel clients={clients} userName={firstName} />
     </PageShell>
   );
 }

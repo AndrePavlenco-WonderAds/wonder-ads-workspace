@@ -6,7 +6,7 @@
 // required. Each row receives the current record + an onSaved callback
 // it fires after the API returns a 200.
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowDown, ArrowUp, ArrowUpDown, CalendarDays } from "lucide-react";
 import { AdminClientRow } from "./admin-client-row";
@@ -52,7 +52,13 @@ type SortColumn =
 
 type SortState = { col: SortColumn; dir: "asc" | "desc" } | null;
 
-export function AdminPanel({ clients }: { clients: AdminClientView[] }) {
+export function AdminPanel({
+  clients,
+  userName = "",
+}: {
+  clients: AdminClientView[];
+  userName?: string;
+}) {
 
   // Per-(slug, dept) record state — seeded from server props, updated
   // every time a row's Save returns. Drives both the rollup tiles AND
@@ -177,7 +183,11 @@ export function AdminPanel({ clients }: { clients: AdminClientView[] }) {
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">
-            <span className="brand-gradient-text">Clients</span>
+            <Typewriter
+              text={
+                userName ? `How is business, ${userName}?` : "How is business?"
+              }
+            />
           </h1>
           <p className="mt-1.5 text-[12px] text-white/45">
             Every client across every department — edit independently per row.
@@ -306,6 +316,43 @@ export function AdminPanel({ clients }: { clients: AdminClientView[] }) {
         </div>
       </section>
     </div>
+  );
+}
+
+/** Types `text` out character-by-character on every mount (so it
+ *  re-runs each time the page opens), with a blinking caret. The full
+ *  text is rendered transparently underneath to reserve layout space
+ *  and avoid reflow as it types. */
+function Typewriter({ text }: { text: string }) {
+  const [count, setCount] = useState(0);
+  useEffect(() => {
+    setCount(0);
+    let i = 0;
+    const id = window.setInterval(() => {
+      i += 1;
+      setCount(i);
+      if (i >= text.length) window.clearInterval(id);
+    }, 55);
+    return () => window.clearInterval(id);
+  }, [text]);
+  const typing = count < text.length;
+  return (
+    <span className="relative inline-block">
+      {/* Invisible spacer reserves the final width/height */}
+      <span aria-hidden className="invisible">
+        {text}
+      </span>
+      <span className="absolute inset-0">
+        <span className="brand-gradient-text">{text.slice(0, count)}</span>
+        <span
+          aria-hidden
+          className={`ml-0.5 inline-block w-[2px] -translate-y-[2px] self-stretch bg-[#a98bff] align-middle ${
+            typing ? "opacity-100" : "animate-pulse"
+          }`}
+          style={{ height: "0.9em" }}
+        />
+      </span>
+    </span>
   );
 }
 
