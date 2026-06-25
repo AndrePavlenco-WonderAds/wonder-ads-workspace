@@ -23,6 +23,7 @@ export const CLIENT_LOGOS: Record<string, string> = {
   "sentir-saude": "/logos/sentir-saude.png",
   "clinica-fernando-almeida": "/logos/clinica-fernando-almeida.png",
   cuidamais: "/logos/cuidamais.png",
+  "kings-gyms": "/logos/kings-gyms.png",
 };
 
 export function getClientLogo(slug: string): string | null {
@@ -38,6 +39,8 @@ const LOGO_BG_OVERRIDES: Record<string, LogoBgMode> = {
   wonderads: "dark",
   // FA's logo asset ships on its own dark charcoal panel.
   "clinica-fernando-almeida": "dark",
+  // Kings Gyms — gold + white wordmark on black; ships on its own black panel.
+  "kings-gyms": "dark",
   // CDT's logo asset sits on #F6A800 — match the chip exactly. IHN follows.
   ihn: { custom: "#F6A800" },
   cdt: { custom: "#F6A800" },
@@ -71,6 +74,7 @@ export const CLIENT_WEBSITES: Record<string, string> = {
   "senior-resort": "https://senior-resort.pt/",
   "clinica-mimus": "https://www.mimus.pt/",
   wonderads: "https://wonder-ads.com/",
+  "kings-gyms": "https://kingsgyms.com/",
   "monte-mar": "https://www.montemar.pt/",
   cdt: "https://www.corridadotempo.pt/",
   "sea-yourself": "https://seayourself.pt/",

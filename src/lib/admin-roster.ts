@@ -22,6 +22,7 @@ import {
   getLogoSizing,
 } from "@/lib/client-meta";
 import { getClientPalette, paletteToGradient } from "@/lib/client-colors";
+import { getExtraClients } from "@/lib/admin-extra-clients-store";
 
 export async function buildAdminClientViews(): Promise<AdminClientView[]> {
   // SEO department — pulled from Notion; degrade gracefully so admin
@@ -49,6 +50,9 @@ export async function buildAdminClientViews(): Promise<AdminClientView[]> {
     title: c.title,
     icon: c.icon,
   }));
+  // Clients added manually from the admin table.
+  const extraClients = await getExtraClients().catch(() => []);
+  const extraSlugs = new Set(extraClients.map((c) => c.slug));
 
   type Merged = {
     slug: string;
@@ -80,6 +84,12 @@ export async function buildAdminClientViews(): Promise<AdminClientView[]> {
   for (const c of webClients) {
     const m = ensure(c);
     if (!m.departments.includes("Web")) m.departments.push("Web");
+  }
+  for (const c of extraClients) {
+    const m = ensure({ slug: c.slug, title: c.title, icon: c.icon });
+    for (const d of c.departments) {
+      if (!m.departments.includes(d)) m.departments.push(d);
+    }
   }
 
   const rows = Array.from(merged.values()).map((m) => ({
@@ -116,6 +126,7 @@ export async function buildAdminClientViews(): Promise<AdminClientView[]> {
             department: dept,
             clientDepartments: m.departments,
             record,
+            isExtra: extraSlugs.has(m.slug),
           };
         }),
     );

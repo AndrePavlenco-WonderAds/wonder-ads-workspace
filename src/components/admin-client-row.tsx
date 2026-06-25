@@ -49,6 +49,11 @@ type Props = {
    *  this to update its records map so the rollup tiles (MRR / IVA)
    *  recompute instantly without waiting on router.refresh(). */
   onSaved?: (record: AdminClientRecord) => void;
+  /** True when this client was added manually (extra-clients store) and
+   *  can be removed from here. */
+  isExtra?: boolean;
+  /** Delete the whole manually-added client (all its dept rows). */
+  onDelete?: (slug: string) => void;
 };
 
 const DEPT_PILL: Record<string, string> = {
@@ -75,6 +80,8 @@ export function AdminClientRow({
   clientDepartments,
   initial,
   onSaved,
+  isExtra,
+  onDelete,
 }: Props) {
   const sharedWith = clientDepartments.filter((d) => d !== department);
   const [draft, setDraft] = useState<AdminClientRecord>(initial);
@@ -386,6 +393,22 @@ export function AdminClientRow({
             >
               {errorMsg}
             </span>
+          )}
+          {isExtra && onDelete && (
+            <button
+              type="button"
+              onClick={() => {
+                if (
+                  window.confirm(
+                    `Remover o cliente "${title}"? Remove todas as linhas deste cliente adicionado manualmente.`,
+                  )
+                )
+                  onDelete(slug);
+              }}
+              className="text-[10.5px] text-white/35 transition hover:text-rose-300"
+            >
+              Remove client
+            </button>
           )}
         </div>
       </td>

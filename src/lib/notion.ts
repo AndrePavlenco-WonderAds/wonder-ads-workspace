@@ -67,6 +67,8 @@ const EXTRA_SEO_CLIENTS: Array<{ title: string; icon: string }> = [
   // CuidaMais (Cuida+) — André Pereira (v74.38). Portuguese e-commerce
   // for orthopedic / rehab / mobility products. Not in Notion yet.
   { title: "CuidaMais", icon: "🩺" },
+  // Kings Gyms (kingsgyms.com) — André Pereira (v74.59). Not in Notion yet.
+  { title: "Kings Gyms", icon: "🏋️" },
 ];
 
 const _fetchSeoClients = unstable_cache(
@@ -131,7 +133,7 @@ const _fetchSeoClients = unstable_cache(
   // synthetic roster (v74.31). Bump whenever the shape of NotionClient or
   // any of its derived fields changes meaningfully. v7: added CuidaMais
   // (v74.38).
-  ["seo-clients-v7"],
+  ["seo-clients-v8"],
   { revalidate: 3600, tags: ["seo-clients"] },
 );
 

@@ -13,6 +13,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.59",
+    date: "2026-06-25",
+    title: "Novo cliente Kings Gyms (André Pereira) + adicionar clientes direto no Admin",
+    highlights: [
+      "**🏋️ Kings Gyms (kingsgyms.com).** Novo projeto SEO atribuído ao **André Pereira**, com o **logo real** puxado do site (coroa dourada sobre preto), website, paleta e chip escuro. Aparece automaticamente no SEO DPT, nas páginas do cliente e no Admin (com os campos de faturação a vazio, prontos a preencher).",
+      "**➕ Adicionar clientes no Admin.** Em `/admin/projects` há agora um botão **'Add client'**: dás nome, escolhes departamento(s) (SEO/ADS/Web) e website opcional, e o cliente entra como nova linha (uma por departamento) com os campos a vazio. Clientes adicionados assim podem ser removidos (botão 'Remove client' na linha).",
+    ],
+  },
+  {
     version: "74.58",
     date: "2026-06-25",
     title: "SEO DPT — total de visitantes orgânicos (30 dias) ao lado do nº de clientes",

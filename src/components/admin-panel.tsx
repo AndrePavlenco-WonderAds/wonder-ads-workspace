@@ -8,7 +8,17 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowDown, ArrowUp, ArrowUpDown, CalendarDays, FileBarChart } from "lucide-react";
+import { useRouter } from "next/navigation";
+import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  CalendarDays,
+  FileBarChart,
+  Plus,
+  Loader2,
+  X,
+} from "lucide-react";
 import { AdminClientRow } from "./admin-client-row";
 import { UpcomingActions, type UpcomingInvoice } from "./upcoming-actions";
 import type {
@@ -19,6 +29,7 @@ import {
   adminRecordKey,
   cadenceMonths,
   formatMoney,
+  CLIENT_DEPARTMENTS,
 } from "@/lib/admin-clients-store";
 import type { LogoBgMode, LogoSizing } from "@/lib/client-meta";
 
@@ -39,6 +50,9 @@ export type AdminClientView = {
    *  the API). */
   clientDepartments: ClientDepartment[];
   record: AdminClientRecord;
+  /** True when this client was added manually from the admin table
+   *  (lives in the extra-clients KV store, deletable from here). */
+  isExtra?: boolean;
 };
 
 type SortColumn =
@@ -81,6 +95,19 @@ export function AdminPanel({
       return next;
     });
   }, []);
+
+  const router = useRouter();
+  const [addOpen, setAddOpen] = useState(false);
+
+  const deleteExtra = useCallback(
+    async (slug: string) => {
+      const res = await fetch(`/api/admin/extra-clients?slug=${slug}`, {
+        method: "DELETE",
+      });
+      if (res.ok) router.refresh();
+    },
+    [router],
+  );
 
   // Sortable column state. Clicking the same column cycles asc → desc →
   // off (default order from the server). Null = the default order.
@@ -196,6 +223,14 @@ export function AdminPanel({
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setAddOpen(true)}
+            className="inline-flex items-center gap-2 rounded-xl border border-emerald-400/40 bg-emerald-500/12 px-3.5 py-2 text-[12.5px] font-semibold text-emerald-200 transition hover:border-emerald-400/70 hover:bg-emerald-500/20 hover:text-white"
+          >
+            <Plus className="h-4 w-4" />
+            Add client
+          </button>
           <Link
             href="/admin/report"
             target="_blank"
@@ -317,6 +352,8 @@ export function AdminPanel({
                       clientDepartments={c.clientDepartments}
                       initial={live}
                       onSaved={handleSaved}
+                      isExtra={c.isExtra}
+                      onDelete={c.isExtra ? deleteExtra : undefined}
                     />
                   );
                 })
@@ -325,6 +362,162 @@ export function AdminPanel({
           </table>
         </div>
       </section>
+
+      {addOpen && (
+        <AddClientForm
+          onClose={() => setAddOpen(false)}
+          onAdded={() => {
+            setAddOpen(false);
+            router.refresh();
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function AddClientForm({
+  onClose,
+  onAdded,
+}: {
+  onClose: () => void;
+  onAdded: () => void;
+}) {
+  const [title, setTitle] = useState("");
+  const [website, setWebsite] = useState("");
+  const [depts, setDepts] = useState<ClientDepartment[]>(["SEO"]);
+  const [state, setState] = useState<"idle" | "saving">("idle");
+  const [error, setError] = useState<string | null>(null);
+
+  function toggleDept(d: ClientDepartment) {
+    setDepts((prev) =>
+      prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d],
+    );
+  }
+
+  async function submit() {
+    if (!title.trim()) {
+      setError("Dá um nome ao cliente.");
+      return;
+    }
+    if (depts.length === 0) {
+      setError("Escolhe pelo menos um departamento.");
+      return;
+    }
+    setState("saving");
+    setError(null);
+    try {
+      const res = await fetch("/api/admin/extra-clients", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, departments: depts, website }),
+      });
+      if (!res.ok) {
+        const j = (await res.json().catch(() => ({}))) as { error?: string };
+        throw new Error(j.error ?? `HTTP ${res.status}`);
+      }
+      onAdded();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Falhou");
+      setState("idle");
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
+      <div className="w-full max-w-md overflow-hidden rounded-2xl border border-white/10 bg-[#0a0a0f] shadow-2xl shadow-black/70">
+        <header className="flex items-center justify-between border-b border-white/8 px-5 py-3.5">
+          <h3 className="text-[15px] font-semibold text-white">
+            Adicionar cliente
+          </h3>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Fechar"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/10 text-white/60 transition hover:border-white/30 hover:text-white"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </header>
+        <div className="space-y-3.5 px-5 py-5">
+          <label className="block">
+            <span className="mb-1 block text-[10.5px] font-bold uppercase tracking-[0.14em] text-white/45">
+              Nome do cliente
+            </span>
+            <input
+              autoFocus
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && submit()}
+              placeholder="Ex.: Kings Gyms"
+              className="w-full rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-[13px] text-white outline-none transition focus:border-white/30 placeholder:text-white/30"
+            />
+          </label>
+          <div>
+            <span className="mb-1.5 block text-[10.5px] font-bold uppercase tracking-[0.14em] text-white/45">
+              Departamento(s)
+            </span>
+            <div className="flex flex-wrap gap-2">
+              {CLIENT_DEPARTMENTS.map((d) => (
+                <button
+                  key={d}
+                  type="button"
+                  onClick={() => toggleDept(d)}
+                  className={`rounded-lg border px-3 py-1.5 text-[12px] font-semibold transition ${
+                    depts.includes(d)
+                      ? "border-[#783DF5]/55 bg-[#783DF5]/15 text-white"
+                      : "border-white/10 bg-white/[0.02] text-white/55 hover:text-white/80"
+                  }`}
+                >
+                  {d}
+                </button>
+              ))}
+            </div>
+          </div>
+          <label className="block">
+            <span className="mb-1 block text-[10.5px] font-bold uppercase tracking-[0.14em] text-white/45">
+              Website (opcional)
+            </span>
+            <input
+              value={website}
+              onChange={(e) => setWebsite(e.target.value)}
+              placeholder="https://…"
+              className="w-full rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-[13px] text-white outline-none transition focus:border-white/30 placeholder:text-white/30"
+            />
+          </label>
+          {error && (
+            <p className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-1.5 text-[11.5px] text-rose-300">
+              {error}
+            </p>
+          )}
+          <p className="text-[11px] text-white/40">
+            O cliente aparece como nova linha (uma por departamento) com os
+            campos a vazio, prontos a preencher.
+          </p>
+        </div>
+        <footer className="flex items-center justify-end gap-2 border-t border-white/8 bg-black/30 px-5 py-3.5">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg border border-white/12 px-3 py-2 text-[12px] font-medium text-white/70 transition hover:border-white/30 hover:text-white"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            onClick={submit}
+            disabled={state === "saving"}
+            className="brand-gradient-bg inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-[12px] font-semibold text-white shadow-[0_6px_22px_-4px_rgba(120,61,245,0.55)] transition hover:opacity-90 disabled:opacity-50"
+          >
+            {state === "saving" ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Plus className="h-3.5 w-3.5" />
+            )}
+            Adicionar
+          </button>
+        </footer>
+      </div>
     </div>
   );
 }

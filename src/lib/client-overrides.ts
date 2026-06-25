@@ -42,11 +42,12 @@ const YENISEY = new Set([
 
 // André Pereira — new SEO consultant (v74.31). His first book:
 // Sentir Saúde + Clínica Fernando Almeida (both onboarded 15/06/2026).
-// CuidaMais added v74.38.
+// CuidaMais added v74.38. Kings Gyms (kingsgyms.com) added v74.59.
 const ANDRE_PEREIRA = new Set([
   "sentir-saude",
   "clinica-fernando-almeida",
   "cuidamais",
+  "kings-gyms",
 ]);
 
 /** Returns the Head Consultant for a given client slug. */
