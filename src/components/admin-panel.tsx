@@ -7,8 +7,10 @@
 // it fires after the API returns a 200.
 
 import { useCallback, useMemo, useState } from "react";
-import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
+import Link from "next/link";
+import { ArrowDown, ArrowUp, ArrowUpDown, CalendarDays } from "lucide-react";
 import { AdminClientRow } from "./admin-client-row";
+import { UpcomingActions, type UpcomingInvoice } from "./upcoming-actions";
 import type {
   AdminClientRecord,
   ClientDepartment,
@@ -119,6 +121,23 @@ export function AdminPanel({ clients }: { clients: AdminClientView[] }) {
     return total;
   }, [clients, records]);
 
+  // Invoices with a set invoice date — feed the Próx. 7/30 dias blocks.
+  const upcomingInvoices = useMemo<UpcomingInvoice[]>(() => {
+    const out: UpcomingInvoice[] = [];
+    for (const c of clients) {
+      const r = records.get(adminRecordKey(c.slug, c.department));
+      if (r?.invoiceDate) {
+        out.push({
+          id: `${c.slug}-${c.department}`,
+          title: c.title,
+          department: c.department,
+          date: r.invoiceDate,
+        });
+      }
+    }
+    return out;
+  }, [clients, records]);
+
   // Apply the active sort against the live `records` map so changes
   // saved on one row immediately re-rank the table.
   const sortedClients = useMemo(() => {
@@ -155,15 +174,24 @@ export function AdminPanel({ clients }: { clients: AdminClientView[] }) {
 
   return (
     <div className="animate-fade-up mt-2">
-      <header>
-        <h1 className="text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">
-          <span className="brand-gradient-text">Clients</span>
-        </h1>
-        <p className="mt-1.5 text-[12px] text-white/45">
-          Every client across every department — edit independently per row.
-          {/* v74.23: workspace logout lives on the header UserChip — no
-              per-page button anymore. */}
-        </p>
+      <header className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">
+            <span className="brand-gradient-text">Clients</span>
+          </h1>
+          <p className="mt-1.5 text-[12px] text-white/45">
+            Every client across every department — edit independently per row.
+            {/* v74.23: workspace logout lives on the header UserChip — no
+                per-page button anymore. */}
+          </p>
+        </div>
+        <Link
+          href="/admin/calendar"
+          className="inline-flex items-center gap-2 rounded-xl border border-[#783DF5]/40 bg-[#783DF5]/12 px-3.5 py-2 text-[12.5px] font-semibold text-[#d4c4ff] transition hover:border-[#783DF5]/70 hover:bg-[#783DF5]/20 hover:text-white"
+        >
+          <CalendarDays className="h-4 w-4" />
+          Overview Calendário
+        </Link>
       </header>
 
       {/* Roll-up tiles. MRR tile glows emerald when populated so a
@@ -185,6 +213,9 @@ export function AdminPanel({ clients }: { clients: AdminClientView[] }) {
           tone="rose"
         />
       </section>
+
+      {/* Next actions — invoices + events landing in the next 7 / 30 days */}
+      <UpcomingActions invoices={upcomingInvoices} />
 
       {/* Single flat client table */}
       <section aria-label="Clients" className="mt-10">
@@ -235,7 +266,6 @@ export function AdminPanel({ clients }: { clients: AdminClientView[] }) {
                   sort={sort}
                   onClick={cycleSort}
                 />
-                <th className="px-3 py-2.5">Notes</th>
                 <th className="px-3 py-2.5">&nbsp;</th>
               </tr>
             </thead>
@@ -243,7 +273,7 @@ export function AdminPanel({ clients }: { clients: AdminClientView[] }) {
               {clients.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={9}
+                    colSpan={8}
                     className="px-4 py-8 text-center text-[12px] text-white/40"
                   >
                     No clients yet.

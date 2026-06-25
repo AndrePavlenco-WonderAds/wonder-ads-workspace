@@ -91,8 +91,7 @@ export function AdminClientRow({
     draft.invoiceDate !== saved.invoiceDate ||
     draft.invoiceType !== saved.invoiceType ||
     draft.monthlyValue !== saved.monthlyValue ||
-    draft.iva !== saved.iva ||
-    draft.notes !== saved.notes;
+    draft.iva !== saved.iva;
 
   async function save() {
     setState("saving");
@@ -110,7 +109,6 @@ export function AdminClientRow({
             invoiceType: draft.invoiceType,
             monthlyValue: draft.monthlyValue,
             iva: draft.iva,
-            notes: draft.notes,
             clientDepartments,
           }),
         },
@@ -339,17 +337,6 @@ export function AdminClientRow({
           />
         </div>
         <div className="mt-1 text-right text-[10.5px] text-white/45">IVA · EUR</div>
-      </td>
-
-      {/* Notes */}
-      <td className="px-3 py-3.5">
-        <textarea
-          value={draft.notes}
-          onChange={(e) => setDraft({ ...draft, notes: e.target.value })}
-          rows={2}
-          placeholder="Invoicing quirks, payment terms, etc."
-          className="w-full rounded-md border border-white/10 bg-white/[0.04] px-2 py-1.5 text-[12px] text-white outline-none transition focus:border-white/30 placeholder:text-white/35"
-        />
       </td>
 
       {/* Save / state */}

@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.51",
+    date: "2026-06-25",
+    title: "Admin — Próximas ações (7/30 dias) + Overview Calendário com eventos personalizáveis",
+    highlights: [
+      "**⏱️ Próximas ações 7/30 dias.** Entre os blocos Clients/MRR/Obrigações Fiscais e a tabela aparecem dois blocos de **próximas ações**: à esquerda **Próx. 7 dias** (vermelho) e à direita **Próximos 30 dias** ('Brevemente'). Listam e contam as **faturas a enviar** (datas de fatura dos clientes) + os eventos do calendário dentro da janela; faturas atrasadas aparecem destacadas.",
+      "**🗓️ Overview Calendário.** Novo botão no topo da página de Clients abre um **calendário mensal em ecrã inteiro** (estilo dark), com as faturas a roxo nos respetivos dias e navegação de mês / Hoje.",
+      "**➕ Eventos personalizáveis.** Dá para clicar num dia (ou em 'Adicionar evento') e criar um bloco — ex.: *Entregar IVA até dia 5* — com **título, descrição e cor** à escolha. Clicar num evento edita ou elimina. Guardado em KV e partilhado pela equipa.",
+      "**🔁 Ligação às próximas ações.** Qualquer evento a 7 ou 30 dias passa a aparecer automaticamente nos blocos de próximas ações da página geral.",
+      "**🧹 Coluna Notes removida** da tabela de clientes (as notas vivem agora na aba **Notas** do pop-up do cliente).",
+    ],
+  },
+  {
     version: "74.50",
     date: "2026-06-25",
     title: "Admin — 'Projects' passa a 'Clients' + pop-up de cliente (contactos, emails, notas, faturas) e nova fiscalidade",

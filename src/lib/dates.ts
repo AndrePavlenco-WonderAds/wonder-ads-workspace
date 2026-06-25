@@ -43,3 +43,23 @@ export function formatDateLong(d: Date | number | string | null | undefined): st
     year: "numeric",
   });
 }
+
+/** Local-timezone ISO date (yyyy-mm-dd) for a given Date — defaults to
+ *  today. Uses local parts (not toISOString, which is UTC) so "today"
+ *  matches the user's wall clock in Lisbon. */
+export function toISODate(d: Date = new Date()): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+/** Whole days from today until the given ISO date (yyyy-mm-dd).
+ *  Negative when the date is in the past, 0 for today. Compares at
+ *  date granularity (midnight local) so partial days don't skew it. */
+export function daysUntilISO(iso: string, now: Date = new Date()): number {
+  const target = new Date(`${iso}T00:00:00`);
+  if (Number.isNaN(target.getTime())) return Number.NaN;
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  return Math.round((target.getTime() - start.getTime()) / 86_400_000);
+}
