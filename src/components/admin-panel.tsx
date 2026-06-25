@@ -8,7 +8,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowDown, ArrowUp, ArrowUpDown, CalendarDays } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, CalendarDays, FileBarChart } from "lucide-react";
 import { AdminClientRow } from "./admin-client-row";
 import { UpcomingActions, type UpcomingInvoice } from "./upcoming-actions";
 import type {
@@ -195,13 +195,23 @@ export function AdminPanel({
                 per-page button anymore. */}
           </p>
         </div>
-        <Link
-          href="/admin/calendar"
-          className="inline-flex items-center gap-2 rounded-xl border border-[#783DF5]/40 bg-[#783DF5]/12 px-3.5 py-2 text-[12.5px] font-semibold text-[#d4c4ff] transition hover:border-[#783DF5]/70 hover:bg-[#783DF5]/20 hover:text-white"
-        >
-          <CalendarDays className="h-4 w-4" />
-          Overview Calendário
-        </Link>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            href="/admin/report"
+            target="_blank"
+            className="inline-flex items-center gap-2 rounded-xl border border-emerald-400/40 bg-emerald-500/12 px-3.5 py-2 text-[12.5px] font-semibold text-emerald-200 transition hover:border-emerald-400/70 hover:bg-emerald-500/20 hover:text-white"
+          >
+            <FileBarChart className="h-4 w-4" />
+            Gerar Monthly Report
+          </Link>
+          <Link
+            href="/admin/calendar"
+            className="inline-flex items-center gap-2 rounded-xl border border-[#783DF5]/40 bg-[#783DF5]/12 px-3.5 py-2 text-[12.5px] font-semibold text-[#d4c4ff] transition hover:border-[#783DF5]/70 hover:bg-[#783DF5]/20 hover:text-white"
+          >
+            <CalendarDays className="h-4 w-4" />
+            Overview Calendário
+          </Link>
+        </div>
       </header>
 
       {/* Roll-up tiles. MRR tile glows emerald when populated so a

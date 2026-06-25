@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.53",
+    date: "2026-06-25",
+    title: "Relatório Mensal — dashboard de faturação com mês, trimestre e YTD + PDF",
+    highlights: [
+      "**📊 Botão 'Gerar Monthly Report'.** Novo botão (verde, à esquerda do Overview Calendário) na página de Clients que abre o relatório **numa nova página**.",
+      "**🧾 Relatório completo.** KPIs (clientes, MRR, run-rate anual, Obrigações Fiscais/IVA, ticket médio), **receita por departamento** e **por tipo de fatura** (gráficos de barras), bloco **'Este mês'** (faturas a enviar, valor, IVA, progresso de enviadas + obrigações do mês), **Trimestre** e **Desde Janeiro (YTD)** com estimativas, e uma **tabela de todos os clientes**.",
+      "**📄 Download em PDF.** Botão 'Descarregar PDF' (documento branco, branded, pronto a imprimir em A4) com nome de ficheiro limpo.",
+    ],
+  },
+  {
     version: "74.52",
     date: "2026-06-25",
     title: "Próximas ações — janelas sem duplicados + concluir com tick e animação",
