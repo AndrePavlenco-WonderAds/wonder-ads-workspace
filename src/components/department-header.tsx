@@ -8,6 +8,7 @@ export function DepartmentHeader({
   Icon,
   count,
   countLabel,
+  countSuffix,
   rightSlot,
   extra,
   large = false,
@@ -17,6 +18,9 @@ export function DepartmentHeader({
   Icon?: LucideIcon;
   count?: number;
   countLabel?: string;
+  /** Rendered inline, to the right of the count badge (e.g. a second
+   *  rollup pill like total organic visitors). */
+  countSuffix?: ReactNode;
   rightSlot?: ReactNode;
   extra?: ReactNode;
   large?: boolean;
@@ -68,9 +72,12 @@ export function DepartmentHeader({
             >
               {tagline}
             </p>
-            {typeof count === "number" && (
-              <div className="mt-5">
-                <CountBadge value={count} label={countLabel ?? "clients"} />
+            {(typeof count === "number" || countSuffix) && (
+              <div className="mt-5 flex flex-wrap items-center gap-2.5">
+                {typeof count === "number" && (
+                  <CountBadge value={count} label={countLabel ?? "clients"} />
+                )}
+                {countSuffix}
               </div>
             )}
             {extra && <div className="mt-4">{extra}</div>}

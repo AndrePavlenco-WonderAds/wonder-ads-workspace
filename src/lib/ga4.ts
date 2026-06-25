@@ -5,6 +5,7 @@
 // we list the GA4 properties the impersonated user can see, read each one's
 // web data stream, and match clients by website domain.
 
+import { unstable_cache } from "next/cache";
 import { CLIENT_WEBSITES } from "./client-meta";
 import { getGoogleAccessToken, googleAuthConfigured } from "./google-auth";
 import type { Ga4Channel, Ga4Data, Ga4Metric } from "./analytics";
@@ -376,3 +377,54 @@ export function formatGa4ForKwPrompt(data: Ga4Data): string | null {
   );
   return lines.join("\n");
 }
+
+// ---------------------------------------------------------------------------
+// Department-wide organic-visitor rollup
+// ---------------------------------------------------------------------------
+
+export type SeoOrganicRollup = {
+  /** Sum of organic-search users across all clients (last 30 days). */
+  total: number;
+  /** How many clients actually returned GA4 data (rest skipped silently). */
+  clientsWithData: number;
+  /** False when the Google service account isn't configured at all. */
+  configured: boolean;
+};
+
+/** Sum of organic-search visitors (GA4 `totalUsers`, Organic Search channel,
+ *  last 30 days) across every SEO client. Cached for 30 minutes so the SEO
+ *  landing page never blocks on ~20 live GA4 calls on each render — the
+ *  rollup only refreshes on a cache miss. Clients without a GA4 property are
+ *  skipped (contribute 0), never invented. */
+export const getSeoOrganicVisitors30d = unstable_cache(
+  async (slugs: string[]): Promise<SeoOrganicRollup> => {
+    if (!googleAuthConfigured) {
+      return { total: 0, clientsWithData: 0, configured: false };
+    }
+    const perClient = await Promise.all(
+      slugs.map(async (slug) => {
+        try {
+          const data = await getGa4Data(slug, 30, "Organic Search");
+          if (data.status === "ok") {
+            const users = data.metrics.find((m) => m.key === "users")?.value;
+            return typeof users === "number" ? Math.round(users) : null;
+          }
+        } catch {
+          /* skip this client — never fabricate a number */
+        }
+        return null;
+      }),
+    );
+    let total = 0;
+    let clientsWithData = 0;
+    for (const v of perClient) {
+      if (v !== null) {
+        total += v;
+        clientsWithData += 1;
+      }
+    }
+    return { total, clientsWithData, configured: true };
+  },
+  ["seo-organic-visitors-30d"],
+  { revalidate: 1800, tags: ["seo-organic-visitors"] },
+);

@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.58",
+    date: "2026-06-25",
+    title: "SEO DPT — total de visitantes orgânicos (30 dias) ao lado do nº de clientes",
+    highlights: [
+      "**📈 Visitantes orgânicos do departamento.** Ao lado do badge de clientes no topo do SEO DPT aparece agora um novo badge (verde) com a **soma dos visitantes orgânicos dos últimos 30 dias de todos os clientes** (GA4 · Organic Search). Dados reais, em cache de 30 min; clientes sem GA4 são simplesmente ignorados (nunca inventado).",
+    ],
+  },
+  {
     version: "74.57",
     date: "2026-06-25",
     title: "Creatives Studio — geração de IMAGENS reais (Gemini Flash Image), on-brand",

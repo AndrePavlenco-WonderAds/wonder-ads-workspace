@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowUpRight } from "lucide-react";
+import { ArrowUpRight, TrendingUp } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { AccessDenied } from "@/components/access-denied";
 import { getCurrentEmployee } from "@/lib/auth/server";
@@ -10,6 +10,7 @@ import { ClientCard } from "@/components/client-card";
 import { WorldMap } from "@/components/world-map";
 import { TypewriterPrompt } from "@/components/typewriter-prompt";
 import { getSeoClients, slugify, type NotionClient } from "@/lib/notion";
+import { getSeoOrganicVisitors30d } from "@/lib/ga4";
 import {
   CONSULTANT_ORDER,
   getConsultantForSlug,
@@ -81,6 +82,10 @@ export default async function SeoPage() {
     clients: grouped[name] ?? [],
   })).filter((col) => col.clients.length > 0);
 
+  // Department-wide organic visitors (GA4, Organic Search, last 30 days).
+  // Cached for 30 min so the page doesn't block on ~20 live GA4 calls.
+  const organic = await getSeoOrganicVisitors30d(clients.map((c) => c.slug));
+
   return (
     <PageShell>
       <DepartmentHeader
@@ -88,6 +93,11 @@ export default async function SeoPage() {
         tagline="Crescimento orgânico no Google e nas IAs. Agência #1 de SEO & GEO em Portugal."
         count={clients.length || undefined}
         countLabel="clients"
+        countSuffix={
+          organic.configured && organic.total > 0 ? (
+            <OrganicVisitorsBadge total={organic.total} />
+          ) : undefined
+        }
         rightSlot={<WorldMap />}
         extra={
           <TypewriterPrompt text="Which project are we working on now, boss?" />
@@ -168,5 +178,28 @@ function NotionFallback({ message }: { message: string }) {
       </p>
       <p className="mt-3 text-xs text-white/35">Error: {message}</p>
     </div>
+  );
+}
+
+/** Department-wide organic visitors pill, shown next to the clients
+ *  count. Emerald accent so it reads as a growth signal. Number is the
+ *  real GA4 organic-search users sum — only rendered when GA4 is
+ *  configured and the total is > 0. */
+function OrganicVisitorsBadge({ total }: { total: number }) {
+  const display =
+    total >= 1000 ? `${(total / 1000).toFixed(1)}k` : total.toLocaleString("en-GB");
+  return (
+    <span
+      className="animate-count-pop inline-flex items-center gap-2 rounded-full border border-emerald-400/35 bg-emerald-500/[0.10] px-3 py-1.5 text-emerald-100 backdrop-blur-md transition-all duration-300 hover:scale-105 hover:border-emerald-400/60 hover:bg-emerald-500/[0.16]"
+      title={`${total.toLocaleString("en-GB")} organic visitors across all SEO clients (GA4 · Organic Search · last 30 days)`}
+    >
+      <TrendingUp className="h-3.5 w-3.5 text-emerald-300" strokeWidth={2.5} />
+      <span className="text-base font-bold leading-none tracking-tight">
+        {display}
+      </span>
+      <span className="text-base font-medium uppercase tracking-[0.16em] leading-none text-emerald-200/80">
+        organic · 30d
+      </span>
+    </span>
   );
 }
