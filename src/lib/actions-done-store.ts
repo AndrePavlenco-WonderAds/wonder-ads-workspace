@@ -23,6 +23,10 @@ export type DoneAction = {
   /** Stable key identifying the action+date (see actionDoneKey). */
   key: string;
   doneAt: number;
+  /** When true the action was permanently dismissed — it's hidden from
+   *  BOTH the open list and the "concluídas" section (a completed action
+   *  that's merely ticked has this falsy). */
+  dismissed?: boolean;
 };
 
 export function sanitizeDone(arr: unknown, now: number = Date.now()): DoneAction[] {
@@ -38,7 +42,11 @@ export function sanitizeDone(arr: unknown, now: number = Date.now()): DoneAction
     // Prune stale entries — the underlying action is long gone.
     if (now - doneAt > RETAIN_MS) continue;
     seen.add(d.key);
-    out.push({ key: d.key.slice(0, 200), doneAt });
+    out.push({
+      key: d.key.slice(0, 200),
+      doneAt,
+      ...(d.dismissed === true ? { dismissed: true } : {}),
+    });
     if (out.length >= MAX_ENTRIES) break;
   }
   return out;

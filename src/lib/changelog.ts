@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.53.1",
+    date: "2026-06-25",
+    title: "Próximas ações — apagar permanentemente uma ação concluída",
+    highlights: [
+      "**🗑️ Apagar permanentemente.** Na secção '**concluídas**', cada ação passa a ter (além do **Reabrir**) um botão de **apagar permanentemente** — com confirmação. A ação deixa de aparecer tanto na lista aberta como nas concluídas.",
+    ],
+  },
+  {
     version: "74.53",
     date: "2026-06-25",
     title: "Relatório Mensal — dashboard de faturação com mês, trimestre e YTD + PDF",

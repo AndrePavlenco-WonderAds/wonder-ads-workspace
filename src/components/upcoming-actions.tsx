@@ -12,7 +12,7 @@
 // ones.
 
 import { useEffect, useMemo, useState } from "react";
-import { CalendarClock, ReceiptText, AlertTriangle, Check, RotateCcw } from "lucide-react";
+import { CalendarClock, ReceiptText, AlertTriangle, Check, RotateCcw, Trash2 } from "lucide-react";
 import type { CalendarEvent, EventColor } from "@/lib/calendar-events-store";
 import type { DoneAction } from "@/lib/actions-done-store";
 import { daysUntilISO, formatDate } from "@/lib/dates";
@@ -117,7 +117,20 @@ export function UpcomingActions({ invoices }: { invoices: UpcomingInvoice[] }) {
     void persistDone(done.filter((d) => d.key !== key));
   }
 
-  const doneKeys = useMemo(() => new Set(done.map((d) => d.key)), [done]);
+  function dismiss(key: string) {
+    const next = done.some((d) => d.key === key)
+      ? done.map((d) => (d.key === key ? { ...d, dismissed: true } : d))
+      : [...done, { key, doneAt: Date.now(), dismissed: true }];
+    void persistDone(next);
+  }
+
+  // Completed-and-visible (ticked) keys vs permanently-dismissed keys.
+  const doneKeys = useMemo(
+    () => new Set(done.filter((d) => !d.dismissed).map((d) => d.key)),
+    [done],
+  );
+  // Everything recorded (done OR dismissed) is excluded from the open list.
+  const hiddenKeys = useMemo(() => new Set(done.map((d) => d.key)), [done]);
 
   const allItems: ActionItem[] = useMemo(
     () =>
@@ -148,7 +161,7 @@ export function UpcomingActions({ invoices }: { invoices: UpcomingInvoice[] }) {
   // block. Items still mid-exit-animation stay visible until they land
   // in `done`.
   const visible = allItems.filter(
-    (i) => !doneKeys.has(i.key) || leaving.has(i.key),
+    (i) => !hiddenKeys.has(i.key) || leaving.has(i.key),
   );
   const left = visible.filter((i) => i.days <= 7);
   const right = visible.filter((i) => i.days > 7 && i.days <= 30);
@@ -172,6 +185,7 @@ export function UpcomingActions({ invoices }: { invoices: UpcomingInvoice[] }) {
         leaving={leaving}
         onComplete={complete}
         onReopen={reopen}
+        onDismiss={dismiss}
       />
       <ActionBlock
         tone="amber"
@@ -183,6 +197,7 @@ export function UpcomingActions({ invoices }: { invoices: UpcomingInvoice[] }) {
         leaving={leaving}
         onComplete={complete}
         onReopen={reopen}
+        onDismiss={dismiss}
       />
     </section>
   );
@@ -198,6 +213,7 @@ function ActionBlock({
   leaving,
   onComplete,
   onReopen,
+  onDismiss,
 }: {
   tone: "red" | "amber";
   Icon: typeof CalendarClock;
@@ -208,6 +224,7 @@ function ActionBlock({
   leaving: Set<string>;
   onComplete: (i: ActionItem) => void;
   onReopen: (key: string) => void;
+  onDismiss: (key: string) => void;
 }) {
   const [showDone, setShowDone] = useState(false);
   const isRed = tone === "red";
@@ -289,6 +306,22 @@ function ActionBlock({
                     className="inline-flex items-center gap-1 rounded-md border border-white/10 px-1.5 py-1 text-[10.5px] text-white/50 transition hover:border-white/30 hover:text-white"
                   >
                     <RotateCcw className="h-3 w-3" /> Reabrir
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (
+                        window.confirm(
+                          `Apagar permanentemente "${it.label}"? Esta ação não volta a aparecer.`,
+                        )
+                      )
+                        onDismiss(it.key);
+                    }}
+                    title="Apagar permanentemente"
+                    aria-label="Apagar permanentemente"
+                    className="inline-flex items-center justify-center rounded-md border border-white/10 px-1.5 py-1 text-white/40 transition hover:border-rose-400/50 hover:bg-rose-500/10 hover:text-rose-300"
+                  >
+                    <Trash2 className="h-3 w-3" />
                   </button>
                 </li>
               ))}
