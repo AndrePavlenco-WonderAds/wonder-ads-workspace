@@ -17,7 +17,6 @@ import {
   adminRecordKey,
   cadenceMonths,
   formatMoney,
-  nextBillingDate,
 } from "@/lib/admin-clients-store";
 import type { LogoBgMode, LogoSizing } from "@/lib/client-meta";
 
@@ -44,10 +43,10 @@ type SortColumn =
   | "client"
   | "cadence"
   | "starting"
-  | "next"
-  | "consultants"
+  | "invoiceDate"
+  | "invoiceType"
   | "value"
-  | "status";
+  | "iva";
 
 type SortState = { col: SortColumn; dir: "asc" | "desc" } | null;
 
@@ -110,6 +109,16 @@ export function AdminPanel({ clients }: { clients: AdminClientView[] }) {
     return total;
   }, [clients, records]);
 
+  // Obrigações Fiscais — total IVA owed across every row.
+  const ivaTotal = useMemo(() => {
+    let total = 0;
+    for (const c of clients) {
+      const r = records.get(adminRecordKey(c.slug, c.department));
+      if (r && r.iva) total += r.iva;
+    }
+    return total;
+  }, [clients, records]);
+
   // Apply the active sort against the live `records` map so changes
   // saved on one row immediately re-rank the table.
   const sortedClients = useMemo(() => {
@@ -125,20 +134,14 @@ export function AdminPanel({ clients }: { clients: AdminClientView[] }) {
           return cadenceMonths(r.billingCadence);
         case "starting":
           return r.startingDate ?? "9999-99-99";
-        case "next": {
-          const nb = nextBillingDate(r.startingDate, r.billingCadence);
-          return nb ? nb.getTime() : Number.POSITIVE_INFINITY;
-        }
-        case "consultants":
-          // Sort by consultant count, ties broken by first consultant
-          // name so the order is stable.
-          return `${String(r.consultants.length).padStart(3, "0")}|${
-            (r.consultants[0] ?? "").toLowerCase()
-          }`;
+        case "invoiceDate":
+          return r.invoiceDate ?? "9999-99-99";
+        case "invoiceType":
+          return r.invoiceType;
         case "value":
           return r.monthlyValue ?? Number.POSITIVE_INFINITY;
-        case "status":
-          return r.status;
+        case "iva":
+          return r.iva ?? Number.POSITIVE_INFINITY;
       }
     }
     return [...clients].sort((a, b) => {
@@ -154,7 +157,7 @@ export function AdminPanel({ clients }: { clients: AdminClientView[] }) {
     <div className="animate-fade-up mt-2">
       <header>
         <h1 className="text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">
-          <span className="brand-gradient-text">Projects</span>
+          <span className="brand-gradient-text">Clients</span>
         </h1>
         <p className="mt-1.5 text-[12px] text-white/45">
           Every client across every department — edit independently per row.
@@ -168,13 +171,18 @@ export function AdminPanel({ clients }: { clients: AdminClientView[] }) {
           the agency bills in euros. */}
       <section
         aria-label="Roll-up"
-        className="mt-7 grid grid-cols-1 gap-3 sm:grid-cols-2"
+        className="mt-7 grid grid-cols-1 gap-3 sm:grid-cols-3"
       >
         <RollupTile label="Clients" value={String(totalClients)} />
         <RollupTile
           label="MRR"
           value={mrrEur > 0 ? formatMoney(mrrEur, "EUR") : "—"}
           tone={mrrEur > 0 ? "emerald" : "neutral"}
+        />
+        <RollupTile
+          label="Obrigações Fiscais"
+          value={ivaTotal > 0 ? formatMoney(ivaTotal, "EUR") : "—"}
+          tone="rose"
         />
       </section>
 
@@ -204,14 +212,14 @@ export function AdminPanel({ clients }: { clients: AdminClientView[] }) {
                   onClick={cycleSort}
                 />
                 <SortableTh
-                  label="Next billing"
-                  col="next"
+                  label="Invoice date"
+                  col="invoiceDate"
                   sort={sort}
                   onClick={cycleSort}
                 />
                 <SortableTh
-                  label="Consultants"
-                  col="consultants"
+                  label="Invoice type"
+                  col="invoiceType"
                   sort={sort}
                   onClick={cycleSort}
                 />
@@ -222,8 +230,8 @@ export function AdminPanel({ clients }: { clients: AdminClientView[] }) {
                   onClick={cycleSort}
                 />
                 <SortableTh
-                  label="Status"
-                  col="status"
+                  label="IVA"
+                  col="iva"
                   sort={sort}
                   onClick={cycleSort}
                 />
@@ -323,31 +331,34 @@ function RollupTile({
 }: {
   label: string;
   value: string;
-  tone?: "neutral" | "emerald";
+  tone?: "neutral" | "emerald" | "rose";
 }) {
-  const isEmerald = tone === "emerald";
+  const border =
+    tone === "emerald"
+      ? "border-emerald-400/35 bg-emerald-500/[0.06]"
+      : tone === "rose"
+        ? "border-rose-400/40 bg-rose-500/[0.07]"
+        : "border-white/8 bg-white/[0.025]";
+  const labelColor =
+    tone === "emerald"
+      ? "text-emerald-300/80"
+      : tone === "rose"
+        ? "text-rose-300/85"
+        : "text-white/45";
+  const valueColor =
+    tone === "emerald"
+      ? "text-emerald-200 drop-shadow-[0_0_18px_rgba(52,211,153,0.35)]"
+      : tone === "rose"
+        ? "text-rose-200 drop-shadow-[0_0_18px_rgba(244,63,94,0.35)]"
+        : "text-white";
   return (
-    <div
-      className={`rounded-xl border px-4 py-3 transition ${
-        isEmerald
-          ? "border-emerald-400/35 bg-emerald-500/[0.06]"
-          : "border-white/8 bg-white/[0.025]"
-      }`}
-    >
+    <div className={`rounded-xl border px-4 py-3 transition ${border}`}>
       <div
-        className={`text-[10px] font-bold uppercase tracking-[0.18em] ${
-          isEmerald ? "text-emerald-300/80" : "text-white/45"
-        }`}
+        className={`text-[10px] font-bold uppercase tracking-[0.18em] ${labelColor}`}
       >
         {label}
       </div>
-      <div
-        className={`mt-1 text-xl font-semibold tracking-tight ${
-          isEmerald
-            ? "text-emerald-200 drop-shadow-[0_0_18px_rgba(52,211,153,0.35)]"
-            : "text-white"
-        }`}
-      >
+      <div className={`mt-1 text-xl font-semibold tracking-tight ${valueColor}`}>
         {value}
       </div>
     </div>

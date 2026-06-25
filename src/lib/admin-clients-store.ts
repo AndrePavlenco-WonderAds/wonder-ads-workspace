@@ -27,6 +27,13 @@ export const CLIENT_STATUSES = [
 ] as const;
 export type ClientStatus = (typeof CLIENT_STATUSES)[number];
 
+/** How this client gets invoiced — drives the Invoice Type dropdown
+ *  column on the Clients table. Canva (subscription billed through
+ *  Canva), Contabilidade (handled by the accountant), or Plataforma
+ *  (billed through an ad platform / SaaS). */
+export const INVOICE_TYPES = ["Canva", "Contabilidade", "Plataforma"] as const;
+export type InvoiceType = (typeof INVOICE_TYPES)[number];
+
 // Currency type is kept for forward compatibility (the field exists on
 // every record) but the UI only offers EUR now — the agency bills in
 // euros only. Any record carrying a stale USD value gets coerced to
@@ -147,14 +154,25 @@ export type AdminClientRecord = {
    *  without an immediate code change; the dropdown surfaces the
    *  canonical roster from `CONSULTANTS`. */
   consultants: string[];
-  /** Current engagement status — drives a coloured pill. */
+  /** Current engagement status — drives a coloured pill. Retained for
+   *  the Employees page's Active-Portfolio rollup even though the
+   *  Clients table no longer surfaces it as a column (v74.46). */
   status: ClientStatus;
+  /** How this client is invoiced — Canva / Contabilidade / Plataforma. */
+  invoiceType: InvoiceType;
+  /** Editable invoice date for this row (ISO yyyy-mm-dd). Replaced the
+   *  derived "next billing" column in v74.46 — empty by default; the
+   *  team fills it in manually. */
+  invoiceDate: string | null;
   /** Billing currency for this client. Mixed-currency rosters are
    *  rolled up per-currency in the panel header. */
   currency: Currency;
   /** Monthly equivalent value (raw number in the client's currency,
    *  no symbol). Used for the Active MRR roll-ups. */
   monthlyValue: number | null;
+  /** IVA amount in EUR for this row — editable, empty by default.
+   *  Summed across the table into the "Obrigações Fiscais" tile. */
+  iva: number | null;
   /** Free-form notes — payment quirks, special invoicing instructions,
    *  client contact preferences, etc. */
   notes: string;
@@ -185,8 +203,11 @@ export function defaultAdminRecord(
     consultants:
       seedName !== "Unassigned" && seedDept === department ? [seedName] : [],
     status: "active",
+    invoiceType: "Plataforma",
+    invoiceDate: null,
     currency: "EUR",
     monthlyValue: null,
+    iva: null,
     notes: "",
     updatedAt: new Date(0).toISOString(),
   };
@@ -207,10 +228,17 @@ function legacyKey(slug: string): string {
 /** Legacy record shape — pre-per-department / pre-multi-consultant /
  *  pre-currency. Used to migrate older KV entries on read so saves
  *  from before v74.15 keep rendering correctly. */
-type LegacyAdminRecord = Omit<AdminClientRecord, "department"> & {
+type LegacyAdminRecord = Omit<
+  AdminClientRecord,
+  "department" | "invoiceType" | "invoiceDate" | "iva"
+> & {
   department?: ClientDepartment;
   consultant?: string;
   monthlyValueEur?: number | null;
+  // v74.46 additions — optional on read so pre-v74.46 records migrate.
+  invoiceType?: InvoiceType;
+  invoiceDate?: string | null;
+  iva?: number | null;
 };
 
 /** Common normalisation — currency coerced to EUR, consultants array
@@ -242,6 +270,17 @@ function normaliseFields(
   const currency: Currency = "EUR";
   const startingDate =
     raw.startingDate ?? DEFAULT_STARTING_DATES[slug] ?? null;
+  const invoiceType: InvoiceType = (
+    INVOICE_TYPES as readonly string[]
+  ).includes(raw.invoiceType as string)
+    ? (raw.invoiceType as InvoiceType)
+    : base.invoiceType;
+  const invoiceDate =
+    typeof raw.invoiceDate === "string" &&
+    /^\d{4}-\d{2}-\d{2}$/.test(raw.invoiceDate)
+      ? raw.invoiceDate
+      : base.invoiceDate;
+  const iva = typeof raw.iva === "number" ? raw.iva : base.iva;
   return {
     ...base,
     ...raw,
@@ -251,6 +290,9 @@ function normaliseFields(
     currency,
     monthlyValue,
     startingDate,
+    invoiceType,
+    invoiceDate,
+    iva,
   };
 }
 

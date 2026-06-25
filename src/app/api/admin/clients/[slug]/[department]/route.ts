@@ -11,11 +11,13 @@ import {
   CLIENT_DEPARTMENTS,
   CLIENT_STATUSES,
   CURRENCIES,
+  INVOICE_TYPES,
   type AdminClientRecord,
   type BillingCadence,
   type ClientDepartment,
   type ClientStatus,
   type Currency,
+  type InvoiceType,
 } from "@/lib/admin-clients-store";
 
 export const runtime = "nodejs";
@@ -130,6 +132,47 @@ export async function PUT(
         );
       }
       patch.monthlyValue = Math.round(n * 100) / 100;
+    }
+  }
+
+  if (typeof body.invoiceType === "string") {
+    const v = body.invoiceType as InvoiceType;
+    if (!(INVOICE_TYPES as readonly string[]).includes(v)) {
+      return NextResponse.json(
+        { error: `invoiceType must be one of ${INVOICE_TYPES.join(", ")}` },
+        { status: 400 },
+      );
+    }
+    patch.invoiceType = v;
+  }
+
+  if ("invoiceDate" in body) {
+    const raw = body.invoiceDate;
+    if (raw === null || raw === "") {
+      patch.invoiceDate = null;
+    } else if (typeof raw === "string" && /^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+      patch.invoiceDate = raw;
+    } else {
+      return NextResponse.json(
+        { error: "invoiceDate must be yyyy-mm-dd or null" },
+        { status: 400 },
+      );
+    }
+  }
+
+  if ("iva" in body) {
+    const raw = body.iva;
+    if (raw === null || raw === "") {
+      patch.iva = null;
+    } else {
+      const n = typeof raw === "number" ? raw : Number(raw);
+      if (!Number.isFinite(n) || n < 0) {
+        return NextResponse.json(
+          { error: "iva must be a non-negative number or null" },
+          { status: 400 },
+        );
+      }
+      patch.iva = Math.round(n * 100) / 100;
     }
   }
 

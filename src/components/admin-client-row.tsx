@@ -1,27 +1,32 @@
 "use client";
 
-// Editable row inside the Admin Control Panel — one per client.
-// Owns local "draft" state so the consultant can edit every field,
-// then a single Save button persists the patch to KV via the API.
-// Save → success pill auto-dismisses after 2.5s.
+// Editable row inside the Clients table — one per (client, department).
+// Owns local "draft" state so the team can edit every field, then a
+// single Save button persists the patch to KV via the API. Save →
+// success pill auto-dismisses after 2.5s.
+//
+// v74.46: dropped the Consultants + Status columns (still stored, just
+// not surfaced here — the Employees page still reads them). Added
+// Invoice Type, an editable Invoice date (replacing the derived "next
+// billing"), and an IVA amount. Clicking the client name opens the
+// full-page detail pop-up.
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Loader2, Save, Check, X, Users, ChevronDown } from "lucide-react";
+import { useState } from "react";
+import { Loader2, Save, Check, X } from "lucide-react";
 import {
   BILLING_CADENCES,
-  CLIENT_STATUSES,
-  CONSULTANTS,
+  INVOICE_TYPES,
   cadenceLabel,
   cadenceMonths,
-  nextBillingDate,
   type AdminClientRecord,
   type BillingCadence,
   type ClientDepartment,
-  type ClientStatus,
+  type InvoiceType,
 } from "@/lib/admin-clients-store";
 import { formatDate } from "@/lib/dates";
 
 import { LogoChip } from "./logo-chip";
+import { ClientDetailModal } from "./client-detail-modal";
 import type { LogoBgMode, LogoSizing } from "@/lib/client-meta";
 
 type Props = {
@@ -41,25 +46,9 @@ type Props = {
   clientDepartments: ClientDepartment[];
   initial: AdminClientRecord;
   /** Notified after the server confirms a save. The parent panel uses
-   *  this to update its records map so the rollup tiles (MRR)
+   *  this to update its records map so the rollup tiles (MRR / IVA)
    *  recompute instantly without waiting on router.refresh(). */
   onSaved?: (record: AdminClientRecord) => void;
-};
-
-/** A billing date this close OR closer earns the amber "Approaching"
- *  pill on the Next billing column. */
-const APPROACHING_BILLING_DAYS = 14;
-const MS_PER_DAY = 86_400_000;
-
-const STATUS_PILL: Record<ClientStatus, string> = {
-  active:
-    "border-emerald-400/35 bg-emerald-500/10 text-emerald-200",
-  paused:
-    "border-amber-400/35 bg-amber-500/10 text-amber-200",
-  onboarding:
-    "border-sky-400/35 bg-sky-500/10 text-sky-200",
-  offboarded:
-    "border-rose-400/35 bg-rose-500/10 text-rose-200",
 };
 
 const DEPT_PILL: Record<string, string> = {
@@ -68,11 +57,11 @@ const DEPT_PILL: Record<string, string> = {
   Web: "border-cyan-400/45 bg-cyan-500/12 text-cyan-200",
 };
 
-function arraysShallowEqual(a: string[], b: string[]): boolean {
-  if (a.length !== b.length) return false;
-  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
-  return true;
-}
+const INVOICE_TYPE_PILL: Record<InvoiceType, string> = {
+  Canva: "border-sky-400/35 bg-sky-500/10 text-sky-200",
+  Contabilidade: "border-amber-400/35 bg-amber-500/10 text-amber-200",
+  Plataforma: "border-violet-400/35 bg-violet-500/10 text-violet-200",
+};
 
 export function AdminClientRow({
   slug,
@@ -94,56 +83,16 @@ export function AdminClientRow({
     "idle",
   );
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [consultantsOpen, setConsultantsOpen] = useState(false);
-  const consultantsRef = useRef<HTMLDivElement | null>(null);
-
-  // Close consultants dropdown on outside click + on Escape.
-  useEffect(() => {
-    if (!consultantsOpen) return;
-    function onDown(e: MouseEvent) {
-      if (
-        consultantsRef.current &&
-        !consultantsRef.current.contains(e.target as Node)
-      ) {
-        setConsultantsOpen(false);
-      }
-    }
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setConsultantsOpen(false);
-    }
-    document.addEventListener("mousedown", onDown);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onDown);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [consultantsOpen]);
+  const [detailOpen, setDetailOpen] = useState(false);
 
   const dirty =
     draft.billingCadence !== saved.billingCadence ||
     draft.startingDate !== saved.startingDate ||
-    !arraysShallowEqual(draft.consultants, saved.consultants) ||
-    draft.status !== saved.status ||
-    draft.currency !== saved.currency ||
+    draft.invoiceDate !== saved.invoiceDate ||
+    draft.invoiceType !== saved.invoiceType ||
     draft.monthlyValue !== saved.monthlyValue ||
+    draft.iva !== saved.iva ||
     draft.notes !== saved.notes;
-
-  const nextBilling = useMemo(
-    () => nextBillingDate(draft.startingDate, draft.billingCadence),
-    [draft.startingDate, draft.billingCadence],
-  );
-
-  function toggleConsultant(name: string) {
-    setDraft((d) => {
-      const has = d.consultants.includes(name);
-      return {
-        ...d,
-        consultants: has
-          ? d.consultants.filter((c) => c !== name)
-          : [...d.consultants, name],
-      };
-    });
-  }
 
   async function save() {
     setState("saving");
@@ -157,10 +106,10 @@ export function AdminClientRow({
           body: JSON.stringify({
             billingCadence: draft.billingCadence,
             startingDate: draft.startingDate,
-            consultants: draft.consultants,
-            status: draft.status,
-            currency: draft.currency,
+            invoiceDate: draft.invoiceDate,
+            invoiceType: draft.invoiceType,
             monthlyValue: draft.monthlyValue,
+            iva: draft.iva,
             notes: draft.notes,
             clientDepartments,
           }),
@@ -194,7 +143,7 @@ export function AdminClientRow({
       className="border-b border-white/5 align-top transition hover:bg-white/[0.015]"
       data-dirty={dirty ? "true" : "false"}
     >
-      {/* Client */}
+      {/* Client — name opens the full-page detail pop-up */}
       <td className="px-4 py-3.5">
         <div className="flex items-start gap-2.5">
           <div className="mt-0.5 shrink-0">
@@ -209,9 +158,14 @@ export function AdminClientRow({
             />
           </div>
           <div className="min-w-0">
-            <div className="truncate text-[13px] font-semibold text-white">
+            <button
+              type="button"
+              onClick={() => setDetailOpen(true)}
+              className="truncate text-left text-[13px] font-semibold text-white underline-offset-2 transition hover:text-[#c9b3ff] hover:underline"
+              title="Abrir detalhe do cliente"
+            >
               {title}
-            </div>
+            </button>
             <div className="mt-0.5 flex flex-wrap items-center gap-1">
               <span
                 className={`rounded border px-1.5 py-px text-[9.5px] font-bold uppercase tracking-[0.16em] ${
@@ -275,167 +229,40 @@ export function AdminClientRow({
         </div>
       </td>
 
-      {/* Next billing — derived */}
-      <td className="px-3 py-3.5 text-[12px]">
-        {(() => {
-          const approaching =
-            nextBilling !== null &&
-            (nextBilling.getTime() - Date.now()) / MS_PER_DAY <=
-              APPROACHING_BILLING_DAYS;
-          return (
-            <>
-              <span
-                className={
-                  approaching
-                    ? "font-semibold text-amber-200"
-                    : "text-white/80"
-                }
-              >
-                {nextBilling ? formatDate(nextBilling) : "—"}
-              </span>
-              {approaching ? (
-                <div className="mt-1 inline-flex items-center gap-1 rounded border border-amber-400/55 bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-amber-200">
-                  <span
-                    aria-hidden
-                    className="inline-flex h-1.5 w-1.5 rounded-full bg-amber-300"
-                  />
-                  Approaching
-                </div>
-              ) : (
-                <div className="mt-1 text-[10.5px] text-white/40">
-                  Auto-computed
-                </div>
-              )}
-            </>
-          );
-        })()}
-      </td>
-
-      {/* Consultants — multi-select dropdown. Flags vibrant rose when
-          no consultant is assigned so unattributed rows pop on the
-          board (same emphasis treatment as empty Monthly value). */}
+      {/* Invoice date — editable, empty by default */}
       <td className="px-3 py-3.5">
-        <div ref={consultantsRef} className="relative">
-          <button
-            type="button"
-            onClick={() => setConsultantsOpen((o) => !o)}
-            className={`flex w-full items-center justify-between gap-1.5 rounded-md border px-2 py-1.5 text-left text-[12px] outline-none transition focus:border-white/30 ${
-              draft.consultants.length === 0
-                ? "border-rose-400/55 bg-rose-500/[0.08] text-rose-100 shadow-[0_0_0_1px_rgba(244,63,94,0.18)] hover:border-rose-300"
-                : "border-white/10 bg-white/[0.04] text-white hover:border-white/20"
-            }`}
-            aria-haspopup="listbox"
-            aria-expanded={consultantsOpen}
-          >
-            <span className="flex flex-1 flex-wrap items-center gap-1">
-              {draft.consultants.length === 0 ? (
-                <span className="font-semibold text-rose-200">Unassigned</span>
-              ) : (
-                draft.consultants.map((c) => (
-                  <span
-                    key={c}
-                    className="rounded border border-white/15 bg-white/[0.05] px-1.5 py-0.5 text-[10.5px] text-white/85"
-                  >
-                    {c}
-                  </span>
-                ))
-              )}
-            </span>
-            <ChevronDown
-              className={`h-3 w-3 shrink-0 transition ${
-                consultantsOpen ? "rotate-180" : ""
-              } ${
-                draft.consultants.length === 0
-                  ? "text-rose-300"
-                  : "text-white/40"
-              }`}
-            />
-          </button>
-          {consultantsOpen && (
-            <div
-              role="listbox"
-              aria-multiselectable="true"
-              className="absolute left-0 right-0 top-full z-30 mt-1 rounded-md border border-white/12 bg-[#0c0c12] py-1 shadow-2xl shadow-black/60"
-            >
-              <div className="border-b border-white/8 px-2.5 py-1.5 text-[9.5px] font-bold uppercase tracking-[0.16em] text-white/45">
-                <span className="inline-flex items-center gap-1.5">
-                  <Users className="h-3 w-3" />
-                  Assign consultants
-                </span>
-              </div>
-              {CONSULTANTS.map((name) => {
-                const checked = draft.consultants.includes(name);
-                return (
-                  <button
-                    key={name}
-                    type="button"
-                    onClick={() => toggleConsultant(name)}
-                    className="flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-[12px] text-white/85 transition hover:bg-white/[0.04]"
-                    role="option"
-                    aria-selected={checked}
-                  >
-                    <span
-                      className={`flex h-3.5 w-3.5 items-center justify-center rounded border ${
-                        checked
-                          ? "brand-gradient-bg border-transparent"
-                          : "border-white/25 bg-transparent"
-                      }`}
-                    >
-                      {checked && <Check className="h-2.5 w-2.5 text-white" />}
-                    </span>
-                    <span>{name}</span>
-                  </button>
-                );
-              })}
-              {/* Honour names already saved that aren't in the canonical
-                  roster — show them as toggleable so the consultant can
-                  remove them without losing the row state. */}
-              {draft.consultants
-                .filter(
-                  (c) =>
-                    !(CONSULTANTS as readonly string[]).includes(c),
-                )
-                .map((name) => (
-                  <button
-                    key={`custom-${name}`}
-                    type="button"
-                    onClick={() => toggleConsultant(name)}
-                    className="flex w-full items-center gap-2 border-t border-white/8 px-2.5 py-1.5 text-left text-[12px] text-white/85 transition hover:bg-white/[0.04]"
-                    role="option"
-                    aria-selected
-                  >
-                    <span className="brand-gradient-bg flex h-3.5 w-3.5 items-center justify-center rounded border border-transparent">
-                      <Check className="h-2.5 w-2.5 text-white" />
-                    </span>
-                    <span>
-                      {name}
-                      <span className="ml-1 text-[9.5px] uppercase tracking-[0.14em] text-white/35">
-                        legacy
-                      </span>
-                    </span>
-                  </button>
-                ))}
-            </div>
-          )}
-        </div>
-        <div
-          className={`mt-1 text-[10.5px] ${
-            draft.consultants.length === 0
-              ? "font-semibold text-rose-300"
-              : "text-white/40"
-          }`}
-        >
-          {draft.consultants.length === 0
-            ? "Missing — assign a consultant"
-            : `${draft.consultants.length} ${
-                draft.consultants.length === 1 ? "consultant" : "consultants"
-              }`}
+        <input
+          type="date"
+          value={draft.invoiceDate ?? ""}
+          onChange={(e) =>
+            setDraft({ ...draft, invoiceDate: e.target.value || null })
+          }
+          className="w-full rounded-md border border-white/10 bg-white/[0.04] px-2 py-1.5 text-[12px] text-white outline-none transition focus:border-white/30"
+        />
+        <div className="mt-1 text-[10.5px] text-white/40">
+          {draft.invoiceDate ? formatDate(draft.invoiceDate) : "Not set"}
         </div>
       </td>
 
-      {/* Monthly value — emphasized column, EUR-locked.
-          Empty cells get a vibrant rose ring + tint so unfilled
-          clients pop on the board. */}
+      {/* Invoice Type — Canva / Contabilidade / Plataforma */}
+      <td className="px-3 py-3.5">
+        <select
+          value={draft.invoiceType}
+          onChange={(e) =>
+            setDraft({ ...draft, invoiceType: e.target.value as InvoiceType })
+          }
+          className={`w-full rounded-md border px-2 py-1.5 text-[12px] font-medium outline-none transition focus:border-white/30 ${INVOICE_TYPE_PILL[draft.invoiceType]}`}
+        >
+          {INVOICE_TYPES.map((t) => (
+            <option key={t} value={t} className="bg-[#111] text-white">
+              {t}
+            </option>
+          ))}
+        </select>
+      </td>
+
+      {/* Monthly value — emphasized column, EUR-locked. Empty cells get
+          a vibrant rose ring + tint so unfilled clients pop. */}
       <td className="px-3 py-3.5">
         {(() => {
           const isEmpty = draft.monthlyValue === null;
@@ -487,21 +314,31 @@ export function AdminClientRow({
         })()}
       </td>
 
-      {/* Status */}
+      {/* IVA — editable EUR amount, feeds the Obrigações Fiscais tile */}
       <td className="px-3 py-3.5">
-        <select
-          value={draft.status}
-          onChange={(e) =>
-            setDraft({ ...draft, status: e.target.value as ClientStatus })
-          }
-          className={`w-full rounded-md border px-2 py-1.5 text-[12px] font-medium outline-none transition focus:border-white/30 ${STATUS_PILL[draft.status]}`}
-        >
-          {CLIENT_STATUSES.map((s) => (
-            <option key={s} value={s} className="bg-[#111] text-white">
-              {s.charAt(0).toUpperCase() + s.slice(1)}
-            </option>
-          ))}
-        </select>
+        <div className="flex items-stretch gap-1">
+          <div
+            className="flex shrink-0 items-center justify-center rounded-md border border-rose-400/40 bg-rose-500/[0.10] px-2.5 text-[13px] font-semibold text-rose-200"
+            aria-hidden
+            title="IVA (euros)"
+          >
+            €
+          </div>
+          <input
+            type="number"
+            inputMode="decimal"
+            step="0.01"
+            min="0"
+            value={draft.iva ?? ""}
+            onChange={(e) => {
+              const raw = e.target.value;
+              setDraft({ ...draft, iva: raw === "" ? null : Number(raw) });
+            }}
+            placeholder="0"
+            className="w-full rounded-md border border-white/18 bg-white/[0.05] px-2.5 py-2 text-right text-[14px] font-semibold tabular-nums text-white outline-none transition placeholder:text-white/30 focus:border-white/40"
+          />
+        </div>
+        <div className="mt-1 text-right text-[10.5px] text-white/45">IVA · EUR</div>
       </td>
 
       {/* Notes */}
@@ -535,9 +372,7 @@ export function AdminClientRow({
             {state === "saving" && <Loader2 className="h-3 w-3 animate-spin" />}
             {state === "saved" && <Check className="h-3 w-3" />}
             {state === "error" && <X className="h-3 w-3" />}
-            {(state === "idle" || state === "saving") && dirty && state !== "saving" && (
-              <Save className="h-3 w-3" />
-            )}
+            {state === "idle" && dirty && <Save className="h-3 w-3" />}
             {state === "saving"
               ? "Saving"
               : state === "saved"
@@ -567,6 +402,60 @@ export function AdminClientRow({
           )}
         </div>
       </td>
+
+      {detailOpen && (
+        <ClientDetailModalPortal
+          slug={slug}
+          title={title}
+          logo={logo}
+          icon={icon}
+          gradient={gradient}
+          logoBgMode={logoBgMode}
+          logoSizing={logoSizing}
+          onClose={() => setDetailOpen(false)}
+        />
+      )}
     </tr>
+  );
+}
+
+/** Thin wrapper so the heavy modal (+ its blob-upload deps) is only
+ *  mounted when actually opened, and so the logo chip is built once. */
+function ClientDetailModalPortal({
+  slug,
+  title,
+  logo,
+  icon,
+  gradient,
+  logoBgMode,
+  logoSizing,
+  onClose,
+}: {
+  slug: string;
+  title: string;
+  logo: string | null;
+  icon: string | null;
+  gradient: string;
+  logoBgMode: LogoBgMode;
+  logoSizing: LogoSizing;
+  onClose: () => void;
+}) {
+  return (
+    <ClientDetailModal
+      slug={slug}
+      clientName={title}
+      logo={
+        <LogoChip
+          logo={logo}
+          emoji={icon}
+          alt={`${title} logo`}
+          gradient={gradient}
+          size="sm"
+          bgMode={logoBgMode}
+          sizing={logoSizing}
+        />
+      }
+      onClose={onClose}
+    />
   );
 }

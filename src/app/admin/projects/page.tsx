@@ -22,7 +22,7 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export const metadata = {
-  title: "Projects · SuperAdmin — Wonder Ads Workspace",
+  title: "Clients · SuperAdmin — Wonder Ads Workspace",
 };
 
 export default async function ProjectsAdminPage() {

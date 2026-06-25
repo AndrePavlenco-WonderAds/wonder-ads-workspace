@@ -13,6 +13,19 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.50",
+    date: "2026-06-25",
+    title: "Admin — 'Projects' passa a 'Clients' + pop-up de cliente (contactos, emails, notas, faturas) e nova fiscalidade",
+    highlights: [
+      "**🏷️ 'Projects' → 'Clients'.** O bloco do SuperAdmin Suite e a própria tabela passam a chamar-se **Clients** (era 'Projects').",
+      "**🪟 Pop-up de cliente em ecrã inteiro.** Clicar no nome de um cliente abre um pop-up com **5 abas**: **Contactos** (emails/telefones de faturação), **Email p/ Contabilidade** (template de pedido de fatura à contabilista, com **copiar** + **editar**), **Email p/ Cliente** (template de pedido de pagamento, com copiar + editar), **Notas** e **Faturas** (upload de faturas anteriores). Os dados são **partilhados por cliente** entre SEO/ADS.",
+      "**🧾 Invoice Type.** Saiu a coluna **Consultores**; entrou **Invoice Type** (dropdown: **Canva**, **Contabilidade** ou **Plataforma**).",
+      "**🗑️ Coluna Status removida** da tabela de clientes (continua a existir nos bastidores para o Portfólio Ativo dos Employees).",
+      "**📅 'Next billing' → 'Invoice date'.** A coluna deixa de ser calculada e passa a ser uma **data editável**, vazia por agora.",
+      "**💶 Coluna IVA + 'Obrigações Fiscais'.** Nova coluna **IVA** (€, editável) à direita do Monthly Value, e novo **bloco vermelho 'Obrigações Fiscais'** no topo (ao lado do MRR) que **soma toda a coluna do IVA**.",
+    ],
+  },
+  {
     version: "74.49",
     date: "2026-06-24",
     title: "SEO Blog Writer — internal linking a partir do sitemap real (gate de 75%)",

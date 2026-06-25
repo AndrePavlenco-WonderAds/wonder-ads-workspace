@@ -33,9 +33,9 @@ export function AdminLanding({
   const blocks: ChoiceBlock[] = [
     {
       href: "/admin/projects",
-      title: "Projects",
+      title: "Clients",
       blurb:
-        "Every client across SEO + ADS. Billing cadence, starting date, consultants, monthly value, status, notes.",
+        "Every client across SEO + ADS. Billing cadence, starting & invoice dates, invoice type, monthly value, IVA, contacts, invoices & notes.",
       count: projectsCount,
       badge: projectsCount === 1 ? "client" : "clients",
       Icon: FolderKanban,
