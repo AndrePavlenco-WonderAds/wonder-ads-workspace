@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.55",
+    date: "2026-06-25",
+    title: "ADS DPT — Campaign Vault + ADS Advisor (Claude pro em ads) + tags mais bonitas",
+    highlights: [
+      "**🗂️ Campaign Vault.** Nova zona só do ADS DPT, **única por cliente** (separada dos Client Files): guarda **briefings, criativos/copys e reports mensais anteriores**, com tipo (Briefing/Criativos/Report/…), plataforma (Google/Meta), upload de ficheiros ou links.",
+      "**🤖 Pedir Aconselhamento AI.** Botão que abre o **ADS Advisor** — um agente Claude **especialista PRO em Google Ads e Meta Ads**. A primeira mensagem é dele: analisa as **analytics dos últimos 30 dias** + **todo o Campaign Vault** e dá diagnóstico e prioridades; depois conversas à vontade. Nunca inventa métricas — se a plataforma não estiver ligada, diz-o.",
+      "**✨ Tags mais bonitas.** Os badges do cabeçalho do cliente (Active, Google Ads, Meta Ads, tier, website) ganharam pills com glow subtil, anel interior e pontos de cor.",
+    ],
+  },
+  {
     version: "74.54",
     date: "2026-06-25",
     title: "ADS DPT — dashboard de cliente reformulada (full-width, dados reais, reports)",

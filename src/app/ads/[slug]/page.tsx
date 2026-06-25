@@ -6,10 +6,12 @@ import { ClientBrief } from "@/components/client-brief";
 import { ClientFiles } from "@/components/client-files";
 import { LogoChip } from "@/components/logo-chip";
 import { AdsDashboard } from "@/components/ads-dashboard";
+import { AdsCampaignVault } from "@/components/ads-campaign-vault";
 import { getBriefForSlug } from "@/lib/briefs-storage";
 import { ADS_CLIENTS, getAdsClient } from "@/lib/ads-clients";
 import { getAdsPerformance, type AdsPlatform } from "@/lib/ads/ads-data";
 import { getAdsReports } from "@/lib/ads/ads-reports-store";
+import { getVault } from "@/lib/ads/ads-vault-store";
 import {
   getClientWebsite,
   displayDomain,
@@ -47,10 +49,11 @@ export default async function AdsClientPage({
   if (!client) notFound();
 
   const channels: AdsPlatform[] = (client.channels as AdsPlatform[]) ?? [];
-  const [brief, performance, reports] = await Promise.all([
+  const [brief, performance, reports, vault] = await Promise.all([
     getBriefForSlug(slug),
     getAdsPerformance(slug, { platform: "all", window: { mode: "week" } }),
     getAdsReports(slug),
+    getVault(slug),
   ]);
   const website = getClientWebsite(slug);
   const logo = getClientLogo(slug);
@@ -92,25 +95,31 @@ export default async function AdsClientPage({
           <h1 className="text-3xl font-semibold leading-tight tracking-tight text-white sm:text-4xl">
             {client.title}
           </h1>
-          <div className="mt-2 flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/35 bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-200">
-              <CheckCircle2 className="h-3 w-3" /> Active
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/45 bg-emerald-500/[0.12] px-3 py-1 text-[12px] font-semibold text-emerald-200 shadow-[0_0_18px_-6px_rgba(16,185,129,0.7)] ring-1 ring-inset ring-emerald-400/10">
+              <CheckCircle2 className="h-3.5 w-3.5" /> Active
             </span>
             {channels.map((c) => (
               <span
                 key={c}
-                className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-semibold"
+                className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[12px] font-semibold ring-1 ring-inset ring-white/5"
                 style={{
-                  borderColor: `${PLATFORM_BADGE[c].color}66`,
-                  background: `${PLATFORM_BADGE[c].color}1a`,
+                  borderColor: `${PLATFORM_BADGE[c].color}80`,
+                  background: `${PLATFORM_BADGE[c].color}1f`,
                   color: PLATFORM_BADGE[c].color,
+                  boxShadow: `0 0 18px -7px ${PLATFORM_BADGE[c].color}`,
                 }}
               >
+                <span
+                  aria-hidden
+                  className="h-2 w-2 rounded-full"
+                  style={{ background: PLATFORM_BADGE[c].color }}
+                />
                 {PLATFORM_BADGE[c].label}
               </span>
             ))}
             {tier && (
-              <span className="inline-flex items-center rounded-full border border-[#783DF5]/40 bg-[#783DF5]/12 px-2.5 py-0.5 text-[11px] font-semibold capitalize text-[#d4c4ff]">
+              <span className="inline-flex items-center rounded-full border border-[#783DF5]/55 bg-[#783DF5]/[0.16] px-3 py-1 text-[12px] font-semibold capitalize text-[#d8c8ff] shadow-[0_0_18px_-7px_#783DF5] ring-1 ring-inset ring-[#783DF5]/15">
                 {tier}
               </span>
             )}
@@ -119,10 +128,10 @@ export default async function AdsClientPage({
                 href={website}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-0.5 text-[11px] font-medium text-white/65 transition hover:border-white/25 hover:bg-white/[0.08] hover:text-white"
+                className="inline-flex items-center gap-1.5 rounded-full border border-white/12 bg-white/[0.05] px-3 py-1 text-[12px] font-medium text-white/70 transition hover:border-white/30 hover:bg-white/[0.09] hover:text-white"
               >
                 {displayDomain(website)}
-                <ExternalLink className="h-3 w-3" />
+                <ExternalLink className="h-3 w-3 opacity-70" />
               </a>
             )}
           </div>
@@ -135,6 +144,13 @@ export default async function AdsClientPage({
         channels={channels}
         initialPerformance={performance}
         initialReports={reports}
+      />
+
+      {/* Campaign Vault — ADS-only, unique per client */}
+      <AdsCampaignVault
+        slug={slug}
+        clientName={client.title}
+        initialItems={vault}
       />
 
       {/* Brief / Files moved to the bottom */}
