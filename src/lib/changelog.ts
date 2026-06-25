@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.54",
+    date: "2026-06-25",
+    title: "ADS DPT — dashboard de cliente reformulada (full-width, dados reais, reports)",
+    highlights: [
+      "**📊 Dashboard full-width.** Ao abrir um cliente do ADS DPT, a página passa a ser um **dashboard de performance a toda a largura**: KPI Snapshot (Conversões, ROAS, CTR, CPA, Spend), **Top campanhas por conversão** e gráfico de **conversões por período** (Google vs Meta).",
+      "**🗓️ Janela com dias.** O seletor de período passa a ter **Semana · Mês · Trimestre · Dias** — o modo 'Dias' deixa escolher o nº de dias (com presets 7/14/30/90).",
+      "**🔌 Atenção! Conectar a API.** Quando o Google Ads ou Meta Ads não está ligado à app, aparece um alerta a pedir ligação. **Os dados são SEMPRE reais e puxados das plataformas — nunca inventados.** Sem ligação, os KPIs/campanhas ficam vazios em vez de mostrar números falsos.",
+      "**🧾 Reports automáticos.** Nova secção no fim com os reports gerados, a **data do pedido** e um botão **PDF** para abrir/descarregar (snapshot dos KPIs guardado). 'Gerar report' / 'Export PDF' criam um novo.",
+      "**📁 Brief no fim.** Do's, Don'ts, Notas e Ficheiros passaram para o **fundo da página**.",
+    ],
+  },
+  {
     version: "74.53.1",
     date: "2026-06-25",
     title: "Próximas ações — apagar permanentemente uma ação concluída",
