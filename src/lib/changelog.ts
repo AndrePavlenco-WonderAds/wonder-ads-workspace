@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.56",
+    date: "2026-06-25",
+    title: "ADS DPT — Creatives Studio (Claude Creatives Pro Max) + reports em inglês para clientes ingleses",
+    highlights: [
+      "**🪄 Gerar Creatives.** Novo botão (grande, com gradiente) na zona de Files que abre uma **nova aba — Creatives Studio**.",
+      "**🎨 Creatives Studio.** Tem **brief** (ideia/ponto de partida, direcionamentos, **copy a usar**, plataforma, formato), chat com o **Claude Creatives Pro Max** (agente especialista em criativos de Google/Meta — gera conceitos, hooks, headlines, copy e direção visual) e **histórico de criações anteriores** (guardar, reabrir, apagar).",
+      "**🇬🇧 Reports em inglês.** Para clientes ingleses (ex.: **IHN**), os reports do ADS passam a ser **sempre em inglês** (label, período e textos). Os criativos gerados também saem na língua do cliente.",
+    ],
+  },
+  {
     version: "74.55",
     date: "2026-06-25",
     title: "ADS DPT — Campaign Vault + ADS Advisor (Claude pro em ads) + tags mais bonitas",

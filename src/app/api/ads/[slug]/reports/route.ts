@@ -8,7 +8,45 @@ import {
   addAdsReport,
   deleteAdsReport,
 } from "@/lib/ads/ads-reports-store";
-import { getAdsPerformance, parseWindow, windowLabel, type PlatformFilter } from "@/lib/ads/ads-data";
+import { getAdsPerformance, parseWindow, windowLabel, type AdsWindow, type PlatformFilter } from "@/lib/ads/ads-data";
+import { getClientLocale } from "@/lib/client-locale";
+
+function localizedWindowLabel(w: AdsWindow, locale: "pt" | "en"): string {
+  if (locale === "pt") return windowLabel(w);
+  switch (w.mode) {
+    case "week":
+      return "This week";
+    case "month":
+      return "This month";
+    case "quarter":
+      return "This quarter";
+    case "days":
+      return `Last ${w.days} days`;
+  }
+}
+
+function reportKind(mode: string, locale: "pt" | "en"): string {
+  const map = {
+    pt: {
+      week: "Report semanal",
+      month: "Report mensal",
+      quarter: "Report trimestral",
+      days: "Report",
+    },
+    en: {
+      week: "Weekly report",
+      month: "Monthly report",
+      quarter: "Quarterly report",
+      days: "Report",
+    },
+  } as const;
+  const m = (["week", "month", "quarter", "days"] as const).includes(
+    mode as "week",
+  )
+    ? (mode as "week" | "month" | "quarter" | "days")
+    : "days";
+  return map[locale][m];
+}
 
 export const runtime = "nodejs";
 
@@ -42,11 +80,15 @@ export async function POST(
     body.platform === "google" || body.platform === "meta"
       ? body.platform
       : "all";
+  const windowMode = typeof body.windowMode === "string" ? body.windowMode : "week";
   const window = parseWindow(
-    typeof body.windowMode === "string" ? body.windowMode : null,
+    windowMode,
     typeof body.days === "number" ? String(body.days) : null,
   );
-  const kind = typeof body.kind === "string" ? body.kind : "Report";
+  // Localise the report label by the client's language (EN for English
+  // clients like IHN, PT otherwise) rather than trusting the client body.
+  const locale = getClientLocale(slug);
+  const kind = reportKind(windowMode, locale);
 
   // Snapshot the CURRENT real performance (null KPIs when not connected —
   // we never snapshot invented numbers).
@@ -54,7 +96,7 @@ export async function POST(
   try {
     const report = await addAdsReport(slug, {
       kind,
-      windowLabel: windowLabel(window),
+      windowLabel: localizedWindowLabel(window, locale),
       platform,
       kpis: perf.kpis,
     });

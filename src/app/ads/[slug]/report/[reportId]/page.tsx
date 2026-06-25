@@ -10,7 +10,31 @@ import { getAdsReport } from "@/lib/ads/ads-reports-store";
 import { getAdsClient } from "@/lib/ads-clients";
 import { ReportDownloadButton } from "@/components/report-download-button";
 import { formatDateTime } from "@/lib/dates";
+import { getClientLocale } from "@/lib/client-locale";
 import type { AdsKpis } from "@/lib/ads/ads-data";
+
+// Client-facing copy is localised — English clients (e.g. IHN) get
+// English reports, everyone else PT-PT.
+const T = {
+  pt: {
+    dept: "ADS Department",
+    snapshot: "KPI Snapshot",
+    generatedAt: "gerado em",
+    emptyStrong: "Sem dados.",
+    empty:
+      "No momento do pedido a(s) plataforma(s) não estava(m) ligada(s) à app, por isso este report não contém métricas. Liga o Google Ads / Meta Ads e gera um novo report para puxar dados reais.",
+    footer: "ADS Department",
+  },
+  en: {
+    dept: "ADS Department",
+    snapshot: "KPI Snapshot",
+    generatedAt: "generated on",
+    emptyStrong: "No data.",
+    empty:
+      "The platform(s) weren't connected to the app when this report was requested, so it contains no metrics. Connect Google Ads / Meta Ads and generate a new report to pull real data.",
+    footer: "ADS Department",
+  },
+} as const;
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -38,6 +62,7 @@ export default async function AdsReportPage({
   ]);
   if (!report || !client) notFound();
 
+  const t = T[getClientLocale(slug)];
   const kpis: AdsKpis | null = report.kpis;
   const pdfTitle = `${client.title} — ${report.kind} — Wonder Ads`;
   const generated = formatDateTime(report.requestedAt);
@@ -74,18 +99,18 @@ export default async function AdsReportPage({
                 </span>
               </div>
               <div className="rep-hero-dept">
-                ADS Department
+                {t.dept}
                 <span className="small">{PLATFORM_LABEL[report.platform]}</span>
               </div>
             </div>
             <h1 className="rep-hero-title">{client.title}</h1>
             <div className="rep-hero-sub">
-              {report.kind} · {report.windowLabel} · gerado em {generated}
+              {report.kind} · {report.windowLabel} · {t.generatedAt} {generated}
             </div>
           </header>
 
           <section className="rep-section">
-            <h2 className="rep-h2">KPI Snapshot</h2>
+            <h2 className="rep-h2">{t.snapshot}</h2>
             {kpis ? (
               <div className="rep-kpis">
                 {cards.map((c) => (
@@ -97,17 +122,14 @@ export default async function AdsReportPage({
               </div>
             ) : (
               <div className="rep-empty">
-                <strong>Sem dados.</strong> No momento do pedido a(s)
-                plataforma(s) não estava(m) ligada(s) à app, por isso este
-                report não contém métricas. Liga o Google Ads / Meta Ads e gera
-                um novo report para puxar dados reais.
+                <strong>{t.emptyStrong}</strong> {t.empty}
               </div>
             )}
           </section>
 
           <footer className="rep-footer">
-            Wonder Ads · ADS Department · {client.title} · gerado em {generated}
-            {" · "}wonder-ads.com
+            Wonder Ads · {t.footer} · {client.title} · {t.generatedAt}{" "}
+            {generated} · wonder-ads.com
           </footer>
         </div>
       </body>

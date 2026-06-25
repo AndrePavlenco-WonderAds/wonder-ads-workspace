@@ -171,7 +171,11 @@ export default async function AdsClientPage({
         </div>
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[3fr_2fr]">
           <ClientBrief brief={brief} slug={slug} clientName={client.title} />
-          <ClientFiles slug={slug} clientName={client.title} />
+          <ClientFiles
+            slug={slug}
+            clientName={client.title}
+            creativesHref={`/ads/${slug}/creatives`}
+          />
         </div>
       </section>
     </PageShell>

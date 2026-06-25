@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import Link from "next/link";
 import {
   FolderOpen,
   Upload,
@@ -12,6 +13,7 @@ import {
   Film,
   FileText,
   ExternalLink,
+  Wand2,
 } from "lucide-react";
 import { upload } from "@vercel/blob/client";
 import type { ClientFile } from "@/lib/client-files";
@@ -30,9 +32,13 @@ function sameFiles(a: ClientFile[], b: ClientFile[]): boolean {
 export function ClientFiles({
   slug,
   clientName,
+  creativesHref,
 }: {
   slug: string;
   clientName: string;
+  /** When set (ADS DPT), shows a prominent "Gerar Creatives" button that
+   *  links to the Creatives Studio for this client. */
+  creativesHref?: string;
 }) {
   const [files, setFiles] = useState<ClientFile[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -226,7 +232,22 @@ export function ClientFiles({
           </span>
         )}
 
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          {creativesHref && (
+            <Link
+              href={creativesHref}
+              target="_blank"
+              className="group/cr relative inline-flex items-center gap-2 overflow-hidden rounded-full px-4 py-2 text-sm font-bold tracking-tight text-white shadow-[0_8px_28px_-6px_rgba(120,61,245,0.7)] transition hover:scale-[1.03]"
+              style={{ background: "var(--brand-gradient)" }}
+            >
+              <span
+                aria-hidden
+                className="absolute inset-0 -translate-x-full bg-white/20 transition-transform duration-500 group-hover/cr:translate-x-full"
+              />
+              <Wand2 className="h-4 w-4" strokeWidth={2.5} />
+              Gerar Creatives
+            </Link>
+          )}
           <button
             type="button"
             onClick={() => setAddingLink((v) => !v)}
