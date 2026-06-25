@@ -56,38 +56,38 @@ const MONTHS = [
 const COLOR: Record<EventColor, { chip: string; dot: string; swatch: string }> =
   {
     red: {
-      chip: "border-rose-400/40 bg-rose-500/20 text-rose-100",
-      dot: "bg-rose-400",
+      chip: "border-rose-400/55 bg-rose-500/30 text-rose-50",
+      dot: "bg-rose-300",
       swatch: "bg-rose-500",
     },
     amber: {
-      chip: "border-amber-400/40 bg-amber-500/20 text-amber-100",
-      dot: "bg-amber-400",
+      chip: "border-amber-400/55 bg-amber-500/30 text-amber-50",
+      dot: "bg-amber-300",
       swatch: "bg-amber-500",
     },
     green: {
-      chip: "border-emerald-400/40 bg-emerald-500/20 text-emerald-100",
-      dot: "bg-emerald-400",
+      chip: "border-emerald-400/55 bg-emerald-500/30 text-emerald-50",
+      dot: "bg-emerald-300",
       swatch: "bg-emerald-500",
     },
     blue: {
-      chip: "border-sky-400/40 bg-sky-500/20 text-sky-100",
-      dot: "bg-sky-400",
+      chip: "border-sky-400/55 bg-sky-500/30 text-sky-50",
+      dot: "bg-sky-300",
       swatch: "bg-sky-500",
     },
     violet: {
-      chip: "border-violet-400/40 bg-violet-500/20 text-violet-100",
-      dot: "bg-violet-400",
+      chip: "border-violet-400/55 bg-violet-500/30 text-violet-50",
+      dot: "bg-violet-300",
       swatch: "bg-violet-500",
     },
     cyan: {
-      chip: "border-cyan-400/40 bg-cyan-500/20 text-cyan-100",
-      dot: "bg-cyan-400",
+      chip: "border-cyan-400/55 bg-cyan-500/30 text-cyan-50",
+      dot: "bg-cyan-300",
       swatch: "bg-cyan-500",
     },
     slate: {
-      chip: "border-slate-400/40 bg-slate-500/20 text-slate-100",
-      dot: "bg-slate-400",
+      chip: "border-slate-400/55 bg-slate-500/30 text-slate-50",
+      dot: "bg-slate-300",
       swatch: "bg-slate-500",
     },
   };
@@ -334,12 +334,12 @@ export function CalendarView({
       </div>
 
       {/* Grid */}
-      <div className="mt-3 overflow-hidden rounded-2xl border border-white/10 bg-black/30">
-        <div className="grid grid-cols-7 border-b border-white/8 bg-black/40">
+      <div className="mt-3 overflow-hidden rounded-2xl border border-white/15 bg-white/[0.03]">
+        <div className="grid grid-cols-7 border-b border-white/12 bg-white/[0.06]">
           {WEEKDAYS.map((d) => (
             <div
               key={d}
-              className="px-2 py-2 text-center text-[10px] font-bold uppercase tracking-[0.16em] text-white/40"
+              className="px-2 py-2.5 text-center text-[10.5px] font-bold uppercase tracking-[0.16em] text-white/65"
             >
               {d}
             </div>
@@ -348,7 +348,7 @@ export function CalendarView({
         {weeks.map((week, wi) => (
           <div
             key={wi}
-            className="grid grid-cols-7 border-b border-white/6 last:border-b-0"
+            className="grid grid-cols-7 border-b border-white/10 last:border-b-0"
           >
             {week.map((cell) => {
               const dayEvents = eventsByDate.get(cell.iso) ?? [];
@@ -359,28 +359,28 @@ export function CalendarView({
                   type="button"
                   key={cell.iso}
                   onClick={() => openNew(cell.iso)}
-                  className={`group min-h-[120px] border-r border-white/6 px-1.5 py-1.5 text-left align-top transition last:border-r-0 hover:bg-white/[0.025] ${
-                    cell.inMonth ? "" : "opacity-40"
+                  className={`group min-h-[120px] border-r border-white/10 px-1.5 py-1.5 text-left align-top transition last:border-r-0 hover:bg-white/[0.06] ${
+                    cell.inMonth ? "bg-white/[0.015]" : "bg-black/20 opacity-55"
                   }`}
                 >
                   <div className="mb-1 flex items-center justify-between px-0.5">
                     <span
-                      className={`inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[11px] font-semibold tabular-nums ${
+                      className={`inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[11.5px] font-semibold tabular-nums ${
                         isToday
-                          ? "bg-[#783DF5] text-white"
-                          : "text-white/55"
+                          ? "bg-[#783DF5] text-white shadow-[0_0_14px_-2px_rgba(120,61,245,0.8)]"
+                          : "text-white/80"
                       }`}
                     >
                       {cell.date.getDate()}
                     </span>
-                    <Plus className="h-3 w-3 text-white/0 transition group-hover:text-white/35" />
+                    <Plus className="h-3 w-3 text-white/0 transition group-hover:text-white/45" />
                   </div>
                   <div className="space-y-1">
                     {dayInvoices.map((inv) => (
                       <span
                         key={inv.id}
                         title={`Fatura a enviar · ${inv.title} (${inv.department})`}
-                        className="flex items-center gap-1 truncate rounded border border-violet-400/30 bg-violet-500/15 px-1.5 py-0.5 text-[10.5px] text-violet-100"
+                        className="flex items-center gap-1 truncate rounded-md border border-violet-400/50 bg-violet-500/25 px-1.5 py-1 text-[11px] font-medium text-violet-50"
                       >
                         <ReceiptText className="h-2.5 w-2.5 shrink-0" />
                         <span className="truncate">{inv.title}</span>
@@ -402,7 +402,7 @@ export function CalendarView({
                           }
                         }}
                         title={ev.description || ev.title}
-                        className={`flex cursor-pointer items-center gap-1 truncate rounded border px-1.5 py-0.5 text-[10.5px] ${COLOR[ev.color].chip}`}
+                        className={`flex cursor-pointer items-center gap-1 truncate rounded-md border px-1.5 py-1 text-[11px] font-medium ${COLOR[ev.color].chip}`}
                       >
                         <span
                           className={`h-1.5 w-1.5 shrink-0 rounded-full ${COLOR[ev.color].dot}`}
@@ -418,7 +418,7 @@ export function CalendarView({
         ))}
       </div>
 
-      <p className="mt-3 text-[11px] text-white/35">
+      <p className="mt-3 text-[11.5px] text-white/55">
         Clica num dia para adicionar um evento · clica num evento para editar.
         As faturas (a roxo) vêm das datas de fatura dos clientes.
       </p>

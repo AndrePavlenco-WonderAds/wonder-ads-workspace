@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.51.1",
+    date: "2026-06-25",
+    title: "Overview Calendário — grelha mais clara e legível",
+    highlights: [
+      "**🔆 Calendário mais claro.** Células com fundo mais claro e separadores mais visíveis, números dos dias com mais contraste, cabeçalho dos dias da semana mais legível e os blocos de faturas/eventos com cores mais vivas e texto maior — tudo mais fácil de ler num relance.",
+    ],
+  },
+  {
     version: "74.51",
     date: "2026-06-25",
     title: "Admin — Próximas ações (7/30 dias) + Overview Calendário com eventos personalizáveis",
