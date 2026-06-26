@@ -94,7 +94,7 @@ export default async function SeoPage() {
         count={clients.length || undefined}
         countLabel="clients"
         countSuffix={
-          organic.configured && organic.total > 0 ? (
+          organic.configured ? (
             <OrganicVisitorsBadge total={organic.total} />
           ) : undefined
         }
@@ -187,7 +187,11 @@ function NotionFallback({ message }: { message: string }) {
  *  configured and the total is > 0. */
 function OrganicVisitorsBadge({ total }: { total: number }) {
   const display =
-    total >= 1000 ? `${(total / 1000).toFixed(1)}k` : total.toLocaleString("en-GB");
+    total <= 0
+      ? "—"
+      : total >= 1000
+        ? `${(total / 1000).toFixed(1)}k`
+        : total.toLocaleString("en-GB");
   return (
     <span
       className="animate-count-pop inline-flex items-center gap-2 rounded-full border border-emerald-400/35 bg-emerald-500/[0.10] px-3 py-1.5 text-emerald-100 backdrop-blur-md transition-all duration-300 hover:scale-105 hover:border-emerald-400/60 hover:bg-emerald-500/[0.16]"

@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.59.1",
+    date: "2026-06-26",
+    title: "Fix — badge de visitantes orgânicos não aparecia",
+    highlights: [
+      "**🐛 Visitantes orgânicos a aparecer.** O badge não surgia porque a soma vinha a 0: as ~21 chamadas GA4 em paralelo disparavam cada uma a resolução completa de propriedades (request storm) e estouravam o tempo. Adicionado **dedup in-flight** (uma única construção do índice de propriedades partilhada) + **timeout por cliente**. O badge passa a aparecer sempre que o GA4 está configurado (mostra o número real, ou '—' se ainda não houver dados).",
+    ],
+  },
+  {
     version: "74.59",
     date: "2026-06-25",
     title: "Novo cliente Kings Gyms (André Pereira) + adicionar clientes direto no Admin",

@@ -29,11 +29,22 @@ function hostFromUrl(url: string): string | null {
 type PropertySummary = { propertyId: string; displayName: string };
 
 let cachedProps: { list: PropertySummary[]; expires: number } | null = null;
+// In-flight guard: when many callers (e.g. the SEO organic-visitors
+// rollup fanning out across ~21 clients) hit this at once on a cold
+// cache, they'd each rebuild the full property list. Share one build.
+let propsInFlight: Promise<PropertySummary[]> | null = null;
 
 /** Every GA4 property the impersonated user can access. */
 async function listProperties(token: string): Promise<PropertySummary[]> {
   if (cachedProps && cachedProps.expires > Date.now()) return cachedProps.list;
+  if (propsInFlight) return propsInFlight;
+  propsInFlight = buildProperties(token).finally(() => {
+    propsInFlight = null;
+  });
+  return propsInFlight;
+}
 
+async function buildProperties(token: string): Promise<PropertySummary[]> {
   const out: PropertySummary[] = [];
   let pageToken: string | undefined;
   do {
@@ -75,11 +86,24 @@ async function listProperties(token: string): Promise<PropertySummary[]> {
 // data streams. Cached because it's a fan-out of requests.
 let cachedDomainIndex: { map: Map<string, string>; expires: number } | null =
   null;
+// Same in-flight guard for the (expensive, fan-out) domain index build —
+// without it, 21 concurrent client lookups each fan out across every
+// property's dataStreams, a request storm that can time out and make the
+// whole rollup come back empty.
+let domainIndexInFlight: Promise<Map<string, string>> | null = null;
 
 async function getDomainIndex(token: string): Promise<Map<string, string>> {
   if (cachedDomainIndex && cachedDomainIndex.expires > Date.now()) {
     return cachedDomainIndex.map;
   }
+  if (domainIndexInFlight) return domainIndexInFlight;
+  domainIndexInFlight = buildDomainIndex(token).finally(() => {
+    domainIndexInFlight = null;
+  });
+  return domainIndexInFlight;
+}
+
+async function buildDomainIndex(token: string): Promise<Map<string, string>> {
   const props = await listProperties(token);
   const map = new Map<string, string>();
   await Promise.all(
@@ -401,11 +425,20 @@ export const getSeoOrganicVisitors30d = unstable_cache(
     if (!googleAuthConfigured) {
       return { total: 0, clientsWithData: 0, configured: false };
     }
+    // Per-client cap so one slow GA4 report never stalls the SEO page.
+    const withTimeout = <T,>(p: Promise<T>, ms: number): Promise<T | null> =>
+      Promise.race([
+        p,
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), ms)),
+      ]);
     const perClient = await Promise.all(
       slugs.map(async (slug) => {
         try {
-          const data = await getGa4Data(slug, 30, "Organic Search");
-          if (data.status === "ok") {
+          const data = await withTimeout(
+            getGa4Data(slug, 30, "Organic Search"),
+            12_000,
+          );
+          if (data && data.status === "ok") {
             const users = data.metrics.find((m) => m.key === "users")?.value;
             return typeof users === "number" ? Math.round(users) : null;
           }
@@ -425,6 +458,6 @@ export const getSeoOrganicVisitors30d = unstable_cache(
     }
     return { total, clientsWithData, configured: true };
   },
-  ["seo-organic-visitors-30d"],
+  ["seo-organic-visitors-30d-v2"],
   { revalidate: 1800, tags: ["seo-organic-visitors"] },
 );
