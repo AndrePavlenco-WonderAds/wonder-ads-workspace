@@ -226,7 +226,7 @@ export function AdminEmployeeRow({
       document.removeEventListener("keydown", onKey);
     };
   }, [portfolioOpen]);
-  const sortedBreakdown = portfolio.breakdown
+  const sortedBreakdown = (portfolio.breakdown ?? [])
     .slice()
     .sort((a, b) => b.valueEur - a.valueEur);
   const billedClients = sortedBreakdown.filter((c) => c.valueEur > 0).length;

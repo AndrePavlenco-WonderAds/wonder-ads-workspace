@@ -260,11 +260,11 @@ export function AdminEmployeesPanel({
                 order.map((id) => {
                   const r = records.get(id);
                   if (!r) return null;
-                  const portfolio =
+                  const portfolio: EmployeePortfolio =
                     portfolios[r.name] ?? {
                       activeClients: 0,
                       totalEur: 0,
-                      sampleTitles: [],
+                      breakdown: [],
                     };
                   return (
                     <AdminEmployeeRow

@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.59.2",
+    date: "2026-06-26",
+    title: "Fix — página de Employees rebentava (client-side exception)",
+    highlights: [
+      "**🐛 Employees a abrir outra vez.** A página `/admin/employees` rebentava com 'client-side exception' sempre que existia um colaborador **sem portfólio de cliente** (admins como o Alex, designers de Web, etc.): o objeto de fallback tinha um campo antigo (`sampleTitles`) em vez de `breakdown`, e a linha tentava `breakdown.slice()` sobre `undefined`. Corrigido o fallback + guarda defensiva.",
+    ],
+  },
+  {
     version: "74.59.1",
     date: "2026-06-26",
     title: "Fix — badge de visitantes orgânicos não aparecia",
