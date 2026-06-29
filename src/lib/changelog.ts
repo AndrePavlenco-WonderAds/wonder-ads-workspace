@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.60",
+    date: "2026-06-29",
+    title: "Novo bloco Finances no Control Suite",
+    highlights: [
+      "**💸 Finances.** O SuperAdmin Control Suite passa a ter **4 blocos** — junta-se o **Finances** (`/admin/finances`) aos Clients, Employees e Roadmaps. Reúne a parte financeira num só sítio.",
+      "**📅 Calendário mudou de casa.** O botão **'Overview Calendário'** saiu do separador Clients e passou para o novo bloco Finances.",
+      "**⏰ Próximas obrigações à mão.** Os blocos **'Próx. 7 dias'** e **'Próximos 30 dias'** (faturas e obrigações a tratar) aparecem agora também no Finances, sem deixarem de estar nos Clients. O badge do bloco mostra o número de faturas agendadas.",
+    ],
+  },
+  {
     version: "74.59.2",
     date: "2026-06-26",
     title: "Fix — página de Employees rebentava (client-side exception)",

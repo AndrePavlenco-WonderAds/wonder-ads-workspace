@@ -7,6 +7,7 @@ import { ADS_CLIENTS } from "@/lib/ads-clients";
 import { WEB_CLIENTS } from "@/lib/web-clients";
 import { listEmployees, SEED_EMPLOYEES } from "@/lib/admin-employees-store";
 import { countRoadmaps } from "@/lib/roadmap-admin-helpers";
+import { buildAdminClientViews } from "@/lib/admin-roster";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -43,6 +44,17 @@ export default async function AdminPage() {
   // still renders.
   const roadmapsCount = await countRoadmaps();
 
+  // Finances card count — scheduled invoices on file (clients with an
+  // invoice date set). Falls back to 0 if the roster can't be built so
+  // the landing still renders.
+  let financesCount = 0;
+  try {
+    const clients = await buildAdminClientViews();
+    financesCount = clients.filter((c) => c.record.invoiceDate).length;
+  } catch {
+    /* roster unavailable — show 0 */
+  }
+
   return (
     <PageShell>
       <Link
@@ -56,6 +68,7 @@ export default async function AdminPage() {
         projectsCount={projectsCount}
         employeesCount={employeesCount}
         roadmapsCount={roadmapsCount}
+        financesCount={financesCount}
       />
     </PageShell>
   );

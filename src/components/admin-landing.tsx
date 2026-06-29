@@ -9,7 +9,7 @@
 // v74.27: added Roadmaps block — per-consultant SEO project tracker.
 
 import Link from "next/link";
-import { FolderKanban, Users, Compass, ArrowRight } from "lucide-react";
+import { FolderKanban, Users, Compass, Wallet, ArrowRight } from "lucide-react";
 
 type ChoiceBlock = {
   href: string;
@@ -24,10 +24,12 @@ export function AdminLanding({
   projectsCount,
   employeesCount,
   roadmapsCount,
+  financesCount,
 }: {
   projectsCount: number;
   employeesCount: number;
   roadmapsCount: number;
+  financesCount: number;
 }) {
 
   const blocks: ChoiceBlock[] = [
@@ -58,6 +60,15 @@ export function AdminLanding({
       badge: roadmapsCount === 1 ? "roadmap" : "roadmaps",
       Icon: Compass,
     },
+    {
+      href: "/admin/finances",
+      title: "Finances",
+      blurb:
+        "Calendário de faturação + obrigações fiscais. As próximas faturas a enviar e o que precisa de ser tratado nos próximos 7 e 30 dias.",
+      count: financesCount,
+      badge: financesCount === 1 ? "invoice" : "invoices",
+      Icon: Wallet,
+    },
   ];
 
   return (
@@ -73,7 +84,7 @@ export function AdminLanding({
 
       <section
         aria-label="Manageable rosters"
-        className="mt-10 grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3"
+        className="mt-10 grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4"
       >
         {blocks.map((b) => {
           const { Icon } = b;

@@ -13,7 +13,6 @@ import {
   ArrowDown,
   ArrowUp,
   ArrowUpDown,
-  CalendarDays,
   FileBarChart,
   Plus,
   Loader2,
@@ -239,13 +238,8 @@ export function AdminPanel({
             <FileBarChart className="h-4 w-4" />
             Gerar Monthly Report
           </Link>
-          <Link
-            href="/admin/calendar"
-            className="inline-flex items-center gap-2 rounded-xl border border-[#783DF5]/40 bg-[#783DF5]/12 px-3.5 py-2 text-[12.5px] font-semibold text-[#d4c4ff] transition hover:border-[#783DF5]/70 hover:bg-[#783DF5]/20 hover:text-white"
-          >
-            <CalendarDays className="h-4 w-4" />
-            Overview Calendário
-          </Link>
+          {/* v74.60: "Overview Calendário" moved to the new Finances block
+              (/admin/finances). */}
         </div>
       </header>
 
