@@ -6,6 +6,7 @@ import { getCurrentEmployee } from "@/lib/auth/server";
 import { accessibleDepts } from "@/lib/auth/credentials";
 import { DepartmentHeader } from "@/components/department-header";
 import { KpisCard } from "@/components/kpis-card";
+import { SeoDirectoriesCard } from "@/components/seo-directories-card";
 import { ClientCard } from "@/components/client-card";
 import { WorldMap } from "@/components/world-map";
 import { TypewriterPrompt } from "@/components/typewriter-prompt";
@@ -158,7 +159,11 @@ export default async function SeoPage() {
         </section>
       </div>
 
-      <section aria-label="SEO DPT KPIs" className="mt-12 sm:mt-16">
+      <section aria-label="SEO Directories" className="mt-12 sm:mt-16">
+        <SeoDirectoriesCard />
+      </section>
+
+      <section aria-label="SEO DPT KPIs" className="mt-6 sm:mt-8">
         <KpisCard />
       </section>
     </PageShell>
@@ -186,12 +191,9 @@ function NotionFallback({ message }: { message: string }) {
  *  real GA4 organic-search users sum — only rendered when GA4 is
  *  configured and the total is > 0. */
 function OrganicVisitorsBadge({ total }: { total: number }) {
-  const display =
-    total <= 0
-      ? "—"
-      : total >= 1000
-        ? `${(total / 1000).toFixed(1)}k`
-        : total.toLocaleString("en-GB");
+  // Full number with thousands separators (e.g. "9,127") — no "k"
+  // abbreviation, so the exact organic total is always visible.
+  const display = total <= 0 ? "—" : total.toLocaleString("en-GB");
   return (
     <span
       className="animate-count-pop inline-flex items-center gap-2 rounded-full border border-emerald-400/35 bg-emerald-500/[0.10] px-3 py-1.5 text-emerald-100 backdrop-blur-md transition-all duration-300 hover:scale-105 hover:border-emerald-400/60 hover:bg-emerald-500/[0.16]"

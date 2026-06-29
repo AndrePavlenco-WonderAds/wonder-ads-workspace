@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.61",
+    date: "2026-06-29",
+    title: "SEO Directories — motor de backlinks por cliente",
+    highlights: [
+      "**🔗 SEO Directories.** Nova ferramenta no SEO DPT (botão por cima dos KPIs): uma base de dados partilhada de **178 diretórios** de backlinks (as bibliotecas Free + Paid do Notion, deduplicadas por domínio, + ~18 diretórios bem conhecidos). Cada um com nicho, idioma, país, DA/DR, tráfego orgânico, spam score e requisitos de submissão — tudo **editável, adicionável e removível** na app.",
+      "**🎯 Sugestões por cliente.** Escolhe um cliente e a app ordena os diretórios com melhor fit. O idioma e o nicho são *gates* (um ginásio em Londres só recebe diretórios **ingleses** de **fitness/saúde** + diretórios gerais), e o país + autoridade fazem o ranking. O nicho detetado é ajustável ao vivo para refinar.",
+      "**📌 Pipeline de backlinks.** Adiciona diretórios ao pipeline de cada cliente e segue o estado: **A tentar → Submetido → Live → Rejeitado**. Também dá para navegar/filtrar toda a base de dados e selecionar vários de uma vez.",
+      "**🔢 Visitantes orgânicos sem abreviar.** O badge de orgânico do SEO DPT passa a mostrar o número completo (ex.: 9 127) em vez de '9.1k'.",
+    ],
+  },
+  {
     version: "74.60",
     date: "2026-06-29",
     title: "Novo bloco Finances no Control Suite",
