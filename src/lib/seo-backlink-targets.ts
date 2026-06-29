@@ -4,18 +4,28 @@
 
 export const TARGET_STATUSES = [
   "to-try",
+  "awaiting-approval",
   "submitted",
-  "live",
+  "published",
   "rejected",
 ] as const;
 export type TargetStatus = (typeof TARGET_STATUSES)[number];
 
 export const TARGET_STATUS_LABELS: Record<TargetStatus, string> = {
   "to-try": "A tentar",
+  "awaiting-approval": "Aguarda aprovação",
   submitted: "Submetido",
-  live: "Live",
+  published: "Publicado",
   rejected: "Rejeitado",
 };
+
+/** Back-compat for the original status set (v74.61): "live" → "published". */
+function migrateStatus(s: string): TargetStatus | null {
+  if (s === "live") return "published";
+  return (TARGET_STATUSES as readonly string[]).includes(s)
+    ? (s as TargetStatus)
+    : null;
+}
 
 export type BacklinkTarget = {
   directoryId: string;
@@ -41,11 +51,8 @@ export function sanitizeTargetList(arr: unknown): BacklinkTarget[] {
         : "";
     if (!directoryId || seen.has(directoryId)) continue;
     seen.add(directoryId);
-    const status = (TARGET_STATUSES as readonly string[]).includes(
-      t.status as string,
-    )
-      ? (t.status as TargetStatus)
-      : "to-try";
+    const status =
+      (typeof t.status === "string" && migrateStatus(t.status)) || "to-try";
     out.push({
       directoryId,
       status,

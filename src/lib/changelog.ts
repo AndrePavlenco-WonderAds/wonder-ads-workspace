@@ -13,6 +13,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.62",
+    date: "2026-06-29",
+    title: "SEO Directories — +21 diretórios de saúde + pipeline com aprovação",
+    highlights: [
+      "**➕ 21 novos diretórios (agora 199).** Mais diretórios de **saúde / bem-estar / psicologia** nos nichos dos nossos clientes: lista internacional (US/UK) de saúde (credihealth, healthmanagement.org, mind.help, counselingnow, etc.) e portais PT (profissionaisdesaude.pt, Ordem dos Médicos, saudebemestar.pt, agilcare, nutriama, notícias regionais). Deduplicados por domínio — sem repetir os que já existiam.",
+      "**🔁 Pipeline com aprovação.** Os estados dos alvos passam a ser **A tentar → Aguarda aprovação → Submetido → Publicado → Rejeitado**, e o seletor de estado ganhou a opção **'Remover do pipeline'** (além do botão de lixo).",
+    ],
+  },
+  {
     version: "74.61",
     date: "2026-06-29",
     title: "SEO Directories — motor de backlinks por cliente",

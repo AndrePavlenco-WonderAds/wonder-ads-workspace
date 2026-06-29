@@ -868,6 +868,28 @@ export const SEED_DIRECTORIES: SeoDirectory[] = [
     "paid": false
   },
   {
+    "id": "dir-credihealth-com",
+    "name": "Credihealth",
+    "url": "https://credihealth.com/",
+    "niche": "Health / Medical Platform",
+    "tags": [
+      "health"
+    ],
+    "general": false,
+    "languages": [
+      "en"
+    ],
+    "countries": [
+      "GLOBAL"
+    ],
+    "da": 71,
+    "dr": null,
+    "organicTraffic": null,
+    "spamScore": null,
+    "submission": "Guest post / outreach",
+    "paid": false
+  },
+  {
     "id": "dir-expat-com",
     "name": "Expat",
     "url": "https://www.expat.com/en/guide/europe/portugal/",
@@ -2241,6 +2263,50 @@ export const SEED_DIRECTORIES: SeoDirectory[] = [
     "paid": true
   },
   {
+    "id": "dir-emedicodiary-com",
+    "name": "Emedicodiary",
+    "url": "https://emedicodiary.com/",
+    "niche": "Medical Blog",
+    "tags": [
+      "health"
+    ],
+    "general": false,
+    "languages": [
+      "en"
+    ],
+    "countries": [
+      "GLOBAL"
+    ],
+    "da": 59,
+    "dr": null,
+    "organicTraffic": null,
+    "spamScore": null,
+    "submission": "Guest post / outreach",
+    "paid": false
+  },
+  {
+    "id": "dir-healthgroovy-com",
+    "name": "Healthgroovy",
+    "url": "https://healthgroovy.com/",
+    "niche": "Health Blog",
+    "tags": [
+      "health"
+    ],
+    "general": false,
+    "languages": [
+      "en"
+    ],
+    "countries": [
+      "GLOBAL"
+    ],
+    "da": 59,
+    "dr": null,
+    "organicTraffic": null,
+    "spamScore": null,
+    "submission": "Guest post / outreach",
+    "paid": false
+  },
+  {
     "id": "dir-addyp-com",
     "name": "Addyp",
     "url": "https://addyp.com/",
@@ -2772,6 +2838,28 @@ export const SEED_DIRECTORIES: SeoDirectory[] = [
     "paid": true
   },
   {
+    "id": "dir-healthmanagement-org",
+    "name": "Healthmanagement",
+    "url": "https://healthmanagement.org/",
+    "niche": "Health Management / Medical",
+    "tags": [
+      "health"
+    ],
+    "general": false,
+    "languages": [
+      "en"
+    ],
+    "countries": [
+      "GLOBAL"
+    ],
+    "da": 55,
+    "dr": null,
+    "organicTraffic": null,
+    "spamScore": null,
+    "submission": "Guest post / outreach",
+    "paid": false
+  },
+  {
     "id": "dir-showmelocal-com",
     "name": "Showmelocal",
     "url": "https://global.showmelocal.com/country-pt",
@@ -3021,6 +3109,28 @@ export const SEED_DIRECTORIES: SeoDirectory[] = [
     "paid": false
   },
   {
+    "id": "dir-nchstats-com",
+    "name": "Nchstats",
+    "url": "https://nchstats.com/",
+    "niche": "Health Statistics Blog",
+    "tags": [
+      "health"
+    ],
+    "general": false,
+    "languages": [
+      "en"
+    ],
+    "countries": [
+      "US"
+    ],
+    "da": 48,
+    "dr": null,
+    "organicTraffic": null,
+    "spamScore": null,
+    "submission": "Guest post / outreach",
+    "paid": false
+  },
+  {
     "id": "dir-myhuckleberry-com",
     "name": "Myhuckleberry",
     "url": "https://myhuckleberry.com",
@@ -3134,6 +3244,50 @@ export const SEED_DIRECTORIES: SeoDirectory[] = [
     "paid": true
   },
   {
+    "id": "dir-dianarangaves-com",
+    "name": "Dianarangaves",
+    "url": "https://dianarangaves.com/",
+    "niche": "Health / Pharmacy Blog",
+    "tags": [
+      "health"
+    ],
+    "general": false,
+    "languages": [
+      "en"
+    ],
+    "countries": [
+      "US"
+    ],
+    "da": 45,
+    "dr": null,
+    "organicTraffic": null,
+    "spamScore": null,
+    "submission": "Guest post / outreach",
+    "paid": false
+  },
+  {
+    "id": "dir-evidencenetwork-ca",
+    "name": "Evidencenetwork",
+    "url": "https://evidencenetwork.ca/",
+    "niche": "Health Policy / Medical",
+    "tags": [
+      "health"
+    ],
+    "general": false,
+    "languages": [
+      "en"
+    ],
+    "countries": [
+      "CA"
+    ],
+    "da": 45,
+    "dr": null,
+    "organicTraffic": null,
+    "spamScore": null,
+    "submission": "Guest post / outreach",
+    "paid": false
+  },
+  {
     "id": "dir-directorioamarelo-pt",
     "name": "Directorioamarelo",
     "url": "http://www.directorioamarelo.pt/",
@@ -3153,6 +3307,28 @@ export const SEED_DIRECTORIES: SeoDirectory[] = [
     "organicTraffic": 7000,
     "spamScore": "low",
     "submission": "Business listing registration",
+    "paid": false
+  },
+  {
+    "id": "dir-theweeklyhealthiness-net",
+    "name": "Theweeklyhealthiness",
+    "url": "https://theweeklyhealthiness.net/",
+    "niche": "Health & Wellness Blog",
+    "tags": [
+      "health"
+    ],
+    "general": false,
+    "languages": [
+      "en"
+    ],
+    "countries": [
+      "GLOBAL"
+    ],
+    "da": 41,
+    "dr": null,
+    "organicTraffic": null,
+    "spamScore": null,
+    "submission": "Guest post / outreach",
     "paid": false
   },
   {
@@ -3335,6 +3511,74 @@ export const SEED_DIRECTORIES: SeoDirectory[] = [
     "paid": false
   },
   {
+    "id": "dir-cuteblessings-com",
+    "name": "Cuteblessings",
+    "url": "https://cuteblessings.com/",
+    "niche": "Lifestyle & Wellness Blog",
+    "tags": [
+      "health",
+      "lifestyle"
+    ],
+    "general": false,
+    "languages": [
+      "en"
+    ],
+    "countries": [
+      "GLOBAL"
+    ],
+    "da": 38,
+    "dr": null,
+    "organicTraffic": null,
+    "spamScore": null,
+    "submission": "Guest post / outreach",
+    "paid": false
+  },
+  {
+    "id": "dir-mind-help",
+    "name": "Mind",
+    "url": "https://mind.help/",
+    "niche": "Mental Health / Psychology",
+    "tags": [
+      "health",
+      "psychology"
+    ],
+    "general": false,
+    "languages": [
+      "en"
+    ],
+    "countries": [
+      "GLOBAL"
+    ],
+    "da": 38,
+    "dr": null,
+    "organicTraffic": null,
+    "spamScore": null,
+    "submission": "Guest post / outreach",
+    "paid": false
+  },
+  {
+    "id": "dir-thoracickey-com",
+    "name": "Thoracickey",
+    "url": "https://thoracickey.com/",
+    "niche": "Medical Reference",
+    "tags": [
+      "health"
+    ],
+    "general": false,
+    "languages": [
+      "en"
+    ],
+    "countries": [
+      "GLOBAL"
+    ],
+    "da": 37,
+    "dr": null,
+    "organicTraffic": null,
+    "spamScore": null,
+    "submission": "Guest post / outreach",
+    "paid": false
+  },
+  {
     "id": "dir-awwwards-com",
     "name": "Awwwards",
     "url": "https://www.awwwards.com/",
@@ -3446,6 +3690,29 @@ export const SEED_DIRECTORIES: SeoDirectory[] = [
     "spamScore": "low",
     "submission": "Paid",
     "paid": true
+  },
+  {
+    "id": "dir-counselingnow-com",
+    "name": "Counselingnow",
+    "url": "https://counselingnow.com/",
+    "niche": "Counseling / Therapy Directory",
+    "tags": [
+      "health",
+      "psychology"
+    ],
+    "general": false,
+    "languages": [
+      "en"
+    ],
+    "countries": [
+      "US"
+    ],
+    "da": 35,
+    "dr": null,
+    "organicTraffic": null,
+    "spamScore": null,
+    "submission": "Therapist profile / outreach",
+    "paid": false
   },
   {
     "id": "dir-psicologos-com-pt",
@@ -3605,6 +3872,28 @@ export const SEED_DIRECTORIES: SeoDirectory[] = [
     "paid": false
   },
   {
+    "id": "dir-healthsciencesforum-co-uk",
+    "name": "Healthsciencesforum",
+    "url": "https://healthsciencesforum.co.uk/",
+    "niche": "Health Sciences Forum",
+    "tags": [
+      "health"
+    ],
+    "general": false,
+    "languages": [
+      "en"
+    ],
+    "countries": [
+      "UK"
+    ],
+    "da": 32,
+    "dr": null,
+    "organicTraffic": null,
+    "spamScore": null,
+    "submission": "Guest post / outreach",
+    "paid": false
+  },
+  {
     "id": "dir-expatsportugal-com",
     "name": "Expatsportugal",
     "url": "https://expatsportugal.com/",
@@ -3669,6 +3958,28 @@ export const SEED_DIRECTORIES: SeoDirectory[] = [
     "organicTraffic": 900,
     "spamScore": "low",
     "submission": "Therapist profile submission",
+    "paid": false
+  },
+  {
+    "id": "dir-greenheal-net",
+    "name": "Greenheal",
+    "url": "https://greenheal.net/",
+    "niche": "Health & Wellness Blog",
+    "tags": [
+      "health"
+    ],
+    "general": false,
+    "languages": [
+      "en"
+    ],
+    "countries": [
+      "GLOBAL"
+    ],
+    "da": 30,
+    "dr": null,
+    "organicTraffic": null,
+    "spamScore": null,
+    "submission": "Guest post / outreach",
     "paid": false
   },
   {
@@ -4120,5 +4431,160 @@ export const SEED_DIRECTORIES: SeoDirectory[] = [
     "spamScore": "low",
     "submission": "Registration required",
     "paid": false
+  },
+  {
+    "id": "dir-noticiasdeaveiro-pt",
+    "name": "Noticiasdeaveiro",
+    "url": "https://noticiasdeaveiro.pt/",
+    "niche": "Regional News / Media",
+    "tags": [
+      "news"
+    ],
+    "general": false,
+    "languages": [
+      "pt"
+    ],
+    "countries": [
+      "PT"
+    ],
+    "da": null,
+    "dr": null,
+    "organicTraffic": null,
+    "spamScore": null,
+    "submission": "Guest post / outreach",
+    "paid": true
+  },
+  {
+    "id": "dir-asenhoradomonte-com",
+    "name": "Asenhoradomonte",
+    "url": "https://www.asenhoradomonte.com/",
+    "niche": "Lifestyle / Wellness Blog",
+    "tags": [
+      "health",
+      "lifestyle"
+    ],
+    "general": false,
+    "languages": [
+      "pt"
+    ],
+    "countries": [
+      "PT"
+    ],
+    "da": null,
+    "dr": null,
+    "organicTraffic": null,
+    "spamScore": null,
+    "submission": "Guest post / outreach",
+    "paid": true
+  },
+  {
+    "id": "dir-profissionaisdesaude-pt",
+    "name": "Profissionaisdesaude",
+    "url": "https://www.profissionaisdesaude.pt/",
+    "niche": "Health Professionals Directory",
+    "tags": [
+      "health"
+    ],
+    "general": false,
+    "languages": [
+      "pt"
+    ],
+    "countries": [
+      "PT"
+    ],
+    "da": null,
+    "dr": null,
+    "organicTraffic": null,
+    "spamScore": null,
+    "submission": "Professional registration",
+    "paid": false
+  },
+  {
+    "id": "dir-ordemdosmedicos-pt",
+    "name": "Ordemdosmedicos",
+    "url": "https://ordemdosmedicos.pt/",
+    "niche": "Official Medical Association",
+    "tags": [
+      "health"
+    ],
+    "general": false,
+    "languages": [
+      "pt"
+    ],
+    "countries": [
+      "PT"
+    ],
+    "da": null,
+    "dr": null,
+    "organicTraffic": null,
+    "spamScore": null,
+    "submission": "Professional membership",
+    "paid": false
+  },
+  {
+    "id": "dir-saudebemestar-pt",
+    "name": "Saudebemestar",
+    "url": "https://www.saudebemestar.pt/",
+    "niche": "Health & Wellness Portal",
+    "tags": [
+      "health"
+    ],
+    "general": false,
+    "languages": [
+      "pt"
+    ],
+    "countries": [
+      "PT"
+    ],
+    "da": null,
+    "dr": null,
+    "organicTraffic": null,
+    "spamScore": null,
+    "submission": "Guest post / outreach",
+    "paid": true
+  },
+  {
+    "id": "dir-agilcare-pt",
+    "name": "Agilcare",
+    "url": "https://www.agilcare.pt/blog/",
+    "niche": "Health & Wellness Blog",
+    "tags": [
+      "health"
+    ],
+    "general": false,
+    "languages": [
+      "pt"
+    ],
+    "countries": [
+      "PT"
+    ],
+    "da": null,
+    "dr": null,
+    "organicTraffic": null,
+    "spamScore": null,
+    "submission": "Guest post / outreach",
+    "paid": true
+  },
+  {
+    "id": "dir-nutriama-pt",
+    "name": "Nutriama",
+    "url": "https://nutriama.pt/",
+    "niche": "Nutrition / Health",
+    "tags": [
+      "health"
+    ],
+    "general": false,
+    "languages": [
+      "pt"
+    ],
+    "countries": [
+      "PT"
+    ],
+    "da": null,
+    "dr": null,
+    "organicTraffic": null,
+    "spamScore": null,
+    "submission": "Guest post / outreach",
+    "paid": true
   }
 ];

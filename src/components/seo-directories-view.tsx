@@ -100,9 +100,11 @@ const FIT_STYLE: Record<DirFit, { label: string; cls: string }> = {
 
 function statusClasses(status: TargetStatus): string {
   switch (status) {
+    case "awaiting-approval":
+      return "border-[#783DF5]/55 bg-[#783DF5]/20 text-[#d4c4ff]";
     case "submitted":
       return "border-amber-400/45 bg-amber-500/15 text-amber-200";
-    case "live":
+    case "published":
       return "border-emerald-400/45 bg-emerald-500/15 text-emerald-200";
     case "rejected":
       return "border-rose-400/45 bg-rose-500/15 text-rose-200";
@@ -110,6 +112,9 @@ function statusClasses(status: TargetStatus): string {
       return "border-white/20 bg-white/[0.06] text-white/75";
   }
 }
+
+// Sentinel value for the "remove from pipeline" entry in the status select.
+const REMOVE_OPTION = "__remove__";
 
 export function SeoDirectoriesView({
   directories: initialDirectories,
@@ -509,13 +514,18 @@ export function SeoDirectoriesView({
                         <div className="ml-auto flex items-center gap-1.5">
                           <select
                             value={t.status}
-                            onChange={(e) =>
-                              updateTargetStatus(
-                                selectedSlug,
-                                t.directoryId,
-                                e.target.value as TargetStatus,
-                              )
-                            }
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              if (v === REMOVE_OPTION) {
+                                removeTarget(selectedSlug, t.directoryId);
+                              } else {
+                                updateTargetStatus(
+                                  selectedSlug,
+                                  t.directoryId,
+                                  v as TargetStatus,
+                                );
+                              }
+                            }}
                             className={`rounded-lg border px-2 py-1 text-[11px] font-semibold outline-none ${statusClasses(
                               t.status,
                             )}`}
@@ -525,6 +535,15 @@ export function SeoDirectoriesView({
                                 {TARGET_STATUS_LABELS[s]}
                               </option>
                             ))}
+                            <option disabled className="bg-[#0a0a0f] text-white/40">
+                              ──────────
+                            </option>
+                            <option
+                              value={REMOVE_OPTION}
+                              className="bg-[#0a0a0f] text-rose-300"
+                            >
+                              Remover do pipeline
+                            </option>
                           </select>
                           <button
                             type="button"
@@ -532,6 +551,7 @@ export function SeoDirectoriesView({
                               removeTarget(selectedSlug, t.directoryId)
                             }
                             aria-label="Remover do pipeline"
+                            title="Remover do pipeline"
                             className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-white/10 text-white/40 transition hover:border-rose-400/50 hover:text-rose-300"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
