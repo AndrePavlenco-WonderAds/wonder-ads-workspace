@@ -503,7 +503,51 @@ Each variant must lead with the primary keyword OR the strongest hook, include t
       return `Output a list of internal-link opportunities. For each: source page (existing page on the site that should link), suggested anchor text (descriptive, not keyword-stuffed), why this link helps (topical authority, user journey, or distributing PageRank), and rough placement (which section/paragraph). Aim for 4–8 quality suggestions, not a wall. Flag any orphan-page risks you notice.`;
 
     case "schema-markup":
-      return `Output a single valid JSON-LD block inside a \`\`\`json fenced code block. Use the most specific applicable @type. Required properties first, then recommended. Use real values from the input — never placeholders like "Your Name". After the block, list any properties you couldn't fill and what the client needs to provide.`;
+      return `Generate production-grade JSON-LD structured data for ONE page. It ships to a live site, so it must validate against schema.org AND Google's Rich Results rules, and it must be materially richer than whatever markup the page has today.
+
+**Facts — source of truth (in priority order). Never invent values, never use placeholders ("Your Name", "City"):**
+1. The crawled page in the live measurements — real NAP, opening hours, services, prices, FAQs, images, AND the list of JSON-LD types already on the page (so you can see what to replace/extend).
+2. The consultant's pasted "Source content / facts".
+3. The client website + brief.
+If a high-value property has no real value, OMIT it (no empty strings / empty arrays) and list it under "Missing — client must provide".
+
+**Market, language & currency (CRITICAL — do NOT default to the agency's market):**
+- Infer the business's real country, language and currency from the PAGE ITSELF: the postal address, phone country code, domain TLD, on-page currency, and the language the copy is written in.
+- A "Market / language" line may appear in the client context — that is the agency's rank-tracking geo and is NOT authoritative for this page's address/country/currency. Ignore it for NAP purposes.
+- If the consultant set a **market** input other than "Auto-detect", honour it exactly. Otherwise auto-detect and state what you detected + the evidence.
+- Encode: addressCountry as ISO-3166 (GB, PT, US…), language tags as BCP-47 (en-GB, pt-PT), currency as ISO-4217 (GBP, EUR…). Phone as E.164 (+44…).
+
+**Type selection:**
+- Use the MOST specific applicable @type (ExerciseGym / HealthClub / MedicalClinic / Dentist / Restaurant / ProfessionalService > generic LocalBusiness).
+- Unless the consultant pinned a single "schemaType", output a **@graph** combining every entity the page supports, cross-linked by @id:
+  - the primary entity (LocalBusiness subtype / Organization / Product / Article…),
+  - WebPage (url, name, isPartOf → WebSite, primaryImageOfPage, inLanguage, about → the business @id),
+  - WebSite (name, url, publisher; add potentialAction SearchAction only if the site truly has search),
+  - the brand Organization (logo, sameAs) — connect the location to it with EITHER parentOrganization OR branchOf (pick one, never both),
+  - BreadcrumbList derived from the URL path,
+  - FAQPage ONLY if the page shows real Q&As — use the actual questions/answers verbatim,
+  - ImageObject for the primary image.
+  - Every node gets a stable @id = page URL + a #fragment (e.g. \`…/page#gym\`, \`#webpage\`, \`#breadcrumb\`).
+
+**Fill every property the facts support:**
+- LocalBusiness family: name, @id, url, image (a REAL photo, not the logo), logo, description (specific + keyword-aware), telephone (E.164), email, address (PostalAddress incl. addressRegion), geo (GeoCoordinates), hasMap, openingHoursSpecification (real hours; add special/holiday hours only if given), priceRange, currenciesAccepted, paymentAccepted, areaServed, amenityFeature (LocationFeatureSpecification for real amenities), makesOffer / hasOfferCatalog (build an OfferCatalog from the real services/memberships + prices), sameAs (real, NON-EMPTY profile URLs only — strip blanks).
+- Article: headline, author (real Person/Organization), datePublished + dateModified (ISO-8601), publisher (+logo), image, mainEntityOfPage, articleSection, inLanguage.
+- Product: name, image, description, brand, sku/gtin if given, offers (price, priceCurrency, availability, url, priceValidUntil).
+- FAQPage: each Question + acceptedAnswer, verbatim from the page.
+
+**Reviews / ratings (hard rule):** include aggregateRating / review ONLY if the rating is genuinely VISIBLE on this page. If a rating exists elsewhere (Google, Judge.me, Trustpilot) but isn't rendered here, DO NOT add it — note it under Opportunities. Invisible/self-serving review markup risks a Google manual action.
+
+**Validity:** @context "https://schema.org". Strict JSON — no trailing commas, no comments. No duplicate properties. ISO-8601 dates, E.164 phones, ISO-3166 countries, BCP-47 languages, ISO-4217 currency.
+
+**Output, in this exact order — JSON-LD is the product, the rest is a terse appendix:**
+1. The complete JSON-LD inside ONE \`\`\`json fenced block (a single <script type="application/ld+json"> payload; use @graph when multiple entities).
+2. **Detected market** — country / language / currency used + the evidence (address, TLD, phone, copy language).
+3. **Why these types** — one line per top-level @type.
+4. **Coverage vs current** — what the page already had (from the crawl's JSON-LD types) vs what this adds/fixes.
+5. **Missing — client must provide** — high-value properties left unfilled + the exact value needed.
+6. **Opportunities** — e.g. surface reviews on-page to unlock AggregateRating, add an FAQ block, add membership Offers.
+7. **Validation checklist** — confirm: valid JSON · schema.org-valid · which Rich Result type it's eligible for · E.164 phone · ISO dates · no placeholders · no invisible-review markup.
+8. **Deploy** — one line on where to paste it + a reminder to re-test in Google's Rich Results Test.`;
 
     case "content-gap-analysis":
       return `Output two sections:

@@ -628,6 +628,12 @@ export async function POST(
         const articleTokens = Math.ceil(wordTarget * 1.65);
         const overheadTokens = 800; // slug + meta + working notes + brief-check appendix
         maxOutputTokens = Math.min(8000, articleTokens + overheadTokens);
+      } else if (entry.action.slug === "schema-markup") {
+        // A full @graph (business + WebPage + WebSite + Org + BreadcrumbList +
+        // FAQPage + ImageObject) plus the appendix can run long — give it room
+        // so the JSON-LD is never truncated mid-block. Vercel Pro's 300s budget
+        // comfortably covers the extra streaming.
+        maxOutputTokens = 16000;
       }
 
       const result = streamText({

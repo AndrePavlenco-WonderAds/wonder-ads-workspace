@@ -34,6 +34,15 @@ const OVERRIDES: Record<string, ClientGeo> = {
     languageCode: "pt",
     countryLabel: "Brazil",
   },
+  // Kings Gyms (André Pereira) is a UK gym chain — London locations
+  // (Mitcham, Croydon, Crawley, Brighton, Tower Bridge), GBP, +44. Without
+  // this it fell back to the PT default, which mis-targeted both the schema
+  // markup and the DataforSEO rank tracking.
+  "kings-gyms": {
+    locationCode: 2826,
+    languageCode: "en",
+    countryLabel: "United Kingdom",
+  },
   // WonderAds runs globally — anchor in PT since the team + main HQ is there.
 };
 

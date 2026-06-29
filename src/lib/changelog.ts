@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.63",
+    date: "2026-06-29",
+    title: "Schema Markup action — 10x mais rico + deteção de mercado",
+    highlights: [
+      "**🌍 Fim do 'Portugal' errado.** A Kings Gyms é um ginásio do **Reino Unido** (Londres, GBP, +44) mas não tinha geo definido, por isso caía no default Portugal — e isso contaminava o schema **e** o rank tracking (DataforSEO). Adicionado override `kings-gyms → United Kingdom / en`. Tópico de fundo: a ação de schema passa a **detetar o mercado pela própria página** (morada, indicativo telefónico, TLD, idioma da cópia), nunca pelo geo da agência.",
+      "**🧠 Schema muito mais rico.** A ação Schema Markup agora **faz crawl da página em tempo real** (NAP, horários, serviços, FAQs e o JSON-LD que já lá está) e gera um **@graph** completo cruzado por `@id`: o negócio (tipo mais específico — ExerciseGym/HealthClub/MedicalClinic/…), WebPage, WebSite, Organization, BreadcrumbList e FAQPage. Preenche morada+região, geo, horários, priceRange, moeda, amenities, e ofertas/serviços (OfferCatalog).",
+      "**✅ Regras de qualidade.** `@id` em todos os nós, telefone E.164, datas ISO-8601, país ISO-3166, idioma BCP-47, sem placeholders, `sameAs` sem vazios, e **só inclui rating/reviews se estiverem visíveis na página** (evita ação manual do Google). O output traz mercado detetado, porquê dos tipos, o que falta, oportunidades, checklist de validação e onde colar.",
+      "**🎛️ Novo campo Mercado/Idioma** (Auto-deteção · EN-UK/US · PT-PT/BR · ES · FR) + opção **Auto / @graph** por defeito no tipo de schema. Conteúdo de origem passa a ser opcional quando há URL.",
+    ],
+  },
+  {
     version: "74.62",
     date: "2026-06-29",
     title: "SEO Directories — +21 diretórios de saúde + pipeline com aprovação",
