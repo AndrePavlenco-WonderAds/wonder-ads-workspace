@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.64.1",
+    date: "2026-06-30",
+    title: "Spine Center — URL atualizado",
+    highlights: [
+      "**🔗 Spine Center.** Website corrigido de `www.spinecenter.pt` para **`spinecenter.pt`** (sem www) em toda a app — alimenta crawls, schema, internal linking e rank tracking.",
+    ],
+  },
+  {
     version: "74.64",
     date: "2026-06-30",
     title: "Changelog nos roadmaps dos clientes (SEO)",
