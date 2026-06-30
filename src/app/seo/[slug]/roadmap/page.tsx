@@ -4,6 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { LogoChip } from "@/components/logo-chip";
 import { RoadmapBoard } from "@/components/roadmap-board";
+import { RoadmapChangelog } from "@/components/roadmap-changelog";
 import { SendToReviewButton } from "@/components/send-to-review-button";
 import { WeeklyUpdateButton } from "@/components/weekly-update-button";
 import { getClientBySlug } from "@/lib/notion";
@@ -14,6 +15,7 @@ import {
 } from "@/lib/client-meta";
 import { getClientPalette, paletteToGradient } from "@/lib/client-colors";
 import { computeWarnings, ensureRoadmap } from "@/lib/roadmap-store";
+import { getRoadmapLog } from "@/lib/roadmap-changelog-store";
 
 export const dynamic = "force-dynamic";
 
@@ -49,6 +51,7 @@ export default async function RoadmapPage({
   const initialWarnings = computeWarnings(roadmap).filter(
     (w) => !new Set(roadmap.dismissedWarnings.map((d) => d.id)).has(w.id),
   );
+  const changelog = await getRoadmapLog(slug);
 
   return (
     <PageShell wide backHref={`/seo/${slug}`} backLabel={client.title}>
@@ -112,6 +115,7 @@ export default async function RoadmapPage({
           initialRoadmap={roadmap}
           initialWarnings={initialWarnings}
         />
+        <RoadmapChangelog clientSlug={slug} initialEntries={changelog} />
       </section>
     </PageShell>
   );

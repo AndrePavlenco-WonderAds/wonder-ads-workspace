@@ -14,6 +14,9 @@ import {
   normaliseRoadmap,
   saveCurrentRoadmap,
 } from "@/lib/roadmap-store";
+import { diffRoadmaps } from "@/lib/roadmap-changelog";
+import { appendRoadmapLog } from "@/lib/roadmap-changelog-store";
+import { getCurrentEmployee } from "@/lib/auth/server";
 
 export const runtime = "nodejs";
 
@@ -49,8 +52,20 @@ export async function PUT(
       { status: 400 },
     );
   }
+  const prev = await getCurrentRoadmap(slug);
   const next = normaliseRoadmap(body, slug);
   await saveCurrentRoadmap(next);
+  // Record meaningful changes to the changelog (best-effort, never blocks
+  // the save). Order-only saves diff to [] → zero extra KV ops.
+  try {
+    const events = diffRoadmaps(prev, next);
+    if (events.length > 0) {
+      const me = await getCurrentEmployee().catch(() => null);
+      await appendRoadmapLog(slug, events, me?.username);
+    }
+  } catch (err) {
+    console.error("roadmap changelog (non-fatal):", err);
+  }
   // Bust the cached `/seo/[slug]` page so the CurrentRoadmapStrip
   // refreshes immediately after a save. Otherwise the client page sits
   // on its 60s revalidate window and keeps showing the stale "No

@@ -13,6 +13,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.64",
+    date: "2026-06-30",
+    title: "Changelog nos roadmaps dos clientes (SEO)",
+    highlights: [
+      "**🕓 Changelog em cada roadmap.** A página de roadmap de cada cliente SEO (`/seo/<cliente>/roadmap`) passa a ter um painel **Changelog** (recolhível) com o histórico de alterações: tarefas adicionadas/removidas, mudanças de estado (ex.: _In progress → Implemented_), mudanças de semana, renomeações e gerações do roadmap — com data/hora e **quem** fez a alteração.",
+      "**💾 Otimizado para armazenamento.** Os registos são gravados de forma **compacta** (chaves de 1 caractere, timestamp em segundos, estado como índice 0–3, títulos cortados a 60 caracteres) e **limitados a 120 entradas por cliente** (FIFO). Só alterações **relevantes** são registadas — reordenar tarefas por drag não escreve nada, por isso não há desperdício de KV.",
+    ],
+  },
+  {
     version: "74.63",
     date: "2026-06-29",
     title: "Schema Markup action — 10x mais rico + deteção de mercado",

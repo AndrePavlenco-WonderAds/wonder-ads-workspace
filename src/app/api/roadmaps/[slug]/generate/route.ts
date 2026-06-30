@@ -32,6 +32,8 @@ import {
   formatMiniSiteAuditForPrompt,
 } from "@/lib/seo-tools/mini-site-audit";
 import { shrinkForVisionInput } from "@/lib/seo-tools/thumbnail";
+import { appendRoadmapLog } from "@/lib/roadmap-changelog-store";
+import { getCurrentEmployee } from "@/lib/auth/server";
 import {
   archiveAndReplace,
   getCurrentRoadmap,
@@ -370,6 +372,13 @@ export async function POST(
     sourcePhotos: photos.map((p) => ({ url: p.url, name: p.originalName })),
   };
   await archiveAndReplace(slug, next);
+  // One compact "generated" entry instead of N task-add entries.
+  try {
+    const me = await getCurrentEmployee().catch(() => null);
+    await appendRoadmapLog(slug, [{ k: "g", c: tasks.length }], me?.username);
+  } catch (err) {
+    console.error("roadmap changelog gen (non-fatal):", err);
+  }
   // Bust the cached `/seo/[slug]` page so the CurrentRoadmapStrip
   // reflects the new roadmap immediately (was waiting up to 60s for the
   // page revalidate to fire on its own).
