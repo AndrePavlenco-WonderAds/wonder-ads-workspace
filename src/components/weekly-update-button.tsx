@@ -110,16 +110,10 @@ export function WeeklyUpdateButton({
         type="button"
         onClick={() => setOpen(true)}
         title="Gera uma mensagem de WhatsApp com o ponto de situação desta semana para enviar ao cliente."
-        className="relative inline-flex items-center justify-center gap-1.5 rounded-md border border-emerald-400/40 bg-emerald-500/10 px-3 py-1.5 text-[11px] font-semibold text-emerald-100 transition hover:border-emerald-300/70 hover:bg-emerald-500/20 hover:text-white"
+        className="inline-flex items-center justify-center gap-1.5 rounded-md border border-emerald-400/40 bg-emerald-500/10 px-3 py-1.5 text-[11px] font-semibold text-emerald-100 transition hover:border-emerald-300/70 hover:bg-emerald-500/20 hover:text-white"
       >
         <MessageCircle className="h-3.5 w-3.5" />
         Gerar Weekly Update
-        <span
-          aria-hidden
-          className="absolute -right-2 -top-2 inline-flex items-center rounded-full bg-gradient-to-br from-[#F5A623] via-[#F54EA2] to-[#C535C9] px-1.5 py-0.5 text-[8.5px] font-extrabold uppercase tracking-[0.08em] text-white shadow-[0_4px_12px_-2px_rgba(245,78,162,0.7)] animate-pulse"
-        >
-          NEW!
-        </span>
       </button>
 
       {open &&

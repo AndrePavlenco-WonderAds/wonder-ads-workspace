@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.64.2",
+    date: "2026-07-01",
+    title: "Weekly Update sem badge 'NEW'",
+    highlights: [
+      "**🧹 Botão Weekly Update.** Removido o badge **'NEW!'** do botão 'Gerar Weekly Update' nos roadmaps — já não é novidade.",
+    ],
+  },
+  {
     version: "74.64.1",
     date: "2026-06-30",
     title: "Spine Center — URL atualizado",
