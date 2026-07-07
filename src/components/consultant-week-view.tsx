@@ -184,7 +184,7 @@ function ClientWeekCard({ client }: { client: ConsultantWeekClient }) {
               <span className="font-semibold text-white/85">
                 {client.currentWeek}
               </span>{" "}
-              de 12
+              de {client.totalWeeks}
             </span>
             <span>
               {client.doneTasks}/{client.totalTasks} concluídas

@@ -14,7 +14,11 @@ import {
   getLogoSizing,
 } from "@/lib/client-meta";
 import { getClientPalette, paletteToGradient } from "@/lib/client-colors";
-import { computeWarnings, ensureRoadmap } from "@/lib/roadmap-store";
+import {
+  computeWarnings,
+  ensureRoadmap,
+  roadmapWeeks,
+} from "@/lib/roadmap-store";
 import { getRoadmapLog } from "@/lib/roadmap-changelog-store";
 
 export const dynamic = "force-dynamic";
@@ -48,6 +52,7 @@ export default async function RoadmapPage({
   const gradient = paletteToGradient(getClientPalette(slug));
 
   const roadmap = await ensureRoadmap(slug);
+  const totalWeeks = roadmapWeeks(roadmap);
   const initialWarnings = computeWarnings(roadmap).filter(
     (w) => !new Set(roadmap.dismissedWarnings.map((d) => d.id)).has(w.id),
   );
@@ -79,7 +84,9 @@ export default async function RoadmapPage({
               <span>SEO Roadmap</span>
             </div>
             <h1 className="mt-1 text-2xl font-semibold leading-tight tracking-tight sm:text-3xl">
-              <span className="brand-gradient-text">12-week roadmap</span>
+              <span className="brand-gradient-text">
+                {totalWeeks}-week roadmap
+              </span>
             </h1>
           </div>
         </div>
@@ -98,7 +105,7 @@ export default async function RoadmapPage({
             <SendToReviewButton
               variant="prominent"
               clientSlug={slug}
-              task={`SEO Roadmap (12 weeks) · ${client.title}`}
+              task={`SEO Roadmap (${totalWeeks} weeks) · ${client.title}`}
               category="Roadmap"
               docLink={`/${slug}/preview/roadmap`}
               sourceType="roadmap"

@@ -17,7 +17,11 @@ import {
   getConsultantEmailForSlug,
   getConsultantForSlug,
 } from "@/lib/client-overrides";
-import { getCurrentRoadmap, currentWeekIndex } from "@/lib/roadmap-store";
+import {
+  getCurrentRoadmap,
+  currentWeekIndex,
+  roadmapWeeks,
+} from "@/lib/roadmap-store";
 import { formatDate } from "@/lib/dates";
 import { pickLang, t } from "@/lib/public-i18n";
 import { PublicReportView } from "@/components/public-report-view";
@@ -42,11 +46,16 @@ export default async function PublicRoadmapPreviewPage({
 
   const lang = pickLang(slug);
   const currentWeek = currentWeekIndex(roadmap);
+  const totalWeeks = roadmapWeeks(roadmap);
+  const allWeeks = Array.from({ length: totalWeeks }, (_, i) => i + 1);
 
   const logo = getClientLogo(slug);
   const consultantEmail = getConsultantEmailForSlug(slug);
   const consultantName = getConsultantForSlug(slug);
-  const actionLabel = lang === "pt" ? "Roadmap SEO — 12 semanas" : "SEO Roadmap — 12 weeks";
+  const actionLabel =
+    lang === "pt"
+      ? `Roadmap SEO — ${totalWeeks} semanas`
+      : `SEO Roadmap — ${totalWeeks} weeks`;
 
   const footerQuestionsHtml = t(lang, "footerQuestions", {
     consultant: consultantName,
@@ -88,7 +97,7 @@ export default async function PublicRoadmapPreviewPage({
       bodySlot={
         <RoadmapReportBody
           roadmap={roadmap}
-          weeks={[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]}
+          weeks={allWeeks}
           currentWeek={currentWeek}
           lang={lang}
         />

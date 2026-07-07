@@ -4,6 +4,8 @@
 // markdown list. No internal SEO diagnosis — just the roadmap.
 
 import {
+  roadmapMonths,
+  roadmapWeeks,
   weekStartDate,
   type Roadmap,
   type RoadmapPillar,
@@ -52,12 +54,6 @@ const PILLAR_LABEL: Record<RoadmapPillar, Record<Lang, string>> = {
   research: { pt: "Pesquisa", en: "Research" },
 };
 
-const MONTHS = [
-  { weeks: [1, 2, 3, 4] },
-  { weeks: [5, 6, 7, 8] },
-  { weeks: [9, 10, 11, 12] },
-];
-
 const COPY: Record<
   Lang,
   { tasks: string; month: string; week: string; thisWeek: string; empty: string }
@@ -85,7 +81,8 @@ export function RoadmapReportBody({
   lang = "pt",
 }: {
   roadmap: Roadmap;
-  /** Which week numbers (1–12) to render. */
+  /** Which week numbers to render (a subset of the roadmap's full span,
+   *  e.g. all weeks for the full plan or just the current month's 4). */
   weeks: number[];
   currentWeek: number;
   lang?: Lang;
@@ -107,7 +104,12 @@ export function RoadmapReportBody({
     0,
   );
 
-  const monthsToShow = MONTHS.map((m, i) => ({ ...m, index: i })).filter((m) =>
+  // Last week actually being shown — drives the "start → end" date range
+  // (the full plan ends at the roadmap's final week; a month view ends at
+  // the month's last week).
+  const lastShownWeek = weeks.length > 0 ? Math.max(...weeks) : roadmapWeeks(roadmap);
+
+  const monthsToShow = roadmapMonths(roadmapWeeks(roadmap)).filter((m) =>
     m.weeks.some((w) => weekSet.has(w)),
   );
 
@@ -116,7 +118,7 @@ export function RoadmapReportBody({
       {/* Meta strip */}
       <p style={{ color: "#64748b", fontSize: "0.85rem", margin: "0 0 1.5rem" }}>
         {shownTaskCount} {c.tasks} · {formatDate(roadmap.startDate)} →{" "}
-        {formatDate(weekStartDate(roadmap, 12))}
+        {formatDate(weekStartDate(roadmap, lastShownWeek))}
       </p>
 
       {monthsToShow.map((m) => {

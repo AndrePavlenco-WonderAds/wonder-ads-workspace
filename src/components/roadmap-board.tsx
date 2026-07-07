@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
   Calendar,
+  CalendarPlus,
   Check,
   ChevronDown,
   ImagePlus,
@@ -18,10 +19,15 @@ import {
 } from "lucide-react";
 import { upload } from "@vercel/blob/client";
 import {
+  MAX_ROADMAP_WEEKS,
+  ROADMAP_EXTEND_STEP,
+  WEEKS_PER_MONTH,
   ROADMAP_PILLARS,
   ROADMAP_STATUSES,
   currentWeekIndex,
   newTaskId,
+  roadmapMonths,
+  roadmapWeeks,
   weekStartDate,
   type Roadmap,
   type RoadmapPillar,
@@ -89,12 +95,6 @@ const PILLAR_LABEL: Record<RoadmapPillar, string> = {
   research: "Research",
 };
 
-const MONTHS = [
-  { name: "Month 1", weeks: [1, 2, 3, 4] },
-  { name: "Month 2", weeks: [5, 6, 7, 8] },
-  { name: "Month 3", weeks: [9, 10, 11, 12] },
-];
-
 // Paced "what's happening" messages displayed while the generate call is
 // pending. The endpoint is one-shot (no server-side progress events) so
 // this is a UX-only cycle — the bar itself is indeterminate.
@@ -155,9 +155,17 @@ export function RoadmapBoard({
   }, [roadmap]);
 
   const week = useMemo(() => currentWeekIndex(roadmap), [roadmap]);
+  const totalWeeks = useMemo(() => roadmapWeeks(roadmap), [roadmap]);
+  const months = useMemo(() => roadmapMonths(totalWeeks), [totalWeeks]);
+  const inHorizon = week >= 1 && week <= totalWeeks;
+  const atMaxWeeks = totalWeeks >= MAX_ROADMAP_WEEKS;
+  // Surface the extend nudge when the consultant is in the final month of
+  // the current plan (or already past its end) — that's exactly when a
+  // finishing roadmap needs its next 3 months.
+  const nearingEnd = week >= totalWeeks - (WEEKS_PER_MONTH - 1);
   const tasksByWeek = useMemo(() => {
     const map = new Map<number, RoadmapTask[]>();
-    for (let w = 1; w <= 12; w++) map.set(w, []);
+    for (let w = 1; w <= totalWeeks; w++) map.set(w, []);
     for (const t of roadmap.tasks) {
       const bucket = map.get(t.week) ?? [];
       bucket.push(t);
@@ -168,7 +176,7 @@ export function RoadmapBoard({
       map.set(w, list);
     }
     return map;
-  }, [roadmap]);
+  }, [roadmap, totalWeeks]);
   const flaggedTaskIds = useMemo(() => {
     const s = new Set<string>();
     for (const w of warnings) for (const id of w.taskIds) s.add(id);
@@ -367,6 +375,18 @@ export function RoadmapBoard({
   const updateStartDate = useCallback((next: string) => {
     setRoadmap((prev) => ({ ...prev, startDate: next }));
   }, []);
+  // "Extend +3 months" — grows the plan by one quarter (up to the 1-year
+  // cap). Existing tasks/weeks are untouched; the new weeks land as empty
+  // columns ready to plan. The debounced auto-save persists the new
+  // `weeks` and the changelog records an "extend" event.
+  const extendRoadmap = useCallback(() => {
+    setRoadmap((prev) => {
+      const current = roadmapWeeks(prev);
+      if (current >= MAX_ROADMAP_WEEKS) return prev;
+      const next = Math.min(MAX_ROADMAP_WEEKS, current + ROADMAP_EXTEND_STEP);
+      return { ...prev, weeks: next };
+    });
+  }, []);
 
   const isEmpty = roadmap.tasks.length === 0;
 
@@ -410,16 +430,16 @@ export function RoadmapBoard({
         )}
         <span
           className={
-            week >= 1 && week <= 12
+            inHorizon
               ? "inline-flex items-center gap-2 rounded-full border border-[color:var(--brand-purple)]/55 bg-[color:var(--brand-purple)]/25 px-3 py-1 text-[11px] font-semibold text-white"
               : "inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.04] px-3 py-1 text-[11px] font-medium text-white/65"
           }
         >
-          {week >= 1 && week <= 12
-            ? `▶ Week ${week} of 12`
+          {inHorizon
+            ? `▶ Week ${week} of ${totalWeeks}`
             : week === 0
               ? "Starts soon"
-              : "Past the 12-week horizon"}
+              : `Past the ${totalWeeks}-week horizon`}
         </span>
         <span className="text-[11px] text-white/45">
           {roadmap.tasks.length} task{roadmap.tasks.length === 1 ? "" : "s"}
@@ -430,6 +450,29 @@ export function RoadmapBoard({
             <span className="inline-flex items-center gap-1.5 text-[11px] text-white/45">
               <Loader2 className="h-3 w-3 animate-spin" /> Saving…
             </span>
+          )}
+          {!isEmpty && (
+            <button
+              type="button"
+              onClick={extendRoadmap}
+              disabled={atMaxWeeks}
+              title={
+                atMaxWeeks
+                  ? `This roadmap is at the ${MAX_ROADMAP_WEEKS}-week (12-month) maximum.`
+                  : `Add ${ROADMAP_EXTEND_STEP} more weeks (3 months) — now ${totalWeeks}, becomes ${Math.min(
+                      MAX_ROADMAP_WEEKS,
+                      totalWeeks + ROADMAP_EXTEND_STEP,
+                    )}.`
+              }
+              className={
+                nearingEnd && !atMaxWeeks
+                  ? "inline-flex items-center gap-1.5 rounded-md bg-gradient-to-br from-[#343ED7] via-[#783DF5] to-[#C535C9] px-3 py-1.5 text-[11px] font-semibold text-white shadow-md shadow-[#783DF5]/25 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+                  : "inline-flex items-center gap-1.5 rounded-md border border-white/15 bg-white/[0.04] px-3 py-1.5 text-[11px] font-medium text-white/85 transition hover:border-white/30 hover:bg-white/[0.08] hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+              }
+            >
+              <CalendarPlus className="h-3.5 w-3.5" />
+              {atMaxWeeks ? "Max 12 months" : "Extend +3 months"}
+            </button>
           )}
           <button
             type="button"
@@ -511,6 +554,48 @@ export function RoadmapBoard({
         </ul>
       )}
 
+      {/* End-of-roadmap nudge — appears once the consultant reaches the
+          final month (or runs past the end) so a finishing plan gets its
+          next quarter without anyone having to remember to add it. */}
+      {!isEmpty && nearingEnd && (
+        <div className="animate-fade-up brand-gradient-border flex flex-col gap-3 rounded-xl bg-white/[0.03] p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3">
+            <span className="brand-gradient-bg mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-white shadow-[0_8px_24px_-8px_rgba(120,61,245,0.7)]">
+              <CalendarPlus className="h-4 w-4" />
+            </span>
+            <div>
+              <p className="text-sm font-semibold text-white">
+                {atMaxWeeks
+                  ? "This plan has reached its full 12-month horizon"
+                  : week > totalWeeks
+                    ? "This roadmap has run past its last week"
+                    : "You're in the final month of this roadmap"}
+              </p>
+              <p className="mt-0.5 text-[12px] leading-relaxed text-white/60">
+                {atMaxWeeks
+                  ? "You can’t extend further — regenerate for a fresh cycle when this engagement rolls over."
+                  : `Add the next quarter and keep the momentum going. Existing weeks and tasks stay exactly as they are — Weeks ${
+                      totalWeeks + 1
+                    }–${Math.min(
+                      MAX_ROADMAP_WEEKS,
+                      totalWeeks + ROADMAP_EXTEND_STEP,
+                    )} land as empty columns ready to plan.`}
+              </p>
+            </div>
+          </div>
+          {!atMaxWeeks && (
+            <button
+              type="button"
+              onClick={extendRoadmap}
+              className="inline-flex shrink-0 items-center justify-center gap-2 rounded-md bg-gradient-to-br from-[#343ED7] via-[#783DF5] to-[#C535C9] px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-[#783DF5]/25 transition hover:brightness-110"
+            >
+              <CalendarPlus className="h-4 w-4" />
+              Extend +3 months
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Months + weeks — month label centred with horizontal connector
           like the mind-map, weeks underneath in a 4-up grid. The month
           that contains the current week + the current week column itself
@@ -518,7 +603,7 @@ export function RoadmapBoard({
           tell at a glance "we're in Week 6, Month 2" without doing the
           maths from the date pills. */}
       <div className="space-y-8">
-        {MONTHS.map((m) => {
+        {months.map((m) => {
           const monthIsCurrent = m.weeks.includes(week);
           return (
           <div key={m.name}>
@@ -562,6 +647,7 @@ export function RoadmapBoard({
                   <WeekColumn
                     key={w}
                     week={w}
+                    totalWeeks={totalWeeks}
                     weekDate={weekStartDate(roadmap, w)}
                     tasks={tasks}
                     isCurrent={isCurrent}
@@ -782,6 +868,7 @@ function GeneratePanel({
 
 function WeekColumn({
   week,
+  totalWeeks,
   weekDate,
   tasks,
   isCurrent,
@@ -794,6 +881,7 @@ function WeekColumn({
   flaggedTaskIds,
 }: {
   week: number;
+  totalWeeks: number;
   weekDate: string;
   tasks: RoadmapTask[];
   isCurrent: boolean;
@@ -860,6 +948,7 @@ function WeekColumn({
           <TaskCard
             key={t.id}
             task={t}
+            totalWeeks={totalWeeks}
             editing={editingTaskId === t.id}
             flagged={flaggedTaskIds.has(t.id)}
             onStartEdit={() => onStartEdit(t.id)}
@@ -888,6 +977,7 @@ function WeekColumn({
 
 function TaskCard({
   task,
+  totalWeeks,
   editing,
   flagged,
   onStartEdit,
@@ -896,6 +986,7 @@ function TaskCard({
   onDelete,
 }: {
   task: RoadmapTask;
+  totalWeeks: number;
   editing: boolean;
   flagged: boolean;
   onStartEdit: () => void;
@@ -998,7 +1089,7 @@ function TaskCard({
               }
               className="mt-0.5 w-full rounded-md border border-white/10 bg-white/[0.06] px-1.5 py-1 text-[11px] text-white focus:border-white/30"
             >
-              {Array.from({ length: 12 }, (_, i) => i + 1).map((w) => (
+              {Array.from({ length: totalWeeks }, (_, i) => i + 1).map((w) => (
                 <option key={w} value={w}>
                   Week {w}
                 </option>

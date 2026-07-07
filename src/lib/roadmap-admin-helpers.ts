@@ -13,6 +13,8 @@
 import {
   currentWeekIndex,
   getCurrentRoadmap,
+  roadmapWeeks,
+  MIN_ROADMAP_WEEKS,
   type Roadmap,
   type RoadmapStatus,
   type RoadmapPillar,
@@ -33,8 +35,12 @@ export type ConsultantClientRow = {
   /** Original agency-engagement date — kept pinned across roadmap
    *  resets so the consultant always sees the historical anchor. */
   onboardingDate: string | null;
-  /** 1–12 normally, 0 if not started, >12 if past the horizon. */
+  /** 1–totalWeeks normally, 0 if not started, >totalWeeks if past the
+   *  horizon. */
   currentWeek: number;
+  /** The roadmap's full span in weeks (12, 24, 36, …) — grows as the
+   *  consultant extends the plan. 12 when no roadmap is on file. */
+  totalWeeks: number;
   /** Total task count in the roadmap. */
   totalTasks: number;
   /** Tasks with status === "implemented", in any week. */
@@ -194,6 +200,7 @@ export async function getRoadmapAdminSummary(
         startDate: null,
         onboardingDate: null,
         currentWeek: 0,
+        totalWeeks: MIN_ROADMAP_WEEKS,
         totalTasks: 0,
         doneTasks: 0,
         donePastWeeks: 0,
@@ -211,6 +218,7 @@ export async function getRoadmapAdminSummary(
       startDate: roadmap.startDate,
       onboardingDate: roadmap.onboardingDate ?? null,
       currentWeek: s.currentWeek,
+      totalWeeks: roadmapWeeks(roadmap),
       totalTasks: s.totalTasks,
       doneTasks: s.doneTasks,
       donePastWeeks: s.donePastWeeks,
@@ -344,6 +352,8 @@ export type ConsultantWeekClient = {
   title: string;
   hasRoadmap: boolean;
   currentWeek: number;
+  /** The roadmap's full span in weeks (12, 24, …). 12 when no roadmap. */
+  totalWeeks: number;
   totalTasks: number;
   doneTasks: number;
   health: ConsultantClientRow["health"];
@@ -402,6 +412,7 @@ export async function getConsultantWeekView(
         title: client.title,
         hasRoadmap: false,
         currentWeek: 0,
+        totalWeeks: MIN_ROADMAP_WEEKS,
         totalTasks: 0,
         doneTasks: 0,
         health: "no-roadmap",
@@ -421,6 +432,7 @@ export async function getConsultantWeekView(
       title: client.title,
       hasRoadmap: true,
       currentWeek: cw,
+      totalWeeks: roadmapWeeks(roadmap),
       totalTasks: s.totalTasks,
       doneTasks: s.doneTasks,
       health: classifyHealth(true, cw, s.overduePastWeeks),

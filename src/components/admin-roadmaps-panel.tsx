@@ -233,7 +233,14 @@ function ClientCard({ client }: { client: ConsultantClientRow }) {
   const chip = HEALTH_CHIP[client.health];
   const weekProgressPct =
     client.currentWeek > 0
-      ? Math.min(100, Math.round((Math.min(client.currentWeek, 12) / 12) * 100))
+      ? Math.min(
+          100,
+          Math.round(
+            (Math.min(client.currentWeek, client.totalWeeks) /
+              client.totalWeeks) *
+              100,
+          ),
+        )
       : 0;
   return (
     <article className="relative flex flex-col rounded-xl border border-white/10 bg-white/[0.025] p-4 transition hover:border-white/20">
@@ -262,12 +269,12 @@ function ClientCard({ client }: { client: ConsultantClientRow }) {
                 <span className="text-white">
                   {client.currentWeek === 0
                     ? "—"
-                    : Math.min(client.currentWeek, 12)}
+                    : Math.min(client.currentWeek, client.totalWeeks)}
                 </span>{" "}
-                of 12
-                {client.currentWeek > 12 && (
+                of {client.totalWeeks}
+                {client.currentWeek > client.totalWeeks && (
                   <span className="ml-1 text-rose-200">
-                    · {client.currentWeek - 12} past horizon
+                    · {client.currentWeek - client.totalWeeks} past horizon
                   </span>
                 )}
               </span>

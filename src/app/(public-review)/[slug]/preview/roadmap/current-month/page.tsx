@@ -10,7 +10,11 @@ import {
   getConsultantEmailForSlug,
   getConsultantForSlug,
 } from "@/lib/client-overrides";
-import { getCurrentRoadmap, currentWeekIndex } from "@/lib/roadmap-store";
+import {
+  getCurrentRoadmap,
+  currentWeekIndex,
+  roadmapWeeks,
+} from "@/lib/roadmap-store";
 import { formatDate } from "@/lib/dates";
 import { pickLang, t } from "@/lib/public-i18n";
 import { PublicReportView } from "@/components/public-report-view";
@@ -20,10 +24,15 @@ import { CommentsThread } from "@/components/comments-thread";
 
 export const dynamic = "force-dynamic";
 
-/** Current month (1–3) + its 4 week numbers, from the live current week. */
-function currentMonth(week: number): { month: number; weeks: number[] } {
-  const clampedWeek = Math.min(12, Math.max(1, week || 1));
-  const month = Math.ceil(clampedWeek / 4); // 1–3
+/** Current month + its 4 week numbers, from the live current week. Clamped
+ *  into the roadmap's real span so a plan that's run past its final week
+ *  still sends the last month rather than an out-of-range one. */
+function currentMonth(
+  week: number,
+  totalWeeks: number,
+): { month: number; weeks: number[] } {
+  const clampedWeek = Math.min(totalWeeks, Math.max(1, week || 1));
+  const month = Math.ceil(clampedWeek / 4);
   const start = (month - 1) * 4 + 1;
   return { month, weeks: [start, start + 1, start + 2, start + 3] };
 }
@@ -43,7 +52,7 @@ export default async function PublicRoadmapMonthPreviewPage({
 
   const lang = pickLang(slug);
   const cw = currentWeekIndex(roadmap);
-  const { month, weeks } = currentMonth(cw);
+  const { month, weeks } = currentMonth(cw, roadmapWeeks(roadmap));
 
   const logo = getClientLogo(slug);
   const consultantEmail = getConsultantEmailForSlug(slug);

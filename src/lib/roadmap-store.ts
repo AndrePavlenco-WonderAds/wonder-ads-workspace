@@ -15,6 +15,47 @@ const CURRENT_PREFIX = "roadmap:current:";
 const ARCHIVE_PREFIX = "roadmap:archive:";
 const MAX_ARCHIVE = 12; // ~3 years of quarterly roadmaps
 
+/** One month = 4 week columns. Roadmap length is always a whole number of
+ *  these so the month grid never has a ragged final row. */
+export const WEEKS_PER_MONTH = 4;
+/** A brand-new roadmap covers one quarter (3 months / 12 weeks). */
+export const MIN_ROADMAP_WEEKS = 12;
+/** Hard ceiling: a full year. Keeps the board (and the KV blob) bounded
+ *  no matter how many times "Extend +3 months" is clicked. */
+export const MAX_ROADMAP_WEEKS = 48;
+/** How many weeks one "Extend +3 months" click adds. */
+export const ROADMAP_EXTEND_STEP = 12;
+
+/** The trusted total-week span of a roadmap. Defaults to 12 when unset
+ *  (pre-v74.65 roadmaps), snaps to a whole number of months, and clamps
+ *  into [MIN, MAX]. Every render path derives its week/month count from
+ *  this so extending is a one-field change. */
+export function roadmapWeeks(roadmap: Pick<Roadmap, "weeks">): number {
+  const raw = roadmap.weeks;
+  if (typeof raw !== "number" || !Number.isFinite(raw)) return MIN_ROADMAP_WEEKS;
+  const snapped = Math.round(raw / WEEKS_PER_MONTH) * WEEKS_PER_MONTH;
+  return Math.max(MIN_ROADMAP_WEEKS, Math.min(MAX_ROADMAP_WEEKS, snapped));
+}
+
+/** Group a roadmap's weeks into 4-week months for the board / report
+ *  grids. `Month 1 → [1,2,3,4]`, `Month 2 → [5,6,7,8]`, … up to
+ *  `totalWeeks`. */
+export function roadmapMonths(
+  totalWeeks: number,
+): { name: string; index: number; weeks: number[] }[] {
+  const monthCount = Math.ceil(totalWeeks / WEEKS_PER_MONTH);
+  const out: { name: string; index: number; weeks: number[] }[] = [];
+  for (let m = 0; m < monthCount; m++) {
+    const start = m * WEEKS_PER_MONTH + 1;
+    const weeks: number[] = [];
+    for (let w = start; w <= Math.min(start + WEEKS_PER_MONTH - 1, totalWeeks); w++) {
+      weeks.push(w);
+    }
+    out.push({ name: `Month ${m + 1}`, index: m, weeks });
+  }
+  return out;
+}
+
 export const roadmapStorageConfigured = Boolean(
   process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN,
 );
@@ -64,6 +105,13 @@ export type RoadmapSourcePhoto = {
 export type Roadmap = {
   id: string;
   clientSlug: string;
+  /** Total number of weeks this roadmap spans. Always a multiple of 4
+   *  (one month = 4 weeks) between {@link MIN_ROADMAP_WEEKS} and
+   *  {@link MAX_ROADMAP_WEEKS}. Optional for backward compatibility —
+   *  roadmaps generated before v74.65 have no `weeks` and are treated as
+   *  a 12-week (3-month) plan. The consultant grows this in 3-month steps
+   *  via "Extend +3 months" on the board as an engagement continues. */
+  weeks?: number;
   /** ISO date (YYYY-MM-DD) — Monday of week 1 of THIS roadmap cycle.
    *  Distinct from `onboardingDate`: when a roadmap is regenerated /
    *  reset partway through the engagement, `startDate` moves to the
@@ -127,6 +175,7 @@ export async function ensureRoadmap(slug: string): Promise<Roadmap> {
   const blank: Roadmap = {
     id: newRoadmapId(),
     clientSlug: slug,
+    weeks: MIN_ROADMAP_WEEKS,
     startDate: today,
     generatedAt: Date.now(),
     tasks: [],
@@ -247,6 +296,7 @@ export function computeWarnings(
 ): RoadmapWarning[] {
   const out: RoadmapWarning[] = [];
   const week = currentWeekIndex(roadmap, now);
+  const totalWeeks = roadmapWeeks(roadmap);
 
   // Pending-review stalls: any task in pending_review for > N days.
   const stalledReviews = roadmap.tasks.filter((t) => {
@@ -317,7 +367,7 @@ export function computeWarnings(
 
   // Empty current week: useful early-warning when nothing is actively in
   // flight in the column you should be working on.
-  if (week >= 1 && week <= 12) {
+  if (week >= 1 && week <= totalWeeks) {
     const currentTasks = roadmap.tasks.filter((t) => t.week === week);
     const inFlight = currentTasks.filter(
       (t) => t.status === "in_progress" || t.status === "pending_review",
@@ -329,7 +379,7 @@ export function computeWarnings(
         message: `Week ${week} has no tasks scheduled — add something or pull work from a later week.`,
         taskIds: [],
       });
-    } else if (inFlight.length === 0 && week <= 12) {
+    } else if (inFlight.length === 0 && week <= totalWeeks) {
       out.push({
         id: `nothing-in-flight:${week}:${currentTasks.length}`,
         severity: "info",
@@ -347,9 +397,11 @@ export function computeWarnings(
 export function normaliseRoadmap(input: unknown, clientSlug: string): Roadmap {
   const raw = (input ?? {}) as Partial<Roadmap>;
   const now = Date.now();
+  const totalWeeks = roadmapWeeks(raw);
   return {
     id: typeof raw.id === "string" && raw.id ? raw.id : newRoadmapId(),
     clientSlug,
+    weeks: totalWeeks,
     startDate:
       typeof raw.startDate === "string" &&
       /^\d{4}-\d{2}-\d{2}$/.test(raw.startDate)
@@ -364,7 +416,7 @@ export function normaliseRoadmap(input: unknown, clientSlug: string): Roadmap {
       typeof raw.generatedAt === "number" ? raw.generatedAt : now,
     tasks: Array.isArray(raw.tasks)
       ? raw.tasks
-          .map((t, i) => normaliseTask(t, i, now))
+          .map((t, i) => normaliseTask(t, i, now, totalWeeks))
           .filter((t): t is RoadmapTask => t !== null)
       : [],
     dismissedWarnings: Array.isArray(raw.dismissedWarnings)
@@ -400,10 +452,11 @@ function normaliseTask(
   input: unknown,
   fallbackOrder: number,
   now: number,
+  maxWeek: number = MIN_ROADMAP_WEEKS,
 ): RoadmapTask | null {
   const raw = (input ?? {}) as Partial<RoadmapTask>;
   if (!raw.title || typeof raw.title !== "string") return null;
-  const week = Math.max(1, Math.min(12, Math.floor(Number(raw.week) || 1)));
+  const week = Math.max(1, Math.min(maxWeek, Math.floor(Number(raw.week) || 1)));
   const status: RoadmapStatus =
     typeof raw.status === "string" &&
     (ROADMAP_STATUSES as readonly string[]).includes(raw.status)

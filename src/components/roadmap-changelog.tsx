@@ -18,6 +18,7 @@ import {
   Pencil,
   Sparkles,
   CircleDot,
+  CalendarPlus,
 } from "lucide-react";
 import {
   ROADMAP_STATUS_LABELS,
@@ -38,6 +39,7 @@ const KIND_META: Record<
   generated: { Icon: Sparkles, tint: "text-[#c08bff]" },
   weekly: { Icon: CircleDot, tint: "text-white/60" },
   reset: { Icon: RefreshCw, tint: "text-amber-300" },
+  extend: { Icon: CalendarPlus, tint: "text-[#c08bff]" },
 };
 
 function describe(e: RoadmapLogEntry): string {
@@ -60,6 +62,10 @@ function describe(e: RoadmapLogEntry): string {
       return `Generated roadmap${e.count != null ? ` · ${e.count} tasks` : ""}`;
     case "reset":
       return "Reset roadmap";
+    case "extend":
+      return `Extended roadmap${
+        e.count != null ? ` to ${e.count} weeks (${e.count / 4} months)` : " by 3 months"
+      }`;
     case "weekly":
       return "Weekly update sent";
     default:

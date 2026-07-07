@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.65",
+    date: "2026-07-07",
+    title: "Roadmaps SEO — botão “Estender +3 meses”",
+    highlights: [
+      "**➕ Estende o roadmap sem recomeçar do zero.** Os roadmaps eram sempre de **12 semanas (3 meses)** e, quando um cliente chegava ao fim, a única opção era **regenerar** (arquivava o plano e apagava tudo). Agora há um botão **“Estender +3 meses”** na board do roadmap (`/seo/<cliente>/roadmap`) que acrescenta mais um trimestre — as semanas e tarefas existentes **mantêm-se intactas** e as novas semanas aparecem como colunas vazias prontas a planear. Vai crescendo em passos de 3 meses até ao limite de **12 meses (48 semanas)**.",
+      "**🔔 Aviso quando o plano está a acabar.** Ao entrar no **último mês** do roadmap (ou ao passar do fim), a board mostra um cartão destacado a sugerir estender já o próximo trimestre — e o próprio botão “Estender” fica com o gradiente da marca para não passar despercebido. É exatamente quando um roadmap a terminar precisa da continuação.",
+      "**🗓️ Meses dinâmicos em todo o lado.** A grelha de meses, o chip **“Semana X de N”**, a pré-visualização do cliente (roadmap completo + mês atual), o **SuperAdmin → Roadmaps** e o **“A minha semana”** de cada consultor passam todos a refletir a duração real do roadmap (12, 24, 36…), em vez de assumirem sempre 12.",
+      "**🕓 Registado no changelog.** Cada extensão fica no changelog do roadmap do cliente (ex.: _“Extended roadmap to 24 weeks (6 months)”_), com data/hora e quem a fez.",
+    ],
+  },
+  {
     version: "74.64.2",
     date: "2026-07-01",
     title: "Weekly Update sem badge 'NEW'",

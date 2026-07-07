@@ -7,7 +7,11 @@
 
 import Link from "next/link";
 import { ArrowRight, Map, Sparkles } from "lucide-react";
-import { getCurrentRoadmap, currentWeekIndex } from "@/lib/roadmap-store";
+import {
+  getCurrentRoadmap,
+  currentWeekIndex,
+  roadmapWeeks,
+} from "@/lib/roadmap-store";
 
 export async function CurrentRoadmapStrip({ slug }: { slug: string }) {
   const roadmap = await getCurrentRoadmap(slug);
@@ -25,7 +29,8 @@ export async function CurrentRoadmapStrip({ slug }: { slug: string }) {
   }
 
   const week = currentWeekIndex(roadmap);
-  const inHorizon = week >= 1 && week <= 12;
+  const totalWeeks = roadmapWeeks(roadmap);
+  const inHorizon = week >= 1 && week <= totalWeeks;
   const currentTasks = roadmap.tasks
     .filter((t) => t.week === week)
     .sort((a, b) => a.order - b.order);
@@ -40,7 +45,7 @@ export async function CurrentRoadmapStrip({ slug }: { slug: string }) {
   const pastPending = roadmap.tasks.filter(
     (t) => t.week < week && t.status !== "implemented",
   );
-  const summary = `Week ${inHorizon ? week : "—"} of 12 · ${currentPending.length} task${currentPending.length === 1 ? "" : "s"} pending`;
+  const summary = `Week ${inHorizon ? week : "—"} of ${totalWeeks} · ${currentPending.length} task${currentPending.length === 1 ? "" : "s"} pending`;
 
   return (
     <div className="mt-3 flex flex-wrap items-center gap-2">

@@ -37,6 +37,7 @@ import { getCurrentEmployee } from "@/lib/auth/server";
 import {
   archiveAndReplace,
   getCurrentRoadmap,
+  MIN_ROADMAP_WEEKS,
   newRoadmapId,
   newTaskId,
   nextMondayISO,
@@ -364,6 +365,9 @@ export async function POST(
   const next: Roadmap = {
     id: newRoadmapId(),
     clientSlug: slug,
+    // Generating always produces a fresh single-quarter plan; the
+    // consultant grows it later via "Extend +3 months" on the board.
+    weeks: MIN_ROADMAP_WEEKS,
     startDate,
     generatedAt: now,
     tasks,

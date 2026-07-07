@@ -36,7 +36,7 @@ function sFromIdx(i: number | undefined): RoadmapStatus | undefined {
   return i == null ? undefined : (STATUS_ORDER[i] ?? undefined);
 }
 
-export type LogKindCode = "+" | "x" | "s" | "m" | "e" | "g" | "w" | "r";
+export type LogKindCode = "+" | "x" | "s" | "m" | "e" | "g" | "w" | "r" | "X";
 
 /** Compact on-disk entry — short keys keep the KV blob small. */
 export type RoadmapLogCompact = {
@@ -59,7 +59,8 @@ export type RoadmapLogKind =
   | "edit"
   | "generated"
   | "weekly"
-  | "reset";
+  | "reset"
+  | "extend";
 
 /** Decoded, UI-friendly entry. */
 export type RoadmapLogEntry = {
@@ -83,6 +84,7 @@ const KIND_DECODE: Record<LogKindCode, RoadmapLogKind> = {
   g: "generated",
   w: "weekly",
   r: "reset",
+  X: "extend",
 };
 
 export function decodeLog(list: RoadmapLogCompact[]): RoadmapLogEntry[] {
@@ -149,6 +151,15 @@ export function diffRoadmaps(
     if (!nextIds.has(p.id)) {
       events.push({ k: "x", w: p.week, ti: snip(p.title) });
     }
+  }
+
+  // Roadmap horizon grown ("Extend +3 months"). `c` carries the NEW total
+  // week count so the log reads "Extended to 24 weeks". Default 12 keeps
+  // pre-v74.65 roadmaps (no `weeks` field) from spuriously logging.
+  const prevWeeks = prev?.weeks ?? 12;
+  const nextWeeks = next.weeks ?? 12;
+  if (nextWeeks > prevWeeks) {
+    events.push({ k: "X", c: nextWeeks });
   }
 
   return events;
