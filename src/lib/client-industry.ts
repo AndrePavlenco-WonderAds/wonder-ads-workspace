@@ -24,9 +24,7 @@ const INDUSTRY: Record<string, string[]> = {
   "clinica-mimus": ["health"],
   "clinica-em-casa": ["health"],
   "clinica-empatia": ["health", "psychology"],
-  "cuidamais": ["health"],
-  "senior-resort": ["health"],
-  "aeger-prima": ["health"],
+  "cuidamais": ["health"],  "aeger-prima": ["health"],
   "b-life": ["health"],
 };
 

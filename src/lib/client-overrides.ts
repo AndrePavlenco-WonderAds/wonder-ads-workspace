@@ -8,7 +8,7 @@ export const TITLE_OVERRIDES: Record<string, string> = {
 };
 
 /** Slugs to hide from the workspace (client offboarded, etc). */
-export const EXCLUDED_SLUGS = new Set<string>(["c-saccor"]);
+export const EXCLUDED_SLUGS = new Set<string>(["c-saccor", "senior-resort"]);
 
 // André P. → Manuel S. handover (v74.10). Manuel took over André's book;
 // the slug membership stays the same, only the consultant identity
@@ -17,7 +17,6 @@ export const EXCLUDED_SLUGS = new Set<string>(["c-saccor"]);
 const MANUEL = new Set([
   "aeger-prima",
   "a-domingos",
-  "senior-resort",
   "safe-away",
   "clinica-em-casa",
 ]);

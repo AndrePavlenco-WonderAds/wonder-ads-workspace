@@ -13,9 +13,7 @@ const TIERS: Record<string, ClientTier> = {
 
   // 2. Core
   ihn: "core",
-  "aeger-prima": "core",
-  "senior-resort": "core",
-  "clinica-mimus": "core",
+  "aeger-prima": "core",  "clinica-mimus": "core",
   "monte-mar": "core",
   "sea-yourself": "core",
   "hds-learning": "core",

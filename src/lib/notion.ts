@@ -132,8 +132,8 @@ const _fetchSeoClients = unstable_cache(
   // and the addition of Sentir Saúde + Clínica Fernando Almeida to the
   // synthetic roster (v74.31). Bump whenever the shape of NotionClient or
   // any of its derived fields changes meaningfully. v7: added CuidaMais
-  // (v74.38).
-  ["seo-clients-v8"],
+  // (v74.38). v9: offboarded Senior Resort (excluded slug).
+  ["seo-clients-v9"],
   { revalidate: 3600, tags: ["seo-clients"] },
 );
 

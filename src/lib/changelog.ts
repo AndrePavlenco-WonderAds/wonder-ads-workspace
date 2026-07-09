@@ -13,6 +13,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.66",
+    date: "2026-07-09",
+    title: "Senior Resort — cliente removido",
+    highlights: [
+      "**🗂️ Senior Resort saiu do workspace.** O cliente **Senior Resort** foi dado como terminado e deixa de aparecer em qualquer lado — some das colunas do **Departamento SEO**, do **SuperAdmin → Clientes** e de todos os seletores de cliente. Passou a estar na lista de _slugs_ excluídos (mesmo mecanismo usado no offboarding anterior), pelo que não volta a ser puxado do Notion.",
+      "**🧹 Limpeza dos dados associados.** Removidas as entradas específicas do cliente (tier, indústria, cores/logótipo, brief, data de início e consultor), incluindo o ficheiro de logótipo. Nada foi apagado do KV — os registos ficam apenas por ler.",
+    ],
+  },
+  {
     version: "74.65",
     date: "2026-07-07",
     title: "Roadmaps SEO — botão “Estender +3 meses”",

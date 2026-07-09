@@ -8,9 +8,7 @@ export const CLIENT_LOGOS: Record<string, string> = {
   ihn: "/logos/ihn.png",
   "aeger-prima": "/logos/aeger-prima.png",
   "b-life": "/logos/b-life.webp",
-  "a-domingos": "/logos/a-domingos.png",
-  "senior-resort": "/logos/senior-resort.png",
-  "clinica-mimus": "/logos/clinica-mimus.png",
+  "a-domingos": "/logos/a-domingos.png",  "clinica-mimus": "/logos/clinica-mimus.png",
   wonderads: "/logos/wonderads.png",
   "monte-mar": "/logos/monte-mar.svg",
   cdt: "/logos/cdt.png",
@@ -43,9 +41,7 @@ const LOGO_BG_OVERRIDES: Record<string, LogoBgMode> = {
   "kings-gyms": "dark",
   // CDT's logo asset sits on #F6A800 — match the chip exactly. IHN follows.
   ihn: { custom: "#F6A800" },
-  cdt: { custom: "#F6A800" },
-  "senior-resort": { custom: "#4B5320" },
-};
+  cdt: { custom: "#F6A800" },};
 
 export function getLogoBgMode(slug: string): LogoBgMode {
   return LOGO_BG_OVERRIDES[slug] ?? "white";
@@ -70,9 +66,7 @@ export const CLIENT_WEBSITES: Record<string, string> = {
   ihn: "https://instituteofholisticnutrition.com/",
   "aeger-prima": "https://aegerprima.pt/",
   "b-life": "https://b-life.clinic/",
-  "a-domingos": "https://adomingoscorreia.pt/",
-  "senior-resort": "https://senior-resort.pt/",
-  "clinica-mimus": "https://www.mimus.pt/",
+  "a-domingos": "https://adomingoscorreia.pt/",  "clinica-mimus": "https://www.mimus.pt/",
   wonderads: "https://wonder-ads.com/",
   "kings-gyms": "https://kingsgyms.com/",
   "monte-mar": "https://www.montemar.pt/",
