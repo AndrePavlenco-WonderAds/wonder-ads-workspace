@@ -14,6 +14,7 @@ import { extractAnalysis } from "@/lib/strip-tool-progress";
 import { MarkdownView } from "./markdown-view";
 import { DomainDashboard } from "./domain-dashboard";
 import { KeywordResearchDashboard } from "./keyword-research-dashboard";
+import { useSeoReadOnly } from "./seo-readonly";
 
 type Status = "loading" | "ready" | "generating" | "done" | "error" | "missing";
 
@@ -39,6 +40,7 @@ export function ResultRunner({
   const searchParams = useSearchParams();
   const isPrintMode = searchParams?.get("print") === "true";
   const router = useRouter();
+  const readOnly = useSeoReadOnly();
 
   const [output, setOutput] = useState(existing?.output ?? "");
   const [inputs, setInputs] = useState<Record<string, string>>(
@@ -605,8 +607,8 @@ export function ResultRunner({
 
       {/* Follow-up refine — apply a targeted edit to the result above
           without regenerating everything. Only shown once there's a real
-          saved analysis to edit. */}
-      {status === "done" && analysisText.trim() && (
+          saved analysis to edit. Hidden for read-only viewers. */}
+      {!readOnly && status === "done" && analysisText.trim() && (
         <article className="rounded-2xl border border-white/10 bg-white/[0.025] p-5 backdrop-blur-md">
           <header className="mb-2 flex items-center gap-2">
             <Wand2 className="h-4 w-4 text-[color:var(--brand-magenta)]" />

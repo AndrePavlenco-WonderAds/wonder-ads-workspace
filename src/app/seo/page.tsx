@@ -3,7 +3,7 @@ import { ArrowUpRight, TrendingUp } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { AccessDenied } from "@/components/access-denied";
 import { getCurrentEmployee } from "@/lib/auth/server";
-import { accessibleDepts } from "@/lib/auth/credentials";
+import { accessibleDepts, editableDepts } from "@/lib/auth/credentials";
 import { DepartmentHeader } from "@/components/department-header";
 import { KpisCard } from "@/components/kpis-card";
 import { SeoDirectoriesCard } from "@/components/seo-directories-card";
@@ -45,6 +45,11 @@ export default async function SeoPage() {
       </PageShell>
     );
   }
+
+  // Web designers get read-only SEO access — they see the client roster
+  // and can open project pages, but the department-level tools (KPIs,
+  // Directories, per-consultant roadmap boards) are for the SEO team.
+  const readOnly = !editableDepts(employee).includes("seo");
 
   let clients: NotionClient[] = [];
   let notionError: string | null = null;
@@ -159,13 +164,17 @@ export default async function SeoPage() {
         </section>
       </div>
 
-      <section aria-label="SEO Directories" className="mt-12 sm:mt-16">
-        <SeoDirectoriesCard />
-      </section>
+      {!readOnly && (
+        <section aria-label="SEO Directories" className="mt-12 sm:mt-16">
+          <SeoDirectoriesCard />
+        </section>
+      )}
 
+      {!readOnly && (
       <section aria-label="SEO DPT KPIs" className="mt-6 sm:mt-8">
         <KpisCard />
       </section>
+      )}
     </PageShell>
   );
 }

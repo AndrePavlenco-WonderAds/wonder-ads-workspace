@@ -13,6 +13,7 @@ import {
 import type { ClientBrief as Brief } from "@/lib/client-briefs";
 import { AddCallNotesButton } from "./add-call-notes-button";
 import { SendToReviewButton } from "./send-to-review-button";
+import { useSeoReadOnly } from "./seo-readonly";
 
 type Kind = "dos" | "donts" | "notes";
 
@@ -39,6 +40,7 @@ export function ClientBrief({
   slug: string;
   clientName: string;
 }) {
+  const readOnly = useSeoReadOnly();
   const [brief, setBrief] = useState<Brief>(initial);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -192,19 +194,22 @@ export function ClientBrief({
               {error}
             </span>
           )}
-          {(brief.dos.length > 0 ||
-            brief.donts.length > 0 ||
-            brief.notes.length > 0) && (
-            <SendToReviewButton
-              variant="compact"
-              clientSlug={slug}
-              task={`Brief (Do's / Don'ts / Notes) · ${clientName}`}
-              category="Brief"
-              docLink={`/${slug}/preview/brief`}
-              sourceType="brief"
-            />
+          {!readOnly &&
+            (brief.dos.length > 0 ||
+              brief.donts.length > 0 ||
+              brief.notes.length > 0) && (
+              <SendToReviewButton
+                variant="compact"
+                clientSlug={slug}
+                task={`Brief (Do's / Don'ts / Notes) · ${clientName}`}
+                category="Brief"
+                docLink={`/${slug}/preview/brief`}
+                sourceType="brief"
+              />
+            )}
+          {!readOnly && (
+            <AddCallNotesButton slug={slug} clientName={clientName} />
           )}
-          <AddCallNotesButton slug={slug} clientName={clientName} />
         </div>
       </header>
 
@@ -394,6 +399,7 @@ function EditableRow({
   isNote?: boolean;
 }) {
   void isNote;
+  const readOnly = useSeoReadOnly();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value);
   const textRef = useRef<HTMLTextAreaElement | null>(null);
@@ -420,6 +426,22 @@ function EditableRow({
     } else if (!trimmed) {
       setDraft(value);
     }
+  }
+
+  // Read-only viewers see plain, non-editable bullets (no click-to-edit,
+  // no remove).
+  if (readOnly) {
+    return (
+      <li className="flex items-start gap-2.5">
+        <span
+          aria-hidden
+          className={`mt-2 h-1.5 w-1.5 shrink-0 rounded-full ${dotClass}`}
+        />
+        <span className="min-w-0 flex-1 whitespace-pre-wrap break-words text-sm leading-relaxed text-white/85 sm:text-base">
+          {value}
+        </span>
+      </li>
+    );
   }
 
   if (editing) {
@@ -492,6 +514,7 @@ function AddRow({
   ringClass: string;
   onAdd: (text: string) => void;
 }) {
+  const readOnly = useSeoReadOnly();
   const [open, setOpen] = useState(false);
   const [text, setText] = useState("");
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -499,6 +522,9 @@ function AddRow({
   useEffect(() => {
     if (open && inputRef.current) inputRef.current.focus();
   }, [open]);
+
+  // Read-only viewers can't add brief items.
+  if (readOnly) return null;
 
   function submit() {
     const t = text.trim();

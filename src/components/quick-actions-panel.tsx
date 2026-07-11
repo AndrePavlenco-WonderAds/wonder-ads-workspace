@@ -18,9 +18,11 @@ import {
   toggleQuickAction,
   useQuickActions,
 } from "@/lib/quick-actions-store";
+import { useSeoReadOnly } from "./seo-readonly";
 
 export function QuickActionsPanel({ clientSlug }: { clientSlug: string }) {
   const pinned = useQuickActions();
+  const readOnly = useSeoReadOnly();
   const [editing, setEditing] = useState(false);
 
   return (
@@ -41,6 +43,7 @@ export function QuickActionsPanel({ clientSlug }: { clientSlug: string }) {
         <h3 className="text-sm font-semibold tracking-tight text-white">
           Quick Actions
         </h3>
+        {!readOnly && (
         <button
           type="button"
           onClick={() => setEditing((v) => !v)}
@@ -59,6 +62,7 @@ export function QuickActionsPanel({ clientSlug }: { clientSlug: string }) {
             </>
           )}
         </button>
+        )}
       </header>
 
       <p className="relative mt-3 text-xs text-white/55">

@@ -12,6 +12,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { SendToReviewButton } from "./send-to-review-button";
+import { useSeoReadOnly } from "./seo-readonly";
 import {
   GMB_CTAS,
   GMB_POST_STATUSES,
@@ -55,6 +56,7 @@ export function GmbPostCard({
   languageCode: string;
   onSaved?: (next: GmbPost) => void;
 }) {
+  const readOnly = useSeoReadOnly();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<GmbPost>(post);
   const [saving, setSaving] = useState(false);
@@ -332,18 +334,21 @@ export function GmbPostCard({
                   )}
                   {copied ? "Copied" : "Copy"}
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setEditing(true)}
-                  className="inline-flex items-center gap-1 rounded-md border border-white/15 bg-white/[0.04] px-2 py-1 text-[11px] text-white/75 transition hover:border-white/30 hover:bg-white/[0.08] hover:text-white"
-                >
-                  <Pencil className="h-3 w-3" />
-                  Edit
-                </button>
+                {!readOnly && (
+                  <button
+                    type="button"
+                    onClick={() => setEditing(true)}
+                    className="inline-flex items-center gap-1 rounded-md border border-white/15 bg-white/[0.04] px-2 py-1 text-[11px] text-white/75 transition hover:border-white/30 hover:bg-white/[0.08] hover:text-white"
+                  >
+                    <Pencil className="h-3 w-3" />
+                    Edit
+                  </button>
+                )}
                 {/* Send THIS specific post (not the whole batch) to the
                     client's pending review table. Useful when the
                     consultant wants the client to OK one post but not
                     the others. */}
+                {!readOnly && (
                 <SendToReviewButton
                   variant="compact"
                   clientSlug={clientSlug}
@@ -352,6 +357,7 @@ export function GmbPostCard({
                   docLink={`/${clientSlug}/preview/gmb-posts/${resultId}`}
                   sourceType={`gmb-post:${draft.id}`}
                 />
+                )}
                 <button
                   type="button"
                   disabled

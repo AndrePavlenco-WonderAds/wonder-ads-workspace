@@ -17,6 +17,7 @@ import type { HistoryEntry } from "@/lib/action-history";
 import { makeResultId, formatDisplayResultId } from "@/lib/action-history";
 import { formatDate } from "@/lib/dates";
 import { groupLocationTargets } from "@/lib/location-targets";
+import { useSeoReadOnly } from "./seo-readonly";
 
 const PENDING_PREFIX = "wa:pending-gen:";
 
@@ -50,6 +51,7 @@ export function ActionRunner({
   onboardingCompetitorCount?: number;
 }) {
   const router = useRouter();
+  const readOnly = useSeoReadOnly();
   const isKwResearch = action.slug === "keyword-research";
   const [values, setValues] = useState<Record<string, string>>(() => {
     const init: Record<string, string> = {};
@@ -211,34 +213,36 @@ export function ActionRunner({
                 field={displayField}
                 value={values[f.key] ?? ""}
                 onChange={(v) => setField(f.key, v)}
-                disabled={navigating}
+                disabled={navigating || readOnly}
               />
             );
           })}
         </div>
 
-        <div className="mt-5 flex items-center gap-3">
-          <button
-            type="button"
-            onClick={run}
-            disabled={navigating || requiredMissing}
-            className="brand-gradient-bg inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white shadow-[0_6px_24px_-4px_rgba(120,61,245,0.6)] transition-all hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:scale-100"
-          >
-            {navigating ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Play className="h-4 w-4" strokeWidth={2.5} />
+        {!readOnly && (
+          <div className="mt-5 flex items-center gap-3">
+            <button
+              type="button"
+              onClick={run}
+              disabled={navigating || requiredMissing}
+              className="brand-gradient-bg inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white shadow-[0_6px_24px_-4px_rgba(120,61,245,0.6)] transition-all hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:scale-100"
+            >
+              {navigating ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Play className="h-4 w-4" strokeWidth={2.5} />
+              )}
+              {navigating
+                ? "Opening result page…"
+                : (action.generateButtonLabel ?? "Generate")}
+            </button>
+            {requiredMissing && !navigating && (
+              <span className="text-xs text-white/40">
+                Fill in the required fields to generate.
+              </span>
             )}
-            {navigating
-              ? "Opening result page…"
-              : (action.generateButtonLabel ?? "Generate")}
-          </button>
-          {requiredMissing && !navigating && (
-            <span className="text-xs text-white/40">
-              Fill in the required fields to generate.
-            </span>
-          )}
-        </div>
+          </div>
+        )}
       </article>
 
       <section>
@@ -295,18 +299,20 @@ export function ActionRunner({
                       {summary.body || "—"}
                     </div>
                   </Link>
-                  <button
-                    type="button"
-                    onClick={(ev) => {
-                      ev.preventDefault();
-                      ev.stopPropagation();
-                      deleteEntry(e.id);
-                    }}
-                    aria-label={`Delete ${e.id}`}
-                    className="absolute right-2 top-2 hidden rounded-md border border-white/10 bg-black/30 p-1 text-white/50 transition hover:border-red-400/40 hover:text-red-300 group-hover:block"
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </button>
+                  {!readOnly && (
+                    <button
+                      type="button"
+                      onClick={(ev) => {
+                        ev.preventDefault();
+                        ev.stopPropagation();
+                        deleteEntry(e.id);
+                      }}
+                      aria-label={`Delete ${e.id}`}
+                      className="absolute right-2 top-2 hidden rounded-md border border-white/10 bg-black/30 p-1 text-white/50 transition hover:border-red-400/40 hover:text-red-300 group-hover:block"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </button>
+                  )}
                 </li>
               );
             })}

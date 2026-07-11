@@ -20,6 +20,9 @@ import {
   roadmapWeeks,
 } from "@/lib/roadmap-store";
 import { getRoadmapLog } from "@/lib/roadmap-changelog-store";
+import { getCurrentEmployee } from "@/lib/auth/server";
+import { editableDepts } from "@/lib/auth/credentials";
+import { SeoReadOnlyProvider, ReadOnlyBanner } from "@/components/seo-readonly";
 
 export const dynamic = "force-dynamic";
 
@@ -58,8 +61,13 @@ export default async function RoadmapPage({
   );
   const changelog = await getRoadmapLog(slug);
 
+  const employee = await getCurrentEmployee();
+  const readOnly = !employee || !editableDepts(employee).includes("seo");
+
   return (
+    <SeoReadOnlyProvider value={readOnly}>
     <PageShell wide backHref={`/seo/${slug}`} backLabel={client.title}>
+      {readOnly && <ReadOnlyBanner />}
       <header className="animate-fade-up mt-4 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <LogoChip
@@ -90,7 +98,7 @@ export default async function RoadmapPage({
             </h1>
           </div>
         </div>
-        {roadmap.tasks.length > 0 && (
+        {!readOnly && roadmap.tasks.length > 0 && (
           <div className="flex flex-wrap items-center gap-2">
             <WeeklyUpdateButton clientSlug={slug} clientName={client.title} />
             <SendToReviewButton
@@ -125,5 +133,6 @@ export default async function RoadmapPage({
         <RoadmapChangelog clientSlug={slug} initialEntries={changelog} />
       </section>
     </PageShell>
+    </SeoReadOnlyProvider>
   );
 }

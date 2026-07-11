@@ -17,6 +17,9 @@ import {
   getClientWebsite,
 } from "@/lib/client-meta";
 import { getClientPalette, paletteToGradient } from "@/lib/client-colors";
+import { getCurrentEmployee } from "@/lib/auth/server";
+import { editableDepts } from "@/lib/auth/credentials";
+import { SeoReadOnlyProvider, ReadOnlyBanner } from "@/components/seo-readonly";
 
 export const revalidate = 60;
 
@@ -63,6 +66,9 @@ export default async function ActionPage({
   const { action, pillar } = entry;
   const { Icon: PillarIcon } = pillar;
 
+  const employee = await getCurrentEmployee();
+  const readOnly = !employee || !editableDepts(employee).includes("seo");
+
   const briefHasContent =
     brief.dos.length + brief.donts.length + brief.notes.length > 0;
   const showBriefPanel = action.usesBrief !== false && briefHasContent;
@@ -87,11 +93,13 @@ export default async function ActionPage({
   }
 
   return (
+    <SeoReadOnlyProvider value={readOnly}>
     <PageShell
       wide
       backHref={`/seo/${slug}#section-actions`}
       backLabel={client.title}
     >
+      {readOnly && <ReadOnlyBanner />}
       <header className="animate-fade-up mt-2">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0 flex-1">
@@ -125,12 +133,12 @@ export default async function ActionPage({
               <IntegrationChips tools={action.tools as ActionToolName[]} />
             )}
           </div>
-          {action.slug === "write-blog-article" && (
+          {!readOnly && action.slug === "write-blog-article" && (
             <div className="shrink-0 pt-2">
               <BlogWriterStandardButton />
             </div>
           )}
-          {action.slug === "keyword-research" && (
+          {!readOnly && action.slug === "keyword-research" && (
             <div className="shrink-0 pt-2">
               <KwBacktestButton slug={slug} />
             </div>
@@ -216,6 +224,7 @@ export default async function ActionPage({
         </div>
       </nav>
     </PageShell>
+    </SeoReadOnlyProvider>
   );
 }
 

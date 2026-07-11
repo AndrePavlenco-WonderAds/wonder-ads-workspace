@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.67",
+    date: "2026-07-10",
+    title: "Departamento Web com acesso de leitura ao SEO",
+    highlights: [
+      "**👀 Os designers Web passam a ver as páginas de projeto do SEO — mas em modo só-leitura.** O Mike, o Gustavo, o Renan e o Cylas já conseguem abrir o **Departamento SEO** e entrar em qualquer **página de cliente** (`/seo/<cliente>`) para ver o brief, o roadmap, os ficheiros, as ações e os resultados. **Não podem alterar nada:** edições, botões de gerar com IA, aprovações (“Enviar para revisão”), uploads e apagar estão escondidos, e há um aviso amarelo de _“Read-only”_ no topo de cada página.",
+      "**🔒 Bloqueio garantido no servidor, não só na interface.** Mesmo que um botão escape, o _middleware_ rejeita qualquer escrita SEO (POST/PUT/PATCH/DELETE) de quem só tem acesso de leitura — a proteção não depende de esconder controlos.",
+      "**🚧 O que fica de fora para o Web.** As ferramentas ao nível do departamento continuam reservadas à equipa de SEO: **KPIs**, **Diretórios**, os **roadmaps por consultor** e a **consola de revisão interna** (`/review`). Aí, um utilizador Web vê o ecrã de _Sem acesso_.",
+      "**✅ Sem mudanças para a equipa de SEO.** Consultores de SEO e SuperAdmins mantêm exatamente o mesmo acesso e capacidade de edição de sempre.",
+    ],
+  },
+  {
     version: "74.66",
     date: "2026-07-09",
     title: "Senior Resort — cliente removido",

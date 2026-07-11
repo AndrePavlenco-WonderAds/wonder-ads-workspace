@@ -21,6 +21,9 @@ import {
   getLogoSizing,
 } from "@/lib/client-meta";
 import { getClientPalette, paletteToGradient } from "@/lib/client-colors";
+import { getCurrentEmployee } from "@/lib/auth/server";
+import { editableDepts } from "@/lib/auth/credentials";
+import { SeoReadOnlyProvider, ReadOnlyBanner } from "@/components/seo-readonly";
 import {
   getConsultantForSlug,
   getConsultantEmailForSlug,
@@ -118,22 +121,28 @@ export default async function ResultPage({
 
   const generatedDate = existing ? formatDate(existing.createdAt) : null;
 
+  const employee = await getCurrentEmployee();
+  const readOnly = !employee || !editableDepts(employee).includes("seo");
+
   return (
+    <SeoReadOnlyProvider value={readOnly}>
     <PageShell
       wide
       backHref={`/seo/${slug}/actions/${actionSlug}`}
       backLabel={action.label}
     >
+      {readOnly && <ReadOnlyBanner />}
       <div className="mt-2 flex justify-end">
         <div className="flex w-full max-w-[280px] flex-col items-stretch gap-2">
           {/* Send to Pending Review on top — same column as the
               downloads so consultants don't lose it on the left edge
               while their eyes are tracking the result table. */}
-          {(action.slug === "gmb-posts"
-            ? gmbResult
-            : action.slug === "meta-title-description"
-              ? metaTagsResult
-              : existing) && (
+          {!readOnly &&
+            (action.slug === "gmb-posts"
+              ? gmbResult
+              : action.slug === "meta-title-description"
+                ? metaTagsResult
+                : existing) && (
             <SendToReviewButton
               variant="prominent"
               clientSlug={slug}
@@ -336,5 +345,6 @@ export default async function ResultPage({
         )}
       </section>
     </PageShell>
+    </SeoReadOnlyProvider>
   );
 }

@@ -36,6 +36,7 @@ import {
   type RoadmapWarning,
 } from "@/lib/roadmap-store";
 import { formatDate } from "@/lib/dates";
+import { useSeoReadOnly } from "./seo-readonly";
 
 const MAX_PHOTOS = 8;
 const PHOTO_ACCEPT = "image/png,image/jpeg,image/webp,image/avif,image/gif";
@@ -122,6 +123,7 @@ export function RoadmapBoard({
   initialRoadmap,
   initialWarnings,
 }: Props) {
+  const readOnly = useSeoReadOnly();
   const [roadmap, setRoadmap] = useState<Roadmap>(initialRoadmap);
   const [warnings, setWarnings] = useState<RoadmapWarning[]>(initialWarnings);
   const [saving, setSaving] = useState(false);
@@ -446,12 +448,12 @@ export function RoadmapBoard({
           {!isEmpty && ` · generated ${formatDate(roadmap.generatedAt)}`}
         </span>
         <span className="ml-auto inline-flex items-center gap-3">
-          {saving && (
+          {saving && !readOnly && (
             <span className="inline-flex items-center gap-1.5 text-[11px] text-white/45">
               <Loader2 className="h-3 w-3 animate-spin" /> Saving…
             </span>
           )}
-          {!isEmpty && (
+          {!readOnly && !isEmpty && (
             <button
               type="button"
               onClick={extendRoadmap}
@@ -474,25 +476,27 @@ export function RoadmapBoard({
               {atMaxWeeks ? "Max 12 months" : "Extend +3 months"}
             </button>
           )}
-          <button
-            type="button"
-            onClick={() => setGeneratePanelOpen((p) => !p)}
-            className={
-              isEmpty
-                ? "inline-flex items-center gap-1.5 rounded-md bg-gradient-to-br from-[#343ED7] via-[#783DF5] to-[#C535C9] px-3 py-1.5 text-[11px] font-semibold text-white shadow-md shadow-[#783DF5]/25 transition hover:brightness-110"
-                : "inline-flex items-center gap-1.5 rounded-md border border-white/15 bg-white/[0.04] px-3 py-1.5 text-[11px] font-medium text-white/85 transition hover:border-white/30 hover:bg-white/[0.08] hover:text-white"
-            }
-          >
-            {isEmpty ? (
-              <Sparkles className="h-3.5 w-3.5" />
-            ) : (
-              <RefreshCw className="h-3.5 w-3.5" />
-            )}
-            {isEmpty ? "Fill with AI" : "Regenerate"}
-            <ChevronDown
-              className={`h-3 w-3 transition ${generatePanelOpen ? "rotate-180" : ""}`}
-            />
-          </button>
+          {!readOnly && (
+            <button
+              type="button"
+              onClick={() => setGeneratePanelOpen((p) => !p)}
+              className={
+                isEmpty
+                  ? "inline-flex items-center gap-1.5 rounded-md bg-gradient-to-br from-[#343ED7] via-[#783DF5] to-[#C535C9] px-3 py-1.5 text-[11px] font-semibold text-white shadow-md shadow-[#783DF5]/25 transition hover:brightness-110"
+                  : "inline-flex items-center gap-1.5 rounded-md border border-white/15 bg-white/[0.04] px-3 py-1.5 text-[11px] font-medium text-white/85 transition hover:border-white/30 hover:bg-white/[0.08] hover:text-white"
+              }
+            >
+              {isEmpty ? (
+                <Sparkles className="h-3.5 w-3.5" />
+              ) : (
+                <RefreshCw className="h-3.5 w-3.5" />
+              )}
+              {isEmpty ? "Fill with AI" : "Regenerate"}
+              <ChevronDown
+                className={`h-3 w-3 transition ${generatePanelOpen ? "rotate-180" : ""}`}
+              />
+            </button>
+          )}
         </span>
       </div>
 
@@ -522,7 +526,7 @@ export function RoadmapBoard({
         />
       )}
 
-      {warnings.length > 0 && (
+      {!readOnly && warnings.length > 0 && (
         <ul className="space-y-2">
           {warnings.map((w) => (
             <li
@@ -893,6 +897,7 @@ function WeekColumn({
   onAdd: (week: number) => void;
   flaggedTaskIds: Set<string>;
 }) {
+  const readOnly = useSeoReadOnly();
   return (
     <div
       className={
@@ -963,14 +968,16 @@ function WeekColumn({
           </li>
         )}
       </ul>
-      <button
-        type="button"
-        onClick={() => onAdd(week)}
-        className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-md border border-dashed border-white/15 bg-white/[0.02] px-2 py-1.5 text-[11px] text-white/55 transition hover:border-white/30 hover:bg-white/[0.05] hover:text-white"
-      >
-        <Plus className="h-3 w-3" />
-        Add task
-      </button>
+      {!readOnly && (
+        <button
+          type="button"
+          onClick={() => onAdd(week)}
+          className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-md border border-dashed border-white/15 bg-white/[0.02] px-2 py-1.5 text-[11px] text-white/55 transition hover:border-white/30 hover:bg-white/[0.05] hover:text-white"
+        >
+          <Plus className="h-3 w-3" />
+          Add task
+        </button>
+      )}
     </div>
   );
 }
@@ -994,7 +1001,31 @@ function TaskCard({
   onUpdate: (patch: Partial<RoadmapTask>) => void;
   onDelete: () => void;
 }) {
+  const readOnly = useSeoReadOnly();
   const meta = STATUS_META[task.status];
+  if (readOnly) {
+    // Read-only viewers see the task as a static card — no click-to-edit,
+    // no pencil, no inline form.
+    return (
+      <li
+        className={`relative rounded-lg ${meta.bgClass} ${flagged ? "ring-1 ring-amber-300/60" : ""}`}
+      >
+        <div className="block w-full px-2.5 py-2 text-left text-[11.5px] leading-snug">
+          <span className="font-medium">{task.title}</span>
+          <span className="mt-1 flex flex-wrap items-center gap-1.5 text-[9.5px] uppercase tracking-[0.1em]">
+            <span
+              className={`inline-flex items-center rounded-full border px-1.5 py-0.5 font-semibold ${meta.chipClass}`}
+            >
+              {meta.label}
+            </span>
+            <span className="rounded-full border border-white/15 bg-white/[0.04] px-1.5 py-0.5 text-white/65">
+              {PILLAR_LABEL[task.pillar]}
+            </span>
+          </span>
+        </div>
+      </li>
+    );
+  }
   if (!editing) {
     return (
       <li

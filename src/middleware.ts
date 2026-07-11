@@ -14,11 +14,49 @@
 
 import { NextResponse, type NextRequest } from "next/server";
 import { SESSION_COOKIE, readSession } from "@/lib/auth/session";
+import { canEditDept } from "@/lib/auth/credentials";
+
+// Mutating HTTP methods — a request using one of these is trying to
+// CHANGE something, so it must clear the per-dept write-gate below.
+const WRITE_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
+
+// API path prefixes that live under the SEO department. A write request
+// (POST/PUT/PATCH/DELETE) to any of these must come from a user who may
+// EDIT the SEO dept — Web designers get read-only SEO access, so their
+// writes are rejected here regardless of which UI control fired them.
+// GET/HEAD are always allowed (reads + downloads of existing outputs).
+const SEO_WRITE_PREFIXES = [
+  "/api/roadmaps",
+  "/api/seo-actions",
+  "/api/briefs",
+  "/api/onboarding",
+  "/api/target-keywords",
+  "/api/quick-actions",
+  "/api/accesses",
+  "/api/call-notes",
+  "/api/chat",
+];
 
 export async function middleware(req: NextRequest) {
   const cookie = req.cookies.get(SESSION_COOKIE)?.value;
   const session = await readSession(cookie);
-  if (session) return NextResponse.next();
+  if (session) {
+    // Read-only enforcement: block SEO writes from users who may view
+    // but not edit the SEO department (Web designers). This is the
+    // single server-side backstop — it does not depend on any UI
+    // control being hidden.
+    if (
+      WRITE_METHODS.has(req.method) &&
+      SEO_WRITE_PREFIXES.some((p) => req.nextUrl.pathname.startsWith(p)) &&
+      !canEditDept(session.u, "seo")
+    ) {
+      return NextResponse.json(
+        { error: "Read-only access — you cannot make changes in the SEO department." },
+        { status: 403 },
+      );
+    }
+    return NextResponse.next();
+  }
   // Build the bounce URL with the original path + search preserved.
   const url = req.nextUrl.clone();
   const original = `${req.nextUrl.pathname}${req.nextUrl.search}`;

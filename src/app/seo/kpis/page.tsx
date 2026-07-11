@@ -10,6 +10,9 @@ import {
   Info,
 } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
+import { AccessDenied } from "@/components/access-denied";
+import { getCurrentEmployee } from "@/lib/auth/server";
+import { editableDepts } from "@/lib/auth/credentials";
 
 export const metadata = {
   title: "SEO DPT KPIs — Wonder Ads Workspace",
@@ -62,7 +65,21 @@ const COO_NOTES = [
   "A history of scores and frameworks like this one help identify knowledge gaps when bringing new people onto the team.",
 ];
 
-export default function SeoKpisPage() {
+export default async function SeoKpisPage() {
+  // SEO-editor only — Web designers get read-only SEO project pages but
+  // not the department KPI dashboard.
+  const employee = await getCurrentEmployee();
+  if (!employee || !editableDepts(employee).includes("seo")) {
+    return (
+      <PageShell>
+        <AccessDenied
+          title="No SEO access"
+          description="The SEO KPIs are open to the SEO team and SuperAdmins."
+          username={employee?.username}
+        />
+      </PageShell>
+    );
+  }
   return (
     <PageShell>
       <Link

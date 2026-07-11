@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
+import { AccessDenied } from "@/components/access-denied";
+import { getCurrentEmployee } from "@/lib/auth/server";
+import { editableDepts } from "@/lib/auth/credentials";
 import { SeoDirectoriesView } from "@/components/seo-directories-view";
 import { getDirectories } from "@/lib/seo-directories-store";
 import { getSeoClients } from "@/lib/notion";
@@ -20,6 +23,21 @@ export const metadata = {
 };
 
 export default async function SeoDirectoriesPage() {
+  // SEO-editor only — Web designers get read-only SEO project pages but
+  // not the department directories/backlink tools.
+  const employee = await getCurrentEmployee();
+  if (!employee || !editableDepts(employee).includes("seo")) {
+    return (
+      <PageShell>
+        <AccessDenied
+          title="No SEO access"
+          description="The SEO directories are open to the SEO team and SuperAdmins."
+          username={employee?.username}
+        />
+      </PageShell>
+    );
+  }
+
   // Build a match profile per SEO client: language + country from client-geo,
   // niche from client-industry. Notion down → empty list (manual browse + CRUD
   // still work).

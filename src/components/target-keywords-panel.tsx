@@ -13,6 +13,7 @@ import Link from "next/link";
 import type { TargetKeyword } from "@/lib/target-keywords-store";
 import { formatDateLong } from "@/lib/dates";
 import { SendToReviewButton } from "./send-to-review-button";
+import { useSeoReadOnly } from "./seo-readonly";
 
 type SortKey = "addedAt" | "keyword" | "volume" | "kd";
 type SortDir = "asc" | "desc";
@@ -31,6 +32,7 @@ export function TargetKeywordsPanel({
   slug: string;
   clientName: string;
 }) {
+  const readOnly = useSeoReadOnly();
   const [items, setItems] = useState<TargetKeyword[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -220,7 +222,7 @@ export function TargetKeywordsPanel({
             <Download className="h-3 w-3" />
             CSV
           </button>
-          {items.length > 0 && (
+          {!readOnly && items.length > 0 && (
             <SendToReviewButton
               variant="compact"
               clientSlug={slug}
@@ -230,14 +232,16 @@ export function TargetKeywordsPanel({
               sourceType="target-keywords"
             />
           )}
-          <button
-            type="button"
-            onClick={() => setAdding((v) => !v)}
-            className="brand-gradient-bg inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-semibold text-white shadow-[0_4px_18px_-4px_rgba(120,61,245,0.55)] transition hover:opacity-90"
-          >
-            <Plus className="h-3 w-3" />
-            Add
-          </button>
+          {!readOnly && (
+            <button
+              type="button"
+              onClick={() => setAdding((v) => !v)}
+              className="brand-gradient-bg inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-semibold text-white shadow-[0_4px_18px_-4px_rgba(120,61,245,0.55)] transition hover:opacity-90"
+            >
+              <Plus className="h-3 w-3" />
+              Add
+            </button>
+          )}
         </div>
       </header>
 
@@ -376,14 +380,16 @@ export function TargetKeywordsPanel({
                     )}
                   </td>
                   <td className="px-3 py-2 text-right">
-                    <button
-                      type="button"
-                      onClick={() => remove(k.keyword)}
-                      aria-label={`Remove ${k.keyword}`}
-                      className="rounded-md p-1 text-white/40 transition hover:bg-rose-500/15 hover:text-rose-300"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
+                    {!readOnly && (
+                      <button
+                        type="button"
+                        onClick={() => remove(k.keyword)}
+                        aria-label={`Remove ${k.keyword}`}
+                        className="rounded-md p-1 text-white/40 transition hover:bg-rose-500/15 hover:text-rose-300"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}

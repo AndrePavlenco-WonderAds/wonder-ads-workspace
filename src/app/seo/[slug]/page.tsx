@@ -23,6 +23,9 @@ import {
   getLogoSizing,
 } from "@/lib/client-meta";
 import { getClientPalette, paletteToGradient } from "@/lib/client-colors";
+import { getCurrentEmployee } from "@/lib/auth/server";
+import { editableDepts } from "@/lib/auth/credentials";
+import { SeoReadOnlyProvider, ReadOnlyBanner } from "@/components/seo-readonly";
 
 export const revalidate = 60;
 
@@ -68,6 +71,12 @@ export default async function ClientPage({
   const client = await getClientBySlug(slug);
   if (!client) notFound();
 
+  // Read-only for anyone who can view but not edit the SEO dept (Web
+  // designers). SEO consultants + SuperAdmins keep full edit. The server
+  // still enforces this in middleware; this flag only tidies the UI.
+  const employee = await getCurrentEmployee();
+  const readOnly = !employee || !editableDepts(employee).includes("seo");
+
   const brief = await getBriefForSlug(slug);
   const website = getClientWebsite(slug);
   const logo = getClientLogo(slug);
@@ -77,7 +86,9 @@ export default async function ClientPage({
   const shared = isSharedWithSeo(slug);
 
   return (
+    <SeoReadOnlyProvider value={readOnly}>
     <PageShell wide sessionTimer backHref="/seo" backLabel="SEO DPT">
+      {readOnly && <ReadOnlyBanner />}
       <section className="animate-fade-up mt-4 flex flex-wrap items-start justify-between gap-5 sm:mt-8">
         <div className="flex items-center gap-5">
           <div className="shrink-0">
@@ -123,7 +134,7 @@ export default async function ClientPage({
             </h1>
             <CurrentRoadmapStrip slug={slug} />
             <div className="mt-2.5">
-              <PendingReviewChip slug={slug} />
+              <PendingReviewChip slug={slug} readOnly={readOnly} />
             </div>
           </div>
         </div>
@@ -166,6 +177,7 @@ export default async function ClientPage({
         <ClientAccesses slug={slug} clientName={client.title} />
       </section>
     </PageShell>
+    </SeoReadOnlyProvider>
   );
 }
 

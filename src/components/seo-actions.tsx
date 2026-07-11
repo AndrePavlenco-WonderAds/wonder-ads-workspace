@@ -8,6 +8,7 @@ import {
   toggleQuickAction,
   useQuickActions,
 } from "@/lib/quick-actions-store";
+import { useSeoReadOnly } from "./seo-readonly";
 
 export function SeoActions({
   clientName,
@@ -19,6 +20,7 @@ export function SeoActions({
   const ref = useRef<HTMLElement | null>(null);
   const [shown, setShown] = useState(false);
   const pinned = useQuickActions();
+  const readOnly = useSeoReadOnly();
 
   useEffect(() => {
     const el = ref.current;
@@ -49,8 +51,9 @@ export function SeoActions({
           Actions
         </h2>
         <span className="text-xs text-white/35">
-          One-click SEO workflows for {clientName} — click any action to run
-          it. Tap the pin to add it to Quick Actions.
+          {readOnly
+            ? `SEO workflows for ${clientName} — open any action to view its latest output.`
+            : `One-click SEO workflows for ${clientName} — click any action to run it. Tap the pin to add it to Quick Actions.`}
         </span>
       </header>
 
@@ -174,6 +177,10 @@ function PinButton({
   label: string;
   isPinned: boolean;
 }) {
+  // Pinning writes to the shared Quick Actions list — read-only viewers
+  // can't, so hide the control (the write is also blocked server-side).
+  const readOnly = useSeoReadOnly();
+  if (readOnly) return null;
   return (
     <span
       role="button"

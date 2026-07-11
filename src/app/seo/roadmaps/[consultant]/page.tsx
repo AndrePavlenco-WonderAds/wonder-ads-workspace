@@ -13,7 +13,7 @@ import { AccessDenied } from "@/components/access-denied";
 import { Greeting } from "@/components/greeting";
 import { ConsultantWeekView } from "@/components/consultant-week-view";
 import { getCurrentEmployee } from "@/lib/auth/server";
-import { accessibleDepts } from "@/lib/auth/credentials";
+import { editableDepts } from "@/lib/auth/credentials";
 import { CONSULTANT_ORDER } from "@/lib/client-overrides";
 import { slugify } from "@/lib/notion";
 import { getConsultantWeekView } from "@/lib/roadmap-admin-helpers";
@@ -57,7 +57,7 @@ export default async function ConsultantWeekPage({
   // renamed in lockstep, see credentials.ts + client-overrides.ts.)
   const allowed =
     employee &&
-    accessibleDepts(employee).includes("seo") &&
+    editableDepts(employee).includes("seo") &&
     (employee.isAdmin || employee.name === consultantName);
 
   if (!allowed) {

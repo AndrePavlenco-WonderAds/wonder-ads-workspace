@@ -156,15 +156,23 @@ export const EMPLOYEE_CREDENTIALS: EmployeeCredential[] = [
 export const DEPARTMENTS = ["seo", "ads", "web", "commercial"] as const;
 export type DeptSlug = (typeof DEPARTMENTS)[number];
 
-/** Which department dashboards a credential row may open.
+/** Which department dashboards a credential row may open — VIEW access.
  *
  *  - SuperAdmins + Founder ("All") → every department.
  *  - SEO consultants → SEO **and** Web (they brief/QA the web builds).
- *  - Web designers → Web only.
+ *  - Web designers → Web (full) **and** SEO (read-only — they can open
+ *    the SEO client project pages to see what's shipping, but every
+ *    edit/generation is blocked; see `editableDepts` + the middleware
+ *    write-gate). Added v74.67.
  *  - ADS / Commercial → their own department only.
  *
  *  Source of truth for the per-dept page gates. Demoting someone is a
- *  code-deploy away — nothing about access lives in the cookie. */
+ *  code-deploy away — nothing about access lives in the cookie.
+ *
+ *  NOTE: viewing ≠ editing. Whether a user may CHANGE anything in a
+ *  department is answered by `editableDepts` / `canEditDept`, which is a
+ *  subset of this. Web → SEO is view-only, so "seo" appears here but NOT
+ *  in `editableDepts`. */
 export function accessibleDepts(
   row: Pick<EmployeeCredential, "dept" | "isAdmin"> | null | undefined,
 ): DeptSlug[] {
@@ -177,6 +185,37 @@ export function accessibleDepts(
     case "SEO":
       return ["seo", "web"];
     case "Web":
+      return ["web", "seo"];
+    case "ADS":
+      return ["ads"];
+    case "Commercial":
+      return ["commercial"];
+    default:
+      return [];
+  }
+}
+
+/** Which departments a credential row may CHANGE — a subset of
+ *  `accessibleDepts`. The difference is the read-only grants: Web
+ *  designers can OPEN the SEO project pages but cannot edit or generate
+ *  anything there, so "seo" is absent from their editable set.
+ *
+ *  Everyone else edits exactly what they can view (access implies edit
+ *  for their own department). Enforced server-side in middleware (the
+ *  write-gate) and used client-side to hide edit/generation controls. */
+export function editableDepts(
+  row: Pick<EmployeeCredential, "dept" | "isAdmin"> | null | undefined,
+): DeptSlug[] {
+  if (!row) return [];
+  if (row.isAdmin) return [...DEPARTMENTS];
+  switch (row.dept) {
+    case "All":
+    case "Founder":
+      return [...DEPARTMENTS];
+    case "SEO":
+      return ["seo", "web"];
+    case "Web":
+      // Web edits ONLY Web — SEO is view-only for designers.
       return ["web"];
     case "ADS":
       return ["ads"];
@@ -195,6 +234,18 @@ export function canAccessDept(
   if (!username) return false;
   const row = findEmployeeByUsername(username);
   return accessibleDepts(row).includes(dept);
+}
+
+/** True when the user behind `username` may CHANGE things in `dept`
+ *  (edit fields, run AI generations, approve/send, delete). Web
+ *  designers viewing SEO get `false` here — read-only. */
+export function canEditDept(
+  username: string | null | undefined,
+  dept: DeptSlug,
+): boolean {
+  if (!username) return false;
+  const row = findEmployeeByUsername(username);
+  return editableDepts(row).includes(dept);
 }
 
 /** People a Web project can be assigned to — the web designers only

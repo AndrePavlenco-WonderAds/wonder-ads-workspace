@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { AlertTriangle, Loader2, Sparkles } from "lucide-react";
 import { pendingKey } from "./action-runner";
 import { MetaTagsTable } from "./meta-tags-table";
+import { useSeoReadOnly } from "./seo-readonly";
 import type { ActionDef } from "@/lib/seo-pillars";
 import type { MetaTagsResult } from "@/lib/meta-tags-store";
 
@@ -44,6 +45,7 @@ export function MetaTagsRunner({
   existing: MetaTagsResult | null;
 }) {
   const router = useRouter();
+  const readOnly = useSeoReadOnly();
   const [status, setStatus] = useState<Status>(existing ? "done" : "loading");
   const [progressPct, setProgressPct] = useState(0);
   const [phaseMessage, setPhaseMessage] = useState<string>("");
@@ -293,7 +295,7 @@ export function MetaTagsRunner({
             clientSlug={clientSlug}
             resultId={result.id}
             initialRows={result.rows}
-            readonly={false}
+            readonly={readOnly}
           />
         </section>
       )}

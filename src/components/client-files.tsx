@@ -18,6 +18,7 @@ import {
 import { upload } from "@vercel/blob/client";
 import type { ClientFile } from "@/lib/client-files";
 import { detectKind } from "@/lib/client-files";
+import { useSeoReadOnly } from "./seo-readonly";
 
 const BROADCAST_CHANNEL = "wa-client-files";
 const POLL_INTERVAL_MS = 30_000;
@@ -40,6 +41,7 @@ export function ClientFiles({
    *  links to the Creatives Studio for this client. */
   creativesHref?: string;
 }) {
+  const readOnly = useSeoReadOnly();
   const [files, setFiles] = useState<ClientFile[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -233,7 +235,7 @@ export function ClientFiles({
         )}
 
         <div className="ml-auto flex flex-wrap items-center gap-2">
-          {creativesHref && (
+          {!readOnly && creativesHref && (
             <Link
               href={creativesHref}
               target="_blank"
@@ -248,23 +250,27 @@ export function ClientFiles({
               Gerar Creatives
             </Link>
           )}
-          <button
-            type="button"
-            onClick={() => setAddingLink((v) => !v)}
-            className="inline-flex items-center gap-1.5 rounded-full border border-white/15 px-3 py-1.5 text-xs font-medium tracking-tight text-white/75 transition hover:border-white/35 hover:bg-white/[0.06]"
-          >
-            <LinkIcon className="h-3.5 w-3.5" />
-            Add link
-          </button>
-          <button
-            type="button"
-            disabled={uploading}
-            onClick={() => fileInputRef.current?.click()}
-            className="brand-gradient-bg inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold tracking-tight text-white shadow-[0_4px_18px_-4px_rgba(120,61,245,0.55)] transition hover:opacity-90 disabled:opacity-50"
-          >
-            <Upload className="h-3.5 w-3.5" />
-            Upload
-          </button>
+          {!readOnly && (
+            <button
+              type="button"
+              onClick={() => setAddingLink((v) => !v)}
+              className="inline-flex items-center gap-1.5 rounded-full border border-white/15 px-3 py-1.5 text-xs font-medium tracking-tight text-white/75 transition hover:border-white/35 hover:bg-white/[0.06]"
+            >
+              <LinkIcon className="h-3.5 w-3.5" />
+              Add link
+            </button>
+          )}
+          {!readOnly && (
+            <button
+              type="button"
+              disabled={uploading}
+              onClick={() => fileInputRef.current?.click()}
+              className="brand-gradient-bg inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold tracking-tight text-white shadow-[0_4px_18px_-4px_rgba(120,61,245,0.55)] transition hover:opacity-90 disabled:opacity-50"
+            >
+              <Upload className="h-3.5 w-3.5" />
+              Upload
+            </button>
+          )}
           <input
             ref={fileInputRef}
             type="file"
@@ -328,17 +334,20 @@ function FileTile({
   file: ClientFile;
   onRemove: () => void;
 }) {
+  const readOnly = useSeoReadOnly();
   return (
     <li className="group relative overflow-hidden rounded-xl border border-white/10 bg-white/[0.025]">
-      <button
-        type="button"
-        onClick={onRemove}
-        aria-label={`Remove ${file.name}`}
-        title="Remove"
-        className="absolute right-1.5 top-1.5 z-10 inline-flex h-6 w-6 items-center justify-center rounded-full bg-black/55 text-white/70 opacity-0 backdrop-blur-sm transition hover:bg-black/80 hover:text-white group-hover:opacity-100"
-      >
-        <X className="h-3.5 w-3.5" />
-      </button>
+      {!readOnly && (
+        <button
+          type="button"
+          onClick={onRemove}
+          aria-label={`Remove ${file.name}`}
+          title="Remove"
+          className="absolute right-1.5 top-1.5 z-10 inline-flex h-6 w-6 items-center justify-center rounded-full bg-black/55 text-white/70 opacity-0 backdrop-blur-sm transition hover:bg-black/80 hover:text-white group-hover:opacity-100"
+        >
+          <X className="h-3.5 w-3.5" />
+        </button>
+      )}
 
       {file.kind === "image" ? (
         <a href={file.url} target="_blank" rel="noopener noreferrer">

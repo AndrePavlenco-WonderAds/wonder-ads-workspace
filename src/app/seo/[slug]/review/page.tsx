@@ -6,6 +6,9 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, ExternalLink } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
+import { AccessDenied } from "@/components/access-denied";
+import { getCurrentEmployee } from "@/lib/auth/server";
+import { editableDepts } from "@/lib/auth/credentials";
 import { LogoChip } from "@/components/logo-chip";
 import { ReviewTable } from "@/components/review-table";
 import { CopyPublicLinkButton } from "@/components/copy-public-link-button";
@@ -42,6 +45,26 @@ export default async function InternalReviewPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
+
+  // Internal approval console — it mutates through the public /api/reviews
+  // endpoint (shared with the client-facing page), which the middleware
+  // write-gate deliberately leaves open. So this page is restricted to SEO
+  // editors; read-only viewers (Web designers) don't get it.
+  const employee = await getCurrentEmployee();
+  if (!employee || !editableDepts(employee).includes("seo")) {
+    return (
+      <PageShell backHref={`/seo/${slug}`} backLabel="SEO DPT">
+        <AccessDenied
+          title="No SEO access"
+          description="The internal review console is open to the SEO team and SuperAdmins."
+          backHref={`/seo/${slug}`}
+          backLabel="Back to client"
+          username={employee?.username}
+        />
+      </PageShell>
+    );
+  }
+
   // Parallelise the two awaited fetches so the request doesn't wait
   // serially for Notion (cached, ~0ms warm but cold-start can be slow)
   // and KV (~50ms) end-to-end. The function above already has

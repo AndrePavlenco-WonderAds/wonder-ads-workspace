@@ -15,6 +15,7 @@ import {
 import { upload } from "@vercel/blob/client";
 import type { OnboardingDoc } from "@/lib/onboarding-store";
 import { formatDateLong } from "@/lib/dates";
+import { useSeoReadOnly } from "./seo-readonly";
 
 const ACCEPT = ".pdf,.doc,.docx,.txt,.md,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown";
 
@@ -25,6 +26,7 @@ export function OnboardingForm({
   slug: string;
   clientName: string;
 }) {
+  const readOnly = useSeoReadOnly();
   const [doc, setDoc] = useState<OnboardingDoc | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -187,7 +189,7 @@ export function OnboardingForm({
         )}
 
         <div className="ml-auto flex items-center gap-2">
-          {doc && (
+          {!readOnly && doc && (
             <>
               <button
                 type="button"
@@ -219,7 +221,7 @@ export function OnboardingForm({
               </button>
             </>
           )}
-          {!doc && (
+          {!readOnly && !doc && (
             <button
               type="button"
               disabled={uploading || !loaded}
