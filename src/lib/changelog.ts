@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.68",
+    date: "2026-07-13",
+    title: "SEO — Avaliação de satisfação do cliente (NPS)",
+    highlights: [
+      "**⭐ Novo formulário de avaliação (modo quiz) para o cliente.** Cada cliente de SEO passa a ter um formulário de satisfação em **modo quiz** — secção a secção, com barra de progresso — que avalia o serviço, os resultados, a comunicação, o consultor e a execução, mais a clássica pergunta de **NPS (0–10)**. É uma página pública e sem chrome da app (`/<cliente>/survey`), com o logótipo e o nome do cliente, e adapta-se automaticamente ao idioma do cliente (PT/EN).",
+      "**🎯 Pontuação 0–10 na própria página do cliente.** No topo da página de cliente (`/seo/<cliente>`), ao lado do link do website, aparece um novo *chip* **NPS** com a pontuação global de satisfação (0–10), a verde/âmbar/vermelho consoante o resultado. Um clique abre a página de gestão.",
+      "**📊 Página de gestão de NPS (`/seo/<cliente>/nps`).** Mostra o **último resultado** (índice global /10, valor de NPS e categoria Promoter/Passive/Detractor), o **detalhe por secção** com destaque para o ponto mais fraco, a **evolução** ao longo do tempo, o **histórico** completo com comentários, e a data do **próximo envio**.",
+      "**📨 Enviar o link e agendar o próximo.** Botões para **copiar o link**, **enviar ao cliente** (regista o envio e abre um email pré-preenchido) ou apenas **marcar como enviado**. Uma cadência configurável (**3 / 6 / 12 meses**) agenda automaticamente o próximo envio, com aviso a **vermelho quando está em atraso**. Cada avaliação respondida reinicia o contador.",
+    ],
+  },
+  {
     version: "74.67",
     date: "2026-07-10",
     title: "Departamento Web com acesso de leitura ao SEO",

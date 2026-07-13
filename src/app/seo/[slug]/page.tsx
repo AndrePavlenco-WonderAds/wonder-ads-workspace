@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
-import { ExternalLink, RefreshCw } from "lucide-react";
+import Link from "next/link";
+import { ExternalLink, RefreshCw, Gauge } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { ClientBrief } from "@/components/client-brief";
 import { ClientFiles } from "@/components/client-files";
@@ -23,6 +24,7 @@ import {
   getLogoSizing,
 } from "@/lib/client-meta";
 import { getClientPalette, paletteToGradient } from "@/lib/client-colors";
+import { getLatestNps } from "@/lib/nps-store";
 import { getCurrentEmployee } from "@/lib/auth/server";
 import { editableDepts } from "@/lib/auth/credentials";
 import { SeoReadOnlyProvider, ReadOnlyBanner } from "@/components/seo-readonly";
@@ -84,6 +86,17 @@ export default async function ClientPage({
   const logoSizing = getLogoSizing(slug);
   const gradient = paletteToGradient(getClientPalette(slug));
   const shared = isSharedWithSeo(slug);
+  const latestNps = await getLatestNps(slug);
+  const npsScore = latestNps?.scores.overall ?? null;
+  // 0–10 → colour bucket for the pill. Neutral when no survey yet.
+  const npsColor =
+    npsScore === null
+      ? "rgba(255,255,255,0.55)"
+      : npsScore >= 8
+        ? "#6ee7b7"
+        : npsScore >= 6
+          ? "#fcd34d"
+          : "#fda4af";
 
   return (
     <SeoReadOnlyProvider value={readOnly}>
@@ -128,6 +141,27 @@ export default async function ClientPage({
                   <ExternalLink className="h-3 w-3" />
                 </a>
               )}
+              <Link
+                href={`/seo/${slug}/nps`}
+                title={
+                  latestNps
+                    ? `Satisfação do cliente: ${npsScore?.toFixed(1)}/10 · NPS ${latestNps.scores.nps}`
+                    : "Avaliação de satisfação do cliente (NPS) — ainda sem respostas"
+                }
+                className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-0.5 text-[11px] font-medium text-white/65 transition hover:border-white/25 hover:bg-white/[0.08] hover:text-white"
+              >
+                <Gauge className="h-3 w-3" style={{ color: npsColor }} />
+                <span className="uppercase tracking-[0.08em] text-white/45">
+                  NPS
+                </span>
+                {npsScore !== null ? (
+                  <span className="font-semibold" style={{ color: npsColor }}>
+                    {npsScore.toFixed(1)}
+                  </span>
+                ) : (
+                  <span className="text-white/40">—</span>
+                )}
+              </Link>
             </div>
             <h1 className="mt-2 text-4xl font-semibold leading-[1.05] tracking-tight sm:text-5xl">
               <span className="brand-gradient-text">{client.title}</span>
