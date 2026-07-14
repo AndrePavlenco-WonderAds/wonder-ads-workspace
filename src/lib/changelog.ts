@@ -13,6 +13,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.68.6",
+    date: "2026-07-14",
+    title: "NPS — perguntas de escolha múltipla",
+    highlights: [
+      "**☑️ Perguntas de escolha múltipla no formulário.** O NPS passa a suportar perguntas qualitativas de **seleção múltipla** (para além das notas 1–5). A primeira é, na secção *Resultados*, **“Diria que o investimento em SEO teve impacto direto em:”** com as opções **Melhor qualidade de leads · Mais visibilidade · Melhor posicionamento no mercado · Mais vendas / conversões · Ainda sem impacto claro**. São opcionais (não bloqueiam o avanço) e **não entram na média de satisfação** — servem para contextualizar o resultado.",
+      "**🔎 Visíveis na revisão do consultor.** Na página de NPS, o bloco “Respostas do cliente” mostra as opções escolhidas destacadas a verde (e as não escolhidas esbatidas), para o consultor ver exatamente o que o cliente assinalou.",
+    ],
+  },
+  {
     version: "74.68.5",
     date: "2026-07-14",
     title: "NPS — onboarding e mês de acompanhamento",

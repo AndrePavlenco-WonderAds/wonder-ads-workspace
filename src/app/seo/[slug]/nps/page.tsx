@@ -25,6 +25,7 @@ import {
   NPS_SECTIONS,
   sectionTitle,
   npsScoreColor,
+  isMultiQuestion,
 } from "@/lib/nps-questions";
 import { pickLang } from "@/lib/public-i18n";
 import { getCurrentEmployee } from "@/lib/auth/server";
@@ -357,6 +358,47 @@ function AnswersDetail({
 
             <div className="space-y-3.5">
               {section.questions.map((q) => {
+                if (isMultiQuestion(q)) {
+                  const picked = latest.choices?.[q.name] ?? [];
+                  return (
+                    <div key={q.name}>
+                      <p className="text-sm leading-snug text-white/75">
+                        {q.q[lang]}
+                      </p>
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {q.options.map((o) => {
+                          const on = picked.includes(o.value);
+                          return (
+                            <span
+                              key={o.value}
+                              className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px]"
+                              style={
+                                on
+                                  ? {
+                                      borderColor: "rgba(52,211,153,0.4)",
+                                      background: "rgba(52,211,153,0.12)",
+                                      color: "#6ee7b7",
+                                    }
+                                  : {
+                                      borderColor: "rgba(255,255,255,0.08)",
+                                      color: "rgba(255,255,255,0.30)",
+                                    }
+                              }
+                            >
+                              {on ? "✓ " : ""}
+                              {o.label[lang]}
+                            </span>
+                          );
+                        })}
+                        {picked.length === 0 && (
+                          <span className="text-[11px] italic text-white/30">
+                            Sem seleção
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                }
                 const value = latest.answers[q.name];
                 const has = typeof value === "number";
                 return (

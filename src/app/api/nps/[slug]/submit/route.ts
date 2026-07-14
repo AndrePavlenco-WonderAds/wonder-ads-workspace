@@ -5,7 +5,11 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { addNpsSubmission } from "@/lib/nps-store";
-import { NPS_QUESTION_NAMES } from "@/lib/nps-questions";
+import {
+  NPS_QUESTION_NAMES,
+  NPS_MULTI_NAMES,
+  getMultiQuestion,
+} from "@/lib/nps-questions";
 import { getConsultantForSlug } from "@/lib/client-overrides";
 
 export const runtime = "nodejs";
@@ -42,6 +46,22 @@ export async function POST(
     answers[name] = v;
   }
 
+  // Multi-select answers — optional. Keep only valid option values for each
+  // known multi question; drop anything unrecognised.
+  const rawChoices = (body.choices ?? {}) as Record<string, unknown>;
+  const choices: Record<string, string[]> = {};
+  for (const name of NPS_MULTI_NAMES) {
+    const picked = rawChoices[name];
+    if (!Array.isArray(picked)) continue;
+    const def = getMultiQuestion(name);
+    if (!def) continue;
+    const allowed = new Set(def.options.map((o) => o.value));
+    const clean = picked
+      .filter((v): v is string => typeof v === "string" && allowed.has(v))
+      .slice(0, def.options.length);
+    if (clean.length) choices[name] = clean;
+  }
+
   const comment =
     typeof body.comment === "string" ? body.comment.trim() || null : null;
   const identification =
@@ -54,6 +74,7 @@ export async function POST(
     slug,
     {
       answers,
+      choices,
       comment,
       identification,
       consultant: consultant === "Unassigned" ? null : consultant,

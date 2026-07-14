@@ -8,7 +8,12 @@
 
 import { useMemo, useState } from "react";
 import { ArrowLeft, ArrowRight, Check, Loader2 } from "lucide-react";
-import { NPS_SECTIONS, NPS_QUESTION_NAMES } from "@/lib/nps-questions";
+import {
+  NPS_SECTIONS,
+  NPS_QUESTION_NAMES,
+  isMultiQuestion,
+  type NpsMultiQuestion,
+} from "@/lib/nps-questions";
 import type { PublicLang } from "@/lib/public-i18n";
 
 const BRAND_GRADIENT =
@@ -113,6 +118,58 @@ function Scale({ value, onChange, min, max, lowCap, highCap }: ScaleProps) {
   );
 }
 
+function MultiChoice({
+  q,
+  lang,
+  selected,
+  onToggle,
+}: {
+  q: NpsMultiQuestion;
+  lang: PublicLang;
+  selected: string[];
+  onToggle: (value: string) => void;
+}) {
+  return (
+    <div>
+      {q.hint && (
+        <p className="mb-2.5 text-[12px] text-black/45">{q.hint[lang]}</p>
+      )}
+      <div className="flex flex-col gap-2">
+        {q.options.map((o) => {
+          const on = selected.includes(o.value);
+          return (
+            <button
+              key={o.value}
+              type="button"
+              onClick={() => onToggle(o.value)}
+              aria-pressed={on}
+              className="flex items-center gap-3 rounded-lg border px-3.5 py-2.5 text-left text-sm transition"
+              style={{
+                borderColor: on ? "transparent" : "rgba(0,0,0,0.12)",
+                background: on ? "rgba(120,61,245,0.08)" : "#fff",
+                boxShadow: on ? "inset 0 0 0 1.5px #783DF5" : "none",
+              }}
+            >
+              <span
+                className="flex h-5 w-5 shrink-0 items-center justify-center rounded-[6px] border transition"
+                style={{
+                  borderColor: on ? "transparent" : "rgba(0,0,0,0.25)",
+                  background: on ? BRAND_GRADIENT : "transparent",
+                }}
+              >
+                {on && <Check className="h-3.5 w-3.5 text-white" />}
+              </span>
+              <span className={on ? "text-black/85" : "text-black/70"}>
+                {o.label[lang]}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export function NpsSurveyForm({
   slug,
   clientName,
@@ -127,6 +184,7 @@ export function NpsSurveyForm({
   const total = sections.length;
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<Record<string, number>>({});
+  const [choices, setChoices] = useState<Record<string, string[]>>({});
   const [comment, setComment] = useState("");
   const [identification, setIdentification] = useState("");
   const [state, setState] = useState<"idle" | "sending" | "done" | "error">(
@@ -140,12 +198,25 @@ export function NpsSurveyForm({
 
   const section = sections[step];
   const isLast = step === total - 1;
+  // Only 1–5 questions are required; multi-select ones are optional.
   const missingInStep = section.questions.filter(
-    (q) => answers[q.name] === undefined,
+    (q) => !isMultiQuestion(q) && answers[q.name] === undefined,
   ).length;
 
   function setAnswer(name: string, v: number) {
     setAnswers((prev) => ({ ...prev, [name]: v }));
+  }
+
+  function toggleChoice(name: string, value: string) {
+    setChoices((prev) => {
+      const cur = prev[name] ?? [];
+      return {
+        ...prev,
+        [name]: cur.includes(value)
+          ? cur.filter((v) => v !== value)
+          : [...cur, value],
+      };
+    });
   }
 
   async function submit() {
@@ -156,6 +227,7 @@ export function NpsSurveyForm({
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           answers,
+          choices,
           comment: comment.trim() || null,
           identification: identification.trim() || null,
         }),
@@ -212,7 +284,7 @@ export function NpsSurveyForm({
         <div className="mb-2 flex flex-wrap justify-between gap-x-4 gap-y-1 text-[10px] font-medium uppercase tracking-[0.14em]">
           {sections.map((s, i) => {
             const done = s.questions.every(
-              (q) => answers[q.name] !== undefined,
+              (q) => isMultiQuestion(q) || answers[q.name] !== undefined,
             );
             const current = i === step;
             return (
@@ -263,14 +335,23 @@ export function NpsSurveyForm({
               <div className="mb-3 text-[15px] font-medium leading-snug text-black/80">
                 {q.q[lang]}
               </div>
-              <Scale
-                value={answers[q.name]}
-                onChange={(v) => setAnswer(q.name, v)}
-                min={1}
-                max={5}
-                lowCap={q.capLow[lang]}
-                highCap={q.capHigh[lang]}
-              />
+              {isMultiQuestion(q) ? (
+                <MultiChoice
+                  q={q}
+                  lang={lang}
+                  selected={choices[q.name] ?? []}
+                  onToggle={(v) => toggleChoice(q.name, v)}
+                />
+              ) : (
+                <Scale
+                  value={answers[q.name]}
+                  onChange={(v) => setAnswer(q.name, v)}
+                  min={1}
+                  max={5}
+                  lowCap={q.capLow[lang]}
+                  highCap={q.capHigh[lang]}
+                />
+              )}
             </div>
           ))}
 

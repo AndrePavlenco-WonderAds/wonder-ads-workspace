@@ -30,8 +30,10 @@ export type NpsSubmission = {
   id: string;
   /** Epoch ms when the client submitted. */
   submittedAt: number;
-  /** Raw answers, keyed by question name (13 rated + derived). */
+  /** Raw 1–5 answers, keyed by question name. */
   answers: Record<string, number>;
+  /** Multi-select answers, keyed by question name → selected option values. */
+  choices?: Record<string, string[]>;
   comment: string | null;
   /** Free-form "Name — Company" the client optionally left. */
   identification: string | null;
@@ -140,6 +142,7 @@ export function npsSendDue(record: NpsRecord, nowMs: number): boolean {
 
 export type NewSubmission = {
   answers: Record<string, number>;
+  choices?: Record<string, string[]>;
   comment?: string | null;
   identification?: string | null;
   consultant?: string | null;
@@ -158,6 +161,7 @@ export async function addNpsSubmission(
     id: `nps_${nowMs}_${Math.floor((nowMs % 1000) + rec.submissions.length)}`,
     submittedAt: nowMs,
     answers: input.answers,
+    choices: input.choices,
     comment: input.comment ? input.comment.slice(0, COMMENT_MAX) : null,
     identification: input.identification
       ? input.identification.slice(0, IDENT_MAX)

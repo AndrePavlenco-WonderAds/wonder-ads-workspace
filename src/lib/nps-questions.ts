@@ -18,7 +18,10 @@ export type NpsScaleKind = "five" | "nps";
 
 type Bilingual = { pt: string; en: string };
 
-export type NpsQuestion = {
+/** A 1–5 rated question — the default, and the only kind that feeds the
+ *  scoring averages. */
+export type NpsScaleQuestion = {
+  kind?: "scale";
   /** Form field name — stable, matches the source HTML. */
   name: string;
   scale: NpsScaleKind;
@@ -26,6 +29,26 @@ export type NpsQuestion = {
   capLow: Bilingual;
   capHigh: Bilingual;
 };
+
+export type NpsMultiOption = { value: string; label: Bilingual };
+
+/** A qualitative "select all that apply" question. NOT scored — it colours
+ *  the review with what the client attributes impact to, but never moves
+ *  the satisfaction average. */
+export type NpsMultiQuestion = {
+  kind: "multi";
+  name: string;
+  q: Bilingual;
+  /** Helper line under the question (e.g. "select all that apply"). */
+  hint?: Bilingual;
+  options: NpsMultiOption[];
+};
+
+export type NpsQuestion = NpsScaleQuestion | NpsMultiQuestion;
+
+export function isMultiQuestion(q: NpsQuestion): q is NpsMultiQuestion {
+  return (q as NpsMultiQuestion).kind === "multi";
+}
 
 export type NpsSectionDef = {
   key: string;
@@ -97,6 +120,46 @@ export const NPS_SECTIONS: NpsSectionDef[] = [
         },
         capLow: { pt: "Nenhum", en: "None" },
         capHigh: { pt: "Muito claro", en: "Very clear" },
+      },
+      {
+        kind: "multi",
+        name: "resultados_impacto",
+        q: {
+          pt: "Diria que o investimento em SEO teve impacto direto em:",
+          en: "Would you say the SEO investment had a direct impact on:",
+        },
+        hint: {
+          pt: "Selecione todas as opções que se aplicam.",
+          en: "Select all that apply.",
+        },
+        options: [
+          {
+            value: "leads_quality",
+            label: { pt: "Melhor qualidade de leads", en: "Better lead quality" },
+          },
+          {
+            value: "visibility",
+            label: { pt: "Mais visibilidade", en: "More visibility" },
+          },
+          {
+            value: "market_position",
+            label: {
+              pt: "Melhor posicionamento no mercado",
+              en: "Better market positioning",
+            },
+          },
+          {
+            value: "sales",
+            label: {
+              pt: "Mais vendas / conversões",
+              en: "More sales / conversions",
+            },
+          },
+          {
+            value: "no_impact",
+            label: { pt: "Ainda sem impacto claro", en: "No clear impact yet" },
+          },
+        ],
       },
     ],
   },
@@ -210,10 +273,26 @@ export const NPS_SECTIONS: NpsSectionDef[] = [
   },
 ];
 
-/** All rated question names, in order — the 13 answers a submission needs. */
+/** Rated (1–5) question names, in order — the answers a submission must
+ *  carry. Multi-select questions are excluded (they're optional + qualitative). */
 export const NPS_QUESTION_NAMES: string[] = NPS_SECTIONS.flatMap((s) =>
-  s.questions.map((q) => q.name),
+  s.questions.filter((q) => !isMultiQuestion(q)).map((q) => q.name),
 );
+
+/** Multi-select (qualitative) question names. */
+export const NPS_MULTI_NAMES: string[] = NPS_SECTIONS.flatMap((s) =>
+  s.questions.filter(isMultiQuestion).map((q) => q.name),
+);
+
+/** Look up a multi-select question definition by name. */
+export function getMultiQuestion(name: string): NpsMultiQuestion | null {
+  for (const s of NPS_SECTIONS) {
+    for (const q of s.questions) {
+      if (q.name === name && isMultiQuestion(q)) return q;
+    }
+  }
+  return null;
+}
 
 /** Every answer sits on the same 1–5 scale the client actually marks —
  *  there is no rescaling to 0–10. All derived scores are shown out of 5. */
@@ -254,6 +333,7 @@ export function computeNpsScores(answers: Record<string, number>): NpsScores {
   for (const section of NPS_SECTIONS) {
     const vals: number[] = [];
     for (const q of section.questions) {
+      if (isMultiQuestion(q)) continue; // qualitative — never scored
       const raw = answers[q.name];
       if (typeof raw !== "number" || Number.isNaN(raw)) continue;
       const v = clamp(raw, 1, 5);
