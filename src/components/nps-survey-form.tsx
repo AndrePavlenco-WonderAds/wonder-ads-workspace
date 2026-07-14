@@ -26,8 +26,8 @@ const COPY = {
     commentLabel:
       "O que destacaria no trabalho de SEO — o que correu bem e o que gostaria que fosse diferente? (opcional)",
     commentPlaceholder: "Escreva aqui a sua observação…",
-    identLabel: "Nome e empresa (opcional)",
-    identPlaceholder: "Nome — Empresa",
+    identLabel: (company: string) => `Quem está a responder por ${company}? (opcional)`,
+    identPlaceholder: "O seu nome",
     doneMark: "— Avaliação registada —",
     doneTitle: "Obrigado pelo seu tempo.",
     doneBody:
@@ -45,8 +45,8 @@ const COPY = {
     commentLabel:
       "What stood out in the SEO work — what went well and what would you change? (optional)",
     commentPlaceholder: "Write your note here…",
-    identLabel: "Name and company (optional)",
-    identPlaceholder: "Name — Company",
+    identLabel: (company: string) => `Who's answering for ${company}? (optional)`,
+    identPlaceholder: "Your name",
     doneMark: "— Evaluation recorded —",
     doneTitle: "Thank you for your time.",
     doneBody:
@@ -115,9 +115,11 @@ function Scale({ value, onChange, min, max, lowCap, highCap }: ScaleProps) {
 
 export function NpsSurveyForm({
   slug,
+  clientName,
   lang,
 }: {
   slug: string;
+  clientName: string;
   lang: PublicLang;
 }) {
   const t = COPY[lang];
@@ -288,7 +290,7 @@ export function NpsSurveyForm({
               </div>
               <div>
                 <div className="mb-2 text-[15px] font-medium leading-snug text-black/80">
-                  {t.identLabel}
+                  {t.identLabel(clientName)}
                 </div>
                 <input
                   type="text"

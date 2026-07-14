@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.68.1",
+    date: "2026-07-14",
+    title: "NPS — afinação de textos e intro animada",
+    highlights: [
+      "**✍️ Enquadramento de agência.** A pergunta de NPS deixa de dizer “recomendar como consultor de SEO” (que nos reduzia a um consultor individual) e passa a “recomendar a **nossa agência** a um colega ou parceiro de negócio”. A secção do consultor foi personalizada para **“o seu consultor dedicado”** e a intro fala do **nosso trabalho de SEO** e da **equipa** que acompanha a conta.",
+      "**🙋 Campo de identificação mais lógico.** Como já sabemos de que cliente é o link, deixámos de pedir “Nome — Empresa”. Agora o campo pergunta apenas **“Quem está a responder por «{cliente}»?”** — só o nome da pessoa.",
+      "**⌨️ Intro com efeito de escrita.** O texto de abertura do formulário aparece **letra a letra** (como se estivesse a ser escrito) e, no fim, surge um selo **“Formulário de 4 minutos”**.",
+    ],
+  },
+  {
     version: "74.68",
     date: "2026-07-13",
     title: "SEO — Avaliação de satisfação do cliente (NPS)",

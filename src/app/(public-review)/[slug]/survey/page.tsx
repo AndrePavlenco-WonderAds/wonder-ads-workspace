@@ -12,6 +12,7 @@ import {
 } from "@/lib/client-overrides";
 import { pickLang } from "@/lib/public-i18n";
 import { NpsSurveyForm } from "@/components/nps-survey-form";
+import { NpsIntro } from "@/components/nps-intro";
 
 export const dynamic = "force-dynamic";
 
@@ -31,8 +32,13 @@ const RESERVED = new Set([
 ]);
 
 const INTRO = {
-  pt: "Um formulário curto para avaliar o serviço de SEO, os resultados orgânicos, a comunicação e o consultor responsável. Sem rodeios — cerca de 5 minutos, respostas diretas.",
-  en: "A short form to evaluate the SEO service, the organic results, the communication and the consultant in charge. Straight to the point — about 5 minutes.",
+  pt: "Um formulário curto para avaliar o nosso trabalho de SEO — o serviço, os resultados orgânicos, a comunicação e a equipa que acompanha a sua conta.",
+  en: "A short form to evaluate our SEO work — the service, the organic results, the communication and the team looking after your account.",
+} as const;
+
+const MINUTES = {
+  pt: "Formulário de 4 minutos",
+  en: "4-minute form",
 } as const;
 
 const EYEBROW = {
@@ -83,11 +89,9 @@ export default async function PublicSurveyPage({
         </div>
       </header>
 
-      <p className="mb-8 max-w-xl text-sm leading-relaxed text-black/60">
-        {INTRO[lang]}
-      </p>
+      <NpsIntro text={INTRO[lang]} minutesLabel={MINUTES[lang]} />
 
-      <NpsSurveyForm slug={slug} lang={lang} />
+      <NpsSurveyForm slug={slug} clientName={client.title} lang={lang} />
 
       {/* Footer */}
       <footer className="mt-12 border-t border-black/8 pt-6 text-center text-[11px] text-black/45">

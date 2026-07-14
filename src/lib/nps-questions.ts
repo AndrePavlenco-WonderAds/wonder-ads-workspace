@@ -130,14 +130,14 @@ export const NPS_SECTIONS: NpsSectionDef[] = [
   {
     key: "consultor",
     tag: "04",
-    title: { pt: "Consultor", en: "Consultant" },
+    title: { pt: "O seu consultor", en: "Your consultant" },
     questions: [
       {
         name: "consultor_profissionalismo",
         scale: "five",
         q: {
-          pt: "Como avalia o profissionalismo do consultor de SEO?",
-          en: "How would you rate the professionalism of the SEO consultant?",
+          pt: "Como avalia o profissionalismo do seu consultor dedicado?",
+          en: "How would you rate the professionalism of your dedicated consultant?",
         },
         capLow: { pt: "Fraco", en: "Poor" },
         capHigh: { pt: "Excelente", en: "Excellent" },
@@ -146,8 +146,8 @@ export const NPS_SECTIONS: NpsSectionDef[] = [
         name: "consultor_conhecimento",
         scale: "five",
         q: {
-          pt: "O consultor demonstrou domínio técnico de SEO (on-page, técnico, conteúdo, backlinks)?",
-          en: "Did the consultant show technical SEO mastery (on-page, technical, content, backlinks)?",
+          pt: "O seu consultor demonstrou domínio técnico de SEO (on-page, técnico, conteúdo, backlinks)?",
+          en: "Did your consultant show technical SEO mastery (on-page, technical, content, backlinks)?",
         },
         capLow: { pt: "Insuficiente", en: "Insufficient" },
         capHigh: { pt: "Muito sólido", en: "Very solid" },
@@ -156,8 +156,8 @@ export const NPS_SECTIONS: NpsSectionDef[] = [
         name: "consultor_interesse",
         scale: "five",
         q: {
-          pt: "O consultor demonstrou interesse genuíno em compreender as necessidades do seu negócio?",
-          en: "Did the consultant show genuine interest in understanding your business needs?",
+          pt: "O seu consultor demonstrou interesse genuíno em compreender as necessidades do seu negócio?",
+          en: "Did your consultant show genuine interest in understanding your business needs?",
         },
         capLow: { pt: "Nenhum", en: "None" },
         capHigh: { pt: "Muito genuíno", en: "Very genuine" },
@@ -200,8 +200,8 @@ export const NPS_SECTIONS: NpsSectionDef[] = [
         name: "nps",
         scale: "nps",
         q: {
-          pt: "Numa escala de 0 a 10, qual a probabilidade de nos recomendar como consultor de SEO?",
-          en: "On a scale of 0 to 10, how likely are you to recommend us as an SEO consultant?",
+          pt: "Numa escala de 0 a 10, qual a probabilidade de recomendar a nossa agência a um colega ou parceiro de negócio?",
+          en: "On a scale of 0 to 10, how likely are you to recommend our agency to a colleague or business partner?",
         },
         capLow: { pt: "Nada provável", en: "Not at all likely" },
         capHigh: { pt: "Extremamente provável", en: "Extremely likely" },
