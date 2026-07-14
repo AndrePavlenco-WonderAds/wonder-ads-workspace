@@ -1,5 +1,7 @@
 import { notFound } from "next/navigation";
 import {
+  CalendarClock,
+  CalendarDays,
   ClipboardList,
   MessageSquareQuote,
   Sparkles,
@@ -17,6 +19,8 @@ import {
 } from "@/lib/client-meta";
 import { getClientPalette, paletteToGradient } from "@/lib/client-colors";
 import { getNpsRecord, type NpsSubmission } from "@/lib/nps-store";
+import { getCurrentRoadmap } from "@/lib/roadmap-store";
+import { DEFAULT_STARTING_DATES } from "@/lib/admin-clients-store";
 import {
   NPS_SECTIONS,
   sectionTitle,
@@ -44,6 +48,18 @@ export async function generateMetadata({
 }
 
 const scoreColor = npsScoreColor;
+
+/** Whole calendar months elapsed since an ISO date (local). 0 within the
+ *  first month. Used to derive "Nth month of the engagement". */
+function monthsSinceISO(iso: string, now: Date = new Date()): number {
+  const d = new Date(`${iso}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return 0;
+  let m =
+    (now.getFullYear() - d.getFullYear()) * 12 +
+    (now.getMonth() - d.getMonth());
+  if (now.getDate() < d.getDate()) m -= 1;
+  return Math.max(0, m);
+}
 
 const CATEGORY_STYLE: Record<
   string,
@@ -83,6 +99,21 @@ export default async function NpsPage({
   const isSuperAdmin = Boolean(employee?.isAdmin);
 
   const record = await getNpsRecord(slug);
+
+  // Onboarding date + which month of the engagement the client is in —
+  // the same facts surfaced on the roadmap page. Prefer the roadmap's
+  // pinned onboardingDate (survives roadmap resets), then the canonical
+  // starting-dates map, then the roadmap's current startDate.
+  const roadmap = await getCurrentRoadmap(slug);
+  const onboardedIso =
+    roadmap?.onboardingDate ??
+    DEFAULT_STARTING_DATES[slug] ??
+    roadmap?.startDate ??
+    null;
+  const engagementMonth = onboardedIso
+    ? monthsSinceISO(onboardedIso) + 1
+    : null;
+
   const logo = getClientLogo(slug);
   const gradient = paletteToGradient(getClientPalette(slug));
   const lang = pickLang(slug);
@@ -122,6 +153,32 @@ export default async function NpsPage({
               Avaliação de satisfação do cliente — resultado mais recente,
               histórico e próximo envio.
             </p>
+            {onboardedIso && (
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <span
+                  className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[11px] text-white/70"
+                  title="Data em que o cliente entrou (onboarded) — a mesma que aparece no roadmap"
+                >
+                  <CalendarDays className="h-3 w-3 text-white/45" />
+                  Cliente desde
+                  <span className="font-semibold text-white/90">
+                    {formatDate(onboardedIso)}
+                  </span>
+                </span>
+                {engagementMonth && (
+                  <span
+                    className="inline-flex items-center gap-1.5 rounded-full border border-[#783DF5]/30 bg-[#783DF5]/10 px-2.5 py-1 text-[11px] text-white/80"
+                    title="Mês de acompanhamento em que o cliente se encontra, contado desde o onboarding"
+                  >
+                    <CalendarClock className="h-3 w-3 text-[#a78bfa]" />
+                    <span className="font-semibold text-white/95">
+                      {engagementMonth}º mês
+                    </span>
+                    de acompanhamento
+                  </span>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </section>

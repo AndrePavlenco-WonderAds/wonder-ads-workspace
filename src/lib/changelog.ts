@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.68.5",
+    date: "2026-07-14",
+    title: "NPS — onboarding e mês de acompanhamento",
+    highlights: [
+      "**📅 Contexto de antiguidade na página de NPS.** O cabeçalho da página de NPS (`/seo/<cliente>/nps`) passa a mostrar **desde quando o cliente está connosco** (data de onboarding) e **em que mês de acompanhamento se encontra** (ex.: *“Cliente desde 01/06/2026 · 2º mês de acompanhamento”*). A data vem da mesma fonte do roadmap (onboarding fixado, com fallback para a data de início oficial do cliente), para o consultor ler o NPS já com a noção de há quanto tempo trabalhamos com aquele cliente.",
+    ],
+  },
+  {
     version: "74.68.4",
     date: "2026-07-14",
     title: "NPS — apagar última avaliação (só SuperAdmins)",
