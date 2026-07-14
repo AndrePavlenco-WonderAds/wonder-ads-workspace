@@ -12,7 +12,7 @@
 // full-page detail pop-up.
 
 import { useState } from "react";
-import { Loader2, Save, Check, X } from "lucide-react";
+import { Loader2, Save, Check, X, Trash2 } from "lucide-react";
 import {
   BILLING_CADENCES,
   INVOICE_TYPES,
@@ -49,17 +49,18 @@ type Props = {
    *  this to update its records map so the rollup tiles (MRR / IVA)
    *  recompute instantly without waiting on router.refresh(). */
   onSaved?: (record: AdminClientRecord) => void;
-  /** True when this client was added manually (extra-clients store) and
-   *  can be removed from here. */
+  /** True when this client was added manually (extra-clients store). */
   isExtra?: boolean;
-  /** Delete the whole manually-added client (all its dept rows). */
-  onDelete?: (slug: string) => void;
+  /** Cancel/remove the whole client (all its dept rows) from the finance
+   *  roster. Available on every row; guarded by a typed CONFIRMAR modal. */
+  onRemove?: (slug: string) => void | Promise<void>;
 };
 
 const DEPT_PILL: Record<string, string> = {
   SEO: "border-[#783DF5]/40 bg-[#783DF5]/12 text-[#d4c4ff]",
   ADS: "border-[#C535C9]/40 bg-[#C535C9]/12 text-[#f4c5f1]",
   Web: "border-cyan-400/45 bg-cyan-500/12 text-cyan-200",
+  CRM: "border-emerald-400/45 bg-emerald-500/12 text-emerald-200",
 };
 
 const INVOICE_TYPE_PILL: Record<InvoiceType, string> = {
@@ -81,7 +82,7 @@ export function AdminClientRow({
   initial,
   onSaved,
   isExtra,
-  onDelete,
+  onRemove,
 }: Props) {
   const sharedWith = clientDepartments.filter((d) => d !== department);
   const [draft, setDraft] = useState<AdminClientRecord>(initial);
@@ -91,6 +92,7 @@ export function AdminClientRow({
   );
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   const dirty =
     draft.billingCadence !== saved.billingCadence ||
@@ -98,6 +100,7 @@ export function AdminClientRow({
     draft.invoiceDate !== saved.invoiceDate ||
     draft.invoiceType !== saved.invoiceType ||
     draft.monthlyValue !== saved.monthlyValue ||
+    draft.totalValue !== saved.totalValue ||
     draft.iva !== saved.iva;
 
   async function save() {
@@ -115,6 +118,7 @@ export function AdminClientRow({
             invoiceDate: draft.invoiceDate,
             invoiceType: draft.invoiceType,
             monthlyValue: draft.monthlyValue,
+            totalValue: draft.totalValue,
             iva: draft.iva,
             clientDepartments,
           }),
@@ -212,8 +216,11 @@ export function AdminClientRow({
           ))}
         </select>
         <div className="mt-1 text-[10.5px] text-white/40">
-          Every {cadenceMonths(draft.billingCadence)} month
-          {cadenceMonths(draft.billingCadence) === 1 ? "" : "s"}
+          {draft.billingCadence === "one-off"
+            ? "Pagamento único"
+            : `Every ${cadenceMonths(draft.billingCadence)} month${
+                cadenceMonths(draft.billingCadence) === 1 ? "" : "s"
+              }`}
         </div>
       </td>
 
@@ -319,6 +326,36 @@ export function AdminClientRow({
         })()}
       </td>
 
+      {/* Total value — what the client pays upfront. Informational; does
+          NOT feed MRR. */}
+      <td className="px-3 py-3.5">
+        <div className="flex items-stretch gap-1">
+          <div
+            className="flex shrink-0 items-center justify-center rounded-md border border-white/15 bg-white/[0.06] px-2.5 text-[13px] font-semibold text-white/70"
+            aria-hidden
+            title="Total (euros)"
+          >
+            €
+          </div>
+          <input
+            type="number"
+            inputMode="decimal"
+            step="0.01"
+            min="0"
+            value={draft.totalValue ?? ""}
+            onChange={(e) => {
+              const raw = e.target.value;
+              setDraft({ ...draft, totalValue: raw === "" ? null : Number(raw) });
+            }}
+            placeholder="—"
+            className="w-full rounded-md border border-white/18 bg-white/[0.05] px-2.5 py-2 text-right text-[14px] font-semibold tabular-nums text-white outline-none transition placeholder:text-white/30 focus:border-white/40"
+          />
+        </div>
+        <div className="mt-1 text-right text-[10.5px] text-white/45">
+          Total · upfront
+        </div>
+      </td>
+
       {/* IVA — editable EUR amount, feeds the Obrigações Fiscais tile */}
       <td className="px-3 py-3.5">
         <div className="flex items-stretch gap-1">
@@ -394,20 +431,14 @@ export function AdminClientRow({
               {errorMsg}
             </span>
           )}
-          {isExtra && onDelete && (
+          {onRemove && (
             <button
               type="button"
-              onClick={() => {
-                if (
-                  window.confirm(
-                    `Remover o cliente "${title}"? Remove todas as linhas deste cliente adicionado manualmente.`,
-                  )
-                )
-                  onDelete(slug);
-              }}
-              className="text-[10.5px] text-white/35 transition hover:text-rose-300"
+              onClick={() => setConfirmOpen(true)}
+              className="inline-flex items-center justify-center gap-1 text-[10.5px] text-white/35 transition hover:text-rose-300"
             >
-              Remove client
+              <Trash2 className="h-3 w-3" />
+              Cancelar cliente
             </button>
           )}
         </div>
@@ -425,7 +456,113 @@ export function AdminClientRow({
           onClose={() => setDetailOpen(false)}
         />
       )}
+
+      {confirmOpen && onRemove && (
+        <ConfirmRemoveModal
+          title={title}
+          isExtra={isExtra}
+          onClose={() => setConfirmOpen(false)}
+          onConfirm={async () => {
+            await onRemove(slug);
+            setConfirmOpen(false);
+          }}
+        />
+      )}
     </tr>
+  );
+}
+
+/** Typed-CONFIRMAR gate before removing a client from the finance roster.
+ *  The delete button only enables once the user types CONFIRMAR exactly. */
+function ConfirmRemoveModal({
+  title,
+  isExtra,
+  onClose,
+  onConfirm,
+}: {
+  title: string;
+  isExtra?: boolean;
+  onClose: () => void;
+  onConfirm: () => void | Promise<void>;
+}) {
+  const [text, setText] = useState("");
+  const [working, setWorking] = useState(false);
+  const ready = text.trim().toUpperCase() === "CONFIRMAR";
+
+  return (
+    <td>
+      <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
+        <div className="w-full max-w-md overflow-hidden rounded-2xl border border-rose-400/25 bg-[#0a0a0f] shadow-2xl shadow-black/70">
+          <header className="flex items-center justify-between border-b border-white/8 px-5 py-3.5">
+            <h3 className="flex items-center gap-2 text-[15px] font-semibold text-rose-200">
+              <Trash2 className="h-4 w-4" />
+              Cancelar cliente
+            </h3>
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Fechar"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/10 text-white/60 transition hover:border-white/30 hover:text-white"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </header>
+          <div className="space-y-3 px-5 py-5">
+            <p className="text-[13px] leading-relaxed text-white/75">
+              Vais remover <span className="font-semibold text-white">{title}</span>{" "}
+              da tabela de Clients (todas as linhas de departamento).{" "}
+              {isExtra
+                ? "Este cliente foi adicionado manualmente e será apagado."
+                : "Deixa de aparecer no roster financeiro."}{" "}
+              Esta ação não pode ser anulada aqui.
+            </p>
+            <label className="block">
+              <span className="mb-1 block text-[10.5px] font-bold uppercase tracking-[0.14em] text-white/45">
+                Escreve CONFIRMAR para continuar
+              </span>
+              <input
+                autoFocus
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && ready && !working) {
+                    setWorking(true);
+                    void onConfirm();
+                  }
+                }}
+                placeholder="CONFIRMAR"
+                className="w-full rounded-lg border border-white/12 bg-white/[0.04] px-3 py-2 text-[13px] tracking-[0.12em] text-white outline-none transition focus:border-rose-400/50 placeholder:tracking-normal placeholder:text-white/25"
+              />
+            </label>
+          </div>
+          <footer className="flex items-center justify-end gap-2 border-t border-white/8 bg-black/30 px-5 py-3.5">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-lg border border-white/12 px-3 py-2 text-[12px] font-medium text-white/70 transition hover:border-white/30 hover:text-white"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              disabled={!ready || working}
+              onClick={() => {
+                setWorking(true);
+                void onConfirm();
+              }}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-rose-400/50 bg-rose-500/20 px-4 py-2 text-[12px] font-semibold text-rose-100 transition hover:bg-rose-500/30 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {working ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Trash2 className="h-3.5 w-3.5" />
+              )}
+              Apagar cliente
+            </button>
+          </footer>
+        </div>
+      </div>
+    </td>
   );
 }
 

@@ -16,6 +16,7 @@ export const BILLING_CADENCES = [
   "bi-monthly",
   "quarterly",
   "semi-annual",
+  "one-off",
 ] as const;
 export type BillingCadence = (typeof BILLING_CADENCES)[number];
 
@@ -107,7 +108,7 @@ const CONSULTANT_RENAMES: Record<string, string> = {
 /** Departments a client row can belong to. Used as a typed dimension
  *  of the per-(slug, department) record key — kept in sync with the
  *  pill-coloring map in admin-client-row.tsx. */
-export const CLIENT_DEPARTMENTS = ["SEO", "ADS", "Web"] as const;
+export const CLIENT_DEPARTMENTS = ["SEO", "ADS", "Web", "CRM"] as const;
 export type ClientDepartment = (typeof CLIENT_DEPARTMENTS)[number];
 
 /** Canonical department for each consultant — drives both the
@@ -130,6 +131,7 @@ export const LEGACY_VALUE_DEPT_PRIORITY: ClientDepartment[] = [
   "SEO",
   "ADS",
   "Web",
+  "CRM",
 ];
 
 export type AdminClientRecord = {
@@ -168,6 +170,9 @@ export type AdminClientRecord = {
   /** Monthly equivalent value (raw number in the client's currency,
    *  no symbol). Used for the Active MRR roll-ups. */
   monthlyValue: number | null;
+  /** Total contract value the client pays when paying upfront (raw
+   *  number, no symbol). Informational column — does NOT feed MRR. */
+  totalValue: number | null;
   /** IVA amount in EUR for this row — editable, empty by default.
    *  Summed across the table into the "Obrigações Fiscais" tile. */
   iva: number | null;
@@ -205,6 +210,7 @@ export function defaultAdminRecord(
     invoiceDate: null,
     currency: "EUR",
     monthlyValue: null,
+    totalValue: null,
     iva: null,
     notes: "",
     updatedAt: new Date(0).toISOString(),
@@ -279,6 +285,8 @@ function normaliseFields(
       ? raw.invoiceDate
       : base.invoiceDate;
   const iva = typeof raw.iva === "number" ? raw.iva : base.iva;
+  const totalValue =
+    typeof raw.totalValue === "number" ? raw.totalValue : base.totalValue;
   return {
     ...base,
     ...raw,
@@ -287,6 +295,7 @@ function normaliseFields(
     consultants,
     currency,
     monthlyValue,
+    totalValue,
     startingDate,
     invoiceType,
     invoiceDate,
@@ -416,7 +425,8 @@ export function adminRecordKey(
 // Cadence-derived helpers
 // ---------------------------------------------------------------------------
 
-/** Months between billings for a given cadence. */
+/** Months between billings for a given cadence. One-off has no recurring
+ *  interval → 0 (callers must treat 0 as "no next billing"). */
 export function cadenceMonths(c: BillingCadence): number {
   switch (c) {
     case "monthly":
@@ -427,6 +437,8 @@ export function cadenceMonths(c: BillingCadence): number {
       return 3;
     case "semi-annual":
       return 6;
+    case "one-off":
+      return 0;
   }
 }
 
@@ -442,6 +454,8 @@ export function cadenceLabel(c: BillingCadence): string {
       return "Each 3 months";
     case "semi-annual":
       return "Each 6 months";
+    case "one-off":
+      return "One-off";
   }
 }
 
@@ -457,6 +471,8 @@ export function nextBillingDate(
   const start = new Date(`${startingDate}T00:00:00Z`);
   if (Number.isNaN(start.getTime())) return null;
   const step = cadenceMonths(cadence);
+  // One-off (step 0) has no recurring next billing.
+  if (step <= 0) return null;
   const next = new Date(start);
   while (next.getTime() <= now.getTime()) {
     next.setUTCMonth(next.getUTCMonth() + step);

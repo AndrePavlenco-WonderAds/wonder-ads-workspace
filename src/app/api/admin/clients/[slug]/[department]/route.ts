@@ -135,6 +135,22 @@ export async function PUT(
     }
   }
 
+  if ("totalValue" in body) {
+    const raw = body.totalValue;
+    if (raw === null || raw === "") {
+      patch.totalValue = null;
+    } else {
+      const n = typeof raw === "number" ? raw : Number(raw);
+      if (!Number.isFinite(n) || n < 0) {
+        return NextResponse.json(
+          { error: "totalValue must be a non-negative number or null" },
+          { status: 400 },
+        );
+      }
+      patch.totalValue = Math.round(n * 100) / 100;
+    }
+  }
+
   if (typeof body.invoiceType === "string") {
     const v = body.invoiceType as InvoiceType;
     if (!(INVOICE_TYPES as readonly string[]).includes(v)) {

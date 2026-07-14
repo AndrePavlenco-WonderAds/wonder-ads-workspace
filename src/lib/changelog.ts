@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.69",
+    date: "2026-07-14",
+    title: "Finanças/Clients — one-off, total upfront, CRM e cancelar cliente",
+    highlights: [
+      "**🔁 Recorrência “One-off”.** A coluna de *Billing cadence* passa a ter a opção **One-off** (pagamento único). Como não é recorrente, **não conta para o MRR** e não gera próxima faturação.",
+      "**💶 Nova coluna “Total (upfront)”.** Entre *Monthly value* e *IVA* há agora uma coluna para o **valor total que o cliente paga quando paga adiantado**. É informativa — não entra no MRR.",
+      "**🟢 Departamento CRM.** Ao adicionar um cliente (e em toda a tabela) passa a existir o departamento **CRM**, a par de SEO / ADS / Web.",
+      "**↕️ Ordenação estilo Notion, agora persistente.** Continua a ordenar por qualquer coluna (clica no cabeçalho: ascendente → descendente → sem ordem) e a escolha **fica guardada** entre visitas.",
+      "**🗑️ Cancelar cliente dentro da app.** Cada linha tem um **“Cancelar cliente”** que abre uma confirmação onde é preciso **escrever CONFIRMAR** antes de apagar. Remove o cliente (todas as linhas de departamento) do roster financeiro; se tinha sido adicionado manualmente, é apagado por completo.",
+    ],
+  },
+  {
     version: "74.68.6",
     date: "2026-07-14",
     title: "NPS — perguntas de escolha múltipla",

@@ -23,6 +23,7 @@ import {
 } from "@/lib/client-meta";
 import { getClientPalette, paletteToGradient } from "@/lib/client-colors";
 import { getExtraClients } from "@/lib/admin-extra-clients-store";
+import { getRemovedSlugSet } from "@/lib/admin-removed-clients-store";
 
 export async function buildAdminClientViews(): Promise<AdminClientView[]> {
   // SEO department — pulled from Notion; degrade gracefully so admin
@@ -53,6 +54,8 @@ export async function buildAdminClientViews(): Promise<AdminClientView[]> {
   // Clients added manually from the admin table.
   const extraClients = await getExtraClients().catch(() => []);
   const extraSlugs = new Set(extraClients.map((c) => c.slug));
+  // Clients cancelled/removed from the finance roster — filtered out below.
+  const removedSlugs = await getRemovedSlugSet().catch(() => new Set<string>());
 
   type Merged = {
     slug: string;
@@ -92,6 +95,9 @@ export async function buildAdminClientViews(): Promise<AdminClientView[]> {
     }
   }
 
+  // Drop cancelled clients before building rows.
+  for (const slug of removedSlugs) merged.delete(slug);
+
   const rows = Array.from(merged.values()).map((m) => ({
     slug: m.slug,
     departments: m.departments,
@@ -106,7 +112,7 @@ export async function buildAdminClientViews(): Promise<AdminClientView[]> {
     return fallback;
   });
 
-  const deptOrder: ClientDepartment[] = ["SEO", "ADS", "Web"];
+  const deptOrder: ClientDepartment[] = ["SEO", "ADS", "Web", "CRM"];
   return Array.from(merged.values())
     .sort((a, b) => a.title.localeCompare(b.title))
     .flatMap((m) =>

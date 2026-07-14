@@ -61,9 +61,12 @@ type SortColumn =
   | "invoiceDate"
   | "invoiceType"
   | "value"
+  | "total"
   | "iva";
 
 type SortState = { col: SortColumn; dir: "asc" | "desc" } | null;
+
+const SORT_STORAGE_KEY = "admin-clients-sort";
 
 export function AdminPanel({
   clients,
@@ -98,10 +101,14 @@ export function AdminPanel({
   const router = useRouter();
   const [addOpen, setAddOpen] = useState(false);
 
-  const deleteExtra = useCallback(
+  // Cancel/remove any client from the finance roster (Notion/ADS/Web or
+  // manually-added). The row guards this behind a typed-CONFIRMAR modal.
+  const removeClient = useCallback(
     async (slug: string) => {
-      const res = await fetch(`/api/admin/extra-clients?slug=${slug}`, {
-        method: "DELETE",
+      const res = await fetch("/api/admin/remove-client", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slug }),
       });
       if (res.ok) router.refresh();
     },
@@ -110,12 +117,31 @@ export function AdminPanel({
 
   // Sortable column state. Clicking the same column cycles asc → desc →
   // off (default order from the server). Null = the default order.
+  // Persisted to localStorage so the chosen sort sticks like a Notion view.
   const [sort, setSort] = useState<SortState>(null);
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(SORT_STORAGE_KEY);
+      if (raw) setSort(JSON.parse(raw) as SortState);
+    } catch {
+      /* ignore malformed storage */
+    }
+  }, []);
   function cycleSort(col: SortColumn) {
     setSort((prev) => {
-      if (!prev || prev.col !== col) return { col, dir: "asc" };
-      if (prev.dir === "asc") return { col, dir: "desc" };
-      return null;
+      const next: SortState =
+        !prev || prev.col !== col
+          ? { col, dir: "asc" }
+          : prev.dir === "asc"
+            ? { col, dir: "desc" }
+            : null;
+      try {
+        if (next) localStorage.setItem(SORT_STORAGE_KEY, JSON.stringify(next));
+        else localStorage.removeItem(SORT_STORAGE_KEY);
+      } catch {
+        /* ignore */
+      }
+      return next;
     });
   }
 
@@ -135,7 +161,9 @@ export function AdminPanel({
         r &&
         r.status === "active" &&
         r.currency === "EUR" &&
-        r.monthlyValue
+        r.monthlyValue &&
+        // One-off payments are not recurring — keep them out of MRR.
+        r.billingCadence !== "one-off"
       ) {
         total += r.monthlyValue;
       }
@@ -191,6 +219,8 @@ export function AdminPanel({
           return r.invoiceType;
         case "value":
           return r.monthlyValue ?? Number.POSITIVE_INFINITY;
+        case "total":
+          return r.totalValue ?? Number.POSITIVE_INFINITY;
         case "iva":
           return r.iva ?? Number.POSITIVE_INFINITY;
       }
@@ -269,7 +299,7 @@ export function AdminPanel({
       {/* Single flat client table */}
       <section aria-label="Clients" className="mt-10">
         <div className="overflow-x-auto rounded-2xl border border-white/8 bg-white/[0.02]">
-          <table className="w-full min-w-[1200px] border-collapse text-left">
+          <table className="w-full min-w-[1360px] border-collapse text-left">
             <thead>
               <tr className="border-b border-white/8 bg-black/30 text-[10px] font-bold uppercase tracking-[0.16em] text-white/50">
                 <SortableTh
@@ -310,6 +340,12 @@ export function AdminPanel({
                   onClick={cycleSort}
                 />
                 <SortableTh
+                  label="Total (upfront)"
+                  col="total"
+                  sort={sort}
+                  onClick={cycleSort}
+                />
+                <SortableTh
                   label="IVA"
                   col="iva"
                   sort={sort}
@@ -322,7 +358,7 @@ export function AdminPanel({
               {clients.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={8}
+                    colSpan={9}
                     className="px-4 py-8 text-center text-[12px] text-white/40"
                   >
                     No clients yet.
@@ -347,7 +383,7 @@ export function AdminPanel({
                       initial={live}
                       onSaved={handleSaved}
                       isExtra={c.isExtra}
-                      onDelete={c.isExtra ? deleteExtra : undefined}
+                      onRemove={removeClient}
                     />
                   );
                 })
