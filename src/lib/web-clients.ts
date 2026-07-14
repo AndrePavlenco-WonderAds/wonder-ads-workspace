@@ -16,11 +16,9 @@ export type WebClient = {
 };
 
 export const WEB_CLIENTS: WebClient[] = [
-  {
-    slug: "prof-fernando-almeida",
-    title: "Prof. Fernando Almeida",
-    icon: "🎓",
-  },
+  // v74.71: "Prof. Fernando Almeida" removed from Web — consolidated into
+  // the single SEO client (slug clinica-fernando-almeida) which now carries
+  // that display name.
 ];
 
 export function getWebClient(slug: string): WebClient | null {

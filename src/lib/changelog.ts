@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.71",
+    date: "2026-07-14",
+    title: "Fernando Almeida — consolidado num único cliente SEO",
+    highlights: [
+      "**🧹 Fernando Almeida deixa de estar duplicado.** Existiam duas entradas — *“Clínica Fernando Almeida”* (SEO, com o brief e os dados) e *“Prof. Fernando Almeida”* (Web, vazia). Ficam agora **um único cliente de SEO**, com o nome **“Prof. Fernando Almeida”**, mantendo **todos os dados** (brief, tier, NPS, faturação, logótipo). A entrada duplicada no departamento Web foi removida. O *slug* interno manteve-se para não perder nada.",
+    ],
+  },
+  {
     version: "74.70",
     date: "2026-07-14",
     title: "Clients — editar serviços, aba Contrato e upload de logótipo",

@@ -59,11 +59,24 @@ async function listChildren(blockId: string) {
  *  its own Notion child page yet. Each entry shares the same shape as a
  *  Notion-sourced client so every downstream consumer (action pages,
  *  briefs, admin board) works without conditional branching. */
-const EXTRA_SEO_CLIENTS: Array<{ title: string; icon: string }> = [
+const EXTRA_SEO_CLIENTS: Array<{
+  title: string;
+  icon: string;
+  /** Explicit slug — overrides slugify(title). Used to rename a client's
+   *  display title while keeping its stable data slug. */
+  slug?: string;
+}> = [
   { title: "Spine Center", icon: "🦴" },
   // André Pereira's first two clients (v74.31) — not in Notion yet.
   { title: "Sentir Saúde", icon: "💆" },
-  { title: "Clínica Fernando Almeida", icon: "🦷" },
+  // v74.71: renamed from "Clínica Fernando Almeida" → "Prof. Fernando
+  // Almeida" (the Web duplicate was removed). Slug stays pinned so all
+  // the existing SEO data (brief, tier, NPS, admin records) is kept.
+  {
+    title: "Prof. Fernando Almeida",
+    slug: "clinica-fernando-almeida",
+    icon: "🦷",
+  },
   // CuidaMais (Cuida+) — André Pereira (v74.38). Portuguese e-commerce
   // for orthopedic / rehab / mobility products. Not in Notion yet.
   { title: "CuidaMais", icon: "🩺" },
@@ -112,7 +125,7 @@ const _fetchSeoClients = unstable_cache(
     // though they don't have a Notion child page. Skips silently if a
     // matching slug was already pulled from Notion.
     for (const extra of EXTRA_SEO_CLIENTS) {
-      const slug = slugify(extra.title);
+      const slug = extra.slug ?? slugify(extra.title);
       if (seenSlugs.has(slug) || EXCLUDED_SLUGS.has(slug)) continue;
       clients.push({
         id: `synthetic:${slug}`,
@@ -133,7 +146,7 @@ const _fetchSeoClients = unstable_cache(
   // synthetic roster (v74.31). Bump whenever the shape of NotionClient or
   // any of its derived fields changes meaningfully. v7: added CuidaMais
   // (v74.38). v9: offboarded Senior Resort (excluded slug).
-  ["seo-clients-v9"],
+  ["seo-clients-v10"],
   { revalidate: 3600, tags: ["seo-clients"] },
 );
 

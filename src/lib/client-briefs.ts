@@ -87,9 +87,6 @@ const BRIEFS: Record<string, ClientBrief> = {
 
   // ADS-only clients
   "clinica-empatia": EMPTY,
-
-  // Web-only clients
-  "prof-fernando-almeida": EMPTY,
 };
 
 export function getClientBrief(slug: string): ClientBrief {

@@ -17,7 +17,6 @@ const INDUSTRY: Record<string, string[]> = {
   "kings-gyms": ["fitness", "health"],
   "sentir-saude": ["health"],
   "clinica-fernando-almeida": ["health", "dental"],
-  "prof-fernando-almeida": ["health", "dental"],
   "white-clinic": ["health", "dental"],
   "spine-center": ["health"],
   "fisio-restelo": ["health"],
