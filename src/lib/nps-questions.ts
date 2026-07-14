@@ -198,10 +198,10 @@ export const NPS_SECTIONS: NpsSectionDef[] = [
     questions: [
       {
         name: "nps",
-        scale: "nps",
+        scale: "five",
         q: {
-          pt: "Numa escala de 0 a 10, qual a probabilidade de recomendar a nossa agência a um colega ou parceiro de negócio?",
-          en: "On a scale of 0 to 10, how likely are you to recommend our agency to a colleague or business partner?",
+          pt: "De 1 a 5, qual a probabilidade de recomendar a nossa agência a um colega ou parceiro de negócio?",
+          en: "From 1 to 5, how likely are you to recommend our agency to a colleague or business partner?",
         },
         capLow: { pt: "Nada provável", en: "Not at all likely" },
         capHigh: { pt: "Extremamente provável", en: "Extremely likely" },
@@ -215,38 +215,39 @@ export const NPS_QUESTION_NAMES: string[] = NPS_SECTIONS.flatMap((s) =>
   s.questions.map((q) => q.name),
 );
 
-const QUESTION_BY_NAME: Record<string, NpsQuestion> = Object.fromEntries(
-  NPS_SECTIONS.flatMap((s) => s.questions).map((q) => [q.name, q]),
-);
+/** Every answer sits on the same 1–5 scale the client actually marks —
+ *  there is no rescaling to 0–10. All derived scores are shown out of 5. */
+export const NPS_MAX = 5;
 
-/** Normalise a single answer to the 0–10 scale. */
-export function normalizeAnswer(name: string, value: number): number {
-  const q = QUESTION_BY_NAME[name];
-  if (!q) return 0;
-  if (q.scale === "nps") return clamp(value, 0, 10);
-  // five-point → 0..10
-  return (clamp(value, 1, 5) - 1) / 4 * 10;
+/** Shared colour bucket for a 0–5 score (green ≥4 · amber ≥3 · red <3). */
+export function npsScoreColor(v: number): string {
+  if (v >= 4) return "#34d399";
+  if (v >= 3) return "#fbbf24";
+  return "#fb7185";
 }
 
 export type NpsCategory = "promoter" | "passive" | "detractor";
 
-export function npsCategory(nps: number): NpsCategory {
-  if (nps >= 9) return "promoter";
-  if (nps >= 7) return "passive";
+/** Recommendation category off the 1–5 "would you recommend" answer:
+ *  5 = Promoter, 4 = Passive, ≤3 = Detractor. */
+export function npsCategory(recommend: number): NpsCategory {
+  if (recommend >= 4.5) return "promoter";
+  if (recommend >= 3.5) return "passive";
   return "detractor";
 }
 
 export type NpsScores = {
-  /** Mean of all 13 normalised answers, 0–10, 1 dp. */
+  /** Mean of all 13 answers, 0–5, 1 dp. */
   overall: number;
-  /** Raw 0–10 "would you recommend" answer. */
+  /** The 1–5 "would you recommend" answer (headline recommendation). */
   nps: number;
   category: NpsCategory;
-  /** Per-section mean (0–10, 1 dp), keyed by section key. */
+  /** Per-section mean (0–5, 1 dp), keyed by section key. */
   sectionScores: Record<string, number>;
 };
 
-/** Compute all derived scores from a full answer map. */
+/** Compute all derived scores from a full answer map. All values are the
+ *  raw 1–5 marks the client made, averaged — nothing is rescaled. */
 export function computeNpsScores(answers: Record<string, number>): NpsScores {
   const sectionScores: Record<string, number> = {};
   const all: number[] = [];
@@ -255,13 +256,13 @@ export function computeNpsScores(answers: Record<string, number>): NpsScores {
     for (const q of section.questions) {
       const raw = answers[q.name];
       if (typeof raw !== "number" || Number.isNaN(raw)) continue;
-      const norm = normalizeAnswer(q.name, raw);
-      vals.push(norm);
-      all.push(norm);
+      const v = clamp(raw, 1, 5);
+      vals.push(v);
+      all.push(v);
     }
     if (vals.length) sectionScores[section.key] = round1(mean(vals));
   }
-  const nps = clamp(Number(answers.nps) || 0, 0, 10);
+  const nps = clamp(Number(answers.nps) || 0, 1, 5);
   return {
     overall: all.length ? round1(mean(all)) : 0,
     nps,

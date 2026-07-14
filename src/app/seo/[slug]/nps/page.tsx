@@ -11,7 +11,11 @@ import {
 } from "@/lib/client-meta";
 import { getClientPalette, paletteToGradient } from "@/lib/client-colors";
 import { getNpsRecord, type NpsSubmission } from "@/lib/nps-store";
-import { NPS_SECTIONS, sectionTitle } from "@/lib/nps-questions";
+import {
+  NPS_SECTIONS,
+  sectionTitle,
+  npsScoreColor,
+} from "@/lib/nps-questions";
 import { pickLang } from "@/lib/public-i18n";
 import { getCurrentEmployee } from "@/lib/auth/server";
 import { editableDepts } from "@/lib/auth/credentials";
@@ -33,12 +37,7 @@ export async function generateMetadata({
   };
 }
 
-/** 0–10 → colour bucket. */
-function scoreColor(v: number): string {
-  if (v >= 8) return "#34d399"; // emerald
-  if (v >= 6) return "#fbbf24"; // amber
-  return "#fb7185"; // rose
-}
+const scoreColor = npsScoreColor;
 
 const CATEGORY_STYLE: Record<
   string,
@@ -153,7 +152,7 @@ export default async function NpsPage({
             slug={slug}
             surveyPath={`/${slug}/survey`}
             clientName={client.title}
-            cadenceMonths={record.meta.cadenceMonths}
+            cadenceDays={record.meta.cadenceDays}
             lang={lang}
             readOnly={readOnly}
           />
@@ -196,16 +195,19 @@ function LatestHero({ latest }: { latest: NpsSubmission }) {
         >
           {s.overall.toFixed(1)}
         </span>
-        <span className="mb-1 text-lg text-white/40">/ 10</span>
+        <span className="mb-1 text-lg text-white/40">/ 5</span>
       </div>
       <p className="mt-1 text-xs text-white/45">Índice de satisfação global</p>
 
       <div className="mt-5 flex items-center gap-3 border-t border-white/8 pt-4">
         <div>
           <p className="text-[10px] uppercase tracking-wide text-white/40">
-            NPS
+            Recomendação
           </p>
-          <p className="text-2xl font-semibold text-white/90">{s.nps}</p>
+          <p className="text-2xl font-semibold text-white/90">
+            {s.nps}
+            <span className="text-sm font-normal text-white/40"> / 5</span>
+          </p>
         </div>
         <span
           className="ml-auto rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wide"
@@ -266,7 +268,7 @@ function SectionBreakdown({
       </p>
       <div className="mt-5 space-y-4">
         {rows.map((r) => {
-          const isWeak = weakest?.key === r.key && r.value! < 8;
+          const isWeak = weakest?.key === r.key && r.value! < 3.5;
           return (
             <div key={r.key}>
               <div className="mb-1.5 flex items-center justify-between text-sm">
@@ -289,7 +291,7 @@ function SectionBreakdown({
                 <div
                   className="h-2 rounded-full transition-all"
                   style={{
-                    width: `${(r.value! / 10) * 100}%`,
+                    width: `${(r.value! / 5) * 100}%`,
                     background: scoreColor(r.value!),
                   }}
                 />
@@ -311,7 +313,7 @@ function TrendPanel({ submissions }: { submissions: NpsSubmission[] }) {
   const n = points.length;
   const coords = points.map((p, i) => {
     const x = n === 1 ? W / 2 : PAD + (i / (n - 1)) * (W - PAD * 2);
-    const y = PAD + (1 - p.scores.overall / 10) * (H - PAD * 2);
+    const y = PAD + (1 - p.scores.overall / 5) * (H - PAD * 2);
     return { x, y, v: p.scores.overall };
   });
   const path = coords.map((c, i) => `${i === 0 ? "M" : "L"} ${c.x} ${c.y}`).join(" ");
@@ -333,8 +335,8 @@ function TrendPanel({ submissions }: { submissions: NpsSubmission[] }) {
             className="mt-4 w-full"
             preserveAspectRatio="none"
           >
-            {[0, 5, 10].map((g) => {
-              const y = PAD + (1 - g / 10) * (H - PAD * 2);
+            {[0, 2.5, 5].map((g) => {
+              const y = PAD + (1 - g / 5) * (H - PAD * 2);
               return (
                 <line
                   key={g}
@@ -386,8 +388,8 @@ function HistoryTable({ submissions }: { submissions: NpsSubmission[] }) {
           <thead>
             <tr className="border-b border-white/8 text-[10px] uppercase tracking-wide text-white/40">
               <th className="py-2 pr-4 font-medium">Data</th>
-              <th className="py-2 pr-4 font-medium">Global</th>
-              <th className="py-2 pr-4 font-medium">NPS</th>
+              <th className="py-2 pr-4 font-medium">Global /5</th>
+              <th className="py-2 pr-4 font-medium">Recom. /5</th>
               <th className="py-2 pr-4 font-medium">Respondente</th>
               <th className="py-2 font-medium">Comentário</th>
             </tr>

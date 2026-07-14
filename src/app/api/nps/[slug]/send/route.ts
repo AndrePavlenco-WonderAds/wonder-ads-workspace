@@ -36,19 +36,21 @@ export async function POST(
 
   // Cadence-only update (from the cadence selector).
   if (body.action === "cadence") {
-    const months = Number(body.cadenceMonths);
-    if (!(CADENCE_OPTIONS as readonly number[]).includes(months)) {
+    const days = Number(body.cadenceDays);
+    if (!(CADENCE_OPTIONS as readonly number[]).includes(days)) {
       return NextResponse.json(
         { error: "Invalid cadence" },
         { status: 400 },
       );
     }
-    const meta = await setNpsCadence(slug, months, now);
+    const meta = await setNpsCadence(slug, days, now);
     revalidatePath(`/seo/${slug}/nps`);
+    revalidatePath(`/seo/${slug}`);
     return NextResponse.json({ ok: true, meta });
   }
 
   const meta = await recordNpsSend(slug, employee.name ?? null, now);
   revalidatePath(`/seo/${slug}/nps`);
+  revalidatePath(`/seo/${slug}`);
   return NextResponse.json({ ok: true, meta });
 }

@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ExternalLink, RefreshCw, Gauge } from "lucide-react";
+import { ExternalLink, RefreshCw, Gauge, Heart } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { ClientBrief } from "@/components/client-brief";
 import { ClientFiles } from "@/components/client-files";
@@ -24,7 +24,8 @@ import {
   getLogoSizing,
 } from "@/lib/client-meta";
 import { getClientPalette, paletteToGradient } from "@/lib/client-colors";
-import { getLatestNps } from "@/lib/nps-store";
+import { getNpsRecord, npsSendDue } from "@/lib/nps-store";
+import { npsScoreColor } from "@/lib/nps-questions";
 import { getCurrentEmployee } from "@/lib/auth/server";
 import { editableDepts } from "@/lib/auth/credentials";
 import { SeoReadOnlyProvider, ReadOnlyBanner } from "@/components/seo-readonly";
@@ -86,17 +87,17 @@ export default async function ClientPage({
   const logoSizing = getLogoSizing(slug);
   const gradient = paletteToGradient(getClientPalette(slug));
   const shared = isSharedWithSeo(slug);
-  const latestNps = await getLatestNps(slug);
+  const npsRecord = await getNpsRecord(slug);
+  const latestNps = npsRecord.submissions[0] ?? null;
   const npsScore = latestNps?.scores.overall ?? null;
-  // 0–10 → colour bucket for the pill. Neutral when no survey yet.
+  // When a send is due (never sent, or within 3 days / overdue), the pill
+  // turns red and pulses like a heartbeat to nudge the consultant.
+  const npsDue = npsSendDue(npsRecord, Date.now());
+  // 0–5 → colour bucket for the pill. Neutral when no survey yet.
   const npsColor =
     npsScore === null
       ? "rgba(255,255,255,0.55)"
-      : npsScore >= 8
-        ? "#6ee7b7"
-        : npsScore >= 6
-          ? "#fcd34d"
-          : "#fda4af";
+      : npsScoreColor(npsScore);
 
   return (
     <SeoReadOnlyProvider value={readOnly}>
@@ -144,17 +145,35 @@ export default async function ClientPage({
               <Link
                 href={`/seo/${slug}/nps`}
                 title={
-                  latestNps
-                    ? `Satisfação do cliente: ${npsScore?.toFixed(1)}/10 · NPS ${latestNps.scores.nps}`
-                    : "Avaliação de satisfação do cliente (NPS) — ainda sem respostas"
+                  npsDue
+                    ? "NPS a precisar de envio — clica para enviar ao cliente"
+                    : latestNps
+                      ? `Satisfação do cliente: ${npsScore?.toFixed(1)}/5 · Recomendação ${latestNps.scores.nps}/5`
+                      : "Avaliação de satisfação do cliente (NPS)"
                 }
-                className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-0.5 text-[11px] font-medium text-white/65 transition hover:border-white/25 hover:bg-white/[0.08] hover:text-white"
+                className={
+                  npsDue
+                    ? "nps-heartbeat inline-flex items-center gap-1.5 rounded-full border border-rose-400/60 bg-rose-500/15 px-2.5 py-0.5 text-[11px] font-semibold text-rose-100 transition hover:bg-rose-500/25"
+                    : "inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-0.5 text-[11px] font-medium text-white/65 transition hover:border-white/25 hover:bg-white/[0.08] hover:text-white"
+                }
               >
-                <Gauge className="h-3 w-3" style={{ color: npsColor }} />
-                <span className="uppercase tracking-[0.08em] text-white/45">
+                {npsDue ? (
+                  <Heart className="h-3 w-3 fill-rose-400 text-rose-400" />
+                ) : (
+                  <Gauge className="h-3 w-3" style={{ color: npsColor }} />
+                )}
+                <span
+                  className={
+                    npsDue
+                      ? "uppercase tracking-[0.08em] text-rose-200/80"
+                      : "uppercase tracking-[0.08em] text-white/45"
+                  }
+                >
                   NPS
                 </span>
-                {npsScore !== null ? (
+                {npsDue ? (
+                  <span className="font-semibold text-rose-100">Enviar</span>
+                ) : npsScore !== null ? (
                   <span className="font-semibold" style={{ color: npsColor }}>
                     {npsScore.toFixed(1)}
                   </span>

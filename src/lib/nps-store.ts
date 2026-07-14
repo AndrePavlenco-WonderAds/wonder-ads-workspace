@@ -18,9 +18,9 @@ const MAX_SENDS = 100;
 const COMMENT_MAX = 4000;
 const IDENT_MAX = 160;
 
-/** Default reminder cadence — SEO satisfaction is surveyed twice a year. */
-export const DEFAULT_CADENCE_MONTHS = 6;
-export const CADENCE_OPTIONS = [3, 6, 12] as const;
+/** Default reminder cadence — SEO satisfaction is surveyed every 60 days. */
+export const DEFAULT_CADENCE_DAYS = 60;
+export const CADENCE_OPTIONS = [30, 60, 90] as const;
 
 export const npsStorageConfigured = Boolean(
   process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN,
@@ -49,9 +49,10 @@ export type NpsSend = {
 
 export type NpsMeta = {
   lastSentAt: number | null;
-  /** Epoch ms the next survey should go out. */
+  /** Epoch ms the next survey should go out. Derived on read from the last
+   *  activity + cadence, so it always reflects the current cadence. */
   nextDueAt: number | null;
-  cadenceMonths: number;
+  cadenceDays: number;
   sends: NpsSend[];
 };
 
@@ -68,30 +69,41 @@ function emptyMeta(): NpsMeta {
   return {
     lastSentAt: null,
     nextDueAt: null,
-    cadenceMonths: DEFAULT_CADENCE_MONTHS,
+    cadenceDays: DEFAULT_CADENCE_DAYS,
     sends: [],
   };
 }
 
 function normalizeRecord(raw: Partial<NpsRecord> | null): NpsRecord {
   const submissions = Array.isArray(raw?.submissions) ? raw!.submissions : [];
-  const meta = raw?.meta ?? emptyMeta();
-  return {
-    submissions,
-    meta: {
-      lastSentAt: meta.lastSentAt ?? null,
-      nextDueAt: meta.nextDueAt ?? null,
-      cadenceMonths: meta.cadenceMonths ?? DEFAULT_CADENCE_MONTHS,
-      sends: Array.isArray(meta.sends) ? meta.sends : [],
-    },
+  const meta = (raw?.meta ?? emptyMeta()) as Partial<NpsMeta>;
+  const cadenceDays =
+    typeof meta.cadenceDays === "number" ? meta.cadenceDays : DEFAULT_CADENCE_DAYS;
+  const normMeta: NpsMeta = {
+    lastSentAt: meta.lastSentAt ?? null,
+    nextDueAt: meta.nextDueAt ?? null,
+    cadenceDays,
+    sends: Array.isArray(meta.sends) ? meta.sends : [],
   };
+  // The next-due date is always derived from the latest activity so it
+  // reflects the current cadence (and heals legacy month-based records).
+  normMeta.nextDueAt = deriveNextDue(normMeta, submissions);
+  return { submissions, meta: normMeta };
 }
 
-/** Add N months to an epoch ms timestamp (calendar-aware). */
-export function addMonths(fromMs: number, months: number): number {
-  const d = new Date(fromMs);
-  d.setMonth(d.getMonth() + months);
-  return d.getTime();
+/** Add N days to an epoch ms timestamp. */
+export function addDays(fromMs: number, days: number): number {
+  return fromMs + days * 86_400_000;
+}
+
+/** Next survey due = last send (or last submission) + cadence. Null when
+ *  the client has never been sent a survey and never answered one. */
+function deriveNextDue(
+  meta: Pick<NpsMeta, "lastSentAt" | "cadenceDays">,
+  submissions: NpsSubmission[],
+): number | null {
+  const anchor = meta.lastSentAt ?? submissions[0]?.submittedAt ?? null;
+  return anchor === null ? null : addDays(anchor, meta.cadenceDays);
 }
 
 export async function getNpsRecord(slug: string): Promise<NpsRecord> {
@@ -111,6 +123,19 @@ export async function getLatestNps(
 ): Promise<NpsSubmission | null> {
   const rec = await getNpsRecord(slug);
   return rec.submissions[0] ?? null;
+}
+
+const DUE_WINDOW_MS = 3 * 86_400_000;
+
+/** True when the consultant should act now: the survey was never sent (and
+ *  never answered), or the next send is due within 3 days (or overdue).
+ *  Drives the pulsing red NPS button on the client page. */
+export function npsSendDue(record: NpsRecord, nowMs: number): boolean {
+  const { meta, submissions } = record;
+  const everEngaged = meta.lastSentAt !== null || submissions.length > 0;
+  if (!everEngaged) return true;
+  if (meta.nextDueAt === null) return true;
+  return meta.nextDueAt - nowMs <= DUE_WINDOW_MS;
 }
 
 export type NewSubmission = {
@@ -144,7 +169,7 @@ export async function addNpsSubmission(
   const meta: NpsMeta = {
     ...rec.meta,
     // A completed survey resets the "next due" clock.
-    nextDueAt: addMonths(nowMs, rec.meta.cadenceMonths),
+    nextDueAt: addDays(nowMs, rec.meta.cadenceDays),
   };
   if (npsStorageConfigured) {
     await kv.set(key(slug), { submissions, meta });
@@ -164,7 +189,7 @@ export async function recordNpsSend(
   const meta: NpsMeta = {
     ...rec.meta,
     lastSentAt: nowMs,
-    nextDueAt: addMonths(nowMs, rec.meta.cadenceMonths),
+    nextDueAt: addDays(nowMs, rec.meta.cadenceDays),
     sends,
   };
   if (npsStorageConfigured) {
@@ -177,7 +202,7 @@ export async function recordNpsSend(
  *  send/submission (or now, if neither exists). */
 export async function setNpsCadence(
   slug: string,
-  cadenceMonths: number,
+  cadenceDays: number,
   nowMs: number,
 ): Promise<NpsMeta> {
   const rec = await getNpsRecord(slug);
@@ -185,8 +210,8 @@ export async function setNpsCadence(
     rec.meta.lastSentAt ?? rec.submissions[0]?.submittedAt ?? nowMs;
   const meta: NpsMeta = {
     ...rec.meta,
-    cadenceMonths,
-    nextDueAt: addMonths(anchor, cadenceMonths),
+    cadenceDays,
+    nextDueAt: addDays(anchor, cadenceDays),
   };
   if (npsStorageConfigured) {
     await kv.set(key(slug), { submissions: rec.submissions, meta });

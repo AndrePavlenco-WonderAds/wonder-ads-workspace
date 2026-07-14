@@ -266,8 +266,8 @@ export function NpsSurveyForm({
               <Scale
                 value={answers[q.name]}
                 onChange={(v) => setAnswer(q.name, v)}
-                min={q.scale === "nps" ? 0 : 1}
-                max={q.scale === "nps" ? 10 : 5}
+                min={1}
+                max={5}
                 lowCap={q.capLow[lang]}
                 highCap={q.capHigh[lang]}
               />

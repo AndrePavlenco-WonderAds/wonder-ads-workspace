@@ -26,14 +26,14 @@ export function NpsManagerActions({
   slug,
   surveyPath,
   clientName,
-  cadenceMonths,
+  cadenceDays,
   lang,
   readOnly,
 }: {
   slug: string;
   surveyPath: string;
   clientName: string;
-  cadenceMonths: number;
+  cadenceDays: number;
   lang: PublicLang;
   readOnly: boolean;
 }) {
@@ -41,7 +41,7 @@ export function NpsManagerActions({
   const [sendState, setSendState] = useState<"idle" | "sending" | "sent">(
     "idle",
   );
-  const [cadence, setCadence] = useState(cadenceMonths);
+  const [cadence, setCadence] = useState(cadenceDays);
   const [savingCadence, setSavingCadence] = useState(false);
 
   function fullLink() {
@@ -83,14 +83,14 @@ export function NpsManagerActions({
     if (typeof window !== "undefined") window.location.href = href;
   }
 
-  async function changeCadence(months: number) {
-    setCadence(months);
+  async function changeCadence(days: number) {
+    setCadence(days);
     setSavingCadence(true);
     try {
       await fetch(`/api/nps/${slug}/send`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ action: "cadence", cadenceMonths: months }),
+        body: JSON.stringify({ action: "cadence", cadenceDays: days }),
       });
     } finally {
       setSavingCadence(false);
@@ -150,16 +150,16 @@ export function NpsManagerActions({
 
       {!readOnly && (
         <label className="inline-flex items-center gap-1.5 rounded-md border border-white/12 bg-white/[0.03] px-2.5 py-1.5 text-[11px] text-white/55">
-          Every
+          A cada
           <select
             value={cadence}
             onChange={(e) => changeCadence(Number(e.target.value))}
             disabled={savingCadence}
             className="rounded bg-transparent text-[11px] font-medium text-white/85 outline-none [&>option]:bg-[#1B2430]"
           >
-            <option value={3}>3 months</option>
-            <option value={6}>6 months</option>
-            <option value={12}>12 months</option>
+            <option value={30}>30 dias</option>
+            <option value={60}>60 dias</option>
+            <option value={90}>90 dias</option>
           </select>
         </label>
       )}

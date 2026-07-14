@@ -32,9 +32,8 @@ export async function POST(
         { status: 400 },
       );
     }
-    const max = name === "nps" ? 10 : 5;
-    const min = name === "nps" ? 0 : 1;
-    if (v < min || v > max) {
+    // Every question — including the final "recommend" one — is a 1–5 mark.
+    if (v < 1 || v > 5) {
       return NextResponse.json(
         { error: `Answer out of range: ${name}` },
         { status: 400 },

@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.68.2",
+    date: "2026-07-14",
+    title: "NPS — escala 0–5, envio a cada 60 dias e alerta pulsante",
+    highlights: [
+      "**5️⃣ Tudo passa a ser de 0 a 5.** Todas as perguntas — incluindo a final de recomendação — usam a mesma escala **1–5** que o cliente assinala. O índice de satisfação global, as médias por secção, o histórico e o *chip* na página do cliente passam a ser mostrados **em /5** (deixa de existir o /10), para refletir exatamente o que o cliente marcou.",
+      "**🗓 Envio a cada 60 dias.** A cadência de reenvio do NPS passa a ter como padrão **60 dias** (opções 30 / 60 / 90). O “Próximo envio” é sempre calculado a partir da última atividade (envio ou resposta) + cadência, pelo que a data à esquerda deixa de estar errada.",
+      "**❤️ Alerta pulsante na página do cliente.** Quando o NPS **nunca foi enviado** ou está **na altura de enviar** (a 3 dias ou em atraso), o botão **NPS** no topo da página do cliente fica **vermelho e a pulsar como um coração**, com a etiqueta **“Enviar”**, para o consultor não deixar passar.",
+    ],
+  },
+  {
     version: "74.68.1",
     date: "2026-07-14",
     title: "NPS — afinação de textos e intro animada",

@@ -282,6 +282,19 @@ body {
 }
 .animate-heartbeat::after { content: ""; }
 
+/* NPS "send due" pill — beats like a heart with an expanding red ring so
+   the consultant can't miss that a survey needs sending. */
+@keyframes nps-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(244, 63, 94, 0.55); }
+  55% { box-shadow: 0 0 0 6px rgba(244, 63, 94, 0); }
+}
+.nps-heartbeat {
+  transform-origin: center;
+  animation:
+    heartbeat 1.3s ease-in-out infinite,
+    nps-glow 1.3s ease-in-out infinite;
+}
+
 /* Indeterminate progress bar — used by the Roadmap Generate panel while
    the long-running Claude call is pending. Sliding strip across the
    track gives a "something is happening" signal without lying about
@@ -301,6 +314,7 @@ body {
   .animate-count-pop,
   .animate-caret-blink,
   .animate-heartbeat,
+  .nps-heartbeat,
   [class*="animate-[indeterminate"] {
     animation: none;
   }
