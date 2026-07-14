@@ -453,6 +453,7 @@ export function AdminClientRow({
           gradient={gradient}
           logoBgMode={logoBgMode}
           logoSizing={logoSizing}
+          clientDepartments={clientDepartments}
           onClose={() => setDetailOpen(false)}
         />
       )}
@@ -576,6 +577,7 @@ function ClientDetailModalPortal({
   gradient,
   logoBgMode,
   logoSizing,
+  clientDepartments,
   onClose,
 }: {
   slug: string;
@@ -585,12 +587,14 @@ function ClientDetailModalPortal({
   gradient: string;
   logoBgMode: LogoBgMode;
   logoSizing: LogoSizing;
+  clientDepartments: ClientDepartment[];
   onClose: () => void;
 }) {
   return (
     <ClientDetailModal
       slug={slug}
       clientName={title}
+      clientDepartments={clientDepartments}
       logo={
         <LogoChip
           logo={logo}

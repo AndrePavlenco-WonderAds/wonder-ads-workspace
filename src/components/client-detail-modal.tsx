@@ -11,6 +11,11 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useRouter } from "next/navigation";
+import {
+  CLIENT_DEPARTMENTS,
+  type ClientDepartment,
+} from "@/lib/admin-clients-store";
 import {
   X,
   Loader2,
@@ -26,6 +31,7 @@ import {
   Mail,
   StickyNote,
   ReceiptText,
+  FileSignature,
 } from "lucide-react";
 import { upload } from "@vercel/blob/client";
 import type {
@@ -36,7 +42,13 @@ import type {
 } from "@/lib/admin-client-detail-store";
 import { formatDate } from "@/lib/dates";
 
-type TabKey = "contacts" | "accounting" | "client" | "notes" | "invoices";
+type TabKey =
+  | "contacts"
+  | "accounting"
+  | "client"
+  | "notes"
+  | "invoices"
+  | "contracts";
 
 const TABS: Array<{ key: TabKey; label: string; Icon: typeof Users }> = [
   { key: "contacts", label: "Contactos", Icon: Users },
@@ -44,17 +56,22 @@ const TABS: Array<{ key: TabKey; label: string; Icon: typeof Users }> = [
   { key: "client", label: "Email p/ Cliente", Icon: Mail },
   { key: "notes", label: "Notas", Icon: StickyNote },
   { key: "invoices", label: "Faturas", Icon: ReceiptText },
+  { key: "contracts", label: "Contrato", Icon: FileSignature },
 ];
 
 export function ClientDetailModal({
   slug,
   clientName,
   logo,
+  clientDepartments = [],
   onClose,
 }: {
   slug: string;
   clientName: string;
   logo?: React.ReactNode;
+  /** Current departments this client belongs to — seeds the services
+   *  editor in the header. */
+  clientDepartments?: ClientDepartment[];
   onClose: () => void;
 }) {
   const [tab, setTab] = useState<TabKey>("contacts");
@@ -158,13 +175,14 @@ export function ClientDetailModal({
       >
         {/* Header */}
         <header className="flex items-center gap-3 border-b border-white/8 bg-black/40 px-5 py-4">
-          {logo && <div className="shrink-0">{logo}</div>}
+          <LogoUploader slug={slug} logo={logo} />
           <div className="min-w-0 flex-1">
             <h2 className="truncate text-lg font-semibold tracking-tight text-white">
               {clientName}
             </h2>
             <p className="text-[11px] text-white/40">
-              Contactos, emails, notas e faturas — partilhado entre departamentos.
+              Contactos, emails, notas, faturas e contrato — partilhado entre
+              departamentos.
             </p>
           </div>
           <SaveButton
@@ -181,6 +199,9 @@ export function ClientDetailModal({
             <X className="h-4 w-4" />
           </button>
         </header>
+
+        {/* Services / departments editor */}
+        <DepartmentsEditor slug={slug} initial={clientDepartments} />
 
         {/* Tabs */}
         <nav className="flex gap-1 overflow-x-auto border-b border-white/8 bg-black/20 px-3">
@@ -236,12 +257,23 @@ export function ClientDetailModal({
               notes={detail.notes}
               onChange={(notes) => patch({ notes })}
             />
+          ) : tab === "contracts" ? (
+            <FilesTab
+              files={detail.contracts}
+              onPersist={(contracts) => persist({ ...detail, contracts })}
+              addLabel="Adicionar contrato"
+              hint="Contrato(s) assinado(s) do cliente — carrega PDFs ou imagens. Cada upload é guardado de imediato."
+              emptyLabel="Sem contrato guardado."
+              removeLabel="Remover contrato"
+            />
           ) : (
-            <InvoicesTab
-              invoices={detail.invoices}
-              onPersist={(invoices) =>
-                persist({ ...detail, invoices })
-              }
+            <FilesTab
+              files={detail.invoices}
+              onPersist={(invoices) => persist({ ...detail, invoices })}
+              addLabel="Adicionar fatura"
+              hint="Faturas anteriores — carrega PDFs ou imagens. Cada upload é guardado de imediato."
+              emptyLabel="Sem faturas guardadas."
+              removeLabel="Remover fatura"
             />
           )}
         </div>
@@ -290,6 +322,203 @@ function SaveButton({
           ? "Guardado"
           : "Guardar"}
     </button>
+  );
+}
+
+// ── Logo uploader (header) ──────────────────────────────────────────────
+function LogoUploader({
+  slug,
+  logo,
+}: {
+  slug: string;
+  logo?: React.ReactNode;
+}) {
+  const router = useRouter();
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleFile(list: FileList | null) {
+    const file = list?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setError("Escolhe um ficheiro de imagem.");
+      return;
+    }
+    setError(null);
+    setBusy(true);
+    try {
+      const blob = await upload(`logos/${slug}-${file.name}`, file, {
+        access: "public",
+        handleUploadUrl: "/api/files/upload",
+      });
+      const res = await fetch(`/api/admin/client-logo/${slug}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: blob.url }),
+      });
+      if (!res.ok) {
+        const j = (await res.json().catch(() => ({}))) as { error?: string };
+        throw new Error(j.error ?? `HTTP ${res.status}`);
+      }
+      setPreview(blob.url);
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Falhou o upload");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="shrink-0">
+      <button
+        type="button"
+        onClick={() => inputRef.current?.click()}
+        disabled={busy}
+        title="Alterar logótipo (upload do teu PC)"
+        className="group relative block h-11 w-11 overflow-hidden rounded-xl"
+      >
+        {preview ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={preview}
+            alt="logo"
+            className="h-full w-full rounded-xl border border-white/10 bg-white object-contain p-1"
+          />
+        ) : (
+          logo
+        )}
+        <span className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/60 opacity-0 transition group-hover:opacity-100">
+          {busy ? (
+            <Loader2 className="h-4 w-4 animate-spin text-white" />
+          ) : (
+            <Upload className="h-4 w-4 text-white" />
+          )}
+        </span>
+      </button>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => {
+          handleFile(e.target.files);
+          e.target.value = "";
+        }}
+      />
+      {error && (
+        <span className="mt-1 block max-w-[80px] text-[9px] leading-tight text-rose-300">
+          {error}
+        </span>
+      )}
+    </div>
+  );
+}
+
+const DEPT_CHIP: Record<ClientDepartment, string> = {
+  SEO: "border-[#783DF5]/55 bg-[#783DF5]/18 text-[#d4c4ff]",
+  ADS: "border-[#C535C9]/55 bg-[#C535C9]/18 text-[#f4c5f1]",
+  Web: "border-cyan-400/55 bg-cyan-500/18 text-cyan-100",
+  CRM: "border-emerald-400/55 bg-emerald-500/18 text-emerald-100",
+};
+
+// ── Serviços / Departamentos ────────────────────────────────────────────
+function DepartmentsEditor({
+  slug,
+  initial,
+}: {
+  slug: string;
+  initial: ClientDepartment[];
+}) {
+  const router = useRouter();
+  const [depts, setDepts] = useState<ClientDepartment[]>(initial);
+  const [state, setState] = useState<"idle" | "saving" | "saved" | "error">(
+    "idle",
+  );
+  const [error, setError] = useState<string | null>(null);
+
+  const canonical = (xs: ClientDepartment[]) =>
+    CLIENT_DEPARTMENTS.filter((d) => xs.includes(d)).join(",");
+  const dirty = canonical(depts) !== canonical(initial);
+
+  function toggle(d: ClientDepartment) {
+    setDepts((prev) =>
+      prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d],
+    );
+  }
+
+  async function save() {
+    if (depts.length === 0) {
+      setError("Escolhe pelo menos um serviço.");
+      return;
+    }
+    setState("saving");
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/client-departments/${slug}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ departments: depts }),
+      });
+      if (!res.ok) {
+        const j = (await res.json().catch(() => ({}))) as { error?: string };
+        throw new Error(j.error ?? `HTTP ${res.status}`);
+      }
+      setState("saved");
+      router.refresh();
+      setTimeout(() => setState("idle"), 2500);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Falhou");
+      setState("error");
+      setTimeout(() => setState("idle"), 4000);
+    }
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-2 border-b border-white/8 bg-black/10 px-5 py-2.5">
+      <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-white/40">
+        Serviços
+      </span>
+      {CLIENT_DEPARTMENTS.map((d) => {
+        const on = depts.includes(d);
+        return (
+          <button
+            key={d}
+            type="button"
+            onClick={() => toggle(d)}
+            aria-pressed={on}
+            className={`rounded-md border px-2.5 py-1 text-[11.5px] font-semibold transition ${
+              on
+                ? DEPT_CHIP[d]
+                : "border-white/10 bg-white/[0.02] text-white/40 hover:text-white/70"
+            }`}
+          >
+            {d}
+          </button>
+        );
+      })}
+      {dirty && (
+        <button
+          type="button"
+          onClick={save}
+          disabled={state === "saving"}
+          className="ml-1 inline-flex items-center gap-1.5 rounded-md brand-gradient-bg px-2.5 py-1 text-[11.5px] font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
+        >
+          {state === "saving" ? (
+            <Loader2 className="h-3 w-3 animate-spin" />
+          ) : (
+            <Check className="h-3 w-3" />
+          )}
+          Guardar serviços
+        </button>
+      )}
+      {state === "saved" && !dirty && (
+        <span className="text-[11px] text-emerald-300">Guardado</span>
+      )}
+      {error && <span className="text-[11px] text-rose-300">{error}</span>}
+    </div>
   );
 }
 
@@ -475,13 +704,21 @@ function NotesTab({
   );
 }
 
-// ── Faturas ────────────────────────────────────────────────────────────
-function InvoicesTab({
-  invoices,
+// ── Faturas / Contrato (ficheiros) ──────────────────────────────────────
+function FilesTab({
+  files,
   onPersist,
+  addLabel,
+  hint,
+  emptyLabel,
+  removeLabel,
 }: {
-  invoices: ClientInvoiceFile[];
+  files: ClientInvoiceFile[];
   onPersist: (next: ClientInvoiceFile[]) => Promise<AdminClientDetail | null>;
+  addLabel: string;
+  hint: string;
+  emptyLabel: string;
+  removeLabel: string;
 }) {
   const [progress, setProgress] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -515,20 +752,17 @@ function InvoicesTab({
       }
     }
     setProgress(null);
-    if (added.length > 0) await onPersist([...added, ...invoices]);
+    if (added.length > 0) await onPersist([...added, ...files]);
   }
 
   async function remove(id: string) {
-    await onPersist(invoices.filter((f) => f.id !== id));
+    await onPersist(files.filter((f) => f.id !== id));
   }
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-[12px] text-white/45">
-          Faturas anteriores — carrega PDFs ou imagens. Cada upload é
-          guardado de imediato.
-        </p>
+        <p className="text-[12px] text-white/45">{hint}</p>
         <div className="flex items-center gap-2">
           {progress && (
             <span className="inline-flex items-center gap-1.5 text-[11px] text-white/45">
@@ -542,7 +776,7 @@ function InvoicesTab({
             onClick={() => inputRef.current?.click()}
             className="brand-gradient-bg inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12px] font-semibold text-white shadow-[0_4px_18px_-4px_rgba(120,61,245,0.55)] transition hover:opacity-90 disabled:opacity-50"
           >
-            <Upload className="h-3.5 w-3.5" /> Adicionar fatura
+            <Upload className="h-3.5 w-3.5" /> {addLabel}
           </button>
           <input
             ref={inputRef}
@@ -562,13 +796,13 @@ function InvoicesTab({
         </p>
       )}
 
-      {invoices.length === 0 ? (
+      {files.length === 0 ? (
         <p className="rounded-lg border border-dashed border-white/10 px-4 py-8 text-center text-[12px] text-white/35">
-          Sem faturas guardadas.
+          {emptyLabel}
         </p>
       ) : (
         <ul className="divide-y divide-white/8 overflow-hidden rounded-xl border border-white/8">
-          {invoices.map((f) => (
+          {files.map((f) => (
             <li
               key={f.id}
               className="flex items-center gap-3 bg-white/[0.02] px-3 py-2.5"
@@ -595,7 +829,7 @@ function InvoicesTab({
               <button
                 type="button"
                 onClick={() => remove(f.id)}
-                aria-label="Remover fatura"
+                aria-label={removeLabel}
                 className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 text-white/40 transition hover:border-rose-400/50 hover:text-rose-300"
               >
                 <Trash2 className="h-3.5 w-3.5" />

@@ -50,6 +50,9 @@ export type AdminClientDetail = {
   clientEmail: EmailTemplate;
   notes: string;
   invoices: ClientInvoiceFile[];
+  /** Signed contract(s) — same file shape as invoices, shown in the
+   *  Contrato tab. */
+  contracts: ClientInvoiceFile[];
   updatedAt: string;
 };
 
@@ -87,6 +90,7 @@ export function defaultClientDetail(slug: string): AdminClientDetail {
     clientEmail: { ...DEFAULT_CLIENT_EMAIL },
     notes: "",
     invoices: [],
+    contracts: [],
     updatedAt: new Date(0).toISOString(),
   };
 }
@@ -136,24 +140,26 @@ export function normaliseDetail(
     };
   }
 
-  const invoices: ClientInvoiceFile[] = Array.isArray(r.invoices)
-    ? r.invoices
-        .filter((f): f is Record<string, unknown> => !!f && typeof f === "object")
-        .filter((f) => typeof f.url === "string" && /^https?:\/\//i.test(f.url))
-        .slice(0, 200)
-        .map((f) => ({
-          id:
-            typeof f.id === "string" && f.id.length > 0
-              ? f.id
-              : crypto.randomUUID(),
-          name:
-            typeof f.name === "string" && f.name.trim().length > 0
-              ? f.name.trim().slice(0, 200)
-              : (f.url as string),
-          url: f.url as string,
-          addedAt: typeof f.addedAt === "number" ? f.addedAt : Date.now(),
-        }))
-    : base.invoices;
+  function fileList(v: unknown, fallback: ClientInvoiceFile[]): ClientInvoiceFile[] {
+    return Array.isArray(v)
+      ? v
+          .filter((f): f is Record<string, unknown> => !!f && typeof f === "object")
+          .filter((f) => typeof f.url === "string" && /^https?:\/\//i.test(f.url))
+          .slice(0, 200)
+          .map((f) => ({
+            id:
+              typeof f.id === "string" && f.id.length > 0
+                ? f.id
+                : crypto.randomUUID(),
+            name:
+              typeof f.name === "string" && f.name.trim().length > 0
+                ? f.name.trim().slice(0, 200)
+                : (f.url as string),
+            url: f.url as string,
+            addedAt: typeof f.addedAt === "number" ? f.addedAt : Date.now(),
+          }))
+      : fallback;
+  }
 
   return {
     slug,
@@ -161,7 +167,8 @@ export function normaliseDetail(
     accountingEmail: template(r.accountingEmail, base.accountingEmail),
     clientEmail: template(r.clientEmail, base.clientEmail),
     notes: asString(r.notes, 8000),
-    invoices,
+    invoices: fileList(r.invoices, base.invoices),
+    contracts: fileList(r.contracts, base.contracts),
     updatedAt: base.updatedAt,
   };
 }

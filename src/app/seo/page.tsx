@@ -22,6 +22,7 @@ import {
   getLogoBgMode,
   getLogoSizing,
 } from "@/lib/client-meta";
+import { getLogoOverrides } from "@/lib/admin-client-logos-store";
 
 export const metadata = {
   title: "SEO DPT — Wonder Ads Workspace",
@@ -92,6 +93,11 @@ export default async function SeoPage() {
   // Cached for 30 min so the page doesn't block on ~20 live GA4 calls.
   const organic = await getSeoOrganicVisitors30d(clients.map((c) => c.slug));
 
+  // Custom uploaded logos override the static CLIENT_LOGOS map.
+  const logoOverrides = await getLogoOverrides().catch(
+    () => ({}) as Record<string, string>,
+  );
+
   return (
     <PageShell>
       <DepartmentHeader
@@ -146,7 +152,7 @@ export default async function SeoPage() {
                         key={c.id}
                         title={c.title}
                         icon={c.icon}
-                        logo={getClientLogo(c.slug)}
+                        logo={logoOverrides[c.slug] ?? getClientLogo(c.slug)}
                         logoBgMode={getLogoBgMode(c.slug)}
                         logoSizing={getLogoSizing(c.slug)}
                         href={`/seo/${c.slug}`}

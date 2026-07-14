@@ -26,6 +26,7 @@ import {
 import { getClientPalette, paletteToGradient } from "@/lib/client-colors";
 import { getNpsRecord, npsSendDue } from "@/lib/nps-store";
 import { npsScoreColor } from "@/lib/nps-questions";
+import { getLogoOverride } from "@/lib/admin-client-logos-store";
 import { getCurrentEmployee } from "@/lib/auth/server";
 import { editableDepts } from "@/lib/auth/credentials";
 import { SeoReadOnlyProvider, ReadOnlyBanner } from "@/components/seo-readonly";
@@ -82,7 +83,7 @@ export default async function ClientPage({
 
   const brief = await getBriefForSlug(slug);
   const website = getClientWebsite(slug);
-  const logo = getClientLogo(slug);
+  const logo = (await getLogoOverride(slug)) ?? getClientLogo(slug);
   const logoBgMode = getLogoBgMode(slug);
   const logoSizing = getLogoSizing(slug);
   const gradient = paletteToGradient(getClientPalette(slug));

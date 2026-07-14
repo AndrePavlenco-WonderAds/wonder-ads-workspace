@@ -24,6 +24,8 @@ import {
 import { getClientPalette, paletteToGradient } from "@/lib/client-colors";
 import { getExtraClients } from "@/lib/admin-extra-clients-store";
 import { getRemovedSlugSet } from "@/lib/admin-removed-clients-store";
+import { getDepartmentOverrides } from "@/lib/admin-client-departments-store";
+import { getLogoOverrides } from "@/lib/admin-client-logos-store";
 
 export async function buildAdminClientViews(): Promise<AdminClientView[]> {
   // SEO department — pulled from Notion; degrade gracefully so admin
@@ -56,6 +58,12 @@ export async function buildAdminClientViews(): Promise<AdminClientView[]> {
   const extraSlugs = new Set(extraClients.map((c) => c.slug));
   // Clients cancelled/removed from the finance roster — filtered out below.
   const removedSlugs = await getRemovedSlugSet().catch(() => new Set<string>());
+  // Per-client department (service) overrides — authoritative when set.
+  const deptOverrides = await getDepartmentOverrides().catch(() => ({}));
+  // Custom uploaded logos — override the static CLIENT_LOGOS map.
+  const logoOverrides = await getLogoOverrides().catch(
+    () => ({}) as Record<string, string>,
+  );
 
   type Merged = {
     slug: string;
@@ -98,6 +106,13 @@ export async function buildAdminClientViews(): Promise<AdminClientView[]> {
   // Drop cancelled clients before building rows.
   for (const slug of removedSlugs) merged.delete(slug);
 
+  // Apply department overrides — a SuperAdmin-set list replaces the
+  // derived departments for that client (add/remove/move services).
+  for (const [slug, depts] of Object.entries(deptOverrides)) {
+    const m = merged.get(slug);
+    if (m && depts.length) m.departments = [...depts];
+  }
+
   const rows = Array.from(merged.values()).map((m) => ({
     slug: m.slug,
     departments: m.departments,
@@ -125,7 +140,7 @@ export async function buildAdminClientViews(): Promise<AdminClientView[]> {
             slug: m.slug,
             title: m.title,
             icon: m.icon,
-            logo: getClientLogo(m.slug),
+            logo: logoOverrides[m.slug] ?? getClientLogo(m.slug),
             logoBgMode: getLogoBgMode(m.slug),
             logoSizing: getLogoSizing(m.slug),
             gradient: paletteToGradient(getClientPalette(m.slug)),

@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.70",
+    date: "2026-07-14",
+    title: "Clients — editar serviços, aba Contrato e upload de logótipo",
+    highlights: [
+      "**🛠️ Editar os serviços de um cliente já criado.** Na ficha do cliente (clica no nome na tabela) há agora um editor de **Serviços** — liga/desliga **SEO · ADS · Web · CRM** e Guarda. Resolve casos como o **Kings Gyms** (passar a SEO + ADS) ou **mover** um cliente de um departamento para outro. As linhas na tabela financeira atualizam-se logo a seguir.",
+      "**📄 Aba “Contrato” na ficha.** Ao lado de *Faturas*, uma nova aba **Contrato** para anexar o(s) contrato(s) assinado(s) do cliente (PDF ou imagem), guardados no Blob tal como as faturas.",
+      "**🖼️ Upload de logótipo do teu PC.** Passa o rato por cima do logótipo no topo da ficha e faz **upload de uma imagem** — fica como logótipo do cliente na tabela de Clients, na grelha do **Departamento SEO** e na página do cliente. Só SuperAdmins. Substitui o emoji/placeholder por marcas reais.",
+    ],
+  },
+  {
     version: "74.69",
     date: "2026-07-14",
     title: "Finanças/Clients — one-off, total upfront, CRM e cancelar cliente",
