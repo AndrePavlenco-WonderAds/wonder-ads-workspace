@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.68.3",
+    date: "2026-07-14",
+    title: "NPS — respostas detalhadas por pergunta",
+    highlights: [
+      "**🔎 Ver o que o cliente respondeu a cada pergunta.** A página de NPS (`/seo/<cliente>/nps`) passa a ter um bloco **“Respostas do cliente — última avaliação”** que mostra **todas as 13 perguntas**, agrupadas por secção, com a **marca exata (1–5)** que o cliente deu em cada uma, os rótulos de cada extremo (1 = … · 5 = …) e a média por secção. O comentário aberto aparece no fim. Tudo no idioma em que o cliente respondeu.",
+    ],
+  },
+  {
     version: "74.68.2",
     date: "2026-07-14",
     title: "NPS — escala 0–5, envio a cada 60 dias e alerta pulsante",

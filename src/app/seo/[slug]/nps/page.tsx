@@ -1,5 +1,10 @@
 import { notFound } from "next/navigation";
-import { MessageSquareQuote, Sparkles, TrendingUp } from "lucide-react";
+import {
+  ClipboardList,
+  MessageSquareQuote,
+  Sparkles,
+  TrendingUp,
+} from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { LogoChip } from "@/components/logo-chip";
 import { NpsManagerActions } from "@/components/nps-manager-actions";
@@ -167,6 +172,11 @@ export default async function NpsPage({
             <SectionBreakdown latest={latest} lang={lang} />
           </section>
 
+          {/* Per-question answers — exactly what the client marked */}
+          <section className="animate-fade-up mt-6">
+            <AnswersDetail latest={latest} lang={lang} />
+          </section>
+
           {/* Trend + history */}
           <section className="animate-fade-up mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[1fr_minmax(0,360px)]">
             <HistoryTable submissions={record.submissions} />
@@ -226,14 +236,123 @@ function LatestHero({ latest }: { latest: NpsSubmission }) {
         {latest.identification && <p>Por: {latest.identification}</p>}
         {latest.consultant && <p>Consultor: {latest.consultant}</p>}
       </div>
+    </div>
+  );
+}
+
+/** The core review surface: every question the client saw, with the exact
+ *  1–5 mark they gave, in the language they answered in. */
+function AnswersDetail({
+  latest,
+  lang,
+}: {
+  latest: NpsSubmission;
+  lang: ReturnType<typeof pickLang>;
+}) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 backdrop-blur-md">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <p className="flex items-center gap-1.5 text-[11px] uppercase tracking-[0.16em] text-white/45">
+          <ClipboardList className="h-3 w-3" />
+          Respostas do cliente — última avaliação
+        </p>
+        <p className="text-[11px] text-white/40">
+          Respondido em {formatDateTime(latest.submittedAt)}
+          {latest.identification ? ` · ${latest.identification}` : ""}
+        </p>
+      </div>
+
+      <div className="mt-5 space-y-6">
+        {NPS_SECTIONS.map((section) => (
+          <div key={section.key}>
+            <div className="mb-3 flex items-baseline gap-2 border-b border-white/8 pb-2">
+              <span className="font-mono text-[10px] tracking-widest text-[#a78bfa]">
+                {section.tag}
+              </span>
+              <span className="text-sm font-semibold text-white/80">
+                {section.title[lang]}
+              </span>
+              {typeof latest.scores.sectionScores[section.key] === "number" && (
+                <span
+                  className="ml-auto font-mono text-xs font-medium"
+                  style={{
+                    color: scoreColor(latest.scores.sectionScores[section.key]),
+                  }}
+                >
+                  {latest.scores.sectionScores[section.key].toFixed(1)} / 5
+                </span>
+              )}
+            </div>
+
+            <div className="space-y-3.5">
+              {section.questions.map((q) => {
+                const value = latest.answers[q.name];
+                const has = typeof value === "number";
+                return (
+                  <div
+                    key={q.name}
+                    className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_auto] sm:items-center sm:gap-6"
+                  >
+                    <div>
+                      <p className="text-sm leading-snug text-white/75">
+                        {q.q[lang]}
+                      </p>
+                      <p className="mt-0.5 text-[10px] text-white/35">
+                        1 = {q.capLow[lang]} · 5 = {q.capHigh[lang]}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-1.5">
+                        {[1, 2, 3, 4, 5].map((n) => {
+                          const on = has && n <= value;
+                          const isMark = has && n === value;
+                          return (
+                            <span
+                              key={n}
+                              className="flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-semibold"
+                              style={{
+                                background: isMark
+                                  ? scoreColor(value)
+                                  : on
+                                    ? "rgba(255,255,255,0.10)"
+                                    : "transparent",
+                                color: isMark
+                                  ? "#0b1220"
+                                  : "rgba(255,255,255,0.45)",
+                                boxShadow: `inset 0 0 0 1px ${
+                                  isMark
+                                    ? "transparent"
+                                    : "rgba(255,255,255,0.14)"
+                                }`,
+                              }}
+                            >
+                              {n}
+                            </span>
+                          );
+                        })}
+                      </div>
+                      <span
+                        className="w-12 text-right font-mono text-sm font-semibold"
+                        style={{ color: has ? scoreColor(value) : undefined }}
+                      >
+                        {has ? `${value}/5` : "—"}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
 
       {latest.comment && (
-        <div className="mt-4 rounded-lg border border-white/8 bg-white/[0.03] p-3">
+        <div className="mt-6 rounded-lg border border-white/8 bg-white/[0.03] p-4">
           <p className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide text-white/40">
             <MessageSquareQuote className="h-3 w-3" />
-            Comentário
+            Comentário aberto
           </p>
-          <p className="mt-1.5 text-sm leading-relaxed text-white/75">
+          <p className="mt-1.5 text-sm leading-relaxed text-white/80">
             “{latest.comment}”
           </p>
         </div>
