@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.68.4",
+    date: "2026-07-14",
+    title: "NPS — apagar última avaliação (só SuperAdmins)",
+    highlights: [
+      "**🗑️ Apagar a última avaliação de NPS, direto na app.** No bloco “Respostas do cliente” da página de NPS há agora um botão **“Apagar última”**. Só os **3 SuperAdmins** (Alex, Alice, André) o conseguem executar — qualquer outro utilizador que clique recebe **“Não há permissões suficientes.”**. A proteção é garantida no servidor (não depende de esconder o botão) e o apagar pede confirmação antes de avançar.",
+    ],
+  },
+  {
     version: "74.68.3",
     date: "2026-07-14",
     title: "NPS — respostas detalhadas por pergunta",

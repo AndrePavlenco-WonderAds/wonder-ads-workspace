@@ -8,6 +8,7 @@ import {
 import { PageShell } from "@/components/page-shell";
 import { LogoChip } from "@/components/logo-chip";
 import { NpsManagerActions } from "@/components/nps-manager-actions";
+import { NpsDeleteLatestButton } from "@/components/nps-delete-latest-button";
 import { getClientBySlug } from "@/lib/notion";
 import {
   getClientLogo,
@@ -79,6 +80,7 @@ export default async function NpsPage({
 
   const employee = await getCurrentEmployee();
   const readOnly = !employee || !editableDepts(employee).includes("seo");
+  const isSuperAdmin = Boolean(employee?.isAdmin);
 
   const record = await getNpsRecord(slug);
   const logo = getClientLogo(slug);
@@ -174,7 +176,12 @@ export default async function NpsPage({
 
           {/* Per-question answers — exactly what the client marked */}
           <section className="animate-fade-up mt-6">
-            <AnswersDetail latest={latest} lang={lang} />
+            <AnswersDetail
+              latest={latest}
+              lang={lang}
+              slug={slug}
+              isSuperAdmin={isSuperAdmin}
+            />
           </section>
 
           {/* Trend + history */}
@@ -245,21 +252,28 @@ function LatestHero({ latest }: { latest: NpsSubmission }) {
 function AnswersDetail({
   latest,
   lang,
+  slug,
+  isSuperAdmin,
 }: {
   latest: NpsSubmission;
   lang: ReturnType<typeof pickLang>;
+  slug: string;
+  isSuperAdmin: boolean;
 }) {
   return (
     <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 backdrop-blur-md">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="flex items-center gap-1.5 text-[11px] uppercase tracking-[0.16em] text-white/45">
           <ClipboardList className="h-3 w-3" />
           Respostas do cliente — última avaliação
         </p>
-        <p className="text-[11px] text-white/40">
-          Respondido em {formatDateTime(latest.submittedAt)}
-          {latest.identification ? ` · ${latest.identification}` : ""}
-        </p>
+        <div className="flex items-center gap-3">
+          <p className="text-[11px] text-white/40">
+            Respondido em {formatDateTime(latest.submittedAt)}
+            {latest.identification ? ` · ${latest.identification}` : ""}
+          </p>
+          <NpsDeleteLatestButton slug={slug} isSuperAdmin={isSuperAdmin} />
+        </div>
       </div>
 
       <div className="mt-5 space-y-6">

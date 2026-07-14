@@ -177,6 +177,22 @@ export async function addNpsSubmission(
   return submission;
 }
 
+/** Remove the most recent submission (the "last filled form"). Returns the
+ *  removed submission, or null when there was nothing to remove. The
+ *  next-due date is re-derived on the next read. SuperAdmin-only — the
+ *  route enforces that; the store just does the mutation. */
+export async function removeLatestNps(
+  slug: string,
+): Promise<NpsSubmission | null> {
+  const rec = await getNpsRecord(slug);
+  if (rec.submissions.length === 0) return null;
+  const [removed, ...rest] = rec.submissions;
+  if (npsStorageConfigured) {
+    await kv.set(key(slug), { submissions: rest, meta: rec.meta });
+  }
+  return removed;
+}
+
 /** Log that the consultant sent the survey link, and schedule the next due
  *  date from now. */
 export async function recordNpsSend(
