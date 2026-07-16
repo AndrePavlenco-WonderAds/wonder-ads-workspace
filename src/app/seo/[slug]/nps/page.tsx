@@ -1,8 +1,10 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import {
   CalendarClock,
   CalendarDays,
   ClipboardList,
+  Download,
   MessageSquareQuote,
   Sparkles,
   TrendingUp,
@@ -377,12 +379,22 @@ function AnswersDetail({
             Respondido em {formatDateTime(latest.submittedAt)}
             {latest.identification ? ` · ${latest.identification}` : ""}
           </p>
+          <Link
+            href={`/seo/${slug}/nps/print`}
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Abrir folha imprimível com todas as perguntas e respostas para guardar em PDF"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 bg-white/[0.04] px-2.5 py-1.5 text-[11px] font-medium text-white/70 transition hover:border-[#783DF5]/50 hover:bg-[#783DF5]/15 hover:text-white"
+          >
+            <Download className="h-3.5 w-3.5" />
+            PDF
+          </Link>
           <NpsDeleteLatestButton slug={slug} isSuperAdmin={isSuperAdmin} />
         </div>
       </div>
 
       <div className="mt-5 space-y-6">
-        {NPS_SECTIONS.map((section) => (
+        {NPS_SECTIONS.filter((s) => s.questions.length > 0).map((section) => (
           <div key={section.key}>
             <div className="mb-3 flex items-baseline gap-2 border-b border-white/8 pb-2">
               <span className="font-mono text-[10px] tracking-widest text-[#a78bfa]">

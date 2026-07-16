@@ -304,6 +304,46 @@ body {
   100% { transform: translateX(300%); }
 }
 
+/* ── NPS survey micro-interactions ──────────────────────────────────────
+   Slide-in per step (direction-aware), staggered question entrance, a
+   pop when an option is chosen, and a celebratory thank-you entrance. */
+@keyframes nps-slide-in-right {
+  from { opacity: 0; transform: translateX(28px) scale(0.985); }
+  to   { opacity: 1; transform: translateX(0) scale(1); }
+}
+@keyframes nps-slide-in-left {
+  from { opacity: 0; transform: translateX(-28px) scale(0.985); }
+  to   { opacity: 1; transform: translateX(0) scale(1); }
+}
+.nps-slide-right { animation: nps-slide-in-right 0.42s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.nps-slide-left  { animation: nps-slide-in-left 0.42s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+@keyframes nps-q-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.nps-q-in { animation: nps-q-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+@keyframes nps-pop {
+  0%   { transform: scale(1); }
+  45%  { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+.nps-pop { animation: nps-pop 0.28s ease-out; }
+
+@keyframes nps-done-in {
+  from { opacity: 0; transform: translateY(16px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.nps-done-in { animation: nps-done-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+@keyframes nps-check-pop {
+  0%   { transform: scale(0.4); opacity: 0; }
+  60%  { transform: scale(1.12); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.nps-check-pop { animation: nps-check-pop 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.1s both; }
+
 /* Respect prefers-reduced-motion */
 @media (prefers-reduced-motion: reduce) {
   .animate-orb-pulse,
@@ -315,6 +355,12 @@ body {
   .animate-caret-blink,
   .animate-heartbeat,
   .nps-heartbeat,
+  .nps-slide-right,
+  .nps-slide-left,
+  .nps-q-in,
+  .nps-pop,
+  .nps-done-in,
+  .nps-check-pop,
   [class*="animate-[indeterminate"] {
     animation: none;
   }

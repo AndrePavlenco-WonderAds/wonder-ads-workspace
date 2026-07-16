@@ -37,6 +37,8 @@ export type NpsSingleOption = {
   label: Bilingual;
   /** 0–10 contribution when the parent question is `scored`. */
   score?: number;
+  /** Small muted note shown under the option label. */
+  note?: Bilingual;
 };
 
 /** Single-choice question. Optionally `scored` (via option.score) and
@@ -97,6 +99,9 @@ export type NpsSectionDef = {
   tag: string;
   title: Bilingual;
   questions: NpsQuestion[];
+  /** Optional informational note for sections with no answerable questions
+   *  (e.g. the closing testimonial step). */
+  note?: Bilingual;
 };
 
 export const NPS_SECTIONS: NpsSectionDef[] = [
@@ -109,8 +114,8 @@ export const NPS_SECTIONS: NpsSectionDef[] = [
         kind: "scale10",
         name: "p1_satisfacao",
         q: {
-          pt: "Numa escala de 0 a 10, qual é o teu nível de satisfação geral com a Wonder Ads neste período?",
-          en: "On a scale of 0 to 10, how satisfied are you overall with Wonder Ads this period?",
+          pt: "Numa escala de 0 a 10, qual é o teu nível de satisfação geral com a Wonder Ads neste último período desde o último formulário que preencheste?",
+          en: "On a scale of 0 to 10, how satisfied are you overall with Wonder Ads over this last period since the last form you filled in?",
         },
         capLow: { pt: "Nada satisfeito", en: "Not at all satisfied" },
         capHigh: { pt: "Totalmente satisfeito", en: "Completely satisfied" },
@@ -328,21 +333,14 @@ export const NPS_SECTIONS: NpsSectionDef[] = [
           { value: "um_parceria", label: { pt: "Sim, 1 momento presencial durante a parceria", en: "Yes, 1 in-person moment during the partnership" } },
           { value: "dois_parceria", label: { pt: "Sim, 2 momentos presenciais durante a parceria", en: "Yes, 2 in-person moments during the partnership" } },
           { value: "um_mes", label: { pt: "Sim, 1 momento presencial por mês", en: "Yes, 1 in-person moment per month" } },
-          { value: "um_semana", label: { pt: "Sim, 1 momento presencial por semana", en: "Yes, 1 in-person moment per week" } },
-        ],
-      },
-      {
-        kind: "multi",
-        name: "p13_presencial_tipo",
-        q: {
-          pt: "Em que tipo de momentos consideras que um acompanhamento presencial teria maior impacto?",
-          en: "In which moments would in-person support have the biggest impact?",
-        },
-        hint: { pt: "Seleciona todas as opções aplicáveis.", en: "Select all that apply." },
-        options: [
-          { value: "workshops_formacao", label: { pt: "Workshops práticos / formação da equipa", en: "Hands-on workshops / team training" } },
-          { value: "definicao_estrategia", label: { pt: "Definição e revisão de estratégia", en: "Strategy definition & review" } },
-          { value: "apoio_implementacao", label: { pt: "Apoio à implementação no site", en: "Hands-on implementation support" } },
+          {
+            value: "um_semana",
+            label: { pt: "Sim, 1 momento presencial por semana", en: "Yes, 1 in-person moment per week" },
+            note: {
+              pt: "Para clientes de Cascais e Lisboa",
+              en: "For clients in Cascais and Lisbon",
+            },
+          },
         ],
       },
     ],
@@ -384,21 +382,11 @@ export const NPS_SECTIONS: NpsSectionDef[] = [
     key: "testemunho",
     tag: "08",
     title: { pt: "Testemunho", en: "Testimonial" },
-    questions: [
-      {
-        kind: "open",
-        name: "p16_testemunho",
-        q: {
-          pt: "Adorávamos que nos deixasses um testemunho — ajuda imenso quem está a considerar trabalhar connosco.",
-          en: "We'd love a testimonial from you — it helps others considering working with us.",
-        },
-        hint: {
-          pt: "Se puderes, inclui: (1) Como estavas antes de trabalhar connosco — qual era o principal desafio na tua presença online / no Google? (2) O que fizemos em conjunto — 2 a 3 pontos-chave (SEO técnico, conteúdo, link building, estratégia…). (3) O que mudou entretanto — tráfego, rankings, leads, visibilidade, previsibilidade.",
-          en: "If you can, include: (1) how you were before working with us; (2) what we did together (2–3 key points); (3) what changed since.",
-        },
-        placeholder: { pt: "Escreve aqui o teu testemunho…", en: "Write your testimonial here…" },
-      },
-    ],
+    questions: [],
+    note: {
+      pt: "Estás quase a terminar! Depois de submeteres, no ecrã seguinte vais ter o link para deixares a tua Google Review — ajuda imenso quem está a considerar trabalhar connosco.",
+      en: "Almost done! After you submit, the next screen will give you the link to leave your Google Review — it helps others considering working with us.",
+    },
   },
 ];
 

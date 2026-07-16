@@ -1,15 +1,13 @@
 "use client";
 
 // Client-facing SEO satisfaction survey, in QUIZ mode: one section per
-// step, a ruler progress bar, and a final thank-you screen. Lives on the
-// public /[slug]/survey page (no app chrome, no auth). Posts to
+// step, a ruler progress bar, animated slide transitions and a final
+// thank-you screen with a Google review CTA. Lives on the public
+// /[slug]/survey page (no app chrome, no auth). Posts to
 // /api/nps/[slug]/submit.
-//
-// v2: four question kinds — 0–10 scale, single-choice, multi-select and
-// open text — rendered from the NPS_SECTIONS catalogue.
 
 import { useMemo, useState } from "react";
-import { ArrowLeft, ArrowRight, Check, Loader2, Star } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Loader2, Star, X, Sparkles } from "lucide-react";
 import {
   NPS_SECTIONS,
   isScale10,
@@ -26,8 +24,7 @@ import type { PublicLang } from "@/lib/public-i18n";
 const BRAND_GRADIENT =
   "linear-gradient(135deg, #343ED7 0%, #783DF5 53.65%, #C535C9 100%)";
 
-/** Wonder Ads' Google Business review link. Shown as a CTA on the final
- *  (testimonial) section so a happy client can post a public review. */
+/** Wonder Ads' Google Business review link. Shown on the thank-you screen. */
 const GOOGLE_REVIEW_URL = "https://g.page/r/CSxgxSWM0p4VEAE/review";
 
 const COPY = {
@@ -43,12 +40,14 @@ const COPY = {
     identLabel: (company: string) =>
       `Quem está a responder por ${company}? (opcional)`,
     identPlaceholder: "O seu nome",
-    googleReviewLead: "Ajuda ainda mais quem procura por nós:",
-    googleReview: "Deixar review no Google",
     doneMark: "— Avaliação registada —",
     doneTitle: "Obrigado pelo seu tempo.",
     doneBody:
       "A sua avaliação foi registada. Este retorno ajuda-nos a manter o rigor na estratégia de SEO e no acompanhamento.",
+    doneReviewLead:
+      "Ajuda-nos a crescer — deixe a sua avaliação no Google (30 segundos):",
+    googleReview: "Deixar review no Google",
+    close: "Fechar janela",
     errorRetry: "Não foi possível enviar. Tente novamente.",
     optional: "opcional",
   },
@@ -63,12 +62,14 @@ const COPY = {
     maxReached: (n: number) => `Max ${n} options`,
     identLabel: (company: string) => `Who's answering for ${company}? (optional)`,
     identPlaceholder: "Your name",
-    googleReviewLead: "Help even more people find us:",
-    googleReview: "Leave a Google review",
     doneMark: "— Evaluation recorded —",
     doneTitle: "Thank you for your time.",
     doneBody:
       "Your evaluation has been recorded. This feedback helps us keep our SEO strategy and follow-up sharp.",
+    doneReviewLead:
+      "Help us grow — leave your review on Google (30 seconds):",
+    googleReview: "Leave a Google review",
+    close: "Close window",
     errorRetry: "Couldn't submit. Please try again.",
     optional: "optional",
   },
@@ -103,15 +104,17 @@ function Scale10({
               className="group flex items-center justify-center rounded-md py-1 outline-none transition focus-visible:ring-2 focus-visible:ring-[#783DF5]/50"
             >
               <span
-                className="flex h-8 w-full items-center justify-center rounded-lg border text-[12px] font-semibold transition sm:h-9"
+                className={`flex h-8 w-full items-center justify-center rounded-lg border text-[12px] font-semibold transition-all duration-200 group-hover:-translate-y-0.5 sm:h-9 ${
+                  selected ? "nps-pop" : "group-hover:border-[#783DF5]/40"
+                }`}
                 style={{
                   borderColor: selected ? "transparent" : "rgba(0,0,0,0.16)",
                   background: selected ? BRAND_GRADIENT : "#ffffff",
                   color: selected ? "#fff" : "rgba(0,0,0,0.5)",
-                  transform: selected ? "scale(1.04)" : "scale(1)",
+                  transform: selected ? "scale(1.06)" : undefined,
                   boxShadow: selected
-                    ? "0 6px 16px -6px rgba(120,61,245,0.5)"
-                    : "none",
+                    ? "0 8px 20px -6px rgba(120,61,245,0.55)"
+                    : "0 1px 2px rgba(0,0,0,0.04)",
                 }}
               >
                 {n}
@@ -120,7 +123,7 @@ function Scale10({
           );
         })}
       </div>
-      <div className="mt-2 flex justify-between text-[11px] text-black/45">
+      <div className="mt-2 flex justify-between text-[11px] font-medium text-black/50">
         <span>{lowCap}</span>
         <span>{highCap}</span>
       </div>
@@ -135,6 +138,7 @@ function OptionRow({
   badge,
   square,
   children,
+  note,
 }: {
   on: boolean;
   onClick: () => void;
@@ -142,6 +146,7 @@ function OptionRow({
   badge?: string;
   square: boolean;
   children: React.ReactNode;
+  note?: string;
 }) {
   return (
     <button
@@ -149,16 +154,20 @@ function OptionRow({
       onClick={onClick}
       aria-pressed={on}
       disabled={disabled && !on}
-      className="flex items-center gap-3 rounded-lg border px-3.5 py-2.5 text-left text-sm transition disabled:cursor-not-allowed disabled:opacity-45"
+      className="group flex items-center gap-3 rounded-xl border px-3.5 py-2.5 text-left text-sm transition-all duration-200 hover:-translate-y-[1px] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:translate-y-0"
       style={{
         borderColor: on ? "transparent" : "rgba(0,0,0,0.12)",
         background: on ? "rgba(120,61,245,0.08)" : "#fff",
-        boxShadow: on ? "inset 0 0 0 1.5px #783DF5" : "none",
+        boxShadow: on
+          ? "inset 0 0 0 1.5px #783DF5, 0 8px 20px -12px rgba(120,61,245,0.5)"
+          : "0 1px 2px rgba(0,0,0,0.03)",
       }}
     >
       {badge ? (
         <span
-          className="flex h-5 w-5 shrink-0 items-center justify-center rounded-[5px] text-[10px] font-bold transition"
+          className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-[5px] text-[10px] font-bold transition-all duration-200 ${
+            on ? "nps-pop" : ""
+          }`}
           style={{
             background: on ? BRAND_GRADIENT : "rgba(0,0,0,0.06)",
             color: on ? "#fff" : "rgba(0,0,0,0.5)",
@@ -168,9 +177,9 @@ function OptionRow({
         </span>
       ) : (
         <span
-          className={`flex h-5 w-5 shrink-0 items-center justify-center border transition ${
+          className={`flex h-5 w-5 shrink-0 items-center justify-center border transition-all duration-200 ${
             square ? "rounded-[6px]" : "rounded-full"
-          }`}
+          } ${on ? "nps-pop" : ""}`}
           style={{
             borderColor: on ? "transparent" : "rgba(0,0,0,0.25)",
             background: on ? BRAND_GRADIENT : "transparent",
@@ -184,7 +193,12 @@ function OptionRow({
             ))}
         </span>
       )}
-      <span className={on ? "text-black/85" : "text-black/70"}>{children}</span>
+      <span className="flex flex-col">
+        <span className={on ? "text-black/85" : "text-black/70"}>{children}</span>
+        {note && (
+          <span className="mt-0.5 text-[11px] text-[#A9834F]">{note}</span>
+        )}
+      </span>
     </button>
   );
 }
@@ -209,6 +223,7 @@ function SingleChoice({
           onClick={() => onPick(o.value)}
           square={false}
           badge={q.lettered ? LETTERS[i] : undefined}
+          note={o.note?.[lang]}
         >
           {o.label[lang]}
         </OptionRow>
@@ -233,7 +248,11 @@ function MultiChoice({
   const atMax = q.max !== undefined && selected.length >= q.max;
   return (
     <div>
-      {q.hint && <p className="mb-2.5 text-[12px] text-black/45">{q.hint[lang]}</p>}
+      {q.hint && (
+        <p className="mb-2.5 text-[12.5px] font-medium text-black/55">
+          {q.hint[lang]}
+        </p>
+      )}
       <div className="flex flex-col gap-2">
         {q.options.map((o) => {
           const on = selected.includes(o.value);
@@ -273,7 +292,7 @@ function OpenText({
   return (
     <div>
       {q.hint && (
-        <p className="mb-2.5 text-[12px] leading-relaxed text-black/45">
+        <p className="mb-2.5 text-[12.5px] font-medium leading-relaxed text-black/55">
           {q.hint[lang]}
         </p>
       )}
@@ -281,7 +300,7 @@ function OpenText({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={q.placeholder?.[lang]}
-        className="min-h-[96px] w-full resize-y rounded-lg border border-black/12 bg-[#f8f7f2] px-3.5 py-3 text-sm text-black/80 outline-none transition focus:border-[#783DF5]/50 focus:ring-2 focus:ring-[#783DF5]/15"
+        className="min-h-[96px] w-full resize-y rounded-xl border border-black/12 bg-[#f8f7f2] px-3.5 py-3 text-sm text-black/80 outline-none transition-all duration-200 focus:-translate-y-[1px] focus:border-[#783DF5]/50 focus:bg-white focus:ring-2 focus:ring-[#783DF5]/15"
       />
       {!q.required && (
         <p className="mt-1 text-[11px] text-black/35">{optionalWord}</p>
@@ -303,6 +322,7 @@ export function NpsSurveyForm({
   const sections = NPS_SECTIONS;
   const total = sections.length;
   const [step, setStep] = useState(0);
+  const [dir, setDir] = useState<1 | -1>(1);
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [choices, setChoices] = useState<Record<string, string[]>>({});
   const [texts, setTexts] = useState<Record<string, string>>({});
@@ -335,6 +355,12 @@ export function NpsSurveyForm({
   const missingInStep = section.questions.filter(
     (q) => isRequired(q) && !isAnswered(q),
   ).length;
+
+  function goTo(target: number) {
+    setDir(target >= step ? 1 : -1);
+    setStep(Math.max(0, Math.min(total - 1, target)));
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
 
   function setAnswer(name: string, v: number) {
     setAnswers((prev) => ({ ...prev, [name]: v }));
@@ -383,15 +409,20 @@ export function NpsSurveyForm({
       submit();
       return;
     }
-    setStep((s) => Math.min(total - 1, s + 1));
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    goTo(step + 1);
   }
 
   if (state === "done") {
     return (
-      <div className="rounded-2xl border border-black/8 bg-white px-6 py-16 text-center shadow-sm">
+      <div className="nps-done-in rounded-2xl border border-black/8 bg-white px-6 py-14 text-center shadow-sm">
         <div
-          className="text-sm font-semibold tracking-wide"
+          className="nps-check-pop mx-auto flex h-14 w-14 items-center justify-center rounded-full"
+          style={{ background: BRAND_GRADIENT }}
+        >
+          <Check className="h-7 w-7 text-white" strokeWidth={3} />
+        </div>
+        <div
+          className="mt-5 text-sm font-semibold tracking-wide"
           style={{
             background: BRAND_GRADIENT,
             WebkitBackgroundClip: "text",
@@ -402,12 +433,38 @@ export function NpsSurveyForm({
         >
           {t.doneMark}
         </div>
-        <h2 className="mt-3 text-2xl font-semibold text-black/85">
+        <h2 className="mt-2 text-2xl font-semibold text-black/85">
           {t.doneTitle}
         </h2>
         <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-black/55">
           {t.doneBody}
         </p>
+
+        <div className="mx-auto mt-7 max-w-sm rounded-xl border border-black/8 bg-[#f8f7f2] px-5 py-5">
+          <p className="flex items-center justify-center gap-1.5 text-[13px] font-medium text-black/70">
+            <Sparkles className="h-3.5 w-3.5 text-[#A9834F]" />
+            {t.doneReviewLead}
+          </p>
+          <a
+            href={GOOGLE_REVIEW_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-3 inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-[#783DF5]/25 transition-all duration-200 hover:-translate-y-0.5 hover:brightness-110"
+            style={{ background: BRAND_GRADIENT }}
+          >
+            <Star className="h-4 w-4 fill-white" />
+            {t.googleReview}
+          </a>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => window.close()}
+          className="mx-auto mt-6 inline-flex items-center gap-1.5 rounded-lg border border-black/12 px-4 py-2 text-sm font-medium text-black/55 transition-all duration-200 hover:-translate-y-[1px] hover:border-black/25 hover:text-black/80"
+        >
+          <X className="h-4 w-4" />
+          {t.close}
+        </button>
       </div>
     );
   }
@@ -428,8 +485,8 @@ export function NpsSurveyForm({
               <button
                 key={s.key}
                 type="button"
-                onClick={() => setStep(i)}
-                className="transition"
+                onClick={() => goTo(i)}
+                className="transition-all duration-200 hover:-translate-y-[1px]"
                 style={{
                   color: current
                     ? "#1B2430"
@@ -444,105 +501,113 @@ export function NpsSurveyForm({
             );
           })}
         </div>
-        <div className="relative h-1 rounded-full bg-black/8">
+        <div className="relative h-1.5 overflow-hidden rounded-full bg-black/8">
           <div
-            className="absolute left-0 top-0 h-1 rounded-full transition-all duration-500"
-            style={{ width: `${pct}%`, background: BRAND_GRADIENT }}
+            className="absolute left-0 top-0 h-1.5 rounded-full transition-all duration-500 ease-out"
+            style={{
+              width: `${pct}%`,
+              background: BRAND_GRADIENT,
+              boxShadow: "0 0 12px -2px rgba(120,61,245,0.6)",
+            }}
           />
         </div>
       </div>
 
-      {/* Section card */}
-      <div className="rounded-2xl border border-black/8 bg-white px-6 py-7 shadow-sm sm:px-8">
-        <div className="mb-6 flex items-baseline gap-2.5 border-b border-black/8 pb-4">
-          <span className="font-mono text-[11px] tracking-widest text-[#783DF5]">
-            {section.tag}
-          </span>
-          <span className="text-lg font-semibold text-black/85">
-            {section.title[lang]}
-          </span>
-          <span className="ml-auto text-[11px] text-black/40">
-            {t.sectionOf(step + 1, total)}
-          </span>
-        </div>
+      {/* Section card — re-keyed per step so the slide animation replays */}
+      <div
+        key={step}
+        className={dir === 1 ? "nps-slide-right" : "nps-slide-left"}
+      >
+        <div className="rounded-2xl border border-black/8 bg-white px-6 py-7 shadow-sm sm:px-8">
+          <div className="mb-6 flex items-baseline gap-2.5 border-b border-black/8 pb-4">
+            <span className="font-mono text-[11px] tracking-widest text-[#783DF5]">
+              {section.tag}
+            </span>
+            <span className="text-lg font-semibold text-black/85">
+              {section.title[lang]}
+            </span>
+            <span className="ml-auto text-[11px] text-black/40">
+              {t.sectionOf(step + 1, total)}
+            </span>
+          </div>
 
-        <div className="space-y-7">
-          {section.questions.map((q) => (
-            <div key={q.name}>
-              <div className="mb-3 text-[15px] font-medium leading-snug text-black/80">
-                {q.q[lang]}
-              </div>
-              {isScale10(q) && (
-                <Scale10
-                  value={answers[q.name]}
-                  onChange={(v) => setAnswer(q.name, v)}
-                  lowCap={q.capLow[lang]}
-                  highCap={q.capHigh[lang]}
-                />
-              )}
-              {isSingle(q) && (
-                <SingleChoice
-                  q={q}
-                  lang={lang}
-                  value={choices[q.name]?.[0]}
-                  onPick={(v) => pickSingle(q.name, v)}
-                />
-              )}
-              {isMulti(q) && (
-                <MultiChoice
-                  q={q}
-                  lang={lang}
-                  selected={choices[q.name] ?? []}
-                  onToggle={(v) => toggleMulti(q.name, v, q.max)}
-                  maxNote={q.max ? t.maxReached(q.max) : undefined}
-                />
-              )}
-              {isOpen(q) && (
-                <OpenText
-                  q={q}
-                  lang={lang}
-                  value={texts[q.name] ?? ""}
-                  onChange={(v) => setText(q.name, v)}
-                  optionalWord={t.optional}
-                />
-              )}
-            </div>
-          ))}
-
-          {/* Google review CTA — on the final (testimonial) section. */}
-          {isLast && (
-            <div className="rounded-xl border border-black/8 bg-[#f8f7f2] px-4 py-4">
-              <p className="mb-3 text-[13px] text-black/55">
-                {t.googleReviewLead}
-              </p>
-              <a
-                href={GOOGLE_REVIEW_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-white shadow-md shadow-[#783DF5]/25 transition hover:brightness-110"
-                style={{ background: BRAND_GRADIENT }}
+          <div className="space-y-7">
+            {section.note && (
+              <div
+                className="nps-q-in flex items-start gap-3 rounded-xl border border-[#783DF5]/20 bg-[#783DF5]/[0.05] px-4 py-3.5"
               >
-                <Star className="h-4 w-4 fill-white" />
-                {t.googleReview}
-              </a>
-            </div>
-          )}
-
-          {/* Who's answering — on the final section only. */}
-          {isLast && (
-            <div>
-              <div className="mb-2 text-[15px] font-medium leading-snug text-black/80">
-                {t.identLabel(clientName)}
+                <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-[#783DF5]" />
+                <p className="text-sm leading-relaxed text-black/70">
+                  {section.note[lang]}
+                </p>
               </div>
-              <input
-                type="text"
-                value={identification}
-                onChange={(e) => setIdentification(e.target.value)}
-                placeholder={t.identPlaceholder}
-                className="w-full border-b border-black/15 bg-transparent px-1 py-2 text-[15px] text-black/80 outline-none transition focus:border-[#783DF5]"
-              />
-            </div>
-          )}
+            )}
+
+            {section.questions.map((q, qi) => (
+              <div
+                key={q.name}
+                className="nps-q-in"
+                style={{ animationDelay: `${qi * 70}ms` }}
+              >
+                <div className="mb-3 text-[15px] font-medium leading-snug text-black/80">
+                  {q.q[lang]}
+                </div>
+                {isScale10(q) && (
+                  <Scale10
+                    value={answers[q.name]}
+                    onChange={(v) => setAnswer(q.name, v)}
+                    lowCap={q.capLow[lang]}
+                    highCap={q.capHigh[lang]}
+                  />
+                )}
+                {isSingle(q) && (
+                  <SingleChoice
+                    q={q}
+                    lang={lang}
+                    value={choices[q.name]?.[0]}
+                    onPick={(v) => pickSingle(q.name, v)}
+                  />
+                )}
+                {isMulti(q) && (
+                  <MultiChoice
+                    q={q}
+                    lang={lang}
+                    selected={choices[q.name] ?? []}
+                    onToggle={(v) => toggleMulti(q.name, v, q.max)}
+                    maxNote={q.max ? t.maxReached(q.max) : undefined}
+                  />
+                )}
+                {isOpen(q) && (
+                  <OpenText
+                    q={q}
+                    lang={lang}
+                    value={texts[q.name] ?? ""}
+                    onChange={(v) => setText(q.name, v)}
+                    optionalWord={t.optional}
+                  />
+                )}
+              </div>
+            ))}
+
+            {/* Who's answering — on the final section only. */}
+            {isLast && (
+              <div
+                className="nps-q-in"
+                style={{ animationDelay: `${section.questions.length * 70}ms` }}
+              >
+                <div className="mb-2 text-[15px] font-medium leading-snug text-black/80">
+                  {t.identLabel(clientName)}
+                </div>
+                <input
+                  type="text"
+                  value={identification}
+                  onChange={(e) => setIdentification(e.target.value)}
+                  placeholder={t.identPlaceholder}
+                  className="w-full border-b border-black/15 bg-transparent px-1 py-2 text-[15px] text-black/80 outline-none transition-colors duration-200 focus:border-[#783DF5]"
+                />
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -554,12 +619,9 @@ export function NpsSurveyForm({
       <div className="mt-6 flex items-center justify-between gap-4">
         <button
           type="button"
-          onClick={() => {
-            setStep((s) => Math.max(0, s - 1));
-            window.scrollTo({ top: 0, behavior: "smooth" });
-          }}
+          onClick={() => goTo(step - 1)}
           disabled={step === 0}
-          className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-black/55 transition hover:bg-black/[0.04] hover:text-black/80 disabled:invisible"
+          className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-black/55 transition-all duration-200 hover:-translate-x-0.5 hover:bg-black/[0.04] hover:text-black/80 disabled:invisible"
         >
           <ArrowLeft className="h-4 w-4" />
           {t.back}
@@ -573,7 +635,7 @@ export function NpsSurveyForm({
             type="button"
             onClick={next}
             disabled={missingInStep > 0 || state === "sending"}
-            className="inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-[#783DF5]/25 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
+            className="group inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-[#783DF5]/25 transition-all duration-200 hover:-translate-y-0.5 hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none disabled:hover:translate-y-0"
             style={{ background: BRAND_GRADIENT }}
           >
             {state === "sending" ? (
@@ -591,7 +653,7 @@ export function NpsSurveyForm({
             ) : (
               <>
                 {t.next}
-                <ArrowRight className="h-4 w-4" />
+                <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
               </>
             )}
           </button>

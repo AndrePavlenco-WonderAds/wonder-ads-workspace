@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.77",
+    date: "2026-07-16",
+    title: "NPS — UX do formulário melhorada, ajustes de perguntas e download PDF",
+    highlights: [
+      "**✨ Formulário do cliente com muito melhor UX.** Transições animadas entre secções (slide direcional), entrada das perguntas em cascata, animações de hover/seleção e barra de progresso com brilho. Respeita `prefers-reduced-motion`.",
+      "**📝 Ajustes de perguntas.** A 1ª pergunta passa a referir “neste último período desde o último formulário que preencheste”. As notas “Seleciona todas as opções aplicáveis” ficam mais legíveis. Removida a pergunta “Em que tipo de momentos… presencial”. Na opção “1 momento presencial por semana” foi adicionada a nota *“Para clientes de Cascais e Lisboa”*.",
+      "**⭐ Testemunho → Google Review no fim.** Removida a caixa de testemunho; passa a haver uma mensagem a explicar que, após submeter, o ecrã final tem o link para deixar a Google Review. O ecrã de agradecimento ganhou o botão de review e um botão **Fechar janela**.",
+      "**📄 Download PDF (lado do consultor).** Na página de NPS há agora um botão **PDF** que abre uma folha imprimível (tema claro, com o nosso branding) com todas as perguntas e as respostas mais recentes do cliente — pronta a guardar em PDF.",
+    ],
+  },
+  {
     version: "74.76",
     date: "2026-07-16",
     title: "NPS — botão “Deixar review no Google” no fim do inquérito",
