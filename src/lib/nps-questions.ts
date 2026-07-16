@@ -268,8 +268,8 @@ export const NPS_SECTIONS: NpsSectionDef[] = [
         name: "p9_acoes",
         max: 5,
         q: {
-          pt: "Quais foram as ações de SEO com maior impacto no desenvolvimento do teu negócio?",
-          en: "Which SEO actions had the biggest impact on your business?",
+          pt: "Das ações que fizemos por ti, quais sentes que tiveram maior impacto na tua faturação e na entrada de contactos/leads?",
+          en: "Of the work we did for you, which do you feel had the biggest impact on your revenue and incoming leads/enquiries?",
         },
         hint: { pt: "Seleciona até 5 opções.", en: "Select up to 5 options." },
         options: [

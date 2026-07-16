@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.79",
+    date: "2026-07-16",
+    title: "NPS — pergunta das ações mais simples e focada no resultado",
+    highlights: [
+      "**🗣️ Linguagem mais clara.** A pergunta das ações de maior impacto passa a estar em linguagem simples e focada no que o cliente sente: *“Das ações que fizemos por ti, quais sentes que tiveram maior impacto na tua faturação e na entrada de contactos/leads?”* (os clientes não têm de perceber de SEO).",
+    ],
+  },
+  {
     version: "74.78",
     date: "2026-07-16",
     title: "NPS — ecrã final: mensagem “pode fechar” com cruz animada",
