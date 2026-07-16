@@ -9,9 +9,12 @@ import { getNpsRecord } from "@/lib/nps-store";
 import {
   NPS_SECTIONS,
   isScale10,
+  isPersonScale,
   isSingle,
   isMulti,
   otherTextKey,
+  personScaleKey,
+  personLabel,
 } from "@/lib/nps-questions";
 import { pickLang } from "@/lib/public-i18n";
 import { getCurrentEmployee } from "@/lib/auth/server";
@@ -272,6 +275,38 @@ function Answer({
           <span>0 · {q.capLow[lang]}</span>
           <span>10 · {q.capHigh[lang]}</span>
         </div>
+      </div>
+    );
+  }
+
+  if (isPersonScale(q)) {
+    const people = latest.choices?.[q.source] ?? [];
+    if (people.length === 0)
+      return <span style={{ fontStyle: "italic", color: "rgba(0,0,0,0.4)" }}>Sem seleção</span>;
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+        {people.map((pv) => {
+          const v = latest.answers[personScaleKey(q.name, pv)];
+          return (
+            <div
+              key={pv}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 12,
+                maxWidth: 380,
+              }}
+            >
+              <span style={{ fontWeight: 500 }}>
+                {personLabel(q.source, pv, lang)}
+              </span>
+              <span style={{ fontWeight: 700, color: PURPLE }}>
+                {typeof v === "number" ? `${v}/10` : "—"}
+              </span>
+            </div>
+          );
+        })}
       </div>
     );
   }

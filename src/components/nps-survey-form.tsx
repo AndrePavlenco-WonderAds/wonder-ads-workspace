@@ -11,11 +11,15 @@ import { ArrowLeft, ArrowRight, Check, Loader2, Star, X, Sparkles } from "lucide
 import {
   NPS_SECTIONS,
   isScale10,
+  isPersonScale,
   isSingle,
   isMulti,
   isOpen,
   otherTextKey,
+  personScaleKey,
+  personLabel,
   type NpsQuestion,
+  type NpsPersonScaleQuestion,
   type NpsSingleQuestion,
   type NpsMultiQuestion,
   type NpsOpenQuestion,
@@ -39,6 +43,7 @@ const COPY = {
     missing: (n: number) => `Falta${n > 1 ? "m" : ""} ${n} nesta secção`,
     maxReached: (n: number) => `Máximo de ${n} opções`,
     otherPlaceholder: "Qual? Escreve aqui…",
+    noPeople: "Volta atrás e seleciona quem te acompanhou para avaliar cada pessoa.",
     doneMark: "— Avaliação registada —",
     doneTitle: "Obrigado pelo seu tempo.",
     doneBody:
@@ -60,6 +65,7 @@ const COPY = {
     missing: (n: number) => `${n} left in this section`,
     maxReached: (n: number) => `Max ${n} options`,
     otherPlaceholder: "Which one? Type here…",
+    noPeople: "Go back and select who accompanied you to rate each person.",
     doneMark: "— Evaluation recorded —",
     doneTitle: "Thank you for your time.",
     doneBody:
@@ -125,6 +131,48 @@ function Scale10({
         <span>{lowCap}</span>
         <span>{highCap}</span>
       </div>
+    </div>
+  );
+}
+
+/** One 0–10 scale per person selected earlier, each labelled with the
+ *  person's name. */
+function PersonScale({
+  q,
+  lang,
+  people,
+  get,
+  onChange,
+  emptyText,
+}: {
+  q: NpsPersonScaleQuestion;
+  lang: PublicLang;
+  people: { value: string; label: string }[];
+  get: (personValue: string) => number | undefined;
+  onChange: (personValue: string, v: number) => void;
+  emptyText: string;
+}) {
+  if (people.length === 0) {
+    return <p className="text-sm text-black/45">{emptyText}</p>;
+  }
+  return (
+    <div className="flex flex-col gap-6">
+      {people.map((p) => (
+        <div key={p.value}>
+          <div className="mb-2.5 flex items-center gap-2 text-[15px] font-semibold text-black/80">
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#783DF5]/10 text-[10px] font-bold text-[#783DF5]">
+              {p.label.charAt(0)}
+            </span>
+            {p.label}
+          </div>
+          <Scale10
+            value={get(p.value)}
+            onChange={(v) => onChange(p.value, v)}
+            lowCap={q.capLow[lang]}
+            highCap={q.capHigh[lang]}
+          />
+        </div>
+      ))}
     </div>
   );
 }
@@ -347,12 +395,20 @@ export function NpsSurveyForm({
 
   const isRequired = (q: NpsQuestion): boolean =>
     isScale10(q) ||
+    isPersonScale(q) ||
     (isSingle(q) && (q.required ?? true)) ||
     (isOpen(q) && Boolean(q.required)) ||
     (isMulti(q) && Boolean(q.required));
 
   const isAnswered = (q: NpsQuestion): boolean => {
     if (isScale10(q)) return answers[q.name] !== undefined;
+    if (isPersonScale(q)) {
+      const people = choices[q.source] ?? [];
+      return (
+        people.length > 0 &&
+        people.every((pv) => answers[personScaleKey(q.name, pv)] !== undefined)
+      );
+    }
     if (isSingle(q)) return (choices[q.name]?.length ?? 0) > 0;
     if (isOpen(q)) return (texts[q.name]?.trim() ?? "") !== "";
     if (isMulti(q)) return !q.required || (choices[q.name]?.length ?? 0) > 0;
@@ -491,7 +547,6 @@ export function NpsSurveyForm({
       <div className="mb-8">
         <div className="mb-2 flex flex-wrap justify-between gap-x-4 gap-y-1 text-[10px] font-medium uppercase tracking-[0.14em]">
           {sections.map((s, i) => {
-            const done = s.questions.every((q) => !isRequired(q) || isAnswered(q));
             const current = i === step;
             return (
               <button
@@ -500,12 +555,8 @@ export function NpsSurveyForm({
                 onClick={() => goTo(i)}
                 className="transition-all duration-200 hover:-translate-y-[1px]"
                 style={{
-                  color: current
-                    ? "#1B2430"
-                    : done
-                      ? "#6E7F6A"
-                      : "rgba(0,0,0,0.32)",
-                  fontWeight: current || done ? 600 : 500,
+                  color: current ? "#1B2430" : "rgba(0,0,0,0.4)",
+                  fontWeight: current ? 700 : 500,
                 }}
               >
                 {s.title[lang]}
@@ -570,6 +621,19 @@ export function NpsSurveyForm({
                     onChange={(v) => setAnswer(q.name, v)}
                     lowCap={q.capLow[lang]}
                     highCap={q.capHigh[lang]}
+                  />
+                )}
+                {isPersonScale(q) && (
+                  <PersonScale
+                    q={q}
+                    lang={lang}
+                    people={(choices[q.source] ?? []).map((v) => ({
+                      value: v,
+                      label: personLabel(q.source, v, lang),
+                    }))}
+                    get={(pv) => answers[personScaleKey(q.name, pv)]}
+                    onChange={(pv, v) => setAnswer(personScaleKey(q.name, pv), v)}
+                    emptyText={t.noPeople}
                   />
                 )}
                 {isSingle(q) && (

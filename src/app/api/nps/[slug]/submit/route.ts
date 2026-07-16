@@ -11,10 +11,12 @@ import {
   NPS_MULTI_NAMES,
   NPS_OPEN_NAMES,
   NPS_OTHER_KEYS,
+  NPS_PERSON_SCALES,
   getMultiQuestion,
   getSingleQuestion,
   getQuestion,
   isOpen,
+  personScaleKey,
 } from "@/lib/nps-questions";
 import { getConsultantForSlug } from "@/lib/client-overrides";
 
@@ -97,6 +99,22 @@ export async function POST(
         { error: `Missing required choice: ${name}` },
         { status: 400 },
       );
+    }
+  }
+
+  // --- per-person 0–10 ratings (one per person selected in the source) ---
+  for (const pq of NPS_PERSON_SCALES) {
+    const people = choices[pq.source] ?? [];
+    for (const person of people) {
+      const key = personScaleKey(pq.name, person);
+      const v = Number(rawAnswers[key]);
+      if (!Number.isFinite(v) || v < 0 || v > 10) {
+        return NextResponse.json(
+          { error: `Missing or invalid rating: ${key}` },
+          { status: 400 },
+        );
+      }
+      answers[key] = Math.round(v);
     }
   }
 

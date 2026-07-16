@@ -27,10 +27,13 @@ import {
   NPS_SECTIONS,
   npsScoreColor,
   isScale10,
+  isPersonScale,
   isSingle,
   isMulti,
   isOpen,
   otherTextKey,
+  personScaleKey,
+  personLabel,
 } from "@/lib/nps-questions";
 import { pickLang } from "@/lib/public-i18n";
 import { getCurrentEmployee } from "@/lib/auth/server";
@@ -314,7 +317,7 @@ function KeyMetrics({ latest }: { latest: NpsSubmission }) {
   const s = latest.scores;
   const rows: { label: string; value: number | null }[] = [
     { label: "Satisfação geral", value: s.satisfaction },
-    { label: "Consultor de SEO", value: s.consultant },
+    { label: "Equipa (desempenho)", value: s.consultant },
     { label: "Continuidade", value: s.nps },
     { label: "Progresso nos objetivos", value: s.progress },
   ];
@@ -440,6 +443,60 @@ function AnswersDetail({
                         >
                           {has ? `${value}/10` : "—"}
                         </span>
+                      </div>
+                    </div>
+                  );
+                }
+
+                if (isPersonScale(q)) {
+                  const people = latest.choices?.[q.source] ?? [];
+                  return (
+                    <div key={q.name}>
+                      <p className="text-sm leading-snug text-white/75">
+                        {q.q[lang]}
+                      </p>
+                      <div className="mt-2 space-y-2">
+                        {people.length === 0 && (
+                          <span className="text-[11px] italic text-white/30">
+                            Sem seleção
+                          </span>
+                        )}
+                        {people.map((pv) => {
+                          const val =
+                            latest.answers[personScaleKey(q.name, pv)];
+                          const has = typeof val === "number";
+                          return (
+                            <div
+                              key={pv}
+                              className="flex items-center justify-between gap-3"
+                            >
+                              <span className="text-sm text-white/70">
+                                {personLabel(q.source, pv, lang)}
+                              </span>
+                              <div className="flex items-center gap-3">
+                                <div className="h-2 w-28 overflow-hidden rounded-full bg-white/8">
+                                  <div
+                                    className="h-2 rounded-full"
+                                    style={{
+                                      width: `${((val ?? 0) / 10) * 100}%`,
+                                      background: has
+                                        ? scoreColor(val)
+                                        : "transparent",
+                                    }}
+                                  />
+                                </div>
+                                <span
+                                  className="w-12 text-right font-mono text-sm font-semibold"
+                                  style={{
+                                    color: has ? scoreColor(val) : undefined,
+                                  }}
+                                >
+                                  {has ? `${val}/10` : "—"}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   );

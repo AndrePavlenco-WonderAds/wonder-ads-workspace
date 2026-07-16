@@ -32,8 +32,8 @@ const RESERVED = new Set([
 ]);
 
 const INTRO = {
-  pt: "Um formulário curto para avaliar o nosso trabalho de SEO — o serviço, os resultados orgânicos, a comunicação e a equipa que acompanha a sua conta.",
-  en: "A short form to evaluate our SEO work — the service, the organic results, the communication and the team looking after your account.",
+  pt: "Um formulário curto para avaliar o nosso trabalho — o serviço, os resultados, a comunicação e a equipa que acompanha a sua conta.",
+  en: "A short form to evaluate our work — the service, the results, the communication and the team looking after your account.",
 } as const;
 
 const MINUTES = {
@@ -42,8 +42,8 @@ const MINUTES = {
 } as const;
 
 const EYEBROW = {
-  pt: "Avaliação de Serviço SEO · Cliente",
-  en: "SEO Service Evaluation · Client",
+  pt: "Avaliação de Serviço · Cliente",
+  en: "Service Evaluation · Client",
 } as const;
 
 const FOOTER = {

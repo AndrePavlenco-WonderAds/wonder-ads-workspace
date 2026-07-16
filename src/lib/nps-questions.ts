@@ -1,23 +1,22 @@
-// Catalogue + scoring for the client SEO satisfaction survey ("NPS quiz").
+// Catalogue + scoring for the client satisfaction survey ("NPS quiz").
 //
 // This module is PURE (no KV, no React) so it can be imported by both the
 // public quiz form (client component) and the server-side store/scoring.
 //
-// v2 (2026-07): reworked to a richer, competitor-inspired survey. The three
-// headline ratings are now a real 0–10 scale (NPS-style). The rest is a mix
-// of single-choice, multi-select and open questions that colour the review
-// without necessarily feeding the score.
+// v3 (2026-07): the client first picks which Wonder Ads service(s) they're
+// on, then which team members accompanied them, then rates each of those
+// people individually (dynamic 0–10 per person). The three headline ratings
+// (overall satisfaction, team performance, continuity) are 0–10.
 //
 // Scoring model:
-//   • Three 0–10 ratings feed the score directly: overall satisfaction (P1),
-//     consultant performance (P5) and continuity/loyalty (P7).
-//   • The progress question (P3) is single-choice but scored: its option
-//     carries a 0–10 `score` that also feeds the average.
-//   • `overall` = mean of those four scored answers (0–10, 1 dp).
-//   • `nps` (headline) = the continuity answer P7, bucketed into the classic
-//     NPS categories (Promoter 9–10 · Passive 7–8 · Detractor 0–6).
-//   • Everything else (multi-select, open text) is qualitative and never
-//     moves the score.
+//   • overall satisfaction (P1) and continuity (P7) are 0–10 and feed the
+//     score directly.
+//   • "team performance" = the mean of the per-person 0–10 ratings.
+//   • the progress question (P3) is single-choice but scored (option carries
+//     a 0–10 `score`).
+//   • `overall` = mean of those four scored values (0–10, 1 dp).
+//   • `nps` (headline) = continuity (P7), bucketed into NPS categories.
+//   • everything else (multi-select, open text) is qualitative.
 
 import type { PublicLang } from "@/lib/public-i18n";
 
@@ -27,6 +26,18 @@ type Bilingual = { pt: string; en: string };
 export type NpsScale10Question = {
   kind: "scale10";
   name: string;
+  q: Bilingual;
+  capLow: Bilingual;
+  capHigh: Bilingual;
+};
+
+/** A dynamic 0–10 rating rendered once per person selected in `source`
+ *  (a multi question). Answers are stored as `${name}__${personValue}`. */
+export type NpsPersonScaleQuestion = {
+  kind: "personScale";
+  name: string;
+  /** Name of the multi question whose selected options are the people. */
+  source: string;
   q: Bilingual;
   capLow: Bilingual;
   capHigh: Bilingual;
@@ -42,7 +53,7 @@ export type NpsSingleOption = {
 };
 
 /** Single-choice question. Optionally `scored` (via option.score) and
- *  optionally `lettered` (A/B/C… badges, like the competitor's A–E list). */
+ *  optionally `lettered` (A/B/C… badges). */
 export type NpsSingleQuestion = {
   kind: "single";
   name: string;
@@ -89,12 +100,15 @@ export type NpsOpenQuestion = {
 
 export type NpsQuestion =
   | NpsScale10Question
+  | NpsPersonScaleQuestion
   | NpsSingleQuestion
   | NpsMultiQuestion
   | NpsOpenQuestion;
 
 export const isScale10 = (q: NpsQuestion): q is NpsScale10Question =>
   q.kind === "scale10";
+export const isPersonScale = (q: NpsQuestion): q is NpsPersonScaleQuestion =>
+  q.kind === "personScale";
 export const isSingle = (q: NpsQuestion): q is NpsSingleQuestion =>
   q.kind === "single";
 export const isMulti = (q: NpsQuestion): q is NpsMultiQuestion =>
@@ -104,14 +118,32 @@ export const isOpen = (q: NpsQuestion): q is NpsOpenQuestion =>
 
 export type NpsSectionDef = {
   key: string;
-  /** "01".."08" — shown as a mono tag in the quiz. */
+  /** "01".."10" — shown as a mono tag in the quiz. */
   tag: string;
   title: Bilingual;
   questions: NpsQuestion[];
-  /** Optional informational note for sections with no answerable questions
-   *  (e.g. the closing testimonial step). */
+  /** Optional informational note for sections with no answerable questions. */
   note?: Bilingual;
 };
+
+// Team roster mirrors src/lib/auth/credentials.ts (SEO, ADS, Web,
+// SuperAdmins). Hardcoded on purpose: this module is imported by the client
+// survey form, and credentials.ts carries password hashes that must never
+// reach the browser bundle. Keep in sync when the team changes.
+const TEAM_OPTIONS: NpsMultiOption[] = [
+  { value: "andre-pereira", label: { pt: "André Pereira", en: "André Pereira" } },
+  { value: "manuel-s", label: { pt: "Manuel Silva", en: "Manuel Silva" } },
+  { value: "fran-r", label: { pt: "Fran. Rosa", en: "Fran. Rosa" } },
+  { value: "yenisey-r", label: { pt: "Yenisey Rodriguez", en: "Yenisey Rodriguez" } },
+  { value: "germano-c", label: { pt: "Germano C.", en: "Germano C." } },
+  { value: "mike", label: { pt: "Mike Nobre", en: "Mike Nobre" } },
+  { value: "gustavo", label: { pt: "Gustavo Rotini", en: "Gustavo Rotini" } },
+  { value: "renan", label: { pt: "Renan Alves", en: "Renan Alves" } },
+  { value: "cylas", label: { pt: "Cylas", en: "Cylas" } },
+  { value: "andre", label: { pt: "André Pavlenco", en: "André Pavlenco" } },
+  { value: "alex", label: { pt: "Alex", en: "Alex" } },
+  { value: "alice", label: { pt: "Alice", en: "Alice" } },
+];
 
 export const NPS_SECTIONS: NpsSectionDef[] = [
   {
@@ -143,8 +175,58 @@ export const NPS_SECTIONS: NpsSectionDef[] = [
     ],
   },
   {
-    key: "satisfacao",
+    key: "equipa",
     tag: "02",
+    title: { pt: "A tua equipa", en: "Your team" },
+    questions: [
+      {
+        kind: "multi",
+        name: "p_equipa",
+        required: true,
+        lettered: true,
+        q: {
+          pt: "Seleciona quem te acompanhou neste último período:",
+          en: "Select who accompanied you over this last period:",
+        },
+        hint: {
+          pt: "Podes escolher todas as pessoas que quiseres.",
+          en: "Pick everyone who applies.",
+        },
+        options: TEAM_OPTIONS,
+      },
+    ],
+  },
+  {
+    key: "desempenho",
+    tag: "03",
+    title: { pt: "Desempenho da equipa", en: "Team performance" },
+    questions: [
+      {
+        kind: "personScale",
+        name: "p_desempenho",
+        source: "p_equipa",
+        q: {
+          pt: "Qual foi o desempenho de cada pessoa que selecionaste?",
+          en: "How would you rate each person you selected?",
+        },
+        capLow: { pt: "Fraco", en: "Poor" },
+        capHigh: { pt: "Excelente", en: "Excellent" },
+      },
+      {
+        kind: "open",
+        name: "p6_consultor_feedback",
+        required: true,
+        q: {
+          pt: "O que mais valorizaste neste acompanhamento e o que poderia ser melhorado?",
+          en: "What did you value most in this follow-up, and what could be improved?",
+        },
+        placeholder: { pt: "Escreve aqui…", en: "Write here…" },
+      },
+    ],
+  },
+  {
+    key: "satisfacao",
+    tag: "04",
     title: { pt: "Satisfação", en: "Satisfaction" },
     questions: [
       {
@@ -204,7 +286,7 @@ export const NPS_SECTIONS: NpsSectionDef[] = [
   },
   {
     key: "progresso",
-    tag: "03",
+    tag: "05",
     title: { pt: "Progresso", en: "Progress" },
     questions: [
       {
@@ -212,8 +294,8 @@ export const NPS_SECTIONS: NpsSectionDef[] = [
         name: "p3_progresso",
         scored: true,
         q: {
-          pt: "Sentes que houve progresso nos objetivos de SEO definidos no início da parceria?",
-          en: "Do you feel there was progress on the SEO goals set at the start of the partnership?",
+          pt: "Sentes que houve progresso nos objetivos definidos no início da parceria?",
+          en: "Do you feel there was progress on the goals set at the start of the partnership?",
         },
         options: [
           { value: "muito", label: { pt: "Muito progresso", en: "A lot of progress" }, score: 10 },
@@ -232,35 +314,8 @@ export const NPS_SECTIONS: NpsSectionDef[] = [
     ],
   },
   {
-    key: "consultor",
-    tag: "04",
-    title: { pt: "O teu consultor", en: "Your consultant" },
-    questions: [
-      {
-        kind: "scale10",
-        name: "p5_consultor",
-        q: {
-          pt: "Como avalias o desempenho do teu consultor de SEO?",
-          en: "How would you rate the performance of your SEO consultant?",
-        },
-        capLow: { pt: "Fraco", en: "Poor" },
-        capHigh: { pt: "Excelente", en: "Excellent" },
-      },
-      {
-        kind: "open",
-        name: "p6_consultor_feedback",
-        required: true,
-        q: {
-          pt: "O que mais valorizaste neste acompanhamento e o que poderia ser melhorado?",
-          en: "What did you value most in this follow-up, and what could be improved?",
-        },
-        placeholder: { pt: "Escreve aqui…", en: "Write here…" },
-      },
-    ],
-  },
-  {
     key: "continuidade",
-    tag: "05",
+    tag: "06",
     title: { pt: "Continuidade", en: "Continuity" },
     questions: [
       {
@@ -277,15 +332,15 @@ export const NPS_SECTIONS: NpsSectionDef[] = [
   },
   {
     key: "resultados",
-    tag: "06",
+    tag: "07",
     title: { pt: "Resultados & impacto", en: "Results & impact" },
     questions: [
       {
         kind: "multi",
         name: "p8_indicadores",
         q: {
-          pt: "Que indicadores utilizas para avaliar o sucesso do nosso trabalho em conjunto?",
-          en: "Which indicators do you use to measure the success of our work together?",
+          pt: "Que indicadores utilizas para avaliar o sucesso do nosso trabalho?",
+          en: "Which indicators do you use to measure the success of our work?",
         },
         hint: {
           pt: "Seleciona todas as opções aplicáveis.",
@@ -326,7 +381,7 @@ export const NPS_SECTIONS: NpsSectionDef[] = [
   },
   {
     key: "servicos",
-    tag: "07",
+    tag: "08",
     title: { pt: "Serviços & acompanhamento", en: "Services & support" },
     questions: [
       {
@@ -338,8 +393,8 @@ export const NPS_SECTIONS: NpsSectionDef[] = [
         },
         hint: { pt: "Seleciona todas as opções aplicáveis.", en: "Select all that apply." },
         options: [
-          { value: "formacao_seo", label: { pt: "Formação em SEO adaptada à tua equipa", en: "SEO training for your team" } },
-          { value: "consultoria_complementar", label: { pt: "Consultoria complementar (Google/Meta Ads, CRO, redes sociais)", en: "Complementary consulting (Ads, CRO, social)" } },
+          { value: "formacao_seo", label: { pt: "Formação adaptada à tua equipa", en: "Training for your team" } },
+          { value: "consultoria_complementar", label: { pt: "Consultoria complementar (Ads, CRO, redes sociais)", en: "Complementary consulting (Ads, CRO, social)" } },
           { value: "mentoria_individual", label: { pt: "Mentoria individual", en: "One-on-one mentoring" } },
           { value: "apoio_ia", label: { pt: "Apoio com ferramentas de IA", en: "Support with AI tools" } },
           { value: "sessoes_qa", label: { pt: "Sessões de Q&A para esclarecer dúvidas", en: "Q&A sessions" } },
@@ -374,7 +429,7 @@ export const NPS_SECTIONS: NpsSectionDef[] = [
   },
   {
     key: "recomendacao",
-    tag: "08",
+    tag: "09",
     title: { pt: "Recomendação & valor", en: "Recommendation & value" },
     questions: [
       {
@@ -386,7 +441,7 @@ export const NPS_SECTIONS: NpsSectionDef[] = [
         },
         hint: { pt: "Seleciona todas as opções aplicáveis.", en: "Select all that apply." },
         options: [
-          { value: "conhecimento_tecnico", label: { pt: "Conhecimento técnico / especializado em SEO", en: "Technical / specialised SEO knowledge" } },
+          { value: "conhecimento_tecnico", label: { pt: "Conhecimento técnico / especializado", en: "Technical / specialised knowledge" } },
           { value: "personalizacao", label: { pt: "Personalização e adaptação da estratégia", en: "Personalised, tailored strategy" } },
           { value: "acompanhamento_disponibilidade", label: { pt: "Acompanhamento e disponibilidade dos consultores", en: "Consultant follow-up & availability" } },
           { value: "resultados_concretos", label: { pt: "Resultados concretos (tráfego, rankings, leads)", en: "Concrete results (traffic, rankings, leads)" } },
@@ -394,43 +449,12 @@ export const NPS_SECTIONS: NpsSectionDef[] = [
         ],
       },
       {
-        // Team roster mirrors src/lib/auth/credentials.ts (SEO, ADS, Web,
-        // SuperAdmins). Kept as a hardcoded list on purpose: this module is
-        // imported by the client survey form, and credentials.ts carries
-        // password hashes that must never reach the browser bundle.
-        kind: "multi",
-        name: "p14b_equipa",
-        lettered: true,
-        q: {
-          pt: "Há algum membro da equipa que gostasses de destacar pelo impacto positivo que teve na tua parceria?",
-          en: "Is there a team member you'd like to highlight for the positive impact they had on your partnership?",
-        },
-        hint: {
-          pt: "Seleciona todas as opções aplicáveis (ou nenhuma).",
-          en: "Select all that apply (or none).",
-        },
-        options: [
-          { value: "andre-pereira", label: { pt: "André Pereira", en: "André Pereira" } },
-          { value: "manuel-s", label: { pt: "Manuel Silva", en: "Manuel Silva" } },
-          { value: "fran-r", label: { pt: "Fran. Rosa", en: "Fran. Rosa" } },
-          { value: "yenisey-r", label: { pt: "Yenisey Rodriguez", en: "Yenisey Rodriguez" } },
-          { value: "germano-c", label: { pt: "Germano C.", en: "Germano C." } },
-          { value: "mike", label: { pt: "Mike Nobre", en: "Mike Nobre" } },
-          { value: "gustavo", label: { pt: "Gustavo Rotini", en: "Gustavo Rotini" } },
-          { value: "renan", label: { pt: "Renan Alves", en: "Renan Alves" } },
-          { value: "cylas", label: { pt: "Cylas", en: "Cylas" } },
-          { value: "andre", label: { pt: "André Pavlenco", en: "André Pavlenco" } },
-          { value: "alex", label: { pt: "Alex", en: "Alex" } },
-          { value: "alice", label: { pt: "Alice", en: "Alice" } },
-        ],
-      },
-      {
         kind: "open",
         name: "p15_temas_essenciais",
         required: true,
         q: {
-          pt: "Que temas consideras essenciais terem sido abordados durante a parceria?",
-          en: "Which topics do you consider essential to have covered during the partnership?",
+          pt: "Que temas não abordámos mas gostarias que tivéssemos falado mais nos últimos tempos?",
+          en: "Which topics did we not cover but you'd have liked us to discuss more lately?",
         },
         placeholder: { pt: "Escreve aqui…", en: "Write here…" },
       },
@@ -438,7 +462,7 @@ export const NPS_SECTIONS: NpsSectionDef[] = [
   },
   {
     key: "testemunho",
-    tag: "09",
+    tag: "10",
     title: { pt: "Testemunho", en: "Testimonial" },
     questions: [],
     note: {
@@ -448,7 +472,7 @@ export const NPS_SECTIONS: NpsSectionDef[] = [
   },
 ];
 
-/** 0–10 rated question names, in order. */
+/** 0–10 rated question names, in order (fixed scales only). */
 export const NPS_SCALE_NAMES: string[] = NPS_SECTIONS.flatMap((s) =>
   s.questions.filter(isScale10).map((q) => q.name),
 );
@@ -468,14 +492,19 @@ export const NPS_OPEN_NAMES: string[] = NPS_SECTIONS.flatMap((s) =>
   s.questions.filter(isOpen).map((q) => q.name),
 );
 
+/** Person-scale questions, in order. */
+export const NPS_PERSON_SCALES: NpsPersonScaleQuestion[] = NPS_SECTIONS.flatMap(
+  (s) => s.questions.filter(isPersonScale),
+);
+
 /** Every question a submission MUST carry to be complete (for progress +
- *  validation): all 0–10 ratings, all single-choice, required opens, and
- *  required multi-selects. Non-required multi-select is optional. */
+ *  validation). Non-required multi-select is optional. */
 export const NPS_REQUIRED_NAMES: string[] = NPS_SECTIONS.flatMap((s) =>
   s.questions
     .filter(
       (q) =>
         isScale10(q) ||
+        isPersonScale(q) ||
         (isSingle(q) && (q.required ?? true)) ||
         (isOpen(q) && Boolean(q.required)) ||
         (isMulti(q) && Boolean(q.required)),
@@ -487,6 +516,11 @@ export const NPS_REQUIRED_NAMES: string[] = NPS_SECTIONS.flatMap((s) =>
  *  stored, in the submission `texts` map. */
 export function otherTextKey(questionName: string, optionValue: string): string {
   return `${questionName}__${optionValue}`;
+}
+
+/** Key under which a per-person 0–10 rating is stored, in `answers`. */
+export function personScaleKey(questionName: string, personValue: string): string {
+  return `${questionName}__${personValue}`;
 }
 
 /** All valid "other" text keys, derived from multi options flagged `other`. */
@@ -521,6 +555,16 @@ export function getQuestion(name: string): NpsQuestion | null {
   return findQuestion(name);
 }
 
+/** Display label for a person option value (from the source multi question). */
+export function personLabel(
+  source: string,
+  value: string,
+  lang: PublicLang,
+): string {
+  const src = getMultiQuestion(source);
+  return src?.options.find((o) => o.value === value)?.label[lang] ?? value;
+}
+
 /** Headline / score maximum — everything is out of 10. */
 export const NPS_MAX = 10;
 
@@ -542,14 +586,14 @@ export function npsCategory(score: number): NpsCategory {
 }
 
 export type NpsScores = {
-  /** Mean of the four scored answers (P1, P5, P7, P3), 0–10, 1 dp. */
+  /** Mean of the four scored values (satisfaction, team, continuity, progress). */
   overall: number;
   /** Continuity / loyalty answer (P7), 0–10 — the headline. */
   nps: number;
   category: NpsCategory;
   /** Overall satisfaction (P1), 0–10. */
   satisfaction: number;
-  /** Consultant performance (P5), 0–10. */
+  /** Team performance = mean of per-person ratings, 0–10. */
   consultant: number;
   /** Progress (P3) mapped to 0–10, or null if unanswered. */
   progress: number | null;
@@ -569,8 +613,20 @@ export function computeNpsScores(input: ScoreInput): NpsScores {
   };
 
   const satisfaction = num("p1_satisfacao");
-  const consultant = num("p5_consultor");
   const continuity = num("p7_continuidade");
+
+  // Team performance = mean of every per-person rating.
+  let team: number | null = null;
+  const teamVals: number[] = [];
+  for (const pq of NPS_PERSON_SCALES) {
+    const prefix = `${pq.name}__`;
+    for (const [k, v] of Object.entries(answers)) {
+      if (k.startsWith(prefix) && Number.isFinite(Number(v))) {
+        teamVals.push(clamp(Number(v), 0, 10));
+      }
+    }
+  }
+  if (teamVals.length) team = round1(mean(teamVals));
 
   // Progress: single-choice with a scored option.
   let progress: number | null = null;
@@ -582,7 +638,7 @@ export function computeNpsScores(input: ScoreInput): NpsScores {
     if (opt && typeof opt.score === "number") progress = clamp(opt.score, 0, 10);
   }
 
-  const scored = [satisfaction, consultant, continuity, progress].filter(
+  const scored = [satisfaction, team, continuity, progress].filter(
     (v): v is number => v !== null,
   );
   const overall = scored.length ? round1(mean(scored)) : 0;
@@ -593,7 +649,7 @@ export function computeNpsScores(input: ScoreInput): NpsScores {
     nps,
     category: npsCategory(nps),
     satisfaction: satisfaction ?? 0,
-    consultant: consultant ?? 0,
+    consultant: team ?? 0,
     progress,
   };
 }

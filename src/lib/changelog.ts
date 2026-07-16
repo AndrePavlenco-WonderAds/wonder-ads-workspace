@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.83",
+    date: "2026-07-16",
+    title: "NPS — seleção de equipa obrigatória + avaliação individual por pessoa",
+    highlights: [
+      "**👥 Nova 2ª pergunta (obrigatória): “Seleciona quem te acompanhou neste último período”** — com toda a equipa (SEO, Ads, Web, SuperAdmins), escolha múltipla. É preciso selecionar pelo menos uma pessoa.",
+      "**⭐ Nova 3ª pergunta: avaliar cada pessoa.** Aparece uma escala 0–10 **por cada pessoa selecionada**, com o respetivo nome. A média destas notas passa a ser a métrica “Equipa (desempenho)” (substitui a antiga nota única do consultor).",
+      "**🧹 Menos SEO no texto.** Removido “SEO” do cabeçalho e da introdução (o inquérito serve todos os serviços) e do título da pergunta do consultor.",
+      "**✍️ Perguntas mais simples.** Removido “em conjunto” na pergunta dos indicadores; a pergunta dos temas passa a *“Que temas não abordámos mas gostarias que tivéssemos falado mais nos últimos tempos?”*.",
+      "**🎨 Barra de progresso.** Passa a ter só 2 estados de cor (secção ativa a preto, restantes a cinzento).",
+    ],
+  },
+  {
     version: "74.82",
     date: "2026-07-16",
     title: "NPS — destacar membros da equipa (toda a Wonder Ads)",
