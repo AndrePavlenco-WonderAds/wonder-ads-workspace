@@ -18,6 +18,12 @@ const MAX_SENDS = 100;
 const COMMENT_MAX = 4000;
 const IDENT_MAX = 160;
 
+/** Bumped when the survey shape changes so old submissions (different
+ *  questions/scale) don't mix with new ones. v2 = the 0–10 competitor-
+ *  inspired survey. Submissions from earlier schemas are filtered out on
+ *  read (clean slate) without touching KV. */
+export const NPS_SCHEMA_VERSION = 2;
+
 /** Default reminder cadence — SEO satisfaction is surveyed every 60 days. */
 export const DEFAULT_CADENCE_DAYS = 60;
 export const CADENCE_OPTIONS = [30, 60, 90] as const;
@@ -28,13 +34,19 @@ export const npsStorageConfigured = Boolean(
 
 export type NpsSubmission = {
   id: string;
+  /** Survey shape this submission was captured with. */
+  schemaVersion: number;
   /** Epoch ms when the client submitted. */
   submittedAt: number;
-  /** Raw 1–5 answers, keyed by question name. */
+  /** Raw 0–10 answers (scale questions), keyed by question name. */
   answers: Record<string, number>;
-  /** Multi-select answers, keyed by question name → selected option values. */
+  /** Multi-select AND single-choice answers, keyed by question name →
+   *  selected option values (single-choice stores a 1-element array). */
   choices?: Record<string, string[]>;
-  comment: string | null;
+  /** Free-text answers, keyed by open-question name. */
+  texts?: Record<string, string>;
+  /** Legacy general comment (v1). Kept optional for back-compat. */
+  comment?: string | null;
   /** Free-form "Name — Company" the client optionally left. */
   identification: string | null;
   /** Consultant on the account at submit time (snapshot). */
@@ -77,7 +89,12 @@ function emptyMeta(): NpsMeta {
 }
 
 function normalizeRecord(raw: Partial<NpsRecord> | null): NpsRecord {
-  const submissions = Array.isArray(raw?.submissions) ? raw!.submissions : [];
+  // Only keep submissions from the current survey schema — older ones use a
+  // different question set/scale and would corrupt the aggregates. This is a
+  // read-time filter; it never deletes anything from KV.
+  const submissions = (
+    Array.isArray(raw?.submissions) ? raw!.submissions : []
+  ).filter((s) => s?.schemaVersion === NPS_SCHEMA_VERSION);
   const meta = (raw?.meta ?? emptyMeta()) as Partial<NpsMeta>;
   const cadenceDays =
     typeof meta.cadenceDays === "number" ? meta.cadenceDays : DEFAULT_CADENCE_DAYS;
@@ -143,6 +160,7 @@ export function npsSendDue(record: NpsRecord, nowMs: number): boolean {
 export type NewSubmission = {
   answers: Record<string, number>;
   choices?: Record<string, string[]>;
+  texts?: Record<string, string>;
   comment?: string | null;
   identification?: string | null;
   consultant?: string | null;
@@ -156,12 +174,17 @@ export async function addNpsSubmission(
   nowMs: number,
 ): Promise<NpsSubmission> {
   const rec = await getNpsRecord(slug);
-  const scores = computeNpsScores(input.answers);
+  const scores = computeNpsScores({
+    answers: input.answers,
+    choices: input.choices,
+  });
   const submission: NpsSubmission = {
     id: `nps_${nowMs}_${Math.floor((nowMs % 1000) + rec.submissions.length)}`,
+    schemaVersion: NPS_SCHEMA_VERSION,
     submittedAt: nowMs,
     answers: input.answers,
     choices: input.choices,
+    texts: input.texts,
     comment: input.comment ? input.comment.slice(0, COMMENT_MAX) : null,
     identification: input.identification
       ? input.identification.slice(0, IDENT_MAX)

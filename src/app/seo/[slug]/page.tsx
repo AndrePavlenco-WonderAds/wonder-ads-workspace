@@ -149,7 +149,7 @@ export default async function ClientPage({
                   npsDue
                     ? "NPS a precisar de envio — clica para enviar ao cliente"
                     : latestNps
-                      ? `Satisfação do cliente: ${npsScore?.toFixed(1)}/5 · Recomendação ${latestNps.scores.nps}/5`
+                      ? `Satisfação do cliente: ${npsScore?.toFixed(1)}/10 · Continuidade ${latestNps.scores.nps}/10`
                       : "Avaliação de satisfação do cliente (NPS)"
                 }
                 className={

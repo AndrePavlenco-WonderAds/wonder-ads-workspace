@@ -2,57 +2,98 @@
 //
 // This module is PURE (no KV, no React) so it can be imported by both the
 // public quiz form (client component) and the server-side store/scoring.
-// The question `name`s mirror the original standalone HTML form so any
-// historical export stays comparable.
+//
+// v2 (2026-07): reworked to a richer, competitor-inspired survey. The three
+// headline ratings are now a real 0–10 scale (NPS-style). The rest is a mix
+// of single-choice, multi-select and open questions that colour the review
+// without necessarily feeding the score.
 //
 // Scoring model:
-//   • Every 1–5 question is normalised to 0–10 via (v - 1) / 4 * 10, so a
-//     "3" (neutral) maps to 5.0 and a "5" maps to 10.
-//   • The NPS question is already 0–10 and is used verbatim.
-//   • `overall` is the mean of all 13 normalised answers (0–10, 1 dp).
-//   • Each section also gets its own mean so we can flag the weakest area.
+//   • Three 0–10 ratings feed the score directly: overall satisfaction (P1),
+//     consultant performance (P5) and continuity/loyalty (P7).
+//   • The progress question (P3) is single-choice but scored: its option
+//     carries a 0–10 `score` that also feeds the average.
+//   • `overall` = mean of those four scored answers (0–10, 1 dp).
+//   • `nps` (headline) = the continuity answer P7, bucketed into the classic
+//     NPS categories (Promoter 9–10 · Passive 7–8 · Detractor 0–6).
+//   • Everything else (multi-select, open text) is qualitative and never
+//     moves the score.
 
 import type { PublicLang } from "@/lib/public-i18n";
 
-export type NpsScaleKind = "five" | "nps";
-
 type Bilingual = { pt: string; en: string };
 
-/** A 1–5 rated question — the default, and the only kind that feeds the
- *  scoring averages. */
-export type NpsScaleQuestion = {
-  kind?: "scale";
-  /** Form field name — stable, matches the source HTML. */
+/** 0–10 rated question — feeds the score. */
+export type NpsScale10Question = {
+  kind: "scale10";
   name: string;
-  scale: NpsScaleKind;
   q: Bilingual;
   capLow: Bilingual;
   capHigh: Bilingual;
 };
 
+export type NpsSingleOption = {
+  value: string;
+  label: Bilingual;
+  /** 0–10 contribution when the parent question is `scored`. */
+  score?: number;
+};
+
+/** Single-choice question. Optionally `scored` (via option.score) and
+ *  optionally `lettered` (A/B/C… badges, like the competitor's A–E list). */
+export type NpsSingleQuestion = {
+  kind: "single";
+  name: string;
+  q: Bilingual;
+  options: NpsSingleOption[];
+  scored?: boolean;
+  lettered?: boolean;
+  /** Defaults to true. */
+  required?: boolean;
+};
+
 export type NpsMultiOption = { value: string; label: Bilingual };
 
-/** A qualitative "select all that apply" question. NOT scored — it colours
- *  the review with what the client attributes impact to, but never moves
- *  the satisfaction average. */
+/** "Select all that apply" question. NOT scored — qualitative only. */
 export type NpsMultiQuestion = {
   kind: "multi";
   name: string;
   q: Bilingual;
-  /** Helper line under the question (e.g. "select all that apply"). */
   hint?: Bilingual;
   options: NpsMultiOption[];
+  /** Optional cap on how many options can be picked. */
+  max?: number;
 };
 
-export type NpsQuestion = NpsScaleQuestion | NpsMultiQuestion;
+/** Free-text question. */
+export type NpsOpenQuestion = {
+  kind: "open";
+  name: string;
+  q: Bilingual;
+  hint?: Bilingual;
+  placeholder?: Bilingual;
+  /** Defaults to false. */
+  required?: boolean;
+};
 
-export function isMultiQuestion(q: NpsQuestion): q is NpsMultiQuestion {
-  return (q as NpsMultiQuestion).kind === "multi";
-}
+export type NpsQuestion =
+  | NpsScale10Question
+  | NpsSingleQuestion
+  | NpsMultiQuestion
+  | NpsOpenQuestion;
+
+export const isScale10 = (q: NpsQuestion): q is NpsScale10Question =>
+  q.kind === "scale10";
+export const isSingle = (q: NpsQuestion): q is NpsSingleQuestion =>
+  q.kind === "single";
+export const isMulti = (q: NpsQuestion): q is NpsMultiQuestion =>
+  q.kind === "multi";
+export const isOpen = (q: NpsQuestion): q is NpsOpenQuestion =>
+  q.kind === "open";
 
 export type NpsSectionDef = {
   key: string;
-  /** "01".."06" — shown as a mono tag in the quiz. */
+  /** "01".."08" — shown as a mono tag in the quiz. */
   tag: string;
   title: Bilingual;
   questions: NpsQuestion[];
@@ -60,294 +101,436 @@ export type NpsSectionDef = {
 
 export const NPS_SECTIONS: NpsSectionDef[] = [
   {
-    key: "servico",
+    key: "satisfacao",
     tag: "01",
-    title: { pt: "Serviço", en: "Service" },
+    title: { pt: "Satisfação", en: "Satisfaction" },
     questions: [
       {
-        name: "servico_qualidade",
-        scale: "five",
+        kind: "scale10",
+        name: "p1_satisfacao",
         q: {
-          pt: "Como avalia a qualidade geral do serviço de SEO prestado?",
-          en: "How would you rate the overall quality of the SEO service provided?",
+          pt: "Numa escala de 0 a 10, qual é o teu nível de satisfação geral com a Wonder Ads neste período?",
+          en: "On a scale of 0 to 10, how satisfied are you overall with Wonder Ads this period?",
         },
-        capLow: { pt: "Fraco", en: "Poor" },
-        capHigh: { pt: "Excelente", en: "Excellent" },
-      },
-      {
-        name: "servico_expectativa",
-        scale: "five",
-        q: {
-          pt: "A estratégia de SEO proposta correspondeu ao que foi prometido inicialmente?",
-          en: "Did the proposed SEO strategy match what was initially promised?",
-        },
-        capLow: { pt: "Ficou aquém", en: "Fell short" },
-        capHigh: { pt: "Superou", en: "Exceeded" },
-      },
-      {
-        name: "servico_clareza",
-        scale: "five",
-        q: {
-          pt: "As recomendações e a estratégia apresentadas foram claras e fáceis de entender?",
-          en: "Were the recommendations and strategy clear and easy to understand?",
-        },
-        capLow: { pt: "Confusas", en: "Confusing" },
-        capHigh: { pt: "Muito claras", en: "Very clear" },
-      },
-    ],
-  },
-  {
-    key: "resultados",
-    tag: "02",
-    title: { pt: "Resultados", en: "Results" },
-    questions: [
-      {
-        name: "resultados_objetivos",
-        scale: "five",
-        q: {
-          pt: "O tráfego orgânico e as posições no motor de busca evoluíram como esperado?",
-          en: "Did organic traffic and search rankings evolve as expected?",
-        },
-        capLow: { pt: "Não evoluiu", en: "No progress" },
-        capHigh: { pt: "Muito acima do esperado", en: "Well above expectations" },
-      },
-      {
-        name: "resultados_retorno",
-        scale: "five",
-        q: {
-          pt: "Sente que o investimento em SEO teve retorno claro (leads, vendas ou visibilidade)?",
-          en: "Do you feel the SEO investment had a clear return (leads, sales or visibility)?",
-        },
-        capLow: { pt: "Nenhum", en: "None" },
-        capHigh: { pt: "Muito claro", en: "Very clear" },
+        capLow: { pt: "Nada satisfeito", en: "Not at all satisfied" },
+        capHigh: { pt: "Totalmente satisfeito", en: "Completely satisfied" },
       },
       {
         kind: "multi",
-        name: "resultados_impacto",
+        name: "p2_correu_bem",
         q: {
-          pt: "Diria que o investimento em SEO teve impacto direto em:",
-          en: "Would you say the SEO investment had a direct impact on:",
+          pt: "O que correu particularmente bem neste período?",
+          en: "What went particularly well this period?",
         },
         hint: {
-          pt: "Selecione todas as opções que se aplicam.",
+          pt: "Seleciona todas as opções aplicáveis.",
           en: "Select all that apply.",
         },
         options: [
           {
-            value: "leads_quality",
-            label: { pt: "Melhor qualidade de leads", en: "Better lead quality" },
+            value: "acompanhamento_consultor",
+            label: { pt: "Acompanhamento do consultor", en: "Consultant follow-up" },
           },
           {
-            value: "visibility",
-            label: { pt: "Mais visibilidade", en: "More visibility" },
+            value: "clareza_relatorios",
+            label: { pt: "Clareza dos relatórios e da informação", en: "Clear reporting & information" },
           },
           {
-            value: "market_position",
-            label: {
-              pt: "Melhor posicionamento no mercado",
-              en: "Better market positioning",
-            },
+            value: "implementacao_recomendacoes",
+            label: { pt: "Implementação das recomendações", en: "Implementation of recommendations" },
           },
           {
-            value: "sales",
-            label: {
-              pt: "Mais vendas / conversões",
-              en: "More sales / conversions",
-            },
+            value: "progressao_rankings",
+            label: { pt: "Progressão de rankings e tráfego", en: "Rankings & traffic progress" },
           },
           {
-            value: "no_impact",
-            label: { pt: "Ainda sem impacto claro", en: "No clear impact yet" },
+            value: "ritmo_execucao",
+            label: { pt: "Ritmo de execução do trabalho", en: "Pace of execution" },
           },
+          {
+            value: "clareza_proximos_passos",
+            label: { pt: "Clareza dos próximos passos", en: "Clear next steps" },
+          },
+          {
+            value: "conteudos_materiais",
+            label: { pt: "Conteúdos e materiais entregues", en: "Content & materials delivered" },
+          },
+          { value: "outro", label: { pt: "Outro", en: "Other" } },
         ],
       },
     ],
   },
   {
-    key: "comunicacao",
-    tag: "03",
-    title: { pt: "Comunicação", en: "Communication" },
+    key: "progresso",
+    tag: "02",
+    title: { pt: "Progresso", en: "Progress" },
     questions: [
       {
-        name: "comunicacao_clareza",
-        scale: "five",
+        kind: "single",
+        name: "p3_progresso",
+        scored: true,
         q: {
-          pt: "Os relatórios de rankings e tráfego foram claros e partilhados com a frequência adequada?",
-          en: "Were the ranking and traffic reports clear and shared at an adequate frequency?",
+          pt: "Sentes que houve progresso nos objetivos de SEO definidos no início da parceria?",
+          en: "Do you feel there was progress on the SEO goals set at the start of the partnership?",
         },
-        capLow: { pt: "Confusos/raros", en: "Confusing/rare" },
-        capHigh: { pt: "Muito claros e regulares", en: "Very clear and regular" },
+        options: [
+          { value: "muito", label: { pt: "Muito progresso", en: "A lot of progress" }, score: 10 },
+          { value: "algum", label: { pt: "Algum progresso", en: "Some progress" }, score: 6.7 },
+          { value: "pouco", label: { pt: "Pouco progresso", en: "Little progress" }, score: 3.3 },
+          { value: "nenhum", label: { pt: "Ainda não houve progresso", en: "No progress yet" }, score: 0 },
+        ],
       },
       {
-        name: "comunicacao_rapidez",
-        scale: "five",
-        q: {
-          pt: "A equipa esteve disponível e respondeu às suas dúvidas com rapidez?",
-          en: "Was the team available and quick to answer your questions?",
-        },
-        capLow: { pt: "Lenta", en: "Slow" },
-        capHigh: { pt: "Muito rápida", en: "Very fast" },
+        kind: "open",
+        name: "p4_justifica",
+        required: true,
+        q: { pt: "Justifica a tua resposta.", en: "Please justify your answer." },
+        placeholder: { pt: "Escreve aqui…", en: "Write here…" },
       },
     ],
   },
   {
     key: "consultor",
-    tag: "04",
-    title: { pt: "O seu consultor", en: "Your consultant" },
+    tag: "03",
+    title: { pt: "O teu consultor", en: "Your consultant" },
     questions: [
       {
-        name: "consultor_profissionalismo",
-        scale: "five",
+        kind: "scale10",
+        name: "p5_consultor",
         q: {
-          pt: "Como avalia o profissionalismo do seu consultor dedicado?",
-          en: "How would you rate the professionalism of your dedicated consultant?",
+          pt: "Como avalias o desempenho do teu consultor de SEO?",
+          en: "How would you rate the performance of your SEO consultant?",
         },
         capLow: { pt: "Fraco", en: "Poor" },
         capHigh: { pt: "Excelente", en: "Excellent" },
       },
       {
-        name: "consultor_conhecimento",
-        scale: "five",
+        kind: "open",
+        name: "p6_consultor_feedback",
+        required: true,
         q: {
-          pt: "O seu consultor demonstrou domínio técnico de SEO (on-page, técnico, conteúdo, backlinks)?",
-          en: "Did your consultant show technical SEO mastery (on-page, technical, content, backlinks)?",
+          pt: "O que mais valorizaste neste acompanhamento e o que poderia ser melhorado?",
+          en: "What did you value most in this follow-up, and what could be improved?",
         },
-        capLow: { pt: "Insuficiente", en: "Insufficient" },
-        capHigh: { pt: "Muito sólido", en: "Very solid" },
-      },
-      {
-        name: "consultor_interesse",
-        scale: "five",
-        q: {
-          pt: "O seu consultor demonstrou interesse genuíno em compreender as necessidades do seu negócio?",
-          en: "Did your consultant show genuine interest in understanding your business needs?",
-        },
-        capLow: { pt: "Nenhum", en: "None" },
-        capHigh: { pt: "Muito genuíno", en: "Very genuine" },
+        placeholder: { pt: "Escreve aqui…", en: "Write here…" },
       },
     ],
   },
   {
-    key: "execucao",
-    tag: "05",
-    title: { pt: "Execução do trabalho", en: "Execution" },
+    key: "continuidade",
+    tag: "04",
+    title: { pt: "Continuidade", en: "Continuity" },
     questions: [
       {
-        name: "execucao_prazos",
-        scale: "five",
+        kind: "scale10",
+        name: "p7_continuidade",
         q: {
-          pt: "As tarefas combinadas (auditorias, otimizações, conteúdo, backlinks) foram entregues nos prazos?",
-          en: "Were the agreed tasks (audits, optimisations, content, backlinks) delivered on time?",
-        },
-        capLow: { pt: "Nunca", en: "Never" },
-        capHigh: { pt: "Sempre", en: "Always" },
-      },
-      {
-        name: "execucao_qualidade",
-        scale: "five",
-        q: {
-          pt: "A qualidade do conteúdo e das otimizações técnicas foi consistente?",
-          en: "Was the quality of the content and technical optimisations consistent?",
-        },
-        capLow: { pt: "Inconsistente", en: "Inconsistent" },
-        capHigh: { pt: "Muito consistente", en: "Very consistent" },
-      },
-    ],
-  },
-  {
-    key: "global",
-    tag: "06",
-    title: { pt: "Avaliação global", en: "Overall" },
-    questions: [
-      {
-        name: "nps",
-        scale: "five",
-        q: {
-          pt: "De 1 a 5, qual a probabilidade de recomendar a nossa agência a um colega ou parceiro de negócio?",
-          en: "From 1 to 5, how likely are you to recommend our agency to a colleague or business partner?",
+          pt: "Qual é a probabilidade de continuares a trabalhar com a Wonder Ads após o término do contrato atual?",
+          en: "How likely are you to keep working with Wonder Ads after the current contract ends?",
         },
         capLow: { pt: "Nada provável", en: "Not at all likely" },
         capHigh: { pt: "Extremamente provável", en: "Extremely likely" },
       },
     ],
   },
+  {
+    key: "resultados",
+    tag: "05",
+    title: { pt: "Resultados & impacto", en: "Results & impact" },
+    questions: [
+      {
+        kind: "multi",
+        name: "p8_indicadores",
+        q: {
+          pt: "Que indicadores utilizas para avaliar o sucesso do nosso trabalho em conjunto?",
+          en: "Which indicators do you use to measure the success of our work together?",
+        },
+        hint: {
+          pt: "Seleciona todas as opções aplicáveis.",
+          en: "Select all that apply.",
+        },
+        options: [
+          { value: "trafego_organico", label: { pt: "Aumento de tráfego orgânico", en: "Organic traffic growth" } },
+          { value: "rankings", label: { pt: "Subida de posições no Google (rankings)", en: "Higher Google rankings" } },
+          { value: "leads", label: { pt: "Mais leads / contactos / pedidos de orçamento", en: "More leads / enquiries" } },
+          { value: "vendas", label: { pt: "Aumento de vendas / faturação", en: "More sales / revenue" } },
+          { value: "visibilidade_marca", label: { pt: "Visibilidade da marca (incl. IAs / GEO)", en: "Brand visibility (incl. AI / GEO)" } },
+          { value: "menos_ads_pagos", label: { pt: "Menor dependência de anúncios pagos", en: "Less reliance on paid ads" } },
+        ],
+      },
+      {
+        kind: "multi",
+        name: "p9_acoes",
+        max: 5,
+        q: {
+          pt: "Quais foram as ações de SEO com maior impacto no desenvolvimento do teu negócio?",
+          en: "Which SEO actions had the biggest impact on your business?",
+        },
+        hint: { pt: "Seleciona até 5 opções.", en: "Select up to 5 options." },
+        options: [
+          { value: "auditoria_tecnica", label: { pt: "Auditoria e correções técnicas do site", en: "Technical audit & fixes" } },
+          { value: "on_page", label: { pt: "Otimização on-page (títulos, meta, conteúdo)", en: "On-page optimisation" } },
+          { value: "conteudos", label: { pt: "Estratégia de conteúdos / blog", en: "Content strategy / blog" } },
+          { value: "keyword_research", label: { pt: "Keyword research e mapeamento de intenções", en: "Keyword research & intent mapping" } },
+          { value: "link_building", label: { pt: "Link building / autoridade do domínio", en: "Link building / domain authority" } },
+          { value: "geo_ia", label: { pt: "Otimização para IAs / GEO (ChatGPT, Gemini…)", en: "AI / GEO optimisation" } },
+          { value: "seo_local", label: { pt: "Google Business Profile / SEO local", en: "Google Business / local SEO" } },
+          { value: "cwv_velocidade", label: { pt: "Velocidade e experiência (Core Web Vitals)", en: "Speed & Core Web Vitals" } },
+          { value: "arquitetura", label: { pt: "Arquitetura e estrutura do site", en: "Site architecture & structure" } },
+          { value: "metricas_objetivos", label: { pt: "Definição de métricas e objetivos claros", en: "Clear metrics & goals" } },
+        ],
+      },
+      {
+        kind: "open",
+        name: "p10_acao_top",
+        required: true,
+        q: {
+          pt: "Das ações acima, qual teve maior impacto no teu negócio?",
+          en: "Of the actions above, which had the biggest impact on your business?",
+        },
+        placeholder: { pt: "Escreve aqui…", en: "Write here…" },
+      },
+    ],
+  },
+  {
+    key: "servicos",
+    tag: "06",
+    title: { pt: "Serviços & acompanhamento", en: "Services & support" },
+    questions: [
+      {
+        kind: "multi",
+        name: "p11_apoio_adicional",
+        q: {
+          pt: "Há algum serviço ou tipo de apoio adicional que gostarias que disponibilizássemos?",
+          en: "Is there any additional service or support you'd like us to offer?",
+        },
+        hint: { pt: "Seleciona todas as opções aplicáveis.", en: "Select all that apply." },
+        options: [
+          { value: "formacao_seo", label: { pt: "Formação em SEO adaptada à tua equipa", en: "SEO training for your team" } },
+          { value: "consultoria_complementar", label: { pt: "Consultoria complementar (Google/Meta Ads, CRO, redes sociais)", en: "Complementary consulting (Ads, CRO, social)" } },
+          { value: "mentoria_individual", label: { pt: "Mentoria individual", en: "One-on-one mentoring" } },
+          { value: "apoio_ia", label: { pt: "Apoio com ferramentas de IA", en: "Support with AI tools" } },
+          { value: "sessoes_qa", label: { pt: "Sessões de Q&A para esclarecer dúvidas", en: "Q&A sessions" } },
+          { value: "networking_clientes", label: { pt: "Rede de networking com outros clientes Wonder Ads", en: "Networking with other Wonder Ads clients" } },
+          { value: "reunioes_presenciais", label: { pt: "Reuniões / consultoria presencial", en: "In-person meetings / consulting" } },
+        ],
+      },
+      {
+        kind: "single",
+        name: "p12_presencial",
+        lettered: true,
+        q: {
+          pt: "Consideras que momentos presenciais poderiam acrescentar mais valor à tua parceria com a Wonder Ads?",
+          en: "Do you think in-person moments could add more value to your Wonder Ads partnership?",
+        },
+        options: [
+          { value: "nao", label: { pt: "Não vejo necessidade de momentos presenciais", en: "No need for in-person moments" } },
+          { value: "um_parceria", label: { pt: "Sim, 1 momento presencial durante a parceria", en: "Yes, 1 in-person moment during the partnership" } },
+          { value: "dois_parceria", label: { pt: "Sim, 2 momentos presenciais durante a parceria", en: "Yes, 2 in-person moments during the partnership" } },
+          { value: "um_mes", label: { pt: "Sim, 1 momento presencial por mês", en: "Yes, 1 in-person moment per month" } },
+          { value: "um_semana", label: { pt: "Sim, 1 momento presencial por semana", en: "Yes, 1 in-person moment per week" } },
+        ],
+      },
+      {
+        kind: "multi",
+        name: "p13_presencial_tipo",
+        q: {
+          pt: "Em que tipo de momentos consideras que um acompanhamento presencial teria maior impacto?",
+          en: "In which moments would in-person support have the biggest impact?",
+        },
+        hint: { pt: "Seleciona todas as opções aplicáveis.", en: "Select all that apply." },
+        options: [
+          { value: "workshops_formacao", label: { pt: "Workshops práticos / formação da equipa", en: "Hands-on workshops / team training" } },
+          { value: "definicao_estrategia", label: { pt: "Definição e revisão de estratégia", en: "Strategy definition & review" } },
+          { value: "apoio_implementacao", label: { pt: "Apoio à implementação no site", en: "Hands-on implementation support" } },
+        ],
+      },
+    ],
+  },
+  {
+    key: "recomendacao",
+    tag: "07",
+    title: { pt: "Recomendação & valor", en: "Recommendation & value" },
+    questions: [
+      {
+        kind: "multi",
+        name: "p14_valor",
+        q: {
+          pt: "Se nos recomendasses a outra empresa, o que destacarias como o nosso principal valor?",
+          en: "If you recommended us to another company, what would you highlight as our main value?",
+        },
+        hint: { pt: "Seleciona todas as opções aplicáveis.", en: "Select all that apply." },
+        options: [
+          { value: "conhecimento_tecnico", label: { pt: "Conhecimento técnico / especializado em SEO", en: "Technical / specialised SEO knowledge" } },
+          { value: "personalizacao", label: { pt: "Personalização e adaptação da estratégia", en: "Personalised, tailored strategy" } },
+          { value: "acompanhamento_disponibilidade", label: { pt: "Acompanhamento e disponibilidade dos consultores", en: "Consultant follow-up & availability" } },
+          { value: "resultados_concretos", label: { pt: "Resultados concretos (tráfego, rankings, leads)", en: "Concrete results (traffic, rankings, leads)" } },
+          { value: "suporte_implementacao", label: { pt: "Suporte na implementação de soluções", en: "Support implementing solutions" } },
+        ],
+      },
+      {
+        kind: "open",
+        name: "p15_temas_essenciais",
+        required: true,
+        q: {
+          pt: "Que temas consideras essenciais terem sido abordados durante a parceria?",
+          en: "Which topics do you consider essential to have covered during the partnership?",
+        },
+        placeholder: { pt: "Escreve aqui…", en: "Write here…" },
+      },
+    ],
+  },
+  {
+    key: "testemunho",
+    tag: "08",
+    title: { pt: "Testemunho", en: "Testimonial" },
+    questions: [
+      {
+        kind: "open",
+        name: "p16_testemunho",
+        q: {
+          pt: "Adorávamos que nos deixasses um testemunho — ajuda imenso quem está a considerar trabalhar connosco.",
+          en: "We'd love a testimonial from you — it helps others considering working with us.",
+        },
+        hint: {
+          pt: "Se puderes, inclui: (1) Como estavas antes de trabalhar connosco — qual era o principal desafio na tua presença online / no Google? (2) O que fizemos em conjunto — 2 a 3 pontos-chave (SEO técnico, conteúdo, link building, estratégia…). (3) O que mudou entretanto — tráfego, rankings, leads, visibilidade, previsibilidade.",
+          en: "If you can, include: (1) how you were before working with us; (2) what we did together (2–3 key points); (3) what changed since.",
+        },
+        placeholder: { pt: "Escreve aqui o teu testemunho…", en: "Write your testimonial here…" },
+      },
+    ],
+  },
 ];
 
-/** Rated (1–5) question names, in order — the answers a submission must
- *  carry. Multi-select questions are excluded (they're optional + qualitative). */
-export const NPS_QUESTION_NAMES: string[] = NPS_SECTIONS.flatMap((s) =>
-  s.questions.filter((q) => !isMultiQuestion(q)).map((q) => q.name),
+/** 0–10 rated question names, in order. */
+export const NPS_SCALE_NAMES: string[] = NPS_SECTIONS.flatMap((s) =>
+  s.questions.filter(isScale10).map((q) => q.name),
 );
 
-/** Multi-select (qualitative) question names. */
+/** Single-choice question names, in order. */
+export const NPS_SINGLE_NAMES: string[] = NPS_SECTIONS.flatMap((s) =>
+  s.questions.filter(isSingle).map((q) => q.name),
+);
+
+/** Multi-select question names, in order. */
 export const NPS_MULTI_NAMES: string[] = NPS_SECTIONS.flatMap((s) =>
-  s.questions.filter(isMultiQuestion).map((q) => q.name),
+  s.questions.filter(isMulti).map((q) => q.name),
 );
 
-/** Look up a multi-select question definition by name. */
-export function getMultiQuestion(name: string): NpsMultiQuestion | null {
+/** Open (free-text) question names, in order. */
+export const NPS_OPEN_NAMES: string[] = NPS_SECTIONS.flatMap((s) =>
+  s.questions.filter(isOpen).map((q) => q.name),
+);
+
+/** Every question a submission MUST carry to be complete (for progress +
+ *  validation): all 0–10 ratings, all single-choice, and required opens.
+ *  Multi-select is always optional. */
+export const NPS_REQUIRED_NAMES: string[] = NPS_SECTIONS.flatMap((s) =>
+  s.questions
+    .filter(
+      (q) =>
+        isScale10(q) ||
+        (isSingle(q) && (q.required ?? true)) ||
+        (isOpen(q) && Boolean(q.required)),
+    )
+    .map((q) => q.name),
+);
+
+function findQuestion(name: string): NpsQuestion | null {
   for (const s of NPS_SECTIONS) {
-    for (const q of s.questions) {
-      if (q.name === name && isMultiQuestion(q)) return q;
-    }
+    for (const q of s.questions) if (q.name === name) return q;
   }
   return null;
 }
 
-/** Every answer sits on the same 1–5 scale the client actually marks —
- *  there is no rescaling to 0–10. All derived scores are shown out of 5. */
-export const NPS_MAX = 5;
+export function getMultiQuestion(name: string): NpsMultiQuestion | null {
+  const q = findQuestion(name);
+  return q && isMulti(q) ? q : null;
+}
 
-/** Shared colour bucket for a 0–5 score (green ≥4 · amber ≥3 · red <3). */
+export function getSingleQuestion(name: string): NpsSingleQuestion | null {
+  const q = findQuestion(name);
+  return q && isSingle(q) ? q : null;
+}
+
+export function getQuestion(name: string): NpsQuestion | null {
+  return findQuestion(name);
+}
+
+/** Headline / score maximum — everything is out of 10. */
+export const NPS_MAX = 10;
+
+/** Colour bucket for a 0–10 score (green ≥8 · amber ≥6 · red <6). */
 export function npsScoreColor(v: number): string {
-  if (v >= 4) return "#34d399";
-  if (v >= 3) return "#fbbf24";
+  if (v >= 8) return "#34d399";
+  if (v >= 6) return "#fbbf24";
   return "#fb7185";
 }
 
 export type NpsCategory = "promoter" | "passive" | "detractor";
 
-/** Recommendation category off the 1–5 "would you recommend" answer:
- *  5 = Promoter, 4 = Passive, ≤3 = Detractor. */
-export function npsCategory(recommend: number): NpsCategory {
-  if (recommend >= 4.5) return "promoter";
-  if (recommend >= 3.5) return "passive";
+/** Classic NPS bucket off the 0–10 continuity answer:
+ *  Promoter 9–10 · Passive 7–8 · Detractor 0–6. */
+export function npsCategory(score: number): NpsCategory {
+  if (score >= 9) return "promoter";
+  if (score >= 7) return "passive";
   return "detractor";
 }
 
 export type NpsScores = {
-  /** Mean of all 13 answers, 0–5, 1 dp. */
+  /** Mean of the four scored answers (P1, P5, P7, P3), 0–10, 1 dp. */
   overall: number;
-  /** The 1–5 "would you recommend" answer (headline recommendation). */
+  /** Continuity / loyalty answer (P7), 0–10 — the headline. */
   nps: number;
   category: NpsCategory;
-  /** Per-section mean (0–5, 1 dp), keyed by section key. */
-  sectionScores: Record<string, number>;
+  /** Overall satisfaction (P1), 0–10. */
+  satisfaction: number;
+  /** Consultant performance (P5), 0–10. */
+  consultant: number;
+  /** Progress (P3) mapped to 0–10, or null if unanswered. */
+  progress: number | null;
 };
 
-/** Compute all derived scores from a full answer map. All values are the
- *  raw 1–5 marks the client made, averaged — nothing is rescaled. */
-export function computeNpsScores(answers: Record<string, number>): NpsScores {
-  const sectionScores: Record<string, number> = {};
-  const all: number[] = [];
-  for (const section of NPS_SECTIONS) {
-    const vals: number[] = [];
-    for (const q of section.questions) {
-      if (isMultiQuestion(q)) continue; // qualitative — never scored
-      const raw = answers[q.name];
-      if (typeof raw !== "number" || Number.isNaN(raw)) continue;
-      const v = clamp(raw, 1, 5);
-      vals.push(v);
-      all.push(v);
-    }
-    if (vals.length) sectionScores[section.key] = round1(mean(vals));
+export type ScoreInput = {
+  answers: Record<string, number>;
+  choices?: Record<string, string[]>;
+};
+
+/** Compute derived scores from a submission's answers + choices. */
+export function computeNpsScores(input: ScoreInput): NpsScores {
+  const { answers, choices = {} } = input;
+  const num = (name: string): number | null => {
+    const v = Number(answers[name]);
+    return Number.isFinite(v) ? clamp(v, 0, 10) : null;
+  };
+
+  const satisfaction = num("p1_satisfacao");
+  const consultant = num("p5_consultor");
+  const continuity = num("p7_continuidade");
+
+  // Progress: single-choice with a scored option.
+  let progress: number | null = null;
+  const progressPick = choices["p3_progresso"]?.[0];
+  if (progressPick) {
+    const opt = getSingleQuestion("p3_progresso")?.options.find(
+      (o) => o.value === progressPick,
+    );
+    if (opt && typeof opt.score === "number") progress = clamp(opt.score, 0, 10);
   }
-  const nps = clamp(Number(answers.nps) || 0, 1, 5);
+
+  const scored = [satisfaction, consultant, continuity, progress].filter(
+    (v): v is number => v !== null,
+  );
+  const overall = scored.length ? round1(mean(scored)) : 0;
+  const nps = continuity ?? 0;
+
   return {
-    overall: all.length ? round1(mean(all)) : 0,
+    overall,
     nps,
     category: npsCategory(nps),
-    sectionScores,
+    satisfaction: satisfaction ?? 0,
+    consultant: consultant ?? 0,
+    progress,
   };
 }
 

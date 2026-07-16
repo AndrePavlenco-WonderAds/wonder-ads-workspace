@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.75",
+    date: "2026-07-16",
+    title: "NPS de SEO — inquérito reformulado (escala 0–10, perguntas mais ricas)",
+    highlights: [
+      "**🔁 Inquérito de satisfação totalmente renovado.** Substituímos as antigas 13 perguntas 1–5 por um inquérito inspirado nas melhores consultorias, adaptado ao nosso serviço de SEO: 8 secções (Satisfação, Progresso, Consultor, Continuidade, Resultados & impacto, Serviços, Recomendação e Testemunho).",
+      "**📊 Escala 0–10 (NPS real).** As perguntas-chave — satisfação geral, desempenho do consultor e probabilidade de continuidade — passam a 0–10. A categoria segue a regra clássica (Promotor 9–10 · Passivo 7–8 · Detrator 0–6).",
+      "**🧩 Novos tipos de resposta.** Escolha única, multi-escolha (com limite, ex.: “até 5”), e perguntas abertas — com o nosso branding e uma UX bem mais cuidada no formulário do cliente.",
+      "**🆕 Recomeço limpo.** O histórico anterior (formato 1–5) fica arquivado e deixa de contar; os novos resultados começam do zero para os números serem comparáveis.",
+      "**⭐ Fecho com testemunho.** No fim, pedimos ao cliente um testemunho orientado (antes/o que fizemos/o que mudou) para reforçar prova social.",
+    ],
+  },
+  {
     version: "74.74",
     date: "2026-07-16",
     title: "SEO — seta decorativa removida dos cartões (sobrepunha o botão de pausa)",

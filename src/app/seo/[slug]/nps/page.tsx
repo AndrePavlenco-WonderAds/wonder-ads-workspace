@@ -23,9 +23,11 @@ import { getCurrentRoadmap } from "@/lib/roadmap-store";
 import { DEFAULT_STARTING_DATES } from "@/lib/admin-clients-store";
 import {
   NPS_SECTIONS,
-  sectionTitle,
   npsScoreColor,
-  isMultiQuestion,
+  isScale10,
+  isSingle,
+  isMulti,
+  isOpen,
 } from "@/lib/nps-questions";
 import { pickLang } from "@/lib/public-i18n";
 import { getCurrentEmployee } from "@/lib/auth/server";
@@ -102,9 +104,7 @@ export default async function NpsPage({
   const record = await getNpsRecord(slug);
 
   // Onboarding date + which month of the engagement the client is in —
-  // the same facts surfaced on the roadmap page. Prefer the roadmap's
-  // pinned onboardingDate (survives roadmap resets), then the canonical
-  // starting-dates map, then the roadmap's current startDate.
+  // the same facts surfaced on the roadmap page.
   const roadmap = await getCurrentRoadmap(slug);
   const onboardedIso =
     roadmap?.onboardingDate ??
@@ -229,7 +229,7 @@ export default async function NpsPage({
           {/* Latest hero */}
           <section className="animate-fade-up mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,320px)_1fr]">
             <LatestHero latest={latest} />
-            <SectionBreakdown latest={latest} lang={lang} />
+            <KeyMetrics latest={latest} />
           </section>
 
           {/* Per-question answers — exactly what the client marked */}
@@ -270,18 +270,18 @@ function LatestHero({ latest }: { latest: NpsSubmission }) {
         >
           {s.overall.toFixed(1)}
         </span>
-        <span className="mb-1 text-lg text-white/40">/ 5</span>
+        <span className="mb-1 text-lg text-white/40">/ 10</span>
       </div>
       <p className="mt-1 text-xs text-white/45">Índice de satisfação global</p>
 
       <div className="mt-5 flex items-center gap-3 border-t border-white/8 pt-4">
         <div>
           <p className="text-[10px] uppercase tracking-wide text-white/40">
-            Recomendação
+            Continuidade
           </p>
           <p className="text-2xl font-semibold text-white/90">
             {s.nps}
-            <span className="text-sm font-normal text-white/40"> / 5</span>
+            <span className="text-sm font-normal text-white/40"> / 10</span>
           </p>
         </div>
         <span
@@ -305,8 +305,55 @@ function LatestHero({ latest }: { latest: NpsSubmission }) {
   );
 }
 
+/** The four scored dimensions, each out of 10. Replaces the old per-section
+ *  breakdown (the survey now has only a handful of scored questions). */
+function KeyMetrics({ latest }: { latest: NpsSubmission }) {
+  const s = latest.scores;
+  const rows: { label: string; value: number | null }[] = [
+    { label: "Satisfação geral", value: s.satisfaction },
+    { label: "Consultor de SEO", value: s.consultant },
+    { label: "Continuidade", value: s.nps },
+    { label: "Progresso nos objetivos", value: s.progress },
+  ];
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 backdrop-blur-md">
+      <p className="text-[11px] uppercase tracking-[0.16em] text-white/45">
+        Métricas-chave (0–10)
+      </p>
+      <div className="mt-5 space-y-4">
+        {rows.map((r) => (
+          <div key={r.label}>
+            <div className="mb-1.5 flex items-center justify-between text-sm">
+              <span className="text-white/70">{r.label}</span>
+              <span
+                className="font-mono text-sm font-medium"
+                style={{
+                  color:
+                    r.value === null ? "rgba(255,255,255,0.35)" : scoreColor(r.value),
+                }}
+              >
+                {r.value === null ? "—" : r.value.toFixed(1)}
+              </span>
+            </div>
+            <div className="h-2 overflow-hidden rounded-full bg-white/8">
+              <div
+                className="h-2 rounded-full transition-all"
+                style={{
+                  width: `${((r.value ?? 0) / 10) * 100}%`,
+                  background:
+                    r.value === null ? "transparent" : scoreColor(r.value),
+                }}
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /** The core review surface: every question the client saw, with the exact
- *  1–5 mark they gave, in the language they answered in. */
+ *  answer they gave, in the language they answered in. */
 function AnswersDetail({
   latest,
   lang,
@@ -344,22 +391,49 @@ function AnswersDetail({
               <span className="text-sm font-semibold text-white/80">
                 {section.title[lang]}
               </span>
-              {typeof latest.scores.sectionScores[section.key] === "number" && (
-                <span
-                  className="ml-auto font-mono text-xs font-medium"
-                  style={{
-                    color: scoreColor(latest.scores.sectionScores[section.key]),
-                  }}
-                >
-                  {latest.scores.sectionScores[section.key].toFixed(1)} / 5
-                </span>
-              )}
             </div>
 
-            <div className="space-y-3.5">
+            <div className="space-y-4">
               {section.questions.map((q) => {
-                if (isMultiQuestion(q)) {
-                  const picked = latest.choices?.[q.name] ?? [];
+                if (isScale10(q)) {
+                  const value = latest.answers[q.name];
+                  const has = typeof value === "number";
+                  return (
+                    <div
+                      key={q.name}
+                      className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_auto] sm:items-center sm:gap-6"
+                    >
+                      <div>
+                        <p className="text-sm leading-snug text-white/75">
+                          {q.q[lang]}
+                        </p>
+                        <p className="mt-0.5 text-[10px] text-white/35">
+                          0 = {q.capLow[lang]} · 10 = {q.capHigh[lang]}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="h-2 w-28 overflow-hidden rounded-full bg-white/8">
+                          <div
+                            className="h-2 rounded-full"
+                            style={{
+                              width: `${((value ?? 0) / 10) * 100}%`,
+                              background: has ? scoreColor(value) : "transparent",
+                            }}
+                          />
+                        </div>
+                        <span
+                          className="w-12 text-right font-mono text-sm font-semibold"
+                          style={{ color: has ? scoreColor(value) : undefined }}
+                        >
+                          {has ? `${value}/10` : "—"}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                }
+
+                if (isSingle(q)) {
+                  const picked = latest.choices?.[q.name]?.[0];
                   return (
                     <div key={q.name}>
                       <p className="text-sm leading-snug text-white/75">
@@ -367,7 +441,49 @@ function AnswersDetail({
                       </p>
                       <div className="mt-2 flex flex-wrap gap-1.5">
                         {q.options.map((o) => {
-                          const on = picked.includes(o.value);
+                          const on = picked === o.value;
+                          return (
+                            <span
+                              key={o.value}
+                              className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px]"
+                              style={
+                                on
+                                  ? {
+                                      borderColor: "rgba(120,61,245,0.5)",
+                                      background: "rgba(120,61,245,0.16)",
+                                      color: "#c4b5fd",
+                                    }
+                                  : {
+                                      borderColor: "rgba(255,255,255,0.08)",
+                                      color: "rgba(255,255,255,0.30)",
+                                    }
+                              }
+                            >
+                              {on ? "● " : ""}
+                              {o.label[lang]}
+                            </span>
+                          );
+                        })}
+                        {!picked && (
+                          <span className="text-[11px] italic text-white/30">
+                            Sem resposta
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                }
+
+                if (isMulti(q)) {
+                  const chosen = latest.choices?.[q.name] ?? [];
+                  return (
+                    <div key={q.name}>
+                      <p className="text-sm leading-snug text-white/75">
+                        {q.q[lang]}
+                      </p>
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {q.options.map((o) => {
+                          const on = chosen.includes(o.value);
                           return (
                             <span
                               key={o.value}
@@ -390,7 +506,7 @@ function AnswersDetail({
                             </span>
                           );
                         })}
-                        {picked.length === 0 && (
+                        {chosen.length === 0 && (
                           <span className="text-[11px] italic text-white/30">
                             Sem seleção
                           </span>
@@ -399,138 +515,29 @@ function AnswersDetail({
                     </div>
                   );
                 }
-                const value = latest.answers[q.name];
-                const has = typeof value === "number";
+
+                // open
+                const text = latest.texts?.[q.name];
                 return (
-                  <div
-                    key={q.name}
-                    className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_auto] sm:items-center sm:gap-6"
-                  >
-                    <div>
-                      <p className="text-sm leading-snug text-white/75">
-                        {q.q[lang]}
+                  <div key={q.name}>
+                    <p className="text-sm leading-snug text-white/75">
+                      {q.q[lang]}
+                    </p>
+                    {text ? (
+                      <p className="mt-1.5 rounded-lg border border-white/8 bg-white/[0.03] px-3.5 py-2.5 text-sm leading-relaxed text-white/80">
+                        “{text}”
                       </p>
-                      <p className="mt-0.5 text-[10px] text-white/35">
-                        1 = {q.capLow[lang]} · 5 = {q.capHigh[lang]}
+                    ) : (
+                      <p className="mt-1 text-[11px] italic text-white/30">
+                        Sem resposta
                       </p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="flex items-center gap-1.5">
-                        {[1, 2, 3, 4, 5].map((n) => {
-                          const on = has && n <= value;
-                          const isMark = has && n === value;
-                          return (
-                            <span
-                              key={n}
-                              className="flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-semibold"
-                              style={{
-                                background: isMark
-                                  ? scoreColor(value)
-                                  : on
-                                    ? "rgba(255,255,255,0.10)"
-                                    : "transparent",
-                                color: isMark
-                                  ? "#0b1220"
-                                  : "rgba(255,255,255,0.45)",
-                                boxShadow: `inset 0 0 0 1px ${
-                                  isMark
-                                    ? "transparent"
-                                    : "rgba(255,255,255,0.14)"
-                                }`,
-                              }}
-                            >
-                              {n}
-                            </span>
-                          );
-                        })}
-                      </div>
-                      <span
-                        className="w-12 text-right font-mono text-sm font-semibold"
-                        style={{ color: has ? scoreColor(value) : undefined }}
-                      >
-                        {has ? `${value}/5` : "—"}
-                      </span>
-                    </div>
+                    )}
                   </div>
                 );
               })}
             </div>
           </div>
         ))}
-      </div>
-
-      {latest.comment && (
-        <div className="mt-6 rounded-lg border border-white/8 bg-white/[0.03] p-4">
-          <p className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide text-white/40">
-            <MessageSquareQuote className="h-3 w-3" />
-            Comentário aberto
-          </p>
-          <p className="mt-1.5 text-sm leading-relaxed text-white/80">
-            “{latest.comment}”
-          </p>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function SectionBreakdown({
-  latest,
-  lang,
-}: {
-  latest: NpsSubmission;
-  lang: ReturnType<typeof pickLang>;
-}) {
-  const scores = latest.scores.sectionScores;
-  const rows = NPS_SECTIONS.map((sec) => ({
-    key: sec.key,
-    label: sectionTitle(sec.key, lang),
-    value: scores[sec.key],
-  })).filter((r) => typeof r.value === "number");
-
-  const weakest = rows.reduce(
-    (min, r) => (r.value! < (min?.value ?? Infinity) ? r : min),
-    null as (typeof rows)[number] | null,
-  );
-
-  return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 backdrop-blur-md">
-      <p className="text-[11px] uppercase tracking-[0.16em] text-white/45">
-        Por secção
-      </p>
-      <div className="mt-5 space-y-4">
-        {rows.map((r) => {
-          const isWeak = weakest?.key === r.key && r.value! < 3.5;
-          return (
-            <div key={r.key}>
-              <div className="mb-1.5 flex items-center justify-between text-sm">
-                <span className="text-white/70">
-                  {r.label}
-                  {isWeak && (
-                    <span className="ml-2 rounded bg-rose-500/15 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-rose-200">
-                      Ponto fraco
-                    </span>
-                  )}
-                </span>
-                <span
-                  className="font-mono text-sm font-medium"
-                  style={{ color: scoreColor(r.value!) }}
-                >
-                  {r.value!.toFixed(1)}
-                </span>
-              </div>
-              <div className="h-2 overflow-hidden rounded-full bg-white/8">
-                <div
-                  className="h-2 rounded-full transition-all"
-                  style={{
-                    width: `${(r.value! / 5) * 100}%`,
-                    background: scoreColor(r.value!),
-                  }}
-                />
-              </div>
-            </div>
-          );
-        })}
       </div>
     </div>
   );
@@ -545,7 +552,7 @@ function TrendPanel({ submissions }: { submissions: NpsSubmission[] }) {
   const n = points.length;
   const coords = points.map((p, i) => {
     const x = n === 1 ? W / 2 : PAD + (i / (n - 1)) * (W - PAD * 2);
-    const y = PAD + (1 - p.scores.overall / 5) * (H - PAD * 2);
+    const y = PAD + (1 - p.scores.overall / 10) * (H - PAD * 2);
     return { x, y, v: p.scores.overall };
   });
   const path = coords.map((c, i) => `${i === 0 ? "M" : "L"} ${c.x} ${c.y}`).join(" ");
@@ -567,8 +574,8 @@ function TrendPanel({ submissions }: { submissions: NpsSubmission[] }) {
             className="mt-4 w-full"
             preserveAspectRatio="none"
           >
-            {[0, 2.5, 5].map((g) => {
-              const y = PAD + (1 - g / 5) * (H - PAD * 2);
+            {[0, 5, 10].map((g) => {
+              const y = PAD + (1 - g / 10) * (H - PAD * 2);
               return (
                 <line
                   key={g}
@@ -620,44 +627,47 @@ function HistoryTable({ submissions }: { submissions: NpsSubmission[] }) {
           <thead>
             <tr className="border-b border-white/8 text-[10px] uppercase tracking-wide text-white/40">
               <th className="py-2 pr-4 font-medium">Data</th>
-              <th className="py-2 pr-4 font-medium">Global /5</th>
-              <th className="py-2 pr-4 font-medium">Recom. /5</th>
+              <th className="py-2 pr-4 font-medium">Global /10</th>
+              <th className="py-2 pr-4 font-medium">Contin. /10</th>
               <th className="py-2 pr-4 font-medium">Respondente</th>
-              <th className="py-2 font-medium">Comentário</th>
+              <th className="py-2 font-medium">Justificação</th>
             </tr>
           </thead>
           <tbody>
-            {submissions.map((s) => (
-              <tr
-                key={s.id}
-                className="border-b border-white/5 align-top text-white/75"
-              >
-                <td className="whitespace-nowrap py-2.5 pr-4 text-white/60">
-                  {formatDate(s.submittedAt)}
-                </td>
-                <td className="py-2.5 pr-4">
-                  <span
-                    className="font-mono font-semibold"
-                    style={{ color: scoreColor(s.scores.overall) }}
-                  >
-                    {s.scores.overall.toFixed(1)}
-                  </span>
-                </td>
-                <td className="py-2.5 pr-4 font-mono text-white/70">
-                  {s.scores.nps}
-                </td>
-                <td className="py-2.5 pr-4 text-white/60">
-                  {s.identification ?? "—"}
-                </td>
-                <td className="max-w-[280px] py-2.5 text-white/60">
-                  {s.comment ? (
-                    <span className="line-clamp-2">{s.comment}</span>
-                  ) : (
-                    "—"
-                  )}
-                </td>
-              </tr>
-            ))}
+            {submissions.map((s) => {
+              const justify = s.texts?.p4_justifica ?? null;
+              return (
+                <tr
+                  key={s.id}
+                  className="border-b border-white/5 align-top text-white/75"
+                >
+                  <td className="whitespace-nowrap py-2.5 pr-4 text-white/60">
+                    {formatDate(s.submittedAt)}
+                  </td>
+                  <td className="py-2.5 pr-4">
+                    <span
+                      className="font-mono font-semibold"
+                      style={{ color: scoreColor(s.scores.overall) }}
+                    >
+                      {s.scores.overall.toFixed(1)}
+                    </span>
+                  </td>
+                  <td className="py-2.5 pr-4 font-mono text-white/70">
+                    {s.scores.nps}
+                  </td>
+                  <td className="py-2.5 pr-4 text-white/60">
+                    {s.identification ?? "—"}
+                  </td>
+                  <td className="max-w-[280px] py-2.5 text-white/60">
+                    {justify ? (
+                      <span className="line-clamp-2">{justify}</span>
+                    ) : (
+                      "—"
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -677,8 +687,8 @@ function EmptyState() {
       <p className="mx-auto mt-2 max-w-sm text-sm text-white/50">
         Envie o formulário de avaliação ao cliente com o botão{" "}
         <span className="text-white/75">Send to client</span> acima. Assim que
-        o cliente responder, o resultado (0–10), o NPS e o histórico aparecem
-        aqui.
+        o cliente responder, o resultado (0–10), a continuidade e o histórico
+        aparecem aqui.
       </p>
     </section>
   );

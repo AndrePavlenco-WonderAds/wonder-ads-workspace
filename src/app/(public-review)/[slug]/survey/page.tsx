@@ -37,8 +37,8 @@ const INTRO = {
 } as const;
 
 const MINUTES = {
-  pt: "Formulário de 4 minutos",
-  en: "4-minute form",
+  pt: "Formulário de 5 minutos",
+  en: "5-minute form",
 } as const;
 
 const EYEBROW = {
