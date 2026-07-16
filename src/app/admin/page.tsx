@@ -8,6 +8,7 @@ import { WEB_CLIENTS } from "@/lib/web-clients";
 import { listEmployees, SEED_EMPLOYEES } from "@/lib/admin-employees-store";
 import { countRoadmaps } from "@/lib/roadmap-admin-helpers";
 import { buildAdminClientViews } from "@/lib/admin-roster";
+import { getOnboardingClients } from "@/lib/onboarding-clients-store";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -44,6 +45,14 @@ export default async function AdminPage() {
   // still renders.
   const roadmapsCount = await countRoadmaps();
 
+  // Onboarding card count — clients currently in an onboarding flow.
+  let onboardingCount = 0;
+  try {
+    onboardingCount = (await getOnboardingClients()).length;
+  } catch {
+    /* KV unavailable — show 0 */
+  }
+
   // Finances card count — scheduled invoices on file (clients with an
   // invoice date set). Falls back to 0 if the roster can't be built so
   // the landing still renders.
@@ -69,6 +78,7 @@ export default async function AdminPage() {
         employeesCount={employeesCount}
         roadmapsCount={roadmapsCount}
         financesCount={financesCount}
+        onboardingCount={onboardingCount}
       />
     </PageShell>
   );

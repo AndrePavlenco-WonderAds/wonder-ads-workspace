@@ -222,10 +222,14 @@ export function OnboardingIntakeForm({
   slug,
   hubHref,
   steps,
+  track = "seo",
+  lessonId = "form",
 }: {
   slug: string;
   hubHref: string;
   steps: OnbStep[];
+  track?: string;
+  lessonId?: string;
 }) {
   const total = steps.length;
   const sections = useMemo(() => sectionsOf(steps), [steps]);
@@ -302,7 +306,7 @@ export function OnboardingIntakeForm({
       const res = await fetch(`/api/onboarding-intake/${slug}/submit`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ texts, choices, files }),
+        body: JSON.stringify({ texts, choices, files, track, lessonId }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       setState("done");

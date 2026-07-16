@@ -5,6 +5,12 @@
 // Video embeds are intentionally left as `videoUrl: null` placeholders — the
 // team will paste the final embed URLs here later; every lesson page already
 // renders the player slot from this field.
+//
+// Each lesson carries a `track` (seo | ads | common). The flow a client sees
+// is composed from their services (see onboarding-tracks.ts) — SEO lessons for
+// SEO clients, Ads lessons for Ads clients, common lessons for everyone.
+
+import type { OnbTrack } from "@/lib/onboarding-tracks";
 
 /** Team emails to grant as admins on the client's accounts. */
 export const TEAM_ADMIN_EMAILS = [
@@ -35,6 +41,8 @@ export type Lesson = {
   summary: string;
   /** "SOBRE ESTE PASSO" rich content. */
   about: LessonBlock[];
+  /** Which onboarding track this lesson belongs to. Missing → "seo". */
+  track?: OnbTrack;
 };
 
 export type OnboardingCategory = {
@@ -50,6 +58,7 @@ export const DEFAULT_ONBOARDING_CATEGORIES: OnboardingCategory[] = [
     lessons: [
       {
         id: "comecar-aqui",
+        track: "common",
         category: "onboarding-pt",
         title: "Começar Aqui",
         kind: "video",
@@ -94,6 +103,26 @@ export const DEFAULT_ONBOARDING_CATEGORIES: OnboardingCategory[] = [
           {
             type: "p",
             text: "Reserve alguns minutos e responda com o máximo de detalhe possível — quanto melhor nos conhecermos, melhores serão os resultados.",
+          },
+        ],
+      },
+      {
+        id: "form-ads",
+        track: "ads",
+        category: "onboarding-pt",
+        title: "Questionário de Ads (Formulário)",
+        kind: "form",
+        emoji: "📣",
+        videoUrl: null,
+        summary: "Um formulário sobre os vossos objetivos, ofertas e orçamento de Ads.",
+        about: [
+          {
+            type: "p",
+            text: "As vossas respostas vão moldar cada parte das campanhas de Google e Meta Ads — desde onde os anúncios aparecem, ao que dizem, até como medimos o sucesso.",
+          },
+          {
+            type: "p",
+            text: "Responda com o máximo de detalhe possível; respostas em tópicos são perfeitas. Se alguma pergunta não se aplicar ou tiver dúvidas, escreva isso mesmo e falamos na nossa chamada.",
           },
         ],
       },
@@ -206,11 +235,81 @@ export const DEFAULT_ONBOARDING_CATEGORIES: OnboardingCategory[] = [
     ],
   },
   {
+    key: "acessos-ads",
+    title: "Acessos Ads",
+    lessons: [
+      {
+        id: "intro-ads",
+        track: "ads",
+        category: "acessos-ads",
+        title: "Introdução (Ads)",
+        kind: "video",
+        emoji: "📣",
+        videoUrl: null,
+        summary: "Que acessos precisamos para gerir os vossos anúncios.",
+        about: [
+          {
+            type: "p",
+            text: "Para lançarmos e otimizarmos as vossas campanhas, precisamos de acesso às contas de anúncios e de medição. Nesta secção mostramos como nos dar acesso a cada uma.",
+          },
+          {
+            type: "emails",
+            intro: "Sempre que pedirmos para adicionar a Wonder Ads, use os seguintes emails:",
+            emails: TEAM_ADMIN_EMAILS,
+          },
+        ],
+      },
+      {
+        id: "google-ads-conta",
+        track: "ads",
+        category: "acessos-ads",
+        title: "Acesso à Conta Google Ads",
+        kind: "video",
+        emoji: "🔎",
+        videoUrl: null,
+        summary: "Dar-nos acesso à conta Google Ads (ou criar uma nova).",
+        about: [
+          {
+            type: "p",
+            text: "Precisamos de acesso à vossa conta Google Ads. Se ainda não tiverem uma, o vídeo mostra como criá-la. Se já existir, partilhem o ID de cliente (Customer ID) e adicionem-nos como administradores.",
+          },
+          {
+            type: "emails",
+            intro: "Emails para adicionar à conta Google Ads como Administradores:",
+            emails: TEAM_ADMIN_EMAILS,
+          },
+        ],
+      },
+      {
+        id: "meta-ads-conta",
+        track: "ads",
+        category: "acessos-ads",
+        title: "Acesso à Conta Meta / Facebook Business",
+        kind: "video",
+        emoji: "📱",
+        videoUrl: null,
+        summary: "Acesso ao Meta Business (Facebook / Instagram Ads).",
+        about: [
+          {
+            type: "p",
+            text: "Para os anúncios de Facebook e Instagram, precisamos de acesso ao vosso Meta Business Manager (página, conta publicitária e pixel). O vídeo mostra como nos adicionar como parceiros.",
+          },
+          {
+            type: "emails",
+            intro: "Emails para adicionar ao Meta Business Manager:",
+            emails: TEAM_ADMIN_EMAILS,
+          },
+        ],
+      },
+    ],
+  },
+  {
     key: "final",
     title: "Último Passo e Obrigado!",
     lessons: [
       {
         id: "sessao-estrategia",
+        track: "common",
         category: "final",
         title: "4º Passo: Sessão de Estratégia",
         kind: "video",
@@ -230,6 +329,7 @@ export const DEFAULT_ONBOARDING_CATEGORIES: OnboardingCategory[] = [
       },
       {
         id: "feito",
+        track: "common",
         category: "final",
         title: "5º Passo: Feito!",
         kind: "info",
@@ -254,6 +354,26 @@ export const DEFAULT_ONBOARDING_CATEGORIES: OnboardingCategory[] = [
 // The catalogue is editable in-app (SuperAdmin) via onboarding-content-store.
 // These helpers are PURE and take the live `categories` array so both the
 // default and any KV override work identically.
+
+/** A lesson's track, defaulting to "seo" for pre-track content. */
+export function lessonTrack(l: Lesson): OnbTrack {
+  return l.track ?? "seo";
+}
+
+/** The course a client sees for their active tracks — lessons whose track is
+ *  "common" or in `tracks`, dropping any category left empty. */
+export function courseForTracks(
+  categories: OnboardingCategory[],
+  tracks: ("seo" | "ads")[],
+): OnboardingCategory[] {
+  const active = new Set<OnbTrack>(["common", ...tracks]);
+  return categories
+    .map((c) => ({
+      ...c,
+      lessons: c.lessons.filter((l) => active.has(lessonTrack(l))),
+    }))
+    .filter((c) => c.lessons.length > 0);
+}
 
 /** Every lesson, flattened, in order. */
 export function flattenLessons(categories: OnboardingCategory[]): Lesson[] {
@@ -289,6 +409,7 @@ export function nextCategory(
 // ---- Normalisation (for the KV override → guard against malformed data) ----
 
 const LESSON_KINDS: LessonKind[] = ["video", "form", "info"];
+const TRACKS: OnbTrack[] = ["seo", "ads", "common"];
 
 function normalizeBlocks(raw: unknown): LessonBlock[] {
   if (!Array.isArray(raw)) return [];
@@ -348,12 +469,17 @@ export function normalizeCourse(raw: unknown): OnboardingCategory[] | null {
         const kind = LESSON_KINDS.includes(kindRaw as LessonKind)
           ? (kindRaw as LessonKind)
           : "video";
+        const trackRaw = (l as { track?: unknown }).track;
+        const track = TRACKS.includes(trackRaw as OnbTrack)
+          ? (trackRaw as OnbTrack)
+          : "seo";
         const videoUrl = (l as { videoUrl?: unknown }).videoUrl;
         outLessons.push({
           id,
           category: key,
           title: lTitle,
           kind,
+          track,
           emoji:
             typeof (l as { emoji?: unknown }).emoji === "string"
               ? (l as { emoji: string }).emoji

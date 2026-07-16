@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.88",
+    date: "2026-07-16",
+    title: "Onboarding por serviço (SEO / Ads) + bloco movido para SuperAdmin",
+    highlights: [
+      "**🎯 Onboarding por serviço.** Ao criar o link escolhe-se os serviços — **Consultoria SEO, Google Ads e/ou Meta Ads**. O link gerado compõe os passos certos: só SEO → fluxo A; só Ads → fluxo B; SEO + Ads → fluxo C com passos de ambos.",
+      "**📣 Conteúdo de Ads.** Novo formulário de Ads (14 perguntas em 5 secções, adaptado do questionário de Google/Meta Ads) e nova categoria de acessos *Acessos Ads* (Conta Google Ads, Meta / Facebook Business).",
+      "**🧩 Sistema de tracks.** Cada lição e cada pergunta tem um *track* (SEO / Ads / Comum). O editor de onboarding ganhou um seletor de track por lição e por passo, para gerir tudo sem código.",
+      "**🗂️ Bloco movido para o SuperAdmin.** O *Iniciar onboarding* saiu do board de SEO e passou a viver na **Suite de SuperAdmin** (`/admin` → Onboarding), com lista de clientes em processo e atalho para o editor.",
+      "**📄 PDF combinado.** Um cliente com SEO + Ads preenche os dois formulários e as respostas juntam-se num único PDF anexado ao projeto.",
+    ],
+  },
+  {
     version: "74.87",
     date: "2026-07-16",
     title: "SEO — editor do processo de Onboarding (curso + formulário)",

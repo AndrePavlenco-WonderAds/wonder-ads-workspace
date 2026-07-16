@@ -12,6 +12,7 @@ import {
   upsertOnboardingClient,
   removeOnboardingClient,
 } from "@/lib/onboarding-clients-store";
+import { normalizeServices } from "@/lib/onboarding-tracks";
 
 export const runtime = "nodejs";
 
@@ -28,10 +29,11 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ error: "invalid body" }, { status: 400 });
   }
-  const { title, consultant, icon } = (body ?? {}) as {
+  const { title, consultant, icon, services } = (body ?? {}) as {
     title?: unknown;
     consultant?: unknown;
     icon?: unknown;
+    services?: unknown;
   };
   const cleanTitle = typeof title === "string" ? title.trim() : "";
   if (!cleanTitle) {
@@ -40,6 +42,13 @@ export async function POST(req: Request) {
   const slug = slugify(cleanTitle);
   if (!slug) {
     return NextResponse.json({ error: "invalid title" }, { status: 400 });
+  }
+  const cleanServices = normalizeServices(services);
+  if (cleanServices.length === 0) {
+    return NextResponse.json(
+      { error: "Selecione pelo menos um serviço." },
+      { status: 400 },
+    );
   }
 
   const onBoard = Boolean(await getClientBySlug(slug).catch(() => null));
@@ -53,6 +62,7 @@ export async function POST(req: Request) {
         typeof consultant === "string" && consultant.trim()
           ? consultant.trim()
           : null,
+      services: cleanServices,
       isNew: !onBoard,
       createdAt: Date.now(),
       promotedAt: null,

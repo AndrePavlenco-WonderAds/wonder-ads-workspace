@@ -1,10 +1,11 @@
 // Public endpoint (no auth — outside the middleware matcher) that receives a
-// submitted onboarding form. It:
-//   1. stores the structured answers,
-//   2. generates the branded answers PDF and attaches it to the client's
-//      "Onboarding Form" zone on the SEO project page,
+// submitted onboarding form (SEO or Ads). It:
+//   1. validates + merges the answers into the client's intake (so a SEO and
+//      an Ads submission coexist),
+//   2. regenerates the branded answers PDF (all of the client's forms) and
+//      attaches it to the "Onboarding Form" zone on the SEO project page,
 //   3. promotes a brand-new client onto the SEO board ("auto-create project"),
-//   4. marks the form lesson complete in the onboarding hub,
+//   4. marks the submitted form's lesson complete in the onboarding hub,
 //   5. revalidates the affected pages.
 
 import { NextResponse } from "next/server";
@@ -14,11 +15,14 @@ import {
   flattenFields,
   requiredNames,
   otherKeysOf,
+  stepsForTrack,
+  stepTrack,
   isCheckbox,
   isFile,
 } from "@/lib/onboarding-questions";
 import { getFormSteps } from "@/lib/onboarding-content-store";
 import {
+  getOnboardingIntake,
   saveOnboardingIntake,
   ONBOARDING_INTAKE_SCHEMA_VERSION,
   type OnboardingIntake,
@@ -75,14 +79,26 @@ export async function POST(
     texts?: Record<string, unknown>;
     choices?: Record<string, unknown>;
     files?: Record<string, unknown>;
+    track?: unknown;
+    lessonId?: unknown;
   };
 
-  // Live form catalogue (KV override or default).
-  const steps = await getFormSteps();
-  const fields = flattenFields(steps);
+  const submittedTrack = raw.track === "ads" ? "ads" : "seo";
+  const lessonId =
+    typeof raw.lessonId === "string" && raw.lessonId
+      ? raw.lessonId
+      : submittedTrack === "ads"
+        ? "form-ads"
+        : "form";
 
-  // Rebuild each collection from the known field catalogue (ignore anything
-  // the client sends that we don't recognise).
+  // Full catalogue (KV override or default); this submission only covers the
+  // fields of the submitted form (track).
+  const allSteps = await getFormSteps();
+  const formSteps = stepsForTrack(allSteps, submittedTrack);
+  const fields = flattenFields(formSteps);
+
+  // Rebuild each collection from the submitted form's field catalogue (ignore
+  // anything the client sends that we don't recognise).
   const texts: Record<string, string> = {};
   const choices: Record<string, string[]> = {};
   const files: Record<string, OnboardingIntakeFile[]> = {};
@@ -102,13 +118,13 @@ export async function POST(
     }
   }
   // "Other" free-text answers (keyed field__option).
-  for (const key of otherKeysOf(steps)) {
+  for (const key of otherKeysOf(formSteps)) {
     const t = asString(raw.texts?.[key]).trim();
     if (t) texts[key] = t;
   }
 
-  // Server-side required-field check.
-  const missing = requiredNames(steps).filter((name) => {
+  // Server-side required-field check (for this form only).
+  const missing = requiredNames(formSteps).filter((name) => {
     const field = fields.find((f) => f.name === name);
     if (!field) return false;
     if (isCheckbox(field)) return (choices[name]?.length ?? 0) === 0;
@@ -119,13 +135,16 @@ export async function POST(
     return NextResponse.json({ error: "missing_required", missing }, { status: 400 });
   }
 
+  // Merge into any existing intake so the other form's answers survive.
+  const existing = await getOnboardingIntake(slug);
+  const now = Date.now();
   const intake: OnboardingIntake = {
     schemaVersion: ONBOARDING_INTAKE_SCHEMA_VERSION,
-    submittedAt: Date.now(),
-    texts,
-    choices,
-    files,
-    pdfUrl: null,
+    submittedAt: now,
+    texts: { ...(existing?.texts ?? {}), ...texts },
+    choices: { ...(existing?.choices ?? {}), ...choices },
+    files: { ...(existing?.files ?? {}), ...files },
+    pdfUrl: existing?.pdfUrl ?? null,
   };
 
   try {
@@ -135,15 +154,18 @@ export async function POST(
     return NextResponse.json({ error: "storage" }, { status: 500 });
   }
 
-  // Generate the branded PDF and attach it to the Onboarding Form zone.
+  // Regenerate the branded PDF from every form the client has (their tracks).
   try {
+    const clientSteps = allSteps.filter((s) =>
+      (client.tracks as string[]).includes(stepTrack(s)),
+    );
     const pdfBytes = await buildOnboardingPdf({
       clientTitle: client.title,
       intake,
-      steps,
+      steps: clientSteps,
     });
     const blob = await put(
-      `onboarding/${slug}/formulario-${intake.submittedAt}.pdf`,
+      `onboarding/${slug}/formulario-${now}.pdf`,
       Buffer.from(pdfBytes),
       { access: "public", contentType: "application/pdf", addRandomSuffix: true },
     );
@@ -154,7 +176,7 @@ export async function POST(
       name: `Formulário de Onboarding — ${client.title}.pdf`,
       contentType: "application/pdf",
       sizeBytes: pdfBytes.byteLength,
-      uploadedAt: intake.submittedAt,
+      uploadedAt: now,
     });
   } catch (err) {
     // Non-fatal: the answers are stored; the PDF can be regenerated later.
@@ -165,23 +187,23 @@ export async function POST(
   try {
     const reg = await getOnboardingClient(slug);
     if (reg && reg.isNew && !reg.promotedAt) {
-      await patchOnboardingClient(slug, { promotedAt: intake.submittedAt });
+      await patchOnboardingClient(slug, { promotedAt: now });
       revalidateTag("seo-clients");
     }
   } catch (err) {
     console.error("onboarding promote failed:", err);
   }
 
-  // Mark the form lesson complete in the hub.
+  // Mark the submitted form's lesson complete in the hub.
   try {
-    await setLessonCompletion(slug, "form", true, intake.submittedAt);
+    await setLessonCompletion(slug, lessonId, true, now);
   } catch (err) {
     console.error("onboarding progress update failed:", err);
   }
 
   revalidatePath(`/seo/${slug}`);
   revalidatePath(`/${slug}/onboarding`);
-  revalidatePath(`/${slug}/onboarding/form`);
+  revalidatePath(`/${slug}/onboarding/${lessonId}`);
 
   return NextResponse.json({ ok: true, pdfUrl: intake.pdfUrl });
 }

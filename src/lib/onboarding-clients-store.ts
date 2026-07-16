@@ -13,6 +13,7 @@
 // the board).
 
 import { kv } from "@vercel/kv";
+import { normalizeServices, type OnbService } from "@/lib/onboarding-tracks";
 
 const KEY = "onboarding-clients";
 const MAX = 2000;
@@ -23,6 +24,8 @@ export type OnboardingClient = {
   icon: string | null;
   /** Consultant display name (e.g. "André Pereira"), or null if unassigned. */
   consultant: string | null;
+  /** Services the client signed up for — drives which tracks appear. */
+  services?: OnbService[];
   /** true when this client is NOT yet a real SEO project (needs promotion). */
   isNew: boolean;
   /** Epoch ms this onboarding record was created. */
@@ -40,9 +43,11 @@ export async function getOnboardingClients(): Promise<OnboardingClient[]> {
   try {
     const stored = await kv.get<OnboardingClient[]>(KEY);
     if (!Array.isArray(stored)) return [];
-    return stored.filter(
-      (c) => c && typeof c.slug === "string" && typeof c.title === "string",
-    );
+    return stored
+      .filter(
+        (c) => c && typeof c.slug === "string" && typeof c.title === "string",
+      )
+      .map((c) => ({ ...c, services: normalizeServices(c.services) }));
   } catch (err) {
     console.error("KV onboarding-clients read failed:", err);
     return [];

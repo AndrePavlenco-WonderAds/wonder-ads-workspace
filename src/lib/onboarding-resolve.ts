@@ -9,6 +9,7 @@ import { getClientBySlug } from "@/lib/notion";
 import { getClientLogo } from "@/lib/client-meta";
 import { getConsultantForSlug } from "@/lib/client-overrides";
 import { getOnboardingClient } from "@/lib/onboarding-clients-store";
+import { tracksForServices, type OnbService } from "@/lib/onboarding-tracks";
 
 export type ResolvedOnboardingClient = {
   slug: string;
@@ -19,12 +20,26 @@ export type ResolvedOnboardingClient = {
   consultant: string | null;
   /** true when this is already a real SEO project. */
   onBoard: boolean;
+  /** Services the client signed up for (defaults to SEO). */
+  services: OnbService[];
+  /** Active content tracks derived from the services. */
+  tracks: ("seo" | "ads")[];
 };
 
 export async function resolveOnboardingClient(
   slug: string,
 ): Promise<ResolvedOnboardingClient | null> {
-  const seo = await getClientBySlug(slug).catch(() => null);
+  const [seo, reg] = await Promise.all([
+    getClientBySlug(slug).catch(() => null),
+    getOnboardingClient(slug),
+  ]);
+  if (!seo && !reg) return null;
+
+  // Services come from the onboarding record if one exists, else default to
+  // SEO (so pre-existing board clients keep the original flow).
+  const services = reg?.services?.length ? reg.services : ["seo" as OnbService];
+  const tracks = tracksForServices(services);
+
   if (seo) {
     const consultant = getConsultantForSlug(slug);
     return {
@@ -32,22 +47,23 @@ export async function resolveOnboardingClient(
       title: seo.title,
       icon: seo.icon,
       logo: getClientLogo(slug),
-      consultant: consultant && consultant !== "Unassigned" ? consultant : null,
+      consultant:
+        reg?.consultant ??
+        (consultant && consultant !== "Unassigned" ? consultant : null),
       onBoard: true,
+      services,
+      tracks,
     };
   }
 
-  const reg = await getOnboardingClient(slug);
-  if (reg) {
-    return {
-      slug,
-      title: reg.title,
-      icon: reg.icon,
-      logo: getClientLogo(slug),
-      consultant: reg.consultant,
-      onBoard: false,
-    };
-  }
-
-  return null;
+  return {
+    slug,
+    title: reg!.title,
+    icon: reg!.icon,
+    logo: getClientLogo(slug),
+    consultant: reg!.consultant,
+    onBoard: false,
+    services,
+    tracks,
+  };
 }

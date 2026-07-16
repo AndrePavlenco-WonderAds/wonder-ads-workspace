@@ -29,6 +29,7 @@ import type {
   OnbField,
   OnbCheckboxOption,
 } from "@/lib/onboarding-questions";
+import type { OnbTrack } from "@/lib/onboarding-tracks";
 
 // ---- immutable array helpers ----
 function move<T>(arr: T[], i: number, dir: -1 | 1): T[] {
@@ -282,7 +283,7 @@ function LessonEditor({
         <RowTools onUp={onUp} onDown={onDown} onDelete={onDelete} deleteLabel="Remover lição" />
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-3 sm:grid-cols-3">
         <Labeled label="ID (usado no URL)">
           <input
             value={lesson.id}
@@ -299,6 +300,17 @@ function LessonEditor({
             <option value="video">Vídeo</option>
             <option value="form">Formulário</option>
             <option value="info">Info / Final</option>
+          </select>
+        </Labeled>
+        <Labeled label="Track (serviço)">
+          <select
+            value={lesson.track ?? "seo"}
+            onChange={(e) => set({ track: e.target.value as OnbTrack })}
+            className={inputCls}
+          >
+            <option value="common">Comum (todos)</option>
+            <option value="seo">SEO</option>
+            <option value="ads">Ads</option>
           </select>
         </Labeled>
       </div>
@@ -604,7 +616,7 @@ function FormEditor({
             className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:p-5"
           >
             <div className="mb-4 flex items-center justify-between gap-2">
-              <div className="grid flex-1 gap-2 sm:grid-cols-[auto_2fr_2fr]">
+              <div className="grid flex-1 gap-2 sm:grid-cols-[auto_2fr_2fr_auto]">
                 <input
                   value={step.sectionTag}
                   onChange={(e) => setStep({ sectionTag: e.target.value })}
@@ -623,6 +635,15 @@ function FormEditor({
                   placeholder="Título do passo"
                   className={inputCls}
                 />
+                <select
+                  value={step.track ?? "seo"}
+                  onChange={(e) => setStep({ track: e.target.value as OnbTrack })}
+                  className={`${inputCls} sm:w-28`}
+                  title="Formulário a que este passo pertence"
+                >
+                  <option value="seo">SEO</option>
+                  <option value="ads">Ads</option>
+                </select>
               </div>
               <RowTools
                 onUp={() => onChange(move(steps, si, -1))}

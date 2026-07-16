@@ -9,7 +9,14 @@
 // v74.27: added Roadmaps block — per-consultant SEO project tracker.
 
 import Link from "next/link";
-import { FolderKanban, Users, Compass, Wallet, ArrowRight } from "lucide-react";
+import {
+  FolderKanban,
+  Users,
+  Compass,
+  Wallet,
+  Rocket,
+  ArrowRight,
+} from "lucide-react";
 
 type ChoiceBlock = {
   href: string;
@@ -25,14 +32,25 @@ export function AdminLanding({
   employeesCount,
   roadmapsCount,
   financesCount,
+  onboardingCount,
 }: {
   projectsCount: number;
   employeesCount: number;
   roadmapsCount: number;
   financesCount: number;
+  onboardingCount: number;
 }) {
 
   const blocks: ChoiceBlock[] = [
+    {
+      href: "/admin/onboarding",
+      title: "Onboarding",
+      blurb:
+        "Gera links de onboarding por serviço (SEO, Google Ads, Meta Ads ou combinações) e acompanha os clientes em processo. Edita as lições e os formulários.",
+      count: onboardingCount,
+      badge: onboardingCount === 1 ? "cliente" : "clientes",
+      Icon: Rocket,
+    },
     {
       href: "/admin/projects",
       title: "Clients",

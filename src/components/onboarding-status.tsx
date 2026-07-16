@@ -6,9 +6,11 @@
 import { FileText, ExternalLink, Check, Clock } from "lucide-react";
 import { CopyPublicLinkButton } from "@/components/copy-public-link-button";
 import { formatDate } from "@/lib/dates";
-import { flattenLessons } from "@/lib/onboarding-lessons";
+import { flattenLessons, courseForTracks } from "@/lib/onboarding-lessons";
 import { getCourse } from "@/lib/onboarding-content-store";
 import { getOnboardingProgress } from "@/lib/onboarding-progress-store";
+import { resolveOnboardingClient } from "@/lib/onboarding-resolve";
+import { servicesLabel } from "@/lib/onboarding-tracks";
 import { getOnboardingIntake } from "@/lib/onboarding-intake-store";
 
 export async function OnboardingStatus({
@@ -16,21 +18,26 @@ export async function OnboardingStatus({
 }: {
   slug: string;
 }) {
-  const [progress, intake, categories] = await Promise.all([
+  const [progress, intake, fullCourse, client] = await Promise.all([
     getOnboardingProgress(slug),
     getOnboardingIntake(slug),
     getCourse(),
+    resolveOnboardingClient(slug),
   ]);
+  const tracks = client?.tracks ?? ["seo"];
+  const categories = courseForTracks(fullCourse, tracks);
   const allLessons = flattenLessons(categories);
   const total = allLessons.length;
   const done = new Set(progress.completed);
   const completedCount = allLessons.filter((l) => done.has(l.id)).length;
   const pct = total ? Math.round((completedCount / total) * 100) : 0;
 
-  const accessCat = categories.find((c) => c.key === "acessos");
-  const confirmedAccesses =
-    accessCat?.lessons.filter((l) => done.has(l.id)).length ?? 0;
-  const totalAccesses = accessCat?.lessons.length ?? 0;
+  // Access lessons across SEO + Ads access categories.
+  const accessLessons = categories
+    .filter((c) => c.key.startsWith("acessos"))
+    .flatMap((c) => c.lessons);
+  const confirmedAccesses = accessLessons.filter((l) => done.has(l.id)).length;
+  const totalAccesses = accessLessons.length;
 
   return (
     <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 sm:p-6">
@@ -44,8 +51,8 @@ export async function OnboardingStatus({
               Onboarding do Cliente
             </h2>
             <p className="text-[11px] text-white/45">
-              {completedCount} de {total} passos · {confirmedAccesses}/
-              {totalAccesses} acessos confirmados
+              {servicesLabel(client?.services ?? ["seo"])} · {completedCount} de{" "}
+              {total} passos · {confirmedAccesses}/{totalAccesses} acessos
             </p>
           </div>
         </div>

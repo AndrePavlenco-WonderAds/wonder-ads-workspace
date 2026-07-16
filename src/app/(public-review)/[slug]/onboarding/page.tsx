@@ -6,7 +6,11 @@ import Link from "next/link";
 import { Check, ArrowRight, FileText, PlayCircle, Flag } from "lucide-react";
 import { resolveOnboardingClient } from "@/lib/onboarding-resolve";
 import { getOnboardingProgress } from "@/lib/onboarding-progress-store";
-import { flattenLessons, type Lesson } from "@/lib/onboarding-lessons";
+import {
+  flattenLessons,
+  courseForTracks,
+  type Lesson,
+} from "@/lib/onboarding-lessons";
 import { getCourse } from "@/lib/onboarding-content-store";
 
 export const dynamic = "force-dynamic";
@@ -30,9 +34,7 @@ const BRAND_GRADIENT =
   "linear-gradient(135deg, #343ED7 0%, #783DF5 53.65%, #C535C9 100%)";
 
 function lessonHref(slug: string, lesson: Lesson): string {
-  return lesson.kind === "form"
-    ? `/${slug}/onboarding/form`
-    : `/${slug}/onboarding/${lesson.id}`;
+  return `/${slug}/onboarding/${lesson.id}`;
 }
 
 export default async function OnboardingHubPage({
@@ -46,10 +48,11 @@ export default async function OnboardingHubPage({
   const client = await resolveOnboardingClient(slug);
   if (!client) notFound();
 
-  const [progress, categories] = await Promise.all([
+  const [progress, fullCourse] = await Promise.all([
     getOnboardingProgress(slug),
     getCourse(),
   ]);
+  const categories = courseForTracks(fullCourse, client.tracks);
   const allLessons = flattenLessons(categories);
   const total = allLessons.length;
   const done = new Set(progress.completed);

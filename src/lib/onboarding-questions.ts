@@ -5,6 +5,11 @@
 // This module is PURE (no KV, no React) so it can be imported by both the
 // public quiz form (client component) and the server-side store / PDF
 // generation. All copy is PT-PT — this form is client-facing and Portuguese.
+//
+// Each step carries a `track` (seo | ads). The SEO form and the Ads form live
+// in the same catalogue and are split by track (see stepsForTrack).
+
+import type { OnbTrack } from "@/lib/onboarding-tracks";
 
 /** Single-line text answer. */
 export type OnbShortField = {
@@ -74,6 +79,8 @@ export type OnbStep = {
   /** Short title shown at the top of the step card. */
   title: string;
   fields: OnbField[];
+  /** Which form this step belongs to. Missing → "seo". */
+  track?: OnbTrack;
 };
 
 export const DEFAULT_ONBOARDING_STEPS: OnbStep[] = [
@@ -657,11 +664,250 @@ export const DEFAULT_ONBOARDING_STEPS: OnbStep[] = [
       },
     ],
   },
+
+  // ===================== ADS FORM (track "ads") =====================
+  // Adapted from the Google/Meta Ads client questionnaire. Client-facing PT-PT.
+  {
+    key: "ads_segmentacao",
+    track: "ads",
+    section: "Segmentação",
+    sectionTag: "A1",
+    title: "Localizações e Raio",
+    fields: [
+      {
+        kind: "long",
+        name: "ads_q1",
+        label:
+          "Quais são as moradas completas de cada localização do negócio, e qual o raio/zona de onde vem a maioria dos clientes?",
+        help: "Indique o raio (em km) ou os códigos-postais de onde vêm a maioria dos clientes.",
+        required: true,
+      },
+    ],
+  },
+  {
+    key: "ads_publico",
+    track: "ads",
+    section: "Segmentação",
+    sectionTag: "A1",
+    title: "Público a Atrair",
+    fields: [
+      {
+        kind: "long",
+        name: "ads_q2",
+        label:
+          "Quem querem atrair sobretudo (idade, género, objetivos)? Há alguém que prefiram NÃO segmentar?",
+        required: true,
+      },
+    ],
+  },
+  {
+    key: "ads_acao",
+    track: "ads",
+    section: "Segmentação",
+    sectionTag: "A1",
+    title: "Ação Principal",
+    fields: [
+      {
+        kind: "long",
+        name: "ads_q3",
+        label:
+          "Qual é a ÚNICA ação que mais querem que um potencial cliente faça?",
+        help: "Por exemplo: marcar um teste/visita, enviar um pedido, ligar, ou comprar online.",
+        required: true,
+      },
+    ],
+  },
+  {
+    key: "ads_oferta",
+    track: "ads",
+    section: "Ofertas",
+    sectionTag: "A2",
+    title: "Oferta de Entrada",
+    fields: [
+      {
+        kind: "long",
+        name: "ads_q4",
+        label: "Que oferta de entrada podemos promover nos anúncios?",
+        help: "Por exemplo: passe grátis, sem taxa de inscrição, 1º mês a €X, sessão grátis.",
+        required: true,
+      },
+    ],
+  },
+  {
+    key: "ads_precos",
+    track: "ads",
+    section: "Ofertas",
+    sectionTag: "A2",
+    title: "Planos e Preços",
+    fields: [
+      {
+        kind: "long",
+        name: "ads_q5",
+        label: "Quais são os vossos planos/pacotes e preços? (mensal vs. contrato)",
+        required: true,
+      },
+    ],
+  },
+  {
+    key: "ads_produtos",
+    track: "ads",
+    section: "Ofertas",
+    sectionTag: "A2",
+    title: "Outros Produtos",
+    fields: [
+      {
+        kind: "long",
+        name: "ads_q6",
+        label:
+          "Além do produto principal, o que mais devemos anunciar? Quais são os mais populares e os mais rentáveis?",
+        required: false,
+      },
+    ],
+  },
+  {
+    key: "ads_usp",
+    track: "ads",
+    section: "Ofertas",
+    sectionTag: "A2",
+    title: "Diferenciação",
+    fields: [
+      {
+        kind: "long",
+        name: "ads_q7",
+        label:
+          "Porque é que as pessoas escolhem o vosso negócio em vez da concorrência local?",
+        help: "Equipamento, atendimento, horário, preço, comunidade, localização…",
+        required: true,
+      },
+    ],
+  },
+  {
+    key: "ads_concorrentes",
+    track: "ads",
+    section: "Ofertas",
+    sectionTag: "A2",
+    title: "Concorrentes",
+    fields: [
+      {
+        kind: "long",
+        name: "ads_q8",
+        label: "Quem são os vossos principais concorrentes locais e cadeias próximas?",
+        required: true,
+      },
+    ],
+  },
+  {
+    key: "ads_orcamento",
+    track: "ads",
+    section: "Orçamento",
+    sectionTag: "A3",
+    title: "Orçamento Mensal",
+    fields: [
+      {
+        kind: "short",
+        name: "ads_q9",
+        label: "Que orçamento mensal gostariam de investir em Ads?",
+        required: true,
+      },
+    ],
+  },
+  {
+    key: "ads_valor",
+    track: "ads",
+    section: "Orçamento",
+    sectionTag: "A3",
+    title: "Valor do Cliente",
+    fields: [
+      {
+        kind: "long",
+        name: "ads_q10",
+        label:
+          "Qual é o valor médio mensal, a duração típica de um cliente e a margem de lucro aproximada?",
+        help: "Isto permite-nos definir um custo-por-conversão que seja realmente rentável para vocês.",
+        required: true,
+      },
+    ],
+  },
+  {
+    key: "ads_sazonalidade",
+    track: "ads",
+    section: "Orçamento",
+    sectionTag: "A3",
+    title: "Datas-Chave",
+    fields: [
+      {
+        kind: "long",
+        name: "ads_q11",
+        label:
+          "Há épocas altas ou datas-chave a planear? (Ano Novo, setembro, verão, aberturas…)",
+        required: false,
+      },
+    ],
+  },
+  {
+    key: "ads_landing",
+    track: "ads",
+    section: "Website & Tracking",
+    sectionTag: "A4",
+    title: "Destino dos Anúncios",
+    fields: [
+      {
+        kind: "long",
+        name: "ads_q12",
+        label:
+          "Para onde devem os anúncios enviar as pessoas — página de inscrição, página por localização, ou homepage? Existe uma página mobile-friendly com formulário claro?",
+        required: true,
+      },
+    ],
+  },
+  {
+    key: "ads_contas",
+    track: "ads",
+    section: "Website & Tracking",
+    sectionTag: "A4",
+    title: "Histórico de Ads",
+    fields: [
+      {
+        kind: "long",
+        name: "ads_q13",
+        label:
+          "Já correram Google/Meta Ads antes (ou correm agora)? Se sim, partilhem o ID da conta e resultados passados.",
+        required: false,
+      },
+    ],
+  },
+  {
+    key: "ads_followup",
+    track: "ads",
+    section: "Contactos",
+    sectionTag: "A5",
+    title: "Gestão de Contactos",
+    fields: [
+      {
+        kind: "long",
+        name: "ads_q14",
+        label:
+          "Quando entra um contacto ou chamada, quem faz o follow-up e com que rapidez?",
+        help: "Um follow-up rápido é um dos maiores fatores para transformar leads em clientes.",
+        required: true,
+      },
+    ],
+  },
 ];
 
 // The form is editable in-app (SuperAdmin) via onboarding-content-store.
 // These helpers are PURE and take the live `steps` array so both the default
 // and any KV override work identically.
+
+/** A step's track, defaulting to "seo" for pre-track content. */
+export function stepTrack(s: OnbStep): OnbTrack {
+  return s.track ?? "seo";
+}
+
+/** The steps belonging to one form (track). */
+export function stepsForTrack(steps: OnbStep[], track: OnbTrack): OnbStep[] {
+  return steps.filter((s) => stepTrack(s) === track);
+}
 
 /** All fields, flattened, in order. */
 export function flattenFields(steps: OnbStep[]): OnbField[] {
@@ -784,12 +1030,16 @@ export function normalizeSteps(raw: unknown): OnbStep[] | null {
           .filter((f): f is OnbField => f !== null)
       : [];
     if (fields.length === 0) continue;
+    const trackRaw = (s as { track?: unknown }).track;
+    const track: OnbTrack =
+      trackRaw === "ads" || trackRaw === "common" ? trackRaw : "seo";
     steps.push({
       key,
       section,
       sectionTag: typeof sectionTag === "string" ? sectionTag : "",
       title: typeof title === "string" ? title : section,
       fields,
+      track,
     });
   }
   return steps.length ? steps : null;

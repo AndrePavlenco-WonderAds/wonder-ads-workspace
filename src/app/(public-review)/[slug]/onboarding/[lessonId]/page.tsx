@@ -2,7 +2,7 @@
 // PASSO" rich content, mark-as-complete, and a right sidebar with the
 // category's numbered steps + next-category button. No auth / no app chrome.
 
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ChevronRight, Check, PlayCircle, ArrowRight } from "lucide-react";
 import { resolveOnboardingClient } from "@/lib/onboarding-resolve";
@@ -11,10 +11,14 @@ import {
   findLesson,
   findCategory,
   nextCategory,
+  courseForTracks,
+  lessonTrack,
   type Lesson,
 } from "@/lib/onboarding-lessons";
-import { getCourse } from "@/lib/onboarding-content-store";
+import { stepsForTrack } from "@/lib/onboarding-questions";
+import { getCourse, getFormSteps } from "@/lib/onboarding-content-store";
 import { OnboardingMarkComplete } from "@/components/onboarding-mark-complete";
+import { OnboardingIntakeForm } from "@/components/onboarding-intake-form";
 
 export const dynamic = "force-dynamic";
 
@@ -37,9 +41,7 @@ const BRAND_GRADIENT =
   "linear-gradient(135deg, #343ED7 0%, #783DF5 53.65%, #C535C9 100%)";
 
 function lessonHref(slug: string, lesson: Lesson): string {
-  return lesson.kind === "form"
-    ? `/${slug}/onboarding/form`
-    : `/${slug}/onboarding/${lesson.id}`;
+  return `/${slug}/onboarding/${lesson.id}`;
 }
 
 export default async function OnboardingLessonPage({
@@ -50,14 +52,13 @@ export default async function OnboardingLessonPage({
   const { slug, lessonId } = await params;
   if (RESERVED.has(slug)) notFound();
 
-  const categories = await getCourse();
-  const lesson = findLesson(categories, lessonId);
-  if (!lesson) notFound();
-  // The form lesson has its own dedicated quiz page.
-  if (lesson.kind === "form") redirect(`/${slug}/onboarding/form`);
-
   const client = await resolveOnboardingClient(slug);
   if (!client) notFound();
+
+  const fullCourse = await getCourse();
+  const categories = courseForTracks(fullCourse, client.tracks);
+  const lesson = findLesson(categories, lessonId);
+  if (!lesson) notFound();
 
   const category = findCategory(categories, lesson.category);
   if (!category) notFound();
@@ -68,6 +69,60 @@ export default async function OnboardingLessonPage({
 
   const hubHref = `/${slug}/onboarding`;
   const nextCat = nextCategory(categories, lesson.id);
+
+  // Form lessons render the stepped quiz for their track.
+  if (lesson.kind === "form") {
+    const track = lessonTrack(lesson) === "ads" ? "ads" : "seo";
+    const steps = stepsForTrack(await getFormSteps(), track);
+    return (
+      <main className="mx-auto min-h-screen max-w-2xl px-4 py-10 sm:px-6">
+        <nav className="mb-6 flex flex-wrap items-center gap-1.5 text-[12px] text-black/45">
+          <Link href={hubHref} className="hover:text-black/70">
+            Onboarding
+          </Link>
+          <ChevronRight className="h-3 w-3" />
+          <span className="text-black/55">{category.title}</span>
+          <ChevronRight className="h-3 w-3" />
+          <span className="font-medium text-black/70">{lesson.title}</span>
+        </nav>
+        <header className="mb-6">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#A9834F]">
+            {client.title}
+          </span>
+          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-black/85 sm:text-3xl">
+            {lesson.title}
+          </h1>
+          {lesson.about[0]?.type === "p" ? (
+            <p className="mt-3 text-sm leading-relaxed text-black/55">
+              {lesson.about[0].text}
+            </p>
+          ) : null}
+        </header>
+        <OnboardingIntakeForm
+          slug={slug}
+          hubHref={hubHref}
+          steps={steps}
+          track={track}
+          lessonId={lesson.id}
+        />
+        <footer className="mt-12 border-t border-black/8 pt-6 text-center text-[11px] text-black/45">
+          <span
+            className="font-semibold"
+            style={{
+              background: BRAND_GRADIENT,
+              WebkitBackgroundClip: "text",
+              backgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              color: "transparent",
+            }}
+          >
+            Wonder Ads
+          </span>
+          {client.consultant && <> · {client.consultant}</>}
+        </footer>
+      </main>
+    );
+  }
 
   return (
     <main className="mx-auto min-h-screen max-w-6xl px-4 py-10 sm:px-6">
