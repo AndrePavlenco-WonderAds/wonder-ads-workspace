@@ -53,11 +53,11 @@ export default async function TicketPage({
     <PageShell wide>
       <header className="animate-fade-up mt-4">
         <Link
-          href={hasWeb ? "/web/tickets" : "/"}
+          href={hasWeb ? "/web" : "/"}
           className="inline-flex w-fit items-center gap-1.5 text-[11px] font-medium uppercase tracking-[0.18em] text-white/55 transition hover:text-white"
         >
           <ArrowLeft className="h-3 w-3" />
-          {hasWeb ? "Tickets" : "Início"}
+          {hasWeb ? "Web" : "Início"}
         </Link>
         <p className="mt-2 text-[11px] uppercase tracking-[0.18em] text-white/40">
           Ticket {ticketRef(ticket)}

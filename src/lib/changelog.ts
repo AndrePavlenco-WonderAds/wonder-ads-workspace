@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.72",
+    date: "2026-07-16",
+    title: "Voltar de um ticket leva ao dashboard de Web",
+    highlights: [
+      "**↩︎ Botão “voltar” num ticket regressa ao Web.** Dentro de um ticket (*/web/tickets/…*), a seta de voltar apontava para a lista de tickets. Passa agora a levar diretamente ao **dashboard geral de Web** (*/web*).",
+    ],
+  },
+  {
     version: "74.71",
     date: "2026-07-14",
     title: "Fernando Almeida — consolidado num único cliente SEO",
