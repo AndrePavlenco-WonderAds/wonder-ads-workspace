@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowUpRight, TrendingUp } from "lucide-react";
+import { ArrowUpRight, PauseCircle, TrendingUp } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { AccessDenied } from "@/components/access-denied";
 import { getCurrentEmployee } from "@/lib/auth/server";
@@ -8,6 +8,7 @@ import { DepartmentHeader } from "@/components/department-header";
 import { KpisCard } from "@/components/kpis-card";
 import { SeoDirectoriesCard } from "@/components/seo-directories-card";
 import { ClientCard } from "@/components/client-card";
+import { SeoPauseToggle } from "@/components/seo-pause-toggle";
 import { WorldMap } from "@/components/world-map";
 import { TypewriterPrompt } from "@/components/typewriter-prompt";
 import { getSeoClients, slugify, type NotionClient } from "@/lib/notion";
@@ -23,6 +24,7 @@ import {
   getLogoSizing,
 } from "@/lib/client-meta";
 import { getLogoOverrides } from "@/lib/admin-client-logos-store";
+import { getPausedSlugSet } from "@/lib/admin-paused-clients-store";
 
 export const metadata = {
   title: "SEO DPT — Wonder Ads Workspace",
@@ -66,32 +68,22 @@ export default async function SeoPage() {
     notionError = "NOTION_API_KEY not set";
   }
 
-  // Group clients by consultant, then sort each column by tier
-  // (growth → core → lite).
-  // IMPORTANT: re-resolve consultant from slug at render time rather than
-  // trusting c.consultant — getSeoClients() is wrapped in unstable_cache
-  // (1h TTL) and the cached value can lag behind code-level consultant
-  // renames in client-overrides.ts. Re-resolving here means any consultant
-  // rename ships instantly, even before the cache evicts. The bug it fixes:
-  // renaming "Yenisey" → "Yenisey R." dropped 5 clients off the board
-  // because the cached consultant string didn't match the new column name.
-  const grouped: Record<string, NotionClient[]> = {};
-  for (const c of clients) {
-    const consultant = getConsultantForSlug(c.slug);
-    (grouped[consultant] ??= []).push({ ...c, consultant });
-  }
-  for (const list of Object.values(grouped)) {
-    list.sort((a, b) => TIER_RANK[a.tier] - TIER_RANK[b.tier]);
-  }
+  // Paused / suspended clients live in a KV set (SuperAdmin-managed).
+  // Split them out of the main grid — they render in a separate section
+  // below, using the same consultant-column structure.
+  const pausedSet = await getPausedSlugSet().catch(() => new Set<string>());
+  const activeClients = clients.filter((c) => !pausedSet.has(c.slug));
+  const pausedClients = clients.filter((c) => pausedSet.has(c.slug));
 
-  const consultantColumns = CONSULTANT_ORDER.map((name) => ({
-    name,
-    clients: grouped[name] ?? [],
-  })).filter((col) => col.clients.length > 0);
+  const consultantColumns = buildConsultantColumns(activeClients);
+  const pausedColumns = buildConsultantColumns(pausedClients);
 
   // Department-wide organic visitors (GA4, Organic Search, last 30 days).
   // Cached for 30 min so the page doesn't block on ~20 live GA4 calls.
-  const organic = await getSeoOrganicVisitors30d(clients.map((c) => c.slug));
+  // Paused clients are excluded from the headline organic total.
+  const organic = await getSeoOrganicVisitors30d(
+    activeClients.map((c) => c.slug),
+  );
 
   // Custom uploaded logos override the static CLIENT_LOGOS map.
   const logoOverrides = await getLogoOverrides().catch(
@@ -103,7 +95,7 @@ export default async function SeoPage() {
       <DepartmentHeader
         title="SEO DPT"
         tagline="Crescimento orgânico no Google e nas IAs. Agência #1 de SEO & GEO em Portugal."
-        count={clients.length || undefined}
+        count={activeClients.length || undefined}
         countLabel="clients"
         countSuffix={
           organic.configured ? (
@@ -122,53 +114,38 @@ export default async function SeoPage() {
           {notionError ? (
             <NotionFallback message={notionError} />
           ) : (
-            <div className="grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {consultantColumns.map((col) => (
-                <div key={col.name} className="space-y-5">
-                  <header className="flex items-baseline justify-between border-b border-white/8 pb-3">
-                    <h3 className="flex items-baseline gap-2 text-sm font-semibold uppercase tracking-[0.18em] text-white/70">
-                      {employee.isAdmin || employee.name === col.name ? (
-                        <Link
-                          href={`/seo/roadmaps/${slugify(col.name)}`}
-                          className="group inline-flex items-baseline gap-1.5 text-white/80 transition hover:text-white"
-                          title={`Open ${col.name}'s weekly roadmap overview`}
-                        >
-                          <span className="underline-offset-4 decoration-white/30 group-hover:underline">
-                            {col.name}
-                          </span>
-                          <ArrowUpRight className="h-3 w-3 self-center opacity-0 transition group-hover:opacity-70" />
-                        </Link>
-                      ) : (
-                        <span>{col.name}</span>
-                      )}
-                    </h3>
-                    <span className="text-xs font-medium uppercase tracking-[0.18em] text-white/35">
-                      {col.clients.length}
-                    </span>
-                  </header>
-                  <div className="space-y-4">
-                    {col.clients.map((c, i) => (
-                      <ClientCard
-                        key={c.id}
-                        title={c.title}
-                        icon={c.icon}
-                        logo={logoOverrides[c.slug] ?? getClientLogo(c.slug)}
-                        logoBgMode={getLogoBgMode(c.slug)}
-                        logoSizing={getLogoSizing(c.slug)}
-                        href={`/seo/${c.slug}`}
-                        consultant={c.consultant}
-                        palette={c.palette}
-                        tier={c.tier}
-                        index={i}
-                      />
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
+            <ClientColumns
+              columns={consultantColumns}
+              logoOverrides={logoOverrides}
+              isAdmin={employee.isAdmin}
+              employeeName={employee.name}
+            />
           )}
         </section>
       </div>
+
+      {!notionError && pausedColumns.length > 0 && (
+        <div className="mt-14 lg:mt-20">
+          <section aria-label="Clientes Pausados / Suspensos">
+            <header className="mb-6 flex items-center gap-3">
+              <PauseCircle className="h-4 w-4 text-amber-300/80" />
+              <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-white/60">
+                Pausados / Suspensos
+              </h2>
+              <span className="rounded-full border border-amber-400/25 bg-amber-500/[0.08] px-2.5 py-0.5 text-xs font-medium uppercase tracking-[0.16em] text-amber-200/80">
+                {pausedClients.length}
+              </span>
+            </header>
+            <ClientColumns
+              columns={pausedColumns}
+              logoOverrides={logoOverrides}
+              isAdmin={employee.isAdmin}
+              employeeName={employee.name}
+              paused
+            />
+          </section>
+        </div>
+      )}
 
       {!readOnly && (
         <section aria-label="SEO Directories" className="mt-12 sm:mt-16">
@@ -182,6 +159,102 @@ export default async function SeoPage() {
       </section>
       )}
     </PageShell>
+  );
+}
+
+type ConsultantColumn = { name: string; clients: NotionClient[] };
+
+/** Group clients by consultant, then sort each column by tier
+ *  (growth → core → lite).
+ *  IMPORTANT: re-resolve consultant from slug rather than trusting
+ *  c.consultant — getSeoClients() is wrapped in unstable_cache (1h TTL)
+ *  and the cached value can lag behind code-level consultant renames in
+ *  client-overrides.ts. Re-resolving here means any consultant rename
+ *  ships instantly, even before the cache evicts. The bug it fixes:
+ *  renaming "Yenisey" → "Yenisey R." dropped 5 clients off the board
+ *  because the cached consultant string didn't match the new column name. */
+function buildConsultantColumns(clients: NotionClient[]): ConsultantColumn[] {
+  const grouped: Record<string, NotionClient[]> = {};
+  for (const c of clients) {
+    const consultant = getConsultantForSlug(c.slug);
+    (grouped[consultant] ??= []).push({ ...c, consultant });
+  }
+  for (const list of Object.values(grouped)) {
+    list.sort((a, b) => TIER_RANK[a.tier] - TIER_RANK[b.tier]);
+  }
+  return CONSULTANT_ORDER.map((name) => ({
+    name,
+    clients: grouped[name] ?? [],
+  })).filter((col) => col.clients.length > 0);
+}
+
+/** The consultant-column grid of client cards. Shared by the active
+ *  roster and the paused/suspended section. When `paused`, cards are
+ *  dimmed. SuperAdmins get a pause/reactivate toggle on every card. */
+function ClientColumns({
+  columns,
+  logoOverrides,
+  isAdmin,
+  employeeName,
+  paused = false,
+}: {
+  columns: ConsultantColumn[];
+  logoOverrides: Record<string, string>;
+  isAdmin: boolean;
+  employeeName: string;
+  paused?: boolean;
+}) {
+  return (
+    <div className="grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      {columns.map((col) => (
+        <div key={col.name} className="space-y-5">
+          <header className="flex items-baseline justify-between border-b border-white/8 pb-3">
+            <h3 className="flex items-baseline gap-2 text-sm font-semibold uppercase tracking-[0.18em] text-white/70">
+              {isAdmin || employeeName === col.name ? (
+                <Link
+                  href={`/seo/roadmaps/${slugify(col.name)}`}
+                  className="group inline-flex items-baseline gap-1.5 text-white/80 transition hover:text-white"
+                  title={`Open ${col.name}'s weekly roadmap overview`}
+                >
+                  <span className="underline-offset-4 decoration-white/30 group-hover:underline">
+                    {col.name}
+                  </span>
+                  <ArrowUpRight className="h-3 w-3 self-center opacity-0 transition group-hover:opacity-70" />
+                </Link>
+              ) : (
+                <span>{col.name}</span>
+              )}
+            </h3>
+            <span className="text-xs font-medium uppercase tracking-[0.18em] text-white/35">
+              {col.clients.length}
+            </span>
+          </header>
+          <div className="space-y-4">
+            {col.clients.map((c, i) => (
+              <div key={c.id} className="relative">
+                <div className={paused ? "opacity-55 transition hover:opacity-80" : undefined}>
+                  <ClientCard
+                    title={c.title}
+                    icon={c.icon}
+                    logo={logoOverrides[c.slug] ?? getClientLogo(c.slug)}
+                    logoBgMode={getLogoBgMode(c.slug)}
+                    logoSizing={getLogoSizing(c.slug)}
+                    href={`/seo/${c.slug}`}
+                    consultant={c.consultant}
+                    palette={c.palette}
+                    tier={c.tier}
+                    index={i}
+                  />
+                </div>
+                {isAdmin && (
+                  <SeoPauseToggle slug={c.slug} title={c.title} paused={paused} />
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
   );
 }
 

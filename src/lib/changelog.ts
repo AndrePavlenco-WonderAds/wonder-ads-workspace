@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.73",
+    date: "2026-07-16",
+    title: "SEO — secção de clientes Pausados / Suspensos",
+    highlights: [
+      "**⏸️ Nova secção “Pausados / Suspensos” no SEO DPT.** Por baixo do board de clientes ativos aparece agora uma segunda grelha, com a **mesma estrutura por consultor**, para clientes em pausa. Ficam atenuados e fora da contagem principal.",
+      "**🔒 Só SuperAdmin pode pausar/reativar.** Cada cartão passa a ter um botão (visível apenas a SuperAdmins) para **pausar** ou **reativar** o projeto. A permissão é validada também no servidor.",
+      "**⏸️ CuidaMais movido para Pausados.** Sai da coluna ativa do André Pereira (mantendo-o como consultor) e passa para a nova secção.",
+    ],
+  },
+  {
     version: "74.72",
     date: "2026-07-16",
     title: "Voltar de um ticket leva ao dashboard de Web",
