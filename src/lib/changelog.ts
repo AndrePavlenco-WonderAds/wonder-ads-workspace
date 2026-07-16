@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.76",
+    date: "2026-07-16",
+    title: "NPS — botão “Deixar review no Google” no fim do inquérito",
+    highlights: [
+      "**⭐ CTA de Google Review.** Na secção final (Testemunho), o cliente tem agora um botão direto para deixar a review na ficha Google da Wonder Ads, além do testemunho que guardamos internamente.",
+    ],
+  },
+  {
     version: "74.75",
     date: "2026-07-16",
     title: "NPS de SEO — inquérito reformulado (escala 0–10, perguntas mais ricas)",

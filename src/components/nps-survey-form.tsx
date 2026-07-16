@@ -9,7 +9,7 @@
 // open text — rendered from the NPS_SECTIONS catalogue.
 
 import { useMemo, useState } from "react";
-import { ArrowLeft, ArrowRight, Check, Loader2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Loader2, Star } from "lucide-react";
 import {
   NPS_SECTIONS,
   isScale10,
@@ -26,6 +26,10 @@ import type { PublicLang } from "@/lib/public-i18n";
 const BRAND_GRADIENT =
   "linear-gradient(135deg, #343ED7 0%, #783DF5 53.65%, #C535C9 100%)";
 
+/** Wonder Ads' Google Business review link. Shown as a CTA on the final
+ *  (testimonial) section so a happy client can post a public review. */
+const GOOGLE_REVIEW_URL = "https://g.page/r/CSxgxSWM0p4VEAE/review";
+
 const COPY = {
   pt: {
     progress: (a: number, b: number) => `${a} de ${b} respondidas`,
@@ -39,6 +43,8 @@ const COPY = {
     identLabel: (company: string) =>
       `Quem está a responder por ${company}? (opcional)`,
     identPlaceholder: "O seu nome",
+    googleReviewLead: "Ajuda ainda mais quem procura por nós:",
+    googleReview: "Deixar review no Google",
     doneMark: "— Avaliação registada —",
     doneTitle: "Obrigado pelo seu tempo.",
     doneBody:
@@ -57,6 +63,8 @@ const COPY = {
     maxReached: (n: number) => `Max ${n} options`,
     identLabel: (company: string) => `Who's answering for ${company}? (optional)`,
     identPlaceholder: "Your name",
+    googleReviewLead: "Help even more people find us:",
+    googleReview: "Leave a Google review",
     doneMark: "— Evaluation recorded —",
     doneTitle: "Thank you for your time.",
     doneBody:
@@ -500,6 +508,25 @@ export function NpsSurveyForm({
               )}
             </div>
           ))}
+
+          {/* Google review CTA — on the final (testimonial) section. */}
+          {isLast && (
+            <div className="rounded-xl border border-black/8 bg-[#f8f7f2] px-4 py-4">
+              <p className="mb-3 text-[13px] text-black/55">
+                {t.googleReviewLead}
+              </p>
+              <a
+                href={GOOGLE_REVIEW_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-white shadow-md shadow-[#783DF5]/25 transition hover:brightness-110"
+                style={{ background: BRAND_GRADIENT }}
+              >
+                <Star className="h-4 w-4 fill-white" />
+                {t.googleReview}
+              </a>
+            </div>
+          )}
 
           {/* Who's answering — on the final section only. */}
           {isLast && (
