@@ -13,6 +13,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.80",
+    date: "2026-07-16",
+    title: "NPS — botão “Download PDF” + PDF em estilo formulário com tick boxes",
+    highlights: [
+      "**📄 Botão “Download PDF” mais visível** ao lado de “Respondido em…” e “Apagar última”, na página de NPS do consultor.",
+      "**☑️ PDF em estilo formulário preenchido.** A folha imprimível passa a mostrar as respostas como o cliente as viu: escala 0–10 com o valor destacado, e todas as opções com tick boxes marcadas/não marcadas (não só as escolhidas) — muito mais fácil de ler de relance.",
+    ],
+  },
+  {
     version: "74.79",
     date: "2026-07-16",
     title: "NPS — pergunta das ações mais simples e focada no resultado",

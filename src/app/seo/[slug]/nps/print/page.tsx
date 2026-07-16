@@ -27,13 +27,19 @@ const CATEGORY_LABEL: Record<string, string> = {
 };
 
 const PRINT_CSS = `
-  .nps-print-root { background:#ffffff; color:#1b2430; }
+  .nps-print-root {
+    background:#ffffff; color:#1b2430;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
   @media print {
     .no-print { display:none !important; }
     body { background:#ffffff !important; }
     .nps-print-card { break-inside: avoid; }
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
   }
 `;
+
+const PURPLE = "#783DF5";
 
 export default async function NpsPrintPage({
   params,
@@ -139,10 +145,10 @@ export default async function NpsPrintPage({
                     <div className="space-y-3.5">
                       {section.questions.map((q) => (
                         <div key={q.name}>
-                          <p className="text-[13px] font-medium leading-snug text-black/75">
+                          <p className="text-[13px] font-semibold leading-snug text-black/80">
                             {q.q[lang]}
                           </p>
-                          <div className="mt-1 text-[13px] text-black/85">
+                          <div className="mt-2 text-[13px] text-black/85">
                             <Answer q={q} latest={latest} lang={lang} />
                           </div>
                         </div>
@@ -181,6 +187,33 @@ function ScoreTile({
   );
 }
 
+/** A print-safe tick box (square = checkbox, round = radio). */
+function Box({ checked, radio }: { checked: boolean; radio?: boolean }) {
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        width: 15,
+        height: 15,
+        flexShrink: 0,
+        borderRadius: radio ? "50%" : 4,
+        border: checked ? "1px solid transparent" : "1.5px solid rgba(0,0,0,0.28)",
+        background: checked ? PURPLE : "#ffffff",
+        color: "#ffffff",
+        fontSize: 10,
+        lineHeight: 1,
+        fontWeight: 700,
+      }}
+    >
+      {checked ? "✓" : ""}
+    </span>
+  );
+}
+
+/** A filled-form view of one answer: the 0–10 scale with the chosen number
+ *  highlighted, option lists with real tick boxes, or the open text. */
 function Answer({
   q,
   latest,
@@ -193,44 +226,133 @@ function Answer({
   if (isScale10(q)) {
     const v = latest.answers[q.name];
     return (
-      <span className="font-semibold" style={{ color: "#783DF5" }}>
-        {typeof v === "number" ? `${v}/10` : "—"}
-      </span>
+      <div>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(11, 1fr)",
+            gap: 4,
+            maxWidth: 380,
+          }}
+        >
+          {Array.from({ length: 11 }, (_, n) => {
+            const sel = v === n;
+            return (
+              <span
+                key={n}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  height: 26,
+                  borderRadius: 6,
+                  border: sel ? "1px solid transparent" : "1px solid rgba(0,0,0,0.15)",
+                  background: sel ? PURPLE : "#ffffff",
+                  color: sel ? "#ffffff" : "rgba(0,0,0,0.5)",
+                  fontSize: 11,
+                  fontWeight: 600,
+                }}
+              >
+                {n}
+              </span>
+            );
+          })}
+        </div>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            maxWidth: 380,
+            marginTop: 3,
+            fontSize: 10,
+            color: "rgba(0,0,0,0.45)",
+          }}
+        >
+          <span>0 · {q.capLow[lang]}</span>
+          <span>10 · {q.capHigh[lang]}</span>
+        </div>
+      </div>
     );
   }
+
   if (isSingle(q)) {
     const picked = latest.choices?.[q.name]?.[0];
-    const opt = q.options.find((o) => o.value === picked);
-    if (!opt) return <span className="italic text-black/40">Sem resposta</span>;
     return (
-      <span>
-        {opt.label[lang]}
-        {opt.note ? (
-          <span className="text-black/50"> — {opt.note[lang]}</span>
-        ) : null}
-      </span>
+      <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+        {q.options.map((o) => {
+          const on = picked === o.value;
+          return (
+            <div
+              key={o.value}
+              style={{
+                display: "flex",
+                alignItems: "flex-start",
+                gap: 8,
+                fontWeight: on ? 600 : 400,
+                color: on ? "#1b2430" : "rgba(0,0,0,0.5)",
+              }}
+            >
+              <Box checked={on} radio />
+              <span>
+                {o.label[lang]}
+                {o.note ? (
+                  <span style={{ color: "#A9834F", fontWeight: 400 }}>
+                    {" "}
+                    — {o.note[lang]}
+                  </span>
+                ) : null}
+              </span>
+            </div>
+          );
+        })}
+      </div>
     );
   }
+
   if (isMulti(q)) {
     const chosen = latest.choices?.[q.name] ?? [];
-    if (chosen.length === 0)
-      return <span className="italic text-black/40">Sem seleção</span>;
-    const labels = q.options
-      .filter((o) => chosen.includes(o.value))
-      .map((o) => o.label[lang]);
     return (
-      <ul className="ml-4 list-disc space-y-0.5">
-        {labels.map((l) => (
-          <li key={l}>{l}</li>
-        ))}
-      </ul>
+      <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+        {q.options.map((o) => {
+          const on = chosen.includes(o.value);
+          return (
+            <div
+              key={o.value}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                fontWeight: on ? 600 : 400,
+                color: on ? "#1b2430" : "rgba(0,0,0,0.45)",
+              }}
+            >
+              <Box checked={on} />
+              <span>{o.label[lang]}</span>
+            </div>
+          );
+        })}
+      </div>
     );
   }
+
   // open
   const text = latest.texts?.[q.name];
   return text ? (
-    <span className="italic text-black/75">“{text}”</span>
+    <div
+      style={{
+        border: "1px solid rgba(0,0,0,0.12)",
+        borderRadius: 8,
+        background: "#f8f7f2",
+        padding: "8px 10px",
+        fontStyle: "italic",
+        color: "rgba(0,0,0,0.8)",
+      }}
+    >
+      “{text}”
+    </div>
   ) : (
-    <span className="italic text-black/40">Sem resposta</span>
+    <span style={{ fontStyle: "italic", color: "rgba(0,0,0,0.4)" }}>
+      Sem resposta
+    </span>
   );
 }

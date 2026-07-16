@@ -383,11 +383,11 @@ function AnswersDetail({
             href={`/seo/${slug}/nps/print`}
             target="_blank"
             rel="noopener noreferrer"
-            title="Abrir folha imprimível com todas as perguntas e respostas para guardar em PDF"
-            className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 bg-white/[0.04] px-2.5 py-1.5 text-[11px] font-medium text-white/70 transition hover:border-[#783DF5]/50 hover:bg-[#783DF5]/15 hover:text-white"
+            title="Abrir folha imprimível com todas as perguntas e respostas (tick boxes) para guardar em PDF"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-[#783DF5]/40 bg-[#783DF5]/15 px-3 py-1.5 text-[11px] font-semibold text-white/90 transition hover:border-[#783DF5]/70 hover:bg-[#783DF5]/25"
           >
             <Download className="h-3.5 w-3.5" />
-            PDF
+            Download PDF
           </Link>
           <NpsDeleteLatestButton slug={slug} isSuperAdmin={isSuperAdmin} />
         </div>
