@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.81",
+    date: "2026-07-16",
+    title: "NPS — 1ª pergunta = serviço, opção “Outro” com texto, e limpeza de perguntas",
+    highlights: [
+      "**🧭 Nova 1ª secção “Serviço”.** Antes da satisfação, o cliente indica que serviço(s) da Wonder Ads está a acompanhar — SEO/GEO, Google Ads, Meta Ads, CRM, Web Design & Desenvolvimento (ou Outro). Deixa de assumir que é só SEO.",
+      "**✍️ Opção “Outro” com campo aberto.** Ao escolher “Outro” (na secção Serviço e no “O que correu bem”), aparece uma caixa para escrever. Aparece também na folha PDF e na vista do consultor.",
+      "**🗺️ “Grande Lisboa”.** A nota da opção de presencial semanal passa a *“Para clientes de Cascais e Grande Lisboa”*.",
+      "**🧹 Menos atrito.** Removida a pergunta aberta “Das ações acima, qual teve maior impacto…” e o campo do nome no fim (deixou de ser pedido).",
+    ],
+  },
+  {
     version: "74.80",
     date: "2026-07-16",
     title: "NPS — botão “Download PDF” + PDF em estilo formulário com tick boxes",

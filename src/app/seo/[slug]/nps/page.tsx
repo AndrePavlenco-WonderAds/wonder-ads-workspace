@@ -30,6 +30,7 @@ import {
   isSingle,
   isMulti,
   isOpen,
+  otherTextKey,
 } from "@/lib/nps-questions";
 import { pickLang } from "@/lib/public-i18n";
 import { getCurrentEmployee } from "@/lib/auth/server";
@@ -524,6 +525,21 @@ function AnswersDetail({
                           </span>
                         )}
                       </div>
+                      {q.options
+                        .filter((o) => o.other && chosen.includes(o.value))
+                        .map((o) => {
+                          const txt =
+                            latest.texts?.[otherTextKey(q.name, o.value)];
+                          return txt ? (
+                            <p
+                              key={o.value}
+                              className="mt-1.5 text-[12px] text-white/60"
+                            >
+                              <span className="text-white/40">Outro:</span> “
+                              {txt}”
+                            </p>
+                          ) : null;
+                        })}
                     </div>
                   );
                 }

@@ -11,6 +11,7 @@ import {
   isScale10,
   isSingle,
   isMulti,
+  otherTextKey,
 } from "@/lib/nps-questions";
 import { pickLang } from "@/lib/public-i18n";
 import { getCurrentEmployee } from "@/lib/auth/server";
@@ -315,6 +316,8 @@ function Answer({
       <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
         {q.options.map((o) => {
           const on = chosen.includes(o.value);
+          const otherTxt =
+            o.other && on ? latest.texts?.[otherTextKey(q.name, o.value)] : null;
           return (
             <div
               key={o.value}
@@ -327,7 +330,15 @@ function Answer({
               }}
             >
               <Box checked={on} />
-              <span>{o.label[lang]}</span>
+              <span>
+                {o.label[lang]}
+                {otherTxt ? (
+                  <span style={{ color: "rgba(0,0,0,0.55)", fontWeight: 400 }}>
+                    {" "}
+                    — “{otherTxt}”
+                  </span>
+                ) : null}
+              </span>
             </div>
           );
         })}

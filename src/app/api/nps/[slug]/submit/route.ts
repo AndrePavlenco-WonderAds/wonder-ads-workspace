@@ -10,6 +10,7 @@ import {
   NPS_SINGLE_NAMES,
   NPS_MULTI_NAMES,
   NPS_OPEN_NAMES,
+  NPS_OTHER_KEYS,
   getMultiQuestion,
   getSingleQuestion,
   getQuestion,
@@ -77,17 +78,26 @@ export async function POST(
     choices[name] = [value];
   }
 
-  // Multi-select — optional. Keep only valid values, respect max.
+  // Multi-select — keep only valid values, respect max. Required multi
+  // questions must carry at least one selection.
   for (const name of NPS_MULTI_NAMES) {
-    const picked = rawChoices[name];
-    if (!Array.isArray(picked)) continue;
     const def = getMultiQuestion(name);
     if (!def) continue;
+    const picked = rawChoices[name];
     const allowed = new Set(def.options.map((o) => o.value));
-    const clean = picked
-      .filter((v): v is string => typeof v === "string" && allowed.has(v))
-      .slice(0, def.max ?? def.options.length);
-    if (clean.length) choices[name] = clean;
+    const clean = Array.isArray(picked)
+      ? picked
+          .filter((v): v is string => typeof v === "string" && allowed.has(v))
+          .slice(0, def.max ?? def.options.length)
+      : [];
+    if (clean.length) {
+      choices[name] = clean;
+    } else if (def.required) {
+      return NextResponse.json(
+        { error: `Missing required choice: ${name}` },
+        { status: 400 },
+      );
+    }
   }
 
   // --- open text answers ---
@@ -107,6 +117,18 @@ export async function POST(
       continue;
     }
     texts[name] = value;
+  }
+
+  // Free-text "other" answers on multi options — stored only when the
+  // matching option is actually selected.
+  for (const key of NPS_OTHER_KEYS) {
+    const raw = rawTexts[key];
+    const value = typeof raw === "string" ? raw.trim().slice(0, TEXT_MAX) : "";
+    if (!value) continue;
+    const sep = key.indexOf("__");
+    const qName = key.slice(0, sep);
+    const optValue = key.slice(sep + 2);
+    if (choices[qName]?.includes(optValue)) texts[key] = value;
   }
 
   const identification =

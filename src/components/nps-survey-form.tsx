@@ -14,6 +14,7 @@ import {
   isSingle,
   isMulti,
   isOpen,
+  otherTextKey,
   type NpsQuestion,
   type NpsSingleQuestion,
   type NpsMultiQuestion,
@@ -37,9 +38,7 @@ const COPY = {
     sending: "A enviar…",
     missing: (n: number) => `Falta${n > 1 ? "m" : ""} ${n} nesta secção`,
     maxReached: (n: number) => `Máximo de ${n} opções`,
-    identLabel: (company: string) =>
-      `Quem está a responder por ${company}? (opcional)`,
-    identPlaceholder: "O seu nome",
+    otherPlaceholder: "Qual? Escreve aqui…",
     doneMark: "— Avaliação registada —",
     doneTitle: "Obrigado pelo seu tempo.",
     doneBody:
@@ -60,8 +59,7 @@ const COPY = {
     sending: "Sending…",
     missing: (n: number) => `${n} left in this section`,
     maxReached: (n: number) => `Max ${n} options`,
-    identLabel: (company: string) => `Who's answering for ${company}? (optional)`,
-    identPlaceholder: "Your name",
+    otherPlaceholder: "Which one? Type here…",
     doneMark: "— Evaluation recorded —",
     doneTitle: "Thank you for your time.",
     doneBody:
@@ -238,12 +236,18 @@ function MultiChoice({
   selected,
   onToggle,
   maxNote,
+  others,
+  onOtherChange,
+  otherPlaceholder,
 }: {
   q: NpsMultiQuestion;
   lang: PublicLang;
   selected: string[];
   onToggle: (value: string) => void;
   maxNote?: string;
+  others: Record<string, string>;
+  onOtherChange: (optValue: string, v: string) => void;
+  otherPlaceholder: string;
 }) {
   const atMax = q.max !== undefined && selected.length >= q.max;
   return (
@@ -257,15 +261,25 @@ function MultiChoice({
         {q.options.map((o) => {
           const on = selected.includes(o.value);
           return (
-            <OptionRow
-              key={o.value}
-              on={on}
-              onClick={() => onToggle(o.value)}
-              disabled={atMax}
-              square
-            >
-              {o.label[lang]}
-            </OptionRow>
+            <div key={o.value} className="flex flex-col gap-2">
+              <OptionRow
+                on={on}
+                onClick={() => onToggle(o.value)}
+                disabled={atMax}
+                square
+              >
+                {o.label[lang]}
+              </OptionRow>
+              {o.other && on && (
+                <input
+                  type="text"
+                  value={others[o.value] ?? ""}
+                  onChange={(e) => onOtherChange(o.value, e.target.value)}
+                  placeholder={otherPlaceholder}
+                  className="ml-8 w-[calc(100%-2rem)] rounded-lg border border-[#783DF5]/30 bg-[#f8f7f2] px-3 py-2 text-sm text-black/80 outline-none transition-all duration-200 focus:border-[#783DF5]/60 focus:bg-white focus:ring-2 focus:ring-[#783DF5]/15"
+                />
+              )}
+            </div>
           );
         })}
       </div>
@@ -326,7 +340,6 @@ export function NpsSurveyForm({
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [choices, setChoices] = useState<Record<string, string[]>>({});
   const [texts, setTexts] = useState<Record<string, string>>({});
-  const [identification, setIdentification] = useState("");
   const [state, setState] = useState<"idle" | "sending" | "done" | "error">(
     "idle",
   );
@@ -334,13 +347,15 @@ export function NpsSurveyForm({
   const isRequired = (q: NpsQuestion): boolean =>
     isScale10(q) ||
     (isSingle(q) && (q.required ?? true)) ||
-    (isOpen(q) && Boolean(q.required));
+    (isOpen(q) && Boolean(q.required)) ||
+    (isMulti(q) && Boolean(q.required));
 
   const isAnswered = (q: NpsQuestion): boolean => {
     if (isScale10(q)) return answers[q.name] !== undefined;
     if (isSingle(q)) return (choices[q.name]?.length ?? 0) > 0;
     if (isOpen(q)) return (texts[q.name]?.trim() ?? "") !== "";
-    return true; // multi is always optional
+    if (isMulti(q)) return !q.required || (choices[q.name]?.length ?? 0) > 0;
+    return true;
   };
 
   const requiredQs = useMemo(
@@ -392,7 +407,7 @@ export function NpsSurveyForm({
           answers,
           choices,
           texts,
-          identification: identification.trim() || null,
+          identification: null,
         }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -571,6 +586,18 @@ export function NpsSurveyForm({
                     selected={choices[q.name] ?? []}
                     onToggle={(v) => toggleMulti(q.name, v, q.max)}
                     maxNote={q.max ? t.maxReached(q.max) : undefined}
+                    others={Object.fromEntries(
+                      q.options
+                        .filter((o) => o.other)
+                        .map((o) => [
+                          o.value,
+                          texts[otherTextKey(q.name, o.value)] ?? "",
+                        ]),
+                    )}
+                    onOtherChange={(ov, v) =>
+                      setText(otherTextKey(q.name, ov), v)
+                    }
+                    otherPlaceholder={t.otherPlaceholder}
                   />
                 )}
                 {isOpen(q) && (
@@ -584,25 +611,6 @@ export function NpsSurveyForm({
                 )}
               </div>
             ))}
-
-            {/* Who's answering — on the final section only. */}
-            {isLast && (
-              <div
-                className="nps-q-in"
-                style={{ animationDelay: `${section.questions.length * 70}ms` }}
-              >
-                <div className="mb-2 text-[15px] font-medium leading-snug text-black/80">
-                  {t.identLabel(clientName)}
-                </div>
-                <input
-                  type="text"
-                  value={identification}
-                  onChange={(e) => setIdentification(e.target.value)}
-                  placeholder={t.identPlaceholder}
-                  className="w-full border-b border-black/15 bg-transparent px-1 py-2 text-[15px] text-black/80 outline-none transition-colors duration-200 focus:border-[#783DF5]"
-                />
-              </div>
-            )}
           </div>
         </div>
       </div>

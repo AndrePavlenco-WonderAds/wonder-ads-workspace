@@ -54,7 +54,12 @@ export type NpsSingleQuestion = {
   required?: boolean;
 };
 
-export type NpsMultiOption = { value: string; label: Bilingual };
+export type NpsMultiOption = {
+  value: string;
+  label: Bilingual;
+  /** When true, selecting this option reveals a free-text "other" field. */
+  other?: boolean;
+};
 
 /** "Select all that apply" question. NOT scored — qualitative only. */
 export type NpsMultiQuestion = {
@@ -65,6 +70,8 @@ export type NpsMultiQuestion = {
   options: NpsMultiOption[];
   /** Optional cap on how many options can be picked. */
   max?: number;
+  /** When true, at least one option must be selected. */
+  required?: boolean;
 };
 
 /** Free-text question. */
@@ -106,8 +113,36 @@ export type NpsSectionDef = {
 
 export const NPS_SECTIONS: NpsSectionDef[] = [
   {
-    key: "satisfacao",
+    key: "servico",
     tag: "01",
+    title: { pt: "Serviço", en: "Service" },
+    questions: [
+      {
+        kind: "multi",
+        name: "p0_servico",
+        required: true,
+        q: {
+          pt: "Que serviço(s) da Wonder Ads estás a acompanhar connosco?",
+          en: "Which Wonder Ads service(s) are you working with us on?",
+        },
+        hint: {
+          pt: "Seleciona todas as opções aplicáveis.",
+          en: "Select all that apply.",
+        },
+        options: [
+          { value: "seo_geo", label: { pt: "SEO / GEO (orgânico e IAs)", en: "SEO / GEO (organic & AI)" } },
+          { value: "google_ads", label: { pt: "Google Ads", en: "Google Ads" } },
+          { value: "meta_ads", label: { pt: "Meta Ads (Facebook / Instagram)", en: "Meta Ads (Facebook / Instagram)" } },
+          { value: "crm", label: { pt: "CRM", en: "CRM" } },
+          { value: "web", label: { pt: "Web Design & Desenvolvimento", en: "Web Design & Development" } },
+          { value: "outro", label: { pt: "Outro", en: "Other" }, other: true },
+        ],
+      },
+    ],
+  },
+  {
+    key: "satisfacao",
+    tag: "02",
     title: { pt: "Satisfação", en: "Satisfaction" },
     questions: [
       {
@@ -160,14 +195,14 @@ export const NPS_SECTIONS: NpsSectionDef[] = [
             value: "conteudos_materiais",
             label: { pt: "Conteúdos e materiais entregues", en: "Content & materials delivered" },
           },
-          { value: "outro", label: { pt: "Outro", en: "Other" } },
+          { value: "outro", label: { pt: "Outro", en: "Other" }, other: true },
         ],
       },
     ],
   },
   {
     key: "progresso",
-    tag: "02",
+    tag: "03",
     title: { pt: "Progresso", en: "Progress" },
     questions: [
       {
@@ -196,7 +231,7 @@ export const NPS_SECTIONS: NpsSectionDef[] = [
   },
   {
     key: "consultor",
-    tag: "03",
+    tag: "04",
     title: { pt: "O teu consultor", en: "Your consultant" },
     questions: [
       {
@@ -223,7 +258,7 @@ export const NPS_SECTIONS: NpsSectionDef[] = [
   },
   {
     key: "continuidade",
-    tag: "04",
+    tag: "05",
     title: { pt: "Continuidade", en: "Continuity" },
     questions: [
       {
@@ -240,7 +275,7 @@ export const NPS_SECTIONS: NpsSectionDef[] = [
   },
   {
     key: "resultados",
-    tag: "05",
+    tag: "06",
     title: { pt: "Resultados & impacto", en: "Results & impact" },
     questions: [
       {
@@ -285,21 +320,11 @@ export const NPS_SECTIONS: NpsSectionDef[] = [
           { value: "metricas_objetivos", label: { pt: "Definição de métricas e objetivos claros", en: "Clear metrics & goals" } },
         ],
       },
-      {
-        kind: "open",
-        name: "p10_acao_top",
-        required: true,
-        q: {
-          pt: "Das ações acima, qual teve maior impacto no teu negócio?",
-          en: "Of the actions above, which had the biggest impact on your business?",
-        },
-        placeholder: { pt: "Escreve aqui…", en: "Write here…" },
-      },
     ],
   },
   {
     key: "servicos",
-    tag: "06",
+    tag: "07",
     title: { pt: "Serviços & acompanhamento", en: "Services & support" },
     questions: [
       {
@@ -337,8 +362,8 @@ export const NPS_SECTIONS: NpsSectionDef[] = [
             value: "um_semana",
             label: { pt: "Sim, 1 momento presencial por semana", en: "Yes, 1 in-person moment per week" },
             note: {
-              pt: "Para clientes de Cascais e Lisboa",
-              en: "For clients in Cascais and Lisbon",
+              pt: "Para clientes de Cascais e Grande Lisboa",
+              en: "For clients in Cascais and Greater Lisbon",
             },
           },
         ],
@@ -347,7 +372,7 @@ export const NPS_SECTIONS: NpsSectionDef[] = [
   },
   {
     key: "recomendacao",
-    tag: "07",
+    tag: "08",
     title: { pt: "Recomendação & valor", en: "Recommendation & value" },
     questions: [
       {
@@ -380,7 +405,7 @@ export const NPS_SECTIONS: NpsSectionDef[] = [
   },
   {
     key: "testemunho",
-    tag: "08",
+    tag: "09",
     title: { pt: "Testemunho", en: "Testimonial" },
     questions: [],
     note: {
@@ -411,17 +436,35 @@ export const NPS_OPEN_NAMES: string[] = NPS_SECTIONS.flatMap((s) =>
 );
 
 /** Every question a submission MUST carry to be complete (for progress +
- *  validation): all 0–10 ratings, all single-choice, and required opens.
- *  Multi-select is always optional. */
+ *  validation): all 0–10 ratings, all single-choice, required opens, and
+ *  required multi-selects. Non-required multi-select is optional. */
 export const NPS_REQUIRED_NAMES: string[] = NPS_SECTIONS.flatMap((s) =>
   s.questions
     .filter(
       (q) =>
         isScale10(q) ||
         (isSingle(q) && (q.required ?? true)) ||
-        (isOpen(q) && Boolean(q.required)),
+        (isOpen(q) && Boolean(q.required)) ||
+        (isMulti(q) && Boolean(q.required)),
     )
     .map((q) => q.name),
+);
+
+/** Key under which a multi-select option's free-text "other" answer is
+ *  stored, in the submission `texts` map. */
+export function otherTextKey(questionName: string, optionValue: string): string {
+  return `${questionName}__${optionValue}`;
+}
+
+/** All valid "other" text keys, derived from multi options flagged `other`. */
+export const NPS_OTHER_KEYS: string[] = NPS_SECTIONS.flatMap((s) =>
+  s.questions
+    .filter(isMulti)
+    .flatMap((q) =>
+      q.options
+        .filter((o) => o.other)
+        .map((o) => otherTextKey(q.name, o.value)),
+    ),
 );
 
 function findQuestion(name: string): NpsQuestion | null {
