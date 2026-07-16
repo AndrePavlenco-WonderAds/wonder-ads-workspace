@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.78",
+    date: "2026-07-16",
+    title: "NPS — ecrã final: mensagem “pode fechar” com cruz animada",
+    highlights: [
+      "**✖️ Fim do inquérito mais claro.** O botão “Fechar janela” foi substituído por uma mensagem *“Já pode fechar esta janela.”* com uma pequena cruz animada ao lado (roda suavemente entre × e +).",
+    ],
+  },
+  {
     version: "74.77",
     date: "2026-07-16",
     title: "NPS — UX do formulário melhorada, ajustes de perguntas e download PDF",

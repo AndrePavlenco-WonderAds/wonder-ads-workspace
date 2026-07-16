@@ -47,7 +47,7 @@ const COPY = {
     doneReviewLead:
       "Ajuda-nos a crescer — deixe a sua avaliação no Google (30 segundos):",
     googleReview: "Deixar review no Google",
-    close: "Fechar janela",
+    closeHint: "Já pode fechar esta janela.",
     errorRetry: "Não foi possível enviar. Tente novamente.",
     optional: "opcional",
   },
@@ -69,7 +69,7 @@ const COPY = {
     doneReviewLead:
       "Help us grow — leave your review on Google (30 seconds):",
     googleReview: "Leave a Google review",
-    close: "Close window",
+    closeHint: "You can now close this window.",
     errorRetry: "Couldn't submit. Please try again.",
     optional: "optional",
   },
@@ -457,14 +457,10 @@ export function NpsSurveyForm({
           </a>
         </div>
 
-        <button
-          type="button"
-          onClick={() => window.close()}
-          className="mx-auto mt-6 inline-flex items-center gap-1.5 rounded-lg border border-black/12 px-4 py-2 text-sm font-medium text-black/55 transition-all duration-200 hover:-translate-y-[1px] hover:border-black/25 hover:text-black/80"
-        >
-          <X className="h-4 w-4" />
-          {t.close}
-        </button>
+        <p className="mt-6 flex items-center justify-center gap-2 text-sm font-medium text-black/50">
+          <X className="nps-x-pulse h-4 w-4 text-[#783DF5]" strokeWidth={2.5} />
+          {t.closeHint}
+        </p>
       </div>
     );
   }
