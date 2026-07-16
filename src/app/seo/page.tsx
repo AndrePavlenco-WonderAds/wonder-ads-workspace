@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowUpRight, PauseCircle, TrendingUp } from "lucide-react";
+import { ArrowUpRight, PauseCircle, TrendingUp, Pencil } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { AccessDenied } from "@/components/access-denied";
 import { getCurrentEmployee } from "@/lib/auth/server";
@@ -127,6 +127,15 @@ export default async function SeoPage() {
 
       {employee.isAdmin && (
         <div className="mt-14 lg:mt-20">
+          <div className="mb-3 flex items-center justify-end">
+            <Link
+              href="/seo/onboarding-editor"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-white/12 px-3 py-1.5 text-[12px] font-medium text-white/60 transition hover:border-[#783DF5]/40 hover:text-white"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+              Editar processo de onboarding
+            </Link>
+          </div>
           <NewOnboardingClient />
         </div>
       )}

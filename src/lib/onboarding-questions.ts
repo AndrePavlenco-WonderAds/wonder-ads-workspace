@@ -76,7 +76,7 @@ export type OnbStep = {
   fields: OnbField[];
 };
 
-export const ONBOARDING_STEPS: OnbStep[] = [
+export const DEFAULT_ONBOARDING_STEPS: OnbStep[] = [
   // 01 — INFORMAÇÕES DA EMPRESA
   {
     key: "empresa",
@@ -659,28 +659,34 @@ export const ONBOARDING_STEPS: OnbStep[] = [
   },
 ];
 
+// The form is editable in-app (SuperAdmin) via onboarding-content-store.
+// These helpers are PURE and take the live `steps` array so both the default
+// and any KV override work identically.
+
 /** All fields, flattened, in order. */
-export const ONBOARDING_FIELDS: OnbField[] = ONBOARDING_STEPS.flatMap(
-  (s) => s.fields,
-);
+export function flattenFields(steps: OnbStep[]): OnbField[] {
+  return steps.flatMap((s) => s.fields);
+}
 
 /** Names of every required field (for progress + validation). */
-export const ONBOARDING_REQUIRED_NAMES: string[] = ONBOARDING_FIELDS.filter(
-  (f) => f.required,
-).map((f) => f.name);
+export function requiredNames(steps: OnbStep[]): string[] {
+  return flattenFields(steps)
+    .filter((f) => f.required)
+    .map((f) => f.name);
+}
 
 /** Unique sections, in order — drives the grouped ruler. */
-export const ONBOARDING_SECTIONS: { key: string; tag: string }[] = (() => {
+export function sectionsOf(steps: OnbStep[]): { key: string; tag: string }[] {
   const seen = new Set<string>();
   const out: { key: string; tag: string }[] = [];
-  for (const s of ONBOARDING_STEPS) {
+  for (const s of steps) {
     if (!seen.has(s.section)) {
       seen.add(s.section);
       out.push({ key: s.section, tag: s.sectionTag });
     }
   }
   return out;
-})();
+}
 
 /** Key under which a checkbox option's free-text "other" answer is stored. */
 export function otherTextKey(fieldName: string, optionValue: string): string {
@@ -688,19 +694,103 @@ export function otherTextKey(fieldName: string, optionValue: string): string {
 }
 
 /** All valid "other" text keys, derived from checkbox options flagged `other`. */
-export const ONBOARDING_OTHER_KEYS: string[] = ONBOARDING_FIELDS.filter(
-  isCheckbox,
-).flatMap((f) =>
-  f.options.filter((o) => o.other).map((o) => otherTextKey(f.name, o.value)),
-);
+export function otherKeysOf(steps: OnbStep[]): string[] {
+  return flattenFields(steps)
+    .filter(isCheckbox)
+    .flatMap((f) =>
+      f.options.filter((o) => o.other).map((o) => otherTextKey(f.name, o.value)),
+    );
+}
 
-export function findField(name: string): OnbField | null {
-  return ONBOARDING_FIELDS.find((f) => f.name === name) ?? null;
+export function findField(steps: OnbStep[], name: string): OnbField | null {
+  return flattenFields(steps).find((f) => f.name === name) ?? null;
 }
 
 /** Human label for a checkbox option value. */
-export function optionLabel(fieldName: string, value: string): string {
-  const f = findField(fieldName);
+export function optionLabel(
+  steps: OnbStep[],
+  fieldName: string,
+  value: string,
+): string {
+  const f = findField(steps, fieldName);
   if (!f || !isCheckbox(f)) return value;
   return f.options.find((o) => o.value === value)?.label ?? value;
+}
+
+// ---- Normalisation (for the KV override → guard against malformed data) ----
+
+const FIELD_KINDS = ["short", "long", "checkbox", "file"] as const;
+
+function normalizeField(raw: unknown): OnbField | null {
+  if (!raw || typeof raw !== "object") return null;
+  const name = (raw as { name?: unknown }).name;
+  const label = (raw as { label?: unknown }).label;
+  const rawKind = (raw as { kind?: unknown }).kind;
+  if (typeof name !== "string" || !name.trim()) return null;
+  if (typeof label !== "string") return null;
+  if (!FIELD_KINDS.includes(rawKind as (typeof FIELD_KINDS)[number])) return null;
+  const kind = rawKind as (typeof FIELD_KINDS)[number];
+  const help =
+    typeof (raw as { help?: unknown }).help === "string"
+      ? (raw as { help: string }).help
+      : undefined;
+  const placeholder =
+    typeof (raw as { placeholder?: unknown }).placeholder === "string"
+      ? (raw as { placeholder: string }).placeholder
+      : undefined;
+  const required = Boolean((raw as { required?: unknown }).required);
+  if (kind === "checkbox") {
+    const rawOpts = (raw as { options?: unknown }).options;
+    const options = Array.isArray(rawOpts)
+      ? rawOpts
+          .filter((o) => o && typeof o === "object")
+          .map((o) => ({
+            value: String((o as { value?: unknown }).value ?? ""),
+            label: String((o as { label?: unknown }).label ?? ""),
+            other: Boolean((o as { other?: unknown }).other) || undefined,
+          }))
+          .filter((o) => o.value && o.label)
+      : [];
+    return { kind: "checkbox", name, label, help, required, options };
+  }
+  if (kind === "file") {
+    return { kind: "file", name, label, help, required };
+  }
+  return {
+    kind: kind as "short" | "long",
+    name,
+    label,
+    help,
+    placeholder,
+    required,
+  };
+}
+
+/** Coerce arbitrary stored data into valid steps, or null if unusable. */
+export function normalizeSteps(raw: unknown): OnbStep[] | null {
+  if (!Array.isArray(raw) || raw.length === 0) return null;
+  const steps: OnbStep[] = [];
+  for (const s of raw) {
+    if (!s || typeof s !== "object") continue;
+    const key = (s as { key?: unknown }).key;
+    const section = (s as { section?: unknown }).section;
+    const sectionTag = (s as { sectionTag?: unknown }).sectionTag;
+    const title = (s as { title?: unknown }).title;
+    const rawFields = (s as { fields?: unknown }).fields;
+    if (typeof key !== "string" || typeof section !== "string") continue;
+    const fields = Array.isArray(rawFields)
+      ? rawFields
+          .map(normalizeField)
+          .filter((f): f is OnbField => f !== null)
+      : [];
+    if (fields.length === 0) continue;
+    steps.push({
+      key,
+      section,
+      sectionTag: typeof sectionTag === "string" ? sectionTag : "",
+      title: typeof title === "string" ? title : section,
+      fields,
+    });
+  }
+  return steps.length ? steps : null;
 }

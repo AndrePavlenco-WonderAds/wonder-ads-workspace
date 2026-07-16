@@ -11,12 +11,13 @@ import { NextResponse } from "next/server";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { put } from "@vercel/blob";
 import {
-  ONBOARDING_FIELDS,
-  ONBOARDING_REQUIRED_NAMES,
-  ONBOARDING_OTHER_KEYS,
+  flattenFields,
+  requiredNames,
+  otherKeysOf,
   isCheckbox,
   isFile,
 } from "@/lib/onboarding-questions";
+import { getFormSteps } from "@/lib/onboarding-content-store";
 import {
   saveOnboardingIntake,
   ONBOARDING_INTAKE_SCHEMA_VERSION,
@@ -76,13 +77,17 @@ export async function POST(
     files?: Record<string, unknown>;
   };
 
+  // Live form catalogue (KV override or default).
+  const steps = await getFormSteps();
+  const fields = flattenFields(steps);
+
   // Rebuild each collection from the known field catalogue (ignore anything
   // the client sends that we don't recognise).
   const texts: Record<string, string> = {};
   const choices: Record<string, string[]> = {};
   const files: Record<string, OnboardingIntakeFile[]> = {};
 
-  for (const field of ONBOARDING_FIELDS) {
+  for (const field of fields) {
     if (isCheckbox(field)) {
       const picked = asStringArray(raw.choices?.[field.name]).filter((v) =>
         field.options.some((o) => o.value === v),
@@ -97,14 +102,14 @@ export async function POST(
     }
   }
   // "Other" free-text answers (keyed field__option).
-  for (const key of ONBOARDING_OTHER_KEYS) {
+  for (const key of otherKeysOf(steps)) {
     const t = asString(raw.texts?.[key]).trim();
     if (t) texts[key] = t;
   }
 
   // Server-side required-field check.
-  const missing = ONBOARDING_REQUIRED_NAMES.filter((name) => {
-    const field = ONBOARDING_FIELDS.find((f) => f.name === name);
+  const missing = requiredNames(steps).filter((name) => {
+    const field = fields.find((f) => f.name === name);
     if (!field) return false;
     if (isCheckbox(field)) return (choices[name]?.length ?? 0) === 0;
     if (isFile(field)) return (files[name]?.length ?? 0) === 0;
@@ -135,6 +140,7 @@ export async function POST(
     const pdfBytes = await buildOnboardingPdf({
       clientTitle: client.title,
       intake,
+      steps,
     });
     const blob = await put(
       `onboarding/${slug}/formulario-${intake.submittedAt}.pdf`,

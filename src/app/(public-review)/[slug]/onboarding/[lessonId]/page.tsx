@@ -13,6 +13,7 @@ import {
   nextCategory,
   type Lesson,
 } from "@/lib/onboarding-lessons";
+import { getCourse } from "@/lib/onboarding-content-store";
 import { OnboardingMarkComplete } from "@/components/onboarding-mark-complete";
 
 export const dynamic = "force-dynamic";
@@ -49,7 +50,8 @@ export default async function OnboardingLessonPage({
   const { slug, lessonId } = await params;
   if (RESERVED.has(slug)) notFound();
 
-  const lesson = findLesson(lessonId);
+  const categories = await getCourse();
+  const lesson = findLesson(categories, lessonId);
   if (!lesson) notFound();
   // The form lesson has its own dedicated quiz page.
   if (lesson.kind === "form") redirect(`/${slug}/onboarding/form`);
@@ -57,7 +59,7 @@ export default async function OnboardingLessonPage({
   const client = await resolveOnboardingClient(slug);
   if (!client) notFound();
 
-  const category = findCategory(lesson.category);
+  const category = findCategory(categories, lesson.category);
   if (!category) notFound();
 
   const progress = await getOnboardingProgress(slug);
@@ -65,7 +67,7 @@ export default async function OnboardingLessonPage({
   const isDone = done.has(lesson.id);
 
   const hubHref = `/${slug}/onboarding`;
-  const nextCat = nextCategory(lesson.id);
+  const nextCat = nextCategory(categories, lesson.id);
 
   return (
     <main className="mx-auto min-h-screen max-w-6xl px-4 py-10 sm:px-6">

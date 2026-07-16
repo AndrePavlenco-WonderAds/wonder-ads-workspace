@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { resolveOnboardingClient } from "@/lib/onboarding-resolve";
+import { getFormSteps } from "@/lib/onboarding-content-store";
 import { OnboardingIntakeForm } from "@/components/onboarding-intake-form";
 
 export const dynamic = "force-dynamic";
@@ -38,6 +39,7 @@ export default async function OnboardingFormPage({
   const client = await resolveOnboardingClient(slug);
   if (!client) notFound();
 
+  const steps = await getFormSteps();
   const hubHref = `/${slug}/onboarding`;
 
   return (
@@ -72,7 +74,7 @@ export default async function OnboardingFormPage({
         </p>
       </header>
 
-      <OnboardingIntakeForm slug={slug} hubHref={hubHref} />
+      <OnboardingIntakeForm slug={slug} hubHref={hubHref} steps={steps} />
 
       <footer className="mt-12 border-t border-black/8 pt-6 text-center text-[11px] text-black/45">
         <span

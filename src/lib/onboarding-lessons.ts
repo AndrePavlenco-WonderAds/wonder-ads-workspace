@@ -43,7 +43,7 @@ export type OnboardingCategory = {
   lessons: Lesson[];
 };
 
-export const ONBOARDING_CATEGORIES: OnboardingCategory[] = [
+export const DEFAULT_ONBOARDING_CATEGORIES: OnboardingCategory[] = [
   {
     key: "onboarding-pt",
     title: "Onboarding PT",
@@ -251,33 +251,123 @@ export const ONBOARDING_CATEGORIES: OnboardingCategory[] = [
   },
 ];
 
+// The catalogue is editable in-app (SuperAdmin) via onboarding-content-store.
+// These helpers are PURE and take the live `categories` array so both the
+// default and any KV override work identically.
+
 /** Every lesson, flattened, in order. */
-export const ALL_LESSONS: Lesson[] = ONBOARDING_CATEGORIES.flatMap(
-  (c) => c.lessons,
-);
-
-export const TOTAL_LESSONS = ALL_LESSONS.length;
-
-export function findLesson(id: string): Lesson | null {
-  return ALL_LESSONS.find((l) => l.id === id) ?? null;
+export function flattenLessons(categories: OnboardingCategory[]): Lesson[] {
+  return categories.flatMap((c) => c.lessons);
 }
 
-export function findCategory(key: string): OnboardingCategory | null {
-  return ONBOARDING_CATEGORIES.find((c) => c.key === key) ?? null;
+export function findLesson(
+  categories: OnboardingCategory[],
+  id: string,
+): Lesson | null {
+  return flattenLessons(categories).find((l) => l.id === id) ?? null;
 }
 
-/** The lesson after `id` in flat order, or null if it's the last. */
-export function nextLesson(id: string): Lesson | null {
-  const i = ALL_LESSONS.findIndex((l) => l.id === id);
-  if (i < 0 || i >= ALL_LESSONS.length - 1) return null;
-  return ALL_LESSONS[i + 1];
+export function findCategory(
+  categories: OnboardingCategory[],
+  key: string,
+): OnboardingCategory | null {
+  return categories.find((c) => c.key === key) ?? null;
 }
 
 /** The category that comes after the one containing `lessonId`. */
-export function nextCategory(lessonId: string): OnboardingCategory | null {
-  const lesson = findLesson(lessonId);
+export function nextCategory(
+  categories: OnboardingCategory[],
+  lessonId: string,
+): OnboardingCategory | null {
+  const lesson = findLesson(categories, lessonId);
   if (!lesson) return null;
-  const ci = ONBOARDING_CATEGORIES.findIndex((c) => c.key === lesson.category);
-  if (ci < 0 || ci >= ONBOARDING_CATEGORIES.length - 1) return null;
-  return ONBOARDING_CATEGORIES[ci + 1];
+  const ci = categories.findIndex((c) => c.key === lesson.category);
+  if (ci < 0 || ci >= categories.length - 1) return null;
+  return categories[ci + 1];
+}
+
+// ---- Normalisation (for the KV override → guard against malformed data) ----
+
+const LESSON_KINDS: LessonKind[] = ["video", "form", "info"];
+
+function normalizeBlocks(raw: unknown): LessonBlock[] {
+  if (!Array.isArray(raw)) return [];
+  const out: LessonBlock[] = [];
+  for (const b of raw) {
+    if (!b || typeof b !== "object") continue;
+    const t = (b as { type?: unknown }).type;
+    if (t === "p" && typeof (b as { text?: unknown }).text === "string") {
+      out.push({ type: "p", text: (b as { text: string }).text });
+    } else if (t === "bullets") {
+      const items = (b as { items?: unknown }).items;
+      out.push({
+        type: "bullets",
+        intro:
+          typeof (b as { intro?: unknown }).intro === "string"
+            ? (b as { intro: string }).intro
+            : undefined,
+        items: Array.isArray(items)
+          ? items.filter((x): x is string => typeof x === "string")
+          : [],
+      });
+    } else if (t === "emails") {
+      const emails = (b as { emails?: unknown }).emails;
+      out.push({
+        type: "emails",
+        intro:
+          typeof (b as { intro?: unknown }).intro === "string"
+            ? (b as { intro: string }).intro
+            : "",
+        emails: Array.isArray(emails)
+          ? emails.filter((x): x is string => typeof x === "string")
+          : [],
+      });
+    }
+  }
+  return out;
+}
+
+/** Coerce arbitrary stored data into a valid course, or null if unusable. */
+export function normalizeCourse(raw: unknown): OnboardingCategory[] | null {
+  if (!Array.isArray(raw) || raw.length === 0) return null;
+  const cats: OnboardingCategory[] = [];
+  for (const c of raw) {
+    if (!c || typeof c !== "object") continue;
+    const key = (c as { key?: unknown }).key;
+    const title = (c as { title?: unknown }).title;
+    const lessons = (c as { lessons?: unknown }).lessons;
+    if (typeof key !== "string" || typeof title !== "string") continue;
+    const outLessons: Lesson[] = [];
+    if (Array.isArray(lessons)) {
+      for (const l of lessons) {
+        if (!l || typeof l !== "object") continue;
+        const id = (l as { id?: unknown }).id;
+        const lTitle = (l as { title?: unknown }).title;
+        if (typeof id !== "string" || typeof lTitle !== "string") continue;
+        const kindRaw = (l as { kind?: unknown }).kind;
+        const kind = LESSON_KINDS.includes(kindRaw as LessonKind)
+          ? (kindRaw as LessonKind)
+          : "video";
+        const videoUrl = (l as { videoUrl?: unknown }).videoUrl;
+        outLessons.push({
+          id,
+          category: key,
+          title: lTitle,
+          kind,
+          emoji:
+            typeof (l as { emoji?: unknown }).emoji === "string"
+              ? (l as { emoji: string }).emoji
+              : "📄",
+          videoUrl: typeof videoUrl === "string" && videoUrl.trim() ? videoUrl : null,
+          summary:
+            typeof (l as { summary?: unknown }).summary === "string"
+              ? (l as { summary: string }).summary
+              : "",
+          about: normalizeBlocks((l as { about?: unknown }).about),
+        });
+      }
+    }
+    cats.push({ key, title, lessons: outLessons });
+  }
+  return cats.length ? cats : null;
 }

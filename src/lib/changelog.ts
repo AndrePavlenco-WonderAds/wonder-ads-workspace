@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.87",
+    date: "2026-07-16",
+    title: "SEO — editor do processo de Onboarding (curso + formulário)",
+    highlights: [
+      "**✏️ Editor de onboarding na app.** Nova página `/seo/onboarding-editor` (só SuperAdmin) para editar tudo sem tocar em código: **lições do curso** (título, emoji, resumo, link de vídeo, blocos de texto/listas/emails) e **perguntas do formulário** (texto, tipo, opções, obrigatório).",
+      "**➕ Adicionar / remover / reordenar.** Categorias, lições, passos e perguntas podem ser criados, apagados e movidos (setas cima/baixo). Botão *Repor original* volta ao conteúdo por defeito.",
+      "**🛡️ À prova de falhas.** O conteúdo passou a ser guardado em KV, mas com validação/normalização no servidor e *fallback* automático para o conteúdo original — uma edição inválida nunca parte o fluxo.",
+      "**🔗 Aplica-se de imediato.** As alterações refletem-se em todos os links de onboarding e no PDF das respostas.",
+      "**👁️ Só SuperAdmin.** O cartão *Iniciar onboarding* e o botão *Editar processo de onboarding* no board de SEO aparecem apenas a SuperAdmins.",
+    ],
+  },
+  {
     version: "74.86",
     date: "2026-07-16",
     title: "SEO — fluxo de Onboarding de clientes (formulário + curso + PDF)",

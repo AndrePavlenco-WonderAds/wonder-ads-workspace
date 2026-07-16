@@ -19,15 +19,15 @@ import {
   X,
 } from "lucide-react";
 import {
-  ONBOARDING_STEPS,
-  ONBOARDING_SECTIONS,
-  ONBOARDING_REQUIRED_NAMES,
+  sectionsOf,
+  requiredNames,
   isShort,
   isLong,
   isCheckbox,
   isFile,
   otherTextKey,
   type OnbField,
+  type OnbStep,
   type OnbCheckboxField,
 } from "@/lib/onboarding-questions";
 
@@ -35,15 +35,6 @@ const BRAND_GRADIENT =
   "linear-gradient(135deg, #343ED7 0%, #783DF5 53.65%, #C535C9 100%)";
 
 type UploadedFile = { url: string; name: string };
-
-// First step index of each section — the ruler jumps here.
-const SECTION_FIRST_STEP: Record<string, number> = (() => {
-  const out: Record<string, number> = {};
-  ONBOARDING_STEPS.forEach((s, i) => {
-    if (!(s.section in out)) out[s.section] = i;
-  });
-  return out;
-})();
 
 function ShortInput({
   value,
@@ -230,12 +221,22 @@ function FileUpload({
 export function OnboardingIntakeForm({
   slug,
   hubHref,
+  steps,
 }: {
   slug: string;
   hubHref: string;
+  steps: OnbStep[];
 }) {
-  const steps = ONBOARDING_STEPS;
   const total = steps.length;
+  const sections = useMemo(() => sectionsOf(steps), [steps]);
+  const sectionFirstStep = useMemo(() => {
+    const out: Record<string, number> = {};
+    steps.forEach((s, i) => {
+      if (!(s.section in out)) out[s.section] = i;
+    });
+    return out;
+  }, [steps]);
+  const requiredNameList = useMemo(() => requiredNames(steps), [steps]);
   const [step, setStep] = useState(0);
   const [dir, setDir] = useState<1 | -1>(1);
   const [texts, setTexts] = useState<Record<string, string>>({});
@@ -254,13 +255,13 @@ export function OnboardingIntakeForm({
   };
 
   const answeredCount = useMemo(() => {
-    const req = new Set(ONBOARDING_REQUIRED_NAMES);
+    const req = new Set(requiredNameList);
     return steps
       .flatMap((s) => s.fields)
       .filter((f) => req.has(f.name) && isAnswered(f)).length;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [texts, choices, files, steps]);
-  const totalRequired = ONBOARDING_REQUIRED_NAMES.length;
+  }, [texts, choices, files, steps, requiredNameList]);
+  const totalRequired = requiredNameList.length;
 
   const current = steps[step];
   const isLast = step === total - 1;
@@ -268,7 +269,7 @@ export function OnboardingIntakeForm({
     (f) => f.required && !isAnswered(f),
   ).length;
 
-  const currentSectionIdx = ONBOARDING_SECTIONS.findIndex(
+  const currentSectionIdx = sections.findIndex(
     (s) => s.key === current.section,
   );
 
@@ -357,13 +358,13 @@ export function OnboardingIntakeForm({
       {/* Ruler progress — grouped by section */}
       <div className="mb-8">
         <div className="mb-2 grid grid-cols-3 gap-x-2 gap-y-1 text-[9.5px] font-medium uppercase tracking-[0.1em] sm:grid-cols-6">
-          {ONBOARDING_SECTIONS.map((s, i) => {
+          {sections.map((s, i) => {
             const activeSection = i === currentSectionIdx;
             return (
               <button
                 key={s.key}
                 type="button"
-                onClick={() => goTo(SECTION_FIRST_STEP[s.key] ?? 0)}
+                onClick={() => goTo(sectionFirstStep[s.key] ?? 0)}
                 className={`rounded-md px-1.5 py-1 text-center leading-tight transition-colors duration-200 ${
                   activeSection ? "bg-black/[0.05]" : "hover:bg-black/[0.03]"
                 }`}

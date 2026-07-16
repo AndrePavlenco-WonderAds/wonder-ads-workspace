@@ -6,11 +6,8 @@
 import { FileText, ExternalLink, Check, Clock } from "lucide-react";
 import { CopyPublicLinkButton } from "@/components/copy-public-link-button";
 import { formatDate } from "@/lib/dates";
-import {
-  ONBOARDING_CATEGORIES,
-  ALL_LESSONS,
-  TOTAL_LESSONS,
-} from "@/lib/onboarding-lessons";
+import { flattenLessons } from "@/lib/onboarding-lessons";
+import { getCourse } from "@/lib/onboarding-content-store";
 import { getOnboardingProgress } from "@/lib/onboarding-progress-store";
 import { getOnboardingIntake } from "@/lib/onboarding-intake-store";
 
@@ -19,15 +16,18 @@ export async function OnboardingStatus({
 }: {
   slug: string;
 }) {
-  const [progress, intake] = await Promise.all([
+  const [progress, intake, categories] = await Promise.all([
     getOnboardingProgress(slug),
     getOnboardingIntake(slug),
+    getCourse(),
   ]);
+  const allLessons = flattenLessons(categories);
+  const total = allLessons.length;
   const done = new Set(progress.completed);
-  const completedCount = ALL_LESSONS.filter((l) => done.has(l.id)).length;
-  const pct = Math.round((completedCount / TOTAL_LESSONS) * 100);
+  const completedCount = allLessons.filter((l) => done.has(l.id)).length;
+  const pct = total ? Math.round((completedCount / total) * 100) : 0;
 
-  const accessCat = ONBOARDING_CATEGORIES.find((c) => c.key === "acessos");
+  const accessCat = categories.find((c) => c.key === "acessos");
   const confirmedAccesses =
     accessCat?.lessons.filter((l) => done.has(l.id)).length ?? 0;
   const totalAccesses = accessCat?.lessons.length ?? 0;
@@ -44,7 +44,7 @@ export async function OnboardingStatus({
               Onboarding do Cliente
             </h2>
             <p className="text-[11px] text-white/45">
-              {completedCount} de {TOTAL_LESSONS} passos · {confirmedAccesses}/
+              {completedCount} de {total} passos · {confirmedAccesses}/
               {totalAccesses} acessos confirmados
             </p>
           </div>
@@ -97,7 +97,7 @@ export async function OnboardingStatus({
 
       {/* Lesson checklist */}
       <div className="grid gap-4 sm:grid-cols-3">
-        {ONBOARDING_CATEGORIES.map((cat) => (
+        {categories.map((cat) => (
           <div key={cat.key}>
             <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-white/40">
               {cat.title}

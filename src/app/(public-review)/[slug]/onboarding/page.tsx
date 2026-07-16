@@ -6,12 +6,8 @@ import Link from "next/link";
 import { Check, ArrowRight, FileText, PlayCircle, Flag } from "lucide-react";
 import { resolveOnboardingClient } from "@/lib/onboarding-resolve";
 import { getOnboardingProgress } from "@/lib/onboarding-progress-store";
-import {
-  ONBOARDING_CATEGORIES,
-  ALL_LESSONS,
-  TOTAL_LESSONS,
-  type Lesson,
-} from "@/lib/onboarding-lessons";
+import { flattenLessons, type Lesson } from "@/lib/onboarding-lessons";
+import { getCourse } from "@/lib/onboarding-content-store";
 
 export const dynamic = "force-dynamic";
 
@@ -50,10 +46,16 @@ export default async function OnboardingHubPage({
   const client = await resolveOnboardingClient(slug);
   if (!client) notFound();
 
-  const progress = await getOnboardingProgress(slug);
+  const [progress, categories] = await Promise.all([
+    getOnboardingProgress(slug),
+    getCourse(),
+  ]);
+  const allLessons = flattenLessons(categories);
+  const total = allLessons.length;
   const done = new Set(progress.completed);
-  const completedCount = ALL_LESSONS.filter((l) => done.has(l.id)).length;
-  const pct = Math.round((completedCount / TOTAL_LESSONS) * 100);
+  const completedCount = allLessons.filter((l) => done.has(l.id)).length;
+  const pct = total ? Math.round((completedCount / total) * 100) : 0;
+  const firstLessonId = allLessons[0]?.id;
 
   return (
     <main className="mx-auto min-h-screen max-w-6xl px-4 py-10 sm:px-6">
@@ -101,7 +103,7 @@ export default async function OnboardingHubPage({
               >
                 {completedCount}
                 <span className="text-lg font-semibold text-black/30">
-                  /{TOTAL_LESSONS}
+                  /{total}
                 </span>
               </span>
               <span className="text-[11px] font-medium text-black/45">
@@ -140,7 +142,7 @@ export default async function OnboardingHubPage({
 
         {/* Categories */}
         <div className="space-y-8">
-          {ONBOARDING_CATEGORIES.map((cat) => {
+          {categories.map((cat) => {
             const catDone = cat.lessons.filter((l) => done.has(l.id)).length;
             return (
               <section key={cat.key}>
@@ -155,7 +157,7 @@ export default async function OnboardingHubPage({
                 <div className="flex flex-col gap-2.5">
                   {cat.lessons.map((lesson) => {
                     const isDone = done.has(lesson.id);
-                    const isFirst = lesson.id === ALL_LESSONS[0].id;
+                    const isFirst = lesson.id === firstLessonId;
                     return (
                       <Link
                         key={lesson.id}

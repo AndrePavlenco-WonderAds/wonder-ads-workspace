@@ -10,12 +10,12 @@ import path from "node:path";
 import { PDFDocument, StandardFonts, rgb, type PDFFont } from "pdf-lib";
 import { formatDate } from "@/lib/dates";
 import {
-  ONBOARDING_STEPS,
   isCheckbox,
   isFile,
   optionLabel,
   otherTextKey,
   type OnbField,
+  type OnbStep,
 } from "@/lib/onboarding-questions";
 import type { OnboardingIntake } from "@/lib/onboarding-intake-store";
 
@@ -83,12 +83,16 @@ function wrap(text: string, font: PDFFont, size: number, maxW: number): string[]
 }
 
 /** Answer for a field, flattened to display lines (or null if unanswered). */
-function answerText(field: OnbField, intake: OnboardingIntake): string | null {
+function answerText(
+  field: OnbField,
+  intake: OnboardingIntake,
+  steps: OnbStep[],
+): string | null {
   if (isCheckbox(field)) {
     const picked = intake.choices[field.name] ?? [];
     if (picked.length === 0) return null;
     const parts = picked.map((v) => {
-      const label = optionLabel(field.name, v);
+      const label = optionLabel(steps, field.name, v);
       const extra = intake.texts[otherTextKey(field.name, v)];
       return extra ? `${label}: ${extra}` : label;
     });
@@ -106,8 +110,9 @@ function answerText(field: OnbField, intake: OnboardingIntake): string | null {
 export async function buildOnboardingPdf(opts: {
   clientTitle: string;
   intake: OnboardingIntake;
+  steps: OnbStep[];
 }): Promise<Uint8Array> {
-  const { clientTitle, intake } = opts;
+  const { clientTitle, intake, steps } = opts;
   const doc = await PDFDocument.create();
   doc.setTitle(`Formulário de Onboarding — ${clientTitle}`);
   doc.setProducer("Wonder Ads Workspace");
@@ -184,7 +189,7 @@ export async function buildOnboardingPdf(opts: {
 
   // ---- Sections + questions ----
   let lastSection = "";
-  for (const step of ONBOARDING_STEPS) {
+  for (const step of steps) {
     if (step.section !== lastSection) {
       lastSection = step.section;
       ensure(40);
@@ -199,7 +204,7 @@ export async function buildOnboardingPdf(opts: {
     }
 
     for (const field of step.fields) {
-      const answer = answerText(field, intake);
+      const answer = answerText(field, intake, steps);
       // Question label
       const qLines = wrap(field.label, bold, 10.5, CONTENT_W);
       ensure(qLines.length * 14 + 18);

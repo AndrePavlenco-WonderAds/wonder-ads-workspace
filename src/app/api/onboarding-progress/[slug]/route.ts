@@ -6,6 +6,7 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { findLesson } from "@/lib/onboarding-lessons";
+import { getCourse } from "@/lib/onboarding-content-store";
 import { resolveOnboardingClient } from "@/lib/onboarding-resolve";
 import { setLessonCompletion } from "@/lib/onboarding-progress-store";
 
@@ -32,7 +33,7 @@ export async function POST(
     lessonId?: unknown;
     done?: unknown;
   };
-  if (typeof lessonId !== "string" || !findLesson(lessonId)) {
+  if (typeof lessonId !== "string" || !findLesson(await getCourse(), lessonId)) {
     return NextResponse.json({ error: "unknown lesson" }, { status: 400 });
   }
 
