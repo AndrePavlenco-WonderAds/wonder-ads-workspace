@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.86",
+    date: "2026-07-16",
+    title: "SEO — fluxo de Onboarding de clientes (formulário + curso + PDF)",
+    highlights: [
+      "**🚀 Onboarding de clientes end-to-end.** Novo fluxo público (sem login) em `/[cliente]/onboarding`: um **hub de \"lições\"** com barra de progresso e passos organizados em *Onboarding PT*, *Acessos* e *Último Passo e Obrigado!*.",
+      "**📝 Formulário passo-a-passo.** Recriação fiel do Google Form de onboarding (35 perguntas, 11 secções) como quiz premium — uma pergunta por ecrã, barra de progresso, validação por passo, animações e upload de ficheiros. Tudo em PT-PT.",
+      "**📄 PDF automático.** Ao submeter, é gerado um **PDF das respostas** com o logótipo Wonder Ads e data DD/MM/AAAA (via `pdf-lib`), anexado automaticamente à zona *Onboarding Form* do projeto de SEO.",
+      "**🎬 Páginas de passo.** Cada acesso (GA4, Search Console, GMB, Website) tem a sua página com player de vídeo (campos prontos para os links), bloco *Sobre Este Passo* com os emails da equipa a adicionar como administradores, e botão *Marcar como Concluído* que atualiza o progresso em tempo real.",
+      "**👀 Vista interna + link partilhável.** No projeto de SEO, a equipa vê o estado do onboarding (passos concluídos, acessos confirmados, PDF do formulário) e pode **copiar o link público** para enviar ao cliente. SuperAdmins podem **iniciar o onboarding de um novo cliente** (que passa a projeto de SEO ao submeter o formulário).",
+    ],
+  },
+  {
     version: "74.85",
     date: "2026-07-16",
     title: "NPS — barra de secções mais equilibrada (grelha 5×2)",

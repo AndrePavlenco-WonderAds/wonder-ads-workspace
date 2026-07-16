@@ -9,6 +9,7 @@ import { KpisCard } from "@/components/kpis-card";
 import { SeoDirectoriesCard } from "@/components/seo-directories-card";
 import { ClientCard } from "@/components/client-card";
 import { SeoPauseToggle } from "@/components/seo-pause-toggle";
+import { NewOnboardingClient } from "@/components/new-onboarding-client";
 import { WorldMap } from "@/components/world-map";
 import { TypewriterPrompt } from "@/components/typewriter-prompt";
 import { getSeoClients, slugify, type NotionClient } from "@/lib/notion";
@@ -123,6 +124,12 @@ export default async function SeoPage() {
           )}
         </section>
       </div>
+
+      {employee.isAdmin && (
+        <div className="mt-14 lg:mt-20">
+          <NewOnboardingClient />
+        </div>
+      )}
 
       {!notionError && pausedColumns.length > 0 && (
         <div className="mt-14 lg:mt-20">

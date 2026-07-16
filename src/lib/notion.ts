@@ -8,6 +8,7 @@ import {
   getConsultantForSlug,
 } from "./client-overrides";
 import { getClientTier, type ClientTier } from "./client-tiers";
+import { getPromotedOnboardingClients } from "./onboarding-clients-store";
 
 const SEO_SPACE_PAGE_ID = "aa162d6cc35b458e8f5e8452406593a0";
 const SEO_PROJECTS_COLUMN_LIST_ID = "23cc892b-a7ef-487e-8b85-9fdc36074aa1";
@@ -139,6 +140,27 @@ const _fetchSeoClients = unstable_cache(
       seenSlugs.add(slug);
     }
 
+    // Clients who came in through the onboarding flow and have submitted the
+    // form are promoted into the roster here ("auto-create the SEO project on
+    // submit"). Existing clients are skipped by the seenSlugs guard.
+    try {
+      for (const oc of await getPromotedOnboardingClients()) {
+        if (seenSlugs.has(oc.slug) || EXCLUDED_SLUGS.has(oc.slug)) continue;
+        clients.push({
+          id: `onboarding:${oc.slug}`,
+          title: oc.title,
+          slug: oc.slug,
+          icon: oc.icon,
+          consultant: oc.consultant ?? getConsultantForSlug(oc.slug),
+          palette: getClientPalette(oc.slug),
+          tier: getClientTier(oc.slug),
+        });
+        seenSlugs.add(oc.slug);
+      }
+    } catch (err) {
+      console.error("Onboarding client merge failed:", err);
+    }
+
     return clients;
   },
   // v5 cache key — bumped for André Pereira joining as a new consultant
@@ -146,7 +168,8 @@ const _fetchSeoClients = unstable_cache(
   // synthetic roster (v74.31). Bump whenever the shape of NotionClient or
   // any of its derived fields changes meaningfully. v7: added CuidaMais
   // (v74.38). v9: offboarded Senior Resort (excluded slug).
-  ["seo-clients-v10"],
+  // v11: merge promoted onboarding-flow clients into the roster.
+  ["seo-clients-v11"],
   { revalidate: 3600, tags: ["seo-clients"] },
 );
 
