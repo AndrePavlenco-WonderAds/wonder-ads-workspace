@@ -21,6 +21,9 @@ export type ClientCardProps = {
   tier: ClientTier;
   channels?: AdChannel[];
   index?: number;
+  /** Hide the decorative top-right arrow. Set on SEO cards where a
+   *  SuperAdmin pause/reactivate toggle sits in that corner instead. */
+  showArrow?: boolean;
 };
 
 export function ClientCard({
@@ -35,6 +38,7 @@ export function ClientCard({
   tier,
   channels,
   index = 0,
+  showArrow = true,
 }: ClientCardProps) {
   const gradient = paletteToGradient(palette);
 
@@ -71,10 +75,12 @@ export function ClientCard({
             sizing={logoSizing}
           />
         </div>
-        <ArrowUpRight
-          className="h-4 w-4 text-white/30 transition-all duration-500 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-white"
-          aria-hidden
-        />
+        {showArrow && (
+          <ArrowUpRight
+            className="h-4 w-4 text-white/30 transition-all duration-500 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-white"
+            aria-hidden
+          />
+        )}
       </div>
 
       <div className="relative">

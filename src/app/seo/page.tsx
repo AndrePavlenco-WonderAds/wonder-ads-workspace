@@ -244,6 +244,7 @@ function ClientColumns({
                     palette={c.palette}
                     tier={c.tier}
                     index={i}
+                    showArrow={false}
                   />
                 </div>
                 {isAdmin && (

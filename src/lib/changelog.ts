@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.74",
+    date: "2026-07-16",
+    title: "SEO — seta decorativa removida dos cartões (sobrepunha o botão de pausa)",
+    highlights: [
+      "**🔧 Correção visual.** Nos cartões de cliente do SEO, a setinha animada no canto superior direito deixava de fazer sentido — ficava por baixo do botão de pausar/reativar. Foi removida desses cartões (mantém-se nos cartões de ADS).",
+    ],
+  },
+  {
     version: "74.73",
     date: "2026-07-16",
     title: "SEO — secção de clientes Pausados / Suspensos",
