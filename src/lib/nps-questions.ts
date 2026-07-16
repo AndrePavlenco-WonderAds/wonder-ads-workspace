@@ -164,11 +164,11 @@ export const NPS_SECTIONS: NpsSectionDef[] = [
           en: "Select all that apply.",
         },
         options: [
-          { value: "seo_geo", label: { pt: "SEO / GEO (orgânico e IAs)", en: "SEO / GEO (organic & AI)" } },
-          { value: "google_ads", label: { pt: "Google Ads", en: "Google Ads" } },
-          { value: "meta_ads", label: { pt: "Meta Ads (Facebook / Instagram)", en: "Meta Ads (Facebook / Instagram)" } },
-          { value: "crm", label: { pt: "CRM", en: "CRM" } },
-          { value: "web", label: { pt: "Web Design & Desenvolvimento", en: "Web Design & Development" } },
+          { value: "seo_geo", label: { pt: "Consultoria de SEO / GEO (orgânico e IAs)", en: "SEO / GEO consulting (organic & AI)" } },
+          { value: "google_ads", label: { pt: "Consultoria de Google Ads", en: "Google Ads consulting" } },
+          { value: "meta_ads", label: { pt: "Consultoria de Meta Ads (Facebook / Instagram)", en: "Meta Ads consulting (Facebook / Instagram)" } },
+          { value: "crm", label: { pt: "Consultoria de CRM", en: "CRM consulting" } },
+          { value: "web", label: { pt: "Consultoria de Web Design & Desenvolvimento", en: "Web Design & Development consulting" } },
           { value: "outro", label: { pt: "Outro", en: "Other" }, other: true },
         ],
       },
@@ -177,7 +177,7 @@ export const NPS_SECTIONS: NpsSectionDef[] = [
   {
     key: "equipa",
     tag: "02",
-    title: { pt: "A tua equipa", en: "Your team" },
+    title: { pt: "Equipa", en: "Team" },
     questions: [
       {
         kind: "multi",
@@ -185,8 +185,8 @@ export const NPS_SECTIONS: NpsSectionDef[] = [
         required: true,
         lettered: true,
         q: {
-          pt: "Seleciona quem te acompanhou neste último período:",
-          en: "Select who accompanied you over this last period:",
+          pt: "Seleciona quem te acompanhou neste último período de 60 dias:",
+          en: "Select who accompanied you over this last 60-day period:",
         },
         hint: {
           pt: "Podes escolher todas as pessoas que quiseres.",
@@ -199,7 +199,7 @@ export const NPS_SECTIONS: NpsSectionDef[] = [
   {
     key: "desempenho",
     tag: "03",
-    title: { pt: "Desempenho da equipa", en: "Team performance" },
+    title: { pt: "Desempenho", en: "Performance" },
     questions: [
       {
         kind: "personScale",
@@ -314,26 +314,9 @@ export const NPS_SECTIONS: NpsSectionDef[] = [
     ],
   },
   {
-    key: "continuidade",
-    tag: "06",
-    title: { pt: "Continuidade", en: "Continuity" },
-    questions: [
-      {
-        kind: "scale10",
-        name: "p7_continuidade",
-        q: {
-          pt: "Qual é a probabilidade de continuares a trabalhar com a Wonder Ads após o término do contrato atual?",
-          en: "How likely are you to keep working with Wonder Ads after the current contract ends?",
-        },
-        capLow: { pt: "Nada provável", en: "Not at all likely" },
-        capHigh: { pt: "Extremamente provável", en: "Extremely likely" },
-      },
-    ],
-  },
-  {
     key: "resultados",
-    tag: "07",
-    title: { pt: "Resultados & impacto", en: "Results & impact" },
+    tag: "06",
+    title: { pt: "Resultados", en: "Results" },
     questions: [
       {
         kind: "multi",
@@ -380,6 +363,23 @@ export const NPS_SECTIONS: NpsSectionDef[] = [
     ],
   },
   {
+    key: "continuidade",
+    tag: "07",
+    title: { pt: "Continuidade", en: "Continuity" },
+    questions: [
+      {
+        kind: "scale10",
+        name: "p7_continuidade",
+        q: {
+          pt: "Qual é a probabilidade de continuares a trabalhar com a Wonder Ads após o término do contrato atual?",
+          en: "How likely are you to keep working with Wonder Ads after the current contract ends?",
+        },
+        capLow: { pt: "Nada provável", en: "Not at all likely" },
+        capHigh: { pt: "Extremamente provável", en: "Extremely likely" },
+      },
+    ],
+  },
+  {
     key: "servicos",
     tag: "08",
     title: { pt: "Serviços & acompanhamento", en: "Services & support" },
@@ -388,8 +388,8 @@ export const NPS_SECTIONS: NpsSectionDef[] = [
         kind: "multi",
         name: "p11_apoio_adicional",
         q: {
-          pt: "Há algum serviço ou tipo de apoio adicional que gostarias que disponibilizássemos?",
-          en: "Is there any additional service or support you'd like us to offer?",
+          pt: "Há algum serviço ou apoio que sentes que te falta?",
+          en: "Is there any service or support you feel you're missing?",
         },
         hint: { pt: "Seleciona todas as opções aplicáveis.", en: "Select all that apply." },
         options: [
@@ -430,7 +430,7 @@ export const NPS_SECTIONS: NpsSectionDef[] = [
   {
     key: "recomendacao",
     tag: "09",
-    title: { pt: "Recomendação & valor", en: "Recommendation & value" },
+    title: { pt: "Recomendação", en: "Recommendation" },
     questions: [
       {
         kind: "multi",

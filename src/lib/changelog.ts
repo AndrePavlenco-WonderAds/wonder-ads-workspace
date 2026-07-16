@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.84",
+    date: "2026-07-16",
+    title: "NPS — afinações de texto e ordem das secções",
+    highlights: [
+      "**🏷️ Serviços com “Consultoria de …”** (Consultoria de SEO/GEO, de Google Ads, de Meta Ads, de CRM, de Web Design & Desenvolvimento).",
+      "**🗓️ “neste último período de 60 dias”** na pergunta de seleção da equipa.",
+      "**🔤 Títulos de secção mais curtos:** *Equipa*, *Desempenho*, *Resultados*, *Recomendação*.",
+      "**🔀 Nova ordem:** Progresso → Resultados → Continuidade.",
+      "**✍️ “Serviços” simplificado** para *“Há algum serviço ou apoio que sentes que te falta?”*.",
+    ],
+  },
+  {
     version: "74.83",
     date: "2026-07-16",
     title: "NPS — seleção de equipa obrigatória + avaliação individual por pessoa",
