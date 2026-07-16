@@ -72,6 +72,8 @@ export type NpsMultiQuestion = {
   max?: number;
   /** When true, at least one option must be selected. */
   required?: boolean;
+  /** When true, options show A/B/C… badges instead of check squares. */
+  lettered?: boolean;
 };
 
 /** Free-text question. */
@@ -389,6 +391,37 @@ export const NPS_SECTIONS: NpsSectionDef[] = [
           { value: "acompanhamento_disponibilidade", label: { pt: "Acompanhamento e disponibilidade dos consultores", en: "Consultant follow-up & availability" } },
           { value: "resultados_concretos", label: { pt: "Resultados concretos (tráfego, rankings, leads)", en: "Concrete results (traffic, rankings, leads)" } },
           { value: "suporte_implementacao", label: { pt: "Suporte na implementação de soluções", en: "Support implementing solutions" } },
+        ],
+      },
+      {
+        // Team roster mirrors src/lib/auth/credentials.ts (SEO, ADS, Web,
+        // SuperAdmins). Kept as a hardcoded list on purpose: this module is
+        // imported by the client survey form, and credentials.ts carries
+        // password hashes that must never reach the browser bundle.
+        kind: "multi",
+        name: "p14b_equipa",
+        lettered: true,
+        q: {
+          pt: "Há algum membro da equipa que gostasses de destacar pelo impacto positivo que teve na tua parceria?",
+          en: "Is there a team member you'd like to highlight for the positive impact they had on your partnership?",
+        },
+        hint: {
+          pt: "Seleciona todas as opções aplicáveis (ou nenhuma).",
+          en: "Select all that apply (or none).",
+        },
+        options: [
+          { value: "andre-pereira", label: { pt: "André Pereira", en: "André Pereira" } },
+          { value: "manuel-s", label: { pt: "Manuel Silva", en: "Manuel Silva" } },
+          { value: "fran-r", label: { pt: "Fran. Rosa", en: "Fran. Rosa" } },
+          { value: "yenisey-r", label: { pt: "Yenisey Rodriguez", en: "Yenisey Rodriguez" } },
+          { value: "germano-c", label: { pt: "Germano C.", en: "Germano C." } },
+          { value: "mike", label: { pt: "Mike Nobre", en: "Mike Nobre" } },
+          { value: "gustavo", label: { pt: "Gustavo Rotini", en: "Gustavo Rotini" } },
+          { value: "renan", label: { pt: "Renan Alves", en: "Renan Alves" } },
+          { value: "cylas", label: { pt: "Cylas", en: "Cylas" } },
+          { value: "andre", label: { pt: "André Pavlenco", en: "André Pavlenco" } },
+          { value: "alex", label: { pt: "Alex", en: "Alex" } },
+          { value: "alice", label: { pt: "Alice", en: "Alice" } },
         ],
       },
       {

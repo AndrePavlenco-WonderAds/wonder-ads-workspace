@@ -73,7 +73,7 @@ const COPY = {
   },
 } as const;
 
-const LETTERS = ["A", "B", "C", "D", "E", "F", "G", "H"];
+const LETTERS = Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i));
 
 function Scale10({
   value,
@@ -258,7 +258,7 @@ function MultiChoice({
         </p>
       )}
       <div className="flex flex-col gap-2">
-        {q.options.map((o) => {
+        {q.options.map((o, i) => {
           const on = selected.includes(o.value);
           return (
             <div key={o.value} className="flex flex-col gap-2">
@@ -266,7 +266,8 @@ function MultiChoice({
                 on={on}
                 onClick={() => onToggle(o.value)}
                 disabled={atMax}
-                square
+                square={!q.lettered}
+                badge={q.lettered ? LETTERS[i] : undefined}
               >
                 {o.label[lang]}
               </OptionRow>

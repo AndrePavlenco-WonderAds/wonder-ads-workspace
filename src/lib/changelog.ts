@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.82",
+    date: "2026-07-16",
+    title: "NPS — destacar membros da equipa (toda a Wonder Ads)",
+    highlights: [
+      "**🙌 Nova pergunta na secção Recomendação.** *“Há algum membro da equipa que gostasses de destacar pelo impacto positivo que teve na tua parceria?”* — com todas as pessoas da app (SEO, Ads, Web e SuperAdmins), em opções com letras (A, B, C…) e seleção múltipla. Aparece na vista do consultor e no PDF.",
+    ],
+  },
+  {
     version: "74.81",
     date: "2026-07-16",
     title: "NPS — 1ª pergunta = serviço, opção “Outro” com texto, e limpeza de perguntas",
