@@ -545,21 +545,30 @@ export function NpsSurveyForm({
     <div>
       {/* Ruler progress */}
       <div className="mb-8">
-        <div className="mb-2 flex flex-wrap justify-between gap-x-4 gap-y-1 text-[10px] font-medium uppercase tracking-[0.14em]">
+        <div className="mb-2 grid grid-cols-2 gap-x-2 gap-y-1 text-[9.5px] font-medium uppercase tracking-[0.1em] sm:grid-cols-5">
           {sections.map((s, i) => {
             const current = i === step;
+            // The ruler needs a compact label for the one long section title.
+            const label =
+              s.key === "servicos"
+                ? lang === "pt"
+                  ? "Serviços"
+                  : "Services"
+                : s.title[lang];
             return (
               <button
                 key={s.key}
                 type="button"
                 onClick={() => goTo(i)}
-                className="transition-all duration-200 hover:-translate-y-[1px]"
+                className={`rounded-md px-1.5 py-1 text-center leading-tight transition-colors duration-200 ${
+                  current ? "bg-black/[0.05]" : "hover:bg-black/[0.03]"
+                }`}
                 style={{
-                  color: current ? "#1B2430" : "rgba(0,0,0,0.4)",
+                  color: current ? "#1B2430" : "rgba(0,0,0,0.42)",
                   fontWeight: current ? 700 : 500,
                 }}
               >
-                {s.title[lang]}
+                {label}
               </button>
             );
           })}

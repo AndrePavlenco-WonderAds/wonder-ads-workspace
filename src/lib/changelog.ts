@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.85",
+    date: "2026-07-16",
+    title: "NPS — barra de secções mais equilibrada (grelha 5×2)",
+    highlights: [
+      "**📐 Cabeçalho de progresso reformulado.** As secções deixam de estar espalhadas com `justify-between` (que deixava buracos na 2ª linha) e passam a uma **grelha alinhada de 5 colunas** (2 linhas de 5), equilibrada entre linhas e ao longo de cada linha. No telemóvel usa 2 colunas.",
+    ],
+  },
+  {
     version: "74.84",
     date: "2026-07-16",
     title: "NPS — afinações de texto e ordem das secções",
