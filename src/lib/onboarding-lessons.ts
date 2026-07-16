@@ -43,7 +43,24 @@ export type Lesson = {
   about: LessonBlock[];
   /** Which onboarding track this lesson belongs to. Missing → "seo". */
   track?: OnbTrack;
+  /** Platform brand icon id (ga4, gsc, gmb, google-ads, meta, website…).
+   *  When set, the UI shows the platform logo instead of the emoji. */
+  platform?: string;
 };
+
+/** Known platform icon ids (see PlatformIcon component). */
+export const PLATFORM_IDS = [
+  "ga4",
+  "gsc",
+  "gmb",
+  "google-ads",
+  "meta",
+  "merchant",
+  "tag-manager",
+  "website",
+  "wordpress",
+  "shopify",
+] as const;
 
 export type OnboardingCategory = {
   key: string;
@@ -154,6 +171,7 @@ export const DEFAULT_ONBOARDING_CATEGORIES: OnboardingCategory[] = [
       },
       {
         id: "ga4",
+        platform: "ga4",
         category: "acessos",
         title: "Google Analytics 4",
         kind: "video",
@@ -174,6 +192,7 @@ export const DEFAULT_ONBOARDING_CATEGORIES: OnboardingCategory[] = [
       },
       {
         id: "gsc",
+        platform: "gsc",
         category: "acessos",
         title: "Google Search Console",
         kind: "video",
@@ -194,6 +213,7 @@ export const DEFAULT_ONBOARDING_CATEGORIES: OnboardingCategory[] = [
       },
       {
         id: "gmb",
+        platform: "gmb",
         category: "acessos",
         title: "Google My Business (Perfil GMB)",
         kind: "video",
@@ -214,6 +234,7 @@ export const DEFAULT_ONBOARDING_CATEGORIES: OnboardingCategory[] = [
       },
       {
         id: "website",
+        platform: "website",
         category: "acessos",
         title: "Acesso ao Website — Clientes Wordpress & Shopify",
         kind: "video",
@@ -261,6 +282,7 @@ export const DEFAULT_ONBOARDING_CATEGORIES: OnboardingCategory[] = [
       },
       {
         id: "google-ads-conta",
+        platform: "google-ads",
         track: "ads",
         category: "acessos-ads",
         title: "Acesso à Conta Google Ads",
@@ -282,6 +304,7 @@ export const DEFAULT_ONBOARDING_CATEGORIES: OnboardingCategory[] = [
       },
       {
         id: "meta-ads-conta",
+        platform: "meta",
         track: "ads",
         category: "acessos-ads",
         title: "Acesso à Conta Meta / Facebook Business",
@@ -474,12 +497,18 @@ export function normalizeCourse(raw: unknown): OnboardingCategory[] | null {
           ? (trackRaw as OnbTrack)
           : "seo";
         const videoUrl = (l as { videoUrl?: unknown }).videoUrl;
+        const platformRaw = (l as { platform?: unknown }).platform;
+        const platform =
+          typeof platformRaw === "string" && platformRaw.trim()
+            ? platformRaw
+            : undefined;
         outLessons.push({
           id,
           category: key,
           title: lTitle,
           kind,
           track,
+          platform,
           emoji:
             typeof (l as { emoji?: unknown }).emoji === "string"
               ? (l as { emoji: string }).emoji

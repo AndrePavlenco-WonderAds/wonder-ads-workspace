@@ -18,11 +18,12 @@ import {
   GraduationCap,
   ClipboardList,
 } from "lucide-react";
-import type {
-  OnboardingCategory,
-  Lesson,
-  LessonBlock,
-  LessonKind,
+import {
+  PLATFORM_IDS,
+  type OnboardingCategory,
+  type Lesson,
+  type LessonBlock,
+  type LessonKind,
 } from "@/lib/onboarding-lessons";
 import type {
   OnbStep,
@@ -315,13 +316,29 @@ function LessonEditor({
         </Labeled>
       </div>
 
-      <div className="mt-3">
+      <div className="mt-3 grid gap-3 sm:grid-cols-[2fr_1fr]">
         <Labeled label="Resumo (mostrado no hub)">
           <input
             value={lesson.summary}
             onChange={(e) => set({ summary: e.target.value })}
             className={inputCls}
           />
+        </Labeled>
+        <Labeled label="Ícone de plataforma">
+          <select
+            value={lesson.platform ?? ""}
+            onChange={(e) =>
+              set({ platform: e.target.value || undefined })
+            }
+            className={inputCls}
+          >
+            <option value="">— (emoji)</option>
+            {PLATFORM_IDS.map((p) => (
+              <option key={p} value={p}>
+                {p}
+              </option>
+            ))}
+          </select>
         </Labeled>
       </div>
 

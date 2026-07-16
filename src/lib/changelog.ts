@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.89",
+    date: "2026-07-16",
+    title: "Onboarding — overview redesenhado + ícones de plataforma",
+    highlights: [
+      "**✨ Overview premium.** A página de onboarding do cliente foi redesenhada de raiz: hero com saudação, **anel de progresso** e botão *Continuar* (leva ao próximo passo por concluir), uma **linha temporal** de passos com estados (concluído / próximo / por fazer) e uma barra lateral com o instrutor e apoio.",
+      "**🎨 Ícones de plataforma.** Os acessos passam a mostrar o **logótipo real da plataforma** (Google Analytics, Search Console, Perfil de Empresa, Google Ads, Meta, Website…) em vez de emoji.",
+      "**🏷️ Badge de roadmap.** Cada acesso/passo indica se pertence ao **roadmap de SEO** ou de **Ads**, para se perceber de relance a que consultoria se refere.",
+      "**☑️ Sem serviço pré-selecionado.** No cartão *Iniciar onboarding*, nenhum serviço vem ticado por defeito — é preciso escolher explicitamente.",
+      "**🛠️ Editável.** O ícone de plataforma de cada lição também se escolhe no editor de onboarding.",
+    ],
+  },
+  {
     version: "74.88",
     date: "2026-07-16",
     title: "Onboarding por serviço (SEO / Ads) + bloco movido para SuperAdmin",

@@ -12,7 +12,7 @@ import { ONBOARDING_SERVICES, type OnbService } from "@/lib/onboarding-tracks";
 export function NewOnboardingClient() {
   const [title, setTitle] = useState("");
   const [consultant, setConsultant] = useState("");
-  const [services, setServices] = useState<OnbService[]>(["seo"]);
+  const [services, setServices] = useState<OnbService[]>([]);
   const [state, setState] = useState<"idle" | "saving" | "done" | "error">(
     "idle",
   );

@@ -19,6 +19,7 @@ import { stepsForTrack } from "@/lib/onboarding-questions";
 import { getCourse, getFormSteps } from "@/lib/onboarding-content-store";
 import { OnboardingMarkComplete } from "@/components/onboarding-mark-complete";
 import { OnboardingIntakeForm } from "@/components/onboarding-intake-form";
+import { PlatformIcon } from "@/components/platform-icon";
 
 export const dynamic = "force-dynamic";
 
@@ -160,7 +161,13 @@ export default async function OnboardingLessonPage({
                   className="absolute inset-0 flex flex-col items-center justify-center gap-3"
                   style={{ background: BRAND_GRADIENT }}
                 >
-                  <span className="text-4xl">{lesson.emoji}</span>
+                  {lesson.platform ? (
+                    <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white shadow-lg">
+                      <PlatformIcon platform={lesson.platform} className="h-9 w-9" />
+                    </span>
+                  ) : (
+                    <span className="text-4xl">{lesson.emoji}</span>
+                  )}
                   <span className="flex items-center gap-2 text-sm font-semibold text-white/90">
                     <PlayCircle className="h-5 w-5" />
                     Vídeo em breve
@@ -170,9 +177,26 @@ export default async function OnboardingLessonPage({
             </div>
           </div>
 
-          <h1 className="mt-6 text-2xl font-semibold tracking-tight text-black/85 sm:text-3xl">
-            {lesson.title}
-          </h1>
+          <div className="mt-6 flex flex-wrap items-center gap-2.5">
+            <h1 className="text-2xl font-semibold tracking-tight text-black/85 sm:text-3xl">
+              {lesson.title}
+            </h1>
+            {(lessonTrack(lesson) === "seo" || lessonTrack(lesson) === "ads") && (
+              <span
+                title={lessonTrack(lesson) === "seo" ? "Roadmap SEO" : "Roadmap Ads"}
+                className="inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.1em]"
+                style={{
+                  background:
+                    lessonTrack(lesson) === "seo"
+                      ? "rgba(120,61,245,0.1)"
+                      : "rgba(52,62,215,0.1)",
+                  color: lessonTrack(lesson) === "seo" ? "#783DF5" : "#343ED7",
+                }}
+              >
+                {lessonTrack(lesson) === "seo" ? "SEO" : "Ads"}
+              </span>
+            )}
+          </div>
 
           {/* About */}
           <div className="mt-6 rounded-2xl border border-black/8 bg-white p-6 shadow-sm">
