@@ -150,7 +150,7 @@ export const DEFAULT_ONBOARDING_STEPS: OnbStep[] = [
   {
     key: "area_influencia",
     track: "common",
-    section: "SEO",
+    section: "Mercado",
     sectionTag: "02",
     title: "Área de Influência",
     fields: [
@@ -198,7 +198,7 @@ export const DEFAULT_ONBOARDING_STEPS: OnbStep[] = [
   {
     key: "competidores",
     track: "common",
-    section: "SEO",
+    section: "Mercado",
     sectionTag: "02",
     title: "Competidores",
     fields: [
@@ -332,15 +332,17 @@ export const DEFAULT_ONBOARDING_STEPS: OnbStep[] = [
   },
   {
     key: "palavras",
+    track: "common",
     section: "Marca",
     sectionTag: "05",
-    title: "Palavras a Usar/Evitar",
+    title: "Regras de Marca",
     fields: [
       {
         kind: "long",
         name: "palavras",
-        label: "Existem palavras ou frases específicas que prefere usar ou evitar?",
-        required: true,
+        label:
+          "Há regras de marca? Palavras ou frases que devemos sempre usar, ou que devemos evitar/nunca dizer.",
+        required: false,
       },
     ],
   },
@@ -403,9 +405,26 @@ export const DEFAULT_ONBOARDING_STEPS: OnbStep[] = [
       {
         kind: "long",
         name: "mais_vendidos",
-        label: "Quais são os serviços/produtos mais vendidos?",
-        help: 'Exemplo: "no meu caso são os branqueamentos dentários".',
+        label:
+          "Quais são os serviços/produtos mais vendidos — e quais os mais rentáveis?",
+        help: 'Nem sempre são os mesmos, e saber ambos ajuda-nos a impulsionar os certos. Exemplo: "no meu caso os mais vendidos são os branqueamentos dentários".',
         required: true,
+      },
+    ],
+  },
+  {
+    key: "servico_crescer",
+    track: "common",
+    section: "Serviço",
+    sectionTag: "06",
+    title: "Serviço a Crescer",
+    fields: [
+      {
+        kind: "long",
+        name: "servico_crescer",
+        label:
+          "Há algum serviço ou produto específico que gostariam sobretudo de fazer crescer?",
+        required: false,
       },
     ],
   },
@@ -861,6 +880,23 @@ export const DEFAULT_ONBOARDING_STEPS: OnbStep[] = [
     ],
   },
   {
+    key: "ads_cpa_max",
+    track: "ads",
+    section: "Orçamento",
+    sectionTag: "A3",
+    title: "Custo Máximo por Lead",
+    fields: [
+      {
+        kind: "short",
+        name: "ads_cpa_max",
+        label:
+          "Qual é o valor máximo que conseguem pagar por uma nova lead/venda de forma rentável? (CPA-alvo)",
+        help: "Se não tiverem a certeza, digam-nos as margens e ajudamos a calcular.",
+        required: false,
+      },
+    ],
+  },
+  {
     key: "ads_sazonalidade",
     track: "ads",
     section: "Orçamento",
@@ -919,9 +955,90 @@ export const DEFAULT_ONBOARDING_STEPS: OnbStep[] = [
         kind: "long",
         name: "ads_q14",
         label:
-          "Quando entra um contacto ou chamada, quem faz o follow-up e com que rapidez?",
+          "Passo a passo, o que acontece quando entra uma lead? Quem contacta, por que canal e com que rapidez (minutos, horas, dia seguinte)?",
         help: "Um follow-up rápido é um dos maiores fatores para transformar leads em clientes.",
         required: true,
+      },
+    ],
+  },
+  {
+    key: "ads_followup_seq",
+    track: "ads",
+    section: "Contactos",
+    sectionTag: "A5",
+    title: "Sequência de Follow-up",
+    fields: [
+      {
+        kind: "long",
+        name: "ads_followup_seq",
+        label:
+          "Se a pessoa não atende à primeira, qual é o follow-up? (uma chamada e fica por aí, ou uma sequência de chamadas/emails/SMS?)",
+        required: false,
+      },
+    ],
+  },
+  {
+    key: "ads_lead_qualidade",
+    track: "ads",
+    section: "Contactos",
+    sectionTag: "A5",
+    title: "Lead Boa vs. Lead Fraca",
+    fields: [
+      {
+        kind: "long",
+        name: "ads_lead_qualidade",
+        label:
+          "Como é uma boa lead para vocês, versus uma lead fraca / que faz perder tempo?",
+        help: "Isto permite-nos otimizar para qualidade de leads, e não só para volume.",
+        required: false,
+      },
+    ],
+  },
+  {
+    key: "ads_conversao",
+    track: "ads",
+    section: "Contactos",
+    sectionTag: "A5",
+    title: "Taxa de Conversão",
+    fields: [
+      {
+        kind: "long",
+        name: "ads_conversao",
+        label:
+          "Aproximadamente, que % das leads se tornam clientes pagantes, e qual é o ciclo de venda típico?",
+        required: false,
+      },
+    ],
+  },
+  {
+    key: "ads_crm",
+    track: "ads",
+    section: "Contactos",
+    sectionTag: "A5",
+    title: "CRM",
+    fields: [
+      {
+        kind: "short",
+        name: "ads_crm",
+        label: "Usam algum CRM? Se sim, qual?",
+        required: false,
+      },
+    ],
+  },
+  {
+    key: "ads_criativos",
+    track: "ads",
+    section: "Criativos",
+    sectionTag: "A6",
+    title: "Materiais Criativos",
+    fields: [
+      {
+        kind: "long",
+        name: "ads_criativos",
+        label:
+          "Que materiais criativos já têm? (fotos, vídeos, logótipo, cores e fontes da marca)",
+        help: "Vão fornecer os criativos, ou preferem que a WonderAds os produza?",
+        required: false,
       },
     ],
   },
@@ -933,7 +1050,7 @@ export const DEFAULT_ONBOARDING_STEPS: OnbStep[] = [
     track: "ads",
     ecommerce: true,
     section: "E-commerce",
-    sectionTag: "A6",
+    sectionTag: "A7",
     title: "Plataforma de Loja",
     fields: [
       {
@@ -950,7 +1067,7 @@ export const DEFAULT_ONBOARDING_STEPS: OnbStep[] = [
     track: "ads",
     ecommerce: true,
     section: "E-commerce",
-    sectionTag: "A6",
+    sectionTag: "A7",
     title: "Catálogo",
     fields: [
       {
@@ -967,14 +1084,32 @@ export const DEFAULT_ONBOARDING_STEPS: OnbStep[] = [
     track: "ads",
     ecommerce: true,
     section: "E-commerce",
-    sectionTag: "A6",
-    title: "Valor Médio de Encomenda",
+    sectionTag: "A7",
+    title: "Preços e Valor Médio de Encomenda",
     fields: [
       {
         kind: "short",
         name: "ec_q3",
-        label: "Qual é o valor médio de encomenda (AOV)?",
+        label:
+          "Qual é a gama de preços dos produtos e o valor médio de encomenda (AOV) típico?",
         required: true,
+      },
+    ],
+  },
+  {
+    key: "ec_margem",
+    track: "ads",
+    ecommerce: true,
+    section: "E-commerce",
+    sectionTag: "A7",
+    title: "Margem e Recompra",
+    fields: [
+      {
+        kind: "long",
+        name: "ec_margem",
+        label:
+          "Qual é a margem de lucro aproximada por encomenda? Os clientes tendem a comprar de novo (recompra / valor ao longo do tempo)?",
+        required: false,
       },
     ],
   },
@@ -983,7 +1118,7 @@ export const DEFAULT_ONBOARDING_STEPS: OnbStep[] = [
     track: "ads",
     ecommerce: true,
     section: "E-commerce",
-    sectionTag: "A6",
+    sectionTag: "A7",
     title: "Feed de Produtos",
     fields: [
       {
@@ -1000,7 +1135,7 @@ export const DEFAULT_ONBOARDING_STEPS: OnbStep[] = [
     track: "ads",
     ecommerce: true,
     section: "E-commerce",
-    sectionTag: "A6",
+    sectionTag: "A7",
     title: "Produtos-Chave",
     fields: [
       {
@@ -1012,11 +1147,28 @@ export const DEFAULT_ONBOARDING_STEPS: OnbStep[] = [
     ],
   },
   {
+    key: "ec_hero",
+    track: "ads",
+    ecommerce: true,
+    section: "E-commerce",
+    sectionTag: "A7",
+    title: "Produto/Categoria a Crescer",
+    fields: [
+      {
+        kind: "long",
+        name: "ec_hero",
+        label:
+          "Há um produto-estrela (hero) ou categoria específica que gostariam sobretudo de fazer crescer?",
+        required: false,
+      },
+    ],
+  },
+  {
     key: "ec_envios",
     track: "ads",
     ecommerce: true,
     section: "E-commerce",
-    sectionTag: "A6",
+    sectionTag: "A7",
     title: "Envios",
     fields: [
       {
@@ -1033,7 +1185,7 @@ export const DEFAULT_ONBOARDING_STEPS: OnbStep[] = [
     track: "ads",
     ecommerce: true,
     section: "E-commerce",
-    sectionTag: "A6",
+    sectionTag: "A7",
     title: "Pixel & Conversões",
     fields: [
       {
@@ -1050,7 +1202,7 @@ export const DEFAULT_ONBOARDING_STEPS: OnbStep[] = [
     track: "ads",
     ecommerce: true,
     section: "E-commerce",
-    sectionTag: "A6",
+    sectionTag: "A7",
     title: "Conversão & ROAS",
     fields: [
       {

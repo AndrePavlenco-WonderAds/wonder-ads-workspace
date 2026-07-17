@@ -15,9 +15,6 @@ import {
   Sparkles,
   PartyPopper,
   Clock,
-  ListChecks,
-  Save,
-  KeyRound,
 } from "lucide-react";
 import { resolveOnboardingClient } from "@/lib/onboarding-resolve";
 import { getOnboardingProgress } from "@/lib/onboarding-progress-store";
@@ -43,20 +40,6 @@ function lessonMinutes(lesson: Lesson): number {
   if (lesson.kind === "video") return 3;
   return 2; // info / access-grant steps
 }
-
-// Human labels for the platform access steps (used in the sidebar checklist).
-const PLATFORM_LABELS: Record<string, string> = {
-  ga4: "Google Analytics 4",
-  gsc: "Search Console",
-  gmb: "Perfil de Empresa Google",
-  "google-ads": "Google Ads",
-  meta: "Meta Business",
-  merchant: "Merchant Center",
-  "tag-manager": "Tag Manager",
-  website: "Website",
-  wordpress: "WordPress",
-  shopify: "Shopify",
-};
 
 const RESERVED = new Set([
   "seo",
@@ -163,25 +146,10 @@ export default async function OnboardingHubPage({
   // Next incomplete lesson drives the "continue" CTA + the "current" highlight.
   const nextLesson = allLessons.find((l) => !done.has(l.id)) ?? null;
 
-  // Time left = rough estimate summed over the steps still to do.
+  // Time left = rough estimate summed over the steps still to do (sticky bar).
   const minutesLeft = allLessons
     .filter((l) => !done.has(l.id))
     .reduce((sum, l) => sum + lessonMinutes(l), 0);
-  const stepsLeft = total - completedCount;
-
-  // "O que vamos precisar" — the platform-access steps, deduped by platform,
-  // each carrying whether the client already completed that step.
-  const accessSteps = allLessons
-    .filter((l) => l.platform)
-    .reduce<{ platform: string; label: string; done: boolean }[]>((acc, l) => {
-      if (acc.some((a) => a.platform === l.platform)) return acc;
-      acc.push({
-        platform: l.platform!,
-        label: PLATFORM_LABELS[l.platform!] ?? l.title,
-        done: done.has(l.id),
-      });
-      return acc;
-    }, []);
 
   const continueLabel = completedCount === 0 ? "Começar agora" : "Continuar";
 
@@ -293,25 +261,6 @@ export default async function OnboardingHubPage({
                 </Link>
               )}
             </div>
-
-            {/* Meta chips — steps + time left + auto-save reassurance */}
-            {!allDone && (
-              <div className="mt-5 flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-black/[0.04] px-3 py-1.5 text-[12px] font-medium text-black/60">
-                  <ListChecks className="h-3.5 w-3.5 text-[#783DF5]" />
-                  {stepsLeft} {stepsLeft === 1 ? "passo" : "passos"} por concluir
-                </span>
-                {minutesLeft > 0 && (
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-black/[0.04] px-3 py-1.5 text-[12px] font-medium text-black/60">
-                    <Clock className="h-3.5 w-3.5 text-[#783DF5]" />~{minutesLeft} min
-                  </span>
-                )}
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-black/[0.04] px-3 py-1.5 text-[12px] font-medium text-black/60">
-                  <Save className="h-3.5 w-3.5 text-[#783DF5]" />
-                  Progresso guardado automaticamente
-                </span>
-              </div>
-            )}
           </div>
 
           {/* Progress ring */}
@@ -486,39 +435,6 @@ export default async function OnboardingHubPage({
         {/* Sidebar */}
         <aside className="space-y-4 lg:sticky lg:top-20 lg:self-start">
           <OnboardingInstructors tracks={client.tracks} />
-
-          {accessSteps.length > 0 && (
-            <div className="rounded-2xl border border-black/8 bg-white p-5 shadow-sm">
-              <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-black/40">
-                <KeyRound className="h-3.5 w-3.5 text-[#A9834F]" />
-                Acessos que vamos precisar
-              </p>
-              <ul className="mt-3 space-y-2.5">
-                {accessSteps.map((a) => (
-                  <li key={a.platform} className="flex items-center gap-2.5">
-                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-black/8 bg-white">
-                      <PlatformIcon platform={a.platform} className="h-4 w-4" />
-                    </span>
-                    <span
-                      className={`flex-1 text-[13px] ${
-                        a.done
-                          ? "text-black/40 line-through"
-                          : "font-medium text-black/70"
-                      }`}
-                    >
-                      {a.label}
-                    </span>
-                    {a.done && (
-                      <Check
-                        className="h-3.5 w-3.5 shrink-0 text-emerald-600"
-                        strokeWidth={3}
-                      />
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
 
           {client.consultant && (
             <div className="rounded-2xl border border-black/8 bg-white p-5 shadow-sm">

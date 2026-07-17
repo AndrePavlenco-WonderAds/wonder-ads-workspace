@@ -13,14 +13,25 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.97",
+    date: "2026-07-17",
+    title: "Onboarding — formulários alinhados com os questionários WonderAds",
+    highlights: [
+      "**📝 Formulário geral (Cliente).** Fundidas as perguntas do *Client Questionnaire*: *serviços/produtos mais vendidos E mais rentáveis*, novo *serviço a fazer crescer* e *regras de marca* (o que sempre dizer / nunca dizer). A secção mal-rotulada *SEO* passou a **Mercado** (área de influência + concorrência).",
+      "**🎯 Formulário de Ads (lead gen).** Acrescentadas as perguntas do *Lead Gen Questionnaire*: passo-a-passo do contacto (quem/canal/rapidez), *sequência de follow-up*, *lead boa vs. fraca*, *% de conversão + ciclo de venda*, *CRM*, *custo máximo por lead (CPA-alvo)* e *materiais criativos*.",
+      "**🛒 Formulário de Ads e-commerce.** Fundido o *E-commerce Questionnaire*: gama de preços + AOV, *margem e recompra*, *produto/categoria hero a crescer*. Sem duplicar o que já vinha do formulário geral/Ads.",
+      "**🧹 Sem repetições.** Perguntas iguais ou muito parecidas entre formulários foram unificadas (ex.: *regras de marca* saiu do SEO para o geral) — cada cliente responde uma só vez.",
+      "**➖ Overview afinado.** Removidos os chips *passos/min/autosave* do hero e a checklist *Acessos que vamos precisar* da barra lateral (da v74.96) a pedido — mantém-se a barra de progresso fixa, o cartão *A seguir* e o tempo por passo.",
+    ],
+  },
+  {
     version: "74.96",
     date: "2026-07-17",
     title: "Onboarding — página de overview mais clara + título da aba",
     highlights: [
       "**🏷️ Título da aba corrigido.** Os links de onboarding mostravam *Pending Review · Wonder Ads* na aba/partilha (herdado do layout público). Agora cada onboarding tem o seu próprio título: *Onboarding · {Cliente} · Wonder Ads* (hub) e *{Passo} · Onboarding {Cliente} · Wonder Ads* (lição).",
       "**📊 Barra de progresso fixa.** Ao fazer scroll, aparece no topo uma barra com o **% concluído**, passos e **~min restantes** + botão *Continuar* — sempre à mão, sobretudo no telemóvel.",
-      "**⏱️ Tempo e passos no hero.** Chips com *X passos por concluir · ~Y min · Progresso guardado automaticamente* e cartão **A seguir** com miniatura do próximo passo. Cada lição mostra a sua estimativa de tempo.",
-      "**🔑 Checklist de acessos.** Nova secção *Acessos que vamos precisar* na barra lateral (Analytics, Search Console, GMB, Ads…) com estado concluído por acesso. Categorias 100% feitas ganham um visto.",
+      "**⏱️ Cartão A seguir + tempo por passo.** No hero, cartão **A seguir** com miniatura do próximo passo; cada lição mostra a sua estimativa de tempo.",
     ],
   },
   {
