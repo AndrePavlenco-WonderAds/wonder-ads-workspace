@@ -3,6 +3,7 @@
 // with platform icons and roadmap (SEO/Ads) badges, and a sticky sidebar with
 // the instructor + help. No auth / no app chrome.
 
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import {
@@ -13,6 +14,10 @@ import {
   Flag,
   Sparkles,
   PartyPopper,
+  Clock,
+  ListChecks,
+  Save,
+  KeyRound,
 } from "lucide-react";
 import { resolveOnboardingClient } from "@/lib/onboarding-resolve";
 import { getOnboardingProgress } from "@/lib/onboarding-progress-store";
@@ -27,8 +32,31 @@ import {
 import { PlatformIcon } from "@/components/platform-icon";
 import { OnboardingInstructors } from "@/components/onboarding-instructors";
 import { OnboardingGate } from "@/components/onboarding-gate";
+import { OnboardingStickyBar } from "@/components/onboarding-sticky-bar";
 
 export const dynamic = "force-dynamic";
+
+// Rough per-step time estimate (minutes) so the client can see "≈X min left"
+// without us hand-maintaining a duration on every lesson.
+function lessonMinutes(lesson: Lesson): number {
+  if (lesson.kind === "form") return 8;
+  if (lesson.kind === "video") return 3;
+  return 2; // info / access-grant steps
+}
+
+// Human labels for the platform access steps (used in the sidebar checklist).
+const PLATFORM_LABELS: Record<string, string> = {
+  ga4: "Google Analytics 4",
+  gsc: "Search Console",
+  gmb: "Perfil de Empresa Google",
+  "google-ads": "Google Ads",
+  meta: "Meta Business",
+  merchant: "Merchant Center",
+  "tag-manager": "Tag Manager",
+  website: "Website",
+  wordpress: "WordPress",
+  shopify: "Shopify",
+};
 
 const RESERVED = new Set([
   "seo",
@@ -89,6 +117,21 @@ function LessonThumb({ lesson }: { lesson: Lesson }) {
   );
 }
 
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  if (RESERVED.has(slug)) return { title: "Onboarding · Wonder Ads" };
+  const client = await resolveOnboardingClient(slug).catch(() => null);
+  const name = client?.title ?? "Onboarding";
+  return {
+    title: `Onboarding · ${name} · Wonder Ads`,
+    description: `Bem-vindo à Wonder Ads, ${name}. Complete o seu onboarding em poucos minutos — o progresso é guardado automaticamente.`,
+  };
+}
+
 export default async function OnboardingHubPage({
   params,
 }: {
@@ -120,6 +163,28 @@ export default async function OnboardingHubPage({
   // Next incomplete lesson drives the "continue" CTA + the "current" highlight.
   const nextLesson = allLessons.find((l) => !done.has(l.id)) ?? null;
 
+  // Time left = rough estimate summed over the steps still to do.
+  const minutesLeft = allLessons
+    .filter((l) => !done.has(l.id))
+    .reduce((sum, l) => sum + lessonMinutes(l), 0);
+  const stepsLeft = total - completedCount;
+
+  // "O que vamos precisar" — the platform-access steps, deduped by platform,
+  // each carrying whether the client already completed that step.
+  const accessSteps = allLessons
+    .filter((l) => l.platform)
+    .reduce<{ platform: string; label: string; done: boolean }[]>((acc, l) => {
+      if (acc.some((a) => a.platform === l.platform)) return acc;
+      acc.push({
+        platform: l.platform!,
+        label: PLATFORM_LABELS[l.platform!] ?? l.title,
+        done: done.has(l.id),
+      });
+      return acc;
+    }, []);
+
+  const continueLabel = completedCount === 0 ? "Começar agora" : "Continuar";
+
   // Progress ring geometry.
   const R = 46;
   const C = 2 * Math.PI * R;
@@ -127,6 +192,16 @@ export default async function OnboardingHubPage({
 
   return (
     <main className="mx-auto min-h-screen max-w-5xl px-4 py-8 sm:px-6 sm:py-12">
+      <OnboardingStickyBar
+        clientTitle={client.title}
+        pct={pct}
+        completedCount={completedCount}
+        total={total}
+        minutesLeft={minutesLeft}
+        nextHref={nextLesson ? lessonHref(slug, nextLesson) : null}
+        continueLabel={continueLabel}
+        allDone={allDone}
+      />
       {!gateConfirmedAt && (
         <OnboardingGate slug={slug} clientTitle={client.title} />
       )}
@@ -189,7 +264,7 @@ export default async function OnboardingHubPage({
                   className="group inline-flex items-center gap-2 rounded-xl px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-[#783DF5]/30 transition-all duration-200 hover:-translate-y-0.5 hover:brightness-110"
                   style={{ background: BRAND_GRADIENT }}
                 >
-                  {completedCount === 0 ? "Começar agora" : "Continuar"}
+                  {continueLabel}
                   <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
                 </Link>
               ) : (
@@ -202,14 +277,41 @@ export default async function OnboardingHubPage({
                 </span>
               )}
               {nextLesson && (
-                <span className="text-[13px] text-black/45">
-                  A seguir:{" "}
-                  <span className="font-medium text-black/70">
-                    {nextLesson.title}
+                <Link
+                  href={lessonHref(slug, nextLesson)}
+                  className="group inline-flex min-w-0 items-center gap-2.5 rounded-xl border border-black/8 bg-white px-3 py-2 transition hover:border-[#783DF5]/30 hover:shadow-sm"
+                >
+                  <LessonThumb lesson={nextLesson} />
+                  <span className="min-w-0">
+                    <span className="block text-[10px] font-semibold uppercase tracking-[0.14em] text-[#A9834F]">
+                      A seguir
+                    </span>
+                    <span className="block truncate text-[13px] font-medium text-black/75">
+                      {nextLesson.title}
+                    </span>
                   </span>
-                </span>
+                </Link>
               )}
             </div>
+
+            {/* Meta chips — steps + time left + auto-save reassurance */}
+            {!allDone && (
+              <div className="mt-5 flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-black/[0.04] px-3 py-1.5 text-[12px] font-medium text-black/60">
+                  <ListChecks className="h-3.5 w-3.5 text-[#783DF5]" />
+                  {stepsLeft} {stepsLeft === 1 ? "passo" : "passos"} por concluir
+                </span>
+                {minutesLeft > 0 && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-black/[0.04] px-3 py-1.5 text-[12px] font-medium text-black/60">
+                    <Clock className="h-3.5 w-3.5 text-[#783DF5]" />~{minutesLeft} min
+                  </span>
+                )}
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-black/[0.04] px-3 py-1.5 text-[12px] font-medium text-black/60">
+                  <Save className="h-3.5 w-3.5 text-[#783DF5]" />
+                  Progresso guardado automaticamente
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Progress ring */}
@@ -253,14 +355,15 @@ export default async function OnboardingHubPage({
           {categories.map((cat, ci) => {
             const catDone = cat.lessons.filter((l) => done.has(l.id)).length;
             const catPct = Math.round((catDone / cat.lessons.length) * 100);
+            const catDone_all = catDone === cat.lessons.length;
             return (
-              <section key={cat.key}>
+              <section key={cat.key} id={`cat-${cat.key}`} className="scroll-mt-20">
                 <div className="mb-4 flex items-center gap-3">
                   <span
                     className="flex h-7 w-7 items-center justify-center rounded-lg text-[12px] font-bold text-white"
                     style={{ background: BRAND_GRADIENT }}
                   >
-                    {ci + 1}
+                    {catDone_all ? <Check className="h-4 w-4" strokeWidth={3} /> : ci + 1}
                   </span>
                   <h2 className="text-lg font-semibold text-black/85">
                     {cat.title}
@@ -341,15 +444,23 @@ export default async function OnboardingHubPage({
                                   Próximo
                                 </span>
                               )}
+                              {!isDone && (
+                                <span className="inline-flex items-center gap-1 text-[11px] font-medium text-black/40">
+                                  <Clock className="h-3 w-3" />~{lessonMinutes(lesson)} min
+                                </span>
+                              )}
                             </div>
                             <p className="mt-0.5 truncate text-[12.5px] text-black/50">
                               {lesson.summary}
                             </p>
                           </div>
                           {isDone ? (
-                            <span className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-600">
+                            <span className="flex shrink-0 items-center gap-1.5 text-[11px] font-semibold text-emerald-600">
                               <Check className="h-3.5 w-3.5" strokeWidth={3} />
-                              Concluído
+                              <span className="hidden sm:inline">Concluído</span>
+                              <span className="text-black/30 transition group-hover:text-[#783DF5]">
+                                · Rever
+                              </span>
                             </span>
                           ) : (
                             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-black/10 text-black/30 transition group-hover:border-[#783DF5]/40 group-hover:text-[#783DF5]">
@@ -373,8 +484,41 @@ export default async function OnboardingHubPage({
         </div>
 
         {/* Sidebar */}
-        <aside className="space-y-4 lg:sticky lg:top-8 lg:self-start">
+        <aside className="space-y-4 lg:sticky lg:top-20 lg:self-start">
           <OnboardingInstructors tracks={client.tracks} />
+
+          {accessSteps.length > 0 && (
+            <div className="rounded-2xl border border-black/8 bg-white p-5 shadow-sm">
+              <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-black/40">
+                <KeyRound className="h-3.5 w-3.5 text-[#A9834F]" />
+                Acessos que vamos precisar
+              </p>
+              <ul className="mt-3 space-y-2.5">
+                {accessSteps.map((a) => (
+                  <li key={a.platform} className="flex items-center gap-2.5">
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-black/8 bg-white">
+                      <PlatformIcon platform={a.platform} className="h-4 w-4" />
+                    </span>
+                    <span
+                      className={`flex-1 text-[13px] ${
+                        a.done
+                          ? "text-black/40 line-through"
+                          : "font-medium text-black/70"
+                      }`}
+                    >
+                      {a.label}
+                    </span>
+                    {a.done && (
+                      <Check
+                        className="h-3.5 w-3.5 shrink-0 text-emerald-600"
+                        strokeWidth={3}
+                      />
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {client.consultant && (
             <div className="rounded-2xl border border-black/8 bg-white p-5 shadow-sm">

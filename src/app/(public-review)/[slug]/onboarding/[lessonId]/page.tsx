@@ -2,6 +2,7 @@
 // PASSO" rich content, mark-as-complete, and a right sidebar with the
 // category's numbered steps + next-category button. No auth / no app chrome.
 
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ChevronRight, Check, PlayCircle, ArrowRight } from "lucide-react";
@@ -44,6 +45,28 @@ const BRAND_GRADIENT =
 
 function lessonHref(slug: string, lesson: Lesson): string {
   return `/${slug}/onboarding/${lesson.id}`;
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string; lessonId: string }>;
+}): Promise<Metadata> {
+  const { slug, lessonId } = await params;
+  if (RESERVED.has(slug)) return { title: "Onboarding · Wonder Ads" };
+  const [client, course] = await Promise.all([
+    resolveOnboardingClient(slug).catch(() => null),
+    getCourse().catch(() => null),
+  ]);
+  const name = client?.title ?? "Onboarding";
+  const lesson = course ? findLesson(course, lessonId) : null;
+  const title = lesson
+    ? `${lesson.title} · Onboarding ${name} · Wonder Ads`
+    : `Onboarding · ${name} · Wonder Ads`;
+  return {
+    title,
+    description: `Passo de onboarding de ${name} na Wonder Ads.`,
+  };
 }
 
 export default async function OnboardingLessonPage({

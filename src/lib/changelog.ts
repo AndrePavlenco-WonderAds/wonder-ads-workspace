@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.96",
+    date: "2026-07-17",
+    title: "Onboarding — página de overview mais clara + título da aba",
+    highlights: [
+      "**🏷️ Título da aba corrigido.** Os links de onboarding mostravam *Pending Review · Wonder Ads* na aba/partilha (herdado do layout público). Agora cada onboarding tem o seu próprio título: *Onboarding · {Cliente} · Wonder Ads* (hub) e *{Passo} · Onboarding {Cliente} · Wonder Ads* (lição).",
+      "**📊 Barra de progresso fixa.** Ao fazer scroll, aparece no topo uma barra com o **% concluído**, passos e **~min restantes** + botão *Continuar* — sempre à mão, sobretudo no telemóvel.",
+      "**⏱️ Tempo e passos no hero.** Chips com *X passos por concluir · ~Y min · Progresso guardado automaticamente* e cartão **A seguir** com miniatura do próximo passo. Cada lição mostra a sua estimativa de tempo.",
+      "**🔑 Checklist de acessos.** Nova secção *Acessos que vamos precisar* na barra lateral (Analytics, Search Console, GMB, Ads…) com estado concluído por acesso. Categorias 100% feitas ganham um visto.",
+    ],
+  },
+  {
     version: "74.95",
     date: "2026-07-17",
     title: "ADS — ligar contas via OAuth dentro da app",
