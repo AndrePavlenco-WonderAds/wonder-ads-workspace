@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.91",
+    date: "2026-07-17",
+    title: "Onboarding — eixo e-commerce (GMC + perguntas) e afinações",
+    highlights: [
+      "**🛒 Onboarding e-commerce.** Ao escolher Google e/ou Meta Ads, o SuperAdmin indica se é um negócio **e-commerce**. Se sim: adiciona o passo **Acesso ao Google Merchant Center** (só Google Ads) e um bloco de **perguntas de e-commerce** ao formulário de Ads (as mesmas para Google e Meta).",
+      "**🧹 Passos removidos.** As lições *Introdução* (Acessos SEO) e *Introdução (Ads)* foram removidas.",
+      "**🔒 Popup legal mais claro.** A confirmação destaca agora os **2 requisitos** — *Contrato assinado* e *Fatura liquidada* — sublinhados e em cartões próprios.",
+      "**📣 ADS DPT.** Adicionada a **Wonder Ads** à lista de clientes do departamento de Publicidade.",
+      "**🛠️ Editável.** Lições e passos podem ser marcados como *só para e-commerce* no editor de onboarding.",
+    ],
+  },
+  {
     version: "74.90",
     date: "2026-07-17",
     title: "Onboarding — instrutores por track, gate legal e afinações",

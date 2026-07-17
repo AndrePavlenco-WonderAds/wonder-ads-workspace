@@ -25,7 +25,11 @@ export async function OnboardingStatus({
     resolveOnboardingClient(slug),
   ]);
   const tracks = client?.tracks ?? ["seo"];
-  const categories = courseForTracks(fullCourse, tracks);
+  const categories = courseForTracks(fullCourse, {
+    tracks,
+    ecommerce: client?.ecommerce ?? false,
+    services: client?.services ?? ["seo"],
+  });
   const allLessons = flattenLessons(categories);
   const total = allLessons.length;
   const done = new Set(progress.completed);

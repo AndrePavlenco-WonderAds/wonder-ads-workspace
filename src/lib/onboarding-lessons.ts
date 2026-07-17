@@ -10,7 +10,7 @@
 // is composed from their services (see onboarding-tracks.ts) — SEO lessons for
 // SEO clients, Ads lessons for Ads clients, common lessons for everyone.
 
-import type { OnbTrack } from "@/lib/onboarding-tracks";
+import type { OnbTrack, OnbService } from "@/lib/onboarding-tracks";
 
 /** Team emails to grant as admins on the client's accounts. */
 export const TEAM_ADMIN_EMAILS = [
@@ -46,6 +46,10 @@ export type Lesson = {
   /** Platform brand icon id (ga4, gsc, gmb, google-ads, meta, website…).
    *  When set, the UI shows the platform logo instead of the emoji. */
   platform?: string;
+  /** Only shown when the client onboarding is flagged e-commerce. */
+  ecommerce?: boolean;
+  /** Only shown when the client signed up for this specific service. */
+  requiresService?: OnbService;
 };
 
 /** Known platform icon ids (see PlatformIcon component). */
@@ -150,26 +154,6 @@ export const DEFAULT_ONBOARDING_CATEGORIES: OnboardingCategory[] = [
     title: "Acessos Consultoria SEO",
     lessons: [
       {
-        id: "intro-acessos",
-        category: "acessos",
-        title: "Introdução",
-        kind: "video",
-        emoji: "🔑",
-        videoUrl: null,
-        summary: "Porque precisamos destes acessos e como os partilhar em segurança.",
-        about: [
-          {
-            type: "p",
-            text: "Para trabalharmos o vosso SEO com rigor, precisamos de acesso às ferramentas onde vivem os vossos dados. Nesta secção mostramos, passo a passo, como nos dar acesso a cada uma.",
-          },
-          {
-            type: "emails",
-            intro: "Sempre que pedirmos para adicionar a Wonder Ads como administrador, use os seguintes emails:",
-            emails: TEAM_ADMIN_EMAILS,
-          },
-        ],
-      },
-      {
         id: "ga4",
         platform: "ga4",
         category: "acessos",
@@ -260,27 +244,6 @@ export const DEFAULT_ONBOARDING_CATEGORIES: OnboardingCategory[] = [
     title: "Acessos Consultoria Ads",
     lessons: [
       {
-        id: "intro-ads",
-        track: "ads",
-        category: "acessos-ads",
-        title: "Introdução (Ads)",
-        kind: "video",
-        emoji: "📣",
-        videoUrl: null,
-        summary: "Que acessos precisamos para gerir os vossos anúncios.",
-        about: [
-          {
-            type: "p",
-            text: "Para lançarmos e otimizarmos as vossas campanhas, precisamos de acesso às contas de anúncios e de medição. Nesta secção mostramos como nos dar acesso a cada uma.",
-          },
-          {
-            type: "emails",
-            intro: "Sempre que pedirmos para adicionar a Wonder Ads, use os seguintes emails:",
-            emails: TEAM_ADMIN_EMAILS,
-          },
-        ],
-      },
-      {
         id: "google-ads-conta",
         platform: "google-ads",
         track: "ads",
@@ -298,6 +261,30 @@ export const DEFAULT_ONBOARDING_CATEGORIES: OnboardingCategory[] = [
           {
             type: "emails",
             intro: "Emails para adicionar à conta Google Ads como Administradores:",
+            emails: TEAM_ADMIN_EMAILS,
+          },
+        ],
+      },
+      {
+        id: "gmc",
+        track: "ads",
+        ecommerce: true,
+        requiresService: "google-ads",
+        platform: "merchant",
+        category: "acessos-ads",
+        title: "Acesso ao Google Merchant Center",
+        kind: "video",
+        emoji: "🛒",
+        videoUrl: null,
+        summary: "Ligar o catálogo de produtos para os anúncios Shopping.",
+        about: [
+          {
+            type: "p",
+            text: "Para anúncios de produtos (Shopping), precisamos de acesso ao vosso Google Merchant Center — é onde vive o feed de produtos que alimenta as campanhas de e-commerce.",
+          },
+          {
+            type: "emails",
+            intro: "Emails para adicionar ao Google Merchant Center como Administradores:",
             emails: TEAM_ADMIN_EMAILS,
           },
         ],
@@ -383,17 +370,29 @@ export function lessonTrack(l: Lesson): OnbTrack {
   return l.track ?? "seo";
 }
 
-/** The course a client sees for their active tracks — lessons whose track is
- *  "common" or in `tracks`, dropping any category left empty. */
+export type ComposeCtx = {
+  tracks: ("seo" | "ads")[];
+  ecommerce: boolean;
+  services: OnbService[];
+};
+
+/** The course a client sees — lessons whose track is "common" or active, that
+ *  aren't e-commerce-only (unless the client is e-commerce) and whose required
+ *  service (if any) the client has. Empty categories are dropped. */
 export function courseForTracks(
   categories: OnboardingCategory[],
-  tracks: ("seo" | "ads")[],
+  ctx: ComposeCtx,
 ): OnboardingCategory[] {
-  const active = new Set<OnbTrack>(["common", ...tracks]);
+  const active = new Set<OnbTrack>(["common", ...ctx.tracks]);
   return categories
     .map((c) => ({
       ...c,
-      lessons: c.lessons.filter((l) => active.has(lessonTrack(l))),
+      lessons: c.lessons.filter(
+        (l) =>
+          active.has(lessonTrack(l)) &&
+          (!l.ecommerce || ctx.ecommerce) &&
+          (!l.requiresService || ctx.services.includes(l.requiresService)),
+      ),
     }))
     .filter((c) => c.lessons.length > 0);
 }
@@ -502,6 +501,12 @@ export function normalizeCourse(raw: unknown): OnboardingCategory[] | null {
           typeof platformRaw === "string" && platformRaw.trim()
             ? platformRaw
             : undefined;
+        const ecommerce = Boolean((l as { ecommerce?: unknown }).ecommerce) || undefined;
+        const reqRaw = (l as { requiresService?: unknown }).requiresService;
+        const requiresService =
+          reqRaw === "seo" || reqRaw === "google-ads" || reqRaw === "meta-ads"
+            ? (reqRaw as OnbService)
+            : undefined;
         outLessons.push({
           id,
           category: key,
@@ -509,6 +514,8 @@ export function normalizeCourse(raw: unknown): OnboardingCategory[] | null {
           kind,
           track,
           platform,
+          ecommerce,
+          requiresService,
           emoji:
             typeof (l as { emoji?: unknown }).emoji === "string"
               ? (l as { emoji: string }).emoji

@@ -29,11 +29,12 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ error: "invalid body" }, { status: 400 });
   }
-  const { title, consultant, icon, services } = (body ?? {}) as {
+  const { title, consultant, icon, services, ecommerce } = (body ?? {}) as {
     title?: unknown;
     consultant?: unknown;
     icon?: unknown;
     services?: unknown;
+    ecommerce?: unknown;
   };
   const cleanTitle = typeof title === "string" ? title.trim() : "";
   if (!cleanTitle) {
@@ -63,6 +64,10 @@ export async function POST(req: Request) {
           ? consultant.trim()
           : null,
       services: cleanServices,
+      ecommerce:
+        Boolean(ecommerce) &&
+        (cleanServices.includes("google-ads") ||
+          cleanServices.includes("meta-ads")),
       isNew: !onBoard,
       createdAt: Date.now(),
       promotedAt: null,

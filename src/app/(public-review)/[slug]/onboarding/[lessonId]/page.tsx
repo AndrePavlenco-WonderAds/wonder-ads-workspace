@@ -15,7 +15,7 @@ import {
   lessonTrack,
   type Lesson,
 } from "@/lib/onboarding-lessons";
-import { stepsForTrack } from "@/lib/onboarding-questions";
+import { stepsForForm } from "@/lib/onboarding-questions";
 import { getCourse, getFormSteps } from "@/lib/onboarding-content-store";
 import { OnboardingMarkComplete } from "@/components/onboarding-mark-complete";
 import { OnboardingIntakeForm } from "@/components/onboarding-intake-form";
@@ -58,7 +58,11 @@ export default async function OnboardingLessonPage({
   if (!client) notFound();
 
   const fullCourse = await getCourse();
-  const categories = courseForTracks(fullCourse, client.tracks);
+  const categories = courseForTracks(fullCourse, {
+    tracks: client.tracks,
+    ecommerce: client.ecommerce,
+    services: client.services,
+  });
   const lesson = findLesson(categories, lessonId);
   if (!lesson) notFound();
 
@@ -75,7 +79,10 @@ export default async function OnboardingLessonPage({
   // Form lessons render the stepped quiz for their track.
   if (lesson.kind === "form") {
     const track = lessonTrack(lesson) === "ads" ? "ads" : "seo";
-    const steps = stepsForTrack(await getFormSteps(), track);
+    const steps = stepsForForm(await getFormSteps(), {
+      track,
+      ecommerce: client.ecommerce,
+    });
     return (
       <main className="mx-auto min-h-screen max-w-2xl px-4 py-10 sm:px-6">
         <nav className="mb-6 flex flex-wrap items-center gap-1.5 text-[12px] text-black/45">

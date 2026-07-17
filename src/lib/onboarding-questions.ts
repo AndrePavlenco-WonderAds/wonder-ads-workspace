@@ -81,6 +81,8 @@ export type OnbStep = {
   fields: OnbField[];
   /** Which form this step belongs to. Missing → "seo". */
   track?: OnbTrack;
+  /** Only included when the client onboarding is flagged e-commerce. */
+  ecommerce?: boolean;
 };
 
 export const DEFAULT_ONBOARDING_STEPS: OnbStep[] = [
@@ -893,6 +895,143 @@ export const DEFAULT_ONBOARDING_STEPS: OnbStep[] = [
       },
     ],
   },
+
+  // ============ E-COMMERCE ADS (track "ads", só quando e-commerce) ============
+  // Mesmas perguntas para Google Ads e Meta Ads em e-commerce.
+  {
+    key: "ec_plataforma",
+    track: "ads",
+    ecommerce: true,
+    section: "E-commerce",
+    sectionTag: "A6",
+    title: "Plataforma de Loja",
+    fields: [
+      {
+        kind: "long",
+        name: "ec_q1",
+        label:
+          "Que plataforma de e-commerce usam? (Shopify, WooCommerce, Magento, PrestaShop…)",
+        required: true,
+      },
+    ],
+  },
+  {
+    key: "ec_catalogo",
+    track: "ads",
+    ecommerce: true,
+    section: "E-commerce",
+    sectionTag: "A6",
+    title: "Catálogo",
+    fields: [
+      {
+        kind: "long",
+        name: "ec_q2",
+        label:
+          "Quantos produtos (SKUs) têm no catálogo e quais são as categorias principais?",
+        required: true,
+      },
+    ],
+  },
+  {
+    key: "ec_aov",
+    track: "ads",
+    ecommerce: true,
+    section: "E-commerce",
+    sectionTag: "A6",
+    title: "Valor Médio de Encomenda",
+    fields: [
+      {
+        kind: "short",
+        name: "ec_q3",
+        label: "Qual é o valor médio de encomenda (AOV)?",
+        required: true,
+      },
+    ],
+  },
+  {
+    key: "ec_feed",
+    track: "ads",
+    ecommerce: true,
+    section: "E-commerce",
+    sectionTag: "A6",
+    title: "Feed de Produtos",
+    fields: [
+      {
+        kind: "long",
+        name: "ec_q4",
+        label:
+          "Já têm o feed de produtos / Google Merchant Center (ou catálogo Meta) configurado? Se sim, em que estado?",
+        required: false,
+      },
+    ],
+  },
+  {
+    key: "ec_topprodutos",
+    track: "ads",
+    ecommerce: true,
+    section: "E-commerce",
+    sectionTag: "A6",
+    title: "Produtos-Chave",
+    fields: [
+      {
+        kind: "long",
+        name: "ec_q5",
+        label: "Quais são os produtos mais vendidos e os de maior margem?",
+        required: true,
+      },
+    ],
+  },
+  {
+    key: "ec_envios",
+    track: "ads",
+    ecommerce: true,
+    section: "E-commerce",
+    sectionTag: "A6",
+    title: "Envios",
+    fields: [
+      {
+        kind: "long",
+        name: "ec_q6",
+        label:
+          "Para que zonas/países enviam? Há custos de envio ou portes grátis acima de um valor?",
+        required: false,
+      },
+    ],
+  },
+  {
+    key: "ec_tracking",
+    track: "ads",
+    ecommerce: true,
+    section: "E-commerce",
+    sectionTag: "A6",
+    title: "Pixel & Conversões",
+    fields: [
+      {
+        kind: "long",
+        name: "ec_q7",
+        label:
+          "Têm o pixel/tag de conversão e os eventos de compra instalados? (Meta Pixel, Google Tag, eventos de e-commerce)",
+        required: false,
+      },
+    ],
+  },
+  {
+    key: "ec_roas",
+    track: "ads",
+    ecommerce: true,
+    section: "E-commerce",
+    sectionTag: "A6",
+    title: "Conversão & ROAS",
+    fields: [
+      {
+        kind: "long",
+        name: "ec_q8",
+        label:
+          "Qual é a taxa de conversão média da loja e qual o retorno (ROAS) alvo que pretendem?",
+        required: false,
+      },
+    ],
+  },
 ];
 
 // The form is editable in-app (SuperAdmin) via onboarding-content-store.
@@ -907,6 +1046,17 @@ export function stepTrack(s: OnbStep): OnbTrack {
 /** The steps belonging to one form (track). */
 export function stepsForTrack(steps: OnbStep[], track: OnbTrack): OnbStep[] {
   return steps.filter((s) => stepTrack(s) === track);
+}
+
+/** The steps a client actually fills for a form: matching track, and only
+ *  e-commerce steps when the client onboarding is flagged e-commerce. */
+export function stepsForForm(
+  steps: OnbStep[],
+  opts: { track: OnbTrack; ecommerce: boolean },
+): OnbStep[] {
+  return steps.filter(
+    (s) => stepTrack(s) === opts.track && (!s.ecommerce || opts.ecommerce),
+  );
 }
 
 /** All fields, flattened, in order. */
@@ -1033,6 +1183,7 @@ export function normalizeSteps(raw: unknown): OnbStep[] | null {
     const trackRaw = (s as { track?: unknown }).track;
     const track: OnbTrack =
       trackRaw === "ads" || trackRaw === "common" ? trackRaw : "seo";
+    const ecommerce = Boolean((s as { ecommerce?: unknown }).ecommerce) || undefined;
     steps.push({
       key,
       section,
@@ -1040,6 +1191,7 @@ export function normalizeSteps(raw: unknown): OnbStep[] | null {
       title: typeof title === "string" ? title : section,
       fields,
       track,
+      ecommerce,
     });
   }
   return steps.length ? steps : null;

@@ -105,7 +105,11 @@ export default async function OnboardingHubPage({
     getCourse(),
     getGateConfirmedAt(slug),
   ]);
-  const categories = courseForTracks(fullCourse, client.tracks);
+  const categories = courseForTracks(fullCourse, {
+    tracks: client.tracks,
+    ecommerce: client.ecommerce,
+    services: client.services,
+  });
   const allLessons = flattenLessons(categories);
   const total = allLessons.length;
   const done = new Set(progress.completed);

@@ -15,7 +15,7 @@ import {
   flattenFields,
   requiredNames,
   otherKeysOf,
-  stepsForTrack,
+  stepsForForm,
   stepTrack,
   isCheckbox,
   isFile,
@@ -94,7 +94,10 @@ export async function POST(
   // Full catalogue (KV override or default); this submission only covers the
   // fields of the submitted form (track).
   const allSteps = await getFormSteps();
-  const formSteps = stepsForTrack(allSteps, submittedTrack);
+  const formSteps = stepsForForm(allSteps, {
+    track: submittedTrack,
+    ecommerce: client.ecommerce,
+  });
   const fields = flattenFields(formSteps);
 
   // Rebuild each collection from the submitted form's field catalogue (ignore
@@ -156,8 +159,10 @@ export async function POST(
 
   // Regenerate the branded PDF from every form the client has (their tracks).
   try {
-    const clientSteps = allSteps.filter((s) =>
-      (client.tracks as string[]).includes(stepTrack(s)),
+    const clientSteps = allSteps.filter(
+      (s) =>
+        (client.tracks as string[]).includes(stepTrack(s)) &&
+        (!s.ecommerce || client.ecommerce),
     );
     const pdfBytes = await buildOnboardingPdf({
       clientTitle: client.title,

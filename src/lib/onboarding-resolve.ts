@@ -24,6 +24,8 @@ export type ResolvedOnboardingClient = {
   services: OnbService[];
   /** Active content tracks derived from the services. */
   tracks: ("seo" | "ads")[];
+  /** Whether the Ads onboarding is for an e-commerce business. */
+  ecommerce: boolean;
 };
 
 export async function resolveOnboardingClient(
@@ -39,6 +41,7 @@ export async function resolveOnboardingClient(
   // SEO (so pre-existing board clients keep the original flow).
   const services = reg?.services?.length ? reg.services : ["seo" as OnbService];
   const tracks = tracksForServices(services);
+  const ecommerce = Boolean(reg?.ecommerce);
 
   if (seo) {
     const consultant = getConsultantForSlug(slug);
@@ -53,6 +56,7 @@ export async function resolveOnboardingClient(
       onBoard: true,
       services,
       tracks,
+      ecommerce,
     };
   }
 
@@ -65,5 +69,6 @@ export async function resolveOnboardingClient(
     onBoard: false,
     services,
     tracks,
+    ecommerce,
   };
 }

@@ -26,6 +26,8 @@ export type OnboardingClient = {
   consultant: string | null;
   /** Services the client signed up for — drives which tracks appear. */
   services?: OnbService[];
+  /** Whether the Ads onboarding is for an e-commerce business. */
+  ecommerce?: boolean;
   /** true when this client is NOT yet a real SEO project (needs promotion). */
   isNew: boolean;
   /** Epoch ms this onboarding record was created. */
@@ -47,7 +49,11 @@ export async function getOnboardingClients(): Promise<OnboardingClient[]> {
       .filter(
         (c) => c && typeof c.slug === "string" && typeof c.title === "string",
       )
-      .map((c) => ({ ...c, services: normalizeServices(c.services) }));
+      .map((c) => ({
+        ...c,
+        services: normalizeServices(c.services),
+        ecommerce: Boolean(c.ecommerce),
+      }));
   } catch (err) {
     console.error("KV onboarding-clients read failed:", err);
     return [];

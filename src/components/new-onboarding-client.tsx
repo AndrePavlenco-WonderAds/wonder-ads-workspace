@@ -13,6 +13,9 @@ export function NewOnboardingClient() {
   const [title, setTitle] = useState("");
   const [consultant, setConsultant] = useState("");
   const [services, setServices] = useState<OnbService[]>([]);
+  const [ecommerce, setEcommerce] = useState(false);
+  const hasAds =
+    services.includes("google-ads") || services.includes("meta-ads");
   const [state, setState] = useState<"idle" | "saving" | "done" | "error">(
     "idle",
   );
@@ -34,7 +37,12 @@ export function NewOnboardingClient() {
       const res = await fetch("/api/admin/onboarding-clients", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ title, consultant, services }),
+        body: JSON.stringify({
+          title,
+          consultant,
+          services,
+          ecommerce: hasAds ? ecommerce : false,
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error ?? `HTTP ${res.status}`);
@@ -104,6 +112,34 @@ export function NewOnboardingClient() {
           );
         })}
       </div>
+
+      {/* E-commerce toggle — only relevant for Ads */}
+      {hasAds && (
+        <button
+          type="button"
+          onClick={() => setEcommerce((v) => !v)}
+          aria-pressed={ecommerce}
+          className="mb-3 flex w-full items-center gap-2.5 rounded-lg border px-3 py-2.5 text-left transition"
+          style={{
+            borderColor: ecommerce ? "transparent" : "rgba(255,255,255,0.12)",
+            background: ecommerce ? "rgba(120,61,245,0.14)" : "transparent",
+          }}
+        >
+          <span
+            className={`flex h-4 w-4 shrink-0 items-center justify-center rounded ${
+              ecommerce ? "brand-gradient-bg" : "border border-white/25"
+            }`}
+          >
+            {ecommerce && <Check className="h-3 w-3 text-white" strokeWidth={3} />}
+          </span>
+          <span className="text-[12.5px] text-white/75">
+            É um negócio <span className="font-semibold text-white">e-commerce</span>?
+            <span className="ml-1 text-white/40">
+              (adiciona GMC + perguntas de e-commerce ao form de Ads)
+            </span>
+          </span>
+        </button>
+      )}
 
       <div className="flex flex-col gap-2.5 sm:flex-row">
         <input

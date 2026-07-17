@@ -357,6 +357,15 @@ function LessonEditor({
         </div>
       )}
 
+      <label className="mt-3 flex items-center gap-2 text-[12px] text-white/60">
+        <input
+          type="checkbox"
+          checked={Boolean(lesson.ecommerce)}
+          onChange={(e) => set({ ecommerce: e.target.checked || undefined })}
+        />
+        Só para e-commerce
+      </label>
+
       <div className="mt-4">
         <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-white/40">
           Sobre este passo
@@ -669,6 +678,17 @@ function FormEditor({
                 deleteLabel="Remover passo"
               />
             </div>
+
+            <label className="mb-3 flex items-center gap-2 text-[12px] text-white/60">
+              <input
+                type="checkbox"
+                checked={Boolean(step.ecommerce)}
+                onChange={(e) =>
+                  setStep({ ecommerce: e.target.checked || undefined })
+                }
+              />
+              Só para e-commerce
+            </label>
 
             <div className="flex flex-col gap-3">
               {step.fields.map((field, fi) => (

@@ -66,6 +66,15 @@ export const ADS_CLIENTS: AdsClient[] = [
     tier: "core",
     channels: ALL_CHANNELS,
   },
+  // Wonder Ads' own paid media.
+  {
+    slug: "wonder-ads",
+    title: "Wonder Ads",
+    icon: "🦋",
+    consultant: "Germano C.",
+    tier: "core",
+    channels: ALL_CHANNELS,
+  },
 ];
 
 export function getAdsClient(slug: string): AdsClient | null {

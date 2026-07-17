@@ -6,7 +6,14 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ShieldCheck, Lock, Loader2, ArrowRight } from "lucide-react";
+import {
+  ShieldCheck,
+  Lock,
+  Loader2,
+  ArrowRight,
+  FileSignature,
+  Receipt,
+} from "lucide-react";
 
 const BRAND_GRADIENT =
   "linear-gradient(135deg, #343ED7 0%, #783DF5 53.65%, #C535C9 100%)";
@@ -66,12 +73,30 @@ export function OnboardingGate({
 
         <div className="px-7 py-6">
           <p className="text-[14.5px] leading-relaxed text-black/70">
-            Este processo de onboarding só pode ser realizado{" "}
-            <strong className="font-semibold text-black/85">
-              após a assinatura do contrato e a liquidação da fatura
-            </strong>
-            .
+            Este processo de onboarding só pode ser realizado depois de
+            concluídos <strong className="font-semibold text-black/85">os dois passos</strong> abaixo:
           </p>
+
+          {/* The two required actions, emphasised */}
+          <div className="mt-4 grid gap-2.5 sm:grid-cols-2">
+            <div className="flex items-center gap-3 rounded-xl border border-[#783DF5]/20 bg-[#783DF5]/[0.05] px-4 py-3.5">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#783DF5]/12">
+                <FileSignature className="h-4 w-4 text-[#783DF5]" />
+              </span>
+              <p className="text-[13.5px] font-bold text-black/85 underline decoration-[#783DF5]/50 decoration-2 underline-offset-2">
+                Contrato assinado
+              </p>
+            </div>
+            <div className="flex items-center gap-3 rounded-xl border border-[#783DF5]/20 bg-[#783DF5]/[0.05] px-4 py-3.5">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#783DF5]/12">
+                <Receipt className="h-4 w-4 text-[#783DF5]" />
+              </span>
+              <p className="text-[13.5px] font-bold text-black/85 underline decoration-[#783DF5]/50 decoration-2 underline-offset-2">
+                Fatura liquidada
+              </p>
+            </div>
+          </div>
+
           <div className="mt-4 flex items-start gap-2.5 rounded-xl border border-black/8 bg-[#f8f7f2] px-4 py-3">
             <Lock className="mt-0.5 h-4 w-4 shrink-0 text-[#A9834F]" />
             <p className="text-[12.5px] leading-relaxed text-black/55">
