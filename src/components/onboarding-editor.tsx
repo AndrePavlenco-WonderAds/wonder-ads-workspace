@@ -667,6 +667,7 @@ function FormEditor({
                   className={`${inputCls} sm:w-28`}
                   title="Formulário a que este passo pertence"
                 >
+                  <option value="common">Geral</option>
                   <option value="seo">SEO</option>
                   <option value="ads">Ads</option>
                 </select>

@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.94",
+    date: "2026-07-17",
+    title: "Onboarding — 3 formulários (Geral, SEO, Ads)",
+    highlights: [
+      "**🗂️ Três formulários.** O onboarding passa a ter (1) **Sobre a Vossa Empresa** — perguntas gerais para vos conhecermos (objetivos, marca, público, concorrência, histórico…), mostrado a todos; (2) **Formulário SEO** — só perguntas específicas de SEO (keywords, quem revê conteúdo, tom de voz, palavras, objeções); (3) **Questionário de Ads** — quando há Google/Meta Ads (com bloco de e-commerce quando aplicável).",
+      "**🧩 Composição por serviço.** O formulário geral aparece sempre; o de SEO só para clientes de SEO; o de Ads só para clientes de Ads. Um cliente SEO+Ads preenche os três e tudo junta num único PDF.",
+      "**🛠️ Editável.** No editor de onboarding cada passo pode ser marcado como *Geral*, *SEO* ou *Ads*.",
+    ],
+  },
+  {
     version: "74.93",
     date: "2026-07-17",
     title: "ADS — ligar contas Google/Meta e puxar métricas reais",

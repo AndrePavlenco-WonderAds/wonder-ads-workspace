@@ -83,13 +83,16 @@ export async function POST(
     lessonId?: unknown;
   };
 
-  const submittedTrack = raw.track === "ads" ? "ads" : "seo";
+  const submittedTrack =
+    raw.track === "ads" ? "ads" : raw.track === "common" ? "common" : "seo";
   const lessonId =
     typeof raw.lessonId === "string" && raw.lessonId
       ? raw.lessonId
       : submittedTrack === "ads"
         ? "form-ads"
-        : "form";
+        : submittedTrack === "common"
+          ? "form-geral"
+          : "form";
 
   // Full catalogue (KV override or default); this submission only covers the
   // fields of the submitted form (track).
@@ -161,7 +164,8 @@ export async function POST(
   try {
     const clientSteps = allSteps.filter(
       (s) =>
-        (client.tracks as string[]).includes(stepTrack(s)) &&
+        (stepTrack(s) === "common" ||
+          (client.tracks as string[]).includes(stepTrack(s))) &&
         (!s.ecommerce || client.ecommerce),
     );
     const pdfBytes = await buildOnboardingPdf({

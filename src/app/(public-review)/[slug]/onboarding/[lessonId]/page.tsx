@@ -78,7 +78,7 @@ export default async function OnboardingLessonPage({
 
   // Form lessons render the stepped quiz for their track.
   if (lesson.kind === "form") {
-    const track = lessonTrack(lesson) === "ads" ? "ads" : "seo";
+    const track = lessonTrack(lesson);
     const steps = stepsForForm(await getFormSteps(), {
       track,
       ecommerce: client.ecommerce,

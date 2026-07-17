@@ -109,21 +109,42 @@ export const DEFAULT_ONBOARDING_CATEGORIES: OnboardingCategory[] = [
         ],
       },
       {
-        id: "form",
+        id: "form-geral",
+        track: "common",
         category: "onboarding-pt",
-        title: "A Vossa Audiência e Conteúdo (Formulário)",
+        title: "Sobre a Vossa Empresa (Formulário)",
         kind: "form",
-        emoji: "📝",
+        emoji: "🏢",
         videoUrl: null,
-        summary: "Um formulário passo-a-passo sobre o vosso negócio e objetivos.",
+        summary: "Perguntas gerais para vos conhecermos melhor — objetivos, marca, mercado.",
         about: [
           {
             type: "p",
-            text: "Precisamos de recolher algumas informações antes da Sessão de Estratégia. Algumas perguntas poderão já ter sido respondidas numa chamada ou parecer repetitivas, mas é importante termos tudo registado por escrito.",
+            text: "Este primeiro formulário ajuda-nos a conhecer o vosso negócio: objetivos, público-alvo, proposta de valor, produtos, concorrência e experiências passadas.",
           },
           {
             type: "p",
             text: "Reserve alguns minutos e responda com o máximo de detalhe possível — quanto melhor nos conhecermos, melhores serão os resultados.",
+          },
+        ],
+      },
+      {
+        id: "form",
+        track: "seo",
+        category: "onboarding-pt",
+        title: "Formulário SEO",
+        kind: "form",
+        emoji: "🔍",
+        videoUrl: null,
+        summary: "Perguntas específicas de SEO — keywords, conteúdo e tom de voz.",
+        about: [
+          {
+            type: "p",
+            text: "Este formulário foca-se apenas no SEO: as keywords que já sabe que são importantes, quem pode rever conteúdos e o tom de voz da vossa marca.",
+          },
+          {
+            type: "p",
+            text: "Nota: para o conteúdo de blog, precisamos de cerca de 1h por semana de alguém que perceba do vosso negócio para rever/escrever.",
           },
         ],
       },

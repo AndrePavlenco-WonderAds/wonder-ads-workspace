@@ -89,6 +89,7 @@ export const DEFAULT_ONBOARDING_STEPS: OnbStep[] = [
   // 01 — INFORMAÇÕES DA EMPRESA
   {
     key: "empresa",
+    track: "common",
     section: "Empresa",
     sectionTag: "01",
     title: "Informações da Empresa",
@@ -124,6 +125,7 @@ export const DEFAULT_ONBOARDING_STEPS: OnbStep[] = [
   },
   {
     key: "ferramentas",
+    track: "common",
     section: "Empresa",
     sectionTag: "01",
     title: "Ferramentas",
@@ -147,6 +149,7 @@ export const DEFAULT_ONBOARDING_STEPS: OnbStep[] = [
   // 02 — QUESTÕES ESPECÍFICAS PARA SEO
   {
     key: "area_influencia",
+    track: "common",
     section: "SEO",
     sectionTag: "02",
     title: "Área de Influência",
@@ -194,6 +197,7 @@ export const DEFAULT_ONBOARDING_STEPS: OnbStep[] = [
   },
   {
     key: "competidores",
+    track: "common",
     section: "SEO",
     sectionTag: "02",
     title: "Competidores",
@@ -212,6 +216,7 @@ export const DEFAULT_ONBOARDING_STEPS: OnbStep[] = [
   // 03 — OBJETIVOS DE NEGÓCIO
   {
     key: "objetivos",
+    track: "common",
     section: "Objetivos",
     sectionTag: "03",
     title: "Objetivos de Negócio",
@@ -228,6 +233,7 @@ export const DEFAULT_ONBOARDING_STEPS: OnbStep[] = [
   },
   {
     key: "kpis",
+    track: "common",
     section: "Objetivos",
     sectionTag: "03",
     title: "Indicadores (KPIs)",
@@ -246,6 +252,7 @@ export const DEFAULT_ONBOARDING_STEPS: OnbStep[] = [
   // 04 — TARGET AUDIENCE
   {
     key: "publico_alvo",
+    track: "common",
     section: "Público-Alvo",
     sectionTag: "04",
     title: "Público-Alvo",
@@ -261,6 +268,7 @@ export const DEFAULT_ONBOARDING_STEPS: OnbStep[] = [
   },
   {
     key: "publico_excluir",
+    track: "common",
     section: "Público-Alvo",
     sectionTag: "04",
     title: "Segmentos a Excluir",
@@ -278,6 +286,7 @@ export const DEFAULT_ONBOARDING_STEPS: OnbStep[] = [
   // 05 — MARCA E COMUNICAÇÃO
   {
     key: "proposta_valor",
+    track: "common",
     section: "Marca",
     sectionTag: "05",
     title: "Proposta de Valor",
@@ -293,6 +302,7 @@ export const DEFAULT_ONBOARDING_STEPS: OnbStep[] = [
   },
   {
     key: "motivos_escolha",
+    track: "common",
     section: "Marca",
     sectionTag: "05",
     title: "Motivos de Escolha",
@@ -336,6 +346,7 @@ export const DEFAULT_ONBOARDING_STEPS: OnbStep[] = [
   },
   {
     key: "branding_guia",
+    track: "common",
     section: "Marca",
     sectionTag: "05",
     title: "Manual de Marca",
@@ -350,6 +361,7 @@ export const DEFAULT_ONBOARDING_STEPS: OnbStep[] = [
   },
   {
     key: "migracao",
+    track: "common",
     section: "Marca",
     sectionTag: "05",
     title: "Migrações Previstas",
@@ -365,6 +377,7 @@ export const DEFAULT_ONBOARDING_STEPS: OnbStep[] = [
   },
   {
     key: "cores",
+    track: "common",
     section: "Marca",
     sectionTag: "05",
     title: "Cores da Marca",
@@ -382,6 +395,7 @@ export const DEFAULT_ONBOARDING_STEPS: OnbStep[] = [
   // 06 — SERVIÇO / PRODUTO
   {
     key: "mais_vendidos",
+    track: "common",
     section: "Serviço",
     sectionTag: "06",
     title: "Serviços/Produtos mais Vendidos",
@@ -397,6 +411,7 @@ export const DEFAULT_ONBOARDING_STEPS: OnbStep[] = [
   },
   {
     key: "processo_comercial",
+    track: "common",
     section: "Serviço",
     sectionTag: "06",
     title: "Processo Comercial",
@@ -427,6 +442,7 @@ export const DEFAULT_ONBOARDING_STEPS: OnbStep[] = [
   },
   {
     key: "frase_unica",
+    track: "common",
     section: "Serviço",
     sectionTag: "06",
     title: "Numa Frase",
@@ -443,6 +459,7 @@ export const DEFAULT_ONBOARDING_STEPS: OnbStep[] = [
   // 07 — PROVAS, OFERTAS, GARANTIAS
   {
     key: "credibilidade",
+    track: "common",
     section: "Provas",
     sectionTag: "07",
     title: "Credibilidade",
@@ -458,6 +475,7 @@ export const DEFAULT_ONBOARDING_STEPS: OnbStep[] = [
   },
   {
     key: "ofertas",
+    track: "common",
     section: "Provas",
     sectionTag: "07",
     title: "Ofertas",
@@ -473,6 +491,7 @@ export const DEFAULT_ONBOARDING_STEPS: OnbStep[] = [
   },
   {
     key: "garantias",
+    track: "common",
     section: "Provas",
     sectionTag: "07",
     title: "Garantias",
@@ -490,6 +509,7 @@ export const DEFAULT_ONBOARDING_STEPS: OnbStep[] = [
   // 08 — O VOSSO MARKETING
   {
     key: "marketing_mal",
+    track: "common",
     section: "Marketing",
     sectionTag: "08",
     title: "O que Correu Mal",
@@ -505,6 +525,7 @@ export const DEFAULT_ONBOARDING_STEPS: OnbStep[] = [
   },
   {
     key: "marketing_bem",
+    track: "common",
     section: "Marketing",
     sectionTag: "08",
     title: "O que Correu Bem",
@@ -521,6 +542,7 @@ export const DEFAULT_ONBOARDING_STEPS: OnbStep[] = [
   // 09 — DETALHES & MÉTRICAS
   {
     key: "datas",
+    track: "common",
     section: "Métricas",
     sectionTag: "09",
     title: "Datas Importantes",
@@ -536,6 +558,7 @@ export const DEFAULT_ONBOARDING_STEPS: OnbStep[] = [
   },
   {
     key: "ltv",
+    track: "common",
     section: "Métricas",
     sectionTag: "09",
     title: "Valor Médio do Cliente (LTV)",
@@ -551,6 +574,7 @@ export const DEFAULT_ONBOARDING_STEPS: OnbStep[] = [
   },
   {
     key: "cac",
+    track: "common",
     section: "Métricas",
     sectionTag: "09",
     title: "Custo de Aquisição (CAC)",
@@ -566,6 +590,7 @@ export const DEFAULT_ONBOARDING_STEPS: OnbStep[] = [
   },
   {
     key: "ticket_medio",
+    track: "common",
     section: "Métricas",
     sectionTag: "09",
     title: "Custo Médio dos Serviços",
@@ -581,6 +606,7 @@ export const DEFAULT_ONBOARDING_STEPS: OnbStep[] = [
   },
   {
     key: "origem_clientes",
+    track: "common",
     section: "Métricas",
     sectionTag: "09",
     title: "Origem dos Clientes",
@@ -605,6 +631,7 @@ export const DEFAULT_ONBOARDING_STEPS: OnbStep[] = [
   },
   {
     key: "outro_website",
+    track: "common",
     section: "Métricas",
     sectionTag: "09",
     title: "Outros Websites",
@@ -621,6 +648,7 @@ export const DEFAULT_ONBOARDING_STEPS: OnbStep[] = [
   // 10 — CONFORMIDADE LEGAL
   {
     key: "legal",
+    track: "common",
     section: "Legal",
     sectionTag: "10",
     title: "Conformidade Legal",
@@ -638,6 +666,7 @@ export const DEFAULT_ONBOARDING_STEPS: OnbStep[] = [
   // 11 — NOTAS FINAIS
   {
     key: "notas_finais",
+    track: "common",
     section: "Notas Finais",
     sectionTag: "11",
     title: "Notas Finais",
@@ -653,6 +682,7 @@ export const DEFAULT_ONBOARDING_STEPS: OnbStep[] = [
   },
   {
     key: "anexos",
+    track: "common",
     section: "Notas Finais",
     sectionTag: "11",
     title: "Anexos",
