@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.90",
+    date: "2026-07-17",
+    title: "Onboarding — instrutores por track, gate legal e afinações",
+    highlights: [
+      "**👤 Instrutor por serviço.** O cartão de instrutor mostra agora a pessoa certa: **André Pavlenco (Instrutor · COO)** para SEO e **Germano Cunha (Instrutor · Diretor DPT Publicidade)** para Ads, com fotografia. Clientes com ambos veem os dois.",
+      "**🔒 Confirmação antes de começar.** Na 1ª visita ao onboarding aparece um aviso: o processo só pode ser feito após assinar o contrato e liquidar a fatura (confidencial e legalmente registado). O cliente escreve «Confirmar» para prosseguir — a confirmação fica registada.",
+      "**✍️ Textos afinados.** Categorias renomeadas (*Vamos conhecer-nos melhor!*, *Acessos Consultoria SEO*, *Acessos Consultoria Ads*, *Último Passo*) e nova descrição no hero (“leva cerca de 30 minutos…”).",
+      "**🎨 Logótipos corrigidos.** Ícones do Google Ads e da Meta redesenhados; sem serviço pré-selecionado no *Iniciar onboarding*.",
+    ],
+  },
+  {
     version: "74.89",
     date: "2026-07-16",
     title: "Onboarding — overview redesenhado + ícones de plataforma",

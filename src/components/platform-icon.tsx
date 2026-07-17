@@ -43,9 +43,11 @@ export function PlatformIcon({
     case "google-ads":
       return (
         <svg {...common}>
-          <rect x="8" y="7" width="12" height="30" rx="6" fill="#FBBC04" transform="rotate(-30 14 22)" />
-          <rect x="28" y="7" width="12" height="30" rx="6" fill="#4285F4" transform="rotate(30 34 22)" />
-          <circle cx="13.5" cy="38.5" r="6" fill="#34A853" />
+          {/* Two rounded bars fanning from a shared top vertex + the
+              yellow/blue overlap dot at the base. */}
+          <rect x="18" y="5" width="11.5" height="35" rx="5.75" fill="#FBBC04" transform="rotate(-27 23.75 9)" />
+          <rect x="18.5" y="5" width="11.5" height="35" rx="5.75" fill="#4285F4" transform="rotate(27 24.25 9)" />
+          <circle cx="12.5" cy="35.5" r="6.25" fill="#34A853" />
         </svg>
       );
     case "meta":
@@ -57,11 +59,12 @@ export function PlatformIcon({
               <stop offset="1" stopColor="#19AFFF" />
             </linearGradient>
           </defs>
+          {/* Infinity ribbon (centre-line stroked). */}
           <path
-            d="M13 16c-4.4 0-7 3.6-7 8s2.6 8 7 8c3.7 0 6.2-3.2 8.8-7.6L24 28l2.2 4.4C28.8 36.8 31.3 40 35 40c4.4 0 7-3.6 7-8s-2.6-8-7-8c-3.7 0-6.2 3.2-8.8 7.6"
+            d="M24 24 C 20 15, 9 15, 9 24 C 9 33, 20 33, 24 24 C 28 15, 39 15, 39 24 C 39 33, 28 33, 24 24 Z"
             fill="none"
             stroke="url(#meta-g)"
-            strokeWidth="5.5"
+            strokeWidth="6"
             strokeLinecap="round"
             strokeLinejoin="round"
           />

@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { resolveOnboardingClient } from "@/lib/onboarding-resolve";
 import { getOnboardingProgress } from "@/lib/onboarding-progress-store";
+import { getGateConfirmedAt } from "@/lib/onboarding-gate-store";
 import { getCourse } from "@/lib/onboarding-content-store";
 import {
   flattenLessons,
@@ -24,6 +25,8 @@ import {
   type Lesson,
 } from "@/lib/onboarding-lessons";
 import { PlatformIcon } from "@/components/platform-icon";
+import { OnboardingInstructors } from "@/components/onboarding-instructors";
+import { OnboardingGate } from "@/components/onboarding-gate";
 
 export const dynamic = "force-dynamic";
 
@@ -97,9 +100,10 @@ export default async function OnboardingHubPage({
   const client = await resolveOnboardingClient(slug);
   if (!client) notFound();
 
-  const [progress, fullCourse] = await Promise.all([
+  const [progress, fullCourse, gateConfirmedAt] = await Promise.all([
     getOnboardingProgress(slug),
     getCourse(),
+    getGateConfirmedAt(slug),
   ]);
   const categories = courseForTracks(fullCourse, client.tracks);
   const allLessons = flattenLessons(categories);
@@ -119,6 +123,10 @@ export default async function OnboardingHubPage({
 
   return (
     <main className="mx-auto min-h-screen max-w-5xl px-4 py-8 sm:px-6 sm:py-12">
+      {!gateConfirmedAt && (
+        <OnboardingGate slug={slug} clientTitle={client.title} />
+      )}
+
       {/* ===== Hero ===== */}
       <section className="relative overflow-hidden rounded-3xl border border-black/8 bg-white p-6 shadow-[0_20px_60px_-30px_rgba(120,61,245,0.35)] sm:p-9">
         {/* gradient glow */}
@@ -167,7 +175,7 @@ export default async function OnboardingHubPage({
             <p className="mt-3 max-w-md text-[15px] leading-relaxed text-black/55">
               {allDone
                 ? "Concluiu todos os passos do onboarding. A nossa equipa já está a preparar a vossa estratégia."
-                : "Vamos preparar a vossa parceria. Siga os passos ao seu ritmo — o progresso é guardado automaticamente."}
+                : "Este onboarding leva cerca de 30 minutos e dá-nos as bases e os acessos para tornarmos esta parceria a melhor e mais personalizada possível. O progresso é guardado automaticamente."}
             </p>
 
             <div className="mt-6 flex flex-wrap items-center gap-3">
@@ -362,24 +370,7 @@ export default async function OnboardingHubPage({
 
         {/* Sidebar */}
         <aside className="space-y-4 lg:sticky lg:top-8 lg:self-start">
-          <div className="rounded-2xl border border-black/8 bg-white p-5 shadow-sm">
-            <div className="flex items-center gap-3">
-              <span
-                className="flex h-12 w-12 items-center justify-center rounded-full text-xl"
-                style={{ background: BRAND_GRADIENT }}
-              >
-                🦋
-              </span>
-              <div>
-                <p className="text-sm font-semibold text-black/85">Wonder Ads</p>
-                <p className="text-[12px] text-black/45">Onboarding · Instrutor</p>
-              </div>
-            </div>
-            <p className="mt-4 text-[13px] leading-relaxed text-black/55">
-              Estamos consigo em cada passo. Complete-os ao seu ritmo — o
-              progresso fica guardado.
-            </p>
-          </div>
+          <OnboardingInstructors tracks={client.tracks} />
 
           {client.consultant && (
             <div className="rounded-2xl border border-black/8 bg-white p-5 shadow-sm">

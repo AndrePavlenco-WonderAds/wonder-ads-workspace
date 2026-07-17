@@ -20,6 +20,7 @@ import { getCourse, getFormSteps } from "@/lib/onboarding-content-store";
 import { OnboardingMarkComplete } from "@/components/onboarding-mark-complete";
 import { OnboardingIntakeForm } from "@/components/onboarding-intake-form";
 import { PlatformIcon } from "@/components/platform-icon";
+import { OnboardingInstructors } from "@/components/onboarding-instructors";
 
 export const dynamic = "force-dynamic";
 
@@ -333,17 +334,8 @@ export default async function OnboardingLessonPage({
           </div>
 
           {/* Instructor */}
-          <div className="mt-4 flex items-center gap-3 rounded-2xl border border-black/8 bg-white p-4 shadow-sm">
-            <span
-              className="flex h-11 w-11 items-center justify-center rounded-full text-lg"
-              style={{ background: BRAND_GRADIENT }}
-            >
-              🦋
-            </span>
-            <div>
-              <p className="text-sm font-semibold text-black/85">Wonder Ads</p>
-              <p className="text-[12px] text-black/45">Onboarding · Instrutor</p>
-            </div>
+          <div className="mt-4">
+            <OnboardingInstructors tracks={client.tracks} />
           </div>
         </aside>
       </div>

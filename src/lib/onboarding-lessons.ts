@@ -71,7 +71,7 @@ export type OnboardingCategory = {
 export const DEFAULT_ONBOARDING_CATEGORIES: OnboardingCategory[] = [
   {
     key: "onboarding-pt",
-    title: "Onboarding PT",
+    title: "Vamos conhecer-nos melhor!",
     lessons: [
       {
         id: "comecar-aqui",
@@ -147,7 +147,7 @@ export const DEFAULT_ONBOARDING_CATEGORIES: OnboardingCategory[] = [
   },
   {
     key: "acessos",
-    title: "Acessos",
+    title: "Acessos Consultoria SEO",
     lessons: [
       {
         id: "intro-acessos",
@@ -257,7 +257,7 @@ export const DEFAULT_ONBOARDING_CATEGORIES: OnboardingCategory[] = [
   },
   {
     key: "acessos-ads",
-    title: "Acessos Ads",
+    title: "Acessos Consultoria Ads",
     lessons: [
       {
         id: "intro-ads",
@@ -328,7 +328,7 @@ export const DEFAULT_ONBOARDING_CATEGORIES: OnboardingCategory[] = [
   },
   {
     key: "final",
-    title: "Último Passo e Obrigado!",
+    title: "Último Passo",
     lessons: [
       {
         id: "sessao-estrategia",
