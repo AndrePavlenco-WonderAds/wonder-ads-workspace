@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.92",
+    date: "2026-07-17",
+    title: "SEO — remover bloco de Onboarding da página de cliente",
+    highlights: [
+      "**🧹 Página de cliente de SEO mais limpa.** Removido o bloco *Onboarding do Cliente* que aparecia em todos os projetos de SEO. A gestão e o estado do onboarding vivem apenas na área de SuperAdmin (`/admin` → Onboarding).",
+    ],
+  },
+  {
     version: "74.91",
     date: "2026-07-17",
     title: "Onboarding — eixo e-commerce (GMC + perguntas) e afinações",

@@ -6,7 +6,6 @@ import { ClientBrief } from "@/components/client-brief";
 import { ClientFiles } from "@/components/client-files";
 import { ClientAccesses } from "@/components/client-accesses";
 import { OnboardingForm } from "@/components/onboarding-form";
-import { OnboardingStatus } from "@/components/onboarding-status";
 import { TargetKeywordsPanel } from "@/components/target-keywords-panel";
 import { CurrentRoadmapStrip } from "@/components/current-roadmap-strip";
 import { PendingReviewChip } from "@/components/pending-review-chip";
@@ -199,10 +198,6 @@ export default async function ClientPage({
 
       <div className="animate-fade-up mt-10 sm:mt-14">
         <OnboardingForm slug={slug} clientName={client.title} />
-      </div>
-
-      <div className="animate-fade-up mt-6">
-        <OnboardingStatus slug={slug} />
       </div>
 
       <div
