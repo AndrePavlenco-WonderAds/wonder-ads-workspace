@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.93",
+    date: "2026-07-17",
+    title: "ADS — ligar contas Google/Meta e puxar métricas reais",
+    highlights: [
+      "**🔌 Ligações por cliente.** Na página de cada cliente de Ads há um painel *Ligações de Plataforma* para colar o **Customer ID (Google Ads)** e o **Ad Account ID (Meta)**. Quando ligado, o dashboard puxa métricas reais (ROAS, CTR, CPA, Spend, conversões, top campanhas e série de conversões) — nada é inventado.",
+      "**📊 Fetchers reais.** Implementados os fetchers de Google Ads (GAQL) e Meta (Graph insights). Se a API falhar ou não houver credenciais, o dashboard mostra *Conectar API* em vez de números falsos.",
+      "**🔑 Credenciais de app.** Os tokens partilhados (developer token, OAuth do Google Ads, system-user token da Meta) ficam nas env vars da Vercel; cada cliente só precisa dos IDs de conta.",
+    ],
+  },
+  {
     version: "74.92",
     date: "2026-07-17",
     title: "SEO — remover bloco de Onboarding da página de cliente",

@@ -7,9 +7,16 @@ import { ClientFiles } from "@/components/client-files";
 import { LogoChip } from "@/components/logo-chip";
 import { AdsDashboard } from "@/components/ads-dashboard";
 import { AdsCampaignVault } from "@/components/ads-campaign-vault";
+import { AdsConnect } from "@/components/ads-connect";
 import { getBriefForSlug } from "@/lib/briefs-storage";
 import { ADS_CLIENTS, getAdsClient } from "@/lib/ads-clients";
-import { getAdsPerformance, type AdsPlatform } from "@/lib/ads/ads-data";
+import {
+  getAdsPerformance,
+  googleAdsConfigured,
+  metaAdsConfigured,
+  type AdsPlatform,
+} from "@/lib/ads/ads-data";
+import { getAdsConnectionConfig } from "@/lib/ads/ads-connections-store";
 import { getAdsReports } from "@/lib/ads/ads-reports-store";
 import { getVault } from "@/lib/ads/ads-vault-store";
 import {
@@ -49,12 +56,14 @@ export default async function AdsClientPage({
   if (!client) notFound();
 
   const channels: AdsPlatform[] = (client.channels as AdsPlatform[]) ?? [];
-  const [brief, performance, reports, vault] = await Promise.all([
+  const [brief, performance, reports, vault, adsConfig] = await Promise.all([
     getBriefForSlug(slug),
     getAdsPerformance(slug, { platform: "all", window: { mode: "week" } }),
     getAdsReports(slug),
     getVault(slug),
+    getAdsConnectionConfig(slug),
   ]);
+  const appCreds = { google: googleAdsConfigured(), meta: metaAdsConfigured() };
   const website = getClientWebsite(slug);
   const logo = getClientLogo(slug);
   const logoBgMode = getLogoBgMode(slug);
@@ -137,6 +146,16 @@ export default async function AdsClientPage({
           </div>
         </div>
       </section>
+
+      {/* Per-client platform connections (Google Ads / Meta account ids) */}
+      <div className="mt-8">
+        <AdsConnect
+          slug={slug}
+          channels={channels}
+          initialConfig={adsConfig}
+          appCreds={appCreds}
+        />
+      </div>
 
       {/* Full-width performance dashboard (real data only) */}
       <AdsDashboard

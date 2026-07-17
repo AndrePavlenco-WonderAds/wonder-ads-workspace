@@ -12,6 +12,12 @@
 
 import "server-only";
 import { getAdsClient } from "@/lib/ads-clients";
+import { getAdsConnectionConfig } from "@/lib/ads/ads-connections-store";
+import {
+  fetchGooglePerformance,
+  fetchMetaPerformance,
+  windowRange,
+} from "@/lib/ads/ads-fetchers";
 
 export type AdsPlatform = "google" | "meta";
 export type PlatformFilter = "all" | AdsPlatform;
@@ -93,55 +99,29 @@ export type AdsPerformance = {
 
 // --- Connection checks (env-driven; no creds yet → false) ------------------
 
+/** App-level Google Ads credentials present (developer token + OAuth). */
 export function googleAdsConfigured(): boolean {
   return Boolean(
     process.env.GOOGLE_ADS_DEVELOPER_TOKEN &&
       process.env.GOOGLE_ADS_REFRESH_TOKEN &&
-      process.env.GOOGLE_ADS_CLIENT_ID,
+      process.env.GOOGLE_ADS_CLIENT_ID &&
+      process.env.GOOGLE_ADS_CLIENT_SECRET,
   );
 }
 
+/** App-level Meta credentials present (system-user token). */
 export function metaAdsConfigured(): boolean {
   return Boolean(process.env.META_ADS_ACCESS_TOKEN);
 }
 
-export function getAdsConnection(): AdsConnection {
-  return { google: googleAdsConfigured(), meta: metaAdsConfigured() };
-}
-
-// --- Real fetchers (to implement when credentials exist) -------------------
-// Each returns null when its platform isn't connected. NEVER returns made-up
-// data — a null here surfaces the "Conectar API" state in the UI.
-
-type PlatformFetch = {
-  kpis: AdsKpis;
-  campaigns: AdsCampaign[];
-  series: number[];
-} | null;
-
-async function fetchGooglePerformance(
-  slug: string,
-  window: AdsWindow,
-): Promise<PlatformFetch> {
-  if (!googleAdsConfigured()) return null;
-  // TODO: call the Google Ads API with the client's customer id, map the
-  // GAQL report rows for `slug`/`window` into KPIs/campaigns/series. Until
-  // then, treat as no-data rather than inventing figures.
-  void slug;
-  void window;
-  return null;
-}
-
-async function fetchMetaPerformance(
-  slug: string,
-  window: AdsWindow,
-): Promise<PlatformFetch> {
-  if (!metaAdsConfigured()) return null;
-  // TODO: call the Meta Marketing API (insights edge) for the client's ad
-  // account using `slug`/`window`. Until then, no-data.
-  void slug;
-  void window;
-  return null;
+/** A platform is connected for a client when the app-level credentials exist
+ *  AND the client has that platform's account id configured. */
+export async function getAdsConnection(slug: string): Promise<AdsConnection> {
+  const config = await getAdsConnectionConfig(slug);
+  return {
+    google: googleAdsConfigured() && Boolean(config.googleCustomerId),
+    meta: metaAdsConfigured() && Boolean(config.metaAdAccountId),
+  };
 }
 
 export async function getAdsPerformance(
@@ -150,15 +130,19 @@ export async function getAdsPerformance(
 ): Promise<AdsPerformance> {
   const client = getAdsClient(slug);
   const channels: AdsPlatform[] = (client?.channels as AdsPlatform[]) ?? [];
-  const connected = getAdsConnection();
+  const config = await getAdsConnectionConfig(slug);
+  const connected: AdsConnection = {
+    google: googleAdsConfigured() && Boolean(config.googleCustomerId),
+    meta: metaAdsConfigured() && Boolean(config.metaAdAccountId),
+  };
   const anyConnected = channels.some((c) => connected[c]);
 
   const [google, meta] = await Promise.all([
-    channels.includes("google")
-      ? fetchGooglePerformance(slug, opts.window)
+    channels.includes("google") && connected.google && config.googleCustomerId
+      ? fetchGooglePerformance(config.googleCustomerId, opts.window)
       : Promise.resolve(null),
-    channels.includes("meta")
-      ? fetchMetaPerformance(slug, opts.window)
+    channels.includes("meta") && connected.meta && config.metaAdAccountId
+      ? fetchMetaPerformance(config.metaAdAccountId, opts.window)
       : Promise.resolve(null),
   ]);
 
@@ -168,15 +152,22 @@ export async function getAdsPerformance(
 
   let kpis: AdsKpis | null = null;
   const topCampaigns: AdsCampaign[] = [];
-  const conversions: AdsSeriesPoint[] = [];
+  let conversions: AdsSeriesPoint[] = [];
 
   if (useG || useM) {
-    // (Wiring point) combine real KPIs from the connected platforms.
-    // Left null while neither fetcher returns data.
     kpis = mergeKpis(useG?.kpis ?? null, useM?.kpis ?? null);
     if (useG) topCampaigns.push(...useG.campaigns);
     if (useM) topCampaigns.push(...useM.campaigns);
     topCampaigns.sort((a, b) => b.conversions - a.conversions);
+    if (topCampaigns.length > 0) topCampaigns[0].best = true;
+
+    // Daily conversions series, aligned to the window, per platform.
+    const { labels } = windowRange(opts.window);
+    conversions = labels.map((label, i) => ({
+      label,
+      google: useG ? (useG.series[i] ?? 0) : null,
+      meta: useM ? (useM.series[i] ?? 0) : null,
+    }));
   }
 
   return {
@@ -186,7 +177,7 @@ export async function getAdsPerformance(
     window: opts.window,
     platform: opts.platform,
     kpis,
-    topCampaigns,
+    topCampaigns: topCampaigns.slice(0, 8),
     conversions,
   };
 }
