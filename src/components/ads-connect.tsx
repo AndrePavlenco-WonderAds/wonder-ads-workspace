@@ -1,13 +1,28 @@
 "use client";
 
-// Per-client ADS platform connection panel on the ADS client page. The team
-// pastes the Google Ads customer id and/or Meta ad account id; the shared
-// app-level API credentials live in env. Once an id is saved (and the app
-// creds exist) the platform is "connected" and the dashboard pulls real data.
+// Per-client ADS platform connection panel on the ADS client page.
+//
+// Two layers:
+//  1. AGENCY connection (OAuth) — the ads manager clicks "Ligar" and logs in
+//     with their own account (which has access to the client accounts). Stored
+//     once, reused for every client. The dev only sets the app-level creds in
+//     env.
+//  2. Per-client account id (Google Ads customer id / Meta ad account id).
+//
+// A platform pulls real data when: app creds exist (dev) + agency connected
+// (OAuth) + the client's account id is set.
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Loader2, Plug, AlertTriangle, Link2 } from "lucide-react";
+import {
+  Check,
+  Loader2,
+  Plug,
+  AlertTriangle,
+  Link2,
+  LogIn,
+  Unplug,
+} from "lucide-react";
 import { PlatformIcon } from "@/components/platform-icon";
 import type { AdsConnectionConfig } from "@/lib/ads/ads-connections-store";
 import type { AdsPlatform } from "@/lib/ads/ads-data";
@@ -28,7 +43,7 @@ const ROWS: Record<AdsPlatform, Row> = {
     iconId: "google-ads",
     field: "googleCustomerId",
     placeholder: "Customer ID (ex: 123-456-7890)",
-    hint: "O Customer ID da conta Google Ads do cliente.",
+    hint: "O Customer ID da conta Google Ads deste cliente.",
   },
   meta: {
     platform: "meta",
@@ -36,7 +51,7 @@ const ROWS: Record<AdsPlatform, Row> = {
     iconId: "meta",
     field: "metaAdAccountId",
     placeholder: "Ad Account ID (ex: act_123456789)",
-    hint: "O ID da conta publicitária Meta (Ad Account).",
+    hint: "O ID da conta publicitária Meta (Ad Account) deste cliente.",
   },
 };
 
@@ -45,13 +60,20 @@ export function AdsConnect({
   channels,
   initialConfig,
   appCreds,
+  agencyConnected,
 }: {
   slug: string;
   channels: AdsPlatform[];
   initialConfig: AdsConnectionConfig;
   appCreds: { google: boolean; meta: boolean };
+  agencyConnected: { google: boolean; meta: boolean };
 }) {
   const router = useRouter();
+  const [flash, setFlash] = useState<string | null>(null);
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search).get("ads_connect");
+    if (p) setFlash(p);
+  }, []);
   const [config, setConfig] = useState<AdsConnectionConfig>(initialConfig);
   const [drafts, setDrafts] = useState<Record<string, string>>({
     googleCustomerId: initialConfig.googleCustomerId ?? "",
@@ -84,6 +106,17 @@ export function AdsConnect({
     }
   }
 
+  async function disconnect(platform: AdsPlatform) {
+    if (!window.confirm(`Desligar a conta da agência de ${ROWS[platform].label}?`))
+      return;
+    await fetch("/api/ads/oauth/disconnect", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ platform }),
+    });
+    router.refresh();
+  }
+
   const rows = channels.map((c) => ROWS[c]).filter(Boolean);
   if (rows.length === 0) return null;
 
@@ -96,16 +129,31 @@ export function AdsConnect({
         <div>
           <h2 className="text-sm font-semibold text-white">Ligações de Plataforma</h2>
           <p className="text-[11px] text-white/45">
-            Liga as contas para o dashboard puxar métricas reais (ROAS, CTR, CPA…).
+            Liga a conta da agência (uma vez) e cola o ID de conta deste cliente.
           </p>
         </div>
       </header>
 
+      {flash && (
+        <p
+          className={`mb-3 rounded-lg px-3 py-2 text-[12px] font-medium ${
+            flash.endsWith("_ok")
+              ? "bg-emerald-500/12 text-emerald-300"
+              : "bg-rose-500/12 text-rose-300"
+          }`}
+        >
+          {flash.endsWith("_ok")
+            ? "Conta da agência ligada com sucesso."
+            : "Falha na ligação. Tente novamente."}
+        </p>
+      )}
+
       <div className="flex flex-col gap-3">
         {rows.map((row) => {
           const saved = config[row.field];
-          const hasAppCreds = appCreds[row.platform];
-          const connected = Boolean(saved) && hasAppCreds;
+          const hasApp = appCreds[row.platform];
+          const agency = agencyConnected[row.platform];
+          const connected = Boolean(saved) && hasApp && agency;
           const draft = drafts[row.field] ?? "";
           const dirty = draft.trim() !== (saved ?? "");
           return (
@@ -113,7 +161,7 @@ export function AdsConnect({
               key={row.platform}
               className="rounded-xl border border-white/10 bg-white/[0.025] p-4"
             >
-              <div className="mb-2.5 flex items-center gap-2.5">
+              <div className="mb-3 flex items-center gap-2.5">
                 <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-white">
                   <PlatformIcon platform={row.iconId} className="h-6 w-6" />
                 </span>
@@ -135,7 +183,39 @@ export function AdsConnect({
                 </span>
               </div>
 
-              <div className="flex flex-col gap-2 sm:flex-row">
+              {/* Step 1 — agency OAuth */}
+              {!hasApp ? (
+                <p className="flex items-center gap-1.5 rounded-lg bg-amber-500/[0.08] px-3 py-2 text-[11px] font-medium text-amber-200/80">
+                  <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                  Credenciais de app em falta nas env vars (configuração do dev).
+                </p>
+              ) : agency ? (
+                <div className="flex items-center gap-2 rounded-lg border border-emerald-400/20 bg-emerald-500/[0.06] px-3 py-2">
+                  <Check className="h-3.5 w-3.5 text-emerald-300" />
+                  <span className="text-[12px] font-medium text-emerald-200/90">
+                    Conta da agência ligada
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => disconnect(row.platform)}
+                    className="ml-auto inline-flex items-center gap-1 text-[11px] font-medium text-white/45 transition hover:text-white/80"
+                  >
+                    <Unplug className="h-3.5 w-3.5" />
+                    Desligar
+                  </button>
+                </div>
+              ) : (
+                <a
+                  href={`/api/ads/oauth/${row.platform}/start?returnTo=/ads/${slug}`}
+                  className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-4 py-2 text-[13px] font-semibold text-white transition hover:bg-white/15"
+                >
+                  <LogIn className="h-4 w-4" />
+                  Ligar {row.label} (login da agência)
+                </a>
+              )}
+
+              {/* Step 2 — per-client account id */}
+              <div className="mt-3 flex flex-col gap-2 sm:flex-row">
                 <input
                   type="text"
                   value={draft}
@@ -156,19 +236,10 @@ export function AdsConnect({
                   ) : (
                     <Link2 className="h-3.5 w-3.5" />
                   )}
-                  Guardar
+                  Guardar ID
                 </button>
               </div>
-
               <p className="mt-1.5 text-[11px] text-white/40">{row.hint}</p>
-
-              {!hasAppCreds && (
-                <p className="mt-2 flex items-center gap-1.5 text-[11px] font-medium text-amber-200/80">
-                  <AlertTriangle className="h-3.5 w-3.5" />
-                  Credenciais de app em falta nas env vars — a ligação só puxa
-                  dados depois de configuradas.
-                </p>
-              )}
             </div>
           );
         })}

@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.95",
+    date: "2026-07-17",
+    title: "ADS — ligar contas via OAuth dentro da app",
+    highlights: [
+      "**🔗 Botão \"Ligar\" (OAuth).** O gestor de Ads liga as contas dentro da app: clica *Ligar Google Ads* / *Ligar Meta*, faz login com a **conta dele** (que tem acesso às contas dos clientes) e a app guarda o token. Não é preciso o dev ter acesso às contas dos clientes.",
+      "**🧱 Separação de responsabilidades.** O dev define **só as credenciais da app** nas env vars (OAuth client do Google, developer token, app da Meta). O acesso às contas é autorizado pelo gestor via frontend, uma vez, e reutilizado em todos os clientes.",
+      "**🗝️ Por cliente.** Depois da agência estar ligada, em cada cliente cola-se apenas o Customer ID (Google) / Ad Account ID (Meta).",
+    ],
+  },
+  {
     version: "74.94",
     date: "2026-07-17",
     title: "Onboarding — 3 formulários (Geral, SEO, Ads)",

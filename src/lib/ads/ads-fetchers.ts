@@ -52,14 +52,14 @@ export function windowRange(w: AdsWindow): {
 
 // ======================= GOOGLE ADS =======================================
 
-async function getGoogleAdsAccessToken(): Promise<string> {
+async function getGoogleAdsAccessToken(refreshToken: string): Promise<string> {
   const res = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "content-type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
       client_id: process.env.GOOGLE_ADS_CLIENT_ID ?? "",
       client_secret: process.env.GOOGLE_ADS_CLIENT_SECRET ?? "",
-      refresh_token: process.env.GOOGLE_ADS_REFRESH_TOKEN ?? "",
+      refresh_token: refreshToken,
       grant_type: "refresh_token",
     }),
   });
@@ -86,10 +86,11 @@ type GoogleRow = {
 export async function fetchGooglePerformance(
   customerId: string,
   w: AdsWindow,
+  refreshToken: string,
 ): Promise<PlatformFetch> {
   try {
     const { since, until, dayKeys } = windowRange(w);
-    const token = await getGoogleAdsAccessToken();
+    const token = await getGoogleAdsAccessToken(refreshToken);
     const query = `
       SELECT campaign.name, segments.date, metrics.conversions,
              metrics.conversions_value, metrics.cost_micros, metrics.clicks,
@@ -211,10 +212,11 @@ type MetaRow = {
 async function metaGet(
   path: string,
   params: Record<string, string>,
+  accessToken: string,
 ): Promise<MetaRow[]> {
   const url = new URL(`https://graph.facebook.com/${META_VERSION}/${path}`);
   for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
-  url.searchParams.set("access_token", process.env.META_ADS_ACCESS_TOKEN ?? "");
+  url.searchParams.set("access_token", accessToken);
   const res = await fetch(url.toString(), { method: "GET" });
   if (!res.ok) {
     throw new Error(`Meta API ${res.status}: ${await res.text()}`);
@@ -226,18 +228,23 @@ async function metaGet(
 export async function fetchMetaPerformance(
   adAccountId: string,
   w: AdsWindow,
+  accessToken: string,
 ): Promise<PlatformFetch> {
   try {
     const { since, until, dayKeys } = windowRange(w);
     const timeRange = JSON.stringify({ since, until });
 
     // Daily account rows → KPIs + series.
-    const daily = await metaGet(`${adAccountId}/insights`, {
-      level: "account",
-      time_increment: "1",
-      time_range: timeRange,
-      fields: "spend,ctr,clicks,impressions,actions,action_values,purchase_roas",
-    });
+    const daily = await metaGet(
+      `${adAccountId}/insights`,
+      {
+        level: "account",
+        time_increment: "1",
+        time_range: timeRange,
+        fields: "spend,ctr,clicks,impressions,actions,action_values,purchase_roas",
+      },
+      accessToken,
+    );
 
     let spend = 0;
     let conversions = 0;
@@ -266,11 +273,15 @@ export async function fetchMetaPerformance(
     };
 
     // Campaign breakdown → top campaigns.
-    const campRows = await metaGet(`${adAccountId}/insights`, {
-      level: "campaign",
-      time_range: timeRange,
-      fields: "campaign_name,spend,actions,action_values",
-    }).catch(() => [] as MetaRow[]);
+    const campRows = await metaGet(
+      `${adAccountId}/insights`,
+      {
+        level: "campaign",
+        time_range: timeRange,
+        fields: "campaign_name,spend,actions,action_values",
+      },
+      accessToken,
+    ).catch(() => [] as MetaRow[]);
 
     const campaigns: AdsCampaign[] = campRows.map((r) => {
       const cSpend = Number(r.spend ?? 0);

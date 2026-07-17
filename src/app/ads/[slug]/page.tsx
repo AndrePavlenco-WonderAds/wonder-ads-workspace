@@ -17,6 +17,7 @@ import {
   type AdsPlatform,
 } from "@/lib/ads/ads-data";
 import { getAdsConnectionConfig } from "@/lib/ads/ads-connections-store";
+import { getAgencyTokens } from "@/lib/ads/ads-oauth-store";
 import { getAdsReports } from "@/lib/ads/ads-reports-store";
 import { getVault } from "@/lib/ads/ads-vault-store";
 import {
@@ -56,14 +57,20 @@ export default async function AdsClientPage({
   if (!client) notFound();
 
   const channels: AdsPlatform[] = (client.channels as AdsPlatform[]) ?? [];
-  const [brief, performance, reports, vault, adsConfig] = await Promise.all([
-    getBriefForSlug(slug),
-    getAdsPerformance(slug, { platform: "all", window: { mode: "week" } }),
-    getAdsReports(slug),
-    getVault(slug),
-    getAdsConnectionConfig(slug),
-  ]);
+  const [brief, performance, reports, vault, adsConfig, agencyTokens] =
+    await Promise.all([
+      getBriefForSlug(slug),
+      getAdsPerformance(slug, { platform: "all", window: { mode: "week" } }),
+      getAdsReports(slug),
+      getVault(slug),
+      getAdsConnectionConfig(slug),
+      getAgencyTokens(),
+    ]);
   const appCreds = { google: googleAdsConfigured(), meta: metaAdsConfigured() };
+  const agencyConnected = {
+    google: Boolean(agencyTokens.googleRefreshToken),
+    meta: Boolean(agencyTokens.metaAccessToken),
+  };
   const website = getClientWebsite(slug);
   const logo = getClientLogo(slug);
   const logoBgMode = getLogoBgMode(slug);
@@ -154,6 +161,7 @@ export default async function AdsClientPage({
           channels={channels}
           initialConfig={adsConfig}
           appCreds={appCreds}
+          agencyConnected={agencyConnected}
         />
       </div>
 

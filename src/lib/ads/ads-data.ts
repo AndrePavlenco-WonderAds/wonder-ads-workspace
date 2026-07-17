@@ -13,6 +13,7 @@
 import "server-only";
 import { getAdsClient } from "@/lib/ads-clients";
 import { getAdsConnectionConfig } from "@/lib/ads/ads-connections-store";
+import { getAgencyTokens } from "@/lib/ads/ads-oauth-store";
 import {
   fetchGooglePerformance,
   fetchMetaPerformance,
@@ -99,28 +100,38 @@ export type AdsPerformance = {
 
 // --- Connection checks (env-driven; no creds yet → false) ------------------
 
-/** App-level Google Ads credentials present (developer token + OAuth). */
+/** App-level Google Ads credentials present (the dev-provided OAuth client +
+ *  developer token). The refresh token itself comes from the in-app OAuth. */
 export function googleAdsConfigured(): boolean {
   return Boolean(
     process.env.GOOGLE_ADS_DEVELOPER_TOKEN &&
-      process.env.GOOGLE_ADS_REFRESH_TOKEN &&
       process.env.GOOGLE_ADS_CLIENT_ID &&
       process.env.GOOGLE_ADS_CLIENT_SECRET,
   );
 }
 
-/** App-level Meta credentials present (system-user token). */
+/** App-level Meta credentials present (the dev-provided app). The access token
+ *  itself comes from the in-app OAuth. */
 export function metaAdsConfigured(): boolean {
-  return Boolean(process.env.META_ADS_ACCESS_TOKEN);
+  return Boolean(process.env.META_APP_ID && process.env.META_APP_SECRET);
 }
 
-/** A platform is connected for a client when the app-level credentials exist
- *  AND the client has that platform's account id configured. */
+/** A platform is connected for a client when: app creds exist (dev) AND the
+ *  agency has authorised via OAuth AND the client's account id is set. */
 export async function getAdsConnection(slug: string): Promise<AdsConnection> {
-  const config = await getAdsConnectionConfig(slug);
+  const [config, tokens] = await Promise.all([
+    getAdsConnectionConfig(slug),
+    getAgencyTokens(),
+  ]);
   return {
-    google: googleAdsConfigured() && Boolean(config.googleCustomerId),
-    meta: metaAdsConfigured() && Boolean(config.metaAdAccountId),
+    google:
+      googleAdsConfigured() &&
+      Boolean(tokens.googleRefreshToken) &&
+      Boolean(config.googleCustomerId),
+    meta:
+      metaAdsConfigured() &&
+      Boolean(tokens.metaAccessToken) &&
+      Boolean(config.metaAdAccountId),
   };
 }
 
@@ -130,19 +141,34 @@ export async function getAdsPerformance(
 ): Promise<AdsPerformance> {
   const client = getAdsClient(slug);
   const channels: AdsPlatform[] = (client?.channels as AdsPlatform[]) ?? [];
-  const config = await getAdsConnectionConfig(slug);
+  const [config, tokens] = await Promise.all([
+    getAdsConnectionConfig(slug),
+    getAgencyTokens(),
+  ]);
   const connected: AdsConnection = {
-    google: googleAdsConfigured() && Boolean(config.googleCustomerId),
-    meta: metaAdsConfigured() && Boolean(config.metaAdAccountId),
+    google:
+      googleAdsConfigured() &&
+      Boolean(tokens.googleRefreshToken) &&
+      Boolean(config.googleCustomerId),
+    meta:
+      metaAdsConfigured() &&
+      Boolean(tokens.metaAccessToken) &&
+      Boolean(config.metaAdAccountId),
   };
   const anyConnected = channels.some((c) => connected[c]);
 
   const [google, meta] = await Promise.all([
-    channels.includes("google") && connected.google && config.googleCustomerId
-      ? fetchGooglePerformance(config.googleCustomerId, opts.window)
+    channels.includes("google") &&
+    connected.google &&
+    config.googleCustomerId &&
+    tokens.googleRefreshToken
+      ? fetchGooglePerformance(config.googleCustomerId, opts.window, tokens.googleRefreshToken)
       : Promise.resolve(null),
-    channels.includes("meta") && connected.meta && config.metaAdAccountId
-      ? fetchMetaPerformance(config.metaAdAccountId, opts.window)
+    channels.includes("meta") &&
+    connected.meta &&
+    config.metaAdAccountId &&
+    tokens.metaAccessToken
+      ? fetchMetaPerformance(config.metaAdAccountId, opts.window, tokens.metaAccessToken)
       : Promise.resolve(null),
   ]);
 
