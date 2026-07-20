@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.98",
+    date: "2026-07-20",
+    title: "ADS — aceitar token direto da Meta",
+    highlights: [
+      "**🔑 Token direto da Meta.** Se o gestor fornecer um access token de longa duração / system user, basta pôr `META_ADS_ACCESS_TOKEN` nas env vars — já não é obrigatório criar app OAuth (META_APP_ID/SECRET) para a Meta. O Google continua a usar o botão *Ligar* para gerar o refresh token.",
+    ],
+  },
+  {
     version: "74.97",
     date: "2026-07-17",
     title: "Onboarding — formulários alinhados com os questionários WonderAds",
