@@ -110,10 +110,14 @@ export function googleAdsConfigured(): boolean {
   );
 }
 
-/** App-level Meta credentials present (the dev-provided app). The access token
- *  itself comes from the in-app OAuth. */
+/** Meta is usable either via the OAuth app (META_APP_ID + META_APP_SECRET, for
+ *  the in-app "Ligar" flow) OR via a direct long-lived/system-user token pasted
+ *  into META_ADS_ACCESS_TOKEN. Either satisfies "app configured". */
 export function metaAdsConfigured(): boolean {
-  return Boolean(process.env.META_APP_ID && process.env.META_APP_SECRET);
+  return Boolean(
+    (process.env.META_APP_ID && process.env.META_APP_SECRET) ||
+      process.env.META_ADS_ACCESS_TOKEN,
+  );
 }
 
 /** A platform is connected for a client when: app creds exist (dev) AND the
