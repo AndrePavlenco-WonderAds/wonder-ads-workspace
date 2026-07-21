@@ -145,6 +145,23 @@ async function resolvePropertyId(
   return index.get(host) ?? null;
 }
 
+/** Resolve a client to a live GA4 token + property id in one call. Returns
+ *  null when Google auth isn't configured or no property matches the client's
+ *  domain. Exposed so the Monthly Report data layer (report/ga4-report.ts) can
+ *  reuse the exact token + property resolution the panel uses. */
+export async function resolveGa4Property(
+  slug: string,
+  propertyIdOverride?: string | null,
+): Promise<{ token: string; propertyId: string } | null> {
+  if (!googleAuthConfigured) return null;
+  const token = await getGoogleAccessToken(SCOPES);
+  const propertyId = propertyIdOverride?.trim()
+    ? propertyIdOverride.trim()
+    : await resolvePropertyId(slug, token);
+  if (!propertyId) return null;
+  return { token, propertyId };
+}
+
 // --- Reporting --------------------------------------------------------------
 
 type ReportRow = {
@@ -152,7 +169,7 @@ type ReportRow = {
   metricValues?: { value?: string }[];
 };
 
-async function runReport(
+export async function runReport(
   token: string,
   propertyId: string,
   body: unknown,

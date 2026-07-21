@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "75.7",
+    date: "2026-07-21",
+    title: "Relatório Mensal SEO — fundações (Fase 0 + camada de dados GA4)",
+    highlights: [
+      "**🧱 Arranque do módulo de Relatório Mensal de SEO & Lead Gen.** Fundações: janelas por **mês de calendário** (mês anterior completo, MoM, YoY) com respeito pelo lag do GSC, config de analytics por cliente (property GA4 / site GSC / location GBP / timezone / mapa de eventos / regex de LLMs), e a camada de dados GA4 do relatório — leads por evento nomeado (com deteção de instrumentação), tráfego orgânico e AI Visibility. Sem alterações visíveis ainda; a montagem do relatório e o PDF vêm nas próximas fases.",
+    ],
+  },
+  {
     version: "75.6",
     date: "2026-07-21",
     title: "Acessos — João B. entra, Yenisey sai do login",
