@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "75.3",
+    date: "2026-07-21",
+    title: "Onboarding — vídeo de boas-vindas correto",
+    highlights: [
+      "**🎥 Vídeo de boas-vindas.** Atualizado o vídeo do 1º passo (*Começar Aqui*) para o correto (`AJyxJmV0pIc`).",
+    ],
+  },
+  {
     version: "75.2",
     date: "2026-07-21",
     title: "Onboarding — vídeo de boas-vindas, passo final novo e ajustes",

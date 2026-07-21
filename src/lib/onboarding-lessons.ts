@@ -87,7 +87,7 @@ export const DEFAULT_ONBOARDING_CATEGORIES: OnboardingCategory[] = [
         title: "Começar Aqui",
         kind: "video",
         emoji: "🚀",
-        videoUrl: "https://www.youtube.com/embed/hLQbjs-WGIE",
+        videoUrl: "https://www.youtube.com/embed/AJyxJmV0pIc",
         summary: "Bem-vindo à Wonder Ads — o que esperar deste processo.",
         about: [
           {
