@@ -13,6 +13,22 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "75.1",
+    date: "2026-07-21",
+    title: "Onboarding — vídeos nos passos de acessos SEO",
+    highlights: [
+      "**🎥 Vídeos de acesso.** Embed dos vídeos de *como dar acesso* nos passos de consultoria SEO: **Google Analytics 4**, **Google Search Console** e **Google My Business (GMB)**.",
+    ],
+  },
+  {
+    version: 75,
+    date: "2026-07-21",
+    title: "Onboarding — Último Passo só com a Sessão de Estratégia",
+    highlights: [
+      "**🎯 Último Passo.** Removido o passo *“Feito!”* final. O último passo passa a ter apenas a **Sessão de Estratégia** — agendar a reunião onde apresentamos o plano inicial.",
+    ],
+  },
+  {
     version: "74.99",
     date: "2026-07-21",
     title: "Onboarding — passo de acesso ao Website só para WordPress",

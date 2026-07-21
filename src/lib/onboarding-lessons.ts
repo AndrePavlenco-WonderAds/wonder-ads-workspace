@@ -181,7 +181,7 @@ export const DEFAULT_ONBOARDING_CATEGORIES: OnboardingCategory[] = [
         title: "Google Analytics 4",
         kind: "video",
         emoji: "📊",
-        videoUrl: null,
+        videoUrl: "https://www.youtube.com/embed/20xo71m-9gs",
         summary: "Adicionar a Wonder Ads como administrador do Google Analytics.",
         about: [
           {
@@ -202,7 +202,7 @@ export const DEFAULT_ONBOARDING_CATEGORIES: OnboardingCategory[] = [
         title: "Google Search Console",
         kind: "video",
         emoji: "🔍",
-        videoUrl: null,
+        videoUrl: "https://www.youtube.com/embed/20xo71m-9gs",
         summary: "Dar-nos acesso ao Search Console para acompanhar as pesquisas.",
         about: [
           {
@@ -223,7 +223,7 @@ export const DEFAULT_ONBOARDING_CATEGORIES: OnboardingCategory[] = [
         title: "Google My Business (Perfil GMB)",
         kind: "video",
         emoji: "📍",
-        videoUrl: null,
+        videoUrl: "https://www.youtube.com/embed/OQDUnGktskw",
         summary: "Acesso ao Perfil de Empresa do Google (mapa e reviews).",
         about: [
           {
@@ -359,26 +359,6 @@ export const DEFAULT_ONBOARDING_CATEGORIES: OnboardingCategory[] = [
           {
             type: "p",
             text: "O vosso consultor irá partilhar o link para agendar. Escolha o horário que melhor lhe convier.",
-          },
-        ],
-      },
-      {
-        id: "feito",
-        track: "common",
-        category: "final",
-        title: "5º Passo: Feito!",
-        kind: "info",
-        emoji: "🎉",
-        videoUrl: null,
-        summary: "Concluiu o onboarding — o que acontece a seguir.",
-        about: [
-          {
-            type: "p",
-            text: "Parabéns — concluiu o processo de onboarding! 🎉 A partir daqui, a nossa equipa começa a trabalhar na vossa estratégia de SEO.",
-          },
-          {
-            type: "p",
-            text: "Vai receber atualizações regulares do vosso consultor. Se tiver qualquer dúvida entretanto, é só falar connosco. Obrigado pela confiança!",
           },
         ],
       },
