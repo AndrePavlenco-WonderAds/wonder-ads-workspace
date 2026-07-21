@@ -98,6 +98,7 @@ export const config = {
     "/api/call-notes/:path*",
     "/api/roadmaps/:path*",
     "/api/seo-actions/:path*",
+    "/api/reports/:path*",
     "/api/onboarding/:path*",
     "/api/keywords/:path*",
     "/api/target-keywords/:path*",

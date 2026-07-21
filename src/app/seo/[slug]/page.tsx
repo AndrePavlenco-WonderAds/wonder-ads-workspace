@@ -11,6 +11,7 @@ import { CurrentRoadmapStrip } from "@/components/current-roadmap-strip";
 import { PendingReviewChip } from "@/components/pending-review-chip";
 import { SeoProjectContainers } from "@/components/seo-project-containers";
 import { SeoActions } from "@/components/seo-actions";
+import { ReportSection } from "@/components/report/report-section";
 import { ProjectSectionNav } from "@/components/project-section-nav";
 import { LogoChip } from "@/components/logo-chip";
 import { getBriefForSlug } from "@/lib/briefs-storage";
@@ -225,6 +226,10 @@ export default async function ClientPage({
 
       <section className="animate-fade-up mt-10 sm:mt-14">
         <SeoActions clientName={client.title} clientSlug={slug} />
+      </section>
+
+      <section className="animate-fade-up mt-10 sm:mt-14">
+        <ReportSection slug={slug} readOnly={readOnly} />
       </section>
 
       <section className="animate-fade-up mt-10 sm:mt-14">

@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "75.9",
+    date: "2026-07-21",
+    title: "Relatório Mensal SEO — interface (Fase 4): gerar + ver relatório",
+    highlights: [
+      "**📊 Relatório Mensal na página do cliente.** Nova secção *Relatório Mensal* (fundo da página do cliente SEO) com botão **Gerar** e lista de relatórios anteriores. Abre a página do relatório com o **documento branded Wonder Ads** (8 secções: Resumo, Leads, GBP, Orgânico, AI Visibility, Top Queries/Páginas, Notas), tira interna de proveniência (GA4/GSC/GBP), e aviso de *rascunho*. A regra de ouro está visível: métricas por validar aparecem como *não instrumentado* / *a preencher* — nunca um 0 falso. Dados reais entram assim que o service-account correr no deploy.",
+    ],
+  },
+  {
     version: "75.8",
     date: "2026-07-21",
     title: "Relatório Mensal SEO — camada GSC + montagem do relatório",
