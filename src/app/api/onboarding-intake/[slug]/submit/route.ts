@@ -36,6 +36,7 @@ import {
   patchOnboardingClient,
 } from "@/lib/onboarding-clients-store";
 import { setLessonCompletion } from "@/lib/onboarding-progress-store";
+import { clearOnboardingDraft } from "@/lib/onboarding-draft-store";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -208,6 +209,14 @@ export async function POST(
     await setLessonCompletion(slug, lessonId, true, now);
   } catch (err) {
     console.error("onboarding progress update failed:", err);
+  }
+
+  // The form is submitted — drop the in-progress draft for this track so it
+  // can't resurface and overwrite the final answers on a later visit.
+  try {
+    await clearOnboardingDraft(slug, submittedTrack);
+  } catch (err) {
+    console.error("onboarding draft clear failed:", err);
   }
 
   revalidatePath(`/seo/${slug}`);

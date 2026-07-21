@@ -6,7 +6,7 @@
 // the onboarding hub. Lives on the public /[slug]/onboarding/form page (no
 // app chrome, no auth). Posts to /api/onboarding-intake/[slug]/submit.
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { upload } from "@vercel/blob/client";
 import {
@@ -15,6 +15,7 @@ import {
   Check,
   Loader2,
   Paperclip,
+  Save,
   Upload,
   X,
 } from "lucide-react";
@@ -250,6 +251,130 @@ export function OnboardingIntakeForm({
     "idle",
   );
 
+  // --- Draft auto-save (every 60s) + manual "Guardar progresso" ---------
+  // People fill half the form, leave, and come back another day — often on
+  // another device. We persist an in-progress draft server-side (KV) keyed by
+  // slug+track so their answers + step are restored, without triggering the
+  // real-submit side-effects (PDF, board promotion). See ./draft route.
+  const [saveState, setSaveState] = useState<
+    "idle" | "saving" | "saved" | "error"
+  >("idle");
+  const [restored, setRestored] = useState(false);
+  const hydratedRef = useRef(false);
+  const savedSnapshotRef = useRef<string>("");
+
+  const snapshot = useCallback(
+    () => JSON.stringify({ texts, choices, files, step }),
+    [texts, choices, files, step],
+  );
+
+  // Hydrate from any saved draft on mount (client-side, so the page itself
+  // stays cacheable and never serves one client's answers to another).
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(
+          `/api/onboarding-intake/${slug}/draft?track=${track}`,
+        );
+        if (res.ok) {
+          const { draft } = (await res.json()) as {
+            draft: {
+              texts?: Record<string, string>;
+              choices?: Record<string, string[]>;
+              files?: Record<string, UploadedFile[]>;
+              step?: number;
+            } | null;
+          };
+          if (!cancelled && draft) {
+            const t = draft.texts ?? {};
+            const c = draft.choices ?? {};
+            const f = draft.files ?? {};
+            const s = Math.max(
+              0,
+              Math.min(total - 1, typeof draft.step === "number" ? draft.step : 0),
+            );
+            setTexts(t);
+            setChoices(c);
+            setFiles(f);
+            setStep(s);
+            savedSnapshotRef.current = JSON.stringify({
+              texts: t,
+              choices: c,
+              files: f,
+              step: s,
+            });
+            const hasAnswers =
+              Object.keys(t).length > 0 ||
+              Object.keys(c).length > 0 ||
+              Object.keys(f).length > 0;
+            if (hasAnswers) {
+              setRestored(true);
+              setSaveState("saved");
+            }
+          }
+        }
+      } catch {
+        // Offline / storage off — the form still works, just no draft.
+      } finally {
+        if (!cancelled) {
+          if (!savedSnapshotRef.current) {
+            savedSnapshotRef.current = JSON.stringify({
+              texts: {},
+              choices: {},
+              files: {},
+              step: 0,
+            });
+          }
+          hydratedRef.current = true;
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slug, track]);
+
+  const saveDraft = useCallback(
+    async (opts?: { silent?: boolean }) => {
+      if (!hydratedRef.current) return;
+      if (state === "sending" || state === "done") return;
+      const snap = snapshot();
+      if (snap === savedSnapshotRef.current) {
+        if (!opts?.silent) setSaveState("saved");
+        return;
+      }
+      if (!opts?.silent) setSaveState("saving");
+      try {
+        const res = await fetch(`/api/onboarding-intake/${slug}/draft`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ texts, choices, files, step, track }),
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        savedSnapshotRef.current = snap;
+        setSaveState("saved");
+      } catch {
+        setSaveState("error");
+      }
+    },
+    [slug, track, texts, choices, files, step, state, snapshot],
+  );
+
+  // Keep a stable 60s timer that always calls the latest saveDraft — so the
+  // cadence doesn't reset on every keystroke.
+  const saveRef = useRef(saveDraft);
+  useEffect(() => {
+    saveRef.current = saveDraft;
+  }, [saveDraft]);
+  useEffect(() => {
+    const id = setInterval(() => {
+      saveRef.current({ silent: true });
+    }, 60000);
+    return () => clearInterval(id);
+  }, []);
+
   const isAnswered = (f: OnbField): boolean => {
     if (!f.required) return true;
     if (isShort(f) || isLong(f)) return (texts[f.name]?.trim() ?? "") !== "";
@@ -281,6 +406,10 @@ export function OnboardingIntakeForm({
     setDir(target >= step ? 1 : -1);
     setStep(Math.max(0, Math.min(total - 1, target)));
     window.scrollTo({ top: 0, behavior: "smooth" });
+    // Checkpoint progress whenever the client moves between steps, so a close
+    // right after answering a step doesn't lose it (the 60s timer covers long
+    // dwells on a single step).
+    setTimeout(() => saveRef.current({ silent: true }), 0);
   }
   const setText = (name: string, v: string) =>
     setTexts((p) => ({ ...p, [name]: v }));
@@ -394,6 +523,17 @@ export function OnboardingIntakeForm({
         </div>
       </div>
 
+      {/* Restored-progress banner */}
+      {restored && (
+        <div className="mb-5 flex items-center gap-2.5 rounded-xl border border-[#783DF5]/20 bg-[#783DF5]/[0.06] px-4 py-3 text-[13px] text-black/70">
+          <Check className="h-4 w-4 shrink-0 text-[#783DF5]" />
+          <span>
+            Retomámos as suas respostas guardadas — continue de onde parou. As
+            alterações são guardadas automaticamente.
+          </span>
+        </div>
+      )}
+
       {/* Step card — re-keyed per step so the slide animation replays */}
       <div key={step} className={dir === 1 ? "nps-slide-right" : "nps-slide-left"}>
         <div className="rounded-2xl border border-black/8 bg-white px-6 py-7 shadow-sm sm:px-8">
@@ -481,8 +621,39 @@ export function OnboardingIntakeForm({
         </p>
       )}
 
+      {/* Save progress — manual button + auto-save status */}
+      <div className="mt-6 flex items-center justify-center gap-3">
+        <button
+          type="button"
+          onClick={() => saveDraft()}
+          disabled={saveState === "saving"}
+          className="inline-flex items-center gap-2 rounded-lg border border-black/12 bg-white px-4 py-2 text-[13px] font-medium text-black/65 transition-all duration-200 hover:-translate-y-[1px] hover:border-[#783DF5]/40 hover:text-black/85 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
+        >
+          {saveState === "saving" ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <Save className="h-3.5 w-3.5" />
+          )}
+          Guardar progresso
+        </button>
+        <span
+          className={`text-[11.5px] ${
+            saveState === "error" ? "text-rose-500" : "text-black/45"
+          }`}
+          aria-live="polite"
+        >
+          {saveState === "saving"
+            ? "A guardar…"
+            : saveState === "saved"
+              ? "Progresso guardado ✓"
+              : saveState === "error"
+                ? "Não foi possível guardar — tente de novo"
+                : "Guardamos automaticamente a cada 60s"}
+        </span>
+      </div>
+
       {/* Nav */}
-      <div className="mt-6 flex items-center justify-between gap-4">
+      <div className="mt-4 flex items-center justify-between gap-4">
         <button
           type="button"
           onClick={() => goTo(step - 1)}

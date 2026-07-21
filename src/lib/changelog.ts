@@ -13,6 +13,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "75.5",
+    date: "2026-07-21",
+    title: "Onboarding — guardar progresso nos formulários (auto-save 60s + botão)",
+    highlights: [
+      "**💾 Já não se perde meio formulário.** Os formulários de onboarding passam a **guardar o progresso automaticamente a cada 60s** e em cada mudança de passo, mais um botão **“Guardar progresso”** manual. Quem preenche a meio e volta no dia seguinte (mesmo noutro dispositivo) **retoma exatamente de onde parou** — respostas + passo restaurados, com um aviso *“Retomámos as suas respostas guardadas”*.",
+      "**🔒 Sem efeitos secundários.** O rascunho é guardado num store KV próprio (`onboarding-draft:<slug>:<track>`), separado do envio final — não gera PDF nem promove o cliente. Ao submeter o formulário, o rascunho é apagado para não ressurgir.",
+    ],
+  },
+  {
     version: "75.4",
     date: "2026-07-21",
     title: "SEO DPT — reorganização de consultores + coluna João B.",
