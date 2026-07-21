@@ -13,6 +13,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "75.6",
+    date: "2026-07-21",
+    title: "Acessos — João B. entra, Yenisey sai do login",
+    highlights: [
+      "**🔑 Login do João B.** Novo acesso de consultor SEO (`joao-b`) — vê o SEO DPT (a sua coluna) e o Web, como os restantes consultores. Password entregue à parte.",
+      "**🚪 Yenisey removida do login.** A conta `yenisey-r` já não consegue entrar no workspace (continua, para já, como opção no inquérito NPS).",
+    ],
+  },
+  {
     version: "75.5",
     date: "2026-07-21",
     title: "Onboarding — guardar progresso nos formulários (auto-save 60s + botão)",

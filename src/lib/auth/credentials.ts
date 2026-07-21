@@ -83,14 +83,6 @@ export const EMPLOYEE_CREDENTIALS: EmployeeCredential[] = [
     hash: "6e007a432f6134a7ee4147089cb486461541cc1fa25a1d1cdf6e077447f4f1ea1962ca78114ad599e8dca4c3138a2dce5fef3f9dbbe189633e449b7c0b19071c",
   },
   {
-    username: "yenisey-r",
-    name: "Yenisey Rodriguez",
-    role: "SEO Consultant",
-    dept: "SEO",
-    salt: "830074dc1e56d7cbaf74665b26467711",
-    hash: "8ac86c5d9126362012ff5dedf8b7240c344ee4184967ab7fcf325ca4db77f0ac7063318d7cecf5ae8e1defd7836dcada185adb91ca49435ac984af81968cb691",
-  },
-  {
     // André Pereira — new SEO consultant (v74.31). Distinct person from
     // "andre" (André Pavlenco, the founder); username is andre-pereira.
     username: "andre-pereira",
@@ -100,6 +92,18 @@ export const EMPLOYEE_CREDENTIALS: EmployeeCredential[] = [
     dept: "SEO",
     salt: "6ec1a1e90e4e37f85489011710bc48d7",
     hash: "82a7a60d6f6352edbb5b352f797ef1b1d1849c8711a919c979f0750158f2c655eb5ab4abf94783d2989789512bccf81dcb27a0d0bddeda03cc71fd0b7eef6d2f",
+  },
+  {
+    // João B. — new SEO consultant (v75.6). `name` must match the SEO
+    // board column header "João B." so he sees his own column link.
+    // Temp password generated out-of-band — Andre to hand it over + rotate.
+    username: "joao-b",
+    name: "João B.",
+    fullName: "João Batista",
+    role: "SEO Consultant",
+    dept: "SEO",
+    salt: "d7d60d6aa538084e6b6385a29274d7b8",
+    hash: "188972f4fbf52acdb335489c79bc32b7443c4185a9bdee0e34c04fa5a5fc99f4ba4a824e84ab2b615dbf12f310220bb12588ec46d34ba155b86f47f879d0f446",
   },
   {
     username: "germano-c",
