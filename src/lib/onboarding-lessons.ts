@@ -241,19 +241,23 @@ export const DEFAULT_ONBOARDING_CATEGORIES: OnboardingCategory[] = [
         id: "website",
         platform: "website",
         category: "acessos",
-        title: "Acesso ao Website — Clientes Wordpress & Shopify",
+        title: "Acesso ao Website — Clientes WordPress",
         kind: "video",
         emoji: "🌐",
         videoUrl: null,
-        summary: "Como nos dar acesso ao vosso site (WordPress ou Shopify).",
+        summary: "Como nos dar acesso ao vosso site (se for WordPress).",
         about: [
           {
             type: "p",
-            text: "Para implementarmos as melhorias técnicas e de conteúdo, precisamos de acesso ao vosso website. O vídeo mostra como criar um utilizador para nós em WordPress ou Shopify.",
+            text: "Para implementarmos as melhorias técnicas e de conteúdo, precisamos de acesso ao vosso website. Se o vosso site for em WordPress, o vídeo mostra como criar um utilizador de administrador para nós.",
+          },
+          {
+            type: "p",
+            text: "Se o vosso site não for em WordPress, não há problema — falem connosco e indicamos a melhor forma de nos dar acesso à vossa plataforma.",
           },
           {
             type: "emails",
-            intro: "Crie um utilizador de administrador com um destes emails (ou envie as credenciais em segurança):",
+            intro: "No WordPress, crie um utilizador de administrador com um destes emails (ou envie as credenciais em segurança):",
             emails: TEAM_ADMIN_EMAILS,
           },
         ],

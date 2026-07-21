@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "74.99",
+    date: "2026-07-21",
+    title: "Onboarding — passo de acesso ao Website só para WordPress",
+    highlights: [
+      "**🌐 Acesso ao Website.** O passo passou a focar-se em **WordPress**: explica como criar um utilizador de administrador nesse caso e, se o site não for WordPress, convida o cliente a falar connosco para indicarmos a melhor forma de dar acesso. Removida a referência ao Shopify.",
+    ],
+  },
+  {
     version: "74.98",
     date: "2026-07-20",
     title: "ADS — aceitar token direto da Meta",
