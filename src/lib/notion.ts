@@ -83,6 +83,12 @@ const EXTRA_SEO_CLIENTS: Array<{
   { title: "CuidaMais", icon: "🩺" },
   // Kings Gyms (kingsgyms.com) — André Pereira (v74.59). Not in Notion yet.
   { title: "Kings Gyms", icon: "🏋️" },
+  // João B.'s first book (v75.4). Both are still in the onboarding phase
+  // (SuperAdmin filling the forms). Surfaced here so they show under João B.
+  // now; when they submit the onboarding form the SAME slug promotes
+  // seamlessly (seenSlugs dedupes) and the intake PDF attaches to /seo/<slug>.
+  { title: "Cidália Cabeleireiros", icon: "💇" },
+  { title: "MyMedic", icon: "🏥" },
 ];
 
 const _fetchSeoClients = unstable_cache(
@@ -169,7 +175,9 @@ const _fetchSeoClients = unstable_cache(
   // any of its derived fields changes meaningfully. v7: added CuidaMais
   // (v74.38). v9: offboarded Senior Resort (excluded slug).
   // v11: merge promoted onboarding-flow clients into the roster.
-  ["seo-clients-v11"],
+  // v12: Yenisey offboarded + book redistributed; João B. joins with
+  // Cidália Cabeleireiros + MyMedic (synthetic, still in onboarding) (v75.4).
+  ["seo-clients-v12"],
   { revalidate: 3600, tags: ["seo-clients"] },
 );
 

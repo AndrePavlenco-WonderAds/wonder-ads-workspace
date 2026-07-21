@@ -13,6 +13,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "75.4",
+    date: "2026-07-21",
+    title: "SEO DPT — reorganização de consultores + coluna João B.",
+    highlights: [
+      "**🔀 Carteira da Yenisey redistribuída** (coluna removida): **IHN → Manuel Silva**; **White Clinic + Spine Center + CDT → André Pereira**; **Monte Mar + Fisio Restelo → Fran. Rosa**. Os emails nos entregáveis/detalhes seguem automaticamente o novo consultor (via `getConsultantEmailForSlug`).",
+      "**🆕 Nova coluna João B.** (`joao.batista@wonder-ads.com`) com **Cidália Cabeleireiros** e **MyMedic** — ambos ainda em fase de onboarding (SuperAdmin a preencher os forms). Aparecem já na coluna; quando submeterem o formulário de onboarding o mesmo slug promove sem duplicar e os dados/PDF passam direto para a página do cliente em `/seo/<cliente>`.",
+    ],
+  },
+  {
     version: "75.3",
     date: "2026-07-21",
     title: "Onboarding — vídeo de boas-vindas correto",
