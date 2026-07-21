@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "75.8",
+    date: "2026-07-21",
+    title: "Relatório Mensal SEO — camada GSC + montagem do relatório",
+    highlights: [
+      "**🧩 Montagem completa dos dados do relatório.** Camada GSC por mês de calendário (totais + top-10 queries/páginas), store de snapshots por cliente+mês, e o agregador que junta GA4+GSC nas 8 secções fixas, calcula o total de leads consolidado, gera o *Executive Summary* por regras e aplica a regra de ouro (métrica em falta = *pendente/manual*, nunca um 0 falso; relatório fica *draft* até estar validado). Falta a interface (página + PDF + preview), que vem já a seguir.",
+    ],
+  },
+  {
     version: "75.7",
     date: "2026-07-21",
     title: "Relatório Mensal SEO — fundações (Fase 0 + camada de dados GA4)",

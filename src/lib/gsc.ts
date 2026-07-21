@@ -465,6 +465,95 @@ export async function getSiteAuditData(
   }
 }
 
+// ---- Monthly Report (calendar-month windows) ---------------------------
+
+export type GscMonthlyReport =
+  | { status: "not-configured" }
+  | { status: "no-property" }
+  | { status: "error"; message: string }
+  | {
+      status: "ok";
+      siteUrl: string;
+      totals: GscTotals;
+      prevTotals: GscTotals | null;
+      topQueries: KeywordRow[];
+      topPages: GscPageRow[];
+    };
+
+/** Search Console totals + top-N queries/pages for an explicit calendar-month
+ *  window (and the prior month for deltas). Unlike getSiteAuditData's rolling
+ *  window, the report always covers a complete month — the caller passes the
+ *  ranges from report-dates. Reuses the same query helpers + property match. */
+export async function getGscMonthlyReport(
+  slug: string,
+  opts: {
+    current: { startDate: string; endDate: string };
+    previous: { startDate: string; endDate: string };
+    siteUrlOverride?: string | null;
+    topLimit?: number;
+  },
+): Promise<GscMonthlyReport> {
+  if (!googleAuthConfigured) return { status: "not-configured" };
+
+  const override = opts.siteUrlOverride?.trim() || GSC_PROPERTY_OVERRIDES[slug];
+  const site = CLIENT_WEBSITES[slug];
+  const domain = site ? domainFromUrl(site) : null;
+  if (!override && !domain) return { status: "no-property" };
+
+  try {
+    const token = await getGoogleAccessToken(SCOPES);
+    let siteUrl: string | null = override ?? null;
+    if (!siteUrl && domain) siteUrl = matchProperty(domain, await listSites(token));
+    if (!siteUrl) return { status: "no-property" };
+
+    const { current, previous } = opts;
+    const limit = opts.topLimit ?? 10;
+
+    const [totals, prevTotals, queryRows, prevQueryRows, pages] =
+      await Promise.all([
+        queryTotals(token, siteUrl, current.startDate, current.endDate),
+        queryTotals(token, siteUrl, previous.startDate, previous.endDate).catch(
+          () => null,
+        ),
+        queryRange(token, siteUrl, current.startDate, current.endDate, limit),
+        queryRange(token, siteUrl, previous.startDate, previous.endDate, 1000).catch(
+          () => [] as GscApiRow[],
+        ),
+        queryPages(token, siteUrl, current.startDate, current.endDate, limit),
+      ]);
+
+    const prevByQuery = new Map(
+      prevQueryRows.map((r) => [r.keys[0], r.position] as const),
+    );
+    const topQueries: KeywordRow[] = queryRows.map((r) => {
+      const query = r.keys[0] ?? "";
+      const prevPos = prevByQuery.get(query);
+      return {
+        query,
+        position: round1(r.position),
+        clicks: r.clicks,
+        impressions: r.impressions,
+        change: prevPos === undefined ? null : round1(prevPos - r.position),
+      };
+    });
+
+    return {
+      status: "ok",
+      siteUrl,
+      totals: totals ?? { clicks: 0, impressions: 0, ctr: 0, position: 0 },
+      prevTotals,
+      topQueries,
+      topPages: pages,
+    };
+  } catch (err) {
+    return {
+      status: "error",
+      message:
+        err instanceof Error ? err.message : "Search Console request failed",
+    };
+  }
+}
+
 export function formatGscSiteAuditForPrompt(d: SiteAuditGscData): string {
   if (d.status === "not-configured") {
     return `## Google Search Console\n_Not configured (GOOGLE_SERVICE_ACCOUNT_JSON missing). Skipping GSC signals._`;
