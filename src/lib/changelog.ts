@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "75.2",
+    date: "2026-07-21",
+    title: "Onboarding — vídeo de boas-vindas, passo final novo e ajustes",
+    highlights: [
+      "**🎥 Vídeo de boas-vindas.** Embed do vídeo de introdução no 1º passo (*Começar Aqui*) e novo vídeo no passo de **Google Analytics 4** do SEO.",
+      "**🏁 Passo final refeito.** Removido o passo *Sessão de Estratégia*. O último passo passa a ser **“Feito! 🎉”** — agradece, pede para agendar a próxima reunião (ou enviar disponibilidades) e para avisar no grupo de **WhatsApp** que terminou o onboarding.",
+      "**⏱️ Formulário SEO ~2 min.** Ajustada a estimativa de tempo do *Formulário SEO* de ~8 para ~2 min (novo override `estMinutes` por passo).",
+    ],
+  },
+  {
     version: "75.1",
     date: "2026-07-21",
     title: "Onboarding — vídeos nos passos de acessos SEO",

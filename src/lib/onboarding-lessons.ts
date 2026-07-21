@@ -50,6 +50,9 @@ export type Lesson = {
   ecommerce?: boolean;
   /** Only shown when the client signed up for this specific service. */
   requiresService?: OnbService;
+  /** Optional override for the "~N min" estimate. When absent we fall back
+   *  to the per-kind default (form 8 / video 3 / info 2). */
+  estMinutes?: number;
 };
 
 /** Known platform icon ids (see PlatformIcon component). */
@@ -84,22 +87,21 @@ export const DEFAULT_ONBOARDING_CATEGORIES: OnboardingCategory[] = [
         title: "Começar Aqui",
         kind: "video",
         emoji: "🚀",
-        videoUrl: null,
+        videoUrl: "https://www.youtube.com/embed/hLQbjs-WGIE",
         summary: "Bem-vindo à Wonder Ads — o que esperar deste processo.",
         about: [
           {
             type: "p",
-            text: "Bem-vindo(a) à Wonder Ads! Este é o ponto de partida da nossa parceria. Ao longo dos próximos passos vamos recolher tudo o que precisamos para preparar a sua estratégia de SEO e agendar a Sessão de Estratégia.",
+            text: "Bem-vindo(a) à Wonder Ads! Este é o ponto de partida da nossa parceria. Ao longo dos próximos passos vamos recolher tudo o que precisamos para preparar a sua estratégia de SEO.",
           },
           {
             type: "bullets",
-            intro: "O processo tem 5 passos simples:",
+            intro: "O processo tem 4 passos simples:",
             items: [
               "Ver este vídeo de boas-vindas.",
               "Preencher o formulário sobre a vossa audiência e conteúdo.",
               "Dar-nos os acessos necessários (Analytics, Search Console, GMB e Website).",
-              "Agendar a Sessão de Estratégia.",
-              "Concluir — e começamos a trabalhar!",
+              "Concluir e avisar-nos — e começamos a trabalhar!",
             ],
           },
           {
@@ -135,6 +137,7 @@ export const DEFAULT_ONBOARDING_CATEGORIES: OnboardingCategory[] = [
         title: "Formulário SEO",
         kind: "form",
         emoji: "🔍",
+        estMinutes: 2,
         videoUrl: null,
         summary: "Perguntas específicas de SEO — keywords, conteúdo e tom de voz.",
         about: [
@@ -181,7 +184,7 @@ export const DEFAULT_ONBOARDING_CATEGORIES: OnboardingCategory[] = [
         title: "Google Analytics 4",
         kind: "video",
         emoji: "📊",
-        videoUrl: "https://www.youtube.com/embed/20xo71m-9gs",
+        videoUrl: "https://www.youtube.com/embed/hLQbjs-WGIE",
         summary: "Adicionar a Wonder Ads como administrador do Google Analytics.",
         about: [
           {
@@ -343,22 +346,26 @@ export const DEFAULT_ONBOARDING_CATEGORIES: OnboardingCategory[] = [
     title: "Último Passo",
     lessons: [
       {
-        id: "sessao-estrategia",
+        id: "feito",
         track: "common",
         category: "final",
-        title: "4º Passo: Sessão de Estratégia",
-        kind: "video",
-        emoji: "🎯",
+        title: "Feito! 🎉",
+        kind: "info",
+        emoji: "🎉",
         videoUrl: null,
-        summary: "Agende a reunião onde apresentamos a estratégia inicial.",
+        summary: "Concluiu o onboarding — obrigado! Só falta avisar-nos.",
         about: [
           {
             type: "p",
-            text: "Com o formulário preenchido e os acessos dados, está tudo pronto para a Sessão de Estratégia — a reunião onde alinhamos objetivos e apresentamos o plano inicial.",
+            text: "Muito obrigado! 🎉 Concluiu o processo de onboarding — a partir daqui começamos a preparar tudo do nosso lado.",
           },
           {
             type: "p",
-            text: "O vosso consultor irá partilhar o link para agendar. Escolha o horário que melhor lhe convier.",
+            text: "Se já tem a próxima reunião connosco agendada, ótimo! Se ainda não, sem problema — envie-nos as suas disponibilidades e agendamos.",
+          },
+          {
+            type: "p",
+            text: "Por fim, avise-nos no grupo de WhatsApp que já terminou o onboarding, para darmos seguimento. Obrigado pela confiança!",
           },
         ],
       },
@@ -512,6 +519,11 @@ export function normalizeCourse(raw: unknown): OnboardingCategory[] | null {
           reqRaw === "seo" || reqRaw === "google-ads" || reqRaw === "meta-ads"
             ? (reqRaw as OnbService)
             : undefined;
+        const estRaw = (l as { estMinutes?: unknown }).estMinutes;
+        const estMinutes =
+          typeof estRaw === "number" && Number.isFinite(estRaw) && estRaw > 0
+            ? estRaw
+            : undefined;
         outLessons.push({
           id,
           category: key,
@@ -521,6 +533,7 @@ export function normalizeCourse(raw: unknown): OnboardingCategory[] | null {
           platform,
           ecommerce,
           requiresService,
+          estMinutes,
           emoji:
             typeof (l as { emoji?: unknown }).emoji === "string"
               ? (l as { emoji: string }).emoji

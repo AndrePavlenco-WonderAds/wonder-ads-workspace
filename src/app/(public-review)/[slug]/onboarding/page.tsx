@@ -36,6 +36,9 @@ export const dynamic = "force-dynamic";
 // Rough per-step time estimate (minutes) so the client can see "≈X min left"
 // without us hand-maintaining a duration on every lesson.
 function lessonMinutes(lesson: Lesson): number {
+  if (typeof lesson.estMinutes === "number" && lesson.estMinutes > 0) {
+    return lesson.estMinutes;
+  }
   if (lesson.kind === "form") return 8;
   if (lesson.kind === "video") return 3;
   return 2; // info / access-grant steps
