@@ -42,6 +42,20 @@ const SOURCE_LABEL: Record<string, string> = {
   deferred: "manual",
 };
 
+/** Actionable explanation for why GBP data isn't flowing yet. */
+function gbpHint(s: FetchStatus): string {
+  switch (s.status) {
+    case "not-configured":
+      return "Google Business Profile: sem service account Google configurado neste deployment.";
+    case "no-location":
+      return "Google Business Profile: a API respondeu, mas não encontrei a ficha deste cliente pela correspondência do website. Confirma o website na ficha GBP ou envia o location ID para eu fixar.";
+    case "error":
+      return `Google Business Profile: ${s.message ?? "erro"}. Se o acesso à Business Profile API ainda estiver a ser aprovado pelo Google, é normal — usa o preenchimento manual entretanto.`;
+    default:
+      return "Google Business Profile ainda por ligar — preenche os cliques manualmente por agora.";
+  }
+}
+
 function SourceChip({ name, s }: { name: string; s: FetchStatus }) {
   const color = s.ok
     ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-200/90"
@@ -159,6 +173,13 @@ export default async function ReportPage({
                 </div>
               )}
             </div>
+
+            {!readOnly && !snapshot.fetch.gbp.ok && (
+              <div className="mb-4 flex items-start gap-2.5 rounded-xl border border-white/12 bg-white/[0.03] px-4 py-3 text-[12.5px] leading-relaxed text-white/65">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-white/40" />
+                <span>{gbpHint(snapshot.fetch.gbp)}</span>
+              </div>
+            )}
 
             {snapshot.status === "draft" && (
               <div className="mb-4 flex items-start gap-2.5 rounded-xl border border-amber-400/25 bg-amber-500/[0.07] px-4 py-3 text-[13px] text-amber-100/90">

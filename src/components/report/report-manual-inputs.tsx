@@ -37,6 +37,18 @@ export function ReportManualInputs({
     () => channels.filter((c) => c.metric.source !== "ga4"),
     [channels],
   );
+  // Lead events that GA4 isn't sending — the ones a GTM setup would automate.
+  const uninstrumentedLeads = useMemo(
+    () =>
+      channels.some(
+        (c) =>
+          ["form", "call", "email", "whatsapp"].includes(c.key) &&
+          c.metric.source === "na" &&
+          !c.metric.manualNa &&
+          c.metric.value === null,
+      ),
+    [channels],
+  );
   const [rows, setRows] = useState<Record<string, RowState>>(() =>
     Object.fromEntries(editable.map((c) => [c.key, initialState(c)])),
   );
@@ -88,6 +100,26 @@ export function ReportManualInputs({
         Introduza o valor do mês ou marque <b>N/A</b>. O relatório fica pronto quando
         não sobrar nada por resolver.
       </p>
+
+      {uninstrumentedLeads && (
+        <div className="mb-4 rounded-xl border border-sky-400/25 bg-sky-500/[0.06] px-4 py-3 text-[12px] leading-relaxed text-sky-100/85">
+          <b>Automatizar os leads via Google Tag Manager.</b> Estes eventos ainda não
+          chegam do GA4 deste cliente. No GTM do site, cria os disparos e marca-os como
+          eventos GA4: <b>submit de formulário → </b><code className="rounded bg-white/10 px-1">generate_lead</code>,
+          {" "}links <code className="rounded bg-white/10 px-1">tel:</code> → <code className="rounded bg-white/10 px-1">click_to_call</code>,
+          {" "}links <code className="rounded bg-white/10 px-1">mailto:</code> → <code className="rounded bg-white/10 px-1">click_to_email</code>,
+          {" "}widget WhatsApp → <code className="rounded bg-white/10 px-1">whatsapp_click</code>.
+          {" "}A partir daí o relatório puxa-os sozinho. Até lá, preenche abaixo.{" "}
+          <a
+            href="https://support.google.com/tagmanager/answer/6106716"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline decoration-sky-300/50 underline-offset-2 hover:text-white"
+          >
+            Guia GTM
+          </a>
+        </div>
+      )}
 
       <div className="space-y-2">
         {editable.map((c) => {

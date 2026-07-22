@@ -467,6 +467,26 @@ export async function getSiteAuditData(
 
 // ---- Monthly Report (calendar-month windows) ---------------------------
 
+/** Position footprint across the site's queries — for the report's month-end
+ *  keyword overview. */
+export type GscKeywordStats = {
+  /** Queries with impressions this month. */
+  total: number;
+  top3: number;
+  top10: number;
+  top20: number;
+  /** Impression-weighted average position. */
+  avgPosition: number;
+};
+
+/** A query whose ranking improved vs. the prior month (positive change). */
+export type GscMover = {
+  query: string;
+  position: number;
+  clicks: number;
+  change: number;
+};
+
 export type GscMonthlyReport =
   | { status: "not-configured" }
   | { status: "no-property" }
@@ -478,6 +498,8 @@ export type GscMonthlyReport =
       prevTotals: GscTotals | null;
       topQueries: KeywordRow[];
       topPages: GscPageRow[];
+      keywordStats: GscKeywordStats;
+      topMovers: GscMover[];
     };
 
 /** Search Console totals + top-N queries/pages for an explicit calendar-month
@@ -508,6 +530,9 @@ export async function getGscMonthlyReport(
 
     const { current, previous } = opts;
     const limit = opts.topLimit ?? 10;
+    // Pull a broad query set (not just the top-N by clicks) so the keyword
+    // footprint stats + movers reflect the whole site, not only the headliners.
+    const statLimit = Math.max(limit, 200);
 
     const [totals, prevTotals, queryRows, prevQueryRows, pages] =
       await Promise.all([
@@ -515,7 +540,7 @@ export async function getGscMonthlyReport(
         queryTotals(token, siteUrl, previous.startDate, previous.endDate).catch(
           () => null,
         ),
-        queryRange(token, siteUrl, current.startDate, current.endDate, limit),
+        queryRange(token, siteUrl, current.startDate, current.endDate, statLimit),
         queryRange(token, siteUrl, previous.startDate, previous.endDate, 1000).catch(
           () => [] as GscApiRow[],
         ),
@@ -525,7 +550,9 @@ export async function getGscMonthlyReport(
     const prevByQuery = new Map(
       prevQueryRows.map((r) => [r.keys[0], r.position] as const),
     );
-    const topQueries: KeywordRow[] = queryRows.map((r) => {
+
+    // Top-N by clicks (GSC returns clicks-desc) for the headline table.
+    const topQueries: KeywordRow[] = queryRows.slice(0, limit).map((r) => {
       const query = r.keys[0] ?? "";
       const prevPos = prevByQuery.get(query);
       return {
@@ -537,6 +564,38 @@ export async function getGscMonthlyReport(
       };
     });
 
+    // Position footprint over the broad set.
+    const withPos = queryRows.filter((r) => r.position > 0);
+    const imprSum = withPos.reduce((t, r) => t + r.impressions, 0);
+    const avgPosition =
+      imprSum > 0
+        ? withPos.reduce((t, r) => t + r.position * r.impressions, 0) / imprSum
+        : withPos.length
+          ? withPos.reduce((t, r) => t + r.position, 0) / withPos.length
+          : 0;
+    const keywordStats: GscKeywordStats = {
+      total: withPos.length,
+      top3: withPos.filter((r) => r.position <= 3).length,
+      top10: withPos.filter((r) => r.position <= 10).length,
+      top20: withPos.filter((r) => r.position <= 20).length,
+      avgPosition: round1(avgPosition),
+    };
+
+    // Biggest ranking improvements vs. the prior month.
+    const topMovers: GscMover[] = queryRows
+      .map((r) => {
+        const prevPos = prevByQuery.get(r.keys[0]);
+        return {
+          query: r.keys[0] ?? "",
+          position: round1(r.position),
+          clicks: r.clicks,
+          change: prevPos === undefined ? 0 : round1(prevPos - r.position),
+        };
+      })
+      .filter((m) => m.change > 0.1)
+      .sort((a, b) => b.change - a.change)
+      .slice(0, 5);
+
     return {
       status: "ok",
       siteUrl,
@@ -544,6 +603,8 @@ export async function getGscMonthlyReport(
       prevTotals,
       topQueries,
       topPages: pages,
+      keywordStats,
+      topMovers,
     };
   } catch (err) {
     return {

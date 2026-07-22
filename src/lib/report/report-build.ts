@@ -21,7 +21,6 @@ import {
 import {
   REPORT_SCHEMA_VERSION,
   pendingMetric,
-  momPercent,
   isUnresolved,
   type FetchStatus,
   type LeadChannel,
@@ -116,76 +115,97 @@ function aiLabel(source: string): string {
   return source;
 }
 
-function pct(n: number): string {
-  const sign = n > 0 ? "+" : "";
-  return `${sign}${n.toFixed(1)}%`;
-}
-
-/** 3–5 highlight bullets: total leads, biggest riser, biggest faller, AI. */
+/** Executive summary — POSITIVE highlights only, never a negative. Aims for
+ *  3–5 bullets. A metric that fell is simply omitted (or shown as a neutral
+ *  total), never framed as a drop. */
 function buildExecSummary(
   snap: Omit<MonthlyReportSnapshot, "execSummary">,
   lang: "pt" | "en",
 ): string[] {
   const pt = lang === "pt";
-  const out: string[] = [];
+  const t = (p: string, e: string) => (pt ? p : e);
+  const fmt = (n: number | null | undefined) =>
+    typeof n === "number" ? Math.round(n).toLocaleString(pt ? "pt-PT" : "en-GB") : "";
 
-  // Total leads.
-  const lead = snap.leads.total;
-  if (lead.value !== null) {
-    const mom = momPercent(lead);
-    const momTxt = mom === null ? "" : pt ? ` (${pct(mom)} MoM)` : ` (${pct(mom)} MoM)`;
-    out.push(
-      pt
-        ? `Total de leads: **${lead.value}**${momTxt}.`
-        : `Total leads: **${lead.value}**${momTxt}.`,
-    );
-  }
-
-  // Movers across a set of named metrics (name, metric, higherIsBetter).
-  const movers: { label: string; mom: number; better: boolean }[] = [];
-  const push = (label: string, m: ReportMetric, better = true) => {
-    const mom = momPercent(m);
-    if (mom !== null && Number.isFinite(mom)) movers.push({ label, mom, better });
+  // Positive % gain for a metric (position is inverted: lower = improvement).
+  const gainOf = (m: ReportMetric): number | null => {
+    if (m.value === null || m.previous === null || m.previous === 0) return null;
+    if (m.unit === "position") {
+      const diff = m.previous - m.value;
+      return diff > 0.05 ? (diff / m.previous) * 100 : null;
+    }
+    const mom = ((m.value - m.previous) / m.previous) * 100;
+    return mom > 0.5 ? mom : null;
   };
-  push(pt ? "utilizadores orgânicos" : "organic users", snap.organic.users);
-  push(pt ? "sessões orgânicas" : "organic sessions", snap.organic.sessions);
-  push(pt ? "clicks no Google (GSC)" : "Google clicks (GSC)", snap.gsc.clicks);
-  push(pt ? "impressões (GSC)" : "impressions (GSC)", snap.gsc.impressions);
-  // Position: lower is better, so invert the sign for "up = good".
-  const posMom = momPercent(snap.gsc.position);
-  if (posMom !== null) movers.push({ label: pt ? "posição média" : "avg position", mom: -posMom, better: true });
 
-  if (movers.length) {
-    const riser = [...movers].sort((a, b) => b.mom - a.mom)[0];
-    const faller = [...movers].sort((a, b) => a.mom - b.mom)[0];
-    if (riser.mom > 0) {
-      out.push(
-        pt
-          ? `Maior subida: **${riser.label}** ${pct(riser.mom)} face ao mês anterior.`
-          : `Biggest gain: **${riser.label}** ${pct(riser.mom)} vs. last month.`,
-      );
+  const cand: { pri: number; text: string }[] = [];
+  const seen = new Set<string>();
+  const add = (pri: number, text: string) => {
+    if (text && !seen.has(text)) {
+      seen.add(text);
+      cand.push({ pri, text });
     }
-    if (faller.mom < 0 && faller.label !== riser.label) {
-      out.push(
-        pt
-          ? `Maior descida: **${faller.label}** ${pct(faller.mom)} — a acompanhar.`
-          : `Biggest drop: **${faller.label}** ${pct(faller.mom)} — to watch.`,
-      );
-    }
+  };
+
+  // Leads (top priority; positive framing whether or not it grew).
+  const leads = snap.leads.total;
+  const leadGain = gainOf(leads);
+  if (leads.value && leads.value > 0) {
+    if (leadGain !== null)
+      add(100, t(
+        `Geraram-se **${fmt(leads.value)}** leads — **+${leadGain.toFixed(0)}%** face ao mês anterior.`,
+        `**${fmt(leads.value)}** leads generated — **+${leadGain.toFixed(0)}%** vs. last month.`,
+      ));
+    else
+      add(96, t(
+        `Geraram-se **${fmt(leads.value)}** leads este mês.`,
+        `**${fmt(leads.value)}** leads generated this month.`,
+      ));
   }
 
-  // AI insight.
+  const ug = gainOf(snap.organic.users);
+  if (ug !== null)
+    add(90, t(`Utilizadores orgânicos a crescer **+${ug.toFixed(0)}%** face ao mês anterior.`, `Organic users up **+${ug.toFixed(0)}%** vs. last month.`));
+  else if (snap.organic.users.value && snap.organic.users.value > 0)
+    add(58, t(`**${fmt(snap.organic.users.value)}** utilizadores chegaram por pesquisa orgânica.`, `**${fmt(snap.organic.users.value)}** users arrived via organic search.`));
+
+  const cg = gainOf(snap.gsc.clicks);
+  if (cg !== null)
+    add(86, t(`Clicks na Pesquisa Google **+${cg.toFixed(0)}%** face ao mês anterior.`, `Google Search clicks **+${cg.toFixed(0)}%** vs. last month.`));
+
+  const pg = gainOf(snap.gsc.position);
+  if (pg !== null && snap.gsc.position.value !== null)
+    add(84, t(`Posição média melhorou para **${snap.gsc.position.value.toFixed(1)}** na Google.`, `Average position improved to **${snap.gsc.position.value.toFixed(1)}** on Google.`));
+
+  const ig = gainOf(snap.gsc.impressions);
+  if (ig !== null)
+    add(70, t(`Impressões na Pesquisa Google **+${ig.toFixed(0)}%**.`, `Google Search impressions **+${ig.toFixed(0)}%**.`));
+
+  const eg = gainOf(snap.organic.engagementRate);
+  if (eg !== null)
+    add(60, t(`Taxa de engagement a subir **+${eg.toFixed(0)}%**.`, `Engagement rate up **+${eg.toFixed(0)}%**.`));
+
   const ai = snap.ai;
   if (ai.totalSessions.value && ai.totalSessions.value > 0) {
     const top = [...ai.sources].sort((a, b) => b.sessions - a.sessions)[0];
-    out.push(
-      pt
-        ? `AI Visibility: **${ai.totalSessions.value}** sessões de LLMs${top ? `, lideradas por ${top.label}` : ""}.`
-        : `AI Visibility: **${ai.totalSessions.value}** LLM sessions${top ? `, led by ${top.label}` : ""}.`,
-    );
+    add(66, t(
+      `**${fmt(ai.totalSessions.value)}** sessões vieram de assistentes de IA${top ? `, lideradas pelo ${top.label}` : ""}.`,
+      `**${fmt(ai.totalSessions.value)}** sessions came from AI assistants${top ? `, led by ${top.label}` : ""}.`,
+    ));
   }
 
-  return out.slice(0, 5);
+  if (snap.gsc.topQueries.length) {
+    const byClicks = snap.gsc.topQueries[0];
+    add(54, t(`A pesquisa «**${byClicks.query}**» trouxe **${fmt(byClicks.clicks)}** clicks.`, `The query “**${byClicks.query}**” drove **${fmt(byClicks.clicks)}** clicks.`));
+    const best = [...snap.gsc.topQueries]
+      .filter((q) => q.position > 0)
+      .sort((a, b) => a.position - b.position)[0];
+    if (best)
+      add(52, t(`«**${best.query}**» está em **${best.position.toFixed(1)}** na Google.`, `“**${best.query}**” sits at **${best.position.toFixed(1)}** on Google.`));
+  }
+
+  cand.sort((a, b) => b.pri - a.pri);
+  return cand.slice(0, 5).map((c) => c.text);
 }
 
 /** Build (do not persist) the monthly report snapshot for a client. Deterministic
@@ -331,6 +351,8 @@ export async function buildMonthlyReport(
             ctr: p.ctr,
             position: p.position,
           })),
+          keywordStats: gsc.keywordStats,
+          topMovers: gsc.topMovers,
         }
       : {
           clicks: pendingMetric("count"),
@@ -339,6 +361,8 @@ export async function buildMonthlyReport(
           position: pendingMetric("position"),
           topQueries: [],
           topPages: [],
+          keywordStats: null,
+          topMovers: [],
         };
 
   // --- AI Visibility ---

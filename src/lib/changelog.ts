@@ -13,6 +13,25 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.4",
+    date: "2026-07-22",
+    title: "Relatório Mensal — resumo só positivo, AI Visibility melhor, keywords overview",
+    highlights: [
+      "**✅ Resumo executivo só com pontos positivos.** Passa a mostrar no mínimo 3 destaques positivos do mês (leads, orgânico, clicks, posições, IA) e **nunca menciona descidas**.",
+      "**🤖 AI Visibility renovado.** Explica como os dados são obtidos (sessões por origem de referral no GA4) e mostra por fonte de IA as **sessões + utilizadores + engagement** em cards, com total.",
+      "**🔑 Keywords & Posições (fim do mês).** Nova secção no fim do relatório via GSC: nº de keywords com impressões, quantas em **Top 3 / Top 10**, **posição média** e as **maiores subidas de posição** do mês.",
+      "**🩺 Diagnóstico + guias.** Quando o GBP ainda não liga, o relatório explica porquê (aprovação da API pendente / ficha por associar). Quando faltam eventos de lead, sugere como automatizá-los via **Google Tag Manager**.",
+    ],
+  },
+  {
+    version: "76.3",
+    date: "2026-07-22",
+    title: "SEO — logótipos reais nos cartões Spine Center, MyMedic e Cidália",
+    highlights: [
+      "**🖼️ Logótipos das marcas.** Os cartões (e páginas de projeto) do **Spine Center**, **MyMedic (Clínicas MyMedic)** e **Cidália Cabeleireiros** deixam de mostrar o emoji sobre o gradiente e passam a apresentar o logótipo real de cada marca, puxado do site respetivo, sobre chip branco — igual aos restantes clientes SEO.",
+    ],
+  },
+  {
     version: "76.2",
     date: "2026-07-22",
     title: "Relatório Mensal — histórico com Abrir + PDF por relatório",

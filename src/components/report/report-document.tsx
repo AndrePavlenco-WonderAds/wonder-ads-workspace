@@ -221,23 +221,44 @@ export function ReportDocument({
       {showAi && (
         <section className="wa-sec">
           <div className="wa-label">AI Visibility</div>
-          <h3 className="wa-h3">{t("Sessões atribuídas a LLMs", "Sessions attributed to LLMs")}</h3>
+          <h3 className="wa-h3">{t("Visitantes vindos de assistentes de IA", "Visitors from AI assistants")}</h3>
+          <p className="wa-method">
+            {t(
+              "Sessões cujo referral corresponde a domínios de assistentes de IA (ChatGPT, Gemini, Perplexity, Claude, Copilot…), segmentadas no Google Analytics 4 pela origem da sessão.",
+              "Sessions whose referral matches AI-assistant domains (ChatGPT, Gemini, Perplexity, Claude, Copilot…), segmented in Google Analytics 4 by session source.",
+            )}
+          </p>
           {ai.sources.length === 0 ? (
             <p className="wa-pending">
               {ai.totalSessions.value === 0
-                ? t("Sem tráfego de LLMs neste mês.", "No LLM traffic this month.")
+                ? t("Sem tráfego de assistentes de IA neste mês.", "No AI-assistant traffic this month.")
                 : t("A aguardar dados de AI Visibility.", "Awaiting AI Visibility data.")}
             </p>
           ) : (
-            <div className="wa-aiwrap">
-              {[...ai.sources]
-                .sort((a, b) => b.sessions - a.sessions)
-                .map((s) => (
-                  <span className="wa-aichip" key={s.source}>
-                    ◆ {s.label} · {formatRaw(s.sessions, "count", lang)}
-                  </span>
-                ))}
-            </div>
+            <>
+              <div className="wa-ai-total">
+                <span className="wa-ai-total-v">
+                  {formatRaw(ai.totalSessions.value ?? 0, "count", lang)}
+                </span>
+                <span className="wa-ai-total-l">
+                  {t("sessões de assistentes de IA no total", "total AI-assistant sessions")}
+                </span>
+              </div>
+              <div className="wa-ai-grid">
+                {[...ai.sources]
+                  .sort((a, b) => b.sessions - a.sessions)
+                  .map((s) => (
+                    <div className="wa-ai-card" key={s.source}>
+                      <div className="wa-ai-src">◆ {s.label}</div>
+                      <div className="wa-ai-sess">{formatRaw(s.sessions, "count", lang)}</div>
+                      <div className="wa-ai-sub">
+                        {formatRaw(s.users, "count", lang)} {t("utiliz.", "users")} ·{" "}
+                        {formatRaw(s.engagedSessions, "count", lang)} {t("c/ engagement", "engaged")}
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </>
           )}
         </section>
       )}
@@ -296,6 +317,61 @@ export function ReportDocument({
               )}
             </div>
           </div>
+        </section>
+      )}
+
+      {/* 7b — Keywords & Positions (month-end footprint) */}
+      {gsc.keywordStats && (gsc.keywordStats.total > 0 || variant === "internal") && (
+        <section className="wa-sec">
+          <div className="wa-label">{t("Keywords & Posições", "Keywords & Positions")}</div>
+          <h3 className="wa-h3">{t("Presença nas pesquisas (fim do mês)", "Search presence (month-end)")}</h3>
+          <p className="wa-method">
+            {t(
+              "Com base nas queries com impressões no Google Search Console durante o mês.",
+              "Based on Google Search Console queries with impressions during the month.",
+            )}
+          </p>
+          <div className="wa-kstats">
+            <div className="wa-kstat">
+              <span className="wa-kv">{formatRaw(gsc.keywordStats.total, "count", lang)}</span>
+              <span className="wa-kl">{t("keywords c/ impressões", "keywords w/ impressions")}</span>
+            </div>
+            <div className="wa-kstat">
+              <span className="wa-kv">{formatRaw(gsc.keywordStats.top3, "count", lang)}</span>
+              <span className="wa-kl">Top 3</span>
+            </div>
+            <div className="wa-kstat">
+              <span className="wa-kv">{formatRaw(gsc.keywordStats.top10, "count", lang)}</span>
+              <span className="wa-kl">Top 10</span>
+            </div>
+            <div className="wa-kstat">
+              <span className="wa-kv">{gsc.keywordStats.avgPosition.toFixed(1)}</span>
+              <span className="wa-kl">{t("posição média", "avg position")}</span>
+            </div>
+          </div>
+          {gsc.topMovers.length > 0 && (
+            <div className="wa-tblwrap" style={{ marginTop: "1rem" }}>
+              <h3 className="wa-h3">{t("Maiores subidas de posição", "Biggest position gains")}</h3>
+              <table className="wa-qtable">
+                <thead>
+                  <tr>
+                    <th>Query</th>
+                    <th className="n">{t("Posição", "Position")}</th>
+                    <th className="n">{t("Subida", "Gain")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {gsc.topMovers.map((m) => (
+                    <tr key={m.query}>
+                      <td>{m.query}</td>
+                      <td className="n">{m.position.toFixed(1)}</td>
+                      <td className="n wa-up">▲ {m.change.toFixed(1)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </section>
       )}
 
@@ -364,8 +440,20 @@ const CSS = `
 .wa-pending{color:#a08fb8;font-style:italic;font-weight:500;font-size:.76rem;}
 .wa-na{color:#7a7890;font-weight:600;font-size:.76rem;}
 .wa-pending-lg{color:#a08fb8;font-style:italic;font-size:.85rem;margin:.3rem 0;}
-.wa-aiwrap{display:flex;flex-wrap:wrap;gap:.35rem;margin-top:.3rem;}
-.wa-aichip{display:inline-flex;align-items:center;gap:.35rem;font-size:.74rem;padding:.24rem .55rem;border-radius:7px;background:rgba(120,61,245,.08);color:#6b34c9;font-weight:600;font-variant-numeric:tabular-nums;}
+.wa-method{margin:.15rem 0 .7rem;font-size:.74rem;line-height:1.5;color:#6d6b86;max-width:62ch;}
+.wa-ai-total{display:flex;align-items:baseline;gap:.5rem;margin:.2rem 0 .8rem;}
+.wa-ai-total-v{font-size:1.6rem;font-weight:800;letter-spacing:-.02em;color:#1a1a24;font-variant-numeric:tabular-nums;}
+.wa-ai-total-l{font-size:.78rem;color:#45435c;}
+.wa-ai-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:.6rem;}
+.wa-ai-card{border:1px solid rgba(120,61,245,.16);background:rgba(120,61,245,.05);border-radius:10px;padding:.7rem .8rem;}
+.wa-ai-src{font-size:.72rem;font-weight:700;color:#6b34c9;}
+.wa-ai-sess{font-size:1.35rem;font-weight:800;color:#1a1a24;line-height:1.1;margin:.15rem 0 .1rem;font-variant-numeric:tabular-nums;}
+.wa-ai-sub{font-size:.66rem;color:#6d6b86;font-variant-numeric:tabular-nums;}
+.wa-kstats{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:.6rem;margin-top:.3rem;}
+.wa-kstat{border:1px solid rgba(0,0,0,.08);border-left:3px solid #783DF5;border-radius:8px;padding:.6rem .75rem;background:#fff;}
+.wa-kv{display:block;font-size:1.5rem;font-weight:800;color:#1a1a24;line-height:1.05;letter-spacing:-.02em;font-variant-numeric:tabular-nums;}
+.wa-kl{display:block;margin-top:.15rem;font-size:.64rem;text-transform:uppercase;letter-spacing:.08em;color:#8a4fd0;font-weight:600;}
+.wa-up{color:#0f8f62 !important;}
 .wa-two-tables{display:grid;grid-template-columns:1fr 1fr;gap:1.4rem;margin-top:.4rem;}
 .wa-tblwrap{min-width:0;overflow-x:auto;}
 .wa-qtable{width:100%;border-collapse:collapse;font-size:.75rem;}

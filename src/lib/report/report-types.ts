@@ -65,6 +65,23 @@ export type AiSourceRow = {
   engagedSessions: number;
 };
 
+/** Month-end keyword footprint from GSC. */
+export type KeywordStats = {
+  total: number;
+  top3: number;
+  top10: number;
+  top20: number;
+  avgPosition: number;
+};
+
+/** A query whose ranking improved vs. the prior month. */
+export type KeywordMover = {
+  query: string;
+  position: number;
+  clicks: number;
+  change: number;
+};
+
 /** Per-source fetch outcome, for the internal provenance panel + re-auth. */
 export type FetchStatus = {
   ok: boolean;
@@ -75,7 +92,7 @@ export type FetchStatus = {
 
 export type ReportStatus = "draft" | "ready" | "sent";
 
-export const REPORT_SCHEMA_VERSION = 2;
+export const REPORT_SCHEMA_VERSION = 3;
 
 export type MonthlyReportSnapshot = {
   schemaVersion: number;
@@ -112,6 +129,8 @@ export type MonthlyReportSnapshot = {
     position: ReportMetric;
     topQueries: TopQueryRow[];
     topPages: TopPageRow[];
+    keywordStats: KeywordStats | null;
+    topMovers: KeywordMover[];
   };
   ai: {
     totalSessions: ReportMetric;
