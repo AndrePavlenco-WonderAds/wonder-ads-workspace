@@ -22,6 +22,9 @@ export const CLIENT_LOGOS: Record<string, string> = {
   "clinica-fernando-almeida": "/logos/clinica-fernando-almeida.png",
   cuidamais: "/logos/cuidamais.png",
   "kings-gyms": "/logos/kings-gyms.png",
+  "spine-center": "/logos/spine-center.png",
+  mymedic: "/logos/mymedic.png",
+  "cidalia-cabeleireiros": "/logos/cidalia-cabeleireiros.png",
 };
 
 export function getClientLogo(slug: string): string | null {
@@ -78,6 +81,8 @@ export const CLIENT_WEBSITES: Record<string, string> = {
   "safe-away": "https://safeaway.pt/",
   "clinica-em-casa": "https://clinicaemcasa.pt/",
   "spine-center": "https://spinecenter.pt/",
+  mymedic: "https://mymedic.pt/",
+  "cidalia-cabeleireiros": "https://www.cidalia-cabeleireiros.com/",
   "sentir-saude": "https://www.sentirsaude.pt/",
   "clinica-fernando-almeida": "https://www.clinicasdentariasfa.pt/",
   cuidamais: "https://cuidamais.pt/",
