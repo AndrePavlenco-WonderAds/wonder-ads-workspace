@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowUpRight, FileBarChart } from "lucide-react";
+import { ArrowUpRight, FileBarChart, FileDown } from "lucide-react";
 import { listReports } from "@/lib/report/report-store";
 import { previousCompleteMonth } from "@/lib/report/report-dates";
 import { formatDate } from "@/lib/dates";
@@ -65,32 +65,55 @@ export async function ReportSection({
         </div>
 
         {reports.length > 0 && (
-          <ul className="mt-5 divide-y divide-white/8 border-t border-white/8">
-            {reports.map((r) => (
-              <li key={r.period}>
-                <Link
-                  href={`/seo/${slug}/report/${r.period}`}
-                  className="group flex items-center justify-between gap-3 py-3 transition hover:px-1"
+          <>
+            <div className="mt-6 mb-2 flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.16em] text-white/40">
+              Relatórios anteriores
+            </div>
+            <ul className="divide-y divide-white/8 border-t border-white/8">
+              {reports.map((r) => (
+                <li
+                  key={r.period}
+                  className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 py-3"
                 >
-                  <span className="flex items-center gap-3">
-                    <span className="text-sm font-medium text-white/85">{r.periodLabel}</span>
+                  <Link
+                    href={`/seo/${slug}/report/${r.period}`}
+                    className="group flex min-w-0 items-center gap-3"
+                  >
+                    <span className="text-sm font-medium text-white/85 transition group-hover:text-white">
+                      {r.periodLabel}
+                    </span>
                     <span
                       className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${STATUS_PILL[r.status]}`}
                     >
                       {STATUS_LABEL[r.status]}
                     </span>
-                    {r.hasPdf && (
-                      <span className="text-[10px] uppercase tracking-wide text-white/35">PDF</span>
-                    )}
-                  </span>
-                  <span className="flex items-center gap-2 text-[11px] text-white/40">
-                    {formatDate(r.generatedAt)}
-                    <ArrowUpRight className="h-3.5 w-3.5 opacity-0 transition group-hover:opacity-70" />
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
+                  </Link>
+                  <div className="flex items-center gap-2">
+                    <span className="mr-1 text-[11px] text-white/35">
+                      {formatDate(r.generatedAt)}
+                    </span>
+                    <Link
+                      href={`/seo/${slug}/report/${r.period}`}
+                      className="inline-flex items-center gap-1.5 rounded-md border border-white/12 bg-white/[0.04] px-2.5 py-1 text-[11px] font-medium text-white/80 transition hover:border-white/25 hover:bg-white/[0.08] hover:text-white"
+                    >
+                      <ArrowUpRight className="h-3.5 w-3.5" />
+                      Abrir
+                    </Link>
+                    <a
+                      href={`/seo/${slug}/report/${r.period}?print=true`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 rounded-md border border-white/12 bg-white/[0.04] px-2.5 py-1 text-[11px] font-medium text-white/80 transition hover:border-[#783DF5]/40 hover:bg-white/[0.08] hover:text-white"
+                      title={`Gerar PDF do relatório de ${r.periodLabel}`}
+                    >
+                      <FileDown className="h-3.5 w-3.5" />
+                      PDF
+                    </a>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </>
         )}
       </div>
     </section>

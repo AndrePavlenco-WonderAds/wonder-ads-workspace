@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.2",
+    date: "2026-07-22",
+    title: "Relatório Mensal — histórico com Abrir + PDF por relatório",
+    highlights: [
+      "**🗂️ Relatórios anteriores.** No hub de relatórios do cliente, cada geração passada aparece com o estado + data e botões **Abrir** (ver/inspecionar) e **PDF** (exportar) — dá para ter o overview de todos e sacar o PDF de qualquer mês diretamente da lista.",
+    ],
+  },
+  {
     version: "76.1",
     date: "2026-07-22",
     title: "Relatório Mensal SEO — integração Google Business Profile",
