@@ -41,6 +41,7 @@ export const REVIEW_CATEGORIES = [
   "GMB Posts",
   "Keyword Research",
   "Roadmap",
+  "Monthly Report",
   "Brief",
   "Other",
 ] as const;
@@ -474,6 +475,7 @@ export const CATEGORY_PILL: Record<
   "GMB Posts": { bg: "#dbeafe", text: "#1e40af", border: "#bfdbfe" },
   "Keyword Research": { bg: "#ede9fe", text: "#5b21b6", border: "#ddd6fe" },
   Roadmap: { bg: "#e0e7ff", text: "#3730a3", border: "#c7d2fe" },
+  "Monthly Report": { bg: "#f3e8ff", text: "#6b21a8", border: "#e9d5ff" },
   Brief: { bg: "#ccfbf1", text: "#115e59", border: "#99f6e4" },
   Other: { bg: "#e5e7eb", text: "#374151", border: "#d1d5db" },
 };

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { PageShell } from "@/components/page-shell";
 import { LogoChip } from "@/components/logo-chip";
 import { ActionRunner } from "@/components/action-runner";
@@ -48,6 +48,11 @@ export default async function ActionPage({
 
   const entry = findAction(actionSlug);
   if (!entry) notFound();
+
+  // Actions with a custom destination (Roadmap → /roadmap, Monthly Report →
+  // /report) aren't markdown-generation actions — send the user straight to
+  // their real surface instead of an empty generation form.
+  if (entry.action.href) redirect(entry.action.href(slug));
 
   const client = await getClientBySlug(slug).catch(() => null);
   if (!client) notFound();

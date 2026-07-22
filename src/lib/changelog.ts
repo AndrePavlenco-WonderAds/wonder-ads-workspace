@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: 76,
+    date: "2026-07-22",
+    title: "Relatório Mensal SEO — input manual, PDF, link do cliente e aprovação",
+    highlights: [
+      "**✍️ Preencher dados em falta.** Na página do relatório dá para introduzir manualmente as métricas que a app não puxa (GBP + eventos não instrumentados) ou marcá-las **N/A**. O total de leads, o resumo e o estado (rascunho→pronto) recalculam-se automaticamente.",
+      "**📄 PDF branded + 🔗 link read-only.** Botão **Gerar PDF** (`Wonderads_SEO-Report_{Cliente}_{AAAA-MM}.pdf`) e **Copiar link do cliente** (página pública, só leitura, sem chrome). **Enviar para aprovação** cria a linha na Pending Review (categoria *Monthly Report*) apontando ao link do cliente.",
+      "**🦋 Logótipo corrigido** no topo do relatório (estava em branco) e o relatório passa a mencionar o **consultor SEO do projeto** (nome + email).",
+      "**🔀 Ação *Monthly Report* reformulada.** O cartão passa a abrir o novo relatório (dados reais + PDF) em vez do texto antigo; a página da ação redireciona para lá.",
+    ],
+  },
+  {
     version: "75.9",
     date: "2026-07-21",
     title: "Relatório Mensal SEO — interface (Fase 4): gerar + ver relatório",

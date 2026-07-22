@@ -53,7 +53,8 @@ function MetricRow({
   lang: "pt" | "en";
   variant: Variant;
 }) {
-  const pending = m.value === null;
+  const isNa = Boolean(m.manualNa);
+  const pending = m.value === null && !isNa;
   if (pending && variant === "client") return null;
   const note = pendingNote(m, lang);
   return (
@@ -62,6 +63,8 @@ function MetricRow({
       <span className="wa-mr">
         {pending ? (
           <span className="wa-pending">{note}</span>
+        ) : isNa ? (
+          <span className="wa-na">N/A</span>
         ) : (
           <>
             <span className="wa-mv">{formatValue(m, lang)}</span>
@@ -87,7 +90,7 @@ export function ReportDocument({
   const leadTotal = snapshot.leads.total;
   const leadDelta = metricDelta(leadTotal, lang);
   const visibleChannels = snapshot.leads.channels.filter(
-    (c) => variant === "internal" || c.metric.value !== null,
+    (c) => variant === "internal" || c.metric.value !== null || c.metric.manualNa,
   );
   const maxChannel = Math.max(
     1,
@@ -110,12 +113,17 @@ export function ReportDocument({
       {/* 1 — Cover */}
       <header className="wa-cover" style={{ background: GRAD }}>
         <div className="wa-cbrand">
-          <span className="wa-cglyph" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img className="wa-cglyph" src="/wonder-ads-butterfly.png" alt="Wonder Ads" />
           Wonder Ads
         </div>
         <h1 className="wa-ctitle">{t("Relatório de SEO & Leads", "SEO & Leads Report")}</h1>
         <div className="wa-cmeta">
           {snapshot.clientTitle} · {snapshot.periodLabel}
+        </div>
+        <div className="wa-cconsult">
+          {t("Consultor", "Consultant")}: {snapshot.consultant.name}
+          {snapshot.consultant.email ? ` · ${snapshot.consultant.email}` : ""}
         </div>
       </header>
 
@@ -151,7 +159,8 @@ export function ReportDocument({
         {visibleChannels.length > 0 && (
           <div className="wa-chan">
             {visibleChannels.map((c) => {
-              const pending = c.metric.value === null;
+              const isNa = Boolean(c.metric.manualNa);
+              const pending = c.metric.value === null && !isNa;
               return (
                 <div className="wa-chan-row" key={c.key}>
                   <span className="wa-cn">{c.label}</span>
@@ -161,6 +170,8 @@ export function ReportDocument({
                   <span className="wa-cv">
                     {pending ? (
                       <span className="wa-pending">{pendingNote(c.metric, lang)}</span>
+                    ) : isNa ? (
+                      <span className="wa-na">N/A</span>
                     ) : (
                       formatValue(c.metric, lang)
                     )}
@@ -318,10 +329,11 @@ const CSS = `
   box-shadow:0 20px 60px -30px rgba(23,22,45,.45);border:1px solid rgba(0,0,0,.06);}
 .wa-report *{box-sizing:border-box;}
 .wa-cover{color:#fff;padding:2.2rem 1.9rem;}
-.wa-cbrand{display:flex;align-items:center;gap:.5rem;font-weight:700;font-size:.92rem;}
-.wa-cglyph{width:20px;height:20px;border-radius:6px;background:rgba(255,255,255,.92);display:inline-block;}
+.wa-cbrand{display:flex;align-items:center;gap:.55rem;font-weight:700;font-size:.95rem;}
+.wa-cglyph{width:30px;height:30px;border-radius:8px;background:#fff;padding:4px;object-fit:contain;display:inline-block;box-shadow:0 4px 12px -4px rgba(0,0,0,.35);}
 .wa-ctitle{margin:1.5rem 0 .25rem;font-size:1.55rem;letter-spacing:-.02em;font-weight:800;}
-.wa-cmeta{font-size:.85rem;opacity:.92;font-variant-numeric:tabular-nums;}
+.wa-cmeta{font-size:.85rem;opacity:.95;font-variant-numeric:tabular-nums;}
+.wa-cconsult{margin-top:.35rem;font-size:.72rem;opacity:.82;}
 .wa-sec{padding:1.15rem 1.6rem;border-top:1px solid rgba(0,0,0,.07);}
 .wa-label{font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;color:#8a4fd0;font-weight:700;}
 .wa-h2{margin:.3rem 0 .6rem;font-size:1.05rem;letter-spacing:-.01em;}
@@ -350,6 +362,7 @@ const CSS = `
 .wa-mr{display:flex;align-items:center;gap:.45rem;font-weight:700;font-variant-numeric:tabular-nums;}
 .wa-nvr{margin-top:.6rem;font-size:.78rem;color:#45435c;font-variant-numeric:tabular-nums;}
 .wa-pending{color:#a08fb8;font-style:italic;font-weight:500;font-size:.76rem;}
+.wa-na{color:#7a7890;font-weight:600;font-size:.76rem;}
 .wa-pending-lg{color:#a08fb8;font-style:italic;font-size:.85rem;margin:.3rem 0;}
 .wa-aiwrap{display:flex;flex-wrap:wrap;gap:.35rem;margin-top:.3rem;}
 .wa-aichip{display:inline-flex;align-items:center;gap:.35rem;font-size:.74rem;padding:.24rem .55rem;border-radius:7px;background:rgba(120,61,245,.08);color:#6b34c9;font-weight:600;font-variant-numeric:tabular-nums;}

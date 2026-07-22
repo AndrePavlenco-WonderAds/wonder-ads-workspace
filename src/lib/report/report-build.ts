@@ -5,6 +5,10 @@
 // report stays "draft" until it's filled or marked N/A — never a fake 0.
 
 import { getClientLocale } from "@/lib/client-locale";
+import {
+  getConsultantForSlug,
+  getConsultantEmailForSlug,
+} from "@/lib/client-overrides";
 import { getGa4MonthlyReport, type MetricPair } from "./ga4-report";
 import { getGscMonthlyReport } from "@/lib/gsc";
 import { getReportConfig } from "./report-config-store";
@@ -17,6 +21,7 @@ import {
   REPORT_SCHEMA_VERSION,
   pendingMetric,
   momPercent,
+  isUnresolved,
   type FetchStatus,
   type LeadChannel,
   type MonthlyReportSnapshot,
@@ -344,6 +349,10 @@ export async function buildMonthlyReport(
     generatedAt: nowMs,
     status: "draft" as ReportStatus,
     lang,
+    consultant: {
+      name: getConsultantForSlug(slug),
+      email: getConsultantEmailForSlug(slug),
+    },
     leads: { total: leadsTotal, channels },
     organic,
     gsc: gscBlock,
@@ -355,4 +364,32 @@ export async function buildMonthlyReport(
   };
 
   return { ...base, execSummary: buildExecSummary(base, lang) };
+}
+
+/** Recompute the derived parts of a snapshot after a manual edit: mirror the
+ *  GBP lead channels into the GBP section, re-sum the consolidated lead total,
+ *  regenerate the Executive Summary, and set the status (ready once no lead
+ *  channel is left unresolved; a "sent" report stays sent). */
+export function recomputeDerived(
+  snap: MonthlyReportSnapshot,
+): MonthlyReportSnapshot {
+  const byKey = Object.fromEntries(
+    snap.leads.channels.map((c) => [c.key, c.metric] as const),
+  );
+  const gbp = {
+    websiteClicks: byKey.gbpWebsite ?? snap.gbp.websiteClicks,
+    directions: byKey.gbpDirections ?? snap.gbp.directions,
+    callClicks: byKey.gbpCall ?? snap.gbp.callClicks,
+  };
+  const total = sumConsolidated(snap.leads.channels);
+  const withLeads: MonthlyReportSnapshot = {
+    ...snap,
+    gbp,
+    leads: { ...snap.leads, total },
+  };
+  const execSummary = buildExecSummary(withLeads, snap.lang);
+  const hasUnresolved = snap.leads.channels.some((c) => isUnresolved(c.metric));
+  const status: ReportStatus =
+    snap.status === "sent" ? "sent" : hasUnresolved ? "draft" : "ready";
+  return { ...withLeads, execSummary, status };
 }

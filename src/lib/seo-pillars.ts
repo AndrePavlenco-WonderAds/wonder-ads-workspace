@@ -273,36 +273,16 @@ export const PILLARS: Pillar[] = [
         ],
       },
       {
+        // The card links to the dedicated Monthly Report hub (data-driven,
+        // branded PDF) instead of the old prose-generation action — same
+        // pattern as the Roadmap card. Slug kept for URL/history stability.
         slug: "monthly-report",
         label: "Monthly Report",
         blurb:
-          "Client-facing monthly synthesis — what was done, what moved, what's next.",
-        usesBrief: true,
-        fields: [
-          {
-            key: "reportingPeriod",
-            label: "Reporting period",
-            type: "select",
-            options: ["Last 28 days", "Last full month", "Last quarter"],
-            defaultValue: "Last full month",
-          },
-          {
-            key: "highlights",
-            label: "Highlights / numbers to spotlight",
-            type: "textarea",
-            rows: 5,
-            placeholder:
-              "Anything you want to spotlight — ranking moves, traffic delta, content shipped, links earned. The system already pulls recent action history + brief; add what the data won't show.",
-          },
-          {
-            key: "nextMonthFocus",
-            label: "What's the focus for next month?",
-            type: "textarea",
-            rows: 3,
-            placeholder:
-              "The angle the next period should push — keep it short, one or two sentences.",
-          },
-        ],
+          "Relatório mensal de SEO & Lead Gen — leads, orgânico, GSC e AI Visibility, com comparação MoM e PDF branded para o cliente.",
+        usesBrief: false,
+        href: (clientSlug) => `/seo/${clientSlug}/report`,
+        fields: [],
       },
     ],
   },

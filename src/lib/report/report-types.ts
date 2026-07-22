@@ -19,6 +19,10 @@ export type ReportMetric = {
   source: MetricSource;
   /** false → surface "não instrumentado" instead of a real-looking 0. */
   instrumented: boolean;
+  /** Consultant explicitly marked this metric "N/A este mês" — a validated
+   *  decision, so it counts as resolved (report can go ready) and shows "N/A"
+   *  rather than a pending note. */
+  manualNa?: boolean;
   unit: MetricUnit;
 };
 
@@ -71,7 +75,7 @@ export type FetchStatus = {
 
 export type ReportStatus = "draft" | "ready" | "sent";
 
-export const REPORT_SCHEMA_VERSION = 1;
+export const REPORT_SCHEMA_VERSION = 2;
 
 export type MonthlyReportSnapshot = {
   schemaVersion: number;
@@ -84,6 +88,8 @@ export type MonthlyReportSnapshot = {
   generatedAt: number;
   status: ReportStatus;
   lang: "pt" | "en";
+  /** SEO consultant who owns this client — shown on the report + PDF footer. */
+  consultant: { name: string; email: string };
 
   leads: {
     total: ReportMetric;
@@ -132,6 +138,22 @@ export function pendingMetric(
   source: MetricSource = "na",
 ): ReportMetric {
   return { value: null, previous: null, source, instrumented: false, unit };
+}
+
+/** A metric filled in by hand. */
+export function manualMetric(value: number, unit: MetricUnit): ReportMetric {
+  return { value, previous: null, source: "manual", instrumented: true, unit };
+}
+
+/** A metric explicitly marked N/A for this month. */
+export function naMetric(unit: MetricUnit): ReportMetric {
+  return { value: null, previous: null, source: "na", instrumented: false, manualNa: true, unit };
+}
+
+/** True when a metric still needs consultant attention (not pulled, not
+ *  filled, not marked N/A). Reports go "ready" only when none remain. */
+export function isUnresolved(m: ReportMetric): boolean {
+  return m.value === null && !m.manualNa;
 }
 
 /** Percentage change of a metric, or null when it can't be computed. */

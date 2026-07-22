@@ -11,6 +11,7 @@ const numLocale = (lang: Lang) => (lang === "pt" ? "pt-PT" : "en-GB");
 /** Format a metric's current value for display, honouring its unit. Returns a
  *  placeholder ("—") when the value is missing / pending. */
 export function formatValue(m: ReportMetric, lang: Lang): string {
+  if (m.manualNa) return "N/A";
   if (m.value === null) return "—";
   return formatRaw(m.value, m.unit, lang);
 }
@@ -74,7 +75,7 @@ export function metricDelta(m: ReportMetric, lang: Lang): MetricDelta | null {
 /** The short "não instrumentado" / "pendente" / "N/A" note for a pending
  *  metric, by source. Returns null when the metric has a real value. */
 export function pendingNote(m: ReportMetric, lang: Lang): string | null {
-  if (m.value !== null) return null;
+  if (m.value !== null || m.manualNa) return null;
   const pt = lang === "pt";
   if (m.source === "na" && !m.instrumented) return pt ? "não instrumentado" : "not instrumented";
   if (m.source === "manual") return pt ? "a preencher" : "awaiting input";
