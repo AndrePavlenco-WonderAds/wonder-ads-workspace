@@ -37,8 +37,9 @@ const SOURCE_LABEL: Record<string, string> = {
   ok: "ligado",
   "not-configured": "sem service account",
   "no-property": "sem propriedade",
+  "no-location": "ficha GBP por ligar",
   error: "erro",
-  deferred: "manual (Fase 3)",
+  deferred: "manual",
 };
 
 function SourceChip({ name, s }: { name: string; s: FetchStatus }) {

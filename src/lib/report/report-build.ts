@@ -11,6 +11,7 @@ import {
 } from "@/lib/client-overrides";
 import { getGa4MonthlyReport, type MetricPair } from "./ga4-report";
 import { getGscMonthlyReport } from "@/lib/gsc";
+import { getGbpMonthlyReport } from "@/lib/gbp";
 import { getReportConfig } from "./report-config-store";
 import {
   periodFromKey,
@@ -57,6 +58,14 @@ const gscMetric = (
   source: "gsc",
   instrumented: true,
   unit,
+});
+
+const gbpMetric = (p: { value: number; previous: number | null }): ReportMetric => ({
+  value: p.value,
+  previous: p.previous,
+  source: "gbp",
+  instrumented: true,
+  unit: "count",
 });
 
 const LEAD_LABELS_PT: Record<string, string> = {
@@ -192,7 +201,7 @@ export async function buildMonthlyReport(
   const config = await getReportConfig(slug);
   const lang = getClientLocale(slug);
 
-  const [ga4, gsc] = await Promise.all([
+  const [ga4, gsc, gbp] = await Promise.all([
     getGa4MonthlyReport(slug, {
       current: windows.current,
       previous: windows.prevMonth,
@@ -206,6 +215,11 @@ export async function buildMonthlyReport(
       siteUrlOverride: config.gscSiteUrl,
       topLimit: 10,
     }),
+    getGbpMonthlyReport(slug, {
+      current: windows.current,
+      previous: windows.prevMonth,
+      locationIdOverride: config.gbpLocationId,
+    }),
   ]);
 
   const ga4Fetch: FetchStatus =
@@ -216,8 +230,10 @@ export async function buildMonthlyReport(
     gsc.status === "ok"
       ? { ok: true, status: "ok" }
       : { ok: false, status: gsc.status, message: gsc.status === "error" ? gsc.message : undefined };
-  // GBP is deferred to Fase 3 — always manual for now.
-  const gbpFetch: FetchStatus = { ok: false, status: "deferred" };
+  const gbpFetch: FetchStatus =
+    gbp.status === "ok"
+      ? { ok: true, status: "ok" }
+      : { ok: false, status: gbp.status, message: gbp.status === "error" ? gbp.message : undefined };
 
   const labels = lang === "pt" ? LEAD_LABELS_PT : LEAD_LABELS_EN;
 
@@ -235,11 +251,24 @@ export async function buildMonthlyReport(
       channels.push({ key, label: labels[key], metric: pendingMetric("count", "na") });
     }
   }
-  // GBP lead channels — pending manual input until Fase 3.
+  // GBP lead channels — real values when the Business Profile Performance API
+  // is reachable, else pending manual input (never a fabricated 0).
   channels.push(
-    { key: "gbpWebsite", label: labels.gbpWebsite, metric: pendingMetric("count", "manual") },
-    { key: "gbpDirections", label: labels.gbpDirections, metric: pendingMetric("count", "manual") },
-    { key: "gbpCall", label: labels.gbpCall, metric: pendingMetric("count", "manual") },
+    {
+      key: "gbpWebsite",
+      label: labels.gbpWebsite,
+      metric: gbp.status === "ok" ? gbpMetric(gbp.websiteClicks) : pendingMetric("count", "manual"),
+    },
+    {
+      key: "gbpDirections",
+      label: labels.gbpDirections,
+      metric: gbp.status === "ok" ? gbpMetric(gbp.directions) : pendingMetric("count", "manual"),
+    },
+    {
+      key: "gbpCall",
+      label: labels.gbpCall,
+      metric: gbp.status === "ok" ? gbpMetric(gbp.callClicks) : pendingMetric("count", "manual"),
+    },
   );
 
   const leadsTotal = sumConsolidated(channels);
@@ -333,12 +362,19 @@ export async function buildMonthlyReport(
         }
       : { totalSessions: pendingMetric("count"), sources: [] };
 
-  // --- GBP (deferred) ---
-  const gbpBlock = {
-    websiteClicks: pendingMetric("count", "manual"),
-    directions: pendingMetric("count", "manual"),
-    callClicks: pendingMetric("count", "manual"),
-  };
+  // --- GBP ---
+  const gbpBlock =
+    gbp.status === "ok"
+      ? {
+          websiteClicks: gbpMetric(gbp.websiteClicks),
+          directions: gbpMetric(gbp.directions),
+          callClicks: gbpMetric(gbp.callClicks),
+        }
+      : {
+          websiteClicks: pendingMetric("count", "manual"),
+          directions: pendingMetric("count", "manual"),
+          callClicks: pendingMetric("count", "manual"),
+        };
 
   const base: Omit<MonthlyReportSnapshot, "execSummary"> = {
     schemaVersion: REPORT_SCHEMA_VERSION,

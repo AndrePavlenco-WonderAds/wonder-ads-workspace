@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.1",
+    date: "2026-07-22",
+    title: "Relatório Mensal SEO — integração Google Business Profile",
+    highlights: [
+      "**📍 GBP automático.** O relatório passa a puxar os cliques do **Google Business Profile** (cliques p/ website, pedidos de direções, cliques p/ ligar) via a Business Profile Performance API, com o mesmo service account do GA4/GSC. Enquanto a API não estiver ligada/aprovada, mantém-se o preenchimento manual (nunca um 0 falso). Requer setup do lado do Google (ver instruções).",
+    ],
+  },
+  {
     version: 76,
     date: "2026-07-22",
     title: "Relatório Mensal SEO — input manual, PDF, link do cliente e aprovação",
