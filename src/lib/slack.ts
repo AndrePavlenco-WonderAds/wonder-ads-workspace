@@ -34,6 +34,27 @@ export async function postChangelogToSlack(payload: {
   return postToWebhook(changelogWebhookUrl(), payload);
 }
 
+/** Webhook for the #client-wins channel — celebratory monthly-report
+ *  highlights. No fallback to the Web channel: wins must land only in their
+ *  own channel, so when this env var is missing every call is a silent no-op
+ *  and the feature stays inert until the webhook is wired on Vercel. */
+function clientWinsWebhookUrl(): string | undefined {
+  return process.env.SLACK_CLIENT_WINS_WEBHOOK_URL || undefined;
+}
+
+export function clientWinsSlackConfigured(): boolean {
+  return Boolean(clientWinsWebhookUrl());
+}
+
+/** Post a monthly-report win to #client-wins. Same never-throws contract as
+ *  postToWebSlack; no-op (returns false) when the webhook isn't configured. */
+export async function postClientWinToSlack(payload: {
+  text: string;
+  blocks?: unknown[];
+}): Promise<boolean> {
+  return postToWebhook(clientWinsWebhookUrl(), payload);
+}
+
 /** Post a Block Kit message to the Web team channel. Returns true on a
  *  2xx, false otherwise (or when no webhook is configured). Never
  *  throws — Slack delivery must never block a ticket write. */

@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.6",
+    date: "2026-07-22",
+    title: "Relatório Mensal — vitórias automáticas no Slack #client-wins",
+    highlights: [
+      "**🏆 Cada relatório novo festeja-se no Slack.** Quando geras pela **primeira vez** o relatório mensal de um cliente, a app publica automaticamente no canal **#client-wins** o **resumo executivo** desse relatório (os principais destaques positivos do mês — leads, orgânico, clicks, posições, IA) e faz **@channel** para toda a gente ver. Inclui o cliente, o mês, o consultor e um link direto para abrir o relatório.",
+      "**🔂 Sem spam.** Só dispara na **primeira geração** de cada cliente+mês — regenerar ou editar o rascunho a seguir **não** volta a tocar o canal. Uma mensagem por relatório.",
+      "**🔌 Fica inerte até ligares o webhook.** Requer definir `SLACK_CLIENT_WINS_WEBHOOK_URL` (Incoming Webhook do Slack apontado ao #client-wins) nas Environment Variables da Vercel. Sem essa variável, não acontece nada — nada parte e nada é enviado.",
+    ],
+  },
+  {
     version: "76.5",
     date: "2026-07-22",
     title: "Add Call Notes — quando o link Fathom não é da conta, cai já no modo colar",
