@@ -144,10 +144,18 @@ function Modal({
           error?: string;
           code?: string;
         };
-        // If the API tells us Fathom isn't wired up, reveal the paste
-        // fallback inline so the consultant can keep working.
-        if (data.code === "no_fathom_key") {
+        // If the API tells us Fathom isn't wired up — OR the recording
+        // simply isn't visible to the Wonder Ads key (recorded in the
+        // consultant's own Fathom, or older than the ~250 recent calls) —
+        // reveal the paste fallback inline so the consultant can keep
+        // working instead of hitting a dead end.
+        if (data.code === "no_fathom_key" || data.code === "not_found") {
           setShowPasteFallback(true);
+        }
+        if (data.code === "not_found") {
+          throw new Error(
+            "This call isn't visible to the Wonder Ads Fathom key — it was likely recorded in a personal Fathom account (or it's an older call). Paste the AI Summary text below instead, or share the recording with the Wonder Ads team in Fathom and retry.",
+          );
         }
         throw new Error(data.error ?? `HTTP ${res.status}`);
       }

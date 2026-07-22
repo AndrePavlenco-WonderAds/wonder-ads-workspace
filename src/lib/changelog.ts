@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.5",
+    date: "2026-07-22",
+    title: "Add Call Notes — quando o link Fathom não é da conta, cai já no modo colar",
+    highlights: [
+      "**🔗 Fim do beco sem saída no Fathom.** Se colares um link Fathom que foi gravado numa conta pessoal (ou é de uma chamada antiga), a app deixa de mostrar só o erro técnico: abre automaticamente o campo de **colar o AI Summary** e explica em português-claro que basta colar o texto, ou partilhar a gravação com a equipa Wonder Ads no Fathom e tentar de novo.",
+    ],
+  },
+  {
     version: "76.4",
     date: "2026-07-22",
     title: "Relatório Mensal — resumo só positivo, AI Visibility melhor, keywords overview",
