@@ -9,8 +9,7 @@ import { getCurrentEmployee } from "@/lib/auth/server";
 import { editableDepts } from "@/lib/auth/credentials";
 import { getClientBySlug } from "@/lib/notion";
 import { buildMonthlyReport } from "@/lib/report/report-build";
-import { getReport, saveReport } from "@/lib/report/report-store";
-import { notifyClientWin } from "@/lib/report/report-win-slack";
+import { saveReport } from "@/lib/report/report-store";
 import { isValidPeriodKey, previousCompleteMonth } from "@/lib/report/report-dates";
 
 export const runtime = "nodejs";
@@ -44,24 +43,14 @@ export async function POST(
   }
 
   try {
-    // First generation for this client+period? Checked BEFORE saveReport
-    // overwrites it, so the #client-wins announcement fires once (on creation)
-    // and never again on the many re-generations / manual edits that follow.
-    const isFirstGeneration = !(await getReport(slug, period));
-
+    // Generating only pulls data + persists the draft. The #client-wins
+    // announcement is deliberately NOT fired here — it fires when the
+    // consultant clicks "Finalizar" (see ../[period]/finalize), after the
+    // manual data is filled in.
     const snapshot = await buildMonthlyReport(slug, client.title, period);
     await saveReport(snapshot);
     revalidatePath(`/seo/${slug}`);
     revalidatePath(`/seo/${slug}/report/${period}`);
-
-    // Announce the month's wins to #client-wins. Awaited (a Vercel function
-    // can freeze after the response and kill a fire-and-forget promise) but
-    // never throws and is a no-op until SLACK_CLIENT_WINS_WEBHOOK_URL is set,
-    // so it can't slow down or break report generation.
-    if (isFirstGeneration) {
-      await notifyClientWin(snapshot, new URL(req.url).origin);
-    }
-
     return NextResponse.json({
       ok: true,
       period,

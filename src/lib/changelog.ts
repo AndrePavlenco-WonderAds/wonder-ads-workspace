@@ -13,13 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
-    version: "76.6",
-    date: "2026-07-22",
-    title: "Relatório Mensal — vitórias automáticas no Slack #client-wins",
+    version: "76.7",
+    date: "2026-07-23",
+    title: "Relatório Mensal — fluxo Gerar → Preencher → Finalizar + aviso no Slack #client-wins + diagnóstico GBP",
     highlights: [
-      "**🏆 Cada relatório novo festeja-se no Slack.** Quando geras pela **primeira vez** o relatório mensal de um cliente, a app publica automaticamente no canal **#client-wins** o **resumo executivo** desse relatório (os principais destaques positivos do mês — leads, orgânico, clicks, posições, IA) e faz **@channel** para toda a gente ver. Inclui o cliente, o mês, o consultor e um link direto para abrir o relatório.",
-      "**🔂 Sem spam.** Só dispara na **primeira geração** de cada cliente+mês — regenerar ou editar o rascunho a seguir **não** volta a tocar o canal. Uma mensagem por relatório.",
-      "**🔌 Fica inerte até ligares o webhook.** Requer definir `SLACK_CLIENT_WINS_WEBHOOK_URL` (Incoming Webhook do Slack apontado ao #client-wins) nas Environment Variables da Vercel. Sem essa variável, não acontece nada — nada parte e nada é enviado.",
+      "**🧭 Fluxo em 3 passos claros.** A página do relatório passa a ter passos explícitos: **1) Gerar** (puxa GA4/GSC/GBP), **2) Preencher** os dados manuais em falta, **3) Finalizar**. O **PDF**, o **link público** e o **Enviar para aprovação** só aparecem *depois* de finalizar — deixou de ser possível partilhar um relatório antes de os dados estarem completos.",
+      "**🏆 O aviso ao #client-wins passou para o Finalizar (e já não para o Gerar).** Antes, clicar em *Gerar* disparava logo a mensagem no Slack — mesmo sem o consultor preencher os dados manuais. Agora o aviso só sai quando clicas **Finalizar report**, com o **resumo executivo** do mês (leads, orgânico, clicks, posições, IA), o cliente, o mês, o consultor, link, e **@channel**.",
+      "**🔁 Dispara em todas as gerações.** Cada ciclo Gerar → Preencher → Finalizar envia um aviso. Regenerar com números novos volta a exigir Finalizar (e reanuncia); há também um botão **Voltar a finalizar e reanunciar**.",
+      "**🚧 Finalizar exige dados completos.** Se ainda houver métricas por preencher ou marcar N/A, o Finalizar avisa quais faltam em vez de deixar sair um relatório incompleto.",
+      "**🔍 Diagnóstico + fixação do Google Business Profile.** Novo endpoint admin `GET /api/admin/gbp/locations` lista todas as fichas que a service account vê (com o `websiteUri` e o *host* de cada uma) — confirma que a API GBP está ligada e mostra *porque* uma ficha não deu match. `POST { slug, locationId }` fixa a ficha certa por cliente (override), resolvendo casos como a A. Domingos Correia em que o match por website falha.",
+      "**🔌 Slack continua inerte até ligares o webhook.** Requer `SLACK_CLIENT_WINS_WEBHOOK_URL` (Incoming Webhook apontado ao #client-wins) nas Environment Variables da Vercel. Sem essa variável, o Finalizar funciona à mesma e simplesmente não envia nada.",
     ],
   },
   {

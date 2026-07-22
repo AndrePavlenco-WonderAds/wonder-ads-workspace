@@ -144,6 +144,11 @@ export type MonthlyReportSnapshot = {
 
   /** 3–5 auto-generated highlight bullets. */
   execSummary: string[];
+  /** When the consultant explicitly finalised the report (clicked "Finalizar").
+   *  null/undefined = still in preparation. Reset to null on every (re)generation
+   *  so a fresh data pull must be re-finalised — which re-announces to
+   *  #client-wins. Gates the PDF / public link / send-for-approval actions. */
+  finalizedAt?: number | null;
   /** Free text from the account manager (section 8). */
   notes: string;
   /** Per-source fetch provenance (internal only, stripped from the PDF). */

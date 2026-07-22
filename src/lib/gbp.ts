@@ -113,6 +113,40 @@ async function resolveLocationName(
   }
 }
 
+/** Diagnostic: every location the service account can see, with the exact
+ *  websiteUri the auto-match compares against. Powers the admin GBP endpoint so
+ *  a mismatch (wrong/missing website on a listing) is visible and the right
+ *  location id can be pinned per client. Bypasses the location cache. */
+export async function listGbpLocationsForDiagnostics(): Promise<
+  | { status: "not-configured" }
+  | { status: "error"; message: string }
+  | {
+      status: "ok";
+      locations: { id: string; title?: string; websiteUri?: string; websiteHost: string | null }[];
+    }
+> {
+  if (!googleAuthConfigured) return { status: "not-configured" };
+  try {
+    const token = await getGoogleAccessToken(SCOPES);
+    cachedLocations = null; // always fetch fresh for a diagnostic
+    const list = await listAllLocations(token);
+    return {
+      status: "ok",
+      locations: list.map((l) => ({
+        id: l.name.replace(/^locations\//, ""),
+        title: l.title,
+        websiteUri: l.websiteUri,
+        websiteHost: l.websiteUri ? hostOf(l.websiteUri) : null,
+      })),
+    };
+  } catch (err) {
+    return {
+      status: "error",
+      message: err instanceof Error ? err.message : "GBP request failed",
+    };
+  }
+}
+
 // --- Performance fetch ------------------------------------------------------
 
 const ymd = (iso: string) => {

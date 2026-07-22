@@ -418,6 +418,10 @@ export async function buildMonthlyReport(
     gsc: gscBlock,
     ai: aiBlock,
     gbp: gbpBlock,
+    // Fresh pull ⇒ not finalised. The consultant fills the manual data then
+    // clicks "Finalizar" (which is what announces to #client-wins), so a
+    // re-generation always requires re-finalising = a fresh announcement.
+    finalizedAt: null,
     notes: "",
     fetch: { ga4: ga4Fetch, gsc: gscFetch, gbp: gbpFetch },
     pdfBlobUrl: null,
