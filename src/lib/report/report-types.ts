@@ -72,9 +72,12 @@ export type KeywordStats = {
   top10: number;
   top20: number;
   avgPosition: number;
-  /** Queries ranking this month that weren't ranking last month. Optional so
-   *  reports generated before this field render without it. */
+  /** Month-over-month keyword movement. Optional so reports generated before
+   *  these fields render (and summarise) without them. */
   newKeywords?: number;
+  improved?: number;
+  enteredTop10?: number;
+  enteredTop3?: number;
 };
 
 /** A query whose ranking improved vs. the prior month. */

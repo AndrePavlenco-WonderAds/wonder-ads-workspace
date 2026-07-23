@@ -479,6 +479,12 @@ export type GscKeywordStats = {
   avgPosition: number;
   /** Queries ranking this month that weren't ranking last month. */
   newKeywords: number;
+  /** Queries whose position improved vs. last month. */
+  improved: number;
+  /** Queries now in the Top 10 that weren't in the Top 10 last month. */
+  enteredTop10: number;
+  /** Queries now in the Top 3 that weren't in the Top 3 last month. */
+  enteredTop3: number;
 };
 
 /** A query whose ranking improved vs. the prior month (positive change). */
@@ -583,6 +589,18 @@ export async function getGscMonthlyReport(
       avgPosition: round1(avgPosition),
       // Queries with impressions now that had none in the prior month.
       newKeywords: withPos.filter((r) => !prevByQuery.has(r.keys[0])).length,
+      improved: withPos.filter((r) => {
+        const p = prevByQuery.get(r.keys[0]);
+        return p !== undefined && p - r.position > 0.1;
+      }).length,
+      enteredTop10: withPos.filter((r) => {
+        const p = prevByQuery.get(r.keys[0]);
+        return r.position <= 10 && (p === undefined || p > 10);
+      }).length,
+      enteredTop3: withPos.filter((r) => {
+        const p = prevByQuery.get(r.keys[0]);
+        return r.position <= 3 && (p === undefined || p > 3);
+      }).length,
     };
 
     // Biggest ranking improvements vs. the prior month.

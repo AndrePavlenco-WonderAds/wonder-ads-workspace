@@ -181,6 +181,31 @@ function buildExecSummary(
   if (ig !== null)
     add(70, t(`Impressões na Pesquisa Google **+${ig.toFixed(0)}%**.`, `Google Search impressions **+${ig.toFixed(0)}%**.`));
 
+  // Keyword movement vs. last month (positive-only, like the rest of the summary).
+  const ks = snap.gsc.keywordStats;
+  if (ks) {
+    if (ks.enteredTop3 && ks.enteredTop3 > 0)
+      add(83, t(
+        `**${fmt(ks.enteredTop3)}** ${ks.enteredTop3 === 1 ? "keyword chegou" : "keywords chegaram"} ao **Top 3** da Google.`,
+        `**${fmt(ks.enteredTop3)}** ${ks.enteredTop3 === 1 ? "keyword reached" : "keywords reached"} the **Top 3** on Google.`,
+      ));
+    if (ks.enteredTop10 && ks.enteredTop10 > 0)
+      add(80, t(
+        `**${fmt(ks.enteredTop10)}** ${ks.enteredTop10 === 1 ? "keyword subiu" : "keywords subiram"} para o **Top 10** da Google.`,
+        `**${fmt(ks.enteredTop10)}** ${ks.enteredTop10 === 1 ? "keyword climbed" : "keywords climbed"} into the **Top 10** on Google.`,
+      ));
+    if (ks.newKeywords && ks.newKeywords > 0)
+      add(74, t(
+        `**${fmt(ks.newKeywords)}** novas keywords a rankar na Google este mês.`,
+        `**${fmt(ks.newKeywords)}** new keywords ranking on Google this month.`,
+      ));
+    if (ks.improved && ks.improved > 0)
+      add(56, t(
+        `**${fmt(ks.improved)}** keywords subiram de posição face ao mês anterior.`,
+        `**${fmt(ks.improved)}** keywords improved their position vs. last month.`,
+      ));
+  }
+
   const eg = gainOf(snap.organic.engagementRate);
   if (eg !== null)
     add(60, t(`Taxa de engagement a subir **+${eg.toFixed(0)}%**.`, `Engagement rate up **+${eg.toFixed(0)}%**.`));

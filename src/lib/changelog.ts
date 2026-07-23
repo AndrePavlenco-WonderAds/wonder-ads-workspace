@@ -13,6 +13,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.10",
+    date: "2026-07-23",
+    title: "Relatório Mensal — saltos de keywords no Resumo Executivo",
+    highlights: [
+      "**🏅 Os saltos de keywords entram no Resumo Executivo automaticamente.** Passa a destacar, quando aplicável: **«X keywords chegaram ao Top 3»**, **«X keywords subiram para o Top 10»** e **«X novas keywords a rankar»** — tudo calculado do GSC (mês vs. mês anterior). Só destaques positivos, com o mesmo sistema de prioridades, por isso não rouba lugar às leads/orgânico quando esses estão fortes; em meses mais calmos, as keywords sobem ao topo do resumo.",
+      "**🧮 Novos sinais no GSC.** Além das *novas keywords*, o cálculo mensal passa a contar quantas keywords **subiram para o Top 3**, para o **Top 10** e quantas **melhoraram de posição** no total — dados que alimentam o resumo e ficam disponíveis para futuros widgets.",
+    ],
+  },
+  {
     version: "76.9",
     date: "2026-07-23",
     title: "Relatório Mensal — saltos de keywords face ao mês anterior + novas keywords",
