@@ -11,10 +11,20 @@
 // against each location's websiteUri. Any failure → status (the report falls
 // back to manual GBP input, never a fabricated number).
 
+import { kv } from "@vercel/kv";
 import { getGoogleAccessToken, googleAuthConfigured } from "./google-auth";
 import { CLIENT_WEBSITES } from "./client-meta";
 
 const SCOPES = ["https://www.googleapis.com/auth/business.manage"];
+
+// Persist the discovered location list in KV so a single successful listing is
+// reused for days — the accounts/locations endpoints have a very low GBP quota
+// and 429 under repeated calls, so we hit them as rarely as possible.
+const kvConfigured = Boolean(
+  process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN,
+);
+const LOC_KV_KEY = "gbp:locations:all";
+const LOC_KV_TTL_MS = 7 * 24 * 60 * 60_000;
 
 const DAILY_METRICS = [
   "WEBSITE_CLICKS",
@@ -82,9 +92,47 @@ function toLocationName(v: string): string {
 type GbpLocation = { name: string; websiteUri?: string; title?: string };
 let cachedLocations: { list: GbpLocation[]; expires: number } | null = null;
 
-async function listAllLocations(token: string): Promise<GbpLocation[]> {
-  if (cachedLocations && cachedLocations.expires > Date.now()) {
-    return cachedLocations.list;
+async function readKvLocations(): Promise<GbpLocation[] | null> {
+  if (!kvConfigured) return null;
+  try {
+    const c = await kv.get<{ list: GbpLocation[]; ts: number }>(LOC_KV_KEY);
+    if (c && Array.isArray(c.list) && Date.now() - c.ts < LOC_KV_TTL_MS) {
+      return c.list;
+    }
+  } catch {
+    /* KV miss / off — fall through to API */
+  }
+  return null;
+}
+
+async function writeKvLocations(list: GbpLocation[]): Promise<void> {
+  if (!kvConfigured) return;
+  try {
+    await kv.set(LOC_KV_KEY, { list, ts: Date.now() });
+  } catch {
+    /* best-effort cache — never block on it */
+  }
+}
+
+/** All locations the service account can see. Prefers the in-memory cache, then
+ *  the KV cache (survives cold starts + the 30-min in-memory window), and only
+ *  hits the rate-limited accounts/locations APIs as a last resort. `force`
+ *  bypasses both caches for an explicit refresh. On a successful API listing the
+ *  result is written to KV so future calls (and report generation) skip the API
+ *  entirely — the durable fix for the low GBP quota. */
+async function listAllLocations(
+  token: string,
+  force = false,
+): Promise<GbpLocation[]> {
+  if (!force) {
+    if (cachedLocations && cachedLocations.expires > Date.now()) {
+      return cachedLocations.list;
+    }
+    const kvList = await readKvLocations();
+    if (kvList) {
+      cachedLocations = { list: kvList, expires: Date.now() + 30 * 60_000 };
+      return kvList;
+    }
   }
   const out: GbpLocation[] = [];
   // 1) list accounts
@@ -121,6 +169,7 @@ async function listAllLocations(token: string): Promise<GbpLocation[]> {
     } while (pageToken);
   }
   cachedLocations = { list: out, expires: Date.now() + 30 * 60_000 };
+  await writeKvLocations(out);
   return out;
 }
 
@@ -147,21 +196,34 @@ async function resolveLocationName(
  *  websiteUri the auto-match compares against. Powers the admin GBP endpoint so
  *  a mismatch (wrong/missing website on a listing) is visible and the right
  *  location id can be pinned per client. Bypasses the location cache. */
-export async function listGbpLocationsForDiagnostics(): Promise<
+export async function listGbpLocationsForDiagnostics(refresh = false): Promise<
   | { status: "not-configured" }
   | { status: "error"; message: string }
   | {
       status: "ok";
+      fromCache: boolean;
       locations: { id: string; title?: string; websiteUri?: string; websiteHost: string | null }[];
     }
 > {
   if (!googleAuthConfigured) return { status: "not-configured" };
   try {
-    const token = await getGoogleAccessToken(SCOPES);
-    cachedLocations = null; // always fetch fresh for a diagnostic
-    const list = await listAllLocations(token);
+    // Serve from cache when we can (no API call, no 429). Only touch the API on
+    // an explicit ?refresh=1 or when nothing is cached yet.
+    let list: GbpLocation[] | null = null;
+    if (!refresh) {
+      list =
+        cachedLocations && cachedLocations.expires > Date.now()
+          ? cachedLocations.list
+          : await readKvLocations();
+    }
+    const fromCache = list !== null;
+    if (!list) {
+      const token = await getGoogleAccessToken(SCOPES);
+      list = await listAllLocations(token, true);
+    }
     return {
       status: "ok",
+      fromCache,
       locations: list.map((l) => ({
         id: l.name.replace(/^locations\//, ""),
         title: l.title,

@@ -23,11 +23,14 @@ async function requireSeoEditor() {
   return employee;
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   if (!(await requireSeoEditor())) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
-  const result = await listGbpLocationsForDiagnostics();
+  // ?refresh=1 forces a fresh API listing (uses the low GBP quota); otherwise
+  // serve the KV/in-memory cache when available so we don't 429.
+  const refresh = new URL(req.url).searchParams.get("refresh") === "1";
+  const result = await listGbpLocationsForDiagnostics(refresh);
   return NextResponse.json({
     ...result,
     // The website host we try to auto-match against, per client — so a mismatch
