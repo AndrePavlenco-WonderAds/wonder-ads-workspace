@@ -477,6 +477,8 @@ export type GscKeywordStats = {
   top20: number;
   /** Impression-weighted average position. */
   avgPosition: number;
+  /** Queries ranking this month that weren't ranking last month. */
+  newKeywords: number;
 };
 
 /** A query whose ranking improved vs. the prior month (positive change). */
@@ -579,6 +581,8 @@ export async function getGscMonthlyReport(
       top10: withPos.filter((r) => r.position <= 10).length,
       top20: withPos.filter((r) => r.position <= 20).length,
       avgPosition: round1(avgPosition),
+      // Queries with impressions now that had none in the prior month.
+      newKeywords: withPos.filter((r) => !prevByQuery.has(r.keys[0])).length,
     };
 
     // Biggest ranking improvements vs. the prior month.

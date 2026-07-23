@@ -41,6 +41,16 @@ function DeltaChip({ delta }: { delta: MetricDelta | null }) {
   );
 }
 
+/** Per-keyword month-over-month position move for the Top Queries table.
+ *  change = prevPos − position, so positive = climbed. null = didn't rank last
+ *  month (a new keyword). */
+function ChangeCell({ change }: { change: number | null }) {
+  if (change === null) return <span className="wa-kwnew">novo</span>;
+  if (change > 0.1) return <span className="wa-up">▲ {change.toFixed(1)}</span>;
+  if (change < -0.1) return <span className="wa-down-t">▼ {Math.abs(change).toFixed(1)}</span>;
+  return <span className="wa-flat-t">—</span>;
+}
+
 /** A headline KPI tile for the hero band. Hidden in client variant when the
  *  value is pending (nothing validated to show yet). */
 function KpiTile({
@@ -335,6 +345,7 @@ export function ReportDocument({
                       <th>Query</th>
                       <th className="n">Clicks</th>
                       <th className="n">Pos.</th>
+                      <th className="n">{t("Δ mês", "MoM Δ")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -343,6 +354,7 @@ export function ReportDocument({
                         <td>{q.query}</td>
                         <td className="n">{formatRaw(q.clicks, "count", lang)}</td>
                         <td className="n">{formatRaw(q.position, "position", lang)}</td>
+                        <td className="n"><ChangeCell change={q.change} /></td>
                       </tr>
                     ))}
                   </tbody>
@@ -401,9 +413,19 @@ export function ReportDocument({
               <span className="wa-kl">Top 10</span>
             </div>
             <div className="wa-kstat">
+              <span className="wa-kv">{formatRaw(gsc.keywordStats.top20, "count", lang)}</span>
+              <span className="wa-kl">Top 20</span>
+            </div>
+            <div className="wa-kstat">
               <span className="wa-kv">{gsc.keywordStats.avgPosition.toFixed(1)}</span>
               <span className="wa-kl">{t("posição média", "avg position")}</span>
             </div>
+            {typeof gsc.keywordStats.newKeywords === "number" && (
+              <div className="wa-kstat wa-kstat-new">
+                <span className="wa-kv">+{formatRaw(gsc.keywordStats.newKeywords, "count", lang)}</span>
+                <span className="wa-kl">{t("novas keywords", "new keywords")}</span>
+              </div>
+            )}
           </div>
           {gsc.topMovers.length > 0 && (
             <div className="wa-tblwrap" style={{ marginTop: "1rem" }}>
@@ -552,6 +574,10 @@ const CSS = `
 .wa-kv{display:block;font-size:1.55rem;font-weight:800;color:var(--ink);line-height:1.05;letter-spacing:-.02em;font-variant-numeric:tabular-nums;}
 .wa-kl{display:block;margin-top:.2rem;font-size:.62rem;text-transform:uppercase;letter-spacing:.08em;color:var(--plum);font-weight:700;}
 .wa-up{color:var(--up) !important;}
+.wa-down-t{color:var(--down);font-weight:700;}
+.wa-flat-t{color:#a5a2b8;}
+.wa-kwnew{display:inline-block;font-size:.6rem;font-weight:800;letter-spacing:.02em;color:var(--up);background:rgba(15,157,107,.12);padding:.05rem .34rem;border-radius:5px;text-transform:uppercase;}
+.wa-kstat-new{border-left-color:var(--up);}
 
 /* Tables */
 .wa-two-tables{display:grid;grid-template-columns:1fr 1fr;gap:1.4rem;margin-top:.4rem;}

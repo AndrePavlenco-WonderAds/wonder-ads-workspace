@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.9",
+    date: "2026-07-23",
+    title: "Relatório Mensal — saltos de keywords face ao mês anterior + novas keywords",
+    highlights: [
+      "**📈 Salto por keyword na tabela Top Queries.** Cada query passa a mostrar uma coluna **Δ mês** com o movimento de posição face ao mês anterior — **▲** subiu, **▼** desceu, e o selo **«novo»** quando a keyword começou a rankar este mês. (O dado já era calculado; estava escondido.)",
+      "**✨ Novas keywords + Top 20.** A secção *Keywords & Posições* ganha dois cartões: **novas keywords** (queries com impressões este mês que não rankavam no mês anterior) e **Top 20** (já era calculado, agora aparece). Continua a listar as **maiores subidas de posição** do mês.",
+      "**♻️ Retrocompatível.** As novas keywords são um campo opcional — relatórios antigos continuam a abrir sem problema (só não mostram o cartão até serem regenerados).",
+    ],
+  },
+  {
     version: "76.8",
     date: "2026-07-23",
     title: "Relatório Mensal — link público reinventado como dashboard",
