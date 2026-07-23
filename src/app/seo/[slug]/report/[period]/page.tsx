@@ -51,6 +51,9 @@ function gbpHint(s: FetchStatus): string {
     case "no-location":
       return "Google Business Profile: a API respondeu, mas não encontrei a ficha deste cliente pela correspondência do website. Confirma o website na ficha GBP ou envia o location ID para eu fixar.";
     case "error":
+      if (s.message?.includes("429")) {
+        return "Google Business Profile: a API está a responder mas atingiu o limite de pedidos da Google (429). É temporário — tenta gerar de novo daqui a um minuto. Para o evitar de vez, fixa o location ID do cliente (evita a listagem de contas, que é o que atinge o limite) ou pede aumento de quota da Business Profile API no Google Cloud.";
+      }
       return `Google Business Profile: ${s.message ?? "erro"}. Se o acesso à Business Profile API ainda estiver a ser aprovado pelo Google, é normal — usa o preenchimento manual entretanto.`;
     default:
       return "Google Business Profile ainda por ligar — preenche os cliques manualmente por agora.";

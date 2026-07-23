@@ -36,6 +36,33 @@ export type GbpMonthlyReport =
       directions: MetricPair;
     };
 
+/** fetch that retries on Google's rate-limit / transient errors (429/503).
+ *  The Business Profile APIs have a low default per-project quota, so the
+ *  accounts + locations listing 429s easily; a short exponential backoff (with
+ *  Retry-After honoured) gets low-volume calls through. Pinning a client's
+ *  gbpLocationId avoids the listing entirely, which is the real fix at scale. */
+async function fetchWithRetry(
+  url: string | URL,
+  init: RequestInit,
+  retries = 3,
+  baseDelayMs = 700,
+): Promise<Response> {
+  let attempt = 0;
+  for (;;) {
+    const res = await fetch(url, init);
+    if ((res.status !== 429 && res.status !== 503) || attempt >= retries) {
+      return res;
+    }
+    const retryAfter = Number(res.headers.get("retry-after"));
+    const wait =
+      Number.isFinite(retryAfter) && retryAfter > 0
+        ? retryAfter * 1000
+        : baseDelayMs * 2 ** attempt;
+    await new Promise((r) => setTimeout(r, Math.min(wait, 8000)));
+    attempt++;
+  }
+}
+
 function hostOf(url: string): string | null {
   try {
     return new URL(url).hostname.replace(/^www\./, "");
@@ -61,11 +88,14 @@ async function listAllLocations(token: string): Promise<GbpLocation[]> {
   }
   const out: GbpLocation[] = [];
   // 1) list accounts
-  const accRes = await fetch(
+  const accRes = await fetchWithRetry(
     "https://mybusinessaccountmanagement.googleapis.com/v1/accounts",
     { headers: { Authorization: `Bearer ${token}` } },
   );
-  if (!accRes.ok) throw new Error(`accounts ${accRes.status}`);
+  if (!accRes.ok) {
+    const detail = accRes.status === 429 ? " (rate limit / quota da API GBP)" : "";
+    throw new Error(`accounts ${accRes.status}${detail}`);
+  }
   const accJson = (await accRes.json()) as { accounts?: { name?: string }[] };
   // 2) list locations per account
   for (const acc of accJson.accounts ?? []) {
@@ -78,7 +108,7 @@ async function listAllLocations(token: string): Promise<GbpLocation[]> {
       url.searchParams.set("readMask", "name,title,websiteUri");
       url.searchParams.set("pageSize", "100");
       if (pageToken) url.searchParams.set("pageToken", pageToken);
-      const locRes = await fetch(url, {
+      const locRes = await fetchWithRetry(url, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!locRes.ok) break;
@@ -173,7 +203,9 @@ async function fetchRangeTotals(
   url.searchParams.set("dailyRange.end_date.month", String(e.month));
   url.searchParams.set("dailyRange.end_date.day", String(e.day));
 
-  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+  const res = await fetchWithRetry(url, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
   if (!res.ok) {
     const text = await res.text().catch(() => "");
     throw new Error(`GBP performance ${res.status}. ${text.slice(0, 160)}`);
