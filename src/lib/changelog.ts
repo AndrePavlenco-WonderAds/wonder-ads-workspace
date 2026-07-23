@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.8",
+    date: "2026-07-23",
+    title: "Relatório Mensal — link público reinventado como dashboard",
+    highlights: [
+      "**📊 Dashboard do mês, não uma folha.** O link público do relatório passa a abrir com um **hero de KPIs** logo no topo — Leads geradas, Utilizadores orgânicos, Clicks no Google e Posição média — cada um com o número grande do mês e a **variação vs. mês anterior** (▲/▼ com cor e valor, nunca só cor). A seguir, os destaques do mês num ribbon, e as secções (leads por canal, orgânico + GBP, AI Visibility, top queries/páginas, keywords & posições, notas) em cards limpos sobre um fundo com leve tom da marca.",
+      "**🎯 UX/UI muito mais forte e on-brand.** Capa com o gradiente Wonder Ads + selo do mês, tipografia com números tabulares e hierarquia clara, tabelas com linhas alternadas e um rodapé com a marca. A mesma peça alimenta a **vista interna**, o **PDF** e o **link público** — todos sobem de nível de uma vez.",
+      "**🔒 Link público só depois de Finalizar.** A página pública só mostra o relatório depois de finalizado; antes disso mostra um educado «Relatório em preparação» (links já partilhados de relatórios antigos continuam a funcionar).",
+    ],
+  },
+  {
     version: "76.7",
     date: "2026-07-23",
     title: "Relatório Mensal — fluxo Gerar → Preencher → Finalizar + aviso no Slack #client-wins + diagnóstico GBP",

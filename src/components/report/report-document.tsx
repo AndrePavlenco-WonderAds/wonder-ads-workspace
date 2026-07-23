@@ -1,6 +1,7 @@
-// The branded Monthly Report "paper" — renders the fixed 8-section structure
-// from a snapshot. Self-contained (own <style>) so it renders identically in
-// the internal view, the print/PDF route, and the public client preview.
+// The branded Monthly Report "paper" — renders the fixed structure from a
+// snapshot as an at-a-glance dashboard. Self-contained (own <style>) so it
+// renders identically in the internal view, the print/PDF route, and the public
+// client preview.
 //
 // variant "internal": shows pending / não-instrumentado metrics so the
 //   consultant knows what to fill. variant "client": clean — pending metrics
@@ -29,7 +30,7 @@ function boldParts(text: string, keyBase: string) {
   );
 }
 
-function DeltaChip({ delta, lang }: { delta: MetricDelta | null; lang: "pt" | "en" }) {
+function DeltaChip({ delta }: { delta: MetricDelta | null }) {
   if (!delta) return null;
   const cls = delta.dir === "flat" ? "flat" : delta.good ? "up" : "down";
   const arrow = delta.dir === "up" ? "▲" : delta.dir === "down" ? "▼" : "·";
@@ -37,6 +38,34 @@ function DeltaChip({ delta, lang }: { delta: MetricDelta | null; lang: "pt" | "e
     <span className={`wa-delta ${cls}`}>
       {arrow} {delta.text}
     </span>
+  );
+}
+
+/** A headline KPI tile for the hero band. Hidden in client variant when the
+ *  value is pending (nothing validated to show yet). */
+function KpiTile({
+  label,
+  m,
+  lang,
+  variant,
+}: {
+  label: string;
+  m: ReportMetric;
+  lang: "pt" | "en";
+  variant: Variant;
+}) {
+  const isNa = Boolean(m.manualNa);
+  const pending = m.value === null && !isNa;
+  if (pending && variant === "client") return null;
+  return (
+    <div className="wa-kpi">
+      <div className="wa-kpi-l">{label}</div>
+      <div className="wa-kpi-v">
+        {pending ? <span className="wa-kpi-dash">—</span> : isNa ? "N/A" : formatValue(m, lang)}
+      </div>
+      {!pending && !isNa && <DeltaChip delta={metricDelta(m, lang)} />}
+      {pending && <div className="wa-kpi-note">{pendingNote(m, lang)}</div>}
+    </div>
   );
 }
 
@@ -68,7 +97,7 @@ function MetricRow({
         ) : (
           <>
             <span className="wa-mv">{formatValue(m, lang)}</span>
-            <DeltaChip delta={metricDelta(m, lang)} lang={lang} />
+            <DeltaChip delta={metricDelta(m, lang)} />
           </>
         )}
       </span>
@@ -102,6 +131,18 @@ export function ReportDocument({
   const ai = snapshot.ai;
   const gbp = snapshot.gbp;
 
+  // Hero KPIs — the month's headline numbers. Order = what the client cares
+  // about most: leads first, then reach, then search performance.
+  const kpiDefs: { label: string; m: ReportMetric }[] = [
+    { label: t("Leads geradas", "Leads generated"), m: leadTotal },
+    { label: t("Utilizadores orgânicos", "Organic users"), m: org.users },
+    { label: t("Clicks no Google", "Google clicks"), m: gsc.clicks },
+    { label: t("Posição média", "Avg. position"), m: gsc.position },
+  ];
+  const kpis = kpiDefs.filter(
+    (k) => variant === "internal" || k.m.value !== null || k.m.manualNa,
+  );
+
   const showTopTables =
     gsc.topQueries.length > 0 || gsc.topPages.length > 0 || variant === "internal";
   const showAi = ai.sources.length > 0 || variant === "internal";
@@ -110,39 +151,51 @@ export function ReportDocument({
     <div className="wa-report">
       <style>{CSS}</style>
 
-      {/* 1 — Cover */}
+      {/* Cover */}
       <header className="wa-cover" style={{ background: GRAD }}>
-        <div className="wa-cbrand">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img className="wa-cglyph" src="/wonder-ads-butterfly.png" alt="Wonder Ads" />
-          Wonder Ads
+        <div className="wa-cover-top">
+          <div className="wa-cbrand">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img className="wa-cglyph" src="/wonder-ads-butterfly.png" alt="Wonder Ads" />
+            Wonder Ads
+          </div>
+          <span className="wa-cbadge">{snapshot.periodLabel}</span>
         </div>
         <h1 className="wa-ctitle">{t("Relatório de SEO & Leads", "SEO & Leads Report")}</h1>
-        <div className="wa-cmeta">
-          {snapshot.clientTitle} · {snapshot.periodLabel}
-        </div>
+        <div className="wa-cmeta">{snapshot.clientTitle}</div>
         <div className="wa-cconsult">
           {t("Consultor", "Consultant")}: {snapshot.consultant.name}
           {snapshot.consultant.email ? ` · ${snapshot.consultant.email}` : ""}
         </div>
       </header>
 
-      {/* 2 — Executive Summary */}
-      {snapshot.execSummary.length > 0 && (
-        <section className="wa-sec">
-          <div className="wa-label">{t("Resumo Executivo", "Executive Summary")}</div>
-          <ul className="wa-exec">
-            {snapshot.execSummary.map((b, i) => (
-              <li key={i}>{boldParts(b, `ex${i}`)}</li>
-            ))}
-          </ul>
+      {/* Hero KPI band */}
+      {kpis.length > 0 && (
+        <section className="wa-kpis">
+          {kpis.map((k) => (
+            <KpiTile key={k.label} label={k.label} m={k.m} lang={lang} variant={variant} />
+          ))}
         </section>
       )}
 
-      {/* 3 — Leads Overview */}
+      {/* Executive Summary — the wins, up front */}
+      {snapshot.execSummary.length > 0 && (
+        <section className="wa-sec">
+          <div className="wa-exec-card">
+            <div className="wa-label wa-label-on-tint">{t("Destaques do mês", "Highlights of the month")}</div>
+            <ul className="wa-exec">
+              {snapshot.execSummary.map((b, i) => (
+                <li key={i}>{boldParts(b, `ex${i}`)}</li>
+              ))}
+            </ul>
+          </div>
+        </section>
+      )}
+
+      {/* Leads breakdown */}
       <section className="wa-sec">
-        <div className="wa-label">{t("Leads", "Leads")}</div>
-        <h2 className="wa-h2">{t("Total consolidado de leads", "Consolidated lead total")}</h2>
+        <div className="wa-label">{t("Leads por canal", "Leads by channel")}</div>
+        <h2 className="wa-h2">{t("De onde vieram os contactos", "Where the contacts came from")}</h2>
         {leadTotal.value === null ? (
           <p className="wa-pending-lg">
             {t(
@@ -153,7 +206,8 @@ export function ReportDocument({
         ) : (
           <div className="wa-bignum">
             <span className="wa-v">{formatValue(leadTotal, lang)}</span>
-            <DeltaChip delta={leadDelta} lang={lang} />
+            <span className="wa-bignum-l">{t("leads no total", "leads in total")}</span>
+            <DeltaChip delta={leadDelta} />
           </div>
         )}
         {visibleChannels.length > 0 && (
@@ -183,41 +237,43 @@ export function ReportDocument({
         )}
       </section>
 
-      {/* 4 & 5 — GBP + Organic side by side */}
-      <section className="wa-sec wa-two">
-        <div>
-          <div className="wa-label">{t("Google Business Profile", "Google Business Profile")}</div>
-          <h3 className="wa-h3">{t("Cliques & direções", "Clicks & directions")}</h3>
-          <MetricRow label={t("Cliques p/ website", "Website clicks")} m={gbp.websiteClicks} lang={lang} variant={variant} />
-          <MetricRow label={t("Pedidos de direções", "Direction requests")} m={gbp.directions} lang={lang} variant={variant} />
-          <MetricRow label={t("Cliques p/ ligar", "Call clicks")} m={gbp.callClicks} lang={lang} variant={variant} />
-        </div>
-        <div>
-          <div className="wa-label">{t("Tráfego Orgânico", "Organic Traffic")}</div>
-          <h3 className="wa-h3">GA4 · GSC</h3>
-          <MetricRow label={t("Sessões orgânicas", "Organic sessions")} m={org.sessions} lang={lang} variant={variant} />
-          <MetricRow label={t("Utilizadores orgânicos", "Organic users")} m={org.users} lang={lang} variant={variant} />
-          <MetricRow label={t("Utilizadores Google orgânico", "Google organic users")} m={org.googleOrganicUsers} lang={lang} variant={variant} />
-          <MetricRow label={t("Tempo médio / utilizador", "Avg time / user")} m={org.avgEngagementTimePerUser} lang={lang} variant={variant} />
-          <MetricRow label={t("Taxa de engagement", "Engagement rate")} m={org.engagementRate} lang={lang} variant={variant} />
-          <MetricRow label={t("Clicks (GSC)", "Clicks (GSC)")} m={gsc.clicks} lang={lang} variant={variant} />
-          <MetricRow label={t("Impressões (GSC)", "Impressions (GSC)")} m={gsc.impressions} lang={lang} variant={variant} />
-          <MetricRow label={t("Posição média (GSC)", "Avg position (GSC)")} m={gsc.position} lang={lang} variant={variant} />
-          <div className="wa-nvr">
-            {org.newUsers.value !== null && org.returningUsers.value !== null ? (
-              <>
-                {t("Novos vs. recorrentes", "New vs. returning")}:{" "}
-                <b>{formatRaw(org.newUsers.value, "count", lang)}</b> /{" "}
-                <b>{formatRaw(org.returningUsers.value, "count", lang)}</b>
-              </>
-            ) : variant === "internal" ? (
-              <span className="wa-pending">{t("novos vs. recorrentes — sem dados", "new vs. returning — no data")}</span>
-            ) : null}
+      {/* GBP + Organic side by side */}
+      <section className="wa-sec">
+        <div className="wa-two">
+          <div className="wa-card">
+            <div className="wa-label">Google Business Profile</div>
+            <h3 className="wa-h3">{t("Cliques & direções", "Clicks & directions")}</h3>
+            <MetricRow label={t("Cliques p/ website", "Website clicks")} m={gbp.websiteClicks} lang={lang} variant={variant} />
+            <MetricRow label={t("Pedidos de direções", "Direction requests")} m={gbp.directions} lang={lang} variant={variant} />
+            <MetricRow label={t("Cliques p/ ligar", "Call clicks")} m={gbp.callClicks} lang={lang} variant={variant} />
+          </div>
+          <div className="wa-card">
+            <div className="wa-label">{t("Tráfego Orgânico", "Organic Traffic")}</div>
+            <h3 className="wa-h3">GA4 · GSC</h3>
+            <MetricRow label={t("Sessões orgânicas", "Organic sessions")} m={org.sessions} lang={lang} variant={variant} />
+            <MetricRow label={t("Utilizadores orgânicos", "Organic users")} m={org.users} lang={lang} variant={variant} />
+            <MetricRow label={t("Utilizadores Google orgânico", "Google organic users")} m={org.googleOrganicUsers} lang={lang} variant={variant} />
+            <MetricRow label={t("Tempo médio / utilizador", "Avg time / user")} m={org.avgEngagementTimePerUser} lang={lang} variant={variant} />
+            <MetricRow label={t("Taxa de engagement", "Engagement rate")} m={org.engagementRate} lang={lang} variant={variant} />
+            <MetricRow label={t("Clicks (GSC)", "Clicks (GSC)")} m={gsc.clicks} lang={lang} variant={variant} />
+            <MetricRow label={t("Impressões (GSC)", "Impressions (GSC)")} m={gsc.impressions} lang={lang} variant={variant} />
+            <MetricRow label={t("Posição média (GSC)", "Avg position (GSC)")} m={gsc.position} lang={lang} variant={variant} />
+            <div className="wa-nvr">
+              {org.newUsers.value !== null && org.returningUsers.value !== null ? (
+                <>
+                  {t("Novos vs. recorrentes", "New vs. returning")}:{" "}
+                  <b>{formatRaw(org.newUsers.value, "count", lang)}</b> /{" "}
+                  <b>{formatRaw(org.returningUsers.value, "count", lang)}</b>
+                </>
+              ) : variant === "internal" ? (
+                <span className="wa-pending">{t("novos vs. recorrentes — sem dados", "new vs. returning — no data")}</span>
+              ) : null}
+            </div>
           </div>
         </div>
       </section>
 
-      {/* 6 — AI Visibility */}
+      {/* AI Visibility */}
       {showAi && (
         <section className="wa-sec">
           <div className="wa-label">AI Visibility</div>
@@ -263,7 +319,7 @@ export function ReportDocument({
         </section>
       )}
 
-      {/* 7 — Top Queries & Pages */}
+      {/* Top Queries & Pages */}
       {showTopTables && (
         <section className="wa-sec">
           <div className="wa-label">{t("Top Queries & Páginas", "Top Queries & Pages")}</div>
@@ -320,7 +376,7 @@ export function ReportDocument({
         </section>
       )}
 
-      {/* 7b — Keywords & Positions (month-end footprint) */}
+      {/* Keywords & Positions (month-end footprint) */}
       {gsc.keywordStats && (gsc.keywordStats.total > 0 || variant === "internal") && (
         <section className="wa-sec">
           <div className="wa-label">{t("Keywords & Posições", "Keywords & Positions")}</div>
@@ -375,7 +431,7 @@ export function ReportDocument({
         </section>
       )}
 
-      {/* 8 — Notes */}
+      {/* Notes */}
       {(snapshot.notes.trim() || variant === "internal") && (
         <section className="wa-sec">
           <div className="wa-label">{t("Notas & Próximos Passos", "Notes & Next Steps")}</div>
@@ -386,6 +442,14 @@ export function ReportDocument({
           )}
         </section>
       )}
+
+      {/* Footer band */}
+      <footer className="wa-foot">
+        <span className="wa-foot-brand">Wonder Ads</span>
+        <span className="wa-foot-sub">
+          {t("Relatório mensal de SEO & Leads", "Monthly SEO & Leads report")} · {snapshot.periodLabel}
+        </span>
+      </footer>
     </div>
   );
 }
@@ -400,68 +464,120 @@ function prettyPath(url: string): string {
 }
 
 const CSS = `
-.wa-report{background:#fff;color:#1a1a24;border-radius:12px;overflow:hidden;
+.wa-report{--ink:#17162d;--muted:#6d6b86;--line:rgba(23,22,45,.08);--violet:#783df5;--plum:#8a4fd0;--tint:#f7f5fe;--up:#0f8f62;--down:#c93a52;
+  background:var(--tint);color:var(--ink);border-radius:16px;overflow:hidden;
   font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-  box-shadow:0 20px 60px -30px rgba(23,22,45,.45);border:1px solid rgba(0,0,0,.06);}
+  box-shadow:0 24px 70px -34px rgba(23,22,45,.5);border:1px solid rgba(23,22,45,.06);}
 .wa-report *{box-sizing:border-box;}
-.wa-cover{color:#fff;padding:2.2rem 1.9rem;}
-.wa-cbrand{display:flex;align-items:center;gap:.55rem;font-weight:700;font-size:.95rem;}
+
+/* Cover */
+.wa-cover{position:relative;color:#fff;padding:2.1rem 1.9rem 2.3rem;overflow:hidden;}
+.wa-cover::after{content:"";position:absolute;right:-70px;top:-70px;width:230px;height:230px;border-radius:50%;
+  background:radial-gradient(circle at center,rgba(255,255,255,.22),transparent 68%);pointer-events:none;}
+.wa-cover-top{display:flex;align-items:center;justify-content:space-between;gap:1rem;position:relative;z-index:1;}
+.wa-cbrand{display:flex;align-items:center;gap:.55rem;font-weight:700;font-size:.95rem;letter-spacing:.01em;}
 .wa-cglyph{width:30px;height:30px;border-radius:8px;background:#fff;padding:4px;object-fit:contain;display:inline-block;box-shadow:0 4px 12px -4px rgba(0,0,0,.35);}
-.wa-ctitle{margin:1.5rem 0 .25rem;font-size:1.55rem;letter-spacing:-.02em;font-weight:800;}
-.wa-cmeta{font-size:.85rem;opacity:.95;font-variant-numeric:tabular-nums;}
-.wa-cconsult{margin-top:.35rem;font-size:.72rem;opacity:.82;}
-.wa-sec{padding:1.15rem 1.6rem;border-top:1px solid rgba(0,0,0,.07);}
-.wa-label{font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;color:#8a4fd0;font-weight:700;}
-.wa-h2{margin:.3rem 0 .6rem;font-size:1.05rem;letter-spacing:-.01em;}
-.wa-h3{margin:.2rem 0 .55rem;font-size:.95rem;letter-spacing:-.01em;}
-.wa-exec{margin:.5rem 0 0;padding:0;display:grid;gap:.4rem;}
-.wa-exec li{list-style:none;padding-left:1.15rem;position:relative;font-size:.86rem;color:#34333f;line-height:1.5;}
-.wa-exec li::before{content:"◆";position:absolute;left:0;color:#783df5;font-size:.6rem;top:.3rem;}
-.wa-bignum{display:flex;align-items:baseline;gap:.7rem;flex-wrap:wrap;margin-bottom:.3rem;}
-.wa-bignum .wa-v{font-size:2.1rem;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums;}
-.wa-delta{display:inline-flex;align-items:center;gap:.25rem;font-size:.76rem;font-weight:700;padding:.12rem .45rem;border-radius:6px;font-variant-numeric:tabular-nums;}
-.wa-delta.up{color:#0f8f62;background:rgba(15,157,107,.12);}
-.wa-delta.down{color:#c93a52;background:rgba(209,67,90,.12);}
-.wa-delta.flat{color:#6d6b86;background:rgba(0,0,0,.05);}
-.wa-chan{display:grid;gap:.5rem;margin-top:.9rem;}
-.wa-chan-row{display:grid;grid-template-columns:150px 1fr 74px;gap:.6rem;align-items:center;font-size:.78rem;}
+.wa-cbadge{display:inline-block;padding:.32rem .7rem;border-radius:999px;font-size:.72rem;font-weight:700;
+  background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.3);font-variant-numeric:tabular-nums;backdrop-filter:blur(2px);}
+.wa-ctitle{margin:1.5rem 0 .3rem;font-size:1.7rem;letter-spacing:-.025em;font-weight:800;line-height:1.05;position:relative;z-index:1;}
+.wa-cmeta{font-size:1rem;font-weight:600;opacity:.97;position:relative;z-index:1;}
+.wa-cconsult{margin-top:.55rem;font-size:.72rem;opacity:.85;position:relative;z-index:1;}
+
+/* Hero KPI band */
+.wa-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.7rem;padding:1.15rem 1.6rem;}
+.wa-kpi{position:relative;background:#fff;border:1px solid var(--line);border-radius:12px;padding:.9rem .95rem 1rem;overflow:hidden;
+  box-shadow:0 8px 24px -20px rgba(23,22,45,.55);}
+.wa-kpi::before{content:"";position:absolute;left:0;top:0;height:3px;width:100%;background:${"linear-gradient(90deg,#343ED7,#783DF5,#C535C9)"};}
+.wa-kpi-l{font-size:.62rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--plum);}
+.wa-kpi-v{font-size:1.9rem;font-weight:800;letter-spacing:-.03em;line-height:1.05;margin:.35rem 0 .4rem;color:var(--ink);font-variant-numeric:tabular-nums;}
+.wa-kpi-dash{color:#c7c2d6;}
+.wa-kpi-note{font-size:.66rem;color:#a08fb8;font-style:italic;}
+
+/* Sections */
+.wa-sec{padding:1.25rem 1.6rem;}
+.wa-sec + .wa-sec{border-top:1px solid var(--line);}
+.wa-label{font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;color:var(--plum);font-weight:700;}
+.wa-h2{margin:.35rem 0 .7rem;font-size:1.1rem;letter-spacing:-.015em;font-weight:700;}
+.wa-h3{margin:.2rem 0 .6rem;font-size:.95rem;letter-spacing:-.01em;font-weight:700;}
+
+/* Executive summary — wins ribbon */
+.wa-exec-card{background:linear-gradient(135deg,rgba(52,62,215,.07),rgba(197,53,201,.07));
+  border:1px solid rgba(120,61,245,.16);border-radius:14px;padding:1.05rem 1.15rem;}
+.wa-label-on-tint{color:#6b34c9;}
+.wa-exec{margin:.55rem 0 0;padding:0;display:grid;gap:.5rem;}
+.wa-exec li{list-style:none;padding-left:1.3rem;position:relative;font-size:.9rem;color:#2f2e3d;line-height:1.5;}
+.wa-exec li::before{content:"◆";position:absolute;left:0;color:var(--violet);font-size:.62rem;top:.28rem;}
+
+/* Leads */
+.wa-bignum{display:flex;align-items:baseline;gap:.6rem;flex-wrap:wrap;margin-bottom:.4rem;}
+.wa-bignum .wa-v{font-size:2.4rem;font-weight:800;letter-spacing:-.03em;font-variant-numeric:tabular-nums;line-height:1;}
+.wa-bignum-l{font-size:.82rem;color:var(--muted);font-weight:600;}
+.wa-delta{display:inline-flex;align-items:center;gap:.25rem;font-size:.74rem;font-weight:700;padding:.14rem .45rem;border-radius:6px;font-variant-numeric:tabular-nums;white-space:nowrap;}
+.wa-delta.up{color:var(--up);background:rgba(15,157,107,.12);}
+.wa-delta.down{color:var(--down);background:rgba(209,67,90,.12);}
+.wa-delta.flat{color:#6d6b86;background:rgba(23,22,45,.06);}
+.wa-chan{display:grid;gap:.55rem;margin-top:1rem;}
+.wa-chan-row{display:grid;grid-template-columns:160px 1fr 74px;gap:.65rem;align-items:center;font-size:.8rem;}
 .wa-cn{color:#45435c;}
-.wa-cbar{height:8px;border-radius:5px;background:rgba(0,0,0,.06);overflow:hidden;}
+.wa-cbar{height:9px;border-radius:5px;background:rgba(23,22,45,.06);overflow:hidden;}
 .wa-cbar i{display:block;height:100%;border-radius:5px;}
 .wa-cv{text-align:right;font-weight:700;font-variant-numeric:tabular-nums;}
-.wa-two{display:grid;grid-template-columns:1fr 1fr;gap:0;padding:0;}
-.wa-two>div{padding:1.15rem 1.6rem;}
-.wa-two>div:first-child{border-right:1px solid rgba(0,0,0,.07);}
-.wa-mrow{display:flex;align-items:center;justify-content:space-between;gap:.5rem;padding:.3rem 0;font-size:.8rem;border-bottom:1px dashed rgba(0,0,0,.08);}
-.wa-mrow:last-child{border-bottom:none;}
+
+/* Cards / two-col */
+.wa-two{display:grid;grid-template-columns:1fr 1fr;gap:.9rem;}
+.wa-card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:1rem 1.1rem;box-shadow:0 8px 24px -22px rgba(23,22,45,.5);}
+.wa-mrow{display:flex;align-items:center;justify-content:space-between;gap:.5rem;padding:.34rem 0;font-size:.8rem;border-bottom:1px dashed var(--line);}
+.wa-mrow:last-of-type{border-bottom:none;}
 .wa-ml{color:#45435c;}
 .wa-mr{display:flex;align-items:center;gap:.45rem;font-weight:700;font-variant-numeric:tabular-nums;}
 .wa-nvr{margin-top:.6rem;font-size:.78rem;color:#45435c;font-variant-numeric:tabular-nums;}
 .wa-pending{color:#a08fb8;font-style:italic;font-weight:500;font-size:.76rem;}
 .wa-na{color:#7a7890;font-weight:600;font-size:.76rem;}
 .wa-pending-lg{color:#a08fb8;font-style:italic;font-size:.85rem;margin:.3rem 0;}
-.wa-method{margin:.15rem 0 .7rem;font-size:.74rem;line-height:1.5;color:#6d6b86;max-width:62ch;}
-.wa-ai-total{display:flex;align-items:baseline;gap:.5rem;margin:.2rem 0 .8rem;}
-.wa-ai-total-v{font-size:1.6rem;font-weight:800;letter-spacing:-.02em;color:#1a1a24;font-variant-numeric:tabular-nums;}
+.wa-method{margin:.15rem 0 .8rem;font-size:.74rem;line-height:1.5;color:var(--muted);max-width:64ch;}
+
+/* AI */
+.wa-ai-total{display:flex;align-items:baseline;gap:.5rem;margin:.2rem 0 .85rem;}
+.wa-ai-total-v{font-size:1.7rem;font-weight:800;letter-spacing:-.02em;color:var(--ink);font-variant-numeric:tabular-nums;}
 .wa-ai-total-l{font-size:.78rem;color:#45435c;}
-.wa-ai-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:.6rem;}
-.wa-ai-card{border:1px solid rgba(120,61,245,.16);background:rgba(120,61,245,.05);border-radius:10px;padding:.7rem .8rem;}
+.wa-ai-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:.65rem;}
+.wa-ai-card{border:1px solid rgba(120,61,245,.16);background:#fff;border-radius:11px;padding:.75rem .85rem;box-shadow:0 8px 22px -22px rgba(23,22,45,.5);}
 .wa-ai-src{font-size:.72rem;font-weight:700;color:#6b34c9;}
-.wa-ai-sess{font-size:1.35rem;font-weight:800;color:#1a1a24;line-height:1.1;margin:.15rem 0 .1rem;font-variant-numeric:tabular-nums;}
-.wa-ai-sub{font-size:.66rem;color:#6d6b86;font-variant-numeric:tabular-nums;}
-.wa-kstats{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:.6rem;margin-top:.3rem;}
-.wa-kstat{border:1px solid rgba(0,0,0,.08);border-left:3px solid #783DF5;border-radius:8px;padding:.6rem .75rem;background:#fff;}
-.wa-kv{display:block;font-size:1.5rem;font-weight:800;color:#1a1a24;line-height:1.05;letter-spacing:-.02em;font-variant-numeric:tabular-nums;}
-.wa-kl{display:block;margin-top:.15rem;font-size:.64rem;text-transform:uppercase;letter-spacing:.08em;color:#8a4fd0;font-weight:600;}
-.wa-up{color:#0f8f62 !important;}
+.wa-ai-sess{font-size:1.4rem;font-weight:800;color:var(--ink);line-height:1.1;margin:.15rem 0 .1rem;font-variant-numeric:tabular-nums;}
+.wa-ai-sub{font-size:.66rem;color:var(--muted);font-variant-numeric:tabular-nums;}
+
+/* Keyword stats */
+.wa-kstats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:.65rem;margin-top:.35rem;}
+.wa-kstat{border:1px solid var(--line);border-left:3px solid var(--violet);border-radius:10px;padding:.7rem .8rem;background:#fff;box-shadow:0 8px 22px -22px rgba(23,22,45,.5);}
+.wa-kv{display:block;font-size:1.55rem;font-weight:800;color:var(--ink);line-height:1.05;letter-spacing:-.02em;font-variant-numeric:tabular-nums;}
+.wa-kl{display:block;margin-top:.2rem;font-size:.62rem;text-transform:uppercase;letter-spacing:.08em;color:var(--plum);font-weight:700;}
+.wa-up{color:var(--up) !important;}
+
+/* Tables */
 .wa-two-tables{display:grid;grid-template-columns:1fr 1fr;gap:1.4rem;margin-top:.4rem;}
 .wa-tblwrap{min-width:0;overflow-x:auto;}
 .wa-qtable{width:100%;border-collapse:collapse;font-size:.75rem;}
-.wa-qtable th{text-align:left;color:#8a4fd0;font-size:.58rem;letter-spacing:.08em;text-transform:uppercase;padding:.3rem .3rem;border-bottom:1px solid rgba(0,0,0,.12);}
+.wa-qtable th{text-align:left;color:var(--plum);font-size:.58rem;letter-spacing:.08em;text-transform:uppercase;padding:.32rem .3rem;border-bottom:1px solid rgba(23,22,45,.12);}
 .wa-qtable th.n,.wa-qtable td.n{text-align:right;font-variant-numeric:tabular-nums;}
-.wa-qtable td{padding:.32rem .3rem;border-bottom:1px solid rgba(0,0,0,.06);color:#34333f;}
-.wa-qtable td.n{font-weight:700;color:#1a1a24;}
-.wa-notes{font-size:.85rem;color:#34333f;line-height:1.55;white-space:pre-wrap;margin:.3rem 0 0;}
-@media (max-width:640px){.wa-two{grid-template-columns:1fr;}.wa-two>div:first-child{border-right:none;border-bottom:1px solid rgba(0,0,0,.07);}
-  .wa-two-tables{grid-template-columns:1fr;}.wa-chan-row{grid-template-columns:110px 1fr 60px;}}
+.wa-qtable td{padding:.34rem .3rem;border-bottom:1px solid var(--line);color:#34333f;}
+.wa-qtable tbody tr:nth-child(even){background:rgba(120,61,245,.03);}
+.wa-qtable td.n{font-weight:700;color:var(--ink);}
+.wa-notes{font-size:.86rem;color:#34333f;line-height:1.55;white-space:pre-wrap;margin:.3rem 0 0;}
+
+/* Footer */
+.wa-foot{display:flex;align-items:center;justify-content:space-between;gap:.6rem;flex-wrap:wrap;
+  padding:1.1rem 1.6rem;border-top:1px solid var(--line);background:#fff;}
+.wa-foot-brand{font-weight:800;font-size:.9rem;background:${GRAD};-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;}
+.wa-foot-sub{font-size:.72rem;color:var(--muted);font-variant-numeric:tabular-nums;}
+
+@media (max-width:640px){
+  .wa-two{grid-template-columns:1fr;}
+  .wa-two-tables{grid-template-columns:1fr;}
+  .wa-chan-row{grid-template-columns:110px 1fr 60px;}
+  .wa-ctitle{font-size:1.45rem;}
+}
+@media print{
+  .wa-report{box-shadow:none;border:none;border-radius:0;background:#fff;}
+  .wa-kpi,.wa-card,.wa-ai-card,.wa-kstat{box-shadow:none;}
+}
 `;

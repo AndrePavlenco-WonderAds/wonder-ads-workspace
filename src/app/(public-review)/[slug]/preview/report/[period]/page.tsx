@@ -33,10 +33,14 @@ export default async function PublicReportPage({
   if (!snapshot) notFound();
 
   const label = periodFromKey(period).label;
+  // The public link only shows a real report once it's been finalised. A
+  // legacy "sent" report (pre-finalizedAt) counts as live so already-shared
+  // links keep working.
+  const isLive = snapshot.status === "sent" || Boolean(snapshot.finalizedAt);
 
   return (
-    <main style={{ maxWidth: "760px", margin: "0 auto", padding: "24px 16px 64px" }}>
-      {snapshot.status === "draft" ? (
+    <main style={{ maxWidth: "820px", margin: "0 auto", padding: "24px 16px 64px" }}>
+      {!isLive ? (
         <div
           style={{
             background: "#fff",
