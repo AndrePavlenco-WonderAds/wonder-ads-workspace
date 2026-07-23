@@ -47,14 +47,16 @@ type Props = {
   onDeleted?: (id: string) => void;
 };
 
-const STATUS_PILL: Record<EmployeeStatus, string> = {
+// Exported so the "Add employee" form renders identical status/department
+// swatches — one source of truth for the roster's colour language.
+export const STATUS_PILL: Record<EmployeeStatus, string> = {
   active: "border-emerald-400/35 bg-emerald-500/10 text-emerald-200",
   onboarding: "border-sky-400/35 bg-sky-500/10 text-sky-200",
   "on-leave": "border-amber-400/35 bg-amber-500/10 text-amber-200",
   offboarded: "border-rose-400/35 bg-rose-500/10 text-rose-200",
 };
 
-const DEPT_PILL: Record<string, string> = {
+export const DEPT_PILL: Record<string, string> = {
   SEO: "border-[#783DF5]/40 bg-[#783DF5]/12 text-[#d4c4ff]",
   ADS: "border-[#C535C9]/40 bg-[#C535C9]/12 text-[#f4c5f1]",
   Web: "border-cyan-400/45 bg-cyan-500/12 text-cyan-200",
@@ -68,7 +70,7 @@ function arraysShallowEqual(a: string[], b: string[]): boolean {
   return true;
 }
 
-const STATUS_LABEL: Record<EmployeeStatus, string> = {
+export const STATUS_LABEL: Record<EmployeeStatus, string> = {
   active: "Active",
   onboarding: "Onboarding",
   "on-leave": "On leave",

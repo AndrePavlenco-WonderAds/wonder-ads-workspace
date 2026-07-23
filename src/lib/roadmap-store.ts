@@ -81,8 +81,16 @@ export type RoadmapPillar = (typeof ROADMAP_PILLARS)[number];
 export type RoadmapTask = {
   /** Stable random id. */
   id: string;
-  /** 1–12 — which week column the task lives in. */
+  /** 1–totalWeeks — the FIRST week column the task lives in (its start). */
   week: number;
+  /** Optional last week the task spans through, inclusive. When set and
+   *  greater than `week`, the task is a multi-week task covering the whole
+   *  range [week, endWeek] (e.g. a task added to Week 2 with endWeek 4
+   *  runs Weeks 2–4). Undefined — or any value ≤ `week` — means an
+   *  ordinary single-week task. Use {@link taskEndWeek} /
+   *  {@link taskCoversWeek} instead of reading this field directly so the
+   *  single-week fallback is handled consistently everywhere. */
+  endWeek?: number;
   title: string;
   description?: string;
   status: RoadmapStatus;
@@ -94,6 +102,31 @@ export type RoadmapTask = {
   statusChangedAt: number;
   createdAt: number;
 };
+
+/** Last week a task spans through (inclusive). Falls back to the task's
+ *  start `week` for single-week tasks or any malformed `endWeek`. */
+export function taskEndWeek(
+  task: Pick<RoadmapTask, "week" | "endWeek">,
+): number {
+  const e = task.endWeek;
+  if (typeof e !== "number" || !Number.isFinite(e)) return task.week;
+  return Math.max(task.week, Math.floor(e));
+}
+
+/** How many week columns a task occupies (1 for a single-week task). */
+export function taskSpanWeeks(
+  task: Pick<RoadmapTask, "week" | "endWeek">,
+): number {
+  return taskEndWeek(task) - task.week + 1;
+}
+
+/** True when week `w` falls inside the task's span [week, endWeek]. */
+export function taskCoversWeek(
+  task: Pick<RoadmapTask, "week" | "endWeek">,
+  w: number,
+): boolean {
+  return w >= task.week && w <= taskEndWeek(task);
+}
 
 export type RoadmapSourcePhoto = {
   /** Vercel Blob URL — same one the consultant uploaded via @vercel/blob/client. */
@@ -331,8 +364,10 @@ export function computeWarnings(
   // "12 of these I never touched". The breakdown drives whether you
   // need to chase the client, sit down and do the work, or both.
   if (week >= 2) {
+    // A multi-week task isn't "behind" until its LAST week has passed —
+    // while the current week still falls inside its span it's in play.
     const overdue = roadmap.tasks.filter(
-      (t) => t.week < week && t.status !== "implemented",
+      (t) => taskEndWeek(t) < week && t.status !== "implemented",
     );
     if (overdue.length >= FALLING_BEHIND_TASK_THRESHOLD) {
       const stuckWithClient = overdue.filter(
@@ -368,7 +403,9 @@ export function computeWarnings(
   // Empty current week: useful early-warning when nothing is actively in
   // flight in the column you should be working on.
   if (week >= 1 && week <= totalWeeks) {
-    const currentTasks = roadmap.tasks.filter((t) => t.week === week);
+    // Count any task whose span covers this week — a Week 2–4 task is still
+    // "this week's work" when the consultant is in Week 3.
+    const currentTasks = roadmap.tasks.filter((t) => taskCoversWeek(t, week));
     const inFlight = currentTasks.filter(
       (t) => t.status === "in_progress" || t.status === "pending_review",
     );
@@ -457,6 +494,14 @@ function normaliseTask(
   const raw = (input ?? {}) as Partial<RoadmapTask>;
   if (!raw.title || typeof raw.title !== "string") return null;
   const week = Math.max(1, Math.min(maxWeek, Math.floor(Number(raw.week) || 1)));
+  // endWeek is only kept when it's a real span (strictly after the start
+  // week). Anything ≤ week collapses back to a single-week task (undefined)
+  // so the "single vs multi" distinction is unambiguous downstream.
+  const endWeekRaw = Math.floor(Number(raw.endWeek));
+  const endWeek =
+    Number.isFinite(endWeekRaw) && endWeekRaw > week
+      ? Math.min(maxWeek, endWeekRaw)
+      : undefined;
   const status: RoadmapStatus =
     typeof raw.status === "string" &&
     (ROADMAP_STATUSES as readonly string[]).includes(raw.status)
@@ -470,6 +515,7 @@ function normaliseTask(
   return {
     id: typeof raw.id === "string" && raw.id ? raw.id : newTaskId(),
     week,
+    endWeek,
     title: raw.title.trim().slice(0, 240),
     description:
       typeof raw.description === "string"

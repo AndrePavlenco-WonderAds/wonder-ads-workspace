@@ -14,6 +14,8 @@ import {
   currentWeekIndex,
   getCurrentRoadmap,
   roadmapWeeks,
+  taskCoversWeek,
+  taskEndWeek,
   MIN_ROADMAP_WEEKS,
   type Roadmap,
   type RoadmapStatus,
@@ -136,7 +138,9 @@ function statsForRoadmap(roadmap: Roadmap, now: number = Date.now()) {
   const overdueWeeks = new Set<number>();
   if (currentWeek >= 2) {
     for (const t of roadmap.tasks) {
-      if (t.week >= currentWeek) continue;
+      // A multi-week task only becomes "past" once its LAST week is behind
+      // us — while currentWeek is still inside its span it's in play.
+      if (taskEndWeek(t) >= currentWeek) continue;
       if (t.status === "implemented") {
         donePastWeeks++;
       } else if (t.status === "pending_review") {
@@ -424,8 +428,11 @@ export async function getConsultantWeekView(
     }
     const s = statsForRoadmap(roadmap, now);
     const cw = s.currentWeek;
+    // Include multi-week tasks that span into the current week, not just
+    // the ones that start in it — a Week 2–4 task is on this week's list
+    // in Weeks 2, 3 AND 4.
     const inWeek = roadmap.tasks
-      .filter((t) => t.week === cw)
+      .filter((t) => taskCoversWeek(t, cw))
       .sort((a, b) => a.order - b.order);
     return {
       slug: client.slug,

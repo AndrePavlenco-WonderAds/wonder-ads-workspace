@@ -25,6 +25,7 @@ export type EmployeeStatus = (typeof EMPLOYEE_STATUSES)[number];
 export const EMPLOYEE_DEPARTMENTS = [
   "SEO",
   "ADS",
+  "Web",
   "Operations",
   "Founder",
 ] as const;
@@ -160,13 +161,20 @@ export function defaultEmployeeRecord(seed: SeedEmployee): AdminEmployeeRecord {
   };
 }
 
-/** Build a fresh record for a brand-new hire (no seed match). */
+/** Build a fresh record for a brand-new hire (no seed match). Every
+ *  operational field can be supplied up front so the Add form can capture
+ *  the full picture (starting date, department, salary, status, notes) in
+ *  one shot instead of leaving them null to fill in later. */
 export function newEmployeeRecord(input: {
   id: string;
   name: string;
   email: string;
   role?: string;
   departments?: string[];
+  startingDate?: string | null;
+  monthlyValue?: number | null;
+  status?: EmployeeStatus;
+  notes?: string;
 }): AdminEmployeeRecord {
   return {
     id: input.id,
@@ -174,12 +182,12 @@ export function newEmployeeRecord(input: {
     email: input.email,
     role: input.role ?? "",
     departments: input.departments ?? [],
-    startingDate: null,
+    startingDate: input.startingDate ?? null,
     paymentCadence: "monthly",
     currency: "EUR",
-    monthlyValue: null,
-    status: "onboarding",
-    notes: "",
+    monthlyValue: input.monthlyValue ?? null,
+    status: input.status ?? "onboarding",
+    notes: input.notes ?? "",
     updatedAt: new Date().toISOString(),
   };
 }
@@ -313,6 +321,10 @@ export async function addEmployee(input: {
   email: string;
   role?: string;
   departments?: string[];
+  startingDate?: string | null;
+  monthlyValue?: number | null;
+  status?: EmployeeStatus;
+  notes?: string;
 }): Promise<AdminEmployeeRecord> {
   if (!employeesStorageConfigured) {
     throw new Error("KV storage not configured on this deployment.");
@@ -328,13 +340,7 @@ export async function addEmployee(input: {
   while (taken.has(id)) {
     id = `${baseId}-${n++}`;
   }
-  const record = newEmployeeRecord({
-    id,
-    name: input.name,
-    email: input.email,
-    role: input.role,
-    departments: input.departments,
-  });
+  const record = newEmployeeRecord({ id, ...input });
   await kv.set(`${KEY_PREFIX}${id}`, record);
   await saveRosterIndex([...roster, id]);
   return record;

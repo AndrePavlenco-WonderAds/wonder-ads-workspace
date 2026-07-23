@@ -6,6 +6,8 @@
 import {
   roadmapMonths,
   roadmapWeeks,
+  taskEndWeek,
+  taskSpanWeeks,
   weekStartDate,
   type Roadmap,
   type RoadmapPillar,
@@ -56,7 +58,15 @@ const PILLAR_LABEL: Record<RoadmapPillar, Record<Lang, string>> = {
 
 const COPY: Record<
   Lang,
-  { tasks: string; month: string; week: string; thisWeek: string; empty: string }
+  {
+    tasks: string;
+    month: string;
+    week: string;
+    thisWeek: string;
+    empty: string;
+    weekAbbr: string;
+    ongoing: string;
+  }
 > = {
   pt: {
     tasks: "tarefas",
@@ -64,6 +74,8 @@ const COPY: Record<
     week: "Semana",
     thisWeek: "Esta semana",
     empty: "Sem tarefas nesta semana.",
+    weekAbbr: "Sem.",
+    ongoing: "em curso",
   },
   en: {
     tasks: "tasks",
@@ -71,6 +83,8 @@ const COPY: Record<
     week: "Week",
     thisWeek: "This week",
     empty: "No tasks this week.",
+    weekAbbr: "Wk",
+    ongoing: "ongoing",
   },
 };
 
@@ -90,17 +104,28 @@ export function RoadmapReportBody({
   const c = COPY[lang];
   const weekSet = new Set(weeks);
 
-  // Bucket tasks by week, ordered.
-  const byWeek = new Map<number, Roadmap["tasks"]>();
+  // Bucket tasks into each week they cover. A multi-week task lands as a
+  // full row in its start week and a slim "ongoing" row in every later
+  // week it runs through, so the client sees it carry across the plan.
+  type Cell = { task: Roadmap["tasks"][number]; isStart: boolean };
+  const byWeek = new Map<number, Cell[]>();
   for (const t of roadmap.tasks) {
-    if (!weekSet.has(t.week)) continue;
-    if (!byWeek.has(t.week)) byWeek.set(t.week, []);
-    byWeek.get(t.week)!.push(t);
+    const end = taskEndWeek(t);
+    for (let w = t.week; w <= end; w++) {
+      if (!weekSet.has(w)) continue;
+      if (!byWeek.has(w)) byWeek.set(w, []);
+      byWeek.get(w)!.push({ task: t, isStart: w === t.week });
+    }
   }
-  for (const list of byWeek.values()) list.sort((a, b) => a.order - b.order);
+  for (const list of byWeek.values())
+    list.sort((a, b) => {
+      if (a.isStart !== b.isStart) return a.isStart ? -1 : 1;
+      return a.task.order - b.task.order;
+    });
 
+  // Count distinct tasks (their start rows), not the continuation echoes.
   const shownTaskCount = weeks.reduce(
-    (s, w) => s + (byWeek.get(w)?.length ?? 0),
+    (s, w) => s + (byWeek.get(w)?.filter((cell) => cell.isStart).length ?? 0),
     0,
   );
 
@@ -158,7 +183,7 @@ export function RoadmapReportBody({
 
             <div style={{ display: "flex", flexDirection: "column", gap: "0.85rem" }}>
               {monthWeeks.map((w) => {
-                const tasks = byWeek.get(w) ?? [];
+                const cells = byWeek.get(w) ?? [];
                 const isNow = w === currentWeek;
                 return (
                   <div
@@ -242,7 +267,7 @@ export function RoadmapReportBody({
                     </div>
 
                     {/* Tasks */}
-                    {tasks.length === 0 ? (
+                    {cells.length === 0 ? (
                       <p
                         style={{
                           margin: 0,
@@ -256,8 +281,66 @@ export function RoadmapReportBody({
                       </p>
                     ) : (
                       <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
-                        {tasks.map((t, idx) => {
+                        {cells.map((cell, idx) => {
+                          const t = cell.task;
                           const meta = STATUS_META[t.status];
+                          const end = taskEndWeek(t);
+                          const multi = taskSpanWeeks(t) > 1;
+                          // Continuation echo of a multi-week task — a slim,
+                          // dimmed "· ongoing" row so it's clearly the same
+                          // effort carried forward, not a new task.
+                          if (!cell.isStart) {
+                            return (
+                              <li
+                                key={`${t.id}-w${w}`}
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "0.6rem",
+                                  padding: "0.5rem 0.9rem",
+                                  borderTop:
+                                    idx === 0
+                                      ? "none"
+                                      : "1px solid rgba(0,0,0,0.05)",
+                                  opacity: 0.72,
+                                }}
+                              >
+                                <span
+                                  style={{
+                                    marginTop: 0,
+                                    width: 9,
+                                    height: 9,
+                                    borderRadius: 999,
+                                    border: `1.5px solid ${meta.dot}`,
+                                    background: "transparent",
+                                    flexShrink: 0,
+                                  }}
+                                />
+                                <span
+                                  style={{
+                                    flex: 1,
+                                    minWidth: 0,
+                                    fontSize: "0.82rem",
+                                    color: "#64748b",
+                                  }}
+                                >
+                                  ↳ {t.title}
+                                </span>
+                                <span
+                                  style={{
+                                    flexShrink: 0,
+                                    fontSize: "0.62rem",
+                                    fontWeight: 600,
+                                    textTransform: "uppercase",
+                                    letterSpacing: "0.06em",
+                                    color: "#94a3b8",
+                                  }}
+                                >
+                                  {w === end ? c.week : `· ${c.ongoing}`}
+                                </span>
+                              </li>
+                            );
+                          }
                           return (
                             <li
                               key={t.id}
@@ -299,6 +382,7 @@ export function RoadmapReportBody({
                                     gap: "0.4rem",
                                     marginTop: "0.3rem",
                                     alignItems: "center",
+                                    flexWrap: "wrap",
                                   }}
                                 >
                                   <span
@@ -327,6 +411,22 @@ export function RoadmapReportBody({
                                   >
                                     {meta.label[lang]}
                                   </span>
+                                  {multi && (
+                                    <span
+                                      style={{
+                                        fontSize: "0.62rem",
+                                        fontWeight: 700,
+                                        letterSpacing: "0.04em",
+                                        color: "#783DF5",
+                                        background: "rgba(120,61,245,0.1)",
+                                        border: "1px solid rgba(120,61,245,0.28)",
+                                        borderRadius: 5,
+                                        padding: "0.1rem 0.4rem",
+                                      }}
+                                    >
+                                      {c.weekAbbr} {t.week}–{end}
+                                    </span>
+                                  )}
                                 </span>
                               </span>
                             </li>

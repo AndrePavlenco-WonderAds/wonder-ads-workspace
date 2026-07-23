@@ -1,12 +1,22 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type DragEvent,
+} from "react";
 import {
   AlertTriangle,
   Calendar,
   CalendarPlus,
   Check,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  CornerDownRight,
   ImagePlus,
   Info,
   Loader2,
@@ -28,6 +38,8 @@ import {
   newTaskId,
   roadmapMonths,
   roadmapWeeks,
+  taskEndWeek,
+  taskSpanWeeks,
   weekStartDate,
   type Roadmap,
   type RoadmapPillar,
@@ -59,17 +71,19 @@ type UploadedPhoto = {
 // review. Emerald (done) + white (not started) are unchanged.
 const STATUS_META: Record<
   RoadmapStatus,
-  { label: string; bgClass: string; chipClass: string }
+  { label: string; bgClass: string; chipClass: string; dotClass: string }
 > = {
   not_started: {
     label: "Not started",
     bgClass: "bg-white/[0.04] border border-white/12 text-white/85",
     chipClass: "border-white/20 bg-white/[0.06] text-white/65",
+    dotClass: "bg-white/45",
   },
   in_progress: {
     label: "In progress",
     bgClass: "bg-amber-500/15 border border-amber-400/45 text-white",
     chipClass: "border-amber-400/40 bg-amber-500/15 text-amber-100",
+    dotClass: "bg-amber-400",
   },
   pending_review: {
     // v74.23.3: shifted from sky-blue to violet so the chip leans
@@ -79,11 +93,13 @@ const STATUS_META: Record<
     label: "Pending client review",
     bgClass: "bg-violet-500/15 border border-violet-400/45 text-white",
     chipClass: "border-violet-400/40 bg-violet-500/20 text-violet-100",
+    dotClass: "bg-violet-400",
   },
   implemented: {
     label: "Implemented",
     bgClass: "bg-emerald-500/15 border border-emerald-400/45 text-white",
     chipClass: "border-emerald-400/40 bg-emerald-500/15 text-emerald-100",
+    dotClass: "bg-emerald-400",
   },
 };
 
@@ -110,6 +126,12 @@ const GENERATE_PHASES = [
   "Saving to your workspace and archiving the previous roadmap…",
 ];
 
+/** One rendered slot inside a week column. A multi-week task produces one
+ *  cell per week it covers: `isStart` on its first week (the full,
+ *  editable, draggable card) and a slim read-only continuation bar on each
+ *  later week. */
+type WeekCell = { task: RoadmapTask; isStart: boolean };
+
 type Props = {
   clientSlug: string;
   clientName: string;
@@ -131,6 +153,9 @@ export function RoadmapBoard({
   const [generateError, setGenerateError] = useState<string | null>(null);
   const [generateMessage, setGenerateMessage] = useState<string>("");
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+  // Id of the card currently being dragged between week columns — lets the
+  // source card dim and every column light up as a drop target.
+  const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null);
   const [generatePanelOpen, setGeneratePanelOpen] = useState(false);
   const [generateStartDate, setGenerateStartDate] = useState(
     initialRoadmap.startDate,
@@ -165,16 +190,25 @@ export function RoadmapBoard({
   // the current plan (or already past its end) — that's exactly when a
   // finishing roadmap needs its next 3 months.
   const nearingEnd = week >= totalWeeks - (WEEKS_PER_MONTH - 1);
-  const tasksByWeek = useMemo(() => {
-    const map = new Map<number, RoadmapTask[]>();
+  // Place every task in each week column its span covers. The start week
+  // gets the full editable card (isStart); later weeks get a slim
+  // continuation bar so a Week 2–4 task visibly runs across all three
+  // columns. Starts sort above continuations, then by their own order.
+  const cellsByWeek = useMemo(() => {
+    const map = new Map<number, WeekCell[]>();
     for (let w = 1; w <= totalWeeks; w++) map.set(w, []);
     for (const t of roadmap.tasks) {
-      const bucket = map.get(t.week) ?? [];
-      bucket.push(t);
-      map.set(t.week, bucket);
+      const start = Math.max(1, Math.min(totalWeeks, t.week));
+      const end = Math.min(totalWeeks, taskEndWeek(t));
+      for (let w = start; w <= end; w++) {
+        map.get(w)?.push({ task: t, isStart: w === t.week });
+      }
     }
     for (const [w, list] of map) {
-      list.sort((a, b) => a.order - b.order);
+      list.sort((a, b) => {
+        if (a.isStart !== b.isStart) return a.isStart ? -1 : 1;
+        return a.task.order - b.task.order;
+      });
       map.set(w, list);
     }
     return map;
@@ -362,6 +396,31 @@ export function RoadmapBoard({
       };
       setEditingTaskId(newTask.id);
       return { ...prev, tasks: [...prev.tasks, newTask] };
+    });
+  }, []);
+  // Slide a task to a new START week, carrying its whole span with it.
+  // Used by the ◀ ▶ nudge arrows (targetWeek = week ± 1) and by
+  // drag-and-drop onto another column (targetWeek = the column dropped on).
+  // The span length is preserved; if it would run off the end of the
+  // roadmap the whole task is nudged back so it stays fully in-bounds.
+  const shiftTask = useCallback((taskId: string, targetWeek: number) => {
+    setRoadmap((prev) => {
+      const total = roadmapWeeks(prev);
+      const tasks = prev.tasks.map((t) => {
+        if (t.id !== taskId) return t;
+        const span = taskEndWeek(t) - t.week; // 0 for a single-week task
+        let start = Math.max(1, Math.min(total, Math.round(targetWeek)));
+        let end = start + span;
+        if (end > total) {
+          end = total;
+          start = Math.max(1, end - span);
+        }
+        if (start === t.week && (t.endWeek ?? t.week) <= t.week && span === 0) {
+          return t; // no-op
+        }
+        return { ...t, week: start, endWeek: span > 0 ? end : undefined };
+      });
+      return { ...prev, tasks };
     });
   }, []);
   const dismissWarning = useCallback((id: string) => {
@@ -645,7 +704,7 @@ export function RoadmapBoard({
             </div>
             <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
               {m.weeks.map((w) => {
-                const tasks = tasksByWeek.get(w) ?? [];
+                const cells = cellsByWeek.get(w) ?? [];
                 const isCurrent = w === week;
                 return (
                   <WeekColumn
@@ -653,7 +712,7 @@ export function RoadmapBoard({
                     week={w}
                     totalWeeks={totalWeeks}
                     weekDate={weekStartDate(roadmap, w)}
-                    tasks={tasks}
+                    cells={cells}
                     isCurrent={isCurrent}
                     editingTaskId={editingTaskId}
                     onStartEdit={(id) => setEditingTaskId(id)}
@@ -661,6 +720,14 @@ export function RoadmapBoard({
                     onUpdate={updateTask}
                     onDelete={deleteTask}
                     onAdd={addTask}
+                    onSlideTask={shiftTask}
+                    draggingTaskId={draggingTaskId}
+                    onDragStartTask={setDraggingTaskId}
+                    onDragEndTask={() => setDraggingTaskId(null)}
+                    onDropTaskToWeek={(id, targetWeek) => {
+                      shiftTask(id, targetWeek);
+                      setDraggingTaskId(null);
+                    }}
                     flaggedTaskIds={flaggedTaskIds}
                   />
                 );
@@ -874,7 +941,7 @@ function WeekColumn({
   week,
   totalWeeks,
   weekDate,
-  tasks,
+  cells,
   isCurrent,
   editingTaskId,
   onStartEdit,
@@ -882,12 +949,17 @@ function WeekColumn({
   onUpdate,
   onDelete,
   onAdd,
+  onSlideTask,
+  draggingTaskId,
+  onDragStartTask,
+  onDragEndTask,
+  onDropTaskToWeek,
   flaggedTaskIds,
 }: {
   week: number;
   totalWeeks: number;
   weekDate: string;
-  tasks: RoadmapTask[];
+  cells: WeekCell[];
   isCurrent: boolean;
   editingTaskId: string | null;
   onStartEdit: (id: string) => void;
@@ -895,22 +967,61 @@ function WeekColumn({
   onUpdate: (id: string, patch: Partial<RoadmapTask>) => void;
   onDelete: (id: string) => void;
   onAdd: (week: number) => void;
+  onSlideTask: (id: string, targetWeek: number) => void;
+  draggingTaskId: string | null;
+  onDragStartTask: (id: string) => void;
+  onDragEndTask: () => void;
+  onDropTaskToWeek: (id: string, targetWeek: number) => void;
   flaggedTaskIds: Set<string>;
 }) {
   const readOnly = useSeoReadOnly();
+  // True while a card is mid-drag AND hovering this column — drives the
+  // "drop here" glow. Local so only the hovered column lights up strongly.
+  const [dropActive, setDropActive] = useState(false);
+  const isDragActive = !readOnly && draggingTaskId !== null;
+
+  const base = isCurrent
+    ? // Current-week column: brand-purple ring + soft outer glow + a top
+      // brand-gradient strip (1px) so the column reads as "you are here"
+      // the instant the page loads.
+      "relative rounded-xl border border-[color:var(--brand-purple)]/70 bg-[color:var(--brand-purple)]/[0.10] p-3 shadow-[0_0_0_1px_rgba(120,61,245,0.45),_0_18px_48px_-18px_rgba(120,61,245,0.6)] ring-1 ring-[color:var(--brand-purple)]/35"
+    : "relative rounded-xl border border-white/8 bg-white/[0.02] p-3";
+  const dragCls = dropActive
+    ? " outline-dashed outline-2 outline-offset-2 outline-[color:var(--brand-purple)] bg-[color:var(--brand-purple)]/[0.14]"
+    : isDragActive
+      ? " outline-dashed outline-1 outline-offset-2 outline-white/20"
+      : "";
+
+  // Only wire drop handlers when interactive and something is being
+  // dragged — keeps read-only viewers and idle columns inert.
+  const dropHandlers = readOnly
+    ? {}
+    : {
+        onDragOver: (e: DragEvent) => {
+          if (draggingTaskId) e.preventDefault();
+        },
+        onDragEnter: (e: DragEvent) => {
+          if (draggingTaskId) {
+            e.preventDefault();
+            setDropActive(true);
+          }
+        },
+        onDragLeave: (e: DragEvent) => {
+          // Ignore leaves that just move into a child node — only clear
+          // when the pointer genuinely exits the column.
+          if (e.currentTarget.contains(e.relatedTarget as Node | null)) return;
+          setDropActive(false);
+        },
+        onDrop: (e: DragEvent) => {
+          e.preventDefault();
+          setDropActive(false);
+          const id = e.dataTransfer.getData("text/plain") || draggingTaskId;
+          if (id) onDropTaskToWeek(id, week);
+        },
+      };
+
   return (
-    <div
-      className={
-        isCurrent
-          ? // Current-week column: brand-purple ring + soft outer glow +
-            // a top brand-gradient strip (1px) so the column reads as
-            // "you are here" the instant the page loads. Without this
-            // the only signal was a tiny "Now" pill and a faint border
-            // that washed out on the dark workspace background.
-            "relative rounded-xl border border-[color:var(--brand-purple)]/70 bg-[color:var(--brand-purple)]/[0.10] p-3 shadow-[0_0_0_1px_rgba(120,61,245,0.45),_0_18px_48px_-18px_rgba(120,61,245,0.6)] ring-1 ring-[color:var(--brand-purple)]/35"
-          : "rounded-xl border border-white/8 bg-white/[0.02] p-3"
-      }
-    >
+    <div className={base + dragCls} {...dropHandlers}>
       {isCurrent && (
         <span
           aria-hidden
@@ -919,11 +1030,7 @@ function WeekColumn({
       )}
       <div className="flex items-center justify-between">
         <div className="flex items-baseline gap-2">
-          <h3
-            className={`text-sm font-semibold ${
-              isCurrent ? "text-white" : "text-white"
-            }`}
-          >
+          <h3 className="text-sm font-semibold text-white">
             {isCurrent && (
               <span
                 aria-hidden
@@ -949,22 +1056,42 @@ function WeekColumn({
         )}
       </div>
       <ul className="mt-2 space-y-2">
-        {tasks.map((t) => (
-          <TaskCard
-            key={t.id}
-            task={t}
-            totalWeeks={totalWeeks}
-            editing={editingTaskId === t.id}
-            flagged={flaggedTaskIds.has(t.id)}
-            onStartEdit={() => onStartEdit(t.id)}
-            onStopEdit={onStopEdit}
-            onUpdate={(patch) => onUpdate(t.id, patch)}
-            onDelete={() => onDelete(t.id)}
-          />
-        ))}
-        {tasks.length === 0 && (
-          <li className="rounded-lg border border-dashed border-white/10 bg-white/[0.01] px-2.5 py-2 text-center text-[10.5px] text-white/35">
-            No tasks
+        {cells.map((cell) =>
+          cell.isStart ? (
+            <TaskCard
+              key={cell.task.id}
+              task={cell.task}
+              totalWeeks={totalWeeks}
+              editing={editingTaskId === cell.task.id}
+              flagged={flaggedTaskIds.has(cell.task.id)}
+              dragging={draggingTaskId === cell.task.id}
+              onStartEdit={() => onStartEdit(cell.task.id)}
+              onStopEdit={onStopEdit}
+              onUpdate={(patch) => onUpdate(cell.task.id, patch)}
+              onDelete={() => onDelete(cell.task.id)}
+              onSlide={(delta) =>
+                onSlideTask(cell.task.id, cell.task.week + delta)
+              }
+              onDragStart={() => onDragStartTask(cell.task.id)}
+              onDragEnd={onDragEndTask}
+            />
+          ) : (
+            <ContinuationChip
+              key={`${cell.task.id}-w${week}`}
+              task={cell.task}
+              week={week}
+            />
+          ),
+        )}
+        {cells.length === 0 && (
+          <li
+            className={
+              isDragActive
+                ? "rounded-lg border border-dashed border-[color:var(--brand-purple)]/50 bg-[color:var(--brand-purple)]/[0.06] px-2.5 py-2 text-center text-[10.5px] font-medium text-white/70"
+                : "rounded-lg border border-dashed border-white/10 bg-white/[0.01] px-2.5 py-2 text-center text-[10.5px] text-white/35"
+            }
+          >
+            {isDragActive ? "Drop to move here" : "No tasks"}
           </li>
         )}
       </ul>
@@ -982,27 +1109,85 @@ function WeekColumn({
   );
 }
 
+/** Slim, read-only marker rendered in each week a multi-week task runs
+ *  through AFTER its start week. Shows the task title + a status dot so the
+ *  consultant can see at a glance that an effort is still ongoing this
+ *  week; the editable card + slide controls live in the task's start week.
+ */
+function ContinuationChip({
+  task,
+  week,
+}: {
+  task: RoadmapTask;
+  week: number;
+}) {
+  const meta = STATUS_META[task.status];
+  const end = taskEndWeek(task);
+  const isLast = week === end;
+  return (
+    <li
+      className="relative flex items-center gap-1.5 overflow-hidden rounded-lg border border-dashed border-white/12 bg-white/[0.015] py-1.5 pl-2 pr-2 text-white/55"
+      title={`Multi-week task — runs Week ${task.week}–${end}. Edit or move it from Week ${task.week}.`}
+    >
+      <span
+        aria-hidden
+        className={`absolute inset-y-0 left-0 w-[3px] ${meta.dotClass} opacity-70`}
+      />
+      <CornerDownRight className="h-3 w-3 shrink-0 text-white/35" />
+      <span className="min-w-0 flex-1 truncate text-[11px] leading-snug">
+        {task.title}
+      </span>
+      <span className="shrink-0 text-[8.5px] font-bold uppercase tracking-[0.12em] text-white/40">
+        {isLast ? "ends" : "cont."}
+      </span>
+    </li>
+  );
+}
+
 function TaskCard({
   task,
   totalWeeks,
   editing,
   flagged,
+  dragging,
   onStartEdit,
   onStopEdit,
   onUpdate,
   onDelete,
+  onSlide,
+  onDragStart,
+  onDragEnd,
 }: {
   task: RoadmapTask;
   totalWeeks: number;
   editing: boolean;
   flagged: boolean;
+  dragging: boolean;
   onStartEdit: () => void;
   onStopEdit: () => void;
   onUpdate: (patch: Partial<RoadmapTask>) => void;
   onDelete: () => void;
+  /** Nudge the task by ±1 week (arrows). Preserves its span. */
+  onSlide: (delta: number) => void;
+  onDragStart: () => void;
+  onDragEnd: () => void;
 }) {
   const readOnly = useSeoReadOnly();
   const meta = STATUS_META[task.status];
+  const span = taskSpanWeeks(task);
+  const end = taskEndWeek(task);
+  const canSlideLeft = task.week > 1;
+  const canSlideRight = end < totalWeeks;
+
+  // "Wk 2–4" pill shown on multi-week tasks so the span is legible even in
+  // the task's start column (the continuation bars carry it forward).
+  const spanBadge =
+    span > 1 ? (
+      <span className="inline-flex items-center rounded-full border border-[color:var(--brand-purple)]/45 bg-[color:var(--brand-purple)]/15 px-1.5 py-0.5 font-semibold text-white/85">
+        Wk {task.week}–{end}
+      </span>
+    ) : null;
+
   if (readOnly) {
     // Read-only viewers see the task as a static card — no click-to-edit,
     // no pencil, no inline form.
@@ -1021,6 +1206,7 @@ function TaskCard({
             <span className="rounded-full border border-white/15 bg-white/[0.04] px-1.5 py-0.5 text-white/65">
               {PILLAR_LABEL[task.pillar]}
             </span>
+            {spanBadge}
           </span>
         </div>
       </li>
@@ -1029,12 +1215,19 @@ function TaskCard({
   if (!editing) {
     return (
       <li
-        className={`group relative rounded-lg ${meta.bgClass} ${flagged ? "ring-1 ring-amber-300/60" : ""}`}
+        draggable
+        onDragStart={(e) => {
+          e.dataTransfer.setData("text/plain", task.id);
+          e.dataTransfer.effectAllowed = "move";
+          onDragStart();
+        }}
+        onDragEnd={onDragEnd}
+        className={`group relative cursor-grab rounded-lg active:cursor-grabbing ${meta.bgClass} ${flagged ? "ring-1 ring-amber-300/60" : ""} ${dragging ? "opacity-40 ring-2 ring-[color:var(--brand-purple)]/70" : ""}`}
       >
         <button
           type="button"
           onClick={onStartEdit}
-          className="block w-full px-2.5 py-2 text-left text-[11.5px] leading-snug"
+          className="block w-full px-2.5 py-2 pr-[4.75rem] text-left text-[11.5px] leading-snug"
         >
           <span className="font-medium">{task.title}</span>
           <span className="mt-1 flex flex-wrap items-center gap-1.5 text-[9.5px] uppercase tracking-[0.1em]">
@@ -1046,16 +1239,41 @@ function TaskCard({
             <span className="rounded-full border border-white/15 bg-white/[0.04] px-1.5 py-0.5 text-white/65">
               {PILLAR_LABEL[task.pillar]}
             </span>
+            {spanBadge}
           </span>
         </button>
-        <button
-          type="button"
-          onClick={onStartEdit}
-          aria-label="Edit"
-          className="absolute right-1 top-1 hidden rounded-md border border-white/10 bg-black/30 p-1 text-white/70 transition hover:border-white/30 hover:text-white group-hover:block"
-        >
-          <Pencil className="h-3 w-3" />
-        </button>
+        {/* Hover toolbar — slide one week ◀ ▶ (span preserved) or edit.
+            Drag the card body onto any column to move it further. */}
+        <div className="absolute right-1 top-1 hidden items-center gap-0.5 group-hover:flex">
+          <button
+            type="button"
+            onClick={() => onSlide(-1)}
+            disabled={!canSlideLeft}
+            aria-label="Move one week earlier"
+            title="Move one week earlier"
+            className="rounded-md border border-white/10 bg-black/40 p-1 text-white/70 transition hover:border-white/30 hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
+          >
+            <ChevronLeft className="h-3 w-3" />
+          </button>
+          <button
+            type="button"
+            onClick={() => onSlide(1)}
+            disabled={!canSlideRight}
+            aria-label="Move one week later"
+            title="Move one week later"
+            className="rounded-md border border-white/10 bg-black/40 p-1 text-white/70 transition hover:border-white/30 hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
+          >
+            <ChevronRight className="h-3 w-3" />
+          </button>
+          <button
+            type="button"
+            onClick={onStartEdit}
+            aria-label="Edit"
+            className="rounded-md border border-white/10 bg-black/40 p-1 text-white/70 transition hover:border-white/30 hover:text-white"
+          >
+            <Pencil className="h-3 w-3" />
+          </button>
+        </div>
       </li>
     );
   }
@@ -1078,7 +1296,7 @@ function TaskCard({
           placeholder="Notes / what this means in practice (optional)"
           className="w-full rounded-md border border-white/10 bg-white/[0.06] px-2 py-1 text-[11px] text-white outline-none placeholder:text-white/35 focus:border-white/30"
         />
-        <div className="grid grid-cols-3 gap-1.5">
+        <div className="grid grid-cols-2 gap-1.5">
           <label className="block text-[9.5px] uppercase tracking-[0.1em] text-white/45">
             Status
             <select
@@ -1111,18 +1329,50 @@ function TaskCard({
               ))}
             </select>
           </label>
+        </div>
+        {/* Start week + how far it runs. "Through" = the last week the task
+            spans; leaving it on "Just this week" keeps it single-week. */}
+        <div className="grid grid-cols-2 gap-1.5">
           <label className="block text-[9.5px] uppercase tracking-[0.1em] text-white/45">
-            Week
+            Week (start)
             <select
               value={task.week}
-              onChange={(e) =>
-                onUpdate({ week: Number(e.target.value) })
-              }
+              onChange={(e) => {
+                const w = Number(e.target.value);
+                const patch: Partial<RoadmapTask> = { week: w };
+                // Keep the span valid — if the new start is at/after the
+                // old end, collapse back to a single-week task.
+                if (task.endWeek != null && task.endWeek <= w) {
+                  patch.endWeek = undefined;
+                }
+                onUpdate(patch);
+              }}
               className="mt-0.5 w-full rounded-md border border-white/10 bg-white/[0.06] px-1.5 py-1 text-[11px] text-white focus:border-white/30"
             >
               {Array.from({ length: totalWeeks }, (_, i) => i + 1).map((w) => (
                 <option key={w} value={w}>
                   Week {w}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="block text-[9.5px] uppercase tracking-[0.1em] text-white/45">
+            Through
+            <select
+              value={end}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                onUpdate({ endWeek: v > task.week ? v : undefined });
+              }}
+              className="mt-0.5 w-full rounded-md border border-white/10 bg-white/[0.06] px-1.5 py-1 text-[11px] text-white focus:border-white/30"
+            >
+              <option value={task.week}>Just this week</option>
+              {Array.from(
+                { length: Math.max(0, totalWeeks - task.week) },
+                (_, i) => task.week + 1 + i,
+              ).map((w) => (
+                <option key={w} value={w}>
+                  Through Week {w}
                 </option>
               ))}
             </select>

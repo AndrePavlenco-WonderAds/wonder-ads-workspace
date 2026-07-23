@@ -11,6 +11,8 @@ import {
   getCurrentRoadmap,
   currentWeekIndex,
   roadmapWeeks,
+  taskCoversWeek,
+  taskEndWeek,
 } from "@/lib/roadmap-store";
 
 export async function CurrentRoadmapStrip({ slug }: { slug: string }) {
@@ -32,7 +34,7 @@ export async function CurrentRoadmapStrip({ slug }: { slug: string }) {
   const totalWeeks = roadmapWeeks(roadmap);
   const inHorizon = week >= 1 && week <= totalWeeks;
   const currentTasks = roadmap.tasks
-    .filter((t) => t.week === week)
+    .filter((t) => taskCoversWeek(t, week))
     .sort((a, b) => a.order - b.order);
   // "Pending" = anything not yet implemented. That's the work the
   // consultant still has to do, vs the total count (which includes
@@ -43,7 +45,7 @@ export async function CurrentRoadmapStrip({ slug }: { slug: string }) {
   // Past-week health: any tasks scheduled BEFORE the current week that
   // aren't implemented are overdue. Drives the green-or-red accent chip.
   const pastPending = roadmap.tasks.filter(
-    (t) => t.week < week && t.status !== "implemented",
+    (t) => taskEndWeek(t) < week && t.status !== "implemented",
   );
   const summary = `Week ${inHorizon ? week : "—"} of ${totalWeeks} · ${currentPending.length} task${currentPending.length === 1 ? "" : "s"} pending`;
 

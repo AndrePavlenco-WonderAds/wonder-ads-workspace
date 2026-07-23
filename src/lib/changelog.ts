@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.11",
+    date: "2026-07-24",
+    title: "Roadmap SEO — tarefas deslizáveis e multi-semana + criação de colaborador completa",
+    highlights: [
+      "**↔️ Arrasta as tarefas de semana para semana.** No quadro do roadmap de cada cliente, cada tarefa passa a poder ser **arrastada** para qualquer coluna de semana (a coluna acende como zona de largar), ou movida um passo de cada vez com as setas **◀ ▶** que aparecem ao passar o rato. A largura da tarefa (span) viaja com ela.",
+      "**📏 Tarefas que se prolongam por várias semanas.** Ao criar ou editar uma tarefa há agora um seletor **«Through»**: uma tarefa na Semana 2 pode correr **2–3** ou **2–4**. Aparece um selo **«Wk 2–4»** na tarefa e uma barra fina de continuação em cada semana seguinte, para se ver de relance que o esforço continua. Os avisos de atraso e a vista «esta semana» já contam o span — uma tarefa 2–4 só fica «em atraso» depois da Semana 4.",
+      "**🧑‍💼 Novo colaborador criado com tudo à cabeça.** No SuperAdmin → Team Roster, o formulário de **adicionar colaborador** deixou de pedir só nome/email/função: agora define logo **departamento(s), data de início, salário mensal (€), estado e notas** num cartão redesenhado. O email preenche-se sozinho a partir do nome, os departamentos e o estado são *pills* a condizer com a tabela, e há mais departamentos disponíveis (SEO, ADS, **Web**, Operations, Founder).",
+    ],
+  },
+  {
     version: "76.10",
     date: "2026-07-23",
     title: "Relatório Mensal — saltos de keywords no Resumo Executivo",
