@@ -35,6 +35,9 @@ function sanitizeFiles(arr: unknown): ClientFile[] {
           : url,
       url,
       addedAt: typeof addedAt === "number" ? addedAt : Date.now(),
+      // Preserved so a save from the client page doesn't strip the
+      // "veio do onboarding" badge off files the client sent us.
+      ...(f.source === "onboarding" ? { source: "onboarding" as const } : {}),
     });
     if (out.length >= MAX_FILES) break;
   }

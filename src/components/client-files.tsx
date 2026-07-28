@@ -416,6 +416,14 @@ function FileTile({
         >
           {file.name}
         </span>
+        {file.source === "onboarding" && (
+          <span
+            className="shrink-0 rounded-full border border-emerald-400/25 bg-emerald-500/[0.12] px-1.5 py-px text-[9px] font-semibold uppercase tracking-wide text-emerald-200/85"
+            title="Enviado pelo cliente durante o onboarding"
+          >
+            Cliente
+          </span>
+        )}
       </div>
     </li>
   );

@@ -19,6 +19,11 @@ export type ClientFile = {
   url: string;
   /** Epoch ms — used for newest-first ordering. */
   addedAt: number;
+  /** Where the file came from. Absent = added by the team from the client
+   *  page. "onboarding" = the client themselves sent it through the public
+   *  onboarding page, so it carries into the library automatically (v76.14).
+   *  Surfaced as a badge so the team knows it wasn't one of them. */
+  source?: "onboarding";
 };
 
 export const EMPTY_FILES: ClientFile[] = [];

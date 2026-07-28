@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.14",
+    date: "2026-07-28",
+    title: "Onboarding — pedido de materiais ao cliente + cancelar onboarding",
+    highlights: [
+      "**📂 Novo cartão «Faltam os vossos materiais» no onboarding.** Na barra lateral da página pública de onboarding, por baixo do *Progresso*, passa a haver um cartão **vermelho com animação em repetição** a pedir ao cliente tudo o que possa ajudar: fotografias, vídeos, links do Google Drive, logótipos, catálogos, revistas e menções na imprensa. O cliente pode **carregar ficheiros** (vão direitos ao Blob, por isso vídeos grandes passam sem problema) ou **colar links**.",
+      "**🟢 Fica verde assim que enviarem alguma coisa.** Ao primeiro envio o cartão muda para verde — «Materiais recebidos», com a contagem — e a animação pára. O estado é calculado só a partir do que **o cliente** enviou: ficheiros adicionados pela equipa não fazem desaparecer o pedido. Quem tiver *reduzir movimento* ligado no sistema vê um contorno fixo em vez da animação.",
+      "**🔄 Passa sozinho para a ficha do cliente.** Os materiais são gravados diretamente na biblioteca `files:<slug>` — a mesma que a ficha do cliente lê, ao lado dos Do's, Don'ts e Notas. Como o slug do onboarding e o do projeto SEO são o mesmo, **não há passo de migração**: quando o cliente é promovido, os ficheiros já lá estão. Aparecem com o selo **«Cliente»** para se saber que vieram do onboarding e não da equipa.",
+      "**🗑️ Cancelar/apagar onboarding no SuperAdmin.** Cada cliente na lista *Clientes em onboarding* ganha um botão de apagar, com confirmação em dois passos ali mesmo na linha (sem pop-up do browser). Remove apenas o registo de onboarding — não mexe nos ficheiros, nas respostas do formulário nem no projeto SEO de quem já foi promovido.",
+      "**🔒 Endpoint público só de adição.** O envio usa um `/api/onboarding-files/[slug]` novo que **só acrescenta** — nunca substitui nem apaga, ao contrário do `PUT /api/files/[slug]` da área interna. Aceita apenas `http(s)`, só escreve em slugs que estão mesmo em onboarding, ignora URLs repetidos e tem limites por envio (30) e por biblioteca (200).",
+    ],
+  },
+  {
     version: "76.13",
     date: "2026-07-28",
     title: "GA4 — a propriedade passa a ser encontrada pelo nome do cliente",

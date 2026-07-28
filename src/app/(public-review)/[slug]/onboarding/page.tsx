@@ -30,6 +30,8 @@ import { PlatformIcon } from "@/components/platform-icon";
 import { OnboardingInstructors } from "@/components/onboarding-instructors";
 import { OnboardingGate } from "@/components/onboarding-gate";
 import { OnboardingStickyBar } from "@/components/onboarding-sticky-bar";
+import { OnboardingFilesRequest } from "@/components/onboarding-files-request";
+import { getFilesForSlug } from "@/lib/files-storage";
 
 export const dynamic = "force-dynamic";
 
@@ -129,11 +131,18 @@ export default async function OnboardingHubPage({
   const client = await resolveOnboardingClient(slug);
   if (!client) notFound();
 
-  const [progress, fullCourse, gateConfirmedAt] = await Promise.all([
-    getOnboardingProgress(slug),
-    getCourse(),
-    getGateConfirmedAt(slug),
-  ]);
+  const [progress, fullCourse, gateConfirmedAt, libraryFiles] =
+    await Promise.all([
+      getOnboardingProgress(slug),
+      getCourse(),
+      getGateConfirmedAt(slug),
+      getFilesForSlug(slug),
+    ]);
+  // Only what the CLIENT sent counts towards the card's green state —
+  // files the team added themselves shouldn't clear their own ask.
+  const sentFilesCount = libraryFiles.filter(
+    (f) => f.source === "onboarding",
+  ).length;
   const categories = courseForTracks(fullCourse, {
     tracks: client.tracks,
     ecommerce: client.ecommerce,
@@ -479,6 +488,8 @@ export default async function OnboardingHubPage({
               />
             </div>
           </div>
+
+          <OnboardingFilesRequest slug={slug} initialCount={sentFilesCount} />
         </aside>
       </div>
 

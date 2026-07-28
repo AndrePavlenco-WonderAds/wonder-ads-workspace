@@ -7,6 +7,7 @@ import { ArrowLeft, Pencil, Users } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { NewOnboardingClient } from "@/components/new-onboarding-client";
 import { CopyPublicLinkButton } from "@/components/copy-public-link-button";
+import { DeleteOnboardingButton } from "@/components/delete-onboarding-button";
 import { getOnboardingClients } from "@/lib/onboarding-clients-store";
 import { servicesLabel } from "@/lib/onboarding-tracks";
 import { formatDate } from "@/lib/dates";
@@ -98,6 +99,7 @@ export default async function AdminOnboardingPage() {
                   </span>
                 ) : null}
                 <CopyPublicLinkButton path={`/${c.slug}/onboarding`} />
+                <DeleteOnboardingButton slug={c.slug} title={c.title} />
               </div>
             ))}
           </div>
