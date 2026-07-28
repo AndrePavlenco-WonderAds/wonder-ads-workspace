@@ -80,6 +80,20 @@ export type KeywordStats = {
   enteredTop3?: number;
 };
 
+/** One of the client's committed target keywords, with where it actually
+ *  ranks this month. Every target is listed — including those not ranking
+ *  yet (`position: null`) — so the client sees the full worked list, not
+ *  just the winners. */
+export type TargetKeywordRank = {
+  keyword: string;
+  position: number | null;
+  previousPosition: number | null;
+  change: number | null;
+  clicks: number;
+  impressions: number;
+  isNew: boolean;
+};
+
 /** A query whose ranking improved vs. the prior month. */
 export type KeywordMover = {
   query: string;
@@ -137,6 +151,10 @@ export type MonthlyReportSnapshot = {
     topPages: TopPageRow[];
     keywordStats: KeywordStats | null;
     topMovers: KeywordMover[];
+    /** The client's target keywords with their current position. Optional so
+     *  reports generated before v76.15 still load (schemaVersion is a hard
+     *  equality check in report-store — bumping it would discard them). */
+    targetRanks?: TargetKeywordRank[];
   };
   ai: {
     totalSessions: ReportMetric;

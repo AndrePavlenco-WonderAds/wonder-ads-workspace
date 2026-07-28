@@ -13,6 +13,19 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.15",
+    date: "2026-07-28",
+    title: "Relatório Mensal — posição atual de todas as keywords trabalhadas",
+    highlights: [
+      "**🎯 Nova secção «Keywords Trabalhadas».** O relatório passa a listar **todas** as keywords do plano do cliente (as *Target Keywords* da ficha) com a **posição média no Google durante o mês**. Não é o top-10 por clicks — é a lista completa daquilo que estamos a trabalhar, que é o que o cliente quer ver.",
+      "**📉 Δ mês por keyword + selo «novo».** Cada keyword mostra o movimento de posição face ao mês anterior (▲ subiu / ▼ desceu) e um selo **«novo»** quando começou a rankear neste mês. A tabela leva também impressões e clicks de cada uma.",
+      "**⭕ As que ainda não rankeiam também aparecem.** Uma keyword sem impressões no período é mostrada como **«ainda não rankeia»** em vez de desaparecer da lista — o progresso mede-se também pelo que falta conquistar. A tabela ordena da melhor posição para a pior, com estas no fim, e há um resumo por cima: *a rankear · Top 3 · Top 10 · por conquistar*.",
+      "**🔍 Rede de pesquisa muito mais larga.** Uma keyword em posição 40 com meia dúzia de impressões nunca apareceria nas 200 linhas que o GSC devolve por clicks. Para as keywords-alvo passamos a varrer até **5000 linhas** por mês (atual e anterior), num pedido próprio — os números de *Keywords & Posições* mantêm exatamente a mesma base de cálculo de sempre, para os meses continuarem comparáveis.",
+      "**🔤 Correspondência à prova de acentos.** «Osteopatia Belém» encontra `osteopatia belem`, maiúsculas e espaços a mais são ignorados, e keywords repetidas na lista contam uma só vez.",
+      "**♻️ Relatórios antigos continuam a abrir.** O campo é opcional: relatórios gerados antes desta versão mantêm-se válidos e passam a mostrar a secção assim que forem regerados.",
+    ],
+  },
+  {
     version: "76.14",
     date: "2026-07-28",
     title: "Onboarding — pedido de materiais ao cliente + cancelar onboarding",

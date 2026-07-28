@@ -138,6 +138,9 @@ export function ReportDocument({
 
   const org = snapshot.organic;
   const gsc = snapshot.gsc;
+  // Optional on the snapshot — reports generated before v76.15 have none.
+  const targetRanks = gsc.targetRanks ?? [];
+  const rankedTargets = targetRanks.filter((k) => k.position !== null);
   const ai = snapshot.ai;
   const gbp = snapshot.gbp;
 
@@ -453,6 +456,98 @@ export function ReportDocument({
         </section>
       )}
 
+      {/* Target keywords — every keyword we're working, with its live rank */}
+      {targetRanks.length > 0 && (
+        <section className="wa-sec">
+          <div className="wa-label">
+            {t("Keywords Trabalhadas", "Target Keywords")}
+          </div>
+          <h3 className="wa-h3">
+            {t(
+              `Posição atual de cada keyword (${targetRanks.length})`,
+              `Current position for every keyword (${targetRanks.length})`,
+            )}
+          </h3>
+          <p className="wa-method">
+            {t(
+              "Posição média no Google durante o mês, para cada keyword do plano. «Ainda não rankeia» significa que a keyword não registou impressões neste período.",
+              "Average Google position during the month, for every keyword in the plan. “Not ranking yet” means the keyword recorded no impressions in this period.",
+            )}
+          </p>
+          <div className="wa-kstats">
+            <div className="wa-kstat">
+              <span className="wa-kv">{formatRaw(rankedTargets.length, "count", lang)}</span>
+              <span className="wa-kl">{t("a rankear", "ranking")}</span>
+            </div>
+            <div className="wa-kstat">
+              <span className="wa-kv">
+                {formatRaw(
+                  targetRanks.filter((k) => k.position !== null && k.position <= 3).length,
+                  "count",
+                  lang,
+                )}
+              </span>
+              <span className="wa-kl">Top 3</span>
+            </div>
+            <div className="wa-kstat">
+              <span className="wa-kv">
+                {formatRaw(
+                  targetRanks.filter((k) => k.position !== null && k.position <= 10).length,
+                  "count",
+                  lang,
+                )}
+              </span>
+              <span className="wa-kl">Top 10</span>
+            </div>
+            <div className="wa-kstat">
+              <span className="wa-kv">
+                {formatRaw(targetRanks.length - rankedTargets.length, "count", lang)}
+              </span>
+              <span className="wa-kl">{t("por conquistar", "still to win")}</span>
+            </div>
+          </div>
+          <div className="wa-tblwrap" style={{ marginTop: "1rem" }}>
+            <table className="wa-qtable">
+              <thead>
+                <tr>
+                  <th>Keyword</th>
+                  <th className="n">{t("Posição", "Position")}</th>
+                  <th className="n">{t("Δ mês", "MoM Δ")}</th>
+                  <th className="n">{t("Impressões", "Impressions")}</th>
+                  <th className="n">Clicks</th>
+                </tr>
+              </thead>
+              <tbody>
+                {targetRanks.map((k) => (
+                  <tr key={k.keyword}>
+                    <td>
+                      {k.keyword}
+                      {k.isNew && (
+                        <span className="wa-kw-new">{t("novo", "new")}</span>
+                      )}
+                    </td>
+                    <td className="n">
+                      {k.position === null ? (
+                        <span className="wa-pending">
+                          {t("ainda não rankeia", "not ranking yet")}
+                        </span>
+                      ) : (
+                        k.position.toFixed(1)
+                      )}
+                    </td>
+                    <td className="n">
+                      <ChangeCell change={k.change} />
+                    </td>
+                    <td className="n">{formatRaw(k.impressions, "count", lang)}</td>
+                    <td className="n">{formatRaw(k.clicks, "count", lang)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
       {/* Notes */}
       {(snapshot.notes.trim() || variant === "internal") && (
         <section className="wa-sec">
@@ -588,6 +683,10 @@ const CSS = `
 .wa-qtable td{padding:.34rem .3rem;border-bottom:1px solid var(--line);color:#34333f;}
 .wa-qtable tbody tr:nth-child(even){background:rgba(120,61,245,.03);}
 .wa-qtable td.n{font-weight:700;color:var(--ink);}
+/* "novo" pill on a target keyword that started ranking this month. */
+.wa-kw-new{display:inline-block;margin-left:.34rem;padding:0 .3rem;border-radius:6px;
+  background:rgba(22,163,74,.12);color:#15803d;font-size:.56rem;font-weight:700;
+  letter-spacing:.05em;text-transform:uppercase;vertical-align:middle;}
 .wa-notes{font-size:.86rem;color:#34333f;line-height:1.55;white-space:pre-wrap;margin:.3rem 0 0;}
 
 /* Footer */

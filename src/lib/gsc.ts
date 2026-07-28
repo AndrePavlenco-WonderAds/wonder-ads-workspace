@@ -495,6 +495,26 @@ export type GscMover = {
   change: number;
 };
 
+/** A keyword the consultant committed to targeting, matched against this
+ *  month's Search Console data. Unlike `topQueries` (top-N by clicks),
+ *  EVERY target is reported — including the ones that don't rank yet, which
+ *  are exactly the ones the client wants to see progress on. */
+export type GscTargetRank = {
+  keyword: string;
+  /** Average position this month, or null when the keyword returned no
+   *  impressions at all (i.e. it isn't ranking in a way GSC can see). */
+  position: number | null;
+  previousPosition: number | null;
+  /** Positions gained vs. the prior month (positive = moved up the page).
+   *  null when there's nothing to compare against. */
+  change: number | null;
+  clicks: number;
+  impressions: number;
+  /** True when the keyword had no impressions in the prior month but does
+   *  now — its first month on the board. */
+  isNew: boolean;
+};
+
 export type GscMonthlyReport =
   | { status: "not-configured" }
   | { status: "no-property" }
@@ -508,7 +528,76 @@ export type GscMonthlyReport =
       topPages: GscPageRow[];
       keywordStats: GscKeywordStats;
       topMovers: GscMover[];
+      targetRanks: GscTargetRank[];
     };
+
+/** How many query rows to scan when locating target keywords. Targets are
+ *  often long-tail with few clicks, so the default 200-row stats pull would
+ *  miss them — GSC sorts by clicks, not by relevance to us. */
+const TARGET_MATCH_ROWS = 5000;
+
+/** GSC lowercases and strips accents inconsistently across locales; compare
+ *  on a normalised form so "fisioterapia lisboa" matches what we stored. */
+function kwKey(s: string): string {
+  return s
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "") // strip combining accents
+    .replace(/\s+/g, " ");
+}
+
+/** Match every target keyword against the month's query rows. Keywords with
+ *  no row are returned with `position: null` rather than dropped — "ainda não
+ *  rankeia" is information the client asked for. */
+function buildTargetRanks(
+  targets: string[],
+  currentRows: GscApiRow[],
+  previousRows: GscApiRow[],
+): GscTargetRank[] {
+  const cur = new Map<string, GscApiRow>();
+  for (const r of currentRows) {
+    const k = kwKey(r.keys[0] ?? "");
+    if (k && !cur.has(k)) cur.set(k, r);
+  }
+  const prev = new Map<string, number>();
+  for (const r of previousRows) {
+    const k = kwKey(r.keys[0] ?? "");
+    if (k && !prev.has(k)) prev.set(k, r.position);
+  }
+
+  const seen = new Set<string>();
+  const out: GscTargetRank[] = [];
+  for (const raw of targets) {
+    const k = kwKey(raw);
+    if (!k || seen.has(k)) continue;
+    seen.add(k);
+    const row = cur.get(k);
+    const prevPos = prev.get(k);
+    const position = row && row.position > 0 ? round1(row.position) : null;
+    out.push({
+      keyword: raw.trim(),
+      position,
+      previousPosition: prevPos === undefined ? null : round1(prevPos),
+      change:
+        position === null || prevPos === undefined
+          ? null
+          : round1(prevPos - position),
+      clicks: row?.clicks ?? 0,
+      impressions: row?.impressions ?? 0,
+      isNew: position !== null && prevPos === undefined,
+    });
+  }
+  // Best rank first; everything that doesn't rank yet sinks to the bottom.
+  return out.sort((a, b) => {
+    if (a.position === null && b.position === null) {
+      return a.keyword.localeCompare(b.keyword);
+    }
+    if (a.position === null) return 1;
+    if (b.position === null) return -1;
+    return a.position - b.position;
+  });
+}
 
 /** Search Console totals + top-N queries/pages for an explicit calendar-month
  *  window (and the prior month for deltas). Unlike getSiteAuditData's rolling
@@ -521,6 +610,9 @@ export async function getGscMonthlyReport(
     previous: { startDate: string; endDate: string };
     siteUrlOverride?: string | null;
     topLimit?: number;
+    /** The client's committed target keywords. Every one is reported with
+     *  its current position — see `targetRanks` on the result. */
+    targetKeywords?: string[];
   },
 ): Promise<GscMonthlyReport> {
   if (!googleAuthConfigured) return { status: "not-configured" };
@@ -542,18 +634,51 @@ export async function getGscMonthlyReport(
     // footprint stats + movers reflect the whole site, not only the headliners.
     const statLimit = Math.max(limit, 200);
 
-    const [totals, prevTotals, queryRows, prevQueryRows, pages] =
-      await Promise.all([
-        queryTotals(token, siteUrl, current.startDate, current.endDate),
-        queryTotals(token, siteUrl, previous.startDate, previous.endDate).catch(
-          () => null,
-        ),
-        queryRange(token, siteUrl, current.startDate, current.endDate, statLimit),
-        queryRange(token, siteUrl, previous.startDate, previous.endDate, 1000).catch(
-          () => [] as GscApiRow[],
-        ),
-        queryPages(token, siteUrl, current.startDate, current.endDate, limit),
-      ]);
+    // Target keywords need a much wider net than the stats pull: GSC sorts
+    // by clicks, and a keyword we're working on may sit at position 40 with
+    // a handful of impressions. Fetched separately so the existing
+    // keywordStats figures keep their current basis and stay comparable
+    // month to month.
+    const targets = (opts.targetKeywords ?? []).filter((k) => k.trim());
+    const wantTargets = targets.length > 0;
+
+    const [
+      totals,
+      prevTotals,
+      queryRows,
+      prevQueryRows,
+      pages,
+      targetCurRows,
+      targetPrevRows,
+    ] = await Promise.all([
+      queryTotals(token, siteUrl, current.startDate, current.endDate),
+      queryTotals(token, siteUrl, previous.startDate, previous.endDate).catch(
+        () => null,
+      ),
+      queryRange(token, siteUrl, current.startDate, current.endDate, statLimit),
+      queryRange(token, siteUrl, previous.startDate, previous.endDate, 1000).catch(
+        () => [] as GscApiRow[],
+      ),
+      queryPages(token, siteUrl, current.startDate, current.endDate, limit),
+      wantTargets
+        ? queryRange(
+            token,
+            siteUrl,
+            current.startDate,
+            current.endDate,
+            TARGET_MATCH_ROWS,
+          ).catch(() => [] as GscApiRow[])
+        : Promise.resolve([] as GscApiRow[]),
+      wantTargets
+        ? queryRange(
+            token,
+            siteUrl,
+            previous.startDate,
+            previous.endDate,
+            TARGET_MATCH_ROWS,
+          ).catch(() => [] as GscApiRow[])
+        : Promise.resolve([] as GscApiRow[]),
+    ]);
 
     const prevByQuery = new Map(
       prevQueryRows.map((r) => [r.keys[0], r.position] as const),
@@ -627,6 +752,9 @@ export async function getGscMonthlyReport(
       topPages: pages,
       keywordStats,
       topMovers,
+      targetRanks: wantTargets
+        ? buildTargetRanks(targets, targetCurRows, targetPrevRows)
+        : [],
     };
   } catch (err) {
     return {

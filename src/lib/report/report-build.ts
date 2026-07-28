@@ -11,6 +11,7 @@ import {
 } from "@/lib/client-overrides";
 import { getGa4MonthlyReport, type MetricPair } from "./ga4-report";
 import { getGscMonthlyReport } from "@/lib/gsc";
+import { listTargetKeywords } from "@/lib/target-keywords-store";
 import { getGbpMonthlyReport } from "@/lib/gbp";
 import { getReportConfig } from "./report-config-store";
 import {
@@ -245,6 +246,11 @@ export async function buildMonthlyReport(
   const windows = reportWindows(period.key);
   const config = await getReportConfig(slug);
   const lang = getClientLocale(slug);
+  // The keywords we've committed to working. Every one is reported with its
+  // live position, whether or not it ranks yet.
+  const targetKeywords = (await listTargetKeywords(slug).catch(() => [])).map(
+    (k) => k.keyword,
+  );
 
   const [ga4, gsc, gbp] = await Promise.all([
     getGa4MonthlyReport(slug, {
@@ -259,6 +265,7 @@ export async function buildMonthlyReport(
       previous: windows.prevMonth,
       siteUrlOverride: config.gscSiteUrl,
       topLimit: 10,
+      targetKeywords,
     }),
     getGbpMonthlyReport(slug, {
       current: windows.current,
@@ -378,6 +385,7 @@ export async function buildMonthlyReport(
           })),
           keywordStats: gsc.keywordStats,
           topMovers: gsc.topMovers,
+          targetRanks: gsc.targetRanks,
         }
       : {
           clicks: pendingMetric("count"),
