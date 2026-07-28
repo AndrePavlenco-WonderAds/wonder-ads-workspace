@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.13",
+    date: "2026-07-28",
+    title: "GA4 — a propriedade passa a ser encontrada pelo nome do cliente",
+    highlights: [
+      "**🔎 Deixou de depender do «Website URL» da propriedade.** Até agora a ligação ao GA4 só era encontrada comparando o domínio do cliente com o *website URL* do data stream — um campo cosmético que quase ninguém atualiza depois de uma migração de site, e que muitas vezes ficou no endereço de testes de quem construiu o site. Se esse campo não batesse certo, o cliente aparecia como **«Not connected»** mesmo com dados a entrar normalmente.",
+      "**🏷️ Nova correspondência pelo nome da propriedade.** Em último recurso, o nome da propriedade GA4 é comparado com a marca do domínio, ignorando acentos, maiúsculas, espaços e pontuação — «Clínica em Casa» encontra `clinicaemcasa.pt`, «Safe Away - GA4» encontra `safeaway.pt`. Para não haver adivinhação, só é aceite quando **uma única** propriedade corresponde; havendo duas hipóteses, não escolhe nenhuma.",
+      "**🔗 O painel passa a respeitar o ID de propriedade guardado.** O Relatório Mensal já permitia fixar o `ga4PropertyId` de um cliente, mas o painel da ficha ignorava-o — dava-se o caso absurdo de o relatório mostrar números e a ficha dizer «Not connected». Agora ambos usam a mesma definição.",
+      "**🩺 Diagnóstico mais completo.** O `/api/diagnostics/ga4-test` passa a listar **todas as propriedades GA4 visíveis** para a conta de serviço e, por cliente, a via de correspondência usada (`host`, `apex`, `name`, `stored`) e os nomes candidatos. Se a propriedade de um cliente não constar da lista de visíveis, o problema é de **permissões no GA4** — a conta de serviço nunca recebeu acesso — e nenhuma alteração de código resolve.",
+    ],
+  },
+  {
     version: "76.12",
     date: "2026-07-28",
     title: "GA4 — fim dos falsos «Not connected» na ficha do cliente",

@@ -48,6 +48,47 @@ function apexOf(host: string): string {
     : lastTwo;
 }
 
+/** The brand label of a domain — `clinicaemcasa.pt` → `clinicaemcasa`. */
+function brandOf(host: string): string {
+  return apexOf(host).split(".")[0] ?? host;
+}
+
+/** Lowercase, de-accented, alphanumerics only. `"Clínica em Casa"` and
+ *  `"clinicaemcasa.pt"` both collapse to `clinicaemcasa`, which is what
+ *  makes name matching work across the agency's naming habits. */
+function normaliseName(s: string): string {
+  return s
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "") // strip combining accents
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
+}
+
+/** Shortest brand label we'll name-match on. Below this, containment
+ *  matches get noisy ("cdt" would hit half the account list). */
+const MIN_BRAND_LEN = 6;
+
+/** Resolve by GA4 property NAME rather than by the stream's website URL.
+ *  The stream `defaultUri` is a cosmetic field consultants rarely update —
+ *  it goes stale after a site migration or is left on a builder's staging
+ *  URL — while the property name almost always still reads as the client.
+ *  Exact normalised equality wins; otherwise a containment match is only
+ *  accepted when exactly ONE property matches, so we never guess between
+ *  two plausible candidates. */
+function matchByName(
+  brand: string,
+  props: PropertySummary[],
+): { propertyId: string; displayName: string } | null {
+  if (brand.length < MIN_BRAND_LEN) return null;
+  const exact = props.filter((p) => normaliseName(p.displayName) === brand);
+  if (exact.length === 1) return exact[0];
+  const contains = props.filter((p) => {
+    const n = normaliseName(p.displayName);
+    return n.includes(brand) || brand.includes(n);
+  });
+  return contains.length === 1 ? contains[0] : null;
+}
+
 // --- Property discovery -----------------------------------------------------
 
 type PropertySummary = { propertyId: string; displayName: string };
@@ -227,19 +268,45 @@ async function buildDomainIndex(token: string): Promise<DomainIndex> {
   return index;
 }
 
+/** Per-client GA4 property id saved in the Monthly Report config. The
+ *  report already honours this; the panel used to ignore it, so a client
+ *  could show live numbers in the report and "Not connected" on its file.
+ *  Never throws — a KV blip must not break resolution. */
+async function storedPropertyId(slug: string): Promise<string | null> {
+  try {
+    const { getReportConfig } = await import("./report/report-config-store");
+    const config = await getReportConfig(slug);
+    const id = config.ga4PropertyId?.trim();
+    return id ? id : null;
+  } catch {
+    return null;
+  }
+}
+
 async function resolvePropertyId(
   slug: string,
   token: string,
 ): Promise<string | null> {
   const override = GA4_PROPERTY_OVERRIDES[slug];
   if (override) return override;
+  const stored = await storedPropertyId(slug);
+  if (stored) return stored;
+
   const site = CLIENT_WEBSITES[slug];
   const host = site ? hostFromUrl(site) : null;
   if (!host) return null;
-  const index = await getDomainIndex(token);
+
   // Exact host first, then registrable domain — so a stream registered on
   // `www.`/a subdomain of the client's site still matches.
-  return index.byHost.get(host) ?? index.byApex.get(apexOf(host)) ?? null;
+  const index = await getDomainIndex(token);
+  const byDomain =
+    index.byHost.get(host) ?? index.byApex.get(apexOf(host)) ?? null;
+  if (byDomain) return byDomain;
+
+  // Last resort: match the property NAME. Catches clients whose stream
+  // website URL is stale or was never set to the live domain.
+  return matchByName(brandOf(host), await listProperties(token))?.propertyId
+    ?? null;
 }
 
 /** Why did resolution succeed or fail for this client? Powers
@@ -249,48 +316,84 @@ export async function explainGa4Resolution(slug: string): Promise<{
   website: string | null;
   host: string | null;
   apex: string | null;
+  brand: string | null;
   override: string | null;
-  matchedBy: "override" | "host" | "apex" | null;
+  stored: string | null;
+  matchedBy: "override" | "stored" | "host" | "apex" | "name" | null;
   propertyId: string | null;
+  matchedName: string | null;
   indexedHosts: number;
   failedProperties: string[];
   apexCandidates: string[];
+  /** Property names whose normalised form shares any prefix with the
+   *  client's brand — the shortlist to eyeball when nothing matched. */
+  nameCandidates: string[];
 }> {
   const site = CLIENT_WEBSITES[slug] || null;
   const host = site ? hostFromUrl(site) : null;
   const override = GA4_PROPERTY_OVERRIDES[slug] ?? null;
+  const stored = await storedPropertyId(slug);
   const base = {
     slug,
     website: site,
     host,
     apex: host ? apexOf(host) : null,
+    brand: host ? brandOf(host) : null,
     override,
+    stored,
+    matchedName: null as string | null,
     indexedHosts: 0,
     failedProperties: [] as string[],
     apexCandidates: [] as string[],
+    nameCandidates: [] as string[],
   };
   if (override) {
     return { ...base, matchedBy: "override" as const, propertyId: override };
+  }
+  if (stored) {
+    return { ...base, matchedBy: "stored" as const, propertyId: stored };
   }
   if (!host) return { ...base, matchedBy: null, propertyId: null };
 
   const token = await getGoogleAccessToken(SCOPES);
   const index = await getDomainIndex(token);
+  const props = await listProperties(token);
   const apex = apexOf(host);
+  const brand = brandOf(host);
   const byHost = index.byHost.get(host) ?? null;
   const byApex = index.byApex.get(apex) ?? null;
+  const byName = byHost || byApex ? null : matchByName(brand, props);
+
   return {
     ...base,
     indexedHosts: index.byHost.size,
     failedProperties: index.failedProperties,
     // Stream hosts sharing this client's registrable domain — shows when a
     // property exists but sits on an unexpected subdomain.
-    apexCandidates: [...index.byHost.keys()].filter(
-      (h) => apexOf(h) === apex,
-    ),
-    matchedBy: byHost ? ("host" as const) : byApex ? ("apex" as const) : null,
-    propertyId: byHost ?? byApex,
+    apexCandidates: [...index.byHost.keys()].filter((h) => apexOf(h) === apex),
+    // Loose shortlist (first 4 chars of the brand) so a human can spot the
+    // right property even when our matcher deliberately refused to guess.
+    nameCandidates: props
+      .filter((p) => normaliseName(p.displayName).includes(brand.slice(0, 4)))
+      .map((p) => `${p.displayName} (${p.propertyId})`),
+    matchedName: byName?.displayName ?? null,
+    matchedBy: byHost
+      ? ("host" as const)
+      : byApex
+        ? ("apex" as const)
+        : byName
+          ? ("name" as const)
+          : null,
+    propertyId: byHost ?? byApex ?? byName?.propertyId ?? null,
   };
+}
+
+/** Every GA4 property the connected account can see. When a client is
+ *  unresolved AND its property isn't in here, the service account simply
+ *  hasn't been granted access — no code change can fix that. */
+export async function listVisibleGa4Properties(): Promise<PropertySummary[]> {
+  const token = await getGoogleAccessToken(SCOPES);
+  return listProperties(token);
 }
 
 /** Resolve a client to a live GA4 token + property id in one call. Returns
