@@ -24,6 +24,30 @@ function hostFromUrl(url: string): string | null {
   }
 }
 
+/** Two-part public suffixes we actually have clients on. Needed so
+ *  `insyncdesign.com.au` reduces to itself and not to `com.au`. */
+const TWO_PART_SUFFIXES = new Set([
+  "com.au",
+  "co.uk",
+  "com.br",
+  "com.pt",
+  "org.uk",
+  "co.nz",
+  "com.es",
+]);
+
+/** Registrable domain for a host — `shop.clinicaemcasa.pt` → `clinicaemcasa.pt`.
+ *  Used as the fallback match key when a GA4 web stream is registered on a
+ *  subdomain (or a different subdomain) of the client's site. */
+function apexOf(host: string): string {
+  const parts = host.split(".");
+  if (parts.length <= 2) return host;
+  const lastTwo = parts.slice(-2).join(".");
+  return TWO_PART_SUFFIXES.has(lastTwo)
+    ? parts.slice(-3).join(".")
+    : lastTwo;
+}
+
 // --- Property discovery -----------------------------------------------------
 
 type PropertySummary = { propertyId: string; displayName: string };
@@ -84,17 +108,38 @@ async function buildProperties(token: string): Promise<PropertySummary[]> {
 
 // Website host → GA4 property ID, built lazily from each property's web
 // data streams. Cached because it's a fan-out of requests.
-let cachedDomainIndex: { map: Map<string, string>; expires: number } | null =
-  null;
+export type DomainIndex = {
+  /** Exact stream host (www-stripped) → property id. */
+  byHost: Map<string, string>;
+  /** Registrable domain → property id. Fallback for streams registered on
+   *  a subdomain (`book.safeaway.pt`) or on the www host of a site we
+   *  store bare (and vice-versa). */
+  byApex: Map<string, string>;
+  /** Property ids whose dataStreams call never succeeded. When this is
+   *  non-empty the index is INCOMPLETE — a client whose property is in
+   *  here would wrongly look "Not connected". */
+  failedProperties: string[];
+};
+
+let cachedDomainIndex: { index: DomainIndex; expires: number } | null = null;
 // Same in-flight guard for the (expensive, fan-out) domain index build —
 // without it, 21 concurrent client lookups each fan out across every
 // property's dataStreams, a request storm that can time out and make the
 // whole rollup come back empty.
-let domainIndexInFlight: Promise<Map<string, string>> | null = null;
+let domainIndexInFlight: Promise<DomainIndex> | null = null;
 
-async function getDomainIndex(token: string): Promise<Map<string, string>> {
+/** Full TTL — only used when every property resolved cleanly. */
+const INDEX_TTL_OK = 30 * 60_000;
+/** Short TTL for a partial index, so a transient 429 self-heals in
+ *  minutes instead of pinning "Not connected" for half an hour. */
+const INDEX_TTL_PARTIAL = 60_000;
+/** Max concurrent dataStreams calls. The previous unbounded Promise.all
+ *  over every property is what tripped Google's per-minute quota. */
+const STREAM_CONCURRENCY = 6;
+
+async function getDomainIndex(token: string): Promise<DomainIndex> {
   if (cachedDomainIndex && cachedDomainIndex.expires > Date.now()) {
-    return cachedDomainIndex.map;
+    return cachedDomainIndex.index;
   }
   if (domainIndexInFlight) return domainIndexInFlight;
   domainIndexInFlight = buildDomainIndex(token).finally(() => {
@@ -103,33 +148,83 @@ async function getDomainIndex(token: string): Promise<Map<string, string>> {
   return domainIndexInFlight;
 }
 
-async function buildDomainIndex(token: string): Promise<Map<string, string>> {
-  const props = await listProperties(token);
-  const map = new Map<string, string>();
-  await Promise.all(
-    props.map(async ({ propertyId }) => {
-      try {
-        const res = await fetch(
-          `https://analyticsadmin.googleapis.com/v1beta/properties/${propertyId}/dataStreams`,
-          { headers: { Authorization: `Bearer ${token}` } },
-        );
-        if (!res.ok) return;
+/** One dataStreams call with retry on the transient failures Google
+ *  actually returns under fan-out: 429 (quota) and 5xx. Returns null
+ *  only when every attempt failed — the caller records that as a gap
+ *  rather than silently pretending the property has no web stream. */
+async function fetchDataStreams(
+  propertyId: string,
+  token: string,
+): Promise<{ webStreamData?: { defaultUri?: string } }[] | null> {
+  const backoff = [250, 750, 2000];
+  for (let attempt = 0; attempt <= backoff.length; attempt++) {
+    try {
+      const res = await fetch(
+        `https://analyticsadmin.googleapis.com/v1beta/properties/${propertyId}/dataStreams`,
+        { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" },
+      );
+      if (res.ok) {
         const json = (await res.json()) as {
           dataStreams?: { webStreamData?: { defaultUri?: string } }[];
         };
-        for (const ds of json.dataStreams ?? []) {
-          const host = ds.webStreamData?.defaultUri
-            ? hostFromUrl(ds.webStreamData.defaultUri)
-            : null;
-          if (host && !map.has(host)) map.set(host, propertyId);
-        }
-      } catch {
-        /* skip this property */
+        return json.dataStreams ?? [];
       }
-    }),
+      // 403/404 are permanent for this property (no access / deleted) —
+      // not a gap we should retry or flag.
+      if (res.status === 403 || res.status === 404) return [];
+      if (res.status !== 429 && res.status < 500) return [];
+    } catch {
+      /* network blip — fall through to retry */
+    }
+    const wait = backoff[attempt];
+    if (wait !== undefined) {
+      await new Promise((r) => setTimeout(r, wait));
+    }
+  }
+  return null;
+}
+
+async function buildDomainIndex(token: string): Promise<DomainIndex> {
+  const props = await listProperties(token);
+  const byHost = new Map<string, string>();
+  const byApex = new Map<string, string>();
+  const failedProperties: string[] = [];
+
+  // Bounded worker pool over the property list.
+  let cursor = 0;
+  const worker = async () => {
+    for (;;) {
+      const i = cursor++;
+      if (i >= props.length) return;
+      const { propertyId } = props[i];
+      const streams = await fetchDataStreams(propertyId, token);
+      if (streams === null) {
+        failedProperties.push(propertyId);
+        continue;
+      }
+      for (const ds of streams) {
+        const host = ds.webStreamData?.defaultUri
+          ? hostFromUrl(ds.webStreamData.defaultUri)
+          : null;
+        if (!host) continue;
+        if (!byHost.has(host)) byHost.set(host, propertyId);
+        const apex = apexOf(host);
+        if (!byApex.has(apex)) byApex.set(apex, propertyId);
+      }
+    }
+  };
+  await Promise.all(
+    Array.from({ length: Math.min(STREAM_CONCURRENCY, props.length) }, worker),
   );
-  cachedDomainIndex = { map, expires: Date.now() + 30 * 60_000 };
-  return map;
+
+  const index: DomainIndex = { byHost, byApex, failedProperties };
+  cachedDomainIndex = {
+    index,
+    expires:
+      Date.now() +
+      (failedProperties.length ? INDEX_TTL_PARTIAL : INDEX_TTL_OK),
+  };
+  return index;
 }
 
 async function resolvePropertyId(
@@ -142,7 +237,60 @@ async function resolvePropertyId(
   const host = site ? hostFromUrl(site) : null;
   if (!host) return null;
   const index = await getDomainIndex(token);
-  return index.get(host) ?? null;
+  // Exact host first, then registrable domain — so a stream registered on
+  // `www.`/a subdomain of the client's site still matches.
+  return index.byHost.get(host) ?? index.byApex.get(apexOf(host)) ?? null;
+}
+
+/** Why did resolution succeed or fail for this client? Powers
+ *  /api/diagnostics/ga4-test — never called on the render path. */
+export async function explainGa4Resolution(slug: string): Promise<{
+  slug: string;
+  website: string | null;
+  host: string | null;
+  apex: string | null;
+  override: string | null;
+  matchedBy: "override" | "host" | "apex" | null;
+  propertyId: string | null;
+  indexedHosts: number;
+  failedProperties: string[];
+  apexCandidates: string[];
+}> {
+  const site = CLIENT_WEBSITES[slug] || null;
+  const host = site ? hostFromUrl(site) : null;
+  const override = GA4_PROPERTY_OVERRIDES[slug] ?? null;
+  const base = {
+    slug,
+    website: site,
+    host,
+    apex: host ? apexOf(host) : null,
+    override,
+    indexedHosts: 0,
+    failedProperties: [] as string[],
+    apexCandidates: [] as string[],
+  };
+  if (override) {
+    return { ...base, matchedBy: "override" as const, propertyId: override };
+  }
+  if (!host) return { ...base, matchedBy: null, propertyId: null };
+
+  const token = await getGoogleAccessToken(SCOPES);
+  const index = await getDomainIndex(token);
+  const apex = apexOf(host);
+  const byHost = index.byHost.get(host) ?? null;
+  const byApex = index.byApex.get(apex) ?? null;
+  return {
+    ...base,
+    indexedHosts: index.byHost.size,
+    failedProperties: index.failedProperties,
+    // Stream hosts sharing this client's registrable domain — shows when a
+    // property exists but sits on an unexpected subdomain.
+    apexCandidates: [...index.byHost.keys()].filter(
+      (h) => apexOf(h) === apex,
+    ),
+    matchedBy: byHost ? ("host" as const) : byApex ? ("apex" as const) : null,
+    propertyId: byHost ?? byApex,
+  };
 }
 
 /** Resolve a client to a live GA4 token + property id in one call. Returns

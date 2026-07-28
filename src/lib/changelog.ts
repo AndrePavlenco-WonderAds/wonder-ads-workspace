@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.12",
+    date: "2026-07-28",
+    title: "GA4 — fim dos falsos «Not connected» na ficha do cliente",
+    highlights: [
+      "**📊 Clientes com GA4 a funcionar deixam de aparecer como «Not connected».** O painel de GA4 descobre a propriedade de cada cliente comparando o domínio do site com o *web data stream* de cada propriedade. Essa descoberta disparava um pedido por **todas** as propriedades ao mesmo tempo, sem limite — a Google respondia **429 (quota)** a algumas, o código **ignorava esses erros em silêncio** e guardava o índice incompleto durante **30 minutos**. Qualquer cliente cuja propriedade caísse nesse buraco ficava marcado como «Not connected» apesar de ter dados a entrar. Detetado na **Clínica em Casa** e no **Safe Away**.",
+      "**🐢 Pedidos limitados e com nova tentativa.** A descoberta passa a correr **6 pedidos em paralelo** (em vez de todos de uma vez) e a repetir automaticamente os **429/5xx** com espera crescente (250ms → 750ms → 2s). Os **403/404** continuam a ser definitivos — propriedade sem acesso ou apagada — e não são repetidos.",
+      "**⏱️ Um índice incompleto já não fica preso 30 minutos.** Se alguma propriedade falhar mesmo assim, o resultado passa a ser guardado só **1 minuto** (em vez de 30), por isso uma falha temporária da Google resolve-se sozinha na atualização seguinte em vez de esconder o cliente durante meia hora.",
+      "**🌐 Correspondência de domínio mais tolerante.** Além do domínio exato, passa a haver reserva pelo **domínio registável** — um stream registado em `www.` ou num subdomínio (ex.: `book.safeaway.pt`) já encontra o cliente. Sufixos de duas partes como `.com.au` e `.co.uk` são tratados corretamente.",
+      "**🩺 Novo diagnóstico `/api/diagnostics/ga4-test`.** Mostra, por cliente, o domínio usado, se houve correspondência (e por que via), quantos hosts foram indexados e — o mais importante — **que propriedades falharam**, para se distinguir «este cliente não tem GA4» de «a Google falhou-nos agora». Aceita `?slug=safe-away` para um cliente só. Protegido pelo login, como o resto do `/api/diagnostics`.",
+    ],
+  },
+  {
     version: "76.11",
     date: "2026-07-24",
     title: "Roadmap SEO — tarefas deslizáveis e multi-semana + criação de colaborador completa",
