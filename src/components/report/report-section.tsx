@@ -1,7 +1,13 @@
 import Link from "next/link";
 import { ArrowUpRight, FileBarChart, FileDown } from "lucide-react";
 import { listReports } from "@/lib/report/report-store";
-import { previousCompleteMonth } from "@/lib/report/report-dates";
+import {
+  previousCompleteMonth,
+  currentMonth,
+  reportWindows,
+  isPeriodReportable,
+} from "@/lib/report/report-dates";
+import { ReportPeriodPicker } from "@/components/report/report-period-picker";
 import { formatDate } from "@/lib/dates";
 import type { ReportStatus } from "@/lib/report/report-types";
 import { GenerateReportButton } from "./generate-report-button";
@@ -29,6 +35,12 @@ export async function ReportSection({
   const [reports, next] = [await listReports(slug), previousCompleteMonth()];
   const alreadyHasNext = reports.some((r) => r.period === next.key);
 
+  // The month still in progress — offered alongside the closed one so a client
+  // who wants July's report on the 29th doesn't have to wait for August.
+  const inProgress = currentMonth();
+  const mtd = reportWindows(inProgress.key).coverage;
+  const canDoCurrent = isPeriodReportable(inProgress.key);
+
   return (
     <section id="section-report" className="scroll-mt-8">
       <header className="mb-5 flex items-center gap-3">
@@ -47,22 +59,48 @@ export async function ReportSection({
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <p className="text-sm text-white/75">
-              Relatório de SEO &amp; Lead Gen do mês anterior — leads, orgânico,
-              GSC e AI Visibility, com comparação face ao mês anterior.
+              Relatório de SEO &amp; Lead Gen — leads, orgânico, GSC e AI
+              Visibility, com comparação face ao período homólogo anterior.
             </p>
             <p className="mt-1 text-[12px] text-white/45">
-              Próximo período: <span className="text-white/70">{next.label}</span>
-              {alreadyHasNext ? " · já gerado" : ""}
+              Escolhe o mês fechado ou o mês em curso (parcial).
             </p>
           </div>
-          {!readOnly && (
-            <GenerateReportButton
-              slug={slug}
-              period={next.key}
-              label={alreadyHasNext ? `Regenerar ${next.label}` : `Gerar ${next.label}`}
-            />
-          )}
         </div>
+
+        {!readOnly && (
+          <div className="mt-4">
+            {canDoCurrent ? (
+              <ReportPeriodPicker
+                slug={slug}
+                closed={{
+                  key: next.key,
+                  label: next.label,
+                  coverage: null,
+                  alreadyGenerated: alreadyHasNext,
+                }}
+                current={{
+                  key: inProgress.key,
+                  label: inProgress.label,
+                  coverage: mtd.partial ? `1–${mtd.days}` : null,
+                  alreadyGenerated: reports.some(
+                    (r) => r.period === inProgress.key,
+                  ),
+                }}
+              />
+            ) : (
+              <GenerateReportButton
+                slug={slug}
+                period={next.key}
+                label={
+                  alreadyHasNext
+                    ? `Regenerar ${next.label}`
+                    : `Gerar ${next.label}`
+                }
+              />
+            )}
+          </div>
+        )}
 
         {reports.length > 0 && (
           <>

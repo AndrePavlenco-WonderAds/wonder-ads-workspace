@@ -18,6 +18,7 @@ import {
   periodFromKey,
   previousCompleteMonth,
   reportWindows,
+  labelWithCoverage,
 } from "./report-dates";
 import {
   REPORT_SCHEMA_VERSION,
@@ -247,7 +248,10 @@ export async function buildMonthlyReport(
   nowMs: number = Date.now(),
 ): Promise<MonthlyReportSnapshot> {
   const period = periodKey ? periodFromKey(periodKey) : previousCompleteMonth(new Date(nowMs));
-  const windows = reportWindows(period.key);
+  // Windows follow the requested period: a complete month gives three full
+  // calendar months (unchanged); a month still in progress gives a
+  // month-to-date window with MoM/YoY cut to the same number of days.
+  const windows = reportWindows(period.key, { now: new Date(nowMs) });
   const config = await getReportConfig(slug);
   const lang = getClientLocale(slug);
   // The keywords we've committed to working. Every one is reported with its
@@ -445,7 +449,8 @@ export async function buildMonthlyReport(
     slug,
     clientTitle,
     period: period.key,
-    periodLabel: period.label,
+    periodLabel: labelWithCoverage(period.label, windows.coverage),
+    coverage: windows.coverage,
     generatedAt: nowMs,
     status: "draft" as ReportStatus,
     lang,

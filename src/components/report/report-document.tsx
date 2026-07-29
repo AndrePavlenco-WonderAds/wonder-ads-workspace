@@ -139,6 +139,7 @@ export function ReportDocument({
   const org = snapshot.organic;
   const gsc = snapshot.gsc;
   // Optional on the snapshot — reports generated before v76.15 have none.
+  const coverage = snapshot.coverage;
   const targetRanks = gsc.targetRanks ?? [];
   const rankedTargets = targetRanks.filter((k) => k.position !== null);
   const ai = snapshot.ai;
@@ -180,6 +181,14 @@ export function ReportDocument({
           {t("Consultor", "Consultant")}: {snapshot.consultant.name}
           {snapshot.consultant.email ? ` · ${snapshot.consultant.email}` : ""}
         </div>
+        {coverage?.partial && (
+          <div className="wa-cpartial">
+            {t(
+              `Relatório parcial — cobre os dias 1 a ${coverage.days} de ${coverage.monthDays}. Todas as comparações usam o mesmo número de dias do período anterior.`,
+              `Partial report — covers days 1–${coverage.days} of ${coverage.monthDays}. Every comparison uses the same number of days from the prior period.`,
+            )}
+          </div>
+        )}
       </header>
 
       {/* Hero KPI band */}
@@ -684,6 +693,11 @@ const CSS = `
 .wa-qtable tbody tr:nth-child(even){background:rgba(120,61,245,.03);}
 .wa-qtable td.n{font-weight:700;color:var(--ink);}
 /* "novo" pill on a target keyword that started ranking this month. */
+/* Partial-month notice on the cover — must be impossible to miss, because a
+   26-day month read as a full one is a wrong conclusion, not a small one. */
+.wa-cpartial{margin-top:.6rem;display:inline-block;padding:.32rem .6rem;border-radius:8px;
+  background:rgba(245,158,11,.14);border:1px solid rgba(245,158,11,.32);
+  color:#92400e;font-size:.68rem;font-weight:600;line-height:1.4;}
 .wa-kw-new{display:inline-block;margin-left:.34rem;padding:0 .3rem;border-radius:6px;
   background:rgba(22,163,74,.12);color:#15803d;font-size:.56rem;font-weight:700;
   letter-spacing:.05em;text-transform:uppercase;vertical-align:middle;}

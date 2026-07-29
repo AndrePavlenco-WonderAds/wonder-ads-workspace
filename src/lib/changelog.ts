@@ -13,6 +13,19 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.17",
+    date: "2026-07-29",
+    title: "Relatório Mensal — gerar o mês fechado ou o mês em curso",
+    highlights: [
+      "**🗓️ Escolhes o período antes de gerar.** Dois cartões na secção *Relatório Mensal*: **mês fechado** (o comportamento de sempre — a 29 de julho reporta junho) ou **mês em curso**, para os clientes que querem o relatório de julho no dia 29 sem esperar por agosto.",
+      "**⚖️ A comparação é dia-a-dia equivalente — este é o ponto crítico.** Um relatório parcial de julho com 26 dias de dados é comparado com **1 a 26 de junho**, não com junho inteiro. Sem isto, todas as métricas apareceriam a cair a pico só porque o mês ainda não acabou. O mesmo vale para o homólogo do ano anterior. Meses mais curtos são tratados (fevereiro contra um janeiro de 30 dias pára no dia 28/29) e a viragem de ano também (janeiro parcial compara com dezembro do ano anterior).",
+      "**⏱️ Corte único de dados para todas as fontes.** O GSC tem ~3 dias de atraso e o GA4 costuma ter dados até ontem. O relatório usa **o mesmo dia de corte para tudo**, para que leads, orgânico e clicks descrevam a mesma janela — um relatório em que as leads cobrem 1–28 e os clicks 1–26 convida exatamente à comparação errada.",
+      "**🏷️ Fica marcado como parcial em todo o lado.** O título passa a ser *«Julho de 2026 (parcial · 1–26)»* e a capa do documento leva um aviso destacado a dizer que cobre X de Y dias e que as comparações usam o mesmo número de dias. O cliente nunca pode ler um mês a meio como se estivesse fechado.",
+      "**🚫 Períodos sem dados são recusados.** Pedir um mês futuro (ou um mês cujo primeiro dia ainda não passou o atraso das APIs) devolve erro em vez de gravar um relatório todo a zeros.",
+      "**♻️ Nada muda para os meses fechados.** Quando o período pedido é um mês completo, as janelas são exatamente as de antes — os relatórios já gerados mantêm-se comparáveis.",
+    ],
+  },
+  {
     version: "76.16",
     date: "2026-07-29",
     title: "Relatório Mensal — eventos de lead configuráveis + curadoria das subidas",

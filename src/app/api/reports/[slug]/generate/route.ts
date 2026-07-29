@@ -10,7 +10,11 @@ import { editableDepts } from "@/lib/auth/credentials";
 import { getClientBySlug } from "@/lib/notion";
 import { buildMonthlyReport } from "@/lib/report/report-build";
 import { saveReport } from "@/lib/report/report-store";
-import { isValidPeriodKey, previousCompleteMonth } from "@/lib/report/report-dates";
+import {
+  isValidPeriodKey,
+  isPeriodReportable,
+  previousCompleteMonth,
+} from "@/lib/report/report-dates";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -31,6 +35,8 @@ export async function POST(
     return NextResponse.json({ error: "unknown client" }, { status: 404 });
   }
 
+  // Any period the consultant asks for — the last CLOSED month (default) or
+  // the month still in progress, which yields a month-to-date report.
   let period: string;
   try {
     const body = (await req.json().catch(() => ({}))) as { period?: unknown };
@@ -40,6 +46,19 @@ export async function POST(
         : previousCompleteMonth().key;
   } catch {
     period = previousCompleteMonth().key;
+  }
+
+  // A future month (or one whose first day hasn't cleared the data lag) has
+  // nothing to pull — refuse rather than persist an all-zero report.
+  if (!isPeriodReportable(period)) {
+    return NextResponse.json(
+      {
+        error: "period_not_reportable",
+        message:
+          "Ainda não há dados para este período. Escolhe um mês já iniciado.",
+      },
+      { status: 400 },
+    );
   }
 
   try {

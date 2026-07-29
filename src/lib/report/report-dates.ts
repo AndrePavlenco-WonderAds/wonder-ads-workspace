@@ -75,19 +75,125 @@ export function previousCompleteMonth(now: Date = new Date()): ReportPeriod {
   return periodFromKey(keyOf(prev));
 }
 
+/** The month currently in progress. On 29/07/2026 this returns July 2026 —
+ *  the "quero o relatório de julho hoje" case. Reporting it produces a
+ *  month-to-date window, never a fake full month. */
+export function currentMonth(now: Date = new Date()): ReportPeriod {
+  return periodFromKey(keyOf({ year: now.getFullYear(), month: now.getMonth() + 1 }));
+}
+
+/** Last day we can trust data for. GSC lags ~2-3 days; GA4 is usually good
+ *  through yesterday. We take the *later-lagging* source so every section of
+ *  a partial report describes the SAME window — a report whose leads cover
+ *  1–28 but whose clicks cover 1–26 invites exactly the wrong comparison. */
+export function dataCutoff(now: Date = new Date(), lagDays = 3): string {
+  const d = new Date(
+    Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()) -
+      lagDays * 86_400_000,
+  );
+  return d.toISOString().slice(0, 10);
+}
+
+const dayOf = (iso: string) => Number(iso.slice(8, 10));
+
+/** Clamp a month to its first `days` days (or its full length, if shorter).
+ *  February compared against a 30-day January stops at the 28th/29th. */
+function firstDaysOf(ym: YM, days: number): DateRange {
+  const len = daysInMonth(ym.year, ym.month);
+  const end = Math.min(days, len);
+  return {
+    startDate: `${ym.year}-${pad2(ym.month)}-01`,
+    endDate: `${ym.year}-${pad2(ym.month)}-${pad2(end)}`,
+  };
+}
+
+export type ReportCoverage = {
+  /** true when the month isn't over (or its data isn't in yet). */
+  partial: boolean;
+  /** Days actually covered, e.g. 26 for "1–26 July". */
+  days: number;
+  /** Days in the full calendar month. */
+  monthDays: number;
+  /** Last day included, "YYYY-MM-DD". */
+  through: string;
+};
+
 /** The three windows a report needs: the month itself, the prior month (MoM),
- *  and the same month a year earlier (YoY). */
-export function reportWindows(periodKey: string): {
+ *  and the same month a year earlier (YoY).
+ *
+ *  For a COMPLETE month this is three full calendar months, exactly as before.
+ *  For a month still in progress the current window is clamped to the data
+ *  cutoff — and, critically, **the comparison windows are clamped to the same
+ *  number of days**. Comparing 26 days of July against all 30 days of June
+ *  would show a fake collapse in every metric. */
+export function reportWindows(
+  periodKey: string,
+  opts: { now?: Date; lagDays?: number } = {},
+): {
   current: DateRange;
   prevMonth: DateRange;
   yoy: DateRange;
+  coverage: ReportCoverage;
 } {
   const ym = ymFromKey(periodKey);
+  const full = rangeOf(ym);
+  const monthDays = daysInMonth(ym.year, ym.month);
+  const cutoff = dataCutoff(opts.now ?? new Date(), opts.lagDays ?? 3);
+
+  // Complete month: nothing to clamp — identical to the pre-v76.17 behaviour.
+  if (cutoff >= full.endDate) {
+    return {
+      current: full,
+      prevMonth: rangeOf(shiftMonth(ym, -1)),
+      yoy: rangeOf(shiftMonth(ym, -12)),
+      coverage: {
+        partial: false,
+        days: monthDays,
+        monthDays,
+        through: full.endDate,
+      },
+    };
+  }
+
+  // Month in progress (or data not in yet). If the cutoff predates the month
+  // entirely there is nothing to report — collapse to day 1 so callers still
+  // get a valid range and the empty result speaks for itself.
+  const days = cutoff < full.startDate ? 1 : dayOf(cutoff);
+  const current = firstDaysOf(ym, days);
   return {
-    current: rangeOf(ym),
-    prevMonth: rangeOf(shiftMonth(ym, -1)),
-    yoy: rangeOf(shiftMonth(ym, -12)),
+    current,
+    prevMonth: firstDaysOf(shiftMonth(ym, -1), days),
+    yoy: firstDaysOf(shiftMonth(ym, -12), days),
+    coverage: {
+      partial: true,
+      days: Math.min(days, monthDays),
+      monthDays,
+      through: current.endDate,
+    },
   };
+}
+
+/** Label suffix for a partial period, e.g. "Julho de 2026 (parcial · 1–26)". */
+export function labelWithCoverage(
+  label: string,
+  coverage: ReportCoverage,
+): string {
+  return coverage.partial
+    ? `${label} (parcial · 1–${coverage.days})`
+    : label;
+}
+
+/** Can this period be reported at all? A future month has no data, and the
+ *  current month only becomes reportable once the cutoff reaches day 1. */
+export function isPeriodReportable(
+  periodKey: string,
+  now: Date = new Date(),
+  lagDays = 3,
+): boolean {
+  if (!isValidPeriodKey(periodKey)) return false;
+  const ym = ymFromKey(periodKey);
+  const start = `${ym.year}-${pad2(ym.month)}-01`;
+  return dataCutoff(now, lagDays) >= start;
 }
 
 /** The N most-recent complete months up to (and including) `periodKey`,

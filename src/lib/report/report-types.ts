@@ -102,6 +102,16 @@ export type KeywordMover = {
   change: number;
 };
 
+/** How much of the month a report covers. A report generated mid-month is
+ *  explicitly partial, and its MoM/YoY windows are cut to the same day count
+ *  so the comparison stays honest. */
+export type ReportCoverage = {
+  partial: boolean;
+  days: number;
+  monthDays: number;
+  through: string;
+};
+
 /** Per-source fetch outcome, for the internal provenance panel + re-auth. */
 export type FetchStatus = {
   ok: boolean;
@@ -120,8 +130,11 @@ export type MonthlyReportSnapshot = {
   clientTitle: string;
   /** "2026-06". */
   period: string;
-  /** "Junho de 2026". */
+  /** "Junho de 2026", ou "Julho de 2026 (parcial · 1–26)" num mês em curso. */
   periodLabel: string;
+  /** Which days the report actually covers. Present from v76.17; absent on
+   *  older snapshots, which are always complete months by construction. */
+  coverage?: ReportCoverage;
   generatedAt: number;
   status: ReportStatus;
   lang: "pt" | "en";
