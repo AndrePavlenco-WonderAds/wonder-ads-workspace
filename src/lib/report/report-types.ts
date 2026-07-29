@@ -150,7 +150,17 @@ export type MonthlyReportSnapshot = {
     topQueries: TopQueryRow[];
     topPages: TopPageRow[];
     keywordStats: KeywordStats | null;
+    /** The movers actually SHOWN to the client — at most 5. Defaults to the
+     *  biggest gains; the consultant can re-pick from `moverCandidates`. */
     topMovers: KeywordMover[];
+    /** Up to 20 gainers to choose from. Raw movement surfaces competitor
+     *  brand names and off-strategy terms, which are exactly the ones we
+     *  don't want in a client's report — so the pick is human. Optional:
+     *  reports generated before v76.16 have none. */
+    moverCandidates?: KeywordMover[];
+    /** True once a consultant has curated the selection, so the UI can tell
+     *  "these are the automatic top 5" from "these were chosen". */
+    moversCurated?: boolean;
     /** The client's target keywords with their current position. Optional so
      *  reports generated before v76.15 still load (schemaVersion is a hard
      *  equality check in report-store — bumping it would discard them). */

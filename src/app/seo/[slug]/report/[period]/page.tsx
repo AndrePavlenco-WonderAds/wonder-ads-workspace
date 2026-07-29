@@ -12,6 +12,9 @@ import { ReportDocument } from "@/components/report/report-document";
 import { ReportPrintView } from "@/components/report/report-print-view";
 import { GenerateReportButton } from "@/components/report/generate-report-button";
 import { ReportManualInputs } from "@/components/report/report-manual-inputs";
+import { ReportLeadEvents } from "@/components/report/report-lead-events";
+import { ReportMoverPicker } from "@/components/report/report-mover-picker";
+import { getReportConfig } from "@/lib/report/report-config-store";
 import { FinalizeReportButton } from "@/components/report/finalize-report-button";
 import { ReportCopyLinkButton } from "@/components/report/report-copy-link-button";
 import { SendToReviewButton } from "@/components/send-to-review-button";
@@ -88,6 +91,9 @@ export default async function ReportPage({
   if (!isValidPeriodKey(period)) notFound();
 
   const snapshot = await getReport(slug, period);
+  // Which GA4 events count as leads for this client — editable below the
+  // manual inputs so a wrong mapping is fixed here, not inside GA4.
+  const reportConfig = await getReportConfig(slug);
 
   // Print/PDF surface — bare branded document, no app chrome.
   const sp = await searchParams;
@@ -180,6 +186,20 @@ export default async function ReportPage({
                   period={period}
                   channels={snapshot.leads.channels}
                   notes={snapshot.notes}
+                />
+
+                {/* Que eventos GA4 contam como lead para este cliente */}
+                <ReportLeadEvents slug={slug} eventMap={reportConfig.eventMap} />
+
+                {/* Curadoria das subidas de posição mostradas ao cliente */}
+                <ReportMoverPicker
+                  slug={slug}
+                  period={period}
+                  candidates={
+                    snapshot.gsc.moverCandidates ?? snapshot.gsc.topMovers
+                  }
+                  selected={snapshot.gsc.topMovers}
+                  curated={Boolean(snapshot.gsc.moversCurated)}
                 />
 
                 {/* Passo 3 — finalizar + ações do cliente (gated) */}

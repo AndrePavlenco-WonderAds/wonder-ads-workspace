@@ -20,13 +20,25 @@ export type ReportSection =
   | "topQueries";
 
 /** GA4 event names for each lead type — defaults match the spec's GTM guide,
- *  overridable per client because every GTM container names events its own way. */
+ *  overridable per client because every GTM container names events its own way.
+ *
+ *  A LIST per type, not one name (v76.16). Renaming an event in GA4 to match
+ *  our default is destructive: GA4 does not backfill, so every month before
+ *  the rename reads 0. Listing the old AND the new name lets one client span
+ *  a rename with its history intact — the report sums all of them.  */
 export type LeadEventMap = {
-  form: string;
-  call: string;
-  email: string;
-  whatsapp: string;
+  form: string[];
+  call: string[];
+  email: string[];
+  whatsapp: string[];
 };
+
+export const LEAD_EVENT_KEYS: (keyof LeadEventMap)[] = [
+  "form",
+  "call",
+  "email",
+  "whatsapp",
+];
 
 export type ReportConfig = {
   /** GA4 numeric property id override (null = auto-resolve by domain). */
@@ -45,10 +57,10 @@ export type ReportConfig = {
 };
 
 export const DEFAULT_LEAD_EVENT_MAP: LeadEventMap = {
-  form: "generate_lead",
-  call: "click_to_call",
-  email: "click_to_email",
-  whatsapp: "whatsapp_click",
+  form: ["generate_lead"],
+  call: ["click_to_call"],
+  email: ["click_to_email"],
+  whatsapp: ["whatsapp_click"],
 };
 
 /** Default AI-referral matchers (host fragments). The report matches each GA4
@@ -89,7 +101,12 @@ export function defaultReportConfig(slug: string, currency = "EUR"): ReportConfi
     gbpLocationId: null,
     timezone: "Europe/Lisbon",
     currency,
-    eventMap: { ...DEFAULT_LEAD_EVENT_MAP },
+    eventMap: {
+      form: [...DEFAULT_LEAD_EVENT_MAP.form],
+      call: [...DEFAULT_LEAD_EVENT_MAP.call],
+      email: [...DEFAULT_LEAD_EVENT_MAP.email],
+      whatsapp: [...DEFAULT_LEAD_EVENT_MAP.whatsapp],
+    },
     llmRegex: [...DEFAULT_LLM_REGEX],
     sectionsEnabled: Object.fromEntries(
       ALL_SECTIONS.map((s) => [s, true]),
@@ -101,13 +118,34 @@ export function defaultReportConfig(slug: string, currency = "EUR"): ReportConfi
 const asStr = (v: unknown): string | null =>
   typeof v === "string" && v.trim() ? v.trim() : null;
 
+/** Accepts the pre-v76.16 single-string shape as well as a list, so configs
+ *  saved before the change keep working untouched. Trims, drops blanks and
+ *  de-dupes; an empty result falls back to the default for that type. */
+function asEventList(v: unknown, fallback: string[]): string[] {
+  const raw = Array.isArray(v) ? v : typeof v === "string" ? [v] : [];
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const item of raw) {
+    if (typeof item !== "string") continue;
+    const name = item.trim();
+    if (!name || seen.has(name)) continue;
+    seen.add(name);
+    out.push(name);
+    if (out.length >= MAX_EVENT_ALIASES) break;
+  }
+  return out.length ? out : [...fallback];
+}
+
+/** Cap per lead type — a paste accident shouldn't blow up the GA4 filter. */
+export const MAX_EVENT_ALIASES = 10;
+
 function normalizeEventMap(v: unknown): LeadEventMap {
   const o = (v ?? {}) as Partial<Record<keyof LeadEventMap, unknown>>;
   return {
-    form: asStr(o.form) ?? DEFAULT_LEAD_EVENT_MAP.form,
-    call: asStr(o.call) ?? DEFAULT_LEAD_EVENT_MAP.call,
-    email: asStr(o.email) ?? DEFAULT_LEAD_EVENT_MAP.email,
-    whatsapp: asStr(o.whatsapp) ?? DEFAULT_LEAD_EVENT_MAP.whatsapp,
+    form: asEventList(o.form, DEFAULT_LEAD_EVENT_MAP.form),
+    call: asEventList(o.call, DEFAULT_LEAD_EVENT_MAP.call),
+    email: asEventList(o.email, DEFAULT_LEAD_EVENT_MAP.email),
+    whatsapp: asEventList(o.whatsapp, DEFAULT_LEAD_EVENT_MAP.whatsapp),
   };
 }
 

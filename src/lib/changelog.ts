@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.16",
+    date: "2026-07-29",
+    title: "Relatório Mensal — eventos de lead configuráveis + curadoria das subidas",
+    highlights: [
+      "**🏷️ Os eventos de lead passam a definir-se na app, por cliente.** Novo cartão *«Eventos de lead no GA4»* na página do relatório: dizes lá que eventos contam como Formulário, Ligar, Email e WhatsApp. Antes a única solução era **renomear o evento dentro do GA4** para bater com o nosso padrão — e o GA4 **não recupera o histórico**, por isso todos os meses anteriores ao rename passavam a ler **0**. Era exatamente o que estava a acontecer na Sentir Saúde.",
+      "**➕ Vários nomes por tipo de lead.** Cada linha aceita **uma lista** de eventos separados por vírgula. Se o cliente mudou o nome do evento a meio do ano, listas o antigo **e** o novo e o relatório soma os dois — a série fica contínua em vez de partida ao meio. Até 10 nomes por tipo.",
+      "**🎯 Escolhes que subidas de posição vão para o cliente.** A secção *«Maiores subidas»* deixa de ser automática: a app propõe agora até **20 candidatas** e tu marcas as **5** que entram no relatório. Ordenar por movimento puro trazia **marcas de concorrentes** (o «body motion vila do conde» da Sentir Saúde) e termos que o cliente não anda a trabalhar — agora só entra o que for marcado. Sem nenhuma escolhida, a secção não aparece.",
+      "**🏷️ Selo «Seleção automática».** Enquanto ninguém curar, a lista mostra-se marcada como automática, para se ver de relance que aquilo ainda não passou por olho humano.",
+      "**♻️ Compatível com o que já está guardado.** Configurações antigas (um só nome em texto) são lidas na mesma e convertidas para lista; relatórios gerados antes desta versão continuam a abrir e ganham as candidatas assim que forem regerados.",
+    ],
+  },
+  {
     version: "76.15",
     date: "2026-07-28",
     title: "Relatório Mensal — posição atual de todas as keywords trabalhadas",

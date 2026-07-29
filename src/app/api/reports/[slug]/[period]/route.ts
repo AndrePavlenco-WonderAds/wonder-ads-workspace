@@ -8,7 +8,7 @@ import { revalidatePath } from "next/cache";
 import { getCurrentEmployee } from "@/lib/auth/server";
 import { editableDepts } from "@/lib/auth/credentials";
 import { getReport, saveReport } from "@/lib/report/report-store";
-import { recomputeDerived } from "@/lib/report/report-build";
+import { recomputeDerived, MAX_SHOWN_MOVERS } from "@/lib/report/report-build";
 import {
   manualMetric,
   naMetric,
@@ -45,6 +45,8 @@ export async function PUT(
     channels?: Partial<Record<LeadChannelKey, ChannelEdit>>;
     notes?: unknown;
     status?: unknown;
+    /** Queries the consultant picked to show as position gains (max 5). */
+    movers?: unknown;
   };
 
   let next: MonthlyReportSnapshot = { ...snap };
@@ -75,6 +77,21 @@ export async function PUT(
 
   if (typeof body.notes === "string") {
     next = { ...next, notes: body.notes.slice(0, 4000) };
+  }
+
+  // Curated position-gain selection. Only queries that are actually in this
+  // report's candidate list are accepted — the picker can't invent a row.
+  if (Array.isArray(body.movers)) {
+    const candidates = next.gsc.moverCandidates ?? next.gsc.topMovers;
+    const wanted = body.movers.filter((q): q is string => typeof q === "string");
+    const picked = wanted
+      .map((q) => candidates.find((c) => c.query === q))
+      .filter((m): m is (typeof candidates)[number] => Boolean(m))
+      .slice(0, MAX_SHOWN_MOVERS);
+    next = {
+      ...next,
+      gsc: { ...next.gsc, topMovers: picked, moversCurated: true },
+    };
   }
 
   // Recompute derived fields (total, exec summary, GBP mirror, status).

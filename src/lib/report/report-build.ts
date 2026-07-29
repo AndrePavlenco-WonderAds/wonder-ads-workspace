@@ -30,6 +30,10 @@ import {
   type ReportStatus,
 } from "./report-types";
 
+/** Movers shown in the client-facing report. Candidates are wider (20) so
+ *  the consultant can swap out competitor brands / off-strategy terms. */
+export const MAX_SHOWN_MOVERS = 5;
+
 const ga4Metric = (
   pair: MetricPair,
   unit: ReportMetric["unit"],
@@ -384,7 +388,10 @@ export async function buildMonthlyReport(
             position: p.position,
           })),
           keywordStats: gsc.keywordStats,
-          topMovers: gsc.topMovers,
+          // Show the top 5 by default; keep all 20 for the picker.
+          topMovers: gsc.topMovers.slice(0, MAX_SHOWN_MOVERS),
+          moverCandidates: gsc.topMovers,
+          moversCurated: false,
           targetRanks: gsc.targetRanks,
         }
       : {

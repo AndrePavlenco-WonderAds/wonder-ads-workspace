@@ -133,7 +133,8 @@ export async function getGa4MonthlyReport(
 
   const { current, previous, eventMap, llmRegex } = opts;
   // Unique event names to query (two lead types could share a name).
-  const eventNames = Array.from(new Set(Object.values(eventMap)));
+  // Flattened alias list — one GA4 filter covering every name across types.
+  const eventNames = Array.from(new Set(Object.values(eventMap).flat()));
 
   try {
     const [organicRows, googleOrgRows, leadRows, probeRows, aiRows] =
@@ -243,20 +244,28 @@ export async function getGa4MonthlyReport(
       const name = realDims(r)[0] ?? "";
       if (name && num(r, 0) > 0) seen.add(name);
     }
-    const leadPair = (evt: string): MetricPair => ({
-      value: counts[evt]?.cur ?? 0,
-      previous: counts[evt]?.prev ?? 0,
-    });
+    // Sum every alias configured for a lead type. A client that renamed the
+    // event mid-year keeps a continuous series as long as both names are listed.
+    const leadPair = (evts: string[]): MetricPair =>
+      evts.reduce<MetricPair>(
+        (acc, evt) => ({
+          value: (acc.value ?? 0) + (counts[evt]?.cur ?? 0),
+          previous: (acc.previous ?? 0) + (counts[evt]?.prev ?? 0),
+        }),
+        { value: 0, previous: 0 },
+      );
+    // Instrumented when ANY alias has fired in the last 365 days.
+    const anySeen = (evts: string[]) => evts.some((e) => seen.has(e));
     const leads: Ga4LeadBlock = {
       form: leadPair(eventMap.form),
       call: leadPair(eventMap.call),
       email: leadPair(eventMap.email),
       whatsapp: leadPair(eventMap.whatsapp),
       instrumented: {
-        form: seen.has(eventMap.form),
-        call: seen.has(eventMap.call),
-        email: seen.has(eventMap.email),
-        whatsapp: seen.has(eventMap.whatsapp),
+        form: anySeen(eventMap.form),
+        call: anySeen(eventMap.call),
+        email: anySeen(eventMap.email),
+        whatsapp: anySeen(eventMap.whatsapp),
       },
     };
 

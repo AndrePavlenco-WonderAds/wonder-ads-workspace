@@ -536,6 +536,10 @@ export type GscMonthlyReport =
  *  miss them — GSC sorts by clicks, not by relevance to us. */
 const TARGET_MATCH_ROWS = 5000;
 
+/** How many position-gain candidates to surface for the consultant to pick
+ *  from. The report itself still shows at most 5. */
+const MOVER_CANDIDATES = 20;
+
 /** GSC lowercases and strips accents inconsistently across locales; compare
  *  on a normalised form so "fisioterapia lisboa" matches what we stored. */
 function kwKey(s: string): string {
@@ -741,7 +745,10 @@ export async function getGscMonthlyReport(
       })
       .filter((m) => m.change > 0.1)
       .sort((a, b) => b.change - a.change)
-      .slice(0, 5);
+      // 20 candidates, not 5: the consultant curates which ones reach the
+      // client (a competitor's brand name or an off-strategy term can win on
+      // raw movement and still be the wrong thing to show).
+      .slice(0, MOVER_CANDIDATES);
 
     return {
       status: "ok",
