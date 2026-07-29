@@ -9,6 +9,7 @@ import { listEmployees, SEED_EMPLOYEES } from "@/lib/admin-employees-store";
 import { countRoadmaps } from "@/lib/roadmap-admin-helpers";
 import { buildAdminClientViews } from "@/lib/admin-roster";
 import { getOnboardingClients } from "@/lib/onboarding-clients-store";
+import { listPenalties, isActive } from "@/lib/admin-penalties-store";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -64,6 +65,15 @@ export default async function AdminPage() {
     /* roster unavailable — show 0 */
   }
 
+  // Penalties card count — entries still counting (last 12 months, not
+  // removed). Falls back to 0 so the landing always renders.
+  let penaltiesCount = 0;
+  try {
+    penaltiesCount = (await listPenalties()).filter((p) => isActive(p)).length;
+  } catch {
+    /* KV unavailable — show 0 */
+  }
+
   return (
     <PageShell>
       <Link
@@ -79,6 +89,7 @@ export default async function AdminPage() {
         roadmapsCount={roadmapsCount}
         financesCount={financesCount}
         onboardingCount={onboardingCount}
+        penaltiesCount={penaltiesCount}
       />
     </PageShell>
   );

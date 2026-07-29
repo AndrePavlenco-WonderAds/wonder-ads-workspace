@@ -13,6 +13,19 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.18",
+    date: "2026-07-29",
+    title: "SuperAdmin — Penalizações",
+    highlights: [
+      "**🛡️ Novo cartão «Penalizações» na SuperAdmin Control Suite.** Uma linha por colaborador, de **todos os departamentos**, com o respetivo registo disciplinar. Cada penalização tem **gravidade 1 a 3** — *Leve* (cinzento), *Médio* (amarelo), *Grave* (vermelho) — título, descrição e **data da ocorrência separada da data de registo** (as coisas registam-se dias depois de acontecerem).",
+      "**📊 Overview no topo.** Penalizações ativas, pontuação total, quantos colaboradores têm ocorrências, quantos estão limpos, e o total de médias e graves. Cada linha traz o seu nível de risco — *Sem ocorrências · Atenção · Preocupante · Crítico*.",
+      "**🗑️ Remover exige motivo e não apaga nada.** A remoção é **soft delete**: a penalização deixa de contar imediatamente mas fica no histórico, riscada, com quem a removeu, quando e porquê. Um registo disciplinar que se pode apagar em silêncio perde todo o valor na primeira vez que for contestado. Há também **repor**, para uma remoção feita por engano.",
+      "**⏳ A pontuação só conta os últimos 12 meses.** Uma ocorrência de há dois anos não pode pesar o mesmo que a da semana passada. As antigas ficam no histórico marcadas como **«expirada»** e a cinzento — para a descida da pontuação ser explicável, não misteriosa.",
+      "**👥 Aparecem todos, mesmo sem ocorrências.** A lista mostra a equipa inteira e não só quem tem registos. Quem já saiu do roster mas tem histórico continua a aparecer, em vez de o registo se perder.",
+      "**🔒 Só SuperAdmin.** Leitura e escrita passam pelo `isCurrentUserAdmin`, e o autor de cada registo e de cada remoção fica gravado automaticamente a partir da sessão. Datas de ocorrência no futuro são recusadas.",
+    ],
+  },
+  {
     version: "76.17",
     date: "2026-07-29",
     title: "Relatório Mensal — gerar o mês fechado ou o mês em curso",

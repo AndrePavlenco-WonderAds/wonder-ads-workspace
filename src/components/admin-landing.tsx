@@ -15,6 +15,7 @@ import {
   Compass,
   Wallet,
   Rocket,
+  ShieldAlert,
   ArrowRight,
 } from "lucide-react";
 
@@ -33,12 +34,14 @@ export function AdminLanding({
   roadmapsCount,
   financesCount,
   onboardingCount,
+  penaltiesCount,
 }: {
   projectsCount: number;
   employeesCount: number;
   roadmapsCount: number;
   financesCount: number;
   onboardingCount: number;
+  penaltiesCount: number;
 }) {
 
   const blocks: ChoiceBlock[] = [
@@ -86,6 +89,15 @@ export function AdminLanding({
       count: financesCount,
       badge: financesCount === 1 ? "invoice" : "invoices",
       Icon: Wallet,
+    },
+    {
+      href: "/admin/penalties",
+      title: "Penalizações",
+      blurb:
+        "Registo disciplinar de toda a equipa, por departamento. Gravidade 1 a 3, título e descrição, com histórico completo — remover exige motivo e fica registado.",
+      count: penaltiesCount,
+      badge: penaltiesCount === 1 ? "ativa" : "ativas",
+      Icon: ShieldAlert,
     },
   ];
 
