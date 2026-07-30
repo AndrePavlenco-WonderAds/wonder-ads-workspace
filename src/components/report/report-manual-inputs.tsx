@@ -42,7 +42,9 @@ export function ReportManualInputs({
     () =>
       channels.some(
         (c) =>
-          ["form", "call", "email", "whatsapp"].includes(c.key) &&
+          // Every GA4-sourced lead line: the four defaults + the client's
+          // extra lines (`custom:<id>`). GBP rows are always manual.
+          !c.key.startsWith("gbp") &&
           c.metric.source === "na" &&
           !c.metric.manualNa &&
           c.metric.value === null,

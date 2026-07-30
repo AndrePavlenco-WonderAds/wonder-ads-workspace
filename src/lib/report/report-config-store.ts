@@ -9,6 +9,7 @@
 // workspace session on every route — same model as ads-connections-store.
 
 import { kv } from "@vercel/kv";
+import { MAX_CUSTOM_LEAD_EVENTS, type CustomLeadEvent } from "./report-types";
 
 const KEY_PREFIX = "report-config:";
 
@@ -50,6 +51,9 @@ export type ReportConfig = {
   timezone: string;
   currency: string;
   eventMap: LeadEventMap;
+  /** Extra lead lines beyond the four defaults (2nd unit's phone, a form that
+   *  only exists on one page…). Empty for most clients. */
+  extraLeadEvents: CustomLeadEvent[];
   /** Regex source strings matched against GA4 sessionSource for AI Visibility. */
   llmRegex: string[];
   sectionsEnabled: Record<ReportSection, boolean>;
@@ -107,6 +111,7 @@ export function defaultReportConfig(slug: string, currency = "EUR"): ReportConfi
       email: [...DEFAULT_LEAD_EVENT_MAP.email],
       whatsapp: [...DEFAULT_LEAD_EVENT_MAP.whatsapp],
     },
+    extraLeadEvents: [],
     llmRegex: [...DEFAULT_LLM_REGEX],
     sectionsEnabled: Object.fromEntries(
       ALL_SECTIONS.map((s) => [s, true]),
@@ -149,6 +154,31 @@ function normalizeEventMap(v: unknown): LeadEventMap {
   };
 }
 
+/** Ids we accept from a client (and can safely embed in a channel key). */
+const ID_RE = /^[A-Za-z0-9][A-Za-z0-9_-]{0,23}$/;
+
+/** Extra lead lines. A line with no label or no event name is dropped — it
+ *  would render as an unnamed row the consultant can never fill. */
+function normalizeExtraLeadEvents(v: unknown): CustomLeadEvent[] {
+  if (!Array.isArray(v)) return [];
+  const out: CustomLeadEvent[] = [];
+  const ids = new Set<string>();
+  for (const item of v) {
+    if (!item || typeof item !== "object") continue;
+    const o = item as Record<string, unknown>;
+    const label = typeof o.label === "string" ? o.label.trim().slice(0, 60) : "";
+    const events = asEventList(o.events, []);
+    if (!label || !events.length) continue;
+    let id =
+      typeof o.id === "string" && ID_RE.test(o.id) ? o.id : `x${out.length + 1}`;
+    while (ids.has(id)) id = `${id}_`;
+    ids.add(id);
+    out.push({ id, label, events });
+    if (out.length >= MAX_CUSTOM_LEAD_EVENTS) break;
+  }
+  return out;
+}
+
 function normalizeConfig(raw: unknown, slug: string): ReportConfig {
   const base = defaultReportConfig(slug, "EUR");
   if (!raw || typeof raw !== "object") return base;
@@ -170,6 +200,7 @@ function normalizeConfig(raw: unknown, slug: string): ReportConfig {
     timezone: asStr(o.timezone) ?? base.timezone,
     currency: asStr(o.currency) ?? base.currency,
     eventMap: normalizeEventMap(o.eventMap),
+    extraLeadEvents: normalizeExtraLeadEvents(o.extraLeadEvents),
     llmRegex: regex && regex.length ? regex : base.llmRegex,
     sectionsEnabled: sections,
     updatedAt: typeof o.updatedAt === "number" ? o.updatedAt : 0,

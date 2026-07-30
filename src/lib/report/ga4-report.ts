@@ -17,6 +17,7 @@ import { resolveGa4Property, runReport } from "@/lib/ga4";
 import { googleAuthConfigured } from "@/lib/google-auth";
 import type { DateRange } from "./report-dates";
 import type { LeadEventMap } from "./report-config-store";
+import type { CustomLeadEvent } from "./report-types";
 
 /** A month value with its prior-month counterpart (null when unavailable). */
 export type MetricPair = { value: number; previous: number | null };
@@ -29,6 +30,9 @@ export type Ga4LeadBlock = {
   /** Whether each mapped event exists in the property at all (365-day probe).
    *  false → surface "não instrumentado", never a real 0. */
   instrumented: Record<keyof LeadEventMap, boolean>;
+  /** The client's extra lead lines (2nd unit's phone, per-page form…), in the
+   *  configured order and keyed by the line's stable id. */
+  extra: { id: string; pair: MetricPair; instrumented: boolean }[];
 };
 
 export type Ga4OrganicBlock = {
@@ -121,6 +125,8 @@ export async function getGa4MonthlyReport(
     current: DateRange;
     previous: DateRange;
     eventMap: LeadEventMap;
+    /** Extra per-client lead lines, counted alongside the four defaults. */
+    extraEvents?: CustomLeadEvent[];
     llmRegex: string[];
     propertyIdOverride?: string | null;
   },
@@ -132,9 +138,16 @@ export async function getGa4MonthlyReport(
   const { token, propertyId } = resolved;
 
   const { current, previous, eventMap, llmRegex } = opts;
+  const extraEvents = opts.extraEvents ?? [];
   // Unique event names to query (two lead types could share a name).
-  // Flattened alias list — one GA4 filter covering every name across types.
-  const eventNames = Array.from(new Set(Object.values(eventMap).flat()));
+  // Flattened alias list — one GA4 filter covering every name across types,
+  // the four defaults plus the client's extra lines.
+  const eventNames = Array.from(
+    new Set([
+      ...Object.values(eventMap).flat(),
+      ...extraEvents.flatMap((e) => e.events),
+    ]),
+  );
 
   try {
     const [organicRows, googleOrgRows, leadRows, probeRows, aiRows] =
@@ -267,6 +280,11 @@ export async function getGa4MonthlyReport(
         email: anySeen(eventMap.email),
         whatsapp: anySeen(eventMap.whatsapp),
       },
+      extra: extraEvents.map((e) => ({
+        id: e.id,
+        pair: leadPair(e.events),
+        instrumented: anySeen(e.events),
+      })),
     };
 
     // --- AI Visibility ---

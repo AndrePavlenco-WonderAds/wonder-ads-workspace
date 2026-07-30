@@ -265,6 +265,7 @@ export async function buildMonthlyReport(
       current: windows.current,
       previous: windows.prevMonth,
       eventMap: config.eventMap,
+      extraEvents: config.extraLeadEvents,
       llmRegex: config.llmRegex,
       propertyIdOverride: config.ga4PropertyId,
     }),
@@ -310,6 +311,21 @@ export async function buildMonthlyReport(
     for (const key of ["form", "call", "email", "whatsapp"] as const) {
       channels.push({ key, label: labels[key], metric: pendingMetric("count", "na") });
     }
+  }
+  // The client's extra lead lines — a second unit's phone, a form that only
+  // lives on one landing page… Own row, own label, counted in the total.
+  for (const line of config.extraLeadEvents) {
+    const pulled =
+      ga4.status === "ok"
+        ? ga4.leads.extra.find((e) => e.id === line.id)
+        : undefined;
+    channels.push({
+      key: `custom:${line.id}`,
+      label: line.label,
+      metric: pulled
+        ? leadMetric(pulled.pair, pulled.instrumented)
+        : pendingMetric("count", "na"),
+    });
   }
   // GBP lead channels — real values when the Business Profile Performance API
   // is reachable, else pending manual input (never a fabricated 0).

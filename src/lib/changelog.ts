@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.19",
+    date: "2026-07-30",
+    title: "Relatório Mensal — linhas de lead adicionais (2.ª unidade, 2.º telefone)",
+    highlights: [
+      "**➕ Podes acrescentar até 8 linhas de lead às quatro por defeito.** Em *Eventos de lead no GA4*, um botão **«Adicionar linha»** com dois campos: o **nome que o cliente vê** (ex.: *Ligar · Unidade Cascais*) e os **eventos GA4** que a alimentam. Nasceu do caso das Clínicas Fernando Almeida: duas unidades, dois números de telefone, e um único campo *Cliques em Ligar* que os obrigava a partilhar a mesma linha.",
+      "**📄 Cada linha é uma linha própria no relatório.** Aparece no gráfico de canais com o nome que escreveste e **soma ao total consolidado de leads** — não é um campo interno. Serve tanto para separar unidades como para formulários com eventos diferentes em páginas diferentes (uma landing de implantes, um formulário de marcações).",
+      "**🔗 O nome e os eventos são independentes.** Cada linha tem um id fixo, por isso mudar-lhe o nome — ou reordenar a lista — **não desloca valores já preenchidos à mão** noutros meses. Cada linha aceita vários eventos separados por vírgula, tal como as quatro por defeito (útil quando o evento foi renomeado a meio do ano).",
+      "**⚠️ Aviso contra dupla contagem.** O painel avisa para não repetir o mesmo evento em duas linhas — seria contado duas vezes no total. E uma linha meia preenchida (nome sem evento, ou evento sem nome) é recusada com mensagem, em vez de desaparecer em silêncio ao gravar.",
+      "**🔧 Linhas não instrumentadas seguem as mesmas regras.** Se o evento de uma linha nova ainda não dispara no GA4, ela entra em *Preencher dados em falta* para valor manual ou N/A — nunca aparece um 0 falso ao cliente.",
+    ],
+  },
+  {
     version: "76.18",
     date: "2026-07-29",
     title: "SuperAdmin — Penalizações",

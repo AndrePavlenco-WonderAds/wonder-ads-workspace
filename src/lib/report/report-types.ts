@@ -33,7 +33,27 @@ export type LeadChannelKey =
   | "whatsapp"
   | "gbpWebsite"
   | "gbpDirections"
-  | "gbpCall";
+  | "gbpCall"
+  /** An extra line configured for this client — see CustomLeadEvent. */
+  | `custom:${string}`;
+
+/** An extra lead line beyond the four defaults: a second phone number for a
+ *  second unit, a form that only lives on one landing page, a per-unit contact
+ *  form… Each is its own row in the report, with its own label and its own
+ *  list of GA4 event names, and each counts towards the consolidated total.
+ *
+ *  `id` is stable and independent of the label/events, so renaming a line (or
+ *  reordering the list) never re-points a manually filled value: the report
+ *  channel key is `custom:<id>`. */
+export type CustomLeadEvent = {
+  id: string;
+  label: string;
+  events: string[];
+};
+
+/** Cap on extra lines per client — enough for a multi-unit clinic without
+ *  letting the GA4 event filter grow unbounded. */
+export const MAX_CUSTOM_LEAD_EVENTS = 8;
 
 export type LeadChannel = {
   key: LeadChannelKey;

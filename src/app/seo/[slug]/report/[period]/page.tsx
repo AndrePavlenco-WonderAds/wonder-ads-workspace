@@ -189,7 +189,11 @@ export default async function ReportPage({
                 />
 
                 {/* Que eventos GA4 contam como lead para este cliente */}
-                <ReportLeadEvents slug={slug} eventMap={reportConfig.eventMap} />
+                <ReportLeadEvents
+                  slug={slug}
+                  eventMap={reportConfig.eventMap}
+                  extraLeadEvents={reportConfig.extraLeadEvents}
+                />
 
                 {/* Curadoria das subidas de posição mostradas ao cliente */}
                 <ReportMoverPicker

@@ -7,7 +7,7 @@
 // backfill, so every month before the rename silently reads 0.
 //
 //   GET → current config
-//   PUT → save { eventMap?, ga4PropertyId?, gscSiteUrl? }
+//   PUT → save { eventMap?, extraLeadEvents?, ga4PropertyId?, gscSiteUrl? }
 
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
@@ -20,6 +20,10 @@ import {
   MAX_EVENT_ALIASES,
   type LeadEventMap,
 } from "@/lib/report/report-config-store";
+import {
+  MAX_CUSTOM_LEAD_EVENTS,
+  type CustomLeadEvent,
+} from "@/lib/report/report-types";
 
 export const runtime = "nodejs";
 
@@ -69,12 +73,14 @@ export async function PUT(
   const { slug } = await params;
   const body = (await req.json().catch(() => ({}))) as {
     eventMap?: unknown;
+    extraLeadEvents?: unknown;
     ga4PropertyId?: unknown;
     gscSiteUrl?: unknown;
   };
 
   const patch: {
     eventMap?: LeadEventMap;
+    extraLeadEvents?: CustomLeadEvent[];
     ga4PropertyId?: string | null;
     gscSiteUrl?: string | null;
   } = {};
@@ -91,6 +97,26 @@ export async function PUT(
       if (parsed) next[key] = parsed;
     }
     patch.eventMap = next;
+  }
+
+  // Extra lead lines. Unlike eventMap, an empty array IS meaningful here — it
+  // is how the consultant deletes every extra line — so the array is written
+  // through as sent. The store drops any entry missing a label or an event.
+  if (Array.isArray(body.extraLeadEvents)) {
+    const lines: CustomLeadEvent[] = [];
+    for (const item of body.extraLeadEvents.slice(0, MAX_CUSTOM_LEAD_EVENTS)) {
+      if (!item || typeof item !== "object") continue;
+      const o = item as Record<string, unknown>;
+      const events = parseEventList(o.events);
+      const label = typeof o.label === "string" ? o.label.trim() : "";
+      if (!label || !events) continue;
+      lines.push({
+        id: typeof o.id === "string" ? o.id : "",
+        label,
+        events,
+      });
+    }
+    patch.extraLeadEvents = lines;
   }
 
   // "" clears an override back to auto-resolution; undefined leaves it alone.
