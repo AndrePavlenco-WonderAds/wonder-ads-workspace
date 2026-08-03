@@ -19,6 +19,7 @@
 //    confirma com o servidor. Se falhar, volta e diz porquê.
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -83,6 +84,13 @@ export function NotificationsDrawer({
   const [items, setItems] = useState(initial);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // O painel sai para o <body> por portal. NÃO É COSMÉTICO: o header do
+  // workspace tem `backdrop-blur`, e um elemento com backdrop-filter passa a
+  // ser o bloco de contenção dos descendentes `position: fixed`. Renderizado
+  // no sítio, o painel ficava preso à caixa do header — 68px de altura, sem
+  // fundo visível e com o conteúdo esmagado.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
   // O servidor volta a calcular a lista em cada navegação; sem isto o painel
   // ficaria preso ao estado do primeiro render da sessão.
@@ -182,7 +190,9 @@ export function NotificationsDrawer({
         )}
       </button>
 
-      {open && (
+      {open &&
+        mounted &&
+        createPortal(
         <div className="fixed inset-0 z-[60]" role="dialog" aria-modal="true">
           <button
             type="button"
@@ -321,8 +331,9 @@ export function NotificationsDrawer({
               </p>
             </footer>
           </aside>
-        </div>
-      )}
+        </div>,
+          document.body,
+        )}
     </>
   );
 }
