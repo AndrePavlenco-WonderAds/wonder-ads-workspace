@@ -57,10 +57,10 @@ export type NotificationRule = {
   createdBy: string;
 };
 
-/** Quantos períodos passados continuam a aparecer. Dois meses: o relatório de
- *  julho que ninguém enviou tem de continuar à frente dos olhos em agosto —
- *  mas não até ao fim do ano. */
-export const LOOKBACK_PERIODS = 2;
+/** Quantos períodos passados continuam a aparecer. Um: o relatório do mês
+ *  passado que ficou por enviar tem de continuar à frente dos olhos este mês
+ *  — mas uma lista com meio ano de atrasos deixa de se ler. */
+export const LOOKBACK_PERIODS = 1;
 
 export const DEPT_OPTIONS = ["SEO", "ADS", "Web", "Commercial", "All"] as const;
 
@@ -79,7 +79,12 @@ export const DEFAULT_NOTIFICATION_RULES: NotificationRule[] = [
     actionLabel: "Abrir Monthly Report",
     actionHref: "/seo/{slug}/report",
     enabled: true,
-    createdAt: 0,
+    // Data de entrada em vigor, não decorativa: nenhuma ocorrência é gerada
+    // antes do mês em que a regra passou a existir. Sem isto, no primeiro dia
+    // a app acusava toda a gente de meses de relatórios em atraso que nunca
+    // lhes foram pedidos — e a primeira coisa que se aprende sobre o sino
+    // seria a despachá-lo em bloco.
+    createdAt: new Date(2026, 7, 1).getTime(), // 01/08/2026
     createdBy: "sistema",
   },
 ];
@@ -132,9 +137,20 @@ export function occurrencesFor(
   now: Date,
   lookback: number = LOOKBACK_PERIODS,
 ): NotificationOccurrence[] {
+  // Nada antes do mês em que a regra passou a existir. Uma regra criada hoje
+  // não pode reclamar trabalho de trás — ninguém foi avisado na altura.
+  const floor = rule.createdAt
+    ? new Date(
+        new Date(rule.createdAt).getFullYear(),
+        new Date(rule.createdAt).getMonth(),
+        1,
+      ).getTime()
+    : 0;
+
   if (rule.schedule.kind === "once") {
     const at = new Date(`${rule.schedule.date}T09:00:00`);
     if (Number.isNaN(at.getTime()) || at.getTime() > now.getTime()) return [];
+    if (at.getTime() < floor) return [];
     return [
       {
         periodKey: rule.schedule.date,
@@ -149,6 +165,7 @@ export function occurrencesFor(
   for (let back = 0; back <= lookback; back += 1) {
     const anchor = new Date(now.getFullYear(), now.getMonth() - back, day);
     if (anchor.getTime() > now.getTime()) continue; // ainda não chegou o dia
+    if (anchor.getTime() < floor) continue; // anterior à regra
     out.push({
       periodKey: monthKey(anchor),
       dueAt: anchor.getTime(),

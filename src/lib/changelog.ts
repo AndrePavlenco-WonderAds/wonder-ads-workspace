@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.25",
+    date: "2026-08-03",
+    title: "Notificações — o painel abre a sério e não inventa atrasos",
+    highlights: [
+      "**🩹 O painel abria vazio e esmagado contra o header.** Um elemento com `backdrop-filter` passa a ser o **bloco de contenção** dos descendentes `position: fixed` — e o header do workspace tem `backdrop-blur`. O painel, que vive dentro dele, resolvia o `inset-0` contra a caixa do header: 68px de altura, sem fundo e com o conteúdo por cima da página. Passa a ser renderizado no `<body>` por portal.",
+      "**🗓️ Uma regra não pode reclamar trabalho anterior a si própria.** Sem isto, no primeiro dia cada consultor de SEO abria o sino e encontrava **três meses** de relatórios «em atraso» que nunca lhe foram pedidos — e a primeira coisa que aprendia sobre o sino era a despachá-lo em bloco. Nenhuma ocorrência é gerada antes do mês em que a regra passou a existir, e a memória passou a ser de **um mês**: o de julho por enviar continua à frente dos olhos em agosto, e mais nada.",
+      "**🧹 Cada linha diz só sobre quem é.** O título do lembrete e o período estavam a repetir-se em cada uma das cinco linhas, por baixo do cabeçalho que já os dizia. Ficam só no cabeçalho do grupo.",
+    ],
+  },
+  {
     version: "76.24",
     date: "2026-08-03",
     title: "Safe Away — data de onboarding corrigida para 26/02/2026",

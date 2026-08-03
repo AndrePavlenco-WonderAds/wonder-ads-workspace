@@ -358,13 +358,18 @@ function NotificationRow({
         >
           {n.client?.icon ?? "•"}
         </span>
+        {/* O título do lembrete e o período vivem no cabeçalho do grupo — a
+            linha só precisa de dizer SOBRE QUEM é. Repeti-los aqui era ruído
+            cinco vezes seguidas. */}
         <span className="min-w-0 flex-1">
           <span className="block truncate text-[13.5px] font-medium text-white/90">
             {n.client ? n.client.title : n.title}
           </span>
-          <span className="block truncate text-[11px] text-white/35">
-            {n.client ? n.title : n.periodLabel}
-          </span>
+          {!n.client && (
+            <span className="block truncate text-[11px] text-white/35">
+              {n.periodLabel}
+            </span>
+          )}
         </span>
       </div>
 
