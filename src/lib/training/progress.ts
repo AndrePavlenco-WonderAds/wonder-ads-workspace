@@ -116,10 +116,13 @@ function moduleState(
   const watchedLessons = lessons.filter((l) => l.watched).length;
   const missingVideos = lessons.filter((l) => l.comingSoon).length;
 
-  const quizRequired = module.quiz.questions.length > 0;
+  // Um teste só é exigível quando há matéria para o estudar. Perguntas
+  // escritas sobre um módulo cujos vídeos ainda não existem não podem ser o
+  // "próximo passo" de ninguém — seria mandar alguém a exame sem aulas.
+  const quizRequired = module.quiz.questions.length > 0 && totalLessons > 0;
   const quizPassed = quizRequired
     ? hasPassedQuiz(attempts, module.quiz.id)
-    : true; // teste sem perguntas → não trava
+    : true; // teste sem perguntas (ou sem aulas gravadas) → não trava
   const attemptsCount = attempts.filter(
     (a) => a.quizId === module.quiz.id,
   ).length;
@@ -132,7 +135,9 @@ function moduleState(
   // 100% e continuava bloqueado, o que só confunde.
   const steps = totalLessons + (quizRequired ? 1 : 0);
   const doneSteps = watchedLessons + (quizRequired && quizPassed ? 1 : 0);
-  const percent = steps === 0 ? 100 : Math.round((doneSteps / steps) * 100);
+  // Sem nada disponível a barra fica a 0, não a 100: um módulo por gravar não
+  // é um módulo cumprido. Quem decide o desbloqueio é `completed`, não isto.
+  const percent = steps === 0 ? 0 : Math.round((doneSteps / steps) * 100);
 
   const minutesLeft = lessons
     .filter((l) => !l.comingSoon && !l.watched)

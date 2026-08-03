@@ -13,6 +13,21 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.21",
+    date: "2026-08-03",
+    title: "Formação — testes, roadmap novo e overview de C-Level (Fases 2 e 3)",
+    highlights: [
+      "**🧪 141 perguntas escritas, uma bateria por módulo.** Os testes da **Categoria Comum** (10 a 12 por módulo) não testam decoreba de organograma — testam mentalidade de campeão e responsabilidade: *«o cliente não responde há três dias, de quem é a responsabilidade de desbloquear?»*, *«cometeste um erro que o cliente ainda não notou»*, *«um mês mau: o que faz um campeão?»*. Nas especializações (5 a 8 por módulo), o foco é a responsabilidade concreta do departamento e o cuidar da conta. **São rascunhos de partida** — foram escritas antes de os vídeos existirem e devem ser afinadas no CMS assim que cada aula for gravada.",
+      "**🔒 A correção é feita no servidor e nunca sai antes do tempo.** A página do teste recebe as opções **sem** indicação de qual é a certa — não há forma de passar um teste a abrir o inspetor. As perguntas aparecem **baralhadas**, mas com ordem estável dentro da mesma tentativa (um F5 não reordena o teste a meio). Opções forjadas no pedido são ignoradas, e o motor recusa submissões de módulos bloqueados ou com aulas por ver.",
+      "**📝 Guarda-se tudo o que foi respondido, não só a nota.** Cada tentativa fica registada com a escolha feita em cada pergunta. No fim, o consultor vê a correção pergunta a pergunta com a explicação do porquê — e repete se chumbou.",
+      "**🗺️ O roadmap do consultor foi refeito de raiz.** Adotámos o desenho do onboarding de clientes: **hero com anel de progresso**, indicadores (aulas, testes, módulos, tempo), cartão de **«continuar onde ficaste»**, **rail vertical numerado** com um cartão por módulo, miniaturas por tipo de aula (formação, scenario, call real), e **barra fixa** com a percentagem e o botão de continuar quando fazes scroll. O teste é a última paragem de cada módulo.",
+      "**🎯 «Concluída» e «em dia» deixaram de ser a mesma coisa.** Quem vê tudo o que já está gravado mas ainda tem aulas por gravar recebe **«Estás em dia»**, não os parabéns de fim de trilha. E um teste só abre quando o módulo tiver aulas gravadas — perguntas escritas sobre vídeos que não existem não podem ser o próximo passo de ninguém.",
+      "**👥 Overview de C-Level com quatro áreas.** *Equipa* (tabela com pesquisa, filtro por trilha e ordenação, mais média da equipa e quem ainda não arrancou), *Gravações* (o que falta gravar, agrupado **por apresentador** — quem tem o quê para gravar), *Inscrições* (atribuir especializações, com repor para o automático) e *Conteúdo* (o CMS).",
+      "**🔍 Drill-down por consultor.** Cada aula com a **percentagem real vista** e a data de conclusão, cada tentativa expansível com **o que respondeu em cada pergunta e o que era correto**, e uma linha temporal da atividade. É isto que transforma o teste numa ferramenta para melhorar o conteúdo: uma pergunta que toda a gente erra costuma ser um vídeo mal explicado.",
+      "**✏️ CMS completo, sem tocar em código.** Trilhas, módulos, aulas (título, descrição, tipo, apresentador, link do vídeo, duração) e testes (perguntas, opções, resposta certa, nota mínima, tentativas, baralhar). É aqui que se colam os links dos vídeos à medida que forem gravados. Uma pergunta sem nenhuma opção correta é descartada ao gravar — não há testes impossíveis de passar. Há sempre **repor original**, e repor conteúdo **não apaga** o progresso de ninguém.",
+    ],
+  },
+  {
     version: "76.20",
     date: "2026-08-03",
     title: "Formação — Consultants Onboarding University (Fase 1)",

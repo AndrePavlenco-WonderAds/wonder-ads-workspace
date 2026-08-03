@@ -18,6 +18,8 @@
 // "Brevemente" ao consultor, não bloqueiam a progressão, e saltam à vista no
 // checklist de gravação do admin.
 
+import { TRAINING_QUESTIONS } from "@/lib/training/questions";
+
 /** Tipo de vídeo de uma aula. */
 export const LESSON_TYPES = ["formacao", "scenario", "call_real"] as const;
 export type TrainingLessonType = (typeof LESSON_TYPES)[number];
@@ -135,6 +137,7 @@ type LessonSeed = {
   type?: TrainingLessonType;
   presenter?: string | null;
   estMinutes?: number;
+  videoUrl?: string;
 };
 
 function lessons(seeds: LessonSeed[]): TrainingLesson[] {
@@ -145,24 +148,25 @@ function lessons(seeds: LessonSeed[]): TrainingLesson[] {
     order: i + 1,
     type: s.type ?? "formacao",
     presenter: s.presenter ?? null,
-    videoUrl: null,
-    videoProvider: null,
+    videoUrl: s.videoUrl ?? null,
+    videoProvider: s.videoUrl ? detectProvider(s.videoUrl) : null,
     ...(s.estMinutes ? { estMinutes: s.estMinutes } : {}),
     isPublished: true,
   }));
 }
 
-/** Teste vazio de um módulo — as perguntas chegam na Fase 2 e são editáveis
- *  no CMS. Um teste sem perguntas não bloqueia a progressão (mesma regra dos
- *  vídeos por gravar) e aparece sinalizado no admin. */
-function emptyQuiz(moduleId: string, title: string): TrainingQuiz {
+/** Teste de um módulo. As perguntas vivem em `questions.ts` (rascunhos a
+ *  afinar quando os vídeos existirem) e são editáveis no CMS. Um módulo sem
+ *  perguntas fica com o teste vazio — que não bloqueia a progressão, mesma
+ *  regra dos vídeos por gravar, e aparece sinalizado no admin. */
+function quizFor(moduleId: string, title: string): TrainingQuiz {
   return {
     id: `${moduleId}-quiz`,
     title,
     passingScore: 80,
     maxAttempts: null,
-    shuffleQuestions: false,
-    questions: [],
+    shuffleQuestions: true,
+    questions: TRAINING_QUESTIONS[moduleId] ?? [],
   };
 }
 
@@ -208,7 +212,7 @@ const COMMON_TRACK: TrainingTrack = {
           presenter: "Alice",
         },
       ]),
-      quiz: emptyQuiz("comum-m1", "Teste — Origem, visão e mindset"),
+      quiz: quizFor("comum-m1", "Teste — Origem, visão e mindset"),
     },
     {
       id: "comum-m2",
@@ -240,7 +244,7 @@ const COMMON_TRACK: TrainingTrack = {
           presenter: "André",
         },
       ]),
-      quiz: emptyQuiz("comum-m2", "Teste — Organização e ferramentas"),
+      quiz: quizFor("comum-m2", "Teste — Organização e ferramentas"),
     },
     {
       id: "comum-m3",
@@ -265,7 +269,7 @@ const COMMON_TRACK: TrainingTrack = {
           presenter: "Alex",
         },
       ]),
-      quiz: emptyQuiz("comum-m3", "Teste — Cliente e oportunidades"),
+      quiz: quizFor("comum-m3", "Teste — Cliente e oportunidades"),
     },
   ],
 };
@@ -298,7 +302,7 @@ const SEO_TRACK: TrainingTrack = {
           presenter: "André",
         },
       ]),
-      quiz: emptyQuiz("seo-m1", "Teste — Trabalho interno SEO"),
+      quiz: quizFor("seo-m1", "Teste — Trabalho interno SEO"),
     },
     {
       id: "seo-m2",
@@ -340,7 +344,7 @@ const SEO_TRACK: TrainingTrack = {
           presenter: "André",
         },
       ]),
-      quiz: emptyQuiz("seo-m2", "Teste — Comunicação com o cliente"),
+      quiz: quizFor("seo-m2", "Teste — Comunicação com o cliente"),
     },
     {
       id: "seo-m3",
@@ -366,7 +370,7 @@ const SEO_TRACK: TrainingTrack = {
           presenter: "André",
         },
       ]),
-      quiz: emptyQuiz("seo-m3", "Teste — Ferramentas"),
+      quiz: quizFor("seo-m3", "Teste — Ferramentas"),
     },
     {
       id: "seo-m4",
@@ -392,7 +396,7 @@ const SEO_TRACK: TrainingTrack = {
           presenter: "André",
         },
       ]),
-      quiz: emptyQuiz("seo-m4", "Teste — Onboarding de cliente"),
+      quiz: quizFor("seo-m4", "Teste — Onboarding de cliente"),
     },
     {
       id: "seo-m5",
@@ -418,7 +422,7 @@ const SEO_TRACK: TrainingTrack = {
           presenter: "André",
         },
       ]),
-      quiz: emptyQuiz("seo-m5", "Teste — Reporting e reunião mensal"),
+      quiz: quizFor("seo-m5", "Teste — Reporting e reunião mensal"),
     },
   ],
 };
@@ -451,7 +455,7 @@ const ADS_TRACK: TrainingTrack = {
           presenter: "Alice",
         },
       ]),
-      quiz: emptyQuiz("ads-m1", "Teste — Ads Department Overview"),
+      quiz: quizFor("ads-m1", "Teste — Ads Department Overview"),
     },
     {
       id: "ads-m2",
@@ -519,7 +523,7 @@ const ADS_TRACK: TrainingTrack = {
             "Cadência de comunicação e como manter o cliente no loop sem o afogar em detalhe.",
         },
       ]),
-      quiz: emptyQuiz("ads-m2", "Teste — Fundamentals"),
+      quiz: quizFor("ads-m2", "Teste — Fundamentals"),
     },
     {
       id: "ads-m3",
@@ -586,7 +590,7 @@ const ADS_TRACK: TrainingTrack = {
           description: "As bases do retargeting.",
         },
       ]),
-      quiz: emptyQuiz("ads-m3", "Teste — How To Advertise"),
+      quiz: quizFor("ads-m3", "Teste — How To Advertise"),
     },
     {
       id: "ads-m4",
@@ -632,7 +636,7 @@ const ADS_TRACK: TrainingTrack = {
           description: "Caso específico: quiropraxia.",
         },
       ]),
-      quiz: emptyQuiz("ads-m4", "Teste — Local Businesses & Lead Gen"),
+      quiz: quizFor("ads-m4", "Teste — Local Businesses & Lead Gen"),
     },
     {
       id: "ads-m5",
@@ -663,7 +667,7 @@ const ADS_TRACK: TrainingTrack = {
           description: "Formação de Google Ads.",
         },
       ]),
-      quiz: emptyQuiz("ads-m5", "Teste — Advanced Strategies"),
+      quiz: quizFor("ads-m5", "Teste — Advanced Strategies"),
     },
   ],
 };
@@ -696,7 +700,7 @@ const WEB_TRACK: TrainingTrack = {
           presenter: "André",
         },
       ]),
-      quiz: emptyQuiz("web-m1", "Teste — Trabalho interno WEB"),
+      quiz: quizFor("web-m1", "Teste — Trabalho interno WEB"),
     },
     {
       id: "web-m2",
@@ -713,7 +717,7 @@ const WEB_TRACK: TrainingTrack = {
           presenter: "André",
         },
       ]),
-      quiz: emptyQuiz("web-m2", "Teste — Entrega do website"),
+      quiz: quizFor("web-m2", "Teste — Entrega do website"),
     },
     {
       id: "web-m3",
@@ -739,7 +743,7 @@ const WEB_TRACK: TrainingTrack = {
           presenter: "André",
         },
       ]),
-      quiz: emptyQuiz("web-m3", "Teste — Aprovação de designs"),
+      quiz: quizFor("web-m3", "Teste — Aprovação de designs"),
     },
   ],
 };
@@ -772,7 +776,7 @@ const COMMERCIAL_TRACK: TrainingTrack = {
           presenter: "Alex",
         },
       ]),
-      quiz: emptyQuiz("com-m1", "Teste — Sales Department Overview"),
+      quiz: quizFor("com-m1", "Teste — Sales Department Overview"),
     },
     {
       id: "com-m2",
@@ -797,7 +801,7 @@ const COMMERCIAL_TRACK: TrainingTrack = {
           description: "Onde ficam as leads e como se mantêm organizadas.",
         },
       ]),
-      quiz: emptyQuiz("com-m2", "Teste — Leads e reuniões"),
+      quiz: quizFor("com-m2", "Teste — Leads e reuniões"),
     },
     {
       id: "com-m3",
@@ -843,7 +847,7 @@ const COMMERCIAL_TRACK: TrainingTrack = {
           description: "Afinar a abordagem e manter a serra afiada.",
         },
       ]),
-      quiz: emptyQuiz("com-m3", "Teste — Venda e follow-up"),
+      quiz: quizFor("com-m3", "Teste — Venda e follow-up"),
     },
   ],
 };

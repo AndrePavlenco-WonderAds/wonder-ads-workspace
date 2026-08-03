@@ -128,6 +128,23 @@ export async function setEnrollment(
   return next;
 }
 
+/** Remove a atribuição explícita — a pessoa volta a herdar a especialização
+ *  do seu departamento. É diferente de gravar `trackSlug: null`, que significa
+ *  "explicitamente sem especialização" e vence o departamento. */
+export async function clearEnrollment(
+  username: string,
+): Promise<EnrollmentMap> {
+  if (!enrollmentsStorageConfigured) {
+    throw new Error("KV storage not configured on this deployment.");
+  }
+  const current = await getEnrollments();
+  if (!(username in current)) return current;
+  const next = { ...current };
+  delete next[username];
+  await kv.set(KEY, next);
+  return next;
+}
+
 export type TrainingUser = {
   username: string;
   name: string;

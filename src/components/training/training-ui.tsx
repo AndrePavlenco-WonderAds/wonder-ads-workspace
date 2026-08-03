@@ -2,12 +2,21 @@
 // páginas de track/aula e o overview do admin — para que "concluído" tenha
 // sempre o mesmo aspeto em todo o lado.
 
-import { CheckCircle2, Clock, Lock, PlayCircle, Video } from "lucide-react";
+import type { ReactNode } from "react";
+import {
+  CheckCircle2,
+  Clock,
+  Drama,
+  Lock,
+  PhoneCall,
+  PlayCircle,
+  Video,
+} from "lucide-react";
 import {
   LESSON_TYPE_LABEL,
   type TrainingLessonType,
 } from "@/lib/training/catalog";
-import type { ModuleStatus } from "@/lib/training/progress";
+import type { ModuleStatus, ModuleState } from "@/lib/training/progress";
 
 const TYPE_TONE: Record<
   TrainingLessonType,
@@ -145,6 +154,120 @@ export function ProgressBar({ percent }: { percent: number }) {
         className="brand-gradient-bg h-1.5 rounded-full transition-all duration-500"
         style={{ width: `${Math.min(100, Math.max(0, percent))}%` }}
       />
+    </div>
+  );
+}
+
+/** Miniatura de uma aula — ícone por tipo sobre um bloco de gradiente, o
+ *  equivalente escuro do LessonThumb do onboarding de clientes. Fica a
+ *  esmaecido quando a aula ainda não tem vídeo. */
+export function LessonThumb({
+  type,
+  watched,
+  comingSoon,
+  size = "md",
+}: {
+  type: TrainingLessonType;
+  watched?: boolean;
+  comingSoon?: boolean;
+  size?: "sm" | "md";
+}) {
+  const Icon =
+    type === "call_real" ? PhoneCall : type === "scenario" ? Drama : PlayCircle;
+  const box = size === "sm" ? "h-9 w-9" : "h-12 w-12";
+  const icon = size === "sm" ? "h-4 w-4" : "h-5 w-5";
+  return (
+    <span
+      className={`relative flex ${box} shrink-0 items-center justify-center rounded-xl border ${
+        watched
+          ? "border-emerald-400/25 bg-emerald-500/10"
+          : comingSoon
+            ? "border-white/8 bg-white/[0.03]"
+            : "border-white/10"
+      }`}
+      style={
+        watched || comingSoon
+          ? undefined
+          : {
+              background:
+                "linear-gradient(135deg, rgba(52,62,215,0.22), rgba(197,53,201,0.22))",
+            }
+      }
+    >
+      {watched ? (
+        <CheckCircle2 className={`${icon} text-emerald-300`} />
+      ) : (
+        <Icon
+          className={`${icon} ${comingSoon ? "text-white/30" : "text-white/85"}`}
+        />
+      )}
+    </span>
+  );
+}
+
+/** Mostrador compacto de um número com legenda — usado nas linhas de
+ *  estatística do hub e do overview de admin. */
+export function StatTile({
+  label,
+  value,
+  hint,
+  icon,
+  tone = "default",
+}: {
+  label: string;
+  value: ReactNode;
+  hint?: string;
+  icon?: ReactNode;
+  tone?: "default" | "warn" | "good";
+}) {
+  const toneCls =
+    tone === "warn"
+      ? "border-amber-400/25 bg-amber-500/[0.06]"
+      : tone === "good"
+        ? "border-emerald-400/25 bg-emerald-500/[0.06]"
+        : "border-white/10 bg-white/[0.025]";
+  return (
+    <div className={`rounded-2xl border px-4 py-3.5 ${toneCls}`}>
+      <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-white/40">
+        {icon}
+        {label}
+      </p>
+      <p className="mt-1.5 text-2xl font-semibold tracking-tight text-white">
+        {value}
+      </p>
+      {hint && <p className="mt-0.5 text-[11px] text-white/40">{hint}</p>}
+    </div>
+  );
+}
+
+/** Fita de módulos de uma trilha — um segmento por módulo, colorido pelo
+ *  estado. Dá a leitura da jornada inteira num relance, sem scroll. */
+export function TrackJourney({ modules }: { modules: ModuleState[] }) {
+  return (
+    <div className="flex items-center gap-1">
+      {modules.map((m) => (
+        <span
+          key={m.module.id}
+          title={`${m.module.title} — ${
+            !m.hasContent
+              ? "por gravar"
+              : m.status === "completed"
+                ? "concluído"
+                : m.status === "in_progress"
+                  ? `em curso (${m.percent}%)`
+                  : "bloqueado"
+          }`}
+          className={`h-1.5 flex-1 rounded-full ${
+            !m.hasContent
+              ? "bg-amber-400/25"
+              : m.status === "completed"
+                ? "bg-emerald-400/70"
+                : m.status === "in_progress"
+                  ? "brand-gradient-bg"
+                  : "bg-white/10"
+          }`}
+        />
+      ))}
     </div>
   );
 }

@@ -1,27 +1,26 @@
-// Overview da Formação (C-Level).
+// Overview da Formação (C-Level) — a fotografia da equipa inteira.
 //
-// FASE 1: tabela-base do roster — quem está em que trilha, progresso global e
-// última atividade. Serve já para confirmar que o tracking está a gravar.
-// A Fase 3 acrescenta filtros, drill-down por consultor com as respostas de
-// cada teste, vista de produção de vídeos por presenter e o CMS de conteúdo.
+// Mesma gramática visual do overview de onboarding de clientes: back-link,
+// título em gradiente, linha de indicadores e uma lista/tabela por baixo.
 
 import Link from "next/link";
-import { ArrowLeft, GraduationCap, Users } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowLeft,
+  ClipboardCheck,
+  Film,
+  Gauge,
+  UserRound,
+  Users,
+} from "lucide-react";
 import { PageShell } from "@/components/page-shell";
-import { ProgressBar } from "@/components/training/training-ui";
-import { getTrainingCatalog } from "@/lib/training/content-store";
+import { TrainingAdminNav } from "@/components/training/admin-nav";
 import {
-  getEnrollments,
-  rosterWithTracks,
-} from "@/lib/training/enrollments-store";
-import { getTrainingProgressMany } from "@/lib/training/progress-store";
-import { getQuizAttemptsMany } from "@/lib/training/attempts-store";
-import {
-  computeUserTraining,
-  currentModuleLabel,
-  overallPercent,
-} from "@/lib/training/progress";
-import { formatDateTime } from "@/lib/dates";
+  RosterTable,
+  type RosterTableRow,
+} from "@/components/training/roster-table";
+import { StatTile } from "@/components/training/training-ui";
+import { getTrainingOverview } from "@/lib/training/admin";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -31,46 +30,32 @@ export const metadata = {
 };
 
 export default async function FormacaoAdminPage() {
-  const [tracks, enrollments] = await Promise.all([
-    getTrainingCatalog(),
-    getEnrollments(),
-  ]);
-  const roster = rosterWithTracks(enrollments);
-  const usernames = roster.map((r) => r.username);
-  const [progressMap, attemptsMap] = await Promise.all([
-    getTrainingProgressMany(usernames),
-    getQuizAttemptsMany(usernames),
-  ]);
+  const overview = await getTrainingOverview();
+  const trackOptions = overview.tracks
+    .filter((t) => !t.isCommon)
+    .map((t) => ({ slug: t.slug, name: t.name }));
 
-  const rows = roster
-    .map((user) => {
-      const progress = progressMap[user.username] ?? {
-        lessons: {},
-        updatedAt: 0,
-      };
-      const attempts = attemptsMap[user.username] ?? [];
-      const { common, specialization } = computeUserTraining(
-        tracks,
-        user.trackSlug,
-        progress,
-        attempts,
-      );
-      const watched =
-        (common?.watchedLessons ?? 0) + (specialization?.watchedLessons ?? 0);
-      const total =
-        (common?.totalLessons ?? 0) + (specialization?.totalLessons ?? 0);
-      return {
-        user,
-        percent: overallPercent(common, specialization),
-        current: currentModuleLabel(common, specialization),
-        watched,
-        total,
-        attempts: attempts.length,
-        lastActivity: progress.updatedAt,
-        trackName: specialization?.track.name ?? "—",
-      };
-    })
-    .sort((a, b) => b.percent - a.percent || a.user.name.localeCompare(b.user.name, "pt"));
+  const rows: RosterTableRow[] = overview.rows.map((r) => ({
+    username: r.user.username,
+    name: r.user.name,
+    role: r.user.role,
+    dept: r.user.dept,
+    trackName:
+      overview.tracks.find((t) => t.slug === r.user.trackSlug)?.name ?? "—",
+    trackSlug: r.user.trackSlug,
+    derived: !r.user.assigned,
+    percent: r.percent,
+    currentLabel: r.currentLabel,
+    watched: r.watched,
+    totalLessons: r.totalLessons,
+    quizzesPassed: r.quizzesPassed,
+    quizzesTotal: r.quizzesTotal,
+    attempts: r.attempts.length,
+    failedAttempts: r.failedAttempts,
+    lastActivity: r.lastActivity,
+  }));
+
+  const activeLearners = overview.rows.filter((r) => r.lastActivity > 0).length;
 
   return (
     <PageShell wide>
@@ -82,16 +67,70 @@ export default async function FormacaoAdminPage() {
         Formação
       </Link>
 
-      <div className="animate-fade-up mt-6">
-        <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-          <span className="brand-gradient-text">Formação — Overview</span>
-        </h1>
-        <p className="mt-2 max-w-2xl text-sm text-white/55">
-          Progresso de toda a equipa na Consultants Onboarding University. O
-          drill-down por consultor, o checklist de gravação e o CMS de conteúdo
-          entram na Fase 3.
-        </p>
+      <div className="animate-fade-up mt-6 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+            <span className="brand-gradient-text">Formação — Overview</span>
+          </h1>
+          <p className="mt-2 max-w-2xl text-sm text-white/55">
+            Progresso de toda a equipa na Consultants Onboarding University.
+            Clica num consultor para ver aula a aula e teste a teste o que ele
+            fez.
+          </p>
+        </div>
+        <TrainingAdminNav />
       </div>
+
+      <section className="animate-fade-up mt-8 grid grid-cols-2 gap-3 lg:grid-cols-5">
+        <StatTile
+          label="Média da equipa"
+          value={`${overview.averagePercent}%`}
+          hint={`${overview.completedCount} concluíram tudo`}
+          icon={<Gauge className="h-3 w-3" />}
+        />
+        <StatTile
+          label="Já começaram"
+          value={`${activeLearners}/${overview.rows.length}`}
+          hint={
+            overview.notStartedCount > 0
+              ? `${overview.notStartedCount} por arrancar`
+              : "toda a gente arrancou"
+          }
+          icon={<Users className="h-3 w-3" />}
+        />
+        <StatTile
+          label="Vídeos por gravar"
+          value={overview.missingVideos}
+          hint="não bloqueiam ninguém"
+          tone={overview.missingVideos > 0 ? "warn" : "good"}
+          icon={<Film className="h-3 w-3" />}
+        />
+        <StatTile
+          label="Sem apresentador"
+          value={overview.unassignedPresenters}
+          hint="aulas por atribuir"
+          tone={overview.unassignedPresenters > 0 ? "warn" : "good"}
+          icon={<UserRound className="h-3 w-3" />}
+        />
+        <StatTile
+          label="Testes por escrever"
+          value={overview.quizzesMissing}
+          hint="módulos sem perguntas"
+          tone={overview.quizzesMissing > 0 ? "warn" : "good"}
+          icon={<ClipboardCheck className="h-3 w-3" />}
+        />
+      </section>
+
+      {overview.missingVideos > 0 && (
+        <Link
+          href="/formacao/admin/conteudo"
+          className="animate-fade-up mt-4 flex flex-wrap items-center gap-2.5 rounded-xl border border-amber-400/25 bg-amber-500/[0.07] px-4 py-3 text-[13px] text-amber-100/85 transition hover:border-amber-400/45"
+        >
+          <AlertTriangle className="h-4 w-4 shrink-0" />
+          Há {overview.missingVideos} aulas sem vídeo carregado. Abre o
+          checklist de gravações para ver quem tem o quê para gravar.
+        </Link>
+      )}
 
       <section className="animate-fade-up mt-8">
         <header className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.14em] text-white/55">
@@ -101,75 +140,7 @@ export default async function FormacaoAdminPage() {
             {rows.length}
           </span>
         </header>
-
-        <div className="overflow-x-auto rounded-2xl border border-white/10">
-          <table className="w-full min-w-[880px] text-left text-[13px]">
-            <thead className="bg-white/[0.03] text-[10.5px] uppercase tracking-[0.12em] text-white/45">
-              <tr>
-                <th className="px-4 py-3 font-semibold">Consultor</th>
-                <th className="px-4 py-3 font-semibold">Especialização</th>
-                <th className="px-4 py-3 font-semibold">Progresso global</th>
-                <th className="px-4 py-3 font-semibold">Módulo atual</th>
-                <th className="px-4 py-3 font-semibold">Aulas</th>
-                <th className="px-4 py-3 font-semibold">Testes</th>
-                <th className="px-4 py-3 font-semibold">Última atividade</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r) => (
-                <tr
-                  key={r.user.username}
-                  className="border-t border-white/8 transition hover:bg-white/[0.02]"
-                >
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2.5">
-                      <span className="brand-gradient-bg flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-bold text-white">
-                        {r.user.name.trim().charAt(0).toUpperCase()}
-                      </span>
-                      <div className="min-w-0">
-                        <p className="truncate font-medium text-white">
-                          {r.user.name}
-                        </p>
-                        <p className="text-[10.5px] text-white/40">
-                          {r.user.role} · {r.user.dept}
-                        </p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-white/70">
-                    <span className="inline-flex items-center gap-1.5">
-                      <GraduationCap className="h-3.5 w-3.5 text-white/35" />
-                      {r.trackName}
-                    </span>
-                    {!r.user.assigned && r.user.trackSlug && (
-                      <span className="ml-1.5 text-[10px] uppercase tracking-wide text-white/30">
-                        (por dept)
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <div className="w-24">
-                        <ProgressBar percent={r.percent} />
-                      </div>
-                      <span className="text-[12px] font-semibold text-white/80">
-                        {r.percent}%
-                      </span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-white/60">{r.current}</td>
-                  <td className="px-4 py-3 text-white/60">
-                    {r.watched} de {r.total}
-                  </td>
-                  <td className="px-4 py-3 text-white/60">{r.attempts}</td>
-                  <td className="px-4 py-3 text-white/50">
-                    {r.lastActivity ? formatDateTime(r.lastActivity) : "—"}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <RosterTable rows={rows} trackOptions={trackOptions} />
       </section>
     </PageShell>
   );
