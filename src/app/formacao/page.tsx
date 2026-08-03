@@ -48,7 +48,9 @@ export default async function FormacaoPage() {
   const tracks = userTracks(ctx);
 
   const watched = tracks.reduce((s, t) => s + t.watchedLessons, 0);
-  const totalLessons = tracks.reduce((s, t) => s + t.totalLessons, 0);
+  // Denominador = programa inteiro, não só o que já está gravado. Enquanto os
+  // vídeos não existem, "0/0 aulas" não dizia a ninguém quanto é o curso.
+  const totalLessons = tracks.reduce((s, t) => s + t.allLessons, 0);
   const quizzesTotal = tracks.reduce(
     (s, t) => s + t.modules.filter((m) => m.quizRequired).length,
     0,
@@ -88,6 +90,7 @@ export default async function FormacaoPage() {
               Consultants University
             </span>
             <h1 className="mt-4 text-3xl font-semibold leading-tight tracking-tight sm:text-[2.6rem]">
+              <span className="text-white/70">Bem-vindo, </span>
               <span className="brand-gradient-text">{employee.name}</span>
             </h1>
             <p className="mt-3 max-w-xl text-sm leading-relaxed text-white/55">
@@ -278,7 +281,7 @@ function TrackCard({ state }: { state: TrackState }) {
           </span>
           <span>·</span>
           <span>
-            {state.watchedLessons}/{state.totalLessons} aulas
+            {state.watchedLessons}/{state.allLessons} aulas
           </span>
           {state.missingVideos > 0 && (
             <>
@@ -301,29 +304,16 @@ function TrackCard({ state }: { state: TrackState }) {
           {state.lockedReason}
         </p>
       ) : (
+        // Um único destino: a sequência do módulo. O atalho para retomar a
+        // aula exata vive no cartão "Continuar onde ficaste", no topo — ter
+        // aqui dois links para sítios diferentes só obrigava a escolher.
         <div className="relative mt-5 flex flex-wrap items-center gap-3">
           <Link
-            href={
-              state.nextLesson
-                ? `/formacao/${state.track.slug}/aula/${state.nextLesson.lesson.id}`
-                : href
-            }
+            href={href}
             className="brand-gradient-bg group inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-[13px] font-semibold text-white shadow-[0_10px_30px_-12px_rgba(120,61,245,0.7)] transition hover:brightness-110"
           >
-            {!state.hasContent
-              ? "Ver programa"
-              : state.completed
-                ? "Rever módulo"
-                : state.watchedLessons === 0
-                  ? "Começar agora"
-                  : "Continuar"}
+            Estudar Módulo
             <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-          </Link>
-          <Link
-            href={href}
-            className="text-[12px] font-medium text-white/55 underline-offset-4 transition hover:text-white hover:underline"
-          >
-            Ver roadmap completo
           </Link>
         </div>
       )}

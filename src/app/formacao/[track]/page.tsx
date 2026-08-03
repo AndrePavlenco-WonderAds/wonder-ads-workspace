@@ -226,7 +226,7 @@ export default async function TrackPage({
         <div className="relative mt-9 grid grid-cols-2 gap-3 sm:grid-cols-4">
           <StatTile
             label="Aulas vistas"
-            value={`${state.watchedLessons}/${state.totalLessons}`}
+            value={`${state.watchedLessons}/${state.allLessons}`}
             icon={<Film className="h-3 w-3" />}
           />
           <StatTile
@@ -407,7 +407,7 @@ function ModuleStation({
                 hasContent={state.hasContent}
               />
               <span className="tabular text-[11px] text-white/30">
-                {state.watchedLessons}/{state.totalLessons} aulas
+                {state.watchedLessons}/{state.allLessons} aulas
                 {state.minutesLeft > 0 && ` · ~${state.minutesLeft} min`}
               </span>
             </div>

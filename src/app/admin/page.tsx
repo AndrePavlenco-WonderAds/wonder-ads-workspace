@@ -10,6 +10,7 @@ import { countRoadmaps } from "@/lib/roadmap-admin-helpers";
 import { buildAdminClientViews } from "@/lib/admin-roster";
 import { getOnboardingClients } from "@/lib/onboarding-clients-store";
 import { listPenalties, isActive } from "@/lib/admin-penalties-store";
+import { getNotificationRules } from "@/lib/notifications/rules-store";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -74,6 +75,17 @@ export default async function AdminPage() {
     /* KV unavailable — show 0 */
   }
 
+  // Notifications card count — rules currently firing. Falls back to 0 so
+  // the landing always renders.
+  let notificationsCount = 0;
+  try {
+    notificationsCount = (await getNotificationRules()).filter(
+      (r) => r.enabled,
+    ).length;
+  } catch {
+    /* KV unavailable — show 0 */
+  }
+
   return (
     <PageShell>
       <Link
@@ -90,6 +102,7 @@ export default async function AdminPage() {
         financesCount={financesCount}
         onboardingCount={onboardingCount}
         penaltiesCount={penaltiesCount}
+        notificationsCount={notificationsCount}
       />
     </PageShell>
   );

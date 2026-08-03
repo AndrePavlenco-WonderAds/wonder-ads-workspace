@@ -27,6 +27,10 @@ import {
 } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { TrainingPlayer } from "@/components/training/training-player";
+import {
+  LessonInstructors,
+  LessonKeyPoints,
+} from "@/components/training/lesson-aside";
 import { LessonTypeBadge } from "@/components/training/training-ui";
 import { getTrainingContext, trackStateFor } from "@/lib/training/server";
 import {
@@ -260,8 +264,14 @@ export default async function LessonPage({
             </div>
           </div>
 
-          {/* ---------- Espinha do capítulo ---------- */}
-          <aside className="animate-fade-up lg:sticky lg:top-20 lg:self-start">
+          {/* ---------- Coluna direita: Remember, instrutores, espinha ---------- */}
+          {/* Rola por dentro: com o Remember, os instrutores e um capítulo
+              longo, a coluna passa a altura do ecrã e o fim ficaria fora de
+              alcance de quem tem a página fixa. */}
+          <aside className="animate-fade-up space-y-4 lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:self-start lg:overflow-y-auto lg:pr-1">
+            <LessonKeyPoints points={lesson.keyPoints} />
+            <LessonInstructors presenter={lesson.presenter} />
+
             <div className="overflow-hidden rounded-2xl border border-white/[0.07] bg-white/[0.018]">
               <div className="h-[3px] w-full bg-white/[0.05]">
                 <div
@@ -277,7 +287,7 @@ export default async function LessonPage({
                   {moduleState.module.title}
                 </p>
                 <p className="tabular mt-1 text-[11px] text-white/35">
-                  {moduleState.watchedLessons}/{moduleState.totalLessons} aulas
+                  {moduleState.watchedLessons}/{moduleState.allLessons} aulas
                   vistas
                 </p>
 

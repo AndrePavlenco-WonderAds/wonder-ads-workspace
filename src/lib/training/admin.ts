@@ -29,7 +29,10 @@ export type RosterRow = {
   percent: number;
   currentLabel: string;
   watched: number;
+  /** Aulas com vídeo — o denominador das regras. */
   totalLessons: number;
+  /** Aulas do programa inteiro, gravadas ou não — o denominador que se lê. */
+  allLessons: number;
   quizzesPassed: number;
   quizzesTotal: number;
   attempts: QuizAttempt[];
@@ -86,6 +89,7 @@ function buildRow(
     currentLabel: currentModuleLabel(common, specializations),
     watched: parts.reduce((s, t) => s + t.watchedLessons, 0),
     totalLessons: parts.reduce((s, t) => s + t.totalLessons, 0),
+    allLessons: parts.reduce((s, t) => s + t.allLessons, 0),
     quizzesPassed,
     quizzesTotal,
     attempts,

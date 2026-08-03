@@ -1,11 +1,25 @@
 import Link from "next/link";
-import type { ReactNode } from "react";
-import { ArrowLeft, ShieldCheck } from "lucide-react";
+import { Suspense, type ReactNode } from "react";
+import { ArrowLeft, Bell, ShieldCheck } from "lucide-react";
 import { BackgroundDecor } from "./background-decor";
 import { WonderAdsLogo } from "./wonder-ads-logo";
 import { HeaderClock } from "./header-clock";
+import { NotificationsBell } from "./notifications/notifications-bell";
 import { UserChip } from "./user-chip";
 import { getCurrentVersion } from "@/lib/changelog";
+
+/** O sino antes de o servidor saber quantos lembretes há. Mesma caixa, mesmo
+ *  peso — para o header não saltar quando o número chega. */
+function BellSkeleton() {
+  return (
+    <span
+      aria-hidden
+      className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/12 bg-white/[0.04] text-white/30"
+    >
+      <Bell className="h-[15px] w-[15px]" />
+    </span>
+  );
+}
 
 export function PageShell({
   children,
@@ -70,6 +84,14 @@ export function PageShell({
           <div className="hidden sm:block">
             <HeaderClock sessionTimer={sessionTimer} />
           </div>
+          {/* Lembretes em aberto — ao lado do nome, porque é aí que se olha
+              quando se chega ao workspace. Também renderiza null sem sessão.
+              Em Suspense: o sino lê KV (e, para quem tem carteira, a lista de
+              clientes) e nenhuma página do workspace pode ficar à espera do
+              header para começar a desenhar. */}
+          <Suspense fallback={<BellSkeleton />}>
+            <NotificationsBell />
+          </Suspense>
           {/* Identity + session controls — server component, renders
               null when there's no valid session (e.g. on /login). */}
           <UserChip />

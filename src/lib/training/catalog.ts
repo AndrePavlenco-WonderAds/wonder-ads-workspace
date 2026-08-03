@@ -91,6 +91,10 @@ export type TrainingLesson = {
   videoProvider: VideoProvider | null;
   /** Estimativa em minutos; ausente → default por tipo. */
   estMinutes?: number;
+  /** "Remember" — o que tem de ficar da aula, em frases curtas. Aparece ao
+   *  lado do vídeo e é o que a pessoa relê antes do teste. Lista vazia é um
+   *  estado legítimo (a aula ainda não foi destilada), não um erro. */
+  keyPoints: string[];
   isPublished: boolean;
 };
 
@@ -139,6 +143,9 @@ type LessonSeed = {
   presenter?: string | null;
   estMinutes?: number;
   videoUrl?: string;
+  /** Pontos do "Remember". Omitir enquanto a aula não estiver destilada — a
+   *  página mostra o estado vazio em vez de inventar conteúdo. */
+  keyPoints?: string[];
 };
 
 function lessons(seeds: LessonSeed[]): TrainingLesson[] {
@@ -152,6 +159,7 @@ function lessons(seeds: LessonSeed[]): TrainingLesson[] {
     videoUrl: s.videoUrl ?? null,
     videoProvider: s.videoUrl ? detectProvider(s.videoUrl) : null,
     ...(s.estMinutes ? { estMinutes: s.estMinutes } : {}),
+    keyPoints: s.keyPoints ?? [],
     isPublished: true,
   }));
 }
@@ -197,6 +205,11 @@ const COMMON_TRACK: TrainingTrack = {
           description:
             "Vídeo de boas-vindas: a origem da empresa, os princípios core e os valores que nos guiam. O que nos fez começar e o que continuamos a recusar fazer.",
           presenter: "Alice / Alex",
+          keyPoints: [
+            "A WonderAds nasceu de um problema concreto: agências que vendem relatórios em vez de resultados.",
+            "O que recusamos fazer é tão definidor como o que fazemos — prometer posições, inflacionar métricas ou esconder um mês mau.",
+            "O cliente contrata uma pessoa, não uma plataforma. O nome que ele associa ao serviço é o teu.",
+          ],
         },
         {
           id: "comum-m1-a2",
@@ -204,6 +217,11 @@ const COMMON_TRACK: TrainingTrack = {
           description:
             "Os objetivos da empresa e como pretendemos lá chegar. O que significa cada valor traduzido em comportamento concreto — não em poster de parede.",
           presenter: "Alice / Alex",
+          keyPoints: [
+            "Um valor só existe se mudar uma decisão tua num dia difícil — se não muda, é decoração.",
+            "A missão mede-se no resultado do cliente, não no volume de trabalho entregue.",
+            "Crescer sem baixar o padrão: preferimos recusar um cliente a servir mal os que já temos.",
+          ],
         },
         {
           id: "comum-m1-a3",
@@ -211,6 +229,11 @@ const COMMON_TRACK: TrainingTrack = {
           description:
             "O mindset diário e o profissionalismo perante clientes. O padrão é ser o melhor consultor que aquele cliente já teve — este vídeo explica o que isso exige de ti.",
           presenter: "Alice",
+          keyPoints: [
+            "O padrão é simples de dizer e exigente de cumprir: ser o melhor consultor que aquele cliente já teve.",
+            "Antecipar vale mais do que reagir — o cliente não devia ser o primeiro a notar um problema na conta dele.",
+            "Erro assumido cedo é um contratempo; erro descoberto pelo cliente é uma quebra de confiança.",
+          ],
         },
       ]),
       quiz: quizFor("comum-m1", "Teste — Origem, visão e mindset"),
@@ -229,6 +252,11 @@ const COMMON_TRACK: TrainingTrack = {
           description:
             "Organograma, departamentos e quem desbloqueia o quê. Saber a quem perguntar é metade da velocidade de execução.",
           presenter: "André",
+          keyPoints: [
+            "Cada assunto tem um dono. Perguntar à pessoa certa à primeira poupa dias, não minutos.",
+            "Escalar não é queixar-se: é passar um bloqueio a quem o pode desbloquear, com contexto suficiente para decidir.",
+            "Ficar parado à espera é uma escolha — e é sempre a pior das disponíveis.",
+          ],
         },
         {
           id: "comum-m2-a2",
@@ -236,6 +264,11 @@ const COMMON_TRACK: TrainingTrack = {
           description:
             "Tour por todas as ferramentas da casa: workspace, comunicação, gestão de projeto e as plataformas de cada departamento.",
           presenter: "Alice / Alex / André",
+          keyPoints: [
+            "O Workspace é a fonte da verdade da conta: se não está lá registado, para a empresa não aconteceu.",
+            "Cada ferramenta tem um propósito único — duplicar registos em sítios diferentes cria versões concorrentes da mesma verdade.",
+            "Acessos de cliente pedem-se e guardam-se no sítio certo; nunca em mensagens soltas.",
+          ],
         },
         {
           id: "comum-m2-a3",
@@ -243,6 +276,11 @@ const COMMON_TRACK: TrainingTrack = {
           description:
             "Como se dá e como se recebe feedback aqui dentro, consoante a pessoa e o contexto. Feedback que não se diz é um problema que fica.",
           presenter: "André",
+          keyPoints: [
+            "Feedback que não se diz não desaparece — acumula e sai pior mais tarde.",
+            "Descreve o comportamento e o efeito concreto, não a pessoa.",
+            "Elogia em público, corrige em privado, e nunca guardes uma correção para a avaliação seguinte.",
+          ],
         },
       ]),
       quiz: quizFor("comum-m2", "Teste — Organização e ferramentas"),
@@ -261,6 +299,11 @@ const COMMON_TRACK: TrainingTrack = {
           description:
             "Tom, tempos e canais de resposta. Como dar más notícias sem perder a relação, como escalar e a quem.",
           presenter: "Alex",
+          keyPoints: [
+            "Responder depressa vale mais do que responder completo: um «recebi, respondo até amanhã» fecha a ansiedade do cliente.",
+            "Má notícia dá-se cedo, com o plano já ao lado — nunca só o problema.",
+            "Não prometas o que não controlas. Compromete-te com o trabalho, não com o resultado do Google.",
+          ],
         },
         {
           id: "comum-m3-a2",
@@ -268,6 +311,11 @@ const COMMON_TRACK: TrainingTrack = {
           description:
             "Todos os consultores devem saber identificar upsell e passá-lo ao Comercial ou ao superior in charge. SEO, WEB e ADS passam ao responsável; comerciais que vejam outras portas passam aos C-Level.",
           presenter: "Alex",
+          keyPoints: [
+            "Uma oportunidade detetada e não passada é receita perdida — e um problema do cliente que fica por resolver.",
+            "SEO, WEB e ADS passam ao responsável do departamento; o Comercial passa aos C-Level.",
+            "Quem vende não és tu: o teu trabalho é sinalizar com contexto (o que viste e porque interessa ao cliente).",
+          ],
         },
       ]),
       quiz: quizFor("comum-m3", "Teste — Cliente e oportunidades"),
@@ -281,7 +329,7 @@ const COMMON_TRACK: TrainingTrack = {
 
 const SEO_TRACK: TrainingTrack = {
   slug: "seo-geo",
-  name: "Consultor SEO/GEO",
+  name: "Especialização SEO/GEO",
   description:
     "Protocolos SEO, ferramentas, comunicação, gestão de tempo, registo de horas e reuniões-tipo. No fim deste módulo sabes comunicar com o cliente em qualquer momento da parceria e conduzir uma conta do onboarding ao relatório mensal.",
   order: 2,
@@ -301,6 +349,11 @@ const SEO_TRACK: TrainingTrack = {
           description:
             "Os protocolos internos do departamento de SEO: o que se faz, por que ordem, em quanto tempo e onde fica registado.",
           presenter: "André",
+          keyPoints: [
+            "A ordem dos protocolos não é sugestão: cada passo assume que o anterior está feito e registado.",
+            "Horas registadas fora do dia em que aconteceram deixam de servir para gerir carteira.",
+            "O roadmap do cliente é o contrato de trabalho da semana — se mudou, muda-se lá primeiro.",
+          ],
         },
       ]),
       quiz: quizFor("seo-m1", "Teste — Trabalho interno SEO"),
@@ -319,6 +372,11 @@ const SEO_TRACK: TrainingTrack = {
           description:
             "O consultor tem de saber comunicar com o cliente em qualquer momento da parceria. Tom, cadência, o que se diz e o que nunca se promete.",
           presenter: "André",
+          keyPoints: [
+            "Cadência combinada e cumprida vale mais do que contacto abundante e irregular.",
+            "Traduz sempre o técnico para o negócio do cliente: não são impressões, são pessoas a encontrar-te.",
+            "Nunca prometas posições nem prazos de indexação — compromete-te com o trabalho e com a data da próxima leitura.",
+          ],
         },
         {
           id: "seo-m2-a2",
@@ -327,6 +385,11 @@ const SEO_TRACK: TrainingTrack = {
             "Gravação real do André a ligar a um cliente que tinha o onboarding pendente e ainda não tinha feito a sessão de estratégia para contar como dia 1.",
           type: "call_real",
           presenter: "André",
+          keyPoints: [
+            "O relógio do serviço só arranca na sessão de estratégia — e é responsabilidade do consultor explicar isso sem soar a desculpa.",
+            "Ligar é mais rápido do que escrever quando o assunto já ficou parado uma vez.",
+            "Sai da chamada com data marcada, não com «depois combinamos».",
+          ],
         },
         {
           id: "seo-m2-a3",
@@ -335,6 +398,11 @@ const SEO_TRACK: TrainingTrack = {
             "Gravação real do André a ligar a um cliente sobre documentos pendentes na tabela de aprovações.",
           type: "call_real",
           presenter: "André",
+          keyPoints: [
+            "Aprovação pendente é trabalho já pago que não está a produzir efeito — trata-se como urgência, não como recordatório.",
+            "Cobra-se o pendente pelo impacto para o cliente, nunca pelo incómodo para nós.",
+            "Se o cliente não responde há três dias, a responsabilidade de desbloquear é tua.",
+          ],
         },
         {
           id: "seo-m2-a4",
@@ -343,6 +411,11 @@ const SEO_TRACK: TrainingTrack = {
             "Gravação do André e de outros consultores a fazer roleplays de chamadas telefónicas — os cenários que mais se repetem na carteira.",
           type: "scenario",
           presenter: "André",
+          keyPoints: [
+            "Os cenários repetem-se: quem os treina antes não improvisa ao telefone com o cliente.",
+            "Silêncio depois de uma pergunta é ferramenta — deixa o cliente responder.",
+            "Fecha sempre com o resumo do que ficou combinado e por escrito a seguir.",
+          ],
         },
       ]),
       quiz: quizFor("seo-m2", "Teste — Comunicação com o cliente"),
@@ -361,6 +434,11 @@ const SEO_TRACK: TrainingTrack = {
           description:
             "Tour pelas ferramentas de SEO da casa e pelo que cada uma resolve.",
           presenter: "André",
+          keyPoints: [
+            "Cada ferramenta responde a uma pergunta diferente — usar a errada dá uma resposta certa à pergunta que ninguém fez.",
+            "Os dados de GA4 e GSC são a base do relatório: se não confias no número, resolve-se antes do relatório, não durante.",
+            "O output da ferramenta é matéria-prima; a decisão continua a ser do consultor.",
+          ],
         },
         {
           id: "seo-m3-a2",
@@ -369,6 +447,11 @@ const SEO_TRACK: TrainingTrack = {
             "Gravação real do André em roleplay com as ferramentas: fazer ao vivo um roadmap e um artigo de blog.",
           type: "scenario",
           presenter: "André",
+          keyPoints: [
+            "Um roadmap faz-se a partir do negócio do cliente e só depois a partir das keywords.",
+            "Artigo gerado não é artigo entregue: revê-se intenção, factos e tom antes de sair.",
+            "O tempo que ganhas na ferramenta é para gastar no que ela não faz — critério e contexto do cliente.",
+          ],
         },
       ]),
       quiz: quizFor("seo-m3", "Teste — Ferramentas"),
@@ -387,6 +470,11 @@ const SEO_TRACK: TrainingTrack = {
           description:
             "O pré-onboarding, a reunião de onboarding e o que é entregue ao cliente depois. Chegar a uma reunião de onboarding sem isto preparado custa a confiança dos primeiros 30 dias.",
           presenter: "André",
+          keyPoints: [
+            "Chega-se à reunião de onboarding com o trabalho de casa feito: site visto, concorrentes vistos, perguntas preparadas.",
+            "Acessos e formulário pedem-se antes, não durante — a reunião é para estratégia, não para logística.",
+            "Os primeiros 30 dias definem a confiança do ano inteiro da conta.",
+          ],
         },
         {
           id: "seo-m4-a2",
@@ -395,6 +483,11 @@ const SEO_TRACK: TrainingTrack = {
             "Vídeo de exemplo de uma reunião real de onboarding com um cliente novo, do início ao fim.",
           type: "call_real",
           presenter: "André",
+          keyPoints: [
+            "Começa-se pelo negócio do cliente, nunca pelo SEO: o que vende, a quem, e o que é uma lead boa para ele.",
+            "Alinha-se expectativa de tempo logo no dia 1 — SEO tem curva, e é melhor dizê-lo antes de o cliente perguntar.",
+            "A reunião fecha com próximos passos datados e com quem faz o quê.",
+          ],
         },
       ]),
       quiz: quizFor("seo-m4", "Teste — Onboarding de cliente"),
@@ -413,6 +506,11 @@ const SEO_TRACK: TrainingTrack = {
           description:
             "Como se constrói o relatório mensal e como se apresenta. Inclui o caso difícil: apresentar um mês mau sem perder a conta.",
           presenter: "André",
+          keyPoints: [
+            "O relatório sai no início do mês seguinte, sempre — a pontualidade é metade da credibilidade do número.",
+            "Um mês mau apresenta-se com a leitura do porquê e o plano do mês seguinte já ao lado.",
+            "Leads e receita primeiro; impressões e posições são a explicação, não o título.",
+          ],
         },
         {
           id: "seo-m5-a2",
@@ -421,6 +519,11 @@ const SEO_TRACK: TrainingTrack = {
             "Gravação de uma reunião mensal com apresentação de dados e do trabalho feito ao cliente.",
           type: "call_real",
           presenter: "André",
+          keyPoints: [
+            "Mostra-se o que foi feito e o que isso produziu — trabalho sem efeito medido é só atividade.",
+            "O cliente tem de sair da reunião a saber o que vem a seguir e o que precisa de aprovar.",
+            "Números que o cliente não percebe não são impressionantes: são ruído.",
+          ],
         },
       ]),
       quiz: quizFor("seo-m5", "Teste — Reporting e reunião mensal"),
@@ -434,7 +537,7 @@ const SEO_TRACK: TrainingTrack = {
 
 const ADS_TRACK: TrainingTrack = {
   slug: "ads",
-  name: "Consultor ADS",
+  name: "Especialização ADS",
   description:
     "Protocolos Ads, ferramentas, comunicação, gestão de tempo, registo de horas e reuniões-tipo, mais o currículo completo de Service Delivery — dos fundamentos às estratégias avançadas.",
   order: 3,
@@ -679,7 +782,7 @@ const ADS_TRACK: TrainingTrack = {
 
 const WEB_TRACK: TrainingTrack = {
   slug: "web",
-  name: "Consultor WEB",
+  name: "Especialização WEB",
   description:
     "Protocolos Web, ferramentas, comunicação, gestão de tempo, registo de horas e reuniões-tipo — do trabalho interno à entrega e aprovação do site com o cliente.",
   order: 4,
@@ -755,7 +858,7 @@ const WEB_TRACK: TrainingTrack = {
 
 const COMMERCIAL_TRACK: TrainingTrack = {
   slug: "comercial",
-  name: "Comercial",
+  name: "Especialização Comercial",
   description:
     "Protocolos comerciais, ferramentas, comunicação, gestão de tempo, registo de horas e reuniões-tipo — da prospeção à assinatura e ao follow-up.",
   order: 5,
@@ -1034,6 +1137,9 @@ function normalizeLesson(raw: unknown, i: number): TrainingLesson | null {
     ...(typeof est === "number" && Number.isFinite(est) && est > 0
       ? { estMinutes: Math.round(est) }
       : {}),
+    keyPoints: (Array.isArray(o.keyPoints) ? o.keyPoints : [])
+      .map((k) => str(k).trim())
+      .filter((k) => k.length > 0),
     isPublished: bool(o.isPublished, true),
   };
 }

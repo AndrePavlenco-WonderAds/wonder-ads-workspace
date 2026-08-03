@@ -22,6 +22,7 @@ export type RosterTableRow = {
   currentLabel: string;
   watched: number;
   totalLessons: number;
+  allLessons: number;
   quizzesPassed: number;
   quizzesTotal: number;
   attempts: number;
@@ -186,7 +187,7 @@ export function RosterTable({
                 </td>
                 <td className="px-4 py-3 text-white/60">{r.currentLabel}</td>
                 <td className="px-4 py-3 text-white/60">
-                  {r.watched} de {r.totalLessons}
+                  {r.watched} de {r.allLessons}
                 </td>
                 <td className="px-4 py-3">
                   <span className="text-white/60">

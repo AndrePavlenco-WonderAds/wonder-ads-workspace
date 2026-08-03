@@ -44,8 +44,12 @@ export type ModuleState = {
   module: TrainingModule;
   status: ModuleStatus;
   lessons: LessonState[];
-  /** Aulas com vídeo disponível. */
+  /** Aulas com vídeo disponível. É o denominador das REGRAS (desbloqueio,
+   *  percentagem) — uma aula por gravar não pode ser exigida a ninguém. */
   totalLessons: number;
+  /** Aulas do programa, gravadas ou não. É o denominador do que se MOSTRA:
+   *  "0/3 aulas" diz o tamanho do capítulo, "0/0" não diz nada. */
+  allLessons: number;
   watchedLessons: number;
   /** Aulas sem vídeo — o que falta gravar neste módulo. */
   missingVideos: number;
@@ -73,6 +77,8 @@ export type TrackState = {
   /** 0–100 sobre a track inteira (aulas disponíveis + testes com perguntas). */
   percent: number;
   totalLessons: number;
+  /** Todas as aulas do programa, incluindo as que ainda não têm vídeo. */
+  allLessons: number;
   watchedLessons: number;
   missingVideos: number;
   completed: boolean;
@@ -147,6 +153,7 @@ function moduleState(
     module,
     lessons,
     totalLessons,
+    allLessons: lessons.length,
     watchedLessons,
     missingVideos,
     percent,
@@ -187,6 +194,7 @@ export function computeTrackState(
   }
 
   const totalLessons = modules.reduce((s, m) => s + m.totalLessons, 0);
+  const allLessons = modules.reduce((s, m) => s + m.allLessons, 0);
   const watchedLessons = modules.reduce((s, m) => s + m.watchedLessons, 0);
   const missingVideos = modules.reduce((s, m) => s + m.missingVideos, 0);
   const quizzes = modules.filter((m) => m.quizRequired);
@@ -230,6 +238,7 @@ export function computeTrackState(
     modules,
     percent,
     totalLessons,
+    allLessons,
     watchedLessons,
     missingVideos,
     completed,

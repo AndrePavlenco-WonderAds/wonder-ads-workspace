@@ -49,6 +49,7 @@ export default async function FormacaoAdminPage() {
     currentLabel: r.currentLabel,
     watched: r.watched,
     totalLessons: r.totalLessons,
+    allLessons: r.allLessons,
     quizzesPassed: r.quizzesPassed,
     quizzesTotal: r.quizzesTotal,
     attempts: r.attempts.length,

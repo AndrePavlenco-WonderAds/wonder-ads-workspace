@@ -543,6 +543,7 @@ export function TrainingCms({
                                           presenter: null,
                                           videoUrl: null,
                                           videoProvider: null,
+                                          keyPoints: [],
                                           isPublished: true,
                                         },
                                       ],
@@ -772,7 +773,12 @@ function LessonEditor({
             <span className="block truncate text-[10.5px] text-white/35">
               {LESSON_TYPE_LABEL[lesson.type]} ·{" "}
               {lesson.presenter ?? "sem apresentador"} ·{" "}
-              {lesson.videoUrl ? "com vídeo" : "brevemente"}
+              {lesson.videoUrl ? "com vídeo" : "brevemente"} ·{" "}
+              {lesson.keyPoints.filter(Boolean).length > 0 ? (
+                `${lesson.keyPoints.filter(Boolean).length} pontos`
+              ) : (
+                <span className="text-amber-200/60">sem Remember</span>
+              )}
             </span>
           </span>
         </button>
@@ -796,6 +802,27 @@ function LessonEditor({
                 rows={3}
                 value={lesson.description}
                 onChange={(e) => onChange({ description: e.target.value })}
+              />
+            </Labeled>
+          </div>
+          <div className="sm:col-span-2">
+            <Labeled
+              label="Remember — pontos a reter"
+              hint="Uma linha por ponto. Aparecem ao lado do vídeo, numerados. Deixa vazio enquanto a aula não estiver destilada."
+            >
+              <textarea
+                className={inputCls}
+                rows={4}
+                placeholder={
+                  "O padrão é ser o melhor consultor que aquele cliente já teve.\nErro assumido cedo é um contratempo; descoberto pelo cliente é uma quebra de confiança."
+                }
+                value={lesson.keyPoints.join("\n")}
+                // Guardam-se as linhas cruas (incluindo as vazias) para o
+                // Enter funcionar enquanto se escreve. As vazias caem na
+                // normalização do servidor, ao gravar.
+                onChange={(e) =>
+                  onChange({ keyPoints: e.target.value.split("\n") })
+                }
               />
             </Labeled>
           </div>

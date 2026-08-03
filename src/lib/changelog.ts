@@ -13,6 +13,21 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.23",
+    date: "2026-08-03",
+    title: "Notificações no topo da app, Remember nas aulas e instrutores com cara",
+    highlights: [
+      "**🔔 O workspace passou a ter um sino — e o que está lá dentro resolve-se ali.** Ao lado do nome, no topo de todas as páginas, com o número do que está **por resolver** (não do que é «novo» — um contador de não-lidos ensina-se a ignorar, um contador de trabalho em aberto não). Abre um painel lateral onde cada linha tem as **duas** saídas possíveis: o botão que leva ao sítio de fazer o trabalho, e o «Concluído». O que se resolve desce para *Concluídas* e pode ser reaberto — um clique errado não apaga o lembrete do mês.",
+      "**📅 A primeira regra: Monthly Report, dia 2 de cada mês, para o DPT de SEO.** Cada consultor recebe **uma notificação por cliente da sua carteira**, cada uma na sua linha, com o botão a abrir o *Monthly Report* daquele cliente. Clientes em pausa ficam de fora — pedir o relatório de uma conta suspensa é ruído, não é lembrete. E o mês passado **não desaparece**: um relatório de julho por enviar continua à frente dos olhos em agosto, à cabeça da lista.",
+      "**🧮 As notificações não são gravadas, são calculadas.** Não há cron a escrever avisos em KV no dia 2 — a regra + o calendário + a carteira do consultor *dão* a lista, e a única coisa que se escreve é o «já está feito». Um cron que falha uma vez perde o mês inteiro e ninguém dá por isso (a ausência de um aviso não dispara nada); um cliente adicionado a meio do mês apareceria fora do sítio. Assim, a lista está sempre certa e alterar uma regra tem efeito imediato.",
+      "**🛠️ `/admin → Notificações` — as regras são geríveis sem código.** Quem recebe (toda a equipa, um departamento, ou pessoas à escolha), sobre o quê (uma por pessoa ou uma por cliente SEO da carteira), em que dia do mês, o texto do botão e o destino — com `{slug}` substituído pelo cliente. Ativar/desativar sem apagar, e «repor originais» a qualquer momento. O que os consultores já marcaram como concluído nunca é apagado por uma edição de regras.",
+      "**📌 «Remember» ao lado do vídeo.** Cada aula ganhou um painel com os pontos que têm mesmo de ficar, numerados, para se reler em diagonal antes do teste — *«erro assumido cedo é um contratempo; descoberto pelo cliente é uma quebra de confiança»*. Estão escritos para a **Categoria Comum** e para a **Especialização SEO/GEO**; nas outras o painel diz que ainda não foi destilado em vez de desaparecer. Editam-se no CMS, uma linha por ponto, e o checklist de aulas passa a marcar as que estão *sem Remember*.",
+      "**🎙️ Quem dá a aula passou a ter cara.** Por baixo do Remember, um cartão com o instrutor (ou instrutores) daquela aula em concreto — Alice, Alex, André —, com foto quando existe e avatar de iniciais quando não. O campo `presenter` continua a ser texto livre no CMS: «Alice / Alex / André» dá três cartões, e um nome de fora da casa aparece na mesma em vez de ser descartado.",
+      "**🔤 «Consultor SEO/GEO» passou a «Especialização SEO/GEO»** — e o mesmo para ADS, WEB e Comercial. No hub, o título é agora **«Bem-vindo, {nome}»**, e o cartão de cada módulo ficou com **um** botão, *Estudar Módulo*, que leva à sequência; o atalho para retomar a aula exata já vivia no cartão de cima e ter dois links para sítios diferentes só obrigava a escolher.",
+      "**🔢 «0/0 aulas» desapareceu.** O denominador passou a ser o programa inteiro — gravado ou não —, por isso um capítulo diz «0/3 aulas» e o módulo de ADS diz o seu tamanho real. As **regras** continuam a contar só o que existe (uma aula por gravar não bloqueia nem é exigida a ninguém): o que mudou é o que se **lê**, não o que se **exige**.",
+    ],
+  },
+  {
     version: "76.22",
     date: "2026-08-03",
     title: "Formação — vocabulário novo, especializações acumuláveis e a consola de sequência",

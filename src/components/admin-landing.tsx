@@ -16,6 +16,7 @@ import {
   Wallet,
   Rocket,
   ShieldAlert,
+  BellRing,
   ArrowRight,
 } from "lucide-react";
 
@@ -35,6 +36,7 @@ export function AdminLanding({
   financesCount,
   onboardingCount,
   penaltiesCount,
+  notificationsCount,
 }: {
   projectsCount: number;
   employeesCount: number;
@@ -42,6 +44,8 @@ export function AdminLanding({
   financesCount: number;
   onboardingCount: number;
   penaltiesCount: number;
+  /** Regras de notificação ativas. */
+  notificationsCount: number;
 }) {
 
   const blocks: ChoiceBlock[] = [
@@ -98,6 +102,15 @@ export function AdminLanding({
       count: penaltiesCount,
       badge: penaltiesCount === 1 ? "ativa" : "ativas",
       Icon: ShieldAlert,
+    },
+    {
+      href: "/admin/notificacoes",
+      title: "Notificações",
+      blurb:
+        "Os lembretes que aparecem no sino do topo da app. Define quem recebe, sobre o quê (uma por pessoa ou uma por cliente da carteira), em que dia do mês e para onde vai o botão de ação.",
+      count: notificationsCount,
+      badge: notificationsCount === 1 ? "regra ativa" : "regras ativas",
+      Icon: BellRing,
     },
   ];
 

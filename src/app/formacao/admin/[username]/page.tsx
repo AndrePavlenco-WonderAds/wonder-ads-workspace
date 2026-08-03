@@ -154,7 +154,7 @@ export default async function ConsultantDrillDownPage({
       <section className="animate-fade-up mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatTile
           label="Aulas vistas"
-          value={`${row.watched}/${row.totalLessons}`}
+          value={`${row.watched}/${row.allLessons}`}
           icon={<Film className="h-3 w-3" />}
         />
         <StatTile
