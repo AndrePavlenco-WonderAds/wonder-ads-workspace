@@ -32,6 +32,7 @@ export async function UserChip() {
       name={display.name}
       role={display.role}
       dept={display.dept}
+      isAdmin={display.isAdmin}
       expiresLabel={expiresLabel}
     />
   );

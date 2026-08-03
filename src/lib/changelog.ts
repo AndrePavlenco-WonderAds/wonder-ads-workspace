@@ -13,6 +13,20 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.20",
+    date: "2026-08-03",
+    title: "Formação — Consultants Onboarding University (Fase 1)",
+    highlights: [
+      "**🎓 Nova área «Formação» no menu do teu nome, no canto superior direito.** Aberta a toda a gente com sessão. O C-Level tem lá também **«Formação — Overview»**. A universidade interna tem duas camadas: uma **Categoria Comum obrigatória para todos** — porque começámos a WonderAds, visão e valores, mindset, quem contactar, tecnologia, feedback, comunicação com o cliente e deteção de oportunidades — e **quatro trilhas de especialização** (SEO/GEO, ADS, WEB e Comercial), com **68 aulas** e um teste por módulo.",
+      "**🧭 Ninguém precisa de ser inscrito à mão.** A especialização deriva do departamento da credencial: SEO → SEO/GEO, ADS → ADS, Web → WEB, Commercial → Comercial. O C-Level pode sempre sobrepor a atribuição, e essa escolha vence o departamento. Toda a gente entra já com a Comum.",
+      "**🔒 Progressão sequencial a sério.** A Comum tem de estar 100% concluída antes de a especialização abrir, e dentro de cada trilha o módulo seguinte só abre depois de **todas as aulas vistas e o teste passado**. Um link partilhado para uma aula bloqueada mostra o motivo, não o vídeo.",
+      "**▶️ Uma aula conta como vista aos 90% do vídeo — medidos, não declarados.** No YouTube e no Vimeo lemos a posição real do player; em ficheiro próprio, o `<video>` nativo. Guardamos a **percentagem real** (para o admin ver quem viu 92% e quem viu 12%) e ela **nunca desce** ao rever. O **Loom não expõe progresso de reprodução**: aí há confirmação manual, que só desbloqueia depois do tempo estimado da aula e fica marcada como manual — mais vale dizer que não foi medido do que inventar um número.",
+      "**🎬 Conteúdo por gravar não tranca ninguém.** Uma aula sem vídeo aparece como *Brevemente*, sai do denominador do módulo e não bloqueia a progressão; um módulo sem teste escrito também não. Uma trilha ainda sem nada gravado diz **«Em preparação»** em vez de fingir 0% ou, pior, «Concluída». Cada aula guarda **quem a vai gravar** (Alice, Alex, André, ou *por atribuir*) — a base do checklist de gravação.",
+      "**🛠️ Sem base de dados nova e sem tocar na Vercel.** O programa vive em código e o CMS (Fase 3) grava por cima em KV, exatamente como o curso de onboarding de clientes — um conteúdo inválido nunca consegue partir a formação. Nada mudou nas rotas, permissões ou dashboards já existentes.",
+      "**➡️ A seguir:** Fase 2 — motor de testes com correção, tentativas e todas as respostas guardadas; Fase 3 — overview de admin com drill-down por consultor, checklist de gravação e CMS de conteúdo.",
+    ],
+  },
+  {
     version: "76.19",
     date: "2026-07-30",
     title: "Relatório Mensal — linhas de lead adicionais (2.ª unidade, 2.º telefone)",

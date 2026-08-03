@@ -87,6 +87,9 @@ export const config = {
     "/commercial/:path*",
     "/admin/:path*",
     "/changelog/:path*",
+    // Formação interna — universidade dos consultores. Toda a gente com
+    // sessão entra; o gate de /formacao/admin é feito no layout (isAdmin).
+    "/formacao/:path*",
     // Internal-only API surfaces. /api/reviews stays public (clients
     // hit it from the (public-review) pages), /api/auth is the gate
     // itself, /api/files is used by both sides so we leave it open
@@ -108,5 +111,6 @@ export const config = {
     "/api/diagnostics/:path*",
     "/api/ga4/:path*",
     "/api/chat/:path*",
+    "/api/formacao/:path*",
   ],
 };

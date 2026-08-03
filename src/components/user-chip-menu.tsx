@@ -6,18 +6,28 @@
 // client" boundary all the way up the tree.
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronDown, LogOut, UserCircle2 } from "lucide-react";
+import {
+  ChevronDown,
+  GraduationCap,
+  LayoutDashboard,
+  LogOut,
+  UserCircle2,
+} from "lucide-react";
 
 export function UserChipMenu({
   name,
   role,
   dept,
+  isAdmin = false,
   expiresLabel,
 }: {
   name: string;
   role: string;
   dept: string;
+  /** C-Level (Andre / Alex / Alice) — vê o overview da Formação. */
+  isAdmin?: boolean;
   /** Pre-formatted "X days" / "Yh" — server picks the granularity. */
   expiresLabel: string;
 }) {
@@ -85,6 +95,29 @@ export function UserChipMenu({
               Session expires in ~{expiresLabel}
             </p>
           </div>
+          {/* Formação — visível a toda a gente com sessão. O overview só
+              aparece para C-Level; a rota está protegida no servidor de
+              qualquer forma (o layout de /formacao/admin verifica isAdmin). */}
+          <Link
+            href="/formacao"
+            role="menuitem"
+            onMouseDown={(e) => e.preventDefault()}
+            className="flex w-full items-center gap-2 border-b border-white/8 px-4 py-2.5 text-left text-[12px] font-medium text-white/75 transition hover:bg-white/[0.06] hover:text-white"
+          >
+            <GraduationCap className="h-3.5 w-3.5 text-[color:var(--brand-purple)]" />
+            Formação
+          </Link>
+          {isAdmin && (
+            <Link
+              href="/formacao/admin"
+              role="menuitem"
+              onMouseDown={(e) => e.preventDefault()}
+              className="flex w-full items-center gap-2 border-b border-white/8 px-4 py-2.5 text-left text-[12px] font-medium text-white/75 transition hover:bg-white/[0.06] hover:text-white"
+            >
+              <LayoutDashboard className="h-3.5 w-3.5 text-[color:var(--brand-purple)]" />
+              Formação — Overview
+            </Link>
+          )}
           <button
             type="button"
             role="menuitem"
