@@ -63,7 +63,10 @@ export const DEFAULT_STARTING_DATES: Record<string, string> = {
   wonderads: "2026-03-30",
   "clinica-em-casa": "2026-02-26",
   "clinica-mimus": "2026-05-04",
-  "insync-design": "2026-01-23",  "safe-away": "2026-02-20",
+  "insync-design": "2026-01-23",
+  // v76.24: Safe Away corrigido para 26/02/2026 (era 20/02) para bater com a
+  // data de onboarding real — a mesma da Clínica em Casa.
+  "safe-away": "2026-02-26",
   "sea-yourself": "2026-01-14",
   "a-domingos": "2026-02-23",
   "aeger-prima": "2025-11-19",

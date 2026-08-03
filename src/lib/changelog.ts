@@ -13,6 +13,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.24",
+    date: "2026-08-03",
+    title: "Safe Away — data de onboarding corrigida para 26/02/2026",
+    highlights: [
+      "**📅 Safe Away passou a estar onboarded a 26/02/2026.** Estava a dizer duas coisas diferentes em dois sítios: **09/02** no registo de admin (que é o que manda na tabela de Clients e nos meses ativos do relatório) e **20/02** no default de código (que é o que alimenta o *«Cliente desde»* da página de NPS). Ficaram os dois em 26/02/2026. A **Clínica em Casa** já estava certa nos dois — não foi tocada.",
+      "**🧾 A faturação não se mexeu.** A `invoiceDate` da Safe Away está gravada explicitamente (26/08/2026) e só seria recalculada a partir da data de início se estivesse vazia — o calendário de faturação fica exatamente onde estava.",
+    ],
+  },
+  {
     version: "76.23",
     date: "2026-08-03",
     title: "Notificações no topo da app, Remember nas aulas e instrutores com cara",
