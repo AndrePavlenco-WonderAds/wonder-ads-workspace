@@ -13,6 +13,20 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.22",
+    date: "2026-08-03",
+    title: "Formação — vocabulário novo, especializações acumuláveis e a consola de sequência",
+    highlights: [
+      "**🗣️ O vocabulário mudou e ficou finalmente coerente.** O que era *trilha* passa a **módulo** (Categoria Comum, SEO/GEO, ADS, WEB, Comercial) e o que era *módulo* passa a **capítulo**. Foi trocado em toda a app de uma ponta à outra — hub, roadmap, aula, teste, tabela de equipa, gravações, CMS e mensagens de erro da API. A etiqueta **«Por gravar» desapareceu**: para o consultor uma aula sem vídeo é **«Brevemente»**, e no checklist de produção é **«Em falta»**.",
+      "**👥 Uma pessoa pode ter mais do que uma especialização.** Quem faz SEO e também fecha vendas precisa das duas — o modelo deixou de ser um campo único e passou a ser uma lista. Nas *Inscrições* cada especialização é um chip que se liga e desliga, e as atribuições que já estavam gravadas migram sozinhas (o formato antigo continua a ser lido, ninguém perde nada). Lista vazia continua a significar *explicitamente sem especialização* e vence o departamento.",
+      "**🛡️ A área de Superadmin diz o que é e está fechada em dois sítios.** *Formação — Overview* passou a **Formação — Superadmin**, no título, no dropdown do perfil e em todos os back-links. O gate cobre `/formacao/admin/**` inteiro, e cada rota da API que escreve (inscrições, conteúdo) volta a verificar as permissões por si — um layout só protege o que é renderizado, não protege um pedido feito à mão.",
+      "**🙋 O hub deixou de dar as boas-vindas e passou a falar a sério.** O título é o **nome do consultor** e por baixo está uma frase de campeão que muda todos os dias e é sempre a mesma dentro do mesmo dia — *«Campeões não nascem prontos. Treinam quando ninguém está a ver.»*, *«A conta do cliente é tua. O resultado dele também.»* Saiu o botão *Overview* do hero (o acesso faz-se pelo dropdown do topo) e a etiqueta perdeu o *onboarding*: agora é **Consultants University**.",
+      "**🛰️ O roadmap foi redesenhado como uma consola de sequência.** À esquerda corre um **condutor vertical** cujo troço entre dois capítulos está aceso na medida exata do que já foi feito: cheio quando o capítulo está concluído, e no capítulo atual aceso até à percentagem real. O nó onde estás tem um halo a pulsar — e é a **única** coisa animada da página, para o olho ir direto ao próximo passo. Capítulos numerados 01, 02, 03, medidor encostado ao topo de cada cartão, e leituras em números de largura fixa para nada saltar quando a percentagem muda.",
+      "**🎬 A página de aula ganhou um viewport.** O vídeo é enquadrado por quatro cantos e um brilho por trás em vez de uma moldura fechada, e por baixo corre uma faixa única de leitura: *cap 01 · aula 01 de 03 · formação · ~12 min · Alice / Alex*. A barra lateral repete o condutor do roadmap, por isso sabes onde estás sem voltar atrás.",
+      "**🎥 O ecrã «aula por gravar» deixou de gritar.** Era um retângulo de gradiente do tamanho do player — e como ainda não há vídeos, era o que toda a gente via em todas as aulas. Agora é um painel escuro com contorno tracejado e uma etiqueta *Brevemente*. Diz exatamente a mesma coisa sem tomar conta da página.",
+    ],
+  },
+  {
     version: "76.21",
     date: "2026-08-03",
     title: "Formação — testes, roadmap novo e overview de C-Level (Fases 2 e 3)",

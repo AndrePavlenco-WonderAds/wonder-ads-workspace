@@ -1,6 +1,6 @@
 "use client";
 
-// Teste de um módulo: lista completa de perguntas (mais simples e mais
+// Teste de um capítulo: lista completa de perguntas (mais simples e mais
 // consistente com a app do que um wizard), barra de progresso de resposta,
 // submissão e correção pergunta a pergunta.
 //
@@ -59,7 +59,7 @@ export function QuizRunner({
   /** null = tentativas ilimitadas. */
   attemptsLeft: number | null;
   trackHref: string;
-  /** Para onde seguir depois de passar (próximo módulo ou a trilha). */
+  /** Para onde seguir depois de passar (próximo capítulo ou o módulo). */
   nextHref: string;
 }) {
   const router = useRouter();
@@ -214,7 +214,7 @@ export function QuizRunner({
                 href={trackHref}
                 className="inline-flex items-center rounded-xl border border-white/12 px-4 py-2.5 text-[13px] font-medium text-white/70 transition hover:border-white/30 hover:text-white"
               >
-                Voltar aos módulos
+                Voltar à sequência
               </Link>
             </div>
           </div>

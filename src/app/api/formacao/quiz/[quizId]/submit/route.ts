@@ -13,7 +13,10 @@
 import { NextResponse } from "next/server";
 import { getCurrentEmployee } from "@/lib/auth/server";
 import { getTrainingCatalog } from "@/lib/training/content-store";
-import { getEnrollments, resolveTrackSlug } from "@/lib/training/enrollments-store";
+import {
+  getEnrollments,
+  resolveTrackSlugs,
+} from "@/lib/training/enrollments-store";
 import { getTrainingProgress } from "@/lib/training/progress-store";
 import {
   appendQuizAttempt,
@@ -89,35 +92,33 @@ export async function POST(
     );
   }
 
-  // O utilizador tem de estar inscrito na track E ter o módulo aberto. Sem
+  // O utilizador tem de estar inscrito no módulo E ter o capítulo aberto. Sem
   // isto, bastava conhecer o id do teste para passar por cima da sequência.
-  const specializationSlug = resolveTrackSlug(
+  const specializationSlugs = resolveTrackSlugs(
     employee.username,
     employee.dept,
     enrollments,
   );
-  const { common, specialization } = computeUserTraining(
+  const { common, specializations } = computeUserTraining(
     tracks,
-    specializationSlug,
+    specializationSlugs,
     progress,
     previousAttempts,
   );
   const state =
-    common?.track.slug === found.trackSlug
-      ? common
-      : specialization?.track.slug === found.trackSlug
-        ? specialization
-        : null;
+    [common, ...specializations]
+      .filter((t) => t !== null)
+      .find((t) => t.track.slug === found.trackSlug) ?? null;
   if (!state) {
     return NextResponse.json(
-      { error: "Não estás inscrito nesta trilha." },
+      { error: "Não estás inscrito neste módulo." },
       { status: 403 },
     );
   }
   const moduleState = state.modules.find((m) => m.module.id === found.moduleId);
   if (!moduleState || moduleState.status === "locked") {
     return NextResponse.json(
-      { error: "Este módulo ainda está bloqueado." },
+      { error: "Este capítulo ainda está bloqueado." },
       { status: 403 },
     );
   }
@@ -125,14 +126,14 @@ export async function POST(
     return NextResponse.json(
       {
         error:
-          "Este módulo ainda não tem aulas gravadas — o teste só abre quando houver matéria.",
+          "Este capítulo ainda não tem aulas gravadas — o teste só abre quando houver matéria.",
       },
       { status: 409 },
     );
   }
   if (moduleState.watchedLessons < moduleState.totalLessons) {
     return NextResponse.json(
-      { error: "Vê todas as aulas do módulo antes de fazer o teste." },
+      { error: "Vê todas as aulas do capítulo antes de fazer o teste." },
       { status: 403 },
     );
   }

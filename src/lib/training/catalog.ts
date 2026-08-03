@@ -1,7 +1,8 @@
-// WonderAds Consultants Onboarding University — catálogo da formação interna.
+// WonderAds Consultants University — catálogo da formação interna.
 //
-// Estrutura: track → módulos → aulas (+ 1 teste por módulo). Módulo puro (sem
-// KV, sem React) para que o hub do consultor, o overview do admin e o CMS
+// Estrutura: módulo (track) → capítulos → aulas (+ 1 teste por capítulo).
+// Ficheiro puro (sem
+// KV, sem React) para que o hub do consultor, o Superadmin e o CMS
 // importem exatamente a mesma verdade.
 //
 // PORQUÊ CONTEÚDO EM CÓDIGO: o workspace não tem base de dados relacional —
@@ -109,7 +110,7 @@ export type TrainingTrack = {
   name: string;
   description: string;
   order: number;
-  /** A track comum é obrigatória para toda a gente e desbloqueia as outras. */
+  /** O módulo comum é obrigatório para toda a gente e desbloqueia os outros. */
   isCommon: boolean;
   modules: TrainingModule[];
 };
@@ -171,14 +172,14 @@ function quizFor(moduleId: string, title: string): TrainingQuiz {
 }
 
 // ---------------------------------------------------------------------------
-// 1 · CATEGORIA COMUM — obrigatória para toda a equipa
+// 1 · CATEGORIA COMUM — obrigatório para toda a equipa
 // ---------------------------------------------------------------------------
 
 const COMMON_TRACK: TrainingTrack = {
   slug: COMMON_TRACK_SLUG,
   name: "Fundações WonderAds",
   description:
-    "Obrigatória para toda a equipa, independentemente do departamento. O propósito da empresa, como nasceu, o mindset que se espera de quem cá trabalha, o objetivo e como lá queremos chegar.",
+    "Obrigatório para toda a equipa, independentemente do departamento. O propósito da empresa, como nasceu, o mindset que se espera de quem cá trabalha, o objetivo e como lá queremos chegar.",
   order: 1,
   isCommon: true,
   modules: [
@@ -282,7 +283,7 @@ const SEO_TRACK: TrainingTrack = {
   slug: "seo-geo",
   name: "Consultor SEO/GEO",
   description:
-    "Protocolos SEO, ferramentas, comunicação, gestão de tempo, registo de horas e reuniões-tipo. No fim desta trilha sabes comunicar com o cliente em qualquer momento da parceria e conduzir uma conta do onboarding ao relatório mensal.",
+    "Protocolos SEO, ferramentas, comunicação, gestão de tempo, registo de horas e reuniões-tipo. No fim deste módulo sabes comunicar com o cliente em qualquer momento da parceria e conduzir uma conta do onboarding ao relatório mensal.",
   order: 2,
   isCommon: false,
   modules: [

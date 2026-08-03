@@ -1,7 +1,8 @@
-// Atribuição da trilha de especialização de um consultor. C-Level apenas.
-//   POST { username, trackSlug }        — atribui (null = sem especialização)
+// Atribuição das especializações de um consultor. SuperAdmin apenas.
+//   POST { username, trackSlugs: [...] } — atribui ([] = sem especialização)
 //   POST { username, clear: true }       — remove a atribuição, volta ao dept
 //
+// Uma pessoa pode ter mais do que uma especialização, daí a lista.
 // Quem atribuiu fica gravado a partir da sessão, nunca do payload.
 
 import { NextResponse } from "next/server";
@@ -11,7 +12,10 @@ import {
   clearEnrollment,
   setEnrollment,
 } from "@/lib/training/enrollments-store";
-import { SPECIALIZATION_SLUGS } from "@/lib/training/catalog";
+import {
+  SPECIALIZATION_SLUGS,
+  type SpecializationSlug,
+} from "@/lib/training/catalog";
 
 export const runtime = "nodejs";
 
@@ -30,9 +34,9 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ error: "invalid body" }, { status: 400 });
   }
-  const { username, trackSlug, clear } = (body ?? {}) as {
+  const { username, trackSlugs, clear } = (body ?? {}) as {
     username?: unknown;
-    trackSlug?: unknown;
+    trackSlugs?: unknown;
     clear?: unknown;
   };
   if (typeof username !== "string" || !username.trim()) {
@@ -51,16 +55,23 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: message }, { status: 400 });
     }
   }
-  const slug =
-    trackSlug === null || trackSlug === ""
-      ? null
-      : typeof trackSlug === "string" &&
-          (SPECIALIZATION_SLUGS as readonly string[]).includes(trackSlug)
-        ? (trackSlug as (typeof SPECIALIZATION_SLUGS)[number])
-        : undefined;
-  if (slug === undefined) {
+  if (!Array.isArray(trackSlugs)) {
     return NextResponse.json(
-      { error: "Trilha de especialização inválida." },
+      { error: "trackSlugs tem de ser uma lista." },
+      { status: 400 },
+    );
+  }
+  // Um slug desconhecido é rejeitado em vez de silenciosamente descartado —
+  // gravar menos especializações do que o C-Level escolheu seria pior do que
+  // falhar de forma visível.
+  const invalid = trackSlugs.filter(
+    (s) =>
+      typeof s !== "string" ||
+      !(SPECIALIZATION_SLUGS as readonly string[]).includes(s),
+  );
+  if (invalid.length > 0) {
+    return NextResponse.json(
+      { error: "Especialização inválida." },
       { status: 400 },
     );
   }
@@ -68,7 +79,7 @@ export async function POST(req: Request) {
   try {
     const map = await setEnrollment(
       username.trim().toLowerCase(),
-      slug,
+      trackSlugs as SpecializationSlug[],
       employee.username,
       Date.now(),
     );

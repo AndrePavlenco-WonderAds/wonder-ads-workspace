@@ -1,6 +1,6 @@
 // Átomos visuais da Formação, partilhados entre o hub do consultor, as
-// páginas de track/aula e o overview do admin — para que "concluído" tenha
-// sempre o mesmo aspeto em todo o lado.
+// páginas de módulo/aula e o Superadmin — para que "concluído" tenha sempre o
+// mesmo aspeto em todo o lado.
 
 import type { ReactNode } from "react";
 import {
@@ -58,14 +58,14 @@ export function ModuleStatusChip({
 }: {
   status: ModuleStatus;
   percent: number;
-  /** Um módulo ainda sem aulas gravadas não é um módulo "concluído". */
+  /** Um capítulo ainda sem aulas gravadas não é um capítulo "concluído". */
   hasContent?: boolean;
 }) {
   if (!hasContent) {
     return (
       <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/25 bg-amber-500/[0.08] px-2.5 py-0.5 text-[10.5px] font-semibold uppercase tracking-wide text-amber-200/80">
         <Clock className="h-3 w-3" />
-        Por gravar
+        Brevemente
       </span>
     );
   }
@@ -88,7 +88,7 @@ export function ModuleStatusChip({
   return (
     <span className="inline-flex items-center gap-1.5 rounded-full border border-[#783DF5]/40 bg-[#783DF5]/12 px-2.5 py-0.5 text-[10.5px] font-semibold uppercase tracking-wide text-[#c3aaff]">
       <PlayCircle className="h-3 w-3" />
-      Em curso · {percent}%
+      Em curso · <span className="tabular">{percent}%</span>
     </span>
   );
 }
@@ -138,7 +138,9 @@ export function ProgressRing({
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-2xl font-bold text-white">{percent}%</span>
+        <span className="tabular text-2xl font-bold text-white">
+          {percent}%
+        </span>
         {label && (
           <span className="text-[10.5px] font-medium text-white/45">{label}</span>
         )}
@@ -232,7 +234,7 @@ export function StatTile({
         {icon}
         {label}
       </p>
-      <p className="mt-1.5 text-2xl font-semibold tracking-tight text-white">
+      <p className="tabular mt-1.5 text-2xl font-semibold tracking-tight text-white">
         {value}
       </p>
       {hint && <p className="mt-0.5 text-[11px] text-white/40">{hint}</p>}
@@ -240,7 +242,7 @@ export function StatTile({
   );
 }
 
-/** Fita de módulos de uma trilha — um segmento por módulo, colorido pelo
+/** Fita de capítulos de um módulo — um segmento por capítulo, colorido pelo
  *  estado. Dá a leitura da jornada inteira num relance, sem scroll. */
 export function TrackJourney({ modules }: { modules: ModuleState[] }) {
   return (
@@ -250,7 +252,7 @@ export function TrackJourney({ modules }: { modules: ModuleState[] }) {
           key={m.module.id}
           title={`${m.module.title} — ${
             !m.hasContent
-              ? "por gravar"
+              ? "brevemente"
               : m.status === "completed"
                 ? "concluído"
                 : m.status === "in_progress"

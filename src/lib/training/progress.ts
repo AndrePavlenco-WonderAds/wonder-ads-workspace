@@ -5,10 +5,10 @@
 // bloqueado" e o admin vê "em curso", uma das duas está a mentir.
 //
 // Regras:
-//  1. A track comum tem de estar 100% concluída (aulas vistas + testes
-//     passados) antes de a especialização abrir.
-//  2. Dentro de uma track os módulos abrem em sequência: o módulo N+1 só abre
-//     depois de todas as aulas do N estarem vistas E o teste do N passado.
+//  1. O módulo comum tem de estar 100% concluído (aulas vistas + testes
+//     passados) antes de as especializações abrirem.
+//  2. Dentro de um módulo os capítulos abrem em sequência: o capítulo N+1 só
+//     abre depois de todas as aulas do N estarem vistas E o teste do N passado.
 //  3. Uma aula conta como vista com percent >= 90 (WATCHED_THRESHOLD).
 //  4. CONTEÚDO EM FALTA NÃO BLOQUEIA NINGUÉM. Aula sem vídeo (ou despublicada)
 //     sai do denominador; teste sem perguntas dá-se por cumprido. Sem isto, a
@@ -76,7 +76,7 @@ export type TrackState = {
   watchedLessons: number;
   missingVideos: number;
   completed: boolean;
-  /** False quando a trilha ainda não tem nenhum conteúdo disponível. */
+  /** False quando o módulo ainda não tem nenhum conteúdo disponível. */
   hasContent: boolean;
   /** Próxima aula sugerida ("Continuar onde ficaste"). */
   nextLesson: { module: TrainingModule; lesson: TrainingLesson } | null;
@@ -195,7 +195,7 @@ export function computeTrackState(
   const steps = totalLessons + quizzes.length;
   const doneSteps = watchedLessons + passedQuizzes;
   const percent = steps === 0 ? 0 : Math.round((doneSteps / steps) * 100);
-  // "Nada por fazer" — inclui o caso de a trilha ainda não ter conteúdo
+  // "Nada por fazer" — inclui o caso de o módulo ainda não ter conteúdo
   // nenhum. É deliberado: enquanto os vídeos não estão gravados, a Categoria
   // Comum não pode manter a especialização de toda a gente trancada. Quem
   // precisa de distinguir os dois casos usa `hasContent`.
@@ -241,42 +241,42 @@ export function computeTrackState(
   };
 }
 
-/** Estado das tracks de um utilizador: a Comum e (quando existe) a sua
- *  especialização, já com a regra "a Comum desbloqueia a especialização"
- *  aplicada. */
+/** Estado dos módulos de um utilizador: o Comum e as suas especializações
+ *  (podem ser mais do que uma), já com a regra "o Comum desbloqueia as
+ *  especializações" aplicada. */
 export function computeUserTraining(
   tracks: TrainingTrack[],
-  specializationSlug: string | null,
+  specializationSlugs: readonly string[],
   progress: UserTrainingProgress,
   attempts: QuizAttempt[],
-): { common: TrackState | null; specialization: TrackState | null } {
+): { common: TrackState | null; specializations: TrackState[] } {
   const commonTrackDef = tracks.find((t) => t.isCommon) ?? null;
   const common = commonTrackDef
     ? computeTrackState(commonTrackDef, progress, attempts)
     : null;
 
-  const specTrackDef = specializationSlug
-    ? (tracks.find((t) => t.slug === specializationSlug && !t.isCommon) ?? null)
-    : null;
-
-  const specialization = specTrackDef
-    ? computeTrackState(specTrackDef, progress, attempts, {
+  // Percorre-se o catálogo (e não a lista de slugs) para que a ordem seja
+  // sempre a canónica, independentemente da ordem de atribuição.
+  const specializations = tracks
+    .filter((t) => !t.isCommon && specializationSlugs.includes(t.slug))
+    .map((t) =>
+      computeTrackState(t, progress, attempts, {
         unlocked: common ? common.completed : true,
         lockedReason:
-          "Conclui a Categoria Comum para desbloquear a tua especialização.",
-      })
-    : null;
+          "Conclui a Categoria Comum para desbloqueares as tuas especializações.",
+      }),
+    );
 
-  return { common, specialization };
+  return { common, specializations };
 }
 
-/** Percentagem global do utilizador (Comum + especialização), a métrica que
- *  encabeça a tabela do admin. */
+/** Percentagem global do utilizador (Comum + especializações), a métrica que
+ *  encabeça a tabela do Superadmin. */
 export function overallPercent(
   common: TrackState | null,
-  specialization: TrackState | null,
+  specializations: TrackState[],
 ): number {
-  const parts = [common, specialization].filter(
+  const parts = [common, ...specializations].filter(
     (t): t is TrackState => t !== null,
   );
   if (!parts.length) return 0;
@@ -295,28 +295,28 @@ export function overallPercent(
   return Math.round((done / steps) * 100);
 }
 
-/** Módulo em que o utilizador está neste momento, para a coluna "módulo
- *  atual" do admin. */
+/** Capítulo em que o utilizador está neste momento, para a coluna "capítulo
+ *  atual" do Superadmin. */
 export function currentModuleLabel(
   common: TrackState | null,
-  specialization: TrackState | null,
+  specializations: TrackState[],
 ): string {
   // Nada gravado ainda em lado nenhum — dizer "Concluído" seria mentira.
-  if (!common?.hasContent && !specialization?.hasContent) {
+  if (!common?.hasContent && !specializations.some((s) => s.hasContent)) {
     return "Sem conteúdo ainda";
   }
   if (common && !common.completed) {
     const active = common.modules.find((m) => m.status === "in_progress");
     return active ? `Comum · ${active.module.title}` : "Comum";
   }
-  if (specialization) {
-    if (specialization.completed) return "Concluído";
-    const active = specialization.modules.find(
-      (m) => m.status === "in_progress",
-    );
+  // Com várias especializações, a que interessa é a primeira por acabar.
+  const pending = specializations.find((s) => !s.completed);
+  if (pending) {
+    const active = pending.modules.find((m) => m.status === "in_progress");
     return active
-      ? `${specialization.track.name} · ${active.module.title}`
-      : specialization.track.name;
+      ? `${pending.track.name} · ${active.module.title}`
+      : pending.track.name;
   }
+  if (specializations.length > 0) return "Concluído";
   return common?.completed ? "Comum concluída" : "—";
 }

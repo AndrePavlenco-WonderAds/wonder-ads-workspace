@@ -286,15 +286,24 @@ export function TrainingPlayer({
     router.refresh();
   }
 
+  // Aula por gravar. Enquanto o programa não estiver todo filmado, ESTE é o
+  // estado que a equipa mais vê — por isso é um painel escuro e sóbrio, não um
+  // bloco de gradiente a ocupar o ecrã inteiro. O sinal de que falta algo dá-se
+  // com uma etiqueta e um contorno tracejado, não com brilho.
   if (!videoUrl) {
     return (
-      <div className="overflow-hidden rounded-2xl border border-white/10 bg-black">
-        <div className="brand-gradient-bg relative flex aspect-video w-full flex-col items-center justify-center gap-3">
-          <PlayCircle className="h-10 w-10 text-white/90" />
-          <span className="text-sm font-semibold text-white/90">
-            Vídeo em breve
+      <div className="relative overflow-hidden rounded-2xl border border-dashed border-white/12 bg-white/[0.015]">
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-40 opacity-[0.14] blur-2xl"
+          style={{ background: "var(--brand-gradient)" }}
+        />
+        <div className="relative flex aspect-video w-full flex-col items-center justify-center gap-3 px-6">
+          <span className="flex h-14 w-14 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.03]">
+            <PlayCircle className="h-6 w-6 text-white/35" />
           </span>
-          <span className="max-w-xs text-center text-[11.5px] text-white/70">
+          <span className="readout text-amber-200/70">Brevemente</span>
+          <span className="max-w-xs text-center text-[12px] leading-relaxed text-white/40">
             Esta aula ainda não foi gravada. Não bloqueia a tua progressão —
             podes avançar para a seguinte.
           </span>
@@ -347,7 +356,7 @@ export function TrainingPlayer({
             Aula concluída
           </span>
         ) : (
-          <span className="text-[11.5px] font-medium text-white/50">
+          <span className="tabular text-[11.5px] font-medium text-white/50">
             {percent}% visto · conta como visto aos {THRESHOLD}%
           </span>
         )}

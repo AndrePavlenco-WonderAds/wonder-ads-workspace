@@ -1,4 +1,4 @@
-// CMS da Formação — editar trilhas, módulos, aulas e testes sem tocar em
+// CMS da Formação — editar módulos, capítulos, aulas e testes sem tocar em
 // código. É também aqui que se colam os links dos vídeos à medida que forem
 // sendo gravados.
 
@@ -32,7 +32,7 @@ export default async function TrainingCmsPage() {
         className="animate-fade-up group inline-flex w-fit items-center gap-2 text-sm text-white/55 transition hover:text-white"
       >
         <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
-        Formação — Overview
+        Formação — Superadmin
       </Link>
 
       <div className="animate-fade-up mt-6 flex flex-wrap items-end justify-between gap-4">
@@ -41,7 +41,7 @@ export default async function TrainingCmsPage() {
             <span className="brand-gradient-text">Conteúdo</span>
           </h1>
           <p className="mt-2 max-w-2xl text-sm text-white/55">
-            Trilhas, módulos, aulas e testes. Cola aqui o link de cada vídeo à
+            Módulos, capítulos, aulas e testes. Cola aqui o link de cada vídeo à
             medida que for gravado — a aula deixa de aparecer como
             &laquo;brevemente&raquo; e passa a contar para a progressão.
           </p>

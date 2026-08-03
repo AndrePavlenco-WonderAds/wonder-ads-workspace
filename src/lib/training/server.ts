@@ -7,7 +7,7 @@ import { getCurrentEmployee } from "@/lib/auth/server";
 import { getTrainingCatalog } from "@/lib/training/content-store";
 import {
   getEnrollments,
-  resolveTrackSlug,
+  resolveTrackSlugs,
 } from "@/lib/training/enrollments-store";
 import { getTrainingProgress } from "@/lib/training/progress-store";
 import { getQuizAttempts } from "@/lib/training/attempts-store";
@@ -25,11 +25,12 @@ export type TrainingContext = {
     isAdmin: boolean;
   };
   tracks: TrainingTrack[];
-  specializationSlug: string | null;
+  specializationSlugs: string[];
   progress: UserTrainingProgress;
   attempts: QuizAttempt[];
   common: TrackState | null;
-  specialization: TrackState | null;
+  /** Pode ser mais do que uma — quem faz SEO e Comercial tem as duas. */
+  specializations: TrackState[];
 };
 
 /** Contexto de formação do utilizador com sessão. null quando não há sessão
@@ -45,15 +46,15 @@ export async function getTrainingContext(): Promise<TrainingContext | null> {
     getQuizAttempts(employee.username),
   ]);
 
-  const specializationSlug = resolveTrackSlug(
+  const specializationSlugs = resolveTrackSlugs(
     employee.username,
     employee.dept,
     enrollments,
   );
 
-  const { common, specialization } = computeUserTraining(
+  const { common, specializations } = computeUserTraining(
     tracks,
-    specializationSlug,
+    specializationSlugs,
     progress,
     attempts,
   );
@@ -61,22 +62,28 @@ export async function getTrainingContext(): Promise<TrainingContext | null> {
   return {
     employee,
     tracks,
-    specializationSlug,
+    specializationSlugs,
     progress,
     attempts,
     common,
-    specialization,
+    specializations,
   };
 }
 
-/** Estado de uma track específica para o utilizador atual, ou null quando ele
- *  não está inscrito nela. Usado pelas páginas /formacao/[track]/… para não
- *  deixarem ninguém abrir uma trilha que não é sua. */
+/** Todos os módulos do utilizador pela ordem de leitura: o Comum primeiro,
+ *  depois as especializações. */
+export function userTracks(ctx: TrainingContext): TrackState[] {
+  return [ctx.common, ...ctx.specializations].filter(
+    (t): t is TrackState => t !== null,
+  );
+}
+
+/** Estado de um módulo específico para o utilizador atual, ou null quando ele
+ *  não está inscrito nele. Usado pelas páginas /formacao/[track]/… para não
+ *  deixarem ninguém abrir um módulo que não é seu. */
 export function trackStateFor(
   ctx: TrainingContext,
   slug: string,
 ): TrackState | null {
-  if (ctx.common?.track.slug === slug) return ctx.common;
-  if (ctx.specialization?.track.slug === slug) return ctx.specialization;
-  return null;
+  return userTracks(ctx).find((t) => t.track.slug === slug) ?? null;
 }

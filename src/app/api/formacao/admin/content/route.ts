@@ -1,4 +1,4 @@
-// Gravar / repor o catálogo da Formação (CMS interno). C-Level apenas.
+// Gravar / repor o catálogo da Formação (CMS interno). SuperAdmin apenas.
 //   POST   { data }  → grava o catálogo inteiro (validado e normalizado)
 //   DELETE           → repõe o catálogo original do código
 //

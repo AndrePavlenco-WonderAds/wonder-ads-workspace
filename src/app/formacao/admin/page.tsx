@@ -1,4 +1,4 @@
-// Overview da Formação (C-Level) — a fotografia da equipa inteira.
+// Superadmin da Formação — a fotografia da equipa inteira.
 //
 // Mesma gramática visual do overview de onboarding de clientes: back-link,
 // título em gradiente, linha de indicadores e uma lista/tabela por baixo.
@@ -26,7 +26,7 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export const metadata = {
-  title: "Formação — Overview · Wonder Ads",
+  title: "Formação — Superadmin · Wonder Ads",
 };
 
 export default async function FormacaoAdminPage() {
@@ -40,10 +40,11 @@ export default async function FormacaoAdminPage() {
     name: r.user.name,
     role: r.user.role,
     dept: r.user.dept,
-    trackName:
-      overview.tracks.find((t) => t.slug === r.user.trackSlug)?.name ?? "—",
-    trackSlug: r.user.trackSlug,
-    derived: !r.user.assigned,
+    trackNames: r.user.trackSlugs.map(
+      (slug) => overview.tracks.find((t) => t.slug === slug)?.name ?? slug,
+    ),
+    trackSlugs: r.user.trackSlugs,
+    derived: !r.user.assigned && r.user.trackSlugs.length > 0,
     percent: r.percent,
     currentLabel: r.currentLabel,
     watched: r.watched,
@@ -70,12 +71,11 @@ export default async function FormacaoAdminPage() {
       <div className="animate-fade-up mt-6 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-            <span className="brand-gradient-text">Formação — Overview</span>
+            <span className="brand-gradient-text">Formação — Superadmin</span>
           </h1>
           <p className="mt-2 max-w-2xl text-sm text-white/55">
-            Progresso de toda a equipa na Consultants Onboarding University.
-            Clica num consultor para ver aula a aula e teste a teste o que ele
-            fez.
+            Progresso de toda a equipa na Consultants University. Clica num
+            consultor para ver aula a aula e teste a teste o que ele fez.
           </p>
         </div>
         <TrainingAdminNav />
@@ -99,7 +99,7 @@ export default async function FormacaoAdminPage() {
           icon={<Users className="h-3 w-3" />}
         />
         <StatTile
-          label="Vídeos por gravar"
+          label="Vídeos em falta"
           value={overview.missingVideos}
           hint="não bloqueiam ninguém"
           tone={overview.missingVideos > 0 ? "warn" : "good"}
@@ -115,7 +115,7 @@ export default async function FormacaoAdminPage() {
         <StatTile
           label="Testes por escrever"
           value={overview.quizzesMissing}
-          hint="módulos sem perguntas"
+          hint="capítulos sem perguntas"
           tone={overview.quizzesMissing > 0 ? "warn" : "good"}
           icon={<ClipboardCheck className="h-3 w-3" />}
         />

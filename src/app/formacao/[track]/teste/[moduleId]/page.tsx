@@ -1,4 +1,4 @@
-// Teste de um módulo. Server component: valida a sequência (módulo aberto +
+// Teste de um capítulo. Server component: valida a sequência (capítulo aberto +
 // aulas vistas), prepara as perguntas já baralhadas e sem as respostas
 // certas, e mostra o histórico de tentativas.
 
@@ -71,7 +71,7 @@ export default async function QuizPage({
       )
     : [...quiz.questions].sort((a, b) => a.order - b.order);
 
-  // Onde continuar depois de passar: o módulo seguinte, se existir.
+  // Onde continuar depois de passar: o capítulo seguinte, se existir.
   const idx = state.modules.findIndex((m) => m.module.id === moduleId);
   const nextModule = idx >= 0 ? state.modules[idx + 1] : undefined;
   const nextLesson = nextModule?.lessons.find((l) => !l.comingSoon);
@@ -81,30 +81,30 @@ export default async function QuizPage({
 
   const blocker = locked
     ? {
-        title: "Módulo bloqueado",
+        title: "Capítulo bloqueado",
         text:
           state.lockedReason ??
-          "Conclui o módulo anterior para chegares a este teste.",
+          "Conclui o capítulo anterior para chegares a este teste.",
       }
     : noQuestions
       ? {
           title: "Teste ainda por escrever",
-          text: "Este módulo ainda não tem perguntas. Não bloqueia a tua progressão — podes seguir para o módulo seguinte.",
+          text: "Este capítulo ainda não tem perguntas. Não bloqueia a tua progressão — podes seguir para o capítulo seguinte.",
         }
       : noLessonsYet
         ? {
-            title: "Aulas ainda por gravar",
-            text: "O teste deste módulo já está escrito, mas as aulas ainda não foram gravadas. Abre assim que houver matéria — e não bloqueia a tua progressão.",
+            title: "Aulas ainda por publicar",
+            text: "O teste deste capítulo já está escrito, mas as aulas ainda não foram gravadas. Abre assim que houver matéria — e não bloqueia a tua progressão.",
           }
         : lessonsPending
           ? {
               title: "Faltam aulas por ver",
-              text: `Vê as ${moduleState.totalLessons - moduleState.watchedLessons} aula(s) que faltam neste módulo antes de fazeres o teste.`,
+              text: `Vê as ${moduleState.totalLessons - moduleState.watchedLessons} aula(s) que faltam neste capítulo antes de fazeres o teste.`,
             }
           : exhausted
             ? {
                 title: "Sem tentativas disponíveis",
-                text: "Já usaste todas as tentativas deste teste. Fala com o C-Level.",
+                text: "Já usaste todas as tentativas deste teste. Fala com o Andre, o Alex ou a Alice.",
               }
             : null;
 
@@ -126,7 +126,7 @@ export default async function QuizPage({
         <div>
           <span className="inline-flex items-center gap-1.5 rounded-full border border-white/12 bg-white/[0.04] px-3 py-1 text-[10.5px] font-semibold uppercase tracking-[0.16em] text-white/60">
             <ClipboardCheck className="h-3.5 w-3.5 text-[color:var(--brand-purple)]" />
-            Teste do módulo
+            Teste do capítulo
           </span>
           <h1 className="mt-3 text-2xl font-semibold tracking-tight text-white sm:text-3xl">
             {quiz.title}
@@ -159,7 +159,7 @@ export default async function QuizPage({
             className="mt-4 inline-flex items-center gap-1.5 rounded-lg border border-white/15 px-3 py-1.5 text-[12px] font-medium text-white/75 transition hover:border-[#783DF5]/40 hover:text-white"
           >
             <PlayCircle className="h-3.5 w-3.5" />
-            Voltar aos módulos
+            Voltar à sequência
           </Link>
         </div>
       ) : (

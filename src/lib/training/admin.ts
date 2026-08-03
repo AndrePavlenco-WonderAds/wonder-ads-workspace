@@ -1,4 +1,4 @@
-// Agregações do overview de admin — server-only.
+// Agregações do Superadmin da Formação — server-only.
 //
 // Uma única função monta a fotografia da equipa inteira: catálogo + inscrições
 // + progresso + tentativas, tudo reduzido a linhas de tabela. As leituras por
@@ -36,7 +36,7 @@ export type RosterRow = {
   failedAttempts: number;
   lastActivity: number;
   common: TrackState | null;
-  specialization: TrackState | null;
+  specializations: TrackState[];
   progress: UserTrainingProgress;
 };
 
@@ -53,7 +53,7 @@ export type TrainingOverview = {
   missingVideos: number;
   /** Aulas sem presenter atribuído. */
   unassignedPresenters: number;
-  /** Módulos cujo teste ainda não tem perguntas. */
+  /** Capítulos cujo teste ainda não tem perguntas. */
   quizzesMissing: number;
 };
 
@@ -63,13 +63,13 @@ function buildRow(
   progress: UserTrainingProgress,
   attempts: QuizAttempt[],
 ): RosterRow {
-  const { common, specialization } = computeUserTraining(
+  const { common, specializations } = computeUserTraining(
     tracks,
-    user.trackSlug,
+    user.trackSlugs,
     progress,
     attempts,
   );
-  const parts = [common, specialization].filter(
+  const parts = [common, ...specializations].filter(
     (t): t is TrackState => t !== null,
   );
   const quizzesTotal = parts.reduce(
@@ -82,8 +82,8 @@ function buildRow(
   );
   return {
     user,
-    percent: overallPercent(common, specialization),
-    currentLabel: currentModuleLabel(common, specialization),
+    percent: overallPercent(common, specializations),
+    currentLabel: currentModuleLabel(common, specializations),
     watched: parts.reduce((s, t) => s + t.watchedLessons, 0),
     totalLessons: parts.reduce((s, t) => s + t.totalLessons, 0),
     quizzesPassed,
@@ -96,7 +96,7 @@ function buildRow(
       0,
     ),
     common,
-    specialization,
+    specializations,
     progress,
   };
 }

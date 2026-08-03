@@ -47,8 +47,8 @@ export async function generateMetadata({
   const row = await getRosterRow(username);
   return {
     title: row
-      ? `${row.user.name} · Formação — Overview · Wonder Ads`
-      : "Formação — Overview · Wonder Ads",
+      ? `${row.user.name} · Formação — Superadmin · Wonder Ads`
+      : "Formação — Superadmin · Wonder Ads",
   };
 }
 
@@ -76,7 +76,7 @@ export default async function ConsultantDrillDownPage({
   if (!row) notFound();
 
   const questions = questionIndex(tracks);
-  const trackStates = [row.common, row.specialization].filter(
+  const trackStates = [row.common, ...row.specializations].filter(
     (t): t is TrackState => t !== null,
   );
 
@@ -117,7 +117,7 @@ export default async function ConsultantDrillDownPage({
         className="animate-fade-up group inline-flex w-fit items-center gap-2 text-sm text-white/55 transition hover:text-white"
       >
         <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
-        Formação — Overview
+        Formação — Superadmin
       </Link>
 
       {/* Cabeçalho */}
@@ -132,8 +132,8 @@ export default async function ConsultantDrillDownPage({
             </h1>
             <p className="mt-0.5 text-[12.5px] text-white/45">
               {row.user.role} · {row.user.dept} ·{" "}
-              {row.specialization
-                ? row.specialization.track.name
+              {row.specializations.length > 0
+                ? row.specializations.map((s) => s.track.name).join(" · ")
                 : "sem especialização"}
               {row.user.assigned && row.user.assignedBy && (
                 <span className="text-white/30">
@@ -174,7 +174,7 @@ export default async function ConsultantDrillDownPage({
           icon={<Gauge className="h-3 w-3" />}
         />
         <StatTile
-          label="Módulo atual"
+          label="Capítulo atual"
           value={
             <span className="text-[15px] leading-snug">{row.currentLabel}</span>
           }
@@ -183,7 +183,7 @@ export default async function ConsultantDrillDownPage({
       </section>
 
       <div className="mt-8 grid gap-8 xl:grid-cols-[1.15fr_1fr]">
-        {/* Trilhas, aula a aula */}
+        {/* Módulos, aula a aula */}
         <div className="animate-fade-up space-y-8">
           {trackStates.map((t) => (
             <section key={t.track.slug}>

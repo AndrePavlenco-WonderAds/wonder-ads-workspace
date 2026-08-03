@@ -1,6 +1,6 @@
 "use client";
 
-// CMS da Formação — CRUD de trilhas, módulos, aulas e testes, sem tocar em
+// CMS da Formação — CRUD de módulos, capítulos, aulas e testes, sem tocar em
 // código. Mesmo modelo do editor de onboarding de clientes: o catálogo inteiro
 // vive em estado local e é gravado de uma vez; o servidor normaliza e recusa
 // estruturas inválidas, por isso uma edição má não consegue partir a formação
@@ -262,10 +262,10 @@ export function TrainingCms({
       {/* Barra de ações */}
       <div className="sticky top-16 z-30 mb-5 flex flex-wrap items-center gap-3 rounded-xl border border-white/10 bg-[color:var(--background)]/92 px-4 py-3 backdrop-blur-md">
         <span className="text-[12px] text-white/50">
-          {tracks.length} trilhas · {totals.modules} módulos · {totals.lessons}{" "}
+          {tracks.length} módulos · {totals.modules} capítulos · {totals.lessons}{" "}
           aulas · {totals.questions} perguntas
           {totals.missing > 0 && (
-            <span className="text-amber-200/70"> · {totals.missing} por gravar</span>
+            <span className="text-amber-200/70"> · {totals.missing} brevemente</span>
           )}
         </span>
         {isCustom && (
@@ -330,7 +330,7 @@ export function TrainingCms({
                       {track.name}
                     </span>
                     <span className="block text-[11px] text-white/40">
-                      {track.slug} · {track.modules.length} módulos ·{" "}
+                      {track.slug} · {track.modules.length} capítulos ·{" "}
                       {track.modules.reduce((s, m) => s + m.lessons.length, 0)}{" "}
                       aulas
                       {track.isCommon && " · obrigatória"}
@@ -343,12 +343,12 @@ export function TrainingCms({
                   onDelete={() => {
                     if (
                       window.confirm(
-                        `Remover a trilha "${track.name}" e tudo o que está dentro?`,
+                        `Remover o módulo "${track.name}" e tudo o que está dentro?`,
                       )
                     )
                       apply(removeAt(tracks, ti));
                   }}
-                  deleteLabel="Remover trilha"
+                  deleteLabel="Remover capítulo"
                 />
               </header>
 
@@ -364,7 +364,7 @@ export function TrainingCms({
                     </Labeled>
                     <Labeled
                       label="Slug"
-                      hint="Muda o URL da trilha. Evita alterar depois de a equipa começar."
+                      hint="Muda o URL do módulo. Evita alterar depois de a equipa começar."
                     >
                       <input
                         className={inputCls}
@@ -436,14 +436,14 @@ export function TrainingCms({
                               onDelete={() => {
                                 if (
                                   window.confirm(
-                                    `Remover o módulo "${mod.title}"?`,
+                                    `Remover o capítulo "${mod.title}"?`,
                                   )
                                 )
                                   patchTrack(ti, {
                                     modules: removeAt(track.modules, mi),
                                   });
                               }}
-                              deleteLabel="Remover módulo"
+                              deleteLabel="Remover capítulo"
                             />
                           </header>
 
@@ -463,7 +463,7 @@ export function TrainingCms({
                                 </Labeled>
                                 <Labeled
                                   label="Secção"
-                                  hint='Agrupa módulos seguidos (ex.: "Service Delivery"). Vazio = sem agrupamento.'
+                                  hint='Agrupa capítulos seguidos (ex.: "Service Delivery"). Vazio = sem agrupamento.'
                                 >
                                   <input
                                     className={inputCls}
@@ -553,7 +553,7 @@ export function TrainingCms({
 
                               {/* Teste */}
                               <h4 className="mt-6 text-[10px] font-bold uppercase tracking-[0.14em] text-[#A9834F]">
-                                Teste do módulo
+                                Teste do capítulo
                               </h4>
                               <div className="mt-2 grid gap-3 sm:grid-cols-4">
                                 <div className="sm:col-span-2">
@@ -700,7 +700,7 @@ export function TrainingCms({
                     })}
 
                     <AddBtn
-                      label="Adicionar módulo"
+                      label="Adicionar capítulo"
                       onClick={() => {
                         const id = nextId(
                           `${track.slug}-m`,
@@ -711,14 +711,14 @@ export function TrainingCms({
                             ...track.modules,
                             {
                               id,
-                              title: "Novo módulo",
+                              title: "Novo capítulo",
                               description: "",
                               order: track.modules.length + 1,
                               section: null,
                               lessons: [],
                               quiz: {
                                 id: `${id}-quiz`,
-                                title: "Teste do módulo",
+                                title: "Teste do capítulo",
                                 passingScore: 80,
                                 maxAttempts: null,
                                 shuffleQuestions: true,
@@ -772,7 +772,7 @@ function LessonEditor({
             <span className="block truncate text-[10.5px] text-white/35">
               {LESSON_TYPE_LABEL[lesson.type]} ·{" "}
               {lesson.presenter ?? "sem apresentador"} ·{" "}
-              {lesson.videoUrl ? "com vídeo" : "por gravar"}
+              {lesson.videoUrl ? "com vídeo" : "brevemente"}
             </span>
           </span>
         </button>

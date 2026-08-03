@@ -382,8 +382,50 @@ body {
 }
 .nps-x-pulse { animation: nps-x-pulse 2.6s ease-in-out infinite; transform-origin: center; }
 
+/* ---------------------------------------------------------------------------
+   Formação — instrumentação
+   O roadmap e a página de aula partilham uma linguagem de "consola": números
+   em largura fixa para as leituras não dançarem, e um halo no nó do capítulo
+   onde a pessoa está. É o único elemento animado das duas páginas — tudo o
+   resto fica quieto, para que o olho vá lá primeiro.
+   --------------------------------------------------------------------------- */
+
+/* Números tabulares: 12% e 100% ocupam a mesma largura, por isso as barras e
+   os anéis não saltam quando o valor muda. */
+.tabular {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+/* Micro-etiqueta de instrumento — o registo "leitura de painel". */
+.readout {
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+}
+
+@keyframes node-halo {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(120, 61, 245, 0.45); }
+  60%      { box-shadow: 0 0 0 10px rgba(120, 61, 245, 0); }
+}
+.animate-node-halo {
+  animation: node-halo 2.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+/* Moldura do player: quatro cantos em vez de uma borda contínua. Enquadra o
+   vídeo sem lhe roubar contraste. */
+.viewport-bracket {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  border-color: rgba(120, 61, 245, 0.55);
+  pointer-events: none;
+}
+
 /* Respect prefers-reduced-motion */
 @media (prefers-reduced-motion: reduce) {
+  .animate-node-halo,
   .animate-orb-pulse,
   .animate-drift-slow,
   .animate-beam,

@@ -1,9 +1,10 @@
-// Gestão de inscrições — quem faz que especialização.
+// Gestão de inscrições — quem faz que especializações.
 //
-// Por defeito ninguém precisa de ser inscrito: a trilha deriva do
+// Por defeito ninguém precisa de ser inscrito: a especialização deriva do
 // departamento da credencial. Esta página existe para os casos que fogem à
-// regra (um C-Level que quer fazer a trilha de ADS, alguém que mudou de
-// departamento, um consultor que vai passar a fazer Comercial).
+// regra (um SuperAdmin que quer fazer o módulo de ADS, alguém que mudou de
+// departamento, um consultor de SEO que também vai fechar vendas — e por isso
+// as especializações são acumuláveis, não uma escolha única).
 
 import Link from "next/link";
 import { ArrowLeft, ClipboardList, Info } from "lucide-react";
@@ -37,7 +38,7 @@ export default async function EnrollmentsPage() {
     name: u.name,
     role: u.role,
     dept: u.dept,
-    trackSlug: u.trackSlug,
+    trackSlugs: u.trackSlugs,
     assigned: u.assigned,
     assignedBy: u.assignedBy,
   }));
@@ -52,7 +53,7 @@ export default async function EnrollmentsPage() {
         className="animate-fade-up group inline-flex w-fit items-center gap-2 text-sm text-white/55 transition hover:text-white"
       >
         <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
-        Formação — Overview
+        Formação — Superadmin
       </Link>
 
       <div className="animate-fade-up mt-6 flex flex-wrap items-end justify-between gap-4">
@@ -61,8 +62,8 @@ export default async function EnrollmentsPage() {
             <span className="brand-gradient-text">Inscrições</span>
           </h1>
           <p className="mt-2 max-w-2xl text-sm text-white/55">
-            A Categoria Comum é automática para toda a gente. Aqui define-se
-            apenas a especialização.
+            A Categoria Comum é automática para toda a gente. Aqui definem-se as
+            especializações — cada pessoa pode ter mais do que uma.
           </p>
         </div>
         <TrainingAdminNav />
@@ -73,8 +74,10 @@ export default async function EnrollmentsPage() {
         <span>
           Sem atribuição explícita, a especialização deriva do departamento da
           credencial (SEO → SEO/GEO, ADS → ADS, Web → WEB, Commercial →
-          Comercial). Uma escolha feita aqui vence sempre o departamento; o
-          botão de repor devolve a pessoa ao automático.
+          Comercial). Liga os chips que a pessoa deve fazer — podem ser vários,
+          e ficam todos disponíveis assim que ela concluir a Categoria Comum.
+          Uma escolha feita aqui vence sempre o departamento; o botão de repor
+          devolve a pessoa ao automático.
         </span>
       </div>
 

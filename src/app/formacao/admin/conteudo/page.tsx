@@ -1,9 +1,9 @@
-// Checklist de gravações — o estado de produção do conteúdo, por trilha e
+// Checklist de gravações — o estado de produção do conteúdo, por módulo e
 // por apresentador.
 //
 // Serve uma pergunta concreta: "o que é que eu (Alice / Alex / André) tenho
 // para gravar?". Por isso a página abre com o resumo por pessoa e só depois
-// desce ao detalhe trilha a trilha.
+// desce ao detalhe módulo a módulo.
 
 import Link from "next/link";
 import {
@@ -49,7 +49,7 @@ export default async function ContentChecklistPage() {
     ? Math.round((recorded / allLessons.length) * 100)
     : 0;
 
-  // Resumo por apresentador — quem tem quantas por gravar.
+  // Resumo por apresentador — quem tem quantas em falta.
   const byPresenter = new Map<
     string,
     { total: number; done: number; pending: typeof allLessons }
@@ -76,7 +76,7 @@ export default async function ContentChecklistPage() {
         className="animate-fade-up group inline-flex w-fit items-center gap-2 text-sm text-white/55 transition hover:text-white"
       >
         <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
-        Formação — Overview
+        Formação — Superadmin
       </Link>
 
       <div className="animate-fade-up mt-6 flex flex-wrap items-end justify-between gap-4">
@@ -102,7 +102,7 @@ export default async function ContentChecklistPage() {
           icon={<Video className="h-3 w-3" />}
         />
         <StatTile
-          label="Por gravar"
+          label="Em falta"
           value={stats.missingVideos}
           tone={stats.missingVideos > 0 ? "warn" : "good"}
           icon={<Film className="h-3 w-3" />}
@@ -117,7 +117,7 @@ export default async function ContentChecklistPage() {
         <StatTile
           label="Testes por escrever"
           value={stats.quizzesMissing}
-          hint="módulos sem perguntas"
+          hint="capítulos sem perguntas"
           tone={stats.quizzesMissing > 0 ? "warn" : "good"}
           icon={<ClipboardCheck className="h-3 w-3" />}
         />
@@ -167,7 +167,7 @@ export default async function ContentChecklistPage() {
                   >
                     {entry.pending.length === 0
                       ? "tudo gravado"
-                      : `${entry.pending.length} por gravar`}
+                      : `${entry.pending.length} em falta`}
                   </span>
                 </header>
 
@@ -207,7 +207,7 @@ export default async function ContentChecklistPage() {
         </div>
       </section>
 
-      {/* Detalhe por trilha */}
+      {/* Detalhe por módulo */}
       <section className="animate-fade-up mt-10">
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-[0.14em] text-white/55">
           Programa completo

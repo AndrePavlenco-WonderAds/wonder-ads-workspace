@@ -1,8 +1,8 @@
-// Hub da Formação — WonderAds Consultants Onboarding University.
+// Hub da Formação — WonderAds Consultants University.
 //
-// Hero com o progresso global, linha de estatísticas, o cartão de "continuar
-// onde ficaste" em destaque, e um cartão por trilha com a fita de módulos que
-// resume a jornada inteira num relance.
+// Hero com o nome do consultor, o progresso global, linha de estatísticas, o
+// cartão de "continuar onde ficaste" em destaque, e um cartão por módulo com a
+// fita de capítulos que resume a jornada inteira num relance.
 
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -13,7 +13,6 @@ import {
   Clock,
   Film,
   GraduationCap,
-  LayoutDashboard,
   Lock,
   PartyPopper,
   Sparkles,
@@ -27,9 +26,10 @@ import {
   StatTile,
   TrackJourney,
 } from "@/components/training/training-ui";
-import { getTrainingContext } from "@/lib/training/server";
+import { getTrainingContext, userTracks } from "@/lib/training/server";
 import { overallPercent } from "@/lib/training/progress";
 import type { TrackState } from "@/lib/training/progress";
+import { championLine } from "@/lib/training/champion";
 import { lessonMinutes } from "@/lib/training/catalog";
 
 export const dynamic = "force-dynamic";
@@ -43,18 +43,9 @@ export default async function FormacaoPage() {
   const ctx = await getTrainingContext();
   if (!ctx) redirect("/login?next=/formacao");
 
-  const { employee, common, specialization } = ctx;
-  const global = overallPercent(common, specialization);
-  const tracks = [common, specialization].filter(
-    (t): t is TrackState => t !== null,
-  );
-
-  // "Tudo concluído" exige que exista mesmo conteúdo concluído — no dia 1,
-  // com os vídeos ainda por gravar, ninguém pode ser felicitado por nada.
-  const allDone =
-    tracks.length > 0 &&
-    tracks.every((t) => t.completed && t.hasContent && t.missingVideos === 0);
-  const nothingRecorded = tracks.length > 0 && tracks.every((t) => !t.hasContent);
+  const { employee, common, specializations } = ctx;
+  const global = overallPercent(common, specializations);
+  const tracks = userTracks(ctx);
 
   const watched = tracks.reduce((s, t) => s + t.watchedLessons, 0);
   const totalLessons = tracks.reduce((s, t) => s + t.totalLessons, 0);
@@ -69,7 +60,7 @@ export default async function FormacaoPage() {
   const minutesLeft = tracks.reduce((s, t) => s + t.minutesLeft, 0);
   const missing = tracks.reduce((s, t) => s + t.missingVideos, 0);
 
-  // O próximo passo real, seja aula ou teste, na primeira trilha aberta.
+  // O próximo passo real, seja aula ou teste, no primeiro módulo aberto.
   const active = tracks.find(
     (t) => !t.lockedReason && (t.nextLesson || t.nextQuizModule),
   );
@@ -94,31 +85,18 @@ export default async function FormacaoPage() {
           <div className="max-w-2xl">
             <span className="inline-flex items-center gap-1.5 rounded-full border border-white/12 bg-white/[0.05] px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-white/60">
               <GraduationCap className="h-3 w-3 text-[color:var(--brand-purple)]" />
-              Consultants Onboarding University
+              Consultants University
             </span>
             <h1 className="mt-4 text-3xl font-semibold leading-tight tracking-tight sm:text-[2.6rem]">
-              <span className="brand-gradient-text">Formação</span>
+              <span className="brand-gradient-text">{employee.name}</span>
             </h1>
             <p className="mt-3 max-w-xl text-sm leading-relaxed text-white/55">
-              {allDone
-                ? `Concluíste toda a tua formação, ${employee.name}. Revê o que quiseres sempre que precisares.`
-                : nothingRecorded
-                  ? `Bem-vindo, ${employee.name}. O programa já está definido — as aulas vão aparecendo aqui à medida que forem gravadas.`
-                  : `Bem-vindo, ${employee.name}. A Categoria Comum é obrigatória para toda a equipa; a tua especialização abre assim que a concluíres.`}
+              {championLine(employee.username, Date.now())}
             </p>
           </div>
 
           <div className="flex shrink-0 items-center gap-5">
             <ProgressRing percent={global} label="global" size={132} />
-            {employee.isAdmin && (
-              <Link
-                href="/formacao/admin"
-                className="inline-flex items-center gap-1.5 rounded-xl border border-white/12 px-3.5 py-2 text-[12.5px] font-medium text-white/70 transition hover:border-[#783DF5]/40 hover:text-white"
-              >
-                <LayoutDashboard className="h-4 w-4" />
-                Overview
-              </Link>
-            )}
           </div>
         </div>
 
@@ -135,16 +113,20 @@ export default async function FormacaoPage() {
               icon={<ClipboardCheck className="h-3 w-3" />}
             />
             <StatTile
-              label="Trilhas"
+              label="Módulos"
               value={tracks.length}
-              hint={specialization ? "comum + especialização" : "só a comum"}
+              hint={
+                specializations.length > 0
+                  ? `comum + ${specializations.length} especializaç${specializations.length === 1 ? "ão" : "ões"}`
+                  : "só o comum"
+              }
               icon={<BookOpen className="h-3 w-3" />}
             />
             {missing > 0 ? (
               <StatTile
-                label="Por gravar"
+                label="Brevemente"
                 value={missing}
-                hint="não bloqueiam"
+                hint="aulas por publicar"
                 tone="warn"
                 icon={<Clock className="h-3 w-3" />}
               />
@@ -201,10 +183,10 @@ export default async function FormacaoPage() {
         </Link>
       )}
 
-      {/* ===== Trilhas ===== */}
+      {/* ===== Módulos ===== */}
       {tracks.length === 0 ? (
         <div className="animate-fade-up mt-10 rounded-2xl border border-dashed border-white/12 bg-white/[0.02] px-4 py-10 text-center text-sm text-white/45">
-          Ainda não tens nenhuma trilha atribuída. Fala com o Andre, o Alex ou a
+          Ainda não tens nenhum módulo atribuído. Fala com o Andre, o Alex ou a
           Alice.
         </div>
       ) : (
@@ -215,12 +197,14 @@ export default async function FormacaoPage() {
         </section>
       )}
 
-      {common && !common.completed && specialization && (
+      {common && !common.completed && specializations.length > 0 && (
         <p className="animate-fade-up mt-6 inline-flex items-center gap-2 text-[12px] text-white/45">
           <Lock className="h-3.5 w-3.5" />
-          A tua especialização ({specialization.track.name}) desbloqueia quando
-          a Categoria Comum estiver 100% concluída — vídeos vistos e testes
-          passados.
+          {specializations.length === 1
+            ? `A tua especialização (${specializations[0].track.name}) desbloqueia`
+            : `As tuas especializações (${specializations.map((s) => s.track.name).join(", ")}) desbloqueiam`}{" "}
+          quando a Categoria Comum estiver 100% concluída — vídeos vistos e
+          testes passados.
         </p>
       )}
     </PageShell>
@@ -254,7 +238,7 @@ function TrackCard({ state }: { state: TrackState }) {
             </h2>
             {state.track.isCommon && (
               <span className="rounded-full border border-white/15 bg-white/[0.05] px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-[0.14em] text-white/60">
-                Obrigatória
+                Obrigatório
               </span>
             )}
             {state.completed && state.hasContent && (
@@ -266,7 +250,7 @@ function TrackCard({ state }: { state: TrackState }) {
                 }`}
               >
                 <PartyPopper className="h-3 w-3" />
-                {state.missingVideos === 0 ? "Concluída" : "Em dia"}
+                {state.missingVideos === 0 ? "Concluído" : "Em dia"}
               </span>
             )}
             {!state.hasContent && (
@@ -285,12 +269,12 @@ function TrackCard({ state }: { state: TrackState }) {
         </span>
       </div>
 
-      {/* Fita da jornada — um segmento por módulo. */}
+      {/* Fita da jornada — um segmento por capítulo. */}
       <div className="relative mt-5">
         <TrackJourney modules={state.modules} />
         <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11.5px] text-white/45">
           <span>
-            {modulesDone}/{state.modules.length} módulos
+            {modulesDone}/{state.modules.length} capítulos
           </span>
           <span>·</span>
           <span>
@@ -300,7 +284,7 @@ function TrackCard({ state }: { state: TrackState }) {
             <>
               <span>·</span>
               <span className="text-amber-200/70">
-                {state.missingVideos} por gravar
+                {state.missingVideos} brevemente
               </span>
             </>
           )}
@@ -329,7 +313,7 @@ function TrackCard({ state }: { state: TrackState }) {
             {!state.hasContent
               ? "Ver programa"
               : state.completed
-                ? "Rever trilha"
+                ? "Rever módulo"
                 : state.watchedLessons === 0
                   ? "Começar agora"
                   : "Continuar"}

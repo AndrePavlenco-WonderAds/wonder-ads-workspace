@@ -1,6 +1,6 @@
 "use client";
 
-// Tabela de consultores do overview: pesquisa por nome, filtro por trilha e
+// Tabela de consultores do Superadmin: pesquisa por nome, filtro por módulo e
 // ordenação. Recebe as linhas já calculadas no servidor — não faz contas nem
 // pedidos, só filtra e ordena o que lhe é dado.
 
@@ -14,8 +14,9 @@ export type RosterTableRow = {
   name: string;
   role: string;
   dept: string;
-  trackName: string;
-  trackSlug: string | null;
+  /** Nomes das especializações, já resolvidos no servidor. */
+  trackNames: string[];
+  trackSlugs: string[];
   derived: boolean;
   percent: number;
   currentLabel: string;
@@ -47,8 +48,8 @@ export function RosterTable({
       if (track === "all") {
         // nada
       } else if (track === "none") {
-        if (r.trackSlug) return false;
-      } else if (r.trackSlug !== track) {
+        if (r.trackSlugs.length > 0) return false;
+      } else if (!r.trackSlugs.includes(track)) {
         return false;
       }
       if (!q) return true;
@@ -83,7 +84,7 @@ export function RosterTable({
           onChange={(e) => setTrack(e.target.value)}
           className="rounded-lg border border-white/12 bg-white/[0.04] px-3 py-2 text-[13px] text-white outline-none transition focus:border-[#783DF5]/60"
         >
-          <option value="all">Todas as trilhas</option>
+          <option value="all">Todos os módulos</option>
           {trackOptions.map((t) => (
             <option key={t.slug} value={t.slug}>
               {t.name}
@@ -117,9 +118,9 @@ export function RosterTable({
           <thead className="bg-white/[0.03] text-[10.5px] uppercase tracking-[0.12em] text-white/45">
             <tr>
               <th className="px-4 py-3 font-semibold">Consultor</th>
-              <th className="px-4 py-3 font-semibold">Especialização</th>
+              <th className="px-4 py-3 font-semibold">Especializações</th>
               <th className="px-4 py-3 font-semibold">Progresso</th>
-              <th className="px-4 py-3 font-semibold">Módulo atual</th>
+              <th className="px-4 py-3 font-semibold">Capítulo atual</th>
               <th className="px-4 py-3 font-semibold">Aulas</th>
               <th className="px-4 py-3 font-semibold">Testes</th>
               <th className="px-4 py-3 font-semibold">Última atividade</th>
@@ -149,11 +150,24 @@ export function RosterTable({
                     </span>
                   </Link>
                 </td>
-                <td className="px-4 py-3 text-white/70">
-                  {r.trackName}
-                  {r.derived && r.trackSlug && (
-                    <span className="ml-1.5 text-[10px] uppercase tracking-wide text-white/25">
-                      por dept
+                <td className="px-4 py-3">
+                  {r.trackNames.length === 0 ? (
+                    <span className="text-white/30">—</span>
+                  ) : (
+                    <span className="flex flex-wrap items-center gap-1.5">
+                      {r.trackNames.map((n) => (
+                        <span
+                          key={n}
+                          className="rounded-full border border-white/12 bg-white/[0.04] px-2 py-0.5 text-[11.5px] text-white/70"
+                        >
+                          {n}
+                        </span>
+                      ))}
+                      {r.derived && (
+                        <span className="text-[10px] uppercase tracking-wide text-white/25">
+                          por dept
+                        </span>
+                      )}
                     </span>
                   )}
                 </td>

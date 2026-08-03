@@ -3,7 +3,7 @@
 // Barra de progresso fixa da Formação — a irmã escura da que existe no
 // onboarding de clientes. Fica escondida enquanto o hero está visível e desce
 // depois, para o consultor ter sempre a percentagem e o "continuar" à mão
-// numa trilha longa (a de ADS tem 34 aulas: o hero desaparece depressa).
+// num módulo longo (o de ADS tem 34 aulas: o hero desaparece depressa).
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -18,7 +18,7 @@ export function TrainingStickyBar({
   nextHref,
   continueLabel,
   allDone,
-  allDoneLabel = "Trilha concluída",
+  allDoneLabel = "Módulo concluído",
 }: {
   title: string;
   percent: number;
@@ -29,7 +29,7 @@ export function TrainingStickyBar({
   continueLabel: string;
   allDone: boolean;
   /** O que dizer quando não há nada por fazer — "concluída" e "em dia" (com
-   *  aulas ainda por gravar) não são a mesma coisa. */
+   *  aulas ainda por publicar) não são a mesma coisa. */
   allDoneLabel?: string;
 }) {
   const [shown, setShown] = useState(false);
@@ -52,7 +52,7 @@ export function TrainingStickyBar({
     >
       <div className="border-b border-white/8 bg-[color:var(--background)]/92 shadow-[0_10px_40px_-24px_rgba(0,0,0,0.9)] backdrop-blur-md">
         <div className="mx-auto flex max-w-5xl items-center gap-3 px-4 py-2.5 sm:gap-4 sm:px-6">
-          <span className="brand-gradient-bg flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-white">
+          <span className="brand-gradient-bg tabular flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-white">
             {percent}%
           </span>
           <div className="min-w-0 flex-1">
