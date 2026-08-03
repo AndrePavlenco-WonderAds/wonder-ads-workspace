@@ -7,9 +7,11 @@ import Link from "next/link";
 import {
   AlertTriangle,
   ArrowLeft,
+  CalendarClock,
   ClipboardCheck,
   Film,
   Gauge,
+  ShieldCheck,
   UserRound,
   Users,
 } from "lucide-react";
@@ -21,6 +23,7 @@ import {
 } from "@/components/training/roster-table";
 import { StatTile } from "@/components/training/training-ui";
 import { getTrainingOverview } from "@/lib/training/admin";
+import { nextExamLine } from "@/lib/training/exams";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -55,6 +58,11 @@ export default async function FormacaoAdminPage() {
     attempts: r.attempts.length,
     failedAttempts: r.failedAttempts,
     lastActivity: r.lastActivity,
+    examsPassed: r.exams.passedCount,
+    examsTotal: r.exams.exams.length,
+    examLine: nextExamLine(r.exams),
+    examEffective: r.exams.effective,
+    examBlocked: r.exams.blocked,
   }));
 
   const activeLearners = overview.rows.filter((r) => r.lastActivity > 0).length;
@@ -76,18 +84,29 @@ export default async function FormacaoAdminPage() {
           </h1>
           <p className="mt-2 max-w-2xl text-sm text-white/55">
             Progresso de toda a equipa na Consultants University. Clica num
-            consultor para ver aula a aula e teste a teste o que ele fez.
+            consultor para ver aula a aula e quiz a quiz o que ele fez.
           </p>
         </div>
         <TrainingAdminNav />
       </div>
 
-      <section className="animate-fade-up mt-8 grid grid-cols-2 gap-3 lg:grid-cols-5">
+      <section className="animate-fade-up mt-8 grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-6">
         <StatTile
           label="Média da equipa"
           value={`${overview.averagePercent}%`}
           hint={`${overview.completedCount} concluíram tudo`}
           icon={<Gauge className="h-3 w-3" />}
+        />
+        <StatTile
+          label="Efetivos"
+          value={`${overview.effectiveCount}/${overview.rows.length}`}
+          hint={
+            overview.examBlockedCount > 0
+              ? `${overview.examBlockedCount} sem tentativas num exame`
+              : "passaram os 6 exames"
+          }
+          tone={overview.examBlockedCount > 0 ? "warn" : "default"}
+          icon={<ShieldCheck className="h-3 w-3" />}
         />
         <StatTile
           label="Já começaram"
@@ -114,13 +133,26 @@ export default async function FormacaoAdminPage() {
           icon={<UserRound className="h-3 w-3" />}
         />
         <StatTile
-          label="Testes por escrever"
+          label="Quizzes por escrever"
           value={overview.quizzesMissing}
           hint="capítulos sem perguntas"
           tone={overview.quizzesMissing > 0 ? "warn" : "good"}
           icon={<ClipboardCheck className="h-3 w-3" />}
         />
       </section>
+
+      {overview.startDatesPending > 0 && (
+        <Link
+          href="/formacao/admin/inscricoes"
+          className="animate-fade-up mt-4 flex flex-wrap items-center gap-2.5 rounded-xl border border-amber-400/25 bg-amber-500/[0.07] px-4 py-3 text-[13px] text-amber-100/85 transition hover:border-amber-400/45"
+        >
+          <CalendarClock className="h-4 w-4 shrink-0" />
+          {overview.startDatesPending} pessoa
+          {overview.startDatesPending === 1 ? "" : "s"} ainda com a data de
+          entrada por confirmar — é ela que ancora os seis exames de fase, e o
+          dos 90 dias decide a efetividade. Abre as Inscrições para corrigir.
+        </Link>
+      )}
 
       {overview.missingVideos > 0 && (
         <Link

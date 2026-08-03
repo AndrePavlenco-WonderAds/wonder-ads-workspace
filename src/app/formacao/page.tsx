@@ -1,8 +1,23 @@
 // Hub da Formação — WonderAds Consultants University.
 //
-// Hero com o nome do consultor, o progresso global, linha de estatísticas, o
-// cartão de "continuar onde ficaste" em destaque, e um cartão por módulo com a
-// fita de capítulos que resume a jornada inteira num relance.
+// DESENHO — "PAINEL DE CARREIRA", não uma lista de cursos. A página responde,
+// por esta ordem, às três perguntas que alguém tem quando entra: onde estou,
+// o que se decide a seguir, e o que faço agora.
+//
+//   1. HERO — quem é, a percentagem global, e a telemetria da formação.
+//   2. EXAMES — os seis marcos, todos visíveis desde o dia 1, com a data em
+//      que cada um abre. É a única parte da página com consequência real, por
+//      isso vem antes do resto.
+//   3. CONTINUAR — o próximo passo exato, a um clique.
+//   4. MÓDULOS — a matéria, um cartão por módulo.
+//
+// A página é FULL-BLEED (`wide`): com seis cartões de exame numa linha, o
+// contentor de 7xl obrigava-os a partir para duas linhas e a leitura de
+// "semana 1 → 90 dias" deixava de ser uma linha do tempo.
+//
+// Vocabulário: os testes de capítulo são QUIZZES (ensinam, repetem-se); os
+// seis marcos são EXAMES (decidem). A distinção é a espinha da página e está
+// escrita em todo o lado — mudar uma palavra aqui obriga a mudar as outras.
 
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -18,6 +33,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
+import { ExamRail, NextExamCard } from "@/components/training/exam-rail";
 import {
   LessonThumb,
   LessonTypeBadge,
@@ -43,7 +59,7 @@ export default async function FormacaoPage() {
   const ctx = await getTrainingContext();
   if (!ctx) redirect("/login?next=/formacao");
 
-  const { employee, common, specializations } = ctx;
+  const { employee, common, specializations, exams } = ctx;
   const global = overallPercent(common, specializations);
   const tracks = userTracks(ctx);
 
@@ -62,7 +78,7 @@ export default async function FormacaoPage() {
   const minutesLeft = tracks.reduce((s, t) => s + t.minutesLeft, 0);
   const missing = tracks.reduce((s, t) => s + t.missingVideos, 0);
 
-  // O próximo passo real, seja aula ou teste, no primeiro módulo aberto.
+  // O próximo passo real, seja aula ou quiz, no primeiro módulo aberto.
   const active = tracks.find(
     (t) => !t.lockedReason && (t.nextLesson || t.nextQuizModule),
   );
@@ -75,44 +91,68 @@ export default async function FormacaoPage() {
       : null;
 
   return (
-    <PageShell backHref="/" backLabel="Workspace">
-      {/* ===== Hero ===== */}
-      <section className="animate-fade-up relative overflow-hidden rounded-3xl border border-white/10 bg-white/[0.03] p-6 backdrop-blur-md sm:p-8">
+    <PageShell backHref="/" backLabel="Workspace" wide>
+      {/* ===== 1 · Hero ===== */}
+      <section className="animate-fade-up relative overflow-hidden rounded-3xl border border-white/[0.08] bg-white/[0.022] p-6 sm:p-9">
+        {/* Duas fontes de luz em vez de uma: a fria à esquerda ancora o nome,
+            a quente à direita ancora o anel. O olho lê nome → progresso. */}
         <span
           aria-hidden
-          className="pointer-events-none absolute -left-24 -top-28 h-80 w-80 rounded-full opacity-25 blur-3xl"
-          style={{ background: "var(--brand-gradient)" }}
+          className="pointer-events-none absolute -left-28 -top-36 h-[26rem] w-[26rem] rounded-full opacity-[0.2] blur-3xl"
+          style={{
+            background:
+              "radial-gradient(circle, rgba(52,62,215,0.9), transparent 70%)",
+          }}
         />
-        <div className="relative flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
+        <span
+          aria-hidden
+          className="pointer-events-none absolute -right-32 -top-44 h-[30rem] w-[30rem] rounded-full opacity-[0.18] blur-3xl"
+          style={{
+            background:
+              "radial-gradient(circle, rgba(197,53,201,0.9), transparent 70%)",
+          }}
+        />
+        {/* Fio de luz no topo — assina o cartão sem lhe pôr moldura. */}
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 top-0 h-px"
+          style={{
+            background:
+              "linear-gradient(90deg, transparent, rgba(120,61,245,0.7), rgba(197,53,201,0.4), transparent)",
+          }}
+        />
+
+        <div className="relative flex flex-col gap-9 lg:flex-row lg:items-center lg:justify-between">
           <div className="max-w-2xl">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/12 bg-white/[0.05] px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-white/60">
+            <span className="readout inline-flex items-center gap-1.5 rounded-full border border-white/12 bg-white/[0.05] px-3 py-1.5 text-white/55">
               <GraduationCap className="h-3 w-3 text-[color:var(--brand-purple)]" />
               Consultants University
             </span>
-            <h1 className="mt-4 text-3xl font-semibold leading-tight tracking-tight sm:text-[2.6rem]">
-              <span className="text-white/70">Bem-vindo, </span>
+            <h1 className="mt-4 text-[2.1rem] font-bold leading-[1.05] tracking-[-0.025em] sm:text-[3rem]">
+              <span className="text-white/60">Bem-vindo, </span>
               <span className="brand-gradient-text">{employee.name}</span>
             </h1>
-            <p className="mt-3 max-w-xl text-sm leading-relaxed text-white/55">
+            <p className="mt-4 max-w-xl text-[13.5px] leading-relaxed text-white/50">
               {championLine(employee.username, Date.now())}
             </p>
           </div>
 
-          <div className="flex shrink-0 items-center gap-5">
-            <ProgressRing percent={global} label="global" size={132} />
+          <div className="flex shrink-0 items-center gap-5 lg:pr-2">
+            <ProgressRing percent={global} label="global" size={150} />
           </div>
         </div>
 
         {tracks.length > 0 && (
-          <div className="relative mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="relative mt-9 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
             <StatTile
               label="Aulas vistas"
               value={`${watched}/${totalLessons}`}
               icon={<Film className="h-3 w-3" />}
             />
             <StatTile
-              label="Testes passados"
+              label="Quizzes passados"
               value={`${quizzesPassed}/${quizzesTotal}`}
+              hint="por capítulo · repetíveis"
               icon={<ClipboardCheck className="h-3 w-3" />}
             />
             <StatTile
@@ -144,11 +184,18 @@ export default async function FormacaoPage() {
                 icon={<Clock className="h-3 w-3" />}
               />
             )}
+            {/* Quando é o próximo exame — e, se já passou os 90 dias, o selo
+                de efetivo em verde. É a leitura que interessa a quem já anda
+                cá há semanas. */}
+            <NextExamCard journey={exams} />
           </div>
         )}
       </section>
 
-      {/* ===== Continuar onde ficaste ===== */}
+      {/* ===== 2 · Exames de fase ===== */}
+      <ExamRail journey={exams} />
+
+      {/* ===== 3 · Continuar onde ficaste ===== */}
       {nextHref && active && (
         <Link
           href={nextHref}
@@ -162,7 +209,7 @@ export default async function FormacaoPage() {
             </span>
           )}
           <div className="min-w-0 flex-1">
-            <p className="flex items-center gap-1.5 text-[9.5px] font-bold uppercase tracking-[0.16em] text-[#A9834F]">
+            <p className="readout flex items-center gap-1.5 text-[#A9834F]">
               <Sparkles className="h-2.5 w-2.5" />
               {watched === 0 && quizzesPassed === 0
                 ? "Começa por aqui"
@@ -186,18 +233,27 @@ export default async function FormacaoPage() {
         </Link>
       )}
 
-      {/* ===== Módulos ===== */}
+      {/* ===== 4 · Módulos ===== */}
       {tracks.length === 0 ? (
         <div className="animate-fade-up mt-10 rounded-2xl border border-dashed border-white/12 bg-white/[0.02] px-4 py-10 text-center text-sm text-white/45">
           Ainda não tens nenhum módulo atribuído. Fala com o Andre, o Alex ou a
           Alice.
         </div>
       ) : (
-        <section className="animate-fade-up mt-6 grid gap-5 lg:grid-cols-2">
-          {tracks.map((t) => (
-            <TrackCard key={t.track.slug} state={t} />
-          ))}
-        </section>
+        <>
+          <div className="animate-fade-up mt-10 flex items-center gap-3">
+            <span className="readout text-white/35">Matéria</span>
+            <span className="tabular text-[10px] font-semibold text-white/25">
+              {tracks.length.toString().padStart(2, "0")} módulos
+            </span>
+            <span className="h-px flex-1 bg-gradient-to-r from-white/12 to-transparent" />
+          </div>
+          <section className="animate-fade-up mt-5 grid gap-5 lg:grid-cols-2 2xl:grid-cols-3">
+            {tracks.map((t) => (
+              <TrackCard key={t.track.slug} state={t} />
+            ))}
+          </section>
+        </>
       )}
 
       {common && !common.completed && specializations.length > 0 && (
@@ -207,7 +263,7 @@ export default async function FormacaoPage() {
             ? `A tua especialização (${specializations[0].track.name}) desbloqueia`
             : `As tuas especializações (${specializations.map((s) => s.track.name).join(", ")}) desbloqueiam`}{" "}
           quando a Categoria Comum estiver 100% concluída — vídeos vistos e
-          testes passados.
+          quizzes passados.
         </p>
       )}
     </PageShell>
@@ -267,7 +323,7 @@ function TrackCard({ state }: { state: TrackState }) {
             {state.track.description}
           </p>
         </div>
-        <span className="shrink-0 text-2xl font-bold text-white/85">
+        <span className="tabular shrink-0 text-2xl font-bold text-white/85">
           {state.percent}%
         </span>
       </div>
@@ -275,7 +331,7 @@ function TrackCard({ state }: { state: TrackState }) {
       {/* Fita da jornada — um segmento por capítulo. */}
       <div className="relative mt-5">
         <TrackJourney modules={state.modules} />
-        <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11.5px] text-white/45">
+        <div className="tabular mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11.5px] text-white/45">
           <span>
             {modulesDone}/{state.modules.length} capítulos
           </span>

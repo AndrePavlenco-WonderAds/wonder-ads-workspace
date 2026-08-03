@@ -128,7 +128,7 @@ export default async function LessonPage({
   const chapterIndex =
     state.modules.findIndex((m) => m.module.id === moduleState.module.id) + 1;
 
-  // Última aula do capítulo com tudo visto → aponta-se ao teste.
+  // Última aula do capítulo com tudo visto → aponta-se ao quiz.
   const allWatchedInModule =
     moduleState.totalLessons > 0 &&
     moduleState.watchedLessons >= moduleState.totalLessons;
@@ -158,7 +158,7 @@ export default async function LessonPage({
           </p>
           <p className="mt-2 text-[13px] text-amber-100/70">
             {state.lockedReason ??
-              "Conclui as aulas e o teste do capítulo anterior para abrires este capítulo."}
+              "Conclui as aulas e o quiz do capítulo anterior para abrires este capítulo."}
           </p>
           <Link
             href={`/formacao/${slug}`}
@@ -258,7 +258,7 @@ export default async function LessonPage({
                   className="brand-gradient-bg group inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-[12.5px] font-semibold text-white transition hover:brightness-110"
                 >
                   <ClipboardCheck className="h-4 w-4" />
-                  Fazer o teste do capítulo
+                  Fazer o quiz do capítulo
                 </Link>
               ) : null}
             </div>

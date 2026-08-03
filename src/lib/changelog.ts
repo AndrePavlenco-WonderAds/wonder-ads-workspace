@@ -13,6 +13,21 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.26",
+    date: "2026-08-03",
+    title: "Exames de fase, o sino a vermelho e a Formação de ponta a ponta",
+    highlights: [
+      "**🎯 Seis exames que decidem, não seis quizzes com outro nome.** Semana 1, 2, 3, 4, dia 60 e dia 90 — contados a partir da **data de entrada** de cada pessoa. Aparecem **todos desde o dia 1**, numa linha só, com a data em que cada um abre: um exame escondido até ao dia em que abre é uma surpresa, um exame visível e trancado é um objetivo. Nota mínima a subir (85% → 88% → 90%), **duas tentativas** por exame, e duas trancas — o relógio *e* o exame anterior passado, senão quem chumbasse a semana 1 saltava para o dos 90 dias e a régua não valia nada.",
+      "**🛡️ Passar o dos 90 dias diz «Efetivo», em verde, com selo.** É o que o exame final decide, por isso é o que ele escreve — no hub do consultor, na ficha dele e na tabela de equipa. Chumbar as duas tentativas de um exame também tem consequência: a linha fica vermelha e a decisão passa explicitamente para o C-Level, em vez de a pessoa ficar a tentar às escuras.",
+      "**✍️ 72 perguntas escritas de raiz, e são outra coisa.** Um quiz pergunta o que foi dito na aula; um exame pergunta o que fazes na segunda-feira de manhã quando o cliente escreve *aquilo*. As opções erradas são as **desculpas comuns** — «a bola está do lado dele», «documentei o risco», «cumpri a minha parte» —, porque é esse raciocínio que o exame existe para apanhar. Nas de múltipla seleção, acertar três de quatro vale **zero**: numa decisão com cliente, esquecer um passo custa o mesmo que não saber nenhum.",
+      "**🔤 «Teste» passou a «Quiz» em toda a app.** Hub, roadmap, aula, página do quiz, CMS, checklist de gravações, tabela de equipa e mensagens de erro da API. A distinção passou a ser a espinha da Formação: os **quizzes** de capítulo ensinam e repetem-se à vontade; os **exames** decidem. *«Testes passados»* é agora **«Quizzes passados»**, ao lado de um **«Exames passados»** novo.",
+      "**🔴 O sino ficou vermelho e passou a bater.** Era da cor da marca — e a marca já estava no botão todo à volta dele, por isso o número lia-se como decoração. Agora é vermelho, pulsa com halo enquanto houver trabalho em aberto, e para de pulsar quando não houver. Quem pediu menos animação ao sistema operativo continua a ver o anel, fixo: menos movimento não pode significar menos sinal.",
+      "**👥 Os Superadmins veem o sino da equipa toda.** Separador novo no painel lateral, com **quem tem trabalho em aberto, quanto, e desde quando** — expansível para ver sobre que clientes é, e com link para a ficha da pessoa. Quem está em dia aparece em bloco no fim. É **só de leitura**, de propósito: marcar «concluído» em nome de outra pessoa destruiria o único sinal fiável que o painel dá. Custa **uma** operação KV, não uma leitura por pessoa.",
+      "**📅 A data de entrada passou a ser gerível.** Nas *Inscrições*, uma coluna nova por pessoa. O default é o dia em que a credencial foi criada no workspace — serve para os exames não nascerem parados, mas está marcado a **amarelo** e a página avisa quantos faltam confirmar: o exame dos 90 dias decide uma efetividade, e uma data errada por uma semana desloca seis exames.",
+      "**✨ O hub da Formação foi reconstruído e passou a full-bleed.** Sem o contentor de 7xl, os seis exames cabem numa linha e a leitura *semana 1 → 90 dias* volta a ser uma linha do tempo. O hero ganhou duas fontes de luz em vez de uma (uma ancora o nome, outra o anel), a telemetria passou a cinco leituras — incluindo **quando é o próximo exame desta pessoa** —, e a matéria ganhou um cabeçalho próprio em vez de aparecer colada ao topo.",
+    ],
+  },
+  {
     version: "76.25",
     date: "2026-08-03",
     title: "Notificações — o painel abre a sério e não inventa atrasos",

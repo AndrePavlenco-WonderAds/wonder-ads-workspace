@@ -6,7 +6,13 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowUpDown, Search, TrendingUp } from "lucide-react";
+import {
+  ArrowUpDown,
+  Search,
+  ShieldAlert,
+  ShieldCheck,
+  TrendingUp,
+} from "lucide-react";
 import { formatDateTime } from "@/lib/dates";
 
 export type RosterTableRow = {
@@ -28,9 +34,16 @@ export type RosterTableRow = {
   attempts: number;
   failedAttempts: number;
   lastActivity: number;
+  /** Exames de fase — o que decide a passagem e a efetividade. */
+  examsPassed: number;
+  examsTotal: number;
+  /** Uma frase: "60 dias — faltam 12 dias", "Efetivo", … */
+  examLine: string;
+  examEffective: boolean;
+  examBlocked: boolean;
 };
 
-type SortKey = "percent" | "name" | "activity";
+type SortKey = "percent" | "name" | "activity" | "exams";
 
 export function RosterTable({
   rows,
@@ -64,6 +77,10 @@ export function RosterTable({
     return out.sort((a, b) => {
       if (sort === "name") return a.name.localeCompare(b.name, "pt");
       if (sort === "activity") return b.lastActivity - a.lastActivity;
+      if (sort === "exams")
+        return (
+          b.examsPassed - a.examsPassed || a.name.localeCompare(b.name, "pt")
+        );
       return b.percent - a.percent || a.name.localeCompare(b.name, "pt");
     });
   }, [rows, query, track, sort]);
@@ -97,7 +114,13 @@ export function RosterTable({
           type="button"
           onClick={() =>
             setSort((s) =>
-              s === "percent" ? "name" : s === "name" ? "activity" : "percent",
+              s === "percent"
+                ? "exams"
+                : s === "exams"
+                  ? "name"
+                  : s === "name"
+                    ? "activity"
+                    : "percent",
             )
           }
           className="inline-flex items-center gap-1.5 rounded-lg border border-white/12 px-3 py-2 text-[12.5px] font-medium text-white/60 transition hover:border-white/25 hover:text-white"
@@ -105,9 +128,11 @@ export function RosterTable({
           <ArrowUpDown className="h-3.5 w-3.5" />
           {sort === "percent"
             ? "Progresso"
-            : sort === "name"
-              ? "Nome"
-              : "Atividade"}
+            : sort === "exams"
+              ? "Exames"
+              : sort === "name"
+                ? "Nome"
+                : "Atividade"}
         </button>
         <span className="ml-auto text-[11.5px] text-white/40">
           {filtered.length} de {rows.length}
@@ -115,7 +140,7 @@ export function RosterTable({
       </div>
 
       <div className="overflow-x-auto rounded-2xl border border-white/10">
-        <table className="w-full min-w-[900px] text-left text-[13px]">
+        <table className="w-full min-w-[1120px] text-left text-[13px]">
           <thead className="bg-white/[0.03] text-[10.5px] uppercase tracking-[0.12em] text-white/45">
             <tr>
               <th className="px-4 py-3 font-semibold">Consultor</th>
@@ -123,7 +148,8 @@ export function RosterTable({
               <th className="px-4 py-3 font-semibold">Progresso</th>
               <th className="px-4 py-3 font-semibold">Capítulo atual</th>
               <th className="px-4 py-3 font-semibold">Aulas</th>
-              <th className="px-4 py-3 font-semibold">Testes</th>
+              <th className="px-4 py-3 font-semibold">Quizzes</th>
+              <th className="px-4 py-3 font-semibold">Exames</th>
               <th className="px-4 py-3 font-semibold">Última atividade</th>
             </tr>
           </thead>
@@ -202,7 +228,30 @@ export function RosterTable({
                     </span>
                   )}
                 </td>
-                <td className="px-4 py-3 text-white/50">
+                <td className="px-4 py-3">
+                  <span className="flex items-center gap-1.5">
+                    {r.examEffective ? (
+                      <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-emerald-300" />
+                    ) : r.examBlocked ? (
+                      <ShieldAlert className="h-3.5 w-3.5 shrink-0 text-rose-300" />
+                    ) : null}
+                    <span
+                      className={`tabular font-semibold ${
+                        r.examEffective
+                          ? "text-emerald-300"
+                          : r.examBlocked
+                            ? "text-rose-300"
+                            : "text-white/70"
+                      }`}
+                    >
+                      {r.examsPassed}/{r.examsTotal}
+                    </span>
+                  </span>
+                  <span className="mt-0.5 block text-[10.5px] text-white/35">
+                    {r.examLine}
+                  </span>
+                </td>
+                <td className="tabular px-4 py-3 text-white/50">
                   {r.lastActivity ? (
                     formatDateTime(r.lastActivity)
                   ) : (
@@ -217,7 +266,7 @@ export function RosterTable({
             {filtered.length === 0 && (
               <tr>
                 <td
-                  colSpan={7}
+                  colSpan={8}
                   className="px-4 py-10 text-center text-[13px] text-white/40"
                 >
                   Ninguém corresponde a este filtro.

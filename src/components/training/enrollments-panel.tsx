@@ -1,15 +1,21 @@
 "use client";
 
-// Gestão de inscrições: atribuir/alterar as especializações de cada pessoa.
+// Gestão de inscrições: especializações e DATA DE ENTRADA de cada pessoa.
 //
 // Cada especialização é um chip que se liga e desliga. É deliberado não ser um
 // dropdown: uma pessoa pode acumular especializações (SEO + Comercial, por
 // exemplo) e num dropdown isso não se vê nem se faz. Grava-se uma linha de
 // cada vez — o alvo é uma pessoa, não a tabela toda.
+//
+// A DATA DE ENTRADA vive aqui porque é aqui que se responde à pergunta "o que
+// é que esta pessoa tem de fazer": é ela que ancora os seis exames de fase
+// (semana 1, 2, 3, 4, dia 60 e dia 90). A que vem por defeito é o dia em que
+// a credencial foi criada no workspace — serve para nada nascer morto, mas
+// não é registo de RH. Uma linha ainda por confirmar aparece marcada.
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Loader2, RotateCcw } from "lucide-react";
+import { CalendarClock, Check, Loader2, RotateCcw } from "lucide-react";
 
 export type EnrollmentRow = {
   username: string;
@@ -20,6 +26,11 @@ export type EnrollmentRow = {
   /** True quando veio de uma atribuição explícita (e não do departamento). */
   assigned: boolean;
   assignedBy?: string;
+  /** Data de entrada em vigor (ISO) — override ou default da credencial. */
+  startedAt: string | null;
+  /** True quando a data veio de uma escolha explícita do C-Level. */
+  startDateExplicit: boolean;
+  startDateSetBy?: string;
 };
 
 export function EnrollmentsPanel({
@@ -62,6 +73,35 @@ export function EnrollmentsPanel({
     }
   }
 
+  /** Grava (ou repõe) a data de entrada de uma pessoa. */
+  async function saveStartDate(
+    username: string,
+    date: string,
+    clear = false,
+  ) {
+    setPending(username);
+    setError(null);
+    try {
+      const res = await fetch("/api/formacao/admin/start-dates", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, date, clear }),
+      });
+      const data = (await res.json()) as { error?: string };
+      if (!res.ok) {
+        setError(data.error ?? "Não foi possível gravar a data.");
+        return;
+      }
+      setSaved((p) => ({ ...p, [username]: true }));
+      setTimeout(() => setSaved((p) => ({ ...p, [username]: false })), 2500);
+      router.refresh();
+    } catch {
+      setError("Falha de rede — tenta outra vez.");
+    } finally {
+      setPending(null);
+    }
+  }
+
   /** Liga/desliga uma especialização mantendo as restantes. */
   function toggle(row: EnrollmentRow, slug: string) {
     const next = row.trackSlugs.includes(slug)
@@ -78,11 +118,12 @@ export function EnrollmentsPanel({
         </p>
       )}
       <div className="overflow-x-auto rounded-2xl border border-white/10">
-        <table className="w-full min-w-[820px] text-left text-[13px]">
+        <table className="w-full min-w-[1040px] text-left text-[13px]">
           <thead className="bg-white/[0.03] text-[10.5px] uppercase tracking-[0.12em] text-white/45">
             <tr>
               <th className="px-4 py-3 font-semibold">Pessoa</th>
               <th className="px-4 py-3 font-semibold">Departamento</th>
+              <th className="px-4 py-3 font-semibold">Data de entrada</th>
               <th className="px-4 py-3 font-semibold">Especializações</th>
               <th className="px-4 py-3 font-semibold">Origem</th>
             </tr>
@@ -106,6 +147,57 @@ export function EnrollmentsPanel({
                     </div>
                   </td>
                   <td className="px-4 py-3 text-white/60">{r.dept}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-1.5">
+                      <label className="relative">
+                        <CalendarClock
+                          aria-hidden
+                          className={`pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 ${
+                            r.startDateExplicit
+                              ? "text-white/35"
+                              : "text-amber-300/70"
+                          }`}
+                        />
+                        <input
+                          type="date"
+                          defaultValue={r.startedAt ?? ""}
+                          disabled={busy}
+                          aria-label={`Data de entrada de ${r.name}`}
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            if (v) saveStartDate(r.username, v);
+                          }}
+                          className={`tabular w-[152px] rounded-lg border bg-white/[0.04] py-1.5 pl-8 pr-2 text-[12.5px] text-white outline-none transition focus:border-[#783DF5]/60 disabled:opacity-50 ${
+                            r.startDateExplicit
+                              ? "border-white/12"
+                              : "border-amber-400/30"
+                          }`}
+                        />
+                      </label>
+                      {r.startDateExplicit && (
+                        <button
+                          type="button"
+                          title="Voltar ao default da credencial"
+                          disabled={busy}
+                          onClick={() => saveStartDate(r.username, "", true)}
+                          className="rounded p-1 text-white/35 transition hover:bg-white/10 hover:text-white/70 disabled:opacity-40"
+                        >
+                          <RotateCcw className="h-3 w-3" />
+                        </button>
+                      )}
+                    </div>
+                    <p
+                      className={`mt-1 text-[10px] ${
+                        r.startDateExplicit
+                          ? "text-white/30"
+                          : "text-amber-200/60"
+                      }`}
+                    >
+                      {r.startDateExplicit
+                        ? `confirmada${r.startDateSetBy ? ` por ${r.startDateSetBy}` : ""}`
+                        : "por confirmar (default)"}
+                    </p>
+                  </td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap items-center gap-1.5">
                       {tracks.map((t) => {

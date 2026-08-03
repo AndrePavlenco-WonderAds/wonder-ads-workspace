@@ -10,13 +10,21 @@
 //
 // Por isso:
 //  • O badge conta o que está POR RESOLVER, não o que é "novo". Um contador de
-//    não-lidos ensina a ignorá-lo; um contador de trabalho em aberto não.
+//    não-lidos ensina a ignorá-lo; um contador de trabalho em aberto não. É
+//    VERMELHO e pulsa: um badge da cor da marca lê-se como decoração, e a
+//    marca já está no botão todo à volta dele.
 //  • As linhas agrupam-se por lembrete + período ("Enviar Monthly Report ·
 //    julho de 2026"), porque é assim que o trabalho é feito: em bloco.
 //  • O que já foi resolvido não desaparece — desce para "Concluídas" e pode
 //    ser reaberto. Um clique errado não pode apagar o lembrete do mês.
 //  • Marcar concluído é otimista: a linha desce imediatamente e só depois se
 //    confirma com o servidor. Se falhar, volta e diz porquê.
+//
+// SUPERADMIN — o painel ganha um separador "Equipa" com o que está em aberto
+// em cada consultor. É deliberadamente SÓ DE LEITURA: o C-Level precisa de
+// saber quem está em dívida e há quanto tempo, não de despachar em nome de
+// outra pessoa (marcar por ela destruiria o único sinal fiável que o painel
+// dá). Daí o link para o drill-down em vez de um botão de "concluído".
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
@@ -28,6 +36,9 @@ import {
   CheckCircle2,
   Loader2,
   RotateCcw,
+  ShieldCheck,
+  TriangleAlert,
+  Users,
   X,
 } from "lucide-react";
 import { formatDate } from "@/lib/dates";
@@ -44,6 +55,25 @@ export type DrawerNotification = {
   actionHref: string;
   resolved: boolean;
   resolvedAt: number | null;
+};
+
+export type TeamRow = {
+  username: string;
+  name: string;
+  role: string;
+  dept: string;
+  pending: number;
+  resolved: number;
+  oldestDueAt: number | null;
+  groups: { key: string; title: string; periodLabel: string; count: number }[];
+  items: { id: string; label: string; periodLabel: string; icon: string | null }[];
+  truncated: number;
+};
+
+export type TeamSummary = {
+  rows: TeamRow[];
+  totalPending: number;
+  peopleWithPending: number;
 };
 
 type Group = {
@@ -76,11 +106,17 @@ function groupOf(items: DrawerNotification[]): Group[] {
 
 export function NotificationsDrawer({
   initial,
+  team = null,
+  viewerUsername,
 }: {
   initial: DrawerNotification[];
+  /** Só chega preenchido a quem tem `isAdmin`. */
+  team?: TeamSummary | null;
+  viewerUsername?: string;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [tab, setTab] = useState<"mine" | "team">("mine");
   const [items, setItems] = useState(initial);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -159,32 +195,54 @@ export function NotificationsDrawer({
   );
 
   const count = pending.length;
+  // O que o C-Level tem em aberto na equipa (fora o dele próprio) — entra no
+  // sino, porque o trabalho parado de um consultor é trabalho parado da casa.
+  const teamOther = useMemo(
+    () =>
+      team
+        ? team.rows
+            .filter((r) => r.username !== viewerUsername)
+            .reduce((s, r) => s + r.pending, 0)
+        : 0,
+    [team, viewerUsername],
+  );
+  const badgeCount = count + teamOther;
 
   return (
     <>
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          setTab(count === 0 && teamOther > 0 ? "team" : "mine");
+          setOpen(true);
+        }}
         aria-label={
-          count > 0
-            ? `Notificações — ${count} por resolver`
+          badgeCount > 0
+            ? `Notificações — ${badgeCount} por resolver`
             : "Notificações — nada pendente"
         }
         aria-haspopup="dialog"
-        className="group relative inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/12 bg-white/[0.04] text-white/70 transition hover:border-[color:var(--brand-purple)]/45 hover:bg-white/[0.08] hover:text-white"
+        className={`group relative inline-flex h-8 w-8 items-center justify-center rounded-full border bg-white/[0.04] transition ${
+          badgeCount > 0
+            ? "border-rose-400/40 text-white hover:border-rose-400/70 hover:bg-rose-500/[0.12]"
+            : "border-white/12 text-white/70 hover:border-[color:var(--brand-purple)]/45 hover:bg-white/[0.08] hover:text-white"
+        }`}
       >
         <Bell className="h-[15px] w-[15px]" />
-        {count > 0 && (
+        {badgeCount > 0 && (
           <>
+            {/* Vermelho e a bater. O anel que expande é um segundo elemento
+                por baixo do número, para o próprio número não escalar e
+                continuar legível enquanto pulsa. */}
             <span
               aria-hidden
-              className="brand-gradient-bg absolute -right-1 -top-1 flex h-[17px] min-w-[17px] items-center justify-center rounded-full px-1 text-[9.5px] font-bold leading-none text-white shadow-[0_4px_14px_-4px_rgba(120,61,245,0.9)]"
+              className="badge-alert absolute -right-1 -top-1 flex h-[17px] min-w-[17px] items-center justify-center rounded-full bg-[#e11d48] px-1 text-[9.5px] font-bold leading-none text-white"
             >
-              {count > 99 ? "99+" : count}
+              {badgeCount > 99 ? "99+" : badgeCount}
             </span>
             <span
               aria-hidden
-              className="absolute -right-1 -top-1 h-[17px] min-w-[17px] animate-ping rounded-full bg-[color:var(--brand-purple)]/40"
+              className="absolute -right-1 -top-1 h-[17px] min-w-[17px] animate-ping rounded-full bg-rose-500/45"
             />
           </>
         )}
@@ -234,6 +292,28 @@ export function NotificationsDrawer({
               </button>
             </header>
 
+            {team && (
+              <div
+                role="tablist"
+                aria-label="Âmbito das notificações"
+                className="flex gap-1 border-b border-white/[0.07] px-5 py-2.5"
+              >
+                <TabButton
+                  active={tab === "mine"}
+                  onClick={() => setTab("mine")}
+                  label="As minhas"
+                  count={count}
+                />
+                <TabButton
+                  active={tab === "team"}
+                  onClick={() => setTab("team")}
+                  label="Equipa"
+                  count={teamOther}
+                  icon={<Users className="h-3 w-3" />}
+                />
+              </div>
+            )}
+
             {error && (
               <p className="border-b border-rose-400/20 bg-rose-500/[0.08] px-5 py-2.5 text-[12px] text-rose-200">
                 {error}
@@ -241,7 +321,13 @@ export function NotificationsDrawer({
             )}
 
             <div className="flex-1 overflow-y-auto px-5 py-5">
-              {count === 0 && done.length === 0 ? (
+              {team && tab === "team" ? (
+                <TeamPanel
+                  team={team}
+                  viewerUsername={viewerUsername}
+                  onNavigate={() => setOpen(false)}
+                />
+              ) : count === 0 && done.length === 0 ? (
                 <EmptyState />
               ) : (
                 <>
@@ -326,8 +412,9 @@ export function NotificationsDrawer({
 
             <footer className="border-t border-white/[0.07] px-5 py-3">
               <p className="text-[10.5px] leading-relaxed text-white/30">
-                Os lembretes são gerados pelo calendário — não há nada a
-                despachar, só a resolver. Quem os configura é o Superadmin.
+                {team && tab === "team"
+                  ? "Vista de leitura: o que cada consultor tem em aberto. Marcar como concluído é sempre da pessoa a quem o trabalho pertence."
+                  : "Os lembretes são gerados pelo calendário — não há nada a despachar, só a resolver. Quem os configura é o Superadmin."}
               </p>
             </footer>
           </aside>
@@ -335,6 +422,225 @@ export function NotificationsDrawer({
           document.body,
         )}
     </>
+  );
+}
+
+function TabButton({
+  active,
+  onClick,
+  label,
+  count,
+  icon,
+}: {
+  active: boolean;
+  onClick: () => void;
+  label: string;
+  count: number;
+  icon?: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      role="tab"
+      aria-selected={active}
+      onClick={onClick}
+      className={`inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-[12px] font-semibold transition ${
+        active
+          ? "bg-white/[0.08] text-white"
+          : "text-white/45 hover:bg-white/[0.04] hover:text-white/75"
+      }`}
+    >
+      {icon}
+      {label}
+      {count > 0 && (
+        <span
+          className={`tabular rounded-full px-1.5 py-0.5 text-[9.5px] font-bold leading-none ${
+            active
+              ? "bg-rose-500/25 text-rose-200"
+              : "bg-rose-500/15 text-rose-300/80"
+          }`}
+        >
+          {count > 99 ? "99+" : count}
+        </span>
+      )}
+    </button>
+  );
+}
+
+/** Painel de equipa do Superadmin — uma linha por pessoa com trabalho em
+ *  aberto, expansível para ver sobre que clientes é. Quem está em dia aparece
+ *  no fim, em bloco: o C-Level tem de conseguir ler "quem está em dívida" sem
+ *  scroll, mas "quem está em dia" também é informação. */
+function TeamPanel({
+  team,
+  viewerUsername,
+  onNavigate,
+}: {
+  team: TeamSummary;
+  viewerUsername?: string;
+  onNavigate: () => void;
+}) {
+  const others = team.rows.filter((r) => r.username !== viewerUsername);
+  const late = others.filter((r) => r.pending > 0);
+  const clear = others.filter((r) => r.pending === 0);
+
+  if (others.length === 0) {
+    return (
+      <div className="px-4 py-14 text-center">
+        <Users className="mx-auto h-6 w-6 text-white/25" />
+        <p className="mt-3 text-[13px] font-semibold text-white/70">
+          Sem regras aplicáveis à equipa
+        </p>
+        <p className="mt-1 text-[11.5px] leading-relaxed text-white/40">
+          Nenhuma regra ativa abrange outra pessoa. Configura-as em{" "}
+          <Link
+            href="/admin/notificacoes"
+            onClick={onNavigate}
+            className="text-[#c3aaff] underline-offset-2 hover:underline"
+          >
+            /admin → Notificações
+          </Link>
+          .
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <span
+          className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10.5px] font-bold uppercase tracking-[0.12em] ${
+            late.length > 0
+              ? "border-rose-400/35 bg-rose-500/[0.1] text-rose-200"
+              : "border-emerald-400/30 bg-emerald-500/[0.1] text-emerald-200"
+          }`}
+        >
+          {late.length > 0 ? (
+            <TriangleAlert className="h-3 w-3" />
+          ) : (
+            <ShieldCheck className="h-3 w-3" />
+          )}
+          {late.length > 0
+            ? `${late.length} ${late.length === 1 ? "pessoa" : "pessoas"} com trabalho em aberto`
+            : "Equipa toda em dia"}
+        </span>
+        {late.length > 0 && (
+          <span className="tabular text-[11px] text-white/40">
+            {late.reduce((s, r) => s + r.pending, 0)} no total
+          </span>
+        )}
+      </div>
+
+      <ul className="space-y-2">
+        {late.map((r) => (
+          <li key={r.username}>
+            <TeamPersonRow row={r} onNavigate={onNavigate} />
+          </li>
+        ))}
+      </ul>
+
+      {clear.length > 0 && (
+        <section className="mt-7 border-t border-white/[0.07] pt-5">
+          <h3 className="readout text-white/30">Em dia · {clear.length}</h3>
+          <ul className="mt-3 space-y-1.5">
+            {clear.map((r) => (
+              <li
+                key={r.username}
+                className="flex items-center gap-2.5 rounded-xl border border-white/[0.05] bg-white/[0.012] px-3 py-2"
+              >
+                <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-400/70" />
+                <span className="min-w-0 flex-1 truncate text-[12.5px] text-white/55">
+                  {r.name}
+                </span>
+                <span className="tabular shrink-0 text-[10.5px] text-white/28">
+                  {r.resolved > 0 ? `${r.resolved} feitas` : "—"}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+    </>
+  );
+}
+
+function TeamPersonRow({
+  row,
+  onNavigate,
+}: {
+  row: TeamRow;
+  onNavigate: () => void;
+}) {
+  return (
+    <details className="group rounded-xl border border-rose-400/20 bg-rose-500/[0.04] p-3 transition open:border-rose-400/35">
+      <summary className="flex cursor-pointer items-center gap-2.5 marker:content-['']">
+        <span
+          aria-hidden
+          className="brand-gradient-bg flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-white"
+        >
+          {row.name.trim().charAt(0).toUpperCase()}
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-[13.5px] font-medium text-white/90">
+            {row.name}
+          </span>
+          <span className="tabular block truncate text-[10.5px] text-white/40">
+            {row.role}
+            {row.oldestDueAt ? ` · desde ${formatDate(row.oldestDueAt)}` : ""}
+          </span>
+        </span>
+        <span className="tabular shrink-0 rounded-full bg-rose-500/20 px-2 py-0.5 text-[11px] font-bold text-rose-200">
+          {row.pending}
+        </span>
+      </summary>
+
+      <div className="mt-3 border-t border-white/[0.07] pt-3">
+        {row.groups.map((g) => (
+          <p
+            key={g.key}
+            className="mb-1.5 flex flex-wrap items-baseline gap-x-1.5 text-[11.5px] last:mb-0"
+          >
+            <span className="font-medium text-white/75">{g.title}</span>
+            <span className="readout text-[#d8b98a]">{g.periodLabel}</span>
+            <span className="tabular ml-auto text-white/40">×{g.count}</span>
+          </p>
+        ))}
+
+        <ul className="mt-2.5 space-y-1">
+          {row.items.map((it) => (
+            <li
+              key={it.id}
+              className="flex items-center gap-2 rounded-lg bg-white/[0.02] px-2 py-1.5"
+            >
+              <span aria-hidden className="shrink-0 text-[13px]">
+                {it.icon ?? "•"}
+              </span>
+              <span className="min-w-0 flex-1 truncate text-[12px] text-white/70">
+                {it.label}
+              </span>
+              <span className="tabular shrink-0 text-[10px] text-white/30">
+                {it.periodLabel}
+              </span>
+            </li>
+          ))}
+          {row.truncated > 0 && (
+            <li className="px-2 pt-1 text-[10.5px] text-white/30">
+              + {row.truncated} sem caber aqui
+            </li>
+          )}
+        </ul>
+
+        <Link
+          href={`/formacao/admin/${row.username}`}
+          onClick={onNavigate}
+          className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-white/12 px-2.5 py-1.5 text-[11.5px] font-medium text-white/65 transition hover:border-[#783DF5]/45 hover:text-white"
+        >
+          Ver ficha
+          <ArrowRight className="h-3 w-3" />
+        </Link>
+      </div>
+    </details>
   );
 }
 

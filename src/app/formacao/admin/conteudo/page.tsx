@@ -115,7 +115,7 @@ export default async function ContentChecklistPage() {
           icon={<UserRound className="h-3 w-3" />}
         />
         <StatTile
-          label="Testes por escrever"
+          label="Quizzes por escrever"
           value={stats.quizzesMissing}
           hint="capítulos sem perguntas"
           tone={stats.quizzesMissing > 0 ? "warn" : "good"}
@@ -229,7 +229,7 @@ export default async function ContentChecklistPage() {
                     {done}/{lessons.length} gravadas ·{" "}
                     {t.modules.filter((m) => m.quiz.questions.length === 0)
                       .length}{" "}
-                    testes por escrever
+                    quizzes por escrever
                   </span>
                 </header>
 
@@ -252,7 +252,7 @@ export default async function ContentChecklistPage() {
                         >
                           {m.quiz.questions.length > 0
                             ? `${m.quiz.questions.length} perguntas`
-                            : "teste por escrever"}
+                            : "quiz por escrever"}
                         </span>
                       </p>
                       <ul className="space-y-0.5">

@@ -1,8 +1,8 @@
-// Submissão de um teste da Formação.
+// Submissão de um quiz de capítulo da Formação.
 //   POST /api/formacao/quiz/<quizId>/submit
 //   { answers: [{ questionId, optionIds?, text? }], startedAt? }
 //
-// O utilizador vem da sessão, o teste vem do catálogo em vigor e a correção é
+// O utilizador vem da sessão, o quiz vem do catálogo em vigor e a correção é
 // feita aqui — nunca no cliente. Guarda-se a tentativa inteira, com todas as
 // respostas dadas, para o admin poder ver exatamente o que a pessoa escolheu.
 //
@@ -70,7 +70,7 @@ export async function POST(
     getQuizAttempts(employee.username),
   ]);
 
-  // Localizar o teste e a track a que pertence.
+  // Localizar o quiz e a track a que pertence.
   let found: { trackSlug: string; moduleId: string; quiz: (typeof tracks)[number]["modules"][number]["quiz"] } | null =
     null;
   for (const t of tracks) {
@@ -83,17 +83,17 @@ export async function POST(
     if (found) break;
   }
   if (!found) {
-    return NextResponse.json({ error: "Teste desconhecido." }, { status: 404 });
+    return NextResponse.json({ error: "Quiz desconhecido." }, { status: 404 });
   }
   if (found.quiz.questions.length === 0) {
     return NextResponse.json(
-      { error: "Este teste ainda não tem perguntas." },
+      { error: "Este quiz ainda não tem perguntas." },
       { status: 409 },
     );
   }
 
   // O utilizador tem de estar inscrito no módulo E ter o capítulo aberto. Sem
-  // isto, bastava conhecer o id do teste para passar por cima da sequência.
+  // isto, bastava conhecer o id do quiz para passar por cima da sequência.
   const specializationSlugs = resolveTrackSlugs(
     employee.username,
     employee.dept,
@@ -126,14 +126,14 @@ export async function POST(
     return NextResponse.json(
       {
         error:
-          "Este capítulo ainda não tem aulas gravadas — o teste só abre quando houver matéria.",
+          "Este capítulo ainda não tem aulas gravadas — o quiz só abre quando houver matéria.",
       },
       { status: 409 },
     );
   }
   if (moduleState.watchedLessons < moduleState.totalLessons) {
     return NextResponse.json(
-      { error: "Vê todas as aulas do capítulo antes de fazer o teste." },
+      { error: "Vê todas as aulas do capítulo antes de fazer o quiz." },
       { status: 403 },
     );
   }
@@ -144,7 +144,7 @@ export async function POST(
     attemptsSoFar.length >= found.quiz.maxAttempts
   ) {
     return NextResponse.json(
-      { error: "Atingiste o número máximo de tentativas deste teste." },
+      { error: "Atingiste o número máximo de tentativas deste quiz." },
       { status: 409 },
     );
   }

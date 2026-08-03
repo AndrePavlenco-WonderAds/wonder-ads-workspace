@@ -6,7 +6,7 @@
 // «o que é que eu tenho de levar daqui?» e «quem é que me está a falar?».
 //
 // O Remember é numerado e cada ponto tem o seu marcador na goteira, para se
-// reler em diagonal antes do teste. Quando a aula ainda não foi destilada, o
+// reler em diagonal antes do quiz. Quando a aula ainda não foi destilada, o
 // painel diz isso em vez de desaparecer — um espaço vazio anunciado é honesto,
 // um painel que às vezes existe e às vezes não é que confunde.
 

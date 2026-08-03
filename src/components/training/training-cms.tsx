@@ -1,6 +1,6 @@
 "use client";
 
-// CMS da Formação — CRUD de módulos, capítulos, aulas e testes, sem tocar em
+// CMS da Formação — CRUD de módulos, capítulos, aulas e quizzes, sem tocar em
 // código. Mesmo modelo do editor de onboarding de clientes: o catálogo inteiro
 // vive em estado local e é gravado de uma vez; o servidor normaliza e recusa
 // estruturas inválidas, por isso uma edição má não consegue partir a formação
@@ -552,9 +552,9 @@ export function TrainingCms({
                                 />
                               </div>
 
-                              {/* Teste */}
+                              {/* Quiz */}
                               <h4 className="mt-6 text-[10px] font-bold uppercase tracking-[0.14em] text-[#A9834F]">
-                                Teste do capítulo
+                                Quiz do capítulo
                               </h4>
                               <div className="mt-2 grid gap-3 sm:grid-cols-4">
                                 <div className="sm:col-span-2">
@@ -719,7 +719,7 @@ export function TrainingCms({
                               lessons: [],
                               quiz: {
                                 id: `${id}-quiz`,
-                                title: "Teste do capítulo",
+                                title: "Quiz do capítulo",
                                 passingScore: 80,
                                 maxAttempts: null,
                                 shuffleQuestions: true,

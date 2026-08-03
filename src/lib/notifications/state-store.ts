@@ -54,6 +54,31 @@ export async function getNotificationState(
   }
 }
 
+/** Estado de várias pessoas numa só operação KV — o painel de equipa do
+ *  Superadmin precisa das 13 chaves de uma vez, e 13 `get` em série no meio
+ *  de um render de header é o tipo de coisa que faz o workspace inteiro
+ *  parecer lento. */
+export async function getNotificationStateMany(
+  usernames: string[],
+): Promise<Record<string, NotificationState>> {
+  const out: Record<string, NotificationState> = {};
+  if (!usernames.length) return out;
+  if (!notificationStateConfigured) {
+    for (const u of usernames) out[u] = {};
+    return out;
+  }
+  try {
+    const rows = await kv.mget<unknown[]>(...usernames.map(stateKey));
+    usernames.forEach((u, i) => {
+      out[u] = normalize(rows?.[i]);
+    });
+  } catch (err) {
+    console.error("KV notification-state mget failed:", err);
+    for (const u of usernames) out[u] = {};
+  }
+  return out;
+}
+
 /** Marca (ou desmarca) uma notificação como concluída. Devolve o estado novo. */
 export async function setNotificationResolved(
   username: string,

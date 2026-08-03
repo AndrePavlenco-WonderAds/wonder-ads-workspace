@@ -7,7 +7,7 @@
 // as especializações são acumuláveis, não uma escolha única).
 
 import Link from "next/link";
-import { ArrowLeft, ClipboardList, Info } from "lucide-react";
+import { ArrowLeft, CalendarClock, ClipboardList, Info } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { TrainingAdminNav } from "@/components/training/admin-nav";
 import {
@@ -19,6 +19,10 @@ import {
   getEnrollments,
   rosterWithTracks,
 } from "@/lib/training/enrollments-store";
+import {
+  getStartDates,
+  resolveStartDate,
+} from "@/lib/training/start-dates-store";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -28,9 +32,10 @@ export const metadata = {
 };
 
 export default async function EnrollmentsPage() {
-  const [tracks, enrollments] = await Promise.all([
+  const [tracks, enrollments, startDates] = await Promise.all([
     getTrainingCatalog(),
     getEnrollments(),
+    getStartDates(),
   ]);
   const roster = rosterWithTracks(enrollments);
   const rows: EnrollmentRow[] = roster.map((u) => ({
@@ -41,7 +46,11 @@ export default async function EnrollmentsPage() {
     trackSlugs: u.trackSlugs,
     assigned: u.assigned,
     assignedBy: u.assignedBy,
+    startedAt: resolveStartDate(u.username, startDates),
+    startDateExplicit: u.username in startDates,
+    startDateSetBy: startDates[u.username]?.setBy,
   }));
+  const unconfirmedDates = rows.filter((r) => !r.startDateExplicit).length;
   const options = tracks
     .filter((t) => !t.isCommon)
     .map((t) => ({ slug: t.slug, name: t.name }));
@@ -63,7 +72,8 @@ export default async function EnrollmentsPage() {
           </h1>
           <p className="mt-2 max-w-2xl text-sm text-white/55">
             A Categoria Comum é automática para toda a gente. Aqui definem-se as
-            especializações — cada pessoa pode ter mais do que uma.
+            especializações — cada pessoa pode ter mais do que uma — e a data de
+            entrada, que é o que ancora os seis exames de fase.
           </p>
         </div>
         <TrainingAdminNav />
@@ -80,6 +90,23 @@ export default async function EnrollmentsPage() {
           devolve a pessoa ao automático.
         </span>
       </div>
+
+      {unconfirmedDates > 0 && (
+        <div className="animate-fade-up mt-3 flex items-start gap-2.5 rounded-xl border border-amber-400/25 bg-amber-500/[0.07] px-4 py-3 text-[12.5px] text-amber-100/85">
+          <CalendarClock className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>
+            <strong className="font-semibold">
+              {unconfirmedDates} data{unconfirmedDates === 1 ? "" : "s"} de
+              entrada por confirmar.
+            </strong>{" "}
+            As que estão a amarelo vieram do <em>default</em> — o dia em que a
+            credencial da pessoa foi criada no workspace. Serve para os exames
+            não nascerem parados, mas não é registo de RH: o exame dos 90 dias
+            decide uma efetividade, e uma data errada por uma semana desloca
+            seis exames. Corrige cada uma e o aviso desaparece.
+          </span>
+        </div>
+      )}
 
       <section className="animate-fade-up mt-6">
         <header className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.14em] text-white/55">

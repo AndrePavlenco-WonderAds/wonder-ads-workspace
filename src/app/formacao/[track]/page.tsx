@@ -230,7 +230,7 @@ export default async function TrackPage({
             icon={<Film className="h-3 w-3" />}
           />
           <StatTile
-            label="Testes"
+            label="Quizzes"
             value={`${quizzesPassed}/${quizzesTotal}`}
             icon={<ClipboardCheck className="h-3 w-3" />}
           />
@@ -485,7 +485,7 @@ function ModuleStation({
                 </li>
               ))}
 
-              {/* Paragem final do capítulo: o teste. */}
+              {/* Paragem final do capítulo: o quiz. */}
               <li>
                 {state.quizRequired ? (
                   <Link
@@ -562,7 +562,7 @@ function TrackUpToDate({ state }: { state: TrackState }) {
         Estás em dia
       </h2>
       <p className="mx-auto mt-2 max-w-md text-[13px] leading-relaxed text-white/50">
-        Viste tudo o que já está publicado e passaste os testes disponíveis.
+        Viste tudo o que já está publicado e passaste os quizzes disponíveis.
         Faltam {state.missingVideos} aulas por publicar — assim que ficarem
         prontas aparecem aqui e voltas a ter trabalho para fazer.
       </p>
@@ -585,7 +585,7 @@ function TrackCompleted({ state }: { state: TrackState }) {
       </h2>
       <p className="relative mx-auto mt-2 max-w-md text-[13.5px] leading-relaxed text-white/55">
         Viste as {state.totalLessons} aulas de {state.track.name} e passaste os{" "}
-        {state.modules.filter((m) => m.quizRequired).length} testes. Podes rever
+        {state.modules.filter((m) => m.quizRequired).length} quizzes. Podes rever
         qualquer aula sempre que precisares.
       </p>
       <div className="relative mt-6 flex flex-wrap justify-center gap-3">

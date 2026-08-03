@@ -11,6 +11,11 @@ import {
 } from "@/lib/training/enrollments-store";
 import { getTrainingProgress } from "@/lib/training/progress-store";
 import { getQuizAttempts } from "@/lib/training/attempts-store";
+import {
+  getStartDates,
+  resolveStartDate,
+} from "@/lib/training/start-dates-store";
+import { computeExamJourney, type ExamJourney } from "@/lib/training/exams";
 import { computeUserTraining, type TrackState } from "@/lib/training/progress";
 import type { TrainingTrack } from "@/lib/training/catalog";
 import type { UserTrainingProgress } from "@/lib/training/progress-store";
@@ -31,6 +36,8 @@ export type TrainingContext = {
   common: TrackState | null;
   /** Pode ser mais do que uma — quem faz SEO e Comercial tem as duas. */
   specializations: TrackState[];
+  /** Os seis exames de fase, já com o relógio da pessoa aplicado. */
+  exams: ExamJourney;
 };
 
 /** Contexto de formação do utilizador com sessão. null quando não há sessão
@@ -39,12 +46,14 @@ export async function getTrainingContext(): Promise<TrainingContext | null> {
   const employee = await getCurrentEmployee();
   if (!employee) return null;
 
-  const [tracks, enrollments, progress, attempts] = await Promise.all([
-    getTrainingCatalog(),
-    getEnrollments(),
-    getTrainingProgress(employee.username),
-    getQuizAttempts(employee.username),
-  ]);
+  const [tracks, enrollments, progress, attempts, startDates] =
+    await Promise.all([
+      getTrainingCatalog(),
+      getEnrollments(),
+      getTrainingProgress(employee.username),
+      getQuizAttempts(employee.username),
+      getStartDates(),
+    ]);
 
   const specializationSlugs = resolveTrackSlugs(
     employee.username,
@@ -67,6 +76,10 @@ export async function getTrainingContext(): Promise<TrainingContext | null> {
     attempts,
     common,
     specializations,
+    exams: computeExamJourney(
+      resolveStartDate(employee.username, startDates),
+      attempts,
+    ),
   };
 }
 

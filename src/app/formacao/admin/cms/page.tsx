@@ -1,4 +1,4 @@
-// CMS da Formação — editar módulos, capítulos, aulas e testes sem tocar em
+// CMS da Formação — editar módulos, capítulos, aulas e quizzes sem tocar em
 // código. É também aqui que se colam os links dos vídeos à medida que forem
 // sendo gravados.
 
@@ -41,7 +41,7 @@ export default async function TrainingCmsPage() {
             <span className="brand-gradient-text">Conteúdo</span>
           </h1>
           <p className="mt-2 max-w-2xl text-sm text-white/55">
-            Módulos, capítulos, aulas e testes. Cola aqui o link de cada vídeo à
+            Módulos, capítulos, aulas e quizzes. Cola aqui o link de cada vídeo à
             medida que for gravado — a aula deixa de aparecer como
             &laquo;brevemente&raquo; e passa a contar para a progressão.
           </p>
@@ -58,7 +58,7 @@ export default async function TrainingCmsPage() {
           que o progresso e as respostas de toda a gente estão guardados —
           apagar uma aula faz o progresso dela deixar de contar. Uma pergunta
           sem nenhuma opção correta é descartada ao gravar, para não haver
-          testes impossíveis de passar.
+          quizzes impossíveis de passar.
         </span>
       </div>
 

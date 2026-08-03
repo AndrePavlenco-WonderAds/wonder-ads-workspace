@@ -11,15 +11,18 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   ArrowLeft,
+  CalendarClock,
   CheckCircle2,
   ClipboardCheck,
   Clock,
   Film,
   Gauge,
   Lock,
+  Target,
   XCircle,
 } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
+import { ExamRail, NextExamCard } from "@/components/training/exam-rail";
 import {
   LessonThumb,
   LessonTypeBadge,
@@ -30,7 +33,8 @@ import {
 } from "@/components/training/training-ui";
 import { getRosterRow } from "@/lib/training/admin";
 import { getTrainingCatalog } from "@/lib/training/content-store";
-import { formatDateTime } from "@/lib/dates";
+import { EXAM_QUESTIONS } from "@/lib/training/exam-questions";
+import { formatDate, formatDateTime } from "@/lib/dates";
 import type { TrackState } from "@/lib/training/progress";
 import type { QuizAttempt } from "@/lib/training/attempts-store";
 import type { TrainingQuestion, TrainingTrack } from "@/lib/training/catalog";
@@ -53,13 +57,17 @@ export async function generateMetadata({
 }
 
 /** Índice pergunta-id → pergunta, para mostrar o enunciado ao lado da
- *  resposta dada. Uma pergunta apagada do CMS depois da tentativa deixa de
- *  ter enunciado — mostramos o id em vez de esconder a resposta. */
+ *  resposta dada. Cobre os quizzes do catálogo E os seis exames — sem os
+ *  exames, uma tentativa de exame aberta aqui mostrava ids em vez de
+ *  enunciados. Uma pergunta apagada do CMS depois da tentativa deixa de ter
+ *  enunciado — mostramos o id em vez de esconder a resposta. */
 function questionIndex(tracks: TrainingTrack[]): Map<string, TrainingQuestion> {
   const map = new Map<string, TrainingQuestion>();
   for (const t of tracks)
     for (const m of t.modules)
       for (const q of m.quiz.questions) map.set(q.id, q);
+  for (const list of Object.values(EXAM_QUESTIONS))
+    for (const q of list) map.set(q.id, q);
   return map;
 }
 
@@ -80,11 +88,40 @@ export default async function ConsultantDrillDownPage({
     (t): t is TrackState => t !== null,
   );
 
-  // Linha temporal: aulas concluídas + tentativas de teste, do mais recente
-  // para o mais antigo.
+  // Tentativas de quiz e de exame vivem na mesma lista guardada em KV, mas
+  // dizem coisas diferentes: um chumbo num quiz é matéria por assentar, um
+  // chumbo num exame é uma decisão de fase. Mostram-se juntas — porque a
+  // ordem cronológica é a leitura útil — mas cada linha diz qual é qual.
+  type AttemptRow = { attempt: QuizAttempt; title: string; isExam: boolean };
+  const examAttempts: AttemptRow[] = row.exams.exams.flatMap((e) =>
+    e.attempts.map((a) => ({
+      attempt: a,
+      title: `${e.exam.label} · ${e.exam.title}`,
+      isExam: true,
+    })),
+  );
+  const quizAttempts: AttemptRow[] = row.attempts.map((a) => ({
+    attempt: a,
+    title:
+      tracks.flatMap((t) => t.modules).find((m) => m.quiz.id === a.quizId)?.quiz
+        .title ?? a.quizId,
+    isExam: false,
+  }));
+  const attemptRows = [...examAttempts, ...quizAttempts].sort(
+    (x, y) => y.attempt.submittedAt - x.attempt.submittedAt,
+  );
+
+  // Linha temporal: aulas concluídas + tentativas, do mais recente para o
+  // mais antigo.
   type Event =
     | { kind: "lesson"; at: number; title: string; percent: number; manual: boolean }
-    | { kind: "attempt"; at: number; attempt: QuizAttempt; title: string };
+    | {
+        kind: "attempt";
+        at: number;
+        attempt: QuizAttempt;
+        title: string;
+        isExam: boolean;
+      };
   const events: Event[] = [];
   for (const t of trackStates) {
     for (const m of t.modules) {
@@ -101,12 +138,14 @@ export default async function ConsultantDrillDownPage({
       }
     }
   }
-  for (const a of row.attempts) {
-    const title =
-      tracks
-        .flatMap((t) => t.modules)
-        .find((m) => m.quiz.id === a.quizId)?.quiz.title ?? a.quizId;
-    events.push({ kind: "attempt", at: a.submittedAt, attempt: a, title });
+  for (const r of attemptRows) {
+    events.push({
+      kind: "attempt",
+      at: r.attempt.submittedAt,
+      attempt: r.attempt,
+      title: r.title,
+      isExam: r.isExam,
+    });
   }
   events.sort((a, b) => b.at - a.at);
 
@@ -142,25 +181,52 @@ export default async function ConsultantDrillDownPage({
                 </span>
               )}
             </p>
-            <p className="mt-1 text-[11.5px] text-white/35">
-              Última atividade:{" "}
-              {row.lastActivity ? formatDateTime(row.lastActivity) : "nunca"}
+            <p className="tabular mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-[11.5px] text-white/35">
+              <span>
+                Última atividade:{" "}
+                {row.lastActivity ? formatDateTime(row.lastActivity) : "nunca"}
+              </span>
+              <span>·</span>
+              <span className="inline-flex items-center gap-1">
+                <CalendarClock className="h-3 w-3" />
+                Entrou a{" "}
+                {row.startedAt
+                  ? formatDate(`${row.startedAt}T00:00:00`)
+                  : "— (por definir)"}
+                {!row.startDateExplicit && row.startedAt && (
+                  <span className="text-white/25"> (default)</span>
+                )}
+              </span>
             </p>
           </div>
         </div>
         <ProgressRing percent={row.percent} label="global" size={110} />
       </section>
 
-      <section className="animate-fade-up mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <section className="animate-fade-up mt-4 grid grid-cols-2 gap-3 lg:grid-cols-5">
         <StatTile
           label="Aulas vistas"
           value={`${row.watched}/${row.allLessons}`}
           icon={<Film className="h-3 w-3" />}
         />
         <StatTile
-          label="Testes passados"
+          label="Quizzes passados"
           value={`${row.quizzesPassed}/${row.quizzesTotal}`}
+          hint="por capítulo · repetíveis"
           icon={<ClipboardCheck className="h-3 w-3" />}
+        />
+        <StatTile
+          label="Exames passados"
+          value={`${row.exams.passedCount}/${row.exams.exams.length}`}
+          hint={row.exams.blocked ? "sem tentativas num deles" : "decidem a fase"}
+          tone={
+            row.exams.blocked
+              ? "warn"
+              : row.exams.effective
+                ? "good"
+                : "default"
+          }
+          icon={<Target className="h-3 w-3" />}
         />
         <StatTile
           label="Tentativas"
@@ -173,6 +239,12 @@ export default async function ConsultantDrillDownPage({
           tone={row.failedAttempts > 0 ? "warn" : "default"}
           icon={<Gauge className="h-3 w-3" />}
         />
+        {/* Quando é o próximo exame desta pessoa — e o selo verde de EFETIVO
+            assim que ela passa o dos 90 dias. */}
+        <NextExamCard journey={row.exams} subject="Tem" />
+      </section>
+
+      <section className="animate-fade-up mt-3">
         <StatTile
           label="Capítulo atual"
           value={
@@ -181,6 +253,11 @@ export default async function ConsultantDrillDownPage({
           icon={<Clock className="h-3 w-3" />}
         />
       </section>
+
+      {/* ===== Exames de fase ===== */}
+      <div className="animate-fade-up mt-6">
+        <ExamRail journey={row.exams} interactive={false} />
+      </div>
 
       <div className="mt-8 grid gap-8 xl:grid-cols-[1.15fr_1fr]">
         {/* Módulos, aula a aula */}
@@ -304,29 +381,28 @@ export default async function ConsultantDrillDownPage({
         <div className="animate-fade-up space-y-8">
           <section>
             <h2 className="mb-3 text-sm font-semibold uppercase tracking-[0.14em] text-white/55">
-              Tentativas de teste
+              Tentativas
             </h2>
-            {row.attempts.length === 0 ? (
+            {attemptRows.length === 0 ? (
               <p className="rounded-2xl border border-dashed border-white/12 bg-white/[0.02] px-4 py-8 text-center text-[13px] text-white/40">
-                Ainda não fez nenhum teste.
+                Ainda não fez nenhum quiz nem nenhum exame.
               </p>
             ) : (
               <div className="space-y-3">
-                {row.attempts.map((a) => {
-                  const title =
-                    tracks
-                      .flatMap((t) => t.modules)
-                      .find((m) => m.quiz.id === a.quizId)?.quiz.title ??
-                    a.quizId;
+                {attemptRows.map(({ attempt: a, title, isExam }) => {
                   const wrong = a.answers.filter((x) => !x.isCorrect).length;
                   return (
                     <details
                       key={a.id}
-                      className="group rounded-2xl border border-white/10 bg-white/[0.022] p-4"
+                      className={`group rounded-2xl border p-4 ${
+                        isExam
+                          ? "border-[#C535C9]/25 bg-[#C535C9]/[0.04]"
+                          : "border-white/10 bg-white/[0.022]"
+                      }`}
                     >
                       <summary className="flex cursor-pointer flex-wrap items-center gap-2.5 text-[13px] marker:content-['']">
                         <span
-                          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-[11px] font-bold ${
+                          className={`tabular flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-[11px] font-bold ${
                             a.passed
                               ? "bg-emerald-500/15 text-emerald-300"
                               : "bg-rose-500/15 text-rose-300"
@@ -335,10 +411,17 @@ export default async function ConsultantDrillDownPage({
                           {a.score}%
                         </span>
                         <span className="min-w-0 flex-1">
-                          <span className="block truncate font-medium text-white/90">
-                            {title}
+                          <span className="flex items-center gap-1.5">
+                            {isExam && (
+                              <span className="readout shrink-0 rounded-full border border-[#C535C9]/35 bg-[#C535C9]/10 px-1.5 py-0.5 text-[#f0a8ee]">
+                                Exame
+                              </span>
+                            )}
+                            <span className="truncate font-medium text-white/90">
+                              {title}
+                            </span>
                           </span>
-                          <span className="block text-[10.5px] text-white/40">
+                          <span className="tabular block text-[10.5px] text-white/40">
                             tentativa {a.attemptNumber} ·{" "}
                             {formatDateTime(a.submittedAt)} ·{" "}
                             {wrong === 0
@@ -443,8 +526,11 @@ export default async function ConsultantDrillDownPage({
                       ) : (
                         <>
                           {e.attempt.passed ? "Passou" : "Chumbou"}{" "}
+                          {e.isExam && (
+                            <span className="text-[#f0a8ee]">o exame </span>
+                          )}
                           <span className="font-medium">{e.title}</span>
-                          <span className="text-white/40">
+                          <span className="tabular text-white/40">
                             {" "}
                             ({e.attempt.score}%)
                           </span>

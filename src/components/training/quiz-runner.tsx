@@ -1,8 +1,15 @@
 "use client";
 
-// Teste de um capítulo: lista completa de perguntas (mais simples e mais
-// consistente com a app do que um wizard), barra de progresso de resposta,
-// submissão e correção pergunta a pergunta.
+// Quiz de um capítulo — e, no modo `exam`, também os exames de fase: lista
+// completa de perguntas (mais simples e mais consistente com a app do que um
+// wizard), barra de progresso de resposta, submissão e correção pergunta a
+// pergunta.
+//
+// UM COMPONENTE PARA OS DOIS. O que muda entre um quiz e um exame não é a
+// forma de responder — é o que está em jogo. Por isso o que o modo `exam`
+// altera é só o vocabulário e o ecrã de resultado (que passa a dizer o que
+// aquela nota DECIDE), e não a mecânica. Duas implementações da mesma lista
+// de perguntas divergiriam ao primeiro ajuste.
 //
 // A correção NUNCA é calculada aqui — as opções chegam sem indicação de qual
 // é a certa. O que se mostra depois de submeter vem inteiro da resposta do
@@ -18,6 +25,7 @@ import {
   Loader2,
   PartyPopper,
   RotateCcw,
+  ShieldCheck,
   XCircle,
 } from "lucide-react";
 import type { PublicQuestion } from "@/lib/training/grading";
@@ -33,6 +41,9 @@ type CorrectionRow = {
   options: { id: string; text: string }[];
 };
 
+/** O que o resultado de um exame decide. Ausente nos quizzes de capítulo. */
+export type ExamOutcome = "advance" | "effective" | "retry" | "blocked";
+
 type Result = {
   score: number;
   passed: boolean;
@@ -41,6 +52,7 @@ type Result = {
   attemptsLeft: number | null;
   pendingReview: number;
   correction: CorrectionRow[];
+  outcome?: ExamOutcome;
 };
 
 export function QuizRunner({
@@ -51,6 +63,11 @@ export function QuizRunner({
   attemptsLeft,
   trackHref,
   nextHref,
+  variant = "quiz",
+  submitUrl,
+  backLabel = "Voltar à sequência",
+  /** Frase que o ecrã de resultado usa quando se passa (o que isto abre). */
+  gateLine,
 }: {
   quizId: string;
   questions: PublicQuestion[];
@@ -61,8 +78,16 @@ export function QuizRunner({
   trackHref: string;
   /** Para onde seguir depois de passar (próximo capítulo ou o módulo). */
   nextHref: string;
+  variant?: "quiz" | "exam";
+  /** Endpoint de submissão. Default: o dos quizzes de capítulo. */
+  submitUrl?: string;
+  backLabel?: string;
+  gateLine?: string;
 }) {
   const router = useRouter();
+  const isExam = variant === "exam";
+  const noun = isExam ? "exame" : "quiz";
+  const endpoint = submitUrl ?? `/api/formacao/quiz/${quizId}/submit`;
   const startedAt = useRef(Date.now());
   const [answers, setAnswers] = useState<Record<string, string[]>>({});
   const [texts, setTexts] = useState<Record<string, string>>({});
@@ -101,7 +126,7 @@ export function QuizRunner({
     setSubmitting(true);
     setError(null);
     try {
-      const res = await fetch(`/api/formacao/quiz/${quizId}/submit`, {
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -115,7 +140,7 @@ export function QuizRunner({
       });
       const data = (await res.json()) as Partial<Result> & { error?: string };
       if (!res.ok) {
-        setError(data.error ?? "Não foi possível submeter o teste.");
+        setError(data.error ?? `Não foi possível submeter o ${noun}.`);
         return;
       }
       setResult(data as Result);
@@ -142,31 +167,66 @@ export function QuizRunner({
     const wrong = result.correction.filter(
       (c) => !c.isCorrect && !c.manualReview,
     );
+    const blocked = result.outcome === "blocked" || result.attemptsLeft === 0;
+    const effective = result.outcome === "effective";
+    // O que a nota decide, dito em uma linha. Nos quizzes não há decisão
+    // nenhuma a comunicar — só o passo seguinte.
+    const verdict = !isExam
+      ? null
+      : effective
+        ? "Passaste o exame final. Estás efetivo."
+        : result.passed
+          ? (gateLine ?? "Passaste — a fase seguinte está aberta.")
+          : blocked
+            ? "Sem tentativas neste exame. A decisão passa para o C-Level — fala com o Andre, o Alex ou a Alice."
+            : "Não chegou à nota mínima. Tens mais uma tentativa — relê a matéria antes de a gastares.";
+
     return (
       <div className="space-y-6">
         <div
-          className={`rounded-2xl border p-6 ${
+          className={`relative overflow-hidden rounded-2xl border p-6 ${
             result.passed
               ? "border-emerald-400/30 bg-emerald-500/[0.07]"
-              : "border-amber-400/30 bg-amber-500/[0.07]"
+              : blocked
+                ? "border-rose-400/35 bg-rose-500/[0.08]"
+                : "border-amber-400/30 bg-amber-500/[0.07]"
           }`}
         >
-          <div className="flex flex-wrap items-center gap-4">
+          {effective && (
             <span
-              className={`flex h-16 w-16 items-center justify-center rounded-2xl text-xl font-bold ${
+              aria-hidden
+              className="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full opacity-25 blur-3xl"
+              style={{ background: "var(--brand-gradient)" }}
+            />
+          )}
+          <div className="relative flex flex-wrap items-center gap-4">
+            <span
+              className={`tabular flex h-16 w-16 items-center justify-center rounded-2xl text-xl font-bold ${
                 result.passed
                   ? "bg-emerald-500/15 text-emerald-300"
-                  : "bg-amber-500/15 text-amber-200"
+                  : blocked
+                    ? "bg-rose-500/15 text-rose-300"
+                    : "bg-amber-500/15 text-amber-200"
               }`}
             >
               {result.score}%
             </span>
             <div className="min-w-0 flex-1">
               <p className="flex items-center gap-2 text-lg font-semibold text-white">
-                {result.passed ? (
+                {effective ? (
+                  <>
+                    <ShieldCheck className="h-5 w-5 text-emerald-300" />
+                    Efetivo
+                  </>
+                ) : result.passed ? (
                   <>
                     <PartyPopper className="h-5 w-5 text-emerald-300" />
-                    Passaste o teste
+                    {isExam ? "Passaste o exame" : "Passaste o quiz"}
+                  </>
+                ) : blocked ? (
+                  <>
+                    <XCircle className="h-5 w-5 text-rose-300" />
+                    Sem tentativas
                   </>
                 ) : (
                   <>
@@ -175,7 +235,12 @@ export function QuizRunner({
                   </>
                 )}
               </p>
-              <p className="mt-1 text-[13px] text-white/60">
+              {verdict && (
+                <p className="mt-1 text-[13.5px] font-medium text-white/85">
+                  {verdict}
+                </p>
+              )}
+              <p className="tabular mt-1 text-[13px] text-white/60">
                 Mínimo para passar: {result.passingScore}% · tentativa{" "}
                 {result.attemptNumber}
                 {result.attemptsLeft !== null &&
@@ -203,18 +268,18 @@ export function QuizRunner({
                 <button
                   type="button"
                   onClick={retry}
-                  disabled={result.attemptsLeft === 0}
+                  disabled={blocked}
                   className="brand-gradient-bg inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-[13px] font-semibold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <RotateCcw className="h-4 w-4" />
-                  Repetir teste
+                  Repetir {noun}
                 </button>
               )}
               <Link
                 href={trackHref}
                 className="inline-flex items-center rounded-xl border border-white/12 px-4 py-2.5 text-[13px] font-medium text-white/70 transition hover:border-white/30 hover:text-white"
               >
-                Voltar à sequência
+                {backLabel}
               </Link>
             </div>
           </div>
@@ -291,7 +356,7 @@ export function QuizRunner({
     );
   }
 
-  // ---- Teste por responder ----
+  // ---- Por responder ----
   return (
     <div className="space-y-5">
       <div className="sticky top-16 z-20 rounded-xl border border-white/10 bg-[color:var(--background)]/90 px-4 py-3 backdrop-blur-md">
@@ -417,7 +482,7 @@ export function QuizRunner({
           ) : (
             <CheckCircle2 className="h-4 w-4" />
           )}
-          Submeter teste
+          Submeter {noun}
         </button>
       </div>
     </div>

@@ -1,6 +1,6 @@
 // WonderAds Consultants University — catálogo da formação interna.
 //
-// Estrutura: módulo (track) → capítulos → aulas (+ 1 teste por capítulo).
+// Estrutura: módulo (track) → capítulos → aulas (+ 1 quiz por capítulo).
 // Ficheiro puro (sem
 // KV, sem React) para que o hub do consultor, o Superadmin e o CMS
 // importem exatamente a mesma verdade.
@@ -236,7 +236,7 @@ const COMMON_TRACK: TrainingTrack = {
           ],
         },
       ]),
-      quiz: quizFor("comum-m1", "Teste — Origem, visão e mindset"),
+      quiz: quizFor("comum-m1", "Quiz — Origem, visão e mindset"),
     },
     {
       id: "comum-m2",
@@ -283,7 +283,7 @@ const COMMON_TRACK: TrainingTrack = {
           ],
         },
       ]),
-      quiz: quizFor("comum-m2", "Teste — Organização e ferramentas"),
+      quiz: quizFor("comum-m2", "Quiz — Organização e ferramentas"),
     },
     {
       id: "comum-m3",
@@ -318,7 +318,7 @@ const COMMON_TRACK: TrainingTrack = {
           ],
         },
       ]),
-      quiz: quizFor("comum-m3", "Teste — Cliente e oportunidades"),
+      quiz: quizFor("comum-m3", "Quiz — Cliente e oportunidades"),
     },
   ],
 };
@@ -356,7 +356,7 @@ const SEO_TRACK: TrainingTrack = {
           ],
         },
       ]),
-      quiz: quizFor("seo-m1", "Teste — Trabalho interno SEO"),
+      quiz: quizFor("seo-m1", "Quiz — Trabalho interno SEO"),
     },
     {
       id: "seo-m2",
@@ -418,7 +418,7 @@ const SEO_TRACK: TrainingTrack = {
           ],
         },
       ]),
-      quiz: quizFor("seo-m2", "Teste — Comunicação com o cliente"),
+      quiz: quizFor("seo-m2", "Quiz — Comunicação com o cliente"),
     },
     {
       id: "seo-m3",
@@ -454,7 +454,7 @@ const SEO_TRACK: TrainingTrack = {
           ],
         },
       ]),
-      quiz: quizFor("seo-m3", "Teste — Ferramentas"),
+      quiz: quizFor("seo-m3", "Quiz — Ferramentas"),
     },
     {
       id: "seo-m4",
@@ -490,7 +490,7 @@ const SEO_TRACK: TrainingTrack = {
           ],
         },
       ]),
-      quiz: quizFor("seo-m4", "Teste — Onboarding de cliente"),
+      quiz: quizFor("seo-m4", "Quiz — Onboarding de cliente"),
     },
     {
       id: "seo-m5",
@@ -526,7 +526,7 @@ const SEO_TRACK: TrainingTrack = {
           ],
         },
       ]),
-      quiz: quizFor("seo-m5", "Teste — Reporting e reunião mensal"),
+      quiz: quizFor("seo-m5", "Quiz — Reporting e reunião mensal"),
     },
   ],
 };
@@ -559,7 +559,7 @@ const ADS_TRACK: TrainingTrack = {
           presenter: "Alice",
         },
       ]),
-      quiz: quizFor("ads-m1", "Teste — Ads Department Overview"),
+      quiz: quizFor("ads-m1", "Quiz — Ads Department Overview"),
     },
     {
       id: "ads-m2",
@@ -627,7 +627,7 @@ const ADS_TRACK: TrainingTrack = {
             "Cadência de comunicação e como manter o cliente no loop sem o afogar em detalhe.",
         },
       ]),
-      quiz: quizFor("ads-m2", "Teste — Fundamentals"),
+      quiz: quizFor("ads-m2", "Quiz — Fundamentals"),
     },
     {
       id: "ads-m3",
@@ -694,7 +694,7 @@ const ADS_TRACK: TrainingTrack = {
           description: "As bases do retargeting.",
         },
       ]),
-      quiz: quizFor("ads-m3", "Teste — How To Advertise"),
+      quiz: quizFor("ads-m3", "Quiz — How To Advertise"),
     },
     {
       id: "ads-m4",
@@ -740,7 +740,7 @@ const ADS_TRACK: TrainingTrack = {
           description: "Caso específico: quiropraxia.",
         },
       ]),
-      quiz: quizFor("ads-m4", "Teste — Local Businesses & Lead Gen"),
+      quiz: quizFor("ads-m4", "Quiz — Local Businesses & Lead Gen"),
     },
     {
       id: "ads-m5",
@@ -771,7 +771,7 @@ const ADS_TRACK: TrainingTrack = {
           description: "Formação de Google Ads.",
         },
       ]),
-      quiz: quizFor("ads-m5", "Teste — Advanced Strategies"),
+      quiz: quizFor("ads-m5", "Quiz — Advanced Strategies"),
     },
   ],
 };
@@ -804,7 +804,7 @@ const WEB_TRACK: TrainingTrack = {
           presenter: "André",
         },
       ]),
-      quiz: quizFor("web-m1", "Teste — Trabalho interno WEB"),
+      quiz: quizFor("web-m1", "Quiz — Trabalho interno WEB"),
     },
     {
       id: "web-m2",
@@ -821,7 +821,7 @@ const WEB_TRACK: TrainingTrack = {
           presenter: "André",
         },
       ]),
-      quiz: quizFor("web-m2", "Teste — Entrega do website"),
+      quiz: quizFor("web-m2", "Quiz — Entrega do website"),
     },
     {
       id: "web-m3",
@@ -847,7 +847,7 @@ const WEB_TRACK: TrainingTrack = {
           presenter: "André",
         },
       ]),
-      quiz: quizFor("web-m3", "Teste — Aprovação de designs"),
+      quiz: quizFor("web-m3", "Quiz — Aprovação de designs"),
     },
   ],
 };
@@ -880,7 +880,7 @@ const COMMERCIAL_TRACK: TrainingTrack = {
           presenter: "Alex",
         },
       ]),
-      quiz: quizFor("com-m1", "Teste — Sales Department Overview"),
+      quiz: quizFor("com-m1", "Quiz — Sales Department Overview"),
     },
     {
       id: "com-m2",
@@ -905,7 +905,7 @@ const COMMERCIAL_TRACK: TrainingTrack = {
           description: "Onde ficam as leads e como se mantêm organizadas.",
         },
       ]),
-      quiz: quizFor("com-m2", "Teste — Leads e reuniões"),
+      quiz: quizFor("com-m2", "Quiz — Leads e reuniões"),
     },
     {
       id: "com-m3",
@@ -951,7 +951,7 @@ const COMMERCIAL_TRACK: TrainingTrack = {
           description: "Afinar a abordagem e manter a serra afiada.",
         },
       ]),
-      quiz: quizFor("com-m3", "Teste — Venda e follow-up"),
+      quiz: quizFor("com-m3", "Quiz — Venda e follow-up"),
     },
   ],
 };
@@ -1096,7 +1096,7 @@ function normalizeQuiz(raw: unknown, moduleId: string): TrainingQuiz {
   const rawMax = o.maxAttempts;
   return {
     id: str(o.id) || `${moduleId}-quiz`,
-    title: str(o.title) || "Teste do módulo",
+    title: str(o.title) || "Quiz do capítulo",
     passingScore: Math.min(100, Math.max(1, num(o.passingScore, 80))),
     maxAttempts:
       typeof rawMax === "number" && Number.isFinite(rawMax) && rawMax > 0

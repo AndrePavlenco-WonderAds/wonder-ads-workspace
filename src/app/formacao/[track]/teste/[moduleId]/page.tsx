@@ -1,4 +1,4 @@
-// Teste de um capítulo. Server component: valida a sequência (capítulo aberto +
+// Quiz de um capítulo. Server component: valida a sequência (capítulo aberto +
 // aulas vistas), prepara as perguntas já baralhadas e sem as respostas
 // certas, e mostra o histórico de tentativas.
 
@@ -28,7 +28,7 @@ export async function generateMetadata({
   return {
     title: mod
       ? `${mod.module.quiz.title} · Formação · Wonder Ads`
-      : "Teste · Formação · Wonder Ads",
+      : "Quiz · Formação · Wonder Ads",
   };
 }
 
@@ -63,7 +63,7 @@ export default async function QuizPage({
   const exhausted = attemptsLeft === 0;
 
   // Ordem baralhada mas estável: o mesmo utilizador, na mesma tentativa, vê
-  // sempre a mesma sequência — um refresh não reordena o teste a meio.
+  // sempre a mesma sequência — um refresh não reordena o quiz a meio.
   const ordered = quiz.shuffleQuestions
     ? seededShuffle(
         quiz.questions,
@@ -84,27 +84,27 @@ export default async function QuizPage({
         title: "Capítulo bloqueado",
         text:
           state.lockedReason ??
-          "Conclui o capítulo anterior para chegares a este teste.",
+          "Conclui o capítulo anterior para chegares a este quiz.",
       }
     : noQuestions
       ? {
-          title: "Teste ainda por escrever",
+          title: "Quiz ainda por escrever",
           text: "Este capítulo ainda não tem perguntas. Não bloqueia a tua progressão — podes seguir para o capítulo seguinte.",
         }
       : noLessonsYet
         ? {
             title: "Aulas ainda por publicar",
-            text: "O teste deste capítulo já está escrito, mas as aulas ainda não foram gravadas. Abre assim que houver matéria — e não bloqueia a tua progressão.",
+            text: "O quiz deste capítulo já está escrito, mas as aulas ainda não foram gravadas. Abre assim que houver matéria — e não bloqueia a tua progressão.",
           }
         : lessonsPending
           ? {
               title: "Faltam aulas por ver",
-              text: `Vê as ${moduleState.totalLessons - moduleState.watchedLessons} aula(s) que faltam neste capítulo antes de fazeres o teste.`,
+              text: `Vê as ${moduleState.totalLessons - moduleState.watchedLessons} aula(s) que faltam neste capítulo antes de fazeres o quiz.`,
             }
           : exhausted
             ? {
                 title: "Sem tentativas disponíveis",
-                text: "Já usaste todas as tentativas deste teste. Fala com o Andre, o Alex ou a Alice.",
+                text: "Já usaste todas as tentativas deste quiz. Fala com o Andre, o Alex ou a Alice.",
               }
             : null;
 
@@ -126,7 +126,7 @@ export default async function QuizPage({
         <div>
           <span className="inline-flex items-center gap-1.5 rounded-full border border-white/12 bg-white/[0.04] px-3 py-1 text-[10.5px] font-semibold uppercase tracking-[0.16em] text-white/60">
             <ClipboardCheck className="h-3.5 w-3.5 text-[color:var(--brand-purple)]" />
-            Teste do capítulo
+            Quiz do capítulo
           </span>
           <h1 className="mt-3 text-2xl font-semibold tracking-tight text-white sm:text-3xl">
             {quiz.title}

@@ -34,6 +34,16 @@ export type EmployeeCredential = {
    *  `@mentions` in the Web Dept Generate-Backlog output. Falls back to
    *  `name` when absent. */
   fullName?: string;
+  /** Data de entrada (ISO yyyy-mm-dd) — o dia 1 da pessoa na casa. É a
+   *  âncora dos EXAMES DE FASE da Formação: o exame da semana 1 abre 7 dias
+   *  depois desta data, o dos 90 dias abre 90 dias depois.
+   *
+   *  ⚠️ SÃO DEFAULTS, NÃO REGISTO DE RH. Os valores abaixo foram inferidos do
+   *  changelog (o dia em que a credencial da pessoa foi criada no workspace)
+   *  e do arranque do workspace para quem já cá estava. O SuperAdmin corrige
+   *  cada um em `/formacao/admin/inscricoes`, e o override em KV vence
+   *  sempre este campo. */
+  startedAt?: string;
 };
 
 export const EMPLOYEE_CREDENTIALS: EmployeeCredential[] = [
@@ -43,6 +53,7 @@ export const EMPLOYEE_CREDENTIALS: EmployeeCredential[] = [
     fullName: "André Pavlenco",
     role: "Founder",
     dept: "All",
+    startedAt: "2026-05-12",
     isAdmin: true,
     salt: "32427320a730f1e0c239b069608d1529",
     hash: "fb4bd29d280ba7c431dba3310d640967fb4c12e8f6bfef67795dd1a76af76e6598899604e43d8495c6bb59e2b88be8e78a2bcfa433d807589969ce8f203fb349",
@@ -53,6 +64,7 @@ export const EMPLOYEE_CREDENTIALS: EmployeeCredential[] = [
     fullName: "Alex",
     role: "SuperAdmin",
     dept: "All",
+    startedAt: "2026-05-12",
     isAdmin: true,
     salt: "38714f97f8304fa760c306cfebe7f111",
     hash: "247ed5439504afaf7ff9b63518f8ca7a0048543c54d9e50af74c0498af5be8de9f33aa417eb43671bc3b4c2380c0b3c4e112d6d9a51f2651bd06036dbca1499f",
@@ -62,6 +74,7 @@ export const EMPLOYEE_CREDENTIALS: EmployeeCredential[] = [
     name: "Alice",
     role: "SuperAdmin",
     dept: "All",
+    startedAt: "2026-05-12",
     isAdmin: true,
     salt: "9463f577eb3171ce484b15cf83a00fa0",
     hash: "6f727c917b71c7d8fa1b3efde211183c8715fc82ec29653c0b2fd7f7c11a511af09668fd8aa76b5c7b48f87ee937867abe3e9d1de6badf0763b4255c073a65dc",
@@ -71,6 +84,7 @@ export const EMPLOYEE_CREDENTIALS: EmployeeCredential[] = [
     name: "Manuel Silva",
     role: "SEO Consultant",
     dept: "SEO",
+    startedAt: "2026-05-12",
     salt: "336026cc21c409c4aebdfb8148c8d0a5",
     hash: "dfa50f7e60e4f1601e4f6d7c95be9847d63e8b63f354a46bab2b09446ab1b459b003b2f0199522a762b02c97ecc255d640b7877f3f2e7e61e3ad69b1fdeff050",
   },
@@ -79,6 +93,7 @@ export const EMPLOYEE_CREDENTIALS: EmployeeCredential[] = [
     name: "Fran. Rosa",
     role: "SEO Consultant",
     dept: "SEO",
+    startedAt: "2026-05-12",
     salt: "0fc7b7960beb67ac252a908ef770b6ed",
     hash: "6e007a432f6134a7ee4147089cb486461541cc1fa25a1d1cdf6e077447f4f1ea1962ca78114ad599e8dca4c3138a2dce5fef3f9dbbe189633e449b7c0b19071c",
   },
@@ -90,6 +105,7 @@ export const EMPLOYEE_CREDENTIALS: EmployeeCredential[] = [
     fullName: "André Pereira",
     role: "SEO Consultant",
     dept: "SEO",
+    startedAt: "2026-06-16",
     salt: "6ec1a1e90e4e37f85489011710bc48d7",
     hash: "82a7a60d6f6352edbb5b352f797ef1b1d1849c8711a919c979f0750158f2c655eb5ab4abf94783d2989789512bccf81dcb27a0d0bddeda03cc71fd0b7eef6d2f",
   },
@@ -102,6 +118,7 @@ export const EMPLOYEE_CREDENTIALS: EmployeeCredential[] = [
     fullName: "João Batista",
     role: "SEO Consultant",
     dept: "SEO",
+    startedAt: "2026-07-21",
     salt: "d7d60d6aa538084e6b6385a29274d7b8",
     hash: "188972f4fbf52acdb335489c79bc32b7443c4185a9bdee0e34c04fa5a5fc99f4ba4a824e84ab2b615dbf12f310220bb12588ec46d34ba155b86f47f879d0f446",
   },
@@ -110,6 +127,7 @@ export const EMPLOYEE_CREDENTIALS: EmployeeCredential[] = [
     name: "Germano C.",
     role: "ADS Consultant",
     dept: "ADS",
+    startedAt: "2026-05-12",
     salt: "bb6622826ccaefd1b6f0a9ba4283b69c",
     hash: "416eece1b238b1dd4175b548cfa7ada44f4c12343fe49191cbf6c73329b63ed960f32b94e5966156917504dfc04ad4af72cbc4b42e090a5678d991f895b6dcf6",
   },
@@ -122,6 +140,7 @@ export const EMPLOYEE_CREDENTIALS: EmployeeCredential[] = [
     fullName: "Mike Nobre",
     role: "Web Designer",
     dept: "Web",
+    startedAt: "2026-06-16",
     salt: "dcd10c8208accd64222497f003f20480",
     hash: "c1f1ee60a2f04d0c0f784b912e8830aaf7ef3094f3d159ec68c07558fcd5306b52879c6be7d1c8e1781c4bc73fa7cb6b47cb4acbc50f10b3b19fe0ed5efdaeee",
   },
@@ -131,6 +150,7 @@ export const EMPLOYEE_CREDENTIALS: EmployeeCredential[] = [
     fullName: "Gustavo Rotini",
     role: "Web Designer",
     dept: "Web",
+    startedAt: "2026-06-16",
     salt: "142c5cf298fdcfeed6c09fc336953c0c",
     hash: "c1c57ffdd6dc7abd9b4e20b0697bb9507093f8d0fa02e7c688da565888e91418fe8111f6b7f7e64da4c9961c458c618f015009baad34633351930c90a344851e",
   },
@@ -140,6 +160,7 @@ export const EMPLOYEE_CREDENTIALS: EmployeeCredential[] = [
     fullName: "Renan Alves",
     role: "Web Designer",
     dept: "Web",
+    startedAt: "2026-06-16",
     salt: "763d35ff3e7121fb2ac9a8b645edb90c",
     hash: "d37be5f7ba8db4b3425ec5e98349e8ab0877a2457af125f738837d03dcd63332c5be39cca2025c4fd19b9b45badcf959e1c2f8d2b4e66f80bebf72d0ff9c61f3",
   },
@@ -151,6 +172,7 @@ export const EMPLOYEE_CREDENTIALS: EmployeeCredential[] = [
     fullName: "Cylas",
     role: "Web Designer",
     dept: "Web",
+    startedAt: "2026-06-23",
     salt: "e6877b670567eb571892c306e349a3c6",
     hash: "cebf6a2effe99af74ffe71655f70d72fbd4d52ec369c9101168d0902b9e0567ebb9a916e1c282b33d4d6a9a1e27cf50d7867f6469fdb56ffcd3a8c8529d3c7e0",
   },

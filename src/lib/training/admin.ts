@@ -16,6 +16,17 @@ import {
   type QuizAttempt,
 } from "@/lib/training/attempts-store";
 import {
+  getStartDates,
+  resolveStartDate,
+  startDateIsExplicit,
+  type StartDateMap,
+} from "@/lib/training/start-dates-store";
+import {
+  computeExamJourney,
+  isExamQuizId,
+  type ExamJourney,
+} from "@/lib/training/exams";
+import {
   computeUserTraining,
   currentModuleLabel,
   overallPercent,
@@ -35,12 +46,18 @@ export type RosterRow = {
   allLessons: number;
   quizzesPassed: number;
   quizzesTotal: number;
+  /** Só tentativas de QUIZ de capítulo. As de exame vivem em `exams`. */
   attempts: QuizAttempt[];
   failedAttempts: number;
   lastActivity: number;
   common: TrackState | null;
   specializations: TrackState[];
   progress: UserTrainingProgress;
+  /** Os seis exames de fase desta pessoa. */
+  exams: ExamJourney;
+  /** Data de entrada em vigor (ISO) e se foi definida à mão pelo C-Level. */
+  startedAt: string | null;
+  startDateExplicit: boolean;
 };
 
 export type TrainingOverview = {
@@ -58,20 +75,33 @@ export type TrainingOverview = {
   unassignedPresenters: number;
   /** Capítulos cujo teste ainda não tem perguntas. */
   quizzesMissing: number;
+  /** Quantos já passaram o exame dos 90 dias. */
+  effectiveCount: number;
+  /** Quantos estão sem tentativas num exame — precisam de decisão. */
+  examBlockedCount: number;
+  /** Quantos ainda correm com a data de entrada por defeito. */
+  startDatesPending: number;
 };
 
 function buildRow(
   user: TrainingUser,
   tracks: TrainingTrack[],
   progress: UserTrainingProgress,
-  attempts: QuizAttempt[],
+  allAttempts: QuizAttempt[],
+  startDates: StartDateMap,
 ): RosterRow {
+  // As tentativas de exame e as de quiz partilham a mesma chave em KV. Aqui
+  // separam-se: um chumbo num exame não é a mesma coisa que um chumbo num
+  // quiz de capítulo e não pode aparecer misturado na coluna de quizzes.
+  const attempts = allAttempts.filter((a) => !isExamQuizId(a.quizId));
   const { common, specializations } = computeUserTraining(
     tracks,
     user.trackSlugs,
     progress,
     attempts,
   );
+  const startedAt = resolveStartDate(user.username, startDates);
+  const exams = computeExamJourney(startedAt, allAttempts);
   const parts = [common, ...specializations].filter(
     (t): t is TrackState => t !== null,
   );
@@ -96,12 +126,15 @@ function buildRow(
     failedAttempts: attempts.filter((a) => !a.passed).length,
     lastActivity: Math.max(
       progress.updatedAt,
-      ...attempts.map((a) => a.submittedAt),
+      ...allAttempts.map((a) => a.submittedAt),
       0,
     ),
     common,
     specializations,
     progress,
+    exams,
+    startedAt,
+    startDateExplicit: startDateIsExplicit(user.username, startDates),
   };
 }
 
@@ -123,9 +156,10 @@ export function contentStats(tracks: TrainingTrack[]) {
 }
 
 export async function getTrainingOverview(): Promise<TrainingOverview> {
-  const [tracks, enrollments] = await Promise.all([
+  const [tracks, enrollments, startDates] = await Promise.all([
     getTrainingCatalog(),
     getEnrollments(),
+    getStartDates(),
   ]);
   const roster = rosterWithTracks(enrollments);
   const usernames = roster.map((r) => r.username);
@@ -141,6 +175,7 @@ export async function getTrainingOverview(): Promise<TrainingOverview> {
         tracks,
         progressMap[user.username] ?? { lessons: {}, updatedAt: 0 },
         attemptsMap[user.username] ?? [],
+        startDates,
       ),
     )
     .sort(
@@ -161,6 +196,9 @@ export async function getTrainingOverview(): Promise<TrainingOverview> {
     averagePercent,
     completedCount: withContent.filter((r) => r.percent === 100).length,
     notStartedCount: rows.filter((r) => r.lastActivity === 0).length,
+    effectiveCount: rows.filter((r) => r.exams.effective).length,
+    examBlockedCount: rows.filter((r) => r.exams.blocked).length,
+    startDatesPending: rows.filter((r) => !r.startDateExplicit).length,
     ...contentStats(tracks),
   };
 }
