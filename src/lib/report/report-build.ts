@@ -24,10 +24,13 @@ import {
   type DateRange,
 } from "./report-dates";
 import {
+  GBP_MAIN_PROFILE_ID,
   REPORT_SCHEMA_VERSION,
+  gbpChannelKey,
   pendingMetric,
   isUnresolved,
   type FetchStatus,
+  type GbpProfileMetrics,
   type LeadChannel,
   type MonthlyReportSnapshot,
   type ReportMetric,
@@ -94,6 +97,55 @@ const LEAD_LABELS_EN: Record<string, string> = {
   gbpDirections: "GBP · direction requests",
   gbpCall: "GBP · call clicks",
 };
+
+/** Default name for the main listing once a client has more than one — a bare
+ *  "GBP · cliques p/ website" next to "Cascais · cliques p/ website" would
+ *  leave the consultant guessing which unit the first one is. */
+const GBP_MAIN_LABEL_PT = "Ficha principal";
+const GBP_MAIN_LABEL_EN = "Main listing";
+
+/** The three GBP lead rows of one profile, named after the profile when the
+ *  client has several ("Cascais · cliques p/ website"). */
+function gbpRowLabels(
+  profileLabel: string | null,
+  lang: "pt" | "en",
+): { website: string; directions: string; call: string } {
+  const labels = lang === "pt" ? LEAD_LABELS_PT : LEAD_LABELS_EN;
+  if (!profileLabel) {
+    return {
+      website: labels.gbpWebsite,
+      directions: labels.gbpDirections,
+      call: labels.gbpCall,
+    };
+  }
+  const pt = lang === "pt";
+  return {
+    website: `${profileLabel} · ${pt ? "cliques p/ website" : "website clicks"}`,
+    directions: `${profileLabel} · ${pt ? "pedidos de direções" : "direction requests"}`,
+    call: `${profileLabel} · ${pt ? "cliques p/ ligar" : "call clicks"}`,
+  };
+}
+
+/** Sum the same metric across every profile. Unlike the consolidated lead
+ *  total this keeps `previous` only when EVERY contributing profile knows its
+ *  previous — a total whose MoM silently drops one unit would read as a fall
+ *  that never happened. */
+function sumProfileMetric(metrics: ReportMetric[]): ReportMetric {
+  const have = metrics.filter((m) => m.value !== null);
+  if (have.length === 0) {
+    // Nothing filled anywhere: keep the first row's shape (manual vs. N/A) so
+    // the card still says what it's waiting for.
+    return metrics[0] ?? pendingMetric("count", "manual");
+  }
+  const value = have.reduce((t, m) => t + (m.value ?? 0), 0);
+  const previous = have.every((m) => m.previous !== null)
+    ? have.reduce((t, m) => t + (m.previous ?? 0), 0)
+    : null;
+  // "gbp" only when every contributing number came from the API — one manual
+  // fill in the mix makes the total a manual number.
+  const source = have.every((m) => m.source === "gbp") ? "gbp" : "manual";
+  return { value, previous, source, instrumented: true, unit: "count" };
+}
 
 function sumConsolidated(channels: LeadChannel[]): ReportMetric {
   const have = channels.filter((c) => c.metric.value !== null);
@@ -242,6 +294,29 @@ function buildExecSummary(
   return cand.slice(0, 5).map((c) => c.text);
 }
 
+/** The report's GBP block from the per-listing metrics: consolidated totals,
+ *  plus the breakdown when the client has more than one listing. A
+ *  single-listing client gets exactly what it got before multi-profile
+ *  support — same three numbers, no `profiles` key. */
+function consolidateGbp(profiles: GbpProfileMetrics[]): MonthlyReportSnapshot["gbp"] {
+  const first = profiles[0];
+  const totals = {
+    websiteClicks: sumProfileMetric(profiles.map((p) => p.websiteClicks)),
+    directions: sumProfileMetric(profiles.map((p) => p.directions)),
+    callClicks: sumProfileMetric(profiles.map((p) => p.callClicks)),
+  };
+  if (profiles.length <= 1) {
+    return first
+      ? {
+          websiteClicks: first.websiteClicks,
+          directions: first.directions,
+          callClicks: first.callClicks,
+        }
+      : totals;
+  }
+  return { ...totals, profiles };
+}
+
 /** SE Ranking positions for a client, or null when there's nothing to show.
  *  Swallows its own errors so rank tracking stays additive to the report. */
 async function fetchSeRanking(
@@ -285,7 +360,7 @@ export async function buildMonthlyReport(
     (k) => k.keyword,
   );
 
-  const [ga4, gsc, gbp, seRanking] = await Promise.all([
+  const [ga4, gsc, gbpRes, seRanking] = await Promise.all([
     getGa4MonthlyReport(slug, {
       current: windows.current,
       previous: windows.prevMonth,
@@ -305,6 +380,7 @@ export async function buildMonthlyReport(
       current: windows.current,
       previous: windows.prevMonth,
       locationIdOverride: config.gbpLocationId,
+      extraProfiles: config.extraGbpProfiles,
     }),
     // True SERP positions. Best-effort: a client with no synced project, an
     // unset API key or an SE Ranking hiccup must never fail the whole report —
@@ -320,10 +396,24 @@ export async function buildMonthlyReport(
     gsc.status === "ok"
       ? { ok: true, status: "ok" }
       : { ok: false, status: gsc.status, message: gsc.status === "error" ? gsc.message : undefined };
+  const gbpMain = gbpRes.main;
+  // A unit that failed on its own is worth naming: the main listing can be
+  // green while one clinic's numbers are missing entirely.
+  const failedProfiles = gbpRes.profiles.filter((p) => p.status !== "ok");
   const gbpFetch: FetchStatus =
-    gbp.status === "ok"
-      ? { ok: true, status: "ok" }
-      : { ok: false, status: gbp.status, message: gbp.status === "error" ? gbp.message : undefined };
+    gbpMain.status === "ok"
+      ? failedProfiles.length === 0
+        ? { ok: true, status: "ok" }
+        : {
+            ok: false,
+            status: "partial",
+            message: `Fichas sem dados: ${failedProfiles.map((p) => p.label).join(", ")}.`,
+          }
+      : {
+          ok: false,
+          status: gbpMain.status,
+          message: gbpMain.status === "error" ? gbpMain.message : undefined,
+        };
 
   const labels = lang === "pt" ? LEAD_LABELS_PT : LEAD_LABELS_EN;
 
@@ -358,23 +448,73 @@ export async function buildMonthlyReport(
   }
   // GBP lead channels — real values when the Business Profile Performance API
   // is reachable, else pending manual input (never a fabricated 0).
-  channels.push(
-    {
-      key: "gbpWebsite",
-      label: labels.gbpWebsite,
-      metric: gbp.status === "ok" ? gbpMetric(gbp.websiteClicks) : pendingMetric("count", "manual"),
+  //
+  // One block of three rows per Business Profile. A multi-unit client (a clinic
+  // in Cascais and another in Lisboa) has one listing per unit: each is its own
+  // block, named after the unit, so the report says which unit is being found
+  // instead of hiding both inside one number.
+  const hasExtraProfiles = config.extraGbpProfiles.length > 0;
+  const mainLabel = hasExtraProfiles
+    ? (config.gbpMainLabel ??
+      (lang === "pt" ? GBP_MAIN_LABEL_PT : GBP_MAIN_LABEL_EN))
+    : null;
+  const gbpProfileBlocks: GbpProfileMetrics[] = [];
+
+  const pushGbpProfile = (
+    id: string,
+    profileLabel: string | null,
+    metrics: {
+      websiteClicks: ReportMetric;
+      directions: ReportMetric;
+      callClicks: ReportMetric;
     },
-    {
-      key: "gbpDirections",
-      label: labels.gbpDirections,
-      metric: gbp.status === "ok" ? gbpMetric(gbp.directions) : pendingMetric("count", "manual"),
-    },
-    {
-      key: "gbpCall",
-      label: labels.gbpCall,
-      metric: gbp.status === "ok" ? gbpMetric(gbp.callClicks) : pendingMetric("count", "manual"),
-    },
+  ) => {
+    const rows = gbpRowLabels(profileLabel, lang);
+    channels.push(
+      { key: gbpChannelKey(id, "website"), label: rows.website, metric: metrics.websiteClicks },
+      { key: gbpChannelKey(id, "directions"), label: rows.directions, metric: metrics.directions },
+      { key: gbpChannelKey(id, "call"), label: rows.call, metric: metrics.callClicks },
+    );
+    gbpProfileBlocks.push({
+      id,
+      label: profileLabel ?? (lang === "pt" ? GBP_MAIN_LABEL_PT : GBP_MAIN_LABEL_EN),
+      ...metrics,
+    });
+  };
+
+  pushGbpProfile(
+    GBP_MAIN_PROFILE_ID,
+    mainLabel,
+    gbpMain.status === "ok"
+      ? {
+          websiteClicks: gbpMetric(gbpMain.websiteClicks),
+          directions: gbpMetric(gbpMain.directions),
+          callClicks: gbpMetric(gbpMain.callClicks),
+        }
+      : {
+          websiteClicks: pendingMetric("count", "manual"),
+          directions: pendingMetric("count", "manual"),
+          callClicks: pendingMetric("count", "manual"),
+        },
   );
+
+  for (const profile of gbpRes.profiles) {
+    pushGbpProfile(
+      profile.id,
+      profile.label,
+      profile.status === "ok"
+        ? {
+            websiteClicks: gbpMetric(profile.websiteClicks),
+            directions: gbpMetric(profile.directions),
+            callClicks: gbpMetric(profile.callClicks),
+          }
+        : {
+            websiteClicks: pendingMetric("count", "manual"),
+            directions: pendingMetric("count", "manual"),
+            callClicks: pendingMetric("count", "manual"),
+          },
+    );
+  }
 
   const leadsTotal = sumConsolidated(channels);
 
@@ -476,18 +616,10 @@ export async function buildMonthlyReport(
       : { totalSessions: pendingMetric("count"), sources: [] };
 
   // --- GBP ---
-  const gbpBlock =
-    gbp.status === "ok"
-      ? {
-          websiteClicks: gbpMetric(gbp.websiteClicks),
-          directions: gbpMetric(gbp.directions),
-          callClicks: gbpMetric(gbp.callClicks),
-        }
-      : {
-          websiteClicks: pendingMetric("count", "manual"),
-          directions: pendingMetric("count", "manual"),
-          callClicks: pendingMetric("count", "manual"),
-        };
+  // Card totals are consolidated across every listing; the per-listing
+  // breakdown rides along (only when there IS more than one) so the report can
+  // show which unit each click belongs to.
+  const gbpBlock = consolidateGbp(gbpProfileBlocks);
 
   const base: Omit<MonthlyReportSnapshot, "execSummary"> = {
     schemaVersion: REPORT_SCHEMA_VERSION,
@@ -531,11 +663,27 @@ export function recomputeDerived(
   const byKey = Object.fromEntries(
     snap.leads.channels.map((c) => [c.key, c.metric] as const),
   );
-  const gbp = {
-    websiteClicks: byKey.gbpWebsite ?? snap.gbp.websiteClicks,
-    directions: byKey.gbpDirections ?? snap.gbp.directions,
-    callClicks: byKey.gbpCall ?? snap.gbp.callClicks,
-  };
+  // Rebuild the GBP block from the lead channels, listing by listing. The
+  // profile list on the snapshot is the source of truth for WHICH listings this
+  // report covers (regenerating is what picks up a newly added one), so a
+  // manual edit never invents or drops a unit.
+  const storedProfiles: GbpProfileMetrics[] = snap.gbp.profiles ?? [
+    {
+      id: GBP_MAIN_PROFILE_ID,
+      label: "",
+      websiteClicks: snap.gbp.websiteClicks,
+      directions: snap.gbp.directions,
+      callClicks: snap.gbp.callClicks,
+    },
+  ];
+  const gbp = consolidateGbp(
+    storedProfiles.map((p) => ({
+      ...p,
+      websiteClicks: byKey[gbpChannelKey(p.id, "website")] ?? p.websiteClicks,
+      directions: byKey[gbpChannelKey(p.id, "directions")] ?? p.directions,
+      callClicks: byKey[gbpChannelKey(p.id, "call")] ?? p.callClicks,
+    })),
+  );
   const total = sumConsolidated(snap.leads.channels);
   const withLeads: MonthlyReportSnapshot = {
     ...snap,

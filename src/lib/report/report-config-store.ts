@@ -9,7 +9,13 @@
 // workspace session on every route — same model as ads-connections-store.
 
 import { kv } from "@vercel/kv";
-import { MAX_CUSTOM_LEAD_EVENTS, type CustomLeadEvent } from "./report-types";
+import {
+  GBP_MAIN_PROFILE_ID,
+  MAX_CUSTOM_LEAD_EVENTS,
+  MAX_GBP_PROFILES,
+  type CustomLeadEvent,
+  type GbpProfile,
+} from "./report-types";
 
 const KEY_PREFIX = "report-config:";
 
@@ -46,8 +52,16 @@ export type ReportConfig = {
   ga4PropertyId: string | null;
   /** GSC site url override, e.g. "sc-domain:client.com" (null = auto). */
   gscSiteUrl: string | null;
-  /** Google Business Profile location id (null until GBP is wired in Fase 3). */
+  /** Google Business Profile location id of the client's MAIN listing
+   *  (null = auto-match by website host). */
   gbpLocationId: string | null;
+  /** Name for the main listing in the report, for clients with more than one
+   *  (ex.: "Clínica Cascais"). null → the report calls it "Ficha principal". */
+  gbpMainLabel: string | null;
+  /** Additional Business Profiles beyond the main one. A multi-unit clinic has
+   *  one listing per unit; each is pulled and reported separately. Empty for
+   *  most clients. */
+  extraGbpProfiles: GbpProfile[];
   timezone: string;
   currency: string;
   eventMap: LeadEventMap;
@@ -103,6 +117,8 @@ export function defaultReportConfig(slug: string, currency = "EUR"): ReportConfi
     ga4PropertyId: null,
     gscSiteUrl: null,
     gbpLocationId: null,
+    gbpMainLabel: null,
+    extraGbpProfiles: [],
     timezone: "Europe/Lisbon",
     currency,
     eventMap: {
@@ -179,6 +195,34 @@ function normalizeExtraLeadEvents(v: unknown): CustomLeadEvent[] {
   return out;
 }
 
+/** Extra Business Profiles. A row with no label or no location id is dropped —
+ *  it would render as an unnamed block the consultant can never fill. Ids are
+ *  de-duped because they are embedded in the lead channel keys, and two rows
+ *  sharing an id would share a manually filled value. */
+function normalizeGbpProfiles(v: unknown): GbpProfile[] {
+  if (!Array.isArray(v)) return [];
+  const out: GbpProfile[] = [];
+  const ids = new Set<string>([GBP_MAIN_PROFILE_ID]);
+  for (const item of v) {
+    if (!item || typeof item !== "object") continue;
+    const o = item as Record<string, unknown>;
+    const label = typeof o.label === "string" ? o.label.trim().slice(0, 60) : "";
+    // Accept "locations/123" or the bare id; store the bare id.
+    const locationId =
+      typeof o.locationId === "string"
+        ? o.locationId.trim().replace(/^locations\//, "").slice(0, 40)
+        : "";
+    if (!label || !locationId) continue;
+    let id =
+      typeof o.id === "string" && ID_RE.test(o.id) ? o.id : `g${out.length + 1}`;
+    while (ids.has(id)) id = `${id}_`;
+    ids.add(id);
+    out.push({ id, label, locationId });
+    if (out.length >= MAX_GBP_PROFILES) break;
+  }
+  return out;
+}
+
 function normalizeConfig(raw: unknown, slug: string): ReportConfig {
   const base = defaultReportConfig(slug, "EUR");
   if (!raw || typeof raw !== "object") return base;
@@ -197,6 +241,8 @@ function normalizeConfig(raw: unknown, slug: string): ReportConfig {
     ga4PropertyId: asStr(o.ga4PropertyId),
     gscSiteUrl: asStr(o.gscSiteUrl),
     gbpLocationId: asStr(o.gbpLocationId),
+    gbpMainLabel: asStr(o.gbpMainLabel),
+    extraGbpProfiles: normalizeGbpProfiles(o.extraGbpProfiles),
     timezone: asStr(o.timezone) ?? base.timezone,
     currency: asStr(o.currency) ?? base.currency,
     eventMap: normalizeEventMap(o.eventMap),

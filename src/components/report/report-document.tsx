@@ -162,6 +162,16 @@ export function ReportDocument({
   const srLocalPack = (seRanking?.ranks ?? []).filter((k) => k.inLocalPack).length;
   const ai = snapshot.ai;
   const gbp = snapshot.gbp;
+  // Per-listing breakdown — only on multi-unit clients (and absent on every
+  // report generated before v76.28). In the client variant a listing with
+  // nothing validated is dropped, like every other pending block.
+  const gbpProfiles = (gbp.profiles ?? []).filter(
+    (p) =>
+      variant === "internal" ||
+      [p.websiteClicks, p.directions, p.callClicks].some(
+        (m) => m.value !== null || m.manualNa,
+      ),
+  );
 
   // Hero KPIs — the month's headline numbers. Order = what the client cares
   // about most: leads first, then reach, then search performance.
@@ -282,10 +292,35 @@ export function ReportDocument({
         <div className="wa-two">
           <div className="wa-card">
             <div className="wa-label">Google Business Profile</div>
-            <h3 className="wa-h3">{t("Cliques & direções", "Clicks & directions")}</h3>
+            <h3 className="wa-h3">
+              {gbpProfiles.length > 1
+                ? t(
+                    `Cliques & direções · ${gbpProfiles.length} fichas`,
+                    `Clicks & directions · ${gbpProfiles.length} listings`,
+                  )
+                : t("Cliques & direções", "Clicks & directions")}
+            </h3>
             <MetricRow label={t("Cliques p/ website", "Website clicks")} m={gbp.websiteClicks} lang={lang} variant={variant} />
             <MetricRow label={t("Pedidos de direções", "Direction requests")} m={gbp.directions} lang={lang} variant={variant} />
             <MetricRow label={t("Cliques p/ ligar", "Call clicks")} m={gbp.callClicks} lang={lang} variant={variant} />
+
+            {/* Breakdown por unidade — só existe quando o cliente tem mais do
+                que uma ficha. O total acima é a soma de todas. */}
+            {gbpProfiles.length > 1 && (
+              <div className="wa-gbp-units">
+                <div className="wa-gbp-units-l">
+                  {t("Por ficha", "Per listing")}
+                </div>
+                {gbpProfiles.map((p) => (
+                  <div className="wa-gbp-unit" key={p.id}>
+                    <div className="wa-gbp-unit-n">{p.label}</div>
+                    <MetricRow label={t("Cliques p/ website", "Website clicks")} m={p.websiteClicks} lang={lang} variant={variant} />
+                    <MetricRow label={t("Pedidos de direções", "Direction requests")} m={p.directions} lang={lang} variant={variant} />
+                    <MetricRow label={t("Cliques p/ ligar", "Call clicks")} m={p.callClicks} lang={lang} variant={variant} />
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
           <div className="wa-card">
             <div className="wa-label">{t("Tráfego Orgânico", "Organic Traffic")}</div>
@@ -766,6 +801,13 @@ const CSS = `
 .wa-ml{color:#45435c;}
 .wa-mr{display:flex;align-items:center;gap:.45rem;font-weight:700;font-variant-numeric:tabular-nums;}
 .wa-nvr{margin-top:.6rem;font-size:.78rem;color:#45435c;font-variant-numeric:tabular-nums;}
+/* Breakdown por ficha GBP (clientes com mais do que uma unidade) */
+.wa-gbp-units{margin-top:.85rem;border-top:1px solid var(--line);padding-top:.7rem;}
+.wa-gbp-units-l{font-size:.6rem;letter-spacing:.13em;text-transform:uppercase;color:var(--plum);font-weight:700;margin-bottom:.4rem;}
+.wa-gbp-unit{background:rgba(120,61,245,.035);border:1px solid var(--line);border-radius:9px;padding:.5rem .7rem;margin-bottom:.45rem;break-inside:avoid;}
+.wa-gbp-unit:last-child{margin-bottom:0;}
+.wa-gbp-unit-n{font-size:.76rem;font-weight:700;color:#2c2a45;margin-bottom:.15rem;}
+.wa-gbp-unit .wa-mrow{font-size:.76rem;padding:.24rem 0;}
 .wa-pending{color:#a08fb8;font-style:italic;font-weight:500;font-size:.76rem;}
 .wa-na{color:#7a7890;font-weight:600;font-size:.76rem;}
 .wa-pending-lg{color:#a08fb8;font-style:italic;font-size:.85rem;margin:.3rem 0;}

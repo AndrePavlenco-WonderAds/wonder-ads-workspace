@@ -7,7 +7,8 @@
 // backfill, so every month before the rename silently reads 0.
 //
 //   GET → current config
-//   PUT → save { eventMap?, extraLeadEvents?, ga4PropertyId?, gscSiteUrl? }
+//   PUT → save { eventMap?, extraLeadEvents?, extraGbpProfiles?, gbpMainLabel?,
+//                gbpLocationId?, ga4PropertyId?, gscSiteUrl? }
 
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
@@ -22,7 +23,9 @@ import {
 } from "@/lib/report/report-config-store";
 import {
   MAX_CUSTOM_LEAD_EVENTS,
+  MAX_GBP_PROFILES,
   type CustomLeadEvent,
+  type GbpProfile,
 } from "@/lib/report/report-types";
 
 export const runtime = "nodejs";
@@ -74,6 +77,9 @@ export async function PUT(
   const body = (await req.json().catch(() => ({}))) as {
     eventMap?: unknown;
     extraLeadEvents?: unknown;
+    extraGbpProfiles?: unknown;
+    gbpMainLabel?: unknown;
+    gbpLocationId?: unknown;
     ga4PropertyId?: unknown;
     gscSiteUrl?: unknown;
   };
@@ -81,6 +87,9 @@ export async function PUT(
   const patch: {
     eventMap?: LeadEventMap;
     extraLeadEvents?: CustomLeadEvent[];
+    extraGbpProfiles?: GbpProfile[];
+    gbpMainLabel?: string | null;
+    gbpLocationId?: string | null;
     ga4PropertyId?: string | null;
     gscSiteUrl?: string | null;
   } = {};
@@ -119,8 +128,29 @@ export async function PUT(
     patch.extraLeadEvents = lines;
   }
 
+  // Extra Business Profiles. Like the lead lines, an empty array is meaningful
+  // — it's how the consultant removes every extra listing — so it's written
+  // through. The store drops any row missing a name or a location id.
+  if (Array.isArray(body.extraGbpProfiles)) {
+    const profiles: GbpProfile[] = [];
+    for (const item of body.extraGbpProfiles.slice(0, MAX_GBP_PROFILES)) {
+      if (!item || typeof item !== "object") continue;
+      const o = item as Record<string, unknown>;
+      const label = typeof o.label === "string" ? o.label.trim() : "";
+      const locationId =
+        typeof o.locationId === "string" ? o.locationId.trim() : "";
+      if (!label || !locationId) continue;
+      profiles.push({
+        id: typeof o.id === "string" ? o.id : "",
+        label,
+        locationId,
+      });
+    }
+    patch.extraGbpProfiles = profiles;
+  }
+
   // "" clears an override back to auto-resolution; undefined leaves it alone.
-  for (const key of ["ga4PropertyId", "gscSiteUrl"] as const) {
+  for (const key of ["ga4PropertyId", "gscSiteUrl", "gbpLocationId", "gbpMainLabel"] as const) {
     const v = body[key];
     if (typeof v === "string") patch[key] = v.trim() || null;
     else if (v === null) patch[key] = null;

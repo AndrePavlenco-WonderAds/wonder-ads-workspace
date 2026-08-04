@@ -10,6 +10,7 @@ import { editableDepts } from "@/lib/auth/credentials";
 import { getReport, saveReport } from "@/lib/report/report-store";
 import { recomputeDerived, MAX_SHOWN_MOVERS } from "@/lib/report/report-build";
 import {
+  isGbpChannelKey,
   manualMetric,
   naMetric,
   pendingMetric,
@@ -19,8 +20,6 @@ import {
 } from "@/lib/report/report-types";
 
 export const runtime = "nodejs";
-
-const GBP_KEYS: LeadChannelKey[] = ["gbpWebsite", "gbpDirections", "gbpCall"];
 
 /** One channel edit: a number fills it, "na" marks N/A, null resets to pending. */
 type ChannelEdit = number | "na" | null;
@@ -60,7 +59,9 @@ export async function PUT(
         channels: next.leads.channels.map((c) => {
           if (!(c.key in body.channels!)) return c;
           const edit = body.channels![c.key];
-          const resetSource = GBP_KEYS.includes(c.key) ? "manual" : "na";
+          // Every Business Profile row — main or per-unit — resets to "manual"
+          // (the API is often unavailable); GA4 rows reset to "na".
+          const resetSource = isGbpChannelKey(c.key) ? "manual" : "na";
           let metric = c.metric;
           if (typeof edit === "number" && Number.isFinite(edit) && edit >= 0) {
             metric = manualMetric(Math.round(edit), "count");

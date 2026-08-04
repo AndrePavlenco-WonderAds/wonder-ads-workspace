@@ -31,11 +31,18 @@ export type LeadChannelKey =
   | "call"
   | "email"
   | "whatsapp"
+  /** The client's main Business Profile — the one auto-matched from their
+   *  website, or pinned via report-config.gbpLocationId. */
   | "gbpWebsite"
   | "gbpDirections"
   | "gbpCall"
   /** An extra line configured for this client — see CustomLeadEvent. */
-  | `custom:${string}`;
+  | `custom:${string}`
+  /** An additional Business Profile: `gbp:<profileId>:website|directions|call`.
+   *  A multi-unit clinic has one listing per unit, each with its own clicks
+   *  and direction requests, and rolling them into one number hides which
+   *  unit is actually being found. */
+  | `gbp:${string}`;
 
 /** An extra lead line beyond the four defaults: a second phone number for a
  *  second unit, a form that only lives on one landing page, a per-unit contact
@@ -54,6 +61,66 @@ export type CustomLeadEvent = {
 /** Cap on extra lines per client — enough for a multi-unit clinic without
  *  letting the GA4 event filter grow unbounded. */
 export const MAX_CUSTOM_LEAD_EVENTS = 8;
+
+/** An additional Google Business Profile beyond the client's main listing.
+ *  Multi-unit clients (a clinic with a practice in Cascais and another in
+ *  Lisboa) have one listing per unit; each is pulled separately so the report
+ *  can show which unit is actually being found.
+ *
+ *  `id` is stable and independent of the label, so renaming a unit never
+ *  re-points a manually filled value — the channel keys are
+ *  `gbp:<id>:website` / `:directions` / `:call`. */
+export type GbpProfile = {
+  id: string;
+  label: string;
+  /** GBP location id ("locations/123…" or the bare numeric id). */
+  locationId: string;
+};
+
+/** Cap on extra Business Profiles per client. Each one costs two more
+ *  Performance API calls per report, on an API with a low quota. */
+export const MAX_GBP_PROFILES = 8;
+
+/** The client's main listing — the one auto-matched from the website, or
+ *  pinned via `report-config.gbpLocationId`. Its channel keys are the original
+ *  `gbpWebsite` / `gbpDirections` / `gbpCall`, so nothing a consultant filled
+ *  in before multi-profile support re-points. */
+export const GBP_MAIN_PROFILE_ID = "main";
+
+/** The three metrics of one profile. */
+export type GbpMetricTrio = "website" | "directions" | "call";
+
+/** Channel key for one metric of one profile. The main listing keeps its
+ *  original keys; extra profiles are namespaced by their stable id. */
+export function gbpChannelKey(
+  profileId: string,
+  metric: GbpMetricTrio,
+): LeadChannelKey {
+  if (profileId === GBP_MAIN_PROFILE_ID) {
+    return metric === "website"
+      ? "gbpWebsite"
+      : metric === "directions"
+        ? "gbpDirections"
+        : "gbpCall";
+  }
+  return `gbp:${profileId}:${metric}`;
+}
+
+/** True for every Business Profile channel — main or extra. These are always
+ *  manual-fillable (the API is often unavailable), unlike GA4 lead events. */
+export function isGbpChannelKey(key: string): boolean {
+  return key.startsWith("gbp");
+}
+
+/** One profile's three metrics, kept alongside the consolidated totals so the
+ *  report can break a multi-unit client down per listing. */
+export type GbpProfileMetrics = {
+  id: string;
+  label: string;
+  websiteClicks: ReportMetric;
+  directions: ReportMetric;
+  callClicks: ReportMetric;
+};
 
 export type LeadChannel = {
   key: LeadChannelKey;
@@ -242,9 +309,14 @@ export type MonthlyReportSnapshot = {
     sources: AiSourceRow[];
   };
   gbp: {
+    /** Consolidated across every profile. Identical to the single listing for
+     *  the clients that have one, so the existing card renders unchanged. */
     websiteClicks: ReportMetric;
     directions: ReportMetric;
     callClicks: ReportMetric;
+    /** Per-listing breakdown, present only when the client has more than one
+     *  Business Profile. Optional so older snapshots still load. */
+    profiles?: GbpProfileMetrics[];
   };
 
   /** 3–5 auto-generated highlight bullets. */

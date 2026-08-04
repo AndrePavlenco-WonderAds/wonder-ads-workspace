@@ -13,6 +13,7 @@ import { ReportPrintView } from "@/components/report/report-print-view";
 import { GenerateReportButton } from "@/components/report/generate-report-button";
 import { ReportManualInputs } from "@/components/report/report-manual-inputs";
 import { ReportLeadEvents } from "@/components/report/report-lead-events";
+import { ReportGbpProfiles } from "@/components/report/report-gbp-profiles";
 import { ReportMoverPicker } from "@/components/report/report-mover-picker";
 import { getReportConfig } from "@/lib/report/report-config-store";
 import { FinalizeReportButton } from "@/components/report/finalize-report-button";
@@ -42,6 +43,7 @@ const SOURCE_LABEL: Record<string, string> = {
   "not-configured": "sem service account",
   "no-property": "sem propriedade",
   "no-location": "ficha GBP por ligar",
+  partial: "fichas em falta",
   error: "erro",
   deferred: "manual",
 };
@@ -53,6 +55,8 @@ function gbpHint(s: FetchStatus): string {
       return "Google Business Profile: sem service account Google configurado neste deployment.";
     case "no-location":
       return "Google Business Profile: a API respondeu, mas não encontrei a ficha deste cliente pela correspondência do website. Confirma o website na ficha GBP ou envia o location ID para eu fixar.";
+    case "partial":
+      return `Google Business Profile: a ficha principal respondeu, mas há fichas adicionais sem dados. ${s.message ?? ""} Confirma o Location ID de cada uma em «Fichas do Google Business Profile», ou preenche os valores dessa unidade à mão abaixo.`;
     case "error":
       if (s.message?.includes("429")) {
         return "Google Business Profile: a API está ligada, mas a Google ainda não atribuiu quota ao projeto (429). O acesso está aprovado — falta só a quota de pedidos. Por agora preenche os cliques do GBP manualmente abaixo; para automatizar, é preciso pedir aumento de quota da Business Profile API no Google Cloud (APIs & Services → Quotas).";
@@ -193,6 +197,13 @@ export default async function ReportPage({
                   slug={slug}
                   eventMap={reportConfig.eventMap}
                   extraLeadEvents={reportConfig.extraLeadEvents}
+                />
+
+                {/* Uma ficha GBP por unidade, para clientes com várias */}
+                <ReportGbpProfiles
+                  slug={slug}
+                  gbpMainLabel={reportConfig.gbpMainLabel}
+                  extraGbpProfiles={reportConfig.extraGbpProfiles}
                 />
 
                 {/* Curadoria das subidas de posição mostradas ao cliente */}

@@ -34,17 +34,31 @@ const DAILY_METRICS = [
 
 type MetricPair = { value: number; previous: number | null };
 
-export type GbpMonthlyReport =
+type GbpMetrics = {
+  websiteClicks: MetricPair;
+  callClicks: MetricPair;
+  directions: MetricPair;
+};
+
+/** The client's main listing: auto-matched by website host, or pinned. */
+export type GbpMainReport =
   | { status: "not-configured" }
   | { status: "no-location" }
   | { status: "error"; message: string }
-  | {
-      status: "ok";
-      locationName: string;
-      websiteClicks: MetricPair;
-      callClicks: MetricPair;
-      directions: MetricPair;
-    };
+  | ({ status: "ok"; locationName: string } & GbpMetrics);
+
+/** One of the client's EXTRA listings — a second unit, a second brand. Always
+ *  explicitly configured (label + location id), so there is no "no-location"
+ *  case: either it answers or it errors. */
+export type GbpExtraProfileReport =
+  | { id: string; label: string; status: "error"; message: string }
+  | ({ id: string; label: string; status: "ok"; locationName: string } & GbpMetrics);
+
+export type GbpMonthlyReport = {
+  main: GbpMainReport;
+  /** Empty for the clients with a single listing (almost all of them). */
+  profiles: GbpExtraProfileReport[];
+};
 
 /** fetch that retries on Google's rate-limit / transient errors (429/503).
  *  The Business Profile APIs have a low default per-project quota, so the
@@ -294,51 +308,109 @@ async function fetchRangeTotals(
   return totals;
 }
 
-/** GBP click metrics for a client over a calendar month vs. the prior month.
- *  Returns a status the report can fall back on (manual input) when GBP isn't
- *  set up yet — never a fabricated zero. */
+/** Current + previous month for one location, as the report's metric pairs. */
+async function fetchLocationMetrics(
+  token: string,
+  locationName: string,
+  windows: {
+    current: { startDate: string; endDate: string };
+    previous: { startDate: string; endDate: string };
+  },
+): Promise<GbpMetrics> {
+  const [cur, prev] = await Promise.all([
+    fetchRangeTotals(token, locationName, windows.current),
+    fetchRangeTotals(token, locationName, windows.previous).catch(
+      () => ({}) as Record<string, number>,
+    ),
+  ]);
+  const pair = (metric: string): MetricPair => ({
+    value: cur[metric] ?? 0,
+    previous: metric in prev ? prev[metric] : null,
+  });
+  return {
+    websiteClicks: pair("WEBSITE_CLICKS"),
+    callClicks: pair("CALL_CLICKS"),
+    directions: pair("BUSINESS_DIRECTION_REQUESTS"),
+  };
+}
+
+/** GBP click metrics for a client over a calendar month vs. the prior month —
+ *  the main listing plus any extra Business Profiles configured for a
+ *  multi-unit client. Returns a status the report can fall back on (manual
+ *  input) when GBP isn't set up yet — never a fabricated zero.
+ *
+ *  Each profile fails on its own: one unit's listing erroring leaves the other
+ *  units (and the main one) with real numbers. */
 export async function getGbpMonthlyReport(
   slug: string,
   opts: {
     current: { startDate: string; endDate: string };
     previous: { startDate: string; endDate: string };
     locationIdOverride?: string | null;
+    /** Extra listings beyond the main one — see report-config.extraGbpProfiles. */
+    extraProfiles?: { id: string; label: string; locationId: string }[];
   },
 ): Promise<GbpMonthlyReport> {
-  if (!googleAuthConfigured) return { status: "not-configured" };
-
-  try {
-    const token = await getGoogleAccessToken(SCOPES);
-    const locationName = await resolveLocationName(
-      slug,
-      token,
-      opts.locationIdOverride ?? null,
-    );
-    if (!locationName) return { status: "no-location" };
-
-    const [cur, prev] = await Promise.all([
-      fetchRangeTotals(token, locationName, opts.current),
-      fetchRangeTotals(token, locationName, opts.previous).catch(
-        () => ({}) as Record<string, number>,
-      ),
-    ]);
-
-    const pair = (metric: string): MetricPair => ({
-      value: cur[metric] ?? 0,
-      previous: metric in prev ? prev[metric] : null,
-    });
-
+  const extras = opts.extraProfiles ?? [];
+  if (!googleAuthConfigured) {
     return {
-      status: "ok",
-      locationName,
-      websiteClicks: pair("WEBSITE_CLICKS"),
-      callClicks: pair("CALL_CLICKS"),
-      directions: pair("BUSINESS_DIRECTION_REQUESTS"),
-    };
-  } catch (err) {
-    return {
-      status: "error",
-      message: err instanceof Error ? err.message : "GBP request failed",
+      main: { status: "not-configured" },
+      profiles: extras.map((p) => ({
+        id: p.id,
+        label: p.label,
+        status: "error" as const,
+        message: "sem service account Google",
+      })),
     };
   }
+
+  let token: string;
+  try {
+    token = await getGoogleAccessToken(SCOPES);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "GBP auth failed";
+    return {
+      main: { status: "error", message },
+      profiles: extras.map((p) => ({ id: p.id, label: p.label, status: "error" as const, message })),
+    };
+  }
+
+  const main: GbpMainReport = await (async () => {
+    try {
+      const locationName = await resolveLocationName(
+        slug,
+        token,
+        opts.locationIdOverride ?? null,
+      );
+      if (!locationName) return { status: "no-location" as const };
+      const metrics = await fetchLocationMetrics(token, locationName, opts);
+      return { status: "ok" as const, locationName, ...metrics };
+    } catch (err) {
+      return {
+        status: "error" as const,
+        message: err instanceof Error ? err.message : "GBP request failed",
+      };
+    }
+  })();
+
+  // Sequential on purpose: the Business Profile APIs have a low per-project
+  // quota and 429 under bursts. A handful of listings costs a few hundred ms
+  // more and is far likelier to actually return data.
+  const profiles: GbpExtraProfileReport[] = [];
+  for (const p of extras) {
+    const locationName = toLocationName(p.locationId);
+    try {
+      const metrics = await fetchLocationMetrics(token, locationName, opts);
+      profiles.push({ id: p.id, label: p.label, status: "ok", locationName, ...metrics });
+    } catch (err) {
+      profiles.push({
+        id: p.id,
+        label: p.label,
+        status: "error",
+        message: err instanceof Error ? err.message : "GBP request failed",
+      });
+    }
+  }
+
+  return { main, profiles };
 }

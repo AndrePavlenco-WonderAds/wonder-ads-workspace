@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.28",
+    date: "2026-08-04",
+    title: "Um cliente, várias unidades — várias fichas do Google Business Profile",
+    highlights: [
+      "**📍 O relatório deixou de assumir que cada cliente tem uma só ficha.** Uma clínica com unidade em Cascais e outra em Lisboa tem **uma ficha por unidade**, cada uma com os seus cliques, pedidos de direções e chamadas. Até agora o relatório lia uma — a que o website apanhava — e a outra unidade simplesmente não existia. Agora acrescentam-se as que forem precisas (até 8) em **Fichas do Google Business Profile**, na página do relatório.",
+      "**🧮 O cartão passou a mostrar o total consolidado *e* a repartição por ficha.** O número de cima é a soma de todas as unidades; por baixo, um bloco por unidade com os três números e a variação face ao mês anterior. Um cliente com uma só ficha vê exatamente o que via antes — a repartição só aparece quando há mais do que uma, porque «por ficha» com uma ficha é ruído.",
+      "**✍️ Cada unidade tem as suas três linhas para preencher à mão.** A API do Business Profile falha com frequência (quota), e a alternativa era o consultor somar as unidades de cabeça antes de escrever um número. Agora cada unidade tem as suas linhas em *Preencher dados em falta*, com o nome da unidade à frente — e nas leads por canal também. **Um valor preenchido nunca se desloca** ao renomear uma unidade: a ligação é feita por um id fixo, não pelo nome.",
+      "**🚦 Uma ficha que falhe não leva as outras atrás.** Cada unidade é pedida à Google por si; se uma der erro, as restantes ficam com dados reais e o aviso **diz o nome da que ficou em falta**, em vez de marcar tudo como avariado. E a soma é honesta: se um dos números foi preenchido à mão, o total assume-se manual e não inventa uma comparação com o mês anterior que não pode fazer.",
+      "**🔎 O Location ID deixou de ser um número para adivinhar.** Botão *Procurar fichas na Google* lista as fichas visíveis à conta com id, nome e website, e o campo autocompleta a partir dessa lista. Só é pedido quando se carrega no botão — a quota desta API é baixa e não se gasta a abrir uma página.",
+    ],
+  },
+  {
     version: "76.27",
     date: "2026-08-04",
     title: "SE Ranking — a posição real na Google, por baixo da média do GSC",
