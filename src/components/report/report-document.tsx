@@ -15,6 +15,7 @@ import {
   pendingNote,
   type MetricDelta,
 } from "@/lib/report/report-format";
+import { formatDate } from "@/lib/dates";
 import type {
   MonthlyReportSnapshot,
   ReportMetric,
@@ -48,6 +49,16 @@ function ChangeCell({ change }: { change: number | null }) {
   if (change === null) return <span className="wa-kwnew">novo</span>;
   if (change > 0.1) return <span className="wa-up">▲ {change.toFixed(1)}</span>;
   if (change < -0.1) return <span className="wa-down-t">▼ {Math.abs(change).toFixed(1)}</span>;
+  return <span className="wa-flat-t">—</span>;
+}
+
+/** Month-over-month move in WHOLE places, for the SE Ranking table. Positions
+ *  there are exact SERP ranks, not averages, so "▲ 3" reads better than
+ *  "▲ 3.0". null = no earlier check to compare against (not a new keyword). */
+function PlaceCell({ change }: { change: number | null }) {
+  if (change === null) return <span className="wa-flat-t">—</span>;
+  if (change > 0) return <span className="wa-up">▲ {change}</span>;
+  if (change < 0) return <span className="wa-down-t">▼ {Math.abs(change)}</span>;
   return <span className="wa-flat-t">—</span>;
 }
 
@@ -142,6 +153,13 @@ export function ReportDocument({
   const coverage = snapshot.coverage;
   const targetRanks = gsc.targetRanks ?? [];
   const rankedTargets = targetRanks.filter((k) => k.position !== null);
+  // True SERP positions — absent on reports for clients with no synced
+  // SE Ranking project, and on every report generated before v76.26.
+  const seRanking = snapshot.seRanking;
+  const srRanked = (seRanking?.ranks ?? []).filter((k) => k.position !== null);
+  const srTop = (n: number) =>
+    srRanked.filter((k) => (k.position ?? Infinity) <= n).length;
+  const srLocalPack = (seRanking?.ranks ?? []).filter((k) => k.inLocalPack).length;
   const ai = snapshot.ai;
   const gbp = snapshot.gbp;
 
@@ -557,6 +575,97 @@ export function ReportDocument({
         </section>
       )}
 
+      {/* True SERP positions (SE Ranking) — the same target keywords as the
+          table above, but checked against the real Google results page rather
+          than averaged over the impressions GSC happened to serve. */}
+      {seRanking && seRanking.ranks.length > 0 && (
+        <section className="wa-sec">
+          <div className="wa-label">
+            {t("Ranking Real na Google", "Live Google Ranking")}
+          </div>
+          <h3 className="wa-h3">
+            {t(
+              `Posição verificada de cada keyword (${seRanking.ranks.length})`,
+              `Verified position for every keyword (${seRanking.ranks.length})`,
+            )}
+          </h3>
+          <p className="wa-method">
+            {seRanking.outsidePeriod
+              ? t(
+                  `Posição real na página de resultados da Google, verificada a ${formatDate(seRanking.checkedOn)}. A monitorização começou depois deste mês, por isso mostramos a posição mais recente — a variação mensal fica disponível a partir do próximo relatório.`,
+                  `Actual position on Google's results page, checked on ${formatDate(seRanking.checkedOn)}. Tracking started after this month, so we show the most recent check — month-over-month movement becomes available from the next report.`,
+                )
+              : t(
+                  `Posição real na página de resultados da Google, verificada a ${formatDate(seRanking.checkedOn)}. Ao contrário da tabela acima (que é uma média das impressões), esta é a posição em que a keyword aparece de facto.`,
+                  `Actual position on Google's results page, checked on ${formatDate(seRanking.checkedOn)}. Unlike the table above (an average over impressions), this is where the keyword actually appears.`,
+                )}
+          </p>
+          <div className="wa-kstats">
+            <div className="wa-kstat">
+              <span className="wa-kv">{formatRaw(srRanked.length, "count", lang)}</span>
+              <span className="wa-kl">{t("no top 100", "in top 100")}</span>
+            </div>
+            <div className="wa-kstat">
+              <span className="wa-kv">{formatRaw(srTop(3), "count", lang)}</span>
+              <span className="wa-kl">Top 3</span>
+            </div>
+            <div className="wa-kstat">
+              <span className="wa-kv">{formatRaw(srTop(10), "count", lang)}</span>
+              <span className="wa-kl">Top 10</span>
+            </div>
+            <div className="wa-kstat">
+              <span className="wa-kv">{formatRaw(srTop(20), "count", lang)}</span>
+              <span className="wa-kl">Top 20</span>
+            </div>
+            {srLocalPack > 0 && (
+              <div className="wa-kstat wa-kstat-new">
+                <span className="wa-kv">{formatRaw(srLocalPack, "count", lang)}</span>
+                <span className="wa-kl">{t("no mapa", "in map pack")}</span>
+              </div>
+            )}
+          </div>
+          <div className="wa-tblwrap" style={{ marginTop: "1rem" }}>
+            <table className="wa-qtable">
+              <thead>
+                <tr>
+                  <th>Keyword</th>
+                  <th className="n">{t("Posição", "Position")}</th>
+                  <th className="n">{t("Δ mês", "MoM Δ")}</th>
+                  <th className="n">{t("Pesquisas/mês", "Searches/mo")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {seRanking.ranks.map((k) => (
+                  <tr key={k.keyword}>
+                    <td>
+                      {k.keyword}
+                      {k.inLocalPack && (
+                        <span className="wa-kw-map">{t("mapa", "map")}</span>
+                      )}
+                    </td>
+                    <td className="n">
+                      {k.position === null ? (
+                        <span className="wa-pending">
+                          {t("fora do top 100", "outside top 100")}
+                        </span>
+                      ) : (
+                        k.position
+                      )}
+                    </td>
+                    <td className="n">
+                      <PlaceCell change={k.change} />
+                    </td>
+                    <td className="n">
+                      {k.volume === null ? "—" : formatRaw(k.volume, "count", lang)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
       {/* Notes */}
       {(snapshot.notes.trim() || variant === "internal") && (
         <section className="wa-sec">
@@ -700,6 +809,9 @@ const CSS = `
   color:#92400e;font-size:.68rem;font-weight:600;line-height:1.4;}
 .wa-kw-new{display:inline-block;margin-left:.34rem;padding:0 .3rem;border-radius:6px;
   background:rgba(22,163,74,.12);color:#15803d;font-size:.56rem;font-weight:700;
+  letter-spacing:.05em;text-transform:uppercase;vertical-align:middle;}
+.wa-kw-map{display:inline-block;margin-left:.34rem;padding:0 .3rem;border-radius:6px;
+  background:rgba(120,61,245,.12);color:var(--violet);font-size:.56rem;font-weight:700;
   letter-spacing:.05em;text-transform:uppercase;vertical-align:middle;}
 .wa-notes{font-size:.86rem;color:#34333f;line-height:1.55;white-space:pre-wrap;margin:.3rem 0 0;}
 

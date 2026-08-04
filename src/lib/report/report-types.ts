@@ -114,6 +114,41 @@ export type TargetKeywordRank = {
   isNew: boolean;
 };
 
+/** One target keyword's TRUE SERP position, checked by SE Ranking.
+ *
+ *  Distinct from TargetKeywordRank, which is a GSC *average* over whatever
+ *  impressions Google chose to serve — a keyword with no impressions simply
+ *  disappears there. SE Ranking checks a fixed SERP on a schedule, so every
+ *  keyword gets an answer whether or not it earned impressions. */
+export type SeRankingRank = {
+  keyword: string;
+  /** null = outside the tracked depth (top 100). */
+  position: number | null;
+  previousPosition: number | null;
+  /** previous − current, so positive = climbed. null when there's no earlier
+   *  check to compare against. */
+  change: number | null;
+  volume: number | null;
+  /** Ranked inside the Google local pack rather than the blue links — for a
+   *  clinic the pack is often the result that actually books appointments. */
+  inLocalPack: boolean;
+};
+
+/** The SE Ranking rank-tracking block of a report. Optional on the snapshot:
+ *  reports generated before this existed simply have none, and clients whose
+ *  project isn't synced yet never get one. */
+export type SeRankingBlock = {
+  siteId: number;
+  /** Date of the position check being shown ("2026-08-03"). */
+  checkedOn: string;
+  /** True when `checkedOn` falls outside the reported month. Rank tracking
+   *  only starts when the project is created, so a report for an earlier month
+   *  has no check from that month; the report then labels the real check date
+   *  instead of implying the number belongs to the reported period. */
+  outsidePeriod: boolean;
+  ranks: SeRankingRank[];
+};
+
 /** A query whose ranking improved vs. the prior month. */
 export type KeywordMover = {
   query: string;
@@ -199,6 +234,9 @@ export type MonthlyReportSnapshot = {
      *  equality check in report-store — bumping it would discard them). */
     targetRanks?: TargetKeywordRank[];
   };
+  /** True SERP positions from SE Ranking for the same target keywords, shown
+   *  under the GSC table. Absent when the client has no synced project. */
+  seRanking?: SeRankingBlock;
   ai: {
     totalSessions: ReportMetric;
     sources: AiSourceRow[];

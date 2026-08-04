@@ -12,6 +12,8 @@ import {
 import { getGa4MonthlyReport, type MetricPair } from "./ga4-report";
 import { getGscMonthlyReport } from "@/lib/gsc";
 import { listTargetKeywords } from "@/lib/target-keywords-store";
+import { getSeRankingLink } from "@/lib/seranking-store";
+import { getSeRankingRanks, isSeRankingConfigured } from "@/lib/seranking";
 import { getGbpMonthlyReport } from "@/lib/gbp";
 import { getReportConfig } from "./report-config-store";
 import {
@@ -19,6 +21,7 @@ import {
   previousCompleteMonth,
   reportWindows,
   labelWithCoverage,
+  type DateRange,
 } from "./report-dates";
 import {
   REPORT_SCHEMA_VERSION,
@@ -239,6 +242,28 @@ function buildExecSummary(
   return cand.slice(0, 5).map((c) => c.text);
 }
 
+/** SE Ranking positions for a client, or null when there's nothing to show.
+ *  Swallows its own errors so rank tracking stays additive to the report. */
+async function fetchSeRanking(
+  slug: string,
+  windows: { current: DateRange; prevMonth: DateRange },
+) {
+  if (!isSeRankingConfigured()) return null;
+  try {
+    const link = await getSeRankingLink(slug);
+    if (!link) return null;
+    return await getSeRankingRanks(link.siteId, {
+      start: windows.current.startDate,
+      end: windows.current.endDate,
+      prevStart: windows.prevMonth.startDate,
+      prevEnd: windows.prevMonth.endDate,
+    });
+  } catch (err) {
+    console.error(`SE Ranking pull failed for ${slug}:`, err);
+    return null;
+  }
+}
+
 /** Build (do not persist) the monthly report snapshot for a client. Deterministic
  *  given the live data — the caller persists via report-store.saveReport. */
 export async function buildMonthlyReport(
@@ -260,7 +285,7 @@ export async function buildMonthlyReport(
     (k) => k.keyword,
   );
 
-  const [ga4, gsc, gbp] = await Promise.all([
+  const [ga4, gsc, gbp, seRanking] = await Promise.all([
     getGa4MonthlyReport(slug, {
       current: windows.current,
       previous: windows.prevMonth,
@@ -281,6 +306,10 @@ export async function buildMonthlyReport(
       previous: windows.prevMonth,
       locationIdOverride: config.gbpLocationId,
     }),
+    // True SERP positions. Best-effort: a client with no synced project, an
+    // unset API key or an SE Ranking hiccup must never fail the whole report —
+    // the section simply doesn't render.
+    fetchSeRanking(slug, windows),
   ]);
 
   const ga4Fetch: FetchStatus =
@@ -477,6 +506,7 @@ export async function buildMonthlyReport(
     leads: { total: leadsTotal, channels },
     organic,
     gsc: gscBlock,
+    ...(seRanking ? { seRanking } : {}),
     ai: aiBlock,
     gbp: gbpBlock,
     // Fresh pull ⇒ not finalised. The consultant fills the manual data then

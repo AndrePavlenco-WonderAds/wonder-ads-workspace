@@ -7,6 +7,7 @@ import { ClientFiles } from "@/components/client-files";
 import { ClientAccesses } from "@/components/client-accesses";
 import { OnboardingForm } from "@/components/onboarding-form";
 import { TargetKeywordsPanel } from "@/components/target-keywords-panel";
+import { SeRankingPanel } from "@/components/seranking-panel";
 import { CurrentRoadmapStrip } from "@/components/current-roadmap-strip";
 import { PendingReviewChip } from "@/components/pending-review-chip";
 import { SeoProjectContainers } from "@/components/seo-project-containers";
@@ -214,6 +215,10 @@ export default async function ClientPage({
 
       <div className="animate-fade-up mt-6">
         <TargetKeywordsPanel slug={slug} clientName={client.title} />
+      </div>
+
+      <div className="animate-fade-up mt-6">
+        <SeRankingPanel slug={slug} />
       </div>
 
       <section

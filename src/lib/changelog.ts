@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.27",
+    date: "2026-08-04",
+    title: "SE Ranking — a posição real na Google, por baixo da média do GSC",
+    highlights: [
+      "**📍 O relatório passou a dizer onde a keyword está, não só onde apareceu.** A tabela que já lá estava é do Search Console, e o Search Console dá a **posição média das impressões que a Google decidiu servir** — uma keyword sem impressões desaparece, e uma que apareceu uma vez em #3 lê-se melhor do que uma que apareceu 400 vezes em #6. Por baixo dela entra uma secção nova, **Ranking Real na Google**, com a posição verificada na página de resultados: todas as keywords respondem, tenham ou não ganho impressões.",
+      "**🗺️ Quem rankeia no mapa fica marcado.** Para uma clínica, o pack local costuma ser o resultado que marca a consulta — aparece agora com selo próprio e contagem em destaque. A B-Life tem 5 keywords no mapa, 10 no Top 3.",
+      "**🕐 Sem histórico, o relatório diz a data em vez de fingir.** A monitorização só começa quando o projeto é criado, por isso um relatório de um mês anterior não tem check desse mês. Em vez de esconder a secção ou insinuar que o número é do período, mostra a posição mais recente e escreve **«verificada a 04/08/2026»**. O Δ mês fica vazio até haver dois meses de tracking — e nunca compara um top-100 com um «fora do top 100», que daria uma subida de 90 lugares que não aconteceu.",
+      "**🔗 Os projetos montam-se sozinhos a partir das Target Keywords.** Painel novo na ficha do cliente: cria o projeto na SE Ranking, escolhe o Google mobile do país do cliente e envia as keywords. É **idempotente** — adota o projeto que já exista para o domínio (a B-Life e a Mimus foram feitas à mão e ficaram como estavam, região local incluída) e só envia o que ainda falta. Correr duas vezes não faz nada.",
+      "**🧹 Quase-duplicadas deixaram de gastar quota a medir a mesma pesquisa.** «cabeleireiro em sintra» e «cabeleireiro sintra» dão a mesma SERP; «utm» e «utms» também. O sync colapsa-as por acentos, palavras-função, plurais, grafia UK/US e ordem das palavras, e mantém a de maior volume. O que **não** colapsa é tão importante: «gym london» e «best gyms in london» são SERPs diferentes, e «ecografia 1º trimestre» não é «ecografia 3º trimestre». As descartadas **continuam na lista de Target Keywords** — e o painel mostra exatamente quais foram e em favor de quê.",
+    ],
+  },
+  {
     version: "76.26",
     date: "2026-08-03",
     title: "Exames de fase, o sino a vermelho e a Formação de ponta a ponta",
