@@ -81,6 +81,15 @@ export const WEB_PRIORITY_META: Record<
   },
 };
 
+/** O que o utilizador pode fazer à data de entrega prevista de um
+ *  projeto. Resolvido no servidor por `webDeliveryRights` (credentials.ts)
+ *  e passado às páginas — o tipo vive aqui para os componentes "use
+ *  client" não terem de importar a tabela de credenciais. */
+export type WebDeliveryRights = { canSet: boolean; canOverride: boolean };
+
+export const WEB_DELIVERY_LOCKED_HINT =
+  "Depois de gravada, a data de entrega prevista fica trancada — só um SuperAdmin a pode corrigir.";
+
 export const WEB_CRED_KINDS = [
   "wordpress",
   "hosting",
@@ -175,7 +184,18 @@ export type PublicWebProject = {
   status: WebStatus;
   priority: WebPriority;
   startDate: string | null;
+  /** DATA DE ENTREGA PREVISTA — o compromisso do departamento Web.
+   *  Só o dept Web (e SuperAdmins) a pode pôr, e uma vez gravada fica
+   *  trancada: só um SuperAdmin a altera. Ver `webDeliveryRights` +
+   *  `resolveDeadline` (web-projects-store), que é onde a regra é
+   *  imposta — o browser só reflete o que o servidor já decidiu. */
   deadline: string | null;
+  /** Quem trancou a data e quando. `null` em projetos que já tinham
+   *  data antes desta regra existir (v76.29) — ficam trancados na mesma,
+   *  apenas sem autor conhecido. */
+  deadlineSetByUsername: string | null;
+  deadlineSetByName: string | null;
+  deadlineSetAt: number | null;
   order: number;
   comments: WebComment[];
   assets: PublicWebAssets;

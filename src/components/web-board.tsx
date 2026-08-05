@@ -10,6 +10,7 @@ import {
   Copy,
   History,
   Loader2,
+  Lock,
   Plus,
   RefreshCw,
   Search,
@@ -21,11 +22,13 @@ import {
 } from "lucide-react";
 import { ClientCombobox, type ClientOption } from "@/components/client-combobox";
 import {
+  WEB_DELIVERY_LOCKED_HINT,
   WEB_PRIORITIES,
   WEB_PRIORITY_META,
   WEB_STATUSES,
   WEB_STATUS_META,
   type PublicWebProject,
+  type WebDeliveryRights,
   type WebPriority,
   type WebStatus,
 } from "@/lib/web-shared";
@@ -90,6 +93,7 @@ export function WebBoard({
   storageConfigured,
   openTickets = [],
   clientOptions = [],
+  deliveryRights,
 }: {
   initialProjects: PublicWebProject[];
   assignees: Assignee[];
@@ -99,6 +103,9 @@ export function WebBoard({
   /** Known clients (registry + project-derived) for the create-project
    *  combobox. */
   clientOptions?: ClientOption[];
+  /** Resolvido no servidor — decide se o formulário de criação mostra o
+   *  campo da entrega prevista. A regra a sério vive na API. */
+  deliveryRights: WebDeliveryRights;
 }) {
   const [projects, setProjects] = useState<PublicWebProject[]>(initialProjects);
   const [tickets, setTickets] = useState<BoardTicket[]>(openTickets);
@@ -439,6 +446,7 @@ export function WebBoard({
         <CreateProjectModal
           assignees={assignees}
           clientOptions={clientOptions}
+          deliveryRights={deliveryRights}
           onClose={() => setShowCreate(false)}
           onCreated={onCreated}
         />
@@ -582,10 +590,25 @@ function BoardCard({
             Start {formatDate(project.startDate)}
           </span>
         )}
-        {project.deadline && (
-          <span className="inline-flex items-center gap-1.5">
+        {/* Entrega prevista — o compromisso trancado. Sem data, o card
+            di-lo em vez de omitir a linha: um projeto sem entrega
+            marcada é exatamente o que se quer ver de relance. */}
+        {project.deadline ? (
+          <span
+            className="inline-flex items-center gap-1.5 font-medium text-emerald-200/85"
+            title={
+              project.deadlineSetByName
+                ? `Entrega prevista definida por ${project.deadlineSetByName}`
+                : "Entrega prevista trancada"
+            }
+          >
+            <Lock className="h-3 w-3" />
+            Entrega prevista {formatDate(project.deadline)}
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1.5 text-amber-200/70">
             <CalendarClock className="h-3 w-3" />
-            Launch {formatDate(project.deadline)}
+            Entrega por definir
           </span>
         )}
       </div>
@@ -600,11 +623,13 @@ function BoardCard({
 function CreateProjectModal({
   assignees,
   clientOptions,
+  deliveryRights,
   onClose,
   onCreated,
 }: {
   assignees: Assignee[];
   clientOptions: ClientOption[];
+  deliveryRights: WebDeliveryRights;
   onClose: () => void;
   onCreated: (p: PublicWebProject) => void;
 }) {
@@ -642,14 +667,20 @@ function CreateProjectModal({
           priority,
           status,
           startDate: startDate || null,
-          deadline: deadline || null,
+          // Quem não tem direito a marcar a entrega nunca a envia — o
+          // campo nem sequer é desenhado para essa pessoa.
+          deadline: deliveryRights.canSet ? deadline || null : null,
         }),
       });
-      if (!res.ok) throw new Error("Create failed");
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Create failed");
       onCreated(data.project);
-    } catch {
-      setErr("Couldn't create the project — try again.");
+    } catch (e) {
+      setErr(
+        e instanceof Error && e.message !== "Create failed"
+          ? e.message
+          : "Couldn't create the project — try again.",
+      );
       setSaving(false);
     }
   };
@@ -761,15 +792,35 @@ function CreateProjectModal({
                 className="modal-input"
               />
             </Field>
-            <Field label="Target launch">
-              <input
-                type="date"
-                value={deadline}
-                onChange={(e) => setDeadline(e.target.value)}
-                className="modal-input"
-              />
+            <Field label="Entrega prevista">
+              {deliveryRights.canSet ? (
+                <input
+                  type="date"
+                  value={deadline}
+                  onChange={(e) => setDeadline(e.target.value)}
+                  className="modal-input"
+                />
+              ) : (
+                <div className="modal-input flex items-center gap-2 text-white/35">
+                  <Lock className="h-3.5 w-3.5 shrink-0" />
+                  Só o dept Web
+                </div>
+              )}
             </Field>
           </div>
+          {deliveryRights.canSet ? (
+            deadline && (
+              <p className="-mt-1 inline-flex items-start gap-1.5 text-[11px] text-amber-200/80">
+                <Lock className="mt-px h-3 w-3 shrink-0" />
+                {WEB_DELIVERY_LOCKED_HINT}
+              </p>
+            )
+          ) : (
+            <p className="-mt-1 text-[11px] text-white/45">
+              A data de entrega prevista é posta pelo departamento Web
+              depois de o projeto existir.
+            </p>
+          )}
 
           {err && <p className="text-sm text-rose-300">{err}</p>}
 

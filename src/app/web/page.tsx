@@ -3,7 +3,11 @@ import { DepartmentHeader } from "@/components/department-header";
 import { AccessDenied } from "@/components/access-denied";
 import { WebBoard } from "@/components/web-board";
 import { getCurrentEmployee } from "@/lib/auth/server";
-import { accessibleDepts, getWebAssignees } from "@/lib/auth/credentials";
+import {
+  accessibleDepts,
+  getWebAssignees,
+  webDeliveryRights,
+} from "@/lib/auth/credentials";
 import {
   getAllProjects,
   toPublicProject,
@@ -95,6 +99,7 @@ export default async function WebPage() {
         storageConfigured={webStorageConfigured}
         openTickets={openTickets}
         clientOptions={clientOptions}
+        deliveryRights={webDeliveryRights(employee)}
       />
     </PageShell>
   );

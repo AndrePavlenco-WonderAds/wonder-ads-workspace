@@ -26,6 +26,7 @@ import {
   type WebAssetFile,
   type WebComment,
   type WebCredKind,
+  type WebDeliveryRights,
   type WebResource,
   type WebStatus,
 } from "./web-shared";
@@ -44,6 +45,7 @@ export type {
   WebCredKind,
   WebComment,
   WebAssetFile,
+  WebDeliveryRights,
   WebResource,
   PublicWebProject,
   WebActivity,
@@ -100,7 +102,12 @@ export type WebProject = {
   status: WebStatus;
   priority: import("./web-shared").WebPriority;
   startDate: string | null;
+  /** Data de entrega prevista — trancada depois de gravada. Ver
+   *  `resolveDeadline` para a regra completa. */
   deadline: string | null;
+  deadlineSetByUsername: string | null;
+  deadlineSetByName: string | null;
+  deadlineSetAt: number | null;
   order: number;
   comments: WebComment[];
   assets: WebProjectAssets;
@@ -234,6 +241,93 @@ export function normaliseAssets(
   };
 }
 
+// ---------------------------------------------------------------------------
+// Data de entrega prevista — o único campo do projeto que o payload NÃO
+// manda. É write-once: quem tem `canSet` põe-na uma vez, e a partir daí
+// só `canOverride` (SuperAdmin) lhe toca. Tudo o resto do payload é
+// aceite normalmente, por isso um board desatualizado a reenviar a data
+// antiga continua a poder mover cards e editar campos.
+// ---------------------------------------------------------------------------
+
+type DeadlineState = {
+  deadline: string | null;
+  deadlineSetByUsername: string | null;
+  deadlineSetByName: string | null;
+  deadlineSetAt: number | null;
+};
+
+/** Porque é que um write à data foi recusado:
+ *  - "locked"    → já existe uma data e o autor não é SuperAdmin.
+ *  - "forbidden" → ainda não existe data mas o autor não é do dept Web. */
+export type DeadlineDenial = "locked" | "forbidden";
+
+export const DEADLINE_DENIAL_MESSAGE: Record<DeadlineDenial, string> = {
+  locked:
+    "A data de entrega prevista já foi definida e não pode ser alterada. Só um SuperAdmin a pode corrigir.",
+  forbidden:
+    "Só o departamento Web pode definir a data de entrega prevista deste projeto.",
+};
+
+/** Diz se o payload tenta mexer na data sem ter direito a isso. Devolve
+ *  `null` quando o write é legítimo — incluindo o caso mais comum, em que
+ *  a data vem igual à guardada e portanto não há alteração nenhuma. */
+export function deadlineWriteDenial(
+  payload: unknown,
+  prev: WebProject | null,
+  rights: WebDeliveryRights,
+): DeadlineDenial | null {
+  const o = (payload ?? {}) as Record<string, unknown>;
+  const requested = isoOrNull(o.deadline);
+  const current = prev?.deadline ?? null;
+  if (requested === current) return null;
+  if (current !== null) return rights.canOverride ? null : "locked";
+  return rights.canSet ? null : "forbidden";
+}
+
+/** Resolve o estado final da data a partir do payload + do que está
+ *  guardado. Nunca lança: um write sem direitos devolve simplesmente o
+ *  estado anterior intacto, para que uma rota que se esqueça de chamar
+ *  `deadlineWriteDenial` falhe fechada em vez de aberta. */
+function resolveDeadline(
+  o: Record<string, unknown>,
+  prev: WebProject | null | undefined,
+  rights: WebDeliveryRights,
+  actor: { username: string; name: string } | undefined,
+  now: number,
+): DeadlineState {
+  const current = prev?.deadline ?? null;
+  const keep: DeadlineState = {
+    deadline: current,
+    deadlineSetByUsername: prev?.deadlineSetByUsername ?? null,
+    deadlineSetByName: prev?.deadlineSetByName ?? null,
+    deadlineSetAt: prev?.deadlineSetAt ?? null,
+  };
+
+  const requested = isoOrNull(o.deadline);
+  if (requested === current) return keep;
+
+  const allowed = current !== null ? rights.canOverride : rights.canSet;
+  if (!allowed) return keep;
+
+  // Limpar a data destranca-a — é a única saída para um engano gravado,
+  // e só um SuperAdmin lá chega (current !== null ⇒ canOverride).
+  if (requested === null) {
+    return {
+      deadline: null,
+      deadlineSetByUsername: null,
+      deadlineSetByName: null,
+      deadlineSetAt: null,
+    };
+  }
+
+  return {
+    deadline: requested,
+    deadlineSetByUsername: actor?.username ?? null,
+    deadlineSetByName: actor?.name ?? null,
+    deadlineSetAt: now,
+  };
+}
+
 function normaliseComment(v: unknown): WebComment | null {
   const o = (v ?? {}) as Record<string, unknown>;
   const body = str(o.body).trim();
@@ -248,14 +342,29 @@ function normaliseComment(v: unknown): WebComment | null {
 }
 
 /** Sanitise a full project payload. `prev` (the stored record) lets us
- *  preserve credential ciphertext + createdAt across edits. */
+ *  preserve credential ciphertext + createdAt across edits.
+ *
+ *  `opts.rights` decide se a data de entrega prevista no payload é aceite
+ *  ou ignorada; omitir `opts` é o mesmo que não ter direito nenhum, por
+ *  isso um caller distraído nunca abre a tranca por acidente. */
 export function normaliseProject(
   v: unknown,
   id: string,
   prev?: WebProject | null,
+  opts?: {
+    rights?: WebDeliveryRights;
+    actor?: { username: string; name: string };
+  },
 ): WebProject {
   const o = (v ?? {}) as Record<string, unknown>;
   const now = Date.now();
+  const delivery = resolveDeadline(
+    o,
+    prev,
+    opts?.rights ?? { canSet: false, canOverride: false },
+    opts?.actor,
+    now,
+  );
   return {
     id,
     name: str(o.name).trim() || "Untitled project",
@@ -268,7 +377,7 @@ export function normaliseProject(
     status: oneOf(o.status, WEB_STATUSES, "negotiation"),
     priority: oneOf(o.priority, WEB_PRIORITIES, "medium"),
     startDate: isoOrNull(o.startDate),
-    deadline: isoOrNull(o.deadline),
+    ...delivery,
     order: num(o.order, now),
     comments: arr(o.comments)
       .map(normaliseComment)

@@ -26,6 +26,7 @@ import {
 import {
   WEB_CRED_KINDS,
   WEB_CRED_KIND_LABEL,
+  WEB_DELIVERY_LOCKED_HINT,
   WEB_PRIORITIES,
   WEB_PRIORITY_META,
   WEB_STATUSES,
@@ -34,6 +35,7 @@ import {
   type PublicWebProject,
   type WebAssetFile,
   type WebCredKind,
+  type WebDeliveryRights,
   type WebPriority,
   type WebResource,
   type WebStatus,
@@ -53,10 +55,14 @@ export function WebProjectDetail({
   initialProject,
   assignees,
   currentUser,
+  deliveryRights,
 }: {
   initialProject: PublicWebProject;
   assignees: Assignee[];
   currentUser: { username: string; name: string };
+  /** Resolvido no servidor — decide se o campo da entrega prevista está
+   *  editável, trancado ou escondido. A API recusa na mesma. */
+  deliveryRights: WebDeliveryRights;
 }) {
   const router = useRouter();
   const [project, setProject] = useState<PublicWebProject>(initialProject);
@@ -64,7 +70,10 @@ export function WebProjectDetail({
   const [error, setError] = useState<string | null>(null);
 
   /** PUT the full project. `tag` drives the per-section saving spinner.
-   *  Optimistically applies `next`, reconciles with the server echo. */
+   *  Optimistically applies `next`, reconciles with the server echo.
+   *  A mensagem do servidor ganha à genérica quando existe — é assim que
+   *  a recusa da data de entrega prevista (403) chega ao ecrã em vez de
+   *  aparecer como "Couldn't save". */
   const save = useCallback(
     async (
       next: PublicWebProject,
@@ -80,13 +89,17 @@ export function WebProjectDetail({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(next),
         });
-        if (!res.ok) throw new Error("Save failed");
-        const data = await res.json();
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || "Couldn't save — try again.");
         setProject(data.project);
         return data.project as PublicWebProject;
-      } catch {
+      } catch (e) {
         setProject(prev);
-        setError("Couldn't save — try again.");
+        setError(
+          e instanceof Error && e.message
+            ? e.message
+            : "Couldn't save — try again.",
+        );
         return null;
       } finally {
         setSavingTag(null);
@@ -135,6 +148,7 @@ export function WebProjectDetail({
           <DetailsCard
             project={project}
             assignees={assignees}
+            deliveryRights={deliveryRights}
             saving={savingTag === "details"}
             onSave={(patch) => save({ ...project, ...patch }, "details")}
           />
@@ -189,11 +203,13 @@ export function WebProjectDetail({
 function DetailsCard({
   project,
   assignees,
+  deliveryRights,
   saving,
   onSave,
 }: {
   project: PublicWebProject;
   assignees: Assignee[];
+  deliveryRights: WebDeliveryRights;
   saving: boolean;
   onSave: (patch: Partial<PublicWebProject>) => void;
 }) {
@@ -206,6 +222,15 @@ function DetailsCard({
   const [startDate, setStartDate] = useState(project.startDate ?? "");
   const [deadline, setDeadline] = useState(project.deadline ?? "");
 
+  // Tranca da entrega prevista. Uma data já gravada só se mexe com
+  // `canOverride`; uma por gravar só se põe com `canSet`. Quando o campo
+  // está trancado nunca enviamos um valor diferente do guardado, para um
+  // save de outro campo qualquer não bater no 403 da API.
+  const deliveryLocked = Boolean(project.deadline) && !deliveryRights.canOverride;
+  const canEditDelivery = project.deadline
+    ? deliveryRights.canOverride
+    : deliveryRights.canSet;
+
   const submit = () => {
     const assigneeName =
       assignees.find((a) => a.username === assignee)?.name ?? "Unassigned";
@@ -217,7 +242,7 @@ function DetailsCard({
       priority,
       status,
       startDate: startDate || null,
-      deadline: deadline || null,
+      deadline: canEditDelivery ? deadline || null : project.deadline,
     });
     setEditing(false);
   };
@@ -240,7 +265,15 @@ function DetailsCard({
             value={WEB_PRIORITY_META[project.priority].label}
           />
           <Meta label="Start date" value={formatDate(project.startDate)} />
-          <Meta label="Target launch" value={formatDate(project.deadline)} />
+          <Meta
+            label="Entrega prevista"
+            value={
+              project.deadline ? formatDate(project.deadline) : "Por definir"
+            }
+            icon={project.deadline ? Lock : undefined}
+            tone={project.deadline ? "locked" : "pending"}
+            hint={deliveryHint(project)}
+          />
           <Meta label="Status" value={WEB_STATUS_META[project.status].label} />
           <Meta label="Last updated" value={formatDateTime(project.updatedAt)} />
         </dl>
@@ -316,15 +349,49 @@ function DetailsCard({
               className="modal-input"
             />
           </Labeled>
-          <Labeled label="Target launch">
-            <input
-              type="date"
-              value={deadline}
-              onChange={(e) => setDeadline(e.target.value)}
-              className="modal-input"
-            />
+          <Labeled label="Entrega prevista">
+            {canEditDelivery ? (
+              <input
+                type="date"
+                value={deadline}
+                onChange={(e) => setDeadline(e.target.value)}
+                className="modal-input"
+              />
+            ) : (
+              <div className="modal-input flex items-center gap-2 text-white/45">
+                <Lock className="h-3.5 w-3.5 shrink-0" />
+                {project.deadline ? formatDate(project.deadline) : "Só o dept Web"}
+              </div>
+            )}
           </Labeled>
         </div>
+
+        {/* Porque é que o campo está como está. Três estados: trancado
+            (já foi posta), aberto-mas-definitivo (pôr agora tranca), e
+            override de SuperAdmin sobre uma data já comprometida. */}
+        {deliveryLocked ? (
+          <p className="-mt-1 inline-flex items-start gap-1.5 text-[11px] text-white/50">
+            <Lock className="mt-px h-3 w-3 shrink-0" />
+            {deliveryHint(project) ??
+              "A entrega prevista já foi definida e não pode ser alterada."}
+          </p>
+        ) : canEditDelivery && project.deadline ? (
+          <p className="-mt-1 inline-flex items-start gap-1.5 text-[11px] text-amber-200/85">
+            <ShieldCheck className="mt-px h-3 w-3 shrink-0" />
+            Estás a alterar uma entrega já comprometida — como SuperAdmin
+            podes, e a mudança fica no activity log com o teu nome.
+          </p>
+        ) : canEditDelivery ? (
+          <p className="-mt-1 inline-flex items-start gap-1.5 text-[11px] text-amber-200/85">
+            <Lock className="mt-px h-3 w-3 shrink-0" />
+            {WEB_DELIVERY_LOCKED_HINT}
+          </p>
+        ) : (
+          <p className="-mt-1 text-[11px] text-white/45">
+            A entrega prevista é definida pelo departamento Web.
+          </p>
+        )}
+
         <div className="flex items-center gap-2">
           <SaveButton saving={saving} onClick={submit} />
           <button
@@ -1324,13 +1391,50 @@ function CardHead({
   );
 }
 
-function Meta({ label, value }: { label: string; value: string }) {
+/** Quem trancou a entrega prevista e quando — `null` quando não há data,
+ *  ou quando o projeto é anterior à regra (v76.29) e por isso não tem
+ *  autor registado. */
+function deliveryHint(project: PublicWebProject): string | null {
+  if (!project.deadline) return null;
+  if (!project.deadlineSetByName) return "Trancada.";
+  const when = project.deadlineSetAt
+    ? ` a ${formatDateTime(project.deadlineSetAt)}`
+    : "";
+  return `Trancada por ${project.deadlineSetByName}${when}.`;
+}
+
+function Meta({
+  label,
+  value,
+  icon: Icon,
+  tone = "default",
+  hint,
+}: {
+  label: string;
+  value: string;
+  icon?: typeof Lock;
+  /** "locked" → compromisso gravado, "pending" → ainda por marcar. */
+  tone?: "default" | "locked" | "pending";
+  hint?: string | null;
+}) {
+  const valueTone =
+    tone === "locked"
+      ? "text-emerald-200"
+      : tone === "pending"
+        ? "text-amber-200/80"
+        : "text-white/85";
   return (
     <div>
       <dt className="text-[11px] uppercase tracking-[0.14em] text-white/40">
         {label}
       </dt>
-      <dd className="mt-0.5 text-[13.5px] text-white/85">{value}</dd>
+      <dd
+        className={`mt-0.5 inline-flex items-center gap-1.5 text-[13.5px] ${valueTone}`}
+      >
+        {Icon && <Icon className="h-3.5 w-3.5 shrink-0" />}
+        {value}
+      </dd>
+      {hint && <p className="mt-0.5 text-[10.5px] text-white/35">{hint}</p>}
     </div>
   );
 }

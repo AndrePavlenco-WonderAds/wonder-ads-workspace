@@ -11,6 +11,8 @@
 // send the user the new plain text out-of-band. Plain passwords live
 // only on Andre's desktop credentials file — never in this repo.
 
+import type { WebDeliveryRights } from "@/lib/web-shared";
+
 export type EmployeeCredential = {
   /** URL-safe identifier the user types into the login form. */
   username: string;
@@ -272,6 +274,38 @@ export function canEditDept(
   if (!username) return false;
   const row = findEmployeeByUsername(username);
   return editableDepts(row).includes(dept);
+}
+
+/** Quem pode mexer na DATA DE ENTREGA PREVISTA de um projeto Web.
+ *
+ *  A data é um compromisso do departamento que constrói, não um campo de
+ *  planeamento partilhado — por isso:
+ *
+ *  - `canSet`      → pôr a data num projeto que ainda não a tem. Web
+ *                    designers (dept "Web") + SuperAdmins. Consultores de
+ *                    SEO abrem e editam o board mas não comprometem datas.
+ *  - `canOverride` → corrigir uma data JÁ gravada. Só SuperAdmins: depois
+ *                    de posta, a data fica trancada para quem a pôs, e a
+ *                    correção de um engano passa pelo C-Level (e fica no
+ *                    activity log).
+ *
+ *  Isto é a fonte de verdade das duas pontas: as rotas
+ *  `/api/web/projects` gastam-na para aceitar ou recusar o write, e as
+ *  páginas passam o resultado ao board/detalhe para esconder ou trancar
+ *  o input. Nunca confiar só no lado do browser.
+ *
+ *  O tipo vive em `web-shared.ts` (livre de imports de servidor) para que
+ *  os componentes "use client" o possam importar sem puxar esta tabela de
+ *  hashes para o bundle. */
+export function webDeliveryRights(
+  row: Pick<EmployeeCredential, "dept" | "isAdmin"> | null | undefined,
+): WebDeliveryRights {
+  if (!row) return { canSet: false, canOverride: false };
+  const admin = Boolean(row.isAdmin);
+  return {
+    canSet: admin || row.dept === "Web",
+    canOverride: admin,
+  };
 }
 
 /** People a Web project can be assigned to — the web designers only

@@ -9,8 +9,9 @@
 
 import { NextResponse } from "next/server";
 import { getCurrentEmployee } from "@/lib/auth/server";
-import { accessibleDepts } from "@/lib/auth/credentials";
+import { accessibleDepts, webDeliveryRights } from "@/lib/auth/credentials";
 import {
+  deadlineWriteDenial,
   deleteProject,
   getProject,
   logActivity,
@@ -18,9 +19,11 @@ import {
   saveProject,
   toPublicProject,
   webStorageConfigured,
+  DEADLINE_DENIAL_MESSAGE,
   WEB_STATUS_LABEL,
   type WebProject,
 } from "@/lib/web-projects-store";
+import { formatDate } from "@/lib/dates";
 
 export const runtime = "nodejs";
 
@@ -59,8 +62,21 @@ function diffEntries(prev: WebProject, next: WebProject): string[] {
     out.push(`changed priority to ${next.priority}`);
   if (prev.startDate !== next.startDate)
     out.push(`updated start date`);
-  if (prev.deadline !== next.deadline) out.push(`updated launch date`);
+  // A data de entrega prevista NÃO entra aqui — tem entrada própria no
+  // log (ver PUT), porque é a única alteração do card que precisa de
+  // ficar identificada com autor e valores antigo/novo.
   return out;
+}
+
+/** Frase de log para uma mudança na data de entrega prevista. */
+function deadlineLogMessage(prev: WebProject, next: WebProject): string {
+  if (!next.deadline) {
+    return `destrancou a data de entrega prevista de "${next.name}" (era ${formatDate(prev.deadline)})`;
+  }
+  if (!prev.deadline) {
+    return `definiu a entrega prevista de "${next.name}" para ${formatDate(next.deadline)}`;
+  }
+  return `alterou a entrega prevista de "${next.name}" de ${formatDate(prev.deadline)} para ${formatDate(next.deadline)}`;
 }
 
 export async function PUT(
@@ -88,7 +104,23 @@ export async function PUT(
   } catch {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
-  const next = normaliseProject(body, id, prev);
+  // Tranca da data de entrega prevista. Recusamos o write inteiro em vez
+  // de ignorar o campo em silêncio: quem tentou mexer merece saber que
+  // não passou, e um board desatualizado que reenvie a data igual nem
+  // chega aqui (a comparação é contra o valor guardado).
+  const rights = webDeliveryRights(employee);
+  const denial = deadlineWriteDenial(body, prev, rights);
+  if (denial) {
+    return NextResponse.json(
+      { error: DEADLINE_DENIAL_MESSAGE[denial] },
+      { status: 403 },
+    );
+  }
+
+  const next = normaliseProject(body, id, prev, {
+    rights,
+    actor: { username: employee.username, name: employee.name },
+  });
   await saveProject(next);
 
   const actor = { actorUsername: employee.username, actorName: employee.name };
@@ -106,7 +138,18 @@ export async function PUT(
     });
   }
 
-  // 2) Field edits.
+  // 2) Data de entrega prevista — entrada própria, com autor e valores.
+  if (prev.deadline !== next.deadline) {
+    await logActivity({
+      projectId: id,
+      projectName: next.name,
+      ...actor,
+      kind: "edited",
+      message: deadlineLogMessage(prev, next),
+    });
+  }
+
+  // 3) Field edits.
   const edits = diffEntries(prev, next);
   if (edits.length > 0) {
     await logActivity({
@@ -118,7 +161,7 @@ export async function PUT(
     });
   }
 
-  // 3) Asset / credential changes (counts only — never the secrets).
+  // 4) Asset / credential changes (counts only — never the secrets).
   const prevAssetSig = assetSignature(prev);
   const nextAssetSig = assetSignature(next);
   if (prevAssetSig !== nextAssetSig) {

@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.29",
+    date: "2026-08-05",
+    title: "A entrega prevista passou a ser um compromisso, não um campo",
+    highlights: [
+      "**🔒 O «Target launch» dos cards do Web deixou de ser editável e passou a chamar-se *Entrega prevista*.** Era uma data como as outras: qualquer pessoa com acesso ao board a punha, e qualquer pessoa a empurrava para a frente quando o prazo apertava — o que, na prática, queria dizer que não havia prazo nenhum. Agora **grava-se uma vez e tranca**. O que muda não é o campo, é o que ele significa: passou a ser a data que o departamento Web assume, não a data que o board mostra hoje.",
+      "**✍️ Só o departamento Web a põe.** Mike, Gustavo, Renan e o Cylas — mais os SuperAdmins. Os consultores de SEO continuam a abrir e a editar tudo o resto no board (é para isso que lá têm acesso), mas **não comprometem uma data de entrega em nome de quem constrói o site**. Para eles o campo aparece trancado, e no formulário de criação nem sequer é desenhado.",
+      "**🛟 A correção de um engano existe, mas custa uma conversa.** Uma data trancada só um SuperAdmin a altera ou destranca — e quando o faz, o **activity log fica com o nome, a data antiga e a data nova**, em vez de um genérico «updated launch date». Um erro de dedo resolve-se; um prazo que escorrega duas semanas de cada vez, sem ninguém dar por isso, deixa de ser possível.",
+      "**👀 Um projeto sem data passou a dizê-lo no card.** Antes, sem data, a linha simplesmente não aparecia — e um card sem entrega marcada era indistinguível de um card que ninguém olhou. Agora lê-se **«Entrega por definir»** a amarelo, e a data comprometida aparece a verde com o cadeado e com quem a pôs. O board responde à pergunta que interessa de relance: **em que projetos é que ainda não nos comprometemos com nada?**",
+      "**🧱 A tranca é do servidor, não do ecrã.** Esconder o input trava enganos, não trava ninguém. Quem tentar mandar uma data sem direito a isso — form escondido, aba antiga aberta desde ontem, pedido à mão — leva **403 com a razão escrita**, e a data guardada nem chega a ser tocada. E um board desatualizado que reenvie a data igual continua a arrastar cards à vontade: só uma alteração *real* da data é que é avaliada.",
+    ],
+  },
+  {
     version: "76.28",
     date: "2026-08-04",
     title: "Um cliente, várias unidades — várias fichas do Google Business Profile",

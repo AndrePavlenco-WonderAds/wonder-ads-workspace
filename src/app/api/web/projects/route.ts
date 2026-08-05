@@ -9,8 +9,9 @@
 
 import { NextResponse } from "next/server";
 import { getCurrentEmployee } from "@/lib/auth/server";
-import { accessibleDepts } from "@/lib/auth/credentials";
+import { accessibleDepts, webDeliveryRights } from "@/lib/auth/credentials";
 import {
+  deadlineWriteDenial,
   getAllProjects,
   logActivity,
   newId,
@@ -18,6 +19,7 @@ import {
   saveProject,
   toPublicProject,
   webStorageConfigured,
+  DEADLINE_DENIAL_MESSAGE,
 } from "@/lib/web-projects-store";
 import {
   getClient,
@@ -78,8 +80,23 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
+  // Data de entrega prevista: já no ato de criar só o dept Web (e os
+  // SuperAdmins) a pode preencher — um consultor de SEO que abra o
+  // formulário cria o projeto sem data, para o Web a pôr depois.
+  const rights = webDeliveryRights(employee);
+  const denial = deadlineWriteDenial(body, null, rights);
+  if (denial) {
+    return NextResponse.json(
+      { error: DEADLINE_DENIAL_MESSAGE[denial] },
+      { status: 403 },
+    );
+  }
+
   const id = newId("p");
-  let project = normaliseProject(body, id, null);
+  let project = normaliseProject(body, id, null, {
+    rights,
+    actor: { username: employee.username, name: employee.name },
+  });
 
   // Client registry integration. When the project is tied to a client
   // slug, pull that client's saved profile so the team stops re-entering

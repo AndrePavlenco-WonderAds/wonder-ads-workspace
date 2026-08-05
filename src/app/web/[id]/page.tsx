@@ -3,7 +3,11 @@ import { PageShell } from "@/components/page-shell";
 import { AccessDenied } from "@/components/access-denied";
 import { WebProjectDetail } from "@/components/web-project-detail";
 import { getCurrentEmployee } from "@/lib/auth/server";
-import { accessibleDepts, getWebAssignees } from "@/lib/auth/credentials";
+import {
+  accessibleDepts,
+  getWebAssignees,
+  webDeliveryRights,
+} from "@/lib/auth/credentials";
 import { getProject, toPublicProject } from "@/lib/web-projects-store";
 
 export const dynamic = "force-dynamic";
@@ -50,6 +54,7 @@ export default async function WebProjectPage({
         initialProject={toPublicProject(project)}
         assignees={getWebAssignees()}
         currentUser={{ username: employee.username, name: employee.name }}
+        deliveryRights={webDeliveryRights(employee)}
       />
     </PageShell>
   );
