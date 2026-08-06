@@ -13,6 +13,23 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.30",
+    date: "2026-08-06",
+    title: "A Formação passou a ter uma sala de exames — e o hub passou a dizer o que fazer",
+    highlights: [
+      "**⏱ Os exames de fase passaram a ser exames a sério: 60 minutos, cronometrados pelo servidor, sem volta atrás.** Antes, abrir um exame e fechar o separador não custava nada — voltava-se no dia seguinte e estava tudo como estava. Agora cada exame começa por uma folha de rosto que escreve as regras em números e pede confirmação **duas vezes** (botão + diálogo), porque a diferença entre «abri sem querer» e «sabia no que ia entrar» é uma tentativa de carreira. À confirmação, o **servidor carimba o prazo** e a partir daí só ele decide: recarregar a página devolve o tempo que sobrou (nunca 60 minutos novos), mudar a hora do sistema não dá um minuto a ninguém, e sair não pára o relógio.",
+      "**⬛ Enquanto o exame corre, ele toma o ecrã.** A navegação do workspace desaparece, o browser pergunta antes de fechar, e cada ida a outro separador fica contada e visível no topo («Saíste do exame 2 vezes — fica registado, e o cronómetro nunca parou»). Não é uma prisão — nada no browser impede ninguém de sair — é o ecrã deixar de sugerir que sair é uma coisa normal a fazer.",
+      "**⏳ Acabar o tempo é definitivo, e a folha vale o que lá estava.** A folha é gravada no servidor de dez em dez segundos — e imediatamente quando a pessoa muda de separador, porque o Chrome estrangula os temporizadores em segundo plano e era exatamente aí que se perdia a última resposta. Ao apito, um invigilador fecha a sessão, corrige o que estava respondido e grava a tentativa: quem não respondeu a nada leva 0, que é a nota certa para uma folha em branco. O exame **não se reabre**. E quem entrega no último segundo não perde o exame por o pedido ter demorado 300 ms — há dez segundos de folga entre o apito e a entrega.",
+      "**📅 A data de entrada aparece agora no topo da Formação, ao lado do nome — «Entrou a 16/06/2026 · dia 52 na WonderAds».** É a âncora de tudo o que aquela página decide (os seis exames abrem contados a partir dela), por isso deixou de viver escondida num painel de admin. Quem não a tem definida vê porquê e com quem falar.",
+      "**🔐 Só a C-suite define essa data — e passou a haver um só sítio onde se define.** A **Data de entrada do Team Roster** (`/admin/employees`) é agora a mesma que arranca o relógio dos exames; as linhas com login no workspace mostram um selo `Exam clock` a dizer isso em voz alta. Duas datas de entrada por pessoa era uma a mais, e a errada seria sempre a que ninguém se lembrava de atualizar.",
+      "**🧠 «Fundações WonderAds» passou a chamar-se «Cultura e Mindset WonderAds»** e passou a ocupar a **linha inteira** do hub. Não é uma decisão de grelha, é hierarquia: é o módulo que toda a gente faz, o que tranca os outros e o único que diz o que a casa é. Meia linha, ao lado de uma especialização, dizia o contrário.",
+      "**📊 A barra de progresso deixou de medir uma percentagem e passou a mostrar as aulas.** Antes havia um segmento por capítulo, todos do mesmo tamanho — um capítulo de uma aula ocupava tanto espaço como um de oito, e a barra respondia «estás a meio de qualquer coisa». Agora **cada aula é uma marca**, agrupadas por capítulo (com o nome do capítulo por baixo) e com cada grupo proporcional ao seu tamanho: conta-se com o dedo quantas já passaram e quantas faltam. Por baixo, a legenda em palavras — vistas / por ver / por publicar.",
+      "**🧭 O hub da Formação foi reorganizado à volta de três perguntas.** *Onde estou* (nome, data de entrada, dia N, percentagem global, situação) → *o que faço já* (**uma** ação, grande; e se houver um exame aberto é ele que ganha ao resto, porque é a única coisa da página com prazo a andar) → *e o resto* (percurso, exames, rever).",
+      "**🔎 Nova zona «Rever» — o índice pesquisável de tudo o que já foi dado.** Metade das vezes que alguém abre a Formação não é para avançar: é porque tem uma reunião daqui a dez minutos e quer rever a aula do onboarding. Escreve-se «onboarding» e está lá, agrupado por capítulo, com separador *Já vistas* / *Todas*.",
+      "**🎨 A Formação passou a usar as pastilhas claras da tabela de Pending Review do lado do cliente.** No tema escuro, um estado escrito a cinzento sobre cinzento desaparece; aquelas pastilhas pastel têm o problema oposto e resolvem-no. Como são as únicas manchas claras do ecrã, o olho vai lá primeiro — e o que está lá é sempre a mesma coisa: o **estado**.",
+    ],
+  },
+  {
     version: "76.29",
     date: "2026-08-05",
     title: "A entrega prevista passou a ser um compromisso, não um campo",

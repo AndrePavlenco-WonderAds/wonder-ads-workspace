@@ -14,6 +14,7 @@ import {
   X,
   Building2,
   ChevronDown,
+  GraduationCap,
   Trash2,
 } from "lucide-react";
 import { formatMoney } from "@/lib/admin-clients-store";
@@ -43,6 +44,11 @@ export type EmployeePortfolio = {
 type Props = {
   initial: AdminEmployeeRecord;
   portfolio: EmployeePortfolio;
+  /** Workspace login this roster row maps to, when there is one. Resolved on
+   *  the server (the credential table carries password hashes and must never
+   *  reach the browser) and used here only to say out loud that saving the
+   *  starting date also moves that person's phase exams. */
+  examClockUser?: string | null;
   onSaved?: (record: AdminEmployeeRecord) => void;
   onDeleted?: (id: string) => void;
 };
@@ -80,6 +86,7 @@ export const STATUS_LABEL: Record<EmployeeStatus, string> = {
 export function AdminEmployeeRow({
   initial,
   portfolio,
+  examClockUser = null,
   onSaved,
   onDeleted,
 }: Props) {
@@ -344,7 +351,8 @@ export function AdminEmployeeRow({
         </div>
       </td>
 
-      {/* Starting date */}
+      {/* Starting date — also the anchor of this person's exam clock when
+          they have a workspace login (see `examClockUser`). */}
       <td className="px-3 py-3.5">
         <input
           type="date"
@@ -352,13 +360,22 @@ export function AdminEmployeeRow({
           onChange={(e) =>
             setDraft({ ...draft, startingDate: e.target.value || null })
           }
-          className="w-full rounded-md border border-white/10 bg-white/[0.04] px-2 py-1.5 text-[12px] text-white outline-none transition focus:border-white/30"
+          className="w-full rounded-md border border-white/10 bg-white/[0.04] px-2 py-1.5 text-[12px] text-white outline-none transition [color-scheme:dark] focus:border-white/30"
         />
         <div className="mt-1 text-[10.5px] text-white/40">
           {draft.startingDate
             ? `Joined ${formatDate(draft.startingDate)}`
             : "Not set"}
         </div>
+        {examClockUser && (
+          <div
+            className="mt-1.5 inline-flex items-center gap-1 rounded-md border border-[#783DF5]/35 bg-[#783DF5]/12 px-1.5 py-0.5 text-[9.5px] font-semibold uppercase tracking-[0.1em] text-[#d4c4ff]"
+            title={`Saving this date also moves ${examClockUser}'s six phase exams in Formação — week 1 opens 7 days after it, the final one at 90 days.`}
+          >
+            <GraduationCap className="h-2.5 w-2.5" />
+            Exam clock
+          </div>
+        )}
       </td>
 
       {/* Monthly salary — EUR only, emphasized, rose when empty */}

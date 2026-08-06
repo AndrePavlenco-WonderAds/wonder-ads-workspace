@@ -64,7 +64,7 @@ export const EXAM_PHASES: ExamPhase[] = [
     label: "Semana 1",
     milestone: "7 dias",
     unlockDays: 7,
-    title: "Exame 1 — Fundações e padrão da casa",
+    title: "Exame 1 — Cultura, mindset e padrão da casa",
     description:
       "O que a WonderAds é, o que recusa fazer, e o padrão de exigência que se espera de quem cá trabalha a partir do dia 1.",
     passingScore: 85,

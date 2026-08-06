@@ -242,6 +242,155 @@ export function StatTile({
   );
 }
 
+/** Pastilha clara — o vocabulário de cor da tabela de Pending Review do lado
+ *  do cliente, trazido para dentro do workspace.
+ *
+ *  PORQUÊ: no tema escuro, um estado escrito a `text-white/45` sobre
+ *  `bg-white/[0.03]` desaparece. As pastilhas pastel do lado do cliente têm o
+ *  problema oposto e resolvem-no — fundo claro, texto escuro, contraste alto —
+ *  e é por isso que aquela tabela se lê num relance. São as únicas manchas
+ *  claras da página, por isso o olho vai lá primeiro: é onde está o ESTADO. */
+export const BRIGHT_TONES = {
+  purple: { bg: "#f3e8ff", text: "#581c87" },
+  indigo: { bg: "#e0e7ff", text: "#3730a3" },
+  green: { bg: "#d1fae5", text: "#065f46" },
+  amber: { bg: "#fef3c7", text: "#92400e" },
+  rose: { bg: "#fee2e2", text: "#991b1b" },
+  sky: { bg: "#dbeafe", text: "#1e40af" },
+  slate: { bg: "#e5e7eb", text: "#374151" },
+} as const;
+
+export type BrightTone = keyof typeof BRIGHT_TONES;
+
+export function BrightPill({
+  tone = "purple",
+  icon,
+  children,
+}: {
+  tone?: BrightTone;
+  icon?: ReactNode;
+  children: ReactNode;
+}) {
+  const c = BRIGHT_TONES[tone];
+  return (
+    <span
+      className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.11em]"
+      style={{ backgroundColor: c.bg, color: c.text }}
+    >
+      {icon}
+      {children}
+    </span>
+  );
+}
+
+/** Fita de AULAS de um módulo — uma marca por aula, agrupadas por capítulo.
+ *
+ *  DESENHO — A BARRA TEM DE DIZER QUANTAS AULAS FALTAM, não uma percentagem.
+ *  A fita antiga tinha um segmento por capítulo, todos do mesmo tamanho: um
+ *  capítulo de uma aula ocupava tanto espaço como um de oito, e a barra
+ *  respondia "estás a meio de qualquer coisa". Aqui cada aula vale uma marca e
+ *  cada capítulo ocupa o espaço proporcional às aulas que tem — a fita passa a
+ *  ser contável com o dedo: estas já vi, estas faltam.
+ *
+ *  As pausas entre grupos são as fronteiras dos capítulos. É o que permite ler
+ *  "estou na segunda aula do capítulo 3" sem abrir nada. */
+export function LessonRibbon({
+  modules,
+  size = "md",
+  /** Escreve o nome do capítulo por baixo do seu grupo de marcas. Só faz
+   *  sentido no cartão largo — num cartão de meia coluna os nomes cortam-se
+   *  uns aos outros e passam a ruído. */
+  withLabels = false,
+}: {
+  modules: ModuleState[];
+  size?: "sm" | "md";
+  withLabels?: boolean;
+}) {
+  const h = size === "sm" ? "h-2" : "h-3";
+  return (
+    <div className={`flex items-stretch ${size === "sm" ? "gap-2.5" : "gap-4"}`}>
+      {modules.map((m) => {
+        // Um capítulo sem aulas nenhumas ainda ocupa lugar na fita: é matéria
+        // do programa, e escondê-lo fazia o curso parecer mais curto do que é.
+        const count = Math.max(1, m.lessons.length);
+        return (
+          <span
+            key={m.module.id}
+            className="flex min-w-0 flex-col gap-1.5"
+            style={{ flex: count }}
+            title={`${m.module.title} — ${m.watchedLessons}/${m.lessons.length} aulas${
+              m.missingVideos > 0 ? ` · ${m.missingVideos} por publicar` : ""
+            }`}
+          >
+            {/* As marcas. Espaçamento largo de propósito: o que interessa não
+                é a barra ser contínua, é conseguir contar as aulas com o dedo. */}
+            <span className="flex items-stretch gap-[3px]">
+              {m.lessons.length === 0 ? (
+                <span
+                  className={`${h} flex-1 rounded-[3px] border border-dashed border-white/15`}
+                />
+              ) : (
+                m.lessons.map((l) => (
+                  <span
+                    key={l.lesson.id}
+                    className={`${h} min-w-[4px] flex-1 rounded-[3px] transition-colors ${
+                      l.watched
+                        ? "brand-gradient-bg"
+                        : l.comingSoon
+                          ? "bg-amber-400/30"
+                          : m.status === "locked"
+                            ? "bg-white/[0.08]"
+                            : "bg-white/[0.2]"
+                    }`}
+                  />
+                ))
+              )}
+            </span>
+            {withLabels && (
+              <span className="truncate text-[10px] font-medium leading-tight text-white/35">
+                {m.module.title}
+              </span>
+            )}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
+/** A legenda da fita, em palavras. Sem isto, três tons de cinzento numa barra
+ *  são uma adivinha. */
+export function LessonRibbonLegend({
+  watched,
+  total,
+  comingSoon,
+}: {
+  watched: number;
+  total: number;
+  comingSoon: number;
+}) {
+  return (
+    <div className="tabular flex flex-wrap items-center gap-x-3.5 gap-y-1 text-[11.5px] text-white/55">
+      <span className="inline-flex items-center gap-1.5">
+        <span className="brand-gradient-bg h-2 w-2 rounded-full" />
+        {watched} vista{watched === 1 ? "" : "s"}
+      </span>
+      <span className="inline-flex items-center gap-1.5">
+        <span className="h-2 w-2 rounded-full bg-white/[0.22]" />
+        {Math.max(0, total - watched - comingSoon)} por ver
+      </span>
+      {comingSoon > 0 && (
+        <span className="inline-flex items-center gap-1.5 text-amber-200/70">
+          <span className="h-2 w-2 rounded-full bg-amber-400/40" />
+          {comingSoon} por publicar
+        </span>
+      )}
+      <span className="text-white/30">·</span>
+      <span className="text-white/40">{total} aulas no total</span>
+    </div>
+  );
+}
+
 /** Fita de capítulos de um módulo — um segmento por capítulo, colorido pelo
  *  estado. Dá a leitura da jornada inteira num relance, sem scroll. */
 export function TrackJourney({ modules }: { modules: ModuleState[] }) {

@@ -15,6 +15,7 @@ import {
   getStartDates,
   resolveStartDate,
 } from "@/lib/training/start-dates-store";
+import { reconcileExpiredExams } from "@/lib/training/exam-proctor";
 import { computeExamJourney, type ExamJourney } from "@/lib/training/exams";
 import { computeUserTraining, type TrackState } from "@/lib/training/progress";
 import type { TrainingTrack } from "@/lib/training/catalog";
@@ -46,7 +47,7 @@ export async function getTrainingContext(): Promise<TrainingContext | null> {
   const employee = await getCurrentEmployee();
   if (!employee) return null;
 
-  const [tracks, enrollments, progress, attempts, startDates] =
+  const [tracks, enrollments, progress, recordedAttempts, startDates] =
     await Promise.all([
       getTrainingCatalog(),
       getEnrollments(),
@@ -54,6 +55,15 @@ export async function getTrainingContext(): Promise<TrainingContext | null> {
       getQuizAttempts(employee.username),
       getStartDates(),
     ]);
+
+  // O invigilador passa por aqui antes de qualquer página desenhar seja o que
+  // for: um exame cujo tempo acabou enquanto a pessoa estava fora é fechado e
+  // corrigido AGORA. Sem isto, quem abandonasse o exame a meio voltava no dia
+  // seguinte e encontrava-o outra vez aberto — e o cronómetro não decidia nada.
+  const burnt = await reconcileExpiredExams(employee.username, recordedAttempts);
+  const attempts = burnt.length
+    ? [...recordedAttempts, ...burnt]
+    : recordedAttempts;
 
   const specializationSlugs = resolveTrackSlugs(
     employee.username,

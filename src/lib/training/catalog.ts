@@ -185,7 +185,7 @@ function quizFor(moduleId: string, title: string): TrainingQuiz {
 
 const COMMON_TRACK: TrainingTrack = {
   slug: COMMON_TRACK_SLUG,
-  name: "Fundações WonderAds",
+  name: "Cultura e Mindset WonderAds",
   description:
     "Obrigatório para toda a equipa, independentemente do departamento. O propósito da empresa, como nasceu, o mindset que se espera de quem cá trabalha, o objetivo e como lá queremos chegar.",
   order: 1,

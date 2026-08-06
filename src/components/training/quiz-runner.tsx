@@ -14,8 +14,18 @@
 // A correção NUNCA é calculada aqui — as opções chegam sem indicação de qual
 // é a certa. O que se mostra depois de submeter vem inteiro da resposta do
 // servidor.
+//
+// MODO INVIGILADO (`proctor`). Quando o exame tem cronómetro, este componente
+// ganha mais três responsabilidades — e nenhuma delas decide seja o que for,
+// porque o relógio que conta é o do servidor:
+//   · mostra o tempo que falta, calculado sobre o `deadlineAt` do servidor e
+//     corrigido pelo desvio do relógio local (mudar a hora do sistema não dá
+//     um minuto a ninguém);
+//   · grava a folha periodicamente, para que "acabar o tempo fica como está o
+//     progresso" tenha alguma coisa concreta para recolher;
+//   · entrega sozinho quando o tempo chega a zero.
 
-import { useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -26,9 +36,33 @@ import {
   PartyPopper,
   RotateCcw,
   ShieldCheck,
+  TimerOff,
   XCircle,
 } from "lucide-react";
-import type { PublicQuestion } from "@/lib/training/grading";
+import type { PublicQuestion, SubmittedAnswer } from "@/lib/training/grading";
+
+/** Tudo o que o modo invigilado precisa de saber. Ausente = quiz normal. */
+export type ProctorConfig = {
+  /** Instante (ms, relógio do SERVIDOR) em que a folha é recolhida. */
+  deadlineAt: number;
+  /** `serverNow - clientNow` no momento do arranque. Somado ao relógio local
+   *  dá a hora do servidor sem pedir nada a mais. */
+  clockOffsetMs: number;
+  /** Onde gravar o snapshot da folha. */
+  progressUrl: string;
+  /** O que já estava gravado — quem recarrega a página não recomeça em branco. */
+  initialAnswers?: SubmittedAnswer[];
+};
+
+/** De quanto em quanto tempo a folha é gravada no servidor. */
+const AUTOSAVE_MS = 10_000;
+
+function formatClock(ms: number): string {
+  const total = Math.max(0, Math.ceil(ms / 1000));
+  const m = Math.floor(total / 60);
+  const s = total % 60;
+  return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}
 
 type CorrectionRow = {
   questionId: string;
@@ -68,6 +102,12 @@ export function QuizRunner({
   backLabel = "Voltar à sequência",
   /** Frase que o ecrã de resultado usa quando se passa (o que isto abre). */
   gateLine,
+  retryHref,
+  /** Presente = exame com cronómetro. Ver `ProctorConfig`. */
+  proctor,
+  /** Chamado quando a folha sai da mesa — entregue ou recolhida ao apito.
+   *  É o sinal para a consola desmontar o modo de bloqueio do ecrã. */
+  onFinished,
 }: {
   quizId: string;
   questions: PublicQuestion[];
@@ -83,17 +123,59 @@ export function QuizRunner({
   submitUrl?: string;
   backLabel?: string;
   gateLine?: string;
+  proctor?: ProctorConfig | null;
+  onFinished?: () => void;
+  /** Para onde vai o botão de nova tentativa num exame invigilado. Uma nova
+   *  tentativa é uma sessão nova, com cronómetro novo — por isso passa
+   *  obrigatoriamente pela página do exame, e não por um `setState` aqui. */
+  retryHref?: string;
 }) {
   const router = useRouter();
   const isExam = variant === "exam";
   const noun = isExam ? "exame" : "quiz";
   const endpoint = submitUrl ?? `/api/formacao/quiz/${quizId}/submit`;
   const startedAt = useRef(Date.now());
-  const [answers, setAnswers] = useState<Record<string, string[]>>({});
-  const [texts, setTexts] = useState<Record<string, string>>({});
+
+  // O que já estava gravado no servidor, reconstruído no formato do ecrã.
+  const [answers, setAnswers] = useState<Record<string, string[]>>(() => {
+    const seed: Record<string, string[]> = {};
+    for (const a of proctor?.initialAnswers ?? []) {
+      if (a.optionIds?.length) seed[a.questionId] = [...a.optionIds];
+    }
+    return seed;
+  });
+  const [texts, setTexts] = useState<Record<string, string>>(() => {
+    const seed: Record<string, string> = {};
+    for (const a of proctor?.initialAnswers ?? []) {
+      if (a.text) seed[a.questionId] = a.text;
+    }
+    return seed;
+  });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<Result | null>(null);
+  /** O tempo acabou sem entrega possível — a folha foi recolhida como estava. */
+  const [timeUp, setTimeUp] = useState(false);
+  /** Quantas vezes a pessoa saiu do separador. Não bloqueia; fica no registo. */
+  const [awayCount, setAwayCount] = useState(0);
+  /** Relógio local, só para redesenhar o contador de segundo a segundo. */
+  const [tick, setTick] = useState(() => Date.now());
+
+  const msLeft = proctor
+    ? proctor.deadlineAt - (tick + proctor.clockOffsetMs)
+    : null;
+  const isProctored = Boolean(proctor);
+  const locked = isProctored && (timeUp || Boolean(result));
+
+  // `proctor` e `onFinished` chegam como literais criados a cada render do
+  // componente pai. Se os efeitos dependessem deles diretamente, o intervalo
+  // de gravação era destruído e recriado a cada tecla — e o `cleanup` gravava
+  // a folha de cada vez. Fica tudo em refs; os efeitos dependem só de valores
+  // estáveis.
+  const proctorRef = useRef(proctor);
+  proctorRef.current = proctor;
+  const onFinishedRef = useRef(onFinished);
+  onFinishedRef.current = onFinished;
 
   const answeredCount = useMemo(
     () =>
@@ -106,8 +188,19 @@ export function QuizRunner({
   );
   const allAnswered = answeredCount === questions.length;
 
+  /** A folha, no formato que o servidor lê. */
+  const sheet = useCallback(
+    (): SubmittedAnswer[] =>
+      questions.map((q) => ({
+        questionId: q.id,
+        optionIds: answers[q.id] ?? [],
+        text: texts[q.id] ?? null,
+      })),
+    [questions, answers, texts],
+  );
+
   function toggle(q: PublicQuestion, optionId: string) {
-    if (result) return;
+    if (result || locked) return;
     setAnswers((prev) => {
       const current = prev[q.id] ?? [];
       if (q.type === "multi_select") {
@@ -122,36 +215,142 @@ export function QuizRunner({
     });
   }
 
-  async function submit() {
-    setSubmitting(true);
-    setError(null);
+  const submit = useCallback(
+    async function submit() {
+      setSubmitting(true);
+      setError(null);
+      try {
+        const res = await fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            startedAt: startedAt.current,
+            answers: sheet(),
+          }),
+        });
+        const data = (await res.json()) as Partial<Result> & {
+          error?: string;
+          expired?: boolean;
+        };
+        if (!res.ok) {
+          // A folha já tinha sido recolhida. Não é um erro a corrigir — é o
+          // resultado, e o que se mostra a seguir vem do servidor.
+          if (data.expired) {
+            setTimeUp(true);
+            onFinishedRef.current?.();
+            router.refresh();
+            return;
+          }
+          setError(data.error ?? `Não foi possível submeter o ${noun}.`);
+          return;
+        }
+        setResult(data as Result);
+        onFinishedRef.current?.();
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        router.refresh();
+      } catch {
+        setError("Falha de rede — tenta outra vez.");
+      } finally {
+        setSubmitting(false);
+      }
+    },
+    [endpoint, noun, router, sheet],
+  );
+
+  // ---- Invigilação ------------------------------------------------------
+  // Um tique por segundo, só para o contador andar. Nada aqui decide nada: a
+  // decisão é sempre do `deadlineAt` que o servidor carimbou.
+  useEffect(() => {
+    if (!isProctored || locked) return;
+    const id = setInterval(() => setTick(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [isProctored, locked]);
+
+  // Entrega automática ao apito. Tenta submeter na mesma — se chegar dentro da
+  // folga do servidor conta como entrega; se não, o servidor responde
+  // `expired` e a folha é a que estava gravada.
+  const autoSubmitted = useRef(false);
+  useEffect(() => {
+    if (!isProctored || locked || msLeft === null || msLeft > 0) return;
+    if (autoSubmitted.current) return;
+    autoSubmitted.current = true;
+    void submit();
+  }, [isProctored, locked, msLeft, submit]);
+
+  // Grava a folha de dez em dez segundos. É o que "fica como está o progresso"
+  // significa na prática — sem isto, quem fecha o portátil aos 55 minutos
+  // levava zero, que é o resultado de um bug e não o resultado do exame.
+  const sheetRef = useRef(sheet);
+  sheetRef.current = sheet;
+  const awayRef = useRef(0);
+  awayRef.current = awayCount;
+  const saveSheet = useCallback(async () => {
+    const config = proctorRef.current;
+    if (!config) return;
     try {
-      const res = await fetch(endpoint, {
+      const res = await fetch(config.progressUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          startedAt: startedAt.current,
-          answers: questions.map((q) => ({
-            questionId: q.id,
-            optionIds: answers[q.id] ?? [],
-            text: texts[q.id] ?? null,
-          })),
+          answers: sheetRef.current(),
+          focusLossCount: awayRef.current,
         }),
       });
-      const data = (await res.json()) as Partial<Result> & { error?: string };
-      if (!res.ok) {
-        setError(data.error ?? `Não foi possível submeter o ${noun}.`);
+      // A resposta do servidor manda sobre o relógio local. Se a sessão já lá
+      // está fechada — porque o prazo passou, ou porque foi entregue noutro
+      // separador — não vale a pena continuar a escrever nem a fingir que o
+      // exame decorre.
+      if (res.status === 409) {
+        setTimeUp(true);
+        onFinishedRef.current?.();
         return;
       }
-      setResult(data as Result);
-      window.scrollTo({ top: 0, behavior: "smooth" });
-      router.refresh();
+      const data = (await res.json()) as { expired?: boolean };
+      if (data.expired) {
+        setTimeUp(true);
+        onFinishedRef.current?.();
+      }
     } catch {
-      setError("Falha de rede — tenta outra vez.");
-    } finally {
-      setSubmitting(false);
+      /* A rede pode falhar; o próximo ciclo volta a tentar. */
     }
-  }
+  }, []);
+
+  useEffect(() => {
+    if (!isProctored || locked) return;
+    const id = setInterval(() => void saveSheet(), AUTOSAVE_MS);
+    return () => {
+      clearInterval(id);
+      // Última gravação ao sair do ecrã — inclui fechar o separador.
+      void saveSheet();
+    };
+  }, [isProctored, locked, saveSheet]);
+
+  // Sair não pausa nada, mas também não é para acontecer por engano: o browser
+  // pergunta antes de fechar, e cada ida a outro separador fica contada.
+  useEffect(() => {
+    if (!isProctored || locked) return;
+    function beforeUnload(e: BeforeUnloadEvent) {
+      e.preventDefault();
+      e.returnValue = "";
+    }
+    function onVisibility() {
+      if (document.visibilityState !== "hidden") return;
+      setAwayCount((n) => n + 1);
+      // Grava JÁ. O Chrome estrangula os temporizadores de um separador em
+      // segundo plano (chegam a correr uma vez por minuto), por isso confiar
+      // só no intervalo deixava um buraco de um minuto exatamente no momento
+      // em que a pessoa se levanta e o portátil adormece. Este é o instante
+      // em que o snapshot mais interessa.
+      awayRef.current += 1;
+      void saveSheet();
+    }
+    window.addEventListener("beforeunload", beforeUnload);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.removeEventListener("beforeunload", beforeUnload);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [isProctored, locked, saveSheet]);
 
   function retry() {
     setResult(null);
@@ -160,6 +359,34 @@ export function QuizRunner({
     setError(null);
     startedAt.current = Date.now();
     window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  // ---- Tempo esgotado ----
+  // A folha foi recolhida pelo invigilador. Não há aqui nada para clicar a
+  // não ser sair: o resultado desta tentativa está na Formação, corrigido
+  // sobre o que estava respondido no último minuto.
+  if (timeUp && !result) {
+    return (
+      <div className="rounded-2xl border border-rose-400/35 bg-rose-500/[0.08] p-7 text-center">
+        <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-rose-500/15 text-rose-200">
+          <TimerOff className="h-7 w-7" />
+        </span>
+        <p className="mt-4 text-lg font-semibold text-white">
+          Tempo esgotado
+        </p>
+        <p className="mx-auto mt-2 max-w-md text-[13px] leading-relaxed text-rose-100/75">
+          O cronómetro chegou a zero e a folha foi recolhida como estava. Vale
+          o que já lá estava respondido — o resto conta como não respondido.
+          Esta tentativa está fechada e não se reabre.
+        </p>
+        <Link
+          href={trackHref}
+          className="mt-5 inline-flex items-center gap-2 rounded-xl border border-white/15 px-4 py-2.5 text-[13px] font-medium text-white/80 transition hover:border-white/35 hover:text-white"
+        >
+          {backLabel}
+        </Link>
+      </div>
+    );
   }
 
   // ---- Resultado ----
@@ -264,6 +491,19 @@ export function QuizRunner({
                   Continuar
                   <ArrowRight className="h-4 w-4" />
                 </Link>
+              ) : proctor ? (
+                // Num exame invigilado a tentativa seguinte é uma sessão nova,
+                // com cronómetro novo. Volta-se à folha de rosto do exame e
+                // carrega-se outra vez em "Começar" — de olhos abertos.
+                !blocked && (
+                  <Link
+                    href={retryHref ?? trackHref}
+                    className="brand-gradient-bg inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-[13px] font-semibold text-white transition hover:brightness-110"
+                  >
+                    <RotateCcw className="h-4 w-4" />
+                    Nova tentativa
+                  </Link>
+                )
               ) : (
                 <button
                   type="button"
@@ -357,10 +597,42 @@ export function QuizRunner({
   }
 
   // ---- Por responder ----
+  // Num exame invigilado a entrega nunca está desativada: entregar com
+  // perguntas por responder é uma escolha legítima (e às vezes a única, com o
+  // relógio a andar). O que a barra faz é dizer o preço dessa escolha.
+  const canSubmit = proctor ? !submitting : allAnswered && !submitting;
+  const urgent = msLeft !== null && msLeft <= 5 * 60_000;
+  const critical = msLeft !== null && msLeft <= 60_000;
+
   return (
     <div className="space-y-5">
-      <div className="sticky top-16 z-20 rounded-xl border border-white/10 bg-[color:var(--background)]/90 px-4 py-3 backdrop-blur-md">
+      <div
+        className={`sticky z-20 rounded-xl border px-4 py-3 backdrop-blur-md ${
+          proctor ? "top-2" : "top-16"
+        } ${
+          critical
+            ? "border-rose-400/50 bg-rose-950/70"
+            : urgent
+              ? "border-amber-400/40 bg-amber-950/50"
+              : "border-white/10 bg-[color:var(--background)]/90"
+        }`}
+      >
         <div className="flex flex-wrap items-center gap-3">
+          {msLeft !== null && (
+            <span
+              className={`tabular inline-flex shrink-0 items-center gap-2 rounded-lg px-3 py-1.5 text-[19px] font-bold leading-none tracking-tight ${
+                critical
+                  ? "animate-pulse bg-rose-500/20 text-rose-100"
+                  : urgent
+                    ? "bg-amber-500/15 text-amber-100"
+                    : "bg-white/[0.06] text-white"
+              }`}
+              aria-live="off"
+              title="Tempo que falta — carimbado pelo servidor"
+            >
+              {formatClock(msLeft)}
+            </span>
+          )}
           <div className="h-1.5 min-w-[120px] flex-1 overflow-hidden rounded-full bg-white/10">
             <div
               className="brand-gradient-bg h-1.5 rounded-full transition-all duration-300"
@@ -377,14 +649,30 @@ export function QuizRunner({
           </span>
           <button
             type="button"
-            onClick={submit}
-            disabled={!allAnswered || submitting}
+            onClick={() => {
+              if (proctor && !allAnswered) {
+                const missing = questions.length - answeredCount;
+                const ok = window.confirm(
+                  `Faltam ${missing} pergunta(s) por responder. Entregar assim conta como erradas. Entregar mesmo?`,
+                );
+                if (!ok) return;
+              }
+              void submit();
+            }}
+            disabled={!canSubmit}
             className="brand-gradient-bg inline-flex shrink-0 items-center gap-2 rounded-lg px-4 py-2 text-[12.5px] font-semibold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
           >
             {submitting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-            Submeter
+            {proctor ? "Entregar" : "Submeter"}
           </button>
         </div>
+        {proctor && awayCount > 0 && (
+          <p className="mt-2 text-[11px] font-medium text-amber-200/80">
+            Saíste do exame {awayCount}{" "}
+            {awayCount === 1 ? "vez" : "vezes"} — fica registado, e o
+            cronómetro nunca parou.
+          </p>
+        )}
       </div>
 
       {error && (
@@ -420,6 +708,7 @@ export function QuizRunner({
                     onChange={(e) =>
                       setTexts((p) => ({ ...p, [q.id]: e.target.value }))
                     }
+                    disabled={locked}
                     rows={4}
                     placeholder="A tua resposta…"
                     className="mt-3 w-full rounded-lg border border-white/12 bg-white/[0.04] px-3 py-2 text-sm text-white outline-none transition placeholder:text-white/30 focus:border-[#783DF5]/60"
@@ -468,13 +757,22 @@ export function QuizRunner({
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[0.02] px-5 py-4">
         <p className="text-[12.5px] text-white/50">
           {allAnswered
-            ? "Tudo respondido. Podes submeter."
+            ? `Tudo respondido. Podes ${proctor ? "entregar" : "submeter"}.`
             : `Faltam ${questions.length - answeredCount} pergunta(s).`}
         </p>
         <button
           type="button"
-          onClick={submit}
-          disabled={!allAnswered || submitting}
+          onClick={() => {
+            if (proctor && !allAnswered) {
+              const missing = questions.length - answeredCount;
+              const ok = window.confirm(
+                `Faltam ${missing} pergunta(s) por responder. Entregar assim conta como erradas. Entregar mesmo?`,
+              );
+              if (!ok) return;
+            }
+            void submit();
+          }}
+          disabled={!canSubmit}
           className="brand-gradient-bg inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-[13px] font-semibold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
         >
           {submitting ? (
@@ -482,7 +780,7 @@ export function QuizRunner({
           ) : (
             <CheckCircle2 className="h-4 w-4" />
           )}
-          Submeter {noun}
+          {proctor ? `Entregar ${noun}` : `Submeter ${noun}`}
         </button>
       </div>
     </div>

@@ -2,7 +2,13 @@
 // Auth-gated by the admin cookie.
 
 import { NextResponse } from "next/server";
-import { isCurrentUserAdmin } from "@/lib/auth/server";
+import { revalidatePath } from "next/cache";
+import { getCurrentEmployee, isCurrentUserAdmin } from "@/lib/auth/server";
+import { findCredentialForRosterRow } from "@/lib/auth/credentials";
+import {
+  clearStartDate,
+  setStartDate,
+} from "@/lib/training/start-dates-store";
 import {
   saveEmployeeRecord,
   deleteEmployee,
@@ -24,7 +30,8 @@ export async function PUT(
   req: Request,
   ctx: { params: Promise<{ id: string }> },
 ) {
-  if (!(await isCurrentUserAdmin())) {
+  const actor = await getCurrentEmployee();
+  if (!actor?.isAdmin) {
     return NextResponse.json({ error: "Not authorised" }, { status: 401 });
   }
 
@@ -131,6 +138,43 @@ export async function PUT(
 
   try {
     const record = await saveEmployeeRecord(id, patch);
+
+    // A Data de entrada escrita aqui é a MESMA que arranca o relógio dos
+    // exames de fase. Duas datas de entrada por pessoa seria uma a mais, e a
+    // errada seria sempre a que ninguém se lembrava de atualizar. Só a C-suite
+    // chega a esta rota, que é exatamente quem pode mexer nesta data.
+    if ("startingDate" in body) {
+      const credential = findCredentialForRosterRow(record.id, record.name);
+      if (credential) {
+        try {
+          if (record.startingDate) {
+            await setStartDate(
+              credential.username,
+              record.startingDate,
+              actor?.username ?? "admin",
+              Date.now(),
+            );
+          } else {
+            await clearStartDate(credential.username);
+          }
+          revalidatePath("/formacao");
+          revalidatePath("/formacao/admin");
+          revalidatePath("/formacao/admin/inscricoes");
+          revalidatePath(`/formacao/admin/${credential.username}`);
+        } catch (err) {
+          // O roster foi gravado; só a sincronização do relógio falhou. Vale a
+          // pena dizê-lo em vez de fingir que correu tudo bem.
+          console.error("start-date sync failed:", err);
+          return NextResponse.json({
+            ok: true,
+            record,
+            warning:
+              "Empregado gravado, mas a data de entrada da Formação não sincronizou.",
+          });
+        }
+      }
+    }
+
     return NextResponse.json({ ok: true, record });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

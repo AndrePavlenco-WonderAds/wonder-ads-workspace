@@ -59,10 +59,15 @@ function suggestEmail(name: string): string {
 export function AdminEmployeesPanel({
   employees,
   portfolios,
+  examClockUsers = {},
 }: {
   employees: AdminEmployeeRecord[];
   /** Keyed by employee name (matches admin client `consultants[]`). */
   portfolios: Record<string, EmployeePortfolio>;
+  /** Employee id → workspace login, for the rows whose Starting date also
+   *  drives that person's phase exams in Formação. Resolved server-side so
+   *  the credential table (password hashes) never reaches the browser. */
+  examClockUsers?: Record<string, string>;
 }) {
   const [records, setRecords] = useState<Map<string, AdminEmployeeRecord>>(
     () => {
@@ -477,6 +482,7 @@ export function AdminEmployeesPanel({
                       key={id}
                       initial={r}
                       portfolio={portfolio}
+                      examClockUser={examClockUsers[id] ?? null}
                       onSaved={handleSaved}
                       onDeleted={handleDeleted}
                     />

@@ -410,6 +410,49 @@ export function getEmployeeDisplay(username: string): {
     : null;
 }
 
+/** Sem acentos, sem pontuação, minúsculas — "Fran. Rosa" e "fran rosa" têm de
+ *  bater certo, porque o roster do /admin e as credenciais foram escritos em
+ *  sítios diferentes por pessoas diferentes. */
+function nameKey(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+/** A credencial de login correspondente a uma linha do roster do /admin.
+ *
+ *  Duas listas descrevem as mesmas pessoas: `EMPLOYEE_CREDENTIALS` (quem entra
+ *  na app) e o roster editável do SuperAdmin (quem trabalha cá, incluindo quem
+ *  não tem login). Isto é a ponte — e é o que permite que a Data de entrada
+ *  escrita no /admin/employees seja a MESMA que arranca o relógio dos exames.
+ *  Sem ponte, havia duas datas de entrada por pessoa e uma delas estava sempre
+ *  errada.
+ *
+ *  Casa primeiro pelo id (os seeds usam de propósito o username como id) e só
+ *  depois pelo nome, já normalizado. */
+export function findCredentialForRosterRow(
+  id: string | null | undefined,
+  name: string | null | undefined,
+): EmployeeCredential | null {
+  if (id) {
+    const byId = EMPLOYEE_CREDENTIALS.find(
+      (c) => c.username === id.trim().toLowerCase(),
+    );
+    if (byId) return byId;
+  }
+  if (!name) return null;
+  const key = nameKey(name);
+  if (!key) return null;
+  return (
+    EMPLOYEE_CREDENTIALS.find(
+      (c) => nameKey(c.name) === key || (c.fullName && nameKey(c.fullName) === key),
+    ) ?? null
+  );
+}
+
 /** True when the username corresponds to one of the three SuperAdmin
  *  accounts (Alex / Alice / Andre). Source of truth for /admin gating. */
 export function isAdminUsername(username: string | null | undefined): boolean {

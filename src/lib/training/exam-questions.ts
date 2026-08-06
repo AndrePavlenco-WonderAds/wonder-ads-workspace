@@ -84,7 +84,7 @@ function build(
 }
 
 // ===========================================================================
-// EXAME 1 · SEMANA 1 — Fundações e padrão da casa
+// EXAME 1 · SEMANA 1 — Cultura, mindset e padrão da casa
 // ===========================================================================
 
 const EXAME_S1 = build("exame-s1", [

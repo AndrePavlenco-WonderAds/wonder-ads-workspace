@@ -12,6 +12,7 @@ import {
   getAdminRecords,
   type ClientDepartment,
 } from "@/lib/admin-clients-store";
+import { findCredentialForRosterRow } from "@/lib/auth/credentials";
 import { getSeoClients } from "@/lib/notion";
 import { ADS_CLIENTS } from "@/lib/ads-clients";
 import { WEB_CLIENTS } from "@/lib/web-clients";
@@ -117,9 +118,22 @@ export default async function EmployeesAdminPage() {
     }
   }
 
+  // Quem, nesta lista, tem login no workspace — e portanto tem exames de fase
+  // ancorados na Data de entrada desta tabela. Resolvido AQUI, no servidor: a
+  // tabela de credenciais tem hashes de password e não pode ir para o browser.
+  const examClockUsers: Record<string, string> = {};
+  for (const e of employees) {
+    const credential = findCredentialForRosterRow(e.id, e.name);
+    if (credential) examClockUsers[e.id] = credential.username;
+  }
+
   return (
     <PageShell wide>
-      <AdminEmployeesPanel employees={employees} portfolios={portfolios} />
+      <AdminEmployeesPanel
+        employees={employees}
+        portfolios={portfolios}
+        examClockUsers={examClockUsers}
+      />
     </PageShell>
   );
 }

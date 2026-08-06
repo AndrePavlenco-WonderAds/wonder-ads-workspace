@@ -1,11 +1,17 @@
 // Submissão de um EXAME DE FASE.
 //   POST /api/formacao/exame/<examId>/submit
-//   { answers: [{ questionId, optionIds?, text? }], startedAt? }
+//   { answers: [{ questionId, optionIds?, text? }] }
 //
 // Mesma correção server-side dos quizzes (`gradeQuiz`), mas com o gate dos
 // exames a ser re-verificado AQUI e não só na página: relógio da pessoa,
 // exame anterior passado e tentativas restantes. Um exame que se pudesse
 // submeter por pedido direto não decidia nada — bastava conhecer o id.
+//
+// E, desde os exames com cronómetro, uma condição a mais: TEM DE HAVER UMA
+// SESSÃO ABERTA E DENTRO DO PRAZO. É o que fecha a última porta — sem isto,
+// bastava não carregar em "Começar" e submeter à mão dois dias depois, sem
+// cronómetro nenhum a correr. O `startedAt` também deixou de vir do cliente:
+// vem da sessão, que é a única versão da história que o servidor carimbou.
 
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
@@ -20,9 +26,21 @@ import {
   resolveStartDate,
 } from "@/lib/training/start-dates-store";
 import { computeExamJourney, examQuiz, findExam } from "@/lib/training/exams";
+import { reconcileExpiredExams } from "@/lib/training/exam-proctor";
+import {
+  finishExamSession,
+  getExamSession,
+  isPastDeadline,
+} from "@/lib/training/exam-sessions-store";
 import { gradeQuiz, type SubmittedAnswer } from "@/lib/training/grading";
 
 export const runtime = "nodejs";
+
+/** Folga entre o apito e a entrega. Quem carrega em "Entregar" no último
+ *  segundo não pode perder o exame porque o pedido demorou 300 ms a chegar —
+ *  a folha já estava na mesa. Dez segundos chegam para isso e não chegam para
+ *  responder a mais nada. */
+const SUBMIT_GRACE_MS = 10_000;
 
 export async function POST(
   req: Request,
@@ -52,9 +70,8 @@ export async function POST(
   } catch {
     return NextResponse.json({ error: "invalid body" }, { status: 400 });
   }
-  const { answers: rawAnswers, startedAt: rawStartedAt } = (body ?? {}) as {
+  const { answers: rawAnswers } = (body ?? {}) as {
     answers?: unknown;
-    startedAt?: unknown;
   };
   if (!Array.isArray(rawAnswers)) {
     return NextResponse.json({ error: "answers em falta" }, { status: 400 });
@@ -72,13 +89,74 @@ export async function POST(
       text: typeof a.text === "string" ? a.text : null,
     }));
 
-  const [previousAttempts, startDates] = await Promise.all([
+  const now = Date.now();
+
+  // A sessão manda. Antes de olhar para o gate, fecha-se o que já rebentou o
+  // prazo — incluindo, se for o caso, esta mesma tentativa.
+  const [recordedAttempts, startDates, session] = await Promise.all([
     getQuizAttempts(employee.username),
     getStartDates(),
+    getExamSession(employee.username, examId),
   ]);
+
+  if (!session || session.examId !== examId) {
+    return NextResponse.json(
+      {
+        error:
+          "Não há nenhum exame a decorrer. Um exame começa no botão «Começar exame» — e o cronómetro conta a partir daí.",
+      },
+      { status: 409 },
+    );
+  }
+  if (session.status === "submitted") {
+    return NextResponse.json(
+      { error: "Esta tentativa já foi entregue." },
+      { status: 409 },
+    );
+  }
+  // Já existe tentativa gravada com este número — foi o invigilador a recolher
+  // a folha primeiro (o exame expirou noutro separador). Não se grava a mesma
+  // tentativa duas vezes.
+  if (
+    recordedAttempts.some(
+      (a) => a.quizId === examId && a.attemptNumber === session.attemptNumber,
+    )
+  ) {
+    await finishExamSession(employee.username, examId, "expired", now);
+    return NextResponse.json(
+      {
+        error:
+          "Esta tentativa já tinha sido recolhida — o tempo acabou antes da entrega.",
+        expired: true,
+      },
+      { status: 409 },
+    );
+  }
+
+  if (
+    session.status === "expired" ||
+    (isPastDeadline(session, now) && now > session.deadlineAt + SUBMIT_GRACE_MS)
+  ) {
+    // O proctor grava a tentativa com o que estava na folha; aqui só se
+    // comunica o que aconteceu. Chegar depois do apito não entrega nada.
+    await reconcileExpiredExams(employee.username, recordedAttempts, now);
+    revalidatePath("/formacao");
+    revalidatePath(`/formacao/exame/${examId}`);
+    return NextResponse.json(
+      {
+        error:
+          "O tempo acabou. A folha foi recolhida como estava no último minuto e a tentativa está fechada.",
+        expired: true,
+      },
+      { status: 409 },
+    );
+  }
+
+  const previousAttempts = recordedAttempts;
   const journey = computeExamJourney(
     resolveStartDate(employee.username, startDates),
     previousAttempts,
+    new Date(now),
   );
   const state = journey.exams.find((e) => e.exam.id === examId);
   if (!state) {
@@ -123,15 +201,6 @@ export async function POST(
       break;
   }
 
-  const now = Date.now();
-  const startedAt =
-    typeof rawStartedAt === "number" &&
-    Number.isFinite(rawStartedAt) &&
-    rawStartedAt <= now &&
-    now - rawStartedAt < 24 * 60 * 60 * 1000
-      ? rawStartedAt
-      : now;
-
   const result = gradeQuiz(quiz, answers);
   const attempt: QuizAttempt = {
     id: `${examId}-${now}`,
@@ -140,16 +209,20 @@ export async function POST(
     // Marca a tentativa como sendo de exame também no `trackSlug`, para o
     // drill-down do admin conseguir agrupar sem depender só do prefixo do id.
     trackSlug: "exames",
-    attemptNumber: state.attemptsUsed + 1,
+    // Da sessão, não do contador: é o mesmo número que o proctor usaria se o
+    // tempo tivesse acabado, o que impede a mesma tentativa de ser gravada
+    // duas vezes com números diferentes.
+    attemptNumber: session.attemptNumber,
     score: result.score,
     passed: result.passed,
-    startedAt,
+    startedAt: session.startedAt,
     submittedAt: now,
     answers: result.answers,
   };
 
   try {
     await appendQuizAttempt(employee.username, attempt);
+    await finishExamSession(employee.username, examId, "submitted", now);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     return NextResponse.json({ error: message }, { status: 500 });

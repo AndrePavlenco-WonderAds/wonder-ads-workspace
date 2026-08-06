@@ -19,9 +19,14 @@ import {
   Target,
 } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
-import { QuizRunner } from "@/components/training/quiz-runner";
+import { ExamConsole } from "@/components/training/exam-console";
 import { getTrainingContext } from "@/lib/training/server";
 import { examQuiz, findExam } from "@/lib/training/exams";
+import {
+  EXAM_DURATION_MINUTES,
+  getExamSession,
+  isPastDeadline,
+} from "@/lib/training/exam-sessions-store";
 import { seededShuffle, toPublicQuestions } from "@/lib/training/grading";
 import { formatDate, formatDateTime } from "@/lib/dates";
 
@@ -58,7 +63,20 @@ export default async function ExamPage({
   if (!state) notFound();
 
   const quiz = examQuiz(exam);
-  const attemptNumber = state.attemptsUsed + 1;
+
+  // `getTrainingContext` já correu o invigilador, por isso uma sessão que
+  // tenha rebentado o prazo enquanto a pessoa estava fora já está fechada e a
+  // tentativa gravada. O que sobra aqui é ou nada, ou um exame mesmo a decorrer.
+  const now = Date.now();
+  const stored = await getExamSession(ctx.employee.username, exam.id);
+  const live =
+    stored && stored.status === "running" && !isPastDeadline(stored, now)
+      ? stored
+      : null;
+
+  // Numa sessão a decorrer manda o número de tentativa que o servidor
+  // carimbou; fora dela, a próxima.
+  const attemptNumber = live?.attemptNumber ?? state.attemptsUsed + 1;
 
   // Ordem baralhada mas estável dentro da mesma tentativa — um F5 a meio de
   // um exame não pode reordenar as perguntas.
@@ -161,7 +179,12 @@ export default async function ExamPage({
             {exam.description}
           </p>
 
-          <div className="relative mt-6 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+          <div className="relative mt-6 grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-5">
+            <Condition
+              label="Duração"
+              value={`${EXAM_DURATION_MINUTES} min`}
+              accent
+            />
             <Condition label="Nota mínima" value={`${exam.passingScore}%`} />
             <Condition
               label="Tentativas"
@@ -232,18 +255,28 @@ export default async function ExamPage({
           </div>
         ) : (
           <div className="animate-fade-up mt-8">
-            <QuizRunner
-              variant="exam"
-              quizId={exam.id}
-              submitUrl={`/api/formacao/exame/${exam.id}/submit`}
+            <ExamConsole
+              examId={exam.id}
+              examTitle={exam.title}
+              examLabel={exam.label}
+              gateLine={exam.gate}
               questions={toPublicQuestions(ordered)}
               passingScore={exam.passingScore}
               attemptNumber={attemptNumber}
               attemptsLeft={state.attemptsLeft}
-              trackHref="/formacao"
-              nextHref="/formacao"
-              backLabel="Voltar à Formação"
-              gateLine={exam.gate}
+              maxAttempts={exam.maxAttempts}
+              durationMinutes={EXAM_DURATION_MINUTES}
+              initialSession={
+                live
+                  ? {
+                      startedAt: live.startedAt,
+                      deadlineAt: live.deadlineAt,
+                      attemptNumber: live.attemptNumber,
+                      answers: live.answers,
+                      serverNow: now,
+                    }
+                  : null
+              }
             />
           </div>
         )}
@@ -286,14 +319,32 @@ export default async function ExamPage({
 function Condition({
   label,
   value,
+  /** A duração é a condição que muda o comportamento de quem lê — destaca-se
+   *  das outras quatro, que são só números de contexto. */
+  accent = false,
 }: {
   label: string;
   value: React.ReactNode;
+  accent?: boolean;
 }) {
   return (
-    <div className="rounded-xl border border-white/[0.08] bg-white/[0.02] px-3.5 py-2.5">
-      <p className="readout text-white/32">{label}</p>
-      <p className="tabular mt-1 text-[15px] font-semibold text-white/90">
+    <div
+      className={`rounded-xl border px-3.5 py-2.5 ${
+        accent
+          ? "border-[#C535C9]/35 bg-[#C535C9]/[0.09]"
+          : "border-white/[0.08] bg-white/[0.02]"
+      }`}
+    >
+      <p
+        className={`readout ${accent ? "text-[#f0a8ee]/80" : "text-white/32"}`}
+      >
+        {label}
+      </p>
+      <p
+        className={`tabular mt-1 text-[15px] font-semibold ${
+          accent ? "text-white" : "text-white/90"
+        }`}
+      >
         {value}
       </p>
     </div>
