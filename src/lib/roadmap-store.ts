@@ -10,6 +10,7 @@
 // pushed to the archive so the history stays auditable.
 
 import { kv } from "@vercel/kv";
+import { getAdminRecord } from "./admin-clients-store";
 
 const CURRENT_PREFIX = "roadmap:current:";
 const ARCHIVE_PREFIX = "roadmap:archive:";
@@ -180,11 +181,43 @@ function archiveKey(slug: string): string {
   return `${ARCHIVE_PREFIX}${slug}`;
 }
 
+/** A data de onboarding em vigor para um cliente.
+ *
+ *  O campo `onboardingDate` do roadmap só existe nos blobs onde alguém o
+ *  gravou à mão — na prática, um punhado deles. Toda a gente vinha sem a
+ *  pastilha «Onboarded» na ficha, apesar de a data existir e estar certa na
+ *  tabela de Clients do admin, que é onde a equipa a mantém.
+ *
+ *  Por isso a data resolve-se na LEITURA, com esta ordem:
+ *    1. o que estiver gravado no roadmap (uma data afixada à mão ganha
+ *       sempre — é o caso de quem teve o roadmap reiniciado a meio);
+ *    2. a Starting date do registo de Clients (que já cai sozinha para os
+ *       defaults em código quando ninguém lhe mexeu).
+ *
+ *  Nada é reescrito: a mesma decisão da v76.33 para os consultores que
+ *  saíram — a leitura sabe compor a verdade sem tocar em dados gravados. */
+async function resolveOnboardingDate(
+  slug: string,
+  pinned: string | undefined,
+): Promise<string | undefined> {
+  if (pinned) return pinned;
+  try {
+    const record = await getAdminRecord(slug, "SEO", ["SEO"]);
+    return record.startingDate ?? undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export async function getCurrentRoadmap(slug: string): Promise<Roadmap | null> {
   if (!roadmapStorageConfigured) return null;
   try {
     const v = await kv.get<Roadmap>(currentKey(slug));
-    return v ?? null;
+    if (!v) return null;
+    return {
+      ...v,
+      onboardingDate: await resolveOnboardingDate(slug, v.onboardingDate),
+    };
   } catch (err) {
     console.error("roadmap read failed:", err);
     return null;
@@ -210,6 +243,7 @@ export async function ensureRoadmap(slug: string): Promise<Roadmap> {
     clientSlug: slug,
     weeks: MIN_ROADMAP_WEEKS,
     startDate: today,
+    onboardingDate: await resolveOnboardingDate(slug, undefined),
     generatedAt: Date.now(),
     tasks: [],
     dismissedWarnings: [],

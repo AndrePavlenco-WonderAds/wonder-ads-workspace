@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.36",
+    date: "2026-08-07",
+    title: "A pastilha «Onboarded» deixou de ser um privilégio de meia dúzia de clientes",
+    highlights: [
+      "**📌 Todos os clientes passam a mostrar a data de onboarding na ficha.** A pastilha só aparecia nos roadmaps onde alguém tinha gravado o campo à mão — um punhado deles. A A. Domingos, a Aeger Prima, a Safe Away, o Kings Gyms e a maioria dos outros não tinham pastilha nenhuma, apesar de a data existir e estar certa na tabela de Clients do admin, que é onde a equipa a mantém.",
+      "**🔗 A data resolve-se na leitura, com uma ordem clara:** primeiro o que estiver afixado no roadmap (uma data posta à mão ganha sempre — é o caso de quem teve o roadmap reiniciado a meio, como a B-Life), e só depois a **Starting date da tabela de Clients**. Nada foi reescrito em produção: é a mesma decisão da v76.33 para os consultores que saíram — a leitura sabe compor a verdade sem tocar em dados gravados.",
+      "**✅ Verificado contra o KV real: 21 dos 23 clientes passam a ter data.** Os dois que faltam são honestos — a Cidália Cabeleireiros não tem Starting date preenchida em lado nenhum (aparece como «Not set» também no admin), e a Clínica Empatia ainda não tem roadmap criado; assim que o board for aberto pela primeira vez, já nasce com a data.",
+    ],
+  },
+  {
     version: "76.35",
     date: "2026-08-07",
     title: "O DataForSEO entrou mesmo no relatório — e o SE Ranking saiu da ficha do cliente",
