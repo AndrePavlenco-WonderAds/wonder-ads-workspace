@@ -21,6 +21,7 @@ import {
   previousCompleteMonth,
   reportWindows,
   labelWithCoverage,
+  trailingMonths,
   type DateRange,
 } from "./report-dates";
 import {
@@ -35,11 +36,34 @@ import {
   type MonthlyReportSnapshot,
   type ReportMetric,
   type ReportStatus,
+  type ReportTrend,
 } from "./report-types";
 
 /** Movers shown in the client-facing report. Candidates are wider (20) so
  *  the consultant can swap out competitor brands / off-strategy terms. */
 export const MAX_SHOWN_MOVERS = 5;
+
+/** Um ano fechado no gráfico de evolução — menos do que isto não mostra
+ *  sazonalidade, mais não cabe legível na largura de uma página A4. */
+const TREND_MONTHS = 12;
+
+const SHORT_MONTHS_PT = [
+  "jan", "fev", "mar", "abr", "mai", "jun",
+  "jul", "ago", "set", "out", "nov", "dez",
+];
+const SHORT_MONTHS_EN = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
+
+/** "2026-08" → "ago" / "Aug". Em janeiro leva o ano atrás ("jan 26"), que é a
+ *  única marca de onde é que o eixo muda de ano. */
+function shortMonthLabel(key: string, lang: "pt" | "en"): string {
+  const [y, m] = key.split("-").map(Number);
+  const names = lang === "pt" ? SHORT_MONTHS_PT : SHORT_MONTHS_EN;
+  const name = names[(m || 1) - 1] ?? key;
+  return m === 1 ? `${name} ${String(y).slice(2)}` : name;
+}
 
 const ga4Metric = (
   pair: MetricPair,
@@ -360,6 +384,11 @@ export async function buildMonthlyReport(
     (k) => k.keyword,
   );
 
+  // Doze meses até ao mês relatado, inclusive — o gráfico de evolução mostra
+  // um ano fechado, que é o que permite ver sazonalidade em vez de ruído.
+  const trendPeriods = trailingMonths(period.key, TREND_MONTHS);
+  const trendMonthKeys = trendPeriods.map((p) => p.key);
+
   const [ga4, gsc, gbpRes, seRanking] = await Promise.all([
     getGa4MonthlyReport(slug, {
       current: windows.current,
@@ -368,6 +397,7 @@ export async function buildMonthlyReport(
       extraEvents: config.extraLeadEvents,
       llmRegex: config.llmRegex,
       propertyIdOverride: config.ga4PropertyId,
+      trendMonths: trendMonthKeys,
     }),
     getGscMonthlyReport(slug, {
       current: windows.current,
@@ -375,6 +405,7 @@ export async function buildMonthlyReport(
       siteUrlOverride: config.gscSiteUrl,
       topLimit: 10,
       targetKeywords,
+      trendMonths: trendMonthKeys,
     }),
     getGbpMonthlyReport(slug, {
       current: windows.current,
@@ -621,6 +652,24 @@ export async function buildMonthlyReport(
   // show which unit each click belongs to.
   const gbpBlock = consolidateGbp(gbpProfileBlocks);
 
+  // --- Evolução dos últimos 12 meses ---
+  // Só existe se o GA4 respondeu: sem tráfego orgânico o gráfico não tem eixo
+  // e as outras séries sozinhas não contam a história que a secção promete.
+  const ga4Trend = ga4.status === "ok" ? ga4.trend : undefined;
+  const gscTrend = gsc.status === "ok" ? gsc.trend : undefined;
+  const emptySeries = trendMonthKeys.map(() => null);
+  const trend: ReportTrend | undefined = ga4Trend
+    ? {
+        months: trendMonthKeys,
+        labels: trendPeriods.map((p) => shortMonthLabel(p.key, lang)),
+        organicUsers: ga4Trend.organicUsers,
+        organicSessions: ga4Trend.organicSessions,
+        leads: ga4Trend.leads,
+        gscClicks: gscTrend?.clicks ?? emptySeries,
+        gscImpressions: gscTrend?.impressions ?? emptySeries,
+      }
+    : undefined;
+
   const base: Omit<MonthlyReportSnapshot, "execSummary"> = {
     schemaVersion: REPORT_SCHEMA_VERSION,
     slug,
@@ -639,6 +688,7 @@ export async function buildMonthlyReport(
     organic,
     gsc: gscBlock,
     ...(seRanking ? { seRanking } : {}),
+    ...(trend ? { trend } : {}),
     ai: aiBlock,
     gbp: gbpBlock,
     // Fresh pull ⇒ not finalised. The consultant fills the manual data then

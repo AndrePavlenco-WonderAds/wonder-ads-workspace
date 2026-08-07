@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.32",
+    date: "2026-08-07",
+    title: "O Monthly Report deixou de listar derrotas e passou a mostrar o ano inteiro",
+    highlights: [
+      "**🙈 As keywords que ainda não rankeiam saíram do relatório do cliente.** Uma tabela de trinta linhas com metade a dizer «ainda não rankeia» não lê como trabalho em curso — lê como falha, e rouba o olho às que subiram. O mesmo para as que estão fora do top 100 na tabela do ranking real. **O consultor continua a ver a lista inteira na vista interna**, que é onde a lacuna é acionável; o contador «por conquistar» também ficou lá.",
+      "**📈 Nova secção «Evolução» — os últimos 12 meses, logo a seguir ao sumário.** É a resposta à primeira pergunta que o cliente faz («isto está a crescer?»), e nenhum número de um mês sozinho a responde. Três linhas: **utilizadores orgânicos**, **leads** e **cliques na Google**, puxadas do GA4 e do Search Console no momento em que o relatório é gerado — por isso o primeiro relatório de um cliente já nasce com o histórico todo, sem esperar um ano a acumular relatórios.",
+      "**📊 Um gráfico por métrica, nunca dois eixos.** Utilizadores orgânicos andam nos milhares e os leads nas dezenas: postos na mesma escala, a linha dos leads ficava colada ao fundo e o cliente concluía que não havia leads. Cada métrica tem o seu painel, com a sua escala, **sempre ancorada no zero** — uma linha que arranca no mínimo da série transforma uma subida de 3% numa montanha, que é a forma mais fácil de mentir num relatório sem escrever um número errado.",
+      "**🕳️ Meses sem medição ficam em branco, não a zero.** Um cliente que começou em novembro não tem uma queda a pique em setembro e outubro — não tem linha nenhuma. E cada painel traz a régua do máximo com o número, para a altura da linha se poder ler e não só a forma.",
+      "**🖨️ Desenhado em SVG à mão, sem JavaScript.** Isto é impresso num PDF por um browser sem interação: uma biblioteca de gráficos desenharia uma página em branco. Cada painel é indivisível na paginação, por isso nenhum gráfico fica partido a meio entre duas páginas.",
+    ],
+  },
+  {
     version: "76.31",
     date: "2026-08-07",
     title: "O Team Roster passou a dizer quem entra na app — e o NPS deixou de depender de alguém se lembrar",

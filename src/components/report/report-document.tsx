@@ -16,6 +16,7 @@ import {
   type MetricDelta,
 } from "@/lib/report/report-format";
 import { formatDate } from "@/lib/dates";
+import { ReportTrendChart } from "./report-trend-chart";
 import type {
   MonthlyReportSnapshot,
   ReportMetric,
@@ -151,15 +152,23 @@ export function ReportDocument({
   const gsc = snapshot.gsc;
   // Optional on the snapshot — reports generated before v76.15 have none.
   const coverage = snapshot.coverage;
-  const targetRanks = gsc.targetRanks ?? [];
-  const rankedTargets = targetRanks.filter((k) => k.position !== null);
+  const allTargetRanks = gsc.targetRanks ?? [];
+  const rankedTargets = allTargetRanks.filter((k) => k.position !== null);
+  // O CLIENTE VÊ SÓ AS QUE RANKEIAM (v76.32). Uma tabela de trinta linhas onde
+  // metade diz «ainda não rankeia» não lê como trabalho em curso — lê como
+  // falha, e rouba o olho às que subiram. O consultor continua a ver a lista
+  // inteira na variante interna, que é onde a lacuna é acionável.
+  const targetRanks = variant === "internal" ? allTargetRanks : rankedTargets;
   // True SERP positions — absent on reports for clients with no synced
   // SE Ranking project, and on every report generated before v76.26.
   const seRanking = snapshot.seRanking;
-  const srRanked = (seRanking?.ranks ?? []).filter((k) => k.position !== null);
+  const srAllRanks = seRanking?.ranks ?? [];
+  const srRanked = srAllRanks.filter((k) => k.position !== null);
+  // Mesma regra: fora do top 100 é «ainda não», não é um resultado.
+  const srVisibleRanks = variant === "internal" ? srAllRanks : srRanked;
   const srTop = (n: number) =>
     srRanked.filter((k) => (k.position ?? Infinity) <= n).length;
-  const srLocalPack = (seRanking?.ranks ?? []).filter((k) => k.inLocalPack).length;
+  const srLocalPack = srAllRanks.filter((k) => k.inLocalPack).length;
   const ai = snapshot.ai;
   const gbp = snapshot.gbp;
   // Per-listing breakdown — only on multi-unit clients (and absent on every
@@ -239,6 +248,25 @@ export function ReportDocument({
               ))}
             </ul>
           </div>
+        </section>
+      )}
+
+      {/* Evolução — vem logo a seguir ao sumário porque é a resposta à
+          primeira pergunta que o cliente faz («isto está a crescer?»), e
+          nenhum número de um mês sozinho a responde. */}
+      {snapshot.trend && (
+        <section className="wa-sec wa-sec-trend">
+          <div className="wa-label">{t("Evolução", "Trend")}</div>
+          <h2 className="wa-h2">
+            {t("Os últimos 12 meses", "The last 12 months")}
+          </h2>
+          <p className="wa-method">
+            {t(
+              "Cada linha tem a sua própria escala e começa no zero. Onde a linha não existe, ainda não havia medição nesse mês.",
+              "Each line has its own scale and starts at zero. Where the line is missing, there was no measurement that month yet.",
+            )}
+          </p>
+          <ReportTrendChart trend={snapshot.trend} lang={lang} />
         </section>
       )}
 
@@ -525,16 +553,26 @@ export function ReportDocument({
             {t("Keywords Trabalhadas", "Target Keywords")}
           </div>
           <h3 className="wa-h3">
-            {t(
-              `Posição atual de cada keyword (${targetRanks.length})`,
-              `Current position for every keyword (${targetRanks.length})`,
-            )}
+            {variant === "internal"
+              ? t(
+                  `Posição atual de cada keyword (${targetRanks.length})`,
+                  `Current position for every keyword (${targetRanks.length})`,
+                )
+              : t(
+                  `Keywords do plano já com posição na Google (${targetRanks.length})`,
+                  `Plan keywords already holding a Google position (${targetRanks.length})`,
+                )}
           </h3>
           <p className="wa-method">
-            {t(
-              "Posição média no Google durante o mês, para cada keyword do plano. «Ainda não rankeia» significa que a keyword não registou impressões neste período.",
-              "Average Google position during the month, for every keyword in the plan. “Not ranking yet” means the keyword recorded no impressions in this period.",
-            )}
+            {variant === "internal"
+              ? t(
+                  "Posição média no Google durante o mês, para cada keyword do plano. «Ainda não rankeia» significa que a keyword não registou impressões neste período — estas linhas não vão para o relatório do cliente.",
+                  "Average Google position during the month, for every keyword in the plan. “Not ranking yet” means the keyword recorded no impressions in this period — these rows don't reach the client's report.",
+                )
+              : t(
+                  "Posição média no Google durante o mês, para cada keyword do plano já com presença nos resultados.",
+                  "Average Google position during the month, for every keyword in the plan already showing up in the results.",
+                )}
           </p>
           <div className="wa-kstats">
             <div className="wa-kstat">
@@ -561,12 +599,20 @@ export function ReportDocument({
               </span>
               <span className="wa-kl">Top 10</span>
             </div>
-            <div className="wa-kstat">
-              <span className="wa-kv">
-                {formatRaw(targetRanks.length - rankedTargets.length, "count", lang)}
-              </span>
-              <span className="wa-kl">{t("por conquistar", "still to win")}</span>
-            </div>
+            {/* «Por conquistar» é uma métrica de gestão, não de resultado —
+                fica na vista interna. */}
+            {variant === "internal" && (
+              <div className="wa-kstat">
+                <span className="wa-kv">
+                  {formatRaw(
+                    allTargetRanks.length - rankedTargets.length,
+                    "count",
+                    lang,
+                  )}
+                </span>
+                <span className="wa-kl">{t("por conquistar", "still to win")}</span>
+              </div>
+            )}
           </div>
           <div className="wa-tblwrap" style={{ marginTop: "1rem" }}>
             <table className="wa-qtable">
@@ -613,15 +659,15 @@ export function ReportDocument({
       {/* True SERP positions (SE Ranking) — the same target keywords as the
           table above, but checked against the real Google results page rather
           than averaged over the impressions GSC happened to serve. */}
-      {seRanking && seRanking.ranks.length > 0 && (
+      {seRanking && srVisibleRanks.length > 0 && (
         <section className="wa-sec">
           <div className="wa-label">
             {t("Ranking Real na Google", "Live Google Ranking")}
           </div>
           <h3 className="wa-h3">
             {t(
-              `Posição verificada de cada keyword (${seRanking.ranks.length})`,
-              `Verified position for every keyword (${seRanking.ranks.length})`,
+              `Posição verificada de cada keyword (${srVisibleRanks.length})`,
+              `Verified position for every keyword (${srVisibleRanks.length})`,
             )}
           </h3>
           <p className="wa-method">
@@ -670,7 +716,7 @@ export function ReportDocument({
                 </tr>
               </thead>
               <tbody>
-                {seRanking.ranks.map((k) => (
+                {srVisibleRanks.map((k) => (
                   <tr key={k.keyword}>
                     <td>
                       {k.keyword}
@@ -812,6 +858,18 @@ const CSS = `
 .wa-na{color:#7a7890;font-weight:600;font-size:.76rem;}
 .wa-pending-lg{color:#a08fb8;font-style:italic;font-size:.85rem;margin:.3rem 0;}
 .wa-method{margin:.15rem 0 .8rem;font-size:.74rem;line-height:1.5;color:var(--muted);max-width:64ch;}
+
+/* Evolução — small multiples, um painel por métrica, cada um com a sua escala */
+.wa-trend{display:grid;gap:.7rem;}
+.wa-trend-panel{background:#fff;border:1px solid var(--line);border-radius:12px;padding:.75rem .9rem .55rem;
+  box-shadow:0 8px 24px -22px rgba(23,22,45,.5);break-inside:avoid;page-break-inside:avoid;}
+.wa-trend-head{display:flex;align-items:baseline;justify-content:space-between;gap:.6rem;margin-bottom:.15rem;}
+.wa-trend-name{font-size:.72rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--plum);}
+.wa-trend-last{font-size:1.05rem;font-weight:800;letter-spacing:-.02em;color:var(--ink);font-variant-numeric:tabular-nums;}
+.wa-trend-svg{display:block;width:100%;height:auto;}
+.wa-trend-tick{font-size:8px;fill:#a09eb4;font-variant-numeric:tabular-nums;letter-spacing:.02em;}
+.wa-trend-max{font-size:8px;fill:#b3aec4;font-weight:700;font-variant-numeric:tabular-nums;}
+.wa-sec-trend{break-inside:avoid;page-break-inside:avoid;}
 
 /* AI */
 .wa-ai-total{display:flex;align-items:baseline;gap:.5rem;margin:.2rem 0 .85rem;}

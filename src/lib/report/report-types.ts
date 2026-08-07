@@ -242,6 +242,24 @@ export type FetchStatus = {
   message?: string;
 };
 
+/** A evolução dos últimos meses — a secção que responde a «isto está a
+ *  crescer?», que é a pergunta que um número de um mês sozinho nunca responde.
+ *
+ *  Cada série tem exatamente um valor por entrada de `months`, na mesma ordem.
+ *  `null` = mês sem medição (a propriedade ainda não existia), que se desenha
+ *  como buraco na linha e não como queda a zero. */
+export type ReportTrend = {
+  /** ["2025-09" … "2026-08"], mais antigo primeiro. */
+  months: string[];
+  /** Rótulos curtos já traduzidos ("set", "out", …) para o eixo. */
+  labels: string[];
+  organicUsers: (number | null)[];
+  organicSessions: (number | null)[];
+  leads: (number | null)[];
+  gscClicks: (number | null)[];
+  gscImpressions: (number | null)[];
+};
+
 export type ReportStatus = "draft" | "ready" | "sent";
 
 export const REPORT_SCHEMA_VERSION = 3;
@@ -304,6 +322,9 @@ export type MonthlyReportSnapshot = {
   /** True SERP positions from SE Ranking for the same target keywords, shown
    *  under the GSC table. Absent when the client has no synced project. */
   seRanking?: SeRankingBlock;
+  /** Evolução dos últimos 12 meses. Ausente nos relatórios gerados antes da
+   *  v76.32 e quando o GA4 não respondeu. */
+  trend?: ReportTrend;
   ai: {
     totalSessions: ReportMetric;
     sources: AiSourceRow[];

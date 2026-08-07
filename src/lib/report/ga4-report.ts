@@ -57,6 +57,16 @@ export type Ga4AiSource = {
 
 export type Ga4AiBlock = { sources: Ga4AiSource[]; totalSessions: number };
 
+/** Série mensal para o gráfico de evolução. Uma entrada por mês pedido, na
+ *  mesma ordem (mais antigo primeiro); `null` = mês sem dados na propriedade
+ *  (a conta ainda não existia), que é diferente de zero e tem de o continuar
+ *  a ser no gráfico. */
+export type Ga4TrendBlock = {
+  organicUsers: (number | null)[];
+  organicSessions: (number | null)[];
+  leads: (number | null)[];
+};
+
 export type Ga4MonthlyReport =
   | {
       status: "ok";
@@ -64,6 +74,8 @@ export type Ga4MonthlyReport =
       organic: Ga4OrganicBlock;
       leads: Ga4LeadBlock;
       ai: Ga4AiBlock;
+      /** Só presente quando `opts.trend` foi pedido e a query correu. */
+      trend?: Ga4TrendBlock;
     }
   | { status: "not-configured" }
   | { status: "no-property" }
@@ -113,6 +125,18 @@ const channelFilter = (channel: string) => ({
   },
 });
 
+/** "2026-08" → "2026-08-31". */
+function monthEndOf(key: string): string {
+  const [y, m] = key.split("-").map(Number);
+  const last = new Date(y, m, 0).getDate();
+  return `${key}-${String(last).padStart(2, "0")}`;
+}
+
+/** A dimensão `yearMonth` do GA4 vem como "202608" — passa a "2026-08". */
+function monthKeyFromGa4(raw: string): string | null {
+  return /^\d{6}$/.test(raw) ? `${raw.slice(0, 4)}-${raw.slice(4)}` : null;
+}
+
 const dateRanges = (current: DateRange, previous: DateRange) => [
   { startDate: current.startDate, endDate: current.endDate },
   { startDate: previous.startDate, endDate: previous.endDate },
@@ -129,6 +153,9 @@ export async function getGa4MonthlyReport(
     extraEvents?: CustomLeadEvent[];
     llmRegex: string[];
     propertyIdOverride?: string | null;
+    /** Meses a puxar para o gráfico de evolução, mais antigo primeiro
+     *  ("2025-09" … "2026-08"). Ausente = não se puxa série nenhuma. */
+    trendMonths?: string[];
   },
 ): Promise<Ga4MonthlyReport> {
   if (!googleAuthConfigured) return { status: "not-configured" };
@@ -149,8 +176,21 @@ export async function getGa4MonthlyReport(
     ]),
   );
 
+  // Janela do gráfico: do primeiro dia do mês mais antigo ao último dia do
+  // mais recente. Uma só query com a dimensão `yearMonth` cobre os doze meses
+  // — puxar mês a mês seriam doze chamadas para desenhar uma linha.
+  const trendMonths = (opts.trendMonths ?? []).filter((m) =>
+    /^\d{4}-\d{2}$/.test(m),
+  );
+  const trendRange = trendMonths.length
+    ? {
+        startDate: `${trendMonths[0]}-01`,
+        endDate: monthEndOf(trendMonths[trendMonths.length - 1]),
+      }
+    : null;
+
   try {
-    const [organicRows, googleOrgRows, leadRows, probeRows, aiRows] =
+    const [organicRows, googleOrgRows, leadRows, probeRows, aiRows, trendOrganicRows, trendLeadRows] =
       await Promise.all([
         // Organic Search channel — month vs. prior month.
         runReport(token, propertyId, {
@@ -224,6 +264,32 @@ export async function getGa4MonthlyReport(
           orderBys: [{ metric: { metricName: "sessions" }, desc: true }],
           limit: 250,
         }),
+        // Evolução mensal — orgânico. Best-effort: se falhar, o relatório
+        // sai na mesma, apenas sem o gráfico.
+        trendRange
+          ? runReport(token, propertyId, {
+              dateRanges: [trendRange],
+              dimensions: [{ name: "yearMonth" }],
+              metrics: [{ name: "totalUsers" }, { name: "sessions" }],
+              dimensionFilter: channelFilter("Organic Search"),
+              limit: 60,
+            }).catch(() => [] as Row[])
+          : Promise.resolve([] as Row[]),
+        // Evolução mensal — leads (todos os eventos configurados somados).
+        trendRange && eventNames.length
+          ? runReport(token, propertyId, {
+              dateRanges: [trendRange],
+              dimensions: [{ name: "yearMonth" }],
+              metrics: [{ name: "eventCount" }],
+              dimensionFilter: {
+                filter: {
+                  fieldName: "eventName",
+                  inListFilter: { values: eventNames },
+                },
+              },
+              limit: 60,
+            }).catch(() => [] as Row[])
+          : Promise.resolve([] as Row[]),
       ]);
 
     // --- Organic ---
@@ -314,7 +380,43 @@ export async function getGa4MonthlyReport(
       totalSessions: aiSources.reduce((t, s) => t + s.sessions, 0),
     };
 
-    return { status: "ok", propertyId, organic, leads, ai };
+    // --- Evolução mensal ---
+    let trend: Ga4TrendBlock | undefined;
+    if (trendRange) {
+      // GA4 devolve `yearMonth` como "202608". Um mês sem linha nenhuma é um
+      // mês sem dados — fica null, não zero: uma linha a cair a pique até ao
+      // fundo por causa de uma conta que ainda não existia é mentira.
+      const users = new Map<string, number>();
+      const sessions = new Map<string, number>();
+      for (const r of trendOrganicRows as Row[]) {
+        const key = monthKeyFromGa4(realDims(r)[0] ?? "");
+        if (!key) continue;
+        users.set(key, (users.get(key) ?? 0) + num(r, 0));
+        sessions.set(key, (sessions.get(key) ?? 0) + num(r, 1));
+      }
+      const leadsByMonth = new Map<string, number>();
+      for (const r of trendLeadRows as Row[]) {
+        const key = monthKeyFromGa4(realDims(r)[0] ?? "");
+        if (!key) continue;
+        leadsByMonth.set(key, (leadsByMonth.get(key) ?? 0) + num(r, 0));
+      }
+      // A partir do primeiro mês COM dados, a ausência de linha é um zero
+      // verdadeiro (houve tráfego antes, não houve neste mês). Antes disso é
+      // «ainda não havia medição» — e essa parte da linha não se desenha.
+      const firstWithData = trendMonths.findIndex((m) => users.has(m));
+      const series = (byMonth: Map<string, number>) =>
+        trendMonths.map((m, i) => {
+          if (firstWithData === -1 || i < firstWithData) return null;
+          return byMonth.get(m) ?? 0;
+        });
+      trend = {
+        organicUsers: series(users),
+        organicSessions: series(sessions),
+        leads: series(leadsByMonth),
+      };
+    }
+
+    return { status: "ok", propertyId, organic, leads, ai, trend };
   } catch (err) {
     return {
       status: "error",

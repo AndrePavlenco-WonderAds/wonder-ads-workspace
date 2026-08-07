@@ -261,6 +261,48 @@ async function queryTotals(
   };
 }
 
+/** Cliques + impressões por mês, para o gráfico de evolução do relatório.
+ *
+ *  A API não tem dimensão «mês», por isso pede-se por dia e soma-se cá. Um ano
+ *  são ~365 linhas — uma chamada, dentro do rowLimit, contra doze chamadas se
+ *  se pedisse mês a mês. */
+async function queryMonthlyTotals(
+  token: string,
+  siteUrl: string,
+  startDate: string,
+  endDate: string,
+): Promise<Map<string, { clicks: number; impressions: number }>> {
+  const out = new Map<string, { clicks: number; impressions: number }>();
+  const endpoint = `https://searchconsole.googleapis.com/webmasters/v3/sites/${encodeURIComponent(
+    siteUrl,
+  )}/searchAnalytics/query`;
+  const res = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      startDate,
+      endDate,
+      dimensions: ["date"],
+      rowLimit: 500,
+    }),
+  });
+  if (!res.ok) return out;
+  const json = (await res.json()) as { rows?: GscApiRow[] };
+  for (const row of json.rows ?? []) {
+    const day = row.keys?.[0] ?? "";
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) continue;
+    const key = day.slice(0, 7);
+    const acc = out.get(key) ?? { clicks: 0, impressions: 0 };
+    acc.clicks += row.clicks;
+    acc.impressions += row.impressions;
+    out.set(key, acc);
+  }
+  return out;
+}
+
 async function queryPages(
   token: string,
   siteUrl: string,
@@ -529,6 +571,9 @@ export type GscMonthlyReport =
       keywordStats: GscKeywordStats;
       topMovers: GscMover[];
       targetRanks: GscTargetRank[];
+      /** Série mensal para o gráfico de evolução, na ordem de
+       *  `opts.trendMonths`. null = mês anterior ao primeiro com dados. */
+      trend?: { clicks: (number | null)[]; impressions: (number | null)[] };
     };
 
 /** How many query rows to scan when locating target keywords. Targets are
@@ -617,6 +662,9 @@ export async function getGscMonthlyReport(
     /** The client's committed target keywords. Every one is reported with
      *  its current position — see `targetRanks` on the result. */
     targetKeywords?: string[];
+    /** Meses ("2025-09" … "2026-08", mais antigo primeiro) a puxar para o
+     *  gráfico de evolução. Ausente = não se puxa série nenhuma. */
+    trendMonths?: string[];
   },
 ): Promise<GscMonthlyReport> {
   if (!googleAuthConfigured) return { status: "not-configured" };
@@ -646,6 +694,10 @@ export async function getGscMonthlyReport(
     const targets = (opts.targetKeywords ?? []).filter((k) => k.trim());
     const wantTargets = targets.length > 0;
 
+    const trendMonths = (opts.trendMonths ?? []).filter((m) =>
+      /^\d{4}-\d{2}$/.test(m),
+    );
+
     const [
       totals,
       prevTotals,
@@ -654,6 +706,7 @@ export async function getGscMonthlyReport(
       pages,
       targetCurRows,
       targetPrevRows,
+      trendByMonth,
     ] = await Promise.all([
       queryTotals(token, siteUrl, current.startDate, current.endDate),
       queryTotals(token, siteUrl, previous.startDate, previous.endDate).catch(
@@ -682,6 +735,19 @@ export async function getGscMonthlyReport(
             TARGET_MATCH_ROWS,
           ).catch(() => [] as GscApiRow[])
         : Promise.resolve([] as GscApiRow[]),
+      // Evolução mensal. Best-effort: sem isto o relatório sai na mesma.
+      trendMonths.length
+        ? queryMonthlyTotals(
+            token,
+            siteUrl,
+            `${trendMonths[0]}-01`,
+            current.endDate,
+          ).catch(
+            () => new Map<string, { clicks: number; impressions: number }>(),
+          )
+        : Promise.resolve(
+            new Map<string, { clicks: number; impressions: number }>(),
+          ),
     ]);
 
     const prevByQuery = new Map(
@@ -762,6 +828,18 @@ export async function getGscMonthlyReport(
       targetRanks: wantTargets
         ? buildTargetRanks(targets, targetCurRows, targetPrevRows)
         : [],
+      trend: trendMonths.length
+        ? (() => {
+            // Antes do primeiro mês com dados a propriedade não estava
+            // verificada — é null, não zero.
+            const first = trendMonths.findIndex((m) => trendByMonth.has(m));
+            const pick = (f: (v: { clicks: number; impressions: number }) => number) =>
+              trendMonths.map((m, i) =>
+                first === -1 || i < first ? null : f(trendByMonth.get(m) ?? { clicks: 0, impressions: 0 }),
+              );
+            return { clicks: pick((v) => v.clicks), impressions: pick((v) => v.impressions) };
+          })()
+        : undefined,
     };
   } catch (err) {
     return {
