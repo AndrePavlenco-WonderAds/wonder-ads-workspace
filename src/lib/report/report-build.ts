@@ -12,8 +12,10 @@ import {
 import { getGa4MonthlyReport, type MetricPair } from "./ga4-report";
 import { getGscMonthlyReport } from "@/lib/gsc";
 import { listTargetKeywords } from "@/lib/target-keywords-store";
-import { getSeRankingLink } from "@/lib/seranking-store";
-import { getSeRankingRanks, isSeRankingConfigured } from "@/lib/seranking";
+import { fetchDfsRanks } from "@/lib/seo-tools/dataforseo-ranks";
+import { fetchGeoReport, hasGeoSignal } from "@/lib/seo-tools/dataforseo-geo";
+import { CLIENT_WEBSITES } from "@/lib/client-meta";
+import { getReport } from "./report-store";
 import { getGbpMonthlyReport } from "@/lib/gbp";
 import { getReportConfig } from "./report-config-store";
 import {
@@ -37,6 +39,8 @@ import {
   type ReportMetric,
   type ReportStatus,
   type ReportTrend,
+  type LiveRankBlock,
+  type GeoBlock,
 } from "./report-types";
 
 /** Movers shown in the client-facing report. Candidates are wider (20) so
@@ -343,24 +347,89 @@ function consolidateGbp(profiles: GbpProfileMetrics[]): MonthlyReportSnapshot["g
 
 /** SE Ranking positions for a client, or null when there's nothing to show.
  *  Swallows its own errors so rank tracking stays additive to the report. */
-async function fetchSeRanking(
+/** Posição real na Google + visibilidade em LLMs, ambas via DataForSEO.
+ *
+ *  A variação mês-a-mês NÃO vem da API: o DataForSEO responde onde a keyword
+ *  está hoje, e mais nada. O «mês passado» sai do relatório do mês anterior,
+ *  que já está gravado em KV — o que também significa que o primeiro
+ *  relatório de um cliente não tem setas, e é honesto que não tenha.
+ *
+ *  Best-effort das duas pontas: um cliente sem target keywords, sem site ou
+ *  com a API em baixo gera o relatório na mesma, apenas sem estas secções. */
+async function fetchDataForSeo(
   slug: string,
-  windows: { current: DateRange; prevMonth: DateRange },
-) {
-  if (!isSeRankingConfigured()) return null;
-  try {
-    const link = await getSeRankingLink(slug);
-    if (!link) return null;
-    return await getSeRankingRanks(link.siteId, {
-      start: windows.current.startDate,
-      end: windows.current.endDate,
-      prevStart: windows.prevMonth.startDate,
-      prevEnd: windows.prevMonth.endDate,
-    });
-  } catch (err) {
-    console.error(`SE Ranking pull failed for ${slug}:`, err);
-    return null;
+  keywords: string[],
+  previousPeriodKey: string,
+): Promise<{ liveRanks?: LiveRankBlock; geo?: GeoBlock }> {
+  const website = CLIENT_WEBSITES[slug];
+  if (!website || keywords.length === 0) return {};
+
+  const [ranksRes, geoRes, prevReport] = await Promise.all([
+    fetchDfsRanks(slug, website, keywords).catch((err) => {
+      console.error(`DataForSEO ranks falhou para ${slug}:`, err);
+      return null;
+    }),
+    fetchGeoReport(slug, website, keywords).catch((err) => {
+      console.error(`DataForSEO GEO falhou para ${slug}:`, err);
+      return null;
+    }),
+    getReport(slug, previousPeriodKey).catch(() => null),
+  ]);
+
+  const out: { liveRanks?: LiveRankBlock; geo?: GeoBlock } = {};
+
+  if (ranksRes && ranksRes.ranks.length > 0) {
+    // Mapa keyword → posição do mês passado. Aceita tanto o bloco novo como o
+    // do SE Ranking, para que o primeiro mês depois da troca ainda tenha
+    // variação em vez de uma coluna de traços.
+    const prevByKeyword = new Map<string, number | null>();
+    for (const r of prevReport?.liveRanks?.ranks ?? []) {
+      prevByKeyword.set(r.keyword.toLowerCase(), r.position);
+    }
+    if (prevByKeyword.size === 0) {
+      for (const r of prevReport?.seRanking?.ranks ?? []) {
+        prevByKeyword.set(r.keyword.toLowerCase(), r.position);
+      }
+    }
+    out.liveRanks = {
+      source: "dataforseo",
+      checkedOn: ranksRes.checkedOn,
+      domain: ranksRes.domain,
+      costUsd: ranksRes.costUsd,
+      ranks: ranksRes.ranks.map((r) => {
+        const prev = prevByKeyword.get(r.keyword.toLowerCase()) ?? null;
+        return {
+          keyword: r.keyword,
+          position: r.position,
+          previousPosition: prev,
+          // Positivo = subiu. Sem posição de um dos lados não há variação
+          // nenhuma para mostrar — e um zero seria mentira.
+          change:
+            prev !== null && r.position !== null ? prev - r.position : null,
+          inLocalPack: r.inLocalPack,
+          localPackPosition: r.localPackPosition,
+          url: r.url,
+        };
+      }),
+    };
   }
+
+  // A secção de GEO só entra quando há mesmo o que mostrar. Ver o cabeçalho
+  // de dataforseo-geo.ts: em português de Portugal, o corpus de perguntas
+  // ainda devolve zero para a maioria dos tópicos específicos.
+  if (geoRes && hasGeoSignal(geoRes)) {
+    out.geo = {
+      source: "dataforseo",
+      checkedOn: geoRes.checkedOn,
+      domain: geoRes.domain,
+      present: geoRes.present,
+      presentTotal: geoRes.presentTotal,
+      gaps: geoRes.gaps,
+      costUsd: geoRes.costUsd,
+    };
+  }
+
+  return out;
 }
 
 /** Build (do not persist) the monthly report snapshot for a client. Deterministic
@@ -389,7 +458,7 @@ export async function buildMonthlyReport(
   const trendPeriods = trailingMonths(period.key, TREND_MONTHS);
   const trendMonthKeys = trendPeriods.map((p) => p.key);
 
-  const [ga4, gsc, gbpRes, seRanking] = await Promise.all([
+  const [ga4, gsc, gbpRes, dfs] = await Promise.all([
     getGa4MonthlyReport(slug, {
       current: windows.current,
       previous: windows.prevMonth,
@@ -413,10 +482,8 @@ export async function buildMonthlyReport(
       locationIdOverride: config.gbpLocationId,
       extraProfiles: config.extraGbpProfiles,
     }),
-    // True SERP positions. Best-effort: a client with no synced project, an
-    // unset API key or an SE Ranking hiccup must never fail the whole report —
-    // the section simply doesn't render.
-    fetchSeRanking(slug, windows),
+    // Posição real na Google + GEO. Best-effort: nunca derruba o relatório.
+    fetchDataForSeo(slug, targetKeywords, trailingMonths(period.key, 2)[0].key),
   ]);
 
   const ga4Fetch: FetchStatus =
@@ -687,7 +754,8 @@ export async function buildMonthlyReport(
     leads: { total: leadsTotal, channels },
     organic,
     gsc: gscBlock,
-    ...(seRanking ? { seRanking } : {}),
+    ...(dfs.liveRanks ? { liveRanks: dfs.liveRanks } : {}),
+    ...(dfs.geo ? { geo: dfs.geo } : {}),
     ...(trend ? { trend } : {}),
     ai: aiBlock,
     gbp: gbpBlock,

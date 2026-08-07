@@ -159,6 +159,21 @@ export function ReportDocument({
   // falha, e rouba o olho às que subiram. O consultor continua a ver a lista
   // inteira na variante interna, que é onde a lacuna é acionável.
   const targetRanks = variant === "internal" ? allTargetRanks : rankedTargets;
+  // Posição real na Google (DataForSEO desde a v76.35). Os relatórios
+  // gravados antes disso trazem o bloco antigo do SE Ranking; renderiza-se o
+  // que lá estiver, para um relatório de março não ficar sem a secção.
+  const live = snapshot.liveRanks;
+  const liveVisible = live
+    ? variant === "internal"
+      ? live.ranks
+      : live.ranks.filter((r) => r.position !== null)
+    : [];
+  const liveRanked = live?.ranks.filter((r) => r.position !== null) ?? [];
+  const liveTop = (n: number) =>
+    liveRanked.filter((r) => (r.position ?? Infinity) <= n).length;
+  const liveLocalPack = live?.ranks.filter((r) => r.inLocalPack).length ?? 0;
+  const geo = snapshot.geo;
+
   // True SERP positions — absent on reports for clients with no synced
   // SE Ranking project, and on every report generated before v76.26.
   const seRanking = snapshot.seRanking;
@@ -656,10 +671,183 @@ export function ReportDocument({
         </section>
       )}
 
-      {/* True SERP positions (SE Ranking) — the same target keywords as the
-          table above, but checked against the real Google results page rather
-          than averaged over the impressions GSC happened to serve. */}
-      {seRanking && srVisibleRanks.length > 0 && (
+      {/* Posição real na Google (DataForSEO) — as mesmas target keywords da
+          tabela de cima, mas perguntadas a uma página de resultados a sério em
+          vez de tiradas da média das impressões que o GSC calhou de servir. */}
+      {live && liveVisible.length > 0 && (
+        <section className="wa-sec">
+          <div className="wa-label">
+            {t("Ranking Real na Google", "Live Google Ranking")}
+          </div>
+          <h3 className="wa-h3">
+            {t(
+              `Posição verificada de cada keyword (${liveVisible.length})`,
+              `Verified position for every keyword (${liveVisible.length})`,
+            )}
+          </h3>
+          <p className="wa-method">
+            {t(
+              `Posição real na página de resultados da Google, verificada a ${formatDate(live.checkedOn)}. Ao contrário da tabela acima (que é uma média das impressões), esta é a posição em que a keyword aparece de facto.`,
+              `Actual position on Google's results page, checked on ${formatDate(live.checkedOn)}. Unlike the table above (an average over impressions), this is where the keyword actually appears.`,
+            )}
+          </p>
+          <div className="wa-kstats">
+            <div className="wa-kstat">
+              <span className="wa-kv">{formatRaw(liveRanked.length, "count", lang)}</span>
+              <span className="wa-kl">{t("no top 100", "in top 100")}</span>
+            </div>
+            <div className="wa-kstat">
+              <span className="wa-kv">{formatRaw(liveTop(3), "count", lang)}</span>
+              <span className="wa-kl">Top 3</span>
+            </div>
+            <div className="wa-kstat">
+              <span className="wa-kv">{formatRaw(liveTop(10), "count", lang)}</span>
+              <span className="wa-kl">Top 10</span>
+            </div>
+            <div className="wa-kstat">
+              <span className="wa-kv">{formatRaw(liveTop(20), "count", lang)}</span>
+              <span className="wa-kl">Top 20</span>
+            </div>
+            {liveLocalPack > 0 && (
+              <div className="wa-kstat wa-kstat-new">
+                <span className="wa-kv">{formatRaw(liveLocalPack, "count", lang)}</span>
+                <span className="wa-kl">{t("no mapa", "in map pack")}</span>
+              </div>
+            )}
+          </div>
+          <div className="wa-tblwrap" style={{ marginTop: "1rem" }}>
+            <table className="wa-qtable">
+              <thead>
+                <tr>
+                  <th>Keyword</th>
+                  <th className="n">{t("Posição", "Position")}</th>
+                  <th className="n">{t("Δ mês", "MoM Δ")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {liveVisible.map((r) => (
+                  <tr key={r.keyword}>
+                    <td>
+                      {r.keyword}
+                      {r.inLocalPack && (
+                        <span className="wa-kw-map">{t("mapa", "map")}</span>
+                      )}
+                    </td>
+                    <td className="n">
+                      {r.position === null ? (
+                        <span className="wa-pending">
+                          {t("fora do top 100", "outside top 100")}
+                        </span>
+                      ) : (
+                        r.position
+                      )}
+                    </td>
+                    <td className="n">
+                      <PlaceCell change={r.change} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {variant === "internal" && (
+            <p className="wa-method" style={{ marginTop: ".6rem" }}>
+              DataForSEO · {live.domain} · ${live.costUsd} nesta verificação.
+            </p>
+          )}
+        </section>
+      )}
+
+      {/* GEO — só existe no snapshot quando houve mesmo sinal (ver
+          hasGeoSignal). O corpus de perguntas em português ainda é curto, e
+          uma secção de zeros lê-se como trabalho não feito. */}
+      {geo && (
+        <section className="wa-sec">
+          <div className="wa-label">
+            {t("Visibilidade em IA", "AI Visibility")}
+          </div>
+          <h3 className="wa-h3">
+            {t(
+              "Onde a marca aparece quando se pergunta a uma IA",
+              "Where the brand shows up when people ask an AI",
+            )}
+          </h3>
+          <p className="wa-method">
+            {t(
+              `Perguntas reais feitas ao ChatGPT e respondidas pela AI Overview da Google, verificadas a ${formatDate(geo.checkedOn)}. O número ao lado é quantas vezes por mês a pergunta é feita.`,
+              `Real questions asked to ChatGPT and answered by Google's AI Overview, checked on ${formatDate(geo.checkedOn)}. The number beside each is how many times a month it gets asked.`,
+            )}
+          </p>
+
+          {geo.present.length > 0 && (
+            <>
+              <div className="wa-kstats">
+                <div className="wa-kstat">
+                  <span className="wa-kv">
+                    {formatRaw(geo.presentTotal, "count", lang)}
+                  </span>
+                  <span className="wa-kl">
+                    {t("perguntas com a marca", "questions citing us")}
+                  </span>
+                </div>
+              </div>
+              <ul className="wa-geo" style={{ marginTop: "1rem" }}>
+                {geo.present.slice(0, 8).map((p, i) => (
+                  <li key={`${p.question}-${i}`} className="wa-geo-hit">
+                    <span className="wa-geo-q">“{p.question}”</span>
+                    <span className="wa-geo-v">
+                      {formatRaw(p.aiSearchVolume, "count", lang)}
+                      {t("/mês", "/mo")}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+
+          {geo.gaps.length > 0 && (
+            <>
+              <h4 className="wa-geo-h">
+                {t("Onde ainda não aparecemos", "Where we're not there yet")}
+              </h4>
+              <p className="wa-method">
+                {t(
+                  "Perguntas sobre os temas deste projeto que a IA já responde citando outros. São o alvo do trabalho dos próximos meses.",
+                  "Questions on this project's topics that AI already answers by citing others. They're the target for the coming months.",
+                )}
+              </p>
+              <ul className="wa-geo">
+                {geo.gaps.flatMap((g) =>
+                  g.prompts.slice(0, 3).map((p, i) => (
+                    <li key={`${g.topic}-${p.question}-${i}`} className="wa-geo-gap">
+                      <span className="wa-geo-q">“{p.question}”</span>
+                      <span className="wa-geo-v">
+                        {formatRaw(p.aiSearchVolume, "count", lang)}
+                        {t("/mês", "/mo")}
+                      </span>
+                      {p.sources.length > 0 && (
+                        <span className="wa-geo-src">
+                          {t("hoje cita", "today it cites")}:{" "}
+                          {p.sources.slice(0, 3).join(", ")}
+                        </span>
+                      )}
+                    </li>
+                  )),
+                )}
+              </ul>
+            </>
+          )}
+          {variant === "internal" && (
+            <p className="wa-method" style={{ marginTop: ".6rem" }}>
+              DataForSEO · {geo.domain} · ${geo.costUsd} nesta verificação.
+            </p>
+          )}
+        </section>
+      )}
+
+      {/* Bloco antigo do SE Ranking — só nos relatórios gravados antes da
+          v76.35, que já o traziam no snapshot. */}
+      {!live && seRanking && srVisibleRanks.length > 0 && (
         <section className="wa-sec">
           <div className="wa-label">
             {t("Ranking Real na Google", "Live Google Ranking")}
@@ -870,6 +1058,17 @@ const CSS = `
 .wa-trend-tick{font-size:8px;fill:#a09eb4;font-variant-numeric:tabular-nums;letter-spacing:.02em;}
 .wa-trend-max{font-size:8px;fill:#b3aec4;font-weight:700;font-variant-numeric:tabular-nums;}
 .wa-sec-trend{break-inside:avoid;page-break-inside:avoid;}
+
+/* Visibilidade em IA */
+.wa-geo{list-style:none;margin:.5rem 0 0;padding:0;display:grid;gap:.4rem;}
+.wa-geo li{border:1px solid var(--line);border-radius:9px;padding:.5rem .7rem;background:#fff;
+  display:flex;flex-wrap:wrap;align-items:baseline;gap:.5rem;break-inside:avoid;}
+.wa-geo-hit{border-color:rgba(15,143,98,.28)!important;background:rgba(15,143,98,.05)!important;}
+.wa-geo-gap{background:rgba(120,61,245,.035)!important;}
+.wa-geo-q{font-size:.82rem;color:#2c2a45;font-weight:600;flex:1 1 auto;}
+.wa-geo-v{font-size:.72rem;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap;}
+.wa-geo-src{flex:1 0 100%;font-size:.68rem;color:#a08fb8;}
+.wa-geo-h{margin:1.1rem 0 .1rem;font-size:.95rem;font-weight:700;letter-spacing:-.01em;color:var(--ink);}
 
 /* AI */
 .wa-ai-total{display:flex;align-items:baseline;gap:.5rem;margin:.2rem 0 .85rem;}

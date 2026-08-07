@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.35",
+    date: "2026-08-07",
+    title: "O DataForSEO entrou mesmo no relatório — e o SE Ranking saiu da ficha do cliente",
+    highlights: [
+      "**🎯 «Ranking Real na Google» passou a ser servido pelo DataForSEO, dentro do relatório mensal.** Na v76.34 a integração existia mas só corria no banco de ensaio — o relatório continuava à espera do SE Ranking, que não respondia porque o plano tinha o teto de websites cheio. Agora cada relatório gerado traz a posição verificada de cada target keyword, com **top 3 / top 10 / top 20** e as que estão **no mapa** contadas à parte.",
+      "**📉 A variação mês-a-mês vem do relatório anterior, não da API.** O DataForSEO responde onde a keyword está hoje e mais nada. O «mês passado» é lido do relatório do mês anterior já gravado — o que significa que **o primeiro relatório de um cliente não tem setas, e é honesto que não tenha**. Na transição, se o mês anterior ainda tiver números do SE Ranking, são esses que servem de comparação, para não haver um mês inteiro de traços.",
+      "**🤖 Nova secção «Visibilidade em IA» no relatório.** As perguntas reais feitas ao ChatGPT e respondidas pela AI Overview onde a marca **já é citada**, e as perguntas sobre os temas do projeto onde **hoje é outro que aparece** — com o volume mensal e quem está lá em vez de nós. **Só entra quando há mesmo sinal:** o corpus de perguntas em português ainda devolve zero para a maioria dos tópicos, e uma secção de zeros lê-se como trabalho não feito.",
+      "**🧹 O painel do SE Ranking saiu da ficha do cliente.** Estava a mostrar um erro vermelho de limite de plano em todas as fichas, a prometer uma tabela que nunca ia aparecer.",
+      "**⏱️ Nenhuma destas chamadas pode derrubar um relatório.** Cada pesquisa tem 15 segundos e cada consulta de IA tem 30; o que passar disso é abandonado e o relatório sai na mesma sem essa secção. Na vista interna cada secção diz quanto custou a verificação — uma integração paga à chamada tem de dizer o que gastou.",
+    ],
+  },
+  {
     version: "76.34",
     date: "2026-08-07",
     title: "DataForSEO: posição real sem teto de clientes, e a verdade sobre o GEO em português",

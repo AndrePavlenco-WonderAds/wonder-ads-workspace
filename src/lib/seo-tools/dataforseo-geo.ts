@@ -30,6 +30,11 @@ const API_BASE = "https://api.dataforseo.com/v3";
  *  custo por cliente na casa dos sessenta cêntimos. */
 const GAP_TOPICS = 5;
 
+/** A documentação admite até 120 s por pedido live. O relatório não tem esse
+ *  tempo para dar — ao fim de 30 s a secção de GEO desiste e o resto do
+ *  relatório sai na mesma. */
+const REQUEST_TIMEOUT_MS = 30_000;
+
 export type GeoPrompt = {
   /** "google" (AI Overview) ou "chat_gpt". */
   platform: string;
@@ -94,6 +99,7 @@ async function searchMentions(
         "Content-Type": "application/json",
       },
       cache: "no-store",
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       body: JSON.stringify([
         {
           language_code: languageCode,

@@ -24,7 +24,12 @@ const API_BASE = "https://api.dataforseo.com/v3";
  *  mas o relatório não fica melhor por chegar 2 segundos mais cedo e um
  *  cliente com 200 keywords não deve conseguir esgotar sozinho o rate limit
  *  de toda a gente. */
-const CONCURRENCY = 8;
+const CONCURRENCY = 12;
+
+/** Teto por pedido. O relatório corre dentro de uma função com orçamento de
+ *  tempo; uma pesquisa que fique pendurada não pode levar o relatório inteiro
+ *  atrás dela. Falha essa keyword, as outras seguem. */
+const REQUEST_TIMEOUT_MS = 15_000;
 
 /** Profundidade da consulta. 100 porque metade do valor de um rank tracker
  *  está em ver uma keyword sair de 80 para 40 — o cliente não vê diferença
@@ -106,6 +111,7 @@ async function serpFor(
       "Content-Type": "application/json",
     },
     cache: "no-store",
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     body: JSON.stringify([
       {
         keyword,

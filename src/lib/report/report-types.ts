@@ -242,6 +242,66 @@ export type FetchStatus = {
   message?: string;
 };
 
+/** Uma target keyword com a posição REAL na página de resultados da Google,
+ *  verificada pelo DataForSEO.
+ *
+ *  Distinta do `TargetKeywordRank`, que é a média do GSC sobre as impressões
+ *  que a Google decidiu servir — lá, uma keyword sem impressões desaparece e
+ *  não se distingue «não rankeia» de «não sabemos». Aqui pergunta-se a uma
+ *  SERP fixa e toda a keyword tem resposta. */
+export type LiveRank = {
+  keyword: string;
+  /** null = fora do top 100. */
+  position: number | null;
+  /** Posição no relatório do mês anterior, quando existe. */
+  previousPosition: number | null;
+  /** previous − current, logo positivo = subiu. */
+  change: number | null;
+  /** Apareceu no pack local (mapa) — para uma clínica é muitas vezes este
+   *  que marca consultas, não o link azul. */
+  inLocalPack: boolean;
+  localPackPosition: number | null;
+  url: string | null;
+};
+
+/** O bloco de posição real de um relatório. */
+export type LiveRankBlock = {
+  source: "dataforseo";
+  /** Data da verificação, ISO yyyy-mm-dd. */
+  checkedOn: string;
+  domain: string;
+  ranks: LiveRank[];
+  /** Custo em USD desta verificação. Só aparece na vista interna — uma
+   *  integração paga à chamada tem de dizer o que gastou. */
+  costUsd: number;
+};
+
+/** Uma pergunta feita a um LLM (ChatGPT ou AI Overview da Google). */
+export type GeoPromptRow = {
+  platform: string;
+  question: string;
+  aiSearchVolume: number;
+  /** Domínios citados na resposta. */
+  sources: string[];
+};
+
+/** Visibilidade do cliente nos LLMs.
+ *
+ *  Só existe no snapshot quando há mesmo alguma coisa para mostrar — o corpus
+ *  de perguntas em português é curto e uma secção de zeros num relatório
+ *  lê-se como trabalho não feito, não como um mercado que ainda não existe. */
+export type GeoBlock = {
+  source: "dataforseo";
+  checkedOn: string;
+  domain: string;
+  /** Perguntas onde o domínio do cliente já é citado. */
+  present: GeoPromptRow[];
+  presentTotal: number;
+  /** Perguntas sobre os tópicos do cliente onde ele ainda não é citado. */
+  gaps: { topic: string; total: number; prompts: GeoPromptRow[] }[];
+  costUsd: number;
+};
+
 /** A evolução dos últimos meses — a secção que responde a «isto está a
  *  crescer?», que é a pergunta que um número de um mês sozinho nunca responde.
  *
@@ -322,6 +382,13 @@ export type MonthlyReportSnapshot = {
   /** True SERP positions from SE Ranking for the same target keywords, shown
    *  under the GSC table. Absent when the client has no synced project. */
   seRanking?: SeRankingBlock;
+  /** Posição real na Google via DataForSEO — substituiu o SE Ranking na
+   *  v76.35 (o plano tinha um teto de 10 websites que deixava dez clientes
+   *  sem posições). Os relatórios antigos continuam a mostrar o bloco
+   *  `seRanking` que já tinham gravado. */
+  liveRanks?: LiveRankBlock;
+  /** Visibilidade em LLMs. Ausente quando não há sinal neste mercado. */
+  geo?: GeoBlock;
   /** Evolução dos últimos 12 meses. Ausente nos relatórios gerados antes da
    *  v76.32 e quando o GA4 não respondeu. */
   trend?: ReportTrend;
