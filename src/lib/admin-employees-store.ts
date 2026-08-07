@@ -69,6 +69,9 @@ export const employeesStorageConfigured = Boolean(
 // ---------------------------------------------------------------------------
 
 type SeedEmployee = {
+  /** MUST match the credential username in `auth/credentials.ts` for
+   *  everyone who has a workspace login — that id is the bridge that ties
+   *  a roster row to its account (access column + exam clock). */
   id: string;
   name: string;
   emailHandle: string;
@@ -79,9 +82,56 @@ type SeedEmployee = {
   monthlyValueEur?: number;
   /** ISO yyyy-mm-dd — when the employee joined. */
   startingDate?: string;
+  /** Defaults to "active". Only set it for people who are already off the
+   *  books, so the roster doesn't lie about who is working here today. */
+  status?: EmployeeStatus;
 };
 
+// v76.31: the seed roster is now ONE ROW PER WORKSPACE LOGIN, plus the
+// people who work here without one. Before this it listed five names while
+// thirteen accounts could log in — the four web designers, João B. and the
+// three SuperAdmins existed only in the credential table, so the C-suite's
+// roster and the app's real access list disagreed about who works here.
+//
+// Salaries are deliberately left empty where they were never given to the
+// app: an empty cell shows up in rose as "Needs salary", which is the honest
+// state. A guessed number would quietly poison the payroll roll-up.
 export const SEED_EMPLOYEES: SeedEmployee[] = [
+  // ── Founder + SuperAdmins ────────────────────────────────────────────
+  {
+    id: "andre",
+    name: "André Pavlenco",
+    emailHandle: "andre",
+    role: "Founder",
+    departments: ["Founder"],
+    startingDate: "2026-05-12",
+  },
+  {
+    id: "alex",
+    name: "Alex",
+    emailHandle: "alex",
+    role: "SuperAdmin",
+    departments: ["Founder"],
+    startingDate: "2026-05-12",
+  },
+  {
+    id: "alice",
+    name: "Alice",
+    emailHandle: "alice",
+    role: "SuperAdmin",
+    departments: ["Operations"],
+    startingDate: "2026-05-12",
+  },
+  // ── SEO ──────────────────────────────────────────────────────────────
+  {
+    id: "fran-r",
+    name: "Fran. Rosa",
+    emailHandle: "fran",
+    role: "SEO Consultant",
+    departments: ["SEO"],
+    monthlyValueEur: 1000,
+    startingDate: "2026-03-17",
+  },
   {
     id: "manuel-s",
     name: "Manuel Silva",
@@ -93,13 +143,21 @@ export const SEED_EMPLOYEES: SeedEmployee[] = [
     startingDate: "2026-06-03",
   },
   {
-    id: "fran-r",
-    name: "Fran. Rosa",
-    emailHandle: "fran",
+    id: "andre-pereira",
+    name: "André Pereira",
+    emailHandle: "andre.pereira",
     role: "SEO Consultant",
     departments: ["SEO"],
-    monthlyValueEur: 1000,
-    startingDate: "2026-03-17",
+    // Monthly rate not provided yet — left null until populated.
+    startingDate: "2026-06-17",
+  },
+  {
+    id: "joao-b",
+    name: "João B.",
+    emailHandle: "joao.batista",
+    role: "SEO Consultant",
+    departments: ["SEO"],
+    startingDate: "2026-07-23",
   },
   {
     id: "yenisey-r",
@@ -109,7 +167,11 @@ export const SEED_EMPLOYEES: SeedEmployee[] = [
     departments: ["SEO"],
     monthlyValueEur: 1250,
     startingDate: "2026-04-20",
+    // Saiu na v75.4 — a carteira foi redistribuída e o login apagado. Fica
+    // na tabela como histórico, fora da folha de pagamentos.
+    status: "offboarded",
   },
+  // ── ADS ──────────────────────────────────────────────────────────────
   {
     id: "germano-c",
     name: "Germano C.",
@@ -119,14 +181,38 @@ export const SEED_EMPLOYEES: SeedEmployee[] = [
     monthlyValueEur: 1000,
     // Germano start date not provided yet — left null until populated.
   },
+  // ── Web ──────────────────────────────────────────────────────────────
   {
-    id: "andre-pereira",
-    name: "André Pereira",
-    emailHandle: "andre.pereira",
-    role: "SEO Consultant",
-    departments: ["SEO"],
-    // Monthly rate not provided yet — left null until populated.
-    startingDate: "2026-06-15",
+    id: "mike",
+    name: "Mike Nobre",
+    emailHandle: "mike",
+    role: "Web Designer",
+    departments: ["Web"],
+    startingDate: "2026-06-16",
+  },
+  {
+    id: "gustavo",
+    name: "Gustavo Rotini",
+    emailHandle: "gustavo",
+    role: "Web Designer",
+    departments: ["Web"],
+    startingDate: "2026-06-16",
+  },
+  {
+    id: "renan",
+    name: "Renan Alves",
+    emailHandle: "renan",
+    role: "Web Designer",
+    departments: ["Web"],
+    startingDate: "2026-06-16",
+  },
+  {
+    id: "cylas",
+    name: "Cylas",
+    emailHandle: "cylas",
+    role: "Web Designer",
+    departments: ["Web"],
+    startingDate: "2026-06-23",
   },
 ];
 
@@ -138,6 +224,29 @@ export function slugifyEmployee(name: string): string {
     .trim()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
+}
+
+/** Sem acentos, sem pontuação, minúsculas — a chave com que o roster e a
+ *  lista de consultores de um cliente se encontram. */
+export function rosterNameKey(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+/** Chave da carteira ativa de uma linha do roster.
+ *
+ *  O nome GUARDADO na linha não serve: o registo do Manuel foi gravado como
+ *  "Manuel S." e os clientes dele estão atribuídos a "Manuel Silva", por isso
+ *  a coluna «Active portfolio» dizia-lhe «None active» com cinco clientes na
+ *  mão. O nome do seed é o canónico — quando o id é de seed, é esse que conta;
+ *  para contratações fora da lista, o nome da própria linha. */
+export function portfolioKeyFor(id: string, name: string): string {
+  const seed = SEED_EMPLOYEES.find((s) => s.id === id);
+  return rosterNameKey(seed?.name ?? name);
 }
 
 function emailFromHandle(handle: string): string {
@@ -155,7 +264,7 @@ export function defaultEmployeeRecord(seed: SeedEmployee): AdminEmployeeRecord {
     paymentCadence: "monthly",
     currency: "EUR",
     monthlyValue: seed.monthlyValueEur ?? null,
-    status: "active",
+    status: seed.status ?? "active",
     notes: "",
     updatedAt: new Date(0).toISOString(),
   };

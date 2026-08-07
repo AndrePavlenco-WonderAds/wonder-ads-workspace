@@ -39,9 +39,11 @@ import { formatMoney } from "@/lib/admin-clients-store";
 import {
   EMPLOYEE_DEPARTMENTS,
   EMPLOYEE_STATUSES,
+  portfolioKeyFor,
   type AdminEmployeeRecord,
   type EmployeeStatus,
 } from "@/lib/admin-employees-store";
+import type { RosterAccess } from "@/lib/auth/credentials";
 
 /** Derive a work-email handle from the first name (accent-stripped),
  *  mirroring the seed roster's `${handle}@wonder-ads.com` convention so
@@ -59,15 +61,17 @@ function suggestEmail(name: string): string {
 export function AdminEmployeesPanel({
   employees,
   portfolios,
-  examClockUsers = {},
+  access = {},
 }: {
   employees: AdminEmployeeRecord[];
-  /** Keyed by employee name (matches admin client `consultants[]`). */
+  /** Keyed by normalised employee name (matches admin client
+   *  `consultants[]` after normalisation). */
   portfolios: Record<string, EmployeePortfolio>;
-  /** Employee id → workspace login, for the rows whose Starting date also
-   *  drives that person's phase exams in Formação. Resolved server-side so
-   *  the credential table (password hashes) never reaches the browser. */
-  examClockUsers?: Record<string, string>;
+  /** Employee id → o que aquele login abre no workspace. Só existe entrada
+   *  para quem TEM conta; a ausência é o que a coluna «Access» mostra como
+   *  «No login». Resolvido no servidor para a tabela de credenciais (hashes
+   *  de password) nunca chegar ao browser. */
+  access?: Record<string, RosterAccess>;
 }) {
   const [records, setRecords] = useState<Map<string, AdminEmployeeRecord>>(
     () => {
@@ -194,11 +198,18 @@ export function AdminEmployeesPanel({
     for (const id of order) {
       const r = records.get(id);
       if (!r) continue;
-      const p = portfolios[r.name];
+      const p = portfolios[portfolioKeyFor(r.id, r.name)];
       if (p) total += p.totalEur;
     }
     return total;
   }, [records, order, portfolios]);
+
+  // Quantas destas pessoas conseguem mesmo entrar na app. A distância entre
+  // este número e o total é a pergunta que a tabela existe para responder.
+  const withAccess = useMemo(
+    () => order.filter((id) => Boolean(access[id])).length,
+    [order, access],
+  );
 
   return (
     <div className="animate-fade-up mt-2">
@@ -424,9 +435,18 @@ export function AdminEmployeesPanel({
       {/* Roll-up tiles — EUR only. */}
       <section
         aria-label="Roll-up"
-        className="mt-7 grid grid-cols-1 gap-3 sm:grid-cols-3"
+        className="mt-7 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4"
       >
         <RollupTile label="Employees" value={String(totalEmployees)} />
+        <RollupTile
+          label="Workspace access"
+          value={`${withAccess} of ${totalEmployees}`}
+          hint={
+            withAccess === totalEmployees
+              ? "Everyone can log in"
+              : `${totalEmployees - withAccess} without a login`
+          }
+        />
         <RollupTile
           label="Payroll"
           value={payEur > 0 ? formatMoney(payEur, "EUR") : "—"}
@@ -443,12 +463,13 @@ export function AdminEmployeesPanel({
 
       <section aria-label="Employees" className="mt-10">
         <div className="overflow-x-auto rounded-2xl border border-white/8 bg-white/[0.02]">
-          <table className="w-full min-w-[1300px] border-collapse text-left">
+          <table className="w-full min-w-[1520px] border-collapse text-left">
             <thead>
               <tr className="border-b border-white/8 bg-black/30 text-[10px] font-bold uppercase tracking-[0.16em] text-white/50">
                 <th className="px-4 py-2.5">Employee</th>
                 <th className="px-3 py-2.5">Role</th>
                 <th className="px-3 py-2.5">Departments</th>
+                <th className="px-3 py-2.5">Workspace access</th>
                 <th className="px-3 py-2.5">Starting date</th>
                 <th className="px-3 py-2.5">Monthly salary</th>
                 <th className="px-3 py-2.5">Active portfolio</th>
@@ -461,7 +482,7 @@ export function AdminEmployeesPanel({
               {order.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={9}
+                    colSpan={10}
                     className="px-4 py-8 text-center text-[12px] text-white/40"
                   >
                     No employees yet. Click <strong>Add employee</strong> to get started.
@@ -472,7 +493,7 @@ export function AdminEmployeesPanel({
                   const r = records.get(id);
                   if (!r) return null;
                   const portfolio: EmployeePortfolio =
-                    portfolios[r.name] ?? {
+                    portfolios[portfolioKeyFor(r.id, r.name)] ?? {
                       activeClients: 0,
                       totalEur: 0,
                       breakdown: [],
@@ -482,7 +503,7 @@ export function AdminEmployeesPanel({
                       key={id}
                       initial={r}
                       portfolio={portfolio}
-                      examClockUser={examClockUsers[id] ?? null}
+                      access={access[id] ?? null}
                       onSaved={handleSaved}
                       onDeleted={handleDeleted}
                     />
@@ -539,10 +560,14 @@ function FormField({
 function RollupTile({
   label,
   value,
+  hint,
   tone = "neutral",
 }: {
   label: string;
   value: string;
+  /** Linha pequena por baixo do número — para o caso em que o número
+   *  sozinho não diz o que fazer com ele. */
+  hint?: string;
   tone?: "neutral" | "emerald";
 }) {
   const isEmerald = tone === "emerald";
@@ -570,6 +595,9 @@ function RollupTile({
       >
         {value}
       </div>
+      {hint && (
+        <div className="mt-0.5 text-[10.5px] text-white/40">{hint}</div>
+      )}
     </div>
   );
 }

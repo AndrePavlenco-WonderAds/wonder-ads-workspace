@@ -15,7 +15,6 @@ import {
   Compass,
   Wallet,
   Rocket,
-  ShieldAlert,
   BellRing,
   ArrowRight,
 } from "lucide-react";
@@ -35,7 +34,6 @@ export function AdminLanding({
   roadmapsCount,
   financesCount,
   onboardingCount,
-  penaltiesCount,
   notificationsCount,
 }: {
   projectsCount: number;
@@ -43,7 +41,6 @@ export function AdminLanding({
   roadmapsCount: number;
   financesCount: number;
   onboardingCount: number;
-  penaltiesCount: number;
   /** Regras de notificação ativas. */
   notificationsCount: number;
 }) {
@@ -95,15 +92,6 @@ export function AdminLanding({
       Icon: Wallet,
     },
     {
-      href: "/admin/penalties",
-      title: "Penalizações",
-      blurb:
-        "Registo disciplinar de toda a equipa, por departamento. Gravidade 1 a 3, título e descrição, com histórico completo — remover exige motivo e fica registado.",
-      count: penaltiesCount,
-      badge: penaltiesCount === 1 ? "ativa" : "ativas",
-      Icon: ShieldAlert,
-    },
-    {
       href: "/admin/notificacoes",
       title: "Notificações",
       blurb:
@@ -127,7 +115,7 @@ export function AdminLanding({
 
       <section
         aria-label="Manageable rosters"
-        className="mt-10 grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4"
+        className="mt-10 grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3"
       >
         {blocks.map((b) => {
           const { Icon } = b;

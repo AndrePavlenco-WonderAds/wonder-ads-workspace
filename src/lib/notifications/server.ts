@@ -8,7 +8,13 @@
 // board do SEO já tem.
 
 import "server-only";
+import { unstable_cache } from "next/cache";
 import { getSeoClients } from "@/lib/notion";
+import {
+  adminRecordKey,
+  getAdminRecords,
+  DEFAULT_STARTING_DATES,
+} from "@/lib/admin-clients-store";
 import { getConsultantForSlug } from "@/lib/client-overrides";
 import { getPausedSlugSet } from "@/lib/admin-paused-clients-store";
 import { EMPLOYEE_CREDENTIALS } from "@/lib/auth/credentials";
@@ -20,9 +26,11 @@ import {
 } from "@/lib/notifications/state-store";
 import {
   audienceMatches,
+  clientMonthOccurrences,
   notificationId,
   occurrencesFor,
   resolveHref,
+  type NotificationOccurrence,
   type NotificationRule,
 } from "@/lib/notifications/rules";
 
@@ -46,13 +54,22 @@ export type UserNotification = {
 
 type Viewer = { username: string; name: string; dept: string };
 
-type ClientRef = { slug: string; title: string; icon: string | null };
+type ClientRef = {
+  slug: string;
+  title: string;
+  icon: string | null;
+  /** Início do acompanhamento (ISO yyyy-mm-dd) — o relógio das regras
+   *  `client-month`. null quando ninguém o preencheu ainda. */
+  startedAt: string | null;
+};
 
 /** Toda a carteira SEO indexada por consultor, numa leitura só. Clientes em
  *  pausa saem — pedir o relatório de uma conta suspensa é ruído, não é
  *  lembrete. O consultor é RE-RESOLVIDO a partir do slug e nunca do campo
  *  em cache (ver o cabeçalho do ficheiro). */
-async function seoBooksByConsultant(): Promise<Map<string, ClientRef[]>> {
+async function seoBooksByConsultant(
+  withStartDates: boolean,
+): Promise<Map<string, ClientRef[]>> {
   const out = new Map<string, ClientRef[]>();
   let all: Awaited<ReturnType<typeof getSeoClients>>;
   try {
@@ -67,16 +84,63 @@ async function seoBooksByConsultant(): Promise<Map<string, ClientRef[]>> {
   } catch {
     /* KV em baixo — mais vale a lista completa do que lista nenhuma */
   }
+  // Só se paga o preço das datas de início quando há uma regra a precisar
+  // delas. O sino corre em TODAS as páginas; uma leitura por cliente por
+  // render seria a coisa mais cara da app a servir uma regra opcional.
+  const startDates = withStartDates ? await getSeoStartDates() : {};
   for (const c of all) {
     if (paused.has(c.slug)) continue;
     const consultant = getConsultantForSlug(c.slug);
     if (!consultant) continue;
     const list = out.get(consultant) ?? [];
-    list.push({ slug: c.slug, title: c.title, icon: c.icon });
+    list.push({
+      slug: c.slug,
+      title: c.title,
+      icon: c.icon,
+      startedAt: startDates[c.slug] ?? null,
+    });
     out.set(consultant, list);
   }
   return out;
 }
+
+/** Data de início de cada cliente SEO, por slug.
+ *
+ *  Vem do registo do SuperAdmin (que já cai para `DEFAULT_STARTING_DATES`
+ *  quando ninguém lhe mexeu), atrás de uma cache de 30 minutos: é uma leitura
+ *  por cliente e a data de arranque de um contrato muda uma vez na vida.
+ *  Bumpar a chave da cache ao mudar a forma do valor. */
+const getSeoStartDates = unstable_cache(
+  async (): Promise<Record<string, string | null>> => {
+    const out: Record<string, string | null> = {};
+    let all: Awaited<ReturnType<typeof getSeoClients>>;
+    try {
+      all = await getSeoClients();
+    } catch {
+      return out;
+    }
+    const rows = all.map((c) => ({
+      slug: c.slug,
+      departments: ["SEO" as const],
+    }));
+    try {
+      const records = await getAdminRecords(rows);
+      for (const c of all) {
+        out[c.slug] =
+          records[adminRecordKey(c.slug, "SEO")]?.startingDate ??
+          DEFAULT_STARTING_DATES[c.slug] ??
+          null;
+      }
+    } catch {
+      // KV em baixo — os defaults em código ainda dão uma janela certa para
+      // a maioria dos clientes.
+      for (const c of all) out[c.slug] = DEFAULT_STARTING_DATES[c.slug] ?? null;
+    }
+    return out;
+  },
+  ["notifications-seo-start-dates-v1"],
+  { revalidate: 1800 },
+);
 
 /** O cálculo em si — sem I/O, para poder ser corrido uma vez por pessoa a
  *  partir de leituras já feitas. É esta função que garante que o sino de um
@@ -94,27 +158,46 @@ function buildNotifications(
   if (applicable.length === 0) return [];
 
   const out: UserNotification[] = [];
+  const push = (
+    rule: NotificationRule,
+    occ: NotificationOccurrence,
+    client: ClientRef | null,
+  ) => {
+    const id = notificationId(rule.id, occ.periodKey, client?.slug ?? "-");
+    const entry = state[id];
+    out.push({
+      id,
+      ruleId: rule.id,
+      title: rule.title,
+      body: rule.body,
+      periodLabel: occ.periodLabel,
+      dueAt: occ.dueAt,
+      client: client
+        ? { slug: client.slug, title: client.title, icon: client.icon }
+        : null,
+      actionLabel: rule.actionLabel,
+      actionHref: resolveHref(rule.actionHref, client?.slug ?? null),
+      resolved: Boolean(entry),
+      resolvedAt: entry?.resolvedAt ?? null,
+    });
+  };
+
   for (const rule of applicable) {
-    for (const occ of occurrencesFor(rule, now)) {
-      const targets: (UserNotification["client"] | null)[] =
-        rule.scope === "seo-client" ? book : [null];
-      for (const client of targets) {
-        const id = notificationId(rule.id, occ.periodKey, client?.slug ?? "-");
-        const entry = state[id];
-        out.push({
-          id,
-          ruleId: rule.id,
-          title: rule.title,
-          body: rule.body,
-          periodLabel: occ.periodLabel,
-          dueAt: occ.dueAt,
-          client,
-          actionLabel: rule.actionLabel,
-          actionHref: resolveHref(rule.actionHref, client?.slug ?? null),
-          resolved: Boolean(entry),
-          resolvedAt: entry?.resolvedAt ?? null,
-        });
+    // Regras ancoradas no contrato do cliente: a janela é diferente para cada
+    // cliente, por isso é o cliente que manda no ciclo e não o calendário.
+    if (rule.schedule.kind === "client-month") {
+      if (rule.scope !== "seo-client") continue; // sem cliente não há relógio
+      for (const client of book) {
+        for (const occ of clientMonthOccurrences(rule, client.startedAt, now)) {
+          push(rule, occ, client);
+        }
       }
+      continue;
+    }
+    for (const occ of occurrencesFor(rule, now)) {
+      const targets: (ClientRef | null)[] =
+        rule.scope === "seo-client" ? book : [null];
+      for (const client of targets) push(rule, occ, client);
     }
   }
 
@@ -144,8 +227,11 @@ export async function getUserNotifications(
 
   // A carteira só se lê se alguma regra precisar dela.
   const needsBook = applicable.some((r) => r.scope === "seo-client");
+  const needsStartDates = applicable.some(
+    (r) => r.schedule.kind === "client-month",
+  );
   const book = needsBook
-    ? ((await seoBooksByConsultant()).get(viewer.name) ?? [])
+    ? ((await seoBooksByConsultant(needsStartDates)).get(viewer.name) ?? [])
     : [];
 
   return buildNotifications(viewer, rules, state, book, now);
@@ -207,10 +293,13 @@ export async function getTeamNotificationSummary(
   }
 
   const needsBook = enabled.some((r) => r.scope === "seo-client");
+  const needsStartDates = enabled.some(
+    (r) => r.schedule.kind === "client-month",
+  );
   const [states, books] = await Promise.all([
     getNotificationStateMany(people.map((p) => p.username)),
     needsBook
-      ? seoBooksByConsultant()
+      ? seoBooksByConsultant(needsStartDates)
       : Promise.resolve(new Map<string, ClientRef[]>()),
   ]);
 

@@ -13,6 +13,20 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.31",
+    date: "2026-08-07",
+    title: "O Team Roster passou a dizer quem entra na app — e o NPS deixou de depender de alguém se lembrar",
+    highlights: [
+      "**🔑 Nova coluna «Workspace access» no Team Roster.** A tabela listava cinco pessoas enquanto **treze contas** conseguiam entrar na app: os quatro web designers, o João B. e os três SuperAdmins existiam só na tabela de credenciais, e a única forma de saber quem tinha acesso a quê era abrir o código. Agora cada linha diz o **username**, se entra como **SuperAdmin**, e que **departamentos abre** — com as que são só de leitura marcadas com um olho (um web designer abre o SEO mas não lhe mexe). Quem trabalha cá sem conta aparece como **«No login»**, que é a informação que faltava: o Tiago e a Yenisey não desapareceram, estão identificados.",
+      "**👥 O roster passou a ser uma linha por pessoa real.** Entraram o André P., o Alex, a Alice, o João B., o Mike, o Gustavo, o Renan e o Cylas. Os salários que a app nunca soube ficam **vazios e a vermelho** («Needs salary») em vez de inventados — um número adivinhado envenenava a folha de pagamentos em silêncio. A Yenisey fica como **offboarded**: saiu, mas apagá-la reescrevia o histórico.",
+      "**📅 Datas de entrada corrigidas pelo C-Level: Fran. Rosa 17/03/2026, André Pereira 17/06/2026, João Batista 23/07/2026.** Não é cosmético — é a mesma data que arranca os seis exames de fase da Formação. A do Fran estava um mês e meio à frente da real, o que lhe deslocava o exame dos 90 dias.",
+      "**📊 A «Active portfolio» do Manuel deixou de dizer «None active» com cinco clientes na mão.** O registo dele foi gravado como «Manuel S.» e os clientes estão atribuídos a «Manuel Silva»; a coluna comparava as duas strings à letra. Passou a resolver pelo id da linha. O **João B.** também entrou na lista de consultores atribuíveis — já tinha login, carteira e coluna no board, só faltava aparecer no dropdown.",
+      "**🔔 Novo lembrete automático: «Enviar NPS Score Form ao cliente».** Aparece no sino de cada consultor de SEO, **um por cliente**, na **última semana do mês 3, 4, 5 e 6 de acompanhamento** — contada a partir da data de início daquele cliente, não do calendário. Pedir a avaliação no dia 1 do mês 3 é pedi-la sobre trabalho que ainda não foi feito; pedi-la ao mês 7 é pedi-la depois de a renovação já ter sido decidida. O botão abre direito ao `/seo/<cliente>/nps`, que copia o link e escreve o email.",
+      "**⏳ Um NPS esquecido não desaparece ao oitavo dia.** A janela dura uma semana mas o lembrete fica cinco semanas à vista — o mesmo espírito do relatório mensal, que continua a aparecer no mês seguinte. E nada é reclamado de trás: as janelas que fecharam antes de a regra existir não contam, senão o primeiro dia da funcionalidade era toda a gente a levar com quatro NPS «em atraso» que nunca lhes foram pedidos.",
+      "**🗑️ A zona de Penalizações saiu da SuperAdmin Control Suite.** Não vamos por aí para já — página, painel, API e store fora. O histórico fica no git, e nada foi apagado do lado dos dados.",
+    ],
+  },
+  {
     version: "76.30",
     date: "2026-08-06",
     title: "A Formação passou a ter uma sala de exames — e o hub passou a dizer o que fazer",

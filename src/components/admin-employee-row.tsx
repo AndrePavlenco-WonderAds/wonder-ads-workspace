@@ -15,6 +15,9 @@ import {
   Building2,
   ChevronDown,
   GraduationCap,
+  KeyRound,
+  ShieldCheck,
+  Eye,
   Trash2,
 } from "lucide-react";
 import { formatMoney } from "@/lib/admin-clients-store";
@@ -26,6 +29,7 @@ import {
   type EmployeeStatus,
 } from "@/lib/admin-employees-store";
 import { formatDate } from "@/lib/dates";
+import type { RosterAccess } from "@/lib/auth/credentials";
 
 export type EmployeePortfolio = {
   activeClients: number;
@@ -44,11 +48,11 @@ export type EmployeePortfolio = {
 type Props = {
   initial: AdminEmployeeRecord;
   portfolio: EmployeePortfolio;
-  /** Workspace login this roster row maps to, when there is one. Resolved on
-   *  the server (the credential table carries password hashes and must never
-   *  reach the browser) and used here only to say out loud that saving the
-   *  starting date also moves that person's phase exams. */
-  examClockUser?: string | null;
+  /** O login do workspace a que esta linha corresponde, quando existe —
+   *  username, se entra na C-suite e que departamentos abre/edita. Resolvido
+   *  no servidor (a tabela de credenciais tem hashes de password e nunca pode
+   *  chegar ao browser). `null` = trabalha cá, não tem conta. */
+  access?: RosterAccess | null;
   onSaved?: (record: AdminEmployeeRecord) => void;
   onDeleted?: (id: string) => void;
 };
@@ -86,10 +90,13 @@ export const STATUS_LABEL: Record<EmployeeStatus, string> = {
 export function AdminEmployeeRow({
   initial,
   portfolio,
-  examClockUser = null,
+  access = null,
   onSaved,
   onDeleted,
 }: Props) {
+  // A Data de entrada desta linha é a mesma que arranca os exames de fase —
+  // mas só para quem tem login (é o username que a Formação conhece).
+  const examClockUser = access?.username ?? null;
   const [draft, setDraft] = useState<AdminEmployeeRecord>(initial);
   const [saved, setSaved] = useState<AdminEmployeeRecord>(initial);
   const [state, setState] = useState<"idle" | "saving" | "saved" | "error">(
@@ -349,6 +356,72 @@ export function AdminEmployeeRow({
             </div>
           )}
         </div>
+      </td>
+
+      {/* Workspace access — read-only, porque não se dá nem se tira um acesso
+          num campo de tabela: as credenciais vivem em código e mudam com um
+          deploy. O que esta coluna faz é acabar com a pergunta «esta pessoa
+          consegue entrar?» e mostrar exatamente o que ela vê lá dentro. */}
+      <td className="px-3 py-3.5">
+        {!access ? (
+          <div className="rounded-md border border-white/8 bg-white/[0.02] px-2 py-1.5">
+            <div className="text-[11.5px] font-medium text-white/45">
+              No login
+            </div>
+            <div className="mt-0.5 text-[10px] text-white/30">
+              Não entra no workspace
+            </div>
+          </div>
+        ) : (
+          <div
+            className={`rounded-md border px-2 py-1.5 ${
+              access.isAdmin
+                ? "border-emerald-400/35 bg-emerald-500/[0.07]"
+                : "border-white/12 bg-white/[0.035]"
+            }`}
+          >
+            <div className="flex items-center gap-1.5">
+              {access.isAdmin ? (
+                <ShieldCheck className="h-3 w-3 shrink-0 text-emerald-300" />
+              ) : (
+                <KeyRound className="h-3 w-3 shrink-0 text-white/45" />
+              )}
+              <span className="truncate font-mono text-[11.5px] text-white/85">
+                {access.username}
+              </span>
+            </div>
+            {access.isAdmin ? (
+              <div className="mt-1.5 inline-flex items-center rounded border border-emerald-400/40 bg-emerald-500/10 px-1.5 py-px text-[9.5px] font-bold uppercase tracking-[0.14em] text-emerald-200">
+                SuperAdmin · tudo
+              </div>
+            ) : (
+              <div className="mt-1.5 flex flex-wrap items-center gap-1">
+                {access.view.map((d) => {
+                  const readOnly = !access.edit.includes(d);
+                  return (
+                    <span
+                      key={d}
+                      title={
+                        readOnly
+                          ? `Abre o departamento ${d} mas não pode alterar nada lá.`
+                          : `Abre e edita o departamento ${d}.`
+                      }
+                      className={`inline-flex items-center gap-1 rounded border px-1.5 py-px text-[9.5px] font-bold uppercase tracking-[0.14em] ${
+                        readOnly
+                          ? "border-white/12 bg-transparent text-white/40"
+                          : (DEPT_PILL[d] ??
+                            "border-white/15 bg-white/[0.05] text-white/85")
+                      }`}
+                    >
+                      {readOnly && <Eye className="h-2.5 w-2.5" />}
+                      {d}
+                    </span>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
       </td>
 
       {/* Starting date — also the anchor of this person's exam clock when

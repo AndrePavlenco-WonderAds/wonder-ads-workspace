@@ -34,10 +34,14 @@ export type NotificationScope = (typeof NOTIFICATION_SCOPES)[number];
 
 /** Quando aparece.
  *  • `monthly` — no dia N de cada mês.
- *  • `once` — a partir de uma data concreta (ISO yyyy-mm-dd). */
+ *  • `once` — a partir de uma data concreta (ISO yyyy-mm-dd).
+ *  • `client-month` — na ÚLTIMA SEMANA do mês N de acompanhamento de cada
+ *    cliente. Não é o calendário que manda, é a idade do contrato: dois
+ *    clientes do mesmo consultor disparam em semanas diferentes. */
 export type NotificationSchedule =
   | { kind: "monthly"; dayOfMonth: number }
-  | { kind: "once"; date: string };
+  | { kind: "once"; date: string }
+  | { kind: "client-month"; months: number[] };
 
 export type NotificationRule = {
   id: string;
@@ -84,6 +88,24 @@ export const DEFAULT_NOTIFICATION_RULES: NotificationRule[] = [
     // a app acusava toda a gente de meses de relatórios em atraso que nunca
     // lhes foram pedidos — e a primeira coisa que se aprende sobre o sino
     // seria a despachá-lo em bloco.
+    createdAt: new Date(2026, 7, 1).getTime(), // 01/08/2026
+    createdBy: "sistema",
+  },
+  {
+    id: "seo-nps-survey",
+    title: "Enviar NPS Score Form ao cliente",
+    body: "Última semana do mês de acompanhamento — pede a avaliação antes de o mês fechar. A página do NPS copia o link e escreve o email por ti.",
+    audience: { kind: "dept", dept: "SEO" },
+    scope: "seo-client",
+    // Meses 3 a 6: cedo demais e ainda não há resultados para avaliar; tarde
+    // demais e a renovação já foi decidida sem se saber o que o cliente acha.
+    schedule: { kind: "client-month", months: [3, 4, 5, 6] },
+    actionLabel: "Abrir NPS do cliente",
+    actionHref: "/seo/{slug}/nps",
+    enabled: true,
+    // Mesma razão do relatório mensal: sem chão, no dia do deploy toda a
+    // gente levava com quatro NPS «em atraso» de janelas que passaram antes
+    // de a regra existir.
     createdAt: new Date(2026, 7, 1).getTime(), // 01/08/2026
     createdBy: "sistema",
   },
@@ -139,13 +161,12 @@ export function occurrencesFor(
 ): NotificationOccurrence[] {
   // Nada antes do mês em que a regra passou a existir. Uma regra criada hoje
   // não pode reclamar trabalho de trás — ninguém foi avisado na altura.
-  const floor = rule.createdAt
-    ? new Date(
-        new Date(rule.createdAt).getFullYear(),
-        new Date(rule.createdAt).getMonth(),
-        1,
-      ).getTime()
-    : 0;
+  const floor = ruleFloor(rule);
+
+  // O calendário não sabe responder por esta: a janela depende da data de
+  // início de CADA cliente. Quem sabe é `clientMonthOccurrences`, chamada
+  // pelo motor com a carteira já em mãos.
+  if (rule.schedule.kind === "client-month") return [];
 
   if (rule.schedule.kind === "once") {
     const at = new Date(`${rule.schedule.date}T09:00:00`);
@@ -170,6 +191,79 @@ export function occurrencesFor(
       periodKey: monthKey(anchor),
       dueAt: anchor.getTime(),
       periodLabel: referenceMonthLabel(anchor.getFullYear(), anchor.getMonth()),
+    });
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------------------
+// Janelas ancoradas no contrato do cliente (`client-month`)
+// ---------------------------------------------------------------------------
+
+/** Quanto tempo uma janela destas continua à vista depois de abrir.
+ *
+ *  A janela em si dura 7 dias, mas desaparecer ao oitavo transformava um NPS
+ *  esquecido numa coisa que nunca aconteceu. Cinco semanas é o mesmo espírito
+ *  do `LOOKBACK_PERIODS` dos mensais: dá para recuperar o mês seguinte e
+ *  depois cala-se, em vez de arrastar meio ano de dívida que ninguém lê. */
+export const CLIENT_MONTH_VISIBILITY_DAYS = 35;
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** Mês em que a regra passou a existir — nada é reclamado antes disto. */
+function ruleFloor(rule: NotificationRule): number {
+  if (!rule.createdAt) return 0;
+  const c = new Date(rule.createdAt);
+  return new Date(c.getFullYear(), c.getMonth(), 1).getTime();
+}
+
+/** `base` + n meses, com o dia preso ao último dia do mês de destino (31/01
+ *  + 1 mês = 28/02, não 03/03). Sem isto, os clientes que entram a 29, 30 ou
+ *  31 saltavam a janela para o mês seguinte. */
+function addMonths(base: Date, months: number): Date {
+  const d = new Date(base.getFullYear(), base.getMonth() + months, 1);
+  const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+  d.setDate(Math.min(base.getDate(), lastDay));
+  d.setHours(9, 0, 0, 0);
+  return d;
+}
+
+/** Ocorrências de uma regra `client-month` para UM cliente.
+ *
+ *  O mês N de acompanhamento vai de `início + (N-1) meses` a `início + N
+ *  meses`; a última semana são os 7 dias antes de fechar. A notificação abre
+ *  quando essa semana começa — nunca antes, porque pedir a avaliação do mês 3
+ *  no dia 1 do mês 3 é pedi-la sobre trabalho que ainda não foi feito. */
+export function clientMonthOccurrences(
+  rule: NotificationRule,
+  clientStartedAt: string | null,
+  now: Date,
+): NotificationOccurrence[] {
+  if (rule.schedule.kind !== "client-month") return [];
+  if (!clientStartedAt || !/^\d{4}-\d{2}-\d{2}$/.test(clientStartedAt)) {
+    // Sem data de início não há relógio. Melhor não notificar do que
+    // notificar na altura errada.
+    return [];
+  }
+  const start = new Date(`${clientStartedAt}T00:00:00`);
+  if (Number.isNaN(start.getTime())) return [];
+
+  const floor = ruleFloor(rule);
+  const nowMs = now.getTime();
+  const out: NotificationOccurrence[] = [];
+
+  for (const month of rule.schedule.months) {
+    const n = Math.round(month);
+    if (!Number.isFinite(n) || n < 1) continue;
+    const monthEnd = addMonths(start, n);
+    const windowStart = monthEnd.getTime() - 7 * DAY_MS;
+    if (windowStart > nowMs) continue; // ainda não chegou a última semana
+    if (windowStart < floor) continue; // janela anterior à própria regra
+    if (nowMs - windowStart > CLIENT_MONTH_VISIBILITY_DAYS * DAY_MS) continue;
+    out.push({
+      periodKey: `m${n}`,
+      dueAt: windowStart,
+      periodLabel: `mês ${n} de acompanhamento`,
     });
   }
   return out;
@@ -238,6 +332,18 @@ function normalizeSchedule(raw: unknown): NotificationSchedule {
   >;
   if (o.kind === "once" && /^\d{4}-\d{2}-\d{2}$/.test(str(o.date))) {
     return { kind: "once", date: str(o.date) };
+  }
+  if (o.kind === "client-month") {
+    const months = Array.from(
+      new Set(
+        (Array.isArray(o.months) ? o.months : [])
+          .map((m) => (typeof m === "number" ? Math.round(m) : Number.NaN))
+          .filter((m) => Number.isFinite(m) && m >= 1 && m <= 36),
+      ),
+    ).sort((a, b) => a - b);
+    // Uma lista vazia é uma regra que nunca dispara — em vez de a deixar
+    // passar em silêncio, cai no default que motivou a funcionalidade.
+    return { kind: "client-month", months: months.length ? months : [3, 4, 5, 6] };
   }
   const day =
     typeof o.dayOfMonth === "number" && Number.isFinite(o.dayOfMonth)

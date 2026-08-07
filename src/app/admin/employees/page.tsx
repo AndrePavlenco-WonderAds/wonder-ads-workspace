@@ -5,6 +5,7 @@ import {
   listEmployees,
   SEED_EMPLOYEES,
   defaultEmployeeRecord,
+  rosterNameKey,
 } from "@/lib/admin-employees-store";
 import {
   adminRecordKey,
@@ -12,7 +13,7 @@ import {
   getAdminRecords,
   type ClientDepartment,
 } from "@/lib/admin-clients-store";
-import { findCredentialForRosterRow } from "@/lib/auth/credentials";
+import { rosterAccessFor, type RosterAccess } from "@/lib/auth/credentials";
 import { getSeoClients } from "@/lib/notion";
 import { ADS_CLIENTS } from "@/lib/ads-clients";
 import { WEB_CLIENTS } from "@/lib/web-clients";
@@ -97,7 +98,12 @@ export default async function EmployeesAdminPage() {
       if (r.status !== "active") continue;
       const valueEur =
         r.currency === "EUR" && r.monthlyValue ? r.monthlyValue : 0;
-      for (const name of r.consultants) {
+      for (const rawName of r.consultants) {
+        // Chaveado por nome normalizado: o roster foi escrito à mão em sítios
+        // diferentes ("Manuel S." num registo guardado, "Manuel Silva" na
+        // lista canónica) e uma comparação literal fazia a carteira de quem
+        // tivesse a forma curta aparecer vazia.
+        const name = rosterNameKey(rawName);
         const existing = portfolios[name] ?? {
           activeClients: 0,
           totalEur: 0,
@@ -118,13 +124,14 @@ export default async function EmployeesAdminPage() {
     }
   }
 
-  // Quem, nesta lista, tem login no workspace — e portanto tem exames de fase
-  // ancorados na Data de entrada desta tabela. Resolvido AQUI, no servidor: a
-  // tabela de credenciais tem hashes de password e não pode ir para o browser.
-  const examClockUsers: Record<string, string> = {};
+  // Quem, nesta lista, tem login no workspace — o que abre, o que edita, e se
+  // entra na C-suite. É também quem tem exames de fase ancorados na Data de
+  // entrada desta tabela. Resolvido AQUI, no servidor: a tabela de credenciais
+  // tem hashes de password e não pode ir para o browser.
+  const access: Record<string, RosterAccess> = {};
   for (const e of employees) {
-    const credential = findCredentialForRosterRow(e.id, e.name);
-    if (credential) examClockUsers[e.id] = credential.username;
+    const a = rosterAccessFor(e.id, e.name);
+    if (a) access[e.id] = a;
   }
 
   return (
@@ -132,7 +139,7 @@ export default async function EmployeesAdminPage() {
       <AdminEmployeesPanel
         employees={employees}
         portfolios={portfolios}
-        examClockUsers={examClockUsers}
+        access={access}
       />
     </PageShell>
   );

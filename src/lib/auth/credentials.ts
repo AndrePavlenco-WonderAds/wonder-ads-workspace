@@ -40,11 +40,11 @@ export type EmployeeCredential = {
    *  âncora dos EXAMES DE FASE da Formação: o exame da semana 1 abre 7 dias
    *  depois desta data, o dos 90 dias abre 90 dias depois.
    *
-   *  ⚠️ SÃO DEFAULTS, NÃO REGISTO DE RH. Os valores abaixo foram inferidos do
-   *  changelog (o dia em que a credencial da pessoa foi criada no workspace)
-   *  e do arranque do workspace para quem já cá estava. O SuperAdmin corrige
-   *  cada um em `/formacao/admin/inscricoes`, e o override em KV vence
-   *  sempre este campo. */
+   *  ⚠️ SÃO DEFAULTS, NÃO REGISTO DE RH — exceto onde diz «confirmada». Os
+   *  restantes foram inferidos do changelog (o dia em que a credencial da
+   *  pessoa foi criada no workspace) e do arranque do workspace para quem já
+   *  cá estava. O SuperAdmin corrige cada um na Data de entrada do Team Roster
+   *  (`/admin/employees`), e o override em KV vence sempre este campo. */
   startedAt?: string;
 };
 
@@ -95,7 +95,9 @@ export const EMPLOYEE_CREDENTIALS: EmployeeCredential[] = [
     name: "Fran. Rosa",
     role: "SEO Consultant",
     dept: "SEO",
-    startedAt: "2026-05-12",
+    // Confirmada pelo C-Level (v76.31) — entrou muito antes do workspace
+    // existir, por isso o default herdado do arranque estava errado.
+    startedAt: "2026-03-17",
     salt: "0fc7b7960beb67ac252a908ef770b6ed",
     hash: "6e007a432f6134a7ee4147089cb486461541cc1fa25a1d1cdf6e077447f4f1ea1962ca78114ad599e8dca4c3138a2dce5fef3f9dbbe189633e449b7c0b19071c",
   },
@@ -107,7 +109,8 @@ export const EMPLOYEE_CREDENTIALS: EmployeeCredential[] = [
     fullName: "André Pereira",
     role: "SEO Consultant",
     dept: "SEO",
-    startedAt: "2026-06-16",
+    // Confirmada pelo C-Level (v76.31).
+    startedAt: "2026-06-17",
     salt: "6ec1a1e90e4e37f85489011710bc48d7",
     hash: "82a7a60d6f6352edbb5b352f797ef1b1d1849c8711a919c979f0750158f2c655eb5ab4abf94783d2989789512bccf81dcb27a0d0bddeda03cc71fd0b7eef6d2f",
   },
@@ -120,7 +123,8 @@ export const EMPLOYEE_CREDENTIALS: EmployeeCredential[] = [
     fullName: "João Batista",
     role: "SEO Consultant",
     dept: "SEO",
-    startedAt: "2026-07-21",
+    // Confirmada pelo C-Level (v76.31).
+    startedAt: "2026-07-23",
     salt: "d7d60d6aa538084e6b6385a29274d7b8",
     hash: "188972f4fbf52acdb335489c79bc32b7443c4185a9bdee0e34c04fa5a5fc99f4ba4a824e84ab2b615dbf12f310220bb12588ec46d34ba155b86f47f879d0f446",
   },
@@ -451,6 +455,46 @@ export function findCredentialForRosterRow(
       (c) => nameKey(c.name) === key || (c.fullName && nameKey(c.fullName) === key),
     ) ?? null
   );
+}
+
+/** O que uma linha do Team Roster pode abrir na app, em forma servível ao
+ *  browser — sem uma única linha da tabela de credenciais.
+ *
+ *  A coluna «Access» do `/admin/employees` responde a três perguntas que
+ *  antes só se respondiam a ler código: esta pessoa tem login?, entra como
+ *  SuperAdmin?, e que departamentos é que abre (e em quais só vê)? */
+export type RosterAccess = {
+  username: string;
+  isAdmin: boolean;
+  /** Departamentos que abre. Rótulos do roster: "SEO" | "ADS" | "Web" |
+   *  "Comercial". */
+  view: string[];
+  /** Subconjunto de `view` onde também pode mexer. O resto é só leitura. */
+  edit: string[];
+};
+
+const DEPT_LABEL: Record<DeptSlug, string> = {
+  seo: "SEO",
+  ads: "ADS",
+  web: "Web",
+  commercial: "Comercial",
+};
+
+/** Acesso da linha do roster, ou null quando aquela pessoa trabalha cá mas
+ *  não tem conta no workspace. Resolvido no servidor e passado já mastigado
+ *  aos componentes — a tabela de hashes nunca vai para o bundle. */
+export function rosterAccessFor(
+  id: string | null | undefined,
+  name: string | null | undefined,
+): RosterAccess | null {
+  const row = findCredentialForRosterRow(id, name);
+  if (!row) return null;
+  return {
+    username: row.username,
+    isAdmin: Boolean(row.isAdmin),
+    view: accessibleDepts(row).map((d) => DEPT_LABEL[d]),
+    edit: editableDepts(row).map((d) => DEPT_LABEL[d]),
+  };
 }
 
 /** True when the username corresponds to one of the three SuperAdmin

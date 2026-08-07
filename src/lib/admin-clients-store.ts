@@ -91,6 +91,9 @@ export const CONSULTANTS = [
   "Yenisey Rodriguez",
   "Germano C.",
   "André Pereira",
+  // v76.31: já tinha login, carteira (client-overrides) e coluna no board —
+  // só faltava aqui, e por isso não aparecia no dropdown de atribuição.
+  "João B.",
 ] as const;
 export type Consultant = (typeof CONSULTANTS)[number];
 
@@ -124,6 +127,7 @@ export const CONSULTANT_DEPARTMENT: Record<string, ClientDepartment> = {
   "Yenisey Rodriguez": "SEO",
   "Germano C.": "ADS",
   "André Pereira": "SEO",
+  "João B.": "SEO",
 };
 
 /** Department a legacy single-row record's monthlyValue should be

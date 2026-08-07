@@ -74,9 +74,14 @@ function audienceText(rule: NotificationRule): string {
 }
 
 function scheduleText(rule: NotificationRule): string {
-  return rule.schedule.kind === "monthly"
-    ? `dia ${rule.schedule.dayOfMonth} de cada mês`
-    : `a partir de ${rule.schedule.date}`;
+  if (rule.schedule.kind === "monthly") {
+    return `dia ${rule.schedule.dayOfMonth} de cada mês`;
+  }
+  if (rule.schedule.kind === "client-month") {
+    const m = rule.schedule.months;
+    return `última semana do mês ${m.join(", ")} de cada cliente`;
+  }
+  return `a partir de ${rule.schedule.date}`;
 }
 
 export function NotificationRulesPanel({
@@ -442,16 +447,44 @@ export function NotificationRulesPanel({
                           schedule:
                             e.target.value === "once"
                               ? { kind: "once", date: "" }
-                              : { kind: "monthly", dayOfMonth: 1 },
+                              : e.target.value === "client-month"
+                                ? { kind: "client-month", months: [3, 4, 5, 6] }
+                                : { kind: "monthly", dayOfMonth: 1 },
                         })
                       }
                     >
                       <option value="monthly">Todos os meses</option>
+                      <option value="client-month">
+                        Última semana do mês N do cliente
+                      </option>
                       <option value="once">Numa data</option>
                     </select>
                   </Labeled>
 
-                  {rule.schedule.kind === "monthly" ? (
+                  {rule.schedule.kind === "client-month" ? (
+                    <Labeled
+                      label="Meses de acompanhamento"
+                      hint="Separados por vírgula. Conta a partir da data de início de CADA cliente, não do calendário."
+                    >
+                      <input
+                        className={inputCls}
+                        value={rule.schedule.months.join(", ")}
+                        onChange={(e) =>
+                          patch(i, {
+                            schedule: {
+                              kind: "client-month",
+                              months: e.target.value
+                                .split(",")
+                                .map((v) => Number(v.trim()))
+                                .filter(
+                                  (v) => Number.isFinite(v) && v >= 1 && v <= 36,
+                                ),
+                            },
+                          })
+                        }
+                      />
+                    </Labeled>
+                  ) : rule.schedule.kind === "monthly" ? (
                     <Labeled
                       label="Dia do mês"
                       hint="1 a 28 — para que todos os meses tenham esse dia."
