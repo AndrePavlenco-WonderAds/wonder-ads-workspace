@@ -242,13 +242,14 @@ export type FetchStatus = {
   message?: string;
 };
 
-/** Uma target keyword com a posição REAL na página de resultados da Google,
- *  verificada pelo DataForSEO.
+/** Uma target keyword com a posição REAL na Google, verificada pelo
+ *  Serpstat (base regional google.pt, domínio + subdomínios) ou, em
+ *  fallback, pelo DataForSEO.
  *
  *  Distinta do `TargetKeywordRank`, que é a média do GSC sobre as impressões
  *  que a Google decidiu servir — lá, uma keyword sem impressões desaparece e
- *  não se distingue «não rankeia» de «não sabemos». Aqui pergunta-se a uma
- *  SERP fixa e toda a keyword tem resposta. */
+ *  não se distingue «não rankeia» de «não sabemos». Aqui toda a keyword do
+ *  plano tem resposta: posição no top-100, ou null. */
 export type LiveRank = {
   keyword: string;
   /** null = fora do top 100. */
@@ -258,22 +259,30 @@ export type LiveRank = {
   /** previous − current, logo positivo = subiu. */
   change: number | null;
   /** Apareceu no pack local (mapa) — para uma clínica é muitas vezes este
-   *  que marca consultas, não o link azul. */
+   *  que marca consultas, não o link azul. Só o DataForSEO sabe isto. */
   inLocalPack: boolean;
   localPackPosition: number | null;
   url: string | null;
+  /** Pesquisas/mês na região. Do Serpstat, ou da client file em fallback.
+   *  Ausente nos blocos gravados antes da v76.38. */
+  volume?: number | null;
 };
 
 /** O bloco de posição real de um relatório. */
 export type LiveRankBlock = {
-  source: "dataforseo";
+  source: "dataforseo" | "serpstat";
   /** Data da verificação, ISO yyyy-mm-dd. */
   checkedOn: string;
   domain: string;
   ranks: LiveRank[];
-  /** Custo em USD desta verificação. Só aparece na vista interna — uma
-   *  integração paga à chamada tem de dizer o que gastou. */
-  costUsd: number;
+  /** Custo em USD desta verificação (só DataForSEO — o Serpstat cobra em
+   *  créditos do plano). Só aparece na vista interna. */
+  costUsd?: number;
+  /** Base regional do Serpstat consultada ("g_pt"). */
+  se?: string;
+  /** O domínio tinha mais keywords do que a consulta cobriu — posições null
+   *  podem ser falta de cobertura, não ausência de ranking. */
+  truncated?: boolean;
 };
 
 /** Uma pergunta feita a um LLM (ChatGPT ou AI Overview da Google). */
@@ -382,10 +391,11 @@ export type MonthlyReportSnapshot = {
   /** True SERP positions from SE Ranking for the same target keywords, shown
    *  under the GSC table. Absent when the client has no synced project. */
   seRanking?: SeRankingBlock;
-  /** Posição real na Google via DataForSEO — substituiu o SE Ranking na
-   *  v76.35 (o plano tinha um teto de 10 websites que deixava dez clientes
-   *  sem posições). Os relatórios antigos continuam a mostrar o bloco
-   *  `seRanking` que já tinham gravado. */
+  /** Posição real na Google das target keywords — via Serpstat desde a
+   *  v76.38 (base google.pt, domínio + subdomínios), com o DataForSEO como
+   *  fallback quando o token não está configurado. Substituiu o SE Ranking
+   *  na v76.35 (teto de 10 websites). Os relatórios antigos continuam a
+   *  mostrar o bloco `seRanking` que já tinham gravado. */
   liveRanks?: LiveRankBlock;
   /** Visibilidade em LLMs. Ausente quando não há sinal neste mercado. */
   geo?: GeoBlock;

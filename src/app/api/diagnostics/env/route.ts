@@ -29,6 +29,9 @@ export async function GET() {
         DATAFORSEO_LOGIN: check("DATAFORSEO_LOGIN"),
         DATAFORSEO_PASSWORD: check("DATAFORSEO_PASSWORD"),
       },
+      serpstat: {
+        SERPSTAT_API_TOKEN: check("SERPSTAT_API_TOKEN"),
+      },
       pagespeed: {
         PAGESPEED_API_KEY: check("PAGESPEED_API_KEY"),
       },

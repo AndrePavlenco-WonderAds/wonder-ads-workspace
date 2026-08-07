@@ -1,11 +1,11 @@
-// Banco de ensaio do DataForSEO — corre a posição real e o GEO de um cliente
-// e mostra o resultado cru, antes de qualquer coisa disto entrar no relatório
-// que vai para o cliente.
+// Banco de ensaio das posições — corre a posição atual das target keywords
+// de um cliente e o GEO, e mostra o resultado cru, antes de qualquer coisa
+// disto entrar no relatório que vai para o cliente.
 //
-// PORQUE É QUE ISTO EXISTE COMO PÁGINA E NÃO COMO SCRIPT: cada corrida gasta
-// dinheiro a sério (cêntimos, mas dinheiro), e a decisão de trocar o SE
-// Ranking por isto é de quem paga. Ver os números de três clientes reais numa
-// página é o que torna essa decisão possível sem ter de acreditar em mim.
+// As posições vêm do MESMO caminho que o relatório mensal usa: Serpstat
+// primeiro (base regional google.pt, domínio + subdomínios), DataForSEO como
+// fallback quando o token não está configurado. Ensaiar por outro caminho
+// seria testar uma coisa e entregar outra.
 //
 // Nada aqui escreve seja o que for: sem KV, sem relatórios, sem cache. É uma
 // leitura, mostrada, e esquecida.
@@ -18,6 +18,10 @@ import { listTargetKeywords } from "@/lib/target-keywords-store";
 import { isDataforSeoConfigured } from "@/lib/seo-tools/dataforseo";
 import { fetchDfsRanks } from "@/lib/seo-tools/dataforseo-ranks";
 import {
+  fetchSerpstatRanks,
+  isSerpstatConfigured,
+} from "@/lib/seo-tools/serpstat";
+import {
   fetchGeoReport,
   hasGeoSignal,
   topicsFromKeywords,
@@ -28,21 +32,31 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export const metadata = {
-  title: "DataForSEO — banco de ensaio",
+  title: "Posições — banco de ensaio",
 };
 
-/** Teto de keywords por corrida. A ~1,5 cêntimos cada, 15 keywords são 22
- *  cêntimos — chega para julgar a qualidade sem transformar um clique
- *  distraído numa fatura. */
-const MAX_KEYWORDS = 15;
+/** Teto de keywords por corrida no fallback DataForSEO. A ~1,5 cêntimos por
+ *  keyword, 15 são 22 cêntimos — chega para julgar a qualidade sem
+ *  transformar um clique distraído numa fatura. O Serpstat não precisa de
+ *  teto: uma corrida cobre a lista inteira numa chamada. */
+const MAX_DFS_KEYWORDS = 15;
 
-export default async function DataForSeoTestPage({
+type RankRow = {
+  keyword: string;
+  position: number | null;
+  url: string | null;
+  volume: number | null;
+  localPack: string | null;
+};
+
+export default async function PositionsTestPage({
   searchParams,
 }: {
   searchParams: Promise<{ slug?: string; geo?: string }>;
 }) {
   const { slug, geo: runGeo } = await searchParams;
-  const configured = isDataforSeoConfigured();
+  const serpstatOk = isSerpstatConfigured();
+  const dfsOk = isDataforSeoConfigured();
 
   const slugs = Object.keys(CLIENT_WEBSITES).sort();
   const website = slug ? CLIENT_WEBSITES[slug] : null;
@@ -54,22 +68,53 @@ export default async function DataForSeoTestPage({
     );
   }
 
-  const ranks =
-    configured && slug && website && keywords.length
-      ? await fetchDfsRanks(slug, website, keywords, {
-          max: MAX_KEYWORDS,
-        }).catch((e) => ({ error: String(e) }) as never)
-      : null;
+  // O mesmo caminho do relatório: Serpstat primeiro, DataForSEO a seguir.
+  let rows: RankRow[] | null = null;
+  let sourceLine: string | null = null;
+  let runError: string | null = null;
+  if (slug && website && keywords.length && (serpstatOk || dfsOk)) {
+    try {
+      const serp = serpstatOk
+        ? await fetchSerpstatRanks(slug, website, keywords)
+        : null;
+      if (serp) {
+        rows = serp.ranks.map((r) => ({
+          keyword: r.keyword,
+          position: r.position,
+          url: r.url,
+          volume: r.volume,
+          localPack: null,
+        }));
+        sourceLine = `Serpstat · base ${serp.se} · domínio + subdomínios · ${serp.domain} · verificado a ${serp.checkedOn}${serp.truncated ? " · ⚠ cobertura truncada" : ""}`;
+      } else if (dfsOk) {
+        const dfs = await fetchDfsRanks(slug, website, keywords, {
+          max: MAX_DFS_KEYWORDS,
+        });
+        if (dfs) {
+          rows = dfs.ranks.map((r) => ({
+            keyword: r.keyword,
+            position: r.position,
+            url: r.url,
+            volume: null,
+            localPack: r.inLocalPack ? `#${r.localPackPosition}` : null,
+          }));
+          sourceLine = `DataForSEO (fallback) · ${dfs.domain} · verificado a ${dfs.checkedOn} · $${dfs.costUsd} nesta corrida${dfs.failed.length ? ` · ${dfs.failed.length} falharam` : ""}`;
+        }
+      }
+    } catch (e) {
+      runError = String(e);
+    }
+  }
 
   const geo =
-    configured && slug && website && keywords.length && runGeo === "1"
+    dfsOk && slug && website && keywords.length && runGeo === "1"
       ? await fetchGeoReport(slug, website, keywords).catch(
           (e) => ({ error: String(e) }) as never,
         )
       : null;
 
   const clientGeo = slug ? getClientGeo(slug) : null;
-  const ranked = ranks?.ranks?.filter((r) => r.position !== null) ?? [];
+  const ranked = rows?.filter((r) => r.position !== null) ?? [];
 
   return (
     <PageShell wide>
@@ -83,19 +128,30 @@ export default async function DataForSeoTestPage({
 
       <header className="mt-6">
         <h1 className="text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">
-          <span className="brand-gradient-text">DataForSEO — banco de ensaio</span>
+          <span className="brand-gradient-text">Posições — banco de ensaio</span>
         </h1>
         <p className="mt-1.5 max-w-3xl text-[12px] text-white/45">
-          Corre a posição real na Google e a visibilidade em LLMs de um cliente,
-          com dados a sério e a custo a sério. Não grava nada.
+          Corre a posição atual das target keywords de um cliente (Serpstat,
+          google.pt, domínio + subdomínios — o mesmo caminho do relatório
+          mensal) e a visibilidade em LLMs. Não grava nada.
         </p>
       </header>
 
-      {!configured && (
-        <p className="mt-6 rounded-xl border border-rose-400/35 bg-rose-500/10 px-4 py-3 text-[13px] text-rose-200">
+      {!serpstatOk && (
+        <p className="mt-6 rounded-xl border border-amber-400/35 bg-amber-500/10 px-4 py-3 text-[13px] text-amber-200">
+          <AlertTriangle className="mr-1.5 inline h-4 w-4" />
+          <code>SERPSTAT_API_TOKEN</code> não está no ambiente desta deployment
+          {dfsOk
+            ? " — as posições correm pelo fallback DataForSEO."
+            : "."}
+        </p>
+      )}
+      {!dfsOk && (
+        <p className="mt-3 rounded-xl border border-amber-400/35 bg-amber-500/10 px-4 py-3 text-[13px] text-amber-200">
           <AlertTriangle className="mr-1.5 inline h-4 w-4" />
           <code>DATAFORSEO_LOGIN</code> / <code>DATAFORSEO_PASSWORD</code> não
-          estão no ambiente desta deployment.
+          estão no ambiente desta deployment — sem fallback de posições nem
+          GEO.
         </p>
       )}
 
@@ -138,8 +194,8 @@ export default async function DataForSeoTestPage({
         </button>
         {slug && (
           <span className="pb-2 text-[11px] text-white/40">
-            {keywords.length} target keywords · analisa as primeiras{" "}
-            {MAX_KEYWORDS} · {clientGeo?.countryLabel} / {clientGeo?.languageCode}
+            {keywords.length} target keywords · {clientGeo?.countryLabel} /{" "}
+            {clientGeo?.languageCode}
           </span>
         )}
       </form>
@@ -151,27 +207,23 @@ export default async function DataForSeoTestPage({
         </p>
       )}
 
-      {/* --- Posição real --- */}
-      {ranks && "error" in ranks && (
+      {/* --- Posição atual --- */}
+      {runError && (
         <p className="mt-6 rounded-xl border border-rose-400/35 bg-rose-500/10 px-4 py-3 text-[12.5px] text-rose-200">
-          {String(ranks.error)}
+          {runError}
         </p>
       )}
-      {ranks && !("error" in ranks) && (
+      {rows && (
         <section className="mt-9">
           <h2 className="text-xl font-semibold tracking-tight text-white">
-            Posição real na Google
+            Posição atual na Google
           </h2>
           <p className="mt-1 text-[12px] text-white/45">
-            {ranks.domain} · verificado a {ranks.checkedOn} ·{" "}
+            {sourceLine} ·{" "}
             <strong className="text-white/70">
-              {ranked.length}/{ranks.ranks.length}
+              {ranked.length}/{rows.length}
             </strong>{" "}
-            no top 100 · custo desta corrida{" "}
-            <strong className="text-white/70">${ranks.costUsd}</strong> (
-            {(ranks.costUsd / Math.max(1, ranks.ranks.length)).toFixed(4)} por
-            keyword)
-            {ranks.failed.length > 0 && ` · ${ranks.failed.length} falharam`}
+            no top 100
           </p>
           <div className="mt-4 overflow-x-auto rounded-2xl border border-white/8 bg-white/[0.02]">
             <table className="w-full min-w-[640px] border-collapse text-left">
@@ -179,12 +231,13 @@ export default async function DataForSeoTestPage({
                 <tr className="border-b border-white/8 bg-black/30 text-[10px] font-bold uppercase tracking-[0.16em] text-white/50">
                   <th className="px-4 py-2.5">Keyword</th>
                   <th className="px-3 py-2.5">Posição</th>
+                  <th className="px-3 py-2.5">Pesquisas/mês</th>
                   <th className="px-3 py-2.5">Mapa</th>
                   <th className="px-3 py-2.5">URL</th>
                 </tr>
               </thead>
               <tbody>
-                {ranks.ranks.map((r) => (
+                {rows.map((r) => (
                   <tr key={r.keyword} className="border-b border-white/5">
                     <td className="px-4 py-2.5 text-[12.5px] text-white/85">
                       {r.keyword}
@@ -208,8 +261,11 @@ export default async function DataForSeoTestPage({
                         </span>
                       )}
                     </td>
+                    <td className="px-3 py-2.5 text-[12px] tabular-nums text-white/60">
+                      {r.volume ?? "—"}
+                    </td>
                     <td className="px-3 py-2.5 text-[12px] text-white/60">
-                      {r.inLocalPack ? `#${r.localPackPosition}` : "—"}
+                      {r.localPack ?? "—"}
                     </td>
                     <td className="max-w-[320px] truncate px-3 py-2.5 text-[11px] text-white/40">
                       {r.url ?? "—"}

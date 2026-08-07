@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.38",
+    date: "2026-08-07",
+    title: "O relatório mensal passou a ter uma única tabela de keywords — com a posição real via Serpstat",
+    highlights: [
+      "**🎯 Quatro secções viraram uma.** O «Top queries (GSC)», o «Top páginas», as «Maiores subidas de posição» e a tabela de médias do GSC contavam quatro versões da mesma história, cada uma com números diferentes para a mesma keyword. Agora o relatório tem UMA tabela comprida: todas as target keywords da client file, com a posição atual, a variação face ao mês anterior e as pesquisas/mês.",
+      "**📍 As posições vêm do Serpstat, na location certa.** Base regional google.pt (ou a do mercado do cliente), pesquisa do domínio completo incluindo subdomínios — exatamente a consulta que se faria à mão no site deles, mas numa chamada de API por relatório. O DataForSEO fica como fallback enquanto o token não estiver no Vercel, e continua a fazer o GEO.",
+      "**🧪 O banco de ensaio acompanhou.** «/admin/dataforseo» passou a «/admin/posicoes» e corre o MESMO caminho do relatório (Serpstat primeiro, fallback depois), com volume e URL por keyword. Ensaiar por outro caminho seria testar uma coisa e entregar outra.",
+      "**🧹 Saiu também o seletor de «maiores subidas».** Sem a secção não há nada para curar — menos um passo no fluxo de preparar o relatório. Os relatórios antigos continuam a renderizar: a tabela única lê o bloco que o snapshot tiver (Serpstat, DataForSEO, SE Ranking ou GSC).",
+    ],
+  },
+  {
     version: "76.37",
     date: "2026-08-07",
     title: "A data de onboarding subiu para o cabeçalho, e os clientes em pausa saíram das vistas de consultor",

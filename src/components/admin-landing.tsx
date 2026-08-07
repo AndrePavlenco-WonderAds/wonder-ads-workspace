@@ -95,10 +95,10 @@ export function AdminLanding({
       Icon: Wallet,
     },
     {
-      href: "/admin/dataforseo",
-      title: "DataForSEO",
+      href: "/admin/posicoes",
+      title: "Posições",
       blurb:
-        "Banco de ensaio: corre a posição real na Google das target keywords de um cliente e a visibilidade dele nos LLMs, com dados e custo a sério. Não grava nada.",
+        "Banco de ensaio: corre a posição atual das target keywords de um cliente via Serpstat (google.pt, domínio + subdomínios) e a visibilidade dele nos LLMs. O mesmo caminho do relatório mensal. Não grava nada.",
       badge: "ensaio",
       Icon: Radar,
     },

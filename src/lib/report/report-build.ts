@@ -13,6 +13,7 @@ import { getGa4MonthlyReport, type MetricPair } from "./ga4-report";
 import { getGscMonthlyReport } from "@/lib/gsc";
 import { listTargetKeywords } from "@/lib/target-keywords-store";
 import { fetchDfsRanks } from "@/lib/seo-tools/dataforseo-ranks";
+import { fetchSerpstatRanks } from "@/lib/seo-tools/serpstat";
 import { fetchGeoReport, hasGeoSignal } from "@/lib/seo-tools/dataforseo-geo";
 import { CLIENT_WEBSITES } from "@/lib/client-meta";
 import { getReport } from "./report-store";
@@ -345,28 +346,32 @@ function consolidateGbp(profiles: GbpProfileMetrics[]): MonthlyReportSnapshot["g
   return { ...totals, profiles };
 }
 
-/** SE Ranking positions for a client, or null when there's nothing to show.
- *  Swallows its own errors so rank tracking stays additive to the report. */
-/** Posição real na Google + visibilidade em LLMs, ambas via DataForSEO.
+/** Posição real na Google das target keywords + visibilidade em LLMs.
  *
- *  A variação mês-a-mês NÃO vem da API: o DataForSEO responde onde a keyword
- *  está hoje, e mais nada. O «mês passado» sai do relatório do mês anterior,
- *  que já está gravado em KV — o que também significa que o primeiro
- *  relatório de um cliente não tem setas, e é honesto que não tenha.
+ *  As posições vêm do Serpstat (base regional google.pt, domínio +
+ *  subdomínios — a mesma pesquisa que se faria à mão no site deles), com o
+ *  DataForSEO como fallback enquanto o token não estiver configurado. O GEO
+ *  continua no DataForSEO.
+ *
+ *  A variação mês-a-mês NÃO vem da API: a resposta diz onde a keyword está
+ *  hoje, e mais nada. O «mês passado» sai do relatório do mês anterior, que
+ *  já está gravado em KV — o que também significa que o primeiro relatório
+ *  de um cliente não tem setas, e é honesto que não tenha.
  *
  *  Best-effort das duas pontas: um cliente sem target keywords, sem site ou
- *  com a API em baixo gera o relatório na mesma, apenas sem estas secções. */
-async function fetchDataForSeo(
+ *  com as APIs em baixo gera o relatório na mesma, apenas sem estas secções. */
+async function fetchRanksAndGeo(
   slug: string,
   keywords: string[],
+  volumeByKeyword: Map<string, number | null>,
   previousPeriodKey: string,
 ): Promise<{ liveRanks?: LiveRankBlock; geo?: GeoBlock }> {
   const website = CLIENT_WEBSITES[slug];
   if (!website || keywords.length === 0) return {};
 
-  const [ranksRes, geoRes, prevReport] = await Promise.all([
-    fetchDfsRanks(slug, website, keywords).catch((err) => {
-      console.error(`DataForSEO ranks falhou para ${slug}:`, err);
+  const [serpstatRes, geoRes, prevReport] = await Promise.all([
+    fetchSerpstatRanks(slug, website, keywords).catch((err) => {
+      console.error(`Serpstat ranks falhou para ${slug}:`, err);
       return null;
     }),
     fetchGeoReport(slug, website, keywords).catch((err) => {
@@ -376,41 +381,71 @@ async function fetchDataForSeo(
     getReport(slug, previousPeriodKey).catch(() => null),
   ]);
 
+  // Fallback só quando o Serpstat não respondeu — não vale a pena pagar duas
+  // fontes pela mesma tabela.
+  const dfsRes = serpstatRes
+    ? null
+    : await fetchDfsRanks(slug, website, keywords).catch((err) => {
+        console.error(`DataForSEO ranks falhou para ${slug}:`, err);
+        return null;
+      });
+
   const out: { liveRanks?: LiveRankBlock; geo?: GeoBlock } = {};
 
-  if (ranksRes && ranksRes.ranks.length > 0) {
-    // Mapa keyword → posição do mês passado. Aceita tanto o bloco novo como o
-    // do SE Ranking, para que o primeiro mês depois da troca ainda tenha
-    // variação em vez de uma coluna de traços.
-    const prevByKeyword = new Map<string, number | null>();
-    for (const r of prevReport?.liveRanks?.ranks ?? []) {
+  // Mapa keyword → posição do mês passado. Aceita tanto o bloco novo como o
+  // do SE Ranking, para que o primeiro mês depois de uma troca de fonte
+  // ainda tenha variação em vez de uma coluna de traços.
+  const prevByKeyword = new Map<string, number | null>();
+  for (const r of prevReport?.liveRanks?.ranks ?? []) {
+    prevByKeyword.set(r.keyword.toLowerCase(), r.position);
+  }
+  if (prevByKeyword.size === 0) {
+    for (const r of prevReport?.seRanking?.ranks ?? []) {
       prevByKeyword.set(r.keyword.toLowerCase(), r.position);
     }
-    if (prevByKeyword.size === 0) {
-      for (const r of prevReport?.seRanking?.ranks ?? []) {
-        prevByKeyword.set(r.keyword.toLowerCase(), r.position);
-      }
-    }
+  }
+  const changeFor = (keyword: string, position: number | null) => {
+    const prev = prevByKeyword.get(keyword.toLowerCase()) ?? null;
+    return {
+      previousPosition: prev,
+      // Positivo = subiu. Sem posição de um dos lados não há variação
+      // nenhuma para mostrar — e um zero seria mentira.
+      change: prev !== null && position !== null ? prev - position : null,
+    };
+  };
+
+  if (serpstatRes && serpstatRes.ranks.length > 0) {
+    out.liveRanks = {
+      source: "serpstat",
+      checkedOn: serpstatRes.checkedOn,
+      domain: serpstatRes.domain,
+      se: serpstatRes.se,
+      ...(serpstatRes.truncated ? { truncated: true } : {}),
+      ranks: serpstatRes.ranks.map((r) => ({
+        keyword: r.keyword,
+        position: r.position,
+        ...changeFor(r.keyword, r.position),
+        inLocalPack: false,
+        localPackPosition: null,
+        url: r.url,
+        volume: r.volume ?? volumeByKeyword.get(r.keyword.toLowerCase()) ?? null,
+      })),
+    };
+  } else if (dfsRes && dfsRes.ranks.length > 0) {
     out.liveRanks = {
       source: "dataforseo",
-      checkedOn: ranksRes.checkedOn,
-      domain: ranksRes.domain,
-      costUsd: ranksRes.costUsd,
-      ranks: ranksRes.ranks.map((r) => {
-        const prev = prevByKeyword.get(r.keyword.toLowerCase()) ?? null;
-        return {
-          keyword: r.keyword,
-          position: r.position,
-          previousPosition: prev,
-          // Positivo = subiu. Sem posição de um dos lados não há variação
-          // nenhuma para mostrar — e um zero seria mentira.
-          change:
-            prev !== null && r.position !== null ? prev - r.position : null,
-          inLocalPack: r.inLocalPack,
-          localPackPosition: r.localPackPosition,
-          url: r.url,
-        };
-      }),
+      checkedOn: dfsRes.checkedOn,
+      domain: dfsRes.domain,
+      costUsd: dfsRes.costUsd,
+      ranks: dfsRes.ranks.map((r) => ({
+        keyword: r.keyword,
+        position: r.position,
+        ...changeFor(r.keyword, r.position),
+        inLocalPack: r.inLocalPack,
+        localPackPosition: r.localPackPosition,
+        url: r.url,
+        volume: volumeByKeyword.get(r.keyword.toLowerCase()) ?? null,
+      })),
     };
   }
 
@@ -449,8 +484,14 @@ export async function buildMonthlyReport(
   const lang = getClientLocale(slug);
   // The keywords we've committed to working. Every one is reported with its
   // live position, whether or not it ranks yet.
-  const targetKeywords = (await listTargetKeywords(slug).catch(() => [])).map(
-    (k) => k.keyword,
+  const targetKeywordRows = await listTargetKeywords(slug).catch(() => []);
+  const targetKeywords = targetKeywordRows.map((k) => k.keyword);
+  // Volume da client file — rede para quando a fonte de posições não traz o
+  // dela (DataForSEO não devolve volumes; o Serpstat só para quem rankeia).
+  const volumeByKeyword = new Map<string, number | null>(
+    targetKeywordRows.map(
+      (k) => [k.keyword.toLowerCase(), k.searchVolume ?? null] as const,
+    ),
   );
 
   // Doze meses até ao mês relatado, inclusive — o gráfico de evolução mostra
@@ -483,7 +524,12 @@ export async function buildMonthlyReport(
       extraProfiles: config.extraGbpProfiles,
     }),
     // Posição real na Google + GEO. Best-effort: nunca derruba o relatório.
-    fetchDataForSeo(slug, targetKeywords, trailingMonths(period.key, 2)[0].key),
+    fetchRanksAndGeo(
+      slug,
+      targetKeywords,
+      volumeByKeyword,
+      trailingMonths(period.key, 2)[0].key,
+    ),
   ]);
 
   const ga4Fetch: FetchStatus =

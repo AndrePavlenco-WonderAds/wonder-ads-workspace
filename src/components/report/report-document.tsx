@@ -152,38 +152,72 @@ export function ReportDocument({
   const gsc = snapshot.gsc;
   // Optional on the snapshot — reports generated before v76.15 have none.
   const coverage = snapshot.coverage;
-  const allTargetRanks = gsc.targetRanks ?? [];
-  const rankedTargets = allTargetRanks.filter((k) => k.position !== null);
-  // O CLIENTE VÊ SÓ AS QUE RANKEIAM (v76.32). Uma tabela de trinta linhas onde
-  // metade diz «ainda não rankeia» não lê como trabalho em curso — lê como
-  // falha, e rouba o olho às que subiram. O consultor continua a ver a lista
-  // inteira na variante interna, que é onde a lacuna é acionável.
-  const targetRanks = variant === "internal" ? allTargetRanks : rankedTargets;
-  // Posição real na Google (DataForSEO desde a v76.35). Os relatórios
-  // gravados antes disso trazem o bloco antigo do SE Ranking; renderiza-se o
-  // que lá estiver, para um relatório de março não ficar sem a secção.
-  const live = snapshot.liveRanks;
-  const liveVisible = live
-    ? variant === "internal"
-      ? live.ranks
-      : live.ranks.filter((r) => r.position !== null)
-    : [];
-  const liveRanked = live?.ranks.filter((r) => r.position !== null) ?? [];
-  const liveTop = (n: number) =>
-    liveRanked.filter((r) => (r.position ?? Infinity) <= n).length;
-  const liveLocalPack = live?.ranks.filter((r) => r.inLocalPack).length ?? 0;
   const geo = snapshot.geo;
 
-  // True SERP positions — absent on reports for clients with no synced
-  // SE Ranking project, and on every report generated before v76.26.
+  // —— A tabela única das keywords trabalhadas (v76.38) ————————————
+  // Uma só tabela comprida com TODAS as target keywords da client file e a
+  // posição atual na location certa. Substituiu quatro secções (Top queries,
+  // Top páginas, Maiores subidas e a média do GSC por keyword) — o relatório
+  // responde a «onde é que estamos em cada keyword do plano?» num sítio só.
+  //
+  // A fonte é a melhor disponível no snapshot: o bloco de posição real
+  // (Serpstat desde a v76.38, DataForSEO na v76.35–37), o SE Ranking nos
+  // relatórios ≤ v76.34, e a média do GSC nos anteriores a isso — para um
+  // relatório antigo nunca ficar sem a sua tabela.
+  const live = snapshot.liveRanks;
   const seRanking = snapshot.seRanking;
-  const srAllRanks = seRanking?.ranks ?? [];
-  const srRanked = srAllRanks.filter((k) => k.position !== null);
-  // Mesma regra: fora do top 100 é «ainda não», não é um resultado.
-  const srVisibleRanks = variant === "internal" ? srAllRanks : srRanked;
-  const srTop = (n: number) =>
-    srRanked.filter((k) => (k.position ?? Infinity) <= n).length;
-  const srLocalPack = srAllRanks.filter((k) => k.inLocalPack).length;
+  type KwSource = "live" | "seranking" | "gsc";
+  type KwRow = {
+    keyword: string;
+    position: number | null;
+    change: number | null;
+    volume: number | null;
+    inLocalPack: boolean;
+    isNew: boolean;
+  };
+  const kwSource: KwSource | null = live
+    ? "live"
+    : seRanking
+      ? "seranking"
+      : (gsc.targetRanks ?? []).length > 0
+        ? "gsc"
+        : null;
+  const kwAll: KwRow[] =
+    kwSource === "live" && live
+      ? live.ranks.map((r) => ({
+          keyword: r.keyword,
+          position: r.position,
+          change: r.change,
+          volume: r.volume ?? null,
+          inLocalPack: r.inLocalPack,
+          isNew: false,
+        }))
+      : kwSource === "seranking" && seRanking
+        ? seRanking.ranks.map((r) => ({
+            keyword: r.keyword,
+            position: r.position,
+            change: r.change,
+            volume: r.volume,
+            inLocalPack: r.inLocalPack,
+            isNew: false,
+          }))
+        : (gsc.targetRanks ?? []).map((k) => ({
+            keyword: k.keyword,
+            position: k.position,
+            change: k.change,
+            volume: k.impressions,
+            inLocalPack: false,
+            isNew: k.isNew,
+          }));
+  // O CLIENTE VÊ SÓ AS QUE RANKEIAM (v76.32). Uma tabela onde metade diz
+  // «fora do top 100» não lê como trabalho em curso — lê como falha, e rouba
+  // o olho às que subiram. O consultor vê a lista inteira na variante
+  // interna, que é onde a lacuna é acionável.
+  const kwVisible =
+    variant === "internal" ? kwAll : kwAll.filter((r) => r.position !== null);
+  // Posições do GSC são médias (12,4); as das outras fontes são lugares
+  // exatos na página de resultados (12).
+  const kwDecimals = kwSource === "gsc";
   const ai = snapshot.ai;
   const gbp = snapshot.gbp;
   // Per-listing breakdown — only on multi-unit clients (and absent on every
@@ -209,8 +243,6 @@ export function ReportDocument({
     (k) => variant === "internal" || k.m.value !== null || k.m.manualNa,
   );
 
-  const showTopTables =
-    gsc.topQueries.length > 0 || gsc.topPages.length > 0 || variant === "internal";
   const showAi = ai.sources.length > 0 || variant === "internal";
 
   return (
@@ -437,132 +469,11 @@ export function ReportDocument({
         </section>
       )}
 
-      {/* Top Queries & Pages */}
-      {showTopTables && (
-        <section className="wa-sec">
-          <div className="wa-label">{t("Top Queries & Páginas", "Top Queries & Pages")}</div>
-          <div className="wa-two-tables">
-            <div className="wa-tblwrap">
-              <h3 className="wa-h3">{t("Top queries (GSC)", "Top queries (GSC)")}</h3>
-              {gsc.topQueries.length === 0 ? (
-                <p className="wa-pending">{t("Sem dados GSC.", "No GSC data.")}</p>
-              ) : (
-                <table className="wa-qtable">
-                  <thead>
-                    <tr>
-                      <th>Query</th>
-                      <th className="n">Clicks</th>
-                      <th className="n">Pos.</th>
-                      <th className="n">{t("Δ mês", "MoM Δ")}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {gsc.topQueries.slice(0, 10).map((q) => (
-                      <tr key={q.query}>
-                        <td>{q.query}</td>
-                        <td className="n">{formatRaw(q.clicks, "count", lang)}</td>
-                        <td className="n">{formatRaw(q.position, "position", lang)}</td>
-                        <td className="n"><ChangeCell change={q.change} /></td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
-            <div className="wa-tblwrap">
-              <h3 className="wa-h3">{t("Top páginas (GSC)", "Top pages (GSC)")}</h3>
-              {gsc.topPages.length === 0 ? (
-                <p className="wa-pending">{t("Sem dados GSC.", "No GSC data.")}</p>
-              ) : (
-                <table className="wa-qtable">
-                  <thead>
-                    <tr>
-                      <th>{t("Página", "Page")}</th>
-                      <th className="n">Clicks</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {gsc.topPages.slice(0, 10).map((p) => (
-                      <tr key={p.page}>
-                        <td>{prettyPath(p.page)}</td>
-                        <td className="n">{formatRaw(p.clicks, "count", lang)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* Keywords & Positions (month-end footprint) */}
-      {gsc.keywordStats && (gsc.keywordStats.total > 0 || variant === "internal") && (
-        <section className="wa-sec">
-          <div className="wa-label">{t("Keywords & Posições", "Keywords & Positions")}</div>
-          <h3 className="wa-h3">{t("Presença nas pesquisas (fim do mês)", "Search presence (month-end)")}</h3>
-          <p className="wa-method">
-            {t(
-              "Com base nas queries com impressões no Google Search Console durante o mês.",
-              "Based on Google Search Console queries with impressions during the month.",
-            )}
-          </p>
-          <div className="wa-kstats">
-            <div className="wa-kstat">
-              <span className="wa-kv">{formatRaw(gsc.keywordStats.total, "count", lang)}</span>
-              <span className="wa-kl">{t("keywords c/ impressões", "keywords w/ impressions")}</span>
-            </div>
-            <div className="wa-kstat">
-              <span className="wa-kv">{formatRaw(gsc.keywordStats.top3, "count", lang)}</span>
-              <span className="wa-kl">Top 3</span>
-            </div>
-            <div className="wa-kstat">
-              <span className="wa-kv">{formatRaw(gsc.keywordStats.top10, "count", lang)}</span>
-              <span className="wa-kl">Top 10</span>
-            </div>
-            <div className="wa-kstat">
-              <span className="wa-kv">{formatRaw(gsc.keywordStats.top20, "count", lang)}</span>
-              <span className="wa-kl">Top 20</span>
-            </div>
-            <div className="wa-kstat">
-              <span className="wa-kv">{gsc.keywordStats.avgPosition.toFixed(1)}</span>
-              <span className="wa-kl">{t("posição média", "avg position")}</span>
-            </div>
-            {typeof gsc.keywordStats.newKeywords === "number" && (
-              <div className="wa-kstat wa-kstat-new">
-                <span className="wa-kv">+{formatRaw(gsc.keywordStats.newKeywords, "count", lang)}</span>
-                <span className="wa-kl">{t("novas keywords", "new keywords")}</span>
-              </div>
-            )}
-          </div>
-          {gsc.topMovers.length > 0 && (
-            <div className="wa-tblwrap" style={{ marginTop: "1rem" }}>
-              <h3 className="wa-h3">{t("Maiores subidas de posição", "Biggest position gains")}</h3>
-              <table className="wa-qtable">
-                <thead>
-                  <tr>
-                    <th>Query</th>
-                    <th className="n">{t("Posição", "Position")}</th>
-                    <th className="n">{t("Subida", "Gain")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {gsc.topMovers.map((m) => (
-                    <tr key={m.query}>
-                      <td>{m.query}</td>
-                      <td className="n">{m.position.toFixed(1)}</td>
-                      <td className="n wa-up">▲ {m.change.toFixed(1)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
-      )}
-
-      {/* Target keywords — every keyword we're working, with its live rank */}
-      {targetRanks.length > 0 && (
+      {/* A tabela única das keywords trabalhadas — todas as target keywords
+          da client file, com a posição atual na location certa. Substituiu o
+          Top queries/páginas, as Maiores subidas e a média do GSC por
+          keyword (v76.38). */}
+      {kwVisible.length > 0 && (
         <section className="wa-sec">
           <div className="wa-label">
             {t("Keywords Trabalhadas", "Target Keywords")}
@@ -570,189 +481,92 @@ export function ReportDocument({
           <h3 className="wa-h3">
             {variant === "internal"
               ? t(
-                  `Posição atual de cada keyword (${targetRanks.length})`,
-                  `Current position for every keyword (${targetRanks.length})`,
+                  `Posição atual de cada keyword (${kwVisible.length})`,
+                  `Current position for every keyword (${kwVisible.length})`,
                 )
               : t(
-                  `Keywords do plano já com posição na Google (${targetRanks.length})`,
-                  `Plan keywords already holding a Google position (${targetRanks.length})`,
+                  `Posição atual das keywords do plano (${kwVisible.length})`,
+                  `Current position of the plan's keywords (${kwVisible.length})`,
                 )}
           </h3>
           <p className="wa-method">
-            {variant === "internal"
+            {kwSource === "gsc"
               ? t(
-                  "Posição média no Google durante o mês, para cada keyword do plano. «Ainda não rankeia» significa que a keyword não registou impressões neste período — estas linhas não vão para o relatório do cliente.",
-                  "Average Google position during the month, for every keyword in the plan. “Not ranking yet” means the keyword recorded no impressions in this period — these rows don't reach the client's report.",
+                  "Posição média no Google durante o mês, para cada keyword do plano, com base nas impressões do Google Search Console.",
+                  "Average Google position during the month for every keyword in the plan, based on Google Search Console impressions.",
                 )
               : t(
-                  "Posição média no Google durante o mês, para cada keyword do plano já com presença nos resultados.",
-                  "Average Google position during the month, for every keyword in the plan already showing up in the results.",
+                  `Posição atual na página de resultados da Google, na região deste cliente e para o site completo (domínio e subdomínios), verificada a ${formatDate(
+                    kwSource === "live" && live
+                      ? live.checkedOn
+                      : seRanking?.checkedOn ?? snapshot.generatedAt,
+                  )}. «Fora do top 100» significa que a keyword ainda não entrou nos primeiros 100 resultados — é onde o trabalho dos próximos meses atua.`,
+                  `Current position on Google's results page, in this client's region and for the full site (domain and subdomains), checked on ${formatDate(
+                    kwSource === "live" && live
+                      ? live.checkedOn
+                      : seRanking?.checkedOn ?? snapshot.generatedAt,
+                  )}. “Outside top 100” means the keyword hasn't entered the first 100 results yet — that's where the coming months' work goes.`,
                 )}
           </p>
-          <div className="wa-kstats">
-            <div className="wa-kstat">
-              <span className="wa-kv">{formatRaw(rankedTargets.length, "count", lang)}</span>
-              <span className="wa-kl">{t("a rankear", "ranking")}</span>
-            </div>
-            <div className="wa-kstat">
-              <span className="wa-kv">
-                {formatRaw(
-                  targetRanks.filter((k) => k.position !== null && k.position <= 3).length,
-                  "count",
-                  lang,
-                )}
-              </span>
-              <span className="wa-kl">Top 3</span>
-            </div>
-            <div className="wa-kstat">
-              <span className="wa-kv">
-                {formatRaw(
-                  targetRanks.filter((k) => k.position !== null && k.position <= 10).length,
-                  "count",
-                  lang,
-                )}
-              </span>
-              <span className="wa-kl">Top 10</span>
-            </div>
-            {/* «Por conquistar» é uma métrica de gestão, não de resultado —
-                fica na vista interna. */}
-            {variant === "internal" && (
-              <div className="wa-kstat">
-                <span className="wa-kv">
-                  {formatRaw(
-                    allTargetRanks.length - rankedTargets.length,
-                    "count",
-                    lang,
-                  )}
-                </span>
-                <span className="wa-kl">{t("por conquistar", "still to win")}</span>
-              </div>
-            )}
-          </div>
-          <div className="wa-tblwrap" style={{ marginTop: "1rem" }}>
+          <div className="wa-tblwrap" style={{ marginTop: ".6rem" }}>
             <table className="wa-qtable">
               <thead>
                 <tr>
                   <th>Keyword</th>
                   <th className="n">{t("Posição", "Position")}</th>
                   <th className="n">{t("Δ mês", "MoM Δ")}</th>
-                  <th className="n">{t("Impressões", "Impressions")}</th>
-                  <th className="n">Clicks</th>
+                  <th className="n">
+                    {kwSource === "gsc"
+                      ? t("Impressões", "Impressions")
+                      : t("Pesquisas/mês", "Searches/mo")}
+                  </th>
                 </tr>
               </thead>
               <tbody>
-                {targetRanks.map((k) => (
+                {kwVisible.map((k) => (
                   <tr key={k.keyword}>
                     <td>
                       {k.keyword}
                       {k.isNew && (
                         <span className="wa-kw-new">{t("novo", "new")}</span>
                       )}
-                    </td>
-                    <td className="n">
-                      {k.position === null ? (
-                        <span className="wa-pending">
-                          {t("ainda não rankeia", "not ranking yet")}
-                        </span>
-                      ) : (
-                        k.position.toFixed(1)
-                      )}
-                    </td>
-                    <td className="n">
-                      <ChangeCell change={k.change} />
-                    </td>
-                    <td className="n">{formatRaw(k.impressions, "count", lang)}</td>
-                    <td className="n">{formatRaw(k.clicks, "count", lang)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      )}
-
-      {/* Posição real na Google (DataForSEO) — as mesmas target keywords da
-          tabela de cima, mas perguntadas a uma página de resultados a sério em
-          vez de tiradas da média das impressões que o GSC calhou de servir. */}
-      {live && liveVisible.length > 0 && (
-        <section className="wa-sec">
-          <div className="wa-label">
-            {t("Ranking Real na Google", "Live Google Ranking")}
-          </div>
-          <h3 className="wa-h3">
-            {t(
-              `Posição verificada de cada keyword (${liveVisible.length})`,
-              `Verified position for every keyword (${liveVisible.length})`,
-            )}
-          </h3>
-          <p className="wa-method">
-            {t(
-              `Posição real na página de resultados da Google, verificada a ${formatDate(live.checkedOn)}. Ao contrário da tabela acima (que é uma média das impressões), esta é a posição em que a keyword aparece de facto.`,
-              `Actual position on Google's results page, checked on ${formatDate(live.checkedOn)}. Unlike the table above (an average over impressions), this is where the keyword actually appears.`,
-            )}
-          </p>
-          <div className="wa-kstats">
-            <div className="wa-kstat">
-              <span className="wa-kv">{formatRaw(liveRanked.length, "count", lang)}</span>
-              <span className="wa-kl">{t("no top 100", "in top 100")}</span>
-            </div>
-            <div className="wa-kstat">
-              <span className="wa-kv">{formatRaw(liveTop(3), "count", lang)}</span>
-              <span className="wa-kl">Top 3</span>
-            </div>
-            <div className="wa-kstat">
-              <span className="wa-kv">{formatRaw(liveTop(10), "count", lang)}</span>
-              <span className="wa-kl">Top 10</span>
-            </div>
-            <div className="wa-kstat">
-              <span className="wa-kv">{formatRaw(liveTop(20), "count", lang)}</span>
-              <span className="wa-kl">Top 20</span>
-            </div>
-            {liveLocalPack > 0 && (
-              <div className="wa-kstat wa-kstat-new">
-                <span className="wa-kv">{formatRaw(liveLocalPack, "count", lang)}</span>
-                <span className="wa-kl">{t("no mapa", "in map pack")}</span>
-              </div>
-            )}
-          </div>
-          <div className="wa-tblwrap" style={{ marginTop: "1rem" }}>
-            <table className="wa-qtable">
-              <thead>
-                <tr>
-                  <th>Keyword</th>
-                  <th className="n">{t("Posição", "Position")}</th>
-                  <th className="n">{t("Δ mês", "MoM Δ")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {liveVisible.map((r) => (
-                  <tr key={r.keyword}>
-                    <td>
-                      {r.keyword}
-                      {r.inLocalPack && (
+                      {k.inLocalPack && (
                         <span className="wa-kw-map">{t("mapa", "map")}</span>
                       )}
                     </td>
                     <td className="n">
-                      {r.position === null ? (
+                      {k.position === null ? (
                         <span className="wa-pending">
-                          {t("fora do top 100", "outside top 100")}
+                          {kwSource === "gsc"
+                            ? t("ainda não rankeia", "not ranking yet")
+                            : t("fora do top 100", "outside top 100")}
                         </span>
+                      ) : kwDecimals ? (
+                        k.position.toFixed(1)
                       ) : (
-                        r.position
+                        k.position
                       )}
                     </td>
                     <td className="n">
-                      <PlaceCell change={r.change} />
+                      {kwDecimals ? (
+                        <ChangeCell change={k.change} />
+                      ) : (
+                        <PlaceCell change={k.change} />
+                      )}
+                    </td>
+                    <td className="n">
+                      {k.volume === null ? "—" : formatRaw(k.volume, "count", lang)}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-          {variant === "internal" && (
+          {variant === "internal" && kwSource === "live" && live && (
             <p className="wa-method" style={{ marginTop: ".6rem" }}>
-              DataForSEO · {live.domain} · ${live.costUsd} nesta verificação.
+              {live.source === "serpstat"
+                ? `Serpstat · base ${live.se ?? "g_pt"} · domínio + subdomínios · ${live.domain}${live.truncated ? " · ⚠ cobertura truncada — posições em falta podem ser falta de cobertura" : ""}`
+                : `DataForSEO · ${live.domain}${typeof live.costUsd === "number" ? ` · $${live.costUsd} nesta verificação` : ""}`}
             </p>
           )}
         </section>
@@ -845,96 +659,6 @@ export function ReportDocument({
         </section>
       )}
 
-      {/* Bloco antigo do SE Ranking — só nos relatórios gravados antes da
-          v76.35, que já o traziam no snapshot. */}
-      {!live && seRanking && srVisibleRanks.length > 0 && (
-        <section className="wa-sec">
-          <div className="wa-label">
-            {t("Ranking Real na Google", "Live Google Ranking")}
-          </div>
-          <h3 className="wa-h3">
-            {t(
-              `Posição verificada de cada keyword (${srVisibleRanks.length})`,
-              `Verified position for every keyword (${srVisibleRanks.length})`,
-            )}
-          </h3>
-          <p className="wa-method">
-            {seRanking.outsidePeriod
-              ? t(
-                  `Posição real na página de resultados da Google, verificada a ${formatDate(seRanking.checkedOn)}. A monitorização começou depois deste mês, por isso mostramos a posição mais recente — a variação mensal fica disponível a partir do próximo relatório.`,
-                  `Actual position on Google's results page, checked on ${formatDate(seRanking.checkedOn)}. Tracking started after this month, so we show the most recent check — month-over-month movement becomes available from the next report.`,
-                )
-              : t(
-                  `Posição real na página de resultados da Google, verificada a ${formatDate(seRanking.checkedOn)}. Ao contrário da tabela acima (que é uma média das impressões), esta é a posição em que a keyword aparece de facto.`,
-                  `Actual position on Google's results page, checked on ${formatDate(seRanking.checkedOn)}. Unlike the table above (an average over impressions), this is where the keyword actually appears.`,
-                )}
-          </p>
-          <div className="wa-kstats">
-            <div className="wa-kstat">
-              <span className="wa-kv">{formatRaw(srRanked.length, "count", lang)}</span>
-              <span className="wa-kl">{t("no top 100", "in top 100")}</span>
-            </div>
-            <div className="wa-kstat">
-              <span className="wa-kv">{formatRaw(srTop(3), "count", lang)}</span>
-              <span className="wa-kl">Top 3</span>
-            </div>
-            <div className="wa-kstat">
-              <span className="wa-kv">{formatRaw(srTop(10), "count", lang)}</span>
-              <span className="wa-kl">Top 10</span>
-            </div>
-            <div className="wa-kstat">
-              <span className="wa-kv">{formatRaw(srTop(20), "count", lang)}</span>
-              <span className="wa-kl">Top 20</span>
-            </div>
-            {srLocalPack > 0 && (
-              <div className="wa-kstat wa-kstat-new">
-                <span className="wa-kv">{formatRaw(srLocalPack, "count", lang)}</span>
-                <span className="wa-kl">{t("no mapa", "in map pack")}</span>
-              </div>
-            )}
-          </div>
-          <div className="wa-tblwrap" style={{ marginTop: "1rem" }}>
-            <table className="wa-qtable">
-              <thead>
-                <tr>
-                  <th>Keyword</th>
-                  <th className="n">{t("Posição", "Position")}</th>
-                  <th className="n">{t("Δ mês", "MoM Δ")}</th>
-                  <th className="n">{t("Pesquisas/mês", "Searches/mo")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {srVisibleRanks.map((k) => (
-                  <tr key={k.keyword}>
-                    <td>
-                      {k.keyword}
-                      {k.inLocalPack && (
-                        <span className="wa-kw-map">{t("mapa", "map")}</span>
-                      )}
-                    </td>
-                    <td className="n">
-                      {k.position === null ? (
-                        <span className="wa-pending">
-                          {t("fora do top 100", "outside top 100")}
-                        </span>
-                      ) : (
-                        k.position
-                      )}
-                    </td>
-                    <td className="n">
-                      <PlaceCell change={k.change} />
-                    </td>
-                    <td className="n">
-                      {k.volume === null ? "—" : formatRaw(k.volume, "count", lang)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      )}
-
       {/* Notes */}
       {(snapshot.notes.trim() || variant === "internal") && (
         <section className="wa-sec">
@@ -956,15 +680,6 @@ export function ReportDocument({
       </footer>
     </div>
   );
-}
-
-function prettyPath(url: string): string {
-  try {
-    const u = new URL(url);
-    return u.pathname === "/" ? u.hostname : u.pathname;
-  } catch {
-    return url;
-  }
 }
 
 const CSS = `
@@ -1092,7 +807,6 @@ const CSS = `
 .wa-kstat-new{border-left-color:var(--up);}
 
 /* Tables */
-.wa-two-tables{display:grid;grid-template-columns:1fr 1fr;gap:1.4rem;margin-top:.4rem;}
 .wa-tblwrap{min-width:0;overflow-x:auto;}
 .wa-qtable{width:100%;border-collapse:collapse;font-size:.75rem;}
 .wa-qtable th{text-align:left;color:var(--plum);font-size:.58rem;letter-spacing:.08em;text-transform:uppercase;padding:.32rem .3rem;border-bottom:1px solid rgba(23,22,45,.12);}
@@ -1122,7 +836,6 @@ const CSS = `
 
 @media (max-width:640px){
   .wa-two{grid-template-columns:1fr;}
-  .wa-two-tables{grid-template-columns:1fr;}
   .wa-chan-row{grid-template-columns:110px 1fr 60px;}
   .wa-ctitle{font-size:1.45rem;}
 }

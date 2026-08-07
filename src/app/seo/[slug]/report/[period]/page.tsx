@@ -14,7 +14,6 @@ import { GenerateReportButton } from "@/components/report/generate-report-button
 import { ReportManualInputs } from "@/components/report/report-manual-inputs";
 import { ReportLeadEvents } from "@/components/report/report-lead-events";
 import { ReportGbpProfiles } from "@/components/report/report-gbp-profiles";
-import { ReportMoverPicker } from "@/components/report/report-mover-picker";
 import { getReportConfig } from "@/lib/report/report-config-store";
 import { FinalizeReportButton } from "@/components/report/finalize-report-button";
 import { ReportCopyLinkButton } from "@/components/report/report-copy-link-button";
@@ -204,17 +203,6 @@ export default async function ReportPage({
                   slug={slug}
                   gbpMainLabel={reportConfig.gbpMainLabel}
                   extraGbpProfiles={reportConfig.extraGbpProfiles}
-                />
-
-                {/* Curadoria das subidas de posição mostradas ao cliente */}
-                <ReportMoverPicker
-                  slug={slug}
-                  period={period}
-                  candidates={
-                    snapshot.gsc.moverCandidates ?? snapshot.gsc.topMovers
-                  }
-                  selected={snapshot.gsc.topMovers}
-                  curated={Boolean(snapshot.gsc.moversCurated)}
                 />
 
                 {/* Passo 3 — finalizar + ações do cliente (gated) */}
