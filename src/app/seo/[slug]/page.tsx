@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ExternalLink, RefreshCw, Gauge, Heart } from "lucide-react";
+import { ExternalLink, RefreshCw, Gauge, Heart, CalendarCheck } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { ClientBrief } from "@/components/client-brief";
 import { ClientFiles } from "@/components/client-files";
@@ -13,6 +13,11 @@ import { SeoProjectContainers } from "@/components/seo-project-containers";
 import { SeoActions } from "@/components/seo-actions";
 import { ProjectSectionNav } from "@/components/project-section-nav";
 import { LogoChip } from "@/components/logo-chip";
+import {
+  getCurrentRoadmap,
+  resolveOnboardingDate,
+} from "@/lib/roadmap-store";
+import { formatDate } from "@/lib/dates";
 import { getBriefForSlug } from "@/lib/briefs-storage";
 import { isSharedWithSeo } from "@/lib/ads-clients";
 import { getClientBySlug, getSeoClients } from "@/lib/notion";
@@ -89,6 +94,12 @@ export default async function ClientPage({
   const gradient = paletteToGradient(getClientPalette(slug));
   const shared = isSharedWithSeo(slug);
   const npsRecord = await getNpsRecord(slug);
+  // Data de onboarding — a mesma que o board mostra. Resolvida aqui para o
+  // cabeçalho a poder mostrar sem carregar o roadmap inteiro.
+  const onboardingDate = await resolveOnboardingDate(
+    slug,
+    (await getCurrentRoadmap(slug).catch(() => null))?.onboardingDate,
+  ).catch(() => undefined);
   const latestNps = npsRecord.submissions[0] ?? null;
   const npsScore = latestNps?.scores.overall ?? null;
   // When a send is due (never sent, or within 3 days / overdue), the pill
@@ -142,6 +153,20 @@ export default async function ClientPage({
                   {displayDomain(website)}
                   <ExternalLink className="h-3 w-3" />
                 </a>
+              )}
+              {onboardingDate && (
+                <span
+                  className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-0.5 text-[11px] font-medium text-white/65"
+                  title="Quando o cliente entrou na agência — a mesma data da tabela de Clients, e a âncora de tudo o que o roadmap conta."
+                >
+                  <CalendarCheck className="h-3 w-3 text-white/45" />
+                  <span className="uppercase tracking-[0.08em] text-white/45">
+                    Onboarded
+                  </span>
+                  <span className="font-semibold text-white/80">
+                    {formatDate(onboardingDate)}
+                  </span>
+                </span>
               )}
               <Link
                 href={`/seo/${slug}/nps`}

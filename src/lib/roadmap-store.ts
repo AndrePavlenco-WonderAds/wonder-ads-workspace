@@ -196,7 +196,7 @@ function archiveKey(slug: string): string {
  *
  *  Nada é reescrito: a mesma decisão da v76.33 para os consultores que
  *  saíram — a leitura sabe compor a verdade sem tocar em dados gravados. */
-async function resolveOnboardingDate(
+export async function resolveOnboardingDate(
   slug: string,
   pinned: string | undefined,
 ): Promise<string | undefined> {

@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.37",
+    date: "2026-08-07",
+    title: "A data de onboarding subiu para o cabeçalho, e os clientes em pausa saíram das vistas de consultor",
+    highlights: [
+      "**📌 A pastilha «Onboarded» passou a estar no cabeçalho da ficha, ao lado do NPS.** Estava escondida na barra do roadmap, uma página abaixo — e é a âncora de tudo o que a ficha conta (a semana em que o projeto está, o que já devia ter saído). Agora está onde o olho passa primeiro, com a mesma data que a v76.36 fez resolver para todos os clientes.",
+      "**⏸️ Clientes em pausa deixaram de aparecer nas vistas de consultor e no painel de Roadmaps do C-Level.** Um contrato suspenso não é trabalho por fazer: deixá-lo lá punha um cartão vermelho de «9 tarefas em atraso» numa conta que ninguém devia estar a tocar, e fazia o painel do C-Level contar dívida que não existe. Saem três — **Sea Yourself** e **InSync Design** (Fran) e **CuidaMais** (André Pereira).",
+      "**🗺️ O roadmap deles fica intacto.** Isto é um filtro de vista, não um apagar: quando a conta voltar, tira-se a pausa e o projeto reaparece exatamente onde estava. E se o KV estiver em baixo, não se esconde ninguém — mostrar a mais é mais seguro do que esconder o que não devia.",
+    ],
+  },
+  {
     version: "76.36",
     date: "2026-08-07",
     title: "A pastilha «Onboarded» deixou de ser um privilégio de meia dúzia de clientes",

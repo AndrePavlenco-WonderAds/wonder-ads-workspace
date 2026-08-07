@@ -23,6 +23,7 @@ import {
 } from "./roadmap-store";
 import { getConsultantForSlug, CONSULTANT_ORDER } from "./client-overrides";
 import { EXCLUDED_SLUGS } from "./client-overrides";
+import { getPausedSlugSet } from "./admin-paused-clients-store";
 import { getSeoClients } from "./notion";
 
 /** A single client row inside a consultant section. */
@@ -170,15 +171,31 @@ function statsForRoadmap(roadmap: Roadmap, now: number = Date.now()) {
 
 /** Fetches the full picture: every SEO client + their roadmap (if any)
  *  + per-client stats + grouped by consultant. */
+
+/** Clientes em pausa. Um contrato suspenso não é trabalho por fazer: deixá-lo
+ *  nas vistas de consultor põe um cartão vermelho de «9 tarefas em atraso»
+ *  numa conta que ninguém devia estar a tocar, e faz o painel do C-Level
+ *  contar dívida que não existe. Sai das vistas; o roadmap fica intacto para
+ *  quando a conta voltar. KV em baixo → não se esconde ninguém, que é mais
+ *  seguro do que esconder o que não devia. */
+async function pausedSet(): Promise<Set<string>> {
+  try {
+    return await getPausedSlugSet();
+  } catch {
+    return new Set<string>();
+  }
+}
+
 export async function getRoadmapAdminSummary(
   now: number = Date.now(),
 ): Promise<RoadmapAdminSummary> {
   let seoClients: { slug: string; title: string }[] = [];
   let notionUnavailable = false;
+  const paused = await pausedSet();
   try {
     const fetched = await getSeoClients();
     seoClients = fetched
-      .filter((c) => !EXCLUDED_SLUGS.has(c.slug))
+      .filter((c) => !EXCLUDED_SLUGS.has(c.slug) && !paused.has(c.slug))
       .map((c) => ({ slug: c.slug, title: c.title }));
   } catch {
     notionUnavailable = true;
@@ -323,10 +340,13 @@ export async function getRoadmapAdminSummary(
  *  number. Falls back to 0 when Notion is unavailable. */
 export async function countRoadmaps(): Promise<number> {
   try {
-    const fetched = await getSeoClients();
+    const [fetched, paused] = await Promise.all([
+      getSeoClients(),
+      pausedSet(),
+    ]);
     const slugs = fetched
       .map((c) => c.slug)
-      .filter((s) => !EXCLUDED_SLUGS.has(s));
+      .filter((s) => !EXCLUDED_SLUGS.has(s) && !paused.has(s));
     const results = await Promise.all(
       slugs.map((s) => getCurrentRoadmap(s).then((r) => Boolean(r))),
     );
@@ -389,12 +409,14 @@ export async function getConsultantWeekView(
 ): Promise<ConsultantWeekView> {
   let seoClients: { slug: string; title: string }[] = [];
   let notionUnavailable = false;
+  const paused = await pausedSet();
   try {
     const fetched = await getSeoClients();
     seoClients = fetched
       .filter(
         (c) =>
           !EXCLUDED_SLUGS.has(c.slug) &&
+          !paused.has(c.slug) &&
           getConsultantForSlug(c.slug) === consultantName,
       )
       .map((c) => ({ slug: c.slug, title: c.title }));
