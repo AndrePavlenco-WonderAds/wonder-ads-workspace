@@ -16,6 +16,7 @@ import {
   Wallet,
   Rocket,
   BellRing,
+  Radar,
   ArrowRight,
 } from "lucide-react";
 
@@ -23,7 +24,9 @@ type ChoiceBlock = {
   href: string;
   title: string;
   blurb: string;
-  count: number;
+  /** Ausente nos blocos que não contam nada — a pastilha mostra só o rótulo,
+   *  em vez de um "0" que se lê como "está vazio". */
+  count?: number;
   badge: string;
   Icon: typeof FolderKanban;
 };
@@ -92,6 +95,14 @@ export function AdminLanding({
       Icon: Wallet,
     },
     {
+      href: "/admin/dataforseo",
+      title: "DataForSEO",
+      blurb:
+        "Banco de ensaio: corre a posição real na Google das target keywords de um cliente e a visibilidade dele nos LLMs, com dados e custo a sério. Não grava nada.",
+      badge: "ensaio",
+      Icon: Radar,
+    },
+    {
       href: "/admin/notificacoes",
       title: "Notificações",
       blurb:
@@ -139,7 +150,7 @@ export function AdminLanding({
                   <Icon className="h-6 w-6 text-white" strokeWidth={2.25} />
                 </span>
                 <span className="rounded-full border border-white/15 bg-white/[0.05] px-2.5 py-1 text-[10.5px] font-bold uppercase tracking-[0.16em] text-white/70">
-                  {b.count} {b.badge}
+                  {b.count === undefined ? b.badge : `${b.count} ${b.badge}`}
                 </span>
               </div>
 

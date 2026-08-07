@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.34",
+    date: "2026-08-07",
+    title: "DataForSEO: posição real sem teto de clientes, e a verdade sobre o GEO em português",
+    highlights: [
+      "**🎯 Novo cartão «DataForSEO» na C-suite — um banco de ensaio que corre com dados a sério.** Escolhe-se um cliente e vê-se a **posição real na Google** de cada target keyword dele, com deteção do pack local. Nada é gravado: é uma leitura, mostrada, e esquecida. Existe para a decisão de trocar o SE Ranking se poder tomar a olhar para números reais em vez de acreditar em promessas.",
+      "**💸 O teto dos 10 websites acaba, e por cerca de $10/mês.** Medido: a **Fisio Restelo** tem 9 das 11 keywords verificadas no top 100 (`fisioterapia restelo` #1 e #1 no mapa, `fisioterapia belém lisboa` #3), a **White Clinic** tem 7 em 12 (`miguel stanley dentist` #1, `cosmetic dentist` #1 e #1 no mapa). Custo real medido: **$0,0141 por keyword** a 100 posições de profundidade — a carteira inteira (~670 keywords) fica por **$9,50/mês**, contra os $100/mês do Serpstat e o teto que hoje deixa dez clientes de fora.",
+      "**🤖 O GEO foi construído e medido — e a conclusão é para ler antes de o mostrar a um cliente.** A metade «onde já aparecemos» funciona: a Fisio Restelo é citada em `pilates clinico lisboa` (260 pesquisas/mês). A metade «onde podíamos aparecer» esbarra no corpus: em português de Portugal, `fisioterapia` devolve 48 perguntas mas `escoliose infantil tratamento` devolve **zero**, e alargar o tópico para uma palavra traz lixo — `coluna worten`, `séries para adolescentes`, `unidade de tratamento intensivo`. Em inglês o mesmo tópico devolve **5977** perguntas. **Não é um defeito da integração, é o estado do mercado** — por isso a secção não entra no relatório do cliente até haver o que mostrar, e o ensaio diz «sem sinal neste mercado» em vez de desenhar uma grelha de zeros.",
+      "**🧠 Os tópicos das perguntas saem das target keywords, sem a cauda geográfica.** «tratamento escoliose lisboa» vira «tratamento escoliose»: mantém o serviço e perde o sítio, que é a diferença entre uma pesquisa local e uma pergunta feita a um LLM.",
+    ],
+  },
+  {
     version: "76.33",
     date: "2026-08-07",
     title: "Uma pessoa que saiu deixou de aparecer em seis sítios da app",
