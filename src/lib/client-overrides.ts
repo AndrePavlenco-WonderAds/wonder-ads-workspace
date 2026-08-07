@@ -14,7 +14,7 @@ export const EXCLUDED_SLUGS = new Set<string>(["c-saccor", "senior-resort"]);
 // the slug membership stays the same, only the consultant identity
 // changed. (André previously took over Luana's book in v74.6 — same
 // pattern.)
-// v75.4: IHN moved here from Yenisey (offboarded).
+// v75.4: IHN moved here when the previous SEO consultant left.
 const MANUEL = new Set([
   "aeger-prima",
   "a-domingos",
@@ -23,7 +23,8 @@ const MANUEL = new Set([
   "ihn",
 ]);
 
-// v75.4: Monte Mar + Fisio Restelo moved here from Yenisey (offboarded).
+// v75.4: Monte Mar + Fisio Restelo moved here when the previous SEO
+// consultant left.
 const FRAN_R = new Set([
   "b-life",
   "hds-learning",
@@ -38,7 +39,8 @@ const FRAN_R = new Set([
 // André Pereira — new SEO consultant (v74.31). His first book:
 // Sentir Saúde + Clínica Fernando Almeida (both onboarded 15/06/2026).
 // CuidaMais added v74.38. Kings Gyms (kingsgyms.com) added v74.59.
-// v75.4: White Clinic + Spine Center + CDT moved here from Yenisey.
+// v75.4: White Clinic + Spine Center + CDT moved here when the previous
+// SEO consultant left.
 const ANDRE_PEREIRA = new Set([
   "sentir-saude",
   "clinica-fernando-almeida",
@@ -58,9 +60,9 @@ const JOAO_B = new Set([
   "mymedic",
 ]);
 
-// Yenisey Rodriguez offboarded (v75.4). Her book was redistributed:
+// v75.4: uma consultora de SEO saiu e a carteira dela foi redistribuída:
 // IHN → Manuel; White Clinic + Spine Center + CDT → André Pereira;
-// Monte Mar + Fisio Restelo → Fran. The column is gone.
+// Monte Mar + Fisio Restelo → Fran. A coluna dela desapareceu do board.
 
 /** Returns the Head Consultant for a given client slug. */
 export function getConsultantForSlug(slug: string): string {

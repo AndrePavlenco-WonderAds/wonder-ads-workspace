@@ -171,7 +171,7 @@ type ConsultantColumn = { name: string; clients: NotionClient[] };
  *  and the cached value can lag behind code-level consultant renames in
  *  client-overrides.ts. Re-resolving here means any consultant rename
  *  ships instantly, even before the cache evicts. The bug it fixes:
- *  renaming "Yenisey" → "Yenisey R." dropped 5 clients off the board
+ *  renaming a consultant to a shorter form dropped 5 clients off the board
  *  because the cached consultant string didn't match the new column name. */
 function buildConsultantColumns(clients: NotionClient[]): ConsultantColumn[] {
   const grouped: Record<string, NotionClient[]> = {};

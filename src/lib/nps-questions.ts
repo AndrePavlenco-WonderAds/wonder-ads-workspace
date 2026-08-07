@@ -134,7 +134,7 @@ const TEAM_OPTIONS: NpsMultiOption[] = [
   { value: "andre-pereira", label: { pt: "André Pereira", en: "André Pereira" } },
   { value: "manuel-s", label: { pt: "Manuel Silva", en: "Manuel Silva" } },
   { value: "fran-r", label: { pt: "Fran. Rosa", en: "Fran. Rosa" } },
-  { value: "yenisey-r", label: { pt: "Yenisey Rodriguez", en: "Yenisey Rodriguez" } },
+  { value: "joao-b", label: { pt: "João Batista", en: "João Batista" } },
   { value: "germano-c", label: { pt: "Germano C.", en: "Germano C." } },
   { value: "mike", label: { pt: "Mike Nobre", en: "Mike Nobre" } },
   { value: "gustavo", label: { pt: "Gustavo Rotini", en: "Gustavo Rotini" } },

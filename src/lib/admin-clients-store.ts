@@ -88,14 +88,20 @@ export const DEFAULT_STARTING_DATES: Record<string, string> = {
 export const CONSULTANTS = [
   "Manuel Silva",
   "Fran. Rosa",
-  "Yenisey Rodriguez",
   "Germano C.",
   "André Pereira",
   // v76.31: já tinha login, carteira (client-overrides) e coluna no board —
   // só faltava aqui, e por isso não aparecia no dropdown de atribuição.
   "João B.",
 ] as const;
+
 export type Consultant = (typeof CONSULTANTS)[number];
+
+/** Quem já não trabalha cá. Continua a existir em registos gravados em KV
+ *  (um cliente atribuído antes da saída guarda o nome para sempre), por isso
+ *  a leitura tem de o saber filtrar — ver `normaliseFields`. Nomes na forma
+ *  canónica, já depois de `CONSULTANT_RENAMES`. */
+export const RETIRED_CONSULTANTS = new Set<string>(["Yenisey Rodriguez"]);
 
 /** Renames that should auto-apply when reading an old admin record —
  *  so a saved consultant field carrying an old short form picks up the
@@ -106,6 +112,8 @@ export type Consultant = (typeof CONSULTANTS)[number];
 const CONSULTANT_RENAMES: Record<string, string> = {
   "Manuel S.": "Manuel Silva",
   "Fran. R.": "Fran. Rosa",
+  // Continua aqui de propósito: normaliza a forma curta para a canónica, que
+  // é a que o `RETIRED_CONSULTANTS` sabe filtrar a seguir.
   "Yenisey R.": "Yenisey Rodriguez",
   "André P.": "Manuel Silva",
   "Luana N.": "Manuel Silva", // older legacy → handover chain
@@ -119,12 +127,11 @@ export type ClientDepartment = (typeof CLIENT_DEPARTMENTS)[number];
 
 /** Canonical department for each consultant — drives both the
  *  consultant-default-on-create logic AND the legacy-record split
- *  on read (a legacy record holding [Yenisey, Germano] gets
- *  attributed Yenisey → SEO row, Germano → ADS row). */
+ *  on read (a legacy record holding [Manuel, Germano] gets
+ *  attributed Manuel → SEO row, Germano → ADS row). */
 export const CONSULTANT_DEPARTMENT: Record<string, ClientDepartment> = {
   "Manuel Silva": "SEO",
   "Fran. Rosa": "SEO",
-  "Yenisey Rodriguez": "SEO",
   "Germano C.": "ADS",
   "André Pereira": "SEO",
   "João B.": "SEO",
@@ -200,8 +207,8 @@ export function defaultAdminRecord(
 ): AdminClientRecord {
   // Seed the consultant from the canonical override map ONLY when it
   // aligns with the row's department — otherwise leave empty so the
-  // consultant picker reflects reality (Yenisey on the SEO row of a
-  // shared client, Germano on the ADS row, etc.).
+  // consultant picker reflects reality (the SEO consultant on the SEO row
+  // of a shared client, Germano on the ADS row, etc.).
   const seedName = getConsultantForSlug(slug);
   const seedDept =
     seedName !== "Unassigned" ? CONSULTANT_DEPARTMENT[seedName] : undefined;
@@ -268,9 +275,17 @@ function normaliseFields(
       : typeof raw.consultant === "string" && raw.consultant.trim()
         ? [raw.consultant.trim()]
         : base.consultants;
-  const consultants = Array.from(
+  // Renomeações primeiro, saídas depois. Um registo gravado antes de alguém
+  // sair continua a nomeá-la em KV para sempre — reescrever esses registos à
+  // mão seria mexer em dados de produção para corrigir uma coisa que a
+  // leitura sabe corrigir sozinha. Quem saiu cai fora aqui; se a linha ficar
+  // sem ninguém, herda o dono atual do cliente (a mesma regra do
+  // `defaultAdminRecord`), que é quem de facto ficou com a conta.
+  const renamed = Array.from(
     new Set(rawConsultants.map((c) => CONSULTANT_RENAMES[c] ?? c)),
   );
+  const active = renamed.filter((c) => !RETIRED_CONSULTANTS.has(c));
+  const consultants = active.length > 0 ? active : base.consultants;
   const monthlyValue =
     typeof raw.monthlyValue === "number"
       ? raw.monthlyValue
@@ -314,7 +329,7 @@ function normaliseFields(
  *  caller-requested department.
  *
  *  - Consultants are filtered to those whose canonical department
- *    matches the target dept (Yenisey/Manuel/Fran → SEO row only,
+ *    matches the target dept (Manuel/Fran/André P. → SEO row only,
  *    Germano → ADS row only). Unknown consultants pass through to
  *    every dept so we don't silently drop them.
  *  - The monthlyValue gets attributed to the LEGACY_VALUE_DEPT_PRIORITY

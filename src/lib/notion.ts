@@ -175,7 +175,7 @@ const _fetchSeoClients = unstable_cache(
   // any of its derived fields changes meaningfully. v7: added CuidaMais
   // (v74.38). v9: offboarded Senior Resort (excluded slug).
   // v11: merge promoted onboarding-flow clients into the roster.
-  // v12: Yenisey offboarded + book redistributed; João B. joins with
+  // v12: uma consultora saiu e a carteira foi redistribuída; João B. joins with
   // Cidália Cabeleireiros + MyMedic (synthetic, still in onboarding) (v75.4).
   ["seo-clients-v12"],
   { revalidate: 3600, tags: ["seo-clients"] },

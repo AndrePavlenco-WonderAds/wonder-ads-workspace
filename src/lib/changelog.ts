@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.33",
+    date: "2026-08-07",
+    title: "Uma pessoa que saiu deixou de aparecer em seis sítios da app",
+    highlights: [
+      "**👤 Uma consultora que saiu em maio continuava viva na app** — no Team Roster, no dropdown de atribuição de clientes, nas menções do Slack e, o mais grave, na **lista de pessoas que o cliente pode avaliar no formulário de NPS**. Saiu de todos.",
+      "**🧹 Seis clientes ainda a apontar para ela em KV — e a correção não passou por reescrever dados.** Os registos do IHN, Monte Mar, Fisio Restelo, White Clinic, Spine Center e CDT foram gravados quando ela cá estava e guardavam o nome dela para sempre, mesmo depois de a carteira ter sido redistribuída no código. Agora **a leitura filtra quem já saiu** e, se a linha ficar sem ninguém, **herda o dono atual do cliente** — a mesma regra que já valia para um cliente novo. Resultado: IHN → Manuel, Monte Mar + Fisio Restelo → Fran, White Clinic + Spine Center + CDT → André Pereira, sem uma única escrita em produção. Da próxima vez que alguém gravar essas linhas, o valor certo fica gravado sozinho.",
+      "**📝 O João Batista entrou na lista de avaliação do NPS**, onde ainda não estava — tem clientes desde julho.",
+    ],
+  },
+  {
     version: "76.32",
     date: "2026-08-07",
     title: "O Monthly Report deixou de listar derrotas e passou a mostrar o ano inteiro",

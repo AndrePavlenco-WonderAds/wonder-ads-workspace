@@ -159,18 +159,6 @@ export const SEED_EMPLOYEES: SeedEmployee[] = [
     departments: ["SEO"],
     startingDate: "2026-07-23",
   },
-  {
-    id: "yenisey-r",
-    name: "Yenisey Rodriguez",
-    emailHandle: "yeni",
-    role: "SEO Consultant",
-    departments: ["SEO"],
-    monthlyValueEur: 1250,
-    startingDate: "2026-04-20",
-    // Saiu na v75.4 — a carteira foi redistribuída e o login apagado. Fica
-    // na tabela como histórico, fora da folha de pagamentos.
-    status: "offboarded",
-  },
   // ── ADS ──────────────────────────────────────────────────────────────
   {
     id: "germano-c",

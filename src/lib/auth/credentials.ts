@@ -347,7 +347,6 @@ export function getMentionName(username: string | null | undefined): string {
 export const SLACK_USER_IDS: Record<string, string> = {
   andre: "U05QPJZHE56",
   "andre-pereira": "U0BBED0K6NA",
-  "yenisey-r": "U0ATWS0CH0V",
   mike: "U0ACN1V6Y74",
   gustavo: "U07R9FV85GR",
   renan: "U0AF149CU0P",
