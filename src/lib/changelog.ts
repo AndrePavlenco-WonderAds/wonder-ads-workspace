@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.43",
+    date: "2026-08-10",
+    title: "A Especialização SEO foi toda rearrumada: dois sub-módulos, 30 aulas, um roleplay por cada situação",
+    highlights: [
+      "**🗂️ Cinco capítulos passaram a dois.** Os antigos — trabalho interno, comunicação, ferramentas, onboarding, reporting — misturavam **o que se DIZ** ao cliente com **o que se PRODUZ** para ele, e por isso a mesma conta aparecia em quatro sítios. Agora há **Comunicação** (17 aulas) e **Client Delivery** (13 aulas), pela lista que o C-Level escreveu, com o wording dela.",
+      "**🎭 Cada momento com o cliente ganhou o seu roleplay a seguir à aula que o explica.** NPS, Surprise News, envio do Monthly Report com Loom, upsell e cross sell: primeiro como se faz, logo a seguir a simulação. Um guião lido não é um guião treinado — e ao telefone com o cliente não há segunda tentativa.",
+      "**➕ 19 aulas novas**, entre elas as que faltavam e ninguém tinha onde arrumar: enviar o NPS (SMS → semana → follow up → chamada), problemas administrativos, reforçar aprovações, criar Daily Update e Weekly Report, roadmap inicial e checklists, ticket de alterações Web, artigo otimizado e os eventos de GA4 para o tracking contar leads a sério.",
+      "**🔒 Nada do que já existia se perdeu.** As **11 aulas antigas mantiveram o id** e mudaram só o título — trocar o id apagava o progresso de quem já as viu e desligava os vídeos que lá estão. As calls reais e os roleplays já gravados continuam onde fazem sentido dentro da nova arrumação. E os **34 quizzes escritos à mão foram todos absorvidos** pelos dois testes que ficaram: 15 em Comunicação, 19 em Client Delivery.",
+      "**✍️ A frase do hub perdeu o autor.** É o tom com que se entra na Formação, não uma citação a estudar — o nome por baixo puxava o olho para quem a disse em vez de para o que ela diz.",
+    ],
+  },
+  {
     version: "76.42",
     date: "2026-08-10",
     title: "A Formação passou a ouvir quem a está a fazer",

@@ -228,17 +228,11 @@ export default async function FormacaoPage() {
               )}
             </div>
 
-            {/* Frase à sorte a cada entrada (v76.42). Com autor: sem o nome
-                de quem a disse, uma frase forte lê-se como slogan; com ele,
-                lê-se como uma ideia já provada por alguém. */}
-            <figure className="mt-4 max-w-xl">
-              <blockquote className="text-[13.5px] leading-relaxed text-white/70">
-                “{quote.text}”
-              </blockquote>
-              <figcaption className="mt-1 text-[11.5px] font-medium uppercase tracking-[0.14em] text-white/35">
-                {quote.author}
-              </figcaption>
-            </figure>
+            {/* Frase à sorte a cada entrada (v76.42). Sem autor: é o tom com
+                que se entra, não uma citação a estudar. */}
+            <p className="mt-4 max-w-xl text-[13.5px] leading-relaxed text-white/70">
+              “{quote}”
+            </p>
 
             {!exams.startedAt && (
               <p className="mt-3 text-[12px] leading-relaxed text-amber-200/70">

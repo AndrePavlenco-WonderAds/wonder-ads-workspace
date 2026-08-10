@@ -179,6 +179,36 @@ function quizFor(moduleId: string, title: string): TrainingQuiz {
   };
 }
 
+/** Quiz de um módulo que ABSORVEU outros. Quando dois capítulos se fundem num
+ *  (a reorganização do SEO na v76.43), o banco de perguntas dos capítulos que
+ *  desapareceram não se deita fora: junta-se ao do que ficou. Perguntas
+ *  escritas à mão são das coisas mais caras da formação — perdê-las numa
+ *  mudança de arrumação seria pagá-las duas vezes.
+ *
+ *  Dedupe por id, porque a mesma pergunta podia existir em dois bancos. */
+function quizFrom(
+  moduleId: string,
+  title: string,
+  sourceModuleIds: string[],
+): TrainingQuiz {
+  const seen = new Set<string>();
+  const questions = sourceModuleIds
+    .flatMap((id) => TRAINING_QUESTIONS[id] ?? [])
+    .filter((q) => {
+      if (seen.has(q.id)) return false;
+      seen.add(q.id);
+      return true;
+    });
+  return {
+    id: `${moduleId}-quiz`,
+    title,
+    passingScore: 80,
+    maxAttempts: null,
+    shuffleQuestions: true,
+    questions,
+  };
+}
+
 // ---------------------------------------------------------------------------
 // 1 · CATEGORIA COMUM — obrigatório para toda a equipa
 // ---------------------------------------------------------------------------
@@ -331,46 +361,41 @@ const SEO_TRACK: TrainingTrack = {
   slug: "seo-geo",
   name: "Especialização SEO/GEO",
   description:
-    "Protocolos SEO, ferramentas, comunicação, gestão de tempo, registo de horas e reuniões-tipo. No fim deste módulo sabes comunicar com o cliente em qualquer momento da parceria e conduzir uma conta do onboarding ao relatório mensal.",
+    "Dois sub-módulos: COMUNICAÇÃO (o que se diz ao cliente em cada momento da parceria, com roleplay para cada situação) e CLIENT DELIVERY (o que se produz e onde fica registado). No fim sabes conduzir uma conta do onboarding ao upsell, e entregar o trabalho pela app sem depender de ninguém.",
   order: 2,
   isCommon: false,
   modules: [
+    // -----------------------------------------------------------------------
+    // ARRUMAÇÃO (v76.43) — os cinco capítulos antigos (trabalho interno,
+    // comunicação, ferramentas, onboarding, reporting) misturavam o que se DIZ
+    // com o que se PRODUZ, e por isso a mesma conta aparecia em quatro sítios.
+    // Passaram a dois sub-módulos, pela lista que o C-Level escreveu:
+    //
+    //   COMUNICAÇÃO    → tudo o que sai da boca do consultor para o cliente,
+    //                    e cada momento tem o seu roleplay a seguir. Um guião
+    //                    lido não é um guião treinado.
+    //   CLIENT DELIVERY→ tudo o que se produz e onde fica registado.
+    //
+    // IDs PRESERVADOS. Onde uma aula já existia com outras palavras, ficou o
+    // MESMO id e mudou só o título (o do documento). Trocar o id apagava o
+    // progresso de quem já a viu e desligava o vídeo que lá está — a
+    // arrumação não pode custar o histórico da equipa.
+    // -----------------------------------------------------------------------
     {
-      id: "seo-m1",
-      title: "Como trabalhamos internamente",
+      id: "seo-m2",
+      title: "Comunicação",
       description:
-        "Protocolos SEO da casa, gestão de tempo, registo de horas e as reuniões-tipo de um consultor.",
+        "O que se diz ao cliente em cada momento da parceria — da primeira reunião ao upsell — com o roleplay de cada situação a seguir à aula que a explica.",
       order: 1,
       section: null,
       lessons: lessons([
         {
-          id: "seo-m1-a1",
-          title: "Como trabalhamos internamente",
-          description:
-            "Os protocolos internos do departamento de SEO: o que se faz, por que ordem, em quanto tempo e onde fica registado.",
-          presenter: "André",
-          keyPoints: [
-            "A ordem dos protocolos não é sugestão: cada passo assume que o anterior está feito e registado.",
-            "Horas registadas fora do dia em que aconteceram deixam de servir para gerir carteira.",
-            "O roadmap do cliente é o contrato de trabalho da semana — se mudou, muda-se lá primeiro.",
-          ],
-        },
-      ]),
-      quiz: quizFor("seo-m1", "Quiz — Trabalho interno SEO"),
-    },
-    {
-      id: "seo-m2",
-      title: "Comunicação com o cliente",
-      description:
-        "Como se fala com o cliente em cada momento da parceria — com calls reais e roleplays para ouvires o padrão.",
-      order: 2,
-      section: null,
-      lessons: lessons([
-        {
+          // Era "Comunicação com o cliente" (a aula de abertura genérica do
+          // capítulo). Mesmo lugar, mesmo id, o título do documento.
           id: "seo-m2-a1",
-          title: "Comunicação com o cliente",
+          title: "Mindset de Consultor de SEO/GEO e de DPT de SEO/GEO",
           description:
-            "O consultor tem de saber comunicar com o cliente em qualquer momento da parceria. Tom, cadência, o que se diz e o que nunca se promete.",
+            "Como pensa quem é dono de uma conta: o que se assume, o que se pergunta, o que nunca se promete, e a diferença entre executar tarefas e responder pelo resultado do cliente.",
           presenter: "André",
           keyPoints: [
             "Cadência combinada e cumprida vale mais do que contacto abundante e irregular.",
@@ -379,96 +404,12 @@ const SEO_TRACK: TrainingTrack = {
           ],
         },
         {
-          id: "seo-m2-a2",
-          title: "Call real — onboarding pendente, sem sessão de estratégia",
-          description:
-            "Gravação real do André a ligar a um cliente que tinha o onboarding pendente e ainda não tinha feito a sessão de estratégia para contar como dia 1.",
-          type: "call_real",
-          presenter: "André",
-          keyPoints: [
-            "O relógio do serviço só arranca na sessão de estratégia — e é responsabilidade do consultor explicar isso sem soar a desculpa.",
-            "Ligar é mais rápido do que escrever quando o assunto já ficou parado uma vez.",
-            "Sai da chamada com data marcada, não com «depois combinamos».",
-          ],
-        },
-        {
-          id: "seo-m2-a3",
-          title: "Call real — documentos pendentes na tabela de aprovações",
-          description:
-            "Gravação real do André a ligar a um cliente sobre documentos pendentes na tabela de aprovações.",
-          type: "call_real",
-          presenter: "André",
-          keyPoints: [
-            "Aprovação pendente é trabalho já pago que não está a produzir efeito — trata-se como urgência, não como recordatório.",
-            "Cobra-se o pendente pelo impacto para o cliente, nunca pelo incómodo para nós.",
-            "Se o cliente não responde há três dias, a responsabilidade de desbloquear é tua.",
-          ],
-        },
-        {
-          id: "seo-m2-a4",
-          title: "Roleplays de chamadas telefónicas",
-          description:
-            "Gravação do André e de outros consultores a fazer roleplays de chamadas telefónicas — os cenários que mais se repetem na carteira.",
-          type: "scenario",
-          presenter: "André",
-          keyPoints: [
-            "Os cenários repetem-se: quem os treina antes não improvisa ao telefone com o cliente.",
-            "Silêncio depois de uma pergunta é ferramenta — deixa o cliente responder.",
-            "Fecha sempre com o resumo do que ficou combinado e por escrito a seguir.",
-          ],
-        },
-      ]),
-      quiz: quizFor("seo-m2", "Quiz — Comunicação com o cliente"),
-    },
-    {
-      id: "seo-m3",
-      title: "Overview das Ferramentas",
-      description:
-        "As ferramentas do consultor SEO e como se usam ao vivo num roadmap e num artigo.",
-      order: 3,
-      section: null,
-      lessons: lessons([
-        {
-          id: "seo-m3-a1",
-          title: "Overview das Ferramentas",
-          description:
-            "Tour pelas ferramentas de SEO da casa e pelo que cada uma resolve.",
-          presenter: "André",
-          keyPoints: [
-            "Cada ferramenta responde a uma pergunta diferente — usar a errada dá uma resposta certa à pergunta que ninguém fez.",
-            "Os dados de GA4 e GSC são a base do relatório: se não confias no número, resolve-se antes do relatório, não durante.",
-            "O output da ferramenta é matéria-prima; a decisão continua a ser do consultor.",
-          ],
-        },
-        {
-          id: "seo-m3-a2",
-          title: "Roleplay com as ferramentas — roadmap e artigo ao vivo",
-          description:
-            "Gravação real do André em roleplay com as ferramentas: fazer ao vivo um roadmap e um artigo de blog.",
-          type: "scenario",
-          presenter: "André",
-          keyPoints: [
-            "Um roadmap faz-se a partir do negócio do cliente e só depois a partir das keywords.",
-            "Artigo gerado não é artigo entregue: revê-se intenção, factos e tom antes de sair.",
-            "O tempo que ganhas na ferramenta é para gastar no que ela não faz — critério e contexto do cliente.",
-          ],
-        },
-      ]),
-      quiz: quizFor("seo-m3", "Quiz — Ferramentas"),
-    },
-    {
-      id: "seo-m4",
-      title: "Onboarding de um cliente novo",
-      description:
-        "O pré-onboarding, a reunião de onboarding e o que é entregue depois.",
-      order: 4,
-      section: null,
-      lessons: lessons([
-        {
+          // Era "O que preparar quando um novo cliente dá onboard".
           id: "seo-m4-a1",
-          title: "O que preparar quando um novo cliente dá onboard",
+          title:
+            "Como fazer uma primeira reunião de parceria (onboarding) e gerir expectativas de timings de aprovações do cliente",
           description:
-            "O pré-onboarding, a reunião de onboarding e o que é entregue ao cliente depois. Chegar a uma reunião de onboarding sem isto preparado custa a confiança dos primeiros 30 dias.",
+            "O que trazer para a reunião de onboarding de um cliente, como se conduz a primeira reunião de parceria e como se deixam alinhados desde o dia 1 os prazos de aprovação que dependem dele.",
           presenter: "André",
           keyPoints: [
             "Chega-se à reunião de onboarding com o trabalho de casa feito: site visto, concorrentes vistos, perguntas preparadas.",
@@ -489,28 +430,50 @@ const SEO_TRACK: TrainingTrack = {
             "A reunião fecha com próximos passos datados e com quem faz o quê.",
           ],
         },
-      ]),
-      quiz: quizFor("seo-m4", "Quiz — Onboarding de cliente"),
-    },
-    {
-      id: "seo-m5",
-      title: "Reporting e reunião mensal",
-      description:
-        "Como se constrói o relatório e como se apresenta um mês bom — e um mês mau.",
-      order: 5,
-      section: null,
-      lessons: lessons([
         {
-          id: "seo-m5-a1",
-          title: "Reporting e reunião mensal",
+          id: "seo-com-nps",
+          title: "Como Enviar NPS Form ao Cliente",
           description:
-            "Como se constrói o relatório mensal e como se apresenta. Inclui o caso difícil: apresentar um mês mau sem perder a conta.",
+            "A sequência completa: SMS, uma semana de espera, um follow up, e uma chamada uma semana depois. Cada passo tem uma razão e um prazo.",
           presenter: "André",
-          keyPoints: [
-            "O relatório sai no início do mês seguinte, sempre — a pontualidade é metade da credibilidade do número.",
-            "Um mês mau apresenta-se com a leitura do porquê e o plano do mês seguinte já ao lado.",
-            "Leads e receita primeiro; impressões e posições são a explicação, não o título.",
-          ],
+        },
+        {
+          id: "seo-com-nps-rp",
+          title: "Roleplay: Como Enviar NPS Form ao Cliente",
+          description:
+            "Roleplay da sequência de NPS — o SMS, o follow up e a chamada final, com as respostas mais comuns do cliente.",
+          type: "scenario",
+          presenter: "André",
+        },
+        {
+          id: "seo-com-news",
+          title: "Como Enviar Surprise News ao Cliente",
+          description:
+            "Quando e como se dá uma boa notícia fora da cadência combinada — o que conta como surprise news e o que é só ruído.",
+          presenter: "André",
+        },
+        {
+          id: "seo-com-news-rp",
+          title: "Roleplay: Como Enviar Surprise News ao Cliente",
+          description:
+            "Roleplay do envio de uma surprise news, com o enquadramento que a transforma em confiança em vez de mais uma mensagem.",
+          type: "scenario",
+          presenter: "André",
+        },
+        {
+          id: "seo-com-mr",
+          title: "Como Enviar um Monthly Report c/ Loom Video",
+          description:
+            "O envio do relatório mensal acompanhado de um Loom: o que se grava, por que ordem, e o que se escreve na mensagem que o acompanha.",
+          presenter: "André",
+        },
+        {
+          id: "seo-com-mr-rp",
+          title: "Roleplay: Como Enviar um Monthly Report",
+          description:
+            "Roleplay do envio do relatório mensal, incluindo o caso difícil: apresentar um mês mau sem perder a conta.",
+          type: "scenario",
+          presenter: "André",
         },
         {
           id: "seo-m5-a2",
@@ -525,8 +488,212 @@ const SEO_TRACK: TrainingTrack = {
             "Números que o cliente não percebe não são impressionantes: são ruído.",
           ],
         },
+        {
+          id: "seo-com-upsell",
+          title: "Como Considerar um Upsell e Cross Sell",
+          description:
+            "Quando é que a conta está pronta para mais serviço, como se identifica a necessidade real e como se propõe sem queimar a relação.",
+          presenter: "André",
+        },
+        {
+          id: "seo-com-upsell-rp",
+          title: "Roleplay: Como Considerar um Up-sell ou Cross Sell",
+          description:
+            "Roleplay da conversa de upsell e cross sell, com as objeções que aparecem sempre.",
+          type: "scenario",
+          presenter: "André",
+        },
+        {
+          id: "seo-com-admin",
+          title: "Como solucionar um problema administrativo",
+          description:
+            "O cliente tem dúvidas sobre o processo — por exemplo o preço de uma página de Wikipédia. Como se responde a uma dúvida administrativa sem a transformar numa negociação.",
+          presenter: "André",
+        },
+        {
+          id: "seo-com-aprov",
+          title:
+            "Como reforçar a aprovação do cliente em materiais, dar follow ups e ligar quando é necessário",
+          description:
+            "Os timings que o cliente tem de cumprir, como se dão os follow ups sem parecer cobrança, e o momento em que se deixa de escrever e se liga.",
+          presenter: "André",
+        },
+        {
+          id: "seo-m2-a3",
+          title: "Call real — documentos pendentes na tabela de aprovações",
+          description:
+            "Gravação real do André a ligar a um cliente sobre documentos pendentes na tabela de aprovações.",
+          type: "call_real",
+          presenter: "André",
+          keyPoints: [
+            "Aprovação pendente é trabalho já pago que não está a produzir efeito — trata-se como urgência, não como recordatório.",
+            "Cobra-se o pendente pelo impacto para o cliente, nunca pelo incómodo para nós.",
+            "Se o cliente não responde há três dias, a responsabilidade de desbloquear é tua.",
+          ],
+        },
+        {
+          id: "seo-m2-a2",
+          title: "Call real — onboarding pendente, sem sessão de estratégia",
+          description:
+            "Gravação real do André a ligar a um cliente que tinha o onboarding pendente e ainda não tinha feito a sessão de estratégia para contar como dia 1.",
+          type: "call_real",
+          presenter: "André",
+          keyPoints: [
+            "O relógio do serviço só arranca na sessão de estratégia — e é responsabilidade do consultor explicar isso sem soar a desculpa.",
+            "Ligar é mais rápido do que escrever quando o assunto já ficou parado uma vez.",
+            "Sai da chamada com data marcada, não com «depois combinamos».",
+          ],
+        },
+        {
+          id: "seo-m2-a4",
+          title: "Roleplays de chamadas telefónicas",
+          description:
+            "Gravação do André e de outros consultores a fazer roleplays de chamadas telefónicas — os cenários que mais se repetem na carteira.",
+          type: "scenario",
+          presenter: "André",
+          keyPoints: [
+            "Os cenários repetem-se: quem os treina antes não improvisa ao telefone com o cliente.",
+            "Silêncio depois de uma pergunta é ferramenta — deixa o cliente responder.",
+            "Fecha sempre com o resumo do que ficou combinado e por escrito a seguir.",
+          ],
+        },
       ]),
-      quiz: quizFor("seo-m5", "Quiz — Reporting e reunião mensal"),
+      // Absorveu o banco de perguntas do onboarding (seo-m4), que era um
+      // capítulo à parte e agora vive aqui dentro.
+      quiz: quizFrom("seo-m2", "Quiz — Comunicação", ["seo-m2", "seo-m4"]),
+    },
+    {
+      id: "seo-m3",
+      title: "Client Delivery",
+      description:
+        "O que se produz para o cliente e onde fica registado — da app interna ao artigo otimizado, passando pelos updates, relatórios, roadmap, tickets e tracking.",
+      order: 2,
+      section: null,
+      lessons: lessons([
+        {
+          id: "seo-m1-a1",
+          title: "Como trabalhamos internamente",
+          description:
+            "Os protocolos internos do departamento de SEO: o que se faz, por que ordem, em quanto tempo e onde fica registado.",
+          presenter: "André",
+          keyPoints: [
+            "A ordem dos protocolos não é sugestão: cada passo assume que o anterior está feito e registado.",
+            "Horas registadas fora do dia em que aconteceram deixam de servir para gerir carteira.",
+            "O roadmap do cliente é o contrato de trabalho da semana — se mudou, muda-se lá primeiro.",
+          ],
+        },
+        {
+          id: "seo-cd-app",
+          title: "Como utilizar app interna",
+          description:
+            "A app do workspace de ponta a ponta: onde vive cada cliente, o que se regista, o que se gera e o que se envia para aprovação.",
+          presenter: "André",
+        },
+        {
+          id: "seo-m3-a1",
+          title: "Overview das Ferramentas",
+          description:
+            "Tour pelas ferramentas de SEO da casa e pelo que cada uma resolve.",
+          presenter: "André",
+          keyPoints: [
+            "Cada ferramenta responde a uma pergunta diferente — usar a errada dá uma resposta certa à pergunta que ninguém fez.",
+            "Os dados de GA4 e GSC são a base do relatório: se não confias no número, resolve-se antes do relatório, não durante.",
+            "O output da ferramenta é matéria-prima; a decisão continua a ser do consultor.",
+          ],
+        },
+        {
+          id: "seo-cd-daily",
+          title: "Como criar um Daily Update (interno)",
+          description:
+            "O update diário interno: o que entra, o que não entra, e para que serve a quem o lê depois.",
+          presenter: "André",
+        },
+        {
+          id: "seo-cd-weekly",
+          title: "Como criar um Weekly Report (externo)",
+          description:
+            "O relatório semanal que vai para o cliente: o que se mostra, como se escreve e o que fica de fora.",
+          presenter: "André",
+        },
+        {
+          id: "seo-cd-weekly-rp",
+          title: "Como criar um Weekly Report — Exemplos e Roleplay",
+          description:
+            "Exemplos reais de relatórios semanais e roleplay da sua construção, do dado em bruto à frase que o cliente lê.",
+          type: "scenario",
+          presenter: "André",
+        },
+        {
+          // Era "Reporting e reunião mensal" — a parte de CONSTRUIR o
+          // relatório. A parte de o APRESENTAR vive agora em Comunicação.
+          id: "seo-m5-a1",
+          title: "Como criar um Monthly Report (app)",
+          description:
+            "Como se constrói o relatório mensal na app: que dados entram, o que é automático, o que é preenchido à mão e o que se revê antes de finalizar.",
+          presenter: "André",
+          keyPoints: [
+            "O relatório sai no início do mês seguinte, sempre — a pontualidade é metade da credibilidade do número.",
+            "Um mês mau apresenta-se com a leitura do porquê e o plano do mês seguinte já ao lado.",
+            "Leads e receita primeiro; impressões e posições são a explicação, não o título.",
+          ],
+        },
+        {
+          id: "seo-cd-roadmap",
+          title: "Como fazer um SEO Roadmap Inicial e Checklists",
+          description:
+            "O roadmap inicial de uma conta nova e as checklists que garantem que nada do essencial fica por fazer nas primeiras semanas.",
+          presenter: "André",
+        },
+        {
+          id: "seo-m3-a2",
+          title: "Roleplay com as ferramentas — roadmap e artigo ao vivo",
+          description:
+            "Gravação real do André em roleplay com as ferramentas: fazer ao vivo um roadmap e um artigo de blog.",
+          type: "scenario",
+          presenter: "André",
+          keyPoints: [
+            "Um roadmap faz-se a partir do negócio do cliente e só depois a partir das keywords.",
+            "Artigo gerado não é artigo entregue: revê-se intenção, factos e tom antes de sair.",
+            "O tempo que ganhas na ferramenta é para gastar no que ela não faz — critério e contexto do cliente.",
+          ],
+        },
+        {
+          id: "seo-cd-ticket",
+          title: "Como criar um ticket de alterações WEB",
+          description:
+            "Como se pede uma alteração ao departamento Web: o que tem de estar no ticket para não voltar, e como se acompanha até estar em produção.",
+          presenter: "André",
+        },
+        {
+          id: "seo-cd-tecnico",
+          title: "Como solucionar um problema técnico",
+          description:
+            "O caminho de diagnóstico de um problema técnico no site do cliente — o que se verifica primeiro e quando se escala.",
+          presenter: "André",
+        },
+        {
+          id: "seo-cd-artigo",
+          title: "Como criar um artigo otimizado e corretamente seo-wise",
+          description:
+            "Da intenção de pesquisa ao artigo publicado: estrutura, keywords, links internos e o que se revê antes de sair.",
+          presenter: "André",
+        },
+        {
+          id: "seo-cd-ga4",
+          title:
+            "Como criar os eventos no GA4 do cliente para tracking correto",
+          description:
+            "Os eventos que têm de existir no GA4 para o relatório mensal contar leads a sério — como se criam e como se confirma que disparam.",
+          presenter: "André",
+        },
+      ]),
+      // Absorveu os bancos do trabalho interno (seo-m1) e do reporting
+      // (seo-m5), que eram capítulos à parte.
+      quiz: quizFrom("seo-m3", "Quiz — Client Delivery", [
+        "seo-m3",
+        "seo-m1",
+        "seo-m5",
+      ]),
     },
   ],
 };
