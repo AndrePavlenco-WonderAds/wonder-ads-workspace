@@ -14,6 +14,21 @@
 // Uma target keyword que não venha na resposta não rankeia no top-100 dessa
 // base — entra na tabela como posição null, porque a lista do plano
 // mostra-se inteira, não só as vitórias.
+//
+// E O QUE SOBRA NÃO SE DEITA FORA (v76.40). A mesma resposta traz todas as
+// OUTRAS keywords para que o domínio rankeia e que ninguém pôs na lista de
+// targets — no Sentir Saúde eram 129 de 131. Descartá-las fazia o relatório
+// dizer «rankeamos para 2 coisas» quando a verdade é «rankeamos para 131,
+// só que a lista do plano ainda não lá chegou». Vêm em `others`, já pagas
+// pela mesma chamada.
+//
+// O QUE NÃO SE FAZ AQUI: aproximar. O domínio rankeia «mbst» em #1 e a
+// target é «mbst portugal»; rankeia «clinica fisioterapia vila do conde» e a
+// target tem o «de». São perguntas diferentes na Google, com volumes
+// diferentes — dar a uma a posição da outra seria pôr um número falso no
+// relatório do cliente. Casa-se por igualdade (com acentos dobrados, que
+// isso é grafia e não outra pergunta) e o resto aparece em `others`, onde o
+// consultor o vê e decide se entra no plano.
 
 import { getClientGeo } from "@/lib/client-geo";
 import { bareDomain } from "./dataforseo-ranks";
@@ -30,6 +45,13 @@ const PAGE_SIZE = 1000;
 /** Teto de páginas. 5000 keywords chegam para qualquer cliente da carteira;
  *  um domínio gigante não deve poder queimar créditos sem fim. */
 const MAX_PAGES = 5;
+
+/** Quantas keywords fora do plano se guardam no snapshot. As melhores 150
+ *  posições contam a história toda («o site aparece em N pesquisas, aqui
+ *  estão as melhores»); guardar 5000 encheria o KV do relatório sem
+ *  acrescentar nada que alguém leia. O total real vai à parte, em
+ *  `othersTotal`, para o número no relatório não mentir por truncagem. */
+const MAX_OTHERS = 150;
 
 /** Base regional do Serpstat a partir do geo já configurado por cliente
  *  (client-geo.ts usa códigos de localização da Google). */
@@ -68,6 +90,12 @@ export type SerpstatRankReport = {
   se: string;
   /** Uma linha por TARGET keyword pedida — incluindo as que não rankeiam. */
   ranks: SerpstatRank[];
+  /** Keywords onde o domínio rankeia e que NÃO estão na lista de targets,
+   *  melhores posições primeiro. Limitado a `MAX_OTHERS`. */
+  others: SerpstatRank[];
+  /** Quantas existiam ao todo antes do corte — o relatório mostra este
+   *  número, não o comprimento da lista guardada. */
+  othersTotal: number;
   /** O domínio tinha mais keywords do que o teto de páginas cobriu — as
    *  posições null podem ser falta de cobertura, não ausência de ranking. */
   truncated: boolean;
@@ -185,14 +213,50 @@ export async function fetchSerpstatRanks(
     if (page === MAX_PAGES) truncated = true;
   }
 
+  // As linhas que serviram uma target ficam marcadas, para não reaparecerem
+  // como «outro ranking» logo por baixo da mesma keyword.
+  const usedByTarget = new Set<SerpstatRow>();
+  const targetKeys = new Set<string>();
+  for (const kw of targets) {
+    targetKeys.add(kw);
+    targetKeys.add(fold(kw));
+  }
+
   const ranks: SerpstatRank[] = targets.map((kw) => {
     const row = exact.get(kw) ?? folded.get(fold(kw));
+    if (row) usedByTarget.add(row);
     return {
       keyword: kw,
       position: row?.position ?? null,
       url: row?.url ?? null,
       volume: row?.region_queries_count ?? null,
     };
+  });
+
+  // Tudo o resto: o que o domínio rankeia e ninguém pôs no plano. Dedup por
+  // grafia dobrada («saúde clínica» e «saude clinica» são a mesma pergunta
+  // com duas escritas) ficando a melhor posição das duas.
+  const othersByKey = new Map<string, SerpstatRank>();
+  for (const row of exact.values()) {
+    if (usedByTarget.has(row)) continue;
+    const kw = row.keyword?.trim().toLowerCase();
+    if (!kw || typeof row.position !== "number") continue;
+    const key = fold(kw);
+    if (targetKeys.has(kw) || targetKeys.has(key)) continue;
+    const prev = othersByKey.get(key);
+    if (prev && (prev.position ?? Infinity) <= row.position) continue;
+    othersByKey.set(key, {
+      keyword: kw,
+      position: row.position,
+      url: row.url ?? null,
+      volume: row.region_queries_count ?? null,
+    });
+  }
+  const allOthers = Array.from(othersByKey.values()).sort((a, b) => {
+    const pa = a.position ?? Infinity;
+    const pb = b.position ?? Infinity;
+    if (pa !== pb) return pa - pb;
+    return (b.volume ?? 0) - (a.volume ?? 0);
   });
 
   // A rankear primeiro, por posição; as que ainda não aparecem no fim.
@@ -210,6 +274,8 @@ export async function fetchSerpstatRanks(
     domain,
     se,
     ranks,
+    others: allOthers.slice(0, MAX_OTHERS),
+    othersTotal: allOthers.length,
     truncated,
   };
 }

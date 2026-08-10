@@ -218,6 +218,26 @@ export function ReportDocument({
   // Posições do GSC são médias (12,4); as das outras fontes são lugares
   // exatos na página de resultados (12).
   const kwDecimals = kwSource === "gsc";
+
+  // —— Outros rankings (v76.40) ————————————————————————————————
+  // As keywords onde o site JÁ aparece e que não estão na lista de targets.
+  // Vinham na mesma resposta do Serpstat e eram deitadas fora: no Sentir
+  // Saúde isso eram 129 de 131, o que fazia o relatório dizer «rankeamos
+  // para 2 coisas» quando a verdade era o contrário. Não substitui a tabela
+  // do plano — fica POR BAIXO dela, porque o que foi prometido ao cliente
+  // continua a ser a primeira coisa a responder.
+  const otherRanks = kwSource === "live" ? (live?.others ?? []) : [];
+  const otherTotal = live?.othersTotal ?? otherRanks.length;
+  // O cliente vê as melhores; o consultor vê tudo o que foi guardado, que é
+  // de onde saem as próximas targets.
+  const OTHERS_CLIENT_CAP = 30;
+  const othersVisible =
+    variant === "internal"
+      ? otherRanks
+      : otherRanks.slice(0, OTHERS_CLIENT_CAP);
+  const othersTop10 = otherRanks.filter(
+    (r) => r.position !== null && r.position <= 10,
+  ).length;
   const ai = snapshot.ai;
   const gbp = snapshot.gbp;
   // Per-listing breakdown — only on multi-unit clients (and absent on every
@@ -569,6 +589,69 @@ export function ReportDocument({
                 : `DataForSEO · ${live.domain}${typeof live.costUsd === "number" ? ` · $${live.costUsd} nesta verificação` : ""}`}
             </p>
           )}
+        </section>
+      )}
+
+      {/* Outros rankings — tudo o resto onde o site já aparece na Google e
+          que não está na lista de targets. Mesma resposta do Serpstat, sem
+          chamada extra (v76.40). */}
+      {othersVisible.length > 0 && (
+        <section className="wa-sec">
+          <div className="wa-label">
+            {t("Outros Rankings", "Other Rankings")}
+          </div>
+          <h3 className="wa-h3">
+            {t(
+              `Onde o site também já aparece (${otherTotal})`,
+              `Where the site already shows up too (${otherTotal})`,
+            )}
+          </h3>
+          <p className="wa-method">
+            {t(
+              `Pesquisas onde o site já entra nos primeiros 100 resultados e que não fazem parte da lista de keywords do plano — ${othersTop10} delas na primeira página. Ganhas ao longo do trabalho, contam a dimensão real da presença orgânica${
+                variant === "internal"
+                  ? ". É daqui que saem as próximas target keywords: uma keyword com volume e posição já feita é mais barata de subir do que uma do zero."
+                  : othersVisible.length < otherTotal
+                    ? `. A tabela mostra as ${othersVisible.length} melhores.`
+                    : "."
+              }`,
+              `Searches where the site already ranks in the top 100 and that aren't part of the plan's keyword list — ${othersTop10} of them on page one. Won along the way, they show the real size of the organic presence${
+                variant === "internal"
+                  ? ". This is where the next target keywords come from: a keyword with volume and a position already earned is cheaper to lift than one from scratch."
+                  : othersVisible.length < otherTotal
+                    ? `. The table shows the top ${othersVisible.length}.`
+                    : "."
+              }`,
+            )}
+          </p>
+          <div className="wa-tblwrap" style={{ marginTop: ".6rem" }}>
+            <table className="wa-qtable">
+              <thead>
+                <tr>
+                  <th>Keyword</th>
+                  <th className="n">{t("Posição", "Position")}</th>
+                  <th className="n">{t("Δ mês", "MoM Δ")}</th>
+                  <th className="n">{t("Pesquisas/mês", "Searches/mo")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {othersVisible.map((k) => (
+                  <tr key={k.keyword}>
+                    <td>{k.keyword}</td>
+                    <td className="n">{k.position ?? "—"}</td>
+                    <td className="n">
+                      <PlaceCell change={k.change} />
+                    </td>
+                    <td className="n">
+                      {k.volume === null || k.volume === undefined
+                        ? "—"
+                        : formatRaw(k.volume, "count", lang)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </section>
       )}
 

@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.40",
+    date: "2026-08-10",
+    title: "O relatório deitava fora 129 das 131 keywords que o site rankeia — agora mostra-as",
+    highlights: [
+      "**🔍 O diagnóstico, no Sentir Saúde:** a tabela do plano dizia «2 keywords com posição» e 22 «fora do top 100». Parecia um erro de correspondência, mas não era. O Serpstat devolve **131 keywords** onde o site rankeia; a lista de targets tem 24; **cruzam-se em 2**. O relatório estava certo — o que faltava era contar a outra metade da história.",
+      "**➕ Nova tabela «Outros Rankings», por baixo da do plano:** as **121** pesquisas onde o site já aparece e que ninguém pôs na lista de targets, **12 delas na primeira página** — `mbst` em **#1**, `tecnostress` em **#1**, `clinica fisioterapia vila do conde` em **#3**. O cliente vê as 30 melhores, o consultor vê tudo. **Custo zero:** estas linhas já vinham na mesma resposta do Serpstat e eram deitadas fora.",
+      "**🚫 O que NÃO se fez foi aproximar as keywords.** O site rankeia `mbst` em #1 e o target é `mbst portugal`; rankeia `clinica fisioterapia vila do conde` e o target tem o «de». São pesquisas diferentes na Google, com volumes diferentes — dar a uma a posição da outra punha um número falso no relatório do cliente. Continua a casar-se por igualdade (a dobrar acentos, que isso é grafia e não outra pergunta), e o resto aparece na tabela nova.",
+      "**🎯 E a tabela nova é a lista de compras do próximo mês.** Na vista interna diz-se lá: uma keyword com volume e posição já conquistada é mais barata de subir do que uma do zero. É de lá que devem sair as próximas target keywords.",
+      "**📈 A variação mês-a-mês também vale para elas** — o relatório do mês anterior serve de memória, tal como na tabela do plano. O primeiro mês sai sem setas, e é honesto que saia.",
+    ],
+  },
+  {
     version: "76.39",
     date: "2026-08-10",
     title: "Entrou a Maratona Clube de Portugal — e o sino deixou de gritar a vermelho por trabalho que não é nosso",

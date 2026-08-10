@@ -399,6 +399,14 @@ async function fetchRanksAndGeo(
   for (const r of prevReport?.liveRanks?.ranks ?? []) {
     prevByKeyword.set(r.keyword.toLowerCase(), r.position);
   }
+  // As keywords fora do plano também têm memória do mês passado — senão a
+  // tabela «Outros rankings» nasceria com uma coluna inteira de traços e
+  // ninguém veria o que subiu ou caiu nela.
+  for (const r of prevReport?.liveRanks?.others ?? []) {
+    if (!prevByKeyword.has(r.keyword.toLowerCase())) {
+      prevByKeyword.set(r.keyword.toLowerCase(), r.position);
+    }
+  }
   if (prevByKeyword.size === 0) {
     for (const r of prevReport?.seRanking?.ranks ?? []) {
       prevByKeyword.set(r.keyword.toLowerCase(), r.position);
@@ -430,6 +438,20 @@ async function fetchRanksAndGeo(
         url: r.url,
         volume: r.volume ?? volumeByKeyword.get(r.keyword.toLowerCase()) ?? null,
       })),
+      ...(serpstatRes.others.length > 0
+        ? {
+            others: serpstatRes.others.map((r) => ({
+              keyword: r.keyword,
+              position: r.position,
+              ...changeFor(r.keyword, r.position),
+              inLocalPack: false,
+              localPackPosition: null,
+              url: r.url,
+              volume: r.volume,
+            })),
+            othersTotal: serpstatRes.othersTotal,
+          }
+        : {}),
     };
   } else if (dfsRes && dfsRes.ranks.length > 0) {
     out.liveRanks = {

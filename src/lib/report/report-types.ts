@@ -275,6 +275,13 @@ export type LiveRankBlock = {
   checkedOn: string;
   domain: string;
   ranks: LiveRank[];
+  /** Keywords onde o site JÁ aparece e que não estão na lista de targets —
+   *  vêm da mesma resposta do Serpstat, sem chamada extra. Ausente nos
+   *  relatórios gerados antes da v76.40 e nos que vêm do DataForSEO (que
+   *  responde keyword-a-keyword e não sabe o que mais o domínio rankeia). */
+  others?: LiveRank[];
+  /** Quantas existiam ao todo antes do corte de armazenamento. */
+  othersTotal?: number;
   /** Custo em USD desta verificação (só DataForSEO — o Serpstat cobra em
    *  créditos do plano). Só aparece na vista interna. */
   costUsd?: number;
