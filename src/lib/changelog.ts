@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.44",
+    date: "2026-08-10",
+    title: "Nove capítulos temáticos na Especialização SEO — e a página finalmente lê-se",
+    highlights: [
+      "**📚 Dois capítulos passaram a nove.** Um capítulo tem um quiz no fim, e um quiz só significa alguma coisa se as aulas antes dele falarem todas do mesmo assunto. Um teste no fim de dezassete aulas que iam do mindset ao upsell não media compreensão — media memória de curto prazo. Agora cada capítulo é um tema fechado: **Mindset e primeira reunião · NPS e Surprise News · Entrega do relatório mensal · Upsell e cross sell · Aprovações e follow ups** em Comunicação, e **App e ferramentas · Updates e relatórios · Roadmap e conteúdo · Técnico e tracking** em Client Delivery.",
+      "**🏷️ Os dois sub-módulos continuam à vista** como agrupadores por cima dos capítulos — ganhou-se granularidade sem perder a leitura de alto nível («isto é comunicação, aquilo é entrega»).",
+      "**🔆 A página está muito mais clara.** Os cartões de aula tinham fundo a 1,5% de branco e o título a 90% — na prática, cinzento sobre cinzento. Passaram a **fundo a 6%, moldura visível e título a branco cheio, maior e mais pesado**; o nome do capítulo cresceu e a linha de contexto (apresentador, duração) subiu de 35% para 55% de opacidade. O cabeçalho do módulo acompanhou.",
+      "**🧠 As 34 perguntas de quiz seguiram para o capítulo certo:** 7 no de onboarding, 7 no do relatório mensal, 8 no de acompanhamento e 12 no de app e ferramentas. **Nenhuma se perdeu na mudança.** Os cinco capítulos novos ficam honestamente marcados como «ainda sem perguntas» — não bloqueiam a progressão, e aparecem sinalizados no admin para serem escritos quando os vídeos existirem.",
+    ],
+  },
+  {
     version: "76.43",
     date: "2026-08-10",
     title: "A Especialização SEO foi toda rearrumada: dois sub-módulos, 30 aulas, um roleplay por cada situação",

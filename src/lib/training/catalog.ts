@@ -366,28 +366,33 @@ const SEO_TRACK: TrainingTrack = {
   isCommon: false,
   modules: [
     // -----------------------------------------------------------------------
-    // ARRUMAÇÃO (v76.43) — os cinco capítulos antigos (trabalho interno,
-    // comunicação, ferramentas, onboarding, reporting) misturavam o que se DIZ
-    // com o que se PRODUZ, e por isso a mesma conta aparecia em quatro sítios.
-    // Passaram a dois sub-módulos, pela lista que o C-Level escreveu:
+    // ARRUMAÇÃO (v76.44) — NOVE capítulos temáticos, agrupados nos dois
+    // sub-módulos que o C-Level escreveu.
     //
-    //   COMUNICAÇÃO    → tudo o que sai da boca do consultor para o cliente,
-    //                    e cada momento tem o seu roleplay a seguir. Um guião
-    //                    lido não é um guião treinado.
-    //   CLIENT DELIVERY→ tudo o que se produz e onde fica registado.
+    // PORQUÊ NOVE E NÃO DOIS: um capítulo tem um quiz no fim, e um quiz só
+    // significa alguma coisa se as aulas antes dele falarem todas do MESMO
+    // assunto. Um teste no fim de dezassete aulas que vão do mindset ao
+    // upsell não mede compreensão — mede memória de curto prazo. Cada
+    // capítulo aqui é um tema fechado: entra-se, treina-se com o roleplay do
+    // próprio tema, e responde-se sobre ele.
     //
-    // IDs PRESERVADOS. Onde uma aula já existia com outras palavras, ficou o
-    // MESMO id e mudou só o título (o do documento). Trocar o id apagava o
-    // progresso de quem já a viu e desligava o vídeo que lá está — a
-    // arrumação não pode custar o histórico da equipa.
+    // O AGRUPADOR `section` mantém os dois sub-módulos à vista, para não se
+    // perder a leitura de alto nível («isto é comunicação, aquilo é
+    // entrega») ao ganhar granularidade.
+    //
+    // IDs PRESERVADOS. As onze aulas que já existiam mantêm o id — trocá-lo
+    // apagava o progresso de quem já as viu e desligava o vídeo que lá está.
+    // O mesmo para os dois capítulos que guardam os maiores bancos de
+    // perguntas (`seo-m2` e `seo-m3`): mudam de título e de lugar, mas o id
+    // fica, e com ele as tentativas de quiz já feitas.
     // -----------------------------------------------------------------------
     {
-      id: "seo-m2",
-      title: "Comunicação",
+      id: "seo-com-1",
+      title: "Mindset e primeira reunião de parceria",
       description:
-        "O que se diz ao cliente em cada momento da parceria — da primeira reunião ao upsell — com o roleplay de cada situação a seguir à aula que a explica.",
+        "Como pensa quem é dono de uma conta, e como se conduz a primeira reunião — a que alinha expectativas de prazos para o resto do ano.",
       order: 1,
-      section: null,
+      section: "Comunicação",
       lessons: lessons([
         {
           // Era "Comunicação com o cliente" (a aula de abertura genérica do
@@ -431,6 +436,31 @@ const SEO_TRACK: TrainingTrack = {
           ],
         },
         {
+          id: "seo-m2-a2",
+          title: "Call real — onboarding pendente, sem sessão de estratégia",
+          description:
+            "Gravação real do André a ligar a um cliente que tinha o onboarding pendente e ainda não tinha feito a sessão de estratégia para contar como dia 1.",
+          type: "call_real",
+          presenter: "André",
+          keyPoints: [
+            "O relógio do serviço só arranca na sessão de estratégia — e é responsabilidade do consultor explicar isso sem soar a desculpa.",
+            "Ligar é mais rápido do que escrever quando o assunto já ficou parado uma vez.",
+            "Sai da chamada com data marcada, não com «depois combinamos».",
+          ],
+        },
+      ]),
+      // Herdou o banco de perguntas do antigo capítulo de onboarding.
+      quiz: quizFrom("seo-com-1", "Quiz — Mindset e onboarding", ["seo-m4"]),
+    },
+    {
+      id: "seo-com-2",
+      title: "NPS e Surprise News",
+      description:
+        "As duas comunicações que se fazem fora da cadência do relatório: pedir a opinião do cliente e dar-lhe uma boa notícia. Cada uma com o seu roleplay.",
+      order: 2,
+      section: "Comunicação",
+      lessons: lessons([
+        {
           id: "seo-com-nps",
           title: "Como Enviar NPS Form ao Cliente",
           description:
@@ -460,6 +490,17 @@ const SEO_TRACK: TrainingTrack = {
           type: "scenario",
           presenter: "André",
         },
+      ]),
+      quiz: quizFor("seo-com-2", "Quiz — NPS e Surprise News"),
+    },
+    {
+      id: "seo-com-3",
+      title: "Entrega do relatório mensal ao cliente",
+      description:
+        "O momento mais visível da parceria: como se envia o relatório com Loom e como se conduz a reunião mensal — incluindo o mês mau.",
+      order: 3,
+      section: "Comunicação",
+      lessons: lessons([
         {
           id: "seo-com-mr",
           title: "Como Enviar um Monthly Report c/ Loom Video",
@@ -488,6 +529,18 @@ const SEO_TRACK: TrainingTrack = {
             "Números que o cliente não percebe não são impressionantes: são ruído.",
           ],
         },
+      ]),
+      // Herdou o banco do antigo capítulo de reporting.
+      quiz: quizFrom("seo-com-3", "Quiz — Relatório mensal com o cliente", ["seo-m5"]),
+    },
+    {
+      id: "seo-com-4",
+      title: "Upsell e cross sell",
+      description:
+        "Quando a conta está pronta para mais serviço, como se identifica a necessidade real e como se propõe sem queimar a relação.",
+      order: 4,
+      section: "Comunicação",
+      lessons: lessons([
         {
           id: "seo-com-upsell",
           title: "Como Considerar um Upsell e Cross Sell",
@@ -503,13 +556,17 @@ const SEO_TRACK: TrainingTrack = {
           type: "scenario",
           presenter: "André",
         },
-        {
-          id: "seo-com-admin",
-          title: "Como solucionar um problema administrativo",
-          description:
-            "O cliente tem dúvidas sobre o processo — por exemplo o preço de uma página de Wikipédia. Como se responde a uma dúvida administrativa sem a transformar numa negociação.",
-          presenter: "André",
-        },
+      ]),
+      quiz: quizFor("seo-com-4", "Quiz — Upsell e cross sell"),
+    },
+    {
+      id: "seo-m2",
+      title: "Aprovações, follow ups e problemas do dia a dia",
+      description:
+        "O que desbloqueia contas paradas: cobrar aprovações sem parecer cobrança, dar follow ups, responder a dúvidas administrativas e saber quando se deixa de escrever e se liga.",
+      order: 5,
+      section: "Comunicação",
+      lessons: lessons([
         {
           id: "seo-com-aprov",
           title:
@@ -532,17 +589,11 @@ const SEO_TRACK: TrainingTrack = {
           ],
         },
         {
-          id: "seo-m2-a2",
-          title: "Call real — onboarding pendente, sem sessão de estratégia",
+          id: "seo-com-admin",
+          title: "Como solucionar um problema administrativo",
           description:
-            "Gravação real do André a ligar a um cliente que tinha o onboarding pendente e ainda não tinha feito a sessão de estratégia para contar como dia 1.",
-          type: "call_real",
+            "O cliente tem dúvidas sobre o processo — por exemplo o preço de uma página de Wikipédia. Como se responde a uma dúvida administrativa sem a transformar numa negociação.",
           presenter: "André",
-          keyPoints: [
-            "O relógio do serviço só arranca na sessão de estratégia — e é responsabilidade do consultor explicar isso sem soar a desculpa.",
-            "Ligar é mais rápido do que escrever quando o assunto já ficou parado uma vez.",
-            "Sai da chamada com data marcada, não com «depois combinamos».",
-          ],
         },
         {
           id: "seo-m2-a4",
@@ -558,17 +609,16 @@ const SEO_TRACK: TrainingTrack = {
           ],
         },
       ]),
-      // Absorveu o banco de perguntas do onboarding (seo-m4), que era um
-      // capítulo à parte e agora vive aqui dentro.
-      quiz: quizFrom("seo-m2", "Quiz — Comunicação", ["seo-m2", "seo-m4"]),
+      // Mantém o id `seo-m2` — e com ele o banco e as tentativas já feitas.
+      quiz: quizFrom("seo-m2", "Quiz — Acompanhamento do cliente", ["seo-m2"]),
     },
     {
       id: "seo-m3",
-      title: "Client Delivery",
+      title: "A app e as ferramentas",
       description:
-        "O que se produz para o cliente e onde fica registado — da app interna ao artigo otimizado, passando pelos updates, relatórios, roadmap, tickets e tracking.",
-      order: 2,
-      section: null,
+        "Onde vive o trabalho: os protocolos internos, a app do workspace e as ferramentas de SEO da casa.",
+      order: 6,
+      section: "Client Delivery",
       lessons: lessons([
         {
           id: "seo-m1-a1",
@@ -601,6 +651,18 @@ const SEO_TRACK: TrainingTrack = {
             "O output da ferramenta é matéria-prima; a decisão continua a ser do consultor.",
           ],
         },
+      ]),
+      // Mantém o id `seo-m3` e absorveu o banco do antigo trabalho interno.
+      quiz: quizFrom("seo-m3", "Quiz — App e ferramentas", ["seo-m3", "seo-m1"]),
+    },
+    {
+      id: "seo-cd-2",
+      title: "Updates e relatórios",
+      description:
+        "O que se escreve e com que frequência: o update diário interno, o relatório semanal do cliente e a construção do relatório mensal na app.",
+      order: 7,
+      section: "Client Delivery",
+      lessons: lessons([
         {
           id: "seo-cd-daily",
           title: "Como criar um Daily Update (interno)",
@@ -637,6 +699,17 @@ const SEO_TRACK: TrainingTrack = {
             "Leads e receita primeiro; impressões e posições são a explicação, não o título.",
           ],
         },
+      ]),
+      quiz: quizFor("seo-cd-2", "Quiz — Updates e relatórios"),
+    },
+    {
+      id: "seo-cd-3",
+      title: "Roadmap e produção de conteúdo",
+      description:
+        "O plano da conta e o que dele sai: roadmap inicial, checklists e o artigo otimizado, do briefing à publicação.",
+      order: 8,
+      section: "Client Delivery",
+      lessons: lessons([
         {
           id: "seo-cd-roadmap",
           title: "Como fazer um SEO Roadmap Inicial e Checklists",
@@ -658,6 +731,24 @@ const SEO_TRACK: TrainingTrack = {
           ],
         },
         {
+          id: "seo-cd-artigo",
+          title: "Como criar um artigo otimizado e corretamente seo-wise",
+          description:
+            "Da intenção de pesquisa ao artigo publicado: estrutura, keywords, links internos e o que se revê antes de sair.",
+          presenter: "André",
+        },
+      ]),
+      quiz: quizFor("seo-cd-3", "Quiz — Roadmap e conteúdo"),
+    },
+    {
+      id: "seo-cd-4",
+      title: "Técnico e tracking",
+      description:
+        "O que quebra e o que se mede: tickets para o departamento Web, diagnóstico de problemas técnicos e os eventos de GA4 sem os quais o relatório não conta leads.",
+      order: 9,
+      section: "Client Delivery",
+      lessons: lessons([
+        {
           id: "seo-cd-ticket",
           title: "Como criar um ticket de alterações WEB",
           description:
@@ -672,13 +763,6 @@ const SEO_TRACK: TrainingTrack = {
           presenter: "André",
         },
         {
-          id: "seo-cd-artigo",
-          title: "Como criar um artigo otimizado e corretamente seo-wise",
-          description:
-            "Da intenção de pesquisa ao artigo publicado: estrutura, keywords, links internos e o que se revê antes de sair.",
-          presenter: "André",
-        },
-        {
           id: "seo-cd-ga4",
           title:
             "Como criar os eventos no GA4 do cliente para tracking correto",
@@ -687,13 +771,7 @@ const SEO_TRACK: TrainingTrack = {
           presenter: "André",
         },
       ]),
-      // Absorveu os bancos do trabalho interno (seo-m1) e do reporting
-      // (seo-m5), que eram capítulos à parte.
-      quiz: quizFrom("seo-m3", "Quiz — Client Delivery", [
-        "seo-m3",
-        "seo-m1",
-        "seo-m5",
-      ]),
+      quiz: quizFor("seo-cd-4", "Quiz — Técnico e tracking"),
     },
   ],
 };

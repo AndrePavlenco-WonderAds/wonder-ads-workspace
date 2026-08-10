@@ -138,12 +138,12 @@ export default async function TrackPage({
       )}
 
       {/* ===================== Hero ===================== */}
-      <section className="animate-fade-up relative overflow-hidden rounded-3xl border border-white/[0.08] bg-white/[0.022] p-6 sm:p-9">
+      <section className="animate-fade-up relative overflow-hidden rounded-3xl border border-white/[0.14] bg-white/[0.06] p-6 sm:p-9">
         {/* Bloom de fundo — ancorado ao canto do anel, para o olho cair no
             número do progresso e não num sítio qualquer. */}
         <span
           aria-hidden
-          className="pointer-events-none absolute -right-32 -top-40 h-[26rem] w-[26rem] rounded-full opacity-[0.18] blur-3xl"
+          className="pointer-events-none absolute -right-32 -top-40 h-[26rem] w-[26rem] rounded-full opacity-[0.3] blur-3xl"
           style={{ background: "var(--brand-gradient)" }}
         />
         {/* Fio de luz no topo — assina o cartão sem lhe pôr uma moldura. */}
@@ -159,7 +159,7 @@ export default async function TrackPage({
         <div className="relative flex flex-col gap-9 lg:flex-row lg:items-center lg:justify-between">
           <div className="max-w-2xl">
             <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-              <span className="readout text-white/35">
+              <span className="readout text-white/60">
                 {state.track.isCommon
                   ? "Módulo · obrigatório"
                   : "Módulo · especialização"}
@@ -278,8 +278,10 @@ export default async function TrackPage({
           <section key={`${g.section ?? "s"}-${gi}`}>
             {g.section && (
               <div className="mb-5 ml-14 mt-6 flex items-center gap-3">
-                <span className="readout text-[#d8b98a]">{g.section}</span>
-                <span className="h-px flex-1 bg-gradient-to-r from-[#A9834F]/25 to-transparent" />
+                <span className="readout text-[15px] font-bold tracking-[0.18em] text-[#e8c89a]">
+                  {g.section}
+                </span>
+                <span className="h-px flex-1 bg-gradient-to-r from-[#A9834F]/50 to-transparent" />
               </div>
             )}
             {g.modules.map((m) => (
@@ -367,13 +369,13 @@ function ModuleStation({
       <div
         className={`mb-5 flex-1 overflow-hidden rounded-2xl border transition ${
           isCurrent
-            ? "border-[#783DF5]/35 bg-white/[0.04] shadow-[0_20px_60px_-38px_rgba(120,61,245,1)]"
-            : "border-white/[0.07] bg-white/[0.015]"
+            ? "border-[#783DF5]/55 bg-white/[0.075] shadow-[0_20px_60px_-32px_rgba(120,61,245,1)]"
+            : "border-white/[0.13] bg-white/[0.05]"
         } ${locked ? "opacity-50" : ""}`}
       >
         {/* Medidor do capítulo — encostado ao topo do cartão, como uma régua
             de nível. Substitui a barra solta que existia a meio. */}
-        <div className="h-[3px] w-full bg-white/[0.05]">
+        <div className="h-[3px] w-full bg-white/[0.12]">
           <div
             className="brand-gradient-bg h-[3px] transition-all duration-700"
             style={{ width: `${state.percent}%` }}
@@ -384,18 +386,18 @@ function ModuleStation({
           <header className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2.5">
-                <span className="readout text-white/28">
+                <span className="readout text-white/55">
                   Capítulo {index.toString().padStart(2, "0")}
                 </span>
                 {isCurrent && (
                   <span className="readout text-[#d8b98a]">Estás aqui</span>
                 )}
               </div>
-              <h2 className="mt-1.5 text-[16px] font-semibold tracking-[-0.01em] text-white">
+              <h2 className="mt-1.5 text-[19px] font-bold tracking-[-0.015em] text-white">
                 {module.title}
               </h2>
               {module.description && (
-                <p className="mt-1.5 max-w-2xl text-[12.5px] leading-relaxed text-white/45">
+                <p className="mt-1.5 max-w-2xl text-[13px] leading-relaxed text-white/65">
                   {module.description}
                 </p>
               )}
@@ -406,7 +408,7 @@ function ModuleStation({
                 percent={state.percent}
                 hasContent={state.hasContent}
               />
-              <span className="tabular text-[11px] text-white/30">
+              <span className="tabular text-[11.5px] text-white/55">
                 {state.watchedLessons}/{state.allLessons} aulas
                 {state.minutesLeft > 0 && ` · ~${state.minutesLeft} min`}
               </span>
@@ -414,7 +416,7 @@ function ModuleStation({
           </header>
 
           {locked ? (
-            <p className="mt-5 inline-flex items-center gap-2 rounded-lg border border-white/[0.07] bg-white/[0.02] px-3 py-2 text-[12px] text-white/40">
+            <p className="mt-5 inline-flex items-center gap-2 rounded-lg border border-white/[0.14] bg-white/[0.05] px-3 py-2 text-[12.5px] text-white/60">
               <Lock className="h-3.5 w-3.5" />
               Abre quando concluíres o capítulo anterior.
             </p>
@@ -424,7 +426,7 @@ function ModuleStation({
                 <li key={l.lesson.id}>
                   <Link
                     href={`/formacao/${trackSlug}/aula/${l.lesson.id}`}
-                    className="group flex items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.015] p-2.5 transition hover:border-[#783DF5]/35 hover:bg-white/[0.05]"
+                    className="group flex items-center gap-3 rounded-xl border border-white/[0.12] bg-white/[0.06] p-3 transition hover:border-[#783DF5]/55 hover:bg-white/[0.11]"
                   >
                     <LessonThumb
                       type={l.lesson.type}
@@ -434,8 +436,8 @@ function ModuleStation({
                     <span className="min-w-0 flex-1">
                       <span className="flex flex-wrap items-center gap-2">
                         <span
-                          className={`text-[13.5px] font-medium ${
-                            l.comingSoon ? "text-white/40" : "text-white/90"
+                          className={`text-[14.5px] font-semibold ${
+                            l.comingSoon ? "text-white/65" : "text-white"
                           }`}
                         >
                           {l.lesson.title}
@@ -455,14 +457,14 @@ function ModuleStation({
                           </span>
                         )}
                       </span>
-                      <span className="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-[11px] text-white/35">
+                      <span className="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-[11.5px] text-white/55">
                         {l.lesson.presenter ? (
                           <span className="inline-flex items-center gap-1">
                             <UserRound className="h-2.5 w-2.5" />
                             {l.lesson.presenter}
                           </span>
                         ) : (
-                          <span className="text-amber-200/45">
+                          <span className="text-amber-200/70">
                             apresentador por atribuir
                           </span>
                         )}
