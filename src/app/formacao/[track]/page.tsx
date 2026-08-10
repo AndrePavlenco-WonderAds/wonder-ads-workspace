@@ -38,6 +38,10 @@ import {
   ProgressRing,
   StatTile,
 } from "@/components/training/training-ui";
+import {
+  TrackSearch,
+  type TrackSearchEntry,
+} from "@/components/training/track-search";
 import { getTrainingContext, trackStateFor } from "@/lib/training/server";
 import { lessonMinutes } from "@/lib/training/catalog";
 import type { ModuleState, TrackState } from "@/lib/training/progress";
@@ -96,6 +100,24 @@ export default async function TrackPage({
     state.modules.find((m) => m.status === "in_progress")?.module.id ?? null;
   const orderIndex = new Map(
     state.modules.map((m, i) => [m.module.id, i + 1] as const),
+  );
+
+  // Índice para a pesquisa do módulo — inclui os pontos-chave, que é onde
+  // está o assunto de cada aula (o título raramente o diz por extenso).
+  const searchEntries: TrackSearchEntry[] = state.modules.flatMap((m, mi) =>
+    m.lessons.map((l) => ({
+      id: l.lesson.id,
+      href: `/formacao/${slug}/aula/${l.lesson.id}`,
+      title: l.lesson.title,
+      description: l.lesson.description,
+      keyPoints: l.lesson.keyPoints,
+      moduleTitle: m.module.title,
+      chapterIndex: mi + 1,
+      type: l.lesson.type,
+      watched: l.watched,
+      comingSoon: l.comingSoon,
+      locked: m.status === "locked",
+    })),
   );
 
   const quizzesTotal = state.modules.filter((m) => m.quizRequired).length;
@@ -264,8 +286,12 @@ export default async function TrackPage({
         </div>
       )}
 
+      {/* Pesquisa do módulo — por cima da sequência, porque é uma ferramenta
+          de salto e não um filtro do caminho. */}
+      <TrackSearch entries={searchEntries} />
+
       {/* ===================== Sequência ===================== */}
-      <div className="animate-fade-up mt-12">
+      <div className="animate-fade-up mt-10">
         <div className="mb-7 flex items-center gap-3">
           <span className="readout text-white/35">Sequência</span>
           <span className="tabular text-[10px] font-semibold text-white/25">

@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.46",
+    date: "2026-08-10",
+    title: "Correção: o lembrete dos Weekly Reports estava a nascer numa sexta que já tinha passado",
+    highlights: [
+      "**🐞 O que estava mal.** A regra semanal nasceu numa **segunda, dia 10**, e no mesmo instante os quatro consultores de SEO ficaram com um lembrete da **sexta, dia 7** — de uma semana em que a funcionalidade ainda não existia. A culpa era do «chão» das regras: estava a arredondar a data de criação ao **início do mês**, o que é o correto numa regra mensal (o período é o mês) mas deixa passar até cinco sextas-feiras numa regra semanal.",
+      "**✅ O que passa a acontecer.** O chão de uma regra semanal é o **instante** em que ela passou a existir, e a primeira ocorrência é a primeira sexta-feira a sério depois disso. Confirmado nos quatro consultores: **o lembrete de 07/08 desapareceu**, e o próximo aparece **na sexta 14/08**, mantendo-se no sábado e cedendo o lugar ao de 21/08 na sexta seguinte. É calendário puro — nada disto olha para a semana do roadmap de nenhum cliente.",
+      "**🔍 Pesquisa dentro de cada módulo da Formação.** Uma barra por cima da sequência que procura **por aula e por assunto** — e procura também nos pontos-chave de cada aula, que é onde o assunto está escrito: «silêncio» encontra o roleplay de chamadas, embora a palavra não apareça no título nem na descrição. Ignora acentos, aceita várias palavras (todas têm de bater) e mostra o capítulo de cada resultado.",
+      "**🧭 A pesquisa salta, não filtra.** A sequência continua inteira por baixo. Esconder capítulos a meio de uma pesquisa dava a ideia de que o módulo tinha três aulas — e a sequência é o caminho, a ordem por que a matéria foi pensada.",
+    ],
+  },
+  {
     version: "76.45",
     date: "2026-08-10",
     title: "Weekly Reports: cola a semana de daily updates, sai uma mensagem por cliente",

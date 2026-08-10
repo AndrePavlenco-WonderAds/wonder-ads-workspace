@@ -267,6 +267,20 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 /** Mês em que a regra passou a existir — nada é reclamado antes disto. */
 function ruleFloor(rule: NotificationRule): number {
   if (!rule.createdAt) return 0;
+  // O CHÃO TEM DE TER A GRANULARIDADE DO PERÍODO DA REGRA.
+  //
+  // Numa regra mensal, o período é o mês, e arredondar ao dia 1 é o que
+  // permite que uma regra criada a 10 ainda reclame o mês em curso — que é
+  // o que se quer.
+  //
+  // Numa regra SEMANAL isso é um erro: o período é uma semana, e recuar ao
+  // início do mês deixa passar até cinco sextas-feiras que já aconteceram.
+  // Foi o que sucedeu na v76.45 — a regra nasceu numa segunda, dia 10, e no
+  // mesmo instante toda a gente levou com um lembrete da sexta dia 7, de uma
+  // semana em que a funcionalidade ainda não existia. Aqui o chão é o
+  // INSTANTE em que a regra passou a existir: a primeira ocorrência é a
+  // primeira sexta-feira a sério depois disso.
+  if (rule.schedule.kind === "weekly") return rule.createdAt;
   const c = new Date(rule.createdAt);
   return new Date(c.getFullYear(), c.getMonth(), 1).getTime();
 }
