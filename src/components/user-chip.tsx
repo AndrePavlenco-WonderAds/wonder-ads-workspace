@@ -4,10 +4,24 @@
 // display row via credentials.ts, and renders the pill. When there's
 // no valid session (e.g. on /login itself, where the cookie is gone)
 // it renders nothing — no orphan placeholder.
+//
+// O chip mostra sempre a pessoa que a app está a tratar como utilizador —
+// a vista, quando há lente ativa. É o mesmo princípio do resto: a ver como
+// outra pessoa, tudo tem de parecer o dela, senão a vista não prova nada.
+// Quem fez login vai à parte, para o menu poder dizer de quem é a sessão e
+// oferecer o caminho de volta.
 
 import { cookies } from "next/headers";
-import { SESSION_COOKIE, readSession } from "@/lib/auth/session";
-import { getEmployeeDisplay } from "@/lib/auth/credentials";
+import {
+  SESSION_COOKIE,
+  effectiveUsername,
+  readSession,
+} from "@/lib/auth/session";
+import {
+  getEmployeeDisplay,
+  isAdminUsername,
+  listImpersonationTargets,
+} from "@/lib/auth/credentials";
 import { UserChipMenu } from "./user-chip-menu";
 
 export async function UserChip() {
@@ -15,7 +29,8 @@ export async function UserChip() {
   const cookieValue = cookieStore.get(SESSION_COOKIE)?.value;
   const session = await readSession(cookieValue);
   if (!session) return null;
-  const display = getEmployeeDisplay(session.u);
+  const viewingUsername = effectiveUsername(session);
+  const display = viewingUsername ? getEmployeeDisplay(viewingUsername) : null;
   if (!display) return null;
   // 1-week cookie — surface session age so consultants can see when
   // they'll be prompted again, without doing the maths themselves.
@@ -27,6 +42,13 @@ export async function UserChip() {
     daysLeft >= 1
       ? `${daysLeft} day${daysLeft === 1 ? "" : "s"}`
       : `${hoursLeft}h`;
+
+  // O seletor só existe para quem FEZ LOGIN como SuperAdmin — e continua a
+  // existir enquanto ele está na pele de outra pessoa, para poder saltar
+  // direto para uma terceira sem ter de voltar a si primeiro.
+  const realIsAdmin = isAdminUsername(session.u);
+  const realDisplay = getEmployeeDisplay(session.u);
+
   return (
     <UserChipMenu
       name={display.name}
@@ -34,6 +56,10 @@ export async function UserChip() {
       dept={display.dept}
       isAdmin={display.isAdmin}
       expiresLabel={expiresLabel}
+      canImpersonate={realIsAdmin}
+      realName={realDisplay?.name ?? session.u}
+      viewingAs={session.as ?? null}
+      people={realIsAdmin ? listImpersonationTargets() : []}
     />
   );
 }

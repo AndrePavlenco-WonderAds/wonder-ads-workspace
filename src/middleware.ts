@@ -13,7 +13,12 @@
 // → They never reach this middleware.
 
 import { NextResponse, type NextRequest } from "next/server";
-import { SESSION_COOKIE, readSession } from "@/lib/auth/session";
+import {
+  SESSION_COOKIE,
+  effectiveUsername,
+  isImpersonating,
+  readSession,
+} from "@/lib/auth/session";
 import { canEditDept } from "@/lib/auth/credentials";
 
 // Mutating HTTP methods — a request using one of these is trying to
@@ -41,6 +46,22 @@ export async function middleware(req: NextRequest) {
   const cookie = req.cookies.get(SESSION_COOKIE)?.value;
   const session = await readSession(cookie);
   if (session) {
+    // «VER COMO» É SÓ DE LEITURA. Um SuperAdmin a espreitar a app de um
+    // consultor não pode escrever nada — nem sem querer. Se pudesse, o
+    // trabalho ficava assinado por quem não o fez: um roadmap alterado, uma
+    // ação aprovada, uma nota gravada, tudo com o nome da outra pessoa e
+    // sem rasto de quem lá mexeu. O objetivo do «ver como» é VER, e o
+    // bloqueio vive aqui — no servidor, à frente de todas as rotas
+    // internas — para não depender de nenhum botão estar escondido.
+    if (WRITE_METHODS.has(req.method) && isImpersonating(session)) {
+      return NextResponse.json(
+        {
+          error:
+            "Estás a ver a app como outra pessoa — esta vista é só de leitura. Volta ao teu utilizador para fazer alterações.",
+        },
+        { status: 403 },
+      );
+    }
     // Read-only enforcement: block SEO writes from users who may view
     // but not edit the SEO department (Web designers). This is the
     // single server-side backstop — it does not depend on any UI
@@ -48,7 +69,7 @@ export async function middleware(req: NextRequest) {
     if (
       WRITE_METHODS.has(req.method) &&
       SEO_WRITE_PREFIXES.some((p) => req.nextUrl.pathname.startsWith(p)) &&
-      !canEditDept(session.u, "seo")
+      !canEditDept(effectiveUsername(session), "seo")
     ) {
       return NextResponse.json(
         { error: "Read-only access — you cannot make changes in the SEO department." },

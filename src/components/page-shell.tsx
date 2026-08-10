@@ -6,6 +6,8 @@ import { WonderAdsLogo } from "./wonder-ads-logo";
 import { HeaderClock } from "./header-clock";
 import { NotificationsBell } from "./notifications/notifications-bell";
 import { UserChip } from "./user-chip";
+import { ImpersonationBanner } from "./impersonation-banner";
+import { getImpersonation } from "@/lib/auth/server";
 import { getCurrentVersion } from "@/lib/changelog";
 
 /** O sino antes de o servidor saber quantos lembretes há. Mesma caixa, mesmo
@@ -21,7 +23,7 @@ function BellSkeleton() {
   );
 }
 
-export function PageShell({
+export async function PageShell({
   children,
   wide = false,
   sessionTimer = false,
@@ -59,9 +61,25 @@ export function PageShell({
   const headerChrome = transparentHeader
     ? "relative bg-transparent"
     : "sticky top-0 z-30 border-b border-white/5 bg-[color:var(--background)]/85 backdrop-blur-md";
+  // Estado do «Ver como» — leitura de cookie + lookup em memória, sem I/O.
+  // Fica aqui (e não dentro da faixa) porque o shell também precisa dele
+  // para abrir a margem em baixo e a faixa não tapar o rodapé.
+  const impersonation = await getImpersonation().catch(() => null);
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[color:var(--background)] text-[color:var(--foreground)]">
+    <div
+      className={`relative min-h-screen overflow-hidden bg-[color:var(--background)] text-[color:var(--foreground)] ${
+        impersonation ? "pb-10" : ""
+      }`}
+    >
       <BackgroundDecor />
+      {impersonation && (
+        <ImpersonationBanner
+          viewingName={impersonation.viewing.name}
+          viewingRole={impersonation.viewing.role}
+          viewingDept={impersonation.viewing.dept}
+          realName={impersonation.real.name}
+        />
+      )}
 
       <header
         className={`mx-auto flex w-full ${widthClass} items-center justify-between gap-4 px-6 py-4 sm:px-10 sm:py-5 ${headerChrome}`}

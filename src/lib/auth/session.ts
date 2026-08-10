@@ -11,6 +11,8 @@
 // from `credentials.ts` server-side on every render, so demoting a
 // user is a code-deploy away (no cookie purge needed).
 
+import { findEmployeeByUsername, isAdminUsername } from "./credentials";
+
 export const SESSION_COOKIE = "wa-session";
 
 /** 7 days in milliseconds — bumped from 48h in v74.23.1 so consultants
@@ -22,13 +24,44 @@ export const SESSION_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 export const SESSION_MAX_AGE_SECONDS = Math.floor(SESSION_MAX_AGE_MS / 1000);
 
 export type SessionPayload = {
-  /** Username (lowercase, matches credentials.ts). */
+  /** Username de QUEM FEZ LOGIN (lowercase, matches credentials.ts).
+   *  Nunca muda enquanto a sessão durar — nem sequer a ver como outra
+   *  pessoa. É o que garante que o caminho de volta existe sempre. */
   u: string;
+  /** «A ver como» — o username que o SuperAdmin está a espreitar. Só o
+   *  `u` é a identidade real; este é uma lente por cima dela.
+   *
+   *  Vai DENTRO da carga assinada de propósito: um campo à parte, ou um
+   *  segundo cookie, seria falsificável por quem soubesse o nome de outro
+   *  utilizador. Assim, trocar de pele exige a chave de assinatura.
+   *
+   *  E `readSession` só o honra quando `u` é SuperAdmin — a verificação
+   *  vive aqui, no leitor, e não em cada consumidor, para não haver um
+   *  sítio que se esqueça dela. */
+  as?: string;
   /** Expiry — `Date.now() + SESSION_MAX_AGE_MS` at issue time. */
   exp: number;
   /** Issued-at — useful for "session age" UI without doing maths. */
   iat: number;
 };
+
+/** Quem a app deve tratar como utilizador nesta sessão: a pessoa que está
+ *  a ser vista, se houver, senão quem fez login. Todos os gates (páginas,
+ *  middleware, APIs) usam ISTO — é o que faz o SuperAdmin ver mesmo a app
+ *  do outro, com os mesmos limites, em vez de uma imitação. */
+export function effectiveUsername(
+  session: SessionPayload | null | undefined,
+): string | null {
+  if (!session) return null;
+  return session.as ?? session.u;
+}
+
+/** True quando a sessão está a ver a app como outra pessoa. */
+export function isImpersonating(
+  session: SessionPayload | null | undefined,
+): boolean {
+  return Boolean(session?.as && session.as !== session.u);
+}
 
 /** Look up the secret used to sign cookies. In prod we REQUIRE the
  *  env var so a forgotten setting fails loudly rather than letting
@@ -101,16 +134,29 @@ async function getKey(): Promise<CryptoKey> {
 }
 
 /** Issue a signed cookie value for a username. Caller is responsible
- *  for setting it via res.cookies.set with the matching maxAge. */
-export async function issueSession(username: string): Promise<{
+ *  for setting it via res.cookies.set with the matching maxAge.
+ *
+ *  `options.as` põe a sessão a ver a app como outra pessoa. Quem chama
+ *  TEM de confirmar que `username` é SuperAdmin antes de o passar — e o
+ *  `readSession` volta a confirmar na leitura, para que um cookie forjado
+ *  noutro tempo (ou uma despromoção depois de emitido) não valha nada. */
+export async function issueSession(
+  username: string,
+  options?: { as?: string | null; expiresAt?: number },
+): Promise<{
   cookieValue: string;
   payload: SessionPayload;
 }> {
   const iat = Date.now();
+  const as = options?.as?.trim().toLowerCase() || null;
   const payload: SessionPayload = {
     u: username,
-    exp: iat + SESSION_MAX_AGE_MS,
+    // Ver como outra pessoa NÃO estica a sessão: mantém-se o fim do prazo
+    // original. Senão, uma volta pelo chip renovava a semana sem ninguém
+    // voltar a escrever a password.
+    exp: options?.expiresAt ?? iat + SESSION_MAX_AGE_MS,
     iat,
+    ...(as && as !== username ? { as } : {}),
   };
   const body = utf8ToBase64Url(JSON.stringify(payload));
   const key = await getKey();
@@ -170,5 +216,25 @@ export async function readSession(
     return null;
   }
   if (Date.now() > payload.exp) return null;
+  // A LENTE VERIFICA-SE AQUI, NÃO EM QUEM LÊ. Um cookie válido pode ter sido
+  // emitido quando `u` ainda era SuperAdmin; se entretanto deixou de ser, a
+  // lente cai e a sessão volta a ser a dele. O mesmo para um `as` que aponte
+  // para alguém que já não existe nas credenciais. Só se aceita uma lente
+  // que continue a fazer sentido AGORA — a alternativa era cada página
+  // lembrar-se de a validar, e uma esquecer-se.
+  if (typeof payload.as === "string" && payload.as) {
+    const target = payload.as.trim().toLowerCase();
+    if (
+      target === payload.u ||
+      !isAdminUsername(payload.u) ||
+      !findEmployeeByUsername(target)
+    ) {
+      return { u: payload.u, exp: payload.exp, iat: payload.iat };
+    }
+    return { ...payload, as: target };
+  }
+  if ("as" in payload) {
+    return { u: payload.u, exp: payload.exp, iat: payload.iat };
+  }
   return payload;
 }

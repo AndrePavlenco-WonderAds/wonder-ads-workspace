@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.41",
+    date: "2026-08-10",
+    title: "«Ver como» — o C-Level passa a abrir a app pelos olhos de qualquer pessoa da equipa",
+    highlights: [
+      "**👁 Três cliques até à pele de outra pessoa.** No chip do header há um **«Ver como…»** com toda a equipa. Escolhe-se alguém e a app recarrega exatamente como ela a vê: os mesmos departamentos, os mesmos clientes, os mesmos botões — e as mesmas portas fechadas. A ver como um consultor, o **/admin responde «SuperAdmin only»**, porque uma imitação que não herdasse os limites não provava nada.",
+      "**🔒 A vista é SÓ DE LEITURA, e o bloqueio é a sério.** Qualquer POST/PUT/PATCH/DELETE é recusado no middleware enquanto a lente estiver ativa. Se assim não fosse, o trabalho ficava assinado por quem não o fez — um roadmap alterado, uma ação aprovada, uma nota gravada, tudo com o nome da outra pessoa e sem rasto de quem lá mexeu.",
+      "**🟠 Impossível esquecer que se está lá dentro.** O chip do header fica cor de âmbar com um ícone de olho, e há uma faixa fixa no fundo do ecrã a dizer quem se está a ver e que a vista é só de leitura — com o botão de voltar sempre à mão. Andar na pele de outra pessoa sem dar por isso é a única forma de isto correr mal.",
+      "**🔑 Quem fez login nunca se perde.** O cookie continua a guardar o utilizador real e acrescenta-lhe a lente **dentro da carga assinada**; a saída vive fora do bloqueio de escrita, por isso o caminho de volta nunca fecha. E a lente **só é aceite na leitura se quem fez login for SuperAdmin** — um cookie assinado a dizer «sou o consultor X a ver como o André» não vale nada, e uma despromoção derruba a lente sem ninguém ter de limpar cookies.",
+      "**⏳ Trocar de pele não renova a sessão.** O prazo original mantém-se ao entrar e ao sair — senão uma volta pelo seletor valia uma semana de sessão nova sem ninguém voltar a escrever a password.",
+    ],
+  },
+  {
     version: "76.40",
     date: "2026-08-10",
     title: "O relatório deitava fora 129 das 131 keywords que o site rankeia — agora mostra-as",

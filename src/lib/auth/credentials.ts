@@ -413,6 +413,37 @@ export function getEmployeeDisplay(username: string): {
     : null;
 }
 
+/** Toda a gente que um SuperAdmin pode espreitar no «Ver como» — só os
+ *  campos que a UI mostra.
+ *
+ *  Nunca devolve `salt`/`hash`: esta lista viaja para o browser no chip do
+ *  header, e um seletor de utilizadores não é motivo para pôr material de
+ *  password do lado do cliente. Ordenada por departamento e depois por nome,
+ *  que é como o seletor os agrupa. */
+export function listImpersonationTargets(): Array<{
+  username: string;
+  name: string;
+  role: string;
+  dept: string;
+  isAdmin: boolean;
+}> {
+  const deptOrder = ["All", "SEO", "ADS", "Web", "Commercial"];
+  return EMPLOYEE_CREDENTIALS.map((c) => ({
+    username: c.username,
+    name: c.name,
+    role: c.role,
+    dept: c.dept,
+    isAdmin: Boolean(c.isAdmin),
+  })).sort((a, b) => {
+    const da = deptOrder.indexOf(a.dept);
+    const db = deptOrder.indexOf(b.dept);
+    const ra = da === -1 ? deptOrder.length : da;
+    const rb = db === -1 ? deptOrder.length : db;
+    if (ra !== rb) return ra - rb;
+    return a.name.localeCompare(b.name, "pt");
+  });
+}
+
 /** Sem acentos, sem pontuação, minúsculas — "Fran. Rosa" e "fran rosa" têm de
  *  bater certo, porque o roster do /admin e as credenciais foram escritos em
  *  sítios diferentes por pessoas diferentes. */
