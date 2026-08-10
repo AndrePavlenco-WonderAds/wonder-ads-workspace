@@ -25,6 +25,7 @@ export const CLIENT_LOGOS: Record<string, string> = {
   "spine-center": "/logos/spine-center.png",
   mymedic: "/logos/mymedic.png",
   "cidalia-cabeleireiros": "/logos/cidalia-cabeleireiros.png",
+  "maratona-clube-de-portugal": "/logos/maratona-clube-de-portugal.png",
 };
 
 export function getClientLogo(slug: string): string | null {
@@ -42,6 +43,9 @@ const LOGO_BG_OVERRIDES: Record<string, LogoBgMode> = {
   "clinica-fernando-almeida": "dark",
   // Kings Gyms — gold + white wordmark on black; ships on its own black panel.
   "kings-gyms": "dark",
+  // Maratona Clube de Portugal — emblema a cores + lettering branco sobre
+  // transparente; num chip claro o nome desaparecia.
+  "maratona-clube-de-portugal": "dark",
   // CDT's logo asset sits on #F6A800 — match the chip exactly. IHN follows.
   ihn: { custom: "#F6A800" },
   cdt: { custom: "#F6A800" },};
@@ -83,6 +87,7 @@ export const CLIENT_WEBSITES: Record<string, string> = {
   "spine-center": "https://spinecenter.pt/",
   mymedic: "https://mymedic.pt/",
   "cidalia-cabeleireiros": "https://www.cidalia-cabeleireiros.com/",
+  "maratona-clube-de-portugal": "https://maratonaclubedeportugal.com/",
   "sentir-saude": "https://www.sentirsaude.pt/",
   "clinica-fernando-almeida": "https://www.clinicasdentariasfa.pt/",
   cuidamais: "https://cuidamais.pt/",

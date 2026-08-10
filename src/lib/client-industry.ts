@@ -15,6 +15,9 @@
 
 const INDUSTRY: Record<string, string[]> = {
   "kings-gyms": ["fitness", "health"],
+  // Organizador de provas de corrida (EDP Maratona de Lisboa, meias
+  // maratonas): desporto + agenda de eventos com público que viaja para correr.
+  "maratona-clube-de-portugal": ["fitness", "lifestyle", "travel"],
   "sentir-saude": ["health"],
   "clinica-fernando-almeida": ["health", "dental"],
   "white-clinic": ["health", "dental"],

@@ -10,9 +10,15 @@
 //
 // Por isso:
 //  • O badge conta o que está POR RESOLVER, não o que é "novo". Um contador de
-//    não-lidos ensina a ignorá-lo; um contador de trabalho em aberto não. É
-//    VERMELHO e pulsa: um badge da cor da marca lê-se como decoração, e a
-//    marca já está no botão todo à volta dele.
+//    não-lidos ensina a ignorá-lo; um contador de trabalho em aberto não. Pulsa
+//    e não é da cor da marca: um badge roxo lê-se como decoração, e a marca já
+//    está no botão todo à volta dele.
+//  • A COR diz DE QUEM é o trabalho. Vermelho quando há coisas minhas por
+//    resolver; AZUL quando o contador só traz trabalho de outra pessoa. Quem
+//    tem o painel de equipa (C-Level) passava o dia com um sino vermelho por
+//    causa da dívida dos outros — e um alarme que está sempre ligado deixa de
+//    ser um alarme. Basta uma notificação própria para o vermelho voltar.
+//    A mesma regra vale para os separadores e para todo o painel de equipa.
 //  • As linhas agrupam-se por lembrete + período ("Enviar Monthly Report ·
 //    julho de 2026"), porque é assim que o trabalho é feito: em bloco.
 //  • O que já foi resolvido não desaparece — desce para "Concluídas" e pode
@@ -207,42 +213,55 @@ export function NotificationsDrawer({
     [team, viewerUsername],
   );
   const badgeCount = count + teamOther;
+  // VERMELHO = MEU. Quando o contador só traz trabalho de outra pessoa, o
+  // sino fica AZUL: continua a pedir atenção, mas diz logo de fora que não é
+  // dívida de quem está a ver. Basta uma notificação própria para o vermelho
+  // voltar — nunca se pode esconder o que é meu por trás do que é da equipa.
+  const teamOnly = count === 0 && teamOther > 0;
 
   return (
     <>
       <button
         type="button"
         onClick={() => {
-          setTab(count === 0 && teamOther > 0 ? "team" : "mine");
+          setTab(teamOnly ? "team" : "mine");
           setOpen(true);
         }}
         aria-label={
           badgeCount > 0
-            ? `Notificações — ${badgeCount} por resolver`
+            ? `Notificações — ${badgeCount} por resolver${
+                teamOnly ? " na equipa" : ""
+              }`
             : "Notificações — nada pendente"
         }
         aria-haspopup="dialog"
         className={`group relative inline-flex h-8 w-8 items-center justify-center rounded-full border bg-white/[0.04] transition ${
-          badgeCount > 0
-            ? "border-rose-400/40 text-white hover:border-rose-400/70 hover:bg-rose-500/[0.12]"
-            : "border-white/12 text-white/70 hover:border-[color:var(--brand-purple)]/45 hover:bg-white/[0.08] hover:text-white"
+          badgeCount === 0
+            ? "border-white/12 text-white/70 hover:border-[color:var(--brand-purple)]/45 hover:bg-white/[0.08] hover:text-white"
+            : teamOnly
+              ? "border-sky-400/40 text-white hover:border-sky-400/70 hover:bg-sky-500/[0.12]"
+              : "border-rose-400/40 text-white hover:border-rose-400/70 hover:bg-rose-500/[0.12]"
         }`}
       >
         <Bell className="h-[15px] w-[15px]" />
         {badgeCount > 0 && (
           <>
-            {/* Vermelho e a bater. O anel que expande é um segundo elemento
-                por baixo do número, para o próprio número não escalar e
-                continuar legível enquanto pulsa. */}
+            {/* A bater. O anel que expande é um segundo elemento por baixo do
+                número, para o próprio número não escalar e continuar legível
+                enquanto pulsa. */}
             <span
               aria-hidden
-              className="badge-alert absolute -right-1 -top-1 flex h-[17px] min-w-[17px] items-center justify-center rounded-full bg-[#e11d48] px-1 text-[9.5px] font-bold leading-none text-white"
+              className={`badge-alert absolute -right-1 -top-1 flex h-[17px] min-w-[17px] items-center justify-center rounded-full px-1 text-[9.5px] font-bold leading-none text-white ${
+                teamOnly ? "badge-alert-info bg-[#0ea5e9]" : "bg-[#e11d48]"
+              }`}
             >
               {badgeCount > 99 ? "99+" : badgeCount}
             </span>
             <span
               aria-hidden
-              className="absolute -right-1 -top-1 h-[17px] min-w-[17px] animate-ping rounded-full bg-rose-500/45"
+              className={`absolute -right-1 -top-1 h-[17px] min-w-[17px] animate-ping rounded-full ${
+                teamOnly ? "bg-sky-500/45" : "bg-rose-500/45"
+              }`}
             />
           </>
         )}
@@ -303,12 +322,14 @@ export function NotificationsDrawer({
                   onClick={() => setTab("mine")}
                   label="As minhas"
                   count={count}
+                  tone="mine"
                 />
                 <TabButton
                   active={tab === "team"}
                   onClick={() => setTab("team")}
                   label="Equipa"
                   count={teamOther}
+                  tone="team"
                   icon={<Users className="h-3 w-3" />}
                 />
               </div>
@@ -430,14 +451,25 @@ function TabButton({
   onClick,
   label,
   count,
+  tone,
   icon,
 }: {
   active: boolean;
   onClick: () => void;
   label: string;
   count: number;
+  /** A mesma regra do sino: vermelho para o que é meu, azul para o da equipa. */
+  tone: "mine" | "team";
   icon?: React.ReactNode;
 }) {
+  const pill =
+    tone === "team"
+      ? active
+        ? "bg-sky-500/25 text-sky-200"
+        : "bg-sky-500/15 text-sky-300/80"
+      : active
+        ? "bg-rose-500/25 text-rose-200"
+        : "bg-rose-500/15 text-rose-300/80";
   return (
     <button
       type="button"
@@ -454,11 +486,7 @@ function TabButton({
       {label}
       {count > 0 && (
         <span
-          className={`tabular rounded-full px-1.5 py-0.5 text-[9.5px] font-bold leading-none ${
-            active
-              ? "bg-rose-500/25 text-rose-200"
-              : "bg-rose-500/15 text-rose-300/80"
-          }`}
+          className={`tabular rounded-full px-1.5 py-0.5 text-[9.5px] font-bold leading-none ${pill}`}
         >
           {count > 99 ? "99+" : count}
         </span>
@@ -512,7 +540,7 @@ function TeamPanel({
         <span
           className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10.5px] font-bold uppercase tracking-[0.12em] ${
             late.length > 0
-              ? "border-rose-400/35 bg-rose-500/[0.1] text-rose-200"
+              ? "border-sky-400/35 bg-sky-500/[0.1] text-sky-200"
               : "border-emerald-400/30 bg-emerald-500/[0.1] text-emerald-200"
           }`}
         >
@@ -573,7 +601,7 @@ function TeamPersonRow({
   onNavigate: () => void;
 }) {
   return (
-    <details className="group rounded-xl border border-rose-400/20 bg-rose-500/[0.04] p-3 transition open:border-rose-400/35">
+    <details className="group rounded-xl border border-sky-400/20 bg-sky-500/[0.04] p-3 transition open:border-sky-400/35">
       <summary className="flex cursor-pointer items-center gap-2.5 marker:content-['']">
         <span
           aria-hidden
@@ -590,7 +618,7 @@ function TeamPersonRow({
             {row.oldestDueAt ? ` · desde ${formatDate(row.oldestDueAt)}` : ""}
           </span>
         </span>
-        <span className="tabular shrink-0 rounded-full bg-rose-500/20 px-2 py-0.5 text-[11px] font-bold text-rose-200">
+        <span className="tabular shrink-0 rounded-full bg-sky-500/20 px-2 py-0.5 text-[11px] font-bold text-sky-200">
           {row.pending}
         </span>
       </summary>

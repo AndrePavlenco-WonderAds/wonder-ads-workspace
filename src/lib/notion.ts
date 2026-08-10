@@ -89,6 +89,9 @@ const EXTRA_SEO_CLIENTS: Array<{
   // seamlessly (seenSlugs dedupes) and the intake PDF attaches to /seo/<slug>.
   { title: "Cidália Cabeleireiros", icon: "💇" },
   { title: "MyMedic", icon: "🏥" },
+  // Maratona Clube de Portugal (v76.39) — organizador da EDP Maratona de
+  // Lisboa, Meia Maratona e restantes provas. João B., onboarding 01/09/2026.
+  { title: "Maratona Clube de Portugal", icon: "🏃" },
 ];
 
 const _fetchSeoClients = unstable_cache(
@@ -177,7 +180,8 @@ const _fetchSeoClients = unstable_cache(
   // v11: merge promoted onboarding-flow clients into the roster.
   // v12: uma consultora saiu e a carteira foi redistribuída; João B. joins with
   // Cidália Cabeleireiros + MyMedic (synthetic, still in onboarding) (v75.4).
-  ["seo-clients-v12"],
+  // v13: Maratona Clube de Portugal entra na carteira do João B. (v76.39).
+  ["seo-clients-v13"],
   { revalidate: 3600, tags: ["seo-clients"] },
 );
 

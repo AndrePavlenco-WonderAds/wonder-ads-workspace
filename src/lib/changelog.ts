@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.39",
+    date: "2026-08-10",
+    title: "Entrou a Maratona Clube de Portugal — e o sino deixou de gritar a vermelho por trabalho que não é nosso",
+    highlights: [
+      "**🏃 Novo cliente SEO: Maratona Clube de Portugal**, para o **João B.** — o organizador da EDP Maratona de Lisboa, da Meia Maratona e das restantes provas. Entra já com o logótipo real tirado do site, as cores da marca (o verde-néon do site a fechar no azul-marinho), o website e a ficha de nicho (desporto · eventos · quem viaja para correr), que é o que alimenta o motor de diretórios.",
+      "**📅 Onboarding e arranque a 01/09/2026**, definidos no sítio onde a equipa os mantém — a Starting date da tabela de Clients. A pastilha «Onboarded» na ficha e o roadmap leem daí sozinhos, sem ninguém ter de repetir a data em três sítios. **O link público de onboarding já está criado** e é o mesmo slug da ficha, por isso o formulário submetido cola-se a `/seo/maratona-clube-de-portugal` sem trabalho manual.",
+      "**🔵 O sino das notificações passou a distinguir o que é MEU do que é da EQUIPA.** Quem tem o painel de equipa (o C-Level e o André) andava com o contador vermelho a pulsar por causa de trabalho em aberto de outras pessoas — e um alarme que está sempre ligado deixa de ser um alarme. Agora a bola do número fica **azul quando só há trabalho da equipa** e volta a **vermelho assim que houver uma notificação própria**. Uma coisa minha nunca fica escondida atrás das dos outros.",
+      "**🎨 A regra é a mesma em todo o painel**, não só na bola: os separadores «As minhas» / «Equipa», as linhas de cada pessoa e o resumo de quem está em dívida seguem a mesma cor. O verde de «em dia» ficou como estava.",
+    ],
+  },
+  {
     version: "76.38",
     date: "2026-08-07",
     title: "O relatório mensal passou a ter uma única tabela de keywords — com a posição real via Serpstat",

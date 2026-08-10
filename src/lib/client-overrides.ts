@@ -55,9 +55,11 @@ const ANDRE_PEREIRA = new Set([
 // onboarding (superadmin filling the forms) — surfaced on the board via
 // EXTRA_SEO_CLIENTS in notion.ts. When they submit the onboarding form the
 // same slug promotes seamlessly and the intake attaches to /seo/<slug>.
+// v76.39: Maratona Clube de Portugal (onboarding 01/09/2026).
 const JOAO_B = new Set([
   "cidalia-cabeleireiros",
   "mymedic",
+  "maratona-clube-de-portugal",
 ]);
 
 // v75.4: uma consultora de SEO saiu e a carteira dela foi redistribuída:

@@ -50,6 +50,13 @@ const PALETTES: Record<string, ClientPalette> = {
   cuidamais: { from: "#3FB54A", via: "#0A8015", to: "#23286A" },
   // kingsgyms.com — gold crown + white wordmark on black (regal gold → dark).
   "kings-gyms": { from: "#E8C66B", via: "#B8902F", to: "#0A0A0A" },
+  // maratonaclubedeportugal.com — verde-néon do site (#28FF52) + verde do
+  // emblema, a fechar no azul-marinho da marca (#053266).
+  "maratona-clube-de-portugal": {
+    from: "#28FF52",
+    via: "#248430",
+    to: "#053266",
+  },
 };
 
 const DEFAULT_PALETTE: ClientPalette = {

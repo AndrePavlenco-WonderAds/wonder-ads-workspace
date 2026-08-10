@@ -447,15 +447,25 @@ body {
   40%           { transform: scale(1.07); }
 }
 @keyframes badge-alert-halo {
-  0%   { box-shadow: 0 0 0 0 rgba(225, 29, 72, 0.65); }
-  70%  { box-shadow: 0 0 0 7px rgba(225, 29, 72, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(225, 29, 72, 0); }
+  0%   { box-shadow: 0 0 0 0 var(--badge-halo); }
+  70%  { box-shadow: 0 0 0 7px var(--badge-halo-out); }
+  100% { box-shadow: 0 0 0 0 var(--badge-halo-out); }
 }
 .badge-alert {
+  --badge-halo: rgba(225, 29, 72, 0.65);
+  --badge-halo-out: rgba(225, 29, 72, 0);
   transform-origin: center;
   animation:
     badge-alert-beat 1.5s ease-in-out infinite,
     badge-alert-halo 1.5s ease-in-out infinite;
+}
+/* Mesma batida, outro significado: azul quando o que está por resolver é da
+   EQUIPA e não de quem está a ver. O vermelho fica reservado ao que é meu —
+   se tudo pulsar vermelho, deixa de haver diferença entre «tenho de fazer» e
+   «tenho de cobrar». */
+.badge-alert-info {
+  --badge-halo: rgba(14, 165, 233, 0.65);
+  --badge-halo-out: rgba(14, 165, 233, 0);
 }
 
 /* Respect prefers-reduced-motion */
