@@ -1,40 +1,74 @@
 // Frases de campeão do hub da Formação.
 //
 // A linha por baixo do nome não é decoração: é o tom com que a WonderAds quer
-// que a equipa entre na formação. Fala de responsabilidade sobre a conta e de
-// fazer o trabalho bem feito — não de "boa sorte".
+// que a equipa entre na formação. Dez frases conhecidas sobre disciplina,
+// repetição e trabalho feito — não sobre "boa sorte".
 //
-// A escolha é DETERMINÍSTICA (username + dia), não aleatória: dentro do mesmo
-// dia a frase é sempre a mesma para a mesma pessoa, o que evita que mude a
-// cada refresh, e muda no dia seguinte, o que evita que canse.
+// COM AUTOR, SEMPRE. Uma frase forte sem nome lê-se como slogan de agência;
+// com o nome de quem a disse, lê-se como uma ideia que já foi provada por
+// alguém. E atribuir mal é pior do que não atribuir: a frase da excelência
+// como hábito é de Will Durant a resumir Aristóteles, e é assim que está
+// creditada aqui, e não como toda a internet a cita.
+//
+// SORTEIO A CADA VISITA (v76.42). Era determinística por dia — a mesma frase
+// para a mesma pessoa durante 24h. Passou a mudar sempre que se entra na
+// Formação, que é o que faz alguém repará-la outra vez. A página já é
+// `force-dynamic`, por isso não há cache a congelar a escolha.
 
-const CHAMPION_LINES = [
-  "Campeões não nascem prontos. Treinam quando ninguém está a ver.",
-  "A conta do cliente é tua. O resultado dele também.",
-  "Ninguém se torna bom por acaso — torna-se bom por repetição.",
-  "O que aprendes hoje é o que entregas ao cliente amanhã.",
-  "Detalhe é o que separa quem faz de quem faz bem.",
-  "Se o cliente não responde, o próximo passo continua a ser teu.",
-  "Um mês mau não define um campeão. A reação a ele, sim.",
-  "Sabe explicar o que fazes. É isso que transforma trabalho em confiança.",
-  "Faz as perguntas difíceis cedo. Custam sempre menos do que tarde.",
-  "Excelência é um hábito, não um momento de inspiração.",
+export type ChampionQuote = {
+  text: string;
+  author: string;
+};
+
+const CHAMPION_QUOTES: ChampionQuote[] = [
+  {
+    text: "O sucesso é a soma de pequenos esforços repetidos dia após dia.",
+    author: "Robert Collier",
+  },
+  {
+    text: "A disciplina é a ponte entre os objetivos e as conquistas.",
+    author: "Jim Rohn",
+  },
+  {
+    text: "Não contes os dias. Faz com que os dias contem.",
+    author: "Muhammad Ali",
+  },
+  {
+    text: "Somos aquilo que fazemos repetidamente. A excelência não é um ato, é um hábito.",
+    author: "Will Durant",
+  },
+  {
+    text: "O único sítio onde o sucesso vem antes do trabalho é no dicionário.",
+    author: "Vince Lombardi",
+  },
+  {
+    text: "Faz o que podes, com o que tens, onde estás.",
+    author: "Theodore Roosevelt",
+  },
+  {
+    text: "A sorte acontece quando a preparação encontra a oportunidade.",
+    author: "Séneca",
+  },
+  {
+    text: "Ou encontro um caminho, ou abro um.",
+    author: "Aníbal",
+  },
+  {
+    text: "Se queres ir depressa, vai sozinho; se queres ir longe, vai acompanhado.",
+    author: "Provérbio africano",
+  },
+  {
+    text: "Nada neste mundo substitui a persistência.",
+    author: "Calvin Coolidge",
+  },
 ];
 
-/** Dias inteiros desde a época — muda a frase à meia-noite. */
-function dayIndex(nowMs: number): number {
-  return Math.floor(nowMs / 86_400_000);
+/** Uma frase à sorte — nova a cada entrada na Formação. */
+export function championQuote(): ChampionQuote {
+  const i = Math.floor(Math.random() * CHAMPION_QUOTES.length);
+  return CHAMPION_QUOTES[i] ?? CHAMPION_QUOTES[0];
 }
 
-function hash(text: string): number {
-  let h = 0;
-  for (let i = 0; i < text.length; i += 1) {
-    h = (h * 31 + text.charCodeAt(i)) | 0;
-  }
-  return Math.abs(h);
-}
-
-export function championLine(username: string, nowMs: number): string {
-  const i = (hash(username) + dayIndex(nowMs)) % CHAMPION_LINES.length;
-  return CHAMPION_LINES[i];
-}
+/** Quantas frases há — usado nos testes e para o painel do CMS não ter de
+ *  importar a lista inteira. */
+export const CHAMPION_QUOTE_COUNT = CHAMPION_QUOTES.length;

@@ -17,7 +17,8 @@ import {
 } from "@/lib/admin-clients-store";
 import { getConsultantForSlug } from "@/lib/client-overrides";
 import { getPausedSlugSet } from "@/lib/admin-paused-clients-store";
-import { EMPLOYEE_CREDENTIALS } from "@/lib/auth/credentials";
+import { EMPLOYEE_CREDENTIALS, isAdminUsername } from "@/lib/auth/credentials";
+import { listTrainingFeedback } from "@/lib/training/feedback-store";
 import { getNotificationRules } from "@/lib/notifications/rules-store";
 import {
   getNotificationState,
@@ -211,6 +212,69 @@ function buildNotifications(
 }
 
 /** Notificações em aberto (e as recentemente resolvidas) de um utilizador. */
+/** Janela de tempo em que uma submissão de feedback continua a aparecer no
+ *  sino. Depois disto sai do sino e vive só na página de Formação → Feedback:
+ *  o sino é para o que está por tratar, não é um arquivo. */
+const FEEDBACK_NOTIFICATION_WINDOW_MS = 60 * 24 * 60 * 60 * 1000; // 60 dias
+
+/** Feedback da Formação → notificações, SÓ para SuperAdmins.
+ *
+ *  Isto não passa pelo motor de regras de propósito: as regras são um
+ *  calendário (todo o mês 2, entre o mês 3 e o 6 do cliente…) e isto é um
+ *  ACONTECIMENTO — alguém respondeu, num instante que ninguém agendou. Forçar
+ *  um no molde do outro dava uma regra com um `schedule` falso.
+ *
+ *  Derivam-se do registo em cada leitura, como tudo o resto no sino: nada é
+ *  "enviado" na submissão, portanto não há entrega que possa falhar em
+ *  silêncio. E o corpo leva as RESPOSTAS, não um "há feedback novo" — quem
+ *  abre o sino já fica a saber o que a pessoa disse. */
+async function trainingFeedbackNotifications(
+  viewer: Viewer,
+  state: NotificationState,
+  now: Date,
+): Promise<UserNotification[]> {
+  if (!isAdminUsername(viewer.username)) return [];
+  let entries: Awaited<ReturnType<typeof listTrainingFeedback>>;
+  try {
+    entries = await listTrainingFeedback();
+  } catch (err) {
+    console.error("Notificações: feedback da Formação falhou:", err);
+    return [];
+  }
+  const floor = now.getTime() - FEEDBACK_NOTIFICATION_WINDOW_MS;
+  return entries
+    .filter((e) => e.createdAt >= floor)
+    .map((e) => {
+      const id = `training-feedback:${e.id}`;
+      const resolved = state[id];
+      const stars = (n: number) => "★".repeat(n) + "☆".repeat(5 - n);
+      const free = [
+        e.whatWorked && `Funcionou: ${e.whatWorked}`,
+        e.whatMissing && `Faltou: ${e.whatMissing}`,
+        e.suggestions && `Mudaria: ${e.suggestions}`,
+      ]
+        .filter(Boolean)
+        .join(" · ");
+      return {
+        id,
+        ruleId: "training-feedback",
+        title: `${e.name} deu feedback sobre a formação`,
+        body:
+          `Formador ${stars(e.ratings.instructor)} · Vídeo ${stars(e.ratings.video)} · ` +
+          `Processo ${stars(e.ratings.process)} — na aula «${e.lessonTitle}», ` +
+          `com ${e.lessonsWatchedAtTime} aulas vistas.` +
+          (free ? ` ${free}` : ""),
+        periodLabel: e.lessonTitle || "Formação",
+        dueAt: e.createdAt,
+        client: null,
+        actionLabel: "Ler as respostas",
+        actionHref: "/formacao/admin/feedback",
+        resolved: Boolean(resolved),
+        resolvedAt: resolved?.resolvedAt ?? null,
+      };
+    });
+}
+
 export async function getUserNotifications(
   viewer: Viewer,
   now: Date = new Date(),
@@ -220,10 +284,14 @@ export async function getUserNotifications(
     getNotificationState(viewer.username),
   ]);
 
+  // O feedback da Formação corre mesmo quando não há regra nenhuma aplicável
+  // — não depende delas.
+  const feedback = await trainingFeedbackNotifications(viewer, state, now);
+
   const applicable = rules.filter(
     (r) => r.enabled && audienceMatches(r.audience, viewer),
   );
-  if (applicable.length === 0) return [];
+  if (applicable.length === 0) return feedback;
 
   // A carteira só se lê se alguma regra precisar dela.
   const needsBook = applicable.some((r) => r.scope === "seo-client");
@@ -234,7 +302,7 @@ export async function getUserNotifications(
     ? ((await seoBooksByConsultant(needsStartDates)).get(viewer.name) ?? [])
     : [];
 
-  return buildNotifications(viewer, rules, state, book, now);
+  return [...feedback, ...buildNotifications(viewer, rules, state, book, now)];
 }
 
 // ---------------------------------------------------------------------------

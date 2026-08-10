@@ -32,7 +32,16 @@ import {
   LessonKeyPoints,
 } from "@/components/training/lesson-aside";
 import { LessonTypeBadge } from "@/components/training/training-ui";
-import { getTrainingContext, trackStateFor } from "@/lib/training/server";
+import { LessonFeedback } from "@/components/training/lesson-feedback";
+import {
+  getTrainingContext,
+  trackStateFor,
+  userTracks,
+} from "@/lib/training/server";
+import {
+  computeNudge,
+  listUserTrainingFeedback,
+} from "@/lib/training/feedback-store";
 import {
   detectProvider,
   lessonMinutes,
@@ -121,6 +130,18 @@ export default async function LessonPage({
   const provider =
     lesson.videoProvider ??
     (lesson.videoUrl ? detectProvider(lesson.videoUrl) : null);
+
+  // Estado do lembrete de feedback. Duas leituras baratas de KV (o que esta
+  // pessoa já submeteu + quantas aulas leva), e é o que decide se a zona de
+  // feedback da barra lateral pisca ou fica quieta.
+  const myFeedback = await listUserTrainingFeedback(ctx.employee.username).catch(
+    () => [],
+  );
+  const lessonsWatchedTotal = userTracks(ctx).reduce(
+    (s, t) => s + t.watchedLessons,
+    0,
+  );
+  const nudge = computeNudge(myFeedback, lessonsWatchedTotal);
 
   // Posição dentro do capítulo — a leitura "aula 2 de 5" que aparece na faixa.
   const posInModule =
@@ -231,37 +252,79 @@ export default async function LessonPage({
               </div>
             )}
 
-            {/* ---------- Navegação ---------- */}
-            <div className="mt-8 flex flex-wrap items-center justify-between gap-3">
+            {/* ---------- Navegação ----------
+                UMA BARRA, NÃO DOIS BOTÕES SOLTOS. Antes era um flex
+                `justify-between` sem moldura: na primeira aula de um capítulo
+                não há «anterior», e o botão de avançar ficava sozinho a
+                flutuar no meio do branco, sem nada que explicasse o que era.
+                Agora os dois vivem numa barra com rótulos — mesmo quando só
+                há um lado, o botão pertence a alguma coisa. */}
+            <nav
+              aria-label="Navegação entre aulas"
+              className="mt-8 grid gap-2 rounded-2xl border border-white/[0.07] bg-white/[0.018] p-2.5 sm:grid-cols-2"
+            >
               {prev ? (
                 <Link
                   href={`/formacao/${slug}/aula/${prev.lesson.id}`}
-                  className="group inline-flex min-w-0 max-w-full items-center gap-2 rounded-xl border border-white/[0.09] px-3.5 py-2.5 text-[12.5px] text-white/60 transition hover:border-[#783DF5]/40 hover:text-white"
+                  className="group flex min-w-0 items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-left transition hover:bg-white/[0.05]"
                 >
-                  <ArrowLeft className="h-4 w-4 shrink-0 transition-transform group-hover:-translate-x-0.5" />
-                  <span className="truncate">{prev.lesson.title}</span>
+                  <ArrowLeft className="h-4 w-4 shrink-0 text-white/40 transition-transform group-hover:-translate-x-0.5 group-hover:text-white" />
+                  <span className="min-w-0">
+                    <span className="readout block text-white/28">Anterior</span>
+                    <span className="block truncate text-[12.5px] text-white/70 group-hover:text-white">
+                      {prev.lesson.title}
+                    </span>
+                  </span>
                 </Link>
               ) : (
-                <span />
+                <span className="flex items-center gap-2.5 rounded-xl px-3.5 py-2.5">
+                  <span className="min-w-0">
+                    <span className="readout block text-white/20">Anterior</span>
+                    <span className="block truncate text-[12.5px] text-white/30">
+                      Primeira aula do capítulo
+                    </span>
+                  </span>
+                </span>
               )}
               {next && !next.locked ? (
                 <Link
                   href={`/formacao/${slug}/aula/${next.lesson.id}`}
-                  className="brand-gradient-bg group inline-flex min-w-0 max-w-full items-center gap-2 rounded-xl px-4 py-2.5 text-[12.5px] font-semibold text-white transition hover:brightness-110"
+                  className="brand-gradient-bg group flex min-w-0 items-center justify-end gap-2.5 rounded-xl px-4 py-2.5 text-right transition hover:brightness-110"
                 >
-                  <span className="truncate">{next.lesson.title}</span>
-                  <ArrowRight className="h-4 w-4 shrink-0 transition-transform group-hover:translate-x-0.5" />
+                  <span className="min-w-0">
+                    <span className="readout block text-white/60">A seguir</span>
+                    <span className="block truncate text-[12.5px] font-semibold text-white">
+                      {next.lesson.title}
+                    </span>
+                  </span>
+                  <ArrowRight className="h-4 w-4 shrink-0 text-white transition-transform group-hover:translate-x-0.5" />
                 </Link>
               ) : moduleState.quizRequired && allWatchedInModule ? (
                 <Link
                   href={`/formacao/${slug}/teste/${moduleState.module.id}`}
-                  className="brand-gradient-bg group inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-[12.5px] font-semibold text-white transition hover:brightness-110"
+                  className="brand-gradient-bg group flex items-center justify-end gap-2.5 rounded-xl px-4 py-2.5 text-right transition hover:brightness-110"
                 >
-                  <ClipboardCheck className="h-4 w-4" />
-                  Fazer o quiz do capítulo
+                  <span>
+                    <span className="readout block text-white/60">A seguir</span>
+                    <span className="block text-[12.5px] font-semibold text-white">
+                      Fazer o quiz do capítulo
+                    </span>
+                  </span>
+                  <ClipboardCheck className="h-4 w-4 shrink-0 text-white" />
                 </Link>
-              ) : null}
-            </div>
+              ) : (
+                <span className="flex items-center justify-end gap-2.5 rounded-xl px-4 py-2.5 text-right">
+                  <span>
+                    <span className="readout block text-white/20">A seguir</span>
+                    <span className="block text-[12.5px] text-white/30">
+                      {next?.locked
+                        ? "Ainda trancada"
+                        : "Última aula do capítulo"}
+                    </span>
+                  </span>
+                </span>
+              )}
+            </nav>
           </div>
 
           {/* ---------- Coluna direita: Remember, instrutores, espinha ---------- */}
@@ -271,6 +334,17 @@ export default async function LessonPage({
           <aside className="animate-fade-up space-y-4 lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:self-start lg:overflow-y-auto lg:pr-1">
             <LessonKeyPoints points={lesson.keyPoints} />
             <LessonInstructors presenter={lesson.presenter} />
+            {/* Logo por baixo de quem deu a aula — é sobre ele, sobre o vídeo
+                e sobre o processo que se pergunta. */}
+            <LessonFeedback
+              trackSlug={slug}
+              lessonId={lesson.id}
+              lessonTitle={lesson.title}
+              presenter={lesson.presenter ?? null}
+              shouldNudge={nudge.shouldNudge}
+              watchedSinceFeedback={nudge.watchedSinceFeedback}
+              submissions={nudge.submissions}
+            />
 
             <div className="overflow-hidden rounded-2xl border border-white/[0.07] bg-white/[0.018]">
               <div className="h-[3px] w-full bg-white/[0.05]">

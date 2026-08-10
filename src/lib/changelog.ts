@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.42",
+    date: "2026-08-10",
+    title: "A Formação passou a ouvir quem a está a fazer",
+    highlights: [
+      "**💬 Nova zona «Dar feedback sobre este processo», por baixo do instrutor de cada aula.** Abre um formulário com três notas separadas — **o formador**, **o vídeo** e **o processo até ali** — mais três campos livres. Separadas de propósito: um 3 numa nota única não se consegue acionar, porque pode ser um bom formador com um vídeo mau, e a correção é oposta em cada caso.",
+      "**🔴 Ao fim de 15 aulas sem feedback, a zona começa a piscar.** E volta a acender 15 aulas depois da última resposta — quem responde à 15.ª é chamado outra vez à 30.ª, não na aula seguinte. Um pedido que está sempre ligado ensina-se a ignorar; este só aparece quando a pessoa já viu formação que chegue para ter opinião fundamentada.",
+      "**🔔 Cada resposta cai no sino do C-Level — e leva lá dentro as RESPOSTAS.** Não é um «há feedback novo» que obriga a abrir outra página: o corpo da notificação traz as três notas em estrelas, a aula, o formador, quantas aulas a pessoa já tinha visto e os textos que escreveu. **Só os SuperAdmins a veem.** Há também um separador **Formação → Feedback** com o arquivo completo e a média de cada uma das três dimensões, para se ver qual delas está a puxar a formação para baixo.",
+      "**✍️ A frase de boas-vindas passou a ser sorteada a cada entrada**, de uma biblioteca de dez frases conhecidas sobre disciplina e repetição — cada uma com o autor. Era a mesma durante 24 horas. E o autor não é enfeite: sem nome, uma frase forte lê-se como slogan de agência; com ele, lê-se como uma ideia que já foi provada por alguém.",
+      "**🧭 Arrumos.** O anel do hub diz **«progresso»** e não «global». O botão da aula seguinte deixou de flutuar sozinho no meio do nada — os dois lados vivem agora numa barra com rótulos «Anterior» e «A seguir», e na primeira aula do capítulo o lado vazio explica-se em vez de ficar em branco. E o cargo do André nos cartões de instrutor passou a **Head de Operações, Processos e Protocolos**.",
+    ],
+  },
+  {
     version: "76.41",
     date: "2026-08-10",
     title: "«Ver como» — o C-Level passa a abrir a app pelos olhos de qualquer pessoa da equipa",

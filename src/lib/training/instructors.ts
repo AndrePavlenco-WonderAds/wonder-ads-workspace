@@ -38,14 +38,14 @@ const CAST: Record<string, TrainingInstructor> = {
   andre: {
     key: "andre",
     name: "André Pavlenco",
-    role: "COO · Head de SEO",
+    role: "COO · Head de Operações, Processos e Protocolos",
     photo: "/team/andre-pavlenco.jpg",
     objectPosition: "50% 20%",
   },
   "andre pavlenco": {
     key: "andre",
     name: "André Pavlenco",
-    role: "COO · Head de SEO",
+    role: "COO · Head de Operações, Processos e Protocolos",
     photo: "/team/andre-pavlenco.jpg",
     objectPosition: "50% 20%",
   },

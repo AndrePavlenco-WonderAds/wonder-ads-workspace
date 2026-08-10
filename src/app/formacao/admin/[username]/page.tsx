@@ -200,7 +200,7 @@ export default async function ConsultantDrillDownPage({
             </p>
           </div>
         </div>
-        <ProgressRing percent={row.percent} label="global" size={110} />
+        <ProgressRing percent={row.percent} label="progresso" size={110} />
       </section>
 
       <section className="animate-fade-up mt-4 grid grid-cols-2 gap-3 lg:grid-cols-5">

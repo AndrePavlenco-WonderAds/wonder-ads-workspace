@@ -5,7 +5,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ClipboardList, Film, Pencil, Users } from "lucide-react";
+import {
+  ClipboardList,
+  Film,
+  MessageSquareQuote,
+  Pencil,
+  Users,
+} from "lucide-react";
 
 const TABS = [
   { href: "/formacao/admin", label: "Equipa", Icon: Users, exact: true },
@@ -16,6 +22,11 @@ const TABS = [
     Icon: ClipboardList,
   },
   { href: "/formacao/admin/cms", label: "Conteúdo", Icon: Pencil },
+  {
+    href: "/formacao/admin/feedback",
+    label: "Feedback",
+    Icon: MessageSquareQuote,
+  },
 ];
 
 export function TrainingAdminNav() {

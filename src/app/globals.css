@@ -468,9 +468,29 @@ body {
   --badge-halo-out: rgba(14, 165, 233, 0);
 }
 
+/* A zona de feedback da Formação depois de 15 aulas sem resposta.
+   LENTO DE PROPÓSITO — 2,4s por ciclo, e a pulsar a moldura em vez do
+   conteúdo. É um lembrete numa barra lateral que fica aberta enquanto se vê
+   um vídeo de 12 minutos: a piscar depressa era um erro de UI, não um
+   pedido. */
+@keyframes feedback-nudge {
+  0%, 100% {
+    border-color: rgba(251, 113, 133, 0.45);
+    box-shadow: 0 0 0 0 rgba(244, 63, 94, 0);
+  }
+  50% {
+    border-color: rgba(251, 113, 133, 0.95);
+    box-shadow: 0 0 0 4px rgba(244, 63, 94, 0.13);
+  }
+}
+.animate-feedback-nudge {
+  animation: feedback-nudge 2.4s ease-in-out infinite;
+}
+
 /* Respect prefers-reduced-motion */
 @media (prefers-reduced-motion: reduce) {
   .animate-drawer-in,
+  .animate-feedback-nudge,
   .animate-node-halo,
   .animate-orb-pulse,
   .animate-drift-slow,

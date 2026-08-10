@@ -60,7 +60,7 @@ import {
 import { getTrainingContext, userTracks } from "@/lib/training/server";
 import { overallPercent } from "@/lib/training/progress";
 import type { TrackState } from "@/lib/training/progress";
-import { championLine } from "@/lib/training/champion";
+import { championQuote } from "@/lib/training/champion";
 import { lessonMinutes } from "@/lib/training/catalog";
 import { formatDate } from "@/lib/dates";
 
@@ -88,6 +88,8 @@ export default async function FormacaoPage() {
 
   const { employee, common, specializations, exams } = ctx;
   const global = overallPercent(common, specializations);
+  // Sorteada a cada entrada — a página é force-dynamic, por isso muda mesmo.
+  const quote = championQuote();
   const tracks = userTracks(ctx);
   const now = new Date();
   const day = dayInHouse(exams.startedAt, now);
@@ -226,9 +228,17 @@ export default async function FormacaoPage() {
               )}
             </div>
 
-            <p className="mt-4 max-w-xl text-[13.5px] leading-relaxed text-white/55">
-              {championLine(employee.username, Date.now())}
-            </p>
+            {/* Frase à sorte a cada entrada (v76.42). Com autor: sem o nome
+                de quem a disse, uma frase forte lê-se como slogan; com ele,
+                lê-se como uma ideia já provada por alguém. */}
+            <figure className="mt-4 max-w-xl">
+              <blockquote className="text-[13.5px] leading-relaxed text-white/70">
+                “{quote.text}”
+              </blockquote>
+              <figcaption className="mt-1 text-[11.5px] font-medium uppercase tracking-[0.14em] text-white/35">
+                {quote.author}
+              </figcaption>
+            </figure>
 
             {!exams.startedAt && (
               <p className="mt-3 text-[12px] leading-relaxed text-amber-200/70">
@@ -250,7 +260,7 @@ export default async function FormacaoPage() {
           </div>
 
           <div className="flex shrink-0 items-center gap-5 lg:pr-2">
-            <ProgressRing percent={global} label="global" size={150} />
+            <ProgressRing percent={global} label="progresso" size={150} />
           </div>
         </div>
       </section>
