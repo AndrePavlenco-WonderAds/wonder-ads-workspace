@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.45",
+    date: "2026-08-10",
+    title: "Weekly Reports: cola a semana de daily updates, sai uma mensagem por cliente",
+    highlights: [
+      "**📋 Nova página `/seo/weekly-reports`, partilhada por todos os consultores.** Cinco caixas — segunda a sexta, já com as datas da semana — onde se cola o daily update de cada dia tal como foi escrito no grupo interno. A app lê-os, descobre que clientes lá estão, e devolve **um ponto de situação por cliente**, pronto a colar no grupo de WhatsApp dele.",
+      "**🔁 O botão do roadmap deixou de gerar e passou a levar aqui.** O antigo escrevia a mensagem a partir do ROADMAP — que diz o que estava *planeado*, não o que foi *feito* — e obrigava a repetir tudo uma vez por cliente. Deixar os dois caminhos vivos garantia que mais cedo ou mais tarde saíam duas mensagens diferentes para o mesmo cliente na mesma semana.",
+      "**🧮 Quem lê os daily updates é código, não a IA.** O formato é escrito pela casa («Cliente:» e bullets por baixo), e um parser determinístico erra sempre da mesma maneira — dá para ver no ecrã. Um modelo a fazer o mesmo pode fundir dois clientes ou perder um bullet, e ninguém dá por isso até a mensagem estar no telemóvel do cliente errado. **À IA fica o que ela faz bem:** traduzir «instalado plugin de tradução» para o benefício que o cliente percebe. Nomes que não batem com a carteira aparecem à mesma, marcados a amarelo.",
+      "**🗓️ O «Na próxima semana» não é inventado.** Os daily updates só contam o que foi feito; a secção do que vem a seguir é lida do **roadmap de cada cliente**. Quando o roadmap não tem a semana seguinte preenchida, o cartão diz isso e a mensagem fica genérica — pôr um modelo a escrever compromissos numa mensagem que vai para o cliente é a única coisa aqui sem volta.",
+      "**🔔 Sexta-feira, um lembrete por consultor de SEO** para enviar os weekly reports nos grupos, com botão direto para a página. **Uma só notificação, não uma por cliente** — o trabalho faz-se numa sentada e a página devolve a carteira toda; dez linhas no sino para a mesma tarefa ensinavam a ignorá-lo. O motor de notificações ganhou agendamento **semanal** para isto.",
+    ],
+  },
+  {
     version: "76.44",
     date: "2026-08-10",
     title: "Nove capítulos temáticos na Especialização SEO — e a página finalmente lê-se",

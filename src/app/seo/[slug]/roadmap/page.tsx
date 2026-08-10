@@ -100,7 +100,7 @@ export default async function RoadmapPage({
         </div>
         {!readOnly && roadmap.tasks.length > 0 && (
           <div className="flex flex-wrap items-center gap-2">
-            <WeeklyUpdateButton clientSlug={slug} clientName={client.title} />
+            <WeeklyUpdateButton clientName={client.title} />
             <SendToReviewButton
               variant="default"
               clientSlug={slug}

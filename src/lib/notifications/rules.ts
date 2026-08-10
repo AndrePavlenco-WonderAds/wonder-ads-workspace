@@ -37,11 +37,16 @@ export type NotificationScope = (typeof NOTIFICATION_SCOPES)[number];
  *  • `once` — a partir de uma data concreta (ISO yyyy-mm-dd).
  *  • `client-month` — na ÚLTIMA SEMANA do mês N de acompanhamento de cada
  *    cliente. Não é o calendário que manda, é a idade do contrato: dois
- *    clientes do mesmo consultor disparam em semanas diferentes. */
+ *    clientes do mesmo consultor disparam em semanas diferentes.
+ *  • `weekly` — todas as semanas, no dia da semana N (0 = domingo, 5 =
+ *    sexta). O período é a SEMANA, não o mês: o lembrete de sexta-feira
+ *    passada e o desta sexta são coisas diferentes e resolvem-se à parte —
+ *    se partilhassem período, despachar um apagava o outro. */
 export type NotificationSchedule =
   | { kind: "monthly"; dayOfMonth: number }
   | { kind: "once"; date: string }
-  | { kind: "client-month"; months: number[] };
+  | { kind: "client-month"; months: number[] }
+  | { kind: "weekly"; weekday: number };
 
 export type NotificationRule = {
   id: string;
@@ -65,6 +70,11 @@ export type NotificationRule = {
  *  passado que ficou por enviar tem de continuar à frente dos olhos este mês
  *  — mas uma lista com meio ano de atrasos deixa de se ler. */
 export const LOOKBACK_PERIODS = 1;
+
+/** Semanas para trás nas regras `weekly`. Duas: dá para recuperar a sexta
+ *  passada sem transformar o sino num arquivo de meio ano de lembretes que
+ *  já não têm o que resolver. */
+export const WEEKLY_LOOKBACK_WEEKS = 2;
 
 export const DEPT_OPTIONS = ["SEO", "ADS", "Web", "Commercial", "All"] as const;
 
@@ -107,6 +117,25 @@ export const DEFAULT_NOTIFICATION_RULES: NotificationRule[] = [
     // gente levava com quatro NPS «em atraso» de janelas que passaram antes
     // de a regra existir.
     createdAt: new Date(2026, 7, 1).getTime(), // 01/08/2026
+    createdBy: "sistema",
+  },
+  {
+    id: "seo-weekly-reports",
+    title: "Enviar os Weekly Reports nos grupos",
+    body: "Sexta-feira: cola os daily updates da semana no estúdio e sai um ponto de situação por cliente, pronto a colar no grupo de WhatsApp de cada um.",
+    audience: { kind: "dept", dept: "SEO" },
+    // UMA por consultor, não uma por cliente. O weekly report faz-se numa
+    // sentada, a partir dos daily updates da semana, e a página devolve a
+    // carteira inteira de uma vez — dez linhas no sino para o mesmo trabalho
+    // ensinariam a ignorá-lo.
+    scope: "user",
+    // Sexta-feira (0 = domingo). O ponto de situação fecha a semana; enviado
+    // à segunda já está a falar de trabalho que o cliente considera velho.
+    schedule: { kind: "weekly", weekday: 5 },
+    actionLabel: "Abrir estúdio de Weekly Reports",
+    actionHref: "/seo/weekly-reports",
+    enabled: true,
+    createdAt: new Date(2026, 7, 10).getTime(), // 10/08/2026
     createdBy: "sistema",
   },
 ];
@@ -167,6 +196,31 @@ export function occurrencesFor(
   // início de CADA cliente. Quem sabe é `clientMonthOccurrences`, chamada
   // pelo motor com a carteira já em mãos.
   if (rule.schedule.kind === "client-month") return [];
+
+  if (rule.schedule.kind === "weekly") {
+    const weekday = Math.min(6, Math.max(0, Math.round(rule.schedule.weekday)));
+    const out: NotificationOccurrence[] = [];
+    // Uma ocorrência por semana para trás, a começar na mais recente que já
+    // passou. O lookback é em MESES nas outras regras; aqui contam-se
+    // semanas, senão um lembrete semanal enchia o sino com meio ano.
+    for (let back = 0; back <= WEEKLY_LOOKBACK_WEEKS; back += 1) {
+      const anchor = new Date(now);
+      anchor.setHours(9, 0, 0, 0);
+      const diff = (anchor.getDay() - weekday + 7) % 7;
+      anchor.setDate(anchor.getDate() - diff - back * 7);
+      if (anchor.getTime() > now.getTime()) continue;
+      if (anchor.getTime() < floor) continue;
+      const y = anchor.getFullYear();
+      const m = String(anchor.getMonth() + 1).padStart(2, "0");
+      const d = String(anchor.getDate()).padStart(2, "0");
+      out.push({
+        periodKey: `${y}-${m}-${d}`,
+        dueAt: anchor.getTime(),
+        periodLabel: `semana de ${d}/${m}`,
+      });
+    }
+    return out;
+  }
 
   if (rule.schedule.kind === "once") {
     const at = new Date(`${rule.schedule.date}T09:00:00`);
@@ -332,6 +386,16 @@ function normalizeSchedule(raw: unknown): NotificationSchedule {
   >;
   if (o.kind === "once" && /^\d{4}-\d{2}-\d{2}$/.test(str(o.date))) {
     return { kind: "once", date: str(o.date) };
+  }
+  if (o.kind === "weekly") {
+    // Sem isto, uma regra semanal gravada pelo painel voltava de KV
+    // convertida em mensal — silenciosamente, e só se descobria quando o
+    // lembrete de sexta deixasse de aparecer.
+    const weekday =
+      typeof o.weekday === "number" && Number.isFinite(o.weekday)
+        ? Math.min(6, Math.max(0, Math.round(o.weekday)))
+        : 5;
+    return { kind: "weekly", weekday };
   }
   if (o.kind === "client-month") {
     const months = Array.from(

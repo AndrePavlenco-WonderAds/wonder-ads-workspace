@@ -81,6 +81,18 @@ function scheduleText(rule: NotificationRule): string {
     const m = rule.schedule.months;
     return `última semana do mês ${m.join(", ")} de cada cliente`;
   }
+  if (rule.schedule.kind === "weekly") {
+    const names = [
+      "domingo",
+      "segunda",
+      "terça",
+      "quarta",
+      "quinta",
+      "sexta",
+      "sábado",
+    ];
+    return `todas as semanas, à ${names[rule.schedule.weekday] ?? "sexta"}`;
+  }
   return `a partir de ${rule.schedule.date}`;
 }
 
@@ -449,11 +461,14 @@ export function NotificationRulesPanel({
                               ? { kind: "once", date: "" }
                               : e.target.value === "client-month"
                                 ? { kind: "client-month", months: [3, 4, 5, 6] }
-                                : { kind: "monthly", dayOfMonth: 1 },
+                                : e.target.value === "weekly"
+                                  ? { kind: "weekly", weekday: 5 }
+                                  : { kind: "monthly", dayOfMonth: 1 },
                         })
                       }
                     >
                       <option value="monthly">Todos os meses</option>
+                      <option value="weekly">Todas as semanas</option>
                       <option value="client-month">
                         Última semana do mês N do cliente
                       </option>
@@ -505,12 +520,41 @@ export function NotificationRulesPanel({
                         }
                       />
                     </Labeled>
+                  ) : rule.schedule.kind === "weekly" ? (
+                    <Labeled label="Dia da semana">
+                      <select
+                        className={inputCls}
+                        value={rule.schedule.weekday}
+                        onChange={(e) =>
+                          patch(i, {
+                            schedule: {
+                              kind: "weekly",
+                              weekday: Number(e.target.value),
+                            },
+                          })
+                        }
+                      >
+                        {[
+                          "Domingo",
+                          "Segunda",
+                          "Terça",
+                          "Quarta",
+                          "Quinta",
+                          "Sexta",
+                          "Sábado",
+                        ].map((d, wi) => (
+                          <option key={d} value={wi}>
+                            {d}
+                          </option>
+                        ))}
+                      </select>
+                    </Labeled>
                   ) : (
                     <Labeled label="Data (AAAA-MM-DD)">
                       <input
                         type="date"
                         className={inputCls}
-                        value={rule.schedule.date}
+                        value={rule.schedule.kind === "once" ? rule.schedule.date : ""}
                         onChange={(e) =>
                           patch(i, {
                             schedule: { kind: "once", date: e.target.value },
