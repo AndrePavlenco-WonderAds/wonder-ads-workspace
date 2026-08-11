@@ -386,6 +386,105 @@ async function roadmapEndingNotifications(
   return out;
 }
 
+/** Quem marca as Situation Point Calls. É o fundador, e é só ele: a call é
+ *  dele com o cliente, e mandar o aviso a mais gente transformava um lembrete
+ *  pessoal em ruído para quem não a pode marcar. */
+const SITUATION_POINT_OWNER = "andre";
+
+/** A partir de quantas SEMANAS de roadmap o cliente entra na lista. Quatro
+ *  meses completos: com `WEEKS_PER_MONTH = 4`, o mês 4 acaba na semana 16, e
+ *  na 17 o cliente tem quatro meses feitos. */
+const SITUATION_POINT_WEEK = 17;
+
+/** Clientes SEO com quatro meses de roadmap cumpridos.
+ *
+ *  Cache de 30 minutos pela mesma razão dos horizontes: isto corre no sino,
+ *  que está em todas as páginas, e uma conta que muda uma vez por semana não
+ *  justifica uma leitura de KV por cliente a cada render. */
+const getSituationPointCandidates = unstable_cache(
+  async (): Promise<
+    { slug: string; title: string; icon: string | null; week: number }[]
+  > => {
+    let all: Awaited<ReturnType<typeof getSeoClients>>;
+    try {
+      all = await getSeoClients();
+    } catch {
+      return [];
+    }
+    let paused = new Set<string>();
+    try {
+      paused = await getPausedSlugSet();
+    } catch {
+      /* sem KV, mais vale a lista completa do que lista nenhuma */
+    }
+    const out: {
+      slug: string;
+      title: string;
+      icon: string | null;
+      week: number;
+    }[] = [];
+    await Promise.all(
+      all.map(async (c) => {
+        // Uma conta suspensa não precisa de ponto de situação — está parada
+        // por decisão comercial já tomada.
+        if (paused.has(c.slug)) return;
+        try {
+          const roadmap = await getCurrentRoadmap(c.slug);
+          if (!roadmap || roadmap.tasks.length === 0) return;
+          const week = currentWeekIndex(roadmap);
+          if (week < SITUATION_POINT_WEEK) return;
+          out.push({ slug: c.slug, title: c.title, icon: c.icon, week });
+        } catch {
+          /* um roadmap ilegível não pode calar o sino inteiro */
+        }
+      }),
+    );
+    return out.sort((a, b) => b.week - a.week);
+  },
+  ["notifications-situation-point-v1"],
+  { revalidate: 1800 },
+);
+
+/** «Agendar Situation Point Call» — um lembrete por cliente que chega aos
+ *  quatro meses de roadmap.
+ *
+ *  É UM MARCO, NÃO UM CICLO. Por isso o id não leva a semana: leva `m4` e o
+ *  slug, e mais nada. Assim que o fundador marcar a call e der a coisa por
+ *  resolvida, o lembrete desaparece PARA SEMPRE naquele cliente — não volta
+ *  na semana seguinte só porque o roadmap avançou mais uma. Um marco que se
+ *  repetisse todas as semanas ensinava-se a ignorar em duas. */
+async function situationPointNotifications(
+  viewer: Viewer,
+  state: NotificationState,
+  now: Date,
+): Promise<UserNotification[]> {
+  if (viewer.username !== SITUATION_POINT_OWNER) return [];
+  let candidates: Awaited<ReturnType<typeof getSituationPointCandidates>>;
+  try {
+    candidates = await getSituationPointCandidates();
+  } catch (err) {
+    console.error("Notificações: situation point falhou:", err);
+    return [];
+  }
+  return candidates.map((c) => {
+    const id = notificationId("seo-situation-point", "m4", c.slug);
+    const entry = state[id];
+    return {
+      id,
+      ruleId: "seo-situation-point",
+      title: `Agendar Situation Point Call com ${c.title}`,
+      body: `Já leva 4 meses de roadmap — vai na semana ${c.week}. É o momento de sentar com o cliente e fazer o ponto de situação da parceria: o que já produziu, o que muda daqui para a frente, e se o plano seguinte continua a ser o certo.`,
+      periodLabel: "4 meses de roadmap",
+      dueAt: now.getTime(),
+      client: { slug: c.slug, title: c.title, icon: c.icon },
+      actionLabel: "Abrir ficha do cliente",
+      actionHref: `/seo/${c.slug}`,
+      resolved: Boolean(entry),
+      resolvedAt: entry?.resolvedAt ?? null,
+    };
+  });
+}
+
 export async function getUserNotifications(
   viewer: Viewer,
   now: Date = new Date(),
@@ -414,11 +513,17 @@ export async function getUserNotifications(
       ? ((await seoBooksByConsultant(needsStartDates)).get(viewer.name) ?? [])
       : [];
 
-  const ending = await roadmapEndingNotifications(viewer, book, state, now);
+  const [ending, situationPoints] = await Promise.all([
+    roadmapEndingNotifications(viewer, book, state, now),
+    situationPointNotifications(viewer, state, now),
+  ]);
 
-  if (applicable.length === 0) return [...feedback, ...ending];
+  if (applicable.length === 0) {
+    return [...situationPoints, ...feedback, ...ending];
+  }
 
   return [
+    ...situationPoints,
     ...feedback,
     ...ending,
     ...buildNotifications(viewer, rules, state, book, now),

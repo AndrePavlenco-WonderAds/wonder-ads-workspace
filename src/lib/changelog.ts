@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.49",
+    date: "2026-08-11",
+    title: "Situation Point Call: o fundador é avisado quando um cliente faz 4 meses de roadmap",
+    highlights: [
+      "**📞 Novo lembrete no sino do André: «Agendar Situation Point Call com X».** Dispara quando um cliente de SEO cumpre **4 meses de roadmap** — com `WEEKS_PER_MONTH = 4`, o mês 4 fecha na semana 16, por isso o aviso entra na **semana 17**. Hoje são três: **IHN, Monte Mar e Fisio Restelo**, todos na semana 17 de 24.",
+      "**👤 Só o fundador o vê.** A call é dele com o cliente; mandá-la também aos consultores transformava um lembrete pessoal em ruído para quem não a pode marcar. Confirmado: não aparece ao Alex, à Alice nem a nenhum consultor.",
+      "**✅ É um MARCO, não um ciclo.** O lembrete não leva a semana na identidade — leva o cliente e o marco dos 4 meses. Assim que a call for marcada e a linha der-se por resolvida, **não volta naquele cliente**, nem na semana seguinte só porque o roadmap andou. Um marco que reaparecesse todas as semanas ensinava-se a ignorar em duas.",
+      "**⏸️ Contas em pausa ficam de fora** — uma conta suspensa não precisa de ponto de situação, a decisão comercial já foi tomada. E a varredura dos roadmaps está atrás de 30 minutos de cache, porque o sino corre em todas as páginas da app.",
+    ],
+  },
+  {
     version: "76.48",
     date: "2026-08-11",
     title: "Renovação na barra do roadmap, barra mais limpa, e aviso quando um plano está a acabar",
