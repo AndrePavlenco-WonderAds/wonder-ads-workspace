@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.54",
+    date: "2026-08-11",
+    title: "O NPS respondido chega também ao consultor da conta",
+    highlights: [
+      "**👥 Dois destinatários, dois motivos.** O **COO** continua a ver TODAS as respostas — a leitura dele é transversal, a saúde da carteira inteira. O **consultor** passa a ver as dos **seus** clientes, porque a leitura dele é a conta: é ele que liga, que corrige e que conhece o contexto do que o cliente escreveu.",
+      "**🔄 O dono resolve-se pelo consultor ATUAL da conta**, não por quem lá estava no dia em que o cliente respondeu. Numa conta que mudou de mãos, o aviso segue o cliente e não o histórico — quem tem de agir hoje é quem a tem hoje.",
+      "**✍️ O texto muda com quem lê.** Ao COO diz «conta do Manuel Silva», porque é a informação que lhe diz com quem falar; ao próprio Manuel essa frase era ruído e sai. E num detrator, ao COO sugere a chamada antes da renovação, ao consultor diz-lhe diretamente: «Liga-lhe esta semana — uma resposta destas não se resolve por email».",
+      "**✅ Verificado no encaminhamento real:** o Manuel recebe a da **A. Domingos (4/10)**, a Fran recebe a da **WonderAds (8/10)**, o André recebe as duas, e o André Pereira, o João B., o Alex e o Germano não recebem nenhuma.",
+    ],
+  },
+  {
     version: "76.53",
     date: "2026-08-11",
     title: "O COO é avisado sempre que um cliente responde ao NPS — com a nota logo no aviso",

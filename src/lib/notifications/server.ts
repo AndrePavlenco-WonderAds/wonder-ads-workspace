@@ -509,6 +509,8 @@ const getRecentNpsSubmissions = unstable_cache(
       overall: number;
       category: string;
       consultant: string | null;
+      /** Quem tem a conta AGORA — pode não ser quem a tinha na resposta. */
+      currentConsultant: string;
       identification: string | null;
     }[]
   > => {
@@ -536,6 +538,7 @@ const getRecentNpsSubmissions = unstable_cache(
               overall: s.scores.overall,
               category: s.scores.category,
               consultant: s.consultant,
+              currentConsultant: resolveConsultant(c.slug, c.consultant),
               identification: s.identification,
             });
           }
@@ -565,7 +568,17 @@ async function npsNotifications(
   state: NotificationState,
   now: Date,
 ): Promise<UserNotification[]> {
-  if (viewer.username !== SITUATION_POINT_OWNER) return [];
+  // DOIS DESTINATÁRIOS, DOIS MOTIVOS. O COO vê TODAS as respostas, porque a
+  // leitura dele é transversal — a saúde da carteira inteira. O consultor vê
+  // só as dos SEUS clientes, porque a dele é a conta: é ele que liga, que
+  // corrige e que conhece o contexto do que o cliente escreveu.
+  //
+  // O dono resolve-se pelo consultor ATUAL da conta, não pelo que estava lá
+  // no dia da resposta: quem tem de agir hoje é quem a tem hoje. Numa conta
+  // que mudou de mãos, o aviso segue o cliente e não o histórico.
+  const isCoo = viewer.username === SITUATION_POINT_OWNER;
+  const isConsultant = viewer.dept === "SEO";
+  if (!isCoo && !isConsultant) return [];
   let subs: Awaited<ReturnType<typeof getRecentNpsSubmissions>>;
   try {
     subs = await getRecentNpsSubmissions();
@@ -573,7 +586,11 @@ async function npsNotifications(
     console.error("Notificações: NPS falhou:", err);
     return [];
   }
-  return subs.map((s) => {
+  const mine = isCoo
+    ? subs
+    : subs.filter((s) => s.currentConsultant === viewer.name);
+
+  return mine.map((s) => {
     const id = notificationId("seo-nps-submitted", s.id, s.slug);
     const entry = state[id];
     const detractor = s.nps <= 6;
@@ -591,10 +608,16 @@ async function npsNotifications(
         : `A ${s.title} respondeu ao NPS — ${s.nps}/10`,
       body:
         `Continuidade ${s.nps}/10 (${label}) · média geral ${s.overall.toFixed(1)}/10` +
-        (s.consultant ? ` · conta do ${s.consultant}` : "") +
+        // Dizer «conta do Manuel» ao próprio Manuel é ruído; ao COO é a
+        // informação que lhe diz com quem falar.
+        (isCoo && s.currentConsultant !== "Unassigned"
+          ? ` · conta do ${s.currentConsultant}`
+          : "") +
         (s.identification ? ` · respondeu ${s.identification}` : "") +
         (detractor
-          ? ". Vale uma chamada esta semana, antes de a renovação chegar."
+          ? isCoo
+            ? ". Vale uma chamada esta semana, antes de a renovação chegar."
+            : ". Liga-lhe esta semana — uma resposta destas não se resolve por email."
           : promoter
             ? ". Bom momento para pedir uma referência ou uma review."
             : "."),
