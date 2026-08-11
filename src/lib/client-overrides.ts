@@ -75,6 +75,34 @@ export function getConsultantForSlug(slug: string): string {
   return "Unassigned";
 }
 
+/** O consultor em vigor para um cliente, com rede para os que ainda não
+ *  estão neste ficheiro.
+ *
+ *  PORQUE EXISTE (v76.47): a board e o motor de notificações resolviam o
+ *  consultor SÓ pelo slug, de propósito — `getSeoClients()` está em cache de
+ *  1 hora, e confiar no campo `consultant` dela fazia um cliente que mudou de
+ *  mãos apontar à pessoa errada durante esse tempo.
+ *
+ *  Só que um cliente que entra pelo ONBOARDING não está aqui: o slug dele
+ *  nasce quando o SuperAdmin cria o link, e a atribuição vive no registo de
+ *  onboarding. Resolver só pelo slug devolvia "Unassigned" — e como as
+ *  colunas da board são as do `CONSULTANT_ORDER`, o cliente não aparecia em
+ *  coluna NENHUMA. Ficava invisível no departamento até alguém se lembrar de
+ *  o acrescentar a este ficheiro e fazer deploy.
+ *
+ *  A ordem resolve as duas coisas: quem está aqui manda sempre (uma passagem
+ *  de carteira escrita em código continua a ganhar à cache), e quem não está
+ *  usa a atribuição que veio com ele. */
+export function resolveConsultant(
+  slug: string,
+  fallback: string | null | undefined,
+): string {
+  const known = getConsultantForSlug(slug);
+  if (known !== "Unassigned") return known;
+  const f = typeof fallback === "string" ? fallback.trim() : "";
+  return f || "Unassigned";
+}
+
 /** Returns the work email of the Head Consultant for a given client slug.
  *  Used on PDF/DOCX deliverables so replies land in the inbox of the
  *  consultant actually managing the project (not the shared seo@ alias). */

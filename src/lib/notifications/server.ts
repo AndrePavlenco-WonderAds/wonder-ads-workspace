@@ -1,11 +1,12 @@
 // Motor das notificações — server-only. Junta regras + calendário + carteira
 // do consultor + estado de "concluída" e devolve a lista pronta para o sino.
 //
-// A carteira SEO é re-resolvida a partir do slug (`getConsultantForSlug`) e
-// nunca do campo `consultant` que vem em cache: `getSeoClients()` está dentro
-// de um `unstable_cache` de 1h, e uma passagem de cliente entre consultores
-// ficaria a apontar à pessoa errada durante uma hora. O mesmo cuidado que a
-// board do SEO já tem.
+// A carteira SEO é re-resolvida a partir do slug (`resolveConsultant`) e não
+// do campo `consultant` que vem em cache: `getSeoClients()` está dentro de um
+// `unstable_cache` de 1h, e uma passagem de cliente entre consultores ficaria
+// a apontar à pessoa errada durante uma hora. O campo em cache entra apenas
+// como rede para os clientes vindos do onboarding, que ainda não existem em
+// client-overrides.ts. O mesmo cuidado que a board do SEO já tem.
 
 import "server-only";
 import { unstable_cache } from "next/cache";
@@ -15,7 +16,7 @@ import {
   getAdminRecords,
   DEFAULT_STARTING_DATES,
 } from "@/lib/admin-clients-store";
-import { getConsultantForSlug } from "@/lib/client-overrides";
+import { resolveConsultant } from "@/lib/client-overrides";
 import { getPausedSlugSet } from "@/lib/admin-paused-clients-store";
 import { EMPLOYEE_CREDENTIALS, isAdminUsername } from "@/lib/auth/credentials";
 import { listTrainingFeedback } from "@/lib/training/feedback-store";
@@ -91,7 +92,7 @@ async function seoBooksByConsultant(
   const startDates = withStartDates ? await getSeoStartDates() : {};
   for (const c of all) {
     if (paused.has(c.slug)) continue;
-    const consultant = getConsultantForSlug(c.slug);
+    const consultant = resolveConsultant(c.slug, c.consultant);
     if (!consultant) continue;
     const list = out.get(consultant) ?? [];
     list.push({

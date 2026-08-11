@@ -15,7 +15,7 @@ import { getSeoClients, slugify, type NotionClient } from "@/lib/notion";
 import { getSeoOrganicVisitors30d } from "@/lib/ga4";
 import {
   CONSULTANT_ORDER,
-  getConsultantForSlug,
+  resolveConsultant,
 } from "@/lib/client-overrides";
 import { TIER_RANK } from "@/lib/client-tiers";
 import {
@@ -169,23 +169,48 @@ type ConsultantColumn = { name: string; clients: NotionClient[] };
  *  IMPORTANT: re-resolve consultant from slug rather than trusting
  *  c.consultant — getSeoClients() is wrapped in unstable_cache (1h TTL)
  *  and the cached value can lag behind code-level consultant renames in
- *  client-overrides.ts. Re-resolving here means any consultant rename
+ *  client-overrides.ts. O campo em cache só entra como REDE, para os
+ *  clientes que entraram pelo onboarding e ainda não estão em
+ *  client-overrides.ts (ver `resolveConsultant`) — sem isso caíam em
+ *  "Unassigned" e não apareciam em coluna nenhuma. Re-resolving here means any consultant rename
  *  ships instantly, even before the cache evicts. The bug it fixes:
  *  renaming a consultant to a shorter form dropped 5 clients off the board
  *  because the cached consultant string didn't match the new column name. */
 function buildConsultantColumns(clients: NotionClient[]): ConsultantColumn[] {
   const grouped: Record<string, NotionClient[]> = {};
   for (const c of clients) {
-    const consultant = getConsultantForSlug(c.slug);
+    const consultant = resolveConsultant(c.slug, c.consultant);
     (grouped[consultant] ??= []).push({ ...c, consultant });
   }
   for (const list of Object.values(grouped)) {
     list.sort((a, b) => TIER_RANK[a.tier] - TIER_RANK[b.tier]);
   }
-  return CONSULTANT_ORDER.map((name) => ({
-    name,
+  const columns: ConsultantColumn[] = CONSULTANT_ORDER.map((name) => ({
+    name: name as string,
     clients: grouped[name] ?? [],
   })).filter((col) => col.clients.length > 0);
+
+  // NENHUM CLIENTE PODE DESAPARECER DA BOARD (v76.47). As colunas eram
+  // exatamente os nomes do `CONSULTANT_ORDER`, e tudo o que resolvesse para
+  // outra coisa — "Unassigned", ou um nome escrito à mão que não bate certo
+  // ("João Batista" em vez de "João B.") — era descartado em silêncio. Um
+  // cliente que acabou de fazer o onboarding ficava invisível no
+  // departamento, e ninguém tinha como dar por isso: não havia erro, não
+  // havia coluna vazia, simplesmente não estava lá.
+  //
+  // Agora sobra sempre uma coluna com quem não coube. É feia de propósito:
+  // um cliente aqui é uma atribuição por resolver, não um estado normal.
+  const known = new Set<string>(CONSULTANT_ORDER);
+  const orphans = Object.entries(grouped)
+    .filter(([name]) => !known.has(name))
+    .flatMap(([, list]) => list);
+  if (orphans.length > 0) {
+    columns.push({
+      name: "Por atribuir",
+      clients: orphans.sort((a, b) => TIER_RANK[a.tier] - TIER_RANK[b.tier]),
+    });
+  }
+  return columns;
 }
 
 /** The consultant-column grid of client cards. Shared by the active

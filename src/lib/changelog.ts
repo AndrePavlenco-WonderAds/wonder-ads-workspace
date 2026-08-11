@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.47",
+    date: "2026-08-11",
+    title: "Um cliente vindo do onboarding já não pode desaparecer da board",
+    highlights: [
+      "**🐞 O que estava a acontecer.** As colunas da board de SEO são exatamente os nomes dos quatro consultores, e o consultor de cada cliente era resolvido **só pelo slug** — uma lista escrita em código. Um cliente que entra pelo **onboarding** não está nessa lista (o slug dele nasce quando o link é criado), resolvia para «Unassigned», e como não havia coluna com esse nome era **descartado em silêncio**. Sem erro, sem coluna vazia: simplesmente não estava lá.",
+      "**✅ A correção tem duas camadas.** Primeiro, quem não está na lista de código passa a usar a **atribuição que veio com ele no onboarding** — quem está na lista continua a mandar, para uma passagem de carteira escrita em código continuar a ganhar à cache de 1 hora. Segundo, a board ganhou uma coluna **«Por atribuir»** onde cai tudo o que não encaixe: um cliente pode aparecer no sítio errado, mas nunca em sítio nenhum.",
+      "**🔽 O campo «Consultor» na criação do link passou a dropdown.** Era texto livre, e o nome escrito lá é o que decide a coluna. O registo da **Brancoptica** já tinha «João Batista» escrito à mão quando a coluna se chama «João B.» — bastava isso para o cliente ficar invisível ao submeter o formulário. Agora só se escolhe de uma lista, e o registo foi corrigido.",
+      "**👓 Brancoptica criada para o João B.** Fica à espera de que preencham o formulário; ao submeterem, entra sozinha na coluna dele. Testado ponta a ponta: simulada a submissão, o cliente apareceu sob «João B.»; e com o nome errado de propósito, apareceu em «Por atribuir» em vez de desaparecer.",
+    ],
+  },
+  {
     version: "76.46",
     date: "2026-08-10",
     title: "Correção: o lembrete dos Weekly Reports estava a nascer numa sexta que já tinha passado",

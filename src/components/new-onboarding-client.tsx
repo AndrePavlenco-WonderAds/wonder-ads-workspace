@@ -8,6 +8,7 @@
 import { useState } from "react";
 import { Check, Link as LinkIcon, Loader2, Rocket } from "lucide-react";
 import { ONBOARDING_SERVICES, type OnbService } from "@/lib/onboarding-tracks";
+import { CONSULTANT_ORDER } from "@/lib/client-overrides";
 
 export function NewOnboardingClient() {
   const [title, setTitle] = useState("");
@@ -149,13 +150,27 @@ export function NewOnboardingClient() {
           placeholder="Nome do cliente"
           className="flex-1 rounded-lg border border-white/12 bg-white/[0.04] px-3 py-2 text-sm text-white outline-none transition focus:border-[#783DF5]/60 focus:bg-white/[0.06]"
         />
-        <input
-          type="text"
+        {/* DROPDOWN E NÃO CAMPO LIVRE (v76.47). O nome escrito aqui é o que
+            decide a COLUNA em que o cliente aterra na board do SEO depois de
+            submeter o formulário — e as colunas são exatamente estes nomes.
+            Um campo livre aceitava "joão b", "Joao B." ou um nome com um
+            espaço a mais, e o cliente ficava sem coluna, invisível no
+            departamento. */}
+        <select
           value={consultant}
           onChange={(e) => setConsultant(e.target.value)}
-          placeholder="Consultor (opcional)"
-          className="rounded-lg border border-white/12 bg-white/[0.04] px-3 py-2 text-sm text-white outline-none transition focus:border-[#783DF5]/60 focus:bg-white/[0.06] sm:w-52"
-        />
+          aria-label="Consultor responsável"
+          className={`rounded-lg border border-white/12 bg-white/[0.04] px-3 py-2 text-sm outline-none transition focus:border-[#783DF5]/60 focus:bg-white/[0.06] sm:w-52 ${
+            consultant ? "text-white" : "text-white/45"
+          }`}
+        >
+          <option value="">Consultor (por atribuir)</option>
+          {CONSULTANT_ORDER.map((name) => (
+            <option key={name} value={name}>
+              {name}
+            </option>
+          ))}
+        </select>
         <button
           type="button"
           onClick={create}
