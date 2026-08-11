@@ -18,6 +18,11 @@ import {
 } from "@/lib/admin-clients-store";
 import { resolveConsultant } from "@/lib/client-overrides";
 import { getPausedSlugSet } from "@/lib/admin-paused-clients-store";
+import {
+  currentWeekIndex,
+  getCurrentRoadmap,
+  roadmapWeeks,
+} from "@/lib/roadmap-store";
 import { EMPLOYEE_CREDENTIALS, isAdminUsername } from "@/lib/auth/credentials";
 import { listTrainingFeedback } from "@/lib/training/feedback-store";
 import { getNotificationRules } from "@/lib/notifications/rules-store";
@@ -276,6 +281,111 @@ async function trainingFeedbackNotifications(
     });
 }
 
+/** Estado do horizonte do roadmap de cada cliente SEO, por slug.
+ *
+ *  Atrás de uma cache de 30 minutos porque o sino corre em TODAS as páginas
+ *  e isto é uma leitura de KV por cliente. Um roadmap não muda de semana
+ *  entre dois refreshes — meia hora de atraso num aviso que fala de um mês
+ *  não custa nada, e sem cache seria a coisa mais cara da app. */
+const getRoadmapHorizons = unstable_cache(
+  async (): Promise<Record<string, { week: number; totalWeeks: number }>> => {
+    const out: Record<string, { week: number; totalWeeks: number }> = {};
+    let all: Awaited<ReturnType<typeof getSeoClients>>;
+    try {
+      all = await getSeoClients();
+    } catch {
+      return out;
+    }
+    await Promise.all(
+      all.map(async (c) => {
+        try {
+          const roadmap = await getCurrentRoadmap(c.slug);
+          if (!roadmap || roadmap.tasks.length === 0) return;
+          out[c.slug] = {
+            week: currentWeekIndex(roadmap),
+            totalWeeks: roadmapWeeks(roadmap),
+          };
+        } catch {
+          /* um roadmap ilegível não pode calar o sino inteiro */
+        }
+      }),
+    );
+    return out;
+  },
+  ["notifications-roadmap-horizons-v1"],
+  { revalidate: 1800 },
+);
+
+/** Roadmaps a chegar ao fim — para o consultor que os tem.
+ *
+ *  NÃO É UMA REGRA DO CALENDÁRIO, e por isso não passa pelo motor de regras:
+ *  não há dia do mês em que isto aconteça. É um ESTADO — «este plano está a
+ *  acabar» — e depende da data de arranque de cada roadmap, que é diferente
+ *  para cada cliente.
+ *
+ *  Dois graus, porque são dois problemas: um plano no último mês ainda dá
+ *  para estender com calma; um plano que já passou do horizonte é trabalho a
+ *  decorrer sem plano nenhum, e isso é pior. Um aviso que os tratasse como
+ *  iguais fazia o consultor adiar o segundo. */
+async function roadmapEndingNotifications(
+  viewer: Viewer,
+  book: ClientRef[],
+  state: NotificationState,
+  now: Date,
+): Promise<UserNotification[]> {
+  if (book.length === 0) return [];
+  let horizons: Record<string, { week: number; totalWeeks: number }>;
+  try {
+    horizons = await getRoadmapHorizons();
+  } catch (err) {
+    console.error("Notificações: horizontes de roadmap falharam:", err);
+    return [];
+  }
+
+  const out: UserNotification[] = [];
+  for (const client of book) {
+    const h = horizons[client.slug];
+    if (!h) continue;
+    const { week, totalWeeks } = h;
+    const past = week > totalWeeks;
+    // Último mês = as quatro últimas semanas. O mesmo limiar do banner que
+    // já existe dentro do roadmap (`nearingEnd`) — o sino e a página têm de
+    // dizer a mesma coisa, senão uma delas está a mentir.
+    const lastMonth = week >= totalWeeks - 3 && week <= totalWeeks;
+    if (!past && !lastMonth) continue;
+
+    // O período é o par (semana, total): quando o consultor estende o plano,
+    // o total muda, o id muda, e o aviso desaparece sozinho — sem ninguém
+    // ter de o marcar como resolvido.
+    const periodKey = `w${week}-${totalWeeks}`;
+    const id = notificationId("seo-roadmap-ending", periodKey, client.slug);
+    const entry = state[id];
+    const weeksLeft = totalWeeks - week;
+    out.push({
+      id,
+      ruleId: "seo-roadmap-ending",
+      title: past
+        ? `O roadmap da ${client.title} chegou ao fim`
+        : `Último mês do roadmap da ${client.title}`,
+      body: past
+        ? `A semana ${week} já vai além das ${totalWeeks} planeadas — há trabalho a decorrer sem plano. Estende o roadmap e as semanas novas entram vazias, prontas a planear; o que já lá está fica exatamente como está.`
+        : `Estás na semana ${week} de ${totalWeeks}${
+            weeksLeft > 0
+              ? ` — faltam ${weeksLeft} semana${weeksLeft === 1 ? "" : "s"}`
+              : ""
+          }. Se o cliente continua (ou já aceitou renovar), acrescenta o próximo trimestre: as semanas novas entram vazias e as atuais não se mexem.`,
+      periodLabel: `semana ${week} de ${totalWeeks}`,
+      dueAt: now.getTime(),
+      client: { slug: client.slug, title: client.title, icon: client.icon },
+      actionLabel: "Abrir roadmap e estender",
+      actionHref: `/seo/${client.slug}/roadmap`,
+      resolved: Boolean(entry),
+      resolvedAt: entry?.resolvedAt ?? null,
+    });
+  }
+  return out;
+}
+
 export async function getUserNotifications(
   viewer: Viewer,
   now: Date = new Date(),
@@ -292,18 +402,27 @@ export async function getUserNotifications(
   const applicable = rules.filter(
     (r) => r.enabled && audienceMatches(r.audience, viewer),
   );
-  if (applicable.length === 0) return feedback;
 
-  // A carteira só se lê se alguma regra precisar dela.
+  // A carteira lê-se quando alguma regra precisa dela OU para o aviso de
+  // roadmap a acabar, que é por cliente e não depende de regra nenhuma.
   const needsBook = applicable.some((r) => r.scope === "seo-client");
   const needsStartDates = applicable.some(
     (r) => r.schedule.kind === "client-month",
   );
-  const book = needsBook
-    ? ((await seoBooksByConsultant(needsStartDates)).get(viewer.name) ?? [])
-    : [];
+  const book =
+    needsBook || viewer.dept === "SEO"
+      ? ((await seoBooksByConsultant(needsStartDates)).get(viewer.name) ?? [])
+      : [];
 
-  return [...feedback, ...buildNotifications(viewer, rules, state, book, now)];
+  const ending = await roadmapEndingNotifications(viewer, book, state, now);
+
+  if (applicable.length === 0) return [...feedback, ...ending];
+
+  return [
+    ...feedback,
+    ...ending,
+    ...buildNotifications(viewer, rules, state, book, now),
+  ];
 }
 
 // ---------------------------------------------------------------------------

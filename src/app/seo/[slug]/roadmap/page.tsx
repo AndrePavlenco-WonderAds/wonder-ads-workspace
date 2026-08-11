@@ -20,6 +20,7 @@ import {
   roadmapWeeks,
 } from "@/lib/roadmap-store";
 import { getRoadmapLog } from "@/lib/roadmap-changelog-store";
+import { getClientRenewal } from "@/lib/client-renewal-store";
 import { getCurrentEmployee } from "@/lib/auth/server";
 import { editableDepts } from "@/lib/auth/credentials";
 import { SeoReadOnlyProvider, ReadOnlyBanner } from "@/components/seo-readonly";
@@ -55,6 +56,11 @@ export default async function RoadmapPage({
   const gradient = paletteToGradient(getClientPalette(slug));
 
   const roadmap = await ensureRoadmap(slug);
+  // Renovação: chave própria, para sobreviver a um reinício do roadmap.
+  const renewal = await getClientRenewal(slug).catch(() => ({
+    renewalDate: null,
+    termMonths: 6 as const,
+  }));
   const totalWeeks = roadmapWeeks(roadmap);
   const initialWarnings = computeWarnings(roadmap).filter(
     (w) => !new Set(roadmap.dismissedWarnings.map((d) => d.id)).has(w.id),
@@ -127,6 +133,8 @@ export default async function RoadmapPage({
         <RoadmapBoard
           clientSlug={slug}
           clientName={client.title}
+          initialRenewalDate={renewal.renewalDate}
+          initialTermMonths={renewal.termMonths}
           initialRoadmap={roadmap}
           initialWarnings={initialWarnings}
         />

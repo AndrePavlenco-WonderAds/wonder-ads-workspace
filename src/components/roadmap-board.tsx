@@ -48,6 +48,7 @@ import {
   type RoadmapWarning,
 } from "@/lib/roadmap-store";
 import { formatDate } from "@/lib/dates";
+import { RoadmapRenewalChip } from "./roadmap-renewal-chip";
 import { useSeoReadOnly } from "./seo-readonly";
 
 const MAX_PHOTOS = 8;
@@ -135,6 +136,9 @@ type WeekCell = { task: RoadmapTask; isStart: boolean };
 type Props = {
   clientSlug: string;
   clientName: string;
+  /** Renovação do contrato — vive fora do roadmap (ver client-renewal-store). */
+  initialRenewalDate: string | null;
+  initialTermMonths: number;
   initialRoadmap: Roadmap;
   initialWarnings: RoadmapWarning[];
 };
@@ -142,6 +146,8 @@ type Props = {
 export function RoadmapBoard({
   clientSlug,
   clientName,
+  initialRenewalDate,
+  initialTermMonths,
   initialRoadmap,
   initialWarnings,
 }: Props) {
@@ -455,12 +461,6 @@ export function RoadmapBoard({
     <div className="space-y-5">
       {/* Top bar */}
       <div className="brand-gradient-border flex flex-wrap items-center gap-3 rounded-xl bg-white/[0.03] px-4 py-3 text-sm text-white/75 backdrop-blur-md">
-        <span
-          className="inline-flex items-center gap-2 rounded-full border border-[color:var(--brand-purple)]/45 bg-[color:var(--brand-purple)]/15 px-3 py-1 text-[11px] font-semibold text-white"
-          title="Client this roadmap is for"
-        >
-          {clientName}
-        </span>
         <label
           className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.04] px-3 py-1 text-[11px] text-white/75"
           title="Starting date — week 1 begins here. Editable inline."
@@ -489,22 +489,14 @@ export function RoadmapBoard({
             </span>
           </span>
         )}
-        <span
-          className={
-            inHorizon
-              ? "inline-flex items-center gap-2 rounded-full border border-[color:var(--brand-purple)]/55 bg-[color:var(--brand-purple)]/25 px-3 py-1 text-[11px] font-semibold text-white"
-              : "inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.04] px-3 py-1 text-[11px] font-medium text-white/65"
-          }
-        >
-          {inHorizon
-            ? `▶ Week ${week} of ${totalWeeks}`
-            : week === 0
-              ? "Starts soon"
-              : `Past the ${totalWeeks}-week horizon`}
-        </span>
+        <RoadmapRenewalChip
+          clientSlug={clientSlug}
+          initialRenewalDate={initialRenewalDate}
+          initialTermMonths={initialTermMonths}
+          readOnly={readOnly}
+        />
         <span className="text-[11px] text-white/45">
           {roadmap.tasks.length} task{roadmap.tasks.length === 1 ? "" : "s"}
-          {!isEmpty && ` · generated ${formatDate(roadmap.generatedAt)}`}
         </span>
         <span className="ml-auto inline-flex items-center gap-3">
           {saving && !readOnly && (

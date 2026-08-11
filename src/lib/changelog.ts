@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.48",
+    date: "2026-08-11",
+    title: "Renovação na barra do roadmap, barra mais limpa, e aviso quando um plano está a acabar",
+    highlights: [
+      "**🔁 Novo chip «Renovação», ao lado do «Onboarded».** Escolhe-se a data em que o contrato renova e por quantos meses (**3, 6, 9 ou 12**). Fica com uma **contagem decrescente** que muda de cor sozinha — âmbar a 30 dias, vermelho a 7 — e continua a contar depois de passar, porque uma renovação vencida sem ninguém ter falado com o cliente é a pior das situações e não pode ficar cinzenta.",
+      "**💾 Guardada fora do roadmap, de propósito.** Um roadmap é reiniciado e arquivado quando o plano se esgota, e o que lá está vai com ele — foi o que aconteceu à data de onboarding antes da v76.36. A renovação é um facto comercial do cliente, não do plano de trabalho: sobrevive a reinícios, a roadmaps novos e a mudanças de consultor.",
+      "**🧹 A barra de topo ficou com o essencial.** Saíram o chip com o nome do cliente (que já está no cabeçalho da página, duas linhas acima), o «Week 10 of 12» (a barra de meses já o mostra, e o aviso de último mês tem faixa própria) e o «generated …». Fica a data de arranque, o onboarding, a renovação e o total de tarefas.",
+      "**🔔 Aviso no sino quando um roadmap está a acabar.** Chega ao consultor que tem o cliente, com botão direto para o roadmap. **Dois graus, porque são dois problemas:** «último mês» ainda dá para estender com calma; **«o roadmap chegou ao fim»** é trabalho a decorrer sem plano nenhum. Tratá-los como iguais fazia adiar o segundo. Hoje isso são **4 clientes do Manuel** (Aeger Prima, A. Domingos, Safe Away, Clínica em Casa), **1 do André Pereira** e **2 da Fran já esgotados**.",
+      "**⏱️ E desaparece sozinho.** O aviso é identificado pelo par (semana, total de semanas): ao estender o plano o total muda, e o lembrete some sem ninguém o marcar como resolvido. Os clientes em pausa continuam de fora, e a leitura dos roadmaps está atrás de meia hora de cache — o sino corre em todas as páginas da app.",
+    ],
+  },
+  {
     version: "76.47",
     date: "2026-08-11",
     title: "Um cliente vindo do onboarding já não pode desaparecer da board",
