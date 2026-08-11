@@ -7,6 +7,8 @@
 // ticket from the home page. The Web team triages, assigns, and works
 // them inside /web/tickets.
 
+import type { DeliveryRevision, WebStatus } from "./web-shared";
+
 // ---- Status ----
 export const TICKET_STATUSES = [
   "new",
@@ -137,6 +139,22 @@ export const REQUESTING_DEPT_LABEL: Record<string, string> = {
   other: "Outro",
 };
 
+/** Ticket-status ↔ coluna do board. Os tickets têm enum próprio mas vivem
+ *  no mesmo Kanban de 5 colunas dos projetos.
+ *
+ *  Vive aqui (e não no componente do board) desde a v76.52: o servidor
+ *  também precisa dele para contar a carga de cada web designer, e duas
+ *  cópias do mesmo mapa divergiriam no dia em que se acrescentasse um
+ *  estado. */
+export const TICKET_TO_BOARD_COLUMN: Record<TicketStatus, WebStatus> = {
+  new: "negotiation",
+  triage: "negotiation",
+  in_dev: "in_progress",
+  waiting: "client_feedback",
+  done: "done",
+  closed: "done",
+};
+
 // ---- Record shapes ----
 export type TicketAttachment = {
   id: string;
@@ -210,6 +228,8 @@ export type WebTicket = {
   deadlineSetByUsername: string | null;
   deadlineSetByName: string | null;
   deadlineSetAt: number | null;
+  /** Linhas de re-planeamento da entrega — ver DeliveryRevision. */
+  deliveryRevisions: DeliveryRevision[];
 };
 
 export function ticketRef(t: Pick<WebTicket, "seq">): string {

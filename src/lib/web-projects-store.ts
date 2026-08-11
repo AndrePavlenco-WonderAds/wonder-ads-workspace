@@ -19,6 +19,7 @@ import {
   WEB_CRED_KINDS,
   WEB_PRIORITIES,
   WEB_STATUSES,
+  normaliseStoredRevisions,
   slugify,
   type PublicWebAssets,
   type PublicWebProject,
@@ -26,6 +27,7 @@ import {
   type WebAssetFile,
   type WebComment,
   type WebCredKind,
+  type DeliveryRevision,
   type WebDeliveryRights,
   type WebResource,
   type WebStatus,
@@ -102,6 +104,8 @@ export type WebProject = {
   status: WebStatus;
   priority: import("./web-shared").WebPriority;
   startDate: string | null;
+  /** Linhas de re-planeamento da entrega — ver DeliveryRevision. */
+  deliveryRevisions: DeliveryRevision[];
   /** Data de entrega prevista — trancada depois de gravada. Ver
    *  `resolveDeadline` para a regra completa. */
   deadline: string | null;
@@ -384,6 +388,7 @@ export function normaliseProject(
     priority: oneOf(o.priority, WEB_PRIORITIES, "medium"),
     startDate: isoOrNull(o.startDate),
     ...delivery,
+    deliveryRevisions: normaliseStoredRevisions(o.deliveryRevisions),
     order: num(o.order, now),
     comments: arr(o.comments)
       .map(normaliseComment)

@@ -33,8 +33,12 @@ import {
   type WebPriority,
   type WebStatus,
 } from "@/lib/web-shared";
-import type { TicketStatus } from "@/lib/web-tickets-shared";
+import {
+  TICKET_TO_BOARD_COLUMN,
+  type TicketStatus,
+} from "@/lib/web-tickets-shared";
 import { formatDate, formatDateTime } from "@/lib/dates";
+import { DeliveryRevisionPrompt } from "@/components/delivery-revisions";
 
 type Assignee = { username: string; name: string };
 
@@ -58,16 +62,9 @@ export type BoardTicket = {
   requestingDeptLabel: string;
 };
 
-// Ticket-status ↔ board-column mapping. Tickets keep their own status
-// enum but live on the same 5-column Kanban as projects.
-const TICKET_TO_COLUMN: Record<TicketStatus, WebStatus> = {
-  new: "negotiation",
-  triage: "negotiation",
-  in_dev: "in_progress",
-  waiting: "client_feedback",
-  done: "done",
-  closed: "done",
-};
+// O mapa ticket→coluna vive em web-tickets-shared (o servidor também o usa
+// para contar a carga de cada designer).
+const TICKET_TO_COLUMN = TICKET_TO_BOARD_COLUMN;
 const COLUMN_TO_TICKET: Record<WebStatus, TicketStatus> = {
   negotiation: "new",
   in_progress: "in_dev",
@@ -183,6 +180,21 @@ export function WebBoard({
     return byCol;
   }, [tickets, query, assigneeFilter, assignees]);
 
+  // Prompt da nova linha de entrega — o board move os cartões de forma
+  // otimista, por isso quando o servidor recusa (Client Feedback → In
+  // Progress sem linha nova) o cartão TEM de voltar para trás e o prompt
+  // abrir. Sem isto o cartão ficava visualmente movido e o servidor não.
+  const [revPrompt, setRevPrompt] = useState<null | {
+    kind: "ticket" | "project";
+    id: string;
+    title: string;
+    status: string;
+  }>(null);
+  const [revDate, setRevDate] = useState("");
+  const [revNote, setRevNote] = useState("");
+  const [revBusy, setRevBusy] = useState(false);
+  const [revError, setRevError] = useState<string | null>(null);
+
   const moveTicket = useCallback(
     async (id: string, col: WebStatus) => {
       const ticket = tickets.find((t) => t.id === id);
@@ -199,7 +211,24 @@ export function WebBoard({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ status: nextStatus }),
         });
-        if (!res.ok) throw new Error("Save failed");
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          if (data?.code === "delivery_revision_required") {
+            // Desfaz o movimento otimista e pede a linha nova.
+            setTickets((list) => list.map((t) => (t.id === id ? prev : t)));
+            setRevError(null);
+            setRevDate("");
+            setRevNote("");
+            setRevPrompt({
+              kind: "ticket",
+              id,
+              title: prev.title,
+              status: nextStatus,
+            });
+            return;
+          }
+          throw new Error("Save failed");
+        }
       } catch {
         setTickets((list) => list.map((t) => (t.id === id ? prev : t)));
         setError("Não foi possível mover o ticket — tenta de novo.");
@@ -224,7 +253,23 @@ export function WebBoard({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(updated),
         });
-        if (!res.ok) throw new Error("Save failed");
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          if (err?.code === "delivery_revision_required") {
+            setProjects((prev) => prev.map((p) => (p.id === id ? project : p)));
+            setRevError(null);
+            setRevDate("");
+            setRevNote("");
+            setRevPrompt({
+              kind: "project",
+              id,
+              title: project.name,
+              status,
+            });
+            return;
+          }
+          throw new Error("Save failed");
+        }
         const data = await res.json();
         setProjects((prev) => prev.map((p) => (p.id === id ? data.project : p)));
       } catch {
@@ -234,6 +279,57 @@ export function WebBoard({
     },
     [projects],
   );
+
+  /** Repete o movimento recusado, agora com a linha de entrega nova. */
+  const confirmRevision = useCallback(async () => {
+    if (!revPrompt) return;
+    setRevBusy(true);
+    setRevError(null);
+    const revision = { date: revDate, note: revNote.trim() };
+    try {
+      if (revPrompt.kind === "ticket") {
+        const res = await fetch(`/api/web/tickets/${revPrompt.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            status: revPrompt.status,
+            deliveryRevision: revision,
+          }),
+        });
+        if (!res.ok) throw new Error("falhou");
+        const data = await res.json();
+        setTickets((list) =>
+          list.map((t) =>
+            t.id === revPrompt.id ? { ...t, status: data.ticket.status } : t,
+          ),
+        );
+      } else {
+        const project = projects.find((p) => p.id === revPrompt.id);
+        if (!project) throw new Error("falhou");
+        const res = await fetch(`/api/web/projects/${revPrompt.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ...project,
+            status: revPrompt.status,
+            deliveryRevision: revision,
+          }),
+        });
+        if (!res.ok) throw new Error("falhou");
+        const data = await res.json();
+        setProjects((prev) =>
+          prev.map((p) => (p.id === revPrompt.id ? data.project : p)),
+        );
+      }
+      setRevPrompt(null);
+      setRevDate("");
+      setRevNote("");
+    } catch {
+      setRevError("Não foi possível guardar. Confirma a data e a nota.");
+    } finally {
+      setRevBusy(false);
+    }
+  }, [revPrompt, revDate, revNote, projects]);
 
   const refresh = useCallback(async () => {
     setRefreshing(true);
@@ -459,6 +555,22 @@ export function WebBoard({
         />
       )}
       {showBacklog && <BacklogModal onClose={() => setShowBacklog(false)} />}
+
+      <DeliveryRevisionPrompt
+        open={revPrompt !== null}
+        title={revPrompt?.title ?? ""}
+        date={revDate}
+        note={revNote}
+        onDate={setRevDate}
+        onNote={setRevNote}
+        onCancel={() => {
+          setRevPrompt(null);
+          setRevError(null);
+        }}
+        onConfirm={() => void confirmRevision()}
+        busy={revBusy}
+        error={revError}
+      />
     </div>
   );
 }

@@ -14,7 +14,6 @@ import {
   Loader2,
   Paperclip,
   Send,
-  UserPlus,
   X,
 } from "lucide-react";
 import {
@@ -57,8 +56,14 @@ export function TicketForm({
   authorName: string;
   /** Pre-select the requesting dept from the author's home department. */
   defaultDept: RequestingDept;
-  /** Web designers a ticket can be force-assigned to on creation. */
-  webDevs: { username: string; name: string }[];
+  /** Web designers, com a carga aberta de cada um — a atribuição é
+   *  obrigatória e tem de ser informada (v76.52). */
+  webDevs: {
+    username: string;
+    name: string;
+    load: { label: string; count: number }[];
+    total: number;
+  }[];
   /** Known clients (registry + project-derived) for the combobox. */
   clients: ClientOption[];
 }) {
@@ -72,8 +77,11 @@ export function TicketForm({
   const [priority, setPriority] = useState<TicketPriority>("medium");
   const [requestingDept, setRequestingDept] =
     useState<RequestingDept>(defaultDept);
-  const [forceAssign, setForceAssign] = useState(false);
-  const [assignee, setAssignee] = useState<string>(webDevs[0]?.username ?? "");
+  // ATRIBUIÇÃO OBRIGATÓRIA (v76.52) — arranca VAZIA de propósito. Um
+  // pré-selecionado seria escolhido por omissão em metade dos tickets, e a
+  // pessoa que menos aparece no topo da lista acabava com metade do
+  // trabalho. Obrigar a escolher é o que torna a carga uma decisão.
+  const [assignee, setAssignee] = useState<string>("");
   const [files, setFiles] = useState<Upl[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -130,6 +138,10 @@ export function TicketForm({
   }, []);
 
   const submit = useCallback(async () => {
+    if (!assignee) {
+      setError("Escolhe o web designer que fica com este ticket.");
+      return;
+    }
     if (!title.trim()) {
       setError("O título é obrigatório.");
       return;
@@ -153,7 +165,7 @@ export function TicketForm({
           priority,
           requestingDept,
           attachments,
-          assigneeUsername: forceAssign ? assignee : null,
+          assigneeUsername: assignee,
         }),
       });
       const data = (await res.json()) as {
@@ -182,7 +194,6 @@ export function TicketForm({
     category,
     priority,
     requestingDept,
-    forceAssign,
     assignee,
     files,
     router,
@@ -351,36 +362,86 @@ export function TicketForm({
           </div>
         </div>
 
-        {/* Forçar atribuição — optional. Off by default (tickets land
-            unassigned in the Web board's Not Started column); turn on to
-            pin the ticket to a specific web dev on creation. */}
-        <div className="mt-4">
-          <button
-            type="button"
-            onClick={() => setForceAssign((v) => !v)}
-            className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-[12px] font-medium transition ${
-              forceAssign
-                ? "border-[color:var(--brand-purple)]/60 bg-[color:var(--brand-purple)]/15 text-white"
-                : "border-white/15 bg-white/[0.04] text-white/80 hover:border-white/30 hover:text-white"
-            }`}
-          >
-            <UserPlus className="h-4 w-4" />
-            Forçar atribuição
-          </button>
-          {forceAssign && (
-            <div className="mt-2 max-w-xs">
-              <Select
-                value={assignee}
-                onChange={setAssignee}
-                options={webDevs.map((d) => ({
-                  value: d.username,
-                  label: d.name,
-                }))}
-              />
-              <p className="mt-1 text-[10.5px] text-white/40">
-                O ticket é atribuído já a este web dev.
-              </p>
-            </div>
+        {/* ATRIBUIÇÃO — cartas com a carga de cada web designer.
+            Um dropdown escondia justamente a informação que torna a escolha
+            boa: quem está com o quê. Aqui vê-se a fila de cada um antes de
+            se decidir, que é a diferença entre atribuir e despachar. */}
+        <div className="mt-5 border-t border-white/8 pt-4">
+          <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
+            <span className="text-[11px] font-semibold uppercase tracking-[0.13em] text-white/55">
+              Atribuir a <span className="text-rose-300">*</span>
+            </span>
+            <span className="text-[10.5px] text-white/40">
+              O número em cada carta é o trabalho em aberto dessa pessoa.
+            </span>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {webDevs.map((d) => {
+              const on = assignee === d.username;
+              return (
+                <button
+                  key={d.username}
+                  type="button"
+                  onClick={() => setAssignee(on ? "" : d.username)}
+                  aria-pressed={on}
+                  className={`rounded-xl border p-3 text-left transition ${
+                    on
+                      ? "border-[color:var(--brand-purple)]/70 bg-[color:var(--brand-purple)]/12"
+                      : "border-white/12 bg-white/[0.03] hover:border-white/30 hover:bg-white/[0.06]"
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="inline-flex items-center gap-2">
+                      <span
+                        aria-hidden
+                        className={`flex h-7 w-7 items-center justify-center rounded-full text-[11px] font-bold text-white ${
+                          on ? "brand-gradient-bg" : "bg-white/12"
+                        }`}
+                      >
+                        {d.name.trim().charAt(0).toUpperCase()}
+                      </span>
+                      <span className="text-[13px] font-semibold text-white">
+                        {d.name}
+                      </span>
+                    </span>
+                    <span
+                      className={`tabular rounded-full px-2 py-0.5 text-[10.5px] font-bold ${
+                        d.total === 0
+                          ? "bg-emerald-500/15 text-emerald-200"
+                          : d.total >= 10
+                            ? "bg-rose-500/15 text-rose-200"
+                            : "bg-white/10 text-white/70"
+                      }`}
+                      title="Total em aberto"
+                    >
+                      {d.total}
+                    </span>
+                  </div>
+                  <dl className="mt-2 space-y-0.5 border-t border-white/8 pt-2">
+                    {d.load.map((l) => (
+                      <div
+                        key={l.label}
+                        className="flex items-baseline justify-between gap-2 text-[10.5px]"
+                      >
+                        <dt className="text-white/45">{l.label}</dt>
+                        <dd
+                          className={`tabular font-semibold ${
+                            l.count > 0 ? "text-white/85" : "text-white/25"
+                          }`}
+                        >
+                          {l.count}
+                        </dd>
+                      </div>
+                    ))}
+                  </dl>
+                </button>
+              );
+            })}
+          </div>
+          {!assignee && (
+            <p className="mt-2 text-[11px] text-amber-200/70">
+              Escolhe o web designer que vai ficar com este ticket.
+            </p>
           )}
         </div>
 
@@ -393,7 +454,7 @@ export function TicketForm({
           <button
             type="button"
             onClick={submit}
-            disabled={submitting || anyUploading || !title.trim()}
+            disabled={submitting || anyUploading || !title.trim() || !assignee}
             className="ml-auto inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-[#783DF5]/25 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
             style={{
               background:

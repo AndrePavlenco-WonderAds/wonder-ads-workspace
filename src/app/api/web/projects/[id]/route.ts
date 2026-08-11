@@ -8,6 +8,11 @@
 // DELETE → remove a project + log it.
 
 import { NextResponse } from "next/server";
+import {
+  DELIVERY_REVISION_REQUIRED_MESSAGE,
+  normaliseDeliveryRevision,
+  requiresDeliveryRevision,
+} from "@/lib/web-shared";
 import { getCurrentEmployee } from "@/lib/auth/server";
 import { accessibleDepts, webDeliveryRights } from "@/lib/auth/credentials";
 import {
@@ -117,10 +122,44 @@ export async function PUT(
     );
   }
 
-  const next = normaliseProject(body, id, prev, {
-    rights,
-    actor: { username: employee.username, name: employee.name },
-  });
+  // Nova linha de entrega prevista — a mesma regra dos tickets. Devolver
+  // o trabalho a In Progress depois de Client Feedback significa que a data
+  // anterior deixou de ser verdade; exige-se a nova e o motivo.
+  const o = (body ?? {}) as Record<string, unknown>;
+  const nextStatusRaw =
+    typeof o.status === "string" ? o.status : prev.status;
+  let newRevision: ReturnType<typeof normaliseDeliveryRevision> = null;
+  if (requiresDeliveryRevision(prev.status, nextStatusRaw)) {
+    newRevision = normaliseDeliveryRevision(
+      o.deliveryRevision,
+      { username: employee.username, name: employee.name },
+      Date.now(),
+    );
+    if (!newRevision) {
+      return NextResponse.json(
+        {
+          error: DELIVERY_REVISION_REQUIRED_MESSAGE,
+          code: "delivery_revision_required",
+        },
+        { status: 400 },
+      );
+    }
+  }
+
+  const next = normaliseProject(
+    {
+      ...o,
+      deliveryRevisions: newRevision
+        ? [...prev.deliveryRevisions, newRevision]
+        : prev.deliveryRevisions,
+    },
+    id,
+    prev,
+    {
+      rights,
+      actor: { username: employee.username, name: employee.name },
+    },
+  );
   await saveProject(next);
 
   const actor = { actorUsername: employee.username, actorName: employee.name };

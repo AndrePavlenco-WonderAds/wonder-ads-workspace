@@ -10,8 +10,12 @@ import {
   webStorageConfigured,
 } from "@/lib/web-projects-store";
 import { getAllClients } from "@/lib/web-clients-store";
-import { slugify } from "@/lib/web-shared";
-import type { RequestingDept } from "@/lib/web-tickets-shared";
+import { getAllTickets } from "@/lib/web-tickets-store";
+import { slugify, WEB_STATUS_LABEL, type WebStatus } from "@/lib/web-shared";
+import {
+  TICKET_TO_BOARD_COLUMN,
+  type RequestingDept,
+} from "@/lib/web-tickets-shared";
 import type { ClientOption } from "@/components/client-combobox";
 
 export const metadata = {
@@ -50,13 +54,42 @@ export default async function NewTicketPage() {
     );
   }
 
-  const webDevs = getWebAssignees().map((a) => ({
-    username: a.username,
-    name: a.name,
-  }));
-  const [projects, registry] = webStorageConfigured
-    ? await Promise.all([getAllProjects(), getAllClients()])
-    : [[], []];
+  const [projects, registry, tickets] = webStorageConfigured
+    ? await Promise.all([getAllProjects(), getAllClients(), getAllTickets()])
+    : [[], [], []];
+
+  // CARGA DE CADA WEB DESIGNER — o que faz a atribuição ser uma decisão e
+  // não um palpite. Conta projetos E tickets, porque para quem constrói é
+  // tudo trabalho na mesma fila; e conta só o que está EM ABERTO: uma
+  // pessoa com 40 "Done" não está ocupada, está produtiva.
+  const OPEN_COLUMNS: WebStatus[] = [
+    "negotiation",
+    "in_progress",
+    "client_feedback",
+    "migration",
+  ];
+  const webDevs = getWebAssignees().map((a) => {
+    const load: Record<string, number> = {};
+    for (const col of OPEN_COLUMNS) load[col] = 0;
+    for (const p of projects) {
+      if (p.assigneeUsername !== a.username) continue;
+      if (load[p.status] !== undefined) load[p.status] += 1;
+    }
+    for (const t of tickets) {
+      if (t.assigneeUsername !== a.username) continue;
+      const col = TICKET_TO_BOARD_COLUMN[t.status];
+      if (col && load[col] !== undefined) load[col] += 1;
+    }
+    return {
+      username: a.username,
+      name: a.name,
+      load: OPEN_COLUMNS.map((col) => ({
+        label: WEB_STATUS_LABEL[col],
+        count: load[col] ?? 0,
+      })),
+      total: OPEN_COLUMNS.reduce((sum, col) => sum + (load[col] ?? 0), 0),
+    };
+  });
 
   // Registry profiles first, then any client name seen on a project that
   // isn't a saved profile yet — same merge as the project board.

@@ -21,6 +21,10 @@ import {
   type WebTicket,
 } from "@/lib/web-tickets-shared";
 import { formatDateTime } from "@/lib/dates";
+import {
+  DeliveryRevisionPrompt,
+  DeliveryRevisions,
+} from "@/components/delivery-revisions";
 
 type Assignee = { username: string; name: string };
 
@@ -39,6 +43,13 @@ export function TicketDetail({
   const [ticket, setTicket] = useState<WebTicket>(initialTicket);
   const [saving, setSaving] = useState(false);
   const [comment, setComment] = useState("");
+  // Prompt da nova linha de entrega — aberto quando o servidor recusa a
+  // mudança de estado por falta dela. Guarda o estado pedido para o repetir
+  // assim que a data e o motivo estiverem preenchidos.
+  const [revPrompt, setRevPrompt] = useState<null | { status: string }>(null);
+  const [revDate, setRevDate] = useState("");
+  const [revNote, setRevNote] = useState("");
+  const [revError, setRevError] = useState<string | null>(null);
   const [posting, setPosting] = useState(false);
 
   const patch = useCallback(
@@ -50,14 +61,46 @@ export function TicketDetail({
           headers: { "content-type": "application/json" },
           body: JSON.stringify(body),
         });
-        const data = (await res.json()) as { ticket?: WebTicket };
-        if (res.ok && data.ticket) setTicket(data.ticket);
+        const data = (await res.json()) as {
+          ticket?: WebTicket;
+          code?: string;
+          error?: string;
+        };
+        // O servidor é quem sabe que esta passagem exige uma linha nova —
+        // a UI não repete a regra, reage ao código que ele devolve.
+        if (!res.ok && data.code === "delivery_revision_required") {
+          setRevError(null);
+          setRevPrompt({ status: String(body.status ?? "") });
+          return false;
+        }
+        if (res.ok && data.ticket) {
+          setTicket(data.ticket);
+          return true;
+        }
+        return false;
       } finally {
         setSaving(false);
       }
     },
     [ticket.id],
   );
+
+  /** Repete a mudança de estado, agora com a linha nova. */
+  const confirmRevision = useCallback(async () => {
+    if (!revPrompt) return;
+    setRevError(null);
+    const ok = await patch({
+      status: revPrompt.status,
+      deliveryRevision: { date: revDate, note: revNote.trim() },
+    });
+    if (ok) {
+      setRevPrompt(null);
+      setRevDate("");
+      setRevNote("");
+    } else {
+      setRevError("Não foi possível guardar. Confirma a data e a nota.");
+    }
+  }, [patch, revPrompt, revDate, revNote]);
 
   const postComment = useCallback(async () => {
     if (!comment.trim()) return;
@@ -268,6 +311,11 @@ export function TicketDetail({
           </label>
         </div>
 
+        <DeliveryRevisions
+          original={ticket.deadline}
+          revisions={ticket.deliveryRevisions}
+        />
+
         <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-4 text-[12px] text-white/60">
           {ticket.project && <Meta label="Projeto" value={ticket.project} />}
           <Meta label="Autor" value={ticket.authorName} />
@@ -295,6 +343,22 @@ export function TicketDetail({
           </ul>
         </div>
       </aside>
+
+      <DeliveryRevisionPrompt
+        open={revPrompt !== null}
+        title={ticket.title}
+        date={revDate}
+        note={revNote}
+        onDate={setRevDate}
+        onNote={setRevNote}
+        onCancel={() => {
+          setRevPrompt(null);
+          setRevError(null);
+        }}
+        onConfirm={() => void confirmRevision()}
+        busy={saving}
+        error={revError}
+      />
     </div>
   );
 }

@@ -65,16 +65,23 @@ export async function POST(req: Request) {
     );
   }
 
-  // Optional forced assignment — only honour a username that is a real
-  // Web designer (Mike / Renan / Gustavo / Cylas).
+  // ATRIBUIÇÃO OBRIGATÓRIA (v76.52) e só a um web designer a sério
+  // (Mike / Renan / Gustavo / Cylas). O formulário já obriga, mas quem
+  // chama a rota à mão também tem de obrigar — um ticket sem dono ficava a
+  // apodrecer na coluna "Not Started" sem ninguém se sentir responsável,
+  // que é precisamente o que esta mudança veio acabar.
   const webUsernames = new Set(getWebAssignees().map((a) => a.username));
   const forcedUser =
     typeof o.assigneeUsername === "string" && webUsernames.has(o.assigneeUsername)
       ? o.assigneeUsername
       : null;
-  const forcedName = forcedUser
-    ? getEmployeeDisplay(forcedUser)?.name ?? forcedUser
-    : null;
+  if (!forcedUser) {
+    return NextResponse.json(
+      { error: "Escolhe o web designer que fica com este ticket." },
+      { status: 400 },
+    );
+  }
+  const forcedName = getEmployeeDisplay(forcedUser)?.name ?? forcedUser;
 
   const seq = await nextTicketSeq();
   const id = newTicketId();

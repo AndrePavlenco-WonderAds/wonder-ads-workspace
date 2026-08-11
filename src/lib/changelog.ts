@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.52",
+    date: "2026-08-11",
+    title: "Tickets com dono obrigatório e carga à vista, e uma linha nova de entrega sempre que o trabalho volta para a mesa",
+    highlights: [
+      "**👥 Atribuir deixou de ser opcional — e passou a ser uma decisão informada.** O «Forçar atribuição» era um botão escondido; agora há uma **carta por web designer com a fila dele à vista** (Not Started, In Progress, Client Feedback, Migration + total em aberto). Hoje isso mostra logo o desequilíbrio: **Mike 14, Renan 7, Gustavo 6, Cylas 1**. Conta projetos e tickets juntos, porque para quem constrói é tudo a mesma fila, e só o que está em aberto — 40 «Done» não é estar ocupado.",
+      "**🚫 Sem ninguém escolhido, o ticket não sai** — nem pelo botão, nem por chamada direta à API. Um ticket sem dono ficava a apodrecer no «Not Started» sem ninguém se sentir responsável. E nenhum designer vem pré-selecionado de propósito: um pré-selecionado é escolhido por omissão em metade dos casos, e quem calha em primeiro na lista acaba com metade do trabalho.",
+      "**📆 Nova LINHA de entrega prevista, em vez de corrigir a data.** Quando o trabalho volta de **Client Feedback → In Progress**, a app pede — obrigatoriamente — a **nova data** e **o que falta** («Falta animações»). Não se reescreve a data anterior: acrescenta-se uma linha. Fica a história toda — o que foi prometido, quando mudou, porquê e por quem — que é a diferença entre poder dizer ao cliente «isto atrasou três vezes por revisões» e apenas «a data é esta».",
+      "**🧱 A regra vive no servidor, não nos botões.** Vale para a ficha, para o **arrasto no board** e para qualquer chamada à mão. No board o cartão volta ao sítio e abre o pedido da linha nova — antes de v76.52 um arrasto recusado deixava o cartão movido no ecrã e parado no servidor.",
+      "**📋 O cartão lateral de todos os projetos e tickets** passa a mostrar a entrega em vigor, quantas revisões já houve, e a lista completa com autor e data de cada uma.",
+    ],
+  },
+  {
     version: "76.51",
     date: "2026-08-11",
     title: "O cartão do ticket passou a dizer quem pediu, e não só quem faz",

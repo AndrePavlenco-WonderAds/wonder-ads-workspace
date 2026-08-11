@@ -87,6 +87,89 @@ export const WEB_PRIORITY_META: Record<
  *  client" não terem de importar a tabela de credenciais. */
 export type WebDeliveryRights = { canSet: boolean; canOverride: boolean };
 
+/** UMA NOVA LINHA DE ENTREGA PREVISTA (v76.52).
+ *
+ *  A data de entrega original é write-once de propósito: é o compromisso
+ *  assumido, e poder reescrevê-lo à vontade tirava-lhe o valor. Só que a
+ *  realidade tem um caso legítimo e frequente — o cliente devolve o
+ *  trabalho com um ajuste, a peça volta para produção, e a entrega passa a
+ *  ser outra.
+ *
+ *  Em vez de deixar corrigir a data (que apagaria a promessa anterior),
+ *  ACRESCENTA-SE UMA LINHA. Fica o histórico inteiro: o que foi prometido,
+ *  quando mudou, porquê e por quem. É a diferença entre «este trabalho
+ *  atrasou-se três vezes por causa de revisões do cliente» e «a data é
+ *  esta». */
+export type DeliveryRevision = {
+  id: string;
+  /** Nova entrega prevista, ISO yyyy-mm-dd. */
+  date: string;
+  /** Porque mudou — «Falta animações», «Cliente pediu outra cor». */
+  note: string;
+  byUsername: string;
+  byName: string;
+  at: number;
+};
+
+/** Uma passagem de Client Feedback de volta para In Progress obriga a uma
+ *  nova linha: o trabalho voltou para a mesa, portanto a data anterior já
+ *  não é verdade e alguém tem de dizer qual passa a ser. */
+export function requiresDeliveryRevision(
+  prevStatus: string,
+  nextStatus: string,
+): boolean {
+  return prevStatus === "client_feedback" && nextStatus === "in_progress";
+}
+
+export const DELIVERY_REVISION_REQUIRED_MESSAGE =
+  "Ao devolver este trabalho a In Progress tens de indicar a nova data de entrega prevista e o que falta.";
+
+/** Normaliza uma linha vinda do payload. null quando é inutilizável — uma
+ *  revisão sem data ou sem nota não serve para nada. */
+export function normaliseDeliveryRevision(
+  v: unknown,
+  actor: { username: string; name: string },
+  now: number,
+): DeliveryRevision | null {
+  const o = (v ?? {}) as Record<string, unknown>;
+  const date = typeof o.date === "string" ? o.date.trim() : "";
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
+  const note = typeof o.note === "string" ? o.note.trim().slice(0, 500) : "";
+  if (!note) return null;
+  return {
+    id:
+      typeof o.id === "string" && o.id
+        ? o.id
+        : `dr_${now.toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
+    date,
+    note,
+    byUsername: actor.username,
+    byName: actor.name,
+    at: typeof o.at === "number" ? o.at : now,
+  };
+}
+
+/** Linhas já guardadas — usado na leitura, onde o autor não se recalcula. */
+export function normaliseStoredRevisions(v: unknown): DeliveryRevision[] {
+  if (!Array.isArray(v)) return [];
+  const out: DeliveryRevision[] = [];
+  for (const raw of v) {
+    const o = (raw ?? {}) as Record<string, unknown>;
+    const date = typeof o.date === "string" ? o.date : "";
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) continue;
+    out.push({
+      id: typeof o.id === "string" ? o.id : `dr_${out.length}`,
+      date,
+      note: typeof o.note === "string" ? o.note.slice(0, 500) : "",
+      byUsername: typeof o.byUsername === "string" ? o.byUsername : "",
+      byName: typeof o.byName === "string" ? o.byName : "—",
+      at: typeof o.at === "number" ? o.at : 0,
+    });
+    if (out.length >= 50) break;
+  }
+  return out;
+}
+
 export const WEB_DELIVERY_LOCKED_HINT =
   "Depois de gravada, a data de entrega prevista fica trancada — só um SuperAdmin a pode corrigir.";
 

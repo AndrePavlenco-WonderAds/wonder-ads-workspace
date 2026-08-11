@@ -10,7 +10,7 @@
 // corrupt the blob.
 
 import { kv } from "@vercel/kv";
-import { slugify } from "./web-shared";
+import { normaliseStoredRevisions, slugify } from "./web-shared";
 import {
   OPEN_STATUSES,
   RESOLVED_STATUSES,
@@ -155,6 +155,7 @@ export function normaliseTicket(
     history: arr(o.history)
       .map(normaliseEvent)
       .filter((e): e is TicketEvent => e !== null),
+    deliveryRevisions: normaliseStoredRevisions(o.deliveryRevisions),
     deadline: isoDateOrNull(o.deadline),
     deadlineSetByUsername: str(o.deadlineSetByUsername).trim() || null,
     deadlineSetByName: str(o.deadlineSetByName).trim() || null,

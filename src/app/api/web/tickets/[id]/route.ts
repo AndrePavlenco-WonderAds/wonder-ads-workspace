@@ -16,6 +16,11 @@ import {
 } from "@/lib/auth/credentials";
 import { DEADLINE_DENIAL_MESSAGE, deadlineWriteDenial } from "@/lib/web-projects-store";
 import {
+  DELIVERY_REVISION_REQUIRED_MESSAGE,
+  normaliseDeliveryRevision,
+  requiresDeliveryRevision,
+} from "@/lib/web-shared";
+import {
   deleteTicket,
   getTicket,
   normaliseTicket,
@@ -25,6 +30,7 @@ import {
 import {
   TICKET_PRIORITY_META,
   TICKET_STATUS_META,
+  TICKET_TO_BOARD_COLUMN,
   type TicketEvent,
   type WebTicket,
 } from "@/lib/web-tickets-shared";
@@ -107,6 +113,36 @@ export async function PATCH(
     return NextResponse.json({ ticket: next });
   }
 
+  const nextStatus =
+    typeof o.status === "string" ? o.status : prev.status;
+  const statusChanged = nextStatus !== prev.status;
+
+  // --- Nova linha de entrega prevista ----------------------------------
+  // Devolver o trabalho a In Progress depois de Client Feedback significa
+  // que a data anterior deixou de ser verdade. Exige-se a nova data e o
+  // motivo — no servidor, porque é aqui que passam TODAS as mudanças de
+  // estado (a ficha, o board por drag, e qualquer chamada à mão).
+  const prevColumn = TICKET_TO_BOARD_COLUMN[prev.status];
+  const nextColumn =
+    TICKET_TO_BOARD_COLUMN[nextStatus as WebTicket["status"]] ?? prevColumn;
+  let newRevision: ReturnType<typeof normaliseDeliveryRevision> = null;
+  if (requiresDeliveryRevision(prevColumn, nextColumn)) {
+    newRevision = normaliseDeliveryRevision(
+      o.deliveryRevision,
+      { username: employee.username, name: employee.name },
+      Date.now(),
+    );
+    if (!newRevision) {
+      return NextResponse.json(
+        {
+          error: DELIVERY_REVISION_REQUIRED_MESSAGE,
+          code: "delivery_revision_required",
+        },
+        { status: 400 },
+      );
+    }
+  }
+
   // --- Data de entrega prevista ---------------------------------------
   // Mesmas regras dos projetos e a MESMA função a decidir: write-once, posta
   // por quem constrói e corrigida só por um SuperAdmin. Reusar a função em
@@ -156,10 +192,6 @@ export async function PATCH(
       ),
     );
   }
-  const nextStatus =
-    typeof o.status === "string" ? o.status : prev.status;
-  const statusChanged = nextStatus !== prev.status;
-
   if (statusChanged) {
     history.push(
       evt(
@@ -205,8 +237,27 @@ export async function PATCH(
 
   // `deadlineState` vai DEPOIS do payload: um board desatualizado a
   // reenviar a data antiga não pode desfazer o que já está trancado.
+  if (newRevision) {
+    history.push(
+      evt(
+        "status",
+        employee.username,
+        employee.name,
+        `Nova entrega prevista ${newRevision.date} — ${newRevision.note}`,
+      ),
+    );
+  }
+
   const next = normaliseTicket(
-    { ...prev, ...o, ...deadlineState, history },
+    {
+      ...prev,
+      ...o,
+      ...deadlineState,
+      deliveryRevisions: newRevision
+        ? [...prev.deliveryRevisions, newRevision]
+        : prev.deliveryRevisions,
+      history,
+    },
     prev.id,
     prev.seq,
     prev,
