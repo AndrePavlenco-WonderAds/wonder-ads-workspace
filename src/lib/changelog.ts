@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.51",
+    date: "2026-08-11",
+    title: "O cartão do ticket passou a dizer quem pediu, e não só quem faz",
+    highlights: [
+      "**📥 «Pedido por X · Departamento» nos cartões de ticket.** O cartão já dizia quem executa; faltava de quem veio o pedido. Num departamento que recebe trabalho de outros três, saber a origem é o que decide **a quem se pergunta** quando o pedido não se percebe — e isso obrigava a abrir o ticket para descobrir.",
+      "**👤 Ícones diferentes de propósito.** Responsável, quem pediu e entrega prevista são três factos distintos e levam três marcas distintas. Com o mesmo ícone de pessoa nas duas primeiras, o cartão lia-se como tendo duas pessoas atribuídas.",
+      "**🗃️ Quem já saiu continua a constar.** Os tickets pedidos por uma consultora que entretanto deixou a casa continuam a mostrar o nome dela — o pedido foi mesmo dela, e reescrever autoria histórica faria o cartão mentir sobre o passado.",
+    ],
+  },
+  {
     version: "76.50",
     date: "2026-08-11",
     title: "Os tickets do Web passaram a ter data de entrega, como os projetos",

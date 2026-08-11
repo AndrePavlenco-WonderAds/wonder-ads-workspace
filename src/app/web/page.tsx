@@ -18,7 +18,10 @@ import {
   ticketsStorageConfigured,
 } from "@/lib/web-tickets-store";
 import { getAllClients } from "@/lib/web-clients-store";
-import { TICKET_PRIORITY_META } from "@/lib/web-tickets-shared";
+import {
+  REQUESTING_DEPT_LABEL,
+  TICKET_PRIORITY_META,
+} from "@/lib/web-tickets-shared";
 import { slugify } from "@/lib/web-shared";
 import type { BoardTicket } from "@/components/web-board";
 import type { ClientOption } from "@/components/client-combobox";
@@ -84,6 +87,9 @@ export default async function WebPage() {
       priorityTag: TICKET_PRIORITY_META[t.priority].tag,
       deadline: t.deadline,
       deadlineSetByName: t.deadlineSetByName,
+      authorName: t.authorName,
+      requestingDeptLabel:
+        REQUESTING_DEPT_LABEL[t.requestingDept] ?? t.requestingDept,
       assigneeName: t.assigneeName,
       status: t.status,
     }));

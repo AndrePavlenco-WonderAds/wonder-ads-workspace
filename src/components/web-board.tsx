@@ -14,6 +14,7 @@ import {
   Plus,
   RefreshCw,
   Search,
+  Inbox,
   Send,
   Ticket,
   User2,
@@ -52,6 +53,9 @@ export type BoardTicket = {
   /** Entrega prevista — as mesmas regras dos projetos (v76.50). */
   deadline: string | null;
   deadlineSetByName: string | null;
+  /** Quem PEDIU o ticket, e de que departamento (v76.51). */
+  authorName: string;
+  requestingDeptLabel: string;
 };
 
 // Ticket-status ↔ board-column mapping. Tickets keep their own status
@@ -528,9 +532,22 @@ function TicketCard({
         </p>
       )}
       <div className="mt-2 flex flex-col gap-1 border-t border-white/8 pt-2 text-[10.5px] text-white/45">
+        {/* DUAS PESSOAS, DOIS PAPÉIS. O cartão já dizia quem FAZ; faltava
+            quem PEDIU — e num departamento que recebe trabalho de outros
+            três, saber de quem veio decide a quem se pergunta quando o
+            pedido não se percebe. Ícones diferentes de propósito: com o
+            mesmo, as duas linhas liam-se como duas pessoas atribuídas. */}
         <span className="inline-flex items-center gap-1">
           <User2 className="h-3 w-3" />
           {ticket.assigneeName ?? "Por atribuir"}
+        </span>
+        <span
+          className="inline-flex items-center gap-1 text-white/40"
+          title={`Pedido por ${ticket.authorName} · ${ticket.requestingDeptLabel}`}
+        >
+          <Inbox className="h-3 w-3" />
+          Pedido por {ticket.authorName}
+          <span className="text-white/25">· {ticket.requestingDeptLabel}</span>
         </span>
         {/* Entrega prevista — a mesma linha que os projetos já tinham. Um
             ticket sem data marcada é exatamente o que se quer ver de
