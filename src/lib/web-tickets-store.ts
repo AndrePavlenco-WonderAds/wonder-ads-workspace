@@ -105,6 +105,11 @@ function normaliseEvent(v: unknown): TicketEvent | null {
 
 /** Sanitise a full ticket payload. `prev` preserves immutable fields
  *  (seq, author, createdAt) + the resolvedAt stamp across edits. */
+/** yyyy-mm-dd ou null. Qualquer outra coisa é lixo e não fica guardada. */
+function isoDateOrNull(v: unknown): string | null {
+  return typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null;
+}
+
 export function normaliseTicket(
   v: unknown,
   id: string,
@@ -150,6 +155,13 @@ export function normaliseTicket(
     history: arr(o.history)
       .map(normaliseEvent)
       .filter((e): e is TicketEvent => e !== null),
+    deadline: isoDateOrNull(o.deadline),
+    deadlineSetByUsername: str(o.deadlineSetByUsername).trim() || null,
+    deadlineSetByName: str(o.deadlineSetByName).trim() || null,
+    deadlineSetAt:
+      typeof o.deadlineSetAt === "number" && Number.isFinite(o.deadlineSetAt)
+        ? o.deadlineSetAt
+        : null,
     createdAt: prev?.createdAt ?? num(o.createdAt, now),
     updatedAt: now,
     resolvedAt,

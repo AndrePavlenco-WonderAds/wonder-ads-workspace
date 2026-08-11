@@ -82,6 +82,8 @@ export default async function WebPage() {
       project: t.project,
       priorityLabel: TICKET_PRIORITY_META[t.priority].label,
       priorityTag: TICKET_PRIORITY_META[t.priority].tag,
+      deadline: t.deadline,
+      deadlineSetByName: t.deadlineSetByName,
       assigneeName: t.assigneeName,
       status: t.status,
     }));

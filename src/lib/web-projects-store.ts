@@ -264,8 +264,10 @@ export type DeadlineDenial = "locked" | "forbidden";
 export const DEADLINE_DENIAL_MESSAGE: Record<DeadlineDenial, string> = {
   locked:
     "A data de entrega prevista já foi definida e não pode ser alterada. Só um SuperAdmin a pode corrigir.",
+  // Sem "projeto" no texto: a mesma mensagem serve projetos e tickets
+  // desde a v76.50.
   forbidden:
-    "Só o departamento Web pode definir a data de entrega prevista deste projeto.",
+    "Só o departamento Web pode definir a data de entrega prevista.",
 };
 
 /** Diz se o payload tenta mexer na data sem ter direito a isso. Devolve
@@ -273,7 +275,11 @@ export const DEADLINE_DENIAL_MESSAGE: Record<DeadlineDenial, string> = {
  *  a data vem igual à guardada e portanto não há alteração nenhuma. */
 export function deadlineWriteDenial(
   payload: unknown,
-  prev: WebProject | null,
+  // Só se lê `prev.deadline` — por isso o parâmetro aceita qualquer coisa
+  // que tenha data de entrega. É o que permite aos TICKETS usarem esta
+  // mesma função (v76.50) em vez de terem uma cópia da regra que mais tarde
+  // divergiria da dos projetos.
+  prev: { deadline: string | null } | null | undefined,
   rights: WebDeliveryRights,
 ): DeadlineDenial | null {
   const o = (payload ?? {}) as Record<string, unknown>;

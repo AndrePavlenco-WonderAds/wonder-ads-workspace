@@ -5,7 +5,12 @@ import { PageShell } from "@/components/page-shell";
 import { AccessDenied } from "@/components/access-denied";
 import { TicketDetail } from "@/components/ticket-detail";
 import { getCurrentEmployee } from "@/lib/auth/server";
-import { accessibleDepts, getWebAssignees } from "@/lib/auth/credentials";
+import {
+  accessibleDepts,
+  findEmployeeByUsername,
+  getWebAssignees,
+  webDeliveryRights,
+} from "@/lib/auth/credentials";
 import { getTicket } from "@/lib/web-tickets-store";
 import { ticketRef } from "@/lib/web-tickets-shared";
 
@@ -65,7 +70,13 @@ export default async function TicketPage({
       </header>
 
       <section className="mt-4">
-        <TicketDetail initialTicket={ticket} assignees={assignees} />
+        <TicketDetail
+          initialTicket={ticket}
+          assignees={assignees}
+          deliveryRights={webDeliveryRights(
+            findEmployeeByUsername(employee.username),
+          )}
+        />
       </section>
     </PageShell>
   );

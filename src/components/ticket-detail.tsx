@@ -27,9 +27,14 @@ type Assignee = { username: string; name: string };
 export function TicketDetail({
   initialTicket,
   assignees,
+  deliveryRights,
 }: {
   initialTicket: WebTicket;
   assignees: Assignee[];
+  /** Direitos sobre a data de entrega — resolvidos no servidor. O input
+   *  fica trancado quando a pessoa não a pode mexer; a rota volta a
+   *  verificar, porque esconder um controlo não é proteger nada. */
+  deliveryRights: { canSet: boolean; canOverride: boolean };
 }) {
   const [ticket, setTicket] = useState<WebTicket>(initialTicket);
   const [saving, setSaving] = useState(false);
@@ -233,6 +238,34 @@ export function TicketDetail({
               ...assignees.map((a) => ({ value: a.username, label: a.name })),
             ]}
           />
+
+          {/* Entrega prevista — write-once, como nos projetos: quem constrói
+              põe-na uma vez, e a partir daí só um SuperAdmin a corrige. */}
+          <label className="mt-3 block">
+            <span className="text-[10.5px] font-medium uppercase tracking-[0.13em] text-white/50">
+              Entrega prevista
+            </span>
+            <input
+              type="date"
+              value={ticket.deadline ?? ""}
+              disabled={
+                ticket.deadline
+                  ? !deliveryRights.canOverride
+                  : !deliveryRights.canSet
+              }
+              onChange={(e) => patch({ deadline: e.target.value || null })}
+              className="mt-1 w-full rounded-lg border border-white/12 bg-white/[0.04] px-3 py-2 text-[12px] text-white outline-none [color-scheme:dark] focus:border-[color:var(--brand-purple)]/60 disabled:cursor-not-allowed disabled:opacity-55"
+            />
+            <span className="mt-1 block text-[10px] leading-relaxed text-white/35">
+              {ticket.deadline
+                ? deliveryRights.canOverride
+                  ? `Definida por ${ticket.deadlineSetByName ?? "—"}. Só um SuperAdmin a pode corrigir.`
+                  : `Trancada — definida por ${ticket.deadlineSetByName ?? "—"}.`
+                : deliveryRights.canSet
+                  ? "Depois de gravada fica trancada."
+                  : "Só o departamento Web define a data de entrega."}
+            </span>
+          </label>
         </div>
 
         <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-4 text-[12px] text-white/60">

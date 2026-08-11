@@ -49,6 +49,9 @@ export type BoardTicket = {
   assigneeName: string | null;
   /** Ticket status (own enum) — mapped to a board column for placement. */
   status: TicketStatus;
+  /** Entrega prevista — as mesmas regras dos projetos (v76.50). */
+  deadline: string | null;
+  deadlineSetByName: string | null;
 };
 
 // Ticket-status ↔ board-column mapping. Tickets keep their own status
@@ -524,9 +527,32 @@ function TicketCard({
           {ticket.project}
         </p>
       )}
-      <div className="mt-2 flex items-center gap-1 border-t border-white/8 pt-2 text-[10.5px] text-white/45">
-        <User2 className="h-3 w-3" />
-        {ticket.assigneeName ?? "Por atribuir"}
+      <div className="mt-2 flex flex-col gap-1 border-t border-white/8 pt-2 text-[10.5px] text-white/45">
+        <span className="inline-flex items-center gap-1">
+          <User2 className="h-3 w-3" />
+          {ticket.assigneeName ?? "Por atribuir"}
+        </span>
+        {/* Entrega prevista — a mesma linha que os projetos já tinham. Um
+            ticket sem data marcada é exatamente o que se quer ver de
+            relance, por isso a linha aparece mesmo vazia. */}
+        {ticket.deadline ? (
+          <span
+            className="inline-flex items-center gap-1.5 font-medium text-emerald-200/85"
+            title={
+              ticket.deadlineSetByName
+                ? `Entrega prevista definida por ${ticket.deadlineSetByName}`
+                : "Entrega prevista trancada"
+            }
+          >
+            <Lock className="h-3 w-3" />
+            Entrega prevista {formatDate(ticket.deadline)}
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1.5 text-amber-200/70">
+            <CalendarClock className="h-3 w-3" />
+            Entrega por definir
+          </span>
+        )}
       </div>
     </Link>
   );

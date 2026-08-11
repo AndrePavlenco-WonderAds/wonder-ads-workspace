@@ -200,6 +200,16 @@ export type WebTicket = {
   /** First time the ticket reached a resolved status — drives the
    *  average-resolution-time metric. */
   resolvedAt: number | null;
+  /** DATA DE ENTREGA PREVISTA (v76.50) — as mesmas regras dos projetos:
+   *  write-once, posta por quem constrói (dept Web) e corrigida só por um
+   *  SuperAdmin. Um ticket é trabalho pedido por outro departamento e
+   *  também tem quem espera por ele; não ter data fazia dos tickets o único
+   *  sítio do board sem compromisso à vista. ISO yyyy-mm-dd; null = por
+   *  definir. */
+  deadline: string | null;
+  deadlineSetByUsername: string | null;
+  deadlineSetByName: string | null;
+  deadlineSetAt: number | null;
 };
 
 export function ticketRef(t: Pick<WebTicket, "seq">): string {

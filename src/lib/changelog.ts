@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.50",
+    date: "2026-08-11",
+    title: "Os tickets do Web passaram a ter data de entrega, como os projetos",
+    highlights: [
+      "**📅 «Entrega por definir» aparece agora também nos cartões de ticket.** Era a única metade do board sem compromisso à vista: um projeto mostrava a data (ou a falta dela) e um ticket não mostrava nada — apesar de ser trabalho pedido por outro departamento, com alguém do outro lado à espera.",
+      "**🔒 As regras são exatamente as dos projetos, e é a MESMA função a decidi-las.** Write-once: quem constrói (departamento Web) põe a data uma vez, e a partir daí só um SuperAdmin a corrige. Reusar a regra em vez de a copiar é o que garante que as duas metades do departamento não divergem quando ela mudar.",
+      "**✅ Verificado nas quatro situações:** um consultor de SEO a tentar definir leva **403**; um designer de Web define e fica registado quem a pôs; o **mesmo** designer a tentar alterá-la leva **403** («já foi definida»); e um SuperAdmin corrige-a. O input na ficha do ticket tranca-se sozinho conforme os direitos de quem está a ver — e a rota volta a verificar, porque esconder um controlo não protege nada.",
+      "**🗂️ Fica no histórico do ticket.** Definir ou remover a data escreve uma linha no histórico, como qualquer outra alteração — uma data de entrega é um compromisso, e um compromisso tem de ter dono e hora.",
+    ],
+  },
+  {
     version: "76.49",
     date: "2026-08-11",
     title: "Situation Point Call: o fundador é avisado quando um cliente faz 4 meses de roadmap",

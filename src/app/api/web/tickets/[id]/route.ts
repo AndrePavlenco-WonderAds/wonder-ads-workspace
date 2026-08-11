@@ -8,7 +8,13 @@
 
 import { NextResponse } from "next/server";
 import { getCurrentEmployee } from "@/lib/auth/server";
-import { canAccessDept, getEmployeeDisplay } from "@/lib/auth/credentials";
+import {
+  canAccessDept,
+  findEmployeeByUsername,
+  getEmployeeDisplay,
+  webDeliveryRights,
+} from "@/lib/auth/credentials";
+import { DEADLINE_DENIAL_MESSAGE, deadlineWriteDenial } from "@/lib/web-projects-store";
 import {
   deleteTicket,
   getTicket,
@@ -101,8 +107,55 @@ export async function PATCH(
     return NextResponse.json({ ticket: next });
   }
 
+  // --- Data de entrega prevista ---------------------------------------
+  // Mesmas regras dos projetos e a MESMA função a decidir: write-once, posta
+  // por quem constrói e corrigida só por um SuperAdmin. Reusar a função em
+  // vez de a copiar é o que garante que as duas metades do departamento não
+  // divergem quando a regra mudar.
+  const rights = webDeliveryRights(findEmployeeByUsername(employee.username));
+  const denial = deadlineWriteDenial(o, prev, rights);
+  if (denial) {
+    return NextResponse.json(
+      { error: DEADLINE_DENIAL_MESSAGE[denial] },
+      { status: 403 },
+    );
+  }
+  const requestedDeadline =
+    typeof o.deadline === "string" && /^\d{4}-\d{2}-\d{2}$/.test(o.deadline)
+      ? o.deadline
+      : o.deadline === null || o.deadline === ""
+        ? null
+        : undefined;
+  const deadlineChanged =
+    requestedDeadline !== undefined && requestedDeadline !== prev.deadline;
+  const deadlineState = deadlineChanged
+    ? {
+        deadline: requestedDeadline,
+        deadlineSetByUsername: requestedDeadline ? employee.username : null,
+        deadlineSetByName: requestedDeadline ? employee.name : null,
+        deadlineSetAt: requestedDeadline ? Date.now() : null,
+      }
+    : {
+        deadline: prev.deadline,
+        deadlineSetByUsername: prev.deadlineSetByUsername,
+        deadlineSetByName: prev.deadlineSetByName,
+        deadlineSetAt: prev.deadlineSetAt,
+      };
+
   // --- Field updates: build the merged payload + history diff ---
   const history = [...prev.history];
+  if (deadlineChanged) {
+    history.push(
+      evt(
+        "status",
+        employee.username,
+        employee.name,
+        requestedDeadline
+          ? `Entrega prevista: ${requestedDeadline}`
+          : "Entrega prevista removida.",
+      ),
+    );
+  }
   const nextStatus =
     typeof o.status === "string" ? o.status : prev.status;
   const statusChanged = nextStatus !== prev.status;
@@ -150,8 +203,10 @@ export async function PATCH(
     if (o.assigneeUsername) o.assigneeName = newName;
   }
 
+  // `deadlineState` vai DEPOIS do payload: um board desatualizado a
+  // reenviar a data antiga não pode desfazer o que já está trancado.
   const next = normaliseTicket(
-    { ...prev, ...o, history },
+    { ...prev, ...o, ...deadlineState, history },
     prev.id,
     prev.seq,
     prev,
