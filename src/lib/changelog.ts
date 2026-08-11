@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.53",
+    date: "2026-08-11",
+    title: "O COO é avisado sempre que um cliente responde ao NPS — com a nota logo no aviso",
+    highlights: [
+      "**📣 Cada NPS respondido cai no sino do André.** Vai para quem é dono da relação ao nível da casa, e não para o consultor: o consultor já sabe que pediu o inquérito, e a resposta é precisamente a leitura que ele não consegue fazer sobre si próprio.",
+      "**🔢 O aviso leva a NOTA, não só o facto de existir resposta.** Um 9 e um 4 pedem coisas opostas — um é para agradecer e pedir referência, o outro é para ligar hoje. Um «há uma resposta nova» obrigava a abrir a página para saber qual dos dois é, e a urgência perdia-se pelo caminho. O corpo traz a continuidade, a média geral, o consultor da conta e quem respondeu.",
+      "**⚠️ Detratores destacam-se.** Uma resposta de 6 ou menos abre com aviso e sugere a chamada antes de a renovação chegar; uma de 9+ sugere pedir a referência enquanto o cliente está satisfeito. Já apanhou uma real: **A. Domingos, 4/10**.",
+      "**🗂️ Uma resposta, um bloco.** O painel agrupa por regra e período; com um rótulo fixo, a resposta de um detrator e a de um promotor caíam no mesmo grupo e o cabeçalho de uma passava a descrever a outra. O rótulo leva o cliente e a data.",
+      "**⚡ 15 minutos de cache, e não 30 como os outros avisos.** É uma leitura por cliente e o sino corre em todas as páginas — mas meia hora de atraso a saber que um cliente está insatisfeito é meia hora a mais.",
+    ],
+  },
+  {
     version: "76.52",
     date: "2026-08-11",
     title: "Tickets com dono obrigatório e carga à vista, e uma linha nova de entrega sempre que o trabalho volta para a mesa",

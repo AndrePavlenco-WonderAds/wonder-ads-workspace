@@ -18,6 +18,7 @@ import {
 } from "@/lib/admin-clients-store";
 import { resolveConsultant } from "@/lib/client-overrides";
 import { getPausedSlugSet } from "@/lib/admin-paused-clients-store";
+import { getNpsRecord } from "@/lib/nps-store";
 import {
   currentWeekIndex,
   getCurrentRoadmap,
@@ -485,6 +486,133 @@ async function situationPointNotifications(
   });
 }
 
+/** Janela em que uma resposta de NPS continua a aparecer no sino. Depois
+ *  disto vive só na página de NPS do cliente — o sino é para o que está por
+ *  tratar, não é arquivo. */
+const NPS_NOTIFICATION_WINDOW_MS = 60 * 24 * 60 * 60 * 1000; // 60 dias
+
+/** Respostas de NPS recentes de toda a carteira SEO.
+ *
+ *  Cache de 15 minutos: é uma leitura de KV por cliente e o sino corre em
+ *  todas as páginas. Quinze e não trinta porque um NPS de um detrator é a
+ *  coisa mais urgente que aparece aqui — meia hora de atraso a saber que um
+ *  cliente está insatisfeito é meia hora a mais. */
+const getRecentNpsSubmissions = unstable_cache(
+  async (): Promise<
+    {
+      slug: string;
+      title: string;
+      icon: string | null;
+      id: string;
+      submittedAt: number;
+      nps: number;
+      overall: number;
+      category: string;
+      consultant: string | null;
+      identification: string | null;
+    }[]
+  > => {
+    let all: Awaited<ReturnType<typeof getSeoClients>>;
+    try {
+      all = await getSeoClients();
+    } catch {
+      return [];
+    }
+    const floor = Date.now() - NPS_NOTIFICATION_WINDOW_MS;
+    const out: Awaited<ReturnType<typeof getRecentNpsSubmissions>> = [];
+    await Promise.all(
+      all.map(async (c) => {
+        try {
+          const rec = await getNpsRecord(c.slug);
+          for (const s of rec.submissions) {
+            if (s.submittedAt < floor) continue;
+            out.push({
+              slug: c.slug,
+              title: c.title,
+              icon: c.icon,
+              id: s.id,
+              submittedAt: s.submittedAt,
+              nps: s.scores.nps,
+              overall: s.scores.overall,
+              category: s.scores.category,
+              consultant: s.consultant,
+              identification: s.identification,
+            });
+          }
+        } catch {
+          /* um registo ilegível não pode calar o sino inteiro */
+        }
+      }),
+    );
+    return out.sort((a, b) => b.submittedAt - a.submittedAt);
+  },
+  ["notifications-recent-nps-v1"],
+  { revalidate: 900 },
+);
+
+/** «Um cliente respondeu ao NPS» — para o COO.
+ *
+ *  Vai para quem é dono da relação com o cliente ao nível da casa, não para
+ *  o consultor: o consultor já sabe que pediu o inquérito, e a resposta é
+ *  precisamente a leitura que ELE não consegue fazer sobre si próprio.
+ *
+ *  O CORPO LEVA A NOTA. Um NPS de 9 e um de 4 pedem coisas opostas — um é
+ *  para agradecer e pedir referência, o outro é para ligar hoje. Um aviso
+ *  que dissesse só «há uma resposta nova» obrigava a abrir a página para
+ *  saber qual dos dois é, e a urgência perdia-se pelo caminho. */
+async function npsNotifications(
+  viewer: Viewer,
+  state: NotificationState,
+  now: Date,
+): Promise<UserNotification[]> {
+  if (viewer.username !== SITUATION_POINT_OWNER) return [];
+  let subs: Awaited<ReturnType<typeof getRecentNpsSubmissions>>;
+  try {
+    subs = await getRecentNpsSubmissions();
+  } catch (err) {
+    console.error("Notificações: NPS falhou:", err);
+    return [];
+  }
+  return subs.map((s) => {
+    const id = notificationId("seo-nps-submitted", s.id, s.slug);
+    const entry = state[id];
+    const detractor = s.nps <= 6;
+    const promoter = s.nps >= 9;
+    const label = detractor
+      ? "DETRATOR"
+      : promoter
+        ? "promotor"
+        : "neutro";
+    return {
+      id,
+      ruleId: "seo-nps-submitted",
+      title: detractor
+        ? `⚠️ NPS ${s.nps}/10 da ${s.title} — resposta de detrator`
+        : `A ${s.title} respondeu ao NPS — ${s.nps}/10`,
+      body:
+        `Continuidade ${s.nps}/10 (${label}) · média geral ${s.overall.toFixed(1)}/10` +
+        (s.consultant ? ` · conta do ${s.consultant}` : "") +
+        (s.identification ? ` · respondeu ${s.identification}` : "") +
+        (detractor
+          ? ". Vale uma chamada esta semana, antes de a renovação chegar."
+          : promoter
+            ? ". Bom momento para pedir uma referência ou uma review."
+            : "."),
+      // O painel agrupa por (regra, período). Com um rótulo constante, a
+      // resposta de um detrator e a de um promotor caíam no mesmo grupo — e
+      // o cabeçalho de um passava a descrever o outro. O rótulo leva o
+      // cliente e a data, por isso cada resposta é o seu próprio bloco.
+      periodLabel: `${s.title} · ${new Date(s.submittedAt).toLocaleDateString("en-GB")}`,
+      dueAt: s.submittedAt,
+      client: { slug: s.slug, title: s.title, icon: s.icon },
+      actionLabel: "Ler as respostas",
+      actionHref: `/seo/${s.slug}/nps`,
+      resolved: Boolean(entry),
+      resolvedAt: entry?.resolvedAt ?? null,
+    };
+  });
+}
+
 export async function getUserNotifications(
   viewer: Viewer,
   now: Date = new Date(),
@@ -513,16 +641,18 @@ export async function getUserNotifications(
       ? ((await seoBooksByConsultant(needsStartDates)).get(viewer.name) ?? [])
       : [];
 
-  const [ending, situationPoints] = await Promise.all([
+  const [ending, situationPoints, nps] = await Promise.all([
     roadmapEndingNotifications(viewer, book, state, now),
     situationPointNotifications(viewer, state, now),
+    npsNotifications(viewer, state, now),
   ]);
 
   if (applicable.length === 0) {
-    return [...situationPoints, ...feedback, ...ending];
+    return [...nps, ...situationPoints, ...feedback, ...ending];
   }
 
   return [
+    ...nps,
     ...situationPoints,
     ...feedback,
     ...ending,
