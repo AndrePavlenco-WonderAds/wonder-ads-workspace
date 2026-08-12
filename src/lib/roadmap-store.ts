@@ -22,10 +22,28 @@ export const WEEKS_PER_MONTH = 4;
 /** A brand-new roadmap covers one quarter (3 months / 12 weeks). */
 export const MIN_ROADMAP_WEEKS = 12;
 /** Hard ceiling: a full year. Keeps the board (and the KV blob) bounded
- *  no matter how many times "Extend +3 months" is clicked. */
+ *  no matter how many times the plan is extended. */
 export const MAX_ROADMAP_WEEKS = 48;
-/** How many weeks one "Extend +3 months" click adds. */
-export const ROADMAP_EXTEND_STEP = 12;
+/** The extension steps the consultant can pick, in months. Three sizes
+ *  because three different situations: +1 closes out a plan that only
+ *  needs a few more weeks, +3 is the ordinary quarterly renewal, and +6
+ *  matches an account that already signed for a longer term — making
+ *  that consultant click "+3" twice was busywork that also logged two
+ *  extensions for one decision. */
+export const ROADMAP_EXTEND_MONTHS = [1, 3, 6] as const;
+
+/** Total weeks after growing `currentWeeks` by `months`, already capped at
+ *  the 12-month ceiling. Single source of the clamp so the button label,
+ *  the tooltip and the state update can never disagree. */
+export function weeksAfterExtend(
+  currentWeeks: number,
+  months: number,
+): number {
+  return Math.min(
+    MAX_ROADMAP_WEEKS,
+    currentWeeks + months * WEEKS_PER_MONTH,
+  );
+}
 
 /** The trusted total-week span of a roadmap. Defaults to 12 when unset
  *  (pre-v74.65 roadmaps), snaps to a whole number of months, and clamps
@@ -143,8 +161,9 @@ export type Roadmap = {
    *  (one month = 4 weeks) between {@link MIN_ROADMAP_WEEKS} and
    *  {@link MAX_ROADMAP_WEEKS}. Optional for backward compatibility —
    *  roadmaps generated before v74.65 have no `weeks` and are treated as
-   *  a 12-week (3-month) plan. The consultant grows this in 3-month steps
-   *  via "Extend +3 months" on the board as an engagement continues. */
+   *  a 12-week (3-month) plan. The consultant grows this in 1-, 3- or
+   *  6-month steps via "Extend" on the board (see
+   *  {@link ROADMAP_EXTEND_MONTHS}) as an engagement continues. */
   weeks?: number;
   /** ISO date (YYYY-MM-DD) — Monday of week 1 of THIS roadmap cycle.
    *  Distinct from `onboardingDate`: when a roadmap is regenerated /

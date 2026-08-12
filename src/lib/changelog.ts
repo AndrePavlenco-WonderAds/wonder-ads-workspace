@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.56",
+    date: "2026-08-12",
+    title: "Estender o roadmap +1, +3 ou +6 meses",
+    highlights: [
+      "**📅 Três passos em vez de um.** O botão só sabia somar um trimestre. Uma conta que acabou de assinar seis meses obrigava a dois cliques — e deixava duas linhas de «estendido» no histórico para uma única decisão; um plano a que faltava fechar um mês era obrigado a saltar um trimestre inteiro e a ficar com colunas vazias que ninguém ia planear.",
+      "**🚫 Um passo que não cabe fica desativado, não encolhido.** Num roadmap a 11 meses, o +3 e o +6 apagam-se e o tooltip diz quanto ainda cabe. Clicar «+6» e receber um mês é a espécie de mentira pequena que ensina as pessoas a desconfiar do botão.",
+      "**🎯 O +3 continua a ser o destacado** no aviso de fim de roadmap — três botões igualmente garridos transformavam um lembrete num teste de escolha múltipla. Continua a ser o passo normal, deixou é de ser o único.",
+      "**🧱 As semanas e as tarefas que já lá estão não se mexem.** As novas entram como colunas vazias a seguir à última, e o histórico do roadmap regista uma linha com o novo total.",
+    ],
+  },
+  {
     version: "76.55",
     date: "2026-08-12",
     title: "Os tickets antigos voltam a abrir",

@@ -30,8 +30,9 @@ import {
 import { upload } from "@vercel/blob/client";
 import {
   MAX_ROADMAP_WEEKS,
-  ROADMAP_EXTEND_STEP,
+  ROADMAP_EXTEND_MONTHS,
   WEEKS_PER_MONTH,
+  weeksAfterExtend,
   ROADMAP_PILLARS,
   ROADMAP_STATUSES,
   currentWeekIndex,
@@ -442,15 +443,15 @@ export function RoadmapBoard({
   const updateStartDate = useCallback((next: string) => {
     setRoadmap((prev) => ({ ...prev, startDate: next }));
   }, []);
-  // "Extend +3 months" — grows the plan by one quarter (up to the 1-year
-  // cap). Existing tasks/weeks are untouched; the new weeks land as empty
+  // "Extend" — grows the plan by 1, 3 or 6 months (up to the 1-year cap).
+  // Existing tasks/weeks are untouched; the new weeks land as empty
   // columns ready to plan. The debounced auto-save persists the new
   // `weeks` and the changelog records an "extend" event.
-  const extendRoadmap = useCallback(() => {
+  const extendRoadmap = useCallback((months: number) => {
     setRoadmap((prev) => {
       const current = roadmapWeeks(prev);
-      if (current >= MAX_ROADMAP_WEEKS) return prev;
-      const next = Math.min(MAX_ROADMAP_WEEKS, current + ROADMAP_EXTEND_STEP);
+      const next = weeksAfterExtend(current, months);
+      if (next <= current) return prev;
       return { ...prev, weeks: next };
     });
   }, []);
@@ -505,27 +506,11 @@ export function RoadmapBoard({
             </span>
           )}
           {!readOnly && !isEmpty && (
-            <button
-              type="button"
-              onClick={extendRoadmap}
-              disabled={atMaxWeeks}
-              title={
-                atMaxWeeks
-                  ? `This roadmap is at the ${MAX_ROADMAP_WEEKS}-week (12-month) maximum.`
-                  : `Add ${ROADMAP_EXTEND_STEP} more weeks (3 months) — now ${totalWeeks}, becomes ${Math.min(
-                      MAX_ROADMAP_WEEKS,
-                      totalWeeks + ROADMAP_EXTEND_STEP,
-                    )}.`
-              }
-              className={
-                nearingEnd && !atMaxWeeks
-                  ? "inline-flex items-center gap-1.5 rounded-md bg-gradient-to-br from-[#343ED7] via-[#783DF5] to-[#C535C9] px-3 py-1.5 text-[11px] font-semibold text-white shadow-md shadow-[#783DF5]/25 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
-                  : "inline-flex items-center gap-1.5 rounded-md border border-white/15 bg-white/[0.04] px-3 py-1.5 text-[11px] font-medium text-white/85 transition hover:border-white/30 hover:bg-white/[0.08] hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
-              }
-            >
-              <CalendarPlus className="h-3.5 w-3.5" />
-              {atMaxWeeks ? "Max 12 months" : "Extend +3 months"}
-            </button>
+            <ExtendControl
+              totalWeeks={totalWeeks}
+              highlight={nearingEnd}
+              onExtend={extendRoadmap}
+            />
           )}
           {!readOnly && (
             <button
@@ -629,24 +614,19 @@ export function RoadmapBoard({
               <p className="mt-0.5 text-[12px] leading-relaxed text-white/60">
                 {atMaxWeeks
                   ? "You can’t extend further — regenerate for a fresh cycle when this engagement rolls over."
-                  : `Add the next quarter and keep the momentum going. Existing weeks and tasks stay exactly as they are — Weeks ${
+                  : `Add another month, quarter or half-year and keep the momentum going — pick the one that matches what the client signed. Existing weeks and tasks stay exactly as they are; the new weeks land as empty columns from Week ${
                       totalWeeks + 1
-                    }–${Math.min(
-                      MAX_ROADMAP_WEEKS,
-                      totalWeeks + ROADMAP_EXTEND_STEP,
-                    )} land as empty columns ready to plan.`}
+                    } onwards, ready to plan.`}
               </p>
             </div>
           </div>
           {!atMaxWeeks && (
-            <button
-              type="button"
-              onClick={extendRoadmap}
-              className="inline-flex shrink-0 items-center justify-center gap-2 rounded-md bg-gradient-to-br from-[#343ED7] via-[#783DF5] to-[#C535C9] px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-[#783DF5]/25 transition hover:brightness-110"
-            >
-              <CalendarPlus className="h-4 w-4" />
-              Extend +3 months
-            </button>
+            <ExtendControl
+              totalWeeks={totalWeeks}
+              highlight
+              size="lg"
+              onExtend={extendRoadmap}
+            />
           )}
         </div>
       )}
@@ -734,6 +714,102 @@ export function RoadmapBoard({
 }
 
 // -----------------------------------------------------------
+
+/** EXTEND +1 / +3 / +6 MONTHS.
+ *
+ *  A quarter is the common renewal but it was never the only one: an
+ *  account that just signed for six months needed two clicks (and left
+ *  two "extended" lines in the log for one decision), and a plan that
+ *  only had to reach the end of an engagement had to overshoot by a
+ *  whole quarter. Three steps side by side make the choice one click and
+ *  keep the horizon honest.
+ *
+ *  A step that would run past the 12-month ceiling is DISABLED, not
+ *  silently clamped — clicking "+6" and getting one month is the kind of
+ *  small lie that teaches people to stop trusting the button. The
+ *  tooltip says how much room is actually left.
+ *
+ *  +3 stays the visually recommended step in the end-of-roadmap nudge:
+ *  three equally loud buttons turn a reminder into a quiz. */
+function ExtendControl({
+  totalWeeks,
+  highlight,
+  size = "sm",
+  onExtend,
+}: {
+  totalWeeks: number;
+  /** Final month of the plan (or past it) — when the choice actually
+   *  matters and the control earns the extra colour. */
+  highlight: boolean;
+  size?: "sm" | "lg";
+  onExtend: (months: number) => void;
+}) {
+  const lg = size === "lg";
+
+  if (totalWeeks >= MAX_ROADMAP_WEEKS) {
+    return (
+      <span
+        className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-white/12 bg-white/[0.03] px-3 py-1.5 text-[11px] font-medium text-white/45"
+        title={`This roadmap is at the ${MAX_ROADMAP_WEEKS}-week (12-month) maximum.`}
+      >
+        <CalendarPlus className="h-3.5 w-3.5" />
+        Max 12 months
+      </span>
+    );
+  }
+
+  return (
+    <span
+      className={`inline-flex shrink-0 items-center gap-1 rounded-md border px-1.5 py-1 ${
+        highlight
+          ? "border-[color:var(--brand-purple)]/45 bg-[color:var(--brand-purple)]/10"
+          : "border-white/12 bg-white/[0.03]"
+      }`}
+    >
+      <span
+        className={`inline-flex items-center gap-1.5 pl-1 pr-0.5 font-medium ${
+          lg ? "text-[11.5px] text-white/75" : "text-[11px] text-white/65"
+        }`}
+      >
+        <CalendarPlus className={lg ? "h-4 w-4" : "h-3.5 w-3.5"} />
+        Extend
+      </span>
+      {ROADMAP_EXTEND_MONTHS.map((m) => {
+        const next = weeksAfterExtend(totalWeeks, m);
+        // Room left, in months — the honest version of "+6" when only two
+        // months fit under the ceiling.
+        const roomMonths = (MAX_ROADMAP_WEEKS - totalWeeks) / WEEKS_PER_MONTH;
+        const fits = m <= roomMonths;
+        const featured = highlight && m === 3;
+        return (
+          <button
+            key={m}
+            type="button"
+            disabled={!fits}
+            onClick={() => onExtend(m)}
+            title={
+              fits
+                ? `Weeks ${totalWeeks + 1}–${next} land as empty columns — ${
+                    next / WEEKS_PER_MONTH
+                  } months in total.`
+                : `Only ${roomMonths} more month${
+                    roomMonths === 1 ? "" : "s"
+                  } fit before the 12-month ceiling.`
+            }
+            className={`rounded ${lg ? "px-2.5 py-1 text-[11.5px]" : "px-2 py-0.5 text-[11px]"} font-semibold tabular-nums transition disabled:cursor-not-allowed disabled:opacity-35 ${
+              featured
+                ? "bg-gradient-to-br from-[#343ED7] via-[#783DF5] to-[#C535C9] text-white shadow-md shadow-[#783DF5]/25 hover:brightness-110"
+                : "border border-white/12 bg-white/[0.04] text-white/80 hover:border-white/30 hover:bg-white/[0.09] hover:text-white"
+            }`}
+          >
+            +{m}
+            {lg ? (m === 1 ? " month" : " months") : "m"}
+          </button>
+        );
+      })}
+    </span>
+  );
+}
 
 function GeneratePanel({
   startDate,
