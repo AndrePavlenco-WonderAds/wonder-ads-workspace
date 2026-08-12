@@ -225,93 +225,97 @@ export function ReportDocument({
   // desenhado nos relatórios que já estavam gravados com ele — regenerar um
   // relatório antigo passa-o para a secção nova.
   const geoIntel = snapshot.geoIntel;
-  const geoReadiness = snapshot.geoReadiness;
-  const geo = geoIntel || geoReadiness ? undefined : snapshot.geo;
+  const geo = geoIntel ? undefined : snapshot.geo;
 
-  // —— A tabela única das keywords trabalhadas (v76.38) ————————————
-  // Uma só tabela comprida com TODAS as target keywords da client file e a
-  // posição atual na location certa. Substituiu quatro secções (Top queries,
-  // Top páginas, Maiores subidas e a média do GSC por keyword) — o relatório
-  // responde a «onde é que estamos em cada keyword do plano?» num sítio só.
+  // —— A TABELA DE KEYWORDS É DO SERPSTAT E DE MAIS NINGUÉM (v76.58) ————
   //
-  // A fonte é a melhor disponível no snapshot: o bloco de posição real
-  // (Serpstat desde a v76.38, DataForSEO na v76.35–37), o SE Ranking nos
-  // relatórios ≤ v76.34, e a média do GSC nos anteriores a isso — para um
-  // relatório antigo nunca ficar sem a sua tabela.
-  const live = snapshot.liveRanks;
-  const seRanking = snapshot.seRanking;
-  type KwSource = "live" | "seranking" | "gsc";
+  // E é a lista COMPLETA: todas as keywords para que o domínio (com
+  // subdomínios) rankeia no top-100 da base regional — a mesma consulta que
+  // se faz à mão no Serpstat. Antes mostrava-se só o plano de keywords, o
+  // que fazia o relatório dizer «rankeamos para 9 coisas» quando a resposta
+  // do Serpstat trazia 139. As do plano continuam distinguidas por uma
+  // etiqueta, porque foi isso que se prometeu trabalhar.
+  //
+  // O DataForSEO e o GSC estão FORA desta secção por decisão do Andre
+  // (v76.58): metodologias diferentes — uma média de impressões do GSC e um
+  // lugar exato na SERP não são o mesmo número — e misturá-las num sítio
+  // onde o cliente lê tudo como uma só medição produz um relatório errado.
+  // Sem Serpstat não há tabela; o bloco `seRanking` dos relatórios ≤ v76.34
+  // continua a desenhar-se para não apagar o que já estava gravado.
+  const live =
+    snapshot.liveRanks?.source === "serpstat" ? snapshot.liveRanks : undefined;
+  const seRanking = live ? undefined : snapshot.seRanking;
   type KwRow = {
     keyword: string;
     position: number | null;
     change: number | null;
     volume: number | null;
-    inLocalPack: boolean;
-    isNew: boolean;
+    inPlan: boolean;
+    aiOverview: boolean;
+    citedInAio: boolean;
+    difficulty: number | null;
+    traffic: number | null;
   };
-  const kwSource: KwSource | null = live
-    ? "live"
-    : seRanking
-      ? "seranking"
-      : (gsc.targetRanks ?? []).length > 0
-        ? "gsc"
-        : null;
-  const kwAll: KwRow[] =
-    kwSource === "live" && live
-      ? live.ranks.map((r) => ({
-          keyword: r.keyword,
-          position: r.position,
-          change: r.change,
-          volume: r.volume ?? null,
-          inLocalPack: r.inLocalPack,
-          isNew: false,
-        }))
-      : kwSource === "seranking" && seRanking
-        ? seRanking.ranks.map((r) => ({
-            keyword: r.keyword,
-            position: r.position,
-            change: r.change,
-            volume: r.volume,
-            inLocalPack: r.inLocalPack,
-            isNew: false,
-          }))
-        : (gsc.targetRanks ?? []).map((k) => ({
-            keyword: k.keyword,
-            position: k.position,
-            change: k.change,
-            volume: k.impressions,
-            inLocalPack: false,
-            isNew: k.isNew,
-          }));
-  // O CLIENTE VÊ SÓ AS QUE RANKEIAM (v76.32). Uma tabela onde metade diz
-  // «fora do top 100» não lê como trabalho em curso — lê como falha, e rouba
-  // o olho às que subiram. O consultor vê a lista inteira na variante
-  // interna, que é onde a lacuna é acionável.
-  const kwVisible =
-    variant === "internal" ? kwAll : kwAll.filter((r) => r.position !== null);
-  // Posições do GSC são médias (12,4); as das outras fontes são lugares
-  // exatos na página de resultados (12).
-  const kwDecimals = kwSource === "gsc";
+  const AIO = "ai_overview";
+  const AIO_CITED = ["snip_url_in_aio", "snip_fqdn_in_aio"];
+  const rowFrom = (
+    r: {
+      keyword: string;
+      position: number | null;
+      change: number | null;
+      volume?: number | null;
+      types?: string[];
+      difficulty?: number | null;
+      traffic?: number | null;
+    },
+    inPlan: boolean,
+  ): KwRow => ({
+    keyword: r.keyword,
+    position: r.position,
+    change: r.change,
+    volume: r.volume ?? null,
+    inPlan,
+    aiOverview: (r.types ?? []).includes(AIO),
+    citedInAio: (r.types ?? []).some((x) => AIO_CITED.includes(x)),
+    difficulty: r.difficulty ?? null,
+    traffic: r.traffic ?? null,
+  });
 
-  // —— Outros rankings (v76.40) ————————————————————————————————
-  // As keywords onde o site JÁ aparece e que não estão na lista de targets.
-  // Vinham na mesma resposta do Serpstat e eram deitadas fora: no Sentir
-  // Saúde isso eram 129 de 131, o que fazia o relatório dizer «rankeamos
-  // para 2 coisas» quando a verdade era o contrário. Não substitui a tabela
-  // do plano — fica POR BAIXO dela, porque o que foi prometido ao cliente
-  // continua a ser a primeira coisa a responder.
-  const otherRanks = kwSource === "live" ? (live?.others ?? []) : [];
-  const otherTotal = live?.othersTotal ?? otherRanks.length;
-  // O cliente vê as melhores; o consultor vê tudo o que foi guardado, que é
-  // de onde saem as próximas targets.
-  const OTHERS_CLIENT_CAP = 30;
-  const othersVisible =
-    variant === "internal"
-      ? otherRanks
-      : otherRanks.slice(0, OTHERS_CLIENT_CAP);
-  const othersTop10 = otherRanks.filter(
-    (r) => r.position !== null && r.position <= 10,
-  ).length;
+  const kwAll: KwRow[] = live
+    ? [
+        ...live.ranks.map((r) => rowFrom(r, true)),
+        ...(live.others ?? []).map((r) => rowFrom(r, false)),
+      ]
+    : (seRanking?.ranks ?? []).map((r) =>
+        rowFrom({ ...r, volume: r.volume }, true),
+      );
+
+  // A rankear primeiro, por lugar; as do plano que ainda não entraram no
+  // top-100 ficam no fim — continuam a ser trabalho em curso e não uma
+  // falha, mas não podem roubar o topo da tabela a quem já lá está.
+  const kwRanked = kwAll
+    .filter((r) => r.position !== null)
+    .sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+  const kwPending = kwAll.filter((r) => r.position === null);
+  // O cliente vê o que rankeia (princípio v76.32); o consultor vê a lista
+  // toda, porque a lacuna é que é acionável.
+  const kwVisible =
+    variant === "internal" ? [...kwRanked, ...kwPending] : kwRanked;
+  const kwDecimals = false;
+  const kwInPlan = kwRanked.filter((r) => r.inPlan).length;
+  // AI OVERVIEW, do Serpstat, na mesma resposta que deu a tabela acima. É a
+  // prova mais concreta de GEO que existe: a Google mostra resposta gerada
+  // nesta pesquisa, e ou cita este site ou cita outro.
+  const aioRows = kwRanked
+    .filter((r) => r.aiOverview || r.citedInAio)
+    .sort(
+      (a, b) =>
+        Number(b.citedInAio) - Number(a.citedInAio) ||
+        (b.volume ?? 0) - (a.volume ?? 0) ||
+        (a.position ?? 999) - (b.position ?? 999),
+    );
+  const kwTop10 = kwRanked.filter((r) => (r.position ?? 999) <= 10).length;
+
   const ai = snapshot.ai;
   const gbp = snapshot.gbp;
   // Per-listing breakdown — only on multi-unit clients (and absent on every
@@ -339,7 +343,7 @@ export function ReportDocument({
 
   const showAi = ai.sources.length > 0 || variant === "internal";
   const showNotes = Boolean(snapshot.notes.trim()) || variant === "internal";
-  const showGeo = Boolean(snapshot.geoIntel || snapshot.geoReadiness || geo);
+  const showGeo = Boolean(snapshot.geoIntel || geo || aioRows.length > 0);
 
   // O ÍNDICE. Uma lista só, montada com as mesmas condições que desenham as
   // secções, para que o número no cabeçalho e a entrada no índice não possam
@@ -352,11 +356,8 @@ export function ReportDocument({
     { key: "leads", label: t("Leads por canal", "Leads by channel") },
     { key: "traffic", label: t("Tráfego & Ficha Google", "Traffic & Google listing") },
     ...(showAi ? [{ key: "ai", label: "AI Visibility" }] : []),
-    ...(kwVisible.length > 0
-      ? [{ key: "kw", label: t("Keywords trabalhadas", "Target keywords") }]
-      : []),
-    ...(othersVisible.length > 0
-      ? [{ key: "others", label: t("Outros rankings", "Other rankings") }]
+    ...(kwVisible.length > 0 || variant === "internal"
+      ? [{ key: "kw", label: t("Keywords & posições", "Keywords & positions") }]
       : []),
     ...(showGeo ? [{ key: "geo", label: t("GEO · SEO para IA", "GEO · SEO for AI") }] : []),
     ...(showNotes
@@ -632,131 +633,29 @@ export function ReportDocument({
       {kwVisible.length > 0 && (
         <section className="wa-sec">
           <SecLabel n={secN("kw")}>
-            {t("Keywords Trabalhadas", "Target Keywords")}
-          </SecLabel>
-          <h3 className="wa-h3">
-            {variant === "internal"
-              ? t(
-                  `Posição atual de cada keyword (${kwVisible.length})`,
-                  `Current position for every keyword (${kwVisible.length})`,
-                )
-              : t(
-                  `Posição atual das keywords do plano (${kwVisible.length})`,
-                  `Current position of the plan's keywords (${kwVisible.length})`,
-                )}
-          </h3>
-          <p className="wa-method">
-            {kwSource === "gsc"
-              ? t(
-                  "Posição média no Google durante o mês, para cada keyword do plano, com base nas impressões do Google Search Console.",
-                  "Average Google position during the month for every keyword in the plan, based on Google Search Console impressions.",
-                )
-              : t(
-                  `Posição atual na página de resultados da Google, na região deste cliente e para o site completo (domínio e subdomínios), verificada a ${formatDate(
-                    kwSource === "live" && live
-                      ? live.checkedOn
-                      : seRanking?.checkedOn ?? snapshot.generatedAt,
-                  )}. «Fora do top 100» significa que a keyword ainda não entrou nos primeiros 100 resultados — é onde o trabalho dos próximos meses atua.`,
-                  `Current position on Google's results page, in this client's region and for the full site (domain and subdomains), checked on ${formatDate(
-                    kwSource === "live" && live
-                      ? live.checkedOn
-                      : seRanking?.checkedOn ?? snapshot.generatedAt,
-                  )}. “Outside top 100” means the keyword hasn't entered the first 100 results yet — that's where the coming months' work goes.`,
-                )}
-          </p>
-          <div className="wa-tblwrap" style={{ marginTop: ".6rem" }}>
-            <table className="wa-qtable">
-              <thead>
-                <tr>
-                  <th>Keyword</th>
-                  <th className="n">{t("Posição", "Position")}</th>
-                  <th className="n">{t("Δ mês", "MoM Δ")}</th>
-                  <th className="n">
-                    {kwSource === "gsc"
-                      ? t("Impressões", "Impressions")
-                      : t("Pesquisas/mês", "Searches/mo")}
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {kwVisible.map((k) => (
-                  <tr key={k.keyword}>
-                    <td>
-                      {k.keyword}
-                      {k.isNew && (
-                        <span className="wa-kw-new">{t("novo", "new")}</span>
-                      )}
-                      {k.inLocalPack && (
-                        <span className="wa-kw-map">{t("mapa", "map")}</span>
-                      )}
-                    </td>
-                    <td className="n">
-                      {k.position === null ? (
-                        <span className="wa-pending">
-                          {kwSource === "gsc"
-                            ? t("ainda não rankeia", "not ranking yet")
-                            : t("fora do top 100", "outside top 100")}
-                        </span>
-                      ) : (
-                        <PosPill pos={k.position} decimals={kwDecimals} />
-                      )}
-                    </td>
-                    <td className="n">
-                      {kwDecimals ? (
-                        <ChangeCell change={k.change} />
-                      ) : (
-                        <PlaceCell change={k.change} />
-                      )}
-                    </td>
-                    <td className="n">
-                      {k.volume === null ? "—" : formatRaw(k.volume, "count", lang)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          {variant === "internal" && kwSource === "live" && live && (
-            <p className="wa-method" style={{ marginTop: ".6rem" }}>
-              {live.source === "serpstat"
-                ? `Serpstat · base ${live.se ?? "g_pt"} · domínio + subdomínios · ${live.domain}${live.truncated ? " · ⚠ cobertura truncada — posições em falta podem ser falta de cobertura" : ""}`
-                : `DataForSEO · ${live.domain}${typeof live.costUsd === "number" ? ` · $${live.costUsd} nesta verificação` : ""}`}
-            </p>
-          )}
-        </section>
-      )}
-
-      {/* Outros rankings — tudo o resto onde o site já aparece na Google e
-          que não está na lista de targets. Mesma resposta do Serpstat, sem
-          chamada extra (v76.40). */}
-      {othersVisible.length > 0 && (
-        <section className="wa-sec">
-          <SecLabel n={secN("others")}>
-            {t("Outros Rankings", "Other Rankings")}
+            {t("Keywords & Posições", "Keywords & Positions")}
           </SecLabel>
           <h3 className="wa-h3">
             {t(
-              `Onde o site também já aparece (${otherTotal})`,
-              `Where the site already shows up too (${otherTotal})`,
+              `Onde o site aparece na Google (${kwRanked.length})`,
+              `Where the site shows up on Google (${kwRanked.length})`,
             )}
           </h3>
           <p className="wa-method">
             {t(
-              `Pesquisas onde o site já entra nos primeiros 100 resultados e que não fazem parte da lista de keywords do plano — ${othersTop10} delas na primeira página. Ganhas ao longo do trabalho, contam a dimensão real da presença orgânica${
-                variant === "internal"
-                  ? ". É daqui que saem as próximas target keywords: uma keyword com volume e posição já feita é mais barata de subir do que uma do zero."
-                  : othersVisible.length < otherTotal
-                    ? `. A tabela mostra as ${othersVisible.length} melhores.`
-                    : "."
-              }`,
-              `Searches where the site already ranks in the top 100 and that aren't part of the plan's keyword list — ${othersTop10} of them on page one. Won along the way, they show the real size of the organic presence${
-                variant === "internal"
-                  ? ". This is where the next target keywords come from: a keyword with volume and a position already earned is cheaper to lift than one from scratch."
-                  : othersVisible.length < otherTotal
-                    ? `. The table shows the top ${othersVisible.length}.`
-                    : "."
-              }`,
+              `Todas as pesquisas em que o site já entra nos 100 primeiros resultados da Google, na região deste cliente e para o domínio completo com subdomínios — ${kwTop10} ${kwTop10 === 1 ? "delas está" : "delas estão"} na primeira página e ${kwInPlan} ${kwInPlan === 1 ? "é keyword" : "são keywords"} do plano de trabalho. Posições verificadas a ${formatDate(
+                live?.checkedOn ?? seRanking?.checkedOn ?? snapshot.generatedAt,
+              )}.`,
+              `Every search where the site already ranks in Google's top 100, in this client's region and for the full domain including subdomains — ${kwTop10} on page one and ${kwInPlan} from the work plan. Positions checked on ${formatDate(
+                live?.checkedOn ?? seRanking?.checkedOn ?? snapshot.generatedAt,
+              )}.`,
             )}
+            {variant === "internal" && kwPending.length > 0 &&
+              " " +
+                t(
+                  `As últimas ${kwPending.length} linhas são keywords do plano que ainda não entraram no top 100.`,
+                  `The last ${kwPending.length} rows are plan keywords that haven't entered the top 100 yet.`,
+                )}
           </p>
           <div className="wa-tblwrap" style={{ marginTop: ".6rem" }}>
             <table className="wa-qtable">
@@ -766,126 +665,84 @@ export function ReportDocument({
                   <th className="n">{t("Posição", "Position")}</th>
                   <th className="n">{t("Δ mês", "MoM Δ")}</th>
                   <th className="n">{t("Pesquisas/mês", "Searches/mo")}</th>
+                  {variant === "internal" && <th className="n">KD</th>}
                 </tr>
               </thead>
               <tbody>
-                {othersVisible.map((k) => (
+                {kwVisible.map((k) => (
                   <tr key={k.keyword}>
-                    <td>{k.keyword}</td>
+                    <td>
+                      {k.keyword}
+                      {k.inPlan && (
+                        <span className="wa-kw-plan">{t("plano", "plan")}</span>
+                      )}
+                      {k.citedInAio ? (
+                        <span className="wa-kw-aio cited">
+                          {t("citado na IA", "cited by AI")}
+                        </span>
+                      ) : k.aiOverview ? (
+                        <span className="wa-kw-aio">AI Overview</span>
+                      ) : null}
+                    </td>
                     <td className="n">
                       {k.position === null ? (
-                        "—"
+                        <span className="wa-pending">
+                          {t("fora do top 100", "outside top 100")}
+                        </span>
                       ) : (
-                        <PosPill pos={k.position} decimals={false} />
+                        <PosPill pos={k.position} decimals={kwDecimals} />
                       )}
                     </td>
                     <td className="n">
                       <PlaceCell change={k.change} />
                     </td>
                     <td className="n">
-                      {k.volume === null || k.volume === undefined
-                        ? "—"
-                        : formatRaw(k.volume, "count", lang)}
+                      {k.volume === null ? "—" : formatRaw(k.volume, "count", lang)}
                     </td>
+                    {variant === "internal" && (
+                      <td className="n">
+                        {k.difficulty === null ? "—" : k.difficulty}
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+          {variant === "internal" && live && (
+            <p className="wa-method" style={{ marginTop: ".6rem" }}>
+              {`Serpstat · base ${live.se ?? "g_pt"} · domínio + subdomínios · ${live.domain}${
+                live.truncated
+                  ? " · ⚠ cobertura truncada — posições em falta podem ser falta de cobertura"
+                  : ""
+              }`}
+            </p>
+          )}
         </section>
       )}
 
-      {/* GEO — só existe no snapshot quando houve mesmo sinal (ver
-          hasGeoSignal). O corpus de perguntas em português ainda é curto, e
-          uma secção de zeros lê-se como trabalho não feito. */}
-      {geo && (
+      {/* SEM SERPSTAT NÃO HÁ TABELA. O consultor precisa de saber porquê —
+          quase sempre são créditos da API esgotados — e o cliente não pode
+          ver uma secção vazia nem números de outra fonte. */}
+      {kwVisible.length === 0 && variant === "internal" && (
         <section className="wa-sec">
-          <SecLabel n={secN("geo")}>
-            {t("Visibilidade em IA", "AI Visibility")}
+          <SecLabel n={secN("kw")}>
+            {t("Keywords Trabalhadas", "Target Keywords")}
           </SecLabel>
-          <h3 className="wa-h3">
+          <p className="wa-pending-lg">
             {t(
-              "Onde a marca aparece quando se pergunta a uma IA",
-              "Where the brand shows up when people ask an AI",
-            )}
-          </h3>
-          <p className="wa-method">
-            {t(
-              `Perguntas reais feitas ao ChatGPT e respondidas pela AI Overview da Google, verificadas a ${formatDate(geo.checkedOn)}. O número ao lado é quantas vezes por mês a pergunta é feita.`,
-              `Real questions asked to ChatGPT and answered by Google's AI Overview, checked on ${formatDate(geo.checkedOn)}. The number beside each is how many times a month it gets asked.`,
+              "O Serpstat não devolveu posições para este relatório, por isso a tabela de keywords não sai. Verifica os créditos da API do Serpstat (SerpstatLimitsProcedure.getStats) e volta a gerar — não há fonte alternativa por decisão de produto.",
+              "Serpstat returned no positions for this report, so the keyword table is omitted. Check the Serpstat API credits and regenerate — there is no alternative source by design.",
             )}
           </p>
-
-          {geo.present.length > 0 && (
-            <>
-              <div className="wa-kstats">
-                <div className="wa-kstat">
-                  <span className="wa-kv">
-                    {formatRaw(geo.presentTotal, "count", lang)}
-                  </span>
-                  <span className="wa-kl">
-                    {t("perguntas com a marca", "questions citing us")}
-                  </span>
-                </div>
-              </div>
-              <ul className="wa-geo" style={{ marginTop: "1rem" }}>
-                {geo.present.slice(0, 8).map((p, i) => (
-                  <li key={`${p.question}-${i}`} className="wa-geo-hit">
-                    <span className="wa-geo-q">“{p.question}”</span>
-                    <span className="wa-geo-v">
-                      {formatRaw(p.aiSearchVolume, "count", lang)}
-                      {t("/mês", "/mo")}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
-
-          {geo.gaps.length > 0 && (
-            <>
-              <h4 className="wa-geo-h">
-                {t("Onde ainda não aparecemos", "Where we're not there yet")}
-              </h4>
-              <p className="wa-method">
-                {t(
-                  "Perguntas sobre os temas deste projeto que a IA já responde citando outros. São o alvo do trabalho dos próximos meses.",
-                  "Questions on this project's topics that AI already answers by citing others. They're the target for the coming months.",
-                )}
-              </p>
-              <ul className="wa-geo">
-                {geo.gaps.flatMap((g) =>
-                  g.prompts.slice(0, 3).map((p, i) => (
-                    <li key={`${g.topic}-${p.question}-${i}`} className="wa-geo-gap">
-                      <span className="wa-geo-q">“{p.question}”</span>
-                      <span className="wa-geo-v">
-                        {formatRaw(p.aiSearchVolume, "count", lang)}
-                        {t("/mês", "/mo")}
-                      </span>
-                      {p.sources.length > 0 && (
-                        <span className="wa-geo-src">
-                          {t("hoje cita", "today it cites")}:{" "}
-                          {p.sources.slice(0, 3).join(", ")}
-                        </span>
-                      )}
-                    </li>
-                  )),
-                )}
-              </ul>
-            </>
-          )}
-          {variant === "internal" && (
-            <p className="wa-method" style={{ marginTop: ".6rem" }}>
-              DataForSEO · {geo.domain} · ${geo.costUsd} nesta verificação.
-            </p>
-          )}
         </section>
       )}
 
       {/* GEO v2 — o corpus de perguntas + a auditoria de prontidão. */}
       <ReportGeoSection
         intel={geoIntel}
-        readiness={geoReadiness}
+        aio={aioRows}
+        aioCheckedOn={live?.checkedOn ?? null}
         lang={lang}
         variant={variant}
         sectionNumber={secN("geo")}
@@ -980,6 +837,11 @@ const CSS = GEO_CSS + PRINT_CSS + `
 .wa-spark circle{fill:var(--violet);}
 
 /* Pastilha de posição */
+.wa-kw-plan{margin-left:.4rem;padding:.05rem .32rem;border-radius:4px;font-size:.6rem;font-weight:800;letter-spacing:.05em;
+  text-transform:uppercase;background:rgba(120,61,245,.12);color:#6b34c9;}
+.wa-kw-aio{margin-left:.35rem;padding:.05rem .32rem;border-radius:4px;font-size:.6rem;font-weight:800;letter-spacing:.05em;
+  text-transform:uppercase;background:rgba(23,22,45,.06);color:#5c5a72;}
+.wa-kw-aio.cited{background:rgba(15,143,98,.14);color:#0b6f4c;}
 .wa-pos{display:inline-block;min-width:2.1rem;padding:.1rem .38rem;border-radius:6px;font-weight:800;font-size:.76rem;
   font-variant-numeric:tabular-nums;text-align:center;}
 .wa-pos.p1{background:rgba(15,143,98,.14);color:#0b6f4c;}

@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.58",
+    date: "2026-08-12",
+    title: "As keywords do relatório passam a ser só do Serpstat — e a lista completa",
+    highlights: [
+      "**🔒 DataForSEO e GSC fora da tabela de keywords.** Metodologias diferentes: uma média de impressões do GSC e um lugar exato na SERP não são o mesmo número, e misturá-las num sítio onde o cliente lê tudo como uma só medição dá um relatório errado. Sem Serpstat não há tabela — e a vista interna diz porquê em vez de inventar uma fonte.",
+      "**📋 A tabela passa a ser a lista COMPLETA do Serpstat.** Todas as pesquisas em que o domínio (com subdomínios) já entra no top-100 da base regional, ordenadas por posição — a mesma consulta que se faz à mão no Serpstat. Antes mostrava só o plano: o relatório dizia «rankeamos para 9 coisas» quando a resposta trazia 139. As do plano ficam marcadas com uma etiqueta.",
+      "**🤖 AI Overview, de graça, na mesma resposta.** O Serpstat devolve por keyword os sinais `ai_overview` (a Google mostra resposta gerada) e `snip_url_in_aio` / `snip_fqdn_in_aio` (é ESTE site que ela cita lá dentro). A secção de GEO abre agora com isso: no Sentir Saúde, 6 pesquisas já têm resposta da IA e numa delas — «mbst», #1 — é o site a fonte citada. Zero chamadas e zero custo extra.",
+      "**🧹 Saíram do relatório** a auditoria de prontidão do site com a lista de ações, e o ranking «quem a IA cita neste tema».",
+      "**🛟 Uma página do Serpstat que falha deixa de deitar fora as anteriores.** Com o plano perto do teto, a página 2 devolvia «Limits exceeded» e perdiam-se as 1000 keywords que a página 1 já tinha trazido. Agora fica o que veio, marcado como cobertura truncada.",
+    ],
+  },
+  {
     version: "76.57",
     date: "2026-08-12",
     title: "GEO no relatório mensal — o que a IA responde, quem cita, e se o site está pronto",

@@ -51,7 +51,7 @@ const MAX_PAGES = 5;
  *  estão as melhores»); guardar 5000 encheria o KV do relatório sem
  *  acrescentar nada que alguém leia. O total real vai à parte, em
  *  `othersTotal`, para o número no relatório não mentir por truncagem. */
-const MAX_OTHERS = 150;
+const MAX_OTHERS = 300;
 
 /** Base regional do Serpstat a partir do geo já configurado por cliente
  *  (client-geo.ts usa códigos de localização da Google). */
@@ -81,7 +81,27 @@ export type SerpstatRank = {
   url: string | null;
   /** Pesquisas/mês na região (region_queries_count), quando conhecido. */
   volume: number | null;
+  /** Funcionalidades da SERP desta keyword. A lista do Serpstat inclui
+   *  `ai_overview` (a Google mostra resposta gerada) e — o que interessa
+   *  mesmo — `snip_url_in_aio` / `snip_fqdn_in_aio`, que dizem que é ESTE
+   *  site que a AI Overview cita lá dentro. Vem na mesma resposta, sem
+   *  custo nenhum. */
+  types: string[];
+  /** Dificuldade estimada (0–100). */
+  difficulty: number | null;
+  /** Tráfego estimado que a posição traz. */
+  traffic: number | null;
 };
+
+/** A Google mostra uma resposta gerada para esta pesquisa. */
+export function hasAiOverview(types: string[]): boolean {
+  return types.includes("ai_overview");
+}
+
+/** …e o site é uma das fontes citadas dentro dessa resposta. */
+export function citedInAiOverview(types: string[]): boolean {
+  return types.includes("snip_url_in_aio") || types.includes("snip_fqdn_in_aio");
+}
 
 export type SerpstatRankReport = {
   checkedOn: string; // ISO yyyy-mm-dd
@@ -106,7 +126,22 @@ type SerpstatRow = {
   position?: number;
   url?: string;
   region_queries_count?: number;
+  types?: string[];
+  difficulty?: number | null;
+  traff?: number | null;
 };
+
+function toRank(kw: string, row: SerpstatRow | undefined): SerpstatRank {
+  return {
+    keyword: kw,
+    position: row?.position ?? null,
+    url: row?.url ?? null,
+    volume: row?.region_queries_count ?? null,
+    types: Array.isArray(row?.types) ? row!.types! : [],
+    difficulty: typeof row?.difficulty === "number" ? row.difficulty : null,
+    traffic: typeof row?.traff === "number" ? row.traff : null,
+  };
+}
 
 type SerpstatResponse = {
   result?: {
@@ -200,9 +235,23 @@ export async function fetchSerpstatRanks(
     }
   };
 
+  // UMA PÁGINA QUE FALHA NÃO DEITA FORA AS ANTERIORES. Com o plano perto do
+  // teto, a página 2 devolve «Limits exceeded» enquanto a 1 já trouxe 1000
+  // keywords boas — perder tudo por causa disso dava um relatório sem
+  // tabela quando havia tabela para dar. A falta de cobertura fica marcada
+  // em `truncated`, que é o que impede o relatório de ler uma posição em
+  // falta como «não rankeia».
   let truncated = false;
   for (let page = 1; page <= MAX_PAGES; page++) {
-    const rows = await fetchPage(domain, se, page);
+    let rows: SerpstatRow[];
+    try {
+      rows = await fetchPage(domain, se, page);
+    } catch (err) {
+      if (page === 1) throw err;
+      console.error(`Serpstat página ${page} falhou para ${domain}:`, err);
+      truncated = true;
+      break;
+    }
     for (const row of rows) {
       const kw = row.keyword?.trim().toLowerCase();
       if (!kw) continue;
@@ -225,12 +274,7 @@ export async function fetchSerpstatRanks(
   const ranks: SerpstatRank[] = targets.map((kw) => {
     const row = exact.get(kw) ?? folded.get(fold(kw));
     if (row) usedByTarget.add(row);
-    return {
-      keyword: kw,
-      position: row?.position ?? null,
-      url: row?.url ?? null,
-      volume: row?.region_queries_count ?? null,
-    };
+    return toRank(kw, row);
   });
 
   // Tudo o resto: o que o domínio rankeia e ninguém pôs no plano. Dedup por
@@ -245,12 +289,7 @@ export async function fetchSerpstatRanks(
     if (targetKeys.has(kw) || targetKeys.has(key)) continue;
     const prev = othersByKey.get(key);
     if (prev && (prev.position ?? Infinity) <= row.position) continue;
-    othersByKey.set(key, {
-      keyword: kw,
-      position: row.position,
-      url: row.url ?? null,
-      volume: row.region_queries_count ?? null,
-    });
+    othersByKey.set(key, toRank(kw, row));
   }
   const allOthers = Array.from(othersByKey.values()).sort((a, b) => {
     const pa = a.position ?? Infinity;

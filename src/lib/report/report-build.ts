@@ -12,11 +12,9 @@ import {
 import { getGa4MonthlyReport, type MetricPair } from "./ga4-report";
 import { getGscMonthlyReport } from "@/lib/gsc";
 import { listTargetKeywords } from "@/lib/target-keywords-store";
-import { fetchDfsRanks } from "@/lib/seo-tools/dataforseo-ranks";
 import { fetchSerpstatRanks } from "@/lib/seo-tools/serpstat";
 import { fetchGeoReport, hasGeoSignal } from "@/lib/seo-tools/dataforseo-geo";
 import { fetchGeoIntel, hasGeoIntelSignal } from "@/lib/seo-tools/geo-intel";
-import { auditGeoReadiness } from "@/lib/seo-tools/geo-readiness";
 import { getClientGeo } from "@/lib/client-geo";
 import { CLIENT_WEBSITES } from "@/lib/client-meta";
 import { getReport } from "./report-store";
@@ -46,7 +44,6 @@ import {
   type LiveRankBlock,
   type GeoBlock,
   type GeoIntelBlock,
-  type GeoReadinessBlock,
 } from "./report-types";
 
 /** Movers shown in the client-facing report. Candidates are wider (20) so
@@ -374,26 +371,11 @@ async function fetchRanksAndGeo(
   liveRanks?: LiveRankBlock;
   geo?: GeoBlock;
   geoIntel?: GeoIntelBlock;
-  geoReadiness?: GeoReadinessBlock;
 }> {
   const website = CLIENT_WEBSITES[slug];
-  if (!website) return {};
-  // A auditoria de prontidão não precisa de keywords nenhumas — é o site a
-  // responder sobre si próprio — por isso corre mesmo para um cliente sem
-  // plano de keywords carregado, que é precisamente quando mais falta faz.
-  const readinessPromise = auditGeoReadiness(website, {
-    expectedLang: getClientGeo(slug).languageCode,
-  }).catch((err) => {
-    console.error(`GEO readiness falhou para ${slug}:`, err);
-    return null;
-  });
+  if (!website || keywords.length === 0) return {};
 
-  if (keywords.length === 0) {
-    const readiness = await readinessPromise;
-    return readiness ? { geoReadiness: readiness } : {};
-  }
-
-  const [serpstatRes, geoRes, geoIntelRes, readiness, prevReport] =
+  const [serpstatRes, geoRes, geoIntelRes, prevReport] =
     await Promise.all([
       fetchSerpstatRanks(slug, website, keywords).catch((err) => {
         console.error(`Serpstat ranks falhou para ${slug}:`, err);
@@ -407,26 +389,22 @@ async function fetchRanksAndGeo(
         console.error(`GEO intel falhou para ${slug}:`, err);
         return null;
       }),
-      readinessPromise,
       getReport(slug, previousPeriodKey).catch(() => null),
     ]);
 
-  // Fallback só quando o Serpstat não respondeu — não vale a pena pagar duas
-  // fontes pela mesma tabela.
-  const dfsRes = serpstatRes
-    ? null
-    : await fetchDfsRanks(slug, website, keywords).catch((err) => {
-        console.error(`DataForSEO ranks falhou para ${slug}:`, err);
-        return null;
-      });
+  // SEM FALLBACK DE POSIÇÕES (v76.58). A tabela de keywords é do Serpstat e
+  // de mais ninguém: quando o Serpstat não responde, a tabela não sai. Havia
+  // aqui um fallback para o DataForSEO e o resultado era pior do que não ter
+  // tabela — posições de outra metodologia, sem volumes e sem as keywords
+  // fora do plano, num sítio onde o cliente lê tudo como se fosse a mesma
+  // medição. Uma tabela em falta é um problema de créditos que se resolve;
+  // uma tabela com números de outra fonte é um relatório errado.
 
   const out: {
     liveRanks?: LiveRankBlock;
     geo?: GeoBlock;
     geoIntel?: GeoIntelBlock;
-    geoReadiness?: GeoReadinessBlock;
   } = {};
-  if (readiness) out.geoReadiness = readiness;
 
   // Mapa keyword → posição do mês passado. Aceita tanto o bloco novo como o
   // do SE Ranking, para que o primeiro mês depois de uma troca de fonte
@@ -473,6 +451,9 @@ async function fetchRanksAndGeo(
         localPackPosition: null,
         url: r.url,
         volume: r.volume ?? volumeByKeyword.get(r.keyword.toLowerCase()) ?? null,
+        types: r.types,
+        difficulty: r.difficulty,
+        traffic: r.traffic,
       })),
       ...(serpstatRes.others.length > 0
         ? {
@@ -484,26 +465,13 @@ async function fetchRanksAndGeo(
               localPackPosition: null,
               url: r.url,
               volume: r.volume,
+              types: r.types,
+              difficulty: r.difficulty,
+              traffic: r.traffic,
             })),
             othersTotal: serpstatRes.othersTotal,
           }
         : {}),
-    };
-  } else if (dfsRes && dfsRes.ranks.length > 0) {
-    out.liveRanks = {
-      source: "dataforseo",
-      checkedOn: dfsRes.checkedOn,
-      domain: dfsRes.domain,
-      costUsd: dfsRes.costUsd,
-      ranks: dfsRes.ranks.map((r) => ({
-        keyword: r.keyword,
-        position: r.position,
-        ...changeFor(r.keyword, r.position),
-        inLocalPack: r.inLocalPack,
-        localPackPosition: r.localPackPosition,
-        url: r.url,
-        volume: volumeByKeyword.get(r.keyword.toLowerCase()) ?? null,
-      })),
     };
   }
 
@@ -868,7 +836,6 @@ export async function buildMonthlyReport(
     ...(dfs.liveRanks ? { liveRanks: dfs.liveRanks } : {}),
     ...(dfs.geo ? { geo: dfs.geo } : {}),
     ...(dfs.geoIntel ? { geoIntel: dfs.geoIntel } : {}),
-    ...(dfs.geoReadiness ? { geoReadiness: dfs.geoReadiness } : {}),
     ...(trend ? { trend } : {}),
     ai: aiBlock,
     gbp: gbpBlock,

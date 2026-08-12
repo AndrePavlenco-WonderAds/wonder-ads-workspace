@@ -266,6 +266,14 @@ export type LiveRank = {
   /** Pesquisas/mês na região. Do Serpstat, ou da client file em fallback.
    *  Ausente nos blocos gravados antes da v76.38. */
   volume?: number | null;
+  /** Funcionalidades da SERP desta pesquisa, como o Serpstat as devolve.
+   *  `ai_overview` = a Google mostra resposta gerada; `snip_url_in_aio` /
+   *  `snip_fqdn_in_aio` = é este site que ela cita lá dentro. Ausente nos
+   *  blocos gravados antes da v76.58. */
+  types?: string[];
+  /** Dificuldade estimada (0–100) e tráfego estimado da posição. */
+  difficulty?: number | null;
+  traffic?: number | null;
 };
 
 /** O bloco de posição real de um relatório. */
@@ -386,32 +394,6 @@ export type GeoIntelBlock = {
   costUsd: number;
 };
 
-export type GeoReadinessPillar = "access" | "understanding" | "extraction" | "trust";
-
-export type GeoReadinessCheck = {
-  id: string;
-  pillar: GeoReadinessPillar;
-  label: string;
-  status: "pass" | "warn" | "fail" | "unknown";
-  detail: string;
-  why: string;
-  fix: string;
-  weight: 1 | 2 | 3;
-};
-
-export type GeoReadinessBlock = {
-  checkedOn: string;
-  domain: string;
-  unreachable: boolean;
-  pagesAudited: string[];
-  checks: GeoReadinessCheck[];
-  score: number;
-  pillarScores: Record<GeoReadinessPillar, number>;
-  bots: { name: string; label: string; allowed: boolean | null; critical: boolean }[];
-  hasLlmsTxt: boolean;
-  schemaTypes: string[];
-};
-
 /** A evolução dos últimos meses — a secção que responde a «isto está a
  *  crescer?», que é a pergunta que um número de um mês sozinho nunca responde.
  *
@@ -503,9 +485,6 @@ export type MonthlyReportSnapshot = {
   /** GEO v2 — o corpus de perguntas, quem é citado e a quota de voz.
    *  Ausente quando o corpus deste país+língua não devolveu nada. */
   geoIntel?: GeoIntelBlock;
-  /** GEO v2 — auditoria de prontidão do próprio site. Tem quase sempre
-   *  resposta, mesmo quando o corpus não tem. */
-  geoReadiness?: GeoReadinessBlock;
   /** Evolução dos últimos 12 meses. Ausente nos relatórios gerados antes da
    *  v76.32 e quando o GA4 não respondeu. */
   trend?: ReportTrend;

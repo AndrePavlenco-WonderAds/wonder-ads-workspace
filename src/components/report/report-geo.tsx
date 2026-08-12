@@ -11,57 +11,22 @@
 // uma tabela comprida.
 
 import { formatDate } from "@/lib/dates";
-import type {
-  GeoIntelBlock,
-  GeoReadinessBlock,
-  GeoReadinessCheck,
-  GeoReadinessPillar,
-} from "@/lib/report/report-types";
+import type { GeoIntelBlock } from "@/lib/report/report-types";
+
+/** Uma keyword do Serpstat onde a Google mostra AI Overview. */
+export type AioRow = {
+  keyword: string;
+  position: number | null;
+  volume: number | null;
+  citedInAio: boolean;
+  inPlan: boolean;
+};
 
 type Variant = "internal" | "client";
 
 /** Quantas perguntas entram na tabela do cliente. O consultor vê tudo o que
  *  foi guardado — é dele o trabalho de escolher os próximos alvos. */
 const CLIENT_PROMPT_CAP = 30;
-
-const PILLARS: { key: GeoReadinessPillar; pt: string; en: string; blurb: [string, string] }[] = [
-  {
-    key: "access",
-    pt: "Acesso",
-    en: "Access",
-    blurb: [
-      "Os motores conseguem ler o site?",
-      "Can the engines read the site?",
-    ],
-  },
-  {
-    key: "understanding",
-    pt: "Compreensão",
-    en: "Understanding",
-    blurb: [
-      "Percebem quem somos e o que fazemos?",
-      "Do they understand who we are?",
-    ],
-  },
-  {
-    key: "extraction",
-    pt: "Extração",
-    en: "Extraction",
-    blurb: [
-      "O conteúdo tem a forma que uma resposta cita?",
-      "Is the content shaped to be quoted?",
-    ],
-  },
-  {
-    key: "trust",
-    pt: "Confiança",
-    en: "Trust",
-    blurb: [
-      "Há autor, data, morada, língua?",
-      "Author, date, address, language?",
-    ],
-  },
-];
 
 function num(n: number, lang: "pt" | "en"): string {
   return new Intl.NumberFormat(lang === "pt" ? "pt-PT" : "en-GB").format(
@@ -74,59 +39,26 @@ function pct(n: number): string {
   return n < 1 ? `${n.toFixed(1)}%` : `${Math.round(n)}%`;
 }
 
-/** Meia-lua de 0 a 100. Um número grande num anel lê-se num segundo; o
- *  mesmo número numa tabela lê-se em cinco. */
-function ScoreDial({ score, label }: { score: number; label: string }) {
-  const r = 34;
-  const circ = Math.PI * r; // meia circunferência
-  const filled = (Math.max(0, Math.min(100, score)) / 100) * circ;
-  const tone = score >= 75 ? "good" : score >= 50 ? "mid" : "bad";
-  return (
-    <div className={`wa-geo-dial ${tone}`}>
-      <svg viewBox="0 0 88 52" className="wa-geo-dial-svg" aria-hidden>
-        <path
-          d="M 10 46 A 34 34 0 0 1 78 46"
-          fill="none"
-          strokeWidth="9"
-          strokeLinecap="round"
-          className="wa-geo-dial-track"
-        />
-        <path
-          d="M 10 46 A 34 34 0 0 1 78 46"
-          fill="none"
-          strokeWidth="9"
-          strokeLinecap="round"
-          className="wa-geo-dial-fill"
-          strokeDasharray={`${filled} ${circ}`}
-        />
-      </svg>
-      <div className="wa-geo-dial-v">{score}</div>
-      <div className="wa-geo-dial-l">{label}</div>
-    </div>
-  );
-}
-
-function StatusMark({ status }: { status: GeoReadinessCheck["status"] }) {
-  const glyph =
-    status === "pass" ? "✓" : status === "warn" ? "!" : status === "fail" ? "✗" : "?";
-  return <span className={`wa-geo-mark ${status}`}>{glyph}</span>;
-}
-
 export function ReportGeoSection({
   intel,
-  readiness,
+  aio = [],
+  aioCheckedOn,
   lang,
   variant,
   sectionNumber,
 }: {
   intel?: GeoIntelBlock;
-  readiness?: GeoReadinessBlock;
+  /** Keywords com AI Overview, do Serpstat — a mesma resposta que deu a
+   *  tabela de posições, sem chamada nem custo extra. */
+  aio?: AioRow[];
+  aioCheckedOn?: string | null;
   lang: "pt" | "en";
   variant: Variant;
   /** Número no índice do relatório. 0 = a secção não entrou no índice. */
   sectionNumber?: number;
 }) {
-  if (!intel && !readiness) return null;
+  if (!intel && aio.length === 0) return null;
+  const aioCited = aio.filter((r) => r.citedInAio);
   const pt = lang === "pt";
   const t = (p: string, e: string) => (pt ? p : e);
 
@@ -144,14 +76,6 @@ export function ReportGeoSection({
   // A citação que se mostra por extenso: a de maior volume onde já somos
   // fonte. É a prova concreta de que isto não é uma promessa.
   const showcase = citedPrompts[0] ?? null;
-
-  const failing = (readiness?.checks ?? [])
-    .filter((c) => c.status === "fail" || c.status === "warn")
-    .sort(
-      (a, b) =>
-        b.weight - a.weight ||
-        (a.status === "fail" ? -1 : 1) - (b.status === "fail" ? -1 : 1),
-    );
 
   return (
     <section className="wa-sec wa-geo2">
@@ -171,13 +95,47 @@ export function ReportGeoSection({
       </h2>
       <p className="wa-method">
         {t(
-          "Um motor de resposta não tem uma lista de dez lugares: tem uma resposta e três a oito fontes citadas. Estar lá dentro é uma coisa binária. Esta secção mede as duas metades do problema — o mercado (que perguntas se fazem e quem é citado hoje) e o site (se está preparado para ser a fonte escolhida).",
-          "An answer engine doesn't have ten ranked slots: it has one answer and three to eight cited sources. Being inside it is binary. This section measures both halves — the market (which questions get asked and who is cited today) and the site (whether it is ready to be the chosen source).",
+          "Um motor de resposta não tem uma lista de dez lugares: tem uma resposta e três a oito fontes citadas. Estar lá dentro é uma coisa binária. Aqui ficam as perguntas reais que se fazem neste mercado, e em quais delas a marca já é uma das fontes.",
+          "An answer engine doesn't have ten ranked slots: it has one answer and three to eight cited sources. Being inside it is binary. Below are the real questions asked in this market, and which of them already cite the brand.",
         )}
       </p>
 
       {/* ——— Painel de topo ——————————————————————————————— */}
       <div className="wa-geo-hero">
+        {aio.length > 0 && (
+          <>
+            <div className="wa-geo-stat">
+              <div className="wa-geo-stat-v">
+                {aioCited.length}
+                <span className="wa-geo-stat-of">/{aio.length}</span>
+              </div>
+              <div className="wa-geo-stat-l">
+                {t(
+                  "keywords onde a IA nos cita",
+                  "keywords where AI cites us",
+                )}
+              </div>
+              <div className="wa-geo-stat-s">
+                {t(
+                  "das que já mostram AI Overview",
+                  "of those already showing an AI Overview",
+                )}
+              </div>
+            </div>
+            <div className="wa-geo-stat">
+              <div className="wa-geo-stat-v">{aio.length}</div>
+              <div className="wa-geo-stat-l">
+                {t("pesquisas com resposta da IA", "searches with an AI answer")}
+              </div>
+              <div className="wa-geo-stat-s">
+                {t(
+                  "onde o site já rankeia no top 100",
+                  "where the site already ranks in the top 100",
+                )}
+              </div>
+            </div>
+          </>
+        )}
         {intel && (
           <>
             <div className="wa-geo-stat">
@@ -209,31 +167,84 @@ export function ReportGeoSection({
             </div>
           </>
         )}
-        {readiness && (
-          <div className="wa-geo-stat wa-geo-stat-dial">
-            <ScoreDial
-              score={readiness.score}
-              label={t("prontidão do site", "site readiness")}
-            />
-          </div>
-        )}
-        {intel && intel.competitors.length > 0 && (
-          <div className="wa-geo-stat">
-            <div className="wa-geo-stat-v wa-geo-stat-sm">
-              {intel.competitors[0].domain}
-            </div>
-            <div className="wa-geo-stat-l">
-              {t("fonte mais citada no tema", "most-cited source in the topic")}
-            </div>
-            <div className="wa-geo-stat-s">
-              {t(
-                `presente em ${pct(intel.competitors[0].coverage)} do volume`,
-                `present in ${pct(intel.competitors[0].coverage)} of the volume`,
-              )}
-            </div>
-          </div>
-        )}
       </div>
+
+      {/* ——— AI OVERVIEW, PELO SERPSTAT ——————————————————————
+          A prova mais direta que existe de GEO, e vem de graça: a mesma
+          resposta do Serpstat que dá as posições diz, por keyword, se a
+          Google mostra resposta gerada e se é ESTE site que ela cita lá
+          dentro. Uma pesquisa com AI Overview onde não somos citados é uma
+          posição orgânica que passou a valer menos. */}
+      {aio.length > 0 && (
+        <>
+          <h3 className="wa-h3 wa-geo-h">
+            {t(
+              "Pesquisas em que a Google já responde com IA",
+              "Searches where Google already answers with AI",
+            )}
+          </h3>
+          <p className="wa-method">
+            {t(
+              `Das pesquisas em que o site aparece nos primeiros 100 resultados, ${aio.length} já mostram uma resposta gerada pela Google por cima dos links azuis${
+                aioCited.length > 0
+                  ? `, e em ${aioCited.length} dela${aioCited.length === 1 ? "" : "s"} é este site uma das fontes citadas`
+                  : ", e em nenhuma delas este site é ainda uma das fontes citadas"
+              }. Onde a resposta aparece e não nos cita, o lugar orgânico continua lá mas vale menos: a pessoa lê a resposta e não desce.${
+                aioCheckedOn ? "" : ""
+              }`,
+              `Of the searches where the site ranks in the top 100, ${aio.length} already show a Google-generated answer above the blue links${
+                aioCited.length > 0
+                  ? `, and in ${aioCited.length} of them this site is one of the cited sources`
+                  : ", and in none of them is this site a cited source yet"
+              }. Where the answer shows and doesn't cite us, the organic spot is still there but worth less: people read the answer and never scroll.`,
+            )}
+          </p>
+          <div className="wa-tblwrap">
+            <table className="wa-qtable wa-geo-tbl">
+              <thead>
+                <tr>
+                  <th>Keyword</th>
+                  <th className="n">{t("Posição", "Position")}</th>
+                  <th className="n">{t("Pesquisas/mês", "Searches/mo")}</th>
+                  <th className="c">{t("Citados na IA?", "Cited by AI?")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {aio.map((r) => (
+                  <tr key={r.keyword} className={r.citedInAio ? "cited" : ""}>
+                    <td>
+                      {r.keyword}
+                      {r.inPlan && (
+                        <span className="wa-kw-plan">{t("plano", "plan")}</span>
+                      )}
+                    </td>
+                    <td className="n">{r.position ?? "—"}</td>
+                    <td className="n">
+                      {r.volume === null
+                        ? "—"
+                        : num(r.volume, lang)}
+                    </td>
+                    <td className="c">
+                      {r.citedInAio ? (
+                        <span className="wa-geo-yes">✓</span>
+                      ) : (
+                        <span className="wa-geo-no">—</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {variant === "internal" && aioCheckedOn && (
+            <p className="wa-method" style={{ marginTop: ".5rem" }}>
+              Serpstat · sinais `ai_overview` / `snip_url_in_aio` /
+              `snip_fqdn_in_aio` da mesma consulta de posições ·{" "}
+              {formatDate(aioCheckedOn)}.
+            </p>
+          )}
+        </>
+      )}
 
       {/* ——— A resposta, tal como sai ————————————————————— */}
       {showcase && (
@@ -270,7 +281,7 @@ export function ReportGeoSection({
       )}
 
       {/* ——— Todas as prompts ————————————————————————————— */}
-      {prompts.length > 0 && (
+      {prompts.length > 0 && intel && (
         <>
           <h3 className="wa-h3 wa-geo-h">
             {t(
@@ -360,50 +371,6 @@ export function ReportGeoSection({
         </>
       )}
 
-      {/* ——— Quem ocupa o lugar ————————————————————————— */}
-      {intel && intel.competitors.length > 0 && (
-        <>
-          <h3 className="wa-h3 wa-geo-h">
-            {t("Quem a IA cita neste tema", "Who AI cites in this topic")}
-          </h3>
-          <p className="wa-method">
-            {t(
-              "Percentagem do volume de perguntas em cujas respostas cada domínio aparece. Cada resposta cita várias fontes ao mesmo tempo, por isso a coluna não soma 100 — o que interessa é a distância entre nós e quem está sempre lá.",
-              "Share of the question volume whose answers cite each domain. Every answer cites several sources at once, so the column does not add up to 100 — what matters is the distance between us and whoever is always there.",
-            )}
-          </p>
-          <div className="wa-geo-comp">
-            {intel.competitors.slice(0, 10).map((c) => (
-              <div
-                className={`wa-geo-comp-row${c.isClient ? " me" : ""}`}
-                key={c.domain}
-              >
-                <span className="wa-geo-comp-d">
-                  {c.isClient && <span className="wa-geo-star">★</span>}
-                  {c.domain}
-                </span>
-                <span className="wa-geo-comp-bar">
-                  <i
-                    style={{
-                      width: `${Math.max(2, Math.min(100, c.coverage))}%`,
-                    }}
-                  />
-                </span>
-                <span className="wa-geo-comp-v">{pct(c.coverage)}</span>
-              </div>
-            ))}
-            {!intel.competitors.some((c) => c.isClient) && (
-              <p className="wa-geo-absent">
-                {t(
-                  "O domínio deste cliente ainda não aparece em nenhuma das respostas analisadas. É exatamente esse o trabalho que a auditoria abaixo prioriza.",
-                  "This client's domain doesn't appear in any of the analysed answers yet. That is precisely the work the audit below prioritises.",
-                )}
-              </p>
-            )}
-          </div>
-        </>
-      )}
-
       {/* ——— Sub-perguntas ————————————————————————————— */}
       {intel && intel.fanOut.length > 0 && (
         <>
@@ -449,119 +416,6 @@ export function ReportGeoSection({
               </span>
             ))}
           </div>
-        </>
-      )}
-
-      {/* ——— Auditoria de prontidão ————————————————————— */}
-      {readiness && (
-        <>
-          <h3 className="wa-h3 wa-geo-h">
-            {t(
-              "Está o site preparado para ser citado?",
-              "Is the site ready to be cited?",
-            )}
-          </h3>
-          <p className="wa-method">
-            {readiness.unreachable
-              ? t(
-                  `O site não respondeu a um rastreio de ${readiness.domain} no momento da verificação. Enquanto isso acontecer, nenhum motor de resposta o consegue citar — é a primeira coisa a resolver.`,
-                  `The site did not respond to a crawl of ${readiness.domain} at check time. While that lasts, no answer engine can cite it — it is the first thing to fix.`,
-                )
-              : t(
-                  `${readiness.checks.length} verificações em ${readiness.pagesAudited.length} página${readiness.pagesAudited.length === 1 ? "" : "s"}, a ${formatDate(readiness.checkedOn)}. Cada uma pesa consoante o efeito que tem em ser escolhido como fonte.`,
-                  `${readiness.checks.length} checks across ${readiness.pagesAudited.length} page${readiness.pagesAudited.length === 1 ? "" : "s"}, on ${formatDate(readiness.checkedOn)}. Each is weighted by how much it affects being picked as a source.`,
-                )}
-          </p>
-
-          {!readiness.unreachable && (
-            <div className="wa-geo-pillars">
-              {PILLARS.map((p) => (
-                <div className="wa-geo-pillar" key={p.key}>
-                  <div className="wa-geo-pillar-h">
-                    <span className="wa-geo-pillar-n">{pt ? p.pt : p.en}</span>
-                    <span
-                      className={`wa-geo-pillar-v ${
-                        readiness.pillarScores[p.key] >= 75
-                          ? "good"
-                          : readiness.pillarScores[p.key] >= 50
-                            ? "mid"
-                            : "bad"
-                      }`}
-                    >
-                      {readiness.pillarScores[p.key]}
-                    </span>
-                  </div>
-                  <div className="wa-geo-pillar-bar">
-                    <i style={{ width: `${readiness.pillarScores[p.key]}%` }} />
-                  </div>
-                  <div className="wa-geo-pillar-b">
-                    {pt ? p.blurb[0] : p.blurb[1]}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          <ul className="wa-geo-checks">
-            {readiness.checks.map((c) => (
-              <li key={c.id} className={`wa-geo-check ${c.status}`}>
-                <StatusMark status={c.status} />
-                <div className="wa-geo-check-b">
-                  <div className="wa-geo-check-t">
-                    {c.label}
-                    {c.weight === 3 && (
-                      <span className="wa-geo-w">
-                        {t("decisivo", "decisive")}
-                      </span>
-                    )}
-                  </div>
-                  <div className="wa-geo-check-d">{c.detail}</div>
-                  {c.status !== "pass" && (
-                    <div className="wa-geo-check-w">{c.why}</div>
-                  )}
-                </div>
-              </li>
-            ))}
-          </ul>
-
-          {/* Bots — a tabela que ninguém olha até ao dia em que explica tudo */}
-          {!readiness.unreachable && (
-            <div className="wa-geo-bots">
-              <div className="wa-geo-bots-l">
-                {t("Agentes de IA e o que o robots.txt lhes diz", "AI agents and what robots.txt tells them")}
-              </div>
-              <div className="wa-geo-bots-grid">
-                {readiness.bots.map((b) => (
-                  <span
-                    key={b.name}
-                    className={`wa-geo-bot ${
-                      b.allowed === null ? "unknown" : b.allowed ? "ok" : "blocked"
-                    }${b.critical ? " crit" : ""}`}
-                  >
-                    <b>{b.allowed === null ? "?" : b.allowed ? "✓" : "✗"}</b>
-                    {b.label}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-        </>
-      )}
-
-      {/* ——— Plano de ação ————————————————————————————— */}
-      {failing.length > 0 && (
-        <>
-          <h3 className="wa-h3 wa-geo-h">
-            {t("O que fazer a seguir", "What to do next")}
-          </h3>
-          <ol className="wa-geo-plan">
-            {failing.slice(0, 6).map((c) => (
-              <li key={c.id}>
-                <span className="wa-geo-plan-t">{c.label}</span>
-                <span className="wa-geo-plan-f">{c.fix || c.why}</span>
-              </li>
-            ))}
-          </ol>
         </>
       )}
 
