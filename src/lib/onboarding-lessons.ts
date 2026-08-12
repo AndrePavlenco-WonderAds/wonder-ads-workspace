@@ -12,13 +12,19 @@
 
 import type { OnbTrack, OnbService } from "@/lib/onboarding-tracks";
 
-/** Team emails to grant as admins on the client's accounts. */
-export const TEAM_ADMIN_EMAILS = [
-  "alex@wonder-ads.com",
+// QUEM ENTRA EM CADA CONTA, POR DEPARTAMENTO. Uma lista só para tudo dava
+// pedidos de acesso a gente que não vai lá trabalhar, e um cliente que vê
+// quatro emails para adicionar num painel que só aceita um fica sem saber
+// qual. Cada acesso pede exatamente quem precisa dele.
+
+/** Acessos de publicidade — Google Ads, Merchant Center, Meta Business. */
+export const ADS_ADMIN_EMAILS = [
   "alice@wonder-ads.com",
-  "andre@wonder-ads.com",
-  "seo@wonder-ads.com",
+  "germano@wonder-ads.com",
 ];
+
+/** Acessos de SEO — Analytics, Search Console, Perfil de Empresa, website. */
+export const SEO_ADMIN_EMAILS = ["seo@wonder-ads.com"];
 
 export type LessonBlock =
   | { type: "p"; text: string }
@@ -194,7 +200,7 @@ export const DEFAULT_ONBOARDING_CATEGORIES: OnboardingCategory[] = [
           {
             type: "emails",
             intro: "Emails para adicionar ao Google Analytics como Administradores:",
-            emails: TEAM_ADMIN_EMAILS,
+            emails: SEO_ADMIN_EMAILS,
           },
         ],
       },
@@ -215,7 +221,7 @@ export const DEFAULT_ONBOARDING_CATEGORIES: OnboardingCategory[] = [
           {
             type: "emails",
             intro: "Emails para adicionar ao Google Search Console como Proprietários/Utilizadores:",
-            emails: TEAM_ADMIN_EMAILS,
+            emails: SEO_ADMIN_EMAILS,
           },
         ],
       },
@@ -236,7 +242,7 @@ export const DEFAULT_ONBOARDING_CATEGORIES: OnboardingCategory[] = [
           {
             type: "emails",
             intro: "Emails para adicionar ao Perfil de Empresa do Google como Gestores:",
-            emails: TEAM_ADMIN_EMAILS,
+            emails: SEO_ADMIN_EMAILS,
           },
         ],
       },
@@ -261,7 +267,7 @@ export const DEFAULT_ONBOARDING_CATEGORIES: OnboardingCategory[] = [
           {
             type: "emails",
             intro: "No WordPress, crie um utilizador de administrador com um destes emails (ou envie as credenciais em segurança):",
-            emails: TEAM_ADMIN_EMAILS,
+            emails: SEO_ADMIN_EMAILS,
           },
         ],
       },
@@ -279,7 +285,7 @@ export const DEFAULT_ONBOARDING_CATEGORIES: OnboardingCategory[] = [
         title: "Acesso à Conta Google Ads",
         kind: "video",
         emoji: "🔎",
-        videoUrl: null,
+        videoUrl: "https://www.youtube.com/embed/aub1RVH3dZE",
         summary: "Dar-nos acesso à conta Google Ads (ou criar uma nova).",
         about: [
           {
@@ -289,31 +295,7 @@ export const DEFAULT_ONBOARDING_CATEGORIES: OnboardingCategory[] = [
           {
             type: "emails",
             intro: "Emails para adicionar à conta Google Ads como Administradores:",
-            emails: TEAM_ADMIN_EMAILS,
-          },
-        ],
-      },
-      {
-        id: "gmc",
-        track: "ads",
-        ecommerce: true,
-        requiresService: "google-ads",
-        platform: "merchant",
-        category: "acessos-ads",
-        title: "Acesso ao Google Merchant Center",
-        kind: "video",
-        emoji: "🛒",
-        videoUrl: null,
-        summary: "Ligar o catálogo de produtos para os anúncios Shopping.",
-        about: [
-          {
-            type: "p",
-            text: "Para anúncios de produtos (Shopping), precisamos de acesso ao vosso Google Merchant Center — é onde vive o feed de produtos que alimenta as campanhas de e-commerce.",
-          },
-          {
-            type: "emails",
-            intro: "Emails para adicionar ao Google Merchant Center como Administradores:",
-            emails: TEAM_ADMIN_EMAILS,
+            emails: ADS_ADMIN_EMAILS,
           },
         ],
       },
@@ -325,7 +307,7 @@ export const DEFAULT_ONBOARDING_CATEGORIES: OnboardingCategory[] = [
         title: "Acesso à Conta Meta / Facebook Business",
         kind: "video",
         emoji: "📱",
-        videoUrl: null,
+        videoUrl: "https://www.youtube.com/embed/Ske42cU6nUs",
         summary: "Acesso ao Meta Business (Facebook / Instagram Ads).",
         about: [
           {
@@ -335,7 +317,36 @@ export const DEFAULT_ONBOARDING_CATEGORIES: OnboardingCategory[] = [
           {
             type: "emails",
             intro: "Emails para adicionar ao Meta Business Manager:",
-            emails: TEAM_ADMIN_EMAILS,
+            emails: ADS_ADMIN_EMAILS,
+          },
+        ],
+      },
+      {
+        id: "gmc",
+        track: "ads",
+        // E-COMMERCE, NÃO GOOGLE ADS. O Merchant Center alimenta o feed de
+        // produtos e faz falta a quem vende online, mesmo que só faça Meta:
+        // os catálogos do Meta puxam do mesmo sítio. Exigir o serviço
+        // google-ads escondia o passo a um cliente de e-commerce só de Meta,
+        // que é precisamente quem tem catálogo. Vem depois do Meta porque é
+        // o último acesso e o mais específico.
+        ecommerce: true,
+        platform: "merchant",
+        category: "acessos-ads",
+        title: "Acesso ao Google Merchant Center",
+        kind: "video",
+        emoji: "🛒",
+        videoUrl: "https://www.youtube.com/embed/-dMzC17hsuE",
+        summary: "Ligar o catálogo de produtos para os anúncios Shopping.",
+        about: [
+          {
+            type: "p",
+            text: "Para anúncios de produtos (Shopping), precisamos de acesso ao vosso Google Merchant Center — é onde vive o feed de produtos que alimenta as campanhas de e-commerce.",
+          },
+          {
+            type: "emails",
+            intro: "Emails para adicionar ao Google Merchant Center como Administradores:",
+            emails: ADS_ADMIN_EMAILS,
           },
         ],
       },

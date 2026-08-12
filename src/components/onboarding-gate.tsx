@@ -1,10 +1,18 @@
 "use client";
 
-// First-visit legal gate: the client must confirm they've signed the contract
-// and paid the invoice before entering onboarding. Shown once per client
-// (confirmation is recorded server-side). Renders as a blocking modal overlay.
+// Legal gate: the client must confirm they've signed the contract and paid the
+// invoice before entering onboarding. Renders as a blocking modal overlay.
+//
+// APARECE EM CADA SESSÃO NOVA (v76.62), e não uma vez por cliente. Um link de
+// onboarding é reenviado, reencaminhado e aberto por mais do que uma pessoa da
+// empresa do cliente — quem o abre a seguir entrava direto e nunca via a
+// condição a que o processo está sujeito. A confirmação continua a ficar
+// gravada no servidor com o primeiro carimbo temporal (é um registo legal, não
+// uma preferência de interface); o que passa a ser por sessão é MOSTRAR a
+// janela. Fica em sessionStorage e não em localStorage de propósito: fechar o
+// separador tem de voltar a pedir.
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ShieldCheck,
@@ -18,6 +26,8 @@ import {
 const BRAND_GRADIENT =
   "linear-gradient(135deg, #343ED7 0%, #783DF5 53.65%, #C535C9 100%)";
 
+const SESSION_KEY = (slug: string) => `onboarding-gate:${slug}`;
+
 export function OnboardingGate({
   slug,
   clientTitle,
@@ -30,6 +40,18 @@ export function OnboardingGate({
   const [state, setState] = useState<"idle" | "saving" | "done" | "error">(
     "idle",
   );
+  // null = ainda não sabemos (o servidor não tem sessionStorage). Só depois de
+  // montar é que se decide, para o HTML do servidor e o do cliente coincidirem
+  // e a janela não piscar em quem já confirmou nesta sessão.
+  const [show, setShow] = useState<boolean | null>(null);
+  useEffect(() => {
+    try {
+      setShow(window.sessionStorage.getItem(SESSION_KEY(slug)) !== "1");
+    } catch {
+      // Modo privado sem sessionStorage: mostrar é o comportamento seguro.
+      setShow(true);
+    }
+  }, [slug]);
   const ok = value.trim().toLowerCase() === "confirmar";
 
   async function confirm() {
@@ -42,6 +64,12 @@ export function OnboardingGate({
         body: JSON.stringify({ confirmation: value }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      try {
+        window.sessionStorage.setItem(SESSION_KEY(slug), "1");
+      } catch {
+        // Sem sessionStorage a janela volta na próxima navegação. Chato, mas
+        // é melhor do que rebentar a confirmação que já foi gravada.
+      }
       setState("done");
       router.refresh();
     } catch {
@@ -49,7 +77,7 @@ export function OnboardingGate({
     }
   }
 
-  if (state === "done") return null;
+  if (state === "done" || show !== true) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">

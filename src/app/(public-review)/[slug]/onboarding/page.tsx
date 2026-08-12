@@ -18,7 +18,6 @@ import {
 } from "lucide-react";
 import { resolveOnboardingClient } from "@/lib/onboarding-resolve";
 import { getOnboardingProgress } from "@/lib/onboarding-progress-store";
-import { getGateConfirmedAt } from "@/lib/onboarding-gate-store";
 import { getCourse } from "@/lib/onboarding-content-store";
 import {
   flattenLessons,
@@ -131,13 +130,11 @@ export default async function OnboardingHubPage({
   const client = await resolveOnboardingClient(slug);
   if (!client) notFound();
 
-  const [progress, fullCourse, gateConfirmedAt, libraryFiles] =
-    await Promise.all([
-      getOnboardingProgress(slug),
-      getCourse(),
-      getGateConfirmedAt(slug),
-      getFilesForSlug(slug),
-    ]);
+  const [progress, fullCourse, libraryFiles] = await Promise.all([
+    getOnboardingProgress(slug),
+    getCourse(),
+    getFilesForSlug(slug),
+  ]);
   // Only what the CLIENT sent counts towards the card's green state —
   // files the team added themselves shouldn't clear their own ask.
   const sentFilesCount = libraryFiles.filter(
@@ -182,9 +179,10 @@ export default async function OnboardingHubPage({
         continueLabel={continueLabel}
         allDone={allDone}
       />
-      {!gateConfirmedAt && (
-        <OnboardingGate slug={slug} clientTitle={client.title} />
-      )}
+      {/* Sempre montado: é o componente que decide, por sessão do browser, se
+          se mostra (v76.62). O carimbo do servidor continua a existir como
+          registo legal — deixou é de ser o que decide quem vê a janela. */}
+      <OnboardingGate slug={slug} clientTitle={client.title} />
 
       {/* ===== Hero ===== */}
       <section className="relative overflow-hidden rounded-3xl border border-black/8 bg-white p-6 shadow-[0_20px_60px_-30px_rgba(120,61,245,0.35)] sm:p-9">
