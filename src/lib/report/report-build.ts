@@ -15,6 +15,9 @@ import { listTargetKeywords } from "@/lib/target-keywords-store";
 import { fetchDfsRanks } from "@/lib/seo-tools/dataforseo-ranks";
 import { fetchSerpstatRanks } from "@/lib/seo-tools/serpstat";
 import { fetchGeoReport, hasGeoSignal } from "@/lib/seo-tools/dataforseo-geo";
+import { fetchGeoIntel, hasGeoIntelSignal } from "@/lib/seo-tools/geo-intel";
+import { auditGeoReadiness } from "@/lib/seo-tools/geo-readiness";
+import { getClientGeo } from "@/lib/client-geo";
 import { CLIENT_WEBSITES } from "@/lib/client-meta";
 import { getReport } from "./report-store";
 import { getGbpMonthlyReport } from "@/lib/gbp";
@@ -42,6 +45,8 @@ import {
   type ReportTrend,
   type LiveRankBlock,
   type GeoBlock,
+  type GeoIntelBlock,
+  type GeoReadinessBlock,
 } from "./report-types";
 
 /** Movers shown in the client-facing report. Candidates are wider (20) so
@@ -365,21 +370,46 @@ async function fetchRanksAndGeo(
   keywords: string[],
   volumeByKeyword: Map<string, number | null>,
   previousPeriodKey: string,
-): Promise<{ liveRanks?: LiveRankBlock; geo?: GeoBlock }> {
+): Promise<{
+  liveRanks?: LiveRankBlock;
+  geo?: GeoBlock;
+  geoIntel?: GeoIntelBlock;
+  geoReadiness?: GeoReadinessBlock;
+}> {
   const website = CLIENT_WEBSITES[slug];
-  if (!website || keywords.length === 0) return {};
+  if (!website) return {};
+  // A auditoria de prontidão não precisa de keywords nenhumas — é o site a
+  // responder sobre si próprio — por isso corre mesmo para um cliente sem
+  // plano de keywords carregado, que é precisamente quando mais falta faz.
+  const readinessPromise = auditGeoReadiness(website, {
+    expectedLang: getClientGeo(slug).languageCode,
+  }).catch((err) => {
+    console.error(`GEO readiness falhou para ${slug}:`, err);
+    return null;
+  });
 
-  const [serpstatRes, geoRes, prevReport] = await Promise.all([
-    fetchSerpstatRanks(slug, website, keywords).catch((err) => {
-      console.error(`Serpstat ranks falhou para ${slug}:`, err);
-      return null;
-    }),
-    fetchGeoReport(slug, website, keywords).catch((err) => {
-      console.error(`DataForSEO GEO falhou para ${slug}:`, err);
-      return null;
-    }),
-    getReport(slug, previousPeriodKey).catch(() => null),
-  ]);
+  if (keywords.length === 0) {
+    const readiness = await readinessPromise;
+    return readiness ? { geoReadiness: readiness } : {};
+  }
+
+  const [serpstatRes, geoRes, geoIntelRes, readiness, prevReport] =
+    await Promise.all([
+      fetchSerpstatRanks(slug, website, keywords).catch((err) => {
+        console.error(`Serpstat ranks falhou para ${slug}:`, err);
+        return null;
+      }),
+      fetchGeoReport(slug, website, keywords).catch((err) => {
+        console.error(`DataForSEO GEO falhou para ${slug}:`, err);
+        return null;
+      }),
+      fetchGeoIntel(slug, website, keywords).catch((err) => {
+        console.error(`GEO intel falhou para ${slug}:`, err);
+        return null;
+      }),
+      readinessPromise,
+      getReport(slug, previousPeriodKey).catch(() => null),
+    ]);
 
   // Fallback só quando o Serpstat não respondeu — não vale a pena pagar duas
   // fontes pela mesma tabela.
@@ -390,7 +420,13 @@ async function fetchRanksAndGeo(
         return null;
       });
 
-  const out: { liveRanks?: LiveRankBlock; geo?: GeoBlock } = {};
+  const out: {
+    liveRanks?: LiveRankBlock;
+    geo?: GeoBlock;
+    geoIntel?: GeoIntelBlock;
+    geoReadiness?: GeoReadinessBlock;
+  } = {};
+  if (readiness) out.geoReadiness = readiness;
 
   // Mapa keyword → posição do mês passado. Aceita tanto o bloco novo como o
   // do SE Ranking, para que o primeiro mês depois de uma troca de fonte
@@ -484,6 +520,13 @@ async function fetchRanksAndGeo(
       gaps: geoRes.gaps,
       costUsd: geoRes.costUsd,
     };
+  }
+
+  // O bloco novo, com o corpus inteiro. Quando existe, é ele que desenha a
+  // secção — o `geo` antigo fica no snapshot só para os relatórios já
+  // gravados não perderem o que mostravam.
+  if (geoIntelRes && hasGeoIntelSignal(geoIntelRes)) {
+    out.geoIntel = { source: "dataforseo", ...geoIntelRes };
   }
 
   return out;
@@ -824,6 +867,8 @@ export async function buildMonthlyReport(
     gsc: gscBlock,
     ...(dfs.liveRanks ? { liveRanks: dfs.liveRanks } : {}),
     ...(dfs.geo ? { geo: dfs.geo } : {}),
+    ...(dfs.geoIntel ? { geoIntel: dfs.geoIntel } : {}),
+    ...(dfs.geoReadiness ? { geoReadiness: dfs.geoReadiness } : {}),
     ...(trend ? { trend } : {}),
     ai: aiBlock,
     gbp: gbpBlock,

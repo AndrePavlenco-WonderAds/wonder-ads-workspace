@@ -13,6 +13,20 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.57",
+    date: "2026-08-12",
+    title: "GEO no relatório mensal — o que a IA responde, quem cita, e se o site está pronto",
+    highlights: [
+      "**🤖 Uma secção inteira de GEO no fim do relatório.** Um motor de resposta não tem dez lugares: tem UMA resposta e três a oito fontes citadas. A secção mede as duas metades disso — o **mercado** (que perguntas se fazem, quem é citado) e o **site** (se está preparado para ser a fonte escolhida). Substitui as duas listas curtas que lá estavam.",
+      "**❓ Todas as prompts, na língua e no país do cliente.** Perguntas reais feitas em Portugal (ou Brasil, ou UK — segue o `client-geo` de cada cliente) a que um motor generativo respondeu, com o volume mensal, se nos cita, e quem a resposta cita hoje. No Sentir Saúde deu 24 perguntas de mercado; no Fisio Restelo apanhou uma onde a Google já cita o cliente ao lado do Hospital da Luz: «pilates clinico lisboa», 260 pesquisas/mês.",
+      "**🎯 A escada de tópicos foi invertida — e é por isso que agora encontra dados.** A versão anterior escolhia os tópicos MAIS específicos e o corpus português devolvia zero («tratamento escoliose lisboa» → 0). Agora começa na cabeça («fisioterapia» → 48 perguntas, «dentista» → 90) e desce. Medido a 12/08/2026.",
+      "**🧹 Perguntas de contexto ficam de fora das contas.** Pedir «fisioterapia» traz, na mesma lista, quem quer marcar consulta e quem quer saber a média de entrada da licenciatura. As de ensino/profissão/dicionário/outro país são marcadas e excluídas da quota de voz, da tabela do cliente e do ranking de concorrentes. O consultor continua a vê-las, marcadas.",
+      "**🩺 Auditoria de prontidão para motores de resposta (20 verificações, custo zero).** Quatro pilares: **Acesso** (o robots.txt bloqueia o OAI-SearchBot, o PerplexityBot, o Google-Extended?), **Compreensão** (Organization/sameAs, FAQPage, autoria), **Extração** (títulos em forma de pergunta, densidade, alt), **Confiança** (morada, telefone, frescura, língua). Cada uma diz o que encontrou, porque conta e o que fazer. Sentir Saúde 79/100; White Clinic 82/100.",
+      "**📉 E quando o site não responde, isso é o resultado.** O fisiorestelo.pt não respondeu a 15 s de rastreio — o que um agente não consegue buscar não pode citar, e o relatório diz isso em vez de não mostrar secção nenhuma.",
+      "**✨ Upgrade de UI do relatório todo.** Índice «Neste relatório» no topo, secções numeradas (01…06), sparkline de 12 meses dentro de cada KPI, pastilhas de posição por escalão (top 3 verde, 4–10 azul, 11–20 âmbar) e regras de impressão para o PDF deixar de cortar cartões e tabelas a meio da página.",
+    ],
+  },
+  {
     version: "76.56",
     date: "2026-08-12",
     title: "Estender o roadmap +1, +3 ou +6 meses",

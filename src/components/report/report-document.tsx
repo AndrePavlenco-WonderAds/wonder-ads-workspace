@@ -17,6 +17,7 @@ import {
 } from "@/lib/report/report-format";
 import { formatDate } from "@/lib/dates";
 import { ReportTrendChart } from "./report-trend-chart";
+import { GEO_CSS, ReportGeoSection } from "./report-geo";
 import type {
   MonthlyReportSnapshot,
   ReportMetric,
@@ -29,6 +30,70 @@ type Variant = "internal" | "client";
 function boldParts(text: string, keyBase: string) {
   return text.split("**").map((part, i) =>
     i % 2 === 1 ? <strong key={`${keyBase}-${i}`}>{part}</strong> : <span key={`${keyBase}-${i}`}>{part}</span>,
+  );
+}
+
+/** UM ÍNDICE E UM NÚMERO POR SECÇÃO (v76.57). O relatório cresceu para nove
+ *  secções e passou a ler-se como um rolo: quem o abre não sabe quanto falta
+ *  nem o que lá vem. Numerar dá-lhe forma, e o índice do topo transforma-o
+ *  num documento que se consulta em vez de se percorrer. Em papel, os
+ *  números são a única forma de alguém dizer «vê o ponto 6». */
+function SecLabel({
+  n,
+  children,
+  onTint,
+}: {
+  n: number;
+  children: React.ReactNode;
+  onTint?: boolean;
+}) {
+  return (
+    <div className={`wa-label${onTint ? " wa-label-on-tint" : ""}`}>
+      <span className="wa-secn">{String(n).padStart(2, "0")}</span>
+      {children}
+    </div>
+  );
+}
+
+/** Linha de 12 meses dentro do cartão do KPI. Sem eixos, sem rótulos: a
+ *  forma é a informação, e o número grande por cima já dá a escala. */
+function Spark({ values }: { values: (number | null)[] }) {
+  const pts = values.filter((v): v is number => v !== null);
+  if (pts.length < 3) return null;
+  const max = Math.max(...pts, 1);
+  const w = 100;
+  const h = 22;
+  const step = w / Math.max(1, values.length - 1);
+  let d = "";
+  let started = false;
+  values.forEach((v, i) => {
+    if (v === null) {
+      started = false;
+      return;
+    }
+    const x = i * step;
+    const y = h - (v / max) * (h - 2) - 1;
+    d += `${started ? "L" : "M"}${x.toFixed(1)} ${y.toFixed(1)} `;
+    started = true;
+  });
+  const last = values[values.length - 1];
+  return (
+    <svg className="wa-spark" viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" aria-hidden>
+      <path d={d.trim()} fill="none" strokeWidth="1.6" vectorEffect="non-scaling-stroke" />
+      {last !== null && last !== undefined && (
+        <circle cx={w} cy={h - (last / max) * (h - 2) - 1} r="1.8" />
+      )}
+    </svg>
+  );
+}
+
+/** Pastilha de posição, por escalão. Um 3 e um 47 são histórias diferentes e
+ *  numa coluna de números cinzentos leem-se igual. */
+function PosPill({ pos, decimals }: { pos: number | null; decimals: boolean }) {
+  if (pos === null) return null;
+  const band = pos <= 3 ? "p1" : pos <= 10 ? "p2" : pos <= 20 ? "p3" : "p4";
+  return (
+    <span className={`wa-pos ${band}`}>{decimals ? pos.toFixed(1) : pos}</span>
   );
 }
 
@@ -70,11 +135,14 @@ function KpiTile({
   m,
   lang,
   variant,
+  spark,
 }: {
   label: string;
   m: ReportMetric;
   lang: "pt" | "en";
   variant: Variant;
+  /** 12 meses da mesma métrica, quando o snapshot os tem. */
+  spark?: (number | null)[];
 }) {
   const isNa = Boolean(m.manualNa);
   const pending = m.value === null && !isNa;
@@ -87,6 +155,7 @@ function KpiTile({
       </div>
       {!pending && !isNa && <DeltaChip delta={metricDelta(m, lang)} />}
       {pending && <div className="wa-kpi-note">{pendingNote(m, lang)}</div>}
+      {!pending && spark && <Spark values={spark} />}
     </div>
   );
 }
@@ -152,7 +221,12 @@ export function ReportDocument({
   const gsc = snapshot.gsc;
   // Optional on the snapshot — reports generated before v76.15 have none.
   const coverage = snapshot.coverage;
-  const geo = snapshot.geo;
+  // GEO: o bloco novo (v76.57) manda quando existe. O antigo só continua
+  // desenhado nos relatórios que já estavam gravados com ele — regenerar um
+  // relatório antigo passa-o para a secção nova.
+  const geoIntel = snapshot.geoIntel;
+  const geoReadiness = snapshot.geoReadiness;
+  const geo = geoIntel || geoReadiness ? undefined : snapshot.geo;
 
   // —— A tabela única das keywords trabalhadas (v76.38) ————————————
   // Uma só tabela comprida com TODAS as target keywords da client file e a
@@ -264,6 +338,40 @@ export function ReportDocument({
   );
 
   const showAi = ai.sources.length > 0 || variant === "internal";
+  const showNotes = Boolean(snapshot.notes.trim()) || variant === "internal";
+  const showGeo = Boolean(snapshot.geoIntel || snapshot.geoReadiness || geo);
+
+  // O ÍNDICE. Uma lista só, montada com as mesmas condições que desenham as
+  // secções, para que o número no cabeçalho e a entrada no índice não possam
+  // divergir — que é o que aconteceria se cada secção soubesse o seu número.
+  const secs: { key: string; label: string }[] = [
+    ...(snapshot.execSummary.length > 0
+      ? [{ key: "exec", label: t("Destaques do mês", "Highlights of the month") }]
+      : []),
+    ...(snapshot.trend ? [{ key: "trend", label: t("Evolução", "Trend") }] : []),
+    { key: "leads", label: t("Leads por canal", "Leads by channel") },
+    { key: "traffic", label: t("Tráfego & Ficha Google", "Traffic & Google listing") },
+    ...(showAi ? [{ key: "ai", label: "AI Visibility" }] : []),
+    ...(kwVisible.length > 0
+      ? [{ key: "kw", label: t("Keywords trabalhadas", "Target keywords") }]
+      : []),
+    ...(othersVisible.length > 0
+      ? [{ key: "others", label: t("Outros rankings", "Other rankings") }]
+      : []),
+    ...(showGeo ? [{ key: "geo", label: t("GEO · SEO para IA", "GEO · SEO for AI") }] : []),
+    ...(showNotes
+      ? [{ key: "notes", label: t("Notas & próximos passos", "Notes & next steps") }]
+      : []),
+  ];
+  const secN = (key: string) => secs.findIndex((x) => x.key === key) + 1;
+
+  // Séries do gráfico de evolução reaproveitadas como sparkline dos KPI.
+  const tr = snapshot.trend;
+  const sparkFor: Record<string, (number | null)[] | undefined> = {
+    [t("Leads geradas", "Leads generated")]: tr?.leads,
+    [t("Utilizadores orgânicos", "Organic users")]: tr?.organicUsers,
+    [t("Clicks no Google", "Google clicks")]: tr?.gscClicks,
+  };
 
   return (
     <div className="wa-report">
@@ -299,16 +407,39 @@ export function ReportDocument({
       {kpis.length > 0 && (
         <section className="wa-kpis">
           {kpis.map((k) => (
-            <KpiTile key={k.label} label={k.label} m={k.m} lang={lang} variant={variant} />
+            <KpiTile
+              key={k.label}
+              label={k.label}
+              m={k.m}
+              lang={lang}
+              variant={variant}
+              spark={sparkFor[k.label]}
+            />
           ))}
         </section>
+      )}
+
+      {secs.length > 2 && (
+        <nav className="wa-toc" aria-label={t("Índice", "Contents")}>
+          <span className="wa-toc-l">{t("Neste relatório", "In this report")}</span>
+          <ol className="wa-toc-list">
+            {secs.map((sec, i) => (
+              <li key={sec.key}>
+                <span className="wa-toc-n">{String(i + 1).padStart(2, "0")}</span>
+                {sec.label}
+              </li>
+            ))}
+          </ol>
+        </nav>
       )}
 
       {/* Executive Summary — the wins, up front */}
       {snapshot.execSummary.length > 0 && (
         <section className="wa-sec">
           <div className="wa-exec-card">
-            <div className="wa-label wa-label-on-tint">{t("Destaques do mês", "Highlights of the month")}</div>
+            <SecLabel n={secN("exec")} onTint>
+              {t("Destaques do mês", "Highlights of the month")}
+            </SecLabel>
             <ul className="wa-exec">
               {snapshot.execSummary.map((b, i) => (
                 <li key={i}>{boldParts(b, `ex${i}`)}</li>
@@ -323,7 +454,7 @@ export function ReportDocument({
           nenhum número de um mês sozinho a responde. */}
       {snapshot.trend && (
         <section className="wa-sec wa-sec-trend">
-          <div className="wa-label">{t("Evolução", "Trend")}</div>
+          <SecLabel n={secN("trend")}>{t("Evolução", "Trend")}</SecLabel>
           <h2 className="wa-h2">
             {t("Os últimos 12 meses", "The last 12 months")}
           </h2>
@@ -339,7 +470,9 @@ export function ReportDocument({
 
       {/* Leads breakdown */}
       <section className="wa-sec">
-        <div className="wa-label">{t("Leads por canal", "Leads by channel")}</div>
+        <SecLabel n={secN("leads")}>
+          {t("Leads por canal", "Leads by channel")}
+        </SecLabel>
         <h2 className="wa-h2">{t("De onde vieram os contactos", "Where the contacts came from")}</h2>
         {leadTotal.value === null ? (
           <p className="wa-pending-lg">
@@ -384,7 +517,10 @@ export function ReportDocument({
 
       {/* GBP + Organic side by side */}
       <section className="wa-sec">
-        <div className="wa-two">
+        <SecLabel n={secN("traffic")}>
+          {t("Tráfego & Ficha Google", "Traffic & Google listing")}
+        </SecLabel>
+        <div className="wa-two wa-two-sp">
           <div className="wa-card">
             <div className="wa-label">Google Business Profile</div>
             <h3 className="wa-h3">
@@ -446,7 +582,7 @@ export function ReportDocument({
       {/* AI Visibility */}
       {showAi && (
         <section className="wa-sec">
-          <div className="wa-label">AI Visibility</div>
+          <SecLabel n={secN("ai")}>AI Visibility</SecLabel>
           <h3 className="wa-h3">{t("Visitantes vindos de assistentes de IA", "Visitors from AI assistants")}</h3>
           <p className="wa-method">
             {t(
@@ -495,9 +631,9 @@ export function ReportDocument({
           keyword (v76.38). */}
       {kwVisible.length > 0 && (
         <section className="wa-sec">
-          <div className="wa-label">
+          <SecLabel n={secN("kw")}>
             {t("Keywords Trabalhadas", "Target Keywords")}
-          </div>
+          </SecLabel>
           <h3 className="wa-h3">
             {variant === "internal"
               ? t(
@@ -561,10 +697,8 @@ export function ReportDocument({
                             ? t("ainda não rankeia", "not ranking yet")
                             : t("fora do top 100", "outside top 100")}
                         </span>
-                      ) : kwDecimals ? (
-                        k.position.toFixed(1)
                       ) : (
-                        k.position
+                        <PosPill pos={k.position} decimals={kwDecimals} />
                       )}
                     </td>
                     <td className="n">
@@ -597,9 +731,9 @@ export function ReportDocument({
           chamada extra (v76.40). */}
       {othersVisible.length > 0 && (
         <section className="wa-sec">
-          <div className="wa-label">
+          <SecLabel n={secN("others")}>
             {t("Outros Rankings", "Other Rankings")}
-          </div>
+          </SecLabel>
           <h3 className="wa-h3">
             {t(
               `Onde o site também já aparece (${otherTotal})`,
@@ -638,7 +772,13 @@ export function ReportDocument({
                 {othersVisible.map((k) => (
                   <tr key={k.keyword}>
                     <td>{k.keyword}</td>
-                    <td className="n">{k.position ?? "—"}</td>
+                    <td className="n">
+                      {k.position === null ? (
+                        "—"
+                      ) : (
+                        <PosPill pos={k.position} decimals={false} />
+                      )}
+                    </td>
                     <td className="n">
                       <PlaceCell change={k.change} />
                     </td>
@@ -660,9 +800,9 @@ export function ReportDocument({
           uma secção de zeros lê-se como trabalho não feito. */}
       {geo && (
         <section className="wa-sec">
-          <div className="wa-label">
+          <SecLabel n={secN("geo")}>
             {t("Visibilidade em IA", "AI Visibility")}
-          </div>
+          </SecLabel>
           <h3 className="wa-h3">
             {t(
               "Onde a marca aparece quando se pergunta a uma IA",
@@ -742,10 +882,21 @@ export function ReportDocument({
         </section>
       )}
 
+      {/* GEO v2 — o corpus de perguntas + a auditoria de prontidão. */}
+      <ReportGeoSection
+        intel={geoIntel}
+        readiness={geoReadiness}
+        lang={lang}
+        variant={variant}
+        sectionNumber={secN("geo")}
+      />
+
       {/* Notes */}
       {(snapshot.notes.trim() || variant === "internal") && (
         <section className="wa-sec">
-          <div className="wa-label">{t("Notas & Próximos Passos", "Notes & Next Steps")}</div>
+          <SecLabel n={secN("notes")}>
+            {t("Notas & Próximos Passos", "Notes & Next Steps")}
+          </SecLabel>
           {snapshot.notes.trim() ? (
             <p className="wa-notes">{snapshot.notes}</p>
           ) : (
@@ -765,7 +916,24 @@ export function ReportDocument({
   );
 }
 
-const CSS = `
+/** Regras de impressão. O PDF é o formato em que este relatório chega mais
+ *  vezes ao cliente, e um cartão cortado a meio entre páginas estraga a
+ *  leitura de tudo o que vem a seguir. */
+const PRINT_CSS = `
+@media print{
+  .wa-report{box-shadow:none;border:none;border-radius:0;background:#fff;}
+  .wa-toc{break-after:avoid;}
+  .wa-sec{break-inside:auto;padding-top:1rem;padding-bottom:1rem;}
+  .wa-h2,.wa-h3,.wa-label{break-after:avoid;}
+  .wa-kpi,.wa-card,.wa-exec-card,.wa-geo-stat,.wa-geo-show,.wa-geo-pillar,
+  .wa-geo-check,.wa-geo-bots,.wa-trend-panel,.wa-gbp-unit{break-inside:avoid;}
+  .wa-qtable tr{break-inside:avoid;}
+  .wa-qtable thead{display:table-header-group;}
+  .wa-foot{break-inside:avoid;}
+}
+`;
+
+const CSS = GEO_CSS + PRINT_CSS + `
 .wa-report{--ink:#17162d;--muted:#6d6b86;--line:rgba(23,22,45,.08);--violet:#783df5;--plum:#8a4fd0;--tint:#f7f5fe;--up:#0f8f62;--down:#c93a52;
   background:var(--tint);color:var(--ink);border-radius:16px;overflow:hidden;
   font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
@@ -795,8 +963,33 @@ const CSS = `
 .wa-kpi-dash{color:#c7c2d6;}
 .wa-kpi-note{font-size:.66rem;color:#a08fb8;font-style:italic;}
 
+/* Índice + numeração de secções (v76.57) */
+.wa-toc{padding:.25rem 1.6rem 1.1rem;}
+.wa-toc-l{display:block;font-size:.6rem;letter-spacing:.14em;text-transform:uppercase;color:var(--plum);font-weight:700;margin-bottom:.45rem;}
+.wa-toc-list{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:.35rem;counter-reset:none;}
+.wa-toc-list li{display:inline-flex;align-items:baseline;gap:.35rem;font-size:.72rem;font-weight:600;color:#4a4863;
+  background:#fff;border:1px solid var(--line);border-radius:999px;padding:.25rem .65rem;}
+.wa-toc-n{font-size:.62rem;font-weight:800;color:var(--violet);font-variant-numeric:tabular-nums;letter-spacing:.02em;}
+.wa-secn{display:inline-block;margin-right:.45rem;padding:.05rem .3rem;border-radius:4px;font-size:.6rem;font-weight:800;
+  background:rgba(120,61,245,.12);color:#6b34c9;font-variant-numeric:tabular-nums;letter-spacing:.04em;vertical-align:.05em;}
+.wa-label-on-tint .wa-secn{background:rgba(107,52,201,.16);}
+
+/* Sparkline dentro do KPI */
+.wa-spark{display:block;width:100%;height:22px;margin-top:.5rem;overflow:visible;}
+.wa-spark path{stroke:var(--violet);opacity:.55;}
+.wa-spark circle{fill:var(--violet);}
+
+/* Pastilha de posição */
+.wa-pos{display:inline-block;min-width:2.1rem;padding:.1rem .38rem;border-radius:6px;font-weight:800;font-size:.76rem;
+  font-variant-numeric:tabular-nums;text-align:center;}
+.wa-pos.p1{background:rgba(15,143,98,.14);color:#0b6f4c;}
+.wa-pos.p2{background:rgba(52,62,215,.12);color:#2f38b8;}
+.wa-pos.p3{background:rgba(201,138,21,.14);color:#8a5a1f;}
+.wa-pos.p4{background:rgba(23,22,45,.06);color:#5c5a72;}
+
 /* Sections */
 .wa-sec{padding:1.25rem 1.6rem;}
+.wa-two-sp{margin-top:.55rem;}
 .wa-sec + .wa-sec{border-top:1px solid var(--line);}
 .wa-label{font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;color:var(--plum);font-weight:700;}
 .wa-h2{margin:.35rem 0 .7rem;font-size:1.1rem;letter-spacing:-.015em;font-weight:700;}

@@ -318,6 +318,100 @@ export type GeoBlock = {
   costUsd: number;
 };
 
+// —— GEO v2 (v76.57) ————————————————————————————————————————————
+// O bloco `geo` acima é a primeira versão: uma lista de perguntas onde a
+// marca aparece e outra onde não. Ficou curta por duas razões — escolhia
+// tópicos demasiado específicos (e o corpus português devolvia zero) e não
+// media nada do que depende de nós. Estes dois blocos substituem-no; o
+// antigo fica declarado para os relatórios já gravados continuarem a abrir.
+//
+// Espelham `GeoIntel` / `GeoReadiness` de src/lib/seo-tools. Redeclarados e
+// não importados porque este ficheiro é puxado para o browser e aqueles
+// arrastariam as credenciais e o cliente HTTP atrás deles.
+
+export type GeoIntelSource = {
+  domain: string;
+  url: string;
+  title: string;
+  position: number;
+};
+
+export type GeoIntelPrompt = {
+  platform: string;
+  modelName: string;
+  question: string;
+  answerExcerpt: string;
+  aiSearchVolume: number;
+  cited: boolean;
+  citedPosition: number | null;
+  sources: GeoIntelSource[];
+  fanOutQueries: string[];
+  topic: string;
+  relevance: number;
+  audience: "customer" | "context";
+  firstSeen: string | null;
+  lastSeen: string | null;
+};
+
+export type GeoIntelCompetitor = {
+  domain: string;
+  mentions: number;
+  volume: number;
+  /** % do volume do corpus em cujas respostas o domínio é citado. Várias
+   *  fontes por resposta → a coluna NÃO soma 100. */
+  coverage: number;
+  isClient: boolean;
+};
+
+export type GeoIntelBlock = {
+  source: "dataforseo";
+  checkedOn: string;
+  domain: string;
+  locationCode: number;
+  languageCode: string;
+  countryLabel: string;
+  platforms: string[];
+  topics: { topic: string; prompts: number; volume: number; cited: number; citedVolume: number }[];
+  prompts: GeoIntelPrompt[];
+  promptsTotal: number;
+  promptsCited: number;
+  contextPrompts: number;
+  contextVolume: number;
+  volumeTotal: number;
+  volumeCited: number;
+  shareOfVoice: number;
+  competitors: GeoIntelCompetitor[];
+  fanOut: { query: string; count: number }[];
+  keywordVolumes: { keyword: string; aiSearchVolume: number; history: number[] }[];
+  costUsd: number;
+};
+
+export type GeoReadinessPillar = "access" | "understanding" | "extraction" | "trust";
+
+export type GeoReadinessCheck = {
+  id: string;
+  pillar: GeoReadinessPillar;
+  label: string;
+  status: "pass" | "warn" | "fail" | "unknown";
+  detail: string;
+  why: string;
+  fix: string;
+  weight: 1 | 2 | 3;
+};
+
+export type GeoReadinessBlock = {
+  checkedOn: string;
+  domain: string;
+  unreachable: boolean;
+  pagesAudited: string[];
+  checks: GeoReadinessCheck[];
+  score: number;
+  pillarScores: Record<GeoReadinessPillar, number>;
+  bots: { name: string; label: string; allowed: boolean | null; critical: boolean }[];
+  hasLlmsTxt: boolean;
+  schemaTypes: string[];
+};
+
 /** A evolução dos últimos meses — a secção que responde a «isto está a
  *  crescer?», que é a pergunta que um número de um mês sozinho nunca responde.
  *
@@ -404,8 +498,14 @@ export type MonthlyReportSnapshot = {
    *  na v76.35 (teto de 10 websites). Os relatórios antigos continuam a
    *  mostrar o bloco `seRanking` que já tinham gravado. */
   liveRanks?: LiveRankBlock;
-  /** Visibilidade em LLMs. Ausente quando não há sinal neste mercado. */
+  /** Visibilidade em LLMs, primeira versão. Só nos relatórios ≤ v76.56. */
   geo?: GeoBlock;
+  /** GEO v2 — o corpus de perguntas, quem é citado e a quota de voz.
+   *  Ausente quando o corpus deste país+língua não devolveu nada. */
+  geoIntel?: GeoIntelBlock;
+  /** GEO v2 — auditoria de prontidão do próprio site. Tem quase sempre
+   *  resposta, mesmo quando o corpus não tem. */
+  geoReadiness?: GeoReadinessBlock;
   /** Evolução dos últimos 12 meses. Ausente nos relatórios gerados antes da
    *  v76.32 e quando o GA4 não respondeu. */
   trend?: ReportTrend;
