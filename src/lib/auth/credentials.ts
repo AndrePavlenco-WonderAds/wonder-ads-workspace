@@ -46,6 +46,15 @@ export type EmployeeCredential = {
    *  cá estava. O SuperAdmin corrige cada um na Data de entrada do Team Roster
    *  (`/admin/employees`), e o override em KV vence sempre este campo. */
   startedAt?: string;
+  /** Retrato em `public/team/`. Só as pessoas que aparecem em cartões de
+   *  escolha (hoje, os web designers no pedido de ticket) precisam de um —
+   *  quem não tiver fica com a inicial. */
+  photo?: string;
+  /** false = a pessoa continua com conta e continua a aparecer nos tickets
+   *  que já são dela, mas deixa de ser oferecida como destino de trabalho
+   *  novo. Tirá-la de `EMPLOYEE_CREDENTIALS` fá-la-ia perder o login e
+   *  transformaria o nome nos tickets antigos num username órfão. */
+  assignable?: boolean;
 };
 
 export const EMPLOYEE_CREDENTIALS: EmployeeCredential[] = [
@@ -147,6 +156,7 @@ export const EMPLOYEE_CREDENTIALS: EmployeeCredential[] = [
     role: "Web Designer",
     dept: "Web",
     startedAt: "2026-06-16",
+    photo: "/team/mike.jpg",
     salt: "dcd10c8208accd64222497f003f20480",
     hash: "c1f1ee60a2f04d0c0f784b912e8830aaf7ef3094f3d159ec68c07558fcd5306b52879c6be7d1c8e1781c4bc73fa7cb6b47cb4acbc50f10b3b19fe0ed5efdaeee",
   },
@@ -157,6 +167,7 @@ export const EMPLOYEE_CREDENTIALS: EmployeeCredential[] = [
     role: "Web Designer",
     dept: "Web",
     startedAt: "2026-06-16",
+    photo: "/team/gustavo.jpg",
     salt: "142c5cf298fdcfeed6c09fc336953c0c",
     hash: "c1c57ffdd6dc7abd9b4e20b0697bb9507093f8d0fa02e7c688da565888e91418fe8111f6b7f7e64da4c9961c458c618f015009baad34633351930c90a344851e",
   },
@@ -167,17 +178,20 @@ export const EMPLOYEE_CREDENTIALS: EmployeeCredential[] = [
     role: "Web Designer",
     dept: "Web",
     startedAt: "2026-06-16",
+    photo: "/team/renan.jpg",
     salt: "763d35ff3e7121fb2ac9a8b645edb90c",
     hash: "d37be5f7ba8db4b3425ec5e98349e8ab0877a2457af125f738837d03dcd63332c5be39cca2025c4fd19b9b45badcf959e1c2f8d2b4e66f80bebf72d0ff9c61f3",
   },
   {
-    // Cylas — 4th web designer (v74.40). Temp password generated
-    // out-of-band ("cylas-web-2026") — Andre to rotate to a real one.
+    // Cylas — 4.º web designer (v74.40). Deixou de receber trabalho novo na
+    // v76.61: continua com conta e continua a aparecer nos tickets que já
+    // são dele, mas sai dos cartões de atribuição.
     username: "cylas",
     name: "Cylas",
     fullName: "Cylas",
     role: "Web Designer",
     dept: "Web",
+    assignable: false,
     startedAt: "2026-06-23",
     salt: "e6877b670567eb571892c306e349a3c6",
     hash: "cebf6a2effe99af74ffe71655f70d72fbd4d52ec369c9101168d0902b9e0567ebb9a916e1c282b33d4d6a9a1e27cf50d7867f6469fdb56ffcd3a8c8529d3c7e0",
@@ -320,11 +334,15 @@ export function getWebAssignees(): {
   username: string;
   name: string;
   fullName: string;
+  photo?: string;
 }[] {
-  return EMPLOYEE_CREDENTIALS.filter((c) => c.dept === "Web").map((c) => ({
+  return EMPLOYEE_CREDENTIALS.filter(
+    (c) => c.dept === "Web" && c.assignable !== false,
+  ).map((c) => ({
     username: c.username,
     name: c.name,
     fullName: c.fullName ?? c.name,
+    ...(c.photo ? { photo: c.photo } : {}),
   }));
 }
 

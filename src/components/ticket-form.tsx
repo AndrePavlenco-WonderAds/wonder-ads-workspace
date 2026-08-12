@@ -61,6 +61,8 @@ export function TicketForm({
   webDevs: {
     username: string;
     name: string;
+    /** Retrato em `public/team/`. Sem foto, fica a inicial. */
+    photo?: string;
     load: { label: string; count: number }[];
     total: number;
   }[];
@@ -384,40 +386,57 @@ export function TicketForm({
                   type="button"
                   onClick={() => setAssignee(on ? "" : d.username)}
                   aria-pressed={on}
-                  className={`rounded-xl border p-3 text-left transition ${
+                  className={`group overflow-hidden rounded-xl border text-left transition ${
                     on
-                      ? "border-[color:var(--brand-purple)]/70 bg-[color:var(--brand-purple)]/12"
+                      ? "border-[color:var(--brand-purple)]/70 bg-[color:var(--brand-purple)]/12 shadow-[0_10px_34px_-14px_rgba(120,61,245,.8)]"
                       : "border-white/12 bg-white/[0.03] hover:border-white/30 hover:bg-white/[0.06]"
                   }`}
                 >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="inline-flex items-center gap-2">
-                      <span
+                  {/* BANNER. A cara da pessoa antes do nome: escolhe-se a
+                      quem se atribui olhando para quem é, e uma inicial num
+                      círculo não deixa ninguém fazer isso. O recorte corta a
+                      faixa do logótipo que vem nos retratos do site. */}
+                  <span className="relative block h-[104px] w-full overflow-hidden bg-white/[0.06]">
+                    {d.photo ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={d.photo}
+                        alt=""
                         aria-hidden
-                        className={`flex h-7 w-7 items-center justify-center rounded-full text-[11px] font-bold text-white ${
-                          on ? "brand-gradient-bg" : "bg-white/12"
+                        className={`h-full w-full object-cover transition duration-300 ${
+                          on ? "scale-[1.03]" : "grayscale-[.35] group-hover:grayscale-0"
                         }`}
-                      >
+                        style={{ objectPosition: "center 38%" }}
+                      />
+                    ) : (
+                      <span className="flex h-full w-full items-center justify-center text-3xl font-bold text-white/45">
                         {d.name.trim().charAt(0).toUpperCase()}
                       </span>
-                      <span className="text-[13px] font-semibold text-white">
-                        {d.name}
-                      </span>
+                    )}
+                    <span
+                      aria-hidden
+                      className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/85 via-black/45 to-transparent"
+                    />
+                    <span className="absolute bottom-2 left-3 text-[17px] font-bold leading-none tracking-tight text-white drop-shadow-[0_2px_8px_rgba(0,0,0,.7)]">
+                      {d.name}
                     </span>
                     <span
-                      className={`tabular rounded-full px-2 py-0.5 text-[10.5px] font-bold ${
+                      className={`tabular absolute right-2 top-2 rounded-full px-2 py-0.5 text-[10.5px] font-bold backdrop-blur-sm ${
                         d.total === 0
-                          ? "bg-emerald-500/15 text-emerald-200"
+                          ? "bg-emerald-500/25 text-emerald-100"
                           : d.total >= 10
-                            ? "bg-rose-500/15 text-rose-200"
-                            : "bg-white/10 text-white/70"
+                            ? "bg-rose-500/30 text-rose-50"
+                            : "bg-black/45 text-white/90"
                       }`}
                       title="Total em aberto"
                     >
                       {d.total}
                     </span>
-                  </div>
-                  <dl className="mt-2 space-y-0.5 border-t border-white/8 pt-2">
+                    {on && (
+                      <span className="brand-gradient-bg absolute left-0 top-0 h-full w-1" />
+                    )}
+                  </span>
+                  <dl className="space-y-0.5 px-3 py-2.5">
                     {d.load.map((l) => (
                       <div
                         key={l.label}

@@ -13,6 +13,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.61",
+    date: "2026-08-12",
+    title: "Os cartões de atribuição de tickets passam a ter a cara de quem trabalha",
+    highlights: [
+      "**📸 Retratos do Gustavo, do Mike e do Renan** no pedido de ticket, em banner por cima da carga de cada um, com o nome grande sobreposto. Escolhe-se a quem se atribui olhando para quem é, e uma inicial num círculo não deixava ninguém fazer isso. As fotos vêm da página de equipa do wonder-ads.com e ficam servidas do próprio workspace.",
+      "**🚪 O Cylas sai dos cartões de atribuição.** Não perde a conta nem desaparece dos tickets que já são dele — deixa é de ser oferecido como destino de trabalho novo. É um campo `assignable` na credencial, e não uma remoção: apagar a linha fá-lo-ia perder o login e deixaria o nome dos tickets antigos órfão.",
+    ],
+  },
+  {
     version: "76.60",
     date: "2026-08-12",
     title: "O relatório deixa de mostrar zeros — e a tabela de keywords fica legível",

@@ -83,6 +83,7 @@ export default async function NewTicketPage() {
     return {
       username: a.username,
       name: a.name,
+      photo: a.photo,
       load: OPEN_COLUMNS.map((col) => ({
         label: WEB_STATUS_LABEL[col],
         count: load[col] ?? 0,
