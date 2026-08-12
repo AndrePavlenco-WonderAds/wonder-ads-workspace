@@ -336,7 +336,7 @@ export const DEFAULT_ONBOARDING_CATEGORIES: OnboardingCategory[] = [
         title: "Acesso ao Google Merchant Center",
         kind: "video",
         emoji: "🛒",
-        videoUrl: "https://www.youtube.com/embed/-dMzC17hsuE",
+        videoUrl: "https://www.youtube.com/embed/LBXgm58-WeQ",
         summary: "Ligar o catálogo de produtos para os anúncios Shopping.",
         about: [
           {

@@ -17,7 +17,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-08-12",
     title: "Onboarding — vídeos de Ads, GMC para e-commerce e a janela legal em cada sessão",
     highlights: [
-      "**🎥 Três tutoriais novos:** acesso à conta **Google Ads**, acesso ao **Meta Business** e acesso ao **Google Merchant Center**. Os placeholders «Vídeo em breve» destes três passos deixaram de existir.",
+      "**🎥 Três tutoriais novos:** acesso à conta **Google Ads**, acesso ao **Meta Business** e acesso ao **Google Merchant Center**. Os placeholders «Vídeo em breve» destes três passos deixaram de existir. (O do Merchant Center foi trocado logo a seguir pela versão final.)",
       "**🛒 O passo do Merchant Center passa a depender do e-commerce e não do Google Ads.** Um cliente de e-commerce só com Meta é precisamente quem tem catálogo — e os catálogos do Meta puxam do mesmo feed. Aparece agora depois do Meta, como último acesso.",
       "**🔒 A janela «Antes de começar» volta a aparecer em cada sessão nova.** Um link de onboarding é reenviado e reencaminhado; quem o abria a seguir entrava direto e nunca via a condição a que o processo está sujeito. A confirmação continua gravada no servidor com o primeiro carimbo — é um registo legal —, o que passou a ser por sessão é mostrá-la.",
       "**📧 Cada acesso pede só quem vai lá trabalhar.** Nos passos de Ads (Google Ads, Merchant Center, Meta) ficam **alice@** e **germano@**; nos de SEO (Analytics, Search Console, Perfil de Empresa, website) fica só **seo@**. Quatro emails num painel que aceita um deixava o cliente sem saber qual escolher.",
