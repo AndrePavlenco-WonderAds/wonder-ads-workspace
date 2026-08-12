@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.55",
+    date: "2026-08-12",
+    title: "Os tickets antigos voltam a abrir",
+    highlights: [
+      "**🐛 Ecrã preto em todos os tickets anteriores a ontem.** O cartão «Entrega prevista» da v76.52 lia uma lista de revisões que os tickets já gravados não têm — e um `undefined.length` não falha só no cartão, deita abaixo a página inteira. Quem abrisse o #1 ou o #40 via «Application error» em vez do ticket.",
+      "**🩹 A correção é na leitura, não no ecrã.** Os campos acrescentados depois passam a ser preenchidos no único sítio por onde toda a leitura do KV passa. Um `?? []` em cada componente tapava este caso e deixava o próximo à espera.",
+      "**🧯 O mesmo valia para os projetos.** Mover um projeto antigo de Client Feedback para In Progress dava 500 pela mesma razão — a linha nova era acrescentada a uma lista que não existia.",
+      "**✅ Verificado no ticket que rebentava** (`tk_msnrtmhl…`) e num criado hoje: ambos abrem, e o cartão mostra «Ainda por definir» quando não há datas.",
+    ],
+  },
+  {
     version: "76.54",
     date: "2026-08-11",
     title: "O NPS respondido chega também ao consultor da conta",

@@ -424,9 +424,29 @@ export function toPublicProject(p: WebProject): PublicWebProject {
 // CRUD
 // ---------------------------------------------------------------------------
 
+/** Mesma razão do `hydrateTicket`: campos acrescentados depois já não estão
+ *  nos projetos antigos do KV, e as leituras não passam por
+ *  `normaliseProject`. Sem isto, mover um projeto anterior à v76.52 de
+ *  Client Feedback para In Progress dava 500 ao espalhar um
+ *  `deliveryRevisions` inexistente. */
+function hydrateProject(p: WebProject): WebProject {
+  return {
+    ...p,
+    comments: Array.isArray(p.comments) ? p.comments : [],
+    deliveryRevisions: Array.isArray(p.deliveryRevisions)
+      ? p.deliveryRevisions
+      : [],
+    deadline: p.deadline ?? null,
+    deadlineSetByUsername: p.deadlineSetByUsername ?? null,
+    deadlineSetByName: p.deadlineSetByName ?? null,
+    deadlineSetAt: p.deadlineSetAt ?? null,
+  };
+}
+
 export async function getProject(id: string): Promise<WebProject | null> {
   if (!webStorageConfigured) return null;
-  return (await kv.get<WebProject>(PROJECT_PREFIX + id)) ?? null;
+  const raw = await kv.get<WebProject>(PROJECT_PREFIX + id);
+  return raw ? hydrateProject(raw) : null;
 }
 
 export async function getAllProjects(): Promise<WebProject[]> {
@@ -435,7 +455,7 @@ export async function getAllProjects(): Promise<WebProject[]> {
   if (!ids || ids.length === 0) return [];
   const keys = ids.map((id) => PROJECT_PREFIX + id);
   const rows = await kv.mget<WebProject[]>(...keys);
-  return rows.filter((r): r is WebProject => Boolean(r));
+  return rows.filter((r): r is WebProject => Boolean(r)).map(hydrateProject);
 }
 
 export async function saveProject(p: WebProject): Promise<void> {

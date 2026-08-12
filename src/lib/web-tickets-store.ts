@@ -169,6 +169,30 @@ export function normaliseTicket(
   };
 }
 
+/** CAMPOS NOVOS EM REGISTOS ANTIGOS. Um ticket gravado antes de o campo
+ *  existir não o tem no KV, e as leituras NÃO passam por `normaliseTicket`
+ *  (isso reescreveria `updatedAt` a cada abertura). O resultado era um
+ *  `deliveryRevisions` a undefined a chegar ao componente e a rebentar o
+ *  ecrã inteiro no `.length` — todos os tickets anteriores à v76.52
+ *  deixaram de abrir. Preenche-se aqui, no único sítio por onde toda a
+ *  leitura passa, para não haver um `?? []` espalhado por cada ecrã. */
+function hydrateTicket(t: WebTicket): WebTicket {
+  return {
+    ...t,
+    attachments: Array.isArray(t.attachments) ? t.attachments : [],
+    comments: Array.isArray(t.comments) ? t.comments : [],
+    history: Array.isArray(t.history) ? t.history : [],
+    deliveryRevisions: Array.isArray(t.deliveryRevisions)
+      ? t.deliveryRevisions
+      : [],
+    deadline: t.deadline ?? null,
+    deadlineSetByUsername: t.deadlineSetByUsername ?? null,
+    deadlineSetByName: t.deadlineSetByName ?? null,
+    deadlineSetAt: t.deadlineSetAt ?? null,
+    resolvedAt: t.resolvedAt ?? null,
+  };
+}
+
 // ---- CRUD ----
 export async function nextTicketSeq(): Promise<number> {
   if (!ticketsStorageConfigured) return 0;
@@ -177,7 +201,8 @@ export async function nextTicketSeq(): Promise<number> {
 
 export async function getTicket(id: string): Promise<WebTicket | null> {
   if (!ticketsStorageConfigured) return null;
-  return (await kv.get<WebTicket>(TICKET_PREFIX + id)) ?? null;
+  const raw = await kv.get<WebTicket>(TICKET_PREFIX + id);
+  return raw ? hydrateTicket(raw) : null;
 }
 
 export async function getAllTickets(): Promise<WebTicket[]> {
@@ -188,6 +213,7 @@ export async function getAllTickets(): Promise<WebTicket[]> {
   const rows = await kv.mget<WebTicket[]>(...keys);
   return rows
     .filter((r): r is WebTicket => Boolean(r))
+    .map(hydrateTicket)
     .sort((a, b) => b.createdAt - a.createdAt);
 }
 

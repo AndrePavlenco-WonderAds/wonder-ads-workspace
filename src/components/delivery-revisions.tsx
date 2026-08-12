@@ -20,12 +20,17 @@ import type { DeliveryRevision } from "@/lib/web-shared";
 
 export function DeliveryRevisions({
   original,
-  revisions,
+  revisions: revisionsProp,
 }: {
   /** A entrega prevista original — a primeira linha da história. */
   original: string | null;
-  revisions: DeliveryRevision[];
+  /** Pode chegar a undefined de registos gravados antes de este campo
+   *  existir. A store hidrata-os na leitura; aqui defende-se na mesma,
+   *  porque um cartão lateral em falta é um detalhe e um ecrã em branco
+   *  é um ticket que ninguém consegue abrir. */
+  revisions: DeliveryRevision[] | undefined;
 }) {
+  const revisions = revisionsProp ?? [];
   const current =
     revisions.length > 0 ? revisions[revisions.length - 1].date : original;
 
