@@ -13,6 +13,19 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.59",
+    date: "2026-08-12",
+    title: "Afinações no relatório mensal — e o Serpstat a devolver a lista toda",
+    highlights: [
+      "**🔑 Serpstat com plano novo: 200 000 créditos.** A consulta completa passou a correr — o Sentir Saúde devolve **123 keywords a rankear** (24 do plano, 121 ganhas pelo caminho), 13 na primeira página e 6 já com AI Overview, uma delas a citar o site («mbst», #1). Era isto que faltava desde a v76.58.",
+      "**👁️ O aviso de relatório parcial voltou a ler-se.** Estava castanho-âmbar por cima do gradiente roxo da capa, praticamente invisível. Passa a branco sobre véu escuro — a cor que funciona num fundo claro não funciona neste.",
+      "**🧾 Fora o índice «Neste relatório».** As secções continuam numeradas; o bloco de navegação no topo saiu.",
+      "**✍️ «Destaques do mês» passa a «Resumo Executivo».**",
+      "**📐 As descrições de método ocupam a largura toda** em vez de ficarem cortadas a 64 caracteres a meio da página.",
+      "**🧹 Os cartões de assistentes de IA mostram só as sessões** — saiu a linha de utilizadores e engagement por baixo.",
+    ],
+  },
+  {
     version: "76.58",
     date: "2026-08-12",
     title: "As keywords do relatório passam a ser só do Serpstat — e a lista completa",

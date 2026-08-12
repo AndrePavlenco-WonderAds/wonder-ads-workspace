@@ -108,16 +108,6 @@ function DeltaChip({ delta }: { delta: MetricDelta | null }) {
   );
 }
 
-/** Per-keyword month-over-month position move for the Top Queries table.
- *  change = prevPos − position, so positive = climbed. null = didn't rank last
- *  month (a new keyword). */
-function ChangeCell({ change }: { change: number | null }) {
-  if (change === null) return <span className="wa-kwnew">novo</span>;
-  if (change > 0.1) return <span className="wa-up">▲ {change.toFixed(1)}</span>;
-  if (change < -0.1) return <span className="wa-down-t">▼ {Math.abs(change).toFixed(1)}</span>;
-  return <span className="wa-flat-t">—</span>;
-}
-
 /** Month-over-month move in WHOLE places, for the SE Ranking table. Positions
  *  there are exact SERP ranks, not averages, so "▲ 3" reads better than
  *  "▲ 3.0". null = no earlier check to compare against (not a new keyword). */
@@ -350,7 +340,7 @@ export function ReportDocument({
   // divergir — que é o que aconteceria se cada secção soubesse o seu número.
   const secs: { key: string; label: string }[] = [
     ...(snapshot.execSummary.length > 0
-      ? [{ key: "exec", label: t("Destaques do mês", "Highlights of the month") }]
+      ? [{ key: "exec", label: t("Resumo Executivo", "Executive Summary") }]
       : []),
     ...(snapshot.trend ? [{ key: "trend", label: t("Evolução", "Trend") }] : []),
     { key: "leads", label: t("Leads por canal", "Leads by channel") },
@@ -420,26 +410,12 @@ export function ReportDocument({
         </section>
       )}
 
-      {secs.length > 2 && (
-        <nav className="wa-toc" aria-label={t("Índice", "Contents")}>
-          <span className="wa-toc-l">{t("Neste relatório", "In this report")}</span>
-          <ol className="wa-toc-list">
-            {secs.map((sec, i) => (
-              <li key={sec.key}>
-                <span className="wa-toc-n">{String(i + 1).padStart(2, "0")}</span>
-                {sec.label}
-              </li>
-            ))}
-          </ol>
-        </nav>
-      )}
-
       {/* Executive Summary — the wins, up front */}
       {snapshot.execSummary.length > 0 && (
         <section className="wa-sec">
           <div className="wa-exec-card">
             <SecLabel n={secN("exec")} onTint>
-              {t("Destaques do mês", "Highlights of the month")}
+              {t("Resumo Executivo", "Executive Summary")}
             </SecLabel>
             <ul className="wa-exec">
               {snapshot.execSummary.map((b, i) => (
@@ -614,10 +590,6 @@ export function ReportDocument({
                     <div className="wa-ai-card" key={s.source}>
                       <div className="wa-ai-src">◆ {s.label}</div>
                       <div className="wa-ai-sess">{formatRaw(s.sessions, "count", lang)}</div>
-                      <div className="wa-ai-sub">
-                        {formatRaw(s.users, "count", lang)} {t("utiliz.", "users")} ·{" "}
-                        {formatRaw(s.engagedSessions, "count", lang)} {t("c/ engagement", "engaged")}
-                      </div>
                     </div>
                   ))}
               </div>
@@ -779,7 +751,6 @@ export function ReportDocument({
 const PRINT_CSS = `
 @media print{
   .wa-report{box-shadow:none;border:none;border-radius:0;background:#fff;}
-  .wa-toc{break-after:avoid;}
   .wa-sec{break-inside:auto;padding-top:1rem;padding-bottom:1rem;}
   .wa-h2,.wa-h3,.wa-label{break-after:avoid;}
   .wa-kpi,.wa-card,.wa-exec-card,.wa-geo-stat,.wa-geo-show,.wa-geo-pillar,
@@ -820,13 +791,7 @@ const CSS = GEO_CSS + PRINT_CSS + `
 .wa-kpi-dash{color:#c7c2d6;}
 .wa-kpi-note{font-size:.66rem;color:#a08fb8;font-style:italic;}
 
-/* Índice + numeração de secções (v76.57) */
-.wa-toc{padding:.25rem 1.6rem 1.1rem;}
-.wa-toc-l{display:block;font-size:.6rem;letter-spacing:.14em;text-transform:uppercase;color:var(--plum);font-weight:700;margin-bottom:.45rem;}
-.wa-toc-list{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:.35rem;counter-reset:none;}
-.wa-toc-list li{display:inline-flex;align-items:baseline;gap:.35rem;font-size:.72rem;font-weight:600;color:#4a4863;
-  background:#fff;border:1px solid var(--line);border-radius:999px;padding:.25rem .65rem;}
-.wa-toc-n{font-size:.62rem;font-weight:800;color:var(--violet);font-variant-numeric:tabular-nums;letter-spacing:.02em;}
+/* Numeração de secções (v76.57) */
 .wa-secn{display:inline-block;margin-right:.45rem;padding:.05rem .3rem;border-radius:4px;font-size:.6rem;font-weight:800;
   background:rgba(120,61,245,.12);color:#6b34c9;font-variant-numeric:tabular-nums;letter-spacing:.04em;vertical-align:.05em;}
 .wa-label-on-tint .wa-secn{background:rgba(107,52,201,.16);}
@@ -898,7 +863,7 @@ const CSS = GEO_CSS + PRINT_CSS + `
 .wa-pending{color:#a08fb8;font-style:italic;font-weight:500;font-size:.76rem;}
 .wa-na{color:#7a7890;font-weight:600;font-size:.76rem;}
 .wa-pending-lg{color:#a08fb8;font-style:italic;font-size:.85rem;margin:.3rem 0;}
-.wa-method{margin:.15rem 0 .8rem;font-size:.74rem;line-height:1.5;color:var(--muted);max-width:64ch;}
+.wa-method{margin:.15rem 0 .8rem;font-size:.74rem;line-height:1.55;color:var(--muted);}
 
 /* Evolução — small multiples, um painel por métrica, cada um com a sua escala */
 .wa-trend{display:grid;gap:.7rem;}
@@ -931,7 +896,6 @@ const CSS = GEO_CSS + PRINT_CSS + `
 .wa-ai-card{border:1px solid rgba(120,61,245,.16);background:#fff;border-radius:11px;padding:.75rem .85rem;box-shadow:0 8px 22px -22px rgba(23,22,45,.5);}
 .wa-ai-src{font-size:.72rem;font-weight:700;color:#6b34c9;}
 .wa-ai-sess{font-size:1.4rem;font-weight:800;color:var(--ink);line-height:1.1;margin:.15rem 0 .1rem;font-variant-numeric:tabular-nums;}
-.wa-ai-sub{font-size:.66rem;color:var(--muted);font-variant-numeric:tabular-nums;}
 
 /* Keyword stats */
 .wa-kstats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:.65rem;margin-top:.35rem;}
@@ -955,9 +919,12 @@ const CSS = GEO_CSS + PRINT_CSS + `
 /* "novo" pill on a target keyword that started ranking this month. */
 /* Partial-month notice on the cover — must be impossible to miss, because a
    26-day month read as a full one is a wrong conclusion, not a small one. */
-.wa-cpartial{margin-top:.6rem;display:inline-block;padding:.32rem .6rem;border-radius:8px;
-  background:rgba(245,158,11,.14);border:1px solid rgba(245,158,11,.32);
-  color:#92400e;font-size:.68rem;font-weight:600;line-height:1.4;}
+/* Castanho-âmbar sobre o gradiente roxo da capa era ilegível — a cor que
+   funciona num fundo claro desaparece neste. Aqui o aviso é branco sobre um
+   véu escuro, que é o que se lê em cima de qualquer ponto do gradiente. */
+.wa-cpartial{position:relative;z-index:1;margin-top:.75rem;display:inline-block;padding:.36rem .7rem;border-radius:8px;
+  background:rgba(23,22,45,.28);border:1px solid rgba(255,255,255,.42);backdrop-filter:blur(2px);
+  color:#fff;font-size:.7rem;font-weight:600;line-height:1.45;}
 .wa-kw-new{display:inline-block;margin-left:.34rem;padding:0 .3rem;border-radius:6px;
   background:rgba(22,163,74,.12);color:#15803d;font-size:.56rem;font-weight:700;
   letter-spacing:.05em;text-transform:uppercase;vertical-align:middle;}
