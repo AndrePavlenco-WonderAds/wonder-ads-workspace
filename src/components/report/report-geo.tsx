@@ -168,7 +168,6 @@ export function ReportGeoSection({
                 <tr>
                   <th>Keyword</th>
                   <th className="n">{t("Posição", "Position")}</th>
-                  <th className="n">{t("Pesquisas/mês", "Searches/mo")}</th>
                   {aioCited.length > 0 && (
                     <th className="c">{t("Citados na IA?", "Cited by AI?")}</th>
                   )}
@@ -184,11 +183,6 @@ export function ReportGeoSection({
                       )}
                     </td>
                     <td className="n">{r.position ?? "—"}</td>
-                    <td className="n">
-                      {r.volume === null
-                        ? "—"
-                        : num(r.volume, lang)}
-                    </td>
                     {aioCited.length > 0 && (
                       <td className="c">
                         {r.citedInAio ? (
