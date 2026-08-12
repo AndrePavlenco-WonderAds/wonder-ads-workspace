@@ -137,6 +137,11 @@ function KpiTile({
   const isNa = Boolean(m.manualNa);
   const pending = m.value === null && !isNa;
   if (pending && variant === "client") return null;
+  // ZERO NÃO É NÚMERO PARA MOSTRAR A UM CLIENTE (v76.60). Um cartão a dizer
+  // «0» ou «0%» não informa nada que a ausência do cartão não informe, e num
+  // relatório mensal lê-se como uma acusação. O consultor continua a ver
+  // tudo na vista interna, que é onde o zero é acionável.
+  if (variant === "client" && m.value === 0) return null;
   return (
     <div className="wa-kpi">
       <div className="wa-kpi-l">{label}</div>
@@ -166,6 +171,7 @@ function MetricRow({
   const isNa = Boolean(m.manualNa);
   const pending = m.value === null && !isNa;
   if (pending && variant === "client") return null;
+  if (variant === "client" && m.value === 0) return null;
   const note = pendingNote(m, lang);
   return (
     <div className="wa-mrow">
@@ -200,7 +206,10 @@ export function ReportDocument({
   const leadTotal = snapshot.leads.total;
   const leadDelta = metricDelta(leadTotal, lang);
   const visibleChannels = snapshot.leads.channels.filter(
-    (c) => variant === "internal" || c.metric.value !== null || c.metric.manualNa,
+    (c) =>
+      variant === "internal" ||
+      (c.metric.value !== null && c.metric.value > 0) ||
+      c.metric.manualNa,
   );
   const maxChannel = Math.max(
     1,
@@ -289,8 +298,15 @@ export function ReportDocument({
   const kwPending = kwAll.filter((r) => r.position === null);
   // O cliente vê o que rankeia (princípio v76.32); o consultor vê a lista
   // toda, porque a lacuna é que é acionável.
-  const kwVisible =
-    variant === "internal" ? [...kwRanked, ...kwPending] : kwRanked;
+  // TETO DE 70 LINHAS. A lista completa do Serpstat chega às centenas e uma
+  // tabela dessas deixa de se ler — ninguém percorre 123 linhas à procura de
+  // nada. As 70 melhores posições são a presença orgânica real; o resto é
+  // cauda, e a cauda conta-se, não se lista.
+  const KW_CAP = 70;
+  const kwVisible = (
+    variant === "internal" ? [...kwRanked, ...kwPending] : kwRanked
+  ).slice(0, KW_CAP);
+  const kwHidden = Math.max(0, kwRanked.length - KW_CAP);
   const kwDecimals = false;
   const kwInPlan = kwRanked.filter((r) => r.inPlan).length;
   // AI OVERVIEW, do Serpstat, na mesma resposta que deu a tabela acima. É a
@@ -328,11 +344,18 @@ export function ReportDocument({
     { label: t("Posição média", "Avg. position"), m: gsc.position },
   ];
   const kpis = kpiDefs.filter(
-    (k) => variant === "internal" || k.m.value !== null || k.m.manualNa,
+    (k) =>
+      variant === "internal" ||
+      (k.m.value !== null && k.m.value !== 0) ||
+      k.m.manualNa,
   );
 
   const showAi = ai.sources.length > 0 || variant === "internal";
   const showNotes = Boolean(snapshot.notes.trim()) || variant === "internal";
+  const showLeads =
+    variant === "internal" ||
+    (leadTotal.value !== null && leadTotal.value > 0) ||
+    visibleChannels.length > 0;
   const showGeo = Boolean(snapshot.geoIntel || geo || aioRows.length > 0);
 
   // O ÍNDICE. Uma lista só, montada com as mesmas condições que desenham as
@@ -343,7 +366,9 @@ export function ReportDocument({
       ? [{ key: "exec", label: t("Resumo Executivo", "Executive Summary") }]
       : []),
     ...(snapshot.trend ? [{ key: "trend", label: t("Evolução", "Trend") }] : []),
-    { key: "leads", label: t("Leads por canal", "Leads by channel") },
+    ...(showLeads
+      ? [{ key: "leads", label: t("Leads por canal", "Leads by channel") }]
+      : []),
     { key: "traffic", label: t("Tráfego & Ficha Google", "Traffic & Google listing") },
     ...(showAi ? [{ key: "ai", label: "AI Visibility" }] : []),
     ...(kwVisible.length > 0 || variant === "internal"
@@ -445,7 +470,10 @@ export function ReportDocument({
         </section>
       )}
 
-      {/* Leads breakdown */}
+      {/* Leads breakdown — some some quando não há nada de positivo a dizer:
+          um «0 leads no total» com uma grelha de barras vazias é a única
+          coisa que o cliente lê da página inteira. */}
+      {showLeads && (
       <section className="wa-sec">
         <SecLabel n={secN("leads")}>
           {t("Leads por canal", "Leads by channel")}
@@ -491,6 +519,7 @@ export function ReportDocument({
           </div>
         )}
       </section>
+      )}
 
       {/* GBP + Organic side by side */}
       <section className="wa-sec">
@@ -615,10 +644,14 @@ export function ReportDocument({
           </h3>
           <p className="wa-method">
             {t(
-              `Todas as pesquisas em que o site já entra nos 100 primeiros resultados da Google, na região deste cliente e para o domínio completo com subdomínios — ${kwTop10} ${kwTop10 === 1 ? "delas está" : "delas estão"} na primeira página e ${kwInPlan} ${kwInPlan === 1 ? "é keyword" : "são keywords"} do plano de trabalho. Posições verificadas a ${formatDate(
+              `Pesquisas em que o site já aparece na Google, na região deste cliente${
+                kwHidden > 0 ? `. Mostram-se as ${KW_CAP} melhores posições de ${kwRanked.length}` : ""
+              } — ${kwTop10} ${kwTop10 === 1 ? "está" : "estão"} na primeira página. Verificado a ${formatDate(
                 live?.checkedOn ?? seRanking?.checkedOn ?? snapshot.generatedAt,
               )}.`,
-              `Every search where the site already ranks in Google's top 100, in this client's region and for the full domain including subdomains — ${kwTop10} on page one and ${kwInPlan} from the work plan. Positions checked on ${formatDate(
+              `Searches where the site already shows up on Google, in this client's region${
+                kwHidden > 0 ? `. Showing the top ${KW_CAP} of ${kwRanked.length}` : ""
+              } — ${kwTop10} on page one. Checked on ${formatDate(
                 live?.checkedOn ?? seRanking?.checkedOn ?? snapshot.generatedAt,
               )}.`,
             )}
@@ -636,7 +669,6 @@ export function ReportDocument({
                   <th>Keyword</th>
                   <th className="n">{t("Posição", "Position")}</th>
                   <th className="n">{t("Δ mês", "MoM Δ")}</th>
-                  <th className="n">{t("Pesquisas/mês", "Searches/mo")}</th>
                   {variant === "internal" && <th className="n">KD</th>}
                 </tr>
               </thead>
@@ -667,9 +699,6 @@ export function ReportDocument({
                     </td>
                     <td className="n">
                       <PlaceCell change={k.change} />
-                    </td>
-                    <td className="n">
-                      {k.volume === null ? "—" : formatRaw(k.volume, "count", lang)}
                     </td>
                     {variant === "internal" && (
                       <td className="n">

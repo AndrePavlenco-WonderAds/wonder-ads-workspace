@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.60",
+    date: "2026-08-12",
+    title: "O relatório deixa de mostrar zeros — e a tabela de keywords fica legível",
+    highlights: [
+      "**🚫 Zero deixa de ser um número para mostrar.** Um cartão a dizer «0%» ou «0/24» não informa nada que a ausência do cartão não informe, e num relatório mensal lê-se como uma acusação. Na versão do cliente desaparecem os KPI a zero, os canais de lead a zero, a secção de leads inteira quando não houve nenhuma, e as colunas «Citados?» quando não há citação nenhuma. **A vista interna continua a mostrar tudo** — é lá que o zero é acionável.",
+      "**✂️ A tabela de keywords corta nas 70 melhores posições** e perde a coluna de pesquisas/mês. Cento e vinte e três linhas não se leem; as 70 melhores são a presença orgânica real e a cauda conta-se em vez de se listar.",
+      "**🥊 «Concorrentes que estamos a vigiar»** — é o novo título da tabela de perguntas de IA. Era isso que ela sempre mostrou: as perguntas do nosso tema e os sites que a IA cita para lhes responder.",
+      "**📝 Descrições de GEO cortadas para uma linha.** Saíram também o bloco de sub-perguntas e o de «keywords do plano perguntadas a uma IA».",
+    ],
+  },
+  {
     version: "76.59",
     date: "2026-08-12",
     title: "Afinações no relatório mensal — e o Serpstat a devolver a lista toda",

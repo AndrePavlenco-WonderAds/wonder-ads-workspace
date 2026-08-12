@@ -95,77 +95,50 @@ export function ReportGeoSection({
       </h2>
       <p className="wa-method">
         {t(
-          "Um motor de resposta não tem uma lista de dez lugares: tem uma resposta e três a oito fontes citadas. Estar lá dentro é uma coisa binária. Aqui ficam as perguntas reais que se fazem neste mercado, e em quais delas a marca já é uma das fontes.",
-          "An answer engine doesn't have ten ranked slots: it has one answer and three to eight cited sources. Being inside it is binary. Below are the real questions asked in this market, and which of them already cite the brand.",
+          "Quando alguém pergunta a uma IA, não há dez lugares — há uma resposta e as fontes que ela cita.",
+          "When someone asks an AI there are no ten slots — there is one answer and the sources it cites.",
         )}
       </p>
 
       {/* ——— Painel de topo ——————————————————————————————— */}
       <div className="wa-geo-hero">
-        {aio.length > 0 && (
-          <>
-            <div className="wa-geo-stat">
-              <div className="wa-geo-stat-v">
-                {aioCited.length}
-                <span className="wa-geo-stat-of">/{aio.length}</span>
-              </div>
-              <div className="wa-geo-stat-l">
-                {t(
-                  "keywords onde a IA nos cita",
-                  "keywords where AI cites us",
-                )}
-              </div>
-              <div className="wa-geo-stat-s">
-                {t(
-                  "das que já mostram AI Overview",
-                  "of those already showing an AI Overview",
-                )}
-              </div>
+        {aioCited.length > 0 && (
+          <div className="wa-geo-stat">
+            <div className="wa-geo-stat-v">
+              {aioCited.length}
+              <span className="wa-geo-stat-of">/{aio.length}</span>
             </div>
-            <div className="wa-geo-stat">
-              <div className="wa-geo-stat-v">{aio.length}</div>
-              <div className="wa-geo-stat-l">
-                {t("pesquisas com resposta da IA", "searches with an AI answer")}
-              </div>
-              <div className="wa-geo-stat-s">
-                {t(
-                  "onde o site já rankeia no top 100",
-                  "where the site already ranks in the top 100",
-                )}
-              </div>
+            <div className="wa-geo-stat-l">
+              {t("keywords onde a IA nos cita", "keywords where AI cites us")}
             </div>
-          </>
+          </div>
         )}
-        {intel && (
-          <>
-            <div className="wa-geo-stat">
-              <div className="wa-geo-stat-v">{pct(intel.shareOfVoice)}</div>
-              <div className="wa-geo-stat-l">
-                {t("quota de voz em IA", "AI share of voice")}
-              </div>
-              <div className="wa-geo-stat-s">
-                {t(
-                  `${num(intel.volumeCited, lang)} de ${num(intel.volumeTotal, lang)} pesquisas/mês`,
-                  `${num(intel.volumeCited, lang)} of ${num(intel.volumeTotal, lang)} searches/mo`,
-                )}
-              </div>
+        {aio.length > 0 && (
+          <div className="wa-geo-stat">
+            <div className="wa-geo-stat-v">{aio.length}</div>
+            <div className="wa-geo-stat-l">
+              {t("pesquisas com resposta da IA", "searches with an AI answer")}
             </div>
-            <div className="wa-geo-stat">
-              <div className="wa-geo-stat-v">
-                {intel.promptsCited}
-                <span className="wa-geo-stat-of">/{intel.promptsTotal}</span>
-              </div>
-              <div className="wa-geo-stat-l">
-                {t("perguntas em que somos citados", "questions citing us")}
-              </div>
-              <div className="wa-geo-stat-s">
-                {t(
-                  `no corpus de ${intel.countryLabel} · ${intel.languageCode}`,
-                  `in the ${intel.countryLabel} · ${intel.languageCode} corpus`,
-                )}
-              </div>
+          </div>
+        )}
+        {intel && intel.shareOfVoice > 0 && (
+          <div className="wa-geo-stat">
+            <div className="wa-geo-stat-v">{pct(intel.shareOfVoice)}</div>
+            <div className="wa-geo-stat-l">
+              {t("quota de voz em IA", "AI share of voice")}
             </div>
-          </>
+          </div>
+        )}
+        {intel && intel.promptsCited > 0 && (
+          <div className="wa-geo-stat">
+            <div className="wa-geo-stat-v">
+              {intel.promptsCited}
+              <span className="wa-geo-stat-of">/{intel.promptsTotal}</span>
+            </div>
+            <div className="wa-geo-stat-l">
+              {t("perguntas em que somos citados", "questions citing us")}
+            </div>
+          </div>
         )}
       </div>
 
@@ -185,18 +158,8 @@ export function ReportGeoSection({
           </h3>
           <p className="wa-method">
             {t(
-              `Das pesquisas em que o site aparece nos primeiros 100 resultados, ${aio.length} já mostram uma resposta gerada pela Google por cima dos links azuis${
-                aioCited.length > 0
-                  ? `, e em ${aioCited.length} dela${aioCited.length === 1 ? "" : "s"} é este site uma das fontes citadas`
-                  : ", e em nenhuma delas este site é ainda uma das fontes citadas"
-              }. Onde a resposta aparece e não nos cita, o lugar orgânico continua lá mas vale menos: a pessoa lê a resposta e não desce.${
-                aioCheckedOn ? "" : ""
-              }`,
-              `Of the searches where the site ranks in the top 100, ${aio.length} already show a Google-generated answer above the blue links${
-                aioCited.length > 0
-                  ? `, and in ${aioCited.length} of them this site is one of the cited sources`
-                  : ", and in none of them is this site a cited source yet"
-              }. Where the answer shows and doesn't cite us, the organic spot is still there but worth less: people read the answer and never scroll.`,
+              "Pesquisas nossas onde a Google já responde com IA por cima dos links. Quando a resposta não nos cita, o lugar orgânico vale menos: a pessoa lê e não desce.",
+              "Our searches where Google already answers with AI above the links. When the answer doesn't cite us, the organic spot is worth less: people read and never scroll.",
             )}
           </p>
           <div className="wa-tblwrap">
@@ -206,7 +169,9 @@ export function ReportGeoSection({
                   <th>Keyword</th>
                   <th className="n">{t("Posição", "Position")}</th>
                   <th className="n">{t("Pesquisas/mês", "Searches/mo")}</th>
-                  <th className="c">{t("Citados na IA?", "Cited by AI?")}</th>
+                  {aioCited.length > 0 && (
+                    <th className="c">{t("Citados na IA?", "Cited by AI?")}</th>
+                  )}
                 </tr>
               </thead>
               <tbody>
@@ -224,13 +189,15 @@ export function ReportGeoSection({
                         ? "—"
                         : num(r.volume, lang)}
                     </td>
-                    <td className="c">
-                      {r.citedInAio ? (
-                        <span className="wa-geo-yes">✓</span>
-                      ) : (
-                        <span className="wa-geo-no">—</span>
-                      )}
-                    </td>
+                    {aioCited.length > 0 && (
+                      <td className="c">
+                        {r.citedInAio ? (
+                          <span className="wa-geo-yes">✓</span>
+                        ) : (
+                          <span className="wa-geo-no">—</span>
+                        )}
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -273,8 +240,8 @@ export function ReportGeoSection({
           </div>
           <div className="wa-geo-show-f">
             {t(
-              `Pergunta feita ${num(showcase.aiSearchVolume, lang)} vezes por mês. As fontes acima são as que a resposta cita, por ordem.`,
-              `Asked ${num(showcase.aiSearchVolume, lang)} times a month. The sources above are the ones the answer cites, in order.`,
+              `Perguntada ${num(showcase.aiSearchVolume, lang)} vezes por mês. Acima, as fontes que a resposta cita.`,
+              `Asked ${num(showcase.aiSearchVolume, lang)} times a month. Above, the sources the answer cites.`,
             )}
           </div>
         </div>
@@ -285,32 +252,20 @@ export function ReportGeoSection({
         <>
           <h3 className="wa-h3 wa-geo-h">
             {t(
-              `As perguntas reais deste mercado (${prompts.length}${
-                prompts.length < intel!.promptsTotal
-                  ? ` de ${intel!.promptsTotal}`
-                  : ""
-              })`,
-              `The real questions in this market (${prompts.length}${
-                prompts.length < intel!.promptsTotal
-                  ? ` of ${intel!.promptsTotal}`
-                  : ""
-              })`,
+              "Concorrentes que estamos a vigiar, e as suas keywords",
+              "Competitors we're watching, and their keywords",
             )}
           </h3>
           <p className="wa-method">
             {t(
-              `Perguntas que pessoas em ${intel!.countryLabel} fizeram e a que um motor generativo respondeu, na língua do mercado. Estão ordenadas pelas que já nos citam, depois pelas que mais têm que ver com o plano de keywords. A coluna da direita diz quem a resposta cita hoje — é a lista de quem ocupa o lugar.`,
-              `Questions people in ${intel!.countryLabel} asked and a generative engine answered, in the market's language. Sorted by the ones already citing us, then by how close they are to the keyword plan. The right column is who the answer cites today — the list of who holds the spot.`,
+              `Perguntas do nosso tema feitas em ${intel!.countryLabel} e os sites que a IA cita para lhes responder.`,
+              `Questions in our topic asked in ${intel!.countryLabel}, and the sites AI cites to answer them.`,
             )}
-            {intel!.contextPrompts > 0 &&
+            {variant === "internal" && intel!.contextPrompts > 0 &&
               " " +
                 t(
-                  variant === "internal"
-                    ? `Vêm marcadas ${intel!.contextPrompts} perguntas de CONTEXTO — ensino, profissão, dicionário ou outro país. Ficam fora de todas as contas e não aparecem na versão do cliente.`
-                    : `Foram postas de lado ${intel!.contextPrompts} perguntas do mesmo tema que não são deste mercado (quem procura licenciaturas, salários ou o significado da palavra).`,
-                  variant === "internal"
-                    ? `${intel!.contextPrompts} CONTEXT questions are tagged — education, profession, dictionary or another country. They stay out of every calculation and never reach the client version.`
-                    : `${intel!.contextPrompts} questions on the same topic were set aside because they are not this market (people looking for degrees, salaries or the meaning of the word).`,
+                  `${intel!.contextPrompts} perguntas de contexto (ensino, profissão, dicionário) ficaram marcadas e fora das contas.`,
+                  `${intel!.contextPrompts} context questions (education, profession, dictionary) are tagged and excluded from every count.`,
                 )}
           </p>
           <div className="wa-tblwrap">
@@ -319,7 +274,9 @@ export function ReportGeoSection({
                 <tr>
                   <th>{t("Pergunta", "Question")}</th>
                   <th className="n">{t("Pesquisas/mês", "Searches/mo")}</th>
-                  <th className="c">{t("Citados?", "Cited?")}</th>
+                  {citedPrompts.length > 0 && (
+                    <th className="c">{t("Citados?", "Cited?")}</th>
+                  )}
                   <th>{t("Quem a resposta cita", "Who the answer cites")}</th>
                 </tr>
               </thead>
@@ -341,15 +298,17 @@ export function ReportGeoSection({
                       )}
                     </td>
                     <td className="n">{num(p.aiSearchVolume, lang)}</td>
-                    <td className="c">
-                      {p.cited ? (
-                        <span className="wa-geo-yes">
-                          ✓{p.citedPosition ? ` #${p.citedPosition}` : ""}
-                        </span>
-                      ) : (
-                        <span className="wa-geo-no">—</span>
-                      )}
-                    </td>
+                    {citedPrompts.length > 0 && (
+                      <td className="c">
+                        {p.cited ? (
+                          <span className="wa-geo-yes">
+                            ✓{p.citedPosition ? ` #${p.citedPosition}` : ""}
+                          </span>
+                        ) : (
+                          <span className="wa-geo-no">—</span>
+                        )}
+                      </td>
+                    )}
                     <td className="wa-geo-srcs">
                       {p.sources.length === 0
                         ? "—"
@@ -367,54 +326,6 @@ export function ReportGeoSection({
                 ))}
               </tbody>
             </table>
-          </div>
-        </>
-      )}
-
-      {/* ——— Sub-perguntas ————————————————————————————— */}
-      {intel && intel.fanOut.length > 0 && (
-        <>
-          <h3 className="wa-h3 wa-geo-h">
-            {t("As sub-perguntas que o motor gera", "The sub-questions the engine generates")}
-          </h3>
-          <p className="wa-method">
-            {t(
-              "Antes de responder, o motor parte a pergunta em várias. Cada uma destas é um parágrafo que o site pode passar a ter — e a forma mais barata de entrar numa resposta onde ainda não estamos.",
-              "Before answering, the engine splits the question into several. Each of these is a paragraph the site could have — and the cheapest way into an answer we're not in yet.",
-            )}
-          </p>
-          <div className="wa-geo-fan">
-            {intel.fanOut.slice(0, 18).map((f) => (
-              <span className="wa-geo-chip" key={f.query}>
-                {f.query}
-              </span>
-            ))}
-          </div>
-        </>
-      )}
-
-      {/* ——— Keywords com procura em IA ——————————————————— */}
-      {intel && intel.keywordVolumes.length > 0 && (
-        <>
-          <h3 className="wa-h3 wa-geo-h">
-            {t(
-              "Keywords do plano que já são perguntadas a uma IA",
-              "Plan keywords already being asked to an AI",
-            )}
-          </h3>
-          <p className="wa-method">
-            {t(
-              "Volume de pesquisa dentro de motores generativos, não na caixa de pesquisa. É a lista das keywords do plano onde vale a pena escrever para ser citado, e não só para posicionar.",
-              "Search volume inside generative engines, not in the search box. These are the plan's keywords worth writing for citation, not only for ranking.",
-            )}
-          </p>
-          <div className="wa-geo-kw">
-            {intel.keywordVolumes.slice(0, 12).map((k) => (
-              <span className="wa-geo-kwrow" key={k.keyword}>
-                <b>{k.keyword}</b>
-                <i>{num(k.aiSearchVolume, lang)}/{t("mês", "mo")}</i>
-              </span>
-            ))}
           </div>
         </>
       )}
