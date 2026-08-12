@@ -394,9 +394,13 @@ export function TicketForm({
                 >
                   {/* BANNER. A cara da pessoa antes do nome: escolhe-se a
                       quem se atribui olhando para quem é, e uma inicial num
-                      círculo não deixa ninguém fazer isso. O recorte corta a
-                      faixa do logótipo que vem nos retratos do site. */}
-                  <span className="relative block h-[104px] w-full overflow-hidden bg-white/[0.06]">
+                      círculo não deixa ninguém fazer isso.
+                      A faixa do logótipo que vinha nos retratos do site foi
+                      cortada nos próprios ficheiros e não por CSS: com
+                      `object-position` em percentagem o enquadramento muda
+                      com a largura do cartão, e o que ficava bem em três
+                      colunas cortava a testa numa. */}
+                  <span className="relative block h-[132px] w-full overflow-hidden bg-white/[0.06]">
                     {d.photo ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
@@ -406,7 +410,7 @@ export function TicketForm({
                         className={`h-full w-full object-cover transition duration-300 ${
                           on ? "scale-[1.03]" : "grayscale-[.35] group-hover:grayscale-0"
                         }`}
-                        style={{ objectPosition: "center 38%" }}
+                        style={{ objectPosition: "center 20%" }}
                       />
                     ) : (
                       <span className="flex h-full w-full items-center justify-center text-3xl font-bold text-white/45">
