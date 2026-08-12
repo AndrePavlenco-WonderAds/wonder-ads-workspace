@@ -524,3 +524,157 @@ body {
   background: rgba(120, 61, 245, 0.35);
   color: #fff;
 }
+
+/* ------------------------------------------------------------------ */
+/* Ausências — a folha de RH e a assinatura manuscrita                 */
+/* ------------------------------------------------------------------ */
+
+.font-signature {
+  font-family: var(--font-signature), "Snell Roundhand", "Apple Chancery",
+    "Segoe Script", cursive;
+}
+
+/* Campos da folha (fundo claro — o resto da app é escuro, por isso estes
+   inputs não herdam nada e definem-se aqui uma vez). */
+.sheet-label {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(0, 0, 0, 0.45);
+}
+.sheet-input {
+  display: block;
+  width: 100%;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.16);
+  background: rgba(255, 255, 255, 0.85);
+  padding: 9px 12px;
+  font-size: 13.5px;
+  color: #20202a;
+  outline: none;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+.sheet-input::placeholder {
+  color: rgba(0, 0, 0, 0.3);
+}
+.sheet-input:focus {
+  border-color: #783df5;
+  box-shadow: 0 0 0 3px rgba(120, 61, 245, 0.16);
+}
+.sheet-input:disabled {
+  opacity: 0.6;
+}
+/* O picker nativo de datas vem com ícone escuro — em fundo claro está
+   certo, só o alinhamos com a altura dos restantes. */
+.sheet-input[type="date"] {
+  min-height: 38px;
+}
+
+/* Cada letra da assinatura entra como se estivesse a ser escrita: sobe do
+   ponto da caneta com uma rotação mínima. O atraso por letra é dado inline
+   (animation-delay) pelo componente. */
+@keyframes signature-letter-in {
+  0% {
+    opacity: 0;
+    transform: translateY(6px) rotate(-6deg) scale(0.7);
+    filter: blur(1.5px);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(-1px) rotate(1.5deg) scale(1.04);
+    filter: blur(0);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) rotate(0) scale(1);
+  }
+}
+.signature-letter {
+  display: inline-block;
+  opacity: 0;
+  animation: signature-letter-in 0.34s cubic-bezier(0.2, 0.9, 0.3, 1.2) forwards;
+}
+
+/* A caneta que acompanha a escrita — um balanço curto, como um punho a
+   trabalhar. A posição horizontal é conduzida pelo componente. */
+@keyframes signature-pen-wobble {
+  0%,
+  100% {
+    transform: rotate(38deg) translateY(0);
+  }
+  50% {
+    transform: rotate(44deg) translateY(1.5px);
+  }
+}
+.signature-pen {
+  animation: signature-pen-wobble 0.18s ease-in-out infinite;
+}
+
+/* O traço por baixo do nome desenha-se da esquerda para a direita no fim
+   da assinatura. */
+@keyframes signature-underline-draw {
+  from {
+    stroke-dashoffset: 320;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+.signature-underline {
+  stroke-dasharray: 320;
+  stroke-dashoffset: 320;
+  animation: signature-underline-draw 0.55s ease-out forwards;
+}
+
+/* O carimbo de SUBMETIDO cai na folha: entra grande e desfocado, assenta
+   com um ressalto mínimo — borracha contra papel. */
+@keyframes stamp-in {
+  0% {
+    opacity: 0;
+    transform: rotate(-14deg) scale(2.1);
+    filter: blur(3px);
+  }
+  55% {
+    opacity: 1;
+    transform: rotate(-8deg) scale(0.94);
+    filter: blur(0);
+  }
+  75% {
+    transform: rotate(-9.5deg) scale(1.05);
+  }
+  100% {
+    opacity: 1;
+    transform: rotate(-9deg) scale(1);
+  }
+}
+.stamp-in {
+  animation: stamp-in 0.5s cubic-bezier(0.2, 0.85, 0.3, 1.1) forwards;
+}
+
+/* Estados decididos no histórico usam o mesmo carimbo, mas já assente. */
+.stamp-static {
+  transform: rotate(-9deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .signature-letter {
+    animation: none;
+    opacity: 1;
+  }
+  .signature-pen {
+    animation: none;
+  }
+  .signature-underline {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+  .stamp-in {
+    animation: none;
+    opacity: 1;
+    transform: rotate(-9deg) scale(1);
+  }
+}

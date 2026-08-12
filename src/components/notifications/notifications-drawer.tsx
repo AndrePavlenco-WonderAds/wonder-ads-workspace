@@ -683,6 +683,10 @@ function NotificationRow({
   onResolve: () => void;
   onNavigate: () => void;
 }) {
+  // Numa resposta a um pedido de ausência não há trabalho a "concluir" —
+  // há uma decisão a acusar como recebida. O botão diz isso.
+  const resolveLabel =
+    n.ruleId === "absence-decision" ? "Entendido" : "Concluído";
   return (
     <div className="group rounded-xl border border-white/[0.08] bg-white/[0.02] p-3 transition hover:border-[#783DF5]/35 hover:bg-white/[0.045]">
       <div className="flex items-center gap-2.5">
@@ -731,7 +735,7 @@ function NotificationRow({
           ) : (
             <CheckCircle2 className="h-3.5 w-3.5" />
           )}
-          Concluído
+          {resolveLabel}
         </button>
       </div>
     </div>

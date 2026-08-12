@@ -65,6 +65,26 @@ export async function postToWebSlack(payload: {
   return postToWebhook(process.env.SLACK_WEB_WEBHOOK_URL, payload);
 }
 
+/** Webhook do canal #ausencias — pedidos de ausência da equipa. Sem
+ *  fallback para outros canais: uma folha de RH não pode aterrar no canal
+ *  da equipa Web por uma env var em falta. Sem SLACK_AUSENCIAS_WEBHOOK_URL
+ *  no Vercel, cada post é um no-op silencioso e a app segue em frente. */
+function ausenciasWebhookUrl(): string | undefined {
+  return process.env.SLACK_AUSENCIAS_WEBHOOK_URL || undefined;
+}
+
+export function ausenciasSlackConfigured(): boolean {
+  return Boolean(ausenciasWebhookUrl());
+}
+
+/** Post para o #ausencias. Mesmo contrato never-throws dos restantes. */
+export async function postAusenciasToSlack(payload: {
+  text: string;
+  blocks?: unknown[];
+}): Promise<boolean> {
+  return postToWebhook(ausenciasWebhookUrl(), payload);
+}
+
 async function postToWebhook(
   url: string | undefined,
   payload: { text: string; blocks?: unknown[] },

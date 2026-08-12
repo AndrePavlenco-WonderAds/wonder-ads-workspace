@@ -111,6 +111,13 @@ export const config = {
     // Formação interna — universidade dos consultores. Toda a gente com
     // sessão entra; o gate de /formacao/admin é feito no layout (isAdmin).
     "/formacao/:path*",
+    // Ausências — a folha de pedido + histórico do próprio. Toda a gente
+    // com sessão; a decisão vive em /admin/ausencias (gate isAdmin) e a
+    // API de decisão volta a verificar. NOTA: /api/slack fica DE FORA do
+    // matcher de propósito — quem lá bate é o Slack, autenticado pela
+    // assinatura HMAC do próprio payload, não por cookie de sessão.
+    "/ausencias/:path*",
+    "/api/absences/:path*",
     // Internal-only API surfaces. /api/reviews stays public (clients
     // hit it from the (public-review) pages), /api/auth is the gate
     // itself, /api/files is used by both sides so we leave it open

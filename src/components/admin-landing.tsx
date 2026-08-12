@@ -17,6 +17,7 @@ import {
   Rocket,
   BellRing,
   Radar,
+  CalendarOff,
   ArrowRight,
 } from "lucide-react";
 
@@ -38,6 +39,7 @@ export function AdminLanding({
   financesCount,
   onboardingCount,
   notificationsCount,
+  absencesPendingCount,
 }: {
   projectsCount: number;
   employeesCount: number;
@@ -46,6 +48,8 @@ export function AdminLanding({
   onboardingCount: number;
   /** Regras de notificação ativas. */
   notificationsCount: number;
+  /** Pedidos de ausência à espera de decisão. */
+  absencesPendingCount: number;
 }) {
 
   const blocks: ChoiceBlock[] = [
@@ -75,6 +79,15 @@ export function AdminLanding({
       count: employeesCount,
       badge: employeesCount === 1 ? "employee" : "employees",
       Icon: Users,
+    },
+    {
+      href: "/admin/ausencias",
+      title: "Ausências",
+      blurb:
+        "Os pedidos de ausência da equipa — férias, baixas, consultas, assuntos pessoais. A folha completa de cada pedido, com aprovação/recusa daqui ou direto do Slack (#ausencias).",
+      count: absencesPendingCount,
+      badge: absencesPendingCount === 1 ? "pendente" : "pendentes",
+      Icon: CalendarOff,
     },
     {
       href: "/admin/roadmaps",

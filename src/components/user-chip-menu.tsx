@@ -10,6 +10,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
+  CalendarOff,
   ChevronDown,
   Eye,
   GraduationCap,
@@ -245,6 +246,17 @@ export function UserChipMenu({
               )}
             </>
           )}
+          {/* Pedir Ausência — para TODA a gente com sessão: a folha de RH e
+              o histórico dos próprios pedidos vivem em /ausencias. */}
+          <Link
+            href="/ausencias"
+            role="menuitem"
+            onMouseDown={(e) => e.preventDefault()}
+            className="flex w-full items-center gap-2 border-b border-white/8 px-4 py-2.5 text-left text-[12px] font-medium text-white/75 transition hover:bg-white/[0.06] hover:text-white"
+          >
+            <CalendarOff className="h-3.5 w-3.5 text-[color:var(--brand-purple)]" />
+            Pedir Ausência
+          </Link>
           {/* Formação — visível a toda a gente com sessão. A área de
               Superadmin só aparece aos SuperAdmins; a rota está protegida no
               servidor de qualquer forma (o layout de /formacao/admin verifica

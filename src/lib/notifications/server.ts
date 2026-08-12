@@ -26,6 +26,11 @@ import {
 } from "@/lib/roadmap-store";
 import { EMPLOYEE_CREDENTIALS, isAdminUsername } from "@/lib/auth/credentials";
 import { listTrainingFeedback } from "@/lib/training/feedback-store";
+import { listAbsences } from "@/lib/absences-store";
+import {
+  absenceDurationLine,
+  absencePeriodLine,
+} from "@/lib/absences-shared";
 import { getNotificationRules } from "@/lib/notifications/rules-store";
 import {
   getNotificationState,
@@ -636,6 +641,88 @@ async function npsNotifications(
   });
 }
 
+/** Ausências → notificações. DOIS LADOS DO MESMO REGISTO, e nenhum passa
+ *  pelo motor de regras — são acontecimentos, não calendário:
+ *
+ *  • SUPERADMINS: cada pedido PENDENTE é uma notificação. Não se "envia"
+ *    nada — deriva-se do estado —, por isso quando um dos três decide
+ *    (na app ou no Slack), o pedido deixa de estar pendente e a notificação
+ *    evapora-se do sino dos outros dois sozinha. Exatamente o pedido do
+ *    C-Level, sem nenhuma limpeza explícita.
+ *
+ *  • O PRÓPRIO: um pedido decidido e ainda não «entendido» é a notificação
+ *    da resposta. O botão do sino diz «Entendido» (não «Concluído») e grava
+ *    o acknowledgedAt no registo — a partir daí deixa de ser gerada.
+ *
+ *  Uma leitura de KV (índice + mget) serve os dois lados. */
+async function absenceNotifications(
+  viewer: Viewer,
+  state: NotificationState,
+): Promise<UserNotification[]> {
+  let all: Awaited<ReturnType<typeof listAbsences>>;
+  try {
+    all = await listAbsences();
+  } catch (err) {
+    console.error("Notificações: ausências falharam:", err);
+    return [];
+  }
+  if (all.length === 0) return [];
+
+  const out: UserNotification[] = [];
+
+  if (isAdminUsername(viewer.username)) {
+    for (const a of all) {
+      if (a.status !== "pending") continue;
+      const id = `absence-pending:${a.id}`;
+      const entry = state[id];
+      out.push({
+        id,
+        ruleId: "absence-pending",
+        title: `${a.name} pediu ausência — ${a.reasonLabel}`,
+        body:
+          `${absencePeriodLine(a)} · ${absenceDurationLine(a)}.` +
+          (a.details ? ` «${a.details.slice(0, 160)}${a.details.length > 160 ? "…" : ""}»` : "") +
+          (a.attachment ? " · com comprovativo anexado" : ""),
+        periodLabel: a.ref,
+        dueAt: a.createdAt,
+        client: null,
+        actionLabel: "Rever e decidir",
+        actionHref: "/admin/ausencias",
+        resolved: Boolean(entry),
+        resolvedAt: entry?.resolvedAt ?? null,
+      });
+    }
+  }
+
+  for (const a of all) {
+    if (a.username !== viewer.username) continue;
+    if (a.status === "pending" || a.acknowledgedAt) continue;
+    const id = `absence-decision:${a.id}`;
+    const entry = state[id];
+    const approved = a.status === "approved";
+    out.push({
+      id,
+      ruleId: "absence-decision",
+      title: approved
+        ? `O teu pedido de ausência foi aprovado ✅`
+        : `O teu pedido de ausência foi recusado ❌`,
+      body:
+        `${a.reasonLabel} · ${absencePeriodLine(a)} · ${absenceDurationLine(a)}. ` +
+        `Decidido por ${a.decidedByName ?? "C-Level"}${a.decidedVia === "slack" ? " (via Slack)" : ""}.` +
+        (a.decisionNote ? ` Nota: «${a.decisionNote}»` : ""),
+      periodLabel: a.ref,
+      dueAt: a.decidedAt ?? a.createdAt,
+      client: null,
+      actionLabel: "Ver os meus pedidos",
+      actionHref: "/ausencias",
+      resolved: Boolean(entry),
+      resolvedAt: entry?.resolvedAt ?? null,
+    });
+  }
+
+  return out.sort((a, b) => b.dueAt - a.dueAt);
+}
+
 export async function getUserNotifications(
   viewer: Viewer,
   now: Date = new Date(),
@@ -664,17 +751,21 @@ export async function getUserNotifications(
       ? ((await seoBooksByConsultant(needsStartDates)).get(viewer.name) ?? [])
       : [];
 
-  const [ending, situationPoints, nps] = await Promise.all([
+  const [ending, situationPoints, nps, absences] = await Promise.all([
     roadmapEndingNotifications(viewer, book, state, now),
     situationPointNotifications(viewer, state, now),
     npsNotifications(viewer, state, now),
+    absenceNotifications(viewer, state),
   ]);
 
+  // Ausências à cabeça: um pedido por decidir (ou uma resposta por ler) é
+  // gente à espera de gente — passa à frente dos lembretes de calendário.
   if (applicable.length === 0) {
-    return [...nps, ...situationPoints, ...feedback, ...ending];
+    return [...absences, ...nps, ...situationPoints, ...feedback, ...ending];
   }
 
   return [
+    ...absences,
     ...nps,
     ...situationPoints,
     ...feedback,

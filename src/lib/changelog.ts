@@ -13,6 +13,19 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.63",
+    date: "2026-08-13",
+    title: "Ausências — a folha de RH com assinatura manuscrita, aprovação na C-Suite e no Slack",
+    highlights: [
+      "**📋 «Pedir Ausência» no menu do teu nome.** Toda a gente tem agora uma folha de pedido de ausência ao estilo big corporate em `/ausencias`: manhã, tarde, um dia ou um período até 20 dias corridos, com motivo, detalhe, contacto, passagem de trabalho e comprovativo anexado (obrigatório em situações de saúde). O contador de dias úteis/corridos calcula-se enquanto escolhes as datas.",
+      "**✍️ A assinatura escreve-se sozinha.** Escreves o teu nome, carregas em «Assinar e submeter» e a assinatura aparece manuscrita na folha, letra a letra, com a caneta a acompanhar — e o carimbo de SUBMETIDO só cai quando o servidor confirmar. Cada pedido ganha uma referência sequencial (AUS-2026-001…).",
+      "**🗂️ O teu histórico completo na mesma página** — pendentes, aprovados e recusados, com quem decidiu, quando, a justificação da recusa quando existe, e o botão «Entendido» para acusares a resposta.",
+      "**🏛️ Bloco novo «Ausências» na C-Suite.** Os superadmins veem a fila de pedidos com a folha completa à vista e decidem ali: Aprovar é um clique, Recusar abre um campo de justificação que a pessoa vai ler. O registo de tudo o que já foi decidido fica em baixo, filtrável.",
+      "**🔔 Notificações que se limpam sozinhas.** Um pedido novo acende o sino dos três superadmins; a PRIMEIRA decisão (de qualquer um deles, na app ou no Slack) apaga a notificação dos outros dois — porque deixa de haver pendente. O colaborador recebe a resposta no sino dele com o botão «Entendido» para a arrumar.",
+      "**💬 #ausencias no Slack com botões de decisão.** Cada pedido novo chega ao canal com TUDO o que a pessoa preencheu e botões ✅ Aprovar / ❌ Recusar que funcionam direto do Slack (com confirmação, guarda de «já foi decidido por…» e verificação de assinatura do Slack). Decisões feitas na app também ficam registadas no canal.",
+    ],
+  },
+  {
     version: "76.62",
     date: "2026-08-12",
     title: "Onboarding — vídeos de Ads, GMC para e-commerce e a janela legal em cada sessão",

@@ -13,6 +13,12 @@ import {
   type UserNotification,
 } from "@/lib/notifications/server";
 import { setNotificationResolved } from "@/lib/notifications/state-store";
+import { acknowledgeAbsence } from "@/lib/absences-store";
+
+/** As notificações de resposta a ausências vivem no REGISTO da ausência
+ *  (acknowledgedAt), não no estado por-utilizador: o «Entendido» tem de as
+ *  fazer desaparecer de vez, não descê-las para "Concluídas". */
+const ABSENCE_DECISION_PREFIX = "absence-decision:";
 
 export const runtime = "nodejs";
 
@@ -60,6 +66,26 @@ export async function POST(req: Request) {
       { error: "Notificação desconhecida ou já fora do período." },
       { status: 404 },
     );
+  }
+
+  // «Entendido» numa resposta de ausência: o ack no registo é a fonte de
+  // verdade (e o exists-check acima já garantiu que a ausência é desta
+  // pessoa). Vai primeiro — se falhar, não se grava estado nenhum e o
+  // painel repõe a linha com o erro.
+  if (resolved && id.startsWith(ABSENCE_DECISION_PREFIX)) {
+    try {
+      await acknowledgeAbsence(
+        id.slice(ABSENCE_DECISION_PREFIX.length),
+        viewer.username,
+      );
+    } catch (err) {
+      console.error("Notificações: ack de ausência falhou:", err);
+      return NextResponse.json(
+        { error: "Não foi possível gravar o Entendido — tenta outra vez." },
+        { status: 500 },
+      );
+    }
+    return NextResponse.json({ ok: true });
   }
 
   try {

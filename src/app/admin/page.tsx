@@ -10,6 +10,7 @@ import { countRoadmaps } from "@/lib/roadmap-admin-helpers";
 import { buildAdminClientViews } from "@/lib/admin-roster";
 import { getOnboardingClients } from "@/lib/onboarding-clients-store";
 import { getNotificationRules } from "@/lib/notifications/rules-store";
+import { listPendingAbsences } from "@/lib/absences-store";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -76,6 +77,14 @@ export default async function AdminPage() {
     /* KV unavailable — show 0 */
   }
 
+  // Ausências card count — pedidos à espera de decisão.
+  let absencesPendingCount = 0;
+  try {
+    absencesPendingCount = (await listPendingAbsences()).length;
+  } catch {
+    /* KV unavailable — show 0 */
+  }
+
   return (
     <PageShell>
       <Link
@@ -92,6 +101,7 @@ export default async function AdminPage() {
         financesCount={financesCount}
         onboardingCount={onboardingCount}
         notificationsCount={notificationsCount}
+        absencesPendingCount={absencesPendingCount}
       />
     </PageShell>
   );

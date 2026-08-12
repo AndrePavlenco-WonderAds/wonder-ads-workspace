@@ -1,0 +1,97 @@
+// Ausências — a folha de pedido (RH-01) + o histórico do próprio.
+//
+// Toda a gente com sessão entra (o item «Pedir Ausência» vive no dropdown
+// do nome, no header). A decisão é do C-Level e mora em /admin/ausencias;
+// aqui a pessoa pede, acompanha e acusa a resposta como entendida.
+
+import { PageShell } from "@/components/page-shell";
+import { getCurrentEmployee } from "@/lib/auth/server";
+import { listAbsencesForUser } from "@/lib/absences-store";
+import { AbsenceRequestForm } from "@/components/absences/absence-request-form";
+import { AbsenceHistory } from "@/components/absences/absence-history";
+import { formatDayCount } from "@/lib/absences-shared";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
+export const metadata = {
+  title: "Ausências — Wonder Ads Workspace",
+};
+
+export default async function AusenciasPage() {
+  const employee = await getCurrentEmployee();
+  // O middleware já mandou quem não tem sessão para /login.
+  if (!employee) return null;
+
+  const mine = await listAbsencesForUser(employee.username);
+  const pendingCount = mine.filter((a) => a.status === "pending").length;
+  const year = new Date().getFullYear();
+  const approvedBusinessDays = mine
+    .filter(
+      (a) => a.status === "approved" && a.startDate.startsWith(String(year)),
+    )
+    .reduce((sum, a) => sum + a.businessDays, 0);
+
+  return (
+    <PageShell backHref="/" backLabel="workspace">
+      <header className="animate-fade-up mt-2">
+        <p className="readout text-white/35">Recursos Humanos</p>
+        <h1 className="mt-1 text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">
+          <span className="brand-gradient-text">Ausências</span>
+        </h1>
+        <p className="mt-2 max-w-[620px] text-[13px] leading-relaxed text-white/50">
+          Pede uma manhã, uma tarde, um dia ou um período até 20 dias. A folha segue
+          diretamente para o C-Level — recebes a resposta no sino da app, e o histórico
+          de tudo o que já pediste fica nesta página.
+        </p>
+
+        <div className="mt-6 grid grid-cols-3 gap-3 sm:max-w-[520px]">
+          {[
+            {
+              label: "Por decidir",
+              value: String(pendingCount),
+              tone: pendingCount > 0 ? "text-amber-300" : "text-white",
+            },
+            {
+              label: `Dias úteis aprovados · ${year}`,
+              value: approvedBusinessDays > 0 ? formatDayCount(approvedBusinessDays) : "0",
+              tone: "text-white",
+            },
+            {
+              label: "Pedidos no total",
+              value: String(mine.length),
+              tone: "text-white",
+            },
+          ].map((s) => (
+            <div
+              key={s.label}
+              className="rounded-xl border border-white/[0.08] bg-white/[0.03] px-3.5 py-3"
+            >
+              <p className={`tabular text-[20px] font-semibold leading-none ${s.tone}`}>
+                {s.value}
+              </p>
+              <p className="mt-1.5 text-[9.5px] font-semibold uppercase tracking-[0.14em] text-white/35">
+                {s.label}
+              </p>
+            </div>
+          ))}
+        </div>
+      </header>
+
+      <div className="animate-fade-up mt-10">
+        <AbsenceRequestForm
+          employee={{
+            username: employee.username,
+            name: employee.name,
+            role: employee.role,
+            dept: employee.dept,
+          }}
+        />
+      </div>
+
+      <div className="mt-14">
+        <AbsenceHistory initial={mine} />
+      </div>
+    </PageShell>
+  );
+}
