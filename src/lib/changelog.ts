@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.67",
+    date: "2026-08-13",
+    title: "NPS — a equipa apresenta-se ao cliente pelo nome completo",
+    highlights: [
+      "**👥 Três pessoas novas na secção «Equipa» do inquérito:** **Vasco Montez**, **João Có** e **Tiago Silveira**. O cliente só consegue avaliar quem consegue selecionar — quem não estava na lista era invisível ao NPS.",
+      "**🪪 Apelidos onde faltavam:** «Alex» → **Alex Pavlenco**, «Alice» → **Alice Santos**, «Cylas» → **Cylas Tee** e «Germano C.» → **Germano Cunha**. Do outro lado está um cliente que conhece as pessoas pelo nome por que se apresentaram, não pelo diminutivo interno.",
+      "**🕰️ Os inquéritos já respondidos também acertam.** Os nomes resolvem-se a cada leitura a partir da lista, e não ficam congelados na resposta — por isso o histórico de NPS passa a mostrar os nomes completos sem ninguém lhe tocar.",
+    ],
+  },
+  {
     version: "76.66",
     date: "2026-08-13",
     title: "O tutorial do Merchant Center passa para Loom",

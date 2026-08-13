@@ -126,23 +126,38 @@ export type NpsSectionDef = {
   note?: Bilingual;
 };
 
-// Team roster mirrors src/lib/auth/credentials.ts (SEO, ADS, Web,
-// SuperAdmins). Hardcoded on purpose: this module is imported by the client
-// survey form, and credentials.ts carries password hashes that must never
-// reach the browser bundle. Keep in sync when the team changes.
+// Quem o cliente pode dizer que o acompanhou. Escrita à mão de propósito:
+// este módulo é importado pelo formulário que o CLIENTE abre, e
+// credentials.ts leva hashes de password que não podem chegar ao bundle do
+// browser.
+//
+// NEM TODA A GENTE DAQUI TEM LOGIN no workspace — a lista é de quem aparece
+// à frente do cliente, e isso é mais gente do que quem tem conta. Manter a
+// par da equipa quando alguém entra ou sai.
+//
+// NOME COMPLETO, SEMPRE. Do outro lado está um cliente que conhece as
+// pessoas pelo nome por que se apresentaram, não pelo diminutivo interno:
+// «Alex» ou «Germano C.» obriga-o a adivinhar de quem se trata.
+//
+// ⚠️ OS `value` SÃO A CHAVE DAS RESPOSTAS JÁ GRAVADAS. Os rótulos resolvem-se
+// aqui a cada leitura (`personLabel`), por isso mudar um label acerta também
+// o histórico; mudar um `value` deixava as respostas antigas órfãs.
 const TEAM_OPTIONS: NpsMultiOption[] = [
   { value: "andre-pereira", label: { pt: "André Pereira", en: "André Pereira" } },
   { value: "manuel-s", label: { pt: "Manuel Silva", en: "Manuel Silva" } },
   { value: "fran-r", label: { pt: "Fran. Rosa", en: "Fran. Rosa" } },
   { value: "joao-b", label: { pt: "João Batista", en: "João Batista" } },
-  { value: "germano-c", label: { pt: "Germano C.", en: "Germano C." } },
+  { value: "germano-c", label: { pt: "Germano Cunha", en: "Germano Cunha" } },
   { value: "mike", label: { pt: "Mike Nobre", en: "Mike Nobre" } },
   { value: "gustavo", label: { pt: "Gustavo Rotini", en: "Gustavo Rotini" } },
   { value: "renan", label: { pt: "Renan Alves", en: "Renan Alves" } },
-  { value: "cylas", label: { pt: "Cylas", en: "Cylas" } },
+  { value: "cylas", label: { pt: "Cylas Tee", en: "Cylas Tee" } },
+  { value: "vasco-m", label: { pt: "Vasco Montez", en: "Vasco Montez" } },
+  { value: "joao-c", label: { pt: "João Có", en: "João Có" } },
+  { value: "tiago-s", label: { pt: "Tiago Silveira", en: "Tiago Silveira" } },
   { value: "andre", label: { pt: "André Pavlenco", en: "André Pavlenco" } },
-  { value: "alex", label: { pt: "Alex", en: "Alex" } },
-  { value: "alice", label: { pt: "Alice", en: "Alice" } },
+  { value: "alex", label: { pt: "Alex Pavlenco", en: "Alex Pavlenco" } },
+  { value: "alice", label: { pt: "Alice Santos", en: "Alice Santos" } },
 ];
 
 export const NPS_SECTIONS: NpsSectionDef[] = [
