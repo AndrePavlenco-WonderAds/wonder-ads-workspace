@@ -45,6 +45,13 @@ type NpsCommon = {
   retired?: boolean;
 };
 
+/** O vocabulário que a etiqueta da escala usa a cada nota.
+ *
+ *  A escala 0–10 serve perguntas de naturezas diferentes, e a palavra tem de
+ *  ser da natureza da pergunta: um 10 de CONTINUIDADE é «Certeza», não
+ *  «Excecional» — a pergunta é sobre probabilidade, não sobre qualidade. */
+export type NpsScaleWordSet = "quality" | "satisfaction" | "likelihood";
+
 /** 0–10 rated question — feeds the score. */
 export type NpsScale10Question = NpsCommon & {
   kind: "scale10";
@@ -52,6 +59,8 @@ export type NpsScale10Question = NpsCommon & {
   q: Bilingual;
   capLow: Bilingual;
   capHigh: Bilingual;
+  /** Defaults to "quality". */
+  words?: NpsScaleWordSet;
 };
 
 /** A dynamic 0–10 rating rendered once per person selected in `source`
@@ -114,6 +123,11 @@ export type NpsMultiOption = {
   label: Bilingual;
   /** When true, selecting this option reveals a free-text "other" field. */
   other?: boolean;
+  /** Retrato em `public/team/avatar/`, quando a pessoa tem foto publicada
+   *  na página de equipa do wonder-ads.com. Sem foto fica a inicial — o
+   *  site tem silhuetas genéricas para quem ainda não posou, e a mesma
+   *  silhueta em duas pessoas diferentes confunde mais do que uma letra. */
+  photo?: string;
 };
 
 /** "Select all that apply" question. NOT scored — qualitative only. */
@@ -198,18 +212,62 @@ const TEAM_OPTIONS: NpsMultiOption[] = [
   { value: "manuel-s", label: { pt: "Manuel Silva", en: "Manuel Silva" } },
   { value: "fran-r", label: { pt: "Fran. Rosa", en: "Fran. Rosa" } },
   { value: "joao-b", label: { pt: "João Batista", en: "João Batista" } },
-  { value: "germano-c", label: { pt: "Germano Cunha", en: "Germano Cunha" } },
-  { value: "mike", label: { pt: "Mike Nobre", en: "Mike Nobre" } },
-  { value: "gustavo", label: { pt: "Gustavo Rotini", en: "Gustavo Rotini" } },
-  { value: "renan", label: { pt: "Renan Alves", en: "Renan Alves" } },
-  { value: "cylas", label: { pt: "Cylas Tee", en: "Cylas Tee" } },
+  {
+    value: "germano-c",
+    label: { pt: "Germano Cunha", en: "Germano Cunha" },
+    photo: "/team/avatar/germano-c.jpg",
+  },
+  {
+    value: "mike",
+    label: { pt: "Mike Nobre", en: "Mike Nobre" },
+    photo: "/team/avatar/mike.jpg",
+  },
+  {
+    value: "gustavo",
+    label: { pt: "Gustavo Rotini", en: "Gustavo Rotini" },
+    photo: "/team/avatar/gustavo.jpg",
+  },
+  {
+    value: "renan",
+    label: { pt: "Renan Alves", en: "Renan Alves" },
+    photo: "/team/avatar/renan.jpg",
+  },
+  {
+    value: "cylas",
+    label: { pt: "Cylas Tee", en: "Cylas Tee" },
+    photo: "/team/avatar/cylas.jpg",
+  },
   { value: "vasco-m", label: { pt: "Vasco Montez", en: "Vasco Montez" } },
   { value: "joao-c", label: { pt: "João Có", en: "João Có" } },
-  { value: "tiago-s", label: { pt: "Tiago Silveira", en: "Tiago Silveira" } },
-  { value: "andre", label: { pt: "André Pavlenco", en: "André Pavlenco" } },
-  { value: "alex", label: { pt: "Alex Pavlenco", en: "Alex Pavlenco" } },
-  { value: "alice", label: { pt: "Alice Santos", en: "Alice Santos" } },
+  {
+    value: "tiago-s",
+    label: { pt: "Tiago Silveira", en: "Tiago Silveira" },
+    photo: "/team/avatar/tiago-s.jpg",
+  },
+  {
+    value: "andre",
+    label: { pt: "André Pavlenco", en: "André Pavlenco" },
+    photo: "/team/avatar/andre.jpg",
+  },
+  {
+    value: "alex",
+    label: { pt: "Alex Pavlenco", en: "Alex Pavlenco" },
+    photo: "/team/avatar/alex.jpg",
+  },
+  {
+    value: "alice",
+    label: { pt: "Alice Santos", en: "Alice Santos" },
+    photo: "/team/avatar/alice.jpg",
+  },
 ];
+
+/** Retrato de uma pessoa da equipa, ou null quando não tem foto publicada. */
+export function personPhoto(source: string, value: string): string | null {
+  return (
+    getMultiQuestion(source)?.options.find((o) => o.value === value)?.photo ??
+    null
+  );
+}
 
 export const NPS_SECTIONS: NpsSectionDef[] = [
   {
@@ -313,6 +371,7 @@ export const NPS_SECTIONS: NpsSectionDef[] = [
       {
         kind: "scale10",
         name: "p1_satisfacao",
+        words: "satisfaction",
         q: {
           pt: "Numa escala de 0 a 10, qual é o teu nível de satisfação geral com a Wonder Ads neste último período desde o último formulário que preencheste?",
           en: "On a scale of 0 to 10, how satisfied are you overall with Wonder Ads over this last period since the last form you filled in?",
@@ -404,6 +463,7 @@ export const NPS_SECTIONS: NpsSectionDef[] = [
         // Ads mostrada a um cliente só de SEO seria respondida à sorte.
         kind: "scale10",
         name: "p_ads_resultados",
+        words: "satisfaction",
         visibleIf: { question: "p0_servico", anyOf: ["google_ads", "meta_ads"] },
         q: {
           pt: "Qual é o teu grau de satisfação com os resultados das campanhas de Ads da Wonder Ads?",
@@ -467,6 +527,7 @@ export const NPS_SECTIONS: NpsSectionDef[] = [
       {
         kind: "scale10",
         name: "p7_continuidade",
+        words: "likelihood",
         q: {
           pt: "Qual é a probabilidade de continuares a trabalhar com a Wonder Ads após o término do contrato atual?",
           en: "How likely are you to keep working with Wonder Ads after the current contract ends?",

@@ -46,6 +46,7 @@ import {
   isSingle,
   otherTextKey,
   personLabel,
+  personPhoto,
   personQuestionText,
   personScaleKey,
   qualifiesForGoogleReview,
@@ -55,6 +56,7 @@ import {
   type NpsPersonOpenQuestion,
   type NpsPersonScaleQuestion,
   type NpsQuestion,
+  type NpsScaleWordSet,
   type NpsSingleQuestion,
 } from "@/lib/nps-questions";
 import type { PublicLang } from "@/lib/public-i18n";
@@ -92,19 +94,47 @@ const COPY = {
     closeHint: "Já podes fechar esta janela.",
     errorRetry: "Não foi possível enviar. Tenta novamente.",
     optional: "opcional",
-    scaleWords: [
-      "Péssimo",
-      "Muito mau",
-      "Mau",
-      "Fraco",
-      "Insuficiente",
-      "Assim-assim",
-      "Razoável",
-      "Bom",
-      "Muito bom",
-      "Excelente",
-      "Excecional",
-    ],
+    scaleWords: {
+      quality: [
+        "Péssimo",
+        "Muito mau",
+        "Mau",
+        "Fraco",
+        "Insuficiente",
+        "Assim-assim",
+        "Razoável",
+        "Bom",
+        "Muito bom",
+        "Excelente",
+        "Excecional",
+      ],
+      satisfaction: [
+        "Nada satisfeito",
+        "Muito insatisfeito",
+        "Insatisfeito",
+        "Pouco satisfeito",
+        "Aquém do esperado",
+        "Neutro",
+        "Razoável",
+        "Satisfeito",
+        "Muito satisfeito",
+        "Excelente",
+        "Totalmente satisfeito",
+      ],
+      likelihood: [
+        "Nada provável",
+        "Muito improvável",
+        "Improvável",
+        "Pouco provável",
+        "Duvidoso",
+        "Talvez",
+        "Possível",
+        "Provável",
+        "Muito provável",
+        "Quase certo",
+        "Certeza",
+      ],
+    },
   },
   en: {
     progress: (a: number, b: number) => `${a} of ${b} answered`,
@@ -131,19 +161,47 @@ const COPY = {
     closeHint: "You can now close this window.",
     errorRetry: "Couldn't submit. Please try again.",
     optional: "optional",
-    scaleWords: [
-      "Terrible",
-      "Very poor",
-      "Poor",
-      "Weak",
-      "Not enough",
-      "So-so",
-      "Fair",
-      "Good",
-      "Very good",
-      "Excellent",
-      "Outstanding",
-    ],
+    scaleWords: {
+      quality: [
+        "Terrible",
+        "Very poor",
+        "Poor",
+        "Weak",
+        "Not enough",
+        "So-so",
+        "Fair",
+        "Good",
+        "Very good",
+        "Excellent",
+        "Outstanding",
+      ],
+      satisfaction: [
+        "Not at all satisfied",
+        "Very dissatisfied",
+        "Dissatisfied",
+        "Somewhat dissatisfied",
+        "Below expectations",
+        "Neutral",
+        "Fair",
+        "Satisfied",
+        "Very satisfied",
+        "Excellent",
+        "Completely satisfied",
+      ],
+      likelihood: [
+        "Not at all likely",
+        "Very unlikely",
+        "Unlikely",
+        "Doubtful",
+        "Uncertain",
+        "Maybe",
+        "Possible",
+        "Likely",
+        "Very likely",
+        "Almost certain",
+        "Certain",
+      ],
+    },
   },
 } as const;
 
@@ -164,14 +222,18 @@ function Scale10({
   lowCap,
   highCap,
   lang,
+  words = "quality",
 }: {
   value: number | undefined;
   onChange: (v: number) => void;
   lowCap: string;
   highCap: string;
   lang: PublicLang;
+  /** Vocabulário da etiqueta — ver NpsScaleWordSet. */
+  words?: NpsScaleWordSet;
 }) {
   const t = COPY[lang];
+  const vocab = t.scaleWords[words];
   const ticks = Array.from({ length: 11 }, (_, i) => i);
   const picked = typeof value === "number";
   const tone = picked ? toneFor(value) : null;
@@ -241,7 +303,7 @@ function Scale10({
             className="nps-pop rounded-full px-2.5 py-1 text-[11.5px] font-bold"
             style={{ background: tone.soft, color: tone.solid }}
           >
-            {value}/10 · {t.scaleWords[value]}
+            {value}/10 · {vocab[value]}
           </span>
         ) : (
           <span className="hidden text-[10.5px] text-black/30 sm:inline">
@@ -254,13 +316,45 @@ function Scale10({
   );
 }
 
-/** Uma cara + inicial para cada pessoa avaliada. */
-function PersonBadge({ label }: { label: string }) {
+/** A cara da pessoa, quando ela tem foto publicada; a inicial quando não.
+ *
+ *  Nem toda a equipa tem retrato no site — quem não tem aparece lá com uma
+ *  silhueta genérica, a MESMA para várias pessoas. Uma inicial com a cor da
+ *  marca distingue-as; duas silhuetas iguais não. */
+function PersonBadge({
+  label,
+  photo,
+  size = 28,
+}: {
+  label: string;
+  photo?: string | null;
+  size?: number;
+}) {
+  if (photo) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={photo}
+        alt=""
+        aria-hidden
+        loading="lazy"
+        width={size}
+        height={size}
+        className="shrink-0 rounded-full border border-black/10 bg-white object-cover"
+        style={{ width: size, height: size }}
+      />
+    );
+  }
   return (
     <span
       aria-hidden
-      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-white"
-      style={{ background: BRAND_GRADIENT }}
+      className="flex shrink-0 items-center justify-center rounded-full font-bold text-white"
+      style={{
+        background: BRAND_GRADIENT,
+        width: size,
+        height: size,
+        fontSize: size * 0.4,
+      }}
     >
       {label.trim().charAt(0).toUpperCase()}
     </span>
@@ -279,7 +373,7 @@ function PersonScale({
 }: {
   q: NpsPersonScaleQuestion;
   lang: PublicLang;
-  people: { value: string; label: string }[];
+  people: { value: string; label: string; photo: string | null }[];
   get: (personValue: string) => number | undefined;
   onChange: (personValue: string, v: number) => void;
   emptyText: string;
@@ -295,7 +389,7 @@ function PersonScale({
           className="rounded-2xl border border-black/[0.07] bg-[#fbfaf7] p-4"
         >
           <div className="mb-3 flex items-center gap-2.5 text-[14.5px] font-semibold text-black/80">
-            <PersonBadge label={p.label} />
+            <PersonBadge label={p.label} photo={p.photo} size={34} />
             {p.label}
           </div>
           <Scale10
@@ -322,7 +416,7 @@ function PersonOpen({
 }: {
   q: NpsPersonOpenQuestion;
   lang: PublicLang;
-  people: { value: string; label: string }[];
+  people: { value: string; label: string; photo: string | null }[];
   get: (personValue: string) => string;
   onChange: (personValue: string, v: string) => void;
   emptyText: string;
@@ -335,7 +429,7 @@ function PersonOpen({
       {people.map((p) => (
         <div key={p.value}>
           <label className="mb-2 flex items-start gap-2.5 text-[14px] font-medium leading-snug text-black/75">
-            <PersonBadge label={p.label} />
+            <PersonBadge label={p.label} photo={p.photo} size={32} />
             <span className="pt-1">
               {personQuestionText(q, p.label, lang)}
             </span>
@@ -360,6 +454,8 @@ function OptionRow({
   square,
   children,
   note,
+  photo,
+  photoAlt,
 }: {
   on: boolean;
   onClick: () => void;
@@ -368,6 +464,9 @@ function OptionRow({
   square: boolean;
   children: React.ReactNode;
   note?: string;
+  /** Retrato da pessoa — substitui a letra/caixa na lista da equipa. */
+  photo?: string | null;
+  photoAlt?: string;
 }) {
   return (
     <button
@@ -384,7 +483,33 @@ function OptionRow({
           : "0 1px 2px rgba(0,0,0,0.03)",
       }}
     >
-      {badge ? (
+      {photo ? (
+        <span className="relative shrink-0">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={photo}
+            alt={photoAlt ?? ""}
+            loading="lazy"
+            width={38}
+            height={38}
+            className={`h-[38px] w-[38px] rounded-full border-2 bg-white object-cover transition-all duration-200 ${
+              on ? "border-[#783DF5]" : "border-black/10 group-hover:border-black/20"
+            }`}
+            style={{ filter: on ? "none" : "saturate(0.9)" }}
+          />
+          {/* O visto encostado à foto — sem ele, uma lista de caras não diz
+              quais estão escolhidas a quem não vê a cor de fundo. */}
+          {on && (
+            <span
+              aria-hidden
+              className="nps-pop absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full border-2 border-white"
+              style={{ background: BRAND_GRADIENT }}
+            >
+              <Check className="h-2.5 w-2.5 text-white" strokeWidth={4} />
+            </span>
+          )}
+        </span>
+      ) : badge ? (
         <span
           className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-[5px] text-[10px] font-bold transition-all duration-200 ${
             on ? "nps-pop" : ""
@@ -491,6 +616,8 @@ function MultiChoice({
                 disabled={atMax}
                 square={!q.lettered}
                 badge={q.lettered ? LETTERS[i] : undefined}
+                photo={o.photo}
+                photoAlt={o.label[lang]}
               >
                 {o.label[lang]}
               </OptionRow>
@@ -917,6 +1044,7 @@ export function NpsSurveyForm({
                     lowCap={q.capLow[lang]}
                     highCap={q.capHigh[lang]}
                     lang={lang}
+                    words={q.words}
                   />
                 )}
                 {isPersonScale(q) && (
@@ -926,6 +1054,7 @@ export function NpsSurveyForm({
                     people={(choices[q.source] ?? []).map((v) => ({
                       value: v,
                       label: personLabel(q.source, v, lang),
+                      photo: personPhoto(q.source, v),
                     }))}
                     get={(pv) => answers[personScaleKey(q.name, pv)]}
                     onChange={(pv, v) => setAnswer(personScaleKey(q.name, pv), v)}
@@ -939,6 +1068,7 @@ export function NpsSurveyForm({
                     people={(choices[q.source] ?? []).map((v) => ({
                       value: v,
                       label: personLabel(q.source, v, lang),
+                      photo: personPhoto(q.source, v),
                     }))}
                     get={(pv) => texts[personScaleKey(q.name, pv)] ?? ""}
                     onChange={(pv, v) => setText(personScaleKey(q.name, pv), v)}

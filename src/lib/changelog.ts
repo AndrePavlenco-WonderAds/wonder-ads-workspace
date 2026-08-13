@@ -13,6 +13,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.69",
+    date: "2026-08-13",
+    title: "As caras da equipa no inquérito — e a escala a falar a língua da pergunta",
+    highlights: [
+      "**🙂 A secção «Equipa» passa a mostrar as caras.** Quem tem retrato publicado na página de equipa do wonder-ads.com aparece com a fotografia (com visto e moldura quando é selecionado) e acompanha a pessoa nas notas e no feedback escrito. Quem ainda não tem foto fica com a inicial: **o site usa silhuetas genéricas — a MESMA para várias pessoas** —, e duas silhuetas iguais confundiam mais do que uma letra.",
+      "**🎯 A escala 0–10 deixa de chamar «Excecional» a uma probabilidade.** A etiqueta passa a usar o vocabulário da pergunta: **Continuidade** diz «Nada provável → Muito improvável → Muito provável → Certeza», **Satisfação** e **resultados de Ads** dizem «Nada satisfeito → Totalmente satisfeito», e o **Desempenho** de cada pessoa mantém a escala de qualidade. As cores continuam a acompanhar a nota.",
+    ],
+  },
+  {
     version: "76.68",
     date: "2026-08-13",
     title: "O inquérito de satisfação passa a ser o inquérito DAQUELE cliente",
