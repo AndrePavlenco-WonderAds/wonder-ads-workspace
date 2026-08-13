@@ -12,6 +12,7 @@ import {
   findLesson,
   findCategory,
   nextCategory,
+  nextLesson,
   courseForTracks,
   lessonTrack,
   type Lesson,
@@ -98,6 +99,12 @@ export default async function OnboardingLessonPage({
 
   const hubHref = `/${slug}/onboarding`;
   const nextCat = nextCategory(categories, lesson.id);
+  // O passo seguinte do percurso — a próxima lição, atravesse ela a fronteira
+  // da categoria ou não. Quando atravessa, o botão de categoria seguinte
+  // levaria ao MESMO sítio: nesse caso mostra-se só este, senão eram dois
+  // botões colados a fazer a mesma coisa.
+  const next = nextLesson(categories, lesson.id);
+  const nextStartsNewCategory = Boolean(next && next.category !== lesson.category);
 
   // Form lessons render the stepped quiz for their track.
   if (lesson.kind === "form") {
@@ -343,17 +350,38 @@ export default async function OnboardingLessonPage({
               })}
             </ol>
 
-            {nextCat && (
+            {/* Próximo passo — o botão principal. Leva a próxima lição e diz
+                qual é: quem acaba um passo quer saber o que vem a seguir antes
+                de carregar, e num salto de categoria diz-se também para onde. */}
+            {next && (
+              <Link
+                href={lessonHref(slug, next)}
+                className="mt-4 flex w-full items-center gap-3 rounded-lg px-4 py-2.5 text-left text-white shadow-md shadow-[#783DF5]/25 transition-all duration-200 hover:-translate-y-0.5 hover:brightness-110"
+                style={{ background: BRAND_GRADIENT }}
+              >
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-semibold">Próximo passo</span>
+                  <span className="block truncate text-[11.5px] text-white/75">
+                    {nextStartsNewCategory && nextCat
+                      ? `${nextCat.title} · ${next.title}`
+                      : next.title}
+                  </span>
+                </span>
+                <ArrowRight className="h-4 w-4 shrink-0" />
+              </Link>
+            )}
+            {/* Saltar a categoria inteira — só quando ainda há passos aqui
+                pela frente, senão duplicava o botão de cima. */}
+            {nextCat && !nextStartsNewCategory && (
               <Link
                 href={lessonHref(slug, nextCat.lessons[0])}
-                className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-white shadow-md shadow-[#783DF5]/25 transition-all duration-200 hover:-translate-y-0.5 hover:brightness-110"
-                style={{ background: BRAND_GRADIENT }}
+                className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg border border-black/12 px-4 py-2.5 text-sm font-semibold text-black/65 transition hover:border-[#783DF5]/30 hover:bg-[#783DF5]/[0.04] hover:text-[#783DF5]"
               >
                 Próxima Categoria
                 <ArrowRight className="h-4 w-4" />
               </Link>
             )}
-            {!nextCat && (
+            {!next && (
               <Link
                 href={hubHref}
                 className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg border border-black/12 px-4 py-2.5 text-sm font-semibold text-black/65 transition hover:bg-black/[0.03]"

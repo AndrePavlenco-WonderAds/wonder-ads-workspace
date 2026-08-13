@@ -439,6 +439,22 @@ export function findCategory(
   return categories.find((c) => c.key === key) ?? null;
 }
 
+/** A lição imediatamente a seguir no curso INTEIRO: a próxima da mesma
+ *  categoria e, quando esta acaba, a primeira da categoria seguinte.
+ *
+ *  É o percurso tal como o cliente o faz — ele avança passo a passo e não
+ *  categoria a categoria, e o salto de categoria é um detalhe da arrumação
+ *  do curso, não uma paragem no caminho dele. null na última lição. */
+export function nextLesson(
+  categories: OnboardingCategory[],
+  lessonId: string,
+): Lesson | null {
+  const all = flattenLessons(categories);
+  const i = all.findIndex((l) => l.id === lessonId);
+  if (i < 0 || i >= all.length - 1) return null;
+  return all[i + 1];
+}
+
 /** The category that comes after the one containing `lessonId`. */
 export function nextCategory(
   categories: OnboardingCategory[],

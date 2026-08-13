@@ -13,6 +13,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.65",
+    date: "2026-08-13",
+    title: "Onboarding do cliente — «Próximo passo» dentro de cada aula",
+    highlights: [
+      "**➡️ Botão «Próximo passo»** no painel lateral de cada aula do onboarding, com o **nome do passo seguinte** por baixo. O cliente avança passo a passo, e até aqui o único botão que tinha era «Próxima Categoria» — que saltava por cima do que lhe faltava fazer.",
+      "**🎯 «Próxima Categoria» passa a secundário** e só aparece quando ainda há passos naquela categoria. Na última aula de uma categoria os dois botões levariam ao mesmo sítio: fica só o «Próximo passo», já a dizer para que categoria vai. Na última aula do curso mantém-se o «Voltar ao início».",
+    ],
+  },
+  {
     version: "76.64",
     date: "2026-08-13",
     title: "O cabeçalho das Ausências diz o que a página é",
