@@ -22,8 +22,31 @@ import type { PublicLang } from "@/lib/public-i18n";
 
 type Bilingual = { pt: string; en: string };
 
+/** Condição de visibilidade de uma pergunta: só aparece quando a pergunta
+ *  `question` (multi ou single) tem pelo menos uma das opções `anyOf`.
+ *
+ *  Serve para o inquérito falar do que é DELE: quem só tem Ads não devia ser
+ *  interrogado sobre indicadores de SEO orgânico, e quem só tem SEO não tem
+ *  campanhas para avaliar. Perguntar na mesma dá respostas inventadas — que
+ *  é pior do que não perguntar. */
+export type NpsVisibleIf = { question: string; anyOf: string[] };
+
+/** Campos comuns a todas as perguntas. */
+type NpsCommon = {
+  /** Ver NpsVisibleIf. Sem isto, a pergunta aparece sempre. */
+  visibleIf?: NpsVisibleIf;
+  /** REFORMADA: sai do formulário mas fica no catálogo.
+   *
+   *  Uma pergunta apagada leva consigo as respostas que já foram dadas — a
+   *  página de resultados percorre este catálogo, e o que não está aqui
+   *  deixa de ser mostrado ao consultor, mesmo estando gravado. Reformar em
+   *  vez de apagar tira-a de quem responde a partir de hoje e mantém legível
+   *  o que os clientes já responderam. */
+  retired?: boolean;
+};
+
 /** 0–10 rated question — feeds the score. */
-export type NpsScale10Question = {
+export type NpsScale10Question = NpsCommon & {
   kind: "scale10";
   name: string;
   q: Bilingual;
@@ -33,7 +56,7 @@ export type NpsScale10Question = {
 
 /** A dynamic 0–10 rating rendered once per person selected in `source`
  *  (a multi question). Answers are stored as `${name}__${personValue}`. */
-export type NpsPersonScaleQuestion = {
+export type NpsPersonScaleQuestion = NpsCommon & {
   kind: "personScale";
   name: string;
   /** Name of the multi question whose selected options are the people. */
@@ -41,6 +64,27 @@ export type NpsPersonScaleQuestion = {
   q: Bilingual;
   capLow: Bilingual;
   capHigh: Bilingual;
+};
+
+/** Uma caixa de texto POR PESSOA escolhida em `source`, com o nome dela
+ *  dentro da pergunta.
+ *
+ *  Uma caixa só para toda a gente obrigava o cliente a escrever um parágrafo
+ *  sobre três pessoas ao mesmo tempo — e o que saía era um elogio genérico
+ *  que não servia a nenhuma delas. Com o nome na pergunta, o comentário fica
+ *  colado à pessoa a quem diz respeito.
+ *
+ *  `{name}` no texto é substituído pelo nome. Respostas guardadas como
+ *  `${name}__${personValue}` no mapa de textos. */
+export type NpsPersonOpenQuestion = NpsCommon & {
+  kind: "personOpen";
+  name: string;
+  source: string;
+  /** Usa `{name}` como marcador do nome da pessoa. */
+  q: Bilingual;
+  placeholder?: Bilingual;
+  /** Defaults to true — uma caixa por pessoa, todas obrigatórias. */
+  required?: boolean;
 };
 
 export type NpsSingleOption = {
@@ -54,7 +98,7 @@ export type NpsSingleOption = {
 
 /** Single-choice question. Optionally `scored` (via option.score) and
  *  optionally `lettered` (A/B/C… badges). */
-export type NpsSingleQuestion = {
+export type NpsSingleQuestion = NpsCommon & {
   kind: "single";
   name: string;
   q: Bilingual;
@@ -73,7 +117,7 @@ export type NpsMultiOption = {
 };
 
 /** "Select all that apply" question. NOT scored — qualitative only. */
-export type NpsMultiQuestion = {
+export type NpsMultiQuestion = NpsCommon & {
   kind: "multi";
   name: string;
   q: Bilingual;
@@ -88,7 +132,7 @@ export type NpsMultiQuestion = {
 };
 
 /** Free-text question. */
-export type NpsOpenQuestion = {
+export type NpsOpenQuestion = NpsCommon & {
   kind: "open";
   name: string;
   q: Bilingual;
@@ -101,6 +145,7 @@ export type NpsOpenQuestion = {
 export type NpsQuestion =
   | NpsScale10Question
   | NpsPersonScaleQuestion
+  | NpsPersonOpenQuestion
   | NpsSingleQuestion
   | NpsMultiQuestion
   | NpsOpenQuestion;
@@ -109,6 +154,8 @@ export const isScale10 = (q: NpsQuestion): q is NpsScale10Question =>
   q.kind === "scale10";
 export const isPersonScale = (q: NpsQuestion): q is NpsPersonScaleQuestion =>
   q.kind === "personScale";
+export const isPersonOpen = (q: NpsQuestion): q is NpsPersonOpenQuestion =>
+  q.kind === "personOpen";
 export const isSingle = (q: NpsQuestion): q is NpsSingleQuestion =>
   q.kind === "single";
 export const isMulti = (q: NpsQuestion): q is NpsMultiQuestion =>
@@ -124,6 +171,10 @@ export type NpsSectionDef = {
   questions: NpsQuestion[];
   /** Optional informational note for sections with no answerable questions. */
   note?: Bilingual;
+  /** Nota alternativa para quem NÃO qualifica para o pedido de review
+   *  (ver `qualifiesForGoogleReview`). Sem isto, a secção do testemunho
+   *  prometia uma Google Review a um cliente insatisfeito. */
+  noteAlt?: Bilingual;
 };
 
 // Quem o cliente pode dizer que o acompanhou. Escrita à mão de propósito:
@@ -228,8 +279,23 @@ export const NPS_SECTIONS: NpsSectionDef[] = [
         capHigh: { pt: "Excelente", en: "Excellent" },
       },
       {
+        kind: "personOpen",
+        name: "p6_pessoa_feedback",
+        source: "p_equipa",
+        required: true,
+        q: {
+          pt: "O que mais valorizaste neste acompanhamento e o que poderia ser melhorado pelo/a {name}?",
+          en: "What did you value most in this follow-up, and what could {name} improve?",
+        },
+        placeholder: { pt: "Escreve aqui…", en: "Write here…" },
+      },
+      {
+        // Reformada em v76.68 — substituída pela caixa por pessoa acima. Fica
+        // no catálogo para os inquéritos já respondidos continuarem legíveis
+        // na ficha do cliente.
         kind: "open",
         name: "p6_consultor_feedback",
+        retired: true,
         required: true,
         q: {
           pt: "O que mais valorizaste neste acompanhamento e o que poderia ser melhorado?",
@@ -334,11 +400,25 @@ export const NPS_SECTIONS: NpsSectionDef[] = [
     title: { pt: "Resultados", en: "Results" },
     questions: [
       {
+        // Só para quem tem campanhas connosco. Uma escala de satisfação com
+        // Ads mostrada a um cliente só de SEO seria respondida à sorte.
+        kind: "scale10",
+        name: "p_ads_resultados",
+        visibleIf: { question: "p0_servico", anyOf: ["google_ads", "meta_ads"] },
+        q: {
+          pt: "Qual é o teu grau de satisfação com os resultados das campanhas de Ads da Wonder Ads?",
+          en: "How satisfied are you with the results of Wonder Ads' ad campaigns?",
+        },
+        capLow: { pt: "Nada satisfeito", en: "Not at all satisfied" },
+        capHigh: { pt: "Totalmente satisfeito", en: "Completely satisfied" },
+      },
+      {
         kind: "multi",
         name: "p8_indicadores",
+        visibleIf: { question: "p0_servico", anyOf: ["seo_geo"] },
         q: {
-          pt: "Que indicadores utilizas para avaliar o sucesso do nosso trabalho?",
-          en: "Which indicators do you use to measure the success of our work?",
+          pt: "Que indicadores utilizas para avaliar o sucesso do nosso trabalho orgânico de SEO/GEO?",
+          en: "Which indicators do you use to measure the success of our organic SEO/GEO work?",
         },
         hint: {
           pt: "Seleciona todas as opções aplicáveis.",
@@ -350,12 +430,14 @@ export const NPS_SECTIONS: NpsSectionDef[] = [
           { value: "leads", label: { pt: "Mais leads / contactos / pedidos de orçamento", en: "More leads / enquiries" } },
           { value: "vendas", label: { pt: "Aumento de vendas / faturação", en: "More sales / revenue" } },
           { value: "visibilidade_marca", label: { pt: "Visibilidade da marca (incl. IAs / GEO)", en: "Brand visibility (incl. AI / GEO)" } },
-          { value: "menos_ads_pagos", label: { pt: "Menor dependência de anúncios pagos", en: "Less reliance on paid ads" } },
+          { value: "nao_uso", label: { pt: "Não uso indicadores infelizmente", en: "I don't track any indicators, unfortunately" } },
         ],
       },
       {
+        // Reformada em v76.68 — sai do formulário, fica para o histórico.
         kind: "multi",
         name: "p9_acoes",
+        retired: true,
         max: 5,
         q: {
           pt: "Das ações que fizemos por ti, quais sentes que tiveram maior impacto na tua faturação e na entrada de contactos/leads?",
@@ -484,48 +566,152 @@ export const NPS_SECTIONS: NpsSectionDef[] = [
       pt: "Estás quase a terminar! Depois de submeteres, no ecrã seguinte vais ter o link para deixares a tua Google Review — ajuda imenso quem está a considerar trabalhar connosco.",
       en: "Almost done! After you submit, the next screen will give you the link to leave your Google Review — it helps others considering working with us.",
     },
+    noteAlt: {
+      pt: "Estás quase a terminar! O que escreveste vai direto para a equipa que acompanha a tua conta — e o que apontaste como menos bom é exatamente por onde vamos começar.",
+      en: "Almost done! What you wrote goes straight to the team looking after your account — and what you flagged as falling short is exactly where we'll start.",
+    },
   },
 ];
 
+/** Satisfação mínima (P1, 0–10) a partir da qual se pede a Google Review.
+ *
+ *  Pedir uma review pública a quem acabou de dar 4/10 é pedir uma review
+ *  má — e, pior, soa a que não se leu o que a pessoa escreveu. Abaixo do
+ *  limiar o formulário agradece e encaminha para a equipa em vez de pedir. */
+export const GOOGLE_REVIEW_MIN_SATISFACTION = 7;
+
+/** True quando o inquérito qualifica para o pedido de Google Review. */
+export function qualifiesForGoogleReview(
+  answers: Record<string, number>,
+): boolean {
+  const v = Number(answers["p1_satisfacao"]);
+  return Number.isFinite(v) && v >= GOOGLE_REVIEW_MIN_SATISFACTION;
+}
+
+/** True quando a pergunta deve aparecer, dadas as escolhas até agora.
+ *  Perguntas reformadas nunca aparecem. */
+export function isQuestionVisible(
+  q: NpsQuestion,
+  choices: Record<string, string[]>,
+): boolean {
+  if (q.retired) return false;
+  if (!q.visibleIf) return true;
+  const picked = choices[q.visibleIf.question] ?? [];
+  return q.visibleIf.anyOf.some((v) => picked.includes(v));
+}
+
+/** As secções que o cliente vai mesmo percorrer, dadas as escolhas dele.
+ *  Uma secção cujas perguntas ficaram todas escondidas desaparece — um
+ *  cartão vazio a dizer «Secção 6 de 10» é um beco sem saída. */
+export function visibleSections(
+  choices: Record<string, string[]>,
+): NpsSectionDef[] {
+  return NPS_SECTIONS.filter((s) => {
+    const qs = s.questions.filter((q) => isQuestionVisible(q, choices));
+    return qs.length > 0 || Boolean(s.note);
+  });
+}
+
+/** O texto de uma pergunta por-pessoa, com `{name}` já substituído. */
+export function personQuestionText(
+  q: NpsPersonOpenQuestion,
+  personName: string,
+  lang: PublicLang,
+): string {
+  return q.q[lang].replace("{name}", personName);
+}
+
+/** A forma mínima de uma submissão — o suficiente para saber o que mostrar.
+ *  Estrutural de propósito: assim este módulo continua sem importar o store
+ *  (que puxa o KV) e serve tanto a ficha do cliente como o PDF. */
+export type NpsAnswerBundle = {
+  answers?: Record<string, number>;
+  choices?: Record<string, string[]>;
+  texts?: Record<string, string>;
+};
+
+/** True quando ESTA submissão traz alguma coisa para esta pergunta. */
+export function hasAnswerFor(q: NpsQuestion, sub: NpsAnswerBundle): boolean {
+  if (isScale10(q)) return typeof sub.answers?.[q.name] === "number";
+  if (isPersonScale(q) || isPersonOpen(q)) {
+    const prefix = `${q.name}__`;
+    const pool = isPersonScale(q) ? sub.answers : sub.texts;
+    return Object.keys(pool ?? {}).some((k) => k.startsWith(prefix));
+  }
+  if (isSingle(q) || isMulti(q)) return (sub.choices?.[q.name]?.length ?? 0) > 0;
+  return Boolean(sub.texts?.[q.name]);
+}
+
+/** As perguntas de uma secção que fazem sentido mostrar sobre ESTA resposta.
+ *
+ *  Duas exclusões, por razões opostas:
+ *   • REFORMADAS só aparecem se aquele cliente chegou a respondê-las — é
+ *     exatamente para isso que continuam no catálogo. Numa resposta nova
+ *     seriam uma linha «Sem resposta» a uma pergunta que já ninguém faz.
+ *   • CONDICIONAIS que não se aplicavam ao serviço daquele cliente também
+ *     saem: «Sem resposta» na satisfação com Ads, a um cliente só de SEO,
+ *     lê-se como falha dele — quando a pergunta nunca lhe foi feita. */
+export function questionsForSubmission(
+  section: NpsSectionDef,
+  sub: NpsAnswerBundle,
+): NpsQuestion[] {
+  return section.questions.filter((q) => {
+    if (q.retired) return hasAnswerFor(q, sub);
+    if (q.visibleIf) {
+      return isQuestionVisible(q, sub.choices ?? {}) || hasAnswerFor(q, sub);
+    }
+    return true;
+  });
+}
+
+// AS LISTAS ABAIXO SÃO O CONTRATO DE ESCRITA: alimentam a validação da
+// submissão. Excluem as perguntas reformadas de propósito — uma pergunta que
+// já ninguém vê não pode ser exigida a quem responde hoje (e uma reformada
+// obrigatória bloquearia todas as submissões novas). O catálogo completo,
+// esse, continua a servir a LEITURA na ficha do cliente.
+const LIVE_QUESTIONS: NpsQuestion[] = NPS_SECTIONS.flatMap((s) =>
+  s.questions.filter((q) => !q.retired),
+);
+
 /** 0–10 rated question names, in order (fixed scales only). */
-export const NPS_SCALE_NAMES: string[] = NPS_SECTIONS.flatMap((s) =>
-  s.questions.filter(isScale10).map((q) => q.name),
+export const NPS_SCALE_NAMES: string[] = LIVE_QUESTIONS.filter(isScale10).map(
+  (q) => q.name,
 );
 
 /** Single-choice question names, in order. */
-export const NPS_SINGLE_NAMES: string[] = NPS_SECTIONS.flatMap((s) =>
-  s.questions.filter(isSingle).map((q) => q.name),
+export const NPS_SINGLE_NAMES: string[] = LIVE_QUESTIONS.filter(isSingle).map(
+  (q) => q.name,
 );
 
 /** Multi-select question names, in order. */
-export const NPS_MULTI_NAMES: string[] = NPS_SECTIONS.flatMap((s) =>
-  s.questions.filter(isMulti).map((q) => q.name),
+export const NPS_MULTI_NAMES: string[] = LIVE_QUESTIONS.filter(isMulti).map(
+  (q) => q.name,
 );
 
 /** Open (free-text) question names, in order. */
-export const NPS_OPEN_NAMES: string[] = NPS_SECTIONS.flatMap((s) =>
-  s.questions.filter(isOpen).map((q) => q.name),
+export const NPS_OPEN_NAMES: string[] = LIVE_QUESTIONS.filter(isOpen).map(
+  (q) => q.name,
 );
 
 /** Person-scale questions, in order. */
-export const NPS_PERSON_SCALES: NpsPersonScaleQuestion[] = NPS_SECTIONS.flatMap(
-  (s) => s.questions.filter(isPersonScale),
-);
+export const NPS_PERSON_SCALES: NpsPersonScaleQuestion[] =
+  LIVE_QUESTIONS.filter(isPersonScale);
+
+/** Person-open questions (uma caixa por pessoa), in order. */
+export const NPS_PERSON_OPENS: NpsPersonOpenQuestion[] =
+  LIVE_QUESTIONS.filter(isPersonOpen);
 
 /** Every question a submission MUST carry to be complete (for progress +
  *  validation). Non-required multi-select is optional. */
-export const NPS_REQUIRED_NAMES: string[] = NPS_SECTIONS.flatMap((s) =>
-  s.questions
-    .filter(
-      (q) =>
-        isScale10(q) ||
-        isPersonScale(q) ||
-        (isSingle(q) && (q.required ?? true)) ||
-        (isOpen(q) && Boolean(q.required)) ||
-        (isMulti(q) && Boolean(q.required)),
-    )
-    .map((q) => q.name),
-);
+export const NPS_REQUIRED_NAMES: string[] = LIVE_QUESTIONS.filter(
+  (q) =>
+    isScale10(q) ||
+    isPersonScale(q) ||
+    (isPersonOpen(q) && (q.required ?? true)) ||
+    (isSingle(q) && (q.required ?? true)) ||
+    (isOpen(q) && Boolean(q.required)) ||
+    (isMulti(q) && Boolean(q.required)),
+).map((q) => q.name);
 
 /** Key under which a multi-select option's free-text "other" answer is
  *  stored, in the submission `texts` map. */

@@ -28,12 +28,14 @@ import {
   npsScoreColor,
   isScale10,
   isPersonScale,
+  isPersonOpen,
   isSingle,
   isMulti,
-  isOpen,
   otherTextKey,
+  personQuestionText,
   personScaleKey,
   personLabel,
+  questionsForSubmission,
 } from "@/lib/nps-questions";
 import { pickLang } from "@/lib/public-i18n";
 import { getCurrentEmployee } from "@/lib/auth/server";
@@ -398,7 +400,10 @@ function AnswersDetail({
       </div>
 
       <div className="mt-5 space-y-6">
-        {NPS_SECTIONS.filter((s) => s.questions.length > 0).map((section) => (
+        {NPS_SECTIONS.map((section) => {
+          const shown = questionsForSubmission(section, latest);
+          if (shown.length === 0) return null;
+          return (
           <div key={section.key}>
             <div className="mb-3 flex items-baseline gap-2 border-b border-white/8 pb-2">
               <span className="font-mono text-[10px] tracking-widest text-[#a78bfa]">
@@ -410,7 +415,7 @@ function AnswersDetail({
             </div>
 
             <div className="space-y-4">
-              {section.questions.map((q) => {
+              {shown.map((q) => {
                 if (isScale10(q)) {
                   const value = latest.answers[q.name];
                   const has = typeof value === "number";
@@ -498,6 +503,35 @@ function AnswersDetail({
                           );
                         })}
                       </div>
+                    </div>
+                  );
+                }
+
+                if (isPersonOpen(q)) {
+                  const people = latest.choices?.[q.source] ?? [];
+                  const written = people.filter((pv) =>
+                    Boolean(latest.texts?.[personScaleKey(q.name, pv)]),
+                  );
+                  return (
+                    <div key={q.name} className="space-y-2.5">
+                      {written.length === 0 && (
+                        <p className="text-[11px] italic text-white/30">
+                          Sem resposta
+                        </p>
+                      )}
+                      {written.map((pv) => {
+                        const name = personLabel(q.source, pv, lang);
+                        return (
+                          <div key={pv}>
+                            <p className="text-sm leading-snug text-white/75">
+                              {personQuestionText(q, name, lang)}
+                            </p>
+                            <p className="mt-1.5 rounded-lg border border-white/8 bg-white/[0.03] px-3.5 py-2.5 text-sm leading-relaxed text-white/80">
+                              “{latest.texts?.[personScaleKey(q.name, pv)]}”
+                            </p>
+                          </div>
+                        );
+                      })}
                     </div>
                   );
                 }
@@ -622,7 +656,8 @@ function AnswersDetail({
               })}
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

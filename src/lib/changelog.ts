@@ -13,6 +13,20 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.68",
+    date: "2026-08-13",
+    title: "O inquérito de satisfação passa a ser o inquérito DAQUELE cliente",
+    highlights: [
+      "**🚧 Acabaram os saltos entre secções.** A grelha clicável do topo desapareceu: dava para passar por cima das perguntas e chegar ao fim sem responder, e anunciava dez etapas por fazer logo à entrada. No lugar dela, uma régua que diz o passo e a percentagem — e mais nada.",
+      "**🎯 As perguntas seguem os serviços do cliente.** «Que indicadores utilizas…» só aparece a quem tem **SEO/GEO** (e passou a dizer «do nosso trabalho orgânico de SEO/GEO»); quem tem **Google Ads ou Meta Ads** ganha uma pergunta nova de satisfação com os resultados das campanhas. Uma secção que fique sem perguntas desaparece do percurso — o contador de passos é o dele, não o do catálogo.",
+      "**✍️ O feedback escrito passa a ser por pessoa.** Em vez de uma caixa só para toda a gente, há uma por cada pessoa selecionada, com o nome dentro da pergunta: «…o que poderia ser melhorado pelo/a Manuel Silva?». Um parágrafo sobre três pessoas ao mesmo tempo não servia a nenhuma delas.",
+      "**⭐ A Google Review deixa de ser pedida a toda a gente** — só a quem dá **7/10 ou mais** na satisfação. Quem fica abaixo recebe uma mensagem a dizer que o que apontou é por onde vamos começar. Pedir uma review pública a um cliente insatisfeito é pedir uma review má.",
+      "**🎨 A página do inquérito foi redesenhada.** A escala 0–10 ganha cor conforme a nota (vermelho → âmbar → verde) e escreve o que ela significa, responde ao teclado, e cada pessoa avaliada tem o seu cartão. Auras da marca por trás do cartão, fio de luz no topo, botão que respira quando a secção está pronta e confetes no fim — só para quem tem o que celebrar.",
+      "**🏷️ O separador do browser deixa de dizer «Pending Review».** Passa a «Avaliação de Serviço · [cliente] · Wonder Ads», e o link fica fora do índice do Google.",
+      "**🗄️ As perguntas retiradas não levam o histórico com elas.** A pergunta das ações com maior impacto e a antiga caixa única de feedback saem do formulário mas continuam a ser mostradas nas respostas de quem já as respondeu — apagá-las tinha apagado três avaliações reais da vista do consultor.",
+    ],
+  },
+  {
     version: "76.67",
     date: "2026-08-13",
     title: "NPS — a equipa apresenta-se ao cliente pelo nome completo",

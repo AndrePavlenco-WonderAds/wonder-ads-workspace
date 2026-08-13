@@ -12,10 +12,12 @@ import {
   NPS_OPEN_NAMES,
   NPS_OTHER_KEYS,
   NPS_PERSON_SCALES,
+  NPS_PERSON_OPENS,
   getMultiQuestion,
   getSingleQuestion,
   getQuestion,
   isOpen,
+  isQuestionVisible,
   personScaleKey,
 } from "@/lib/nps-questions";
 import { getConsultantForSlug } from "@/lib/client-overrides";
@@ -36,25 +38,13 @@ export async function POST(
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  // --- 0–10 scale answers (all required) ---
+  // AS ESCOLHAS VÊM PRIMEIRO, E NÃO É ARBITRÁRIO: desde a v76.68 há perguntas
+  // que só existem para certos serviços (`visibleIf`), e é o serviço escolhido
+  // em `p0_servico` que decide quais. Validar as escalas antes de saber as
+  // escolhas exigiria a um cliente só de SEO uma nota às campanhas de Ads que
+  // ele nunca chegou a ver.
   const rawAnswers = (body.answers ?? {}) as Record<string, unknown>;
   const answers: Record<string, number> = {};
-  for (const name of NPS_SCALE_NAMES) {
-    const v = Number(rawAnswers[name]);
-    if (!Number.isFinite(v)) {
-      return NextResponse.json(
-        { error: `Missing or invalid answer: ${name}` },
-        { status: 400 },
-      );
-    }
-    if (v < 0 || v > 10) {
-      return NextResponse.json(
-        { error: `Answer out of range: ${name}` },
-        { status: 400 },
-      );
-    }
-    answers[name] = Math.round(v);
-  }
 
   // --- choices: multi-select + single-choice (both stored as arrays) ---
   const rawChoices = (body.choices ?? {}) as Record<string, unknown>;
@@ -64,6 +54,7 @@ export async function POST(
   for (const name of NPS_SINGLE_NAMES) {
     const def = getSingleQuestion(name);
     if (!def) continue;
+    if (!isQuestionVisible(def, choices)) continue;
     const picked = rawChoices[name];
     const first = Array.isArray(picked) ? picked[0] : picked;
     const value = typeof first === "string" ? first : "";
@@ -85,6 +76,9 @@ export async function POST(
   for (const name of NPS_MULTI_NAMES) {
     const def = getMultiQuestion(name);
     if (!def) continue;
+    // `p0_servico` decide a visibilidade das outras, por isso tem de ser
+    // lida antes delas — e é a primeira da lista, na ordem do catálogo.
+    if (!isQuestionVisible(def, choices)) continue;
     const picked = rawChoices[name];
     const allowed = new Set(def.options.map((o) => o.value));
     const clean = Array.isArray(picked)
@@ -100,6 +94,26 @@ export async function POST(
         { status: 400 },
       );
     }
+  }
+
+  // --- 0–10 scale answers (required, exceto as que o serviço escondeu) ---
+  for (const name of NPS_SCALE_NAMES) {
+    const def = getQuestion(name);
+    if (def && !isQuestionVisible(def, choices)) continue;
+    const v = Number(rawAnswers[name]);
+    if (!Number.isFinite(v)) {
+      return NextResponse.json(
+        { error: `Missing or invalid answer: ${name}` },
+        { status: 400 },
+      );
+    }
+    if (v < 0 || v > 10) {
+      return NextResponse.json(
+        { error: `Answer out of range: ${name}` },
+        { status: 400 },
+      );
+    }
+    answers[name] = Math.round(v);
   }
 
   // --- per-person 0–10 ratings (one per person selected in the source) ---
@@ -135,6 +149,26 @@ export async function POST(
       continue;
     }
     texts[name] = value;
+  }
+
+  // --- feedback escrito POR PESSOA (uma caixa por pessoa selecionada) ---
+  for (const pq of NPS_PERSON_OPENS) {
+    const people = choices[pq.source] ?? [];
+    for (const person of people) {
+      const key = personScaleKey(pq.name, person);
+      const raw = rawTexts[key];
+      const value = typeof raw === "string" ? raw.trim().slice(0, TEXT_MAX) : "";
+      if (!value) {
+        if (pq.required ?? true) {
+          return NextResponse.json(
+            { error: `Missing required answer: ${key}` },
+            { status: 400 },
+          );
+        }
+        continue;
+      }
+      texts[key] = value;
+    }
   }
 
   // Free-text "other" answers on multi options — stored only when the

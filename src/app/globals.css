@@ -526,6 +526,78 @@ body {
 }
 
 /* ------------------------------------------------------------------ */
+/* Inquérito de satisfação (NPS) — página pública do cliente           */
+/* ------------------------------------------------------------------ */
+
+/* Confetes do ecrã final. Fitas de papel a cair e a rodar — CSS puro,
+   porque uma biblioteca de confetes num formulário de 5 minutos é peso
+   que o cliente descarrega para ver dois segundos de festa. */
+@keyframes nps-confetti-fall {
+  0% {
+    transform: translateY(-20px) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(190px) rotate(540deg);
+    opacity: 0;
+  }
+}
+.nps-confetti {
+  position: absolute;
+  top: 0;
+  width: 7px;
+  height: 12px;
+  border-radius: 2px;
+  opacity: 0;
+  animation: nps-confetti-fall 1.5s ease-in forwards;
+}
+
+/* O botão de continuar respira quando a secção está completa: convida a
+   avançar sem tirar a decisão a quem responde (nada de auto-avanço, que
+   rouba o clique a meio de uma mudança de ideias). */
+@keyframes nps-cta-ready {
+  0%,
+  100% {
+    box-shadow: 0 6px 18px -8px rgba(120, 61, 245, 0.55);
+  }
+  50% {
+    box-shadow: 0 10px 26px -6px rgba(120, 61, 245, 0.8);
+  }
+}
+.nps-cta-ready {
+  animation: nps-cta-ready 2.4s ease-in-out infinite;
+}
+
+/* Aura viva por trás do cartão do inquérito — dá profundidade ao fundo
+   creme sem lhe pôr uma imagem em cima. */
+@keyframes nps-aura-drift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(3%, -4%, 0) scale(1.12);
+  }
+}
+.nps-aura {
+  animation: nps-aura-drift 18s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nps-confetti,
+  .nps-cta-ready,
+  .nps-aura {
+    animation: none;
+  }
+  .nps-confetti {
+    display: none;
+  }
+}
+
+/* ------------------------------------------------------------------ */
 /* Ausências — a folha de RH e a assinatura manuscrita                 */
 /* ------------------------------------------------------------------ */
 

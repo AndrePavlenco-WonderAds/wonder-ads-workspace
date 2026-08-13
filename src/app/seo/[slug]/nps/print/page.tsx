@@ -10,11 +10,14 @@ import {
   NPS_SECTIONS,
   isScale10,
   isPersonScale,
+  isPersonOpen,
   isSingle,
   isMulti,
   otherTextKey,
+  personQuestionText,
   personScaleKey,
   personLabel,
+  questionsForSubmission,
 } from "@/lib/nps-questions";
 import { pickLang } from "@/lib/public-i18n";
 import { getCurrentEmployee } from "@/lib/auth/server";
@@ -132,8 +135,10 @@ export default async function NpsPrintPage({
 
             {/* Questions + answers */}
             <section className="mt-8 space-y-6">
-              {NPS_SECTIONS.filter((s) => s.questions.length > 0).map(
-                (section) => (
+              {NPS_SECTIONS.map((section) => {
+                const shown = questionsForSubmission(section, latest);
+                if (shown.length === 0) return null;
+                return (
                   <div key={section.key} className="nps-print-card">
                     <div className="mb-3 flex items-baseline gap-2 border-b border-black/10 pb-1.5">
                       <span
@@ -147,11 +152,16 @@ export default async function NpsPrintPage({
                       </span>
                     </div>
                     <div className="space-y-3.5">
-                      {section.questions.map((q) => (
+                      {shown.map((q) => (
                         <div key={q.name}>
-                          <p className="text-[13px] font-semibold leading-snug text-black/80">
-                            {q.q[lang]}
-                          </p>
+                          {/* A pergunta por-pessoa traz o nome dentro de cada
+                              resposta; imprimir o texto cru mostraria o
+                              marcador «{name}» ao consultor. */}
+                          {!isPersonOpen(q) && (
+                            <p className="text-[13px] font-semibold leading-snug text-black/80">
+                              {q.q[lang]}
+                            </p>
+                          )}
                           <div className="mt-2 text-[13px] text-black/85">
                             <Answer q={q} latest={latest} lang={lang} />
                           </div>
@@ -159,8 +169,8 @@ export default async function NpsPrintPage({
                       ))}
                     </div>
                   </div>
-                ),
-              )}
+                );
+              })}
             </section>
           </>
         )}
@@ -307,6 +317,40 @@ function Answer({
             </div>
           );
         })}
+      </div>
+    );
+  }
+
+  if (isPersonOpen(q)) {
+    const people = latest.choices?.[q.source] ?? [];
+    const written = people.filter((pv) =>
+      Boolean(latest.texts?.[personScaleKey(q.name, pv)]),
+    );
+    if (written.length === 0)
+      return (
+        <span style={{ fontStyle: "italic", color: "rgba(0,0,0,0.4)" }}>
+          Sem resposta
+        </span>
+      );
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {written.map((pv) => (
+          <div key={pv}>
+            <p
+              style={{
+                fontSize: 12.5,
+                fontWeight: 600,
+                color: "rgba(0,0,0,0.75)",
+                marginBottom: 3,
+              }}
+            >
+              {personQuestionText(q, personLabel(q.source, pv, lang), lang)}
+            </p>
+            <p style={{ fontSize: 12.5, color: "rgba(0,0,0,0.85)" }}>
+              “{latest.texts?.[personScaleKey(q.name, pv)]}”
+            </p>
+          </div>
+        ))}
       </div>
     );
   }
