@@ -336,7 +336,18 @@ export const DEFAULT_ONBOARDING_CATEGORIES: OnboardingCategory[] = [
         title: "Acesso ao Google Merchant Center",
         kind: "video",
         emoji: "🛒",
-        videoUrl: "https://www.youtube.com/embed/LBXgm58-WeQ",
+        // LOOM, NÃO YOUTUBE (v76.66). O tutorial do Merchant Center mostra o
+        // painel de um Merchant Center real e o YouTube andou a removê-lo
+        // repetidamente — cada remoção deixava o passo com um player morto
+        // para os clientes de e-commerce. O Loom não tem moderação
+        // automática nem monetização a proteger; o resto do curso fica no
+        // YouTube. O vídeo tem de estar partilhado como «anyone with the
+        // link» para o cliente o ver sem conta.
+        // `hideEmbedTopBar` tira a faixa do Loom (título, «0 views», copiar
+        // link, comentários) — num passo de onboarding do cliente aquilo é
+        // chrome de outra app, e o resto do curso não o tem.
+        videoUrl:
+          "https://www.loom.com/embed/91594b6f631f48bc9533164f239254df?hideEmbedTopBar=true&hide_owner=true&hide_share=true&hide_title=true",
         summary: "Ligar o catálogo de produtos para os anúncios Shopping.",
         about: [
           {

@@ -13,6 +13,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.66",
+    date: "2026-08-13",
+    title: "O tutorial do Merchant Center passa para Loom",
+    highlights: [
+      "**🎥 O vídeo do «Acesso ao Google Merchant Center» sai do YouTube e passa a Loom.** O YouTube andava a remover repetidamente aquele tutorial, e cada remoção deixava o passo com um player morto precisamente para os clientes de e-commerce, que são quem precisa dele. É o único vídeo do curso em Loom — o resto fica onde está.",
+      "**🧹 Sem a faixa do Loom.** O embed vai com `hideEmbedTopBar`, por isso não aparece o título, o «0 views», nem os botões de copiar link e comentar — o passo continua a parecer parte do onboarding e não de outra aplicação.",
+    ],
+  },
+  {
     version: "76.65",
     date: "2026-08-13",
     title: "Onboarding do cliente — «Próximo passo» dentro de cada aula",
