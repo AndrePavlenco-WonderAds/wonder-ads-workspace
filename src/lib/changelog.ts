@@ -13,6 +13,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.70",
+    date: "2026-08-13",
+    title: "Retratos do inquérito reenquadrados — e o Vasco entra na lista",
+    highlights: [
+      "**🧑‍💼 Vasco Montez passa a ter cara** na secção «Equipa» do inquérito.",
+      "**🔍 Germano, Mike, Gustavo, Renan e Tiago reenquadrados.** Os recortes estavam demasiado fechados e puxados para baixo — a cara chegava às bordas do círculo e o queixo ficava cortado. Todos foram refeitos com mais margem e a cabeça ao centro.",
+    ],
+  },
+  {
     version: "76.69",
     date: "2026-08-13",
     title: "As caras da equipa no inquérito — e a escala a falar a língua da pergunta",

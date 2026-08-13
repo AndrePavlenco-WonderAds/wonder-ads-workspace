@@ -237,7 +237,11 @@ const TEAM_OPTIONS: NpsMultiOption[] = [
     label: { pt: "Cylas Tee", en: "Cylas Tee" },
     photo: "/team/avatar/cylas.jpg",
   },
-  { value: "vasco-m", label: { pt: "Vasco Montez", en: "Vasco Montez" } },
+  {
+    value: "vasco-m",
+    label: { pt: "Vasco Montez", en: "Vasco Montez" },
+    photo: "/team/avatar/vasco-m.jpg",
+  },
   { value: "joao-c", label: { pt: "João Có", en: "João Có" } },
   {
     value: "tiago-s",
