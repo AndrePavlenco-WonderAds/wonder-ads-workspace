@@ -37,13 +37,8 @@ export default async function AusenciasPage() {
       <header className="animate-fade-up mt-2">
         <p className="readout text-white/35">Recursos Humanos</p>
         <h1 className="mt-1 text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">
-          <span className="brand-gradient-text">Ausências</span>
+          <span className="brand-gradient-text">Pedido de Ausência</span>
         </h1>
-        <p className="mt-2 max-w-[620px] text-[13px] leading-relaxed text-white/50">
-          Pede uma manhã, uma tarde, um dia ou um período até 20 dias. A folha segue
-          diretamente para o C-Level — recebes a resposta no sino da app, e o histórico
-          de tudo o que já pediste fica nesta página.
-        </p>
 
         <div className="mt-6 grid grid-cols-3 gap-3 sm:max-w-[520px]">
           {[

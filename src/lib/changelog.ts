@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.64",
+    date: "2026-08-13",
+    title: "O cabeçalho das Ausências diz o que a página é",
+    highlights: [
+      "**📋 «Pedido de Ausência»** passa a ser o título da página (era «Ausências»), e o parágrafo cinzento por baixo desapareceu — a folha em si já explica tudo o que ele dizia, e sem ele os contadores sobem para o primeiro ecrã.",
+    ],
+  },
+  {
     version: "76.63",
     date: "2026-08-13",
     title: "Ausências — a folha de RH com assinatura manuscrita, aprovação na C-Suite e no Slack",
