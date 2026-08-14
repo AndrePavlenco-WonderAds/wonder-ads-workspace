@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.72",
+    date: "2026-08-14",
+    title: "Aviso antes de colar: o schema tem campos por preencher",
+    highlights: [
+      "**⚠️ A app avisa quando o schema traz valores de exemplo.** Se o JSON-LD ficar com «A PREENCHER», `[NOME DA CLÍNICA]`, `info@example.com`, `+351 000 000 000`, um campo vazio ou um `TBD`, aparece um aviso por cima do resultado com **a lista dos campos em causa** — propriedade, valor e porquê. Colado no site, um valor de exemplo é pior do que uma propriedade em falta: o Google lê-o como dado real do cliente.",
+      "**📌 O aviso persegue-te até ao fim do bloco.** Os schemas são longos e a cópia acontece lá no fundo — por isso, quando o cartão de aviso sai do ecrã, fica uma pílula no canto a lembrar, clicável para voltar à lista (e dispensável se já trataste do assunto).",
+      "**🎯 Só olha para dentro do JSON-LD.** A secção «Missing — client must provide» pode falar à vontade de campos por preencher que isso não dispara nada — o que conta é o que vai ser colado. E números verdadeiros, moradas e preços não são confundidos com marcadores.",
+      "**🚫 E o pedido ao SEO Claude ficou mais duro:** proibido inventar stand-ins. Sem valor real, a propriedade é omitida e vai para a lista do que o cliente tem de fornecer.",
+    ],
+  },
+  {
     version: "76.71",
     date: "2026-08-14",
     title: "O schema sai da app já com a tag <script> — pronto a colar",

@@ -12,6 +12,8 @@ import type { KwCluster } from "@/lib/kw-cluster-parser";
 import { pendingKey } from "./action-runner";
 import { extractAnalysis } from "@/lib/strip-tool-progress";
 import { wrapJsonLdBlocks } from "@/lib/jsonld-script";
+import { findSchemaPlaceholders } from "@/lib/schema-placeholders";
+import { SchemaPlaceholderAlert } from "./schema-placeholder-alert";
 import { MarkdownView } from "./markdown-view";
 import { DomainDashboard } from "./domain-dashboard";
 import { KeywordResearchDashboard } from "./keyword-research-dashboard";
@@ -98,6 +100,15 @@ export function ResultRunner({
   const analysisText = useMemo(
     () => wrapJsonLdBlocks(extractAnalysis(output)),
     [output],
+  );
+
+  // Placeholder / empty values still sitting in the JSON-LD. Only computed
+  // once the run is done — a half-streamed block is full of "incomplete"
+  // values by definition.
+  const schemaPlaceholders = useMemo(
+    () =>
+      status === "generating" ? [] : findSchemaPlaceholders(analysisText),
+    [analysisText, status],
   );
 
   // Auto-trigger print dialog in print mode once content is in.
@@ -563,6 +574,10 @@ export function ResultRunner({
           initialTargetedKeywords={targetedKeywords}
         />
       )}
+
+      {/* Placeholder guard — sits ABOVE the result so it's read before the
+          block is copied. */}
+      <SchemaPlaceholderAlert hits={schemaPlaceholders} />
 
       {/* Output */}
       <article className="brand-gradient-border relative overflow-hidden rounded-2xl bg-white/[0.035] p-5 backdrop-blur-md">

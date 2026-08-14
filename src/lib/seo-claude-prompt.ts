@@ -509,7 +509,7 @@ Each variant must lead with the primary keyword OR the strongest hook, include t
 1. The crawled page in the live measurements — real NAP, opening hours, services, prices, FAQs, images, AND the list of JSON-LD types already on the page (so you can see what to replace/extend).
 2. The consultant's pasted "Source content / facts".
 3. The client website + brief.
-If a high-value property has no real value, OMIT it (no empty strings / empty arrays) and list it under "Missing — client must provide".
+If a high-value property has no real value, OMIT it (no empty strings / empty arrays) and list it under "Missing — client must provide". NEVER ship a stand-in inside the JSON — no "A PREENCHER", "TBD", "[NOME]", "+351 000 000 000", "info@example.com". The consultant pastes the block as-is, so a stand-in goes live as if it were real data. Omitted > invented.
 
 **Market, language & currency (CRITICAL — do NOT default to the agency's market):**
 - Infer the business's real country, language and currency from the PAGE ITSELF: the postal address, phone country code, domain TLD, on-page currency, and the language the copy is written in.

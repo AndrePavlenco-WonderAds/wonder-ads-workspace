@@ -48,6 +48,66 @@ function wrap(indent: string, marker: string, body: string[]): string[] {
   ];
 }
 
+/** Walk the fenced code blocks of a markdown document. `body` excludes the
+ *  fence lines themselves; `startLine` is the 0-based index of the opening
+ *  fence in the original document. */
+function fencedBlocks(
+  markdown: string,
+): { lang: string; body: string[]; startLine: number }[] {
+  const lines = markdown.split("\n");
+  const blocks: { lang: string; body: string[]; startLine: number }[] = [];
+  let i = 0;
+  while (i < lines.length) {
+    const open = OPEN_FENCE.exec(lines[i]);
+    if (!open) {
+      i++;
+      continue;
+    }
+    const [, , marker, lang] = open;
+    const close = new RegExp(`^[ \\t]*${marker[0]}{${marker.length},}[ \\t]*$`);
+    const body: string[] = [];
+    let j = i + 1;
+    while (j < lines.length && !close.test(lines[j])) {
+      body.push(lines[j]);
+      j++;
+    }
+    blocks.push({ lang: lang.toLowerCase(), body, startLine: i });
+    i = j < lines.length ? j + 1 : j;
+  }
+  return blocks;
+}
+
+/** Every JSON-LD payload in a document — both the bare ```json form and the
+ *  wrapped ```html + <script type="application/ld+json"> form. Used by the
+ *  placeholder scanner, which must only look at what actually gets pasted
+ *  onto a client's site (never the surrounding prose). */
+export function jsonLdPayloads(
+  markdown: string,
+): { lines: string[]; startLine: number }[] {
+  if (!markdown || !markdown.includes("@")) return [];
+  const found: { lines: string[]; startLine: number }[] = [];
+  for (const block of fencedBlocks(markdown)) {
+    const text = block.body.join("\n");
+    if (/application\/ld\+json/i.test(text)) {
+      // Wrapped form — keep only what's between the script tags.
+      const open = block.body.findIndex((l) => /<script/i.test(l));
+      const closeIdx = block.body.findIndex((l) => /<\/script>/i.test(l));
+      found.push({
+        lines: block.body.slice(
+          open + 1,
+          closeIdx > open ? closeIdx : block.body.length,
+        ),
+        startLine: block.startLine + open + 2,
+      });
+      continue;
+    }
+    if (looksLikeJsonLd(block.lang, text)) {
+      found.push({ lines: block.body, startLine: block.startLine + 1 });
+    }
+  }
+  return found;
+}
+
 /** Rewrite every bare JSON-LD fenced block in a markdown document so it
  *  includes the <script type="application/ld+json"> wrapper. Everything
  *  else is returned byte-identical. */
