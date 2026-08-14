@@ -15,6 +15,7 @@ import { findAction } from "@/lib/seo-pillars";
 import { getClientBySlug } from "@/lib/notion";
 import { getHistoryEntry, formatDisplayResultId } from "@/lib/action-history";
 import { extractAnalysis } from "@/lib/strip-tool-progress";
+import { wrapJsonLdBlocks } from "@/lib/jsonld-script";
 import {
   getClientLogo,
   getLogoBgMode,
@@ -92,7 +93,7 @@ export default async function ResultPage({
   if (printMode) {
     // Strip the tool-progress blockquote prefix from the analysis without
     // cutting at "---" section rules inside it (see extractAnalysis).
-    const analysisText = extractAnalysis(existing?.output);
+    const analysisText = wrapJsonLdBlocks(extractAnalysis(existing?.output));
     return (
       <PrintLayout
         clientName={client.title}

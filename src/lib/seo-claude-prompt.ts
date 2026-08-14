@@ -149,7 +149,7 @@ ${getActionOutputSpec(action.slug)}
 # Output format
 - Respond in clean Markdown — H2/H3 headings, lists, tables, fenced code blocks where appropriate.
 - Lead with the deliverable. Reasoning goes in a short "Why this works" section at the end if useful — not before.
-- If you would produce code (e.g. JSON-LD), wrap it in a \`\`\`json fenced block.
+- If you would produce code, wrap it in a fenced block. JSON-LD is the exception: always ship it inside \`\`\`html … \`\`\` with the full <script type="application/ld+json"> … </script> tag around the JSON, so it can be pasted straight into a page.
 - Never wrap the whole response in a single code block.
 - Do not greet, do not preface, do not apologise. Get to work.`;
 }
@@ -540,14 +540,14 @@ If a high-value property has no real value, OMIT it (no empty strings / empty ar
 **Validity:** @context "https://schema.org". Strict JSON — no trailing commas, no comments. No duplicate properties. ISO-8601 dates, E.164 phones, ISO-3166 countries, BCP-47 languages, ISO-4217 currency.
 
 **Output, in this exact order — JSON-LD is the product, the rest is a terse appendix:**
-1. The complete JSON-LD inside ONE \`\`\`json fenced block (a single <script type="application/ld+json"> payload; use @graph when multiple entities).
+1. The complete markup inside ONE \`\`\`html fenced block, **wrapped in the script tag exactly as it must ship** — opening \`<script type="application/ld+json">\`, the JSON (use @graph when multiple entities), closing \`</script>\`. Never output the bare JSON: consultants paste what they see, and naked JSON-LD is ignored by Google.
 2. **Detected market** — country / language / currency used + the evidence (address, TLD, phone, copy language).
 3. **Why these types** — one line per top-level @type.
 4. **Coverage vs current** — what the page already had (from the crawl's JSON-LD types) vs what this adds/fixes.
 5. **Missing — client must provide** — high-value properties left unfilled + the exact value needed.
 6. **Opportunities** — e.g. surface reviews on-page to unlock AggregateRating, add an FAQ block, add membership Offers.
 7. **Validation checklist** — confirm: valid JSON · schema.org-valid · which Rich Result type it's eligible for · E.164 phone · ISO dates · no placeholders · no invisible-review markup.
-8. **Deploy** — one line on where to paste it + a reminder to re-test in Google's Rich Results Test.`;
+8. **Deploy** — one line on where to paste it (the block above already includes the \`<script type="application/ld+json">\` tag — paste it whole, into <head> or before </body>) + a reminder to re-test in Google's Rich Results Test.`;
 
     case "content-gap-analysis":
       return `Output two sections:
@@ -623,7 +623,7 @@ End with a one-line note on which variant fits which type of contact.`;
 - **Effort estimate** (S / M / L) + expected impact (one line).`;
 
     case "faq-section-generator":
-      return `Output 6–10 FAQs in clean Markdown. Each Q is a real question users ask (mine PAA / forums / sales conversations). Each A is 40–90 words, leads with a direct answer, and respects the client's Don'ts. After the list, output a \`\`\`json FAQPage schema block ready to drop into the page.`;
+      return `Output 6–10 FAQs in clean Markdown. Each Q is a real question users ask (mine PAA / forums / sales conversations). Each A is 40–90 words, leads with a direct answer, and respects the client's Don'ts. After the list, output the FAQPage schema in a \`\`\`html block, wrapped in \`<script type="application/ld+json">\` … \`</script>\` so it's ready to drop straight into the page.`;
 
     default:
       return `Produce the deliverable in clean, structured Markdown following 2025 SEO best practice.`;

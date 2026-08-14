@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.71",
+    date: "2026-08-14",
+    title: "O schema sai da app já com a tag <script> — pronto a colar",
+    highlights: [
+      "**🏷️ O JSON-LD passa a vir dentro de `<script type=\"application/ld+json\">…</script>`.** A ação **Schema Markup** entregava só o JSON puro; quem implementava colava exatamente aquilo no site e o Google nem sempre reconhecia os dados estruturados, porque sem a tag aquilo não é marcação — é texto. Agora o bloco sai completo, com abertura e fecho, pronto a colar no `<head>`.",
+      "**🛡️ Não depende de o modelo se lembrar.** Além de o pedido ao SEO Claude passar a exigir a tag, a aplicação embrulha automaticamente qualquer bloco de JSON-LD que apareça sem ela — no ecrã do resultado, no PDF, na pré-visualização do cliente e no DOCX. Vale também para **resultados antigos já guardados**: abrem-se e aparecem já com a tag, sem ser preciso gerar de novo.",
+      "**🎯 Só toca no que é schema.** Blocos de JSON normal (configurações, exemplos) e código noutras linguagens ficam intactos, e um bloco que já traga a tag não é embrulhado outra vez.",
+      "**💬 A FAQ também.** O bloco FAQPage no fim do gerador de FAQs sai com a mesma tag.",
+    ],
+  },
+  {
     version: "76.70",
     date: "2026-08-13",
     title: "Retratos do inquérito reenquadrados — e o Vasco entra na lista",

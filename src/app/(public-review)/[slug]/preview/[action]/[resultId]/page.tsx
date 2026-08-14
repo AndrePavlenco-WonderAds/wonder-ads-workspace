@@ -29,6 +29,7 @@ import { PublicReportView } from "@/components/public-report-view";
 import { findReviewItemByDocPath, listReviewItems } from "@/lib/review-store";
 import { CommentsThread } from "@/components/comments-thread";
 import { extractAnalysis } from "@/lib/strip-tool-progress";
+import { wrapJsonLdBlocks } from "@/lib/jsonld-script";
 
 export const dynamic = "force-dynamic";
 
@@ -51,7 +52,7 @@ export default async function PublicActionPreviewPage({
   // Strip the tool-progress blockquote prefix that the runner emits
   // before Claude's analysis — without cutting at "---" section rules
   // inside the analysis itself (see extractAnalysis).
-  const analysisText = extractAnalysis(history.output);
+  const analysisText = wrapJsonLdBlocks(extractAnalysis(history.output));
 
   const logo = getClientLogo(slug);
   const consultantEmail = getConsultantEmailForSlug(slug);

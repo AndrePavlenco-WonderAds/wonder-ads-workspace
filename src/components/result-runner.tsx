@@ -11,6 +11,7 @@ import type { KwResearchPack } from "@/lib/seo-tools/keyword-research";
 import type { KwCluster } from "@/lib/kw-cluster-parser";
 import { pendingKey } from "./action-runner";
 import { extractAnalysis } from "@/lib/strip-tool-progress";
+import { wrapJsonLdBlocks } from "@/lib/jsonld-script";
 import { MarkdownView } from "./markdown-view";
 import { DomainDashboard } from "./domain-dashboard";
 import { KeywordResearchDashboard } from "./keyword-research-dashboard";
@@ -91,8 +92,13 @@ export function ResultRunner({
 
   // The result card should only show the analysis, not the tool-progress
   // blockquotes — those are transient build output. The separator (`---`)
-  // emitted by the API marks the boundary.
-  const analysisText = useMemo(() => extractAnalysis(output), [output]);
+  // emitted by the API marks the boundary. JSON-LD blocks get their
+  // <script type="application/ld+json"> wrapper here so what the consultant
+  // copies is what the site needs (see wrapJsonLdBlocks).
+  const analysisText = useMemo(
+    () => wrapJsonLdBlocks(extractAnalysis(output)),
+    [output],
+  );
 
   // Auto-trigger print dialog in print mode once content is in.
   useEffect(() => {

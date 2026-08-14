@@ -19,6 +19,7 @@ import { findAction } from "@/lib/seo-pillars";
 import { getClientBySlug } from "@/lib/notion";
 import { getHistoryEntry, formatDisplayResultId } from "@/lib/action-history";
 import { extractAnalysis } from "@/lib/strip-tool-progress";
+import { wrapJsonLdBlocks } from "@/lib/jsonld-script";
 import {
   getConsultantForSlug,
   getConsultantEmailForSlug,
@@ -62,7 +63,7 @@ export async function GET(
 
   // Strip the tool-progress blockquote prefix from the analysis without
   // cutting at "---" section rules inside it (see extractAnalysis).
-  const analysisText = extractAnalysis(existing.output);
+  const analysisText = wrapJsonLdBlocks(extractAnalysis(existing.output));
 
   const coverBlocks: Paragraph[] = [
     new Paragraph({
