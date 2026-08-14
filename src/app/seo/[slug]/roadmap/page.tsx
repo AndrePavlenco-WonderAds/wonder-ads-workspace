@@ -6,7 +6,6 @@ import { LogoChip } from "@/components/logo-chip";
 import { RoadmapBoard } from "@/components/roadmap-board";
 import { RoadmapChangelog } from "@/components/roadmap-changelog";
 import { SendToReviewButton } from "@/components/send-to-review-button";
-import { WeeklyUpdateButton } from "@/components/weekly-update-button";
 import { getClientBySlug } from "@/lib/notion";
 import {
   getClientLogo,
@@ -104,9 +103,13 @@ export default async function RoadmapPage({
             </h1>
           </div>
         </div>
+        {/* O «Gerar Weekly Report» viveu aqui até à v76.73. Saiu para o menu
+            do consultor: o weekly report é trabalho semanal dele sobre a
+            carteira toda, feito de uma sentada a partir dos daily updates —
+            não é uma ação sobre este cliente, e ter o botão em cada roadmap
+            sugeria o contrário. */}
         {!readOnly && roadmap.tasks.length > 0 && (
           <div className="flex flex-wrap items-center gap-2">
-            <WeeklyUpdateButton clientName={client.title} />
             <SendToReviewButton
               variant="default"
               clientSlug={slug}

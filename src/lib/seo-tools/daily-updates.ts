@@ -32,13 +32,21 @@ export type DailyBlock = {
   text: string;
 };
 
+/** Como é que o nome escrito no daily update foi parar a este cliente.
+ *  `fuzzy` é o único que envolveu adivinhar — a UI avisa nesse caso. */
+export type MatchVia = "exact" | "slug" | "compact" | "prefix" | "fuzzy" | null;
+
 export type ParsedClientWork = {
   /** Nome tal como escrito no daily update ("Kings Gym"). */
   rawName: string;
+  /** Todas as grafias com que este cliente apareceu na semana. */
+  rawNames: string[];
   /** Slug resolvido contra a carteira SEO, ou null se não bater com ninguém. */
   slug: string | null;
   /** Título oficial do cliente quando resolvido. */
   title: string;
+  /** Como se lá chegou — ver MatchVia. */
+  via: MatchVia;
   /** Uma entrada por tarefa, com o dia em que apareceu. */
   items: { day: string; text: string }[];
 };
@@ -60,6 +68,49 @@ function fold(s: string): string {
     .trim();
 }
 
+/** Como `fold`, mas também sem espaços. É isto que faz «A. Domingos»,
+ *  «a.domingos» e «Adomingos» serem a mesma coisa: a diferença entre elas é
+ *  só pontuação e espaços, que não são informação nenhuma sobre QUEM é o
+ *  cliente. */
+function foldCompact(s: string): string {
+  return fold(s).replace(/ /g, "");
+}
+
+/** Distância de edição com teto: pára assim que passa de `max`.
+ *
+ *  Serve para o caso do consultor que escreve «admingos» em vez de
+ *  «adomingos» — uma letra a menos, à pressa, no meio de um daily update. */
+function editDistanceWithin(a: string, b: string, max: number): number | null {
+  if (Math.abs(a.length - b.length) > max) return null;
+  let prev = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    const cur = [i];
+    let rowMin = i;
+    for (let j = 1; j <= b.length; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      const v = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + cost);
+      cur.push(v);
+      if (v < rowMin) rowMin = v;
+    }
+    // Nenhuma célula desta linha está dentro do teto → o resultado final
+    // também não vai estar. Sai já.
+    if (rowMin > max) return null;
+    prev = cur;
+  }
+  const d = prev[b.length];
+  return d <= max ? d : null;
+}
+
+/** Quantos erros se toleram num nome deste tamanho. Um nome curto não tem
+ *  folga nenhuma: em «Ana» vs «Ema» a distância é 1 e são pessoas
+ *  diferentes. */
+function tolerance(len: number): number {
+  if (len <= 5) return 0;
+  if (len <= 9) return 1;
+  if (len <= 15) return 2;
+  return 3;
+}
+
 /** Uma linha é nome de cliente quando acaba em ":" e não é um cabeçalho nem
  *  um bullet. Limita-se o comprimento porque uma frase inteira acabada em
  *  dois pontos é uma frase, não um cliente. */
@@ -77,35 +128,73 @@ function clientNameFrom(line: string): string | null {
 
 /** Resolve o nome escrito no daily update contra a carteira SEO.
  *
- *  Três tentativas, da mais estrita para a mais lassa: igualdade dobrada,
- *  slug igual, e prefixo (é o que apanha "Kings Gym" → "Kings Gyms" e
- *  "Sentir Saude" → "Sentir Saúde"). Não se inventa correspondência por
- *  semelhança vaga: um cliente errado numa mensagem que vai para o WhatsApp
- *  do cliente certo é pior do que um cliente por resolver. */
+ *  O daily update é escrito à pressa, no fim do dia, no telemóvel. O mesmo
+ *  cliente aparece como «A. Domingos» à segunda, «Adomingos» à terça e
+ *  «admingos» à quarta — e é o mesmo cliente. Uma app que só percebe a
+ *  primeira grafia obriga o consultor a escrever bonito para a máquina, e
+ *  parte a semana em três clientes que não existem.
+ *
+ *  Cinco tentativas, da mais estrita para a mais lassa:
+ *    1. igualdade (sem acentos nem pontuação)
+ *    2. slug igual
+ *    3. igualdade COMPACTA — sem espaços: apanha «a.domingos» = «A Domingos»
+ *    4. prefixo — apanha «Kings Gym» → «Kings Gyms»
+ *    5. aproximada — até N erros de escrita, N conforme o tamanho do nome
+ *
+ *  REGRA QUE NÃO SE QUEBRA: qualquer passo só conta quando aponta para UM
+ *  cliente. Dois candidatos empatados = não se sabe qual é, e fica por
+ *  resolver. Uma mensagem no WhatsApp do cliente errado, com o trabalho de
+ *  outro cliente lá dentro, é pior do que um cartão amarelo a pedir
+ *  confirmação. */
 export function resolveClientName(
   rawName: string,
   roster: { slug: string; title: string }[],
-): { slug: string | null; title: string } {
+): { slug: string | null; title: string; via: MatchVia } {
   const target = fold(rawName);
-  if (!target) return { slug: null, title: rawName };
+  if (!target) return { slug: null, title: rawName, via: null };
 
   const exact = roster.find((c) => fold(c.title) === target);
-  if (exact) return { slug: exact.slug, title: exact.title };
+  if (exact) return { slug: exact.slug, title: exact.title, via: "exact" };
 
   const bySlug = roster.find((c) => c.slug === slugify(rawName));
-  if (bySlug) return { slug: bySlug.slug, title: bySlug.title };
+  if (bySlug) return { slug: bySlug.slug, title: bySlug.title, via: "slug" };
+
+  const compactTarget = foldCompact(rawName);
+  const compact = roster.filter((c) => foldCompact(c.title) === compactTarget);
+  if (compact.length === 1) {
+    return { slug: compact[0].slug, title: compact[0].title, via: "compact" };
+  }
 
   const prefix = roster.filter((c) => {
     const t = fold(c.title);
     return t.startsWith(target) || target.startsWith(t);
   });
-  // Só se aceita prefixo quando ele identifica UMA pessoa. Dois candidatos
-  // significa que não se sabe qual é — e adivinhar aqui é grave.
   if (prefix.length === 1) {
-    return { slug: prefix[0].slug, title: prefix[0].title };
+    return { slug: prefix[0].slug, title: prefix[0].title, via: "prefix" };
   }
 
-  return { slug: null, title: rawName };
+  // Aproximado, sobre as formas compactas. Guarda-se o melhor E o segundo
+  // melhor: se estiverem à mesma distância, há empate e não se escolhe.
+  const max = tolerance(compactTarget.length);
+  if (max > 0) {
+    let best: { slug: string; title: string; d: number } | null = null;
+    let runnerUp = Infinity;
+    for (const c of roster) {
+      const d = editDistanceWithin(compactTarget, foldCompact(c.title), max);
+      if (d === null) continue;
+      if (!best || d < best.d) {
+        if (best) runnerUp = best.d;
+        best = { slug: c.slug, title: c.title, d };
+      } else if (d < runnerUp) {
+        runnerUp = d;
+      }
+    }
+    if (best && best.d < runnerUp) {
+      return { slug: best.slug, title: best.title, via: "fuzzy" };
+    }
+  }
+
+  return { slug: null, title: rawName, via: null };
 }
 
 /** Lê os blocos de daily update e devolve o trabalho agrupado por cliente,
@@ -141,13 +230,21 @@ export function parseDailyUpdates(
       if (!text) continue;
 
       const resolved = resolveClientName(current, roster);
-      const key = resolved.slug ?? `raw:${fold(current)}`;
+      // Chave do grupo: o slug quando resolveu. Quando não resolveu, a forma
+      // COMPACTA do nome cru — assim «Xpto Lda» e «Xpto Lda.» continuam a ser
+      // um cliente só, mesmo sem estarem na carteira.
+      const key = resolved.slug ?? `raw:${foldCompact(current)}`;
       const entry = byKey.get(key) ?? {
         rawName: current,
+        rawNames: [],
         slug: resolved.slug,
         title: resolved.title,
+        via: resolved.via,
         items: [],
       };
+      // Guardam-se todas as grafias da semana: é isso que a UI mostra quando
+      // diz «lido como», e é a prova de que a app juntou o que devia juntar.
+      if (!entry.rawNames.includes(current)) entry.rawNames.push(current);
       entry.items.push({ day: block.label, text });
       byKey.set(key, entry);
     }

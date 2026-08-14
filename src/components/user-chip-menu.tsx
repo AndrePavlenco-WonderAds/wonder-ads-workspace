@@ -17,6 +17,7 @@ import {
   LayoutDashboard,
   Loader2,
   LogOut,
+  MessageCircle,
   UserCircle2,
   Users,
 } from "lucide-react";
@@ -34,6 +35,7 @@ export function UserChipMenu({
   role,
   dept,
   isAdmin = false,
+  canWeeklyReports = false,
   expiresLabel,
   canImpersonate = false,
   realName,
@@ -45,6 +47,8 @@ export function UserChipMenu({
   dept: string;
   /** SuperAdmin (Andre / Alex / Alice) — vê a área de Superadmin da Formação. */
   isAdmin?: boolean;
+  /** Quem edita SEO vê o estúdio de Weekly Reports no menu. */
+  canWeeklyReports?: boolean;
   /** Pre-formatted "X days" / "Yh" — server picks the granularity. */
   expiresLabel: string;
   /** Quem FEZ LOGIN é SuperAdmin — só esses veem o «Ver como». */
@@ -245,6 +249,22 @@ export function UserChipMenu({
                 </div>
               )}
             </>
+          )}
+          {/* Weekly Reports — trabalho semanal do consultor sobre a carteira
+              toda, não uma ação sobre um cliente. Viveu no roadmap de cada
+              cliente até à v76.73, o que sugeria o contrário e obrigava a
+              procurá-lo dentro de um cliente qualquer. Só para quem edita SEO;
+              a página volta a verificar no servidor. */}
+          {canWeeklyReports && (
+            <Link
+              href="/seo/weekly-reports"
+              role="menuitem"
+              onMouseDown={(e) => e.preventDefault()}
+              className="flex w-full items-center gap-2 border-b border-white/8 px-4 py-2.5 text-left text-[12px] font-medium text-white/75 transition hover:bg-white/[0.06] hover:text-white"
+            >
+              <MessageCircle className="h-3.5 w-3.5 text-[color:var(--brand-purple)]" />
+              Weekly Reports
+            </Link>
           )}
           {/* Pedir Ausência — para TODA a gente com sessão: a folha de RH e
               o histórico dos próprios pedidos vivem em /ausencias. */}

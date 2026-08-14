@@ -13,6 +13,21 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.73",
+    date: "2026-08-14",
+    title: "Weekly Reports: saiu dos roadmaps, entrou no teu menu — e agora vê-se a semana virar mensagem",
+    highlights: [
+      "**📍 Mudou de sítio.** O «Gerar Weekly Report» vivia no roadmap de cada cliente, o que sugeria que era uma ação sobre aquele cliente. Não é: é trabalho **teu**, semanal, sobre a carteira toda, feito de uma sentada. Passou para o **menu do teu utilizador** (o chip do canto), ao lado da Formação e do Pedir Ausência. Quem não edita SEO não o vê.",
+      "**✍️ O molde deixou de ser um pedido e passou a ser código.** A saudação, o `✅ O que foi feito esta semana`, o `📅 Na próxima semana` e o fecho são montados pela app — sempre iguais, semana após semana. Ao modelo fica só o que ele faz bem: traduzir «instalado plugin de tradução» para o benefício que o cliente percebe. Um molde pedido por prompt acerta quase sempre; «quase sempre» numa mensagem que vai para um cliente que paga não chega.",
+      "**🇬🇧 O cliente inglês recebe em inglês.** A língua sai do mercado configurado do cliente (IHN, Kings Gyms, Insync…), texto fixo incluído: «Good afternoon! / Here is this week's status update (SEO)». Mandar «Boa tarde!» a um ginásio de Londres era mandar-lhe a mensagem de outro cliente.",
+      "**🔤 O mesmo cliente escrito de três maneiras passa a ser um cliente.** «A. Domingos» à segunda, «Adomingos» à terça, «admingos» à quarta — a app junta tudo. Ignora pontuação, espaços e acentos, e tolera erros de escrita conforme o tamanho do nome. **Nunca adivinha entre dois candidatos parecidos** (aí fica por resolver, a amarelo) e, quando aproximou, **diz-te no cartão o que leu e o que assumiu**.",
+      "**🎬 A página mostra o que a app está a fazer.** Uma calha com as quatro etapas reais — dias colados → clientes agrupados → roadmaps lidos → mensagens escritas — cada uma com o seu número. O agrupamento aparece em **menos de um segundo** (não gasta modelo nenhum), por isso um nome que não bate com a carteira salta à vista **antes** de se escrever seja o que for.",
+      "**💬 A prévia é uma bolha de WhatsApp a sério.** Verde, com hora e os dois visos — porque a única pergunta antes de enviar é «isto lê-se bem no grupo?», e uma caixa de texto cinzenta não responde a isso. O que está na bolha é exatamente o que o botão «Copiar» põe na área de transferência. Dá para editar antes de copiar, e repor a versão original.",
+      "**🧵 Cada cliente é independente.** Uma chamada por cliente, três ao mesmo tempo: o cartão fica pronto quando fica, uma falha não arrasta os outros, e regenerar um cliente já não obriga a regenerar a carteira toda.",
+      "**🧹 Duas rotas mortas removidas** — o gerador antigo por cliente (que lia o roadmap, ou seja, o que estava *planeado*, e não o que foi *feito*) e o endpoint monolítico que o estúdio já não usava.",
+    ],
+  },
+  {
     version: "76.72",
     date: "2026-08-14",
     title: "Aviso antes de colar: o schema tem campos por preencher",

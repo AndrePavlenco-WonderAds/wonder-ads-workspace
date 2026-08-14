@@ -18,6 +18,7 @@ import {
   readSession,
 } from "@/lib/auth/session";
 import {
+  canEditDept,
   getEmployeeDisplay,
   isAdminUsername,
   listImpersonationTargets,
@@ -55,6 +56,10 @@ export async function UserChip() {
       role={display.role}
       dept={display.dept}
       isAdmin={display.isAdmin}
+      // Quem edita SEO tem o estúdio de Weekly Reports no menu. Segue a
+      // pessoa que está a ser VISTA, como o resto do chip: com lente ativa,
+      // o menu tem de parecer o dela.
+      canWeeklyReports={canEditDept(viewingUsername, "seo")}
       expiresLabel={expiresLabel}
       canImpersonate={realIsAdmin}
       realName={realDisplay?.name ?? session.u}
