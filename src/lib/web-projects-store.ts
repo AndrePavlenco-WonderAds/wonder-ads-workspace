@@ -276,7 +276,14 @@ export const DEADLINE_DENIAL_MESSAGE: Record<DeadlineDenial, string> = {
 
 /** Diz se o payload tenta mexer na data sem ter direito a isso. Devolve
  *  `null` quando o write é legítimo — incluindo o caso mais comum, em que
- *  a data vem igual à guardada e portanto não há alteração nenhuma. */
+ *  a data vem igual à guardada e portanto não há alteração nenhuma.
+ *
+ *  UM PAYLOAD SEM O CAMPO NÃO ESTÁ A MEXER NA DATA (v76.75). Os PATCH
+ *  parciais dos tickets — o board a mover um card manda só `{status}` —
+ *  não trazem `deadline` nenhum, e ler essa ausência como «limpar a data»
+ *  fazia qualquer card COM data de entrega ficar impossível de mover por
+ *  quem não é SuperAdmin. A tranca é sobre quem tenta ESCREVER a data,
+ *  não sobre quem lhe passa ao lado. */
 export function deadlineWriteDenial(
   payload: unknown,
   // Só se lê `prev.deadline` — por isso o parâmetro aceita qualquer coisa
@@ -287,6 +294,7 @@ export function deadlineWriteDenial(
   rights: WebDeliveryRights,
 ): DeadlineDenial | null {
   const o = (payload ?? {}) as Record<string, unknown>;
+  if (!("deadline" in o)) return null;
   const requested = isoOrNull(o.deadline);
   const current = prev?.deadline ?? null;
   if (requested === current) return null;
@@ -312,6 +320,10 @@ function resolveDeadline(
     deadlineSetByName: prev?.deadlineSetByName ?? null,
     deadlineSetAt: prev?.deadlineSetAt ?? null,
   };
+
+  // Payload sem o campo = ninguém mexeu na data. Sem isto, um PUT parcial
+  // de um SuperAdmin limpava (e destrancava) a data em silêncio.
+  if (!("deadline" in o)) return keep;
 
   const requested = isoOrNull(o.deadline);
   if (requested === current) return keep;

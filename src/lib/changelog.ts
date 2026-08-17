@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.75",
+    date: "2026-08-17",
+    title: "Web: cards com data de entrega voltam a poder mudar de coluna",
+    highlights: [
+      "**🐛 Mover um ticket COM data de entrega dava «Não foi possível mover o ticket».** O board move cards mandando só o novo estado, sem o campo da data — e a tranca da entrega prevista lia essa ausência como uma tentativa de *limpar* a data, recusando o movimento a toda a gente exceto SuperAdmins. Cards sem data nunca tropeçavam nisto, por isso pareciam «normais».",
+      "**🔒 A tranca em si não mudou nada.** Um payload que não traz o campo da data não está a mexer nela — é só isso que a regra passou a dizer. Escrever a data continua write-once (departamento Web põe, só SuperAdmin corrige ou limpa), e reenviar a mesma data continua a passar.",
+      "**🧯 De caminho, fechou-se um buraco simétrico nos projetos:** um update parcial vindo de um SuperAdmin limpava (e destrancava) a data em silêncio, porque a ausência do campo também era lida como «limpar». Agora mantém-na.",
+    ],
+  },
+  {
     version: "76.74",
     date: "2026-08-17",
     title: "Weekly Reports: a tua carteira manda — uma mensagem por cliente teu, sempre",
