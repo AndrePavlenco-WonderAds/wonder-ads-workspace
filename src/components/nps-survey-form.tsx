@@ -487,7 +487,12 @@ function OptionRow({
       onClick={onClick}
       aria-pressed={on}
       disabled={disabled && !on}
-      className="group flex items-center gap-3 rounded-xl border px-3.5 py-3 text-left text-sm transition-all duration-200 hover:-translate-y-[1px] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:translate-y-0"
+      // Numa lista de pessoas o cartão agarra-se ao retrato: com o mesmo
+      // px-3.5 py-3 das opções de texto, a foto de 80px ficava a nadar em
+      // branco e a lista da equipa esticava-se por dois ecrãs.
+      className={`group flex items-center border text-left text-sm transition-all duration-200 hover:-translate-y-[1px] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:translate-y-0 ${
+        person ? "gap-2.5 rounded-[14px] p-1" : "gap-3 rounded-xl px-3.5 py-3"
+      }`}
       style={{
         borderColor: on ? "transparent" : "rgba(0,0,0,0.12)",
         background: on ? "rgba(120,61,245,0.07)" : "#fff",
@@ -543,7 +548,7 @@ function OptionRow({
           {on && (
             <span
               aria-hidden
-              className="nps-pop absolute -bottom-1 -right-1 flex h-[20px] w-[20px] items-center justify-center rounded-full border-2 border-white"
+              className="nps-pop absolute -bottom-0.5 -right-0.5 flex h-[20px] w-[20px] items-center justify-center rounded-full border-2 border-white"
               style={{ background: BRAND_GRADIENT }}
             >
               <Check className="h-3 w-3 text-white" strokeWidth={4} />
@@ -650,7 +655,7 @@ function MultiChoice({
           {q.hint[lang]}
         </p>
       )}
-      <div className="flex flex-col gap-2">
+      <div className={`flex flex-col ${isPeople ? "gap-1.5" : "gap-2"}`}>
         {q.options.map((o, i) => {
           const on = selected.includes(o.value);
           return (

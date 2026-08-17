@@ -13,6 +13,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.78",
+    date: "2026-08-17",
+    title: "NPS: os cartões da equipa agarrados ao retrato",
+    highlights: [
+      "**📏 Cartão colado à foto (12px → 4px de margem) e 6px entre cartões, em vez de 8px.** A foto fica do mesmo tamanho — o que desapareceu foi o branco à volta dela, que fazia cada linha ocupar 114px de altura para mostrar um retrato de 80px. A lista da equipa encurtou ~16% sem perder um pixel de foto.",
+      "**As restantes perguntas de escolha múltipla ficaram como estavam** — só as listas de pessoas apertaram; um `A`/`B` de 20px dentro de uma caixa de 4px de margem ficava esmagado.",
+    ],
+  },
+  {
     version: "76.77",
     date: "2026-08-17",
     title: "NPS: a lista da equipa passou a retratos de corpo, maiores",
