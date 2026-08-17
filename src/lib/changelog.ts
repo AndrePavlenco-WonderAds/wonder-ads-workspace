@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.77",
+    date: "2026-08-17",
+    title: "NPS: a lista da equipa passou a retratos de corpo, maiores",
+    highlights: [
+      "**🖼️ Adeus círculos: agora é retrato 3:4 (60×80).** O círculo só deixava ver a cara; a caixa nova mostra cabeça e tronco, com um zoom out para se ver a foto e não só um recorte dela. Área visível quase triplicou face ao círculo de 48px.",
+      "**📐 O enquadramento é uma regra, não é a olho.** Cada retrato é cortado com a cabeça a 40% da altura e a mesma folga por cima, por isso ninguém aparece maior ou mais em cima do que os colegas — a régua está em `scripts/crop-team-avatars.py`, com as medidas de cada pessoa, para a próxima foto ser duas linhas.",
+      "**📸 Novas nesta volta:** Cylas Tee, Tiago Silveira e Gustavo Rotini estreiam retrato de estúdio, e o Vasco Montez trocou pela versão de frente. Germano Cunha continua com o retrato antigo do site (quadrado, cortado pelos lados) até posar.",
+      "**🙂 Nos ecrãs de avaliar cada pessoa o círculo ficou** — mas encostado ao topo da foto, senão o corte central de um retrato de corpo apanhava-lhes o peito em vez da cara.",
+    ],
+  },
+  {
     version: "76.76",
     date: "2026-08-17",
     title: "NPS: retratos de estúdio e caras ao tamanho de se reconhecerem",

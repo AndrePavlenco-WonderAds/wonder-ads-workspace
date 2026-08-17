@@ -341,7 +341,13 @@ function PersonBadge({
         width={size}
         height={size}
         className="shrink-0 rounded-full border border-black/10 bg-white object-cover"
-        style={{ width: size, height: size }}
+        style={{
+          width: size,
+          height: size,
+          // Os retratos são 3:4 (cabeça e tronco). Num círculo, o corte
+          // centrado dava no peito — encostar ao topo põe a cara na moldura.
+          objectPosition: "center top",
+        }}
       />
     );
   }
@@ -446,10 +452,12 @@ function PersonOpen({
   );
 }
 
-/** Diâmetro do retrato na lista da equipa. Uma cara só se reconhece a partir
- *  de um certo tamanho — abaixo disto o cliente lê o nome e ignora a foto,
- *  que é precisamente o contrário do que a lista com caras serve. */
-const AVATAR = 48;
+/** Retrato na lista da equipa: retângulo 3:4, não círculo. Os ficheiros em
+ *  `public/team/avatar/` são 300×400 com a cabeça a ~40% da altura, ou seja
+ *  cabeça e tronco — um círculo cortava-lhes tudo menos a cara. Manter o
+ *  mesmo rácio da imagem para não haver corte nenhum na caixa. */
+const AVATAR_W = 60;
+const AVATAR_H = 80;
 
 function OptionRow({
   on,
@@ -496,16 +504,16 @@ function OptionRow({
               src={person.photo}
               alt={person.name}
               loading="lazy"
-              width={AVATAR}
-              height={AVATAR}
-              className={`rounded-full border-2 bg-white object-cover transition-all duration-200 ${
+              width={AVATAR_W}
+              height={AVATAR_H}
+              className={`rounded-[10px] border-2 bg-white object-cover transition-all duration-200 ${
                 on
                   ? "border-[#783DF5]"
                   : "border-black/15 group-hover:border-black/25"
               }`}
               style={{
-                width: AVATAR,
-                height: AVATAR,
+                width: AVATAR_W,
+                height: AVATAR_H,
                 // Sem dessaturar: a foto de quem ainda não foi escolhido tem
                 // de estar tão legível como a dos escolhidos, senão o cliente
                 // decide sobre caras esbatidas.
@@ -517,14 +525,14 @@ function OptionRow({
           ) : (
             <span
               aria-hidden
-              className={`flex items-center justify-center rounded-full border-2 font-bold text-white transition-all duration-200 ${
+              className={`flex items-center justify-center rounded-[10px] border-2 font-bold text-white transition-all duration-200 ${
                 on ? "border-[#783DF5]" : "border-transparent"
               }`}
               style={{
                 background: BRAND_GRADIENT,
-                width: AVATAR,
-                height: AVATAR,
-                fontSize: AVATAR * 0.38,
+                width: AVATAR_W,
+                height: AVATAR_H,
+                fontSize: AVATAR_W * 0.4,
               }}
             >
               {person.name.trim().charAt(0).toUpperCase()}
@@ -535,7 +543,7 @@ function OptionRow({
           {on && (
             <span
               aria-hidden
-              className="nps-pop absolute -bottom-0.5 -right-0.5 flex h-[18px] w-[18px] items-center justify-center rounded-full border-2 border-white"
+              className="nps-pop absolute -bottom-1 -right-1 flex h-[20px] w-[20px] items-center justify-center rounded-full border-2 border-white"
               style={{ background: BRAND_GRADIENT }}
             >
               <Check className="h-3 w-3 text-white" strokeWidth={4} />
