@@ -208,10 +208,22 @@ export type NpsSectionDef = {
 // aqui a cada leitura (`personLabel`), por isso mudar um label acerta também
 // o histórico; mudar um `value` deixava as respostas antigas órfãs.
 const TEAM_OPTIONS: NpsMultiOption[] = [
-  { value: "andre-pereira", label: { pt: "André Pereira", en: "André Pereira" } },
+  {
+    value: "andre-pereira",
+    label: { pt: "André Pereira", en: "André Pereira" },
+    photo: "/team/avatar/andre-pereira.jpg",
+  },
   { value: "manuel-s", label: { pt: "Manuel Silva", en: "Manuel Silva" } },
-  { value: "fran-r", label: { pt: "Fran. Rosa", en: "Fran. Rosa" } },
-  { value: "joao-b", label: { pt: "João Batista", en: "João Batista" } },
+  {
+    value: "fran-r",
+    label: { pt: "Fran. Rosa", en: "Fran. Rosa" },
+    photo: "/team/avatar/fran-r.jpg",
+  },
+  {
+    value: "joao-b",
+    label: { pt: "João Batista", en: "João Batista" },
+    photo: "/team/avatar/joao-b.jpg",
+  },
   {
     value: "germano-c",
     label: { pt: "Germano Cunha", en: "Germano Cunha" },

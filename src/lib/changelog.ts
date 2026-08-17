@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.76",
+    date: "2026-08-17",
+    title: "NPS: retratos de estúdio e caras ao tamanho de se reconhecerem",
+    highlights: [
+      "**📸 Sessão de estúdio no formulário.** Fran. Rosa, João Batista e André Pereira passaram a ter retrato (antes eram só uma letra), e André Pavlenco, Vasco Montez, Mike Nobre, Renan Alves, Alex Pavlenco e Alice Santos trocaram a foto antiga pela nova. Todas cortadas ao mesmo enquadramento — cabeça centrada, mesma folga por cima — para a lista não parecer uma colagem.",
+      "**🔍 A cara ficou maior e mais nítida (38px → 48px).** E deixou de sair dessaturada quando ainda não está escolhida: o cliente decidia sobre caras esbatidas, que é o contrário do que uma lista com fotos serve. Ganhou também uma sombra leve, para os retratos de fundo escuro se separarem do cartão branco.",
+      "**🔤 Quem ainda não tem retrato aparece com a inicial no mesmo círculo grande** (Manuel Silva, João Có) em vez da letra posicional minúscula — um «B» ou um «K» ao lado de caras não dizia nada a quem está a responder.",
+    ],
+  },
+  {
     version: "76.75",
     date: "2026-08-17",
     title: "Web: cards com data de entrega voltam a poder mudar de coluna",

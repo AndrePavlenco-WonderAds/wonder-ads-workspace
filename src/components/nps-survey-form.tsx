@@ -446,6 +446,11 @@ function PersonOpen({
   );
 }
 
+/** Diâmetro do retrato na lista da equipa. Uma cara só se reconhece a partir
+ *  de um certo tamanho — abaixo disto o cliente lê o nome e ignora a foto,
+ *  que é precisamente o contrário do que a lista com caras serve. */
+const AVATAR = 48;
+
 function OptionRow({
   on,
   onClick,
@@ -454,8 +459,7 @@ function OptionRow({
   square,
   children,
   note,
-  photo,
-  photoAlt,
+  person,
 }: {
   on: boolean;
   onClick: () => void;
@@ -464,9 +468,10 @@ function OptionRow({
   square: boolean;
   children: React.ReactNode;
   note?: string;
-  /** Retrato da pessoa — substitui a letra/caixa na lista da equipa. */
-  photo?: string | null;
-  photoAlt?: string;
+  /** Lista de pessoas: retrato (ou a inicial, para quem ainda não tem foto)
+   *  em vez da letra/caixa. Toda a lista fica com o mesmo peso visual — uma
+   *  letra posicional («B», «K») ao lado de caras não diz nada ao cliente. */
+  person?: { photo?: string | null; name: string };
 }) {
   return (
     <button
@@ -483,29 +488,57 @@ function OptionRow({
           : "0 1px 2px rgba(0,0,0,0.03)",
       }}
     >
-      {photo ? (
+      {person ? (
         <span className="relative shrink-0">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={photo}
-            alt={photoAlt ?? ""}
-            loading="lazy"
-            width={38}
-            height={38}
-            className={`h-[38px] w-[38px] rounded-full border-2 bg-white object-cover transition-all duration-200 ${
-              on ? "border-[#783DF5]" : "border-black/10 group-hover:border-black/20"
-            }`}
-            style={{ filter: on ? "none" : "saturate(0.9)" }}
-          />
+          {person.photo ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={person.photo}
+              alt={person.name}
+              loading="lazy"
+              width={AVATAR}
+              height={AVATAR}
+              className={`rounded-full border-2 bg-white object-cover transition-all duration-200 ${
+                on
+                  ? "border-[#783DF5]"
+                  : "border-black/15 group-hover:border-black/25"
+              }`}
+              style={{
+                width: AVATAR,
+                height: AVATAR,
+                // Sem dessaturar: a foto de quem ainda não foi escolhido tem
+                // de estar tão legível como a dos escolhidos, senão o cliente
+                // decide sobre caras esbatidas.
+                boxShadow: on
+                  ? "0 6px 14px -8px rgba(120,61,245,0.65)"
+                  : "0 3px 8px -4px rgba(0,0,0,0.3)",
+              }}
+            />
+          ) : (
+            <span
+              aria-hidden
+              className={`flex items-center justify-center rounded-full border-2 font-bold text-white transition-all duration-200 ${
+                on ? "border-[#783DF5]" : "border-transparent"
+              }`}
+              style={{
+                background: BRAND_GRADIENT,
+                width: AVATAR,
+                height: AVATAR,
+                fontSize: AVATAR * 0.38,
+              }}
+            >
+              {person.name.trim().charAt(0).toUpperCase()}
+            </span>
+          )}
           {/* O visto encostado à foto — sem ele, uma lista de caras não diz
               quais estão escolhidas a quem não vê a cor de fundo. */}
           {on && (
             <span
               aria-hidden
-              className="nps-pop absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full border-2 border-white"
+              className="nps-pop absolute -bottom-0.5 -right-0.5 flex h-[18px] w-[18px] items-center justify-center rounded-full border-2 border-white"
               style={{ background: BRAND_GRADIENT }}
             >
-              <Check className="h-2.5 w-2.5 text-white" strokeWidth={4} />
+              <Check className="h-3 w-3 text-white" strokeWidth={4} />
             </span>
           )}
         </span>
@@ -598,6 +631,10 @@ function MultiChoice({
   otherPlaceholder: string;
 }) {
   const atMax = q.max !== undefined && selected.length >= q.max;
+  // Lista de pessoas: basta uma opção com retrato para a pergunta inteira
+  // passar a mostrar caras (e iniciais para quem não tem foto) em vez de
+  // letras posicionais.
+  const isPeople = q.options.some((o) => o.photo);
   return (
     <div>
       {q.hint && (
@@ -615,9 +652,10 @@ function MultiChoice({
                 onClick={() => onToggle(o.value)}
                 disabled={atMax}
                 square={!q.lettered}
-                badge={q.lettered ? LETTERS[i] : undefined}
-                photo={o.photo}
-                photoAlt={o.label[lang]}
+                badge={q.lettered && !isPeople ? LETTERS[i] : undefined}
+                person={
+                  isPeople ? { photo: o.photo, name: o.label[lang] } : undefined
+                }
               >
                 {o.label[lang]}
               </OptionRow>
