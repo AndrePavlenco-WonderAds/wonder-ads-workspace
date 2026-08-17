@@ -33,6 +33,10 @@ type Scaffold = {
   nextHeading: string;
   signoff: string;
   thanks: string;
+  /** Bullet neutro quando os daily updates não trouxeram trabalho deste
+   *  cliente — a mensagem sai na mesma (a carteira manda no número de
+   *  mensagens), mas sem inventar trabalho concreto. */
+  doneFallback: string;
   /** Bullet neutro quando o roadmap não tem nada para a semana seguinte. */
   nextFallback: string;
   /** Como se diz ao modelo em que língua deve escrever os bullets. */
@@ -47,6 +51,8 @@ const SCAFFOLDS: Record<ReportLang, Scaffold> = {
     nextHeading: "📅 Na próxima semana:",
     signoff: "Qualquer dúvida, estamos por aqui!",
     thanks: "Obrigado!",
+    doneFallback:
+      "Demos continuidade aos trabalhos de SEO previstos para esta fase.",
     nextFallback:
       "Damos continuidade aos trabalhos de SEO previstos para esta fase.",
     promptLanguage: "português de Portugal",
@@ -58,6 +64,7 @@ const SCAFFOLDS: Record<ReportLang, Scaffold> = {
     nextHeading: "📅 Next week:",
     signoff: "Let us know if you have any questions!",
     thanks: "Thank you!",
+    doneFallback: "We continued with the SEO work planned for this stage.",
     nextFallback: "We are continuing with the SEO work planned for this stage.",
     promptLanguage: "English",
   },
@@ -97,7 +104,9 @@ export function buildWeeklyMessage(
     s.intro,
     "",
     s.doneHeading,
-    ...doneBullets.map((b) => `${BULLET}${b}`),
+    ...(doneBullets.length > 0 ? doneBullets : [s.doneFallback]).map(
+      (b) => `${BULLET}${b}`,
+    ),
     "",
     s.nextHeading,
     ...(nextBullets.length > 0 ? nextBullets : [s.nextFallback]).map(

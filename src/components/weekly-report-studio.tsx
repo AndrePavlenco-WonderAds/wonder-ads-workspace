@@ -1,9 +1,16 @@
 "use client";
 
 // Estúdio de Weekly Reports — cinco dias de notas internas entram, sai uma
-// mensagem por cliente, pronta a colar no grupo de WhatsApp dele.
+// mensagem por cliente da carteira do consultor, pronta a colar no grupo de
+// WhatsApp dele.
 //
-// DESENHO (v76.73)
+// DESENHO (v76.73, carteira como contrato desde a v76.74)
+//
+// • A CARTEIRA MANDA NO NÚMERO DE MENSAGENS. A régua de clientes por cima dos
+//   dias mostra a carteira do consultor e acende cada cliente à medida que
+//   ele aparece no texto colado. Cada cliente da carteira recebe SEMPRE o seu
+//   cartão — mencionado ou não — porque o grupo de WhatsApp dele não pode
+//   ficar sem mensagem por esquecimento num daily update.
 //
 // • O QUE SE VÊ NO FIM É O QUE O CLIENTE VÊ. A mensagem aparece dentro de uma
 //   bolha de WhatsApp a sério — verde, com hora e os dois visos. Não é
@@ -61,38 +68,74 @@ type Card = {
  *  toda ficar pronta em segundos sem atirar vinte pedidos de uma vez. */
 const CONCURRENCY = 3;
 
-/** Nomes de cliente que aparecem num bloco de texto, normalizados.
+type PortfolioEntry = { slug: string; title: string };
+
+/** Sem acentos, sem pontuação, sem espaços, minúsculas — o espelho do
+ *  foldCompact do servidor, para «A. Domingos», «a.domingos» e «Adomingos»
+ *  acenderem o mesmo cliente na régua. */
+function foldCompact(s: string): string {
+  return s
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
+}
+
+const BULLET_RE = /^\s*(?:[•·▪◦*\-–—]|\d+[.)])\s+/;
+const HEADER_RE =
+  /^(daily\s*update|update\s*di[áa]rio|resumo\s*do\s*dia|daily)\b/i;
+const DATE_RE = /^\d{1,2}[/\-.]\d{1,2}([/\-.]\d{2,4})?$/;
+const MULTI_SPLIT_RE = /\s*[&+;,]\s*|\s+e\s+|\s+and\s+/i;
+
+/** Clientes que aparecem num bloco de texto — slugs para os da carteira,
+ *  forma compacta para nomes com dois pontos que não batem com ela.
  *
- *  Serve só para o contador ao vivo — dá ao consultor a confirmação imediata
- *  de que os cabeçalhos que escreveu estão a ser lidos como clientes, antes de
- *  gastar uma geração para descobrir que faltavam os dois pontos. O
- *  agrupamento a sério (com a tolerância a erros de escrita) é feito no
- *  servidor, em parseDailyUpdates. */
-function clientNamesIn(text: string): Set<string> {
-  const names = new Set<string>();
+ *  Serve só para o contador ao vivo e para a régua da carteira — a
+ *  confirmação imediata de que os cabeçalhos estão a ser lidos como clientes,
+ *  com ou sem dois pontos, antes de gastar uma geração. O agrupamento a sério
+ *  (com a tolerância a erros de escrita) é feito no servidor, em
+ *  parseDailyUpdates. */
+function clientsIn(text: string, portfolio: PortfolioEntry[]): Set<string> {
+  const found = new Set<string>();
+  const compactPortfolio = portfolio.map((p) => ({
+    slug: p.slug,
+    compact: foldCompact(p.title),
+  }));
   for (const line of text.split("\n")) {
     const t = line.trim();
-    if (!t.endsWith(":") || t.length > 61) continue;
-    if (/^\s*(?:[•·▪◦*\-–—]|\d+[.)])\s+/.test(t)) continue;
-    if (/^(daily\s*update|update\s*di[áa]rio|resumo\s*do\s*dia|daily)\b/i.test(t))
-      continue;
-    const name = t.slice(0, -1).trim();
-    if (!name || /^\d{1,2}[/-]\d{1,2}([/-]\d{2,4})?$/.test(name)) continue;
-    names.add(
-      name
-        .normalize("NFD")
-        .replace(/[̀-ͯ]/g, "")
-        .toLowerCase()
-        .replace(/[^a-z0-9]/g, ""),
-    );
+    if (!t || t.length > 61) continue;
+    if (BULLET_RE.test(t) || HEADER_RE.test(t)) continue;
+    const hasColon = t.endsWith(":");
+    const name = (hasColon ? t.slice(0, -1) : t).trim();
+    if (!name || DATE_RE.test(name)) continue;
+    if (!hasColon && /[.!?…:]/.test(name)) continue;
+
+    // Cada parte de um cabeçalho multi-cliente («Safe Away & Clinica em
+    // Casa») acende o seu cliente da carteira.
+    let hitPortfolio = false;
+    for (const part of [name, ...name.split(MULTI_SPLIT_RE)]) {
+      const compact = foldCompact(part.trim());
+      const hit = compactPortfolio.find((c) => c.compact === compact);
+      if (hit) {
+        found.add(hit.slug);
+        hitPortfolio = true;
+      }
+    }
+    // Um nome com dois pontos conta sempre — mesmo fora da carteira, o
+    // servidor vai fazer dele um cartão (resolvido ou com aviso amarelo).
+    if (!hitPortfolio && hasColon) found.add(foldCompact(name));
   }
-  return names;
+  return found;
 }
 
 export function WeeklyReportStudio({
   days,
+  portfolio,
 }: {
   days: { label: string; date: string }[];
+  /** A carteira do consultor autenticado — o contrato: um cartão de mensagem
+   *  por cliente daqui, sempre. Vazia para quem não tem carteira (admins). */
+  portfolio: PortfolioEntry[];
 }) {
   const [texts, setTexts] = useState<string[]>(() => days.map(() => ""));
   const [instructions, setInstructions] = useState("");
@@ -103,11 +146,19 @@ export function WeeklyReportStudio({
   const resultsRef = useRef<HTMLDivElement | null>(null);
 
   const filledDays = texts.filter((t) => t.trim()).length;
-  /** Um conjunto de nomes por dia, e o conjunto da semana inteira. */
-  const perDay = useMemo(() => texts.map(clientNamesIn), [texts]);
-  const detected = useMemo(
-    () => new Set(perDay.flatMap((s) => [...s])).size,
+  /** Um conjunto de clientes por dia, e o conjunto da semana inteira. */
+  const perDay = useMemo(
+    () => texts.map((t) => clientsIn(t, portfolio)),
+    [texts, portfolio],
+  );
+  const weekSet = useMemo(
+    () => new Set(perDay.flatMap((s) => [...s])),
     [perDay],
+  );
+  const detected = weekSet.size;
+  const portfolioDetected = useMemo(
+    () => portfolio.filter((p) => weekSet.has(p.slug)).length,
+    [portfolio, weekSet],
   );
 
   const counts = useMemo(() => {
@@ -236,17 +287,53 @@ export function WeeklyReportStudio({
           meta={
             <span className="tabular text-[11.5px] text-white/45">
               {filledDays} de {days.length} dias
-              {detected > 0 && (
+              {portfolio.length > 0 ? (
                 <>
                   <span className="mx-1.5 text-white/20">·</span>
                   <span className="text-[color:var(--brand-purple)]">
-                    {detected} cliente{detected === 1 ? "" : "s"} à vista
+                    {portfolioDetected} de {portfolio.length} da carteira à
+                    vista
                   </span>
                 </>
+              ) : (
+                detected > 0 && (
+                  <>
+                    <span className="mx-1.5 text-white/20">·</span>
+                    <span className="text-[color:var(--brand-purple)]">
+                      {detected} cliente{detected === 1 ? "" : "s"} à vista
+                    </span>
+                  </>
+                )
               )}
             </span>
           }
         />
+
+        {/* A régua da carteira: os grupos que VÃO receber mensagem. Cada
+            cliente acende quando o nome dele aparece no texto colado — o que
+            ficar apagado sai na mesma, com a parte «feito» genérica. */}
+        {portfolio.length > 0 && (
+          <div className="mt-3.5 flex flex-wrap items-center gap-1.5">
+            <span className="readout mr-1 text-white/35">
+              A tua carteira · {portfolio.length}
+            </span>
+            {portfolio.map((p) => {
+              const lit = weekSet.has(p.slug);
+              return (
+                <span
+                  key={p.slug}
+                  className={`rounded-full border px-2.5 py-1 text-[11.5px] font-medium transition ${
+                    lit
+                      ? "border-[color:var(--brand-purple)]/50 bg-[color:var(--brand-purple)]/15 text-white"
+                      : "border-white/10 bg-white/[0.02] text-white/40"
+                  }`}
+                >
+                  {p.title}
+                </span>
+              );
+            })}
+          </div>
+        )}
 
         <div className="mt-4 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-5">
           {days.map((d, i) => (
@@ -257,6 +344,7 @@ export function WeeklyReportStudio({
               value={texts[i] ?? ""}
               clients={perDay[i]?.size ?? 0}
               first={i === 0}
+              exampleName={portfolio[0]?.title ?? "White Clinic"}
               onChange={(v) =>
                 setTexts((cur) => {
                   const next = [...cur];
@@ -429,6 +517,7 @@ function DaySlip({
   value,
   clients,
   first,
+  exampleName,
   onChange,
 }: {
   label: string;
@@ -438,6 +527,10 @@ function DaySlip({
    *  cabeçalhos estão a ser reconhecidos. */
   clients: number;
   first: boolean;
+  /** O placeholder usa um cliente a sério da carteira do consultor — o
+   *  exemplo genérico ensinava um formato; o nome dele ensina o formato E
+   *  confirma que a app sabe de quem é esta carteira. */
+  exampleName: string;
   onChange: (v: string) => void;
 }) {
   const filled = value.trim().length > 0;
@@ -472,7 +565,9 @@ function DaySlip({
         rows={9}
         aria-label={`Daily update de ${label} ${date}`}
         placeholder={
-          first ? "White Clinic:\n• Corrigidos os apontamentos de DNS" : "Cola aqui…"
+          first
+            ? `${exampleName}\n• Corrigidos os apontamentos de DNS`
+            : "Cola aqui…"
         }
         className="w-full flex-1 resize-y border-0 bg-transparent px-3 text-[12px] leading-[1.6] text-white/90 outline-none placeholder:text-white/[0.16] focus:ring-0"
       />
@@ -602,6 +697,11 @@ function ReportCard({
         <h3 className="min-w-0 flex-1 truncate text-[14px] font-semibold tracking-tight text-white">
           {plan.title}
         </h3>
+        {!plan.inPortfolio && plan.slug && (
+          <span className="readout rounded border border-amber-300/30 bg-amber-400/[0.08] px-1.5 py-0.5 text-amber-200/90">
+            fora da carteira
+          </span>
+        )}
         {plan.lang === "en" && (
           <span className="readout rounded border border-white/12 px-1.5 py-0.5 text-white/45">
             EN
@@ -826,6 +926,12 @@ function SourcePanel({ plan }: { plan: WeeklyPlanClient }) {
         <p className="readout text-white/35">
           Dos daily updates · {plan.items.length}
         </p>
+        {plan.items.length === 0 && (
+          <p className="mt-2 text-[11.5px] leading-relaxed text-amber-200/70">
+            Nenhum trabalho deste cliente na semana colada — a parte «o que
+            foi feito» saiu genérica.
+          </p>
+        )}
         <ul className="mt-2 space-y-1.5">
           {plan.items.map((s, i) => (
             <li key={i} className="flex gap-2 text-[11.5px] leading-relaxed">

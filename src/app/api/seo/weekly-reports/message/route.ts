@@ -52,6 +52,20 @@ const BulletsSchema = z.object({
     ),
 });
 
+/** Sem daily updates deste cliente só há uma lista para escrever: a da
+ *  semana seguinte, a partir do roadmap. O «o que foi feito» é a linha
+ *  neutra do molde — pedir «done» ao modelo aqui era pedir-lhe para
+ *  inventar trabalho. */
+const NextOnlySchema = z.object({
+  next: z
+    .array(z.string().min(3).max(300))
+    .min(1)
+    .max(12)
+    .describe(
+      "What is planned for next week, rewritten from the roadmap tasks, one bullet per line, no bullet marker",
+    ),
+});
+
 function systemPrompt(lang: ReportLang): string {
   const s = scaffoldFor(lang);
   return [
@@ -95,6 +109,32 @@ Produce two lists of bullets.
 
 === DONE THIS WEEK (from the consultant's daily updates — base of the bullets) ===
 ${done}
+
+=== SCHEDULED FOR NEXT WEEK (from this client's SEO roadmap) ===
+${next}`;
+}
+
+/** O prompt do caminho sem daily updates: só se escreve a semana seguinte. */
+function nextOnlyPrompt(
+  clientTitle: string,
+  nextWeekTasks: string[],
+  roadmapWeek: number | null,
+  instructions: string,
+): string {
+  const next = nextWeekTasks.map((t) => `- ${t}`).join("\n");
+  const extra = instructions
+    ? `\n\nExtra instructions from the consultant (follow them, but NEVER break the rules above):\n${instructions}`
+    : "";
+
+  return `Client: ${clientTitle}${roadmapWeek ? `\nRoadmap week now: ${roadmapWeek}` : ""}
+
+There are no daily updates for this client this week — the app writes a neutral "we continued the planned work" line for the done section, so you must NOT write it.
+
+Produce ONE list of bullets.
+
+**next** — what is planned, taken ONLY from the scheduled roadmap work below:
+- Affirmative statement of intent ("Vamos otimizar…", "Iremos publicar…" / "We will optimise…", "We will publish…").
+- Rewrite each task as a benefit the client understands; merge tasks that belong together.${extra}
 
 === SCHEDULED FOR NEXT WEEK (from this client's SEO roadmap) ===
 ${next}`;
@@ -153,7 +193,11 @@ export async function POST(req: Request) {
       ? b.instructions.trim().slice(0, 2000)
       : "";
 
-  if (!title || items.length === 0) {
+  // Sem trabalho da semana a mensagem ainda sai — a carteira manda no número
+  // de mensagens — mas só para um cliente a sério: é o slug que dá o roadmap
+  // e a língua. Um nome que não resolveu e ainda por cima sem trabalho não
+  // tem matéria nenhuma para uma mensagem.
+  if (!title || (items.length === 0 && !slug)) {
     return NextResponse.json(
       { error: "Faltam o cliente ou o trabalho da semana." },
       { status: 400 },
@@ -164,34 +208,58 @@ export async function POST(req: Request) {
   // compromisso, não pode vir do browser.
   const roadmap = slug ? await readNextWeek(slug).catch(() => null) : null;
   const lang = reportLangFor(slug);
+  const nextTasks = roadmap?.tasks ?? [];
 
   try {
-    const { object } = await generateObject({
-      model: anthropic(MODEL),
-      schema: BulletsSchema,
-      system: systemPrompt(lang),
-      prompt: userPrompt(
-        title,
-        items,
-        roadmap?.tasks ?? [],
-        roadmap?.currentWeek ?? null,
-        instructions,
-      ),
-    });
+    // Três caminhos, do mais completo ao mais vazio:
+    //   trabalho da semana        → modelo escreve «done» e «next»
+    //   só roadmap                → modelo escreve só «next»; «done» é a
+    //                               linha neutra do molde
+    //   nem um nem outro          → não há nada para o modelo decidir; a
+    //                               mensagem é o molde com as duas linhas
+    //                               neutras, sem chamada nenhuma
+    let done: string[] = [];
+    let next: string[] = [];
+
+    if (items.length > 0) {
+      const { object } = await generateObject({
+        model: anthropic(MODEL),
+        schema: BulletsSchema,
+        system: systemPrompt(lang),
+        prompt: userPrompt(
+          title,
+          items,
+          nextTasks,
+          roadmap?.currentWeek ?? null,
+          instructions,
+        ),
+      });
+      done = object.done;
+      // Uma tarefa inventada para a semana seguinte é a única coisa aqui sem
+      // volta: sem roadmap, o molde escreve a linha neutra dele.
+      next = nextTasks.length > 0 ? object.next : [];
+    } else if (nextTasks.length > 0) {
+      const { object } = await generateObject({
+        model: anthropic(MODEL),
+        schema: NextOnlySchema,
+        system: systemPrompt(lang),
+        prompt: nextOnlyPrompt(
+          title,
+          nextTasks,
+          roadmap?.currentWeek ?? null,
+          instructions,
+        ),
+      });
+      next = object.next;
+    }
 
     return NextResponse.json({
       ok: true,
       lang,
-      done: object.done,
-      // Uma tarefa inventada para a semana seguinte é a única coisa aqui sem
-      // volta: sem roadmap, o molde escreve a linha neutra dele.
-      next: roadmap && roadmap.tasks.length > 0 ? object.next : [],
+      done,
+      next,
       roadmap,
-      message: buildWeeklyMessage(
-        lang,
-        object.done,
-        roadmap && roadmap.tasks.length > 0 ? object.next : [],
-      ),
+      message: buildWeeklyMessage(lang, done, next),
     });
   } catch (err) {
     console.error(`weekly-reports/message: ${slug ?? title} falhou:`, err);

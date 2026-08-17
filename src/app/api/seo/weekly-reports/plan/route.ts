@@ -1,8 +1,16 @@
 // POST /api/seo/weekly-reports/plan
 //
-// Passo 1 do estúdio: lê os daily updates da semana, agrupa por cliente e vai
-// ao roadmap de cada um buscar o que está programado para a semana seguinte.
-// NÃO chama o modelo — é tudo determinístico, responde em menos de um segundo.
+// Passo 1 do estúdio: parte da CARTEIRA do consultor autenticado, cruza-a com
+// os daily updates da semana e vai ao roadmap de cada cliente buscar o que
+// está programado para a semana seguinte. NÃO chama o modelo — é tudo
+// determinístico, responde em menos de um segundo.
+//
+// A carteira manda no número de mensagens (v76.74): o weekly report é uma
+// mensagem por grupo de cliente do consultor, e um cliente esquecido no texto
+// tem de aparecer com aviso — não desaparecer em silêncio. O consultor
+// resolve-se por resolveConsultant, não pelo campo em cache de
+// getSeoClients(): a cache é de 1 hora e uma passagem de carteira não pode
+// mandar mensagens em nome da pessoa errada durante esse tempo.
 //
 // Separar isto da escrita (v76.73) é o que permite ao consultor ver o
 // agrupamento imediatamente: que clientes foram apanhados, quais não batem com
@@ -14,6 +22,7 @@ import { NextResponse } from "next/server";
 import { getCurrentEmployee } from "@/lib/auth/server";
 import { editableDepts } from "@/lib/auth/credentials";
 import { getSeoClients } from "@/lib/notion";
+import { resolveConsultant } from "@/lib/client-overrides";
 import { buildWeeklyPlan } from "@/lib/seo-tools/weekly-plan";
 import type { DailyBlock } from "@/lib/seo-tools/daily-updates";
 
@@ -63,17 +72,20 @@ export async function POST(req: Request) {
     );
   }
 
-  const roster = await getSeoClients().catch(() => []);
-  const all = await buildWeeklyPlan(
-    blocks,
-    roster.map((c) => ({ slug: c.slug, title: c.title })),
-  );
+  const roster = (await getSeoClients().catch(() => [])).map((c) => ({
+    slug: c.slug,
+    title: c.title,
+    consultant: resolveConsultant(c.slug, c.consultant),
+  }));
+  const portfolio = roster.filter((c) => c.consultant === employee.name);
+  const all = await buildWeeklyPlan(blocks, roster, portfolio, employee.name);
 
   if (all.length === 0) {
+    // Só possível sem carteira própria (admin) e sem nenhum nome no texto.
     return NextResponse.json(
       {
         error:
-          "Não encontrei nenhum cliente nos daily updates. Cada cliente tem de estar numa linha própria terminada em dois pontos (ex.: «White Clinic:») e o trabalho dele por baixo.",
+          "Não encontrei nenhum cliente nos daily updates. Escreve o nome de cada cliente numa linha própria (ex.: «White Clinic:» ou só «White Clinic») e o trabalho dele por baixo.",
       },
       { status: 400 },
     );
@@ -85,6 +97,7 @@ export async function POST(req: Request) {
     ok: true,
     generatedAt: Date.now(),
     daysUsed: blocks.length,
+    portfolioCount: portfolio.length,
     clients,
     skipped: Math.max(0, all.length - clients.length),
   });

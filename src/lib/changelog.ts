@@ -13,6 +13,19 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.74",
+    date: "2026-08-17",
+    title: "Weekly Reports: a tua carteira manda — uma mensagem por cliente teu, sempre",
+    highlights: [
+      "**👥 O plano parte da TUA carteira, não do texto colado.** Antes, um cliente só recebia mensagem se o nome dele fosse apanhado nos daily updates — um esquecimento e o grupo de WhatsApp dele ficava em silêncio. Agora a app sabe quais são os teus clientes (os mesmos das colunas do departamento) e **cada um tem sempre o seu cartão**: 5 clientes na carteira → 5 mensagens. Um cliente teu sem trabalho detetado aparece com aviso, com a parte «feito» genérica e a próxima semana lida do roadmap dele na mesma.",
+      "**✂️ Os dois pontos deixaram de ser obrigatórios.** O daily update real escreve-se «Adomingos» ou «Ihn» numa linha e os bullets por baixo — e a app lia «sem nomes». Agora uma linha que bate com a carteira é cabeçalho de cliente, com ou sem dois pontos. Uma frase curta não vira cliente por engano: sem dois pontos, só entra o que bate com a carteira.",
+      "**🤝 «Safe Away & Clinica em Casa» conta para os dois.** Um cabeçalho pode nomear vários clientes (com &, vírgula ou «e») — a reunião com o Hugo entra na mensagem dos dois grupos. Só se aceita a leitura múltipla quando todas as partes batem com a carteira.",
+      "**📆 Datas soltas no meio do paste («11/08») fecham o cliente anterior** — o primeiro bullet do dia seguinte já não se colava ao último cliente do dia anterior.",
+      "**🎛️ A régua da carteira.** Por cima dos cinco dias vês os teus clientes, e cada um acende à medida que aparece no texto — «3 de 5 da carteira à vista» antes de gastar uma geração. O que ficar apagado sai na mesma, com aviso. Um cliente de outro consultor mencionado no texto também sai, marcado «fora da carteira».",
+      "**🧾 Sem trabalho e sem roadmap, a mensagem nem gasta modelo** — sai o molde com as duas linhas neutras. Com roadmap, o modelo escreve só a próxima semana; o «feito» genérico é do molde, para nunca se inventar trabalho que não aconteceu.",
+    ],
+  },
+  {
     version: "76.73",
     date: "2026-08-14",
     title: "Weekly Reports: saiu dos roadmaps, entrou no teu menu — e agora vê-se a semana virar mensagem",

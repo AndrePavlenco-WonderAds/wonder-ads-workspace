@@ -47,6 +47,10 @@ export type WeeklyPlanClient = {
   rawNames: string[];
   /** Como o nome foi resolvido — `fuzzy` significa que a app aproximou. */
   via: MatchVia;
+  /** Cliente da carteira do consultor autenticado. É a carteira que manda no
+   *  número de mensagens: um cliente dela tem SEMPRE cartão, com ou sem
+   *  trabalho detetado nos daily updates. */
+  inPortfolio: boolean;
   lang: ReportLang;
   /** O trabalho da semana, tal como saiu dos daily updates. */
   items: { day: string; text: string }[];
@@ -84,9 +88,19 @@ export async function readNextWeek(
   return { currentWeek, nextWeek, totalWeeks: total, tasks };
 }
 
+/** Um cliente do plano ANTES de se ir ler o roadmap — o que se sabe só de
+ *  cruzar os daily updates com a carteira. */
+type PlanSeed = Omit<ParsedClientWork, "slug"> & {
+  slug: string | null;
+  inPortfolio: boolean;
+  /** Consultor responsável, para o aviso «isto é da carteira de X». */
+  consultant: string | null;
+};
+
 function warningsFor(
-  client: ParsedClientWork,
+  client: PlanSeed,
   roadmap: NextWeekPlan | null,
+  viewerName: string | null,
 ): string[] {
   const out: string[] = [];
   if (!client.slug) {
@@ -102,6 +116,16 @@ function warningsFor(
       `Escrito como ${client.rawNames.map((n) => `«${n}»`).join(", ")} — assumi que é ${client.title}. Confirma antes de enviar.`,
     );
   }
+  if (client.items.length === 0) {
+    out.push(
+      "Não encontrei trabalho deste cliente nos daily updates desta semana — a parte «o que foi feito» sai genérica. Se fizeste trabalho, acrescenta-o num dos dias e regenera.",
+    );
+  }
+  if (!client.inPortfolio && viewerName) {
+    out.push(
+      `Este cliente é da carteira de ${client.consultant ?? "outro consultor"} — confirma que és tu a enviar esta mensagem.`,
+    );
+  }
   if (!roadmap) {
     out.push(
       "Este cliente ainda não tem roadmap — a próxima semana fica genérica. Cria o roadmap para a mensagem ser concreta.",
@@ -115,17 +139,68 @@ function warningsFor(
 }
 
 /** Lê os daily updates da semana e devolve, por cliente, tudo o que é preciso
- *  para escrever a mensagem — menos a mensagem. Os roadmaps são lidos em
- *  paralelo e um que falhe não derruba os outros. */
+ *  para escrever a mensagem — menos a mensagem.
+ *
+ *  QUEM MANDA NO NÚMERO DE CARTÕES É A CARTEIRA, não o texto colado (v76.74).
+ *  O weekly report é «uma mensagem por grupo de cliente do consultor»: um
+ *  cliente da carteira sem trabalho detetado aparece na mesma, com aviso —
+ *  esquecê-lo em silêncio era exatamente o erro que esta página existia para
+ *  evitar. O texto colado só decide o CONTEÚDO da parte «o que foi feito».
+ *
+ *  Por cima da carteira entram os extras: clientes de outros consultores que
+ *  apareceram no texto (com aviso de carteira alheia) e nomes que não bateram
+ *  com carteira nenhuma (com o aviso amarelo de sempre). Quando não há
+ *  carteira — um admin a espreitar — o plano volta a ser guiado só pelo
+ *  texto, como antes.
+ *
+ *  Os roadmaps são lidos em paralelo e um que falhe não derruba os outros. */
 export async function buildWeeklyPlan(
   blocks: DailyBlock[],
-  roster: { slug: string; title: string }[],
+  roster: { slug: string; title: string; consultant?: string }[],
+  portfolio: { slug: string; title: string }[],
+  viewerName: string | null = null,
   now: number = Date.now(),
 ): Promise<WeeklyPlanClient[]> {
   const parsed = parseDailyUpdates(blocks, roster);
+  const bySlug = new Map(
+    parsed.filter((c) => c.slug).map((c) => [c.slug as string, c]),
+  );
+  const consultantOf = new Map(
+    roster.map((c) => [c.slug, c.consultant ?? null]),
+  );
+  const portfolioSlugs = new Set(portfolio.map((c) => c.slug));
+  const hasPortfolio = portfolio.length > 0;
+
+  const seeds: PlanSeed[] = [];
+
+  // 1 · A carteira do consultor, pela ordem dela — com ou sem trabalho.
+  for (const c of portfolio) {
+    const group = bySlug.get(c.slug);
+    seeds.push({
+      rawName: group?.rawName ?? c.title,
+      rawNames: group?.rawNames ?? [],
+      slug: c.slug,
+      title: group?.title ?? c.title,
+      via: group?.via ?? null,
+      items: group?.items ?? [],
+      inPortfolio: true,
+      consultant: viewerName,
+    });
+  }
+
+  // 2 · Extras que apareceram no texto: clientes fora da carteira e nomes
+  //     que não resolveram. Sem carteira (admin), isto é o plano inteiro.
+  for (const c of parsed) {
+    if (c.slug && portfolioSlugs.has(c.slug)) continue;
+    seeds.push({
+      ...c,
+      inPortfolio: !hasPortfolio,
+      consultant: c.slug ? (consultantOf.get(c.slug) ?? null) : null,
+    });
+  }
 
   return Promise.all(
-    parsed.map(async (c): Promise<WeeklyPlanClient> => {
+    seeds.map(async (c): Promise<WeeklyPlanClient> => {
       let roadmap: NextWeekPlan | null = null;
       if (c.slug) {
         try {
@@ -141,10 +216,11 @@ export async function buildWeeklyPlan(
         rawName: c.rawName,
         rawNames: c.rawNames,
         via: c.via,
+        inPortfolio: c.inPortfolio,
         lang: reportLangFor(c.slug),
         items: c.items,
         roadmap,
-        warnings: warningsFor(c, roadmap),
+        warnings: warningsFor(c, roadmap, hasPortfolio ? viewerName : null),
       };
     }),
   );

@@ -21,6 +21,8 @@ import { PageShell } from "@/components/page-shell";
 import { WeeklyReportStudio } from "@/components/weekly-report-studio";
 import { getCurrentEmployee } from "@/lib/auth/server";
 import { editableDepts } from "@/lib/auth/credentials";
+import { getSeoClients } from "@/lib/notion";
+import { resolveConsultant } from "@/lib/client-overrides";
 import { weekdayBlocks } from "@/lib/seo-tools/daily-updates";
 
 export const dynamic = "force-dynamic";
@@ -34,6 +36,13 @@ export default async function WeeklyReportsPage() {
   const employee = await getCurrentEmployee();
   if (!employee) redirect("/login?next=/seo/weekly-reports");
   if (!editableDepts(employee).includes("seo")) redirect("/seo");
+
+  // A carteira do consultor é o contrato da página: um cartão de mensagem por
+  // cliente dela, sempre. Resolve-se por resolveConsultant e não pelo campo em
+  // cache — uma passagem de carteira em código ganha à cache de 1 hora.
+  const portfolio = (await getSeoClients().catch(() => []))
+    .filter((c) => resolveConsultant(c.slug, c.consultant) === employee.name)
+    .map((c) => ({ slug: c.slug, title: c.title }));
 
   const days = weekdayBlocks(new Date());
   const first = days[0];
@@ -51,10 +60,10 @@ export default async function WeeklyReportsPage() {
               <span className="brand-gradient-text">Weekly Reports</span>
             </h1>
             <p className="mt-3 text-[13.5px] leading-relaxed text-white/55">
-              Cola a semana de daily updates. A app agrupa por cliente, vai ao
-              roadmap de cada um buscar o que está programado para a semana que
-              vem, e escreve a mensagem — uma por cliente, pronta a colar no
-              grupo dele.
+              Cola a semana de daily updates. A app cruza-a com a tua carteira,
+              vai ao roadmap de cada cliente buscar o que está programado para
+              a semana que vem, e escreve uma mensagem por cliente teu — pronta
+              a colar no grupo de WhatsApp dele.
             </p>
           </div>
 
@@ -70,16 +79,17 @@ export default async function WeeklyReportsPage() {
         </div>
 
         <p className="mt-6 max-w-3xl text-[12.5px] leading-relaxed text-white/40">
-          Os clientes são reconhecidos pelos cabeçalhos do daily update — uma
-          linha com o nome do cliente terminada em dois pontos («
-          <span className="text-white/70">White Clinic:</span>») e o trabalho por
-          baixo. Grafias diferentes do mesmo cliente ao longo da semana são
-          juntas automaticamente; quando a app tem de adivinhar, diz-te no
-          cartão.
+          Os clientes são reconhecidos pelos cabeçalhos do daily update — o
+          nome do cliente numa linha própria, com ou sem dois pontos («
+          <span className="text-white/70">White Clinic:</span>» ou só «
+          <span className="text-white/70">White Clinic</span>»), e o trabalho
+          por baixo. Grafias diferentes do mesmo cliente ao longo da semana são
+          juntas automaticamente; um cliente teu sem trabalho na semana aparece
+          na mesma, com aviso — nenhum grupo fica sem mensagem.
         </p>
       </header>
 
-      <WeeklyReportStudio days={days} />
+      <WeeklyReportStudio days={days} portfolio={portfolio} />
     </PageShell>
   );
 }
