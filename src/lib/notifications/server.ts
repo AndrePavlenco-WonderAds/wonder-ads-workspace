@@ -27,6 +27,7 @@ import {
 import { EMPLOYEE_CREDENTIALS, isAdminUsername } from "@/lib/auth/credentials";
 import { listTrainingFeedback } from "@/lib/training/feedback-store";
 import { listAbsences } from "@/lib/absences-store";
+import { listReviewItems } from "@/lib/review-store";
 import {
   absenceDurationLine,
   absencePeriodLine,
@@ -386,6 +387,161 @@ async function roadmapEndingNotifications(
       client: { slug: client.slug, title: client.title, icon: client.icon },
       actionLabel: "Abrir roadmap e estender",
       actionHref: `/seo/${client.slug}/roadmap`,
+      resolved: Boolean(entry),
+      resolvedAt: entry?.resolvedAt ?? null,
+    });
+  }
+  return out;
+}
+
+
+/* ------------------------------------------------------------------ *
+ * PENDING REVIEW PARADA — o cliente que não responde                  *
+ *                                                                     *
+ * Uma linha entra na tabela em «For Approval» e fica à espera de uma   *
+ * decisão do cliente. Se ninguém lhe mexer, ela não avisa ninguém —    *
+ * fica lá, e o consultor só dá por ela quando alguém pergunta pelo     *
+ * trabalho. Estes dois lembretes são o relógio que faltava.            *
+ *                                                                     *
+ * DOIS GRAUS, E O SEGUNDO APAGA O PRIMEIRO:                            *
+ *   3 dias → follow-up (email, mensagem, o que o consultor preferir)   *
+ *   5 dias → telefonema, sem falta                                     *
+ *                                                                     *
+ * A troca não precisa de limpeza nenhuma: como tudo no sino, isto é    *
+ * DERIVADO do estado. Ao quinto dia a condição do lembrete de 3 deixa  *
+ * de se verificar e ele evapora-se; nasce o do telefonema no lugar     *
+ * dele. E no instante em que o cliente carrega em Approved / Rejected  *
+ * / Changes Requested, a linha sai da conta e os dois desaparecem.     *
+ * ------------------------------------------------------------------ */
+
+const REVIEW_FOLLOW_UP_DAYS = 3;
+const REVIEW_CALL_DAYS = 5;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+type StaleReviewRow = { id: string; task: string; addedAt: number };
+
+/** Linhas ainda em «For Approval», por cliente — sem idades calculadas.
+ *
+ *  A idade FICA DE FORA da cache de propósito: guardar "há 3 dias" numa
+ *  cache de 15 minutos era gravar uma conta que envelhece. Aqui guarda-se o
+ *  carimbo cru e a idade calcula-se a cada leitura, contra o `now` de quem
+ *  está a ver. */
+const getStaleReviewRows = unstable_cache(
+  async (): Promise<Record<string, StaleReviewRow[]>> => {
+    const out: Record<string, StaleReviewRow[]> = {};
+    let all: Awaited<ReturnType<typeof getSeoClients>>;
+    try {
+      all = await getSeoClients();
+    } catch {
+      return out;
+    }
+    await Promise.all(
+      all.map(async (c) => {
+        try {
+          const items = await listReviewItems(c.slug);
+          const waiting = items
+            .filter((it) => !it.archived && it.status === "For Approval")
+            .map((it) => ({
+              id: it.id,
+              task: it.task,
+              addedAt: it.createdAt,
+            }))
+            .filter((r) => r.addedAt > 0);
+          if (waiting.length > 0) out[c.slug] = waiting;
+        } catch {
+          /* uma tabela ilegível não pode calar o sino inteiro */
+        }
+      }),
+    );
+    return out;
+  },
+  ["notifications-stale-reviews-v1"],
+  { revalidate: 900 },
+);
+
+/** "2026-W34" — o balde semanal do lembrete de telefonema.
+ *
+ *  Está no id do lembrete de 5 dias para o «Confirmo que telefonei» valer
+ *  uma semana e não uma vida: se daqui a sete dias o cliente continuar sem
+ *  responder, o id muda, o lembrete volta e o telefonema repete-se. Sem
+ *  isto, uma confirmação calava o aviso para sempre e a linha ficava parada
+ *  em silêncio — exatamente o problema que estes lembretes existem para
+ *  resolver. */
+function weekBucket(now: Date): string {
+  const d = new Date(
+    Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()),
+  );
+  // ISO-8601: a semana pertence à quinta-feira que contém.
+  const dow = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dow);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  const week = Math.ceil(((d.getTime() - yearStart.getTime()) / DAY_MS + 1) / 7);
+  return `${d.getUTCFullYear()}-W${String(week).padStart(2, "0")}`;
+}
+
+async function pendingReviewNotifications(
+  book: ClientRef[],
+  state: NotificationState,
+  now: Date,
+): Promise<UserNotification[]> {
+  if (book.length === 0) return [];
+  let stale: Record<string, StaleReviewRow[]>;
+  try {
+    stale = await getStaleReviewRows();
+  } catch (err) {
+    console.error("Notificações: linhas de review paradas falharam:", err);
+    return [];
+  }
+
+  const out: UserNotification[] = [];
+  for (const client of book) {
+    const rows = stale[client.slug] ?? [];
+    if (rows.length === 0) continue;
+
+    const daysOf = (r: StaleReviewRow) =>
+      Math.floor((now.getTime() - r.addedAt) / DAY_MS);
+    // A linha MAIS ANTIGA manda no grau do aviso: é ela que define há quanto
+    // tempo este cliente está a dever uma resposta.
+    const oldest = rows.reduce((a, b) => (a.addedAt <= b.addedAt ? a : b));
+    const days = daysOf(oldest);
+    if (days < REVIEW_FOLLOW_UP_DAYS) continue;
+
+    const call = days >= REVIEW_CALL_DAYS;
+    const waiting = rows.filter((r) => daysOf(r) >= REVIEW_FOLLOW_UP_DAYS).length;
+    const lines =
+      waiting === 1 ? "1 linha" : `${waiting} linhas`;
+
+    // O período do id fixa-se no GRAU (d3 / d5) e na linha mais antiga — não
+    // no número de dias. Se contasse os dias, um «já fiz o follow-up» de
+    // ontem voltava a tocar hoje só porque o contador andou.
+    const id = call
+      ? notificationId(
+          "seo-review-call",
+          `d5-${oldest.id}-${weekBucket(now)}`,
+          client.slug,
+        )
+      : notificationId("seo-review-followup", `d3-${oldest.id}`, client.slug);
+    const entry = state[id];
+
+    out.push({
+      id,
+      ruleId: call ? "seo-review-call" : "seo-review-followup",
+      // Sem nome de cliente no título: o sino agrupa por (regra + período) e
+      // o cabeçalho do grupo é o título do primeiro item. Um título com o
+      // nome de um cliente ficaria por cima das linhas de outros.
+      title: call
+        ? `Pending Review parada há ${REVIEW_CALL_DAYS} dias — telefona ao cliente`
+        : `Pending Review sem resposta há ${REVIEW_FOLLOW_UP_DAYS} dias`,
+      body: call
+        ? `Já passaram ${days} dias desde que o trabalho entrou na tabela e o cliente não aprovou, recusou nem pediu ajustes. O follow-up escrito já não chega: liga-lhe. Depois da chamada, marca em baixo que telefonaste — se daqui a uma semana continuar parado, o aviso volta.`
+        : `O trabalho está na tabela há ${days} dias e continua em «For Approval» — o cliente ainda não lhe tocou. Faz follow-up para destrancar. Se ao ${REVIEW_CALL_DAYS}.º dia continuar na mesma, este aviso dá lugar a um pedido de telefonema.`,
+      periodLabel: `${lines} · há ${days} dias`,
+      // O relógio é a data de entrada da linha mais antiga: quanto mais
+      // antiga, mais acima aparece.
+      dueAt: oldest.addedAt,
+      client: { slug: client.slug, title: client.title, icon: client.icon },
+      actionLabel: "Abrir Pending Review",
+      actionHref: `/seo/${client.slug}/review`,
       resolved: Boolean(entry),
       resolvedAt: entry?.resolvedAt ?? null,
     });
@@ -788,21 +944,32 @@ export async function getUserNotifications(
       ? ((await seoBooksByConsultant(needsStartDates)).get(viewer.name) ?? [])
       : [];
 
-  const [ending, situationPoints, nps, absences] = await Promise.all([
+  const [ending, situationPoints, nps, absences, reviews] = await Promise.all([
     roadmapEndingNotifications(viewer, book, state, now),
     situationPointNotifications(viewer, state, now),
     npsNotifications(viewer, state, now),
     absenceNotifications(viewer, state),
+    pendingReviewNotifications(book, state, now),
   ]);
 
   // Ausências à cabeça: um pedido por decidir (ou uma resposta por ler) é
   // gente à espera de gente — passa à frente dos lembretes de calendário.
+  // A seguir vêm os clientes parados na Pending Review: também são gente à
+  // espera, e cada dia que passa custa mais do que um lembrete de calendário.
   if (applicable.length === 0) {
-    return [...absences, ...nps, ...situationPoints, ...feedback, ...ending];
+    return [
+      ...absences,
+      ...reviews,
+      ...nps,
+      ...situationPoints,
+      ...feedback,
+      ...ending,
+    ];
   }
 
   return [
     ...absences,
+    ...reviews,
     ...nps,
     ...situationPoints,
     ...feedback,

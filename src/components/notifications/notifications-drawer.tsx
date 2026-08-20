@@ -672,6 +672,14 @@ function TeamPersonRow({
   );
 }
 
+/** O rótulo do botão que fecha cada tipo de notificação. */
+const RESOLVE_LABELS: Record<string, string> = {
+  "absence-decision": "Entendido",
+  "falta-record": "Entendido",
+  "seo-review-followup": "Já fiz o follow-up",
+  "seo-review-call": "Confirmo que telefonei ao cliente",
+};
+
 function NotificationRow({
   n,
   busy,
@@ -683,13 +691,14 @@ function NotificationRow({
   onResolve: () => void;
   onNavigate: () => void;
 }) {
-  // Numa resposta a um pedido de ausência — ou numa falta que o C-Level
-  // lançou — não há trabalho a "concluir": há uma comunicação a acusar como
-  // recebida. O botão diz isso.
-  const resolveLabel =
-    n.ruleId === "absence-decision" || n.ruleId === "falta-record"
-      ? "Entendido"
-      : "Concluído";
+  // Nem tudo o que está no sino se "conclui". Uma resposta a um pedido de
+  // ausência acusa-se; um telefonema ao cliente confirma-se. O botão tem de
+  // dizer o ato verdadeiro, senão pede-se a alguém que marque como feita uma
+  // coisa que não é a que fez.
+  const resolveLabel = RESOLVE_LABELS[n.ruleId] ?? "Concluído";
+  // Um rótulo comprido não cabe ao lado do CTA na largura do painel — passa
+  // para uma linha própria em vez de espremer os dois.
+  const wideResolve = resolveLabel.length > 16;
   return (
     <div className="group rounded-xl border border-white/[0.08] bg-white/[0.02] p-3 transition hover:border-[#783DF5]/35 hover:bg-white/[0.045]">
       <div className="flex items-center gap-2.5">
@@ -714,7 +723,7 @@ function NotificationRow({
         </span>
       </div>
 
-      <div className="mt-2.5 flex items-center gap-2">
+      <div className="mt-2.5 flex flex-wrap items-center gap-2">
         {n.actionHref ? (
           <Link
             href={n.actionHref}
@@ -731,7 +740,9 @@ function NotificationRow({
           type="button"
           onClick={onResolve}
           disabled={busy}
-          className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-white/12 px-3 py-2 text-[12px] font-medium text-white/60 transition hover:border-emerald-400/45 hover:bg-emerald-500/[0.08] hover:text-emerald-200 disabled:opacity-50"
+          className={`inline-flex items-center gap-1.5 rounded-lg border border-white/12 px-3 py-2 text-[12px] font-medium text-white/60 transition hover:border-emerald-400/45 hover:bg-emerald-500/[0.08] hover:text-emerald-200 disabled:opacity-50 ${
+            wideResolve ? "w-full justify-center" : "shrink-0"
+          }`}
         >
           {busy ? (
             <Loader2 className="h-3.5 w-3.5 animate-spin" />

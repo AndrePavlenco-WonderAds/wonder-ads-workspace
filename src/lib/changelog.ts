@@ -13,6 +13,19 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.81",
+    date: "2026-08-20",
+    title: "O sino passa a cobrar o cliente que não responde à Pending Review",
+    highlights: [
+      "**⏳ Ao 3.º dia, follow-up.** Uma linha que entra na tabela em «For Approval» e lá fica não avisava ninguém — o consultor só dava por ela quando alguém perguntava pelo trabalho. Agora, três dias depois da data de entrada sem o cliente aprovar, recusar nem pedir ajustes, o consultor recebe um aviso no sino com botão direto para a Pending Review desse cliente.",
+      "**📞 Ao 5.º dia, telefonema.** Se continuar parada, o aviso dos 3 dias desaparece e no lugar dele nasce outro: o follow-up escrito já não chega, liga-lhe. O botão que o fecha diz **«Confirmo que telefonei ao cliente»** — porque o que se está a marcar como feito é a chamada, não uma tarefa qualquer.",
+      "**🔁 A troca não precisa de limpeza nenhuma.** Como tudo o resto no sino, isto é derivado do estado: ao quinto dia a condição do primeiro aviso deixa de se verificar e ele evapora-se sozinho. E no instante em que o cliente carrega em Approved, Rejected ou Changes Requested, os dois desaparecem — ninguém tem de ir marcar nada.",
+      "**📅 E o telefonema volta daqui a uma semana se o cliente continuar calado.** O «Confirmo que telefonei» vale uma semana, não uma vida: se sete dias depois a linha ainda estiver parada, o aviso regressa. Sem isto, uma confirmação calava-o para sempre e a linha ficava esquecida em silêncio — exatamente o problema que estes lembretes existem para resolver.",
+      "**🧮 Um aviso por cliente, não um por linha.** A linha mais antiga é que manda no grau, e o aviso diz quantas estão à espera («7 linhas · há 59 dias»). Clientes em pausa ficam de fora — não se cobra uma resposta a uma conta suspensa.",
+      "**📊 Ao ligar isto hoje, acendem-se 17 clientes,** todos já no grau do telefonema: 6 do Fran, 6 do André Pereira, 4 do Manuel e 1 do João. Não é ruído do sistema — é a fila real que estava invisível, com casos parados há 60 e 68 dias.",
+    ],
+  },
+  {
     version: "76.80",
     date: "2026-08-20",
     title: "Pending Review: uma coluna «Added» que diz quando o doc entrou na tabela",
