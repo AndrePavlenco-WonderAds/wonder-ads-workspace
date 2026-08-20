@@ -101,9 +101,25 @@ export type ReviewItem = {
   /** Tracks WHEN the row was archived — useful for sorting the
    *  Archive tab newest-first and for any future audit needs. */
   archivedAt?: number | null;
-  // ---- tracking (not displayed in the public table) ----
+  // ---- tracking ----
+  /** Quando a linha entrou na tabela. IMUTÁVEL: `updateReviewItem` omite-o
+   *  do patch e o sanitiser nunca o aceita do browser, por isso nenhuma
+   *  edição posterior — do consultor ou do cliente — lhe mexe. É esta a
+   *  data que a coluna «Added» mostra. */
   createdAt: number;
   updatedAt: number;
+  /** Quando o DOC LINK apareceu nesta linha pela primeira vez.
+   *
+   *  Na esmagadora maioria das linhas é igual ao `createdAt` — tanto o
+   *  «Send to Review» como o «Add row manually» trazem o link no momento da
+   *  criação. Existe para o caso restante: a linha criada vazia e o
+   *  documento colado dias depois, em que dizer que o doc entrou no dia em
+   *  que a linha nasceu seria falso.
+   *
+   *  Carimbado uma única vez, no servidor (ver `updateReviewItem`). Fica
+   *  `null` nas linhas gravadas antes da v76.80 que ainda não tinham link,
+   *  e `undefined` nas anteriores a este campo existir. */
+  docFirstAddedAt?: number | null;
   /** Where the item came from. Helps the internal view show "this was
    *  auto-sent from GMB Posts result 2026-05-20-1437-h5". */
   sourceType?: string;
@@ -146,6 +162,9 @@ export async function appendReviewItem(
     id: newReviewItemId(),
     createdAt: now,
     updatedAt: now,
+    // Uma linha que nasce com o documento tem as duas datas iguais — é o
+    // caso do «Send to Review» e do «Add row manually» com link.
+    docFirstAddedAt: partial.docLink ? now : null,
   };
   if (!reviewStorageConfigured) return item;
   const current = await listReviewItems(slug);
@@ -160,16 +179,26 @@ export async function appendReviewItem(
 export async function updateReviewItem(
   slug: string,
   id: string,
-  patch: Partial<Omit<ReviewItem, "id" | "createdAt">>,
+  patch: Partial<Omit<ReviewItem, "id" | "createdAt" | "docFirstAddedAt">>,
 ): Promise<ReviewItem | null> {
   if (!reviewStorageConfigured) return null;
   const current = await listReviewItems(slug);
   const idx = current.findIndex((r) => r.id === id);
   if (idx < 0) return null;
+  const now = Date.now();
+  const previous = current[idx];
+  // PRIMEIRA vez que esta linha ganha um documento — e só a primeira. Se já
+  // houver carimbo, trocar o link por outro não o mexe: a coluna diz quando
+  // o consultor entregou, não qual foi a última versão que lá pôs. O carimbo
+  // vive aqui, no store, e não na rota, para nenhum caminho de escrita
+  // futuro se poder esquecer dele.
+  const stampDoc =
+    !previous.docFirstAddedAt && !previous.docLink && Boolean(patch.docLink);
   const updated: ReviewItem = {
-    ...current[idx],
+    ...previous,
     ...patch,
-    updatedAt: Date.now(),
+    updatedAt: now,
+    ...(stampDoc ? { docFirstAddedAt: now } : {}),
   };
   current[idx] = updated;
   await kv.set(key(slug), current);
@@ -363,12 +392,17 @@ export function unresolvedCount(item: ReviewItem): number {
 /** Sanitise a payload coming in from the public PUT endpoint. The
  *  public page is unauthenticated, so we never trust the body — we
  *  whitelist editable fields and clamp lengths. */
+/** A lista branca do que um PATCH pode mexer. `createdAt` e
+ *  `docFirstAddedAt` estão FORA dela de propósito: são o registo de quando
+ *  a linha e o documento entraram na tabela, e um pedido vindo do browser —
+ *  do consultor ou do cliente — não os pode reescrever. */
 export function sanitiseReviewItemPatch(
   raw: unknown,
-): Partial<Omit<ReviewItem, "id" | "createdAt">> {
+): Partial<Omit<ReviewItem, "id" | "createdAt" | "docFirstAddedAt">> {
   if (!raw || typeof raw !== "object") return {};
   const o = raw as Record<string, unknown>;
-  const out: Partial<Omit<ReviewItem, "id" | "createdAt">> = {};
+  const out: Partial<Omit<ReviewItem, "id" | "createdAt" | "docFirstAddedAt">> =
+    {};
   if (typeof o.task === "string") out.task = o.task.slice(0, 240);
   if (
     typeof o.status === "string" &&

@@ -114,7 +114,9 @@ export default async function InternalReviewPage({
             </h1>
             <p className="mt-1 text-xs text-white/55">
               Same table the client sees — every change saves to both views
-              instantly.
+              instantly. The <strong className="font-semibold text-white/75">Added</strong>{" "}
+              column is internal only: it records when the row entered the
+              table and never changes.
             </p>
           </div>
         </div>
@@ -142,6 +144,7 @@ export default async function InternalReviewPage({
           <ReviewTable
             clientSlug={slug}
             initialItems={items}
+            showAddedDate={true}
             allowDelete={true}
             allowArchive={true}
             allowArchiveActions={true}

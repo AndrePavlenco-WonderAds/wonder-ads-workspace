@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.80",
+    date: "2026-08-20",
+    title: "Pending Review: uma coluna «Added» que diz quando o doc entrou na tabela",
+    highlights: [
+      "**🗓️ Coluna nova em todas as tabelas de Pending Review, em todos os clientes de SEO.** Diz o dia em que a linha foi posta na tabela pelo consultor. Até aqui a tabela mostrava tudo sobre o estado do trabalho e nada sobre há quanto tempo ele lá estava — um doc à espera de aprovação há três semanas era indistinguível de um posto ontem.",
+      "**🔒 Gravada uma vez, e nunca mais.** Não é um campo, é um carimbo: aparece como texto, sem a caixa branca das outras datas, e o servidor recusa qualquer tentativa de a mudar — o sanitiser dos patches simplesmente não a aceita, venha o pedido do consultor ou do cliente. Editar a tarefa, trocar o estado ou colar outro link não lhe mexe.",
+      "**📚 Já vem preenchida em todo o histórico.** Cada linha destas tabelas já gravava a data de criação desde o primeiro dia — foram verificadas as 22 tabelas de clientes com trabalho em curso e não há uma única linha sem data. Ou seja: nada de coluna vazia à espera de se encher com o tempo.",
+      "**📎 E quando o doc chega depois da linha, a coluna diz as duas coisas.** No caso raro de uma linha criada vazia com o documento colado dias mais tarde, aparece uma segunda linha discreta («doc 14/08») — dizer só a data da linha seria esconder a que interessa. O carimbo do documento também é de uma vez só: trocar o link por outra versão não o move.",
+      "**👀 É informação interna.** A coluna só existe em `/seo/<cliente>/review`; a tabela que o cliente vê continua exatamente como estava.",
+    ],
+  },
+  {
     version: "76.79",
     date: "2026-08-20",
     title: "Faltas: o C-Level passa a poder lançá-las, e a RH recebe o mapa do mês no dia 1",

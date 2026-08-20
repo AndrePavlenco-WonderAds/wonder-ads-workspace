@@ -34,6 +34,7 @@ import {
   type ReviewStatus,
 } from "@/lib/review-store";
 import { CommentsThread } from "@/components/comments-thread";
+import { formatDate, formatDateTime } from "@/lib/dates";
 import type { PublicLang } from "@/lib/public-i18n";
 
 const TEXT_DEBOUNCE_MS = 600;
@@ -47,6 +48,11 @@ export function ReviewTable({
   /** When true (internal page), enables the delete button per row.
    *  The public page hides delete to prevent accidental client wipes. */
   allowDelete = false,
+  /** When true (internal page), show the read-only «Added» column — a
+   *  carimbo de quando o consultor pôs a linha na tabela. Desligado no lado
+   *  público: é informação de entrega interna, não algo que o cliente
+   *  precise de ver ao aprovar. */
+  showAddedDate = false,
   /** When true (public/client side), hide the Publishing date column.
    *  Clients don't need to set publishing dates — that's internal. */
   hidePublishingDate = false,
@@ -88,6 +94,7 @@ export function ReviewTable({
   clientSlug: string;
   initialItems: ReviewItem[];
   allowDelete?: boolean;
+  showAddedDate?: boolean;
   hidePublishingDate?: boolean;
   readonlyApprovalDate?: boolean;
   allowArchive?: boolean;
@@ -408,21 +415,57 @@ export function ReviewTable({
           </div>
         ) : (
           <>
-            <table className="w-full min-w-[920px] border-collapse text-left text-sm">
+            {/* Mais uma coluna precisa de mais chão antes de o scroll
+                horizontal começar a espremer o Doc link. */}
+            <table
+              className={`w-full border-collapse text-left text-sm ${
+                showAddedDate ? "min-w-[1020px]" : "min-w-[920px]"
+              }`}
+            >
               <thead className="bg-[#4a5d3a] text-white">
                 <tr>
-                  <Th className={hidePublishingDate ? "w-[30%]" : "w-[28%]"}>
+                  <Th
+                    className={
+                      hidePublishingDate
+                        ? "w-[30%]"
+                        : showAddedDate
+                          ? "w-[24%]"
+                          : "w-[28%]"
+                    }
+                  >
                     Task
                   </Th>
-                  <Th className="w-[13%]">Status</Th>
-                  <Th className="w-[11%]">Category</Th>
-                  <Th className="w-[10%]">Approval date</Th>
+                  <Th className={showAddedDate ? "w-[12%]" : "w-[13%]"}>Status</Th>
+                  <Th className={showAddedDate ? "w-[10%]" : "w-[11%]"}>
+                    Category
+                  </Th>
+                  <Th className={showAddedDate ? "w-[9%]" : "w-[10%]"}>
+                    Approval date
+                  </Th>
                   {!hidePublishingDate && (
-                    <Th className="w-[10%]">Publishing date</Th>
+                    <Th className={showAddedDate ? "w-[9%]" : "w-[10%]"}>
+                      Publishing date
+                    </Th>
                   )}
-                  <Th className={hidePublishingDate ? "w-[20%]" : "w-[14%]"}>
+                  <Th
+                    className={
+                      hidePublishingDate
+                        ? "w-[20%]"
+                        : showAddedDate
+                          ? "w-[13%]"
+                          : "w-[14%]"
+                    }
+                  >
                     Doc link
                   </Th>
+                  {showAddedDate && (
+                    <Th
+                      className="w-[9%]"
+                      title="Quando o consultor pôs esta linha na tabela. Gravado uma vez, não muda com edições."
+                    >
+                      Added
+                    </Th>
+                  )}
                   <Th className="w-[6%] text-center">
                     <span className="inline-flex items-center gap-1">
                       <MessageSquare className="h-3 w-3" />
@@ -447,6 +490,7 @@ export function ReviewTable({
                   const cols =
                     6 /* task,status,category,approval,doc,comments */ +
                     (hidePublishingDate ? 0 : 1) +
+                    (showAddedDate ? 1 : 0) +
                     (allowArchiveActions ? 1 : 0) +
                     (allowDelete ? 1 : 0);
                   return (
@@ -529,6 +573,11 @@ export function ReviewTable({
                           }
                         />
                       </Td>
+                      {showAddedDate && (
+                        <Td>
+                          <AddedCell item={it} />
+                        </Td>
+                      )}
                       <Td className="text-center">
                         <CommentsToggle
                           open={isCommentsOpen}
@@ -732,6 +781,38 @@ function TabButton({
 
 /** Format an ISO date (YYYY-MM-DD) as DD/MM/YYYY for the readonly
  *  approval-date cell on the public side. */
+/** A coluna «Added» — texto, nunca um input.
+ *
+ *  A diferença de material é intencional: todas as outras datas da linha são
+ *  campos que se editam, esta é um carimbo. Se tivesse a mesma caixa branca
+ *  das outras, a primeira coisa que alguém faria era tentar mudá-la.
+ *
+ *  A segunda linha só aparece no caso raro em que o documento chegou depois
+ *  da linha (criada vazia, doc colado dias mais tarde) — nesse caso dizer só
+ *  a data da linha escondia a que interessa. */
+function AddedCell({ item }: { item: ReviewItem }) {
+  const added = item.createdAt;
+  const docAt = item.docFirstAddedAt ?? null;
+  const docLater =
+    docAt !== null && formatDate(docAt) !== formatDate(added) ? docAt : null;
+
+  if (!added) {
+    return <span className="text-[11px] text-black/25">—</span>;
+  }
+  return (
+    <span className="block leading-tight" title={`Linha adicionada ${formatDateTime(added)}${docLater ? ` · documento anexado ${formatDateTime(docLater)}` : ""}`}>
+      <span className="tabular block text-xs font-medium text-black/60">
+        {formatDate(added)}
+      </span>
+      {docLater && (
+        <span className="tabular mt-0.5 block text-[10px] text-black/35">
+          doc {formatDate(docLater)}
+        </span>
+      )}
+    </span>
+  );
+}
+
 function formatApprovalDate(iso: string): string {
   const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (!m) return iso;
@@ -750,12 +831,17 @@ function formatRelativeTime(ts: number): string {
 function Th({
   children,
   className,
+  title,
 }: {
   children: React.ReactNode;
   className?: string;
+  /** Tooltip nativo — usado na coluna «Added» para explicar que é um
+   *  carimbo e não um campo. */
+  title?: string;
 }) {
   return (
     <th
+      title={title}
       className={`px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-[0.08em] ${className ?? ""}`}
     >
       {children}
