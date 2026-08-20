@@ -26,6 +26,11 @@ export const CLIENT_LOGOS: Record<string, string> = {
   mymedic: "/logos/mymedic.png",
   "cidalia-cabeleireiros": "/logos/cidalia-cabeleireiros.png",
   "maratona-clube-de-portugal": "/logos/maratona-clube-de-portugal.png",
+  // Brancóptica (v76.82) — o site publica dois ativos de marca: o wordmark
+  // horizontal (840×120) e este lockup quadrado. Fica o quadrado: o chip é
+  // quadrado com object-contain, e um wordmark de 7:1 aterrava com 4px de
+  // altura num chip de 44px.
+  brancoptica: "/logos/brancoptica.png",
 };
 
 export function getClientLogo(slug: string): string | null {
@@ -91,6 +96,7 @@ export const CLIENT_WEBSITES: Record<string, string> = {
   "sentir-saude": "https://www.sentirsaude.pt/",
   "clinica-fernando-almeida": "https://www.clinicasdentariasfa.pt/",
   cuidamais: "https://cuidamais.pt/",
+  brancoptica: "https://www.brancoptica.pt/",
   // ADS-only — not known yet
   "clinica-empatia": "",
 };

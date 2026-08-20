@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.82",
+    date: "2026-08-20",
+    title: "Brancóptica: logótipo, site e data de onboarding",
+    highlights: [
+      "**👓 Logótipo da Brancóptica no chip, em todo o lado** — ficha do cliente, cartão da board, barra do roadmap. O site publica dois ativos de marca: o wordmark horizontal (840×120) e o lockup quadrado. Ficou o quadrado, e por uma razão prática: o chip é quadrado com `object-contain`, e um wordmark de 7:1 aterrava com 4 pixels de altura num chip de 44 — uma mancha azul em vez de um logótipo.",
+      "**🔗 Chip do website a apontar para brancoptica.pt.** Além do link visível, é a mesma entrada que alimenta o SE Ranking, o GA4 e o GBP quando esse cliente lá chegar — o domínio vive num sítio só.",
+      "**📅 Onboarding a 21/08/2026, e a pastilha aparece nas quatro superfícies de uma vez.** Ficha do cliente, barra do roadmap, painel de Roadmaps do Control Suite e página de NPS. Bastou uma entrada porque a data é resolvida na leitura (`resolveOnboardingDate`) e não copiada para cada sítio.",
+      "**🧑‍💼 Cliente fixado na carteira do João B. em código.** Já caía na coluna dele pelo registo de onboarding, mas sem estar no ficheiro da carteira o email do consultor nas entregas em PDF/DOCX caía no alias `seo@` em vez do dele.",
+    ],
+  },
+  {
     version: "76.81",
     date: "2026-08-20",
     title: "O sino passa a cobrar o cliente que não responde à Pending Review",

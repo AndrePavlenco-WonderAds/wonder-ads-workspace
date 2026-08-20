@@ -60,6 +60,11 @@ const JOAO_B = new Set([
   "cidalia-cabeleireiros",
   "mymedic",
   "maratona-clube-de-portugal",
+  // v76.82: Brancóptica, promovida do onboarding a 18/08/2026. Já caía na
+  // coluna dele pelo consultor do registo de onboarding; fica fixada aqui
+  // para `getConsultantEmailForSlug` também a reconhecer — sem isto, as
+  // entregas em PDF/DOCX saíam com o alias seo@ em vez do email dele.
+  "brancoptica",
 ]);
 
 // v75.4: uma consultora de SEO saiu e a carteira dela foi redistribuída:

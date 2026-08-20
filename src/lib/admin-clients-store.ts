@@ -82,6 +82,8 @@ export const DEFAULT_STARTING_DATES: Record<string, string> = {
   "clinica-fernando-almeida": "2026-06-15",
   // v76.39: Maratona Clube de Portugal — onboarding e arranque a 01/09/2026.
   "maratona-clube-de-portugal": "2026-09-01",
+  // v76.82: Brancóptica — onboarding a 21/08/2026.
+  brancoptica: "2026-08-21",
 };
 
 /** Full agency consultant roster — drives the multi-select dropdown on
