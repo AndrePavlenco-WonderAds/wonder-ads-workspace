@@ -1,6 +1,9 @@
-// Registo dos pedidos de ausência — server-only.
+// Registo das ausências — server-only. Duas folhas, um só registo: o PEDIDO
+// que o próprio assina (RH-01, `kind: "request"`) e a FALTA que o C-Level
+// lança a alguém (RH-02, `kind: "falta"`). Partilham a chave, o índice e o
+// sino de propósito — quem lê o histórico de uma pessoa quer as duas coisas.
 //
-// TRÊS CHAVES, DE PROPÓSITO:
+// QUATRO CHAVES, DE PROPÓSITO:
 //   `absence:<id>`     → o pedido em si. Um registo por chave para que a
 //                        decisão (que reescreve o pedido) nunca esteja em
 //                        corrida com a criação de outro pedido — no dia em
@@ -11,6 +14,8 @@
 //                        índice de leitura; nunca é reescrita, só cresce.
 //   `absences:counter` → INCR atómico que dá a referência humana sequencial
 //                        (AUS-2026-007) sem read-modify-write.
+//   `faltas:counter`   → o mesmo, para as faltas (FAL-2026-003). Contador
+//                        próprio: as duas séries são numeradas à parte.
 //
 // As notificações do sino DERIVAM daqui em cada leitura, como tudo o resto
 // no sino: um pedido pendente É a notificação dos superadmins, um pedido
@@ -20,10 +25,11 @@
 
 import { kv } from "@vercel/kv";
 import {
+  faltaReasonById,
   reasonById,
   type AbsenceAttachment,
+  type AbsenceKind,
   type AbsencePeriodKind,
-  type AbsenceReasonId,
   type AbsenceRequest,
   type AbsenceStatus,
 } from "./absences-shared";
@@ -31,6 +37,10 @@ import {
 const RECORD_PREFIX = "absence:";
 const IDS_KEY = "absences:ids";
 const COUNTER_KEY = "absences:counter";
+/** As faltas contam à parte — "FAL-2026-001" tem de começar no 1 mesmo que
+ *  já existam vinte pedidos de ausência gravados. Mesmo INCR atómico, outra
+ *  chave; o índice de leitura continua a ser um só. */
+const FALTA_COUNTER_KEY = "faltas:counter";
 
 /** Quantos pedidos o índice serve, no máximo, numa leitura. Uma casa de ~12
  *  pessoas leva anos a chegar perto disto; é um teto de segurança para o
@@ -59,7 +69,8 @@ const PERIOD_KINDS: AbsencePeriodKind[] = [
   "full-day",
   "multi-day",
 ];
-const STATUSES: AbsenceStatus[] = ["pending", "approved", "rejected"];
+const STATUSES: AbsenceStatus[] = ["pending", "approved", "rejected", "recorded"];
+const KINDS: AbsenceKind[] = ["request", "falta"];
 
 /** O KV devolve objetos crus — um registo gravado antes de um campo existir
  *  vem sem ele. Tudo o que a app lê passa por aqui, com defaults, para que
@@ -76,7 +87,7 @@ export function sanitizeAbsence(raw: unknown): AbsenceRequest | null {
   const status = STATUSES.includes(a.status as AbsenceStatus)
     ? (a.status as AbsenceStatus)
     : "pending";
-  const reason = reasonById(a.reason as string)?.id ?? ("outro" as AbsenceReasonId);
+
 
   let attachment: AbsenceAttachment | null = null;
   if (a.attachment && typeof a.attachment === "object") {
@@ -91,9 +102,26 @@ export function sanitizeAbsence(raw: unknown): AbsenceRequest | null {
     }
   }
 
+  // Tudo o que foi gravado antes das faltas existirem é um pedido — e
+  // nenhum pedido tem classificação de justificada. Sem estes dois defaults,
+  // cada registo antigo rebentava a página que os lê (a lição dos WebTickets).
+  const kind = KINDS.includes(a.kind as AbsenceKind)
+    ? (a.kind as AbsenceKind)
+    : "request";
+
+  // Cada folha tem o seu catálogo de motivos — e os dois têm um "outro" para
+  // aterrar um id que já não exista.
+  const reasonMeta =
+    kind === "falta"
+      ? faltaReasonById(a.reason as string)
+      : reasonById(a.reason as string);
+  const reason = reasonMeta?.id ?? "outro";
+
   return {
     id: a.id,
     ref: text(a.ref, 40) || a.id,
+    kind,
+    justified: typeof a.justified === "boolean" ? a.justified : null,
     username: a.username,
     name: text(a.name, 120) || a.username,
     role: text(a.role, 120),
@@ -104,7 +132,7 @@ export function sanitizeAbsence(raw: unknown): AbsenceRequest | null {
     calendarDays: numOrNull(a.calendarDays) ?? 0,
     businessDays: numOrNull(a.businessDays) ?? 0,
     reason,
-    reasonLabel: text(a.reasonLabel, 80) || (reasonById(reason)?.label ?? "—"),
+    reasonLabel: text(a.reasonLabel, 80) || reasonMeta?.label || "—",
     details: text(a.details, 2000),
     contact: text(a.contact, 200),
     handover: text(a.handover, 1000),
@@ -126,6 +154,8 @@ export type NewAbsenceInput = Omit<
   AbsenceRequest,
   | "id"
   | "ref"
+  | "kind"
+  | "justified"
   | "createdAt"
   | "status"
   | "decidedBy"
@@ -149,6 +179,8 @@ export async function createAbsence(
     ...input,
     id: crypto.randomUUID(),
     ref: `AUS-${year}-${String(seq).padStart(3, "0")}`,
+    kind: "request",
+    justified: null,
     createdAt: Date.now(),
     status: "pending",
     decidedBy: null,
@@ -156,6 +188,59 @@ export async function createAbsence(
     decidedAt: null,
     decisionNote: null,
     decidedVia: null,
+    acknowledgedAt: null,
+  };
+  await kv.set(recordKey(record.id), record);
+  await kv.lpush(IDS_KEY, record.id);
+  return record;
+}
+
+export type NewFaltaInput = Omit<
+  AbsenceRequest,
+  | "id"
+  | "ref"
+  | "kind"
+  | "createdAt"
+  | "status"
+  | "decidedBy"
+  | "decidedByName"
+  | "decidedAt"
+  | "decisionNote"
+  | "decidedVia"
+  | "acknowledgedAt"
+> & {
+  /** Quem lançou a falta — é sempre um superadmin, verificado na API. */
+  registeredBy: string;
+  registeredByName: string;
+};
+
+/** Lança uma falta a alguém. Ao contrário do pedido, NASCE DECIDIDA: não há
+ *  fila de aprovação, o C-Level é que está a afirmar o facto. Por isso os
+ *  campos de decisão são preenchidos na criação — `decidedBy` é quem lançou
+ *  e `decidedAt` é o momento do lançamento —, e o único ato que falta é a
+ *  pessoa carregar em «Entendido» na notificação. */
+export async function createFalta(
+  input: NewFaltaInput,
+): Promise<AbsenceRequest> {
+  if (!absencesConfigured) {
+    throw new Error("KV storage not configured on this deployment.");
+  }
+  const { registeredBy, registeredByName, ...rest } = input;
+  const seq = await kv.incr(FALTA_COUNTER_KEY);
+  const year = new Date().getFullYear();
+  const now = Date.now();
+  const record: AbsenceRequest = {
+    ...rest,
+    id: crypto.randomUUID(),
+    ref: `FAL-${year}-${String(seq).padStart(3, "0")}`,
+    kind: "falta",
+    createdAt: now,
+    status: "recorded",
+    decidedBy: registeredBy,
+    decidedByName: registeredByName,
+    decidedAt: now,
+    decisionNote: null,
+    decidedVia: "app",
     acknowledgedAt: null,
   };
   await kv.set(recordKey(record.id), record);
@@ -203,6 +288,18 @@ export async function listAbsencesForUser(
 export async function listPendingAbsences(): Promise<AbsenceRequest[]> {
   const all = await listAbsences();
   return all.filter((a) => a.status === "pending");
+}
+
+/** Só os pedidos (folha RH-01) — o que o painel de decisão do C-Level trata. */
+export async function listAbsenceRequests(): Promise<AbsenceRequest[]> {
+  const all = await listAbsences();
+  return all.filter((a) => a.kind === "request");
+}
+
+/** Só as faltas (folha RH-02) — o registo de /admin/faltas. */
+export async function listFaltas(): Promise<AbsenceRequest[]> {
+  const all = await listAbsences();
+  return all.filter((a) => a.kind === "falta");
 }
 
 export type DecideResult =

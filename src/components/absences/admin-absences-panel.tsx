@@ -14,6 +14,7 @@
 // primeira palavra é a que conta.
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   CheckCircle2,
@@ -61,7 +62,13 @@ export function AdminAbsencesPanel({ initial }: { initial: AbsenceRequest[] }) {
         <p className="mt-1.5 max-w-[640px] text-[12.5px] leading-relaxed text-white/45">
           Os pedidos da equipa, com a folha completa à vista. Decidir aqui (ou no Slack,
           no #ausencias) resolve a notificação de todos os superadmins e avisa logo a
-          pessoa no sino dela.
+          pessoa no sino dela.{" "}
+          <Link
+            href="/admin/faltas"
+            className="font-medium text-amber-300/90 underline-offset-2 hover:underline"
+          >
+            Para lançar uma falta a alguém, é na folha RH-02 →
+          </Link>
         </p>
         <div className="mt-5 flex flex-wrap gap-3">
           <span

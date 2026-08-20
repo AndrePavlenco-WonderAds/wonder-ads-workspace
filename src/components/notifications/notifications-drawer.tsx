@@ -683,10 +683,13 @@ function NotificationRow({
   onResolve: () => void;
   onNavigate: () => void;
 }) {
-  // Numa resposta a um pedido de ausência não há trabalho a "concluir" —
-  // há uma decisão a acusar como recebida. O botão diz isso.
+  // Numa resposta a um pedido de ausência — ou numa falta que o C-Level
+  // lançou — não há trabalho a "concluir": há uma comunicação a acusar como
+  // recebida. O botão diz isso.
   const resolveLabel =
-    n.ruleId === "absence-decision" ? "Entendido" : "Concluído";
+    n.ruleId === "absence-decision" || n.ruleId === "falta-record"
+      ? "Entendido"
+      : "Concluído";
   return (
     <div className="group rounded-xl border border-white/[0.08] bg-white/[0.02] p-3 transition hover:border-[#783DF5]/35 hover:bg-white/[0.045]">
       <div className="flex items-center gap-2.5">

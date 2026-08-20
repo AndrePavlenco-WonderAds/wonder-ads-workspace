@@ -10,7 +10,7 @@ import { countRoadmaps } from "@/lib/roadmap-admin-helpers";
 import { buildAdminClientViews } from "@/lib/admin-roster";
 import { getOnboardingClients } from "@/lib/onboarding-clients-store";
 import { getNotificationRules } from "@/lib/notifications/rules-store";
-import { listPendingAbsences } from "@/lib/absences-store";
+import { listFaltas, listPendingAbsences } from "@/lib/absences-store";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -85,6 +85,14 @@ export default async function AdminPage() {
     /* KV unavailable — show 0 */
   }
 
+  // Faltas card count — tudo o que já foi lançado (não há "pendentes").
+  let faltasCount = 0;
+  try {
+    faltasCount = (await listFaltas()).length;
+  } catch {
+    /* KV unavailable — show 0 */
+  }
+
   return (
     <PageShell>
       <Link
@@ -102,6 +110,7 @@ export default async function AdminPage() {
         onboardingCount={onboardingCount}
         notificationsCount={notificationsCount}
         absencesPendingCount={absencesPendingCount}
+        faltasCount={faltasCount}
       />
     </PageShell>
   );

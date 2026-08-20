@@ -30,6 +30,7 @@ import { listAbsences } from "@/lib/absences-store";
 import {
   absenceDurationLine,
   absencePeriodLine,
+  justifiedLabel,
 } from "@/lib/absences-shared";
 import { getNotificationRules } from "@/lib/notifications/rules-store";
 import {
@@ -654,6 +655,11 @@ async function npsNotifications(
  *    da resposta. O botão do sino diz «Entendido» (não «Concluído») e grava
  *    o acknowledgedAt no registo — a partir daí deixa de ser gerada.
  *
+ *  • O PRÓPRIO, OUTRA VEZ: uma FALTA que o C-Level lhe lançou (folha RH-02)
+ *    segue o mesmo caminho — nasce já "decidida", por isso aparece no sino
+ *    dele no instante em que é gravada e só sai com o «Entendido». Nunca
+ *    aparece no sino dos superadmins: não há nada para eles decidirem.
+ *
  *  Uma leitura de KV (índice + mget) serve os dois lados. */
 async function absenceNotifications(
   viewer: Viewer,
@@ -697,6 +703,37 @@ async function absenceNotifications(
   for (const a of all) {
     if (a.username !== viewer.username) continue;
     if (a.status === "pending" || a.acknowledgedAt) continue;
+
+    // Uma FALTA lançada pelo C-Level não é a resposta a nada — é uma
+    // comunicação. Chega ao sino com o motivo, a classificação e o nome de
+    // quem assinou, e fica lá até a pessoa carregar em «Entendido». Sem esta
+    // separação, a falta aterrava com a copy de "o teu pedido foi recusado",
+    // que é uma frase errada sobre um facto que ninguém pediu.
+    if (a.kind === "falta") {
+      const id = `falta-record:${a.id}`;
+      const entry = state[id];
+      const justified = a.justified === true;
+      out.push({
+        id,
+        ruleId: "falta-record",
+        title: justified
+          ? "Foi-te registada uma falta justificada 📄"
+          : "Foi-te registada uma falta ⚠️",
+        body:
+          `${a.reasonLabel} · ${absencePeriodLine(a)} · ${absenceDurationLine(a)}. ` +
+          `${justifiedLabel(a.justified)}, registada por ${a.decidedByName ?? "C-Level"}.` +
+          (a.details ? ` «${a.details.slice(0, 200)}${a.details.length > 200 ? "…" : ""}»` : ""),
+        periodLabel: a.ref,
+        dueAt: a.decidedAt ?? a.createdAt,
+        client: null,
+        actionLabel: "Ver o meu histórico",
+        actionHref: "/ausencias",
+        resolved: Boolean(entry),
+        resolvedAt: entry?.resolvedAt ?? null,
+      });
+      continue;
+    }
+
     const id = `absence-decision:${a.id}`;
     const entry = state[id];
     const approved = a.status === "approved";

@@ -15,10 +15,11 @@ import {
 import { setNotificationResolved } from "@/lib/notifications/state-store";
 import { acknowledgeAbsence } from "@/lib/absences-store";
 
-/** As notificações de resposta a ausências vivem no REGISTO da ausência
- *  (acknowledgedAt), não no estado por-utilizador: o «Entendido» tem de as
- *  fazer desaparecer de vez, não descê-las para "Concluídas". */
-const ABSENCE_DECISION_PREFIX = "absence-decision:";
+/** As notificações de resposta a ausências — e as de faltas lançadas pelo
+ *  C-Level — vivem no REGISTO (acknowledgedAt), não no estado por-utilizador:
+ *  o «Entendido» tem de as fazer desaparecer de vez, não descê-las para
+ *  "Concluídas". */
+const ABSENCE_ACK_PREFIXES = ["absence-decision:", "falta-record:"];
 
 export const runtime = "nodejs";
 
@@ -68,16 +69,14 @@ export async function POST(req: Request) {
     );
   }
 
-  // «Entendido» numa resposta de ausência: o ack no registo é a fonte de
-  // verdade (e o exists-check acima já garantiu que a ausência é desta
-  // pessoa). Vai primeiro — se falhar, não se grava estado nenhum e o
-  // painel repõe a linha com o erro.
-  if (resolved && id.startsWith(ABSENCE_DECISION_PREFIX)) {
+  // «Entendido» numa resposta de ausência ou numa falta registada: o ack no
+  // registo é a fonte de verdade (e o exists-check acima já garantiu que o
+  // registo é desta pessoa). Vai primeiro — se falhar, não se grava estado
+  // nenhum e o painel repõe a linha com o erro.
+  const ackPrefix = ABSENCE_ACK_PREFIXES.find((p) => id.startsWith(p));
+  if (resolved && ackPrefix) {
     try {
-      await acknowledgeAbsence(
-        id.slice(ABSENCE_DECISION_PREFIX.length),
-        viewer.username,
-      );
+      await acknowledgeAbsence(id.slice(ackPrefix.length), viewer.username);
     } catch (err) {
       console.error("Notificações: ack de ausência falhou:", err);
       return NextResponse.json(

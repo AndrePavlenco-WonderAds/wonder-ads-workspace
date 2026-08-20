@@ -16,6 +16,7 @@ import { formatDateTime } from "./dates";
 import {
   absenceDurationLine,
   absencePeriodLine,
+  justifiedLabel,
   type AbsenceRequest,
 } from "./absences-shared";
 import { postAusenciasToSlack } from "./slack";
@@ -163,5 +164,65 @@ export async function announceAbsenceDecision(a: AbsenceRequest): Promise<void> 
         },
       },
     ],
+  });
+}
+
+/** Mensagem no #ausencias quando o C-Level lança uma FALTA (folha RH-02).
+ *
+ *  Sem botões: não há nada a decidir — a falta já é um facto assinado. O que
+ *  a mensagem faz é deixar rasto no canal, para que os três superadmins vejam
+ *  o que os outros lançaram sem terem de abrir o Control Suite. */
+export async function announceFaltaRegistered(a: AbsenceRequest): Promise<void> {
+  const mark = a.justified ? "✅ Justificada" : "⚠️ Injustificada";
+  const blocks: unknown[] = [
+    {
+      type: "header",
+      text: {
+        type: "plain_text",
+        text: `⚠️ Falta registada · ${a.ref}`,
+        emoji: true,
+      },
+    },
+    {
+      type: "section",
+      fields: [
+        { type: "mrkdwn", text: `*Colaborador*\n*${a.name}*\n${a.role || "—"} · ${a.dept || "—"}` },
+        { type: "mrkdwn", text: `*Motivo*\n${a.reasonLabel}\n${mark}` },
+        { type: "mrkdwn", text: `*Período*\n${periodLine(a)}` },
+        { type: "mrkdwn", text: `*Duração*\n${durationLine(a)}` },
+      ],
+    },
+  ];
+  if (a.details) {
+    blocks.push({
+      type: "section",
+      text: {
+        type: "mrkdwn",
+        text: `*Descrição*\n>${a.details.replace(/\n/g, "\n>")}`,
+      },
+    });
+  }
+  if (a.attachment) {
+    blocks.push({
+      type: "section",
+      text: {
+        type: "mrkdwn",
+        text: `*Documento*\n<${a.attachment.url}|${a.attachment.name}>`,
+      },
+    });
+  }
+  blocks.push({
+    type: "context",
+    elements: [
+      {
+        type: "mrkdwn",
+        text: `✍️ Assinado por *${a.signatureName}* (${a.decidedByName ?? "C-Level"}) · ${formatDateTime(a.createdAt)} · ${a.name.split(" ")[0]} foi notificado no sino da app`,
+      },
+    ],
+  });
+
+  await postAusenciasToSlack({
+    text: `Falta ${a.ref}: ${a.name} — ${a.reasonLabel} (${justifiedLabel(a.justified).toLowerCase()}), ${periodLine(a)}`,
+    blocks,
   });
 }

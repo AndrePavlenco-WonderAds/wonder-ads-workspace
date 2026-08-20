@@ -13,6 +13,19 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.79",
+    date: "2026-08-20",
+    title: "Faltas: o C-Level passa a poder lançá-las, e a RH recebe o mapa do mês no dia 1",
+    highlights: [
+      "**📋 Folha RH-02 — «Registar Falta», no menu do teu nome (só C-Level).** Até aqui a app só sabia registar ausências que alguém PEDIA; não havia sítio nenhum para dizer «esta pessoa faltou». Agora há, e é o mesmo papel da folha de pedido — cabeçalho timbrado, secções numeradas e a assinatura escrita à mão —, porque um registo de falta é o documento mais sensível que esta app escreve sobre alguém: merece o mesmo ato formal, não um dropdown e um toast.",
+      "**⚠️ Motivos próprios, com a classificação já lá dentro.** Falta injustificada, Falta justificada, Atraso, Saída antecipada, Doença sem aviso prévio e Outro. Cada um traz a marca de justificada ou injustificada colada ao motivo — só o «Outro» pergunta —, e é essa marca que impede que dias de férias aprovadas e dias de falta caiam algum dia no mesmo número.",
+      "**🔔 A pessoa é notificada no instante em que assinas.** A falta aparece-lhe no sino com o motivo, a classificação, a tua descrição e o teu nome, e fica lá até ela carregar em «Entendido» — e tu vês no registo quem já acusou a receção e quem ainda não. No histórico dela em `/ausencias`, as faltas vivem numa lista à parte dos pedidos: um ato do próprio e um ato sobre o próprio não podiam ter o mesmo peso visual.",
+      "**📅 Resumo mensal de assiduidade no #ausencias, todo o dia 1 às 9h, com a Alice identificada.** Por trabalhador: dias úteis de ausência aprovada (com os motivos) e dias úteis de falta, separados entre justificados e injustificados. É o mapa que faltava à RH para saber o que descontar — e a mensagem não decide por ninguém: diz o que aconteceu e separa o que é justificado do que não é.",
+      "**🗓️ Os dias vêm recortados ao mês, não ao mês em que a folha começou.** Umas férias de 28/06 a 04/07 entram com os dias de junho no resumo de junho e os de julho no de julho. Sem esta conta, o processamento salarial de um mês levava dias do outro — que é exatamente o erro que um resumo destes existe para evitar.",
+      "**👀 O resumo pode ser visto e enviado a qualquer hora, em `/admin/faltas`.** Uma mensagem que só sai uma vez por mês é uma mensagem que ninguém consegue afinar; agora vê-se o mês fechado quando se quiser, e o botão «Enviar agora» serve para testar ou para reenviar se a RH pedir.",
+    ],
+  },
+  {
     version: "76.78",
     date: "2026-08-17",
     title: "NPS: os cartões da equipa agarrados ao retrato",

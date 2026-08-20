@@ -18,6 +18,7 @@ import {
   Loader2,
   LogOut,
   MessageCircle,
+  UserMinus,
   UserCircle2,
   Users,
 } from "lucide-react";
@@ -277,6 +278,21 @@ export function UserChipMenu({
             <CalendarOff className="h-3.5 w-3.5 text-[color:var(--brand-purple)]" />
             Pedir Ausência
           </Link>
+          {/* Registar Falta — só o C-Level. A rota vive sob /admin, por isso o
+              gate verdadeiro é o layout (isAdmin) e a API volta a verificar;
+              esconder aqui é só para o menu de um consultor não oferecer uma
+              porta que ele não pode abrir. */}
+          {isAdmin && (
+            <Link
+              href="/admin/faltas"
+              role="menuitem"
+              onMouseDown={(e) => e.preventDefault()}
+              className="flex w-full items-center gap-2 border-b border-white/8 px-4 py-2.5 text-left text-[12px] font-medium text-white/75 transition hover:bg-white/[0.06] hover:text-white"
+            >
+              <UserMinus className="h-3.5 w-3.5 text-amber-300/90" />
+              Registar Falta
+            </Link>
+          )}
           {/* Formação — visível a toda a gente com sessão. A área de
               Superadmin só aparece aos SuperAdmins; a rota está protegida no
               servidor de qualquer forma (o layout de /formacao/admin verifica

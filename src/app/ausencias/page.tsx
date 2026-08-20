@@ -24,13 +24,20 @@ export default async function AusenciasPage() {
   if (!employee) return null;
 
   const mine = await listAbsencesForUser(employee.username);
-  const pendingCount = mine.filter((a) => a.status === "pending").length;
+  // Os dois tipos de folha contam à parte em TODO o lado: dias de férias
+  // aprovados nunca podem entrar no mesmo número que dias de falta.
+  const requests = mine.filter((a) => a.kind !== "falta");
+  const faltas = mine.filter((a) => a.kind === "falta");
+  const pendingCount = requests.filter((a) => a.status === "pending").length;
   const year = new Date().getFullYear();
-  const approvedBusinessDays = mine
+  const approvedBusinessDays = requests
     .filter(
       (a) => a.status === "approved" && a.startDate.startsWith(String(year)),
     )
     .reduce((sum, a) => sum + a.businessDays, 0);
+  const faltasThisYear = faltas.filter((a) =>
+    a.startDate.startsWith(String(year)),
+  );
 
   return (
     <PageShell backHref="/" backLabel="workspace">
@@ -40,7 +47,7 @@ export default async function AusenciasPage() {
           <span className="brand-gradient-text">Pedido de Ausência</span>
         </h1>
 
-        <div className="mt-6 grid grid-cols-3 gap-3 sm:max-w-[520px]">
+        <div className="mt-6 grid grid-cols-2 gap-3 sm:max-w-[680px] sm:grid-cols-4">
           {[
             {
               label: "Por decidir",
@@ -53,8 +60,13 @@ export default async function AusenciasPage() {
               tone: "text-white",
             },
             {
+              label: `Faltas registadas · ${year}`,
+              value: String(faltasThisYear.length),
+              tone: faltasThisYear.length > 0 ? "text-amber-300" : "text-white",
+            },
+            {
               label: "Pedidos no total",
-              value: String(mine.length),
+              value: String(requests.length),
               tone: "text-white",
             },
           ].map((s) => (

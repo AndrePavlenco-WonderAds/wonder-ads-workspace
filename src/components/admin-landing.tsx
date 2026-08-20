@@ -19,6 +19,7 @@ import {
   Radar,
   CalendarOff,
   ArrowRight,
+  UserMinus,
 } from "lucide-react";
 
 type ChoiceBlock = {
@@ -40,6 +41,7 @@ export function AdminLanding({
   onboardingCount,
   notificationsCount,
   absencesPendingCount,
+  faltasCount,
 }: {
   projectsCount: number;
   employeesCount: number;
@@ -50,6 +52,8 @@ export function AdminLanding({
   notificationsCount: number;
   /** Pedidos de ausência à espera de decisão. */
   absencesPendingCount: number;
+  /** Faltas lançadas pelo C-Level, no total. */
+  faltasCount: number;
 }) {
 
   const blocks: ChoiceBlock[] = [
@@ -88,6 +92,15 @@ export function AdminLanding({
       count: absencesPendingCount,
       badge: absencesPendingCount === 1 ? "pendente" : "pendentes",
       Icon: CalendarOff,
+    },
+    {
+      href: "/admin/faltas",
+      title: "Faltas",
+      blurb:
+        "A folha RH-02 — lançar uma falta a um colaborador, com motivo, classificação (justificada ou não) e assinatura. A pessoa recebe-a no sino; a RH recebe o resumo no dia 1 de cada mês.",
+      count: faltasCount,
+      badge: faltasCount === 1 ? "falta" : "faltas",
+      Icon: UserMinus,
     },
     {
       href: "/admin/roadmaps",

@@ -1,11 +1,14 @@
-// C-Suite → Ausências: a fila de pedidos por decidir + o registo de tudo o
+// C-Suite → Ausências: a fila de PEDIDOS por decidir + o registo de tudo o
 // que já foi decidido. O gate isAdmin vive no layout de /admin; a API de
 // decisão volta a verificar por conta própria.
+//
+// As faltas lançadas pelo C-Level são o outro lado da casa e vivem em
+// /admin/faltas — o link está no cabeçalho do painel.
 
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
-import { listAbsences } from "@/lib/absences-store";
+import { listAbsenceRequests } from "@/lib/absences-store";
 import { AdminAbsencesPanel } from "@/components/absences/admin-absences-panel";
 
 export const dynamic = "force-dynamic";
@@ -16,7 +19,10 @@ export const metadata = {
 };
 
 export default async function AdminAusenciasPage() {
-  const all = await listAbsences();
+  // Só as folhas RH-01. As faltas (RH-02) não têm nada a decidir e vivem em
+  // /admin/faltas — misturá-las nesta fila era pôr um facto assinado à espera
+  // de uma aprovação que nunca vem.
+  const all = await listAbsenceRequests();
 
   return (
     <PageShell>

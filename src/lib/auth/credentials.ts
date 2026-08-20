@@ -364,6 +364,9 @@ export function getMentionName(username: string | null | undefined): string {
  *  "@Full Name" text (current behaviour, no regression). */
 export const SLACK_USER_IDS: Record<string, string> = {
   andre: "U05QPJZHE56",
+  // Alice (RH) — é a ela que o resumo mensal de assiduidade é dirigido no
+  // #ausencias, no dia 1 de cada mês.
+  alice: "U05PZR0UWAX",
   "andre-pereira": "U0BBED0K6NA",
   mike: "U0ACN1V6Y74",
   gustavo: "U07R9FV85GR",
