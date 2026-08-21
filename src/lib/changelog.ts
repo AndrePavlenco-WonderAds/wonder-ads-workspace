@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.83",
+    date: "2026-08-21",
+    title: "A satisfação do cliente passa a ver-se na board do SEO",
+    highlights: [
+      "**⭐ Índice de satisfação no cartão do cliente, ao lado do consultor.** Quando um cliente preenche o inquérito de NPS, o índice de satisfação global do último formulário (0–10) aparece numa pastilha ao lado do nome do consultor, na board do departamento. Verde ≥8 · âmbar ≥6 · vermelho <6 — as mesmas cores da página de NPS do cliente. Quem ainda não respondeu a nenhum inquérito continua com o cartão exatamente como estava: a pastilha só existe quando há resposta.",
+      "**🖱️ O tooltip diz a data do inquérito.** Passar o rato pela pastilha mostra «Satisfação do cliente (NPS): 8.2/10 — inquérito de 21/08/2026», para se perceber logo se o número é de agora ou de há três meses.",
+      "**📉 Uma leitura de KV para a board inteira, não uma por cartão.** O `getLatestNpsSummaries` vai buscar os últimos resultados de todos os clientes num só `mget` — a board com ~25 cartões custa uma operação, não vinte e cinco.",
+    ],
+  },
+  {
     version: "76.82",
     date: "2026-08-20",
     title: "Brancóptica: logótipo, site e data de onboarding",

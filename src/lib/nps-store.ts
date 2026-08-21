@@ -10,7 +10,11 @@
 // "send" via /api/nps/[slug]/send.
 
 import { kv } from "@vercel/kv";
-import { computeNpsScores, type NpsScores } from "@/lib/nps-questions";
+import {
+  computeNpsScores,
+  type NpsCategory,
+  type NpsScores,
+} from "@/lib/nps-questions";
 
 const KEY_PREFIX = "nps:";
 const MAX_SUBMISSIONS = 100;
@@ -260,4 +264,45 @@ export async function setNpsCadence(
     await kv.set(key(slug), { submissions: rec.submissions, meta });
   }
   return meta;
+}
+
+/** Latest submission summary for a client, as shown on the SEO department
+ *  board next to the consultant name. */
+export type NpsSummary = {
+  /** Índice de satisfação global (0–10, 1 casa decimal). */
+  overall: number;
+  /** Resposta de continuidade (0–10). */
+  nps: number;
+  category: NpsCategory;
+  submittedAt: number;
+};
+
+/** Latest NPS summary for many clients in ONE KV operation (mget).
+ *  Slugs without a record — or whose only submissions are from an older
+ *  survey schema — are simply absent from the map. Never throws: the
+ *  department board must render even with KV down. */
+export async function getLatestNpsSummaries(
+  slugs: string[],
+): Promise<Record<string, NpsSummary>> {
+  const out: Record<string, NpsSummary> = {};
+  const unique = [...new Set(slugs)];
+  if (!npsStorageConfigured || unique.length === 0) return out;
+  try {
+    const rows = await kv.mget<Array<Partial<NpsRecord> | null>>(
+      ...unique.map(key),
+    );
+    unique.forEach((slug, i) => {
+      const latest = normalizeRecord(rows?.[i] ?? null).submissions[0];
+      if (!latest) return;
+      out[slug] = {
+        overall: latest.scores.overall,
+        nps: latest.scores.nps,
+        category: latest.scores.category,
+        submittedAt: latest.submittedAt,
+      };
+    });
+  } catch (err) {
+    console.error("KV nps mget failed:", err);
+  }
+  return out;
 }

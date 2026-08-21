@@ -1,10 +1,12 @@
 import Link from "next/link";
-import { ArrowUpRight, UserRound } from "lucide-react";
+import { ArrowUpRight, Star, UserRound } from "lucide-react";
 import type { ClientPalette } from "@/lib/client-colors";
 import { paletteToGradient } from "@/lib/client-colors";
 import type { ClientTier } from "@/lib/client-tiers";
 import type { AdChannel } from "@/lib/ads-clients";
 import type { LogoBgMode, LogoSizing } from "@/lib/client-meta";
+import { npsScoreColor } from "@/lib/nps-questions";
+import { formatDate } from "@/lib/dates";
 import { TierBadge } from "./tier-badge";
 import { LogoChip } from "./logo-chip";
 import { SiGoogle, SiMeta } from "./brand-icons";
@@ -20,6 +22,11 @@ export type ClientCardProps = {
   palette: ClientPalette;
   tier: ClientTier;
   channels?: AdChannel[];
+  /** Índice de satisfação global (0–10) do último inquérito NPS que o
+   *  cliente preencheu. `null`/omitido = ainda não respondeu a nenhum. */
+  npsOverall?: number | null;
+  /** Data (epoch ms) desse último inquérito, para o tooltip. */
+  npsAt?: number | null;
   index?: number;
   /** Hide the decorative top-right arrow. Set on SEO cards where a
    *  SuperAdmin pause/reactivate toggle sits in that corner instead. */
@@ -37,6 +44,8 @@ export function ClientCard({
   palette,
   tier,
   channels,
+  npsOverall = null,
+  npsAt = null,
   index = 0,
   showArrow = true,
 }: ClientCardProps) {
@@ -88,9 +97,14 @@ export function ClientCard({
           {title}
         </h3>
         <div className="mt-2 flex items-center justify-between gap-2">
-          <p className="flex items-center gap-1.5 text-xs">
-            <UserRound className="h-3 w-3 text-white/50" />
-            <span className="font-medium text-white/75">{consultant}</span>
+          <p className="flex min-w-0 items-center gap-1.5 text-xs">
+            <UserRound className="h-3 w-3 shrink-0 text-white/50" />
+            <span className="truncate font-medium text-white/75">
+              {consultant}
+            </span>
+            {npsOverall !== null && (
+              <NpsChip overall={npsOverall} at={npsAt} />
+            )}
           </p>
           <TierBadge tier={tier} />
         </div>
@@ -103,6 +117,31 @@ export function ClientCard({
         )}
       </div>
     </Link>
+  );
+}
+
+/** Último índice de satisfação global (NPS) do cliente, ao lado do nome do
+ *  consultor. Verde ≥8 · âmbar ≥6 · vermelho <6 — as mesmas cores da página
+ *  de NPS do cliente. */
+function NpsChip({ overall, at }: { overall: number; at: number | null }) {
+  const color = npsScoreColor(overall);
+  return (
+    <span
+      className="inline-flex shrink-0 items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] font-semibold leading-none tabular-nums"
+      style={{
+        color,
+        borderColor: `${color}59`,
+        background: `${color}1f`,
+      }}
+      title={
+        at
+          ? `Satisfação do cliente (NPS): ${overall.toFixed(1)}/10 — inquérito de ${formatDate(at)}`
+          : `Satisfação do cliente (NPS): ${overall.toFixed(1)}/10`
+      }
+    >
+      <Star className="h-2.5 w-2.5" fill="currentColor" strokeWidth={0} />
+      {overall.toFixed(1)}
+    </span>
   );
 }
 

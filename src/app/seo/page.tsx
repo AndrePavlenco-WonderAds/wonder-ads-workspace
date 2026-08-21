@@ -25,6 +25,7 @@ import {
 } from "@/lib/client-meta";
 import { getLogoOverrides } from "@/lib/admin-client-logos-store";
 import { getPausedSlugSet } from "@/lib/admin-paused-clients-store";
+import { getLatestNpsSummaries, type NpsSummary } from "@/lib/nps-store";
 
 export const metadata = {
   title: "SEO DPT — Wonder Ads Workspace",
@@ -90,6 +91,10 @@ export default async function SeoPage() {
     () => ({}) as Record<string, string>,
   );
 
+  // Último NPS de cada cliente (índice de satisfação global), lido numa
+  // única operação KV (mget) para toda a board — nunca um get por cartão.
+  const npsSummaries = await getLatestNpsSummaries(clients.map((c) => c.slug));
+
   return (
     <PageShell>
       <DepartmentHeader
@@ -117,6 +122,7 @@ export default async function SeoPage() {
             <ClientColumns
               columns={consultantColumns}
               logoOverrides={logoOverrides}
+              npsSummaries={npsSummaries}
               isAdmin={employee.isAdmin}
               employeeName={employee.name}
             />
@@ -139,6 +145,7 @@ export default async function SeoPage() {
             <ClientColumns
               columns={pausedColumns}
               logoOverrides={logoOverrides}
+              npsSummaries={npsSummaries}
               isAdmin={employee.isAdmin}
               employeeName={employee.name}
               paused
@@ -219,12 +226,14 @@ function buildConsultantColumns(clients: NotionClient[]): ConsultantColumn[] {
 function ClientColumns({
   columns,
   logoOverrides,
+  npsSummaries,
   isAdmin,
   employeeName,
   paused = false,
 }: {
   columns: ConsultantColumn[];
   logoOverrides: Record<string, string>;
+  npsSummaries: Record<string, NpsSummary>;
   isAdmin: boolean;
   employeeName: string;
   paused?: boolean;
@@ -268,6 +277,8 @@ function ClientColumns({
                     consultant={c.consultant}
                     palette={c.palette}
                     tier={c.tier}
+                    npsOverall={npsSummaries[c.slug]?.overall ?? null}
+                    npsAt={npsSummaries[c.slug]?.submittedAt ?? null}
                     index={i}
                     showArrow={false}
                   />
