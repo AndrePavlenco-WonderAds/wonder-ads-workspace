@@ -54,7 +54,7 @@ const SECTIONS: Array<{
     emoji: "🔗",
     title: "External links — verify before inserting",
     blurb:
-      "Whitelist of pre-approved authoritative roots · marker for unverified URLs · automated HEAD check after streaming.",
+      "Estudos científicos verificados em primeiro lugar (procurados ao vivo para o tema) · whitelist de domínios pré-aprovados · marcador para URLs não verificados · HEAD check automático no fim.",
     body: BLOG_WRITER_LINK_VERIFICATION,
   },
   {

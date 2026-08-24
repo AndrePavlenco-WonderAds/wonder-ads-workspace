@@ -13,6 +13,11 @@ import {
 import { getClientBySlug } from "@/lib/notion";
 import { buildSeoClaudeSystemPrompt } from "@/lib/seo-claude-prompt";
 import {
+  searchScholarlySources,
+  formatScholarSourcesForPrompt,
+  formatScholarSourcesForStream,
+} from "@/lib/seo-tools/scholar";
+import {
   runPageSpeed,
   formatPsiForPrompt,
   type PsiResult,
@@ -387,6 +392,48 @@ export async function POST(
           const message = err instanceof Error ? err.message : String(err);
           send(
             `> ⚠️ Análise de sitemap falhou (${message.slice(0, 200)}) — a prosseguir sem internal linking automático.\n\n`,
+          );
+        }
+
+        // Academic grounding. Search the scholarly literature for THIS
+        // topic and hand the writer a closed list of real, verified,
+        // peer-reviewed papers it may cite — same discipline as the
+        // internal-link candidates above, applied to external sources.
+        // Best-effort: a failure here just means the writer falls back to
+        // the domain whitelist, exactly as it behaved before.
+        try {
+          send(
+            `> 📚 A procurar literatura científica revista por pares sobre este tema…\n`,
+          );
+          const scholar = await searchScholarlySources({
+            topic: inputs.topic,
+            primaryKeyword: inputs.primaryKeyword,
+            secondaryKeywords: inputs.secondaryKeywords,
+            referenceFocus: inputs.referenceFocus,
+            max: 6,
+            signal: AbortSignal.timeout(45000),
+          });
+          const block = formatScholarSourcesForPrompt(scholar);
+          factPack = factPack ? `${factPack}\n\n---\n\n${block}` : block;
+          if (scholar.ok) {
+            send(
+              `> ✓ ${scholar.papers.length} estudo(s) verificado(s) em ${scholar.providers.join(" + ")} (de ${scholar.found} candidatos${scholar.unverified > 0 ? `, ${scholar.unverified} descartado(s) por link morto` : ""}) — pesquisa: ${scholar.queries.map((q) => `\`${q}\``).join(", ")}\n\n`,
+            );
+            send(`${formatScholarSourcesForStream(scholar)}\n\n`);
+            if (scholar.usedFallbackQuery) {
+              send(
+                `> ⚠️ A tradução da pesquisa para inglês académico não correu — os termos foram para as bases de dados em português, por isso a relevância pode ser mais fraca. Confirma cada estudo antes de aprovar o artigo.\n\n`,
+              );
+            }
+          } else {
+            send(
+              `> ⚠️ ${scholar.reason ?? "Sem literatura científica para este tema"} — o artigo NÃO vai inventar estudos; cai na whitelist de domínios (WHO, DGS, NHS, Cochrane…).\n\n`,
+            );
+          }
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          send(
+            `> ⚠️ Pesquisa académica falhou (${message.slice(0, 200)}) — a prosseguir sem estudos citados.\n\n`,
           );
         }
       } else if (

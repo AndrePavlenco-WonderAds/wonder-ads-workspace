@@ -890,7 +890,7 @@ export const PILLARS: Pillar[] = [
         slug: "write-blog-article",
         label: "Write Blog Article",
         blurb:
-          "Dedicated long-form writer agent. Triple-checks client brief, researches references, plans internal links, then drafts and self-audits.",
+          "Dedicated long-form writer agent. Triple-checks client brief, searches the peer-reviewed literature for verified studies to cite, plans internal links, then drafts and self-audits.",
         titleTemplate: "New article for {client}",
         generateButtonLabel: "Brief → Research → Draft",
         fields: [
@@ -945,7 +945,7 @@ export const PILLARS: Pillar[] = [
             type: "textarea",
             rows: 3,
             placeholder:
-              "Specific authoritative sources or angles the client wants cited (e.g. \"SNS guidelines on lower-back pain\", \"PubMed 2024 meta-analysis on dental implants\").",
+              "Steers the automatic academic search. Every run already searches the peer-reviewed literature (OpenAlex / Europe PMC) for this topic — use this box only to push it somewhere specific, e.g. \"randomised trials, not case reports\", \"SNS guidelines on lower-back pain\", \"meta-analyses on implant survival\".",
           },
           {
             key: "ctaTarget",

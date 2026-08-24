@@ -13,6 +13,22 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.86",
+    date: "2026-08-24",
+    title: "O Blog Writer passa a citar estudos científicos a sério",
+    highlights: [
+      "**📚 Todos os artigos passam a começar por uma pesquisa à literatura revista por pares.** Antes de escrever, o agente procura estudos sobre o tema do artigo, verifica-os, e recebe uma lista fechada dos que pode citar — a mesma disciplina que a v74.x aplicou aos links internos, agora aplicada às fontes externas. Até aqui o writer só podia citar URLs que tinha memorizado no treino, e tudo o resto saía como `[link to be added by consultant]`.",
+      "**🔬 Não é scraping do Google Scholar — e é de propósito.** O Scholar não publica API e as condições dele proíbem acesso automático; a partir de um IP de datacenter (ou seja, de qualquer função da Vercel) devolve CAPTCHA em vez de resultados. O que o Scholar indexa está acessível por APIs abertas e com metadados melhores: **OpenAlex** (250M+ trabalhos, sucessor do Microsoft Academic Graph) e **Europe PMC** (medicina e ciências da vida — a maioria dos nossos clientes). Quem quiser o Scholar literal, basta pôr `SERPAPI_KEY` na Vercel e o terceiro provider liga-se sozinho, sem mais nenhuma alteração.",
+      "**🧠 A pesquisa é traduzida para inglês académico antes de sair.** «tratamento de escoliose em Lisboa» não encontra nada nas bases científicas — os papers estão em inglês e não falam de Lisboa. Um passo em Haiku transforma o briefing em 1–3 queries académicas (tira cidade, marca, preço; fica o conceito clínico). Se esse passo falhar, o sistema não finge: cai numa limpeza por palavras-chave, marca a corrida como degradada e **avisa o consultor na stream** que a relevância pode ser mais fraca.",
+      "**🏅 «Autores de alta autoridade» passa a ser um número, não uma alegação.** Cada estudo traz o h-index do autor principal (via OpenAlex), a revista, o ano, o número de citações e se tem acesso aberto. O score de autoridade 0–100 combina citações-por-ano (normalizadas pela idade, para um paper de 2024 não perder só por ser novo), o h-index do melhor autor, a recência e o acesso aberto.",
+      "**✅ Verificação a sério: retratados fora, DOI que não abre fora.** Trabalhos retratados são excluídos no filtro E revalidados no campo, e cada DOI é resolvido antes de entrar na lista — um link morto num artigo do cliente é pior do que não citar nada. A stream mostra quantos candidatos foram considerados e quantos caíram.",
+      "**🚫 Regras novas contra citações inventadas.** O prompt do agente passa a dizer, por palavras: só podes citar papers desta lista, não inventes autor/revista/ano/DOI «nem que pareça plausível», nomeia a revista e o ano no texto visível (é o que torna a afirmação verificável pelo leitor), prefere o link de acesso aberto, e nunca digas que um estudo conclui mais do que o abstract diz. O checklist de auto-auditoria ganhou duas linhas a cobrar isto.",
+      "**👀 O consultor vê as fontes antes do artigo existir.** A stream mostra uma tabela com estudo, revista, ano, citações, h-index e autoridade, com links clicáveis — dá para rejeitar a corrida antes de gastar o artigo todo. As queries usadas aparecem também, para se perceber o que foi procurado.",
+      "**🧪 Testado contra as APIs reais.** `scripts/test-scholar.ts` (34 asserções) corre contra OpenAlex e Europe PMC a sério: dedupe por DOI, ordenação por autoridade, corte por ano, h-index resolvido, tabela da stream, e o caminho de tema-sem-resultados. Encontrou dois bugs que já vão corrigidos: o Europe PMC serve o nome da revista em `journalInfo.journal.title` quando se pede `resultType=core` (dava «—» em todas as linhas), e o OpenAlex devolve **504 num filtro OR com 5+ ids de autor** — sem erro visível, só uma lista vazia, que era o que estava a apagar todos os h-index. Os pedidos passam a ir em lotes de 4.",
+      "**🛟 Falhar não parte nada.** Qualquer provider em baixo degrada para os outros; todos em baixo devolve exatamente o comportamento de antes (whitelist de domínios + marcador para o consultor). O passo tem timeout próprio de 45s e não bloqueia a escrita do artigo.",
+    ],
+  },
+  {
     version: "76.85",
     date: "2026-08-24",
     title: "Quem assinou garantia de keywords vê-se na board",
