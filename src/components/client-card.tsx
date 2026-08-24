@@ -6,6 +6,7 @@ import type { ClientTier } from "@/lib/client-tiers";
 import type { AdChannel } from "@/lib/ads-clients";
 import type { LogoBgMode, LogoSizing } from "@/lib/client-meta";
 import { npsScoreColor } from "@/lib/nps-questions";
+import { KEYWORD_GUARANTEE_COUNT } from "@/lib/keyword-guarantee";
 import { formatDate } from "@/lib/dates";
 import { TierBadge } from "./tier-badge";
 import { LogoChip } from "./logo-chip";
@@ -27,6 +28,9 @@ export type ClientCardProps = {
   npsOverall?: number | null;
   /** Data (epoch ms) desse último inquérito, para o tooltip. */
   npsAt?: number | null;
+  /** Cliente com contrato de garantia de posicionamento nas Premium
+   *  Keywords. Mostra a pastilha dourada ao lado do tier. */
+  keywordGuarantee?: boolean;
   index?: number;
   /** Hide the decorative top-right arrow. Set on SEO cards where a
    *  SuperAdmin pause/reactivate toggle sits in that corner instead. */
@@ -46,6 +50,7 @@ export function ClientCard({
   channels,
   npsOverall = null,
   npsAt = null,
+  keywordGuarantee = false,
   index = 0,
   showArrow = true,
 }: ClientCardProps) {
@@ -106,7 +111,10 @@ export function ClientCard({
               <NpsChip overall={npsOverall} at={npsAt} />
             )}
           </p>
-          <TierBadge tier={tier} />
+          <div className="flex shrink-0 items-center gap-1.5">
+            {keywordGuarantee && <KeywordGuaranteeChip />}
+            <TierBadge tier={tier} />
+          </div>
         </div>
         {channels && channels.length > 0 && (
           <div className="mt-3 flex flex-wrap gap-1.5">
@@ -117,6 +125,21 @@ export function ClientCard({
         )}
       </div>
     </Link>
+  );
+}
+
+/** Contrato com garantia de posicionamento nas Premium Keywords. Dourado,
+ *  como as estrelas da tabela de Target Keywords — quem vê a pastilha na
+ *  board sabe que aquelas 3 palavras têm um contrato por trás. */
+function KeywordGuaranteeChip() {
+  return (
+    <span
+      title={`Contrato com garantia de posicionamento nas ${KEYWORD_GUARANTEE_COUNT} Premium Keywords`}
+      className="inline-flex shrink-0 items-center gap-1 rounded-full border border-amber-400/30 bg-amber-400/[0.1] px-1.5 py-0.5 text-[9.5px] font-bold uppercase tracking-[0.1em] text-amber-200"
+    >
+      <Star className="h-2.5 w-2.5" fill="currentColor" strokeWidth={2.5} />
+      Garantia {KEYWORD_GUARANTEE_COUNT} KW
+    </span>
   );
 }
 

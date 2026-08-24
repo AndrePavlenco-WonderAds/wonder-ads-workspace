@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.85",
+    date: "2026-08-24",
+    title: "Quem assinou garantia de keywords vê-se na board",
+    highlights: [
+      "**⭐ Pastilha «Garantia 3 KW» no cartão do cliente, ao lado do tier.** Os clientes que assinaram contrato com garantia de posicionamento passam a trazer uma pastilha dourada na board do SEO: Cidália Cabeleireiros, MyMedic, Maratona Clube de Portugal, Brancóptica, Clínica Fernando Almeida, Spine Center e Sentir Saúde. O tooltip diz o que é — «Contrato com garantia de posicionamento nas 3 Premium Keywords».",
+      "**🔗 O mesmo dourado das estrelas da tabela.** A pastilha usa a cor das Premium Keywords (v76.84) de propósito: quem vê o cartão na board e depois abre a ficha do cliente reconhece a mesma coisa nos dois sítios — as 3 palavras douradas são exatamente as que o contrato cobre.",
+      "**🧾 Contrato e trabalho vivem separados, de propósito.** `src/lib/keyword-guarantee.ts` guarda QUEM assinou; as estrelas na tabela guardam QUAIS são as três. Assinar contrato não escolhe palavras-chave, e escolher palavras-chave não assina contrato — misturar as duas listas num sítio só faria a marcação de uma estrela parecer uma alteração contratual.",
+    ],
+  },
+  {
     version: "76.84",
     date: "2026-08-24",
     title: "Premium Keywords: as 3 palavras-chave que mandam na lista",

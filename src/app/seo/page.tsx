@@ -8,6 +8,7 @@ import { DepartmentHeader } from "@/components/department-header";
 import { KpisCard } from "@/components/kpis-card";
 import { SeoDirectoriesCard } from "@/components/seo-directories-card";
 import { ClientCard } from "@/components/client-card";
+import { hasKeywordGuarantee } from "@/lib/keyword-guarantee";
 import { SeoPauseToggle } from "@/components/seo-pause-toggle";
 import { WorldMap } from "@/components/world-map";
 import { TypewriterPrompt } from "@/components/typewriter-prompt";
@@ -279,6 +280,7 @@ function ClientColumns({
                     tier={c.tier}
                     npsOverall={npsSummaries[c.slug]?.overall ?? null}
                     npsAt={npsSummaries[c.slug]?.submittedAt ?? null}
+                    keywordGuarantee={hasKeywordGuarantee(c.slug)}
                     index={i}
                     showArrow={false}
                   />
