@@ -13,6 +13,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.87",
+    date: "2026-08-24",
+    title: "A pastilha da garantia encolhe para o número",
+    highlights: [
+      "**3️⃣ Só o número.** A pastilha «★ GARANTIA 3 KW» no cartão do cliente passa a ser um círculo dourado com um **3** lá dentro — sem estrela, sem texto. O que significa continua no tooltip («Contrato com garantia de posicionamento nas 3 Premium Keywords») e para leitores de ecrã.",
+      "**⬆️ Passa para cima do tier, não para o lado.** A pastilha e o `Core`/`Growth` ficam empilhados à direita em vez de lado a lado. Além de arrumar melhor, devolve a largura que a linha andava a roubar ao nome do consultor — «And…» volta a ser «André Pereira».",
+    ],
+  },
+  {
     version: "76.86",
     date: "2026-08-24",
     title: "O Blog Writer passa a citar estudos científicos a sério",

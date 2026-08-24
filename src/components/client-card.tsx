@@ -111,7 +111,7 @@ export function ClientCard({
               <NpsChip overall={npsOverall} at={npsAt} />
             )}
           </p>
-          <div className="flex shrink-0 items-center gap-1.5">
+          <div className="flex shrink-0 flex-col items-end gap-1">
             {keywordGuarantee && <KeywordGuaranteeChip />}
             <TierBadge tier={tier} />
           </div>
@@ -135,10 +135,13 @@ function KeywordGuaranteeChip() {
   return (
     <span
       title={`Contrato com garantia de posicionamento nas ${KEYWORD_GUARANTEE_COUNT} Premium Keywords`}
-      className="inline-flex shrink-0 items-center gap-1 rounded-full border border-amber-400/30 bg-amber-400/[0.1] px-1.5 py-0.5 text-[9.5px] font-bold uppercase tracking-[0.1em] text-amber-200"
+      className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-amber-400/35 bg-amber-400/[0.12] text-[11px] font-bold leading-none text-amber-200"
     >
-      <Star className="h-2.5 w-2.5" fill="currentColor" strokeWidth={2.5} />
-      Garantia {KEYWORD_GUARANTEE_COUNT} KW
+      {KEYWORD_GUARANTEE_COUNT}
+      <span className="sr-only">
+        {" "}
+        Premium Keywords com garantia contratual
+      </span>
     </span>
   );
 }
