@@ -29,10 +29,48 @@ export type ImpersonationTarget = {
   role: string;
   dept: string;
   isAdmin: boolean;
+  /** Retrato de public/team/avatar, ou null → inicial. */
+  avatar?: string | null;
 };
+
+/** Círculo com o retrato da pessoa (3:4, cabeça no topo → object-top) e
+ *  fallback para a inicial quando não há foto. */
+function AvatarCircle({
+  avatar,
+  name,
+  className,
+  ring = "brand-gradient-bg",
+  children,
+}: {
+  avatar: string | null | undefined;
+  name: string;
+  className: string;
+  ring?: string;
+  children?: React.ReactNode;
+}) {
+  return (
+    <span
+      aria-hidden
+      className={`relative flex shrink-0 items-center justify-center overflow-hidden rounded-full font-bold text-white ${ring} ${className}`}
+    >
+      {children ??
+        (avatar ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={avatar}
+            alt=""
+            className="h-full w-full object-cover object-top"
+          />
+        ) : (
+          name.trim().charAt(0).toUpperCase()
+        ))}
+    </span>
+  );
+}
 
 export function UserChipMenu({
   name,
+  avatar = null,
   role,
   dept,
   isAdmin = false,
@@ -44,6 +82,8 @@ export function UserChipMenu({
   people = [],
 }: {
   name: string;
+  /** Retrato da pessoa VISTA (segue a lente, como o nome). */
+  avatar?: string | null;
   role: string;
   dept: string;
   /** SuperAdmin (Andre / Alex / Alice) — vê a área de Superadmin da Formação. */
@@ -102,8 +142,6 @@ export function UserChipMenu({
     router.refresh();
   }
 
-  const initial = name.trim().charAt(0).toUpperCase();
-
   return (
     <div className="relative">
       <button
@@ -118,16 +156,20 @@ export function UserChipMenu({
             : "border-white/12 text-white/85 hover:border-[color:var(--brand-purple)]/45 hover:bg-white/[0.08] hover:text-white"
         }`}
       >
-        <span
-          aria-hidden
-          className={`flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold text-white ${
+        <AvatarCircle
+          avatar={avatar}
+          name={name}
+          className={`h-6 w-6 text-[10px] ${
             viewingAs
-              ? "bg-amber-500 shadow-[0_4px_14px_-4px_rgba(245,158,11,0.6)]"
-              : "brand-gradient-bg shadow-[0_4px_14px_-4px_rgba(120,61,245,0.6)]"
+              ? "ring-2 ring-amber-400/80 shadow-[0_4px_14px_-4px_rgba(245,158,11,0.6)]"
+              : "shadow-[0_4px_14px_-4px_rgba(120,61,245,0.6)]"
           }`}
+          ring={viewingAs && !avatar ? "bg-amber-500" : "brand-gradient-bg"}
         >
-          {viewingAs ? <Eye className="h-3 w-3" /> : initial}
-        </span>
+          {/* Com lente ativa e sem retrato, o olho continua a ser o sinal;
+              com retrato, o anel âmbar assume esse papel e a cara fica. */}
+          {viewingAs && !avatar ? <Eye className="h-3 w-3" /> : undefined}
+        </AvatarCircle>
         <span className="hidden flex-col text-left leading-tight sm:flex">
           <span>{name}</span>
           <span className="text-[9.5px] font-normal text-white/45">
@@ -144,8 +186,16 @@ export function UserChipMenu({
           className="animate-fade-up absolute right-0 top-full z-40 mt-2 w-60 overflow-hidden rounded-xl border border-white/12 bg-[color:var(--background)]/95 shadow-[0_18px_60px_-12px_rgba(0,0,0,0.7)] backdrop-blur-md"
         >
           <div className="border-b border-white/8 px-4 py-3">
-            <div className="flex items-center gap-2">
-              <UserCircle2 className="h-4 w-4 text-[color:var(--brand-purple)]" />
+            <div className="flex items-center gap-2.5">
+              {avatar ? (
+                <AvatarCircle
+                  avatar={avatar}
+                  name={name}
+                  className="h-9 w-9 text-[13px] ring-1 ring-white/15"
+                />
+              ) : (
+                <UserCircle2 className="h-4 w-4 text-[color:var(--brand-purple)]" />
+              )}
               <div>
                 <p className="text-sm font-semibold text-white">{name}</p>
                 <p className="text-[10.5px] uppercase tracking-[0.18em] text-white/45">
@@ -221,18 +271,16 @@ export function UserChipMenu({
                             : "hover:bg-white/[0.06] disabled:opacity-60"
                         }`}
                       >
-                        <span
-                          aria-hidden
-                          className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[9.5px] font-bold text-white ${
-                            active ? "bg-amber-500" : "brand-gradient-bg"
-                          }`}
+                        <AvatarCircle
+                          avatar={p.avatar}
+                          name={p.name}
+                          className={`h-7 w-7 text-[10px] ${active ? "ring-2 ring-amber-400/80" : ""}`}
+                          ring={active && !p.avatar ? "bg-amber-500" : "brand-gradient-bg"}
                         >
                           {switching === p.username ? (
                             <Loader2 className="h-3 w-3 animate-spin" />
-                          ) : (
-                            p.name.trim().charAt(0).toUpperCase()
-                          )}
-                        </span>
+                          ) : undefined}
+                        </AvatarCircle>
                         <span className="min-w-0 flex-1">
                           <span className="block truncate text-[12px] font-medium text-white/85">
                             {p.name}

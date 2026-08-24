@@ -35,6 +35,13 @@ export type ClientCardProps = {
   /** Hide the decorative top-right arrow. Set on SEO cards where a
    *  SuperAdmin pause/reactivate toggle sits in that corner instead. */
   showArrow?: boolean;
+  /** Hide the consultant line. Set on the SEO board, where the column
+   *  heading already names the consultant — repeating it in every card
+   *  only stole width from the chips (v76.88). */
+  showConsultant?: boolean;
+  /** Domínio do site do cliente (ex. "brancoptica.pt") — linha pequena
+   *  sob o título. */
+  domain?: string | null;
 };
 
 export function ClientCard({
@@ -53,6 +60,8 @@ export function ClientCard({
   keywordGuarantee = false,
   index = 0,
   showArrow = true,
+  showConsultant = true,
+  domain = null,
 }: ClientCardProps) {
   const gradient = paletteToGradient(palette);
 
@@ -101,21 +110,44 @@ export function ClientCard({
         <h3 className="text-base font-semibold tracking-tight text-white">
           {title}
         </h3>
-        <div className="mt-2 flex items-center justify-between gap-2">
-          <p className="flex min-w-0 items-center gap-1.5 text-xs">
-            <UserRound className="h-3 w-3 shrink-0 text-white/50" />
-            <span className="truncate font-medium text-white/75">
-              {consultant}
-            </span>
-            {npsOverall !== null && (
-              <NpsChip overall={npsOverall} at={npsAt} />
-            )}
+        {domain && (
+          <p className="mt-0.5 truncate text-[10.5px] text-white/35">
+            {domain}
           </p>
-          <div className="flex shrink-0 flex-col items-end gap-1">
-            {keywordGuarantee && <KeywordGuaranteeChip />}
-            <TierBadge tier={tier} />
+        )}
+        {showConsultant ? (
+          <div className="mt-2 flex items-center justify-between gap-2">
+            <p className="flex min-w-0 items-center gap-1.5 text-xs">
+              <UserRound className="h-3 w-3 shrink-0 text-white/50" />
+              <span className="truncate font-medium text-white/75">
+                {consultant}
+              </span>
+              {npsOverall !== null && (
+                <NpsChip overall={npsOverall} at={npsAt} />
+              )}
+            </p>
+            <div className="flex shrink-0 flex-col items-end gap-1">
+              {keywordGuarantee && <KeywordGuaranteeChip />}
+              <TierBadge tier={tier} />
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="mt-2.5 flex items-center justify-between gap-2">
+            <div className="flex min-w-0 items-center gap-1.5">
+              {npsOverall !== null ? (
+                <NpsChip overall={npsOverall} at={npsAt} />
+              ) : (
+                <span className="text-[10px] uppercase tracking-[0.14em] text-white/25">
+                  Sem NPS
+                </span>
+              )}
+            </div>
+            <div className="flex shrink-0 items-center gap-1.5">
+              {keywordGuarantee && <KeywordGuaranteeChip />}
+              <TierBadge tier={tier} />
+            </div>
+          </div>
+        )}
         {channels && channels.length > 0 && (
           <div className="mt-3 flex flex-wrap gap-1.5">
             {channels.map((c) => (

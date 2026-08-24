@@ -13,6 +13,19 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.88",
+    date: "2026-08-24",
+    title: "Board do SEO com pesquisa e filtros, e a equipa com cara no header",
+    highlights: [
+      "**🔎 Pesquisa instantânea na board.** Tecla «/» foca, Esc limpa, e a pesquisa ignora acentos — «clinica» encontra «Clínica». Procura pelo nome do cliente E pelo domínio. Colunas sem resultados somem enquanto se filtra, com a contagem «X de Y clientes» e um botão Limpar sempre à mão.",
+      "**🎚️ Filtros por tier e por garantia.** Chips Growth/Core/Lite combináveis, mais o filtro âmbar «Garantia» que deixa só os clientes com contrato de Premium Keywords. Um clique responde a «quais são os Growth do João?» sem ler a board toda.",
+      "**📊 Cabeçalho de coluna com a saúde da carteira.** Cada consultor passa a mostrar a média de NPS da carteira (com a cor da escala) e o nº de clientes com garantia — a média é calculada sobre a carteira toda, não sobre o subconjunto filtrado, porque a média é do consultor e não da pesquisa.",
+      "**🃏 Cartões mais limpos.** O nome do consultor saiu do cartão — a coluna já o diz, e repetir só roubava largura aos chips (era por isso que aparecia «And…»). No lugar: o domínio do site em pequenino sob o título, NPS à esquerda, garantia + tier à direita numa linha só, e um «Sem NPS» discreto onde falta inquérito. O board de ADS mantém o formato antigo (showConsultant continua por omissão).",
+      "**🖼️ A tua cara no círculo do header.** O círculo com a inicial passa a mostrar o retrato da pessoa (os mesmos 300×400 do formulário de NPS, cabeça ao topo). Sem retrato — caso do Manuel — fica a inicial. A lista «Ver como…» do SuperAdmin também ganhou as fotos, e com a lente ativa o anel âmbar assume o papel do olho quando há retrato.",
+      "**📌 Board sem fotos, de propósito.** Perguntado ao André onde destacar a equipa: só no header e no «Ver como…» — os cabeçalhos das colunas ficam com o nome, como estavam.",
+    ],
+  },
+  {
     version: "76.87",
     date: "2026-08-24",
     title: "A pastilha da garantia encolhe para o número",

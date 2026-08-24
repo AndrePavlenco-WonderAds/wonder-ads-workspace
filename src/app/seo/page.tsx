@@ -1,5 +1,4 @@
-import Link from "next/link";
-import { ArrowUpRight, PauseCircle, TrendingUp } from "lucide-react";
+import { PauseCircle, TrendingUp } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { AccessDenied } from "@/components/access-denied";
 import { getCurrentEmployee } from "@/lib/auth/server";
@@ -7,9 +6,8 @@ import { accessibleDepts, editableDepts } from "@/lib/auth/credentials";
 import { DepartmentHeader } from "@/components/department-header";
 import { KpisCard } from "@/components/kpis-card";
 import { SeoDirectoriesCard } from "@/components/seo-directories-card";
-import { ClientCard } from "@/components/client-card";
+import { SeoBoard, type SeoBoardColumn } from "@/components/seo-board";
 import { hasKeywordGuarantee } from "@/lib/keyword-guarantee";
-import { SeoPauseToggle } from "@/components/seo-pause-toggle";
 import { WorldMap } from "@/components/world-map";
 import { TypewriterPrompt } from "@/components/typewriter-prompt";
 import { getSeoClients, slugify, type NotionClient } from "@/lib/notion";
@@ -20,7 +18,9 @@ import {
 } from "@/lib/client-overrides";
 import { TIER_RANK } from "@/lib/client-tiers";
 import {
+  displayDomain,
   getClientLogo,
+  getClientWebsite,
   getLogoBgMode,
   getLogoSizing,
 } from "@/lib/client-meta";
@@ -120,12 +120,15 @@ export default async function SeoPage() {
           {notionError ? (
             <NotionFallback message={notionError} />
           ) : (
-            <ClientColumns
-              columns={consultantColumns}
-              logoOverrides={logoOverrides}
-              npsSummaries={npsSummaries}
+            <SeoBoard
+              columns={toBoardColumns(
+                consultantColumns,
+                logoOverrides,
+                npsSummaries,
+                employee.isAdmin,
+                employee.name,
+              )}
               isAdmin={employee.isAdmin}
-              employeeName={employee.name}
             />
           )}
         </section>
@@ -143,12 +146,15 @@ export default async function SeoPage() {
                 {pausedClients.length}
               </span>
             </header>
-            <ClientColumns
-              columns={pausedColumns}
-              logoOverrides={logoOverrides}
-              npsSummaries={npsSummaries}
+            <SeoBoard
+              columns={toBoardColumns(
+                pausedColumns,
+                logoOverrides,
+                npsSummaries,
+                employee.isAdmin,
+                employee.name,
+              )}
               isAdmin={employee.isAdmin}
-              employeeName={employee.name}
               paused
             />
           </section>
@@ -221,80 +227,40 @@ function buildConsultantColumns(clients: NotionClient[]): ConsultantColumn[] {
   return columns;
 }
 
-/** The consultant-column grid of client cards. Shared by the active
- *  roster and the paused/suspended section. When `paused`, cards are
- *  dimmed. SuperAdmins get a pause/reactivate toggle on every card. */
-function ClientColumns({
-  columns,
-  logoOverrides,
-  npsSummaries,
-  isAdmin,
-  employeeName,
-  paused = false,
-}: {
-  columns: ConsultantColumn[];
-  logoOverrides: Record<string, string>;
-  npsSummaries: Record<string, NpsSummary>;
-  isAdmin: boolean;
-  employeeName: string;
-  paused?: boolean;
-}) {
-  return (
-    <div className="grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-      {columns.map((col) => (
-        <div key={col.name} className="space-y-5">
-          <header className="flex items-baseline justify-between border-b border-white/8 pb-3">
-            <h3 className="flex items-baseline gap-2 text-sm font-semibold uppercase tracking-[0.18em] text-white/70">
-              {isAdmin || employeeName === col.name ? (
-                <Link
-                  href={`/seo/roadmaps/${slugify(col.name)}`}
-                  className="group inline-flex items-baseline gap-1.5 text-white/80 transition hover:text-white"
-                  title={`Open ${col.name}'s weekly roadmap overview`}
-                >
-                  <span className="underline-offset-4 decoration-white/30 group-hover:underline">
-                    {col.name}
-                  </span>
-                  <ArrowUpRight className="h-3 w-3 self-center opacity-0 transition group-hover:opacity-70" />
-                </Link>
-              ) : (
-                <span>{col.name}</span>
-              )}
-            </h3>
-            <span className="text-xs font-medium uppercase tracking-[0.18em] text-white/35">
-              {col.clients.length}
-            </span>
-          </header>
-          <div className="space-y-4">
-            {col.clients.map((c, i) => (
-              <div key={c.id} className="relative">
-                <div className={paused ? "opacity-55 transition hover:opacity-80" : undefined}>
-                  <ClientCard
-                    title={c.title}
-                    icon={c.icon}
-                    logo={logoOverrides[c.slug] ?? getClientLogo(c.slug)}
-                    logoBgMode={getLogoBgMode(c.slug)}
-                    logoSizing={getLogoSizing(c.slug)}
-                    href={`/seo/${c.slug}`}
-                    consultant={c.consultant}
-                    palette={c.palette}
-                    tier={c.tier}
-                    npsOverall={npsSummaries[c.slug]?.overall ?? null}
-                    npsAt={npsSummaries[c.slug]?.submittedAt ?? null}
-                    keywordGuarantee={hasKeywordGuarantee(c.slug)}
-                    index={i}
-                    showArrow={false}
-                  />
-                </div>
-                {isAdmin && (
-                  <SeoPauseToggle slug={c.slug} title={c.title} paused={paused} />
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
+/** Resolve tudo o que precisa de código de servidor (logos, domínio,
+ *  garantia, link do roadmap) para dados serializáveis que a board
+ *  cliente (<SeoBoard/>, pesquisa + filtros) consegue receber. */
+function toBoardColumns(
+  columns: ConsultantColumn[],
+  logoOverrides: Record<string, string>,
+  npsSummaries: Record<string, NpsSummary>,
+  isAdmin: boolean,
+  employeeName: string,
+): SeoBoardColumn[] {
+  return columns.map((col) => ({
+    name: col.name,
+    roadmapHref:
+      isAdmin || employeeName === col.name
+        ? `/seo/roadmaps/${slugify(col.name)}`
+        : null,
+    clients: col.clients.map((c) => {
+      const website = getClientWebsite(c.slug);
+      return {
+        slug: c.slug,
+        title: c.title,
+        icon: c.icon,
+        logo: logoOverrides[c.slug] ?? getClientLogo(c.slug),
+        logoBgMode: getLogoBgMode(c.slug),
+        logoSizing: getLogoSizing(c.slug),
+        palette: c.palette,
+        tier: c.tier,
+        npsOverall: npsSummaries[c.slug]?.overall ?? null,
+        npsAt: npsSummaries[c.slug]?.submittedAt ?? null,
+        keywordGuarantee: hasKeywordGuarantee(c.slug),
+        domain: website ? displayDomain(website) : null,
+      };
+    }),
+  }));
 }
 
 function NotionFallback({ message }: { message: string }) {

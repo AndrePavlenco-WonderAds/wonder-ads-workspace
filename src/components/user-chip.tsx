@@ -23,6 +23,7 @@ import {
   isAdminUsername,
   listImpersonationTargets,
 } from "@/lib/auth/credentials";
+import { getTeamAvatar } from "@/lib/team-avatars";
 import { UserChipMenu } from "./user-chip-menu";
 
 export async function UserChip() {
@@ -53,6 +54,7 @@ export async function UserChip() {
   return (
     <UserChipMenu
       name={display.name}
+      avatar={getTeamAvatar(viewingUsername)}
       role={display.role}
       dept={display.dept}
       isAdmin={display.isAdmin}
@@ -64,7 +66,14 @@ export async function UserChip() {
       canImpersonate={realIsAdmin}
       realName={realDisplay?.name ?? session.u}
       viewingAs={session.as ?? null}
-      people={realIsAdmin ? listImpersonationTargets() : []}
+      people={
+        realIsAdmin
+          ? listImpersonationTargets().map((p) => ({
+              ...p,
+              avatar: getTeamAvatar(p.username),
+            }))
+          : []
+      }
     />
   );
 }
