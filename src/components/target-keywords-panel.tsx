@@ -366,23 +366,6 @@ export function TargetKeywordsPanel({
         <EmptyState slug={slug} />
       ) : (
         <div>
-          {!readOnly && premiumCount === 0 && (
-            <p className="mb-3 flex items-start gap-2 rounded-xl border border-amber-400/15 bg-amber-400/[0.045] px-3 py-2 text-[11px] leading-relaxed text-amber-100/70">
-              <Star
-                className="mt-px h-3 w-3 shrink-0 text-amber-300"
-                fill="currentColor"
-                strokeWidth={2}
-              />
-              <span>
-                Star up to {MAX_PREMIUM_KEYWORDS}{" "}
-                <strong className="font-semibold text-amber-100">
-                  Premium Keywords
-                </strong>{" "}
-                — the headline targets for this client. They stay pinned to the
-                top of the table.
-              </span>
-            </p>
-          )}
           <div className="overflow-hidden rounded-xl border border-white/8">
           <table className="w-full border-collapse text-left text-xs">
             <thead className="bg-white/[0.025]">

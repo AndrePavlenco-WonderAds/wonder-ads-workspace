@@ -1,21 +1,17 @@
 "use client";
 
-// Board de clientes do SEO DPT (v76.88) — o lado cliente da grelha de
-// colunas por consultor. O servidor resolve tudo o que precisa de I/O
-// (logos, NPS, garantia, domínio) e entrega dados serializáveis; aqui
-// vive o que faz a board rápida de USAR:
+// Board de clientes do SEO DPT (v76.88) — grelha de colunas por
+// consultor, com cabeçalho de coluna a mostrar a média de NPS e o nº de
+// garantias da carteira. O servidor resolve tudo o que precisa de I/O
+// (logos, NPS, garantia, domínio) e entrega dados serializáveis.
 //
-//   • pesquisa instantânea (tecla «/» foca, Esc limpa), sem acentos
-//   • filtros por tier e «só com garantia»
-//   • cabeçalho de coluna com média de NPS e nº de garantias
-//   • colunas vazias somem enquanto se filtra, com contagem X/Y
-//
-// SEM fotos dos consultores — decisão do André (24/08): as fotos ficam
-// no header e no «Ver como…», a board mantém só os nomes.
+// A barra de pesquisa + filtros da primeira versão foi removida a pedido
+// do André (v76.89) — com ~25 clientes a board lê-se de uma vez e a barra
+// só empurrava as colunas para baixo. SEM fotos dos consultores, também
+// por decisão dele: as fotos ficam no header e no «Ver como…».
 
-import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowUpRight, Search, ShieldCheck, Star, X } from "lucide-react";
+import { ArrowUpRight, ShieldCheck, Star } from "lucide-react";
 import type { ClientPalette } from "@/lib/client-colors";
 import type { ClientTier } from "@/lib/client-tiers";
 import type { LogoBgMode, LogoSizing } from "@/lib/client-meta";
@@ -45,20 +41,6 @@ export type SeoBoardColumn = {
   clients: SeoBoardCard[];
 };
 
-const TIER_FILTERS: Array<{ key: ClientTier; label: string }> = [
-  { key: "growth", label: "Growth" },
-  { key: "core", label: "Core" },
-  { key: "lite", label: "Lite" },
-];
-
-/** Comparação sem acentos nem maiúsculas — «clinica» encontra «Clínica». */
-function norm(s: string): string {
-  return s
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase();
-}
-
 export function SeoBoard({
   columns,
   isAdmin,
@@ -66,193 +48,29 @@ export function SeoBoard({
 }: {
   columns: SeoBoardColumn[];
   isAdmin: boolean;
-  /** Secção de pausados: cartões esbatidos e sem barra de filtros. */
+  /** Secção de pausados: cartões esbatidos. */
   paused?: boolean;
 }) {
-  const [query, setQuery] = useState("");
-  const [tiers, setTiers] = useState<Set<ClientTier>>(new Set());
-  const [guaranteeOnly, setGuaranteeOnly] = useState(false);
-  const searchRef = useRef<HTMLInputElement | null>(null);
-
-  const filtering = query.trim().length > 0 || tiers.size > 0 || guaranteeOnly;
-
-  // «/» foca a pesquisa a partir de qualquer sítio da página (menos de
-  // dentro de outro campo); Esc dentro do campo limpa e desfoca.
-  useEffect(() => {
-    if (paused) return;
-    function onKey(e: KeyboardEvent) {
-      if (e.key !== "/" || e.metaKey || e.ctrlKey || e.altKey) return;
-      const t = e.target as HTMLElement | null;
-      if (t && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) return;
-      if (t?.isContentEditable) return;
-      e.preventDefault();
-      searchRef.current?.focus();
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [paused]);
-
-  const q = norm(query.trim());
-  const visible = useMemo(
-    () =>
-      columns
-        .map((col) => ({
-          ...col,
-          matches: col.clients.filter((c) => {
-            if (q && !norm(c.title).includes(q) && !norm(c.domain ?? "").includes(q)) {
-              return false;
-            }
-            if (tiers.size > 0 && !tiers.has(c.tier)) return false;
-            if (guaranteeOnly && !c.keywordGuarantee) return false;
-            return true;
-          }),
-        }))
-        .filter((col) => !filtering || col.matches.length > 0),
-    [columns, q, tiers, guaranteeOnly, filtering],
-  );
-
-  const totalClients = columns.reduce((n, c) => n + c.clients.length, 0);
-  const totalMatches = visible.reduce((n, c) => n + c.matches.length, 0);
-
-  function toggleTier(t: ClientTier) {
-    setTiers((cur) => {
-      const next = new Set(cur);
-      if (next.has(t)) next.delete(t);
-      else next.add(t);
-      return next;
-    });
-  }
-
-  function clearFilters() {
-    setQuery("");
-    setTiers(new Set());
-    setGuaranteeOnly(false);
-  }
-
   return (
-    <div>
-      {!paused && (
-        <div className="mb-8 flex flex-wrap items-center gap-2.5">
-          <label className="group relative flex min-w-0 flex-1 items-center sm:max-w-xs">
-            <Search className="pointer-events-none absolute left-3 h-3.5 w-3.5 text-white/35 transition group-focus-within:text-white/70" />
-            <input
-              ref={searchRef}
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Escape") {
-                  setQuery("");
-                  (e.target as HTMLInputElement).blur();
-                }
-              }}
-              placeholder="Procurar cliente…  ( / )"
-              aria-label="Procurar cliente"
-              className="w-full rounded-full border border-white/12 bg-white/[0.04] py-2 pl-9 pr-8 text-sm text-white placeholder:text-white/30 outline-none transition focus:border-[color:var(--brand-purple)]/50 focus:bg-white/[0.06]"
-            />
-            {query && (
-              <button
-                type="button"
-                onClick={() => setQuery("")}
-                aria-label="Limpar pesquisa"
-                className="absolute right-2.5 rounded-full p-0.5 text-white/40 transition hover:bg-white/10 hover:text-white"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            )}
-          </label>
-
-          <div className="flex items-center gap-1.5">
-            {TIER_FILTERS.map((t) => {
-              const active = tiers.has(t.key);
-              return (
-                <button
-                  key={t.key}
-                  type="button"
-                  onClick={() => toggleTier(t.key)}
-                  aria-pressed={active}
-                  className={`rounded-full border px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] transition ${
-                    active
-                      ? "border-[color:var(--brand-purple)]/70 bg-[color:var(--brand-purple)]/20 text-white"
-                      : "border-white/12 text-white/55 hover:border-white/30 hover:text-white/85"
-                  }`}
-                >
-                  {t.label}
-                </button>
-              );
-            })}
-            <button
-              type="button"
-              onClick={() => setGuaranteeOnly((v) => !v)}
-              aria-pressed={guaranteeOnly}
-              title="Só clientes com contrato de garantia de Premium Keywords"
-              className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] transition ${
-                guaranteeOnly
-                  ? "border-amber-400/60 bg-amber-400/[0.14] text-amber-200"
-                  : "border-white/12 text-white/55 hover:border-amber-400/40 hover:text-amber-200/85"
-              }`}
-            >
-              <ShieldCheck className="h-3 w-3" />
-              Garantia
-            </button>
-          </div>
-
-          {filtering && (
-            <span className="flex items-center gap-2 text-[11px] text-white/45">
-              {totalMatches} de {totalClients} clientes
-              <button
-                type="button"
-                onClick={clearFilters}
-                className="rounded-full border border-white/12 px-2 py-0.5 font-medium text-white/60 transition hover:border-white/30 hover:text-white"
-              >
-                Limpar
-              </button>
-            </span>
-          )}
-        </div>
-      )}
-
-      {visible.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-white/12 bg-white/[0.02] px-4 py-14 text-center">
-          <Search className="h-6 w-6 text-white/25" />
-          <p className="text-sm text-white/50">
-            Nenhum cliente corresponde a esta pesquisa.
-          </p>
-          <button
-            type="button"
-            onClick={clearFilters}
-            className="rounded-full border border-white/15 px-4 py-1.5 text-xs font-medium text-white/70 transition hover:border-white/35 hover:text-white"
-          >
-            Limpar filtros
-          </button>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {visible.map((col) => (
-            <ColumnView
-              key={col.name}
-              column={col}
-              matches={col.matches}
-              filtering={filtering}
-              isAdmin={isAdmin}
-              paused={paused}
-            />
-          ))}
-        </div>
-      )}
+    <div className="grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      {columns.map((col) => (
+        <ColumnView
+          key={col.name}
+          column={col}
+          isAdmin={isAdmin}
+          paused={paused}
+        />
+      ))}
     </div>
   );
 }
 
 function ColumnView({
   column,
-  matches,
-  filtering,
   isAdmin,
   paused,
 }: {
   column: SeoBoardColumn;
-  matches: SeoBoardCard[];
-  filtering: boolean;
   isAdmin: boolean;
   paused: boolean;
 }) {
@@ -287,7 +105,7 @@ function ColumnView({
             )}
           </h3>
           <span className="shrink-0 text-xs font-medium uppercase tracking-[0.18em] text-white/35">
-            {filtering ? `${matches.length}/${column.clients.length}` : column.clients.length}
+            {column.clients.length}
           </span>
         </div>
         {(avgNps !== null || guarantees > 0) && (
@@ -318,7 +136,7 @@ function ColumnView({
         )}
       </header>
       <div className="space-y-4">
-        {matches.map((c, i) => (
+        {column.clients.map((c, i) => (
           <div key={c.slug} className="relative">
             <div
               className={

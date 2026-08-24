@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.89",
+    date: "2026-08-24",
+    title: "Menu com as ações de SuperAdmin a dourado e a board sem barra de filtros",
+    highlights: [
+      "**🟡 As ações só de SuperAdmin destacam-se a dourado no menu.** «Ver como…», «Registar Falta» e «Formação — Superadmin» passam a âmbar (ícone e texto, hover a condizer) — vê-se de relance o que é administração e o que é trabalho de todos.",
+      "**🧹 Barra de pesquisa + filtros removida da board.** Com ~25 clientes a board lê-se de uma vez; a barra só empurrava as colunas para baixo. Ficam os cabeçalhos de coluna com média de NPS e nº de garantias.",
+      "**🛡️ A pastilha da garantia no cartão ganhou o escudo.** O círculo com o «3» passa a escudo + 3, igual à pastilha do cabeçalho da coluna — a mesma coisa com a mesma cara nos dois sítios.",
+      "**🤫 Tirada a mensagem de primeira utilização das Premium Keywords.** O aviso «Star up to 3 Premium Keywords…» na tabela de Target Keywords saiu; as estrelas explicam-se sozinhas e o tooltip continua lá.",
+    ],
+  },
+  {
     version: "76.88",
     date: "2026-08-24",
     title: "Board do SEO com pesquisa e filtros, e a equipa com cara no header",

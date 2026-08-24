@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowUpRight, Star, UserRound } from "lucide-react";
+import { ArrowUpRight, ShieldCheck, Star, UserRound } from "lucide-react";
 import type { ClientPalette } from "@/lib/client-colors";
 import { paletteToGradient } from "@/lib/client-colors";
 import type { ClientTier } from "@/lib/client-tiers";
@@ -167,8 +167,9 @@ function KeywordGuaranteeChip() {
   return (
     <span
       title={`Contrato com garantia de posicionamento nas ${KEYWORD_GUARANTEE_COUNT} Premium Keywords`}
-      className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-amber-400/35 bg-amber-400/[0.12] text-[11px] font-bold leading-none text-amber-200"
+      className="inline-flex shrink-0 items-center gap-1 rounded-full bg-amber-400/[0.12] px-1.5 py-0.5 text-[10px] font-semibold text-amber-200"
     >
+      <ShieldCheck className="h-2.5 w-2.5" />
       {KEYWORD_GUARANTEE_COUNT}
       <span className="sr-only">
         {" "}

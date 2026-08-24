@@ -245,9 +245,9 @@ export function UserChipMenu({
                 aria-expanded={picking}
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => setPicking((v) => !v)}
-                className="flex w-full items-center gap-2 border-b border-white/8 px-4 py-2.5 text-left text-[12px] font-medium text-white/75 transition hover:bg-white/[0.06] hover:text-white"
+                className="flex w-full items-center gap-2 border-b border-white/8 px-4 py-2.5 text-left text-[12px] font-medium text-amber-200/90 transition hover:bg-amber-500/[0.08] hover:text-amber-100"
               >
-                <Users className="h-3.5 w-3.5 text-[color:var(--brand-purple)]" />
+                <Users className="h-3.5 w-3.5 text-amber-300/90" />
                 Ver como…
                 <ChevronDown
                   className={`ml-auto h-3 w-3 text-white/45 transition ${picking ? "rotate-180" : ""}`}
@@ -335,7 +335,7 @@ export function UserChipMenu({
               href="/admin/faltas"
               role="menuitem"
               onMouseDown={(e) => e.preventDefault()}
-              className="flex w-full items-center gap-2 border-b border-white/8 px-4 py-2.5 text-left text-[12px] font-medium text-white/75 transition hover:bg-white/[0.06] hover:text-white"
+              className="flex w-full items-center gap-2 border-b border-white/8 px-4 py-2.5 text-left text-[12px] font-medium text-amber-200/90 transition hover:bg-amber-500/[0.08] hover:text-amber-100"
             >
               <UserMinus className="h-3.5 w-3.5 text-amber-300/90" />
               Registar Falta
@@ -359,9 +359,9 @@ export function UserChipMenu({
               href="/formacao/admin"
               role="menuitem"
               onMouseDown={(e) => e.preventDefault()}
-              className="flex w-full items-center gap-2 border-b border-white/8 px-4 py-2.5 text-left text-[12px] font-medium text-white/75 transition hover:bg-white/[0.06] hover:text-white"
+              className="flex w-full items-center gap-2 border-b border-white/8 px-4 py-2.5 text-left text-[12px] font-medium text-amber-200/90 transition hover:bg-amber-500/[0.08] hover:text-amber-100"
             >
-              <LayoutDashboard className="h-3.5 w-3.5 text-[color:var(--brand-purple)]" />
+              <LayoutDashboard className="h-3.5 w-3.5 text-amber-300/90" />
               Formação — Superadmin
             </Link>
           )}
