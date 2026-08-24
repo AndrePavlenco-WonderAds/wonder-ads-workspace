@@ -13,6 +13,9 @@ import { kv } from "@vercel/kv";
 
 const KEY_PREFIX = "target-keywords:";
 const MAX_TARGETS = 200;
+/** Hard ceiling on Premium Keywords per client. Enforced server-side so a
+ *  stale tab or a direct API call can't push a fourth one in. */
+export const MAX_PREMIUM_KEYWORDS = 3;
 
 export type TargetKeywordIntent =
   | "informational"
@@ -33,6 +36,10 @@ export type TargetKeyword = {
   intent?: TargetKeywordIntent;
   searchVolume?: number | null;
   difficulty?: number | null;
+  /** v76.84 — the (max 3) "Premium Keywords": the handful of terms the
+   *  consultant commits to as the project's headline targets. Absent on
+   *  every record written before v76.84, which reads as "not premium". */
+  premium?: boolean;
 };
 
 export const targetKwStorageConfigured = Boolean(
@@ -95,4 +102,38 @@ export async function removeTargetKeyword(
   const next = current.filter((k) => k.keyword.toLowerCase() !== norm);
   await kv.set(key(slug), next);
   return next;
+}
+
+/** How many keywords on `list` are flagged premium. */
+export function countPremium(list: TargetKeyword[]): number {
+  return list.reduce((n, k) => n + (k.premium ? 1 : 0), 0);
+}
+
+/** Flag/unflag a keyword as Premium. Rejects the flag when the client is
+ *  already at MAX_PREMIUM_KEYWORDS so the cap holds regardless of caller.
+ *  Unflagging drops the field entirely rather than storing `false`. */
+export async function setPremiumKeyword(
+  slug: string,
+  keyword: string,
+  premium: boolean,
+): Promise<{ saved: TargetKeyword[]; error?: "not-found" | "at-cap" }> {
+  if (!targetKwStorageConfigured) return { saved: [] };
+  const current = await listTargetKeywords(slug);
+  const norm = keyword.trim().toLowerCase();
+  const target = current.find((k) => k.keyword.toLowerCase() === norm);
+  if (!target) return { saved: current, error: "not-found" };
+  // Already in the requested state — no write, no cap check.
+  if (Boolean(target.premium) === premium) return { saved: current };
+  if (premium && countPremium(current) >= MAX_PREMIUM_KEYWORDS) {
+    return { saved: current, error: "at-cap" };
+  }
+  const next = current.map((k) => {
+    if (k.keyword.toLowerCase() !== norm) return k;
+    if (premium) return { ...k, premium: true };
+    const stripped = { ...k };
+    delete stripped.premium;
+    return stripped;
+  });
+  await kv.set(key(slug), next);
+  return { saved: next };
 }

@@ -13,6 +13,19 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.84",
+    date: "2026-08-24",
+    title: "Premium Keywords: as 3 palavras-chave que mandam na lista",
+    highlights: [
+      "**⭐ Até 3 Premium Keywords por cliente, marcadas com uma estrela dourada.** Na tabela de Target Keywords da ficha do cliente, cada linha ganhou uma estrela. Carregar nela promove a palavra-chave a Premium — as poucas em que o projeto se joga, separadas do resto da lista de alvos. O teto são 3 e é o servidor que o garante: um separador aberto noutro lado, ou um pedido direto à API, levam 409 em vez de acenderem uma quarta estrela.",
+      "**🥇 Dourado, não roxo — e o sublinhado por baixo da palavra.** A linha Premium fica com um fundo âmbar ténue, uma barra dourada à esquerda e a palavra-chave a negrito com um sublinhado em gradiente dourado colado às letras (é pintado como `background`, por isso acompanha o texto e não a largura da célula). O ouro é de propósito: distingue-se do roxo da marca, que já significa «ação», e lê-se como outra categoria de coisa.",
+      "**📌 Ficam sempre no topo, independentemente da ordenação.** Ordenar por volume, por KD ou por data continua a funcionar — mas as Premium ficam agarradas ao cimo da tabela, fechadas por um separador dourado. Não se procura o que é mais importante.",
+      "**🎯 Contador ★★☆ no cabeçalho e estrelas apagadas quando o orçamento acaba.** A pastilha mostra «2/3 Premium» com as estrelas preenchidas. Chegando às 3, as estrelas das restantes linhas ficam esbatidas com o cursor de bloqueado e o tooltip explica porquê, em vez de a lista deixar de responder sem dizer nada.",
+      "**↩️ Marcação otimista com recuo.** A estrela acende no instante do clique e só depois confirma com o KV; se o servidor recusar, a linha volta atrás e o erro aparece no cabeçalho. Cliques rápidos ficam trancados enquanto um pedido está no ar, para dois não passarem o teto ao mesmo tempo.",
+      "**📄 A coluna `premium` entrou no CSV.** A exportação da lista passa a dizer quais são as Premium, para o mesmo ficheiro servir de briefing sem se perder a curadoria.",
+    ],
+  },
+  {
     version: "76.83",
     date: "2026-08-21",
     title: "A satisfação do cliente passa a ver-se na board do SEO",

@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server";
 import {
   addTargetKeywords,
+  countPremium,
   listTargetKeywords,
   removeTargetKeyword,
+  setPremiumKeyword,
   targetKwStorageConfigured,
+  MAX_PREMIUM_KEYWORDS,
   type TargetKeyword,
 } from "@/lib/target-keywords-store";
 import { getClientGeo } from "@/lib/client-geo";
@@ -26,6 +29,9 @@ const ALLOWED_INTENTS = new Set([
 function sanitize(raw: unknown): TargetKeyword[] {
   if (!Array.isArray(raw)) return [];
   const out: TargetKeyword[] = [];
+  // An import payload may carry `premium` flags; honour them but never
+  // let a payload exceed the cap on its own.
+  let premiumBudget = MAX_PREMIUM_KEYWORDS;
   for (const r of raw) {
     if (!r || typeof r !== "object") continue;
     const o = r as Record<string, unknown>;
@@ -47,6 +53,9 @@ function sanitize(raw: unknown): TargetKeyword[] {
       searchVolume:
         typeof o.searchVolume === "number" ? o.searchVolume : null,
       difficulty: typeof o.difficulty === "number" ? o.difficulty : null,
+      ...(o.premium === true && premiumBudget-- > 0
+        ? { premium: true as const }
+        : {}),
     });
   }
   return out;
@@ -134,6 +143,60 @@ export async function POST(
     return NextResponse.json(result);
   } catch (err) {
     console.error("target-keywords add failed:", err);
+    return NextResponse.json(
+      { error: "Storage write failed" },
+      { status: 500 },
+    );
+  }
+}
+
+/** Toggle a keyword's Premium flag. Body: { keyword, premium }. */
+export async function PATCH(
+  req: Request,
+  ctx: { params: Promise<{ slug: string }> },
+) {
+  if (!targetKwStorageConfigured) {
+    return NextResponse.json(
+      { error: "Storage not configured" },
+      { status: 503 },
+    );
+  }
+  const { slug } = await ctx.params;
+  let body: unknown;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+  const o = (body ?? {}) as Record<string, unknown>;
+  const keyword = typeof o.keyword === "string" ? o.keyword.trim() : "";
+  if (!keyword || typeof o.premium !== "boolean") {
+    return NextResponse.json(
+      { error: "Body must be { keyword: string, premium: boolean }" },
+      { status: 400 },
+    );
+  }
+  try {
+    const { saved, error } = await setPremiumKeyword(slug, keyword, o.premium);
+    if (error === "not-found") {
+      return NextResponse.json(
+        { error: "Keyword is not on this list" },
+        { status: 404 },
+      );
+    }
+    if (error === "at-cap") {
+      return NextResponse.json(
+        {
+          error: `Only ${MAX_PREMIUM_KEYWORDS} Premium Keywords allowed — unstar one first`,
+          saved,
+          premiumCount: countPremium(saved),
+        },
+        { status: 409 },
+      );
+    }
+    return NextResponse.json({ saved, premiumCount: countPremium(saved) });
+  } catch (err) {
+    console.error("target-keywords premium toggle failed:", err);
     return NextResponse.json(
       { error: "Storage write failed" },
       { status: 500 },

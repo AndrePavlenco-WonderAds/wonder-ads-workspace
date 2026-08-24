@@ -8,9 +8,11 @@ import {
   Download,
   RefreshCw,
   Plus,
+  Star,
 } from "lucide-react";
 import Link from "next/link";
 import type { TargetKeyword } from "@/lib/target-keywords-store";
+import { MAX_PREMIUM_KEYWORDS } from "@/lib/target-keywords-store";
 import { formatDateLong } from "@/lib/dates";
 import { SendToReviewButton } from "./send-to-review-button";
 import { useSeoReadOnly } from "./seo-readonly";
@@ -41,6 +43,12 @@ export function TargetKeywordsPanel({
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState("");
+  /** Keyword whose star was just switched ON — drives the one-shot row
+   *  flash + star pop, then clears itself. */
+  const [justStarred, setJustStarred] = useState<string | null>(null);
+  /** Keyword with a Premium PATCH in flight. Locks every star meanwhile so
+   *  two fast clicks can't race the cap check. */
+  const [starPending, setStarPending] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -61,6 +69,12 @@ export function TargetKeywordsPanel({
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    if (!justStarred) return;
+    const id = window.setTimeout(() => setJustStarred(null), 1000);
+    return () => window.clearTimeout(id);
+  }, [justStarred]);
 
   async function remove(keyword: string) {
     if (
@@ -83,6 +97,40 @@ export function TargetKeywordsPanel({
       setError(err instanceof Error ? err.message : "Delete failed");
     } finally {
       setBusy(false);
+    }
+  }
+
+  /** Flag/unflag a Premium Keyword. Optimistic, with a rollback — the
+   *  server owns the cap, so a 409 (another tab got there first) snaps the
+   *  row back instead of leaving a fourth star lit. */
+  async function togglePremium(keyword: string, next: boolean) {
+    if (starPending) return;
+    if (next && premiumCount >= MAX_PREMIUM_KEYWORDS) return;
+    const rollback = items;
+    setItems((cur) =>
+      cur.map((k) => (k.keyword === keyword ? { ...k, premium: next } : k)),
+    );
+    setStarPending(keyword);
+    if (next) setJustStarred(keyword);
+    setError(null);
+    try {
+      const res = await fetch(`/api/target-keywords/${slug}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ keyword, premium: next }),
+      });
+      const json = (await res.json().catch(() => ({}))) as {
+        saved?: TargetKeyword[];
+        error?: string;
+      };
+      if (!res.ok) throw new Error(json.error ?? `HTTP ${res.status}`);
+      if (Array.isArray(json.saved)) setItems(json.saved);
+    } catch (err) {
+      setItems(rollback);
+      setJustStarred(null);
+      setError(err instanceof Error ? err.message : "Premium toggle failed");
+    } finally {
+      setStarPending(null);
     }
   }
 
@@ -126,6 +174,7 @@ export function TargetKeywordsPanel({
     if (items.length === 0) return;
     const header = [
       "keyword",
+      "premium",
       "search_volume",
       "keyword_difficulty",
       "intent",
@@ -137,6 +186,7 @@ export function TargetKeywordsPanel({
       lines.push(
         [
           csvEscape(k.keyword),
+          k.premium ? "yes" : "",
           k.searchVolume ?? "",
           k.difficulty ?? "",
           k.intent ?? "",
@@ -158,7 +208,15 @@ export function TargetKeywordsPanel({
     URL.revokeObjectURL(url);
   }
 
+  const premiumCount = items.reduce((n, k) => n + (k.premium ? 1 : 0), 0);
+  const atPremiumCap = premiumCount >= MAX_PREMIUM_KEYWORDS;
+
   const sorted = [...items].sort((a, b) => {
+    // Premium rows are pinned to the top whatever the active sort — they're
+    // the headline of the list and shouldn't have to be hunted for.
+    const pa = a.premium ? 1 : 0;
+    const pb = b.premium ? 1 : 0;
+    if (pa !== pb) return pb - pa;
     const mul = sortDir === "asc" ? 1 : -1;
     switch (sortKey) {
       case "keyword":
@@ -191,6 +249,28 @@ export function TargetKeywordsPanel({
         <span className="inline-flex items-center gap-1 rounded-full border border-white/12 bg-white/[0.04] px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-white/55">
           {items.length} queued
         </span>
+        {items.length > 0 && (
+          <span
+            title={`Premium Keywords — the ${MAX_PREMIUM_KEYWORDS} headline targets for this client`}
+            className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] transition ${
+              premiumCount > 0
+                ? "border-amber-400/30 bg-amber-400/[0.09] text-amber-200"
+                : "border-white/12 bg-white/[0.04] text-white/45"
+            }`}
+          >
+            <span className="flex items-center gap-px">
+              {Array.from({ length: MAX_PREMIUM_KEYWORDS }, (_, i) => (
+                <Star
+                  key={i}
+                  className={`h-2.5 w-2.5 ${i < premiumCount ? "text-amber-300" : "opacity-35"}`}
+                  fill={i < premiumCount ? "currentColor" : "none"}
+                  strokeWidth={2.5}
+                />
+              ))}
+            </span>
+            {premiumCount}/{MAX_PREMIUM_KEYWORDS} Premium
+          </span>
+        )}
         {busy && (
           <span className="inline-flex items-center gap-1.5 text-[11px] text-white/45">
             <Loader2 className="h-3 w-3 animate-spin" />
@@ -285,10 +365,39 @@ export function TargetKeywordsPanel({
       ) : items.length === 0 ? (
         <EmptyState slug={slug} />
       ) : (
-        <div className="overflow-hidden rounded-xl border border-white/8">
+        <div>
+          {!readOnly && premiumCount === 0 && (
+            <p className="mb-3 flex items-start gap-2 rounded-xl border border-amber-400/15 bg-amber-400/[0.045] px-3 py-2 text-[11px] leading-relaxed text-amber-100/70">
+              <Star
+                className="mt-px h-3 w-3 shrink-0 text-amber-300"
+                fill="currentColor"
+                strokeWidth={2}
+              />
+              <span>
+                Star up to {MAX_PREMIUM_KEYWORDS}{" "}
+                <strong className="font-semibold text-amber-100">
+                  Premium Keywords
+                </strong>{" "}
+                — the headline targets for this client. They stay pinned to the
+                top of the table.
+              </span>
+            </p>
+          )}
+          <div className="overflow-hidden rounded-xl border border-white/8">
           <table className="w-full border-collapse text-left text-xs">
             <thead className="bg-white/[0.025]">
               <tr className="border-b border-white/10">
+                <th
+                  className="w-9 py-2 pl-2.5 pr-0"
+                  title={`Premium Keywords — up to ${MAX_PREMIUM_KEYWORDS}`}
+                >
+                  <Star
+                    className="h-3 w-3 text-amber-300/55"
+                    fill="currentColor"
+                    strokeWidth={2}
+                  />
+                  <span className="sr-only">Premium</span>
+                </th>
                 <SortHeader
                   label="Keyword"
                   k="keyword"
@@ -341,12 +450,52 @@ export function TargetKeywordsPanel({
               </tr>
             </thead>
             <tbody>
-              {sorted.map((k) => (
+              {sorted.map((k, i) => (
                 <tr
                   key={k.keyword}
-                  className="border-b border-white/5 transition hover:bg-white/[0.025]"
+                  className={[
+                    "border-b transition",
+                    // Gold divider closes the pinned Premium block.
+                    k.premium && i === premiumCount - 1
+                      ? "border-amber-400/25"
+                      : "border-white/5",
+                    k.premium
+                      ? "bg-amber-400/[0.055] hover:bg-amber-400/[0.09]"
+                      : "hover:bg-white/[0.025]",
+                    justStarred === k.keyword ? "animate-premium-row" : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
                 >
-                  <td className="px-3 py-2 text-white">{k.keyword}</td>
+                  <td
+                    className={`w-9 py-2 pl-2.5 pr-0 align-middle ${
+                      k.premium ? "shadow-[inset_3px_0_0_0_#e0a93a]" : ""
+                    }`}
+                  >
+                    <PremiumStar
+                      keyword={k.keyword}
+                      active={Boolean(k.premium)}
+                      readOnly={readOnly}
+                      // At the cap, the unlit stars go quiet rather than
+                      // disappearing — the row is still eligible, the budget
+                      // just isn't.
+                      blocked={!k.premium && atPremiumCap}
+                      pending={starPending !== null}
+                      popping={justStarred === k.keyword}
+                      onToggle={() => togglePremium(k.keyword, !k.premium)}
+                    />
+                  </td>
+                  <td className="px-3 py-2">
+                    <span
+                      className={
+                        k.premium
+                          ? "premium-underline font-semibold text-amber-50"
+                          : "text-white"
+                      }
+                    >
+                      {k.keyword}
+                    </span>
+                  </td>
                   <td className="px-3 py-2 text-right text-white/80">
                     {fmtNum(k.searchVolume)}
                   </td>
@@ -395,9 +544,80 @@ export function TargetKeywordsPanel({
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
     </section>
+  );
+}
+
+/** The Premium toggle. Three visual states: lit (gold, filled), available
+ *  (dim outline that warms on hover) and blocked (barely-there, cursor
+ *  says no) — so the 3-keyword budget is legible without reading a label. */
+function PremiumStar({
+  keyword,
+  active,
+  blocked,
+  pending,
+  popping,
+  readOnly,
+  onToggle,
+}: {
+  keyword: string;
+  active: boolean;
+  blocked: boolean;
+  pending: boolean;
+  popping: boolean;
+  readOnly: boolean;
+  onToggle: () => void;
+}) {
+  if (readOnly) {
+    return active ? (
+      <span
+        title="Premium Keyword"
+        className="inline-flex h-7 w-7 items-center justify-center text-amber-300 drop-shadow-[0_0_6px_rgba(224,169,58,0.5)]"
+      >
+        <Star className="h-4 w-4" fill="currentColor" strokeWidth={2} />
+        <span className="sr-only">Premium Keyword</span>
+      </span>
+    ) : (
+      <span className="inline-block h-7 w-7" />
+    );
+  }
+
+  const disabled = blocked || pending;
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      disabled={disabled}
+      aria-pressed={active}
+      aria-label={
+        active
+          ? `Remove ${keyword} from Premium Keywords`
+          : `Mark ${keyword} as a Premium Keyword`
+      }
+      title={
+        active
+          ? "Premium Keyword — click to unstar"
+          : blocked
+            ? `Only ${MAX_PREMIUM_KEYWORDS} Premium Keywords — unstar one first`
+            : "Mark as a Premium Keyword"
+      }
+      className={`inline-flex h-7 w-7 items-center justify-center rounded-full transition active:scale-90 ${
+        active
+          ? "text-amber-300 drop-shadow-[0_0_6px_rgba(224,169,58,0.5)] hover:scale-110 hover:bg-amber-400/10"
+          : blocked
+            ? "cursor-not-allowed text-white/10"
+            : "text-white/20 hover:scale-110 hover:bg-amber-400/10 hover:text-amber-300/80"
+      } ${pending && !active ? "opacity-60" : ""}`}
+    >
+      <Star
+        className={`h-4 w-4 ${popping ? "animate-premium-star" : ""}`}
+        fill={active ? "currentColor" : "none"}
+        strokeWidth={2}
+      />
+    </button>
   );
 }
 
