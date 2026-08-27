@@ -147,6 +147,9 @@ export type GmbPostsResult = {
   inputs: {
     postCount: number;
     postType?: GmbPostType;
+    /** Which flow produced the batch. Absent on results before v76.91 —
+     *  fall back to the first post's `imageSource`. */
+    imageSource?: GmbImageSource;
     theme?: string;
     ctaUrlDefault?: string;
   };

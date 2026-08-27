@@ -279,6 +279,11 @@ export function GmbPostsRunner({
             const used = result.referencesUsed.filter((r) => r.status === "used");
             const failed = result.referencesUsed.filter((r) => r.status === "failed");
             const skipped = result.referencesUsed.filter((r) => r.status === "skipped");
+            // Client-photo batches have no image generation to anchor —
+            // the wording has to say what actually happened to the photos.
+            const clientPhotos =
+              (result.inputs.imageSource ?? result.posts[0]?.imageSource) ===
+              "client-files";
             return (
               <details
                 className={
@@ -288,15 +293,19 @@ export function GmbPostsRunner({
                 }
               >
                 <summary className="cursor-pointer font-medium">
-                  {used.length === 0
-                    ? `⚠️ No brand reference images were loaded — image generation ran without anchoring to your client's files.`
-                    : `✓ Used ${used.length} brand reference${used.length === 1 ? "" : "s"} from Client Files`}
+                  {clientPhotos
+                    ? used.length === 0
+                      ? `⚠️ No client photo could be used — every candidate drawn from Client Files failed to download.`
+                      : `✓ ${used.length} client photo${used.length === 1 ? "" : "s"} used from Client Files`
+                    : used.length === 0
+                      ? `⚠️ No brand reference images were loaded — image generation ran without anchoring to your client's files.`
+                      : `✓ Used ${used.length} brand reference${used.length === 1 ? "" : "s"} from Client Files`}
                   {failed.length > 0 && ` · ${failed.length} failed`}
                   {skipped.length > 0 && ` · ${skipped.length} skipped`}
                 </summary>
                 <ul className="mt-2 space-y-1">
-                  {result.referencesUsed.map((r) => (
-                    <li key={r.url} className="flex items-baseline gap-2">
+                  {result.referencesUsed.map((r, i) => (
+                    <li key={`${r.url}#${i}`} className="flex items-baseline gap-2">
                       <span
                         className={
                           r.status === "used"

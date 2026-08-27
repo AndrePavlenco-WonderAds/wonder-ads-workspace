@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.91",
+    date: "2026-08-27",
+    title: "GMB Posts com fotos do cliente: re-sorteio quando um download falha e links Dropbox tratados a sério",
+    highlights: [
+      "**🎲 Um link mau já não custa um post.** No modo «fotos do cliente» o sorteio passa a consumir a lista baralhada até ter os posts pedidos: se a imagem sorteada não descarrega, fica registada como falhada e sorteia-se a seguinte. Era assim que a B-Life acabava com «0 GMB posts» tendo um JPG perfeitamente bom nos Client Files.",
+      "**📦 Pastas do Dropbox deixam de entrar no sorteio.** Não há integração Dropbox, logo uma pasta (`/scl/fo/…`) não se consegue listar — passa a aparecer como ignorada com a correção («carrega as fotos nos Client Files ou partilha uma pasta do Drive com seo@wonder-ads.com»). Um ficheiro Dropbox (`/scl/fi/…`) passa a descarregar-se pela forma `dl=1` e é re-alojado no Blob.",
+      "**🔍 Qualquer outro URL é testado antes de ser candidato.** Um HEAD/GET ao link confirma que devolve `image/*`; um álbum do Google Photos, um site ou um CDN expirado ficam de fora com o motivo («returns text/html, not an image»), em vez de falharem só depois de sorteados.",
+      "**🧾 O diagnóstico conta a história toda.** Cada entrada dos Client Files aparece uma vez: usada, falhada com o motivo certo para a sua origem (upload no Blob, foto do Drive, ficheiro Dropbox, URL), ou «in the pool, not drawn this time» — o consultor vê que o JPG era candidato mesmo quando o sorteio foi para outro lado. Uma pasta do Drive com 40 fotos é uma linha, não quarenta.",
+      "**🚫 Sem resultados vazios.** Se nenhum candidato der um post, a ação devolve um erro com o detalhe por entrada em vez de gravar um «0 GMB posts for …». O cabeçalho do diagnóstico no modo fotos do cliente fala em fotos usadas, não em «image generation without anchoring».",
+    ],
+  },
+  {
     version: "76.90",
     date: "2026-08-27",
     title: "Relatório mensal parcial só com números — sem percentagens de variação",

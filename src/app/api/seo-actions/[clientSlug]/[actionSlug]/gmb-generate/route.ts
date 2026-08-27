@@ -31,6 +31,7 @@ import {
   downloadDriveImageById,
 } from "@/lib/drive-fetcher";
 import type { ClientFile } from "@/lib/client-files";
+import { classifyImageLink, probeImageUrl } from "@/lib/image-links";
 import {
   runMiniSiteAudit,
   formatMiniSiteAuditForPrompt,
@@ -64,6 +65,13 @@ export const maxDuration = 300;
 
 const CAPTION_MODEL = "claude-haiku-4-5-20251001";
 const MAX_REFERENCE_IMAGES = 4;
+
+/** Consultants paste Dropbox FOLDER links straight from the client's email.
+ *  There is no Dropbox integration, so a folder can't be listed — and until
+ *  v76.91 it was treated as an image URL, which is how a draw could land on
+ *  "Pics food" and lose the post. */
+const DROPBOX_FOLDER_REASON =
+  "Dropbox folder links can't be listed (no Dropbox integration) — upload the photos to Client Files or share a Google Drive folder with seo@wonder-ads.com.";
 
 const PostSchema = z.object({
   postType: z
@@ -279,21 +287,24 @@ export async function POST(
             controller.close();
             return;
           }
-          // Random-sample up to postCount.
-          const picked = shuffle([...pool]).slice(0, postCount);
-          const actualCount = picked.length;
-          if (actualCount < postCount) {
+          // Random draw, WITH REDRAW (v76.91). The pool is shuffled once
+          // and consumed in order: a candidate whose download fails is
+          // recorded and the next one is drawn, so one bad link never
+          // costs a post while a perfectly good photo sits unused.
+          const target = Math.min(postCount, pool.length);
+          const actualCount = target;
+          if (pool.length < postCount) {
             send({
               event: "progress",
               phase: "files",
-              message: `⚠️ Only ${actualCount} image(s) available in the library — generating ${actualCount} post(s) instead of the requested ${postCount}. Upload more brand photos to lift the cap.`,
+              message: `⚠️ Only ${pool.length} image(s) available in the library — generating ${pool.length} post(s) instead of the requested ${postCount}. Upload more brand photos to lift the cap.`,
             });
           } else {
             send({
               event: "progress",
               phase: "files",
-              message: `✓ Picked ${actualCount} random image(s) from the library of ${pool.length}.`,
-              filesCount: actualCount,
+              message: `✓ Drawing ${target} random image(s) from the library of ${pool.length}.`,
+              filesCount: target,
             });
           }
 
@@ -304,11 +315,15 @@ export async function POST(
           send({
             event: "progress",
             phase: "captions",
-            message: `Writing ${actualCount} caption(s) with Claude (vision)…`,
+            message: `Writing ${target} caption(s) with Claude (vision)…`,
           });
           const now = Date.now();
-          for (let i = 0; i < picked.length; i++) {
-            const entry = picked[i];
+          const queue = shuffle([...pool]);
+          const drawn = new Set<PoolEntry>();
+          while (posts.length < target && queue.length > 0) {
+            const entry = queue.shift()!;
+            drawn.add(entry);
+            const i = posts.length;
             // Download bytes for vision input.
             const bytes = await entry.fetch();
             if (!bytes) {
@@ -316,7 +331,7 @@ export async function POST(
                 name: entry.breadcrumb,
                 url: entry.originUrl,
                 status: "failed",
-                reason: "Picked image couldn't be downloaded — auth or quota issue.",
+                reason: `${entry.failReason}${queue.length > 0 ? " Drew the next candidate instead." : ""}`,
               });
               continue;
             }
@@ -430,6 +445,50 @@ export async function POST(
               });
             }
           }
+          // Library entries that made it into the pool but weren't drawn
+          // this time — one row per entry (a Drive folder with 40 photos
+          // is one row, not forty), so the diagnostic shows the FULL
+          // picture: the consultant can see the JPG they uploaded was a
+          // candidate even when the draw went elsewhere.
+          const bySource = new Map<
+            string,
+            { url: string; total: number; drawn: number }
+          >();
+          for (const e of pool) {
+            const acc = bySource.get(e.sourceName) ?? {
+              url: e.originUrl,
+              total: 0,
+              drawn: 0,
+            };
+            acc.total++;
+            if (drawn.has(e)) acc.drawn++;
+            bySource.set(e.sourceName, acc);
+          }
+          for (const [name, acc] of bySource) {
+            if (acc.drawn > 0) continue;
+            referencesUsed.push({
+              name,
+              url: acc.url,
+              status: "skipped",
+              reason:
+                acc.total === 1
+                  ? "in the pool, not drawn this time"
+                  : `${acc.total} images in the pool, none drawn this time`,
+            });
+          }
+          if (posts.length === 0) {
+            // Every candidate we drew failed. Don't save an empty result
+            // ("0 GMB posts for B-Life") — say what happened, per entry.
+            const detailLines = referencesUsed
+              .filter((r) => r.status !== "used")
+              .map((r) => `${r.status === "failed" ? "✕" : "•"} ${r.name} — ${r.reason ?? r.status}`);
+            send({
+              event: "error",
+              message: `Couldn't turn any of the ${pool.length} candidate image(s) into a post.\n\nDetails per Client Files entry:\n${detailLines.join("\n")}\n\nFixes: upload JPG/PNG photos directly in Client Files, or share a Google Drive folder with seo@wonder-ads.com (Viewer is enough). Dropbox folder links can't be read.`,
+            });
+            controller.close();
+            return;
+          }
           // Persist
           send({
             event: "progress",
@@ -443,6 +502,7 @@ export async function POST(
             inputs: {
               postCount,
               postType: postTypeInput,
+              imageSource,
               theme: theme || undefined,
               ctaUrlDefault: ctaUrlDefault || undefined,
             },
@@ -525,8 +585,20 @@ export async function POST(
             }
             continue;
           }
+          // Dropbox: a folder can't be listed at all; a file link works
+          // once it's turned into its `dl=1` download form.
+          const link = classifyImageLink(f.url);
+          if (link.kind === "dropbox-folder") {
+            referencesUsed.push({
+              name: f.name,
+              url: f.url,
+              status: "skipped",
+              reason: DROPBOX_FOLDER_REASON,
+            });
+            continue;
+          }
           try {
-            const r = await fetchImageBytes(f.url);
+            const r = await fetchImageBytes(link.directUrl);
             if (r) {
               referenceImages.push({ bytes: r.bytes, mimeType: r.mimeType });
               referencesUsed.push({ name: f.name, url: f.url, status: "used" });
@@ -537,7 +609,9 @@ export async function POST(
                 status: "failed",
                 reason: f.url.includes("drive.google.com")
                   ? "Drive file isn't accessible — share it with seo@wonder-ads.com (Viewer is enough) OR make it anyone-with-link public, then retry"
-                  : "could not fetch as an image (private, removed, or non-image mime-type)",
+                  : link.kind === "dropbox-file"
+                    ? "Dropbox file couldn't be downloaded — check the link still works and isn't password-protected"
+                    : "URL didn't return an image (private, removed, or an HTML page — paste a direct image link)",
               });
             }
           } catch (err) {
@@ -707,6 +781,7 @@ Output STRICT JSON matching the schema. Caption MAX 1500 characters. Do NOT incl
           inputs: {
             postCount,
             postType: postTypeInput,
+            imageSource,
             theme: theme || undefined,
             ctaUrlDefault: ctaUrlDefault || undefined,
           },
@@ -956,6 +1031,13 @@ type PoolEntry = {
     mimeType: string;
     filename: string;
   } | null>;
+  /** The Client Files entry this candidate came from (a Drive folder
+   *  contributes many candidates under one name). */
+  sourceName: string;
+  /** What to tell the consultant when `fetch` returns null — written per
+   *  source so a Blob upload, a Drive photo and a pasted URL each get the
+   *  fix that actually applies to them. */
+  failReason: string;
 };
 
 /** Schema for the per-image vision-grounded caption in client-files
@@ -989,6 +1071,9 @@ async function buildImagePool(
         breadcrumb: f.name,
         originUrl: f.url,
         publicUrl: f.url,
+        sourceName: f.name,
+        failReason:
+          "Upload couldn't be fetched from storage — re-upload the file in Client Files.",
         fetch: async () => {
           try {
             const res = await fetch(f.url);
@@ -1038,6 +1123,9 @@ async function buildImagePool(
           breadcrumb: ref.breadcrumb,
           originUrl: f.url,
           publicUrl: null,
+          sourceName: f.name,
+          failReason:
+            "Drive photo couldn't be downloaded — share the folder with seo@wonder-ads.com (Viewer is enough) and retry.",
           fetch: () => downloadDriveImageById(ref),
         });
       }
@@ -1049,15 +1137,59 @@ async function buildImagePool(
         breadcrumb: f.name,
         originUrl: f.url,
         publicUrl: null,
+        sourceName: f.name,
+        failReason:
+          "Drive file couldn't be downloaded — share it with seo@wonder-ads.com (Viewer is enough) or make it anyone-with-link, then retry.",
         fetch: () => fetchDriveFile(f.url),
       });
       continue;
     }
-    // Other URL (public CDN, etc.)
+    // Dropbox (v76.91): folders are unlistable → skipped with the fix;
+    // single files download fine via their `dl=1` form and get re-hosted
+    // to Blob like Drive photos (a Dropbox link isn't a stable <img> src).
+    const link = classifyImageLink(f.url);
+    if (link.kind === "dropbox-folder" || link.kind === "invalid") {
+      referencesUsed.push({
+        name: f.name,
+        url: f.url,
+        status: "skipped",
+        reason:
+          link.kind === "invalid" ? "not a valid URL" : DROPBOX_FOLDER_REASON,
+      });
+      continue;
+    }
+    if (link.kind === "dropbox-file") {
+      pool.push({
+        breadcrumb: f.name,
+        originUrl: f.url,
+        publicUrl: null,
+        sourceName: f.name,
+        failReason:
+          "Dropbox file couldn't be downloaded — check the link still works and isn't password-protected.",
+        fetch: () => fetchImageBytes(link.directUrl),
+      });
+      continue;
+    }
+    // Any other URL: prove it serves an image BEFORE it can be drawn. A
+    // Google Photos album, a website or an expired CDN link used to sit in
+    // the pool as if it were a photo and only fail after being picked.
+    const probe = await probeImageUrl(f.url);
+    if (!probe.ok) {
+      referencesUsed.push({
+        name: f.name,
+        url: f.url,
+        status: "skipped",
+        reason: `link isn't a direct image URL (${probe.reason}) — paste a direct image link, upload the photo, or share a Drive folder`,
+      });
+      continue;
+    }
     pool.push({
       breadcrumb: f.name,
       originUrl: f.url,
       publicUrl: f.url,
+      sourceName: f.name,
+      failReason:
+        "URL stopped returning an image (private, removed, or an HTML page).",
       fetch: () => fetchImageBytes(f.url),
     });
   }
