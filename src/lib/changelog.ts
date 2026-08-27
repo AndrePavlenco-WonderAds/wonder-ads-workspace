@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.90",
+    date: "2026-08-27",
+    title: "Relatório mensal parcial só com números — sem percentagens de variação",
+    highlights: [
+      "**🔢 Um relatório gerado a meio do mês deixa de mostrar variações.** As pastilhas «▼ -40,2%» dos KPI, das linhas de Tráfego Orgânico, da Ficha Google e do total de leads desaparecem quando o período é parcial — ficam só os números. Um mês incompleto não se compara com um mês inteiro, e mesmo com as janelas cortadas ao mesmo nº de dias o cliente lia aquilo como uma queda.",
+      "**📝 O Resumo Executivo também fica sem percentagens.** Num parcial as frases caem para a versão só com o número («Geraram-se 395 leads este mês», «578 utilizadores chegaram por pesquisa orgânica»); as de «+X% face ao mês anterior» voltam quando o mês fecha e o relatório é regenerado.",
+      "**🏷️ A nota da capa e a dica do seletor de período dizem-no.** «Sem comparações com o mês anterior: um mês incompleto não se compara com um mês inteiro» — no relatório, no PDF e na pré-visualização pública. Os relatórios parciais já gravados ficam logo sem pastilhas; o resumo só muda ao regenerar.",
+    ],
+  },
+  {
     version: "76.89",
     date: "2026-08-24",
     title: "Menu com as ações de SuperAdmin a dourado e a board sem barra de filtros",

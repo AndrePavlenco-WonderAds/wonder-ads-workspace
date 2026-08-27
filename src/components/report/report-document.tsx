@@ -126,6 +126,7 @@ function KpiTile({
   lang,
   variant,
   spark,
+  deltas,
 }: {
   label: string;
   m: ReportMetric;
@@ -133,6 +134,8 @@ function KpiTile({
   variant: Variant;
   /** 12 meses da mesma métrica, quando o snapshot os tem. */
   spark?: (number | null)[];
+  /** false num relatório parcial — ver `showDeltas` em ReportDocument. */
+  deltas?: boolean;
 }) {
   const isNa = Boolean(m.manualNa);
   const pending = m.value === null && !isNa;
@@ -148,7 +151,7 @@ function KpiTile({
       <div className="wa-kpi-v">
         {pending ? <span className="wa-kpi-dash">—</span> : isNa ? "N/A" : formatValue(m, lang)}
       </div>
-      {!pending && !isNa && <DeltaChip delta={metricDelta(m, lang)} />}
+      {!pending && !isNa && deltas !== false && <DeltaChip delta={metricDelta(m, lang)} />}
       {pending && <div className="wa-kpi-note">{pendingNote(m, lang)}</div>}
       {!pending && spark && <Spark values={spark} />}
     </div>
@@ -162,11 +165,14 @@ function MetricRow({
   m,
   lang,
   variant,
+  deltas,
 }: {
   label: string;
   m: ReportMetric;
   lang: "pt" | "en";
   variant: Variant;
+  /** false num relatório parcial — ver `showDeltas` em ReportDocument. */
+  deltas?: boolean;
 }) {
   const isNa = Boolean(m.manualNa);
   const pending = m.value === null && !isNa;
@@ -184,7 +190,7 @@ function MetricRow({
         ) : (
           <>
             <span className="wa-mv">{formatValue(m, lang)}</span>
-            <DeltaChip delta={metricDelta(m, lang)} />
+            {deltas !== false && <DeltaChip delta={metricDelta(m, lang)} />}
           </>
         )}
       </span>
@@ -204,7 +210,6 @@ export function ReportDocument({
   const t = (p: string, e: string) => (pt ? p : e);
 
   const leadTotal = snapshot.leads.total;
-  const leadDelta = metricDelta(leadTotal, lang);
   const visibleChannels = snapshot.leads.channels.filter(
     (c) =>
       variant === "internal" ||
@@ -220,6 +225,22 @@ export function ReportDocument({
   const gsc = snapshot.gsc;
   // Optional on the snapshot — reports generated before v76.15 have none.
   const coverage = snapshot.coverage;
+  // RELATÓRIO PARCIAL = SÓ NÚMEROS, SEM VARIAÇÕES (v76.90). A meio do mês as
+  // pastilhas «▼ -40,2%» dominam a página e o cliente lê-as como uma queda,
+  // mesmo com as janelas cortadas ao mesmo nº de dias — um mês incompleto
+  // não se compara com um mês inteiro. Os valores `previous` continuam no
+  // snapshot; só a apresentação os esconde, e voltam quando o mês fecha e o
+  // relatório é regenerado.
+  const showDeltas = !coverage?.partial;
+  // O Resumo Executivo é gerado (e gravado) no momento em que o relatório se
+  // gera; os parciais gravados antes da v76.90 ainda trazem frases com «+365%
+  // face ao mês anterior». Até serem regenerados, um parcial não mostra
+  // nenhuma frase com percentagem — a única fonte de «%» nestas frases são
+  // as comparações mensais (ver buildExecSummary).
+  const execSummary = showDeltas
+    ? snapshot.execSummary
+    : snapshot.execSummary.filter((b) => !b.includes("%"));
+  const leadDelta = showDeltas ? metricDelta(leadTotal, lang) : null;
   // GEO: o bloco novo (v76.57) manda quando existe. O antigo só continua
   // desenhado nos relatórios que já estavam gravados com ele — regenerar um
   // relatório antigo passa-o para a secção nova.
@@ -362,7 +383,7 @@ export function ReportDocument({
   // secções, para que o número no cabeçalho e a entrada no índice não possam
   // divergir — que é o que aconteceria se cada secção soubesse o seu número.
   const secs: { key: string; label: string }[] = [
-    ...(snapshot.execSummary.length > 0
+    ...(execSummary.length > 0
       ? [{ key: "exec", label: t("Resumo Executivo", "Executive Summary") }]
       : []),
     ...(snapshot.trend ? [{ key: "trend", label: t("Evolução", "Trend") }] : []),
@@ -412,8 +433,8 @@ export function ReportDocument({
         {coverage?.partial && (
           <div className="wa-cpartial">
             {t(
-              `Relatório parcial — cobre os dias 1 a ${coverage.days} de ${coverage.monthDays}. Todas as comparações usam o mesmo número de dias do período anterior.`,
-              `Partial report — covers days 1–${coverage.days} of ${coverage.monthDays}. Every comparison uses the same number of days from the prior period.`,
+              `Relatório parcial — cobre os dias 1 a ${coverage.days} de ${coverage.monthDays}. Sem comparações com o mês anterior: um mês incompleto não se compara com um mês inteiro.`,
+              `Partial report — covers days 1–${coverage.days} of ${coverage.monthDays}. No prior-month comparisons: an incomplete month can't be compared to a full one.`,
             )}
           </div>
         )}
@@ -430,20 +451,21 @@ export function ReportDocument({
               lang={lang}
               variant={variant}
               spark={sparkFor[k.label]}
+              deltas={showDeltas}
             />
           ))}
         </section>
       )}
 
       {/* Executive Summary — the wins, up front */}
-      {snapshot.execSummary.length > 0 && (
+      {execSummary.length > 0 && (
         <section className="wa-sec">
           <div className="wa-exec-card">
             <SecLabel n={secN("exec")} onTint>
               {t("Resumo Executivo", "Executive Summary")}
             </SecLabel>
             <ul className="wa-exec">
-              {snapshot.execSummary.map((b, i) => (
+              {execSummary.map((b, i) => (
                 <li key={i}>{boldParts(b, `ex${i}`)}</li>
               ))}
             </ul>
@@ -537,9 +559,9 @@ export function ReportDocument({
                   )
                 : t("Cliques & direções", "Clicks & directions")}
             </h3>
-            <MetricRow label={t("Cliques p/ website", "Website clicks")} m={gbp.websiteClicks} lang={lang} variant={variant} />
-            <MetricRow label={t("Pedidos de direções", "Direction requests")} m={gbp.directions} lang={lang} variant={variant} />
-            <MetricRow label={t("Cliques p/ ligar", "Call clicks")} m={gbp.callClicks} lang={lang} variant={variant} />
+            <MetricRow label={t("Cliques p/ website", "Website clicks")} m={gbp.websiteClicks} lang={lang} variant={variant} deltas={showDeltas} />
+            <MetricRow label={t("Pedidos de direções", "Direction requests")} m={gbp.directions} lang={lang} variant={variant} deltas={showDeltas} />
+            <MetricRow label={t("Cliques p/ ligar", "Call clicks")} m={gbp.callClicks} lang={lang} variant={variant} deltas={showDeltas} />
 
             {/* Breakdown por unidade — só existe quando o cliente tem mais do
                 que uma ficha. O total acima é a soma de todas. */}
@@ -551,9 +573,9 @@ export function ReportDocument({
                 {gbpProfiles.map((p) => (
                   <div className="wa-gbp-unit" key={p.id}>
                     <div className="wa-gbp-unit-n">{p.label}</div>
-                    <MetricRow label={t("Cliques p/ website", "Website clicks")} m={p.websiteClicks} lang={lang} variant={variant} />
-                    <MetricRow label={t("Pedidos de direções", "Direction requests")} m={p.directions} lang={lang} variant={variant} />
-                    <MetricRow label={t("Cliques p/ ligar", "Call clicks")} m={p.callClicks} lang={lang} variant={variant} />
+                    <MetricRow label={t("Cliques p/ website", "Website clicks")} m={p.websiteClicks} lang={lang} variant={variant} deltas={showDeltas} />
+                    <MetricRow label={t("Pedidos de direções", "Direction requests")} m={p.directions} lang={lang} variant={variant} deltas={showDeltas} />
+                    <MetricRow label={t("Cliques p/ ligar", "Call clicks")} m={p.callClicks} lang={lang} variant={variant} deltas={showDeltas} />
                   </div>
                 ))}
               </div>
@@ -562,14 +584,14 @@ export function ReportDocument({
           <div className="wa-card">
             <div className="wa-label">{t("Tráfego Orgânico", "Organic Traffic")}</div>
             <h3 className="wa-h3">GA4 · GSC</h3>
-            <MetricRow label={t("Sessões orgânicas", "Organic sessions")} m={org.sessions} lang={lang} variant={variant} />
-            <MetricRow label={t("Utilizadores orgânicos", "Organic users")} m={org.users} lang={lang} variant={variant} />
-            <MetricRow label={t("Utilizadores Google orgânico", "Google organic users")} m={org.googleOrganicUsers} lang={lang} variant={variant} />
-            <MetricRow label={t("Tempo médio / utilizador", "Avg time / user")} m={org.avgEngagementTimePerUser} lang={lang} variant={variant} />
-            <MetricRow label={t("Taxa de engagement", "Engagement rate")} m={org.engagementRate} lang={lang} variant={variant} />
-            <MetricRow label={t("Clicks (GSC)", "Clicks (GSC)")} m={gsc.clicks} lang={lang} variant={variant} />
-            <MetricRow label={t("Impressões (GSC)", "Impressions (GSC)")} m={gsc.impressions} lang={lang} variant={variant} />
-            <MetricRow label={t("Posição média (GSC)", "Avg position (GSC)")} m={gsc.position} lang={lang} variant={variant} />
+            <MetricRow label={t("Sessões orgânicas", "Organic sessions")} m={org.sessions} lang={lang} variant={variant} deltas={showDeltas} />
+            <MetricRow label={t("Utilizadores orgânicos", "Organic users")} m={org.users} lang={lang} variant={variant} deltas={showDeltas} />
+            <MetricRow label={t("Utilizadores Google orgânico", "Google organic users")} m={org.googleOrganicUsers} lang={lang} variant={variant} deltas={showDeltas} />
+            <MetricRow label={t("Tempo médio / utilizador", "Avg time / user")} m={org.avgEngagementTimePerUser} lang={lang} variant={variant} deltas={showDeltas} />
+            <MetricRow label={t("Taxa de engagement", "Engagement rate")} m={org.engagementRate} lang={lang} variant={variant} deltas={showDeltas} />
+            <MetricRow label={t("Clicks (GSC)", "Clicks (GSC)")} m={gsc.clicks} lang={lang} variant={variant} deltas={showDeltas} />
+            <MetricRow label={t("Impressões (GSC)", "Impressions (GSC)")} m={gsc.impressions} lang={lang} variant={variant} deltas={showDeltas} />
+            <MetricRow label={t("Posição média (GSC)", "Avg position (GSC)")} m={gsc.position} lang={lang} variant={variant} deltas={showDeltas} />
             <div className="wa-nvr">
               {org.newUsers.value !== null && org.returningUsers.value !== null ? (
                 <>

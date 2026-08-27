@@ -220,7 +220,12 @@ function buildExecSummary(
     typeof n === "number" ? Math.round(n).toLocaleString(pt ? "pt-PT" : "en-GB") : "";
 
   // Positive % gain for a metric (position is inverted: lower = improvement).
+  // Num relatório PARCIAL nunca há % (v76.90): as frases caem para a versão
+  // só com o número («Geraram-se 395 leads este mês»), pela mesma razão que
+  // o documento esconde as pastilhas de variação.
+  const partial = Boolean(snap.coverage?.partial);
   const gainOf = (m: ReportMetric): number | null => {
+    if (partial) return null;
     if (m.value === null || m.previous === null || m.previous === 0) return null;
     if (m.unit === "position") {
       const diff = m.previous - m.value;

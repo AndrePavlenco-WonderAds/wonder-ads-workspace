@@ -125,7 +125,12 @@ export type ReportCoverage = {
  *  For a month still in progress the current window is clamped to the data
  *  cutoff — and, critically, **the comparison windows are clamped to the same
  *  number of days**. Comparing 26 days of July against all 30 days of June
- *  would show a fake collapse in every metric. */
+ *  would show a fake collapse in every metric.
+ *
+ *  The clamped comparison is still stored on every metric (`previous`), but
+ *  since v76.90 a partial report does NOT display it — no delta chips, no
+ *  percentages in the Executive Summary. Numbers only, until the month
+ *  closes and the report is regenerated. */
 export function reportWindows(
   periodKey: string,
   opts: { now?: Date; lagDays?: number } = {},

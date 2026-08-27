@@ -60,7 +60,7 @@ export async function ReportSection({
           <div>
             <p className="text-sm text-white/75">
               Relatório de SEO &amp; Lead Gen — leads, orgânico, GSC e AI
-              Visibility, com comparação face ao período homólogo anterior.
+              Visibility, com comparação face ao mês anterior nos meses fechados.
             </p>
             <p className="mt-1 text-[12px] text-white/45">
               Escolhe o mês fechado ou o mês em curso (parcial).

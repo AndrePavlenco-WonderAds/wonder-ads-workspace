@@ -75,7 +75,7 @@ export function ReportPeriodPicker({
         opt: current,
         icon: CalendarClock,
         hint: current.coverage
-          ? `Dados de 1 a ${current.coverage.split("–")[1]}, comparados com os mesmos dias do mês anterior.`
+          ? `Dados de 1 a ${current.coverage.split("–")[1]}. Só números, sem percentagens de variação — um mês incompleto não se compara com um mês inteiro.`
           : "Mês ainda a decorrer.",
       },
     ];
