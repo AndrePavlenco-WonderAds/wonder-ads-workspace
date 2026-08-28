@@ -365,7 +365,8 @@ export function getMentionName(username: string | null | undefined): string {
 export const SLACK_USER_IDS: Record<string, string> = {
   andre: "U05QPJZHE56",
   // Alice (RH) — é a ela que o resumo mensal de assiduidade é dirigido no
-  // #ausencias, no dia 1 de cada mês.
+  // #ausencias, no dia 1 de cada mês; e é ela (com o André) que leva a menção
+  // no fecho do mês, no último dia.
   alice: "U05PZR0UWAX",
   "andre-pereira": "U0BBED0K6NA",
   mike: "U0ACN1V6Y74",

@@ -285,6 +285,14 @@ export function formatDayCount(days: number): string {
   return `${String(days).replace(".", ",")} dias`;
 }
 
+/** "1 dia útil" / "meio dia útil" / "5 dias úteis" — o plural certo para
+ *  dias úteis, que é o que o balanço do mês e o cartão mostram. */
+export function formatBusinessDays(days: number): string {
+  if (days === 1) return "1 dia útil";
+  if (days === 0.5) return "meio dia útil";
+  return `${formatDayCount(days)} úteis`;
+}
+
 /** "17/08/2026 → 21/08/2026 · Vários dias" — a mesma linha em todo o lado:
  *  Slack, sino, folha, Control Suite. */
 export function absencePeriodLine(

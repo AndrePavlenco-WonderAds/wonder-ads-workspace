@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.92",
+    date: "2026-08-28",
+    title: "Fecho do mês das ausências: balanço automático no #ausencias no último dia de cada mês",
+    highlights: [
+      "**📆 No último dia do mês, o #ausencias recebe o balanço dos pedidos de ausência.** Quantos entraram, quantos foram aprovados (e quantos dias úteis), quantos recusados e o que ficou por decidir — com a lista completa de cada grupo (referência, colaborador, motivo, período, data do pedido e da decisão, nota da recusa). O André e a Alice vão identificados na mensagem.",
+      "**🗓️ Conta-se atividade, não calendário.** Um pedido entra na lista do mês em que foi submetido e a decisão no mês em que foi tomada — cada linha traz as duas datas. As faltas (RH-02) ficam de fora: já vão no resumo de assiduidade do dia 1, que continua igual.",
+      "**⏰ Cron a 28–31 que só dispara no último dia.** A Vercel não aceita «L» na expressão do cron, por isso o job bate à porta quatro dias seguidos (17h UTC — 18h em Lisboa no verão, 17h no inverno) e a rota confirma, à hora de Lisboa, se hoje é o último dia do mês antes de publicar. Nos outros dias responde «skipped» e não sai nada.",
+      "**👀 Pré-visualização e «Enviar agora» em /admin/ausencias.** O cartão mostra o balanço do mês corrente e do anterior tal como vai sair, com o botão para publicar já — para testar sem esperar pelo dia 31 ou reenviar um mês. Avisa quando o webhook do #ausencias não está configurado.",
+    ],
+  },
+  {
     version: "76.91",
     date: "2026-08-27",
     title: "GMB Posts com fotos do cliente: re-sorteio quando um download falha e links Dropbox tratados a sério",

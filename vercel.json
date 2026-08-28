@@ -4,6 +4,10 @@
     {
       "path": "/api/cron/absences-monthly",
       "schedule": "0 9 1 * *"
+    },
+    {
+      "path": "/api/cron/absences-month-close",
+      "schedule": "0 17 28-31 * *"
     }
   ]
 }

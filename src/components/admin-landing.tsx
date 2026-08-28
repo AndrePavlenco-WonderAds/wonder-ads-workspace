@@ -88,7 +88,7 @@ export function AdminLanding({
       href: "/admin/ausencias",
       title: "Ausências",
       blurb:
-        "Os pedidos de ausência da equipa — férias, baixas, consultas, assuntos pessoais. A folha completa de cada pedido, com aprovação/recusa daqui ou direto do Slack (#ausencias).",
+        "Os pedidos de ausência da equipa — férias, baixas, consultas, assuntos pessoais. A folha completa de cada pedido, com aprovação/recusa daqui ou direto do Slack (#ausencias). No último dia de cada mês, o balanço dos pedidos sai sozinho para o #ausencias.",
       count: absencesPendingCount,
       badge: absencesPendingCount === 1 ? "pendente" : "pendentes",
       Icon: CalendarOff,
