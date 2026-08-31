@@ -21,7 +21,8 @@ export type ProposalHero = {
   /** O nome do cliente — o «+ WonderAds» é acrescentado pela moldura. */
   title: string;
   subtitle: string;
-  context: ReactNode;
+  /** Parágrafo de enquadramento por baixo do subtítulo — opcional. */
+  context?: ReactNode;
   stats: StatItem[];
 };
 
@@ -99,9 +100,11 @@ export function ProposalDocument({
           <p className="mt-5 max-w-3xl text-lg leading-relaxed text-black/70 sm:text-xl">
             {hero.subtitle}
           </p>
-          <div className="mt-6 rounded-xl border border-black/8 bg-white/70 px-5 py-4 text-[14px] leading-relaxed text-black/68">
-            {hero.context}
-          </div>
+          {hero.context && (
+            <div className="mt-6 rounded-xl border border-black/8 bg-white/70 px-5 py-4 text-[14px] leading-relaxed text-black/68">
+              {hero.context}
+            </div>
+          )}
           <div className="mt-6">
             <StatGrid items={hero.stats} cols={4} />
           </div>
@@ -147,9 +150,22 @@ export function ProposalDocument({
 
 const PROPOSAL_CSS = `
 html { scroll-behavior: smooth; }
+@keyframes pr-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(120, 61, 245, 0.55); }
+  50% { box-shadow: 0 0 0 14px rgba(120, 61, 245, 0); }
+}
+.proposal .pr-pulse { animation: pr-pulse 2.2s ease-out infinite; }
+.proposal .pr-pulse-off { animation: none; }
+@media (prefers-reduced-motion: reduce) {
+  .proposal .pr-pulse { animation: none; }
+}
 @media print {
   .proposal .proposal-topbar { display: none !important; }
   .proposal .no-print { display: none !important; }
+  .proposal .pr-reveal { opacity: 1 !important; transform: none !important; transition: none !important; }
+  .proposal .pr-anim { transform: none !important; opacity: 1 !important; transition: none !important; }
+  .proposal .pr-acc-body { grid-template-rows: 1fr !important; }
+  .proposal .pr-pulse { animation: none !important; box-shadow: none !important; }
   .proposal section { break-inside: auto; }
   .proposal figure, .proposal .avoid-break { break-inside: avoid; }
   body { background: #fff !important; }

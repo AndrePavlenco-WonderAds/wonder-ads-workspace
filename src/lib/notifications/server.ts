@@ -33,6 +33,8 @@ import {
   absencePeriodLine,
   justifiedLabel,
 } from "@/lib/absences-shared";
+import { listProposalConfirmations } from "@/lib/proposal-events-store";
+import { getProposal, proposalPath } from "@/lib/proposals";
 import { getNotificationRules } from "@/lib/notifications/rules-store";
 import {
   getNotificationState,
@@ -916,6 +918,56 @@ async function absenceNotifications(
   return out.sort((a, b) => b.dueAt - a.dueAt);
 }
 
+/** Um cliente clicou em «Confirmar a renovação» numa proposta pública. Vai
+ *  ao sino do SuperAdmin (o André) à cabeça de tudo: é dinheiro à espera de
+ *  resposta, não um lembrete de calendário. */
+async function proposalConfirmationNotifications(
+  viewer: Viewer,
+  state: NotificationState,
+): Promise<UserNotification[]> {
+  if (!isAdminUsername(viewer.username)) return [];
+  let all: Awaited<ReturnType<typeof listProposalConfirmations>>;
+  try {
+    all = await listProposalConfirmations();
+  } catch (err) {
+    console.error("Notificações: confirmações de propostas falharam:", err);
+    return [];
+  }
+  const out: UserNotification[] = [];
+  for (const c of all) {
+    const meta = getProposal(c.proposalSlug);
+    const id = `proposal-confirm:${c.id}`;
+    const entry = state[id];
+    const when = new Date(c.at).toLocaleString("pt-PT", {
+      timeZone: "Europe/Lisbon",
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    out.push({
+      id,
+      ruleId: "proposal-confirm",
+      title: `${c.clientName} confirmou a renovação 🎉`,
+      body:
+        `Clique em «Confirmar a renovação» na proposta pública a ${when}` +
+        (meta ? ` · ${meta.title} · ${meta.investment}.` : ".") +
+        " Segue-se o email do cliente para andre@wonder-ads.com — responde hoje.",
+      periodLabel: meta?.period ?? "Proposta",
+      dueAt: c.at,
+      client: c.clientSlug
+        ? { slug: c.clientSlug, title: c.clientName, icon: null }
+        : null,
+      actionLabel: "Abrir a proposta",
+      actionHref: proposalPath(c.proposalSlug),
+      resolved: Boolean(entry),
+      resolvedAt: entry?.resolvedAt ?? null,
+    });
+  }
+  return out;
+}
+
 export async function getUserNotifications(
   viewer: Viewer,
   now: Date = new Date(),
@@ -944,13 +996,15 @@ export async function getUserNotifications(
       ? ((await seoBooksByConsultant(needsStartDates)).get(viewer.name) ?? [])
       : [];
 
-  const [ending, situationPoints, nps, absences, reviews] = await Promise.all([
-    roadmapEndingNotifications(viewer, book, state, now),
-    situationPointNotifications(viewer, state, now),
-    npsNotifications(viewer, state, now),
-    absenceNotifications(viewer, state),
-    pendingReviewNotifications(book, state, now),
-  ]);
+  const [ending, situationPoints, nps, absences, reviews, proposals] =
+    await Promise.all([
+      roadmapEndingNotifications(viewer, book, state, now),
+      situationPointNotifications(viewer, state, now),
+      npsNotifications(viewer, state, now),
+      absenceNotifications(viewer, state),
+      pendingReviewNotifications(book, state, now),
+      proposalConfirmationNotifications(viewer, state),
+    ]);
 
   // Ausências à cabeça: um pedido por decidir (ou uma resposta por ler) é
   // gente à espera de gente — passa à frente dos lembretes de calendário.
@@ -958,6 +1012,7 @@ export async function getUserNotifications(
   // espera, e cada dia que passa custa mais do que um lembrete de calendário.
   if (applicable.length === 0) {
     return [
+      ...proposals,
       ...absences,
       ...reviews,
       ...nps,
@@ -968,6 +1023,7 @@ export async function getUserNotifications(
   }
 
   return [
+    ...proposals,
     ...absences,
     ...reviews,
     ...nps,

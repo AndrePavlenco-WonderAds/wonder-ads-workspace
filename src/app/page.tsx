@@ -42,9 +42,8 @@ const DEPARTMENTS: Department[] = [
   {
     title: "COMMERCIAL DPT",
     tagline: "Sales pipeline, partnerships & client success.",
-    href: "https://sales-dashboard-production-a11b.up.railway.app/",
+    href: "/commercial",
     Icon: Handshake,
-    external: true,
   },
 ];
 

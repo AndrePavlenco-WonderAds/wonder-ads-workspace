@@ -13,6 +13,20 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.94",
+    date: "2026-08-31",
+    title: "Proposta da Fisio Restelo: menos texto, mais visual — gráficos, acordeão mês a mês e «Confirmar a renovação» a notificar o André",
+    highlights: [
+      "**✂️ Texto de ligação fora.** Dezassete parágrafos e caixas de enquadramento removidos (acordos/comparticipações, «leitura em uma frase», notoriedade marca vs. serviço, «porquê agora», trimestres, «natureza do plano», garantia «risco zero», plano avançado…). A proposta lê-se pelos números e pelos visuais.",
+      "**📈 Resultados com gráficos e contadores.** Três tiles com ícone e delta, dois gráficos de barras (cliques e impressões mês a mês) que crescem ao entrar no ecrã, tiles «de → para» com barra de progresso, e a tabela mensal num «Ver números» para quem quiser.",
+      "**🪜 Frentes de trabalho numa escada de posições.** Cada frente mostra a procura já conquistada e um marcador «hoje → alvo fev 2027» sobre a régua de posições (20 → #1), com a zona Top 5 sombreada. Escoliose destacada como foco.",
+      "**🗓️ Mês a mês em acordeão** com linha temporal, etiquetas do que se entrega em cada mês e «Expandir os 6 meses»; **quadro de metas** agrupado por tema (tráfego, posições, autoridade, IA, contactos) com hoje → nov → fev em chips.",
+      "**💳 CRM e plano redesenhados.** Cartão escuro do CRM com 1.200 € riscado → 0 €; «O que inclui» em seis cartões curtos; plano único de 4.500 € (750 €/mês) com o incluído em quatro grupos; «Importância» reescrita nos quatro focos (CRM, tracking de leads, escoliose, web design das páginas que faltam); governança cortada a metade.",
+      "**🚀 «Confirmar a renovação».** Painel escuro de fecho com três passos (1.ª call no fim de setembro). O clique regista a confirmação (`POST /api/proposals/<slug>/confirm`, público) → notificação no sino do SuperAdmin («Fisio Restelo confirmou a renovação 🎉», à cabeça de tudo) e abre o email já escrito para andre@wonder-ads.com com a Fran em cc.",
+      "**🏠 COMMERCIAL DPT** na home volta a abrir /commercial — o cartão apontava ao dashboard antigo no Railway.",
+    ],
+  },
+  {
     version: "76.93",
     date: "2026-08-31",
     title: "Propostas comerciais no workspace: a renovação da Fisio Restelo como página pública",
