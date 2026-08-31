@@ -70,10 +70,11 @@ async function run(req: Request) {
   }
 
   try {
-    const { overview, delivered } = await sendMonthClose(year, month);
+    const { overview, delivered, teamDelivered } = await sendMonthClose(year, month);
     return NextResponse.json({
       ok: true,
       delivered,
+      teamDelivered,
       // Sem webhook configurado a mensagem não sai — mas o balanço é
       // calculado na mesma, e é isso que o botão do Control Suite mostra.
       slackConfigured: ausenciasSlackConfigured(),

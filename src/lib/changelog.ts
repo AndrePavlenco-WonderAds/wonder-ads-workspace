@@ -13,6 +13,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.98",
+    date: "2026-08-31",
+    title: "Fecho do mês em duas mensagens: o balanço e o mapa por colaborador",
+    highlights: [
+      "**👥 Segunda mensagem no #ausencias.** Logo a seguir ao balanço do último dia sai o mapa por colaborador: uma linha por pessoa do roster com as ausências aprovadas e as faltas do mês (dias recortados ao calendário, a régua do resumo do dia 1) — e quem está a zeros aparece na mesma, com «✅ sem ausências nem faltas».",
+      "**🖥️ Control Suite acompanha.** O cartão do fecho em /admin/ausencias pré-visualiza a segunda mensagem por baixo das listas do balanço.",
+    ],
+  },
+  {
     version: "76.97",
     date: "2026-08-31",
     title: "Ausências por horas (1h · 2h · 3h) e faltas no fecho do mês",

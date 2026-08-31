@@ -5,6 +5,9 @@
 // coisa: é o BALANÇO DO MOVIMENTO dos pedidos de ausência (folha RH-01)
 // durante o mês — o que entrou, o que foi aprovado, o que foi recusado e o
 // que ficou por decidir — dirigido ao André e à Alice antes de o mês virar.
+// Logo a seguir ao balanço segue uma SEGUNDA mensagem: o mapa por
+// colaborador, com toda a gente do roster mesmo a zeros (ver o bloco «A
+// SEGUNDA MENSAGEM» lá em baixo).
 //
 // A DIFERENÇA QUE IMPORTA: aqui conta-se ATIVIDADE, não calendário. Um
 // pedido submetido a 28/07 e aprovado a 02/08 aparece nos «pedidos» de julho
@@ -19,17 +22,23 @@
 // «hoje é o último dia do mês, em Lisboa?» (`lisbonToday` +
 // `isLastDayOfMonth`). Só num sim é que a mensagem sai.
 
-import { getSlackUserId } from "./auth/credentials";
+import { getSlackUserId, listImpersonationTargets } from "./auth/credentials";
 import { formatDate } from "./dates";
 import {
   absencePeriodLine,
   formatBusinessDays,
+  formatDayCount,
   monthBounds,
   monthLabelPT,
   type AbsenceRequest,
   type AbsenceStatus,
 } from "./absences-shared";
-import { HR_NAME, HR_SLACK_USER_ID } from "./absences-monthly";
+import {
+  buildMonthlyDigest,
+  HR_NAME,
+  HR_SLACK_USER_ID,
+  type PersonMonthLine,
+} from "./absences-monthly";
 import { listAbsences } from "./absences-store";
 import { postAusenciasToSlack } from "./slack";
 
@@ -133,6 +142,11 @@ export type MonthCloseOverview = {
   pending: MonthCloseLine[];
   /** Faltas (RH-02) registadas pelo C-Level durante o mês. */
   faltas: MonthCloseLine[];
+  /** O mapa por colaborador — TODA a gente do roster, mesmo quem está a
+   *  zeros. Ao contrário das listas de atividade acima, aqui os dias são
+   *  RECORTADOS AO MÊS (a régua do resumo do dia 1): é a resposta a "quanto
+   *  esteve fora esta pessoa em agosto", não a "que papéis andaram". */
+  team: TeamMemberMonthLine[];
   totals: {
     requested: number;
     approved: number;
@@ -145,6 +159,58 @@ export type MonthCloseOverview = {
     faltasUnjustified: number;
   };
 };
+
+/** Uma linha do mapa por colaborador: a `PersonMonthLine` do resumo do dia 1
+ *  com a garantia extra de existir para toda a gente do roster. */
+export type TeamMemberMonthLine = PersonMonthLine & {
+  /** true quando não há nada a apontar no mês — a linha do «✅». */
+  clean: boolean;
+};
+
+/** Junta o roster inteiro ao resumo por pessoa do mês — quem não tem nada
+ *  fica com uma linha a zeros em vez de desaparecer do mapa. Quem já saiu do
+ *  roster mas tem registos no mês continua a aparecer, no fim. */
+export function buildTeamMonth(
+  all: AbsenceRequest[],
+  year: number,
+  month: number,
+): TeamMemberMonthLine[] {
+  const digest = buildMonthlyDigest(all, year, month);
+  const byUsername = new Map(digest.people.map((p) => [p.username, p]));
+
+  const zero = (p: { username: string; name: string; role: string; dept: string }): PersonMonthLine => ({
+    username: p.username,
+    name: p.name,
+    role: p.role,
+    dept: p.dept,
+    approvedBusinessDays: 0,
+    approvedByReason: {},
+    faltaJustifiedDays: 0,
+    faltaUnjustifiedDays: 0,
+    faltaByReason: {},
+    refs: [],
+  });
+
+  const team: TeamMemberMonthLine[] = listImpersonationTargets().map((p) => {
+    const line = byUsername.get(p.username) ?? zero(p);
+    byUsername.delete(p.username);
+    return {
+      ...line,
+      // Identidade do roster de hoje — o registo congela cargos antigos.
+      name: p.name,
+      role: p.role,
+      dept: p.dept,
+      clean:
+        line.approvedBusinessDays === 0 &&
+        line.faltaJustifiedDays === 0 &&
+        line.faltaUnjustifiedDays === 0,
+    };
+  });
+  for (const orphan of byUsername.values()) {
+    team.push({ ...orphan, clean: false });
+  }
+  return team;
+}
 
 function toLine(a: AbsenceRequest): MonthCloseLine {
   return {
@@ -221,6 +287,7 @@ export function buildMonthClose(
     rejected,
     pending,
     faltas,
+    team: buildTeamMonth(all, year, month),
     totals: {
       requested: requested.length,
       approved: approved.length,
@@ -460,19 +527,131 @@ export function monthCloseText(o: MonthCloseOverview): string {
   );
 }
 
-/** Lê o KV, constrói e publica o balanço do mês pedido. Devolve o que foi
- *  enviado, para o chamador (cron ou botão do Control Suite) poder mostrar. */
+/* ---------------------------------------------------------------- *
+ * A SEGUNDA MENSAGEM — o mapa por colaborador                        *
+ *                                                                   *
+ * Dispara logo a seguir ao balanço: uma linha por pessoa do roster,  *
+ * MESMO a zeros. O balanço diz o que se passou; este mapa diz com    *
+ * quem — e o «✅ sem ausências nem faltas» é informação, não ruído:  *
+ * é o que permite à Alice varrer a lista de cima a baixo sem ter de  *
+ * se perguntar se alguém ficou de fora.                              *
+ * ---------------------------------------------------------------- */
+
+/** "Férias 5 dias · Consulta meio dia" — o detalhe entre parêntesis. */
+function reasonBreakdown(map: Record<string, number>): string {
+  return Object.entries(map)
+    .sort((a, b) => b[1] - a[1])
+    .map(([label, days]) => `${label} ${formatDayCount(days)}`)
+    .join(" · ");
+}
+
+function teamMemberLine(p: TeamMemberMonthLine): string {
+  const dept = p.dept ? ` _(${p.dept})_` : "";
+  if (p.clean) return `• *${p.name}*${dept} — ✅ sem ausências nem faltas`;
+  const bits: string[] = [];
+  if (p.approvedBusinessDays > 0) {
+    bits.push(
+      `🌴 ${formatBusinessDays(p.approvedBusinessDays)} de ausência aprovada _(${reasonBreakdown(p.approvedByReason)})_`,
+    );
+  }
+  const faltaBits: string[] = [];
+  if (p.faltaUnjustifiedDays > 0) {
+    faltaBits.push(`⚠️ ${formatDayCount(p.faltaUnjustifiedDays)} de falta injustificada`);
+  }
+  if (p.faltaJustifiedDays > 0) {
+    faltaBits.push(`📄 ${formatDayCount(p.faltaJustifiedDays)} de falta justificada`);
+  }
+  if (faltaBits.length > 0) {
+    bits.push(`${faltaBits.join(" · ")} _(${reasonBreakdown(p.faltaByReason)})_`);
+  }
+  return `• *${p.name}*${dept} — ${bits.join(" · ")}`;
+}
+
+/** O mapa por colaborador em Block Kit — a mensagem que segue o balanço. */
+export function teamMonthBlocks(o: MonthCloseOverview): unknown[] {
+  const monthLower = o.label.toLowerCase();
+  const clean = o.team.filter((p) => p.clean).length;
+
+  const blocks: unknown[] = [
+    {
+      type: "header",
+      text: {
+        type: "plain_text",
+        text: `👥 Por colaborador · ${o.label}`,
+        emoji: true,
+      },
+    },
+    section(
+      `O mapa de ${monthLower}, pessoa a pessoa — ausências aprovadas e faltas com os dias ` +
+        `recortados ao mês. Toda a gente do roster aparece, mesmo quem está a zeros.`,
+    ),
+  ];
+
+  pushList(
+    blocks,
+    `*👥 Colaboradores* — ${o.team.length} · ${clean} sem registos`,
+    o.team.map(teamMemberLine),
+    "O roster está vazio.",
+  );
+
+  blocks.push({ type: "divider" });
+  blocks.push({
+    type: "context",
+    elements: [
+      {
+        type: "mrkdwn",
+        text:
+          `Régua do calendário — os mesmos números do resumo de assiduidade do dia 1, por isso uma ` +
+          `ausência a cavalo entre meses conta aqui só a parte que caiu em ${monthLower}. ` +
+          `Folhas em <${APP_URL}/admin/ausencias|Ausências> e <${APP_URL}/admin/faltas|Faltas>.`,
+      },
+    ],
+  });
+
+  return blocks;
+}
+
+/** Texto de fallback do mapa por colaborador. */
+export function teamMonthText(o: MonthCloseOverview): string {
+  const clean = o.team.filter((p) => p.clean).length;
+  const approved = o.team.reduce((s, p) => s + p.approvedBusinessDays, 0);
+  const faltas = o.team.reduce(
+    (s, p) => s + p.faltaJustifiedDays + p.faltaUnjustifiedDays,
+    0,
+  );
+  return (
+    `Por colaborador · ${o.label}: ${o.team.length} colaboradores · ${clean} sem registos · ` +
+    `${formatBusinessDays(approved)} de ausência aprovada · ${formatDayCount(faltas)} de falta.`
+  );
+}
+
+/** Lê o KV, constrói e publica o fecho do mês pedido — DUAS mensagens, por
+ *  esta ordem: o balanço de atividade e, logo a seguir, o mapa por
+ *  colaborador. Devolve o que foi enviado, para o chamador (cron ou botão
+ *  do Control Suite) poder mostrar. */
 export async function sendMonthClose(
   year: number,
   month: number,
-): Promise<{ overview: MonthCloseOverview; delivered: boolean }> {
+): Promise<{
+  overview: MonthCloseOverview;
+  delivered: boolean;
+  teamDelivered: boolean;
+}> {
   const all = await listAbsences();
   const overview = buildMonthClose(all, year, month);
   const delivered = await postAusenciasToSlack({
     text: monthCloseText(overview),
     blocks: monthCloseBlocks(overview),
   });
-  return { overview, delivered };
+  // A segunda só segue se a primeira saiu — um mapa sem balanço à frente
+  // seria uma mensagem órfã, e o falhanço do webhook afeta as duas igual.
+  const teamDelivered = delivered
+    ? await postAusenciasToSlack({
+        text: teamMonthText(overview),
+        blocks: teamMonthBlocks(overview),
+      })
+    : false;
+  return { overview, delivered, teamDelivered };
 }
 
 export { ANDRE_NAME, ANDRE_SLACK_USER_ID };

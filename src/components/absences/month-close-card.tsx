@@ -12,8 +12,12 @@
 import { useState } from "react";
 import { CalendarCheck2, Loader2, Send, TriangleAlert } from "lucide-react";
 import { formatDate } from "@/lib/dates";
-import { formatBusinessDays } from "@/lib/absences-shared";
-import type { MonthCloseLine, MonthCloseOverview } from "@/lib/absences-month-close";
+import { formatBusinessDays, formatDayCount } from "@/lib/absences-shared";
+import type {
+  MonthCloseLine,
+  MonthCloseOverview,
+  TeamMemberMonthLine,
+} from "@/lib/absences-month-close";
 
 type Which = "current" | "previous";
 
@@ -84,6 +88,51 @@ function Group({
   );
 }
 
+function teamSummary(p: TeamMemberMonthLine): string {
+  if (p.clean) return "✅ sem ausências nem faltas";
+  const bits: string[] = [];
+  if (p.approvedBusinessDays > 0) {
+    bits.push(`🌴 ${formatBusinessDays(p.approvedBusinessDays)} de ausência aprovada`);
+  }
+  if (p.faltaUnjustifiedDays > 0) {
+    bits.push(`⚠️ ${formatDayCount(p.faltaUnjustifiedDays)} de falta injustificada`);
+  }
+  if (p.faltaJustifiedDays > 0) {
+    bits.push(`📄 ${formatDayCount(p.faltaJustifiedDays)} de falta justificada`);
+  }
+  return bits.join(" · ");
+}
+
+/** A pré-visualização da SEGUNDA mensagem — o mapa por colaborador. */
+function TeamGroup({ team, monthLabel }: { team: TeamMemberMonthLine[]; monthLabel: string }) {
+  const clean = team.filter((p) => p.clean).length;
+  return (
+    <div>
+      <h3 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/40">
+        👥 Por colaborador em {monthLabel} · {team.length} — 2.ª mensagem, {clean} sem registos
+      </h3>
+      <ul className="mt-2 divide-y divide-white/[0.06] overflow-hidden rounded-xl border border-white/[0.06]">
+        {team.map((p) => (
+          <li
+            key={p.username}
+            className="flex flex-wrap items-center gap-x-3 gap-y-1 bg-white/[0.015] px-4 py-2.5"
+          >
+            <span className="min-w-0 flex-1 truncate text-[12.5px] text-white/80">
+              <span className="font-medium">{p.name}</span>
+              {p.dept ? <span className="text-white/35"> · {p.dept}</span> : null}
+            </span>
+            <span
+              className={`shrink-0 text-[11.5px] ${p.clean ? "text-white/35" : "text-white/65"}`}
+            >
+              {teamSummary(p)}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 export function MonthCloseCard({
   current,
   previous,
@@ -117,7 +166,7 @@ export function MonthCloseCard({
       if (!res.ok) throw new Error(data.error ?? "Não foi possível enviar.");
       setResult(
         data.delivered
-          ? `Fecho de ${o.label} enviado para o #ausencias.`
+          ? `Fecho de ${o.label} enviado para o #ausencias — balanço + mapa por colaborador.`
           : "O balanço foi calculado, mas o webhook do #ausencias ainda não está configurado — nada saiu.",
       );
     } catch (err) {
@@ -139,10 +188,10 @@ export function MonthCloseCard({
             Fecho do mês para o #ausencias · {o.label}
           </h2>
           <p className="mt-1 max-w-[620px] text-[12px] leading-relaxed text-white/45">
-            No último dia de cada mês, ao fim da tarde, esta mensagem sai sozinha para o
-            #ausencias com o André e a Alice identificados: quantos pedidos entraram, quantos
-            foram aprovados e recusados, o que ficou por decidir e as faltas que o C-Level
-            registou — com a lista de cada grupo.
+            No último dia de cada mês, ao fim da tarde, saem sozinhas DUAS mensagens para o
+            #ausencias com o André e a Alice identificados: o balanço (pedidos, aprovados,
+            recusados, por decidir e faltas registadas) e, logo a seguir, o mapa por
+            colaborador — toda a gente do roster, mesmo quem está a zeros.
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
@@ -279,6 +328,7 @@ export function MonthCloseCard({
             detail={(l) => `pedido a ${day(l.requestedOn)}`}
           />
         )}
+        <TeamGroup team={o.team} monthLabel={o.label.toLowerCase()} />
       </div>
 
       {result && (
