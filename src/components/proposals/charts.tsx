@@ -142,11 +142,12 @@ export function GrowthBar({ from, to, color = BRAND_GRADIENT }: { from: number; 
         style={{ width: `${pctFrom}%` }}
       />
       <div
-        className="pr-anim absolute inset-y-0 left-0 rounded-full"
+        className="pr-anim absolute inset-y-0 left-0 w-full rounded-full"
         style={{
-          width: inView ? "100%" : `${pctFrom}%`,
           background: color,
-          transition: "width 1100ms cubic-bezier(.2,.7,.2,1) 150ms",
+          transformOrigin: "left",
+          transform: inView ? "scaleX(1)" : `scaleX(${pctFrom / 100})`,
+          transition: "transform 1100ms cubic-bezier(.2,.7,.2,1) 150ms",
         }}
       />
     </div>
@@ -155,6 +156,9 @@ export function GrowthBar({ from, to, color = BRAND_GRADIENT }: { from: number; 
 
 // ---------------------------------------------------------------------------
 // Escada de posições — onde cada frente está hoje e onde vai estar em fev.
+// Uma régua partilhada (posição 20 → #1) com a zona Top 5 sombreada de alto
+// a baixo; cada frente é uma cápsula em gradiente que vai do marcador «hoje»
+// ao alvo, com riscas em movimento para dar a sensação de subida.
 // ---------------------------------------------------------------------------
 
 export type LadderRow = {
@@ -175,107 +179,127 @@ function xOf(pos: number): number {
   return ((WORST - p) / (WORST - 1)) * 100;
 }
 
+const COLS = "md:grid-cols-[1.05fr_2.3fr]";
+
 export function PositionLadder({ rows }: { rows: LadderRow[] }) {
   const { ref, inView } = useInView<HTMLDivElement>();
   const maxImp = Math.max(...rows.map((r) => r.impressions));
   const top5 = xOf(5);
+  const top3 = xOf(3);
+  const ticks = [20, 15, 10, 5, 1];
   return (
-    <div ref={ref} className="space-y-3">
-      <div className="hidden grid-cols-[1.25fr_0.9fr_2fr] gap-4 px-4 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-black/45 md:grid">
-        <span>Frente de trabalho</span>
-        <span>Procura já conquistada</span>
-        <span className="flex justify-between">
-          <span>Posição 20</span>
-          <span>Posição 10</span>
-          <span className="text-[#5b21b6]">Top 5 · onde clicam</span>
-          <span>#1</span>
-        </span>
+    <div ref={ref} className="overflow-hidden rounded-3xl border border-black/8 bg-white shadow-[0_20px_50px_-30px_rgba(120,61,245,.35)]">
+      {/* ----- cabeçalho com a régua ----- */}
+      <div className={`grid grid-cols-1 gap-2 border-b border-black/6 bg-black/[0.02] px-5 pb-3 pt-4 md:grid ${COLS} md:gap-8`}>
+        <div className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-black/45">
+          Frente de trabalho · procura já conquistada
+        </div>
+        <div className="relative h-9">
+          <div
+            aria-hidden
+            className="absolute inset-x-0 top-1 h-1.5 rounded-full"
+            style={{ background: "linear-gradient(90deg, #e5e7eb 0%, #ddd6fe 45%, #a78bfa 70%, #783DF5 85%, #C535C9 100%)" }}
+          />
+          {ticks.map((t) => (
+            <span
+              key={t}
+              className={`absolute top-4 -translate-x-1/2 text-[10.5px] font-semibold ${t <= 5 ? "text-[#5b21b6]" : "text-black/45"}`}
+              style={{ left: `${xOf(t)}%`, transform: t === 20 ? "translateX(0)" : t === 1 ? "translateX(-100%)" : "translateX(-50%)" }}
+            >
+              {t === 1 ? "#1" : `posição ${t}`}
+            </span>
+          ))}
+        </div>
       </div>
+
+      {/* ----- linhas ----- */}
       {rows.map((r, i) => {
         const xc = xOf(r.current);
         const xt = xOf(r.target);
+        const delta = Math.max(1, Math.round(r.current - r.target));
         return (
           <div
             key={r.label}
-            className={`grid grid-cols-1 gap-3 rounded-2xl bg-white px-4 py-4 md:grid-cols-[1.25fr_0.9fr_2fr] md:items-center md:gap-4 ${r.accent ? "border-2 border-transparent [background:linear-gradient(#fff,#fff)_padding-box,linear-gradient(135deg,#343ED7,#783DF5,#C535C9)_border-box] shadow-[0_10px_30px_-18px_rgba(120,61,245,.5)]" : "border border-black/8"}`}
+            className={`relative grid grid-cols-1 gap-3 border-b border-black/5 px-5 py-4 last:border-b-0 md:grid ${COLS} md:items-center md:gap-8 ${r.accent ? "bg-[#f8f5ff]" : ""}`}
           >
-            <div className="flex items-center gap-2">
-              <p className={`text-[14px] ${r.accent ? "font-bold text-black/90" : "font-medium text-black/80"}`}>
-                {r.label}
-              </p>
-              {r.accent && (
-                <span
-                  className="rounded-full px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-[0.14em] text-white"
-                  style={{ background: BRAND_GRADIENT }}
-                >
-                  Foco
-                </span>
-              )}
-            </div>
-            <div>
-              <div className="flex items-baseline justify-between text-[12px] text-black/60 md:hidden">
-                <span>Procura já conquistada</span>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <p className={`text-[14.5px] ${r.accent ? "font-bold text-black/90" : "font-semibold text-black/82"}`}>{r.label}</p>
+                {r.accent && (
+                  <span className="rounded-full px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-[0.14em] text-white" style={{ background: BRAND_GRADIENT }}>
+                    Foco
+                  </span>
+                )}
               </div>
-              <div className="flex items-center gap-2">
-                <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-black/6">
-                  <div
-                    className="pr-anim h-full rounded-full bg-[#c4b5fd]"
-                    style={{
-                      width: inView ? `${(r.impressions / maxImp) * 100}%` : "0%",
-                      transition: `width 900ms cubic-bezier(.2,.7,.2,1) ${i * 70}ms`,
-                    }}
-                  />
-                </div>
-                <span className="w-[76px] text-right text-[12px] font-semibold tabular-nums text-black/75">
-                  {formatPt(r.impressions)}
-                  <span className="ml-0.5 font-normal text-black/45">imp.</span>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-black/8 bg-white px-2.5 py-1 text-[11.5px] text-black/65">
+                  <span className="inline-block h-1.5 w-12 overflow-hidden rounded-full bg-black/8">
+                    <span
+                      className="pr-anim block h-full rounded-full"
+                      style={{ width: `${(r.impressions / maxImp) * 100}%`, background: BRAND_GRADIENT, transformOrigin: "left", transform: inView ? "scaleX(1)" : "scaleX(0)", transition: `transform 900ms cubic-bezier(.2,.7,.2,1) ${i * 70}ms` }}
+                    />
+                  </span>
+                  <strong className="font-semibold text-black/80">{formatPt(r.impressions)}</strong> impressões
+                </span>
+                <span className="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-bold text-emerald-800">
+                  ↑ {delta} posições
                 </span>
               </div>
             </div>
-            <div className="relative h-9">
-              {/* zona Top 5 */}
+
+            <div className="relative h-16">
+              {/* zona Top 5 contínua (as linhas não têm espaço entre si) */}
+              <div aria-hidden className="absolute -inset-y-4 bg-[#783DF5]/[0.06]" style={{ left: `${top5}%`, right: 0 }} />
+              {r.accent && <div aria-hidden className="absolute -inset-y-4 bg-[#783DF5]/[0.08]" style={{ left: `${top3}%`, right: 0 }} />}
+              <div aria-hidden className="absolute left-0 right-0 top-1/2 h-px bg-black/10" />
+
+              {/* cápsula hoje → alvo */}
               <div
-                aria-hidden
-                className="absolute inset-y-2 rounded-r-full bg-[#783DF5]/8"
-                style={{ left: `${top5}%`, right: 0 }}
-              />
-              <div aria-hidden className="absolute left-0 right-0 top-1/2 h-px bg-black/12" />
-              {/* segmento de → para */}
-              <div
-                className="pr-anim absolute top-1/2 h-1.5 -translate-y-1/2 rounded-full"
+                className={`pr-anim pr-stripes absolute top-1/2 h-6 rounded-full ${r.accent ? "shadow-[0_8px_24px_-8px_rgba(120,61,245,.7)]" : ""}`}
                 style={{
                   left: `${xc}%`,
-                  width: inView ? `${Math.max(0, xt - xc)}%` : "0%",
+                  width: `${Math.max(0, xt - xc)}%`,
                   background: BRAND_GRADIENT,
-                  transition: `width 1000ms cubic-bezier(.2,.7,.2,1) ${150 + i * 90}ms`,
+                  transformOrigin: "left",
+                  transform: inView ? "translateY(-50%) scaleX(1)" : "translateY(-50%) scaleX(0)",
+                  transition: `transform 1100ms cubic-bezier(.2,.7,.2,1) ${120 + i * 90}ms`,
                 }}
               />
-              {/* marcador atual */}
+
+              {/* marcador hoje */}
               <div className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2" style={{ left: `${xc}%` }}>
-                <div className="h-3.5 w-3.5 rounded-full border-2 border-black/35 bg-white" />
-                <span className="absolute left-1/2 top-4 -translate-x-1/2 whitespace-nowrap text-[10.5px] font-medium text-black/55">
-                  {r.currentLabel}
+                <div className="h-4 w-4 rounded-full border-[3px] border-black/40 bg-white shadow" />
+                <span className="absolute left-1/2 top-5 -translate-x-1/2 whitespace-nowrap rounded-md bg-white/90 px-1.5 py-0.5 text-[10.5px] font-medium text-black/60">
+                  hoje {r.currentLabel}
                 </span>
               </div>
+
               {/* marcador alvo */}
               <div
-                className="pr-anim absolute top-1/2 -translate-x-1/2 -translate-y-1/2"
+                className="pr-anim absolute top-1/2"
                 style={{
                   left: `${xt}%`,
                   opacity: inView ? 1 : 0,
                   transform: `translate(-50%, -50%) scale(${inView ? 1 : 0.4})`,
-                  transition: `opacity 400ms ${900 + i * 90}ms, transform 500ms cubic-bezier(.2,.9,.3,1.4) ${900 + i * 90}ms`,
+                  transition: `opacity 400ms ${1000 + i * 90}ms, transform 500ms cubic-bezier(.2,.9,.3,1.4) ${1000 + i * 90}ms`,
                 }}
               >
-                <div className="h-4 w-4 rounded-full ring-2 ring-white" style={{ background: BRAND_GRADIENT }} />
-                <span className={`absolute bottom-4 left-1/2 -translate-x-1/2 whitespace-nowrap text-[11px] ${r.accent ? "font-bold" : "font-semibold"} text-[#4c1d95]`}>
-                  {r.targetLabel}
+                <div className={`rounded-full ring-[3px] ring-white ${r.accent ? "h-6 w-6" : "h-5 w-5"}`} style={{ background: BRAND_GRADIENT }} />
+                <span className={`absolute bottom-6 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md px-2 py-0.5 text-[11px] font-bold text-white ${r.accent ? "text-[12px]" : ""}`} style={{ background: BRAND_GRADIENT }}>
+                  {r.targetLabel} · fev 2027
                 </span>
               </div>
             </div>
           </div>
         );
       })}
+
+      {/* ----- legenda ----- */}
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-black/6 bg-black/[0.02] px-5 py-3 text-[11.5px] text-black/55">
+        <span className="inline-flex items-center gap-1.5"><span className="h-3 w-3 rounded-full border-[2.5px] border-black/40 bg-white" /> hoje (posição média)</span>
+        <span className="inline-flex items-center gap-1.5"><span className="h-3 w-3 rounded-full" style={{ background: BRAND_GRADIENT }} /> alvo em fevereiro de 2027</span>
+        <span className="inline-flex items-center gap-1.5"><span className="h-3 w-5 rounded bg-[#783DF5]/10" /> zona Top 5 — onde as pessoas clicam</span>
+      </div>
     </div>
   );
 }

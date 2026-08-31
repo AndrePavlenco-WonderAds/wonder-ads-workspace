@@ -20,7 +20,7 @@ export type ProposalHero = {
   eyebrow: string;
   /** O nome do cliente — o «+ WonderAds» é acrescentado pela moldura. */
   title: string;
-  subtitle: string;
+  subtitle?: string;
   /** Parágrafo de enquadramento por baixo do subtítulo — opcional. */
   context?: ReactNode;
   stats: StatItem[];
@@ -50,7 +50,7 @@ export function ProposalDocument({
 
       {/* ----- Barra superior ----- */}
       <div className="proposal-topbar sticky top-0 z-30 border-b border-black/8 bg-[#f4f4ed]/92 backdrop-blur">
-        <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-2.5 sm:px-8">
+        <div className="mx-auto flex w-full max-w-[1800px] items-center justify-between gap-4 px-4 py-2.5 sm:px-8 lg:px-12">
           <div className="flex min-w-0 items-center gap-2.5">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/wonder-ads-butterfly.png" alt="" className="h-7 w-7 object-contain" />
@@ -85,7 +85,7 @@ export function ProposalDocument({
         </div>
       </div>
 
-      <div className="mx-auto max-w-5xl px-4 pb-16 pt-10 sm:px-8 sm:pt-14">
+      <div className="mx-auto w-full max-w-[1800px] px-4 pb-16 pt-10 sm:px-8 sm:pt-14 lg:px-12">
         {/* ----- Hero ----- */}
         <header>
           <div className="flex flex-wrap items-center gap-2">
@@ -97,9 +97,11 @@ export function ProposalDocument({
             {hero.title} <span className="text-black/30">+</span>{" "}
             <GradientText>WonderAds</GradientText>
           </h1>
-          <p className="mt-5 max-w-3xl text-lg leading-relaxed text-black/70 sm:text-xl">
-            {hero.subtitle}
-          </p>
+          {hero.subtitle && (
+            <p className="mt-5 max-w-3xl text-lg leading-relaxed text-black/70 sm:text-xl">
+              {hero.subtitle}
+            </p>
+          )}
           {hero.context && (
             <div className="mt-6 rounded-xl border border-black/8 bg-white/70 px-5 py-4 text-[14px] leading-relaxed text-black/68">
               {hero.context}
@@ -155,17 +157,26 @@ html { scroll-behavior: smooth; }
   50% { box-shadow: 0 0 0 14px rgba(120, 61, 245, 0); }
 }
 .proposal .pr-pulse { animation: pr-pulse 2.2s ease-out infinite; }
+@keyframes pr-stripes { from { background-position: 0 0; } to { background-position: 14.14px 0; } }
+.proposal .pr-stripes {
+  background-image: repeating-linear-gradient(-45deg, rgba(255,255,255,0.28) 0 5px, transparent 5px 10px) !important;
+  background-color: #783DF5;
+  background-size: 14.14px 14.14px;
+  animation: pr-stripes 1.1s linear infinite;
+}
 .proposal .pr-pulse-off { animation: none; }
 @media (prefers-reduced-motion: reduce) {
-  .proposal .pr-pulse { animation: none; }
+  .proposal .pr-pulse, .proposal .pr-stripes { animation: none; }
 }
 @media print {
   .proposal .proposal-topbar { display: none !important; }
   .proposal .no-print { display: none !important; }
   .proposal .pr-reveal { opacity: 1 !important; transform: none !important; transition: none !important; }
   .proposal .pr-anim { transform: none !important; opacity: 1 !important; transition: none !important; }
+  .proposal .pr-stripes.pr-anim { transform: translateY(-50%) !important; }
   .proposal .pr-acc-body { grid-template-rows: 1fr !important; }
   .proposal .pr-pulse { animation: none !important; box-shadow: none !important; }
+  .proposal .pr-stripes { animation: none !important; }
   .proposal section { break-inside: auto; }
   .proposal figure, .proposal .avoid-break { break-inside: avoid; }
   body { background: #fff !important; }

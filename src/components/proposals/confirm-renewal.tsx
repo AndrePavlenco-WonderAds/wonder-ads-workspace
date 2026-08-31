@@ -1,15 +1,15 @@
 "use client";
 
-// O fecho da proposta: um painel escuro com o resumo, três passos e o botão
-// «Confirmar a renovação». O clique faz duas coisas: regista a confirmação
-// na app (POST /api/proposals/<slug>/confirm → notificação no sino do
-// SuperAdmin) e abre o email para o André já preenchido. Se o registo
-// falhar, o email abre na mesma — a confirmação nunca fica presa num erro
-// de rede nosso.
+// O fecho da proposta — no branding claro do resto do documento, tudo
+// centrado: resumo, três passos, e o botão «Confirmar a renovação». O
+// clique regista a confirmação na app (POST /api/proposals/<slug>/confirm →
+// notificação no sino do SuperAdmin) e abre o email para o André já
+// preenchido. Se o registo falhar, o email abre na mesma; se o email não
+// abrir (browser sem cliente de correio), fica um link para o repetir.
 
 import { useState } from "react";
-import { CalendarDays, Check, Loader2, Mail, Rocket, Sparkles } from "lucide-react";
-import { BRAND_GRADIENT } from "./proposal-primitives";
+import { CalendarDays, Check, Loader2, Mail, Rocket, ShieldCheck } from "lucide-react";
+import { BRAND_GRADIENT, GradientText } from "./proposal-primitives";
 
 type Props = {
   proposalSlug: string;
@@ -66,73 +66,86 @@ export function ConfirmRenewal({
   ];
 
   return (
-    <div className="relative overflow-hidden rounded-3xl bg-[#0B0C12] px-6 py-8 text-white sm:px-10 sm:py-10">
-      <div aria-hidden className="pointer-events-none absolute -left-24 -top-24 h-72 w-72 rounded-full opacity-40 blur-3xl" style={{ background: BRAND_GRADIENT }} />
-      <div aria-hidden className="pointer-events-none absolute -bottom-32 -right-16 h-80 w-80 rounded-full opacity-30 blur-3xl" style={{ background: BRAND_GRADIENT }} />
+    <div className="rounded-3xl p-[2px] shadow-2xl shadow-[#783DF5]/15" style={{ background: BRAND_GRADIENT }}>
+      <div className="relative overflow-hidden rounded-[22px] bg-white px-5 py-10 text-center sm:px-10 sm:py-14">
+        <div aria-hidden className="pointer-events-none absolute -left-32 -top-32 h-80 w-80 rounded-full opacity-[0.14] blur-3xl" style={{ background: BRAND_GRADIENT }} />
+        <div aria-hidden className="pointer-events-none absolute -bottom-40 -right-24 h-96 w-96 rounded-full opacity-[0.12] blur-3xl" style={{ background: BRAND_GRADIENT }} />
 
-      <div className="relative">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-white/80">
-            <Sparkles className="h-3 w-3" /> Renovação · {period}
+        <div className="relative mx-auto max-w-4xl">
+          <span className="inline-flex items-center rounded-full px-3.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-white" style={{ background: BRAND_GRADIENT }}>
+            Renovação · {period}
           </span>
-          <span className="rounded-full bg-white/10 px-3 py-1 text-[11px] font-semibold text-white/80">{price}</span>
-          <span className="rounded-full bg-emerald-400/15 px-3 py-1 text-[11px] font-semibold text-emerald-200">CRM incluído · 0 €</span>
-        </div>
-        <h3 className="mt-5 text-3xl font-semibold leading-[1.1] tracking-tight sm:text-4xl">
-          Pronto para levar a Fisio Restelo ao topo?
-        </h3>
-        <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-white/65">
-          Seis meses, quatro focos, um só clique para arrancar. O primeiro pico de procura do ano é em setembro — quanto mais cedo confirmar, mais dele apanhamos.
-        </p>
+          <h3 className="mt-6 text-3xl font-semibold leading-[1.08] tracking-tight text-black/90 sm:text-5xl">
+            Pronto para levar a <GradientText>{clientName}</GradientText> ao topo?
+          </h3>
+          <p className="mx-auto mt-4 max-w-2xl text-[15px] leading-relaxed text-black/60 sm:text-[16px]">
+            Seis meses, um só clique para arrancar. Setembro é o primeiro pico de procura do ano — quanto mais cedo confirmar, mais dele apanhamos.
+          </p>
 
-        <ol className="mt-7 grid gap-3 sm:grid-cols-3">
-          {steps.map((s, i) => (
-            <li key={s.title} className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-              <div className="flex items-center gap-2.5">
-                <span className="inline-flex h-8 w-8 items-center justify-center rounded-full text-white" style={{ background: BRAND_GRADIENT }}>
-                  <s.Icon className="h-4 w-4" />
+          <div className="mt-6 flex flex-wrap justify-center gap-2">
+            {[price, "CRM incluído · 0 €", "Arranque em setembro"].map((c) => (
+              <span key={c} className="rounded-full border border-[#e9d5ff] bg-[#f5f0ff] px-3.5 py-1.5 text-[12.5px] font-semibold text-[#4c1d95]">
+                {c}
+              </span>
+            ))}
+          </div>
+
+          {/* ----- passos ----- */}
+          <ol className="relative mx-auto mt-10 grid max-w-3xl gap-6 sm:grid-cols-3 sm:gap-4">
+            <div aria-hidden className="absolute left-[16.6%] right-[16.6%] top-6 hidden h-px bg-gradient-to-r from-[#343ED7] via-[#783DF5] to-[#C535C9] opacity-40 sm:block" />
+            {steps.map((s, i) => (
+              <li key={s.title} className="relative flex flex-col items-center text-center">
+                <span className="inline-flex h-12 w-12 items-center justify-center rounded-full text-white ring-4 ring-white" style={{ background: BRAND_GRADIENT }}>
+                  <s.Icon className="h-5 w-5" />
                 </span>
-                <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/45">Passo {i + 1}</span>
-              </div>
-              <p className="mt-2.5 text-[15px] font-semibold">{s.title}</p>
-              <p className="mt-1 text-[13px] leading-relaxed text-white/60">{s.text}</p>
-            </li>
-          ))}
-        </ol>
+                <span className="mt-3 text-[10.5px] font-semibold uppercase tracking-[0.16em] text-black/40">Passo {i + 1}</span>
+                <p className="mt-1 text-[15px] font-semibold text-black/85">{s.title}</p>
+                <p className="mt-1 max-w-[240px] text-[12.5px] leading-relaxed text-black/55">{s.text}</p>
+              </li>
+            ))}
+          </ol>
 
-        <div className="no-print mt-7 flex flex-col gap-3 sm:flex-row sm:items-center">
-          <button
-            type="button"
-            onClick={confirm}
-            disabled={state === "sending"}
-            className={`pr-pulse inline-flex items-center justify-center gap-2 rounded-xl px-7 py-4 text-[15px] font-bold text-white transition hover:brightness-110 disabled:opacity-80 ${state === "done" ? "pr-pulse-off" : ""}`}
-            style={{ background: state === "done" ? "#059669" : BRAND_GRADIENT }}
-          >
-            {state === "sending" ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : state === "done" ? (
-              <Check className="h-4 w-4" />
-            ) : (
-              <Mail className="h-4 w-4" />
-            )}
-            {state === "done" ? "Renovação confirmada — obrigado!" : state === "sending" ? "A registar…" : "Confirmar a renovação"}
-          </button>
-          <a
-            href={callHref}
-            className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/5 px-6 py-4 text-[14px] font-semibold text-white transition hover:bg-white/10"
-          >
-            <CalendarDays className="h-4 w-4" /> Marcar a call de fim de setembro
-          </a>
+          {/* ----- ação ----- */}
+          {state === "done" ? (
+            <div className="mx-auto mt-10 max-w-xl rounded-2xl border border-emerald-200 bg-emerald-50 px-6 py-5">
+              <div className="flex items-center justify-center gap-2 text-[16px] font-semibold text-emerald-900">
+                <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-emerald-500 text-white"><Check className="h-4 w-4" /></span>
+                Renovação registada — obrigado!
+              </div>
+              <p className="mt-2 text-[13px] leading-relaxed text-emerald-900/80">
+                O André já recebeu a notificação. O email de confirmação abriu no seu programa de correio — basta enviar.
+                {" "}
+                <a href={confirmHref} className="font-semibold underline underline-offset-2">Não abriu? Clique aqui.</a>
+              </p>
+            </div>
+          ) : (
+            <div className="no-print mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
+              <button
+                type="button"
+                onClick={confirm}
+                disabled={state === "sending"}
+                className="pr-pulse inline-flex w-full items-center justify-center gap-2 rounded-2xl px-8 py-4 text-[16px] font-bold text-white transition hover:-translate-y-0.5 hover:brightness-110 disabled:opacity-80 sm:w-auto"
+                style={{ background: BRAND_GRADIENT }}
+              >
+                {state === "sending" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+                {state === "sending" ? "A registar…" : "Confirmar a renovação"}
+              </button>
+              <a
+                href={callHref}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-black/12 bg-white px-7 py-4 text-[15px] font-semibold text-black/75 transition hover:-translate-y-0.5 hover:border-[#c4b5fd] hover:text-black sm:w-auto"
+              >
+                <CalendarDays className="h-4 w-4" /> Marcar a call de fim de setembro
+              </a>
+            </div>
+          )}
+
+          <p className="mt-5 inline-flex flex-wrap items-center justify-center gap-x-1.5 gap-y-1 text-[12.5px] text-black/50">
+            <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
+            Sem formulários: abre um email já escrito para {toEmail} e o André recebe a notificação na app.
+            <span className="text-black/35">·</span>
+            Dúvidas? {consultantFirst} — <a href={`mailto:${ccEmail}`} className="font-medium text-black/65 underline-offset-2 hover:underline">{ccEmail}</a>
+          </p>
         </div>
-        {state === "done" ? (
-          <p className="mt-4 text-[13px] text-emerald-200">
-            Registado. O email para {toEmail} abriu no seu programa de correio — basta enviar. O André e a {consultantFirst} respondem hoje.
-          </p>
-        ) : (
-          <p className="mt-4 text-[12.5px] text-white/45">
-            Ao confirmar, abre um email já escrito para {toEmail} e o André recebe a notificação na app. Dúvidas? {consultantFirst} — {ccEmail}
-          </p>
-        )}
       </div>
     </div>
   );

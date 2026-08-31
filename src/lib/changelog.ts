@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.95",
+    date: "2026-08-31",
+    title: "Proposta da Fisio Restelo em ecrã inteiro, mais curta e toda no branding claro",
+    highlights: [
+      "**🖥️ Ecrã inteiro.** A proposta deixa de viver numa coluna ao centro — barra superior e conteúdo ocupam a largura toda (até 1800 px), com as grelhas a respirar.",
+      "**✂️ Ainda mais curta.** Fora: o mês a mês em acordeão, a projeção de contactos, as quatro metas, «Importância», os quatro focos, «Como acompanhamos», o subtítulo do hero e a intro dos resultados. Ficam sete secções e o documento lê-se em metade do tempo.",
+      "**🪜 Escada de posições refeita.** Régua partilhada (posição 20 → #1) com a zona Top 5 sombreada de alto a baixo, cápsulas em gradiente com riscas em movimento de «hoje» ao alvo, chip «↑ N posições» e barra de impressões por frente; legenda no rodapé.",
+      "**💳 CRM e plano no branding claro.** O cartão do CRM troca o preto pelo branco com moldura em gradiente e painel lilás (1.200 € → 0 €); o plano de 4.500 € ganha «Tudo incluído», 750 €/mês em destaque, um bloco lilás com os quatro extras e o incluído em chips por grupo (CRM a gradiente como NOVO).",
+      "**🚀 Fecho centrado, claro e sem preto.** Painel branco com moldura em gradiente, título com o nome do cliente em gradiente, chips de resumo, três passos ligados por uma linha e os botões ao centro; depois de confirmar aparece um cartão verde com «Não abriu? Clique aqui» para repetir o email.",
+    ],
+  },
+  {
     version: "76.94",
     date: "2026-08-31",
     title: "Proposta da Fisio Restelo: menos texto, mais visual — gráficos, acordeão mês a mês e «Confirmar a renovação» a notificar o André",
