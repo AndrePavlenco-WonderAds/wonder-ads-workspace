@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.97",
+    date: "2026-08-31",
+    title: "Ausências por horas (1h · 2h · 3h) e faltas no fecho do mês",
+    highlights: [
+      "**⏱️ Só umas horas.** A folha de pedido de ausência ganha uma linha própria no período — 1h, 2h ou 3h dentro do mesmo dia (consulta, chegada tardia, saída mais cedo). Conta como fração de um dia de 8h nas somas da RH e aparece como «2h» em todo o lado: Slack, sino, histórico e resumos.",
+      "**⚠️ Fecho do mês com faltas.** O balanço do último dia no #ausencias passa a incluir as faltas (RH-02) registadas pelo C-Level no mês — contador no topo, lista própria com quem registou e a classificação, e o cartão do Control Suite acompanha.",
+      "**🧹 Limpeza.** Removidos os pedidos de teste AUS-2026-001 e AUS-2026-002.",
+    ],
+  },
+  {
     version: "76.96",
     date: "2026-08-31",
     title: "Proposta da Fisio Restelo: preço em duas modalidades (6.000 € mensal · 5.400 € pré-pago)",

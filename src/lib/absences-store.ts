@@ -64,6 +64,9 @@ function numOrNull(v: unknown): number | null {
 }
 
 const PERIOD_KINDS: AbsencePeriodKind[] = [
+  "hours-1",
+  "hours-2",
+  "hours-3",
   "morning",
   "afternoon",
   "full-day",

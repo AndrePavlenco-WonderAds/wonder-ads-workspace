@@ -9,8 +9,28 @@
 
 /** Como é que a ausência ocupa o calendário. "Uma semana" do pedido do
  *  C-Level não é um tipo próprio — é um multi-day com 7 dias, e a folha
- *  tem um atalho que preenche as datas. */
-export type AbsencePeriodKind = "morning" | "afternoon" | "full-day" | "multi-day";
+ *  tem um atalho que preenche as datas. Os "hours-N" são a consulta a meio
+ *  da tarde: 1 a 3 horas dentro de um dia — a partir daí já é meio dia. */
+export type AbsencePeriodKind =
+  | "hours-1"
+  | "hours-2"
+  | "hours-3"
+  | "morning"
+  | "afternoon"
+  | "full-day"
+  | "multi-day";
+
+/** Nº de horas de um período por horas, ou null nos restantes. */
+export function periodHours(kind: AbsencePeriodKind): number | null {
+  if (kind === "hours-1") return 1;
+  if (kind === "hours-2") return 2;
+  if (kind === "hours-3") return 3;
+  return null;
+}
+
+/** O dia de trabalho tem 8 horas — é esta a régua que converte "2 horas"
+ *  em fração de dia (0,25) para o registo e para as contas da RH. */
+export const WORKDAY_HOURS = 8;
 
 /** "recorded" é o estado das FALTAS: não há decisão pendente nem aprovação
  *  — o C-Level lançou o registo e ele já é um facto. Fica na mesma união
@@ -209,6 +229,9 @@ export function justifiedLabel(justified: boolean | null): string {
 }
 
 export const PERIOD_KIND_LABEL: Record<AbsencePeriodKind, string> = {
+  "hours-1": "1 hora",
+  "hours-2": "2 horas",
+  "hours-3": "3 horas",
   morning: "Meio dia — manhã",
   afternoon: "Meio dia — tarde",
   "full-day": "Dia inteiro",
@@ -261,6 +284,15 @@ export function absenceDuration(
   startISO: string,
   endISO: string,
 ): { calendarDays: number; businessDays: number } {
+  const hours = periodHours(kind);
+  if (hours !== null) {
+    // Horas contam como fração de um dia de 8h — 2h = 0,25 dia. Assim as
+    // somas da RH (dias úteis do mês, do ano) continuam a bater certo sem
+    // uma coluna nova, e o formatDayCount volta a mostrá-las como horas.
+    const fraction = hours / WORKDAY_HOURS;
+    const business = businessDaySpan(startISO, startISO) > 0 ? fraction : 0;
+    return { calendarDays: fraction, businessDays: business };
+  }
   if (kind === "morning" || kind === "afternoon") {
     const business = businessDaySpan(startISO, startISO) > 0 ? 0.5 : 0;
     return { calendarDays: 0.5, businessDays: business };
@@ -277,11 +309,22 @@ export function absenceDuration(
   };
 }
 
-/** "meio dia" / "1 dia" / "5 dias". Aceita meios (0.5, 2.5). */
+/** "meio dia" / "1 dia" / "5 dias" — e, desde as ausências por horas,
+ *  "2h" ou "1 dia e 3h". Aceita meios (0.5, 2.5); qualquer outra fração
+ *  é devolvida em horas (fração × 8), que é a única forma de "0,25 dias"
+ *  fazer sentido numa mensagem de RH. */
 export function formatDayCount(days: number): string {
   if (days === 0.5) return "meio dia";
   if (days === 1) return "1 dia";
   if (Number.isInteger(days)) return `${days} dias`;
+  const whole = Math.floor(days);
+  const frac = days - whole;
+  if (Math.abs(frac - 0.5) > 1e-9) {
+    const hours = Math.round(frac * WORKDAY_HOURS * 10) / 10;
+    const hoursText = `${String(hours).replace(".", ",")}h`;
+    if (whole === 0) return hoursText;
+    return `${whole === 1 ? "1 dia" : `${whole} dias`} e ${hoursText}`;
+  }
   return `${String(days).replace(".", ",")} dias`;
 }
 
@@ -318,6 +361,9 @@ export function absencePeriodLine(
 export function absenceDurationLine(
   a: Pick<AbsenceRequest, "calendarDays" | "businessDays" | "periodKind">,
 ): string {
+  if (periodHours(a.periodKind) !== null) {
+    return `${PERIOD_KIND_LABEL[a.periodKind]} dentro do dia`;
+  }
   if (a.periodKind === "morning" || a.periodKind === "afternoon") {
     return PERIOD_KIND_LABEL[a.periodKind].toLowerCase();
   }

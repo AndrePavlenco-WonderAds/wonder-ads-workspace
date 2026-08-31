@@ -26,7 +26,15 @@ import { announceAbsenceRequest } from "@/lib/absences-slack";
 
 export const runtime = "nodejs";
 
-const PERIOD_KINDS = new Set(["morning", "afternoon", "full-day", "multi-day"]);
+const PERIOD_KINDS = new Set([
+  "hours-1",
+  "hours-2",
+  "hours-3",
+  "morning",
+  "afternoon",
+  "full-day",
+  "multi-day",
+]);
 
 function cleanText(v: unknown, max: number): string {
   return typeof v === "string" ? v.trim().slice(0, max) : "";

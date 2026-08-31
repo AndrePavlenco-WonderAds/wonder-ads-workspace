@@ -21,6 +21,7 @@ import {
   Briefcase,
   CalendarRange,
   Check,
+  Clock3,
   FileText,
   Flower2,
   GraduationCap,
@@ -53,6 +54,8 @@ import {
   absenceDuration,
   formatDayCount,
   MAX_ABSENCE_CALENDAR_DAYS,
+  PERIOD_KIND_LABEL,
+  periodHours,
   validateAbsenceDraft,
   type AbsenceAttachment,
   type AbsencePeriodKind,
@@ -103,6 +106,7 @@ export function AbsenceRequestForm({
 
   const requestDate = useMemo(() => todayISO(), []);
   const single = periodKind !== "multi-day";
+  const isHours = periodHours(periodKind) !== null;
   const effectiveEnd = single ? startDate : endDate;
 
   const duration = useMemo(
@@ -364,6 +368,55 @@ export function AbsenceRequestForm({
               })}
             </div>
 
+            {/* Só umas horas — a consulta a meio da tarde não é meio dia.
+                Uma linha só, com as três durações lado a lado: escolher uma
+                seleciona o período por horas; escolher um cartão em cima
+                volta aos períodos por dias. */}
+            <div
+              className={`mt-2 flex flex-wrap items-center gap-x-4 gap-y-2.5 rounded-lg border px-3.5 py-2.5 transition ${
+                isHours
+                  ? "border-[#783DF5] bg-[#783DF5]/[0.07] shadow-[inset_0_0_0_1px_#783DF5]"
+                  : "border-black/15 bg-white/70"
+              }`}
+            >
+              <div className="flex min-w-0 items-center gap-2.5">
+                <Clock3
+                  className={`h-4 w-4 shrink-0 ${isHours ? "text-[#5c2ed0]" : "text-black/40"}`}
+                />
+                <div className="min-w-0">
+                  <span
+                    className={`block text-[12.5px] font-bold ${isHours ? "text-[#3d1f96]" : "text-black/75"}`}
+                  >
+                    Só umas horas
+                  </span>
+                  <span className="block text-[10px] text-black/40">
+                    consulta, chegada tardia ou saída mais cedo — dentro do mesmo dia
+                  </span>
+                </div>
+              </div>
+              <div className="ml-auto flex gap-1.5">
+                {(["hours-1", "hours-2", "hours-3"] as AbsencePeriodKind[]).map((kind) => {
+                  const active = periodKind === kind;
+                  return (
+                    <button
+                      key={kind}
+                      type="button"
+                      disabled={signing}
+                      onClick={() => setPeriodKind(kind)}
+                      aria-pressed={active}
+                      className={`rounded-full border px-3.5 py-1.5 text-[12px] font-bold transition ${
+                        active
+                          ? "border-[#783DF5] bg-[#783DF5] text-white shadow-[0_6px_16px_-6px_rgba(120,61,245,0.6)]"
+                          : "border-black/15 bg-white/80 text-black/60 hover:border-[#783DF5]/60 hover:text-[#5c2ed0]"
+                      } disabled:opacity-60`}
+                    >
+                      {periodHours(kind)}h
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
               <label className="block">
                 <span className="sheet-label">{single ? "Data" : "De (primeiro dia)"}</span>
@@ -432,30 +485,48 @@ export function AbsenceRequestForm({
                     Total pedido
                   </p>
                   <p className={`text-[14px] font-extrabold ${overLimit ? "text-rose-600" : "text-[#20202a]"}`}>
-                    {formatDayCount(duration.calendarDays)}
-                    <span className="font-semibold text-black/45">
-                      {" "}corridos · {formatDayCount(duration.businessDays)} úteis
-                    </span>
+                    {isHours ? (
+                      <>
+                        {PERIOD_KIND_LABEL[periodKind]}
+                        <span className="font-semibold text-black/45">
+                          {" "}dentro do dia · regista {formatDayCount(duration.businessDays)}{" "}
+                          {duration.businessDays > 0 ? "úteis" : "úteis (fim de semana)"}
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        {formatDayCount(duration.calendarDays)}
+                        <span className="font-semibold text-black/45">
+                          {" "}corridos · {formatDayCount(duration.businessDays)} úteis
+                        </span>
+                      </>
+                    )}
                   </p>
                 </div>
-                <div className="ml-auto flex items-center gap-2">
-                  <div className="h-1.5 w-28 overflow-hidden rounded-full bg-black/10 sm:w-40">
-                    <div
-                      className="h-full rounded-full transition-all"
-                      style={{
-                        width: `${Math.min(100, (duration.calendarDays / MAX_ABSENCE_CALENDAR_DAYS) * 100)}%`,
-                        background: overLimit
-                          ? "#e11d48"
-                          : duration.calendarDays > 10
-                            ? "#d97706"
-                            : "var(--brand-gradient)",
-                      }}
-                    />
-                  </div>
-                  <span className={`text-[10.5px] font-bold ${overLimit ? "text-rose-600" : "text-black/45"}`}>
-                    máx. {MAX_ABSENCE_CALENDAR_DAYS}
+                {isHours ? (
+                  <span className="ml-auto rounded-full border border-black/12 bg-white/80 px-2.5 py-1 text-[10.5px] font-bold text-black/45">
+                    máx. 3h — a partir daí é meio dia
                   </span>
-                </div>
+                ) : (
+                  <div className="ml-auto flex items-center gap-2">
+                    <div className="h-1.5 w-28 overflow-hidden rounded-full bg-black/10 sm:w-40">
+                      <div
+                        className="h-full rounded-full transition-all"
+                        style={{
+                          width: `${Math.min(100, (duration.calendarDays / MAX_ABSENCE_CALENDAR_DAYS) * 100)}%`,
+                          background: overLimit
+                            ? "#e11d48"
+                            : duration.calendarDays > 10
+                              ? "#d97706"
+                              : "var(--brand-gradient)",
+                        }}
+                      />
+                    </div>
+                    <span className={`text-[10.5px] font-bold ${overLimit ? "text-rose-600" : "text-black/45"}`}>
+                      máx. {MAX_ABSENCE_CALENDAR_DAYS}
+                    </span>
+                  </div>
+                )}
                 {overLimit && (
                   <p className="w-full text-[11.5px] font-medium text-rose-600">
                     O máximo por pedido são {MAX_ABSENCE_CALENDAR_DAYS} dias corridos. Divide em dois

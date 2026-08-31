@@ -10,8 +10,9 @@
 // pedido submetido a 28/07 e aprovado a 02/08 aparece nos «pedidos» de julho
 // e nos «aprovados» de agosto — cada lista responde a "o que aconteceu neste
 // mês", e cada linha traz as duas datas para ninguém ter de adivinhar. As
-// faltas (RH-02) ficam de fora de propósito: não se pedem nem se aprovam, e
-// já vão no resumo do dia 1.
+// faltas (RH-02) entram pela mesma régua: contam no mês em que o C-Level as
+// REGISTOU (não se pedem nem se aprovam — registar é o ato). Os dias
+// recortados ao calendário continuam no resumo de assiduidade do dia 1.
 //
 // O DIA: a Vercel não aceita «L» (último dia) na expressão do cron, por isso
 // o job corre a 28, 29, 30 e 31 (ver vercel.json) e é a rota que pergunta
@@ -104,7 +105,10 @@ export type MonthCloseLine = {
   businessDays: number;
   /** Estado ATUAL do pedido (o que a lista de «pedidos» mostra ao lado). */
   status: AbsenceStatus;
-  /** yyyy-mm-dd (Lisboa) em que a folha foi submetida. */
+  /** Só nas faltas: a classificação. `null` num pedido. */
+  justified: boolean | null;
+  /** yyyy-mm-dd (Lisboa) em que a folha foi submetida (nas faltas, em que
+   *  o C-Level a registou). */
   requestedOn: string;
   /** yyyy-mm-dd (Lisboa) da decisão, ou null enquanto pendente. */
   decidedOn: string | null;
@@ -127,6 +131,8 @@ export type MonthCloseOverview = {
   rejected: MonthCloseLine[];
   /** Submetidos até ao fim do mês e AINDA sem decisão. */
   pending: MonthCloseLine[];
+  /** Faltas (RH-02) registadas pelo C-Level durante o mês. */
+  faltas: MonthCloseLine[];
   totals: {
     requested: number;
     approved: number;
@@ -134,6 +140,9 @@ export type MonthCloseOverview = {
     pending: number;
     /** Dias úteis dos pedidos aprovados no mês — a dimensão do «sim». */
     approvedBusinessDays: number;
+    faltas: number;
+    /** Quantas dessas faltas estão marcadas como injustificadas. */
+    faltasUnjustified: number;
   };
 };
 
@@ -148,6 +157,7 @@ function toLine(a: AbsenceRequest): MonthCloseLine {
     calendarDays: a.calendarDays,
     businessDays: a.businessDays,
     status: a.status,
+    justified: a.justified,
     requestedOn: lisbonISODate(a.createdAt),
     decidedOn: a.decidedAt ? lisbonISODate(a.decidedAt) : null,
     decidedByName: a.decidedByName,
@@ -156,8 +166,9 @@ function toLine(a: AbsenceRequest): MonthCloseLine {
   };
 }
 
-/** Constrói o balanço de um mês a partir de todos os registos. Só olha
- *  para a folha RH-01 (`kind === "request"`). */
+/** Constrói o balanço de um mês a partir de todos os registos — os pedidos
+ *  (RH-01) pela atividade de submissão/decisão, as faltas (RH-02) pela data
+ *  em que foram registadas. */
 export function buildMonthClose(
   all: AbsenceRequest[],
   year: number,
@@ -170,8 +181,14 @@ export function buildMonthClose(
   const approved: MonthCloseLine[] = [];
   const rejected: MonthCloseLine[] = [];
   const pending: MonthCloseLine[] = [];
+  const faltas: MonthCloseLine[] = [];
 
   for (const a of all) {
+    if (a.kind === "falta") {
+      const line = toLine(a);
+      if (inMonth(line.requestedOn)) faltas.push(line);
+      continue;
+    }
     if (a.kind !== "request") continue;
     const line = toLine(a);
     if (inMonth(line.requestedOn)) requested.push(line);
@@ -191,6 +208,7 @@ export function buildMonthClose(
   approved.sort(byDecided);
   rejected.sort(byDecided);
   pending.sort(byRequested);
+  faltas.sort(byRequested);
 
   return {
     year,
@@ -202,12 +220,15 @@ export function buildMonthClose(
     approved,
     rejected,
     pending,
+    faltas,
     totals: {
       requested: requested.length,
       approved: approved.length,
       rejected: rejected.length,
       pending: pending.length,
       approvedBusinessDays: approved.reduce((s, l) => s + l.businessDays, 0),
+      faltas: faltas.length,
+      faltasUnjustified: faltas.filter((l) => l.justified === false).length,
     },
   };
 }
@@ -258,6 +279,19 @@ function pendingLine(l: MonthCloseLine, todayISO: string): string {
   return `${baseLine(l)} _(pedido a ${day(l.requestedOn)} · ${ageText})_`;
 }
 
+/** «FAL-2026-001 · João B. — Falta injustificada · 20/08/2026 · Meio dia —
+ *  manhã (registada por André Pavlenco a 20/08/2026 · ⚠️ injustificada)». */
+function faltaLine(l: MonthCloseLine): string {
+  const cls =
+    l.justified === true
+      ? "📄 justificada"
+      : l.justified === false
+        ? "⚠️ injustificada"
+        : "por classificar";
+  const note = l.decisionNote ? `\n>_${l.decisionNote.replace(/\n/g, " ")}_` : "";
+  return `${baseLine(l)} _(registada por ${l.decidedByName ?? "—"} a ${day(l.decidedOn)} · ${cls})_${note}`;
+}
+
 /** Um bloco «section» de mrkdwn tem um teto de 3000 caracteres no Slack, e
  *  uma mensagem tem um teto de 50 blocos. A lista é partida em secções e,
  *  se mesmo assim for demasiado longa, cortada com um «e mais N» — o resto
@@ -300,7 +334,10 @@ export function monthCloseBlocks(
   const mentions = `<@${ANDRE_SLACK_USER_ID}> <@${HR_SLACK_USER_ID}>`;
   const monthLower = o.label.toLowerCase();
   const noMovement =
-    o.totals.requested === 0 && o.totals.approved === 0 && o.totals.rejected === 0;
+    o.totals.requested === 0 &&
+    o.totals.approved === 0 &&
+    o.totals.rejected === 0 &&
+    o.totals.faltas === 0;
 
   const blocks: unknown[] = [
     {
@@ -312,8 +349,9 @@ export function monthCloseBlocks(
       },
     },
     section(
-      `${mentions} — ${monthLower} está a fechar. Aqui fica o balanço dos pedidos de ausência ` +
-        `da equipa: o que entrou, o que foi aprovado, o que foi recusado e o que ainda está por decidir.`,
+      `${mentions} — ${monthLower} está a fechar. Aqui fica o balanço das ausências e faltas ` +
+        `da equipa: o que entrou, o que foi aprovado, o que foi recusado, o que ainda está por ` +
+        `decidir e as faltas que o C-Level registou.`,
     ),
     {
       type: "section",
@@ -332,6 +370,14 @@ export function monthCloseBlocks(
           type: "mrkdwn",
           text: `*⏳ Por decidir*\n${o.totals.pending}${o.totals.pending > 0 ? " ⚠️" : ""}`,
         },
+        {
+          type: "mrkdwn",
+          text:
+            `*⚠️ Faltas registadas*\n${o.totals.faltas}` +
+            (o.totals.faltasUnjustified > 0
+              ? ` · ${o.totals.faltasUnjustified} injustificada${o.totals.faltasUnjustified === 1 ? "" : "s"}`
+              : ""),
+        },
       ],
     },
     { type: "divider" },
@@ -340,7 +386,7 @@ export function monthCloseBlocks(
   if (noMovement) {
     blocks.push(
       section(
-        `✅ *Mês sem movimento nos pedidos de ausência.* Ninguém submeteu uma folha em ${monthLower}, e nada foi aprovado ou recusado.`,
+        `✅ *Mês sem movimento nas ausências e faltas.* Ninguém submeteu uma folha em ${monthLower}, nada foi aprovado ou recusado, e o C-Level não registou faltas.`,
       ),
     );
   } else {
@@ -365,6 +411,15 @@ export function monthCloseBlocks(
       o.rejected.map(decidedLine),
       "Nenhuma recusa este mês.",
     );
+    pushList(
+      blocks,
+      `*⚠️ Faltas registadas em ${monthLower}* — ${o.totals.faltas}` +
+        (o.totals.faltasUnjustified > 0
+          ? ` · ${o.totals.faltasUnjustified} injustificada${o.totals.faltasUnjustified === 1 ? "" : "s"}`
+          : ""),
+      o.faltas.map(faltaLine),
+      "Nenhuma falta registada este mês.",
+    );
   }
 
   if (o.pending.length > 0) {
@@ -383,9 +438,10 @@ export function monthCloseBlocks(
       {
         type: "mrkdwn",
         text:
-          `Balanço de atividade — um pedido conta no mês em que foi submetido e a decisão no mês em que foi tomada. ` +
-          `As faltas (RH-02) e os dias recortados ao mês seguem no resumo de assiduidade do dia 1. ` +
-          `Decidir os pendentes em <${APP_URL}/admin/ausencias|Ausências>.`,
+          `Balanço de atividade — um pedido conta no mês em que foi submetido, a decisão no mês em que foi tomada ` +
+          `e uma falta (RH-02) no mês em que o C-Level a registou. ` +
+          `Os dias recortados ao calendário seguem no resumo de assiduidade do dia 1. ` +
+          `Decidir os pendentes em <${APP_URL}/admin/ausencias|Ausências> · faltas em <${APP_URL}/admin/faltas|Faltas>.`,
       },
     ],
   });
@@ -399,7 +455,8 @@ export function monthCloseText(o: MonthCloseOverview): string {
     `Fecho de ${o.label} — Ausências (${ANDRE_NAME}, ${HR_NAME}): ` +
     `${o.totals.requested} pedidos submetidos · ${o.totals.approved} aprovados` +
     (o.totals.approved > 0 ? ` (${formatBusinessDays(o.totals.approvedBusinessDays)})` : "") +
-    ` · ${o.totals.rejected} recusados · ${o.totals.pending} por decidir.`
+    ` · ${o.totals.rejected} recusados · ${o.totals.pending} por decidir · ` +
+    `${o.totals.faltas} falta${o.totals.faltas === 1 ? "" : "s"} registada${o.totals.faltas === 1 ? "" : "s"}.`
   );
 }
 

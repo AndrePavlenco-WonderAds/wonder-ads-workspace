@@ -141,7 +141,8 @@ export function MonthCloseCard({
           <p className="mt-1 max-w-[620px] text-[12px] leading-relaxed text-white/45">
             No último dia de cada mês, ao fim da tarde, esta mensagem sai sozinha para o
             #ausencias com o André e a Alice identificados: quantos pedidos entraram, quantos
-            foram aprovados e recusados, e o que ficou por decidir — com a lista de cada grupo.
+            foram aprovados e recusados, o que ficou por decidir e as faltas que o C-Level
+            registou — com a lista de cada grupo.
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
@@ -194,7 +195,7 @@ export function MonthCloseCard({
         </p>
       )}
 
-      <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-5">
         {[
           { label: "Pedidos submetidos", value: String(totals.requested), tone: "text-white" },
           {
@@ -214,6 +215,14 @@ export function MonthCloseCard({
             label: "Por decidir",
             value: String(totals.pending),
             tone: totals.pending > 0 ? "text-amber-300" : "text-white",
+          },
+          {
+            label:
+              totals.faltasUnjustified > 0
+                ? `Faltas · ${totals.faltasUnjustified} injust.`
+                : "Faltas registadas",
+            value: String(totals.faltas),
+            tone: totals.faltasUnjustified > 0 ? "text-amber-300" : "text-white",
           },
         ].map((s) => (
           <div
@@ -248,6 +257,19 @@ export function MonthCloseCard({
           lines={o.rejected}
           empty="Nenhuma recusa este mês."
           detail={(l) => `por ${l.decidedByName ?? "—"} a ${day(l.decidedOn)}`}
+        />
+        <Group
+          title={`⚠️ Faltas registadas em ${o.label.toLowerCase()}`}
+          lines={o.faltas}
+          empty="Nenhuma falta registada este mês."
+          detail={(l) =>
+            `registada por ${l.decidedByName ?? "—"} a ${day(l.decidedOn)}` +
+            (l.justified === false
+              ? " · injustificada"
+              : l.justified === true
+                ? " · justificada"
+                : "")
+          }
         />
         {o.pending.length > 0 && (
           <Group
