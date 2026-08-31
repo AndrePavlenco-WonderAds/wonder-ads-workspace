@@ -8,7 +8,7 @@
 // abrir (browser sem cliente de correio), fica um link para o repetir.
 
 import { useState } from "react";
-import { CalendarDays, Check, Loader2, Mail, Rocket, ShieldCheck } from "lucide-react";
+import { CalendarDays, Check, Loader2, Mail, Rocket } from "lucide-react";
 import { BRAND_GRADIENT, GradientText } from "./proposal-primitives";
 
 type Props = {
@@ -17,7 +17,7 @@ type Props = {
   toEmail: string;
   ccEmail: string;
   consultantFirst: string;
-  price: string;
+  pricing: { monthly: string; monthlyPer: string; prepaid: string; saving: string };
   period: string;
 };
 
@@ -27,7 +27,7 @@ export function ConfirmRenewal({
   toEmail,
   ccEmail,
   consultantFirst,
-  price,
+  pricing,
   period,
 }: Props) {
   const [state, setState] = useState<"idle" | "sending" | "done">("idle");
@@ -35,7 +35,7 @@ export function ConfirmRenewal({
   const confirmHref = `mailto:${toEmail}?cc=${encodeURIComponent(ccEmail)}&subject=${encodeURIComponent(
     `${clientName} — confirmação da renovação (${period})`,
   )}&body=${encodeURIComponent(
-    `Olá André,\n\nConfirmamos a renovação da parceria com a WonderAds por 6 meses (${period}), nas condições da proposta (${price}, CRM incluído).\n\nCumprimentos,\n${clientName}`,
+    `Olá André,\n\nConfirmamos a renovação da parceria com a WonderAds por 6 meses (${period}), nas condições da proposta, com o CRM incluído.\n\nModalidade escolhida (apagar a que não se aplica):\n- Plano mensal: ${pricing.monthly} (${pricing.monthlyPer})\n- Pré-pago: ${pricing.prepaid} (pagamento único à cabeça)\n\nCumprimentos,\n${clientName}`,
   )}`;
   const callHref = `mailto:${toEmail}?cc=${encodeURIComponent(ccEmail)}&subject=${encodeURIComponent(
     `${clientName} — marcar a primeira call (fim de setembro)`,
@@ -83,7 +83,7 @@ export function ConfirmRenewal({
           </p>
 
           <div className="mt-6 flex flex-wrap justify-center gap-2">
-            {[price, "CRM incluído · 0 €", "Arranque em setembro"].map((c) => (
+            {[`${pricing.monthly} em plano mensal`, `${pricing.prepaid} pré-pago · poupa ${pricing.saving}`, "CRM incluído · 0 €", "Arranque em setembro"].map((c) => (
               <span key={c} className="rounded-full border border-[#e9d5ff] bg-[#f5f0ff] px-3.5 py-1.5 text-[12.5px] font-semibold text-[#4c1d95]">
                 {c}
               </span>
@@ -139,10 +139,7 @@ export function ConfirmRenewal({
             </div>
           )}
 
-          <p className="mt-5 inline-flex flex-wrap items-center justify-center gap-x-1.5 gap-y-1 text-[12.5px] text-black/50">
-            <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
-            Sem formulários: abre um email já escrito para {toEmail} e o André recebe a notificação na app.
-            <span className="text-black/35">·</span>
+          <p className="mt-5 text-[12.5px] text-black/50">
             Dúvidas? {consultantFirst} — <a href={`mailto:${ccEmail}`} className="font-medium text-black/65 underline-offset-2 hover:underline">{ccEmail}</a>
           </p>
         </div>

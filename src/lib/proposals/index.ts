@@ -50,7 +50,7 @@ export const PROPOSALS: ProposalMeta[] = [
     consultant: "Fran. Rosa",
     summary:
       "Resultados dos primeiros 6 meses (fev–ago 2026), roadmap SEO + IA dos próximos 6, foco escoliose no Top 1–3 e CRM incluído.",
-    investment: "4.500 € / 6 meses",
+    investment: "6.000 € mensal · 5.400 € pré-pago",
   },
 ];
 

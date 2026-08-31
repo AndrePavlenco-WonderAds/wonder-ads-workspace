@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.96",
+    date: "2026-08-31",
+    title: "Proposta da Fisio Restelo: preço em duas modalidades (6.000 € mensal · 5.400 € pré-pago)",
+    highlights: [
+      "**💶 Duas modalidades no cartão do plano.** Plano mensal a 6.000 € (1.000 €/mês × 6) e pré-pago a 5.400 € tudo à cabeça, com o chip «Poupa 600 €» na opção destacada. Os chips do fecho e a lista do COMMERCIAL DPT acompanham.",
+      "**✉️ O email de confirmação pede a modalidade.** O texto já escrito para andre@wonder-ads.com traz as duas opções para o cliente apagar a que não se aplica.",
+      "**✂️** Sai a frase «Sem formulários…» por baixo dos botões — fica só o contacto da consultora.",
+    ],
+  },
+  {
     version: "76.95",
     date: "2026-08-31",
     title: "Proposta da Fisio Restelo em ecrã inteiro, mais curta e toda no branding claro",

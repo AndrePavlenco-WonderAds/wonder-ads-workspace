@@ -47,7 +47,10 @@ import { KpiBoard } from "../kpi-board";
 import { ConfirmRenewal } from "../confirm-renewal";
 import type { ProposalBodyProps, ProposalRender } from "./types";
 
-const PLAN_PRICE = "4.500 €";
+const PLAN_MONTHLY = "6.000 €";
+const PLAN_MONTHLY_PER = "1.000 €/mês × 6";
+const PLAN_PREPAID = "5.400 €";
+const PLAN_SAVING = "600 €";
 const CRM_VALUE = "1.200 €";
 const PERIOD = "setembro 2026 – fevereiro 2027";
 const ANDRE_EMAIL = "andre@wonder-ads.com";
@@ -513,15 +516,28 @@ function Body({ consultantName, consultantEmail }: ProposalBodyProps) {
                     <Pill tone="green">Tudo incluído</Pill>
                   </div>
                   <h3 className="mt-5 text-[24px] font-semibold leading-tight tracking-tight text-black/88">Plano de Crescimento Orgânico</h3>
-                  <p className="mt-1.5 text-[13px] text-black/55">Setembro 2026 – Fevereiro 2027 · mesmas condições do plano aceite em janeiro</p>
-                  <div className="mt-7 flex items-end gap-3">
-                    <p className="text-[64px] font-bold leading-none tracking-tight">
-                      <GradientText>{PLAN_PRICE}</GradientText>
-                    </p>
+                  <p className="mt-1.5 text-[13px] text-black/55">Setembro 2026 – Fevereiro 2027 · 6 meses · duas modalidades de pagamento</p>
+                  <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                    <div className="rounded-2xl border border-black/10 bg-white p-4">
+                      <p className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-black/50">Plano mensal</p>
+                      <p className="mt-2 text-[38px] font-bold leading-none tracking-tight">
+                        <GradientText>{PLAN_MONTHLY}</GradientText>
+                      </p>
+                      <p className="mt-2 text-[12.5px] text-black/60">{PLAN_MONTHLY_PER} meses</p>
+                    </div>
+                    <div className="rounded-2xl p-[2px]" style={{ background: BRAND_GRADIENT }}>
+                      <div className="h-full rounded-[14px] bg-white p-4">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-[#5b21b6]">Pré-pago</p>
+                          <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10.5px] font-bold text-emerald-800">Poupa {PLAN_SAVING}</span>
+                        </div>
+                        <p className="mt-2 text-[38px] font-bold leading-none tracking-tight">
+                          <GradientText>{PLAN_PREPAID}</GradientText>
+                        </p>
+                        <p className="mt-2 text-[12.5px] text-black/60">pagamento único, tudo à cabeça</p>
+                      </div>
+                    </div>
                   </div>
-                  <p className="mt-2 text-[13.5px] text-black/60">
-                    6 meses · <strong className="text-black/80">750 €/mês</strong>
-                  </p>
                   <div className="mt-7 space-y-2.5 rounded-2xl border border-[#e9d5ff] bg-[#f5f0ff] p-4">
                     {[
                       { Icon: Workflow, text: <>CRM configurado e ligado — <strong>{CRM_VALUE} incluídos</strong></> },
@@ -576,7 +592,7 @@ function Body({ consultantName, consultantEmail }: ProposalBodyProps) {
             toEmail={ANDRE_EMAIL}
             ccEmail={consultantEmail}
             consultantFirst={consultantName.split(" ")[0]}
-            price={`${PLAN_PRICE} · 6 meses`}
+            pricing={{ monthly: PLAN_MONTHLY, monthlyPer: PLAN_MONTHLY_PER, prepaid: PLAN_PREPAID, saving: PLAN_SAVING }}
             period={PERIOD}
           />
         </Reveal>
