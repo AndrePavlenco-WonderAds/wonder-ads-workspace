@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.93",
+    date: "2026-08-31",
+    title: "Propostas comerciais no workspace: a renovação da Fisio Restelo como página pública",
+    highlights: [
+      "**📄 /proposta/<slug> — propostas comerciais como páginas públicas.** Sem login e sem chrome interno, como as outras páginas para clientes: quem recebe o link vê só a proposta. O conteúdo vive em código (`src/lib/proposals` + `src/components/proposals/bodies`), por isso fica versionado e reaproveita os logos e o consultor do workspace. Substitui os links do antigo proposals.wonder-ads.com.",
+      "**🏥 Proposta de Renovação da Fisio Restelo (set 2026 – fev 2027).** Os resultados dos primeiros 6 meses (1.056 cliques, 299 chamadas, 714 direções, 57 formulários, 65→112 palavras-chave) e o roadmap dos próximos 6, mês a mês, com o quadro de metas T1/T2 — tudo em português de Portugal, a partir dos dois PDFs de agosto.",
+      "**🎯 Foco em escoliose no Top 1–3 e CRM incluído.** Secção própria para o cluster de escoliose (lista de partida de palavras-chave + caminho mês a mês até ao Top 1–3) e outra para a configuração e ligação do CRM, com o valor médio de 1.200 € riscado e «incluído · 0 €». O cartão de preço mantém as condições do plano aceite em janeiro e marca o CRM como NOVO.",
+      "**🔎 Onde se encontra.** O COMMERCIAL DPT deixa de ser «Coming soon» e lista as propostas (cliente, tipo, estado, data, investimento) com «Abrir proposta» e «Copy public link»; a ficha do cliente em /seo/<slug> ganha o chip «Proposta · Renovação» ao lado do «Onboarded».",
+      "**🖨️ Guardar em PDF.** Botão na barra superior da proposta que abre a impressão com o nome do ficheiro já certo; a barra e os botões de email ficam fora do PDF.",
+    ],
+  },
+  {
     version: "76.92",
     date: "2026-08-28",
     title: "Fecho do mês das ausências: balanço automático no #ausencias no último dia de cada mês",

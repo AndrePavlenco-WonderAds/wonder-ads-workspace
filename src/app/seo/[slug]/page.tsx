@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ExternalLink, RefreshCw, Gauge, Heart, CalendarCheck } from "lucide-react";
+import { ExternalLink, RefreshCw, Gauge, Heart, CalendarCheck, FileSignature } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { ClientBrief } from "@/components/client-brief";
 import { ClientFiles } from "@/components/client-files";
@@ -32,6 +32,7 @@ import { getClientPalette, paletteToGradient } from "@/lib/client-colors";
 import { getNpsRecord, npsSendDue } from "@/lib/nps-store";
 import { npsScoreColor } from "@/lib/nps-questions";
 import { getLogoOverride } from "@/lib/admin-client-logos-store";
+import { getProposalsForClient, proposalPath, KIND_LABEL } from "@/lib/proposals";
 import { getCurrentEmployee } from "@/lib/auth/server";
 import { editableDepts } from "@/lib/auth/credentials";
 import { SeoReadOnlyProvider, ReadOnlyBanner } from "@/components/seo-readonly";
@@ -100,6 +101,10 @@ export default async function ClientPage({
     slug,
     (await getCurrentRoadmap(slug).catch(() => null))?.onboardingDate,
   ).catch(() => undefined);
+  // Propostas publicadas para este cliente (renovações, upsells) — a mais
+  // recente vai para o cabeçalho, ao lado do «Onboarded», para que quem
+  // abre a ficha do cliente encontre o link sem passar pelo Comercial.
+  const latestProposal = getProposalsForClient(slug)[0] ?? null;
   const latestNps = npsRecord.submissions[0] ?? null;
   const npsScore = latestNps?.scores.overall ?? null;
   // When a send is due (never sent, or within 3 days / overdue), the pill
@@ -167,6 +172,24 @@ export default async function ClientPage({
                     {formatDate(onboardingDate)}
                   </span>
                 </span>
+              )}
+              {latestProposal && (
+                <a
+                  href={proposalPath(latestProposal.slug)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title={`${latestProposal.title} · abre a página pública da proposta`}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-0.5 text-[11px] font-medium text-white/65 transition hover:border-white/25 hover:bg-white/[0.08] hover:text-white"
+                >
+                  <FileSignature className="h-3 w-3 text-white/45" />
+                  <span className="uppercase tracking-[0.08em] text-white/45">
+                    Proposta
+                  </span>
+                  <span className="font-semibold text-white/80">
+                    {KIND_LABEL[latestProposal.kind]}
+                  </span>
+                  <ExternalLink className="h-3 w-3" />
+                </a>
               )}
               <Link
                 href={`/seo/${slug}/nps`}
