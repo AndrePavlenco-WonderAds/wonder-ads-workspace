@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "76.99",
+    date: "2026-09-01",
+    title: "Target Keywords sem as colunas Vol/mo e KD",
+    highlights: [
+      "**🧹 Lista mais limpa.** A tabela de Target Keywords na página do cliente (Premium Keywords incluídas) deixa de mostrar as colunas Vol/mo e KD — fica a keyword, a intenção, a data e a fonte. A ordenação por volume/dificuldade sai com elas; o CSV exportado mantém os valores.",
+    ],
+  },
+  {
     version: "76.98",
     date: "2026-08-31",
     title: "Fecho do mês em duas mensagens: o balanço e o mapa por colaborador",

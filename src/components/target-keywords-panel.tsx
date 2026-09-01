@@ -17,7 +17,7 @@ import { formatDateLong } from "@/lib/dates";
 import { SendToReviewButton } from "./send-to-review-button";
 import { useSeoReadOnly } from "./seo-readonly";
 
-type SortKey = "addedAt" | "keyword" | "volume" | "kd";
+type SortKey = "addedAt" | "keyword";
 type SortDir = "asc" | "desc";
 
 const INTENT_STYLE: Record<string, string> = {
@@ -221,14 +221,6 @@ export function TargetKeywordsPanel({
     switch (sortKey) {
       case "keyword":
         return a.keyword.localeCompare(b.keyword) * mul;
-      case "volume":
-        return ((a.searchVolume ?? 0) - (b.searchVolume ?? 0)) * mul;
-      case "kd":
-        return (
-          ((a.difficulty ?? Number.MAX_SAFE_INTEGER) -
-            (b.difficulty ?? Number.MAX_SAFE_INTEGER)) *
-          mul
-        );
       case "addedAt":
       default:
         return (a.addedAt - b.addedAt) * mul;
@@ -391,28 +383,6 @@ export function TargetKeywordsPanel({
                     setSortDir(d);
                   }}
                 />
-                <SortHeader
-                  label="Vol/mo"
-                  k="volume"
-                  align="right"
-                  sortKey={sortKey}
-                  sortDir={sortDir}
-                  onSort={(k, d) => {
-                    setSortKey(k);
-                    setSortDir(d);
-                  }}
-                />
-                <SortHeader
-                  label="KD"
-                  k="kd"
-                  align="right"
-                  sortKey={sortKey}
-                  sortDir={sortDir}
-                  onSort={(k, d) => {
-                    setSortKey(k);
-                    setSortDir(d);
-                  }}
-                />
                 <th className="px-3 py-2 text-[10.5px] font-semibold uppercase tracking-[0.08em] text-white/55">
                   Intent
                 </th>
@@ -478,12 +448,6 @@ export function TargetKeywordsPanel({
                     >
                       {k.keyword}
                     </span>
-                  </td>
-                  <td className="px-3 py-2 text-right text-white/80">
-                    {fmtNum(k.searchVolume)}
-                  </td>
-                  <td className="px-3 py-2 text-right text-white/80">
-                    {k.difficulty ?? "—"}
                   </td>
                   <td className="px-3 py-2">
                     {k.intent ? (
@@ -656,13 +620,6 @@ function SortHeader({
       </button>
     </th>
   );
-}
-
-function fmtNum(v: number | null | undefined): string {
-  if (v === null || v === undefined) return "—";
-  if (v < 1000) return v.toString();
-  if (v < 1_000_000) return `${(v / 1000).toFixed(1)}k`;
-  return `${(v / 1_000_000).toFixed(2)}M`;
 }
 
 function csvEscape(s: string): string {
