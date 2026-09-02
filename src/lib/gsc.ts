@@ -648,6 +648,50 @@ function buildTargetRanks(
   });
 }
 
+/** A propriedade GSC de um cliente (override → domínio → correspondência),
+ *  com o token já pronto. Partilhado pelo relatório mensal, pelo bloco de
+ *  Google IA e pela sondagem de API. */
+export async function resolveGscSite(
+  slug: string,
+  siteUrlOverride?: string | null,
+): Promise<{ token: string; siteUrl: string } | null> {
+  if (!googleAuthConfigured) return null;
+  const override = siteUrlOverride?.trim() || GSC_PROPERTY_OVERRIDES[slug];
+  const site = CLIENT_WEBSITES[slug];
+  const domain = site ? domainFromUrl(site) : null;
+  if (!override && !domain) return null;
+  const token = await getGoogleAccessToken(SCOPES);
+  let siteUrl: string | null = override ?? null;
+  if (!siteUrl && domain) siteUrl = matchProperty(domain, await listSites(token));
+  if (!siteUrl) return null;
+  return { token, siteUrl };
+}
+
+/** Uma query crua à Search Analytics API, para sondagens e para o bloco de
+ *  Google IA. Devolve o corpo tal como a Google respondeu (incluindo o erro),
+ *  porque é exatamente isso que uma sondagem precisa de ver. */
+export async function rawSearchAnalytics(
+  token: string,
+  siteUrl: string,
+  body: Record<string, unknown>,
+): Promise<{ ok: boolean; status: number; json: unknown }> {
+  const res = await fetch(
+    `https://searchconsole.googleapis.com/webmasters/v3/sites/${encodeURIComponent(
+      siteUrl,
+    )}/searchAnalytics/query`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    },
+  );
+  const json = await res.json().catch(() => null);
+  return { ok: res.ok, status: res.status, json };
+}
+
 /** Impressões totais para uma lista de janelas arbitrárias — as 4 colunas da
  *  tabela de conversão e-commerce do relatório. Uma chamada por janela (a API
  *  não aceita múltiplos ranges); `null` numa posição = essa janela falhou ou
