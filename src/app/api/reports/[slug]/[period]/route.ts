@@ -12,6 +12,7 @@ import { recomputeDerived, MAX_SHOWN_MOVERS } from "@/lib/report/report-build";
 import {
   ECOM_METRIC_KEYS,
   ECOM_TOP_LIMIT,
+  REPORT_SECTION_KEYS,
   isGbpChannelKey,
   manualMetric,
   naMetric,
@@ -23,6 +24,7 @@ import {
   type EcomTopProduct,
   type LeadChannelKey,
   type MonthlyReportSnapshot,
+  type ReportSectionKey,
   type ReportStatus,
 } from "@/lib/report/report-types";
 
@@ -115,6 +117,9 @@ export async function PUT(
     /** Listas manuais (substituem por inteiro; fonte passa a "manual"). */
     ecomTopProducts?: unknown;
     ecomTopPages?: unknown;
+    /** Secções a retirar do documento (chaves de REPORT_SECTION_KEYS).
+     *  Substitui a lista por inteiro; [] volta a incluir tudo. */
+    hiddenSections?: unknown;
   };
 
   let next: MonthlyReportSnapshot = { ...snap };
@@ -198,6 +203,16 @@ export async function PUT(
       ecom = { ...ecom, topPages: pages, topPagesSource: "manual" };
     }
     next = { ...next, ecom };
+  }
+
+  // Secções retiradas do documento. Só chaves conhecidas entram.
+  if (Array.isArray(body.hiddenSections)) {
+    const hidden = body.hiddenSections.filter(
+      (k): k is ReportSectionKey =>
+        typeof k === "string" &&
+        (REPORT_SECTION_KEYS as readonly string[]).includes(k),
+    );
+    next = { ...next, hiddenSections: hidden };
   }
 
   // Recompute derived fields (total, exec summary, GBP mirror, status).

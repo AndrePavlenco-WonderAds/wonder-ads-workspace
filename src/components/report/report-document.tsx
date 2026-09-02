@@ -242,6 +242,11 @@ export function ReportDocument({
   const pt = lang === "pt";
   const t = (p: string, e: string) => (pt ? p : e);
 
+  // Secções que o consultor retirou deste relatório (v77.2). Escondem-se em
+  // TODAS as vistas — interna, PDF e link público — para o que se vê ser
+  // sempre o que o cliente recebe.
+  const hidden = new Set(snapshot.hiddenSections ?? []);
+
   const leadTotal = snapshot.leads.total;
   const visibleChannels = snapshot.leads.channels.filter(
     (c) =>
@@ -408,14 +413,19 @@ export function ReportDocument({
   );
   const showEcomTable =
     Boolean(ecom) &&
+    !hidden.has("ecom") &&
     (variant === "internal" ||
       (ecomColumns.length > 0 && ecomRowKeys.length > 0));
   const ecomPages = ecom?.topPages ?? [];
   const showEcomPages =
-    Boolean(ecom) && (variant === "internal" || ecomPages.length > 0);
+    Boolean(ecom) &&
+    !hidden.has("ecomPages") &&
+    (variant === "internal" || ecomPages.length > 0);
   const ecomProducts = ecom?.topProducts ?? [];
   const showEcomProducts =
-    Boolean(ecom) && (variant === "internal" || ecomProducts.length > 0);
+    Boolean(ecom) &&
+    !hidden.has("ecomProducts") &&
+    (variant === "internal" || ecomProducts.length > 0);
   // Nota de metodologia: dinheiro vindo da Shopify é da loja INTEIRA.
   const ecomMoneyFromShopify = (ecom?.columns ?? []).some((col) =>
     (["revenue", "transactions", "avgTicket"] as EcomMetricKey[]).some(
@@ -445,22 +455,33 @@ export function ReportDocument({
       k.m.manualNa,
   );
 
-  const showAi = ai.sources.length > 0 || variant === "internal";
-  const showNotes = Boolean(snapshot.notes.trim()) || variant === "internal";
+  const showAi =
+    !hidden.has("ai") && (ai.sources.length > 0 || variant === "internal");
+  const showNotes =
+    !hidden.has("notes") &&
+    (Boolean(snapshot.notes.trim()) || variant === "internal");
   const showLeads =
-    variant === "internal" ||
-    (leadTotal.value !== null && leadTotal.value > 0) ||
-    visibleChannels.length > 0;
-  const showGeo = Boolean(snapshot.geoIntel || geo || aioRows.length > 0);
+    !hidden.has("leads") &&
+    (variant === "internal" ||
+      (leadTotal.value !== null && leadTotal.value > 0) ||
+      visibleChannels.length > 0);
+  const showGeo =
+    !hidden.has("geo") &&
+    Boolean(snapshot.geoIntel || geo || aioRows.length > 0);
+  const showExec = execSummary.length > 0 && !hidden.has("exec");
+  const showTrend = Boolean(snapshot.trend) && !hidden.has("trend");
+  const showTraffic = !hidden.has("traffic");
+  const showKw =
+    !hidden.has("kw") && (kwVisible.length > 0 || variant === "internal");
 
   // O ÍNDICE. Uma lista só, montada com as mesmas condições que desenham as
   // secções, para que o número no cabeçalho e a entrada no índice não possam
   // divergir — que é o que aconteceria se cada secção soubesse o seu número.
   const secs: { key: string; label: string }[] = [
-    ...(execSummary.length > 0
+    ...(showExec
       ? [{ key: "exec", label: t("Resumo Executivo", "Executive Summary") }]
       : []),
-    ...(snapshot.trend ? [{ key: "trend", label: t("Evolução", "Trend") }] : []),
+    ...(showTrend ? [{ key: "trend", label: t("Evolução", "Trend") }] : []),
     ...(showEcomTable
       ? [{ key: "ecom", label: t("Conversão · SEO Orgânico", "Conversion · Organic SEO") }]
       : []),
@@ -473,9 +494,11 @@ export function ReportDocument({
     ...(showLeads
       ? [{ key: "leads", label: t("Leads por canal", "Leads by channel") }]
       : []),
-    { key: "traffic", label: t("Tráfego & Ficha Google", "Traffic & Google listing") },
+    ...(showTraffic
+      ? [{ key: "traffic", label: t("Tráfego & Ficha Google", "Traffic & Google listing") }]
+      : []),
     ...(showAi ? [{ key: "ai", label: "AI Visibility" }] : []),
-    ...(kwVisible.length > 0 || variant === "internal"
+    ...(showKw
       ? [{ key: "kw", label: t("Keywords & posições", "Keywords & positions") }]
       : []),
     ...(showGeo ? [{ key: "geo", label: t("GEO · SEO para IA", "GEO · SEO for AI") }] : []),
@@ -541,7 +564,7 @@ export function ReportDocument({
       )}
 
       {/* Executive Summary — the wins, up front */}
-      {execSummary.length > 0 && (
+      {showExec && (
         <section className="wa-sec">
           <div className="wa-exec-card">
             <SecLabel n={secN("exec")} onTint>
@@ -559,7 +582,7 @@ export function ReportDocument({
       {/* Evolução — vem logo a seguir ao sumário porque é a resposta à
           primeira pergunta que o cliente faz («isto está a crescer?»), e
           nenhum número de um mês sozinho a responde. */}
-      {snapshot.trend && (
+      {showTrend && snapshot.trend && (
         <section className="wa-sec wa-sec-trend">
           <SecLabel n={secN("trend")}>{t("Evolução", "Trend")}</SecLabel>
           <h2 className="wa-h2">
@@ -817,6 +840,7 @@ export function ReportDocument({
       )}
 
       {/* GBP + Organic side by side */}
+      {showTraffic && (
       <section className="wa-sec">
         <SecLabel n={secN("traffic")}>
           {t("Tráfego & Ficha Google", "Traffic & Google listing")}
@@ -879,6 +903,7 @@ export function ReportDocument({
           </div>
         </div>
       </section>
+      )}
 
       {/* AI Visibility */}
       {showAi && (
@@ -926,7 +951,7 @@ export function ReportDocument({
           da client file, com a posição atual na location certa. Substituiu o
           Top queries/páginas, as Maiores subidas e a média do GSC por
           keyword (v76.38). */}
-      {kwVisible.length > 0 && (
+      {showKw && kwVisible.length > 0 && (
         <section className="wa-sec">
           <SecLabel n={secN("kw")}>
             {t("Keywords & Posições", "Keywords & Positions")}
@@ -1020,7 +1045,7 @@ export function ReportDocument({
       {/* SEM SERPSTAT NÃO HÁ TABELA. O consultor precisa de saber porquê —
           quase sempre são créditos da API esgotados — e o cliente não pode
           ver uma secção vazia nem números de outra fonte. */}
-      {kwVisible.length === 0 && variant === "internal" && (
+      {showKw && kwVisible.length === 0 && variant === "internal" && (
         <section className="wa-sec">
           <SecLabel n={secN("kw")}>
             {t("Keywords Trabalhadas", "Target Keywords")}
@@ -1035,17 +1060,19 @@ export function ReportDocument({
       )}
 
       {/* GEO v2 — o corpus de perguntas + a auditoria de prontidão. */}
-      <ReportGeoSection
-        intel={geoIntel}
-        aio={aioRows}
-        aioCheckedOn={live?.checkedOn ?? null}
-        lang={lang}
-        variant={variant}
-        sectionNumber={secN("geo")}
-      />
+      {showGeo && (
+        <ReportGeoSection
+          intel={geoIntel}
+          aio={aioRows}
+          aioCheckedOn={live?.checkedOn ?? null}
+          lang={lang}
+          variant={variant}
+          sectionNumber={secN("geo")}
+        />
+      )}
 
       {/* Notes */}
-      {(snapshot.notes.trim() || variant === "internal") && (
+      {showNotes && (
         <section className="wa-sec">
           <SecLabel n={secN("notes")}>
             {t("Notas & Próximos Passos", "Notes & Next Steps")}

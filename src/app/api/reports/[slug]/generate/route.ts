@@ -43,6 +43,7 @@ export async function POST(
   // the month still in progress, which yields a month-to-date report.
   let period: string;
   let ecommerce: boolean | undefined;
+  let lang: "pt" | "en" | undefined;
   let rememberKind = false;
   try {
     const body = (await req.json().catch(() => ({}))) as {
@@ -50,9 +51,11 @@ export async function POST(
       /** Relatório e-commerce (tabela de conversão + páginas + produtos) em
        *  vez do normal. Sem isto, fica o tipo configurado do cliente. */
       ecommerce?: unknown;
-      /** True só no gerador da página do cliente — a escolha deliberada de
-       *  tipo, que fica gravada no report-config para os meses seguintes.
-       *  Regenerar um relatório antigo NÃO regrava o tipo do cliente. */
+      /** Idioma do relatório ("pt" | "en"). Sem isto, fica o configurado. */
+      lang?: unknown;
+      /** True só no gerador da página do cliente — as escolhas deliberadas
+       *  (tipo + idioma) ficam gravadas no report-config para os meses
+       *  seguintes. Regenerar um relatório antigo NÃO regrava nada. */
       rememberKind?: unknown;
     };
     period =
@@ -60,6 +63,7 @@ export async function POST(
         ? body.period
         : previousCompleteMonth().key;
     if (typeof body.ecommerce === "boolean") ecommerce = body.ecommerce;
+    if (body.lang === "pt" || body.lang === "en") lang = body.lang;
     rememberKind = body.rememberKind === true;
   } catch {
     period = previousCompleteMonth().key;
@@ -79,13 +83,20 @@ export async function POST(
   }
 
   try {
-    // A escolha deliberada do gerador fica gravada para os meses seguintes;
-    // um "Regenerar" apenas fixa o tipo daquele relatório, sem tocar no
-    // config do cliente.
-    if (rememberKind && ecommerce !== undefined) {
+    // As escolhas deliberadas do gerador ficam gravadas para os meses
+    // seguintes; um "Regenerar" apenas fixa o tipo/idioma daquele relatório,
+    // sem tocar no config do cliente.
+    if (rememberKind && (ecommerce !== undefined || lang !== undefined)) {
       const config = await getReportConfig(slug);
-      if (config.ecommerce !== ecommerce) {
-        await saveReportConfig(slug, { ecommerce }, Date.now());
+      const patch: { ecommerce?: boolean; reportLang?: "pt" | "en" } = {};
+      if (ecommerce !== undefined && config.ecommerce !== ecommerce) {
+        patch.ecommerce = ecommerce;
+      }
+      if (lang !== undefined && config.reportLang !== lang) {
+        patch.reportLang = lang;
+      }
+      if (Object.keys(patch).length > 0) {
+        await saveReportConfig(slug, patch, Date.now());
       }
     }
 
@@ -98,7 +109,10 @@ export async function POST(
       client.title,
       period,
       Date.now(),
-      ecommerce !== undefined ? { ecommerce } : {},
+      {
+        ...(ecommerce !== undefined ? { ecommerce } : {}),
+        ...(lang !== undefined ? { lang } : {}),
+      },
     );
     await saveReport(snapshot);
     revalidatePath(`/seo/${slug}`);

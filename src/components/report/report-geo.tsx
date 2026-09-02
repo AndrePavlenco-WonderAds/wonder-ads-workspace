@@ -24,9 +24,11 @@ export type AioRow = {
 
 type Variant = "internal" | "client";
 
-/** Quantas perguntas entram na tabela do cliente. O consultor vê tudo o que
- *  foi guardado — é dele o trabalho de escolher os próximos alvos. */
-const CLIENT_PROMPT_CAP = 30;
+/** Tetos da tabela de perguntas — metade do que eram (v77.2, pedido do
+ *  Andre): 60+ linhas deixavam de se ler, e as de cauda eram exatamente as
+ *  menos relevantes. Citados primeiro, depois relevância, depois volume. */
+const CLIENT_PROMPT_CAP = 15;
+const INTERNAL_PROMPT_CAP = 30;
 
 function num(n: number, lang: "pt" | "en"): string {
   return new Intl.NumberFormat(lang === "pt" ? "pt-PT" : "en-GB").format(
@@ -65,12 +67,22 @@ export function ReportGeoSection({
   // O CLIENTE VÊ O MERCADO DELE. As perguntas de contexto (ensino, profissão,
   // dicionário, outro país) ficam para a vista interna: são úteis a quem
   // planeia conteúdo e são ruído para quem assina o relatório.
-  const customerPrompts = (intel?.prompts ?? []).filter(
-    (p) => p.audience === "customer",
+  //
+  // ORDEM POR VALOR, NÃO POR VOLUME (v77.2): primeiro onde já somos citados,
+  // depois quão «nossa» é a pergunta (relevância = tokens do plano), e só
+  // então o volume. «united kingdom weather» tem 301 mil pesquisas e zero a
+  // ver com o cliente — por volume abria a tabela, assim afunda e o teto
+  // corta-a.
+  const ranked = [...(intel?.prompts ?? [])].sort(
+    (a, b) =>
+      Number(b.cited) - Number(a.cited) ||
+      b.relevance - a.relevance ||
+      b.aiSearchVolume - a.aiSearchVolume,
   );
+  const customerPrompts = ranked.filter((p) => p.audience === "customer");
   const prompts =
     variant === "internal"
-      ? (intel?.prompts ?? [])
+      ? ranked.slice(0, INTERNAL_PROMPT_CAP)
       : customerPrompts.slice(0, CLIENT_PROMPT_CAP);
   const citedPrompts = customerPrompts.filter((p) => p.cited);
   // A citação que se mostra por extenso: a de maior volume onde já somos

@@ -327,6 +327,15 @@ const STOPWORDS = new Set([
   "lisboa", "porto", "cascais", "belem", "belém", "restelo", "estoril",
   "oeiras", "sintra", "amadora", "almada", "london", "lisbon", "uk",
   "portugal", "brasil", "conde", "vila", "near", "me",
+  // Localizações dos mercados dos clientes internacionais. «brighton» como
+  // tópico devolve o corpus de Brighton (pavilhão real, meteorologia…), e
+  // «united kingdom» devolve o do país inteiro — nada disso é do cliente.
+  // A lição do Kings Gyms (v77.2): um qualificador local NUNCA é um tópico.
+  "united", "kingdom", "britain", "england", "scotland", "wales",
+  "brighton", "croydon", "mitcham", "crawley", "manchester", "bristol",
+  "birmingham", "leeds", "liverpool", "glasgow", "edinburgh",
+  "toronto", "vancouver", "montreal", "ottawa", "calgary",
+  "sydney", "melbourne", "brisbane", "perth", "adelaide",
 ]);
 
 function fold(s: string): string {
@@ -342,14 +351,22 @@ function fold(s: string): string {
  *  a palavra que aparece em metade do plano É o tema do cliente.
  *
  *  Exportada para poder ser testada sem gastar chamadas. */
-export function topicLadder(keywords: string[], max = MAX_TOPICS): string[] {
+export function topicLadder(
+  keywords: string[],
+  max = MAX_TOPICS,
+  /** Tokens extra a excluir — o país/mercado do cliente (ex.: "united",
+   *  "kingdom"), para nenhum tópico ser um nome de sítio. */
+  extraStop?: Set<string>,
+): string[] {
   const heads = new Map<string, number>();
   const pairs = new Map<string, number>();
 
   for (const kw of keywords) {
     const words = fold(kw)
       .split(/[^a-z0-9]+/)
-      .filter((w) => w.length > 3 && !STOPWORDS.has(w));
+      .filter(
+        (w) => w.length > 3 && !STOPWORDS.has(w) && !extraStop?.has(w),
+      );
     // Um tópico de uma palavra só tem de ser uma palavra do DOMÍNIO
     // («fisioterapia», «longevidade»), não um adjetivo qualquer que calhou
     // na cauda: «desportiva» ou «saudável» sozinhas trazem um corpus que
@@ -555,14 +572,21 @@ export async function fetchGeoIntel(
   if (!domain) return null;
 
   const geo = getClientGeo(slug);
-  const topics = topicLadder(keywords);
+  // O país do cliente nunca pode virar tópico nem contar como relevância —
+  // «united kingdom» no plano do Kings Gyms trazia o corpus do país inteiro.
+  const geoStop = new Set(
+    fold(geo.countryLabel)
+      .split(/[^a-z0-9]+/)
+      .filter((w) => w.length > 3),
+  );
+  const topics = topicLadder(keywords, MAX_TOPICS, geoStop);
   // O vocabulário do plano — usado para pontuar quão «nossa» é cada pergunta
   // que o corpus devolve.
   const planTokens = new Set(
     keywords.flatMap((k) =>
       fold(k)
         .split(/[^a-z0-9]+/)
-        .filter((w) => w.length > 3 && !STOPWORDS.has(w)),
+        .filter((w) => w.length > 3 && !STOPWORDS.has(w) && !geoStop.has(w)),
     ),
   );
   let costUsd = 0;

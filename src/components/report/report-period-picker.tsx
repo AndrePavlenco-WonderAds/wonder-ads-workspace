@@ -34,18 +34,22 @@ export function ReportPeriodPicker({
   closed,
   current,
   ecommerce = false,
+  lang: initialLang = "pt",
 }: {
   slug: string;
   closed: Option;
   current: Option;
   /** Tipo configurado do cliente — pré-seleciona a escolha normal/e-commerce. */
   ecommerce?: boolean;
+  /** Idioma configurado/automático do cliente — pré-seleciona PT/EN. */
+  lang?: "pt" | "en";
 }) {
   const router = useRouter();
   const [choice, setChoice] = useState<"closed" | "current">("closed");
   const [kind, setKind] = useState<"standard" | "ecommerce">(
     ecommerce ? "ecommerce" : "standard",
   );
+  const [lang, setLang] = useState<"pt" | "en">(initialLang);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -61,6 +65,7 @@ export function ReportPeriodPicker({
         body: JSON.stringify({
           period: picked.key,
           ecommerce: kind === "ecommerce",
+          lang,
           // A escolha do gerador é a deliberada — fica para os meses seguintes.
           rememberKind: true,
         }),
@@ -95,7 +100,7 @@ export function ReportPeriodPicker({
         opt: current,
         icon: CalendarClock,
         hint: current.disabled
-          ? "Ainda sem dados — o GA4/GSC atrasam ~3 dias, volta a partir do dia 4."
+          ? "Disponível a partir do dia 3 — os dados do GA4/GSC atrasam ~2 dias."
           : current.coverage
             ? `Dados de 1 a ${current.coverage.split("–")[1]}. Só números, sem percentagens de variação — um mês incompleto não se compara com um mês inteiro.`
             : "Mês ainda a decorrer.",
@@ -195,6 +200,30 @@ export function ReportPeriodPicker({
             </button>
           );
         })}
+      </div>
+
+      {/* Idioma do documento — clientes EN (IHN, Kings Gyms…) recebem em
+          inglês. A escolha fica gravada como a do tipo. */}
+      <div className="mt-2 flex items-center gap-2">
+        <span className="text-[11.5px] font-medium text-white/45">
+          Idioma do relatório
+        </span>
+        <div className="inline-flex overflow-hidden rounded-lg border border-white/12">
+          {(["pt", "en"] as const).map((l) => (
+            <button
+              key={l}
+              type="button"
+              onClick={() => setLang(l)}
+              className={`px-3 py-1 text-[12px] font-semibold uppercase transition ${
+                lang === l
+                  ? "bg-[#783DF5]/25 text-white"
+                  : "bg-white/[0.02] text-white/45 hover:text-white/75"
+              }`}
+            >
+              {l === "pt" ? "🇵🇹 PT" : "🇬🇧 EN"}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-3">

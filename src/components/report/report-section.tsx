@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowUpRight, FileBarChart, FileDown } from "lucide-react";
 import { listReports } from "@/lib/report/report-store";
 import { getReportConfig } from "@/lib/report/report-config-store";
+import { getClientLocale } from "@/lib/client-locale";
 import {
   previousCompleteMonth,
   currentMonth,
@@ -81,6 +82,7 @@ export async function ReportSection({
             <ReportPeriodPicker
               slug={slug}
               ecommerce={config.ecommerce}
+              lang={config.reportLang ?? getClientLocale(slug)}
               closed={{
                 key: next.key,
                 label: next.label,

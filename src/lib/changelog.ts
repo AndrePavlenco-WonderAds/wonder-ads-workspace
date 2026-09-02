@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.2",
+    date: "2026-09-02",
+    title: "Relatório em inglês, secções à escolha e mês em curso a partir do dia 3",
+    highlights: [
+      "**🇬🇧 Idioma do relatório no gerador.** PT/EN à escolha ao gerar — clientes ingleses (IHN, Kings Gyms…) recebem o documento inteiro em inglês. A escolha fica gravada no cliente; «Regenerar» mantém o idioma do relatório existente.",
+      "**🧩 Secções à escolha.** Novo cartão «Secções do relatório» na coluna de edição: vêm todas incluídas e o consultor desliga as que não quer (Resumo, Evolução, Leads, Tráfego, AI Visibility, Keywords, GEO, Notas, e as três de e-commerce). Aplica-se ao interno, ao PDF e ao link público de uma vez.",
+      "**📅 Mês em curso gerável a partir do dia 3.** O lag de dados desceu de 3 para 2 dias: no dia 3, a qualquer hora, já se gera o parcial com o dia 1 incluído. Texto do gerador adaptado.",
+      "**🧹 GEO sem lixo geográfico e a metade.** Tópicos que eram nomes de sítios («united kingdom», «brighton») deixam de ser consultados — era daí que vinham as linhas de meteorologia e preço do ouro no Kings Gyms. A tabela ordena por citados → relevância → volume e corta a metade (30 internas · 15 no cliente).",
+      "**🖥️ Coluna de edição sem scroll próprio** — corre com a página até ao fim. Bloco do GBP simplificado e renomeado: «fichas» → **localizações** («Cliente com várias localizações?»). Passo Shopify com link para o guia oficial de custom apps.",
+    ],
+  },
+  {
     version: "77.1",
     date: "2026-09-02",
     title: "Relatório Mensal: escolha de tipo sempre visível e edição em dois painéis",

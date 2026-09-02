@@ -102,7 +102,15 @@ export function ReportShopifyConfig({
           <code className="rounded bg-white/10 px-1">read_all_orders</code> (sem
           o segundo só saem 60 dias — a coluna homóloga precisa de 1 ano) e colar
           aqui o Admin API access token (
-          <code className="rounded bg-white/10 px-1">shpat_…</code>).
+          <code className="rounded bg-white/10 px-1">shpat_…</code>).{" "}
+          <a
+            href="https://help.shopify.com/en/manual/apps/app-types/custom-apps"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium text-[#b79bff] underline decoration-[#783DF5]/50 underline-offset-2 transition hover:text-white"
+          >
+            Guia oficial da Shopify ↗
+          </a>
         </p>
       </details>
 

@@ -785,6 +785,8 @@ export async function buildMonthlyReport(
     /** Fixa o tipo deste build (regenerar um relatório mantém o tipo dele),
      *  por cima do configurado no report-config. */
     ecommerce?: boolean;
+    /** Fixa o idioma deste build, por cima do configurado. */
+    lang?: "pt" | "en";
   } = {},
 ): Promise<MonthlyReportSnapshot> {
   const period = periodKey ? periodFromKey(periodKey) : previousCompleteMonth(new Date(nowMs));
@@ -793,7 +795,8 @@ export async function buildMonthlyReport(
   // month-to-date window with MoM/YoY cut to the same number of days.
   const windows = reportWindows(period.key, { now: new Date(nowMs) });
   const config = await getReportConfig(slug);
-  const lang = getClientLocale(slug);
+  // Idioma: override do pedido → escolha gravada do cliente → client-locale.
+  const lang = opts.lang ?? config.reportLang ?? getClientLocale(slug);
   // The keywords we've committed to working. Every one is reported with its
   // live position, whether or not it ranks yet.
   const targetKeywordRows = await listTargetKeywords(slug).catch(() => []);

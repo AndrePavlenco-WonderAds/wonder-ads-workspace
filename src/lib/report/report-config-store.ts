@@ -72,6 +72,10 @@ export type ReportConfig = {
    *  orgânica (receita, transações…), páginas mais acedidas e produtos mais
    *  vendidos. Escolhido no gerador e lembrado aqui para os meses seguintes. */
   ecommerce: boolean;
+  /** Idioma do relatório deste cliente. null = automático (client-locale).
+   *  Escolhido no gerador — clientes EN como a IHN ou o Kings Gyms recebem
+   *  o relatório em inglês. */
+  reportLang: "pt" | "en" | null;
   /** Loja Shopify do cliente ("kingsgym.myshopify.com") — fallback de
    *  receita/transações/produtos quando o GA4 não tem purchase tracking.
    *  ATENÇÃO: os números da Shopify são da loja INTEIRA (todos os canais),
@@ -142,6 +146,7 @@ export function defaultReportConfig(slug: string, currency = "EUR"): ReportConfi
     },
     extraLeadEvents: [],
     ecommerce: false,
+    reportLang: null,
     shopifyShopDomain: null,
     shopifyAccessToken: null,
     llmRegex: [...DEFAULT_LLM_REGEX],
@@ -274,6 +279,7 @@ function normalizeConfig(raw: unknown, slug: string): ReportConfig {
     eventMap: normalizeEventMap(o.eventMap),
     extraLeadEvents: normalizeExtraLeadEvents(o.extraLeadEvents),
     ecommerce: o.ecommerce === true,
+    reportLang: o.reportLang === "pt" || o.reportLang === "en" ? o.reportLang : null,
     shopifyShopDomain: normalizeShopDomain(o.shopifyShopDomain),
     shopifyAccessToken: asStr(o.shopifyAccessToken),
     llmRegex: regex && regex.length ? regex : base.llmRegex,

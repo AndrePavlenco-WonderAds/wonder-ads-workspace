@@ -23,6 +23,10 @@ import { ReportPrintView } from "@/components/report/report-print-view";
 import { GenerateReportButton } from "@/components/report/generate-report-button";
 import { ReportManualInputs } from "@/components/report/report-manual-inputs";
 import { ReportEcomInputs } from "@/components/report/report-ecom-inputs";
+import {
+  ReportSectionsToggle,
+  type SectionOption,
+} from "@/components/report/report-sections-toggle";
 import { ReportShopifyConfig } from "@/components/report/report-shopify-config";
 import { ReportLeadEvents } from "@/components/report/report-lead-events";
 import { ReportGbpProfiles } from "@/components/report/report-gbp-profiles";
@@ -176,6 +180,25 @@ export default async function ReportPage({
     : 0;
   const pendingTotal = pendingChannels + pendingEcom;
 
+  // As secções que este relatório pode ter — as e-commerce só nos ecommerce.
+  const sectionOptions: SectionOption[] = [
+    { key: "exec", label: "Resumo Executivo" },
+    { key: "trend", label: "Evolução" },
+    ...(snapshot?.ecom
+      ? ([
+          { key: "ecom", label: "Conversão e-commerce" },
+          { key: "ecomPages", label: "Páginas mais acedidas" },
+          { key: "ecomProducts", label: "Produtos mais vendidos" },
+        ] as SectionOption[])
+      : []),
+    { key: "leads", label: "Leads por canal" },
+    { key: "traffic", label: "Tráfego & Ficha Google" },
+    { key: "ai", label: "AI Visibility" },
+    { key: "kw", label: "Keywords & posições" },
+    { key: "geo", label: "GEO · SEO para IA" },
+    { key: "notes", label: "Notas & próximos passos" },
+  ];
+
   // Resumo curto de cada bloco de configuração, para se ler fechado.
   const eventsSummary = [
     ...Object.values(reportConfig.eventMap).flat(),
@@ -185,8 +208,8 @@ export default async function ReportPage({
     .join(", ");
   const gbpSummary =
     reportConfig.extraGbpProfiles.length > 0
-      ? `${reportConfig.extraGbpProfiles.length + 1} fichas`
-      : "1 ficha (auto)";
+      ? `${reportConfig.extraGbpProfiles.length + 1} localizações`
+      : "1 localização (auto)";
   const shopifySummary = reportConfig.shopifyAccessToken
     ? `${reportConfig.shopifyShopDomain ?? "loja"} · ligada`
     : "por ligar (opcional)";
@@ -218,9 +241,10 @@ export default async function ReportPage({
               period={period}
               label={snapshot ? "Regenerar" : "Gerar"}
               variant={snapshot ? "ghost" : "solid"}
-              // Regenerar mantém o tipo do relatório já gerado; o tipo
-              // troca-se no gerador da página do cliente.
+              // Regenerar mantém o tipo e o idioma do relatório já gerado;
+              // trocam-se no gerador da página do cliente.
               ecommerce={snapshot ? snapshot.kind === "ecommerce" : undefined}
+              lang={snapshot?.lang}
             />
           )}
         </div>
@@ -248,7 +272,9 @@ export default async function ReportPage({
              direita — o consultor guarda um valor e vê logo onde ele cai,
              sem fazer scroll por um manual inteiro. */
           <div className="gap-6 xl:grid xl:grid-cols-[480px_minmax(0,1fr)] xl:items-start">
-            <div className="min-w-0 pb-4 xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:overflow-y-auto xl:pr-1">
+            {/* Sem sticky nem scroll próprio (v77.2): a coluna corre com a
+                página até ao fim, como o documento ao lado. */}
+            <div className="min-w-0 pb-4">
               {/* Proveniência das fontes — interno, nunca no documento. */}
               <div className="mb-3 flex flex-wrap items-center gap-1.5">
                 <SourceChip name="GA4" s={snapshot.fetch.ga4} />
@@ -292,6 +318,14 @@ export default async function ReportPage({
                 </div>
               )}
 
+              {/* Que secções entram no documento — todas por defeito. */}
+              <ReportSectionsToggle
+                slug={slug}
+                period={period}
+                sections={sectionOptions}
+                hidden={snapshot.hiddenSections ?? []}
+              />
+
               {/* Passo 2 — dados manuais */}
               <ReportManualInputs
                 slug={slug}
@@ -327,7 +361,7 @@ export default async function ReportPage({
               </ConfigDisclosure>
               <ConfigDisclosure
                 icon={MapPin}
-                title="Fichas do Google Business Profile"
+                title="Localizações do Google Business Profile"
                 hint={gbpSummary}
               >
                 <ReportGbpProfiles

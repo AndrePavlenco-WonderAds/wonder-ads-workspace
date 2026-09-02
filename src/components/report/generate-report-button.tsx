@@ -15,12 +15,15 @@ export function GenerateReportButton({
   label,
   variant = "solid",
   ecommerce,
+  lang,
 }: {
   slug: string;
   period?: string;
   label: string;
   variant?: "solid" | "ghost";
   ecommerce?: boolean;
+  /** Fixa o idioma (regenerar mantém o idioma do relatório existente). */
+  lang?: "pt" | "en";
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -36,6 +39,7 @@ export function GenerateReportButton({
         body: JSON.stringify({
           ...(period ? { period } : {}),
           ...(ecommerce !== undefined ? { ecommerce } : {}),
+          ...(lang !== undefined ? { lang } : {}),
         }),
       });
       const data = (await res.json().catch(() => ({}))) as {

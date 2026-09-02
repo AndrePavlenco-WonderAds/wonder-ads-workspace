@@ -505,6 +505,24 @@ export function pendingEcomCell(): EcomCell {
   return { value: null, source: "manual" };
 }
 
+/** As secções do documento que o consultor pode retirar de um relatório.
+ *  As chaves são as mesmas do índice em ReportDocument. */
+export const REPORT_SECTION_KEYS = [
+  "exec",
+  "trend",
+  "ecom",
+  "ecomPages",
+  "ecomProducts",
+  "leads",
+  "traffic",
+  "ai",
+  "kw",
+  "geo",
+  "notes",
+] as const;
+
+export type ReportSectionKey = (typeof REPORT_SECTION_KEYS)[number];
+
 export type ReportStatus = "draft" | "ready" | "sent";
 
 export const REPORT_SCHEMA_VERSION = 3;
@@ -531,6 +549,9 @@ export type MonthlyReportSnapshot = {
   kind?: ReportKind;
   /** O bloco e-commerce. Só existe nos relatórios kind === "ecommerce". */
   ecom?: EcommerceBlock;
+  /** Secções retiradas deste relatório pelo consultor (chaves de
+   *  REPORT_SECTION_KEYS). Ausente/vazio = todas incluídas. */
+  hiddenSections?: ReportSectionKey[];
 
   leads: {
     total: ReportMetric;

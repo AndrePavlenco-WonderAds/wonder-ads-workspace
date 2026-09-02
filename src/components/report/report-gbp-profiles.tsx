@@ -98,12 +98,12 @@ export function ReportGbpProfiles({
     // A half-filled row would vanish server-side without a word — say so.
     const filled = rows.filter((r) => r.label.trim() || r.locationId.trim());
     if (filled.some((r) => !r.label.trim() || !r.locationId.trim())) {
-      setErr("Cada ficha precisa de um nome e de um Location ID.");
+      setErr("Cada localização precisa de um nome e de um Location ID.");
       return;
     }
     const ids = filled.map((r) => r.locationId.trim().replace(/^locations\//, ""));
     if (new Set(ids).size !== ids.length) {
-      setErr("Há duas fichas com o mesmo Location ID — os cliques seriam contados a dobrar.");
+      setErr("Há duas localizações com o mesmo Location ID — os cliques seriam contados a dobrar.");
       return;
     }
     setBusy(true);
@@ -161,36 +161,34 @@ export function ReportGbpProfiles({
         <div className="mb-1 flex items-center gap-2">
           <MapPin className="h-4 w-4 text-[#b79bff]" />
           <h3 className="text-sm font-semibold text-white/85">
-            Fichas do Google Business Profile
+            Localizações do Google Business Profile
           </h3>
         </div>
       )}
       <p className="mb-4 text-[12px] leading-relaxed text-white/45">
-        Cliente com várias unidades? Uma ficha por unidade — o relatório mostra
-        cliques, direções e chamadas de cada uma, além do total. Sem nada aqui,
-        usa-se a ficha encontrada pelo website.
+        Cliente com várias localizações? Adiciona-as aqui e o relatório mostra
+        os números de cada uma.
       </p>
 
       {/* Nome da ficha principal — só faz sentido havendo mais do que uma. */}
       <label className="flex flex-wrap items-center gap-2.5">
-        <span className="w-40 shrink-0 text-[13px] text-white/65">Ficha principal</span>
+        <span className="w-40 shrink-0 text-[13px] text-white/65">
+          Localização principal
+        </span>
         <input
           type="text"
           value={mainLabel}
           onChange={(e) => setMainLabel(e.target.value)}
-          placeholder="Ficha principal"
+          placeholder="ex.: Clínica Cascais"
           maxLength={60}
           className={nameCls}
         />
-        <span className="text-[12px] text-white/35">
-          nome da ficha que já é usada (ex.: <i>Clínica Cascais</i>)
-        </span>
       </label>
 
       <div className="mt-5 border-t border-white/8 pt-4">
         <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
           <div className="text-[12.5px] font-semibold text-white/70">
-            Fichas adicionais
+            Localizações adicionais
           </div>
           <button
             type="button"
@@ -203,13 +201,10 @@ export function ReportGbpProfiles({
             ) : (
               <Search className="h-3.5 w-3.5" />
             )}
-            Procurar fichas na Google
+            Procurar na Google
           </button>
         </div>
-        <p className="mb-3 text-[12px] leading-relaxed text-white/45">
-          Usa <i>Procurar fichas na Google</i> para listar as fichas da conta e
-          copiar o Location ID certo.
-        </p>
+
 
         {knownErr && (
           <p className="mb-3 inline-flex items-center gap-1.5 text-[12px] text-amber-300/90">
@@ -221,7 +216,7 @@ export function ReportGbpProfiles({
           <div className="mb-3 max-h-40 overflow-y-auto rounded-xl border border-white/10 bg-black/20 p-2.5">
             {known.length === 0 ? (
               <p className="text-[12px] text-white/40">
-                A Google não devolveu nenhuma ficha para esta conta.
+                A Google não devolveu nenhuma localização para esta conta.
               </p>
             ) : (
               <ul className="flex flex-col gap-1">
@@ -280,8 +275,8 @@ export function ReportGbpProfiles({
                     <button
                       type="button"
                       onClick={() => setRows((list) => list.filter((r) => r.id !== row.id))}
-                      title="Remover ficha"
-                      aria-label={`Remover ficha ${row.label || i + 1}`}
+                      title="Remover localização"
+                      aria-label={`Remover localização ${row.label || i + 1}`}
                       className="shrink-0 rounded-lg border border-white/10 p-1.5 text-white/40 transition hover:border-red-400/40 hover:text-red-300"
                     >
                       <X className="h-3.5 w-3.5" />
@@ -289,7 +284,7 @@ export function ReportGbpProfiles({
                   </div>
                   {match && (
                     <span className="pl-[10.75rem] text-[11.5px] text-emerald-300/70">
-                      {match.title ?? "ficha encontrada"}
+                      {match.title ?? "localização encontrada"}
                       {match.websiteHost ? ` · ${match.websiteHost}` : ""}
                     </span>
                   )}
@@ -308,11 +303,11 @@ export function ReportGbpProfiles({
           className="inline-flex items-center gap-1.5 rounded-lg border border-white/12 px-3 py-1.5 text-[12.5px] font-medium text-white/70 transition hover:border-[#783DF5]/50 hover:text-white disabled:opacity-40"
         >
           <Plus className="h-3.5 w-3.5" />
-          Adicionar ficha
+          Adicionar localização
         </button>
         {rows.length >= MAX_GBP_PROFILES && (
           <span className="ml-2 text-[12px] text-white/35">
-            Máximo de {MAX_GBP_PROFILES} fichas adicionais.
+            Máximo de {MAX_GBP_PROFILES} localizações adicionais.
           </span>
         )}
       </div>
@@ -329,11 +324,11 @@ export function ReportGbpProfiles({
           ) : (
             <Check className="h-4 w-4" />
           )}
-          Guardar fichas
+          Guardar localizações
         </button>
         {saved && (
           <span className="text-[12.5px] text-emerald-300/90">
-            Guardado ✓ — gera o relatório de novo para puxar os dados de cada ficha.
+            Guardado ✓ — regenera o relatório para puxar os dados.
           </span>
         )}
         {err && (

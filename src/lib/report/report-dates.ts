@@ -82,11 +82,14 @@ export function currentMonth(now: Date = new Date()): ReportPeriod {
   return periodFromKey(keyOf({ year: now.getFullYear(), month: now.getMonth() + 1 }));
 }
 
-/** Last day we can trust data for. GSC lags ~2-3 days; GA4 is usually good
+/** Last day we can trust data for. GSC lags ~2 days; GA4 is usually good
  *  through yesterday. We take the *later-lagging* source so every section of
  *  a partial report describes the SAME window — a report whose leads cover
- *  1–28 but whose clicks cover 1–26 invites exactly the wrong comparison. */
-export function dataCutoff(now: Date = new Date(), lagDays = 3): string {
+ *  1–28 but whose clicks cover 1–26 invites exactly the wrong comparison.
+ *
+ *  Lag de 2 dias (v77.2, pedido do Andre): o mês em curso fica gerável a
+ *  partir do DIA 3, a qualquer hora — no dia 3 o cutoff é o dia 1. */
+export function dataCutoff(now: Date = new Date(), lagDays = 2): string {
   const d = new Date(
     Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()) -
       lagDays * 86_400_000,
@@ -143,7 +146,7 @@ export function reportWindows(
   const ym = ymFromKey(periodKey);
   const full = rangeOf(ym);
   const monthDays = daysInMonth(ym.year, ym.month);
-  const cutoff = dataCutoff(opts.now ?? new Date(), opts.lagDays ?? 3);
+  const cutoff = dataCutoff(opts.now ?? new Date(), opts.lagDays ?? 2);
 
   // Complete month: nothing to clamp — identical to the pre-v76.17 behaviour.
   if (cutoff >= full.endDate) {
@@ -193,7 +196,7 @@ export function labelWithCoverage(
 export function isPeriodReportable(
   periodKey: string,
   now: Date = new Date(),
-  lagDays = 3,
+  lagDays = 2,
 ): boolean {
   if (!isValidPeriodKey(periodKey)) return false;
   const ym = ymFromKey(periodKey);
