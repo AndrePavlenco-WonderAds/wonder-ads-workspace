@@ -23,6 +23,7 @@ import { ReportPrintView } from "@/components/report/report-print-view";
 import { GenerateReportButton } from "@/components/report/generate-report-button";
 import { ReportManualInputs } from "@/components/report/report-manual-inputs";
 import { ReportEcomInputs } from "@/components/report/report-ecom-inputs";
+import { ReportGscAiInputs } from "@/components/report/report-gsc-ai-inputs";
 import {
   ReportSectionsToggle,
   type SectionOption,
@@ -194,6 +195,9 @@ export default async function ReportPage({
     { key: "leads", label: "Leads por canal" },
     { key: "traffic", label: "Tráfego & Ficha Google" },
     { key: "ai", label: "AI Visibility" },
+    ...(snapshot?.gscAi
+      ? ([{ key: "gscAi", label: "Google IA (AI Overviews)" }] as SectionOption[])
+      : []),
     { key: "kw", label: "Keywords & posições" },
     { key: "geo", label: "GEO · SEO para IA" },
     { key: "notes", label: "Notas & próximos passos" },
@@ -333,6 +337,15 @@ export default async function ReportPage({
                 channels={snapshot.leads.channels}
                 notes={snapshot.notes}
               />
+
+              {/* Google IA — impressões nas AI Overviews / AI Mode (GSC) */}
+              {snapshot.gscAi && (
+                <ReportGscAiInputs
+                  slug={slug}
+                  period={period}
+                  gscAi={snapshot.gscAi}
+                />
+              )}
 
               {/* Relatório e-commerce: tabela de conversão + listas */}
               {snapshot.ecom && (

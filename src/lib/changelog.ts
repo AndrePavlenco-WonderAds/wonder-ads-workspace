@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.3",
+    date: "2026-09-02",
+    title: "Google IA no Relatório Mensal — o relatório Generative AI do Search Console",
+    highlights: [
+      "**✨ Nova secção «Google IA · AI Overviews» em TODOS os relatórios.** Quantas vezes as páginas do site apareceram dentro das AI Overviews e do AI Mode da Google — medido pela própria Google (Search Console · relatório Generative AI, lançado em junho e global desde 31/08). Número grande em gradiente, variação MoM, sparkline dos últimos meses, repartição por dispositivo e top páginas com barras. Entra no índice, no PDF e no link público; o cliente só a vê com dados validados.",
+      "**📋 Cola o CSV e está feito.** A Google (ainda) não dá API para este relatório — a Search Analytics API rejeita-o, o BigQuery não tem a coluna, só existe o botão Exportar. O novo cartão «Google IA» na coluna de edição aceita o CSV colado (Gráfico, Páginas ou Dispositivos — ou os três de seguida), reconhece cada linha e preenche o total do mês, as páginas e os dispositivos de uma vez.",
+      "**🔁 MoM e histórico automáticos.** A variação face ao mês anterior e a série do sparkline encadeiam-se sozinhas de relatório para relatório — o consultor só cola o export uma vez por mês. No dia em que a Google abrir a API, a puxada automática entra no mesmo formato sem migração.",
+      "**🧩 Secção destacável** como as restantes («Google IA (AI Overviews)» no cartão de secções) e frase própria no Resumo Executivo quando há número («O site apareceu N vezes nas respostas de IA da Google»).",
+    ],
+  },
+  {
     version: "77.2",
     date: "2026-09-02",
     title: "Relatório em inglês, secções à escolha e mês em curso a partir do dia 3",

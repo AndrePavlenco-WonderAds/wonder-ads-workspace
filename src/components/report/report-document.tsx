@@ -474,6 +474,33 @@ export function ReportDocument({
   const showKw =
     !hidden.has("kw") && (kwVisible.length > 0 || variant === "internal");
 
+  // Google IA — impressões nas AI Overviews / AI Mode (GSC · Generative AI).
+  // O cliente só vê a secção com um número validado; a interna mostra-a
+  // sempre que o bloco existe, para o consultor saber o que falta.
+  const gscAiB = snapshot.gscAi;
+  const gscAiPending =
+    Boolean(gscAiB) &&
+    gscAiB!.impressions.value === null &&
+    !gscAiB!.impressions.manualNa;
+  const showGscAi =
+    Boolean(gscAiB) &&
+    !hidden.has("gscAi") &&
+    (variant === "internal" ||
+      (gscAiB!.impressions.value !== null && gscAiB!.impressions.value > 0) ||
+      gscAiB!.topPages.length > 0);
+  const gscAiMaxPage = Math.max(
+    1,
+    ...(gscAiB?.topPages ?? []).map((p) => p.impressions),
+  );
+  const gscAiDevTotal = (gscAiB?.byDevice ?? []).reduce(
+    (t, d) => t + d.impressions,
+    0,
+  );
+  const gscAiSpark =
+    gscAiB && gscAiB.impressions.value !== null
+      ? [...(gscAiB.impressions.history ?? []), gscAiB.impressions.value]
+      : (gscAiB?.impressions.history ?? []);
+
   // O ÍNDICE. Uma lista só, montada com as mesmas condições que desenham as
   // secções, para que o número no cabeçalho e a entrada no índice não possam
   // divergir — que é o que aconteceria se cada secção soubesse o seu número.
@@ -498,6 +525,9 @@ export function ReportDocument({
       ? [{ key: "traffic", label: t("Tráfego & Ficha Google", "Traffic & Google listing") }]
       : []),
     ...(showAi ? [{ key: "ai", label: "AI Visibility" }] : []),
+    ...(showGscAi
+      ? [{ key: "gscAi", label: t("Google IA · AI Overviews", "Google AI · AI Overviews") }]
+      : []),
     ...(showKw
       ? [{ key: "kw", label: t("Keywords & posições", "Keywords & positions") }]
       : []),
@@ -947,6 +977,127 @@ export function ReportDocument({
         </section>
       )}
 
+      {/* Google IA — o relatório Generative AI do Search Console: quantas
+          vezes as páginas apareceram DENTRO das AI Overviews e do AI Mode.
+          É a métrica de GEO mais oficial que existe: é a própria Google a
+          contar. Distinta do AI Visibility acima (visitantes vindos de
+          assistentes) — aqui é presença nas respostas, medida na origem. */}
+      {showGscAi && gscAiB && (
+        <section className="wa-sec">
+          <SecLabel n={secN("gscAi")}>
+            {t("Google IA · AI Overviews", "Google AI · AI Overviews")}
+          </SecLabel>
+          <h3 className="wa-h3">
+            {t(
+              "Quantas vezes aparecemos nas respostas de IA da Google",
+              "How often we appear in Google's AI answers",
+            )}
+          </h3>
+          <p className="wa-method">
+            {t(
+              "Impressões do site dentro das AI Overviews e do AI Mode da Pesquisa Google — medidas pela própria Google (Search Console · relatório Generative AI). A Google reporta apenas impressões nestas superfícies; os cliques continuam contados no total de Pesquisa.",
+              "Impressions of the site inside Google Search's AI Overviews and AI Mode — measured by Google itself (Search Console · Generative AI report). Google reports impressions only for these surfaces; clicks remain counted in the overall Search totals.",
+            )}
+          </p>
+
+          {gscAiPending ? (
+            <p className="wa-pending-lg">
+              {t(
+                "Por preencher — cola o export do Search Console no cartão «Google IA» (a Google ainda não dá API para este relatório).",
+                "Awaiting input — paste the Search Console export in the “Google AI” card (Google offers no API for this report yet).",
+              )}
+            </p>
+          ) : gscAiB.impressions.manualNa ? (
+            variant === "internal" ? (
+              <p className="wa-pending-lg">
+                {t(
+                  "Marcado N/A este mês — a propriedade ainda não tem visibilidade em IA suficiente para a Google mostrar o relatório.",
+                  "Marked N/A this month — the property doesn't yet have enough AI visibility for Google to show the report.",
+                )}
+              </p>
+            ) : null
+          ) : (
+            <>
+              <div className="wa-gai-hero">
+                <div className="wa-gai-num">
+                  <span className="wa-gai-v">
+                    {formatRaw(gscAiB.impressions.value ?? 0, "count", lang)}
+                  </span>
+                  <span className="wa-gai-l">
+                    {t(
+                      "impressões em respostas de IA este mês",
+                      "impressions in AI answers this month",
+                    )}
+                  </span>
+                  {showDeltas && (
+                    <DeltaChip delta={metricDelta(gscAiB.impressions, lang)} />
+                  )}
+                </div>
+                {gscAiSpark.length >= 3 && (
+                  <div className="wa-gai-spark">
+                    <Spark values={gscAiSpark} />
+                    <span className="wa-gai-spark-l">
+                      {t("últimos meses", "recent months")}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {gscAiB.byDevice.length > 0 && gscAiDevTotal > 0 && (
+                <div className="wa-chan" style={{ marginTop: ".85rem" }}>
+                  {gscAiB.byDevice.map((d) => (
+                    <div className="wa-chan-row" key={d.device}>
+                      <span className="wa-cn">{d.device}</span>
+                      <span className="wa-cbar">
+                        <i
+                          style={{
+                            width: `${(d.impressions / gscAiDevTotal) * 100}%`,
+                            background: GRAD,
+                          }}
+                        />
+                      </span>
+                      <span className="wa-cv">
+                        {formatRaw(d.impressions, "count", lang)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {gscAiB.topPages.length > 0 && (
+                <>
+                  <h3 className="wa-h3" style={{ marginTop: "1.1rem" }}>
+                    {t(
+                      "Páginas que a IA da Google mais mostra",
+                      "Pages Google's AI shows the most",
+                    )}
+                  </h3>
+                  <div className="wa-toplist">
+                    {gscAiB.topPages.map((p, i) => (
+                      <div className="wa-top-row" key={`${p.page}-${i}`}>
+                        <span className="wa-top-n">{i + 1}</span>
+                        <span className="wa-top-name">{p.page}</span>
+                        <span className="wa-top-bar">
+                          <i
+                            style={{
+                              width: `${(p.impressions / gscAiMaxPage) * 100}%`,
+                              background: GRAD,
+                            }}
+                          />
+                        </span>
+                        <span className="wa-top-v">
+                          {formatRaw(p.impressions, "count", lang)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </>
+          )}
+        </section>
+      )}
+
       {/* A tabela única das keywords trabalhadas — todas as target keywords
           da client file, com a posição atual na location certa. Substituiu o
           Top queries/páginas, as Maiores subidas e a média do GSC por
@@ -1270,6 +1421,17 @@ const CSS = GEO_CSS + PRINT_CSS + `
 .wa-ectable th.wa-ec-yoy{color:#5c5a72;}
 .wa-ectable tr.wa-ec-rev td{background:rgba(15,143,98,.10);font-weight:700;}
 .wa-ectable tr.wa-ec-rev td.wa-ec-yoy{background:rgba(15,143,98,.16);}
+
+/* Google IA — hero com o número grande + sparkline dos últimos meses. */
+.wa-gai-hero{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:1rem;margin:.2rem 0 .2rem;}
+.wa-gai-num{display:flex;align-items:baseline;gap:.55rem;flex-wrap:wrap;}
+.wa-gai-v{font-size:2.1rem;font-weight:800;letter-spacing:-.03em;font-variant-numeric:tabular-nums;line-height:1;
+  background:linear-gradient(135deg,#343ED7,#783DF5,#C535C9);-webkit-background-clip:text;background-clip:text;
+  -webkit-text-fill-color:transparent;color:transparent;}
+.wa-gai-l{font-size:.8rem;color:var(--muted);font-weight:600;}
+.wa-gai-spark{min-width:150px;flex:0 1 220px;}
+.wa-gai-spark .wa-spark{height:30px;margin-top:0;}
+.wa-gai-spark-l{display:block;margin-top:.2rem;font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;color:#a09eb4;font-weight:700;text-align:right;}
 
 /* Top 10 (páginas / produtos) — rank, nome, barra, valor. */
 .wa-toplist{display:grid;gap:.45rem;margin-top:.4rem;}

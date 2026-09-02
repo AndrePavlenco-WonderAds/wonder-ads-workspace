@@ -505,6 +505,33 @@ export function pendingEcomCell(): EcomCell {
   return { value: null, source: "manual" };
 }
 
+// —— Google IA · relatório Generative AI do Search Console (v77.3) ————
+// A GSC passou a mostrar quantas vezes as páginas do site aparecem dentro
+// das AI Overviews e do AI Mode (anúncio de 2026-06-03, rollout global a
+// 2026-08-31). LIMITES REAIS, verificados a 2026-09-02: só impressões (sem
+// cliques, sem queries) e SEM ACESSO PROGRAMÁTICO — a Search Analytics API
+// rejeita qualquer type de IA, o bulk export BigQuery não tem a coluna e o
+// export é um botão manual na UI. Por isso o número do mês entra pelo CSV
+// exportado (o cartão «Google IA» faz o parse); o MoM e o histórico
+// encadeiam-se sozinhos de relatório para relatório em KV. Quando a Google
+// abrir a API, a puxada automática entra em report-build (source "gsc")
+// sem mexer neste formato.
+
+export type GscAiTopPage = { page: string; impressions: number };
+export type GscAiDevice = { device: string; impressions: number };
+
+export type GscAiBlock = {
+  /** Impressões do mês em AI Overviews + AI Mode. `previous` e `history`
+   *  vêm encadeados do relatório do mês anterior — automáticos. */
+  impressions: ReportMetric;
+  /** Páginas com mais impressões em IA (do CSV exportado). */
+  topPages: GscAiTopPage[];
+  /** Repartição por dispositivo (do CSV exportado). */
+  byDevice: GscAiDevice[];
+  /** Última edição manual (ms). null = ainda por preencher este mês. */
+  updatedAt: number | null;
+};
+
 /** As secções do documento que o consultor pode retirar de um relatório.
  *  As chaves são as mesmas do índice em ReportDocument. */
 export const REPORT_SECTION_KEYS = [
@@ -516,6 +543,7 @@ export const REPORT_SECTION_KEYS = [
   "leads",
   "traffic",
   "ai",
+  "gscAi",
   "kw",
   "geo",
   "notes",
@@ -552,6 +580,9 @@ export type MonthlyReportSnapshot = {
   /** Secções retiradas deste relatório pelo consultor (chaves de
    *  REPORT_SECTION_KEYS). Ausente/vazio = todas incluídas. */
   hiddenSections?: ReportSectionKey[];
+  /** Impressões nas respostas de IA da Google (GSC · Generative AI).
+   *  Presente em todos os relatórios gerados desde a v77.3. */
+  gscAi?: GscAiBlock;
 
   leads: {
     total: ReportMetric;

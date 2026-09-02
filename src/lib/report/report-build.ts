@@ -46,6 +46,7 @@ import {
   type EcomColumn,
   type EcommerceBlock,
   type FetchStatus,
+  type GscAiBlock,
   type GbpProfileMetrics,
   type LeadChannel,
   type MonthlyReportSnapshot,
@@ -358,6 +359,22 @@ function buildExecSummary(
   const eg = gainOf(snap.organic.engagementRate);
   if (eg !== null)
     add(60, t(`Taxa de engagement a subir **+${eg.toFixed(0)}%**.`, `Engagement rate up **+${eg.toFixed(0)}%**.`));
+
+  // Impressões nas respostas de IA da Google (GSC · Generative AI).
+  const gscAiImpr = snap.gscAi?.impressions;
+  if (gscAiImpr?.value && gscAiImpr.value > 0) {
+    const gain = gainOf(gscAiImpr);
+    if (gain !== null)
+      add(82, t(
+        `O site apareceu **${fmt(gscAiImpr.value)}** vezes nas respostas de IA da Google — **+${gain.toFixed(0)}%** face ao mês anterior.`,
+        `The site appeared **${fmt(gscAiImpr.value)}** times in Google's AI answers — **+${gain.toFixed(0)}%** vs. last month.`,
+      ));
+    else
+      add(68, t(
+        `O site apareceu **${fmt(gscAiImpr.value)}** vezes nas respostas de IA da Google (AI Overviews + AI Mode).`,
+        `The site appeared **${fmt(gscAiImpr.value)}** times in Google's AI answers (AI Overviews + AI Mode).`,
+      ));
+  }
 
   const ai = snap.ai;
   if (ai.totalSessions.value && ai.totalSessions.value > 0) {
@@ -874,6 +891,33 @@ export async function buildMonthlyReport(
   ]);
   const ecom = ecomRaw ? deriveEcomCells(ecomRaw) : null;
 
+  // —— Google IA (GSC · Generative AI) ————————————————————————————
+  // O bloco existe em TODOS os relatórios novos. O valor do mês é manual
+  // (a Google não dá API — ver report-types.ts), mas o MoM e o histórico
+  // encadeiam-se sozinhos a partir do relatório do mês anterior em KV.
+  // QUANDO a API abrir, é AQUI que a puxada automática entra.
+  const prevSnap = await getReport(
+    slug,
+    trailingMonths(period.key, 2)[0].key,
+  ).catch(() => null);
+  const prevAiImpr = prevSnap?.gscAi?.impressions;
+  const aiHistory = prevAiImpr
+    ? [
+        ...(prevAiImpr.history ?? []),
+        ...(prevAiImpr.value !== null ? [prevAiImpr.value] : []),
+      ].slice(-11)
+    : [];
+  const gscAi: GscAiBlock = {
+    impressions: {
+      ...pendingMetric("count", "manual"),
+      previous: prevAiImpr?.value ?? null,
+      ...(aiHistory.length ? { history: aiHistory } : {}),
+    },
+    topPages: [],
+    byDevice: [],
+    updatedAt: null,
+  };
+
   const ga4Fetch: FetchStatus =
     ga4.status === "ok"
       ? { ok: true, status: "ok" }
@@ -1141,6 +1185,7 @@ export async function buildMonthlyReport(
     },
     kind: isEcom ? "ecommerce" : "standard",
     ...(ecom ? { ecom } : {}),
+    gscAi,
     leads: { total: leadsTotal, channels },
     organic,
     gsc: gscBlock,

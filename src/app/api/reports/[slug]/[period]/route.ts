@@ -22,6 +22,8 @@ import {
   type EcomMetricKey,
   type EcomTopPage,
   type EcomTopProduct,
+  type GscAiDevice,
+  type GscAiTopPage,
   type LeadChannelKey,
   type MonthlyReportSnapshot,
   type ReportSectionKey,
@@ -75,6 +77,37 @@ function parseTopProducts(v: unknown): EcomTopProduct[] | null {
   return out;
 }
 
+/** Páginas do relatório Generative AI (GSC) — substitui a lista por inteiro. */
+function parseGscAiPages(v: unknown): GscAiTopPage[] | null {
+  if (!Array.isArray(v)) return null;
+  const out: GscAiTopPage[] = [];
+  for (const item of v.slice(0, ECOM_TOP_LIMIT)) {
+    if (!item || typeof item !== "object") continue;
+    const o = item as Record<string, unknown>;
+    const page = typeof o.page === "string" ? o.page.trim().slice(0, 300) : "";
+    const impressions = Number(o.impressions);
+    if (!page || !Number.isFinite(impressions) || impressions < 0) continue;
+    out.push({ page, impressions: Math.round(impressions) });
+  }
+  return out.sort((a, b) => b.impressions - a.impressions);
+}
+
+/** Dispositivos do relatório Generative AI — substitui a lista por inteiro. */
+function parseGscAiDevices(v: unknown): GscAiDevice[] | null {
+  if (!Array.isArray(v)) return null;
+  const out: GscAiDevice[] = [];
+  for (const item of v.slice(0, 5)) {
+    if (!item || typeof item !== "object") continue;
+    const o = item as Record<string, unknown>;
+    const device =
+      typeof o.device === "string" ? o.device.trim().slice(0, 24) : "";
+    const impressions = Number(o.impressions);
+    if (!device || !Number.isFinite(impressions) || impressions < 0) continue;
+    out.push({ device, impressions: Math.round(impressions) });
+  }
+  return out.sort((a, b) => b.impressions - a.impressions);
+}
+
 /** Lista manual de páginas mais acedidas — substitui a atual por inteiro. */
 function parseTopPages(v: unknown): EcomTopPage[] | null {
   if (!Array.isArray(v)) return null;
@@ -120,6 +153,9 @@ export async function PUT(
     /** Secções a retirar do documento (chaves de REPORT_SECTION_KEYS).
      *  Substitui a lista por inteiro; [] volta a incluir tudo. */
     hiddenSections?: unknown;
+    /** Google IA (GSC · Generative AI): impressões do mês (número | "na" |
+     *  null=repor pendente) + listas do CSV exportado. */
+    gscAi?: { impressions?: unknown; topPages?: unknown; byDevice?: unknown };
   };
 
   let next: MonthlyReportSnapshot = { ...snap };
@@ -203,6 +239,52 @@ export async function PUT(
       ecom = { ...ecom, topPages: pages, topPagesSource: "manual" };
     }
     next = { ...next, ecom };
+  }
+
+  // Google IA — o valor do mês vem do CSV/manual; `previous` e `history`
+  // ficam intactos (são o encadeamento automático entre relatórios).
+  if (next.gscAi && body.gscAi && typeof body.gscAi === "object") {
+    const g = body.gscAi;
+    let impressions = next.gscAi.impressions;
+    if (
+      typeof g.impressions === "number" &&
+      Number.isFinite(g.impressions) &&
+      g.impressions >= 0
+    ) {
+      impressions = {
+        ...impressions,
+        value: Math.round(g.impressions),
+        source: "manual",
+        instrumented: true,
+        manualNa: undefined,
+      };
+    } else if (g.impressions === "na") {
+      impressions = {
+        ...impressions,
+        value: null,
+        source: "na",
+        manualNa: true,
+      };
+    } else if (g.impressions === null) {
+      impressions = {
+        ...impressions,
+        value: null,
+        source: "manual",
+        manualNa: undefined,
+      };
+    }
+    const pages = parseGscAiPages(g.topPages);
+    const devices = parseGscAiDevices(g.byDevice);
+    next = {
+      ...next,
+      gscAi: {
+        ...next.gscAi,
+        impressions,
+        ...(pages ? { topPages: pages } : {}),
+        ...(devices ? { byDevice: devices } : {}),
+        updatedAt: Date.now(),
+      },
+    };
   }
 
   // Secções retiradas do documento. Só chaves conhecidas entram.
