@@ -40,10 +40,14 @@ export function ReportGbpProfiles({
   slug,
   gbpMainLabel,
   extraGbpProfiles,
+  bare = false,
 }: {
   slug: string;
   gbpMainLabel: string | null;
   extraGbpProfiles: GbpProfile[];
+  /** Sem cartão nem cabeçalho próprios — para viver dentro de um disclosure
+   *  que já traz ambos (v77.1). */
+  bare?: boolean;
 }) {
   const router = useRouter();
   const [mainLabel, setMainLabel] = useState(gbpMainLabel ?? "");
@@ -146,21 +150,25 @@ export function ReportGbpProfiles({
     "w-40 shrink-0 rounded-lg border border-white/12 bg-black/25 px-3 py-1.5 text-[12.5px] text-white outline-none placeholder:text-white/25 focus:border-[#783DF5]/50";
 
   return (
-    <div className="mb-4 rounded-2xl border border-white/10 bg-white/[0.025] p-5">
-      <div className="mb-1 flex items-center gap-2">
-        <MapPin className="h-4 w-4 text-[#b79bff]" />
-        <h3 className="text-sm font-semibold text-white/85">
-          Fichas do Google Business Profile
-        </h3>
-      </div>
-      <p className="mb-4 text-[12.5px] leading-relaxed text-white/50">
-        Por defeito o relatório usa <b className="text-white/70">uma</b> ficha, encontrada
-        pelo website do cliente. Se o cliente tem{" "}
-        <b className="text-white/70">mais do que uma unidade</b>, cada unidade tem a sua
-        própria ficha — acrescenta-as aqui e o relatório passa a mostrar{" "}
-        <b className="text-white/70">os cliques, direções e chamadas de cada uma</b>, além
-        do total consolidado. Sem isto, as unidades ficam todas escondidas dentro do mesmo
-        número.
+    <div
+      className={
+        bare
+          ? "p-5"
+          : "mb-4 rounded-2xl border border-white/10 bg-white/[0.025] p-5"
+      }
+    >
+      {!bare && (
+        <div className="mb-1 flex items-center gap-2">
+          <MapPin className="h-4 w-4 text-[#b79bff]" />
+          <h3 className="text-sm font-semibold text-white/85">
+            Fichas do Google Business Profile
+          </h3>
+        </div>
+      )}
+      <p className="mb-4 text-[12px] leading-relaxed text-white/45">
+        Cliente com várias unidades? Uma ficha por unidade — o relatório mostra
+        cliques, direções e chamadas de cada uma, além do total. Sem nada aqui,
+        usa-se a ficha encontrada pelo website.
       </p>
 
       {/* Nome da ficha principal — só faz sentido havendo mais do que uma. */}
@@ -198,11 +206,9 @@ export function ReportGbpProfiles({
             Procurar fichas na Google
           </button>
         </div>
-        <p className="mb-3 text-[12.5px] leading-relaxed text-white/45">
-          O <b className="text-white/65">Location ID</b> é o número da ficha no Google
-          Business Profile. Carrega em <i>Procurar fichas na Google</i> para as listar e
-          copiar o ID certo — cada ficha adicional custa mais dois pedidos à API por
-          relatório, por isso a lista só é pedida quando a pedes.
+        <p className="mb-3 text-[12px] leading-relaxed text-white/45">
+          Usa <i>Procurar fichas na Google</i> para listar as fichas da conta e
+          copiar o Location ID certo.
         </p>
 
         {knownErr && (

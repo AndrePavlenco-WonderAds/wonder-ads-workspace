@@ -253,7 +253,7 @@ export const DEFAULT_ONBOARDING_CATEGORIES: OnboardingCategory[] = [
         title: "Acesso ao Website — Clientes WordPress",
         kind: "video",
         emoji: "🌐",
-        videoUrl: null,
+        videoUrl: "https://www.youtube.com/embed/OauUcbjHnoo",
         summary: "Como nos dar acesso ao vosso site (se for WordPress).",
         about: [
           {

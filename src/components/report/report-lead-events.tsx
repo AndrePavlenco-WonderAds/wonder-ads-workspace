@@ -56,10 +56,14 @@ export function ReportLeadEvents({
   slug,
   eventMap,
   extraLeadEvents,
+  bare = false,
 }: {
   slug: string;
   eventMap: EventMap;
   extraLeadEvents: CustomLeadEvent[];
+  /** Sem cartão nem cabeçalho próprios — para viver dentro de um disclosure
+   *  que já traz ambos (v77.1). */
+  bare?: boolean;
 }) {
   const router = useRouter();
   const [values, setValues] = useState<Record<keyof EventMap, string>>({
@@ -128,20 +132,25 @@ export function ReportLeadEvents({
     "min-w-0 flex-1 rounded-lg border border-white/12 bg-black/25 px-3 py-1.5 font-mono text-[12.5px] text-white outline-none placeholder:text-white/25 focus:border-[#783DF5]/50";
 
   return (
-    <div className="mb-4 rounded-2xl border border-white/10 bg-white/[0.025] p-5">
-      <div className="mb-1 flex items-center gap-2">
-        <Tags className="h-4 w-4 text-[#b79bff]" />
-        <h3 className="text-sm font-semibold text-white/85">
-          Eventos de lead no GA4
-        </h3>
-      </div>
-      <p className="mb-4 text-[12.5px] leading-relaxed text-white/50">
-        Diz à app que eventos ler — em vez de renomear o evento no GA4, que{" "}
-        <b className="text-white/70">não recupera o histórico</b> e põe a zero
-        todos os meses anteriores. Podes indicar{" "}
-        <b className="text-white/70">vários nomes por linha</b> (separados por
-        vírgula): se o cliente mudou de nome a meio do ano, lista o antigo e o
-        novo e o relatório soma os dois.
+    <div
+      className={
+        bare
+          ? "p-5"
+          : "mb-4 rounded-2xl border border-white/10 bg-white/[0.025] p-5"
+      }
+    >
+      {!bare && (
+        <div className="mb-1 flex items-center gap-2">
+          <Tags className="h-4 w-4 text-[#b79bff]" />
+          <h3 className="text-sm font-semibold text-white/85">
+            Eventos de lead no GA4
+          </h3>
+        </div>
+      )}
+      <p className="mb-4 text-[12px] leading-relaxed text-white/45">
+        Vários nomes por linha, separados por vírgula — evento renomeado a meio
+        do ano? Lista o antigo e o novo, o relatório soma os dois. (Nunca
+        renomear no GA4: não recupera o histórico.)
       </p>
 
       <div className="flex flex-col gap-2.5">
@@ -169,15 +178,10 @@ export function ReportLeadEvents({
         <div className="mb-1 text-[12.5px] font-semibold text-white/70">
           Linhas adicionais
         </div>
-        <p className="mb-3 text-[12.5px] leading-relaxed text-white/45">
-          Para um segundo telefone ou uma segunda unidade (ex.:{" "}
-          <i>Ligar · Unidade Cascais</i>), ou formulários com eventos diferentes
-          em páginas diferentes. Cada linha aparece com este nome no relatório do
-          cliente e soma ao total de leads — por isso{" "}
-          <b className="text-white/65">
-            não repitas o mesmo evento em duas linhas
-          </b>
-          , seria contado duas vezes.
+        <p className="mb-3 text-[12px] leading-relaxed text-white/45">
+          2.º telefone, 2.ª unidade, formulário de uma landing… Cada linha é uma
+          linha própria no relatório e soma ao total —{" "}
+          <b className="text-white/65">não repitas o mesmo evento em duas linhas</b>.
         </p>
 
         {extras.length > 0 && (

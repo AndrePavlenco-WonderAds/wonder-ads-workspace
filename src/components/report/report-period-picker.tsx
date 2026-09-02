@@ -24,6 +24,9 @@ type Option = {
   /** "1–26" for a partial month, null when complete. */
   coverage: string | null;
   alreadyGenerated: boolean;
+  /** Ainda não reportável (o cutoff de 3 dias não chegou ao dia 1) — a opção
+   *  mostra-se na mesma, cinzenta, para o gerador não mudar de forma. */
+  disabled?: boolean;
 };
 
 export function ReportPeriodPicker({
@@ -91,9 +94,11 @@ export function ReportPeriodPicker({
         id: "current",
         opt: current,
         icon: CalendarClock,
-        hint: current.coverage
-          ? `Dados de 1 a ${current.coverage.split("–")[1]}. Só números, sem percentagens de variação — um mês incompleto não se compara com um mês inteiro.`
-          : "Mês ainda a decorrer.",
+        hint: current.disabled
+          ? "Ainda sem dados — o GA4/GSC atrasam ~3 dias, volta a partir do dia 4."
+          : current.coverage
+            ? `Dados de 1 a ${current.coverage.split("–")[1]}. Só números, sem percentagens de variação — um mês incompleto não se compara com um mês inteiro.`
+            : "Mês ainda a decorrer.",
       },
     ];
 
@@ -154,26 +159,30 @@ export function ReportPeriodPicker({
       <div className="grid gap-2 sm:grid-cols-2">
         {opts.map(({ id, opt, icon: Icon, hint }) => {
           const on = choice === id;
+          const off = Boolean(opt.disabled);
           return (
             <button
               key={id}
               type="button"
-              onClick={() => setChoice(id)}
+              onClick={() => !off && setChoice(id)}
+              disabled={off}
               className={[
                 "rounded-xl border px-3.5 py-3 text-left transition",
-                on
-                  ? "border-[#783DF5]/50 bg-[#783DF5]/12"
-                  : "border-white/10 bg-white/[0.02] hover:border-white/22",
+                off
+                  ? "cursor-not-allowed border-white/8 bg-white/[0.01] opacity-55"
+                  : on
+                    ? "border-[#783DF5]/50 bg-[#783DF5]/12"
+                    : "border-white/10 bg-white/[0.02] hover:border-white/22",
               ].join(" ")}
             >
               <span className="flex items-center gap-2">
                 <Icon
-                  className={`h-4 w-4 shrink-0 ${on ? "text-[#b79bff]" : "text-white/40"}`}
+                  className={`h-4 w-4 shrink-0 ${on && !off ? "text-[#b79bff]" : "text-white/40"}`}
                 />
                 <span className="text-[13px] font-semibold text-white/90">
                   {opt.label}
                 </span>
-                {opt.coverage && (
+                {opt.coverage && !off && (
                   <span className="rounded-full border border-amber-400/25 bg-amber-500/[0.08] px-1.5 py-px text-[9.5px] font-semibold uppercase tracking-wide text-amber-200/80">
                     parcial
                   </span>

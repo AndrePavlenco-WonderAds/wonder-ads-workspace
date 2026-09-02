@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.1",
+    date: "2026-09-02",
+    title: "Relatório Mensal: escolha de tipo sempre visível e edição em dois painéis",
+    highlights: [
+      "**🛒 A escolha normal/e-commerce aparece sempre.** O gerador na página do cliente mostrava só um botão «Regenerar» nos primeiros dias do mês (o mês em curso ainda não é reportável até ao dia 4) — e a escolha de tipo desaparecia com ele. Agora o picker está sempre lá; o mês em curso fica visível mas desativado, com o porquê.",
+      "**🖥️ Página do relatório em ecrã inteiro, dois painéis.** À esquerda (fixo ao fazer scroll): fontes, «Passo 1» com o nº de métricas por validar, preenchimento manual e finalizar. À direita: o documento. Preenche-se um valor e vê-se logo onde cai, sem percorrer um manual.",
+      "**✍️ Preenchimento compacto.** A grelha de leads/GBP passou a linhas densas com ponto de estado (âmbar por preencher · verde preenchido · cinza N/A) e contador no topo; a dica do GTM ficou num expansor. Menos texto, mesmos números.",
+      "**📦 Configuração do cliente fechada por defeito.** «Eventos de lead no GA4», «Fichas do Google Business Profile» e «Ligação Shopify» afinam-se uma vez — agora vivem em cartões colapsados com um resumo de uma linha (eventos configurados, nº de fichas, estado da loja), e as explicações longas foram cortadas para uma frase.",
+      "**🎬 Onboarding: vídeo no passo «Acesso ao Website — Clientes WordPress».** O tutorial de criar o utilizador de administrador no WordPress ficou embebido no passo (código + override do curso em KV).",
+    ],
+  },
+  {
     version: "77.0",
     date: "2026-09-02",
     title: "Relatório Mensal e-commerce: conversão orgânica, páginas e produtos",

@@ -1,6 +1,16 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, AlertTriangle, Rocket, CheckCircle2, FileDown } from "lucide-react";
+import {
+  ArrowLeft,
+  AlertTriangle,
+  Rocket,
+  CheckCircle2,
+  ChevronDown,
+  FileDown,
+  MapPin,
+  Store,
+  Tags,
+} from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { getCurrentEmployee } from "@/lib/auth/server";
 import { editableDepts } from "@/lib/auth/credentials";
@@ -20,7 +30,12 @@ import { getReportConfig } from "@/lib/report/report-config-store";
 import { FinalizeReportButton } from "@/components/report/finalize-report-button";
 import { ReportCopyLinkButton } from "@/components/report/report-copy-link-button";
 import { SendToReviewButton } from "@/components/send-to-review-button";
-import type { FetchStatus } from "@/lib/report/report-types";
+import {
+  ECOM_METRIC_KEYS,
+  isEcomCellUnresolved,
+  isUnresolved,
+  type FetchStatus,
+} from "@/lib/report/report-types";
 
 export const dynamic = "force-dynamic";
 
@@ -60,10 +75,10 @@ function gbpHint(s: FetchStatus): string {
     case "no-location":
       return "Google Business Profile: a API respondeu, mas não encontrei a ficha deste cliente pela correspondência do website. Confirma o website na ficha GBP ou envia o location ID para eu fixar.";
     case "partial":
-      return `Google Business Profile: a ficha principal respondeu, mas há fichas adicionais sem dados. ${s.message ?? ""} Confirma o Location ID de cada uma em «Fichas do Google Business Profile», ou preenche os valores dessa unidade à mão abaixo.`;
+      return `Google Business Profile: a ficha principal respondeu, mas há fichas adicionais sem dados. ${s.message ?? ""} Confirma o Location ID de cada uma em «Fichas do Google Business Profile», ou preenche os valores dessa unidade à mão.`;
     case "error":
       if (s.message?.includes("429")) {
-        return "Google Business Profile: a API está ligada, mas a Google ainda não atribuiu quota ao projeto (429). O acesso está aprovado — falta só a quota de pedidos. Por agora preenche os cliques do GBP manualmente abaixo; para automatizar, é preciso pedir aumento de quota da Business Profile API no Google Cloud (APIs & Services → Quotas).";
+        return "Google Business Profile: a API está ligada, mas a Google ainda não atribuiu quota ao projeto (429). Preenche os cliques do GBP manualmente por agora.";
       }
       return `Google Business Profile: ${s.message ?? "erro"}. Se o acesso à Business Profile API ainda estiver a ser aprovado pelo Google, é normal — usa o preenchimento manual entretanto.`;
     default:
@@ -85,6 +100,35 @@ function SourceChip({ name, s }: { name: string; s: FetchStatus }) {
       <span className="font-semibold">{name}</span>
       <span className="opacity-75">{SOURCE_LABEL[s.status] ?? s.status}</span>
     </span>
+  );
+}
+
+/** Bloco de configuração fechado por defeito. Estes cartões afinam-se uma vez
+ *  por cliente e depois estorvam — a v77.0 tinha-os sempre abertos e a página
+ *  lia-se como um manual. O `<details>` nativo dispensa JS. */
+function ConfigDisclosure({
+  icon: Icon,
+  title,
+  hint,
+  children,
+}: {
+  icon: typeof Tags;
+  title: string;
+  hint: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <details className="group mb-3 rounded-2xl border border-white/10 bg-white/[0.025]">
+      <summary className="flex cursor-pointer select-none list-none items-center gap-2.5 px-4 py-3 [&::-webkit-details-marker]:hidden">
+        <Icon className="h-4 w-4 shrink-0 text-[#b79bff]" />
+        <span className="text-[13px] font-semibold text-white/85">{title}</span>
+        <span className="min-w-0 flex-1 truncate text-right text-[11px] text-white/35">
+          {hint}
+        </span>
+        <ChevronDown className="h-4 w-4 shrink-0 text-white/35 transition group-open:rotate-180" />
+      </summary>
+      <div className="border-t border-white/8">{children}</div>
+    </details>
   );
 }
 
@@ -119,9 +163,37 @@ export default async function ReportPage({
   const label = periodFromKey(period).label;
   const publicPath = `/${slug}/preview/report/${period}`;
 
+  // Quanto falta validar — o número que dá sentido ao «Passo 1».
+  const pendingChannels = snapshot
+    ? snapshot.leads.channels.filter((c) => isUnresolved(c.metric)).length
+    : 0;
+  const ecomCurrent = snapshot?.ecom?.columns.find(
+    (c) => !c.yoy && c.key === snapshot.period,
+  );
+  const pendingEcom = ecomCurrent
+    ? ECOM_METRIC_KEYS.filter((k) => isEcomCellUnresolved(ecomCurrent.cells[k]))
+        .length
+    : 0;
+  const pendingTotal = pendingChannels + pendingEcom;
+
+  // Resumo curto de cada bloco de configuração, para se ler fechado.
+  const eventsSummary = [
+    ...Object.values(reportConfig.eventMap).flat(),
+    ...reportConfig.extraLeadEvents.map((e) => e.label),
+  ]
+    .slice(0, 3)
+    .join(", ");
+  const gbpSummary =
+    reportConfig.extraGbpProfiles.length > 0
+      ? `${reportConfig.extraGbpProfiles.length + 1} fichas`
+      : "1 ficha (auto)";
+  const shopifySummary = reportConfig.shopifyAccessToken
+    ? `${reportConfig.shopifyShopDomain ?? "loja"} · ligada`
+    : "por ligar (opcional)";
+
   return (
     <PageShell wide backHref={`/seo/${slug}`} backLabel={client.title}>
-      <div className="mx-auto max-w-3xl">
+      <div className="mx-auto max-w-[1560px]">
         <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
           <div>
             <Link
@@ -133,6 +205,11 @@ export default async function ReportPage({
             </Link>
             <h1 className="mt-1 text-2xl font-semibold tracking-tight text-white">
               Relatório Mensal · <span className="brand-gradient-text">{label}</span>
+              {snapshot?.kind === "ecommerce" && (
+                <span className="ml-3 align-middle rounded-full border border-[#783DF5]/40 bg-[#783DF5]/15 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-[#c9b2ff]">
+                  e-commerce
+                </span>
+              )}
             </h1>
           </div>
           {!readOnly && (
@@ -149,7 +226,7 @@ export default async function ReportPage({
         </div>
 
         {!snapshot ? (
-          <div className="brand-gradient-border rounded-2xl bg-white/[0.035] p-8 text-center backdrop-blur-md">
+          <div className="brand-gradient-border mx-auto max-w-3xl rounded-2xl bg-white/[0.035] p-8 text-center backdrop-blur-md">
             <p className="text-white/75">
               Ainda não existe relatório para <b>{label}</b>.
             </p>
@@ -162,142 +239,179 @@ export default async function ReportPage({
               </div>
             )}
           </div>
+        ) : readOnly ? (
+          <div className="mx-auto max-w-3xl">
+            <ReportDocument snapshot={snapshot} variant="internal" />
+          </div>
         ) : (
-          <>
-            {/* Internal provenance strip — never shown to the client. */}
-            <div className="mb-4 flex flex-wrap items-center gap-2">
-              <SourceChip name="GA4" s={snapshot.fetch.ga4} />
-              <SourceChip name="GSC" s={snapshot.fetch.gsc} />
-              <SourceChip name="GBP" s={snapshot.fetch.gbp} />
-              {snapshot.ecom && (
-                <>
-                  <SourceChip name="E-comm GA4" s={snapshot.ecom.fetch.ga4} />
-                  <SourceChip name="Shopify" s={snapshot.ecom.fetch.shopify} />
-                </>
-              )}
-            </div>
-
-            {!readOnly && !snapshot.fetch.gbp.ok && (
-              <div className="mb-4 flex items-start gap-2.5 rounded-xl border border-white/12 bg-white/[0.03] px-4 py-3 text-[12.5px] leading-relaxed text-white/65">
-                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-white/40" />
-                <span>{gbpHint(snapshot.fetch.gbp)}</span>
-              </div>
-            )}
-
-            {!readOnly && (
-              <>
-                {snapshot.status === "draft" && (
-                  <div className="mb-4 flex items-start gap-2.5 rounded-xl border border-amber-400/25 bg-amber-500/[0.07] px-4 py-3 text-[13px] text-amber-100/90">
-                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" />
-                    <span>
-                      <b>Passo 1 — preencher os dados.</b> Há métricas por validar.
-                      Preenche os valores em falta ou marca-os N/A abaixo; o cliente
-                      nunca vê métricas não validadas.
-                    </span>
-                  </div>
+          /* Dois painéis a partir de xl: preencher à esquerda, documento à
+             direita — o consultor guarda um valor e vê logo onde ele cai,
+             sem fazer scroll por um manual inteiro. */
+          <div className="gap-6 xl:grid xl:grid-cols-[480px_minmax(0,1fr)] xl:items-start">
+            <div className="min-w-0 pb-4 xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:overflow-y-auto xl:pr-1">
+              {/* Proveniência das fontes — interno, nunca no documento. */}
+              <div className="mb-3 flex flex-wrap items-center gap-1.5">
+                <SourceChip name="GA4" s={snapshot.fetch.ga4} />
+                <SourceChip name="GSC" s={snapshot.fetch.gsc} />
+                <SourceChip name="GBP" s={snapshot.fetch.gbp} />
+                {snapshot.ecom && (
+                  <>
+                    <SourceChip name="E-comm" s={snapshot.ecom.fetch.ga4} />
+                    <SourceChip name="Shopify" s={snapshot.ecom.fetch.shopify} />
+                  </>
                 )}
+              </div>
 
-                {/* Passo 2 — dados manuais */}
-                <ReportManualInputs
+              {!snapshot.fetch.gbp.ok && (
+                <details className="mb-3 rounded-xl border border-white/12 bg-white/[0.03]">
+                  <summary className="flex cursor-pointer select-none list-none items-center gap-2 px-3.5 py-2.5 text-[12px] text-white/60 [&::-webkit-details-marker]:hidden">
+                    <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-white/40" />
+                    GBP sem dados automáticos — porquê?
+                  </summary>
+                  <p className="border-t border-white/8 px-3.5 py-2.5 text-[12px] leading-relaxed text-white/55">
+                    {gbpHint(snapshot.fetch.gbp)}
+                  </p>
+                </details>
+              )}
+
+              {/* Passo 1 — uma linha com o número, não um parágrafo. */}
+              {snapshot.status === "draft" ? (
+                <div className="mb-3 flex items-center gap-2.5 rounded-xl border border-amber-400/25 bg-amber-500/[0.07] px-3.5 py-2.5 text-[12.5px] text-amber-100/90">
+                  <AlertTriangle className="h-4 w-4 shrink-0 text-amber-300" />
+                  <span>
+                    <b>Passo 1 — preencher.</b>{" "}
+                    {pendingTotal > 0
+                      ? `${pendingTotal} ${pendingTotal === 1 ? "métrica" : "métricas"} por validar.`
+                      : "Há métricas por validar abaixo."}
+                  </span>
+                </div>
+              ) : (
+                <div className="mb-3 flex items-center gap-2.5 rounded-xl border border-emerald-400/25 bg-emerald-500/[0.06] px-3.5 py-2.5 text-[12.5px] text-emerald-100/90">
+                  <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-300" />
+                  Dados validados — pronto para finalizar.
+                </div>
+              )}
+
+              {/* Passo 2 — dados manuais */}
+              <ReportManualInputs
+                slug={slug}
+                period={period}
+                channels={snapshot.leads.channels}
+                notes={snapshot.notes}
+              />
+
+              {/* Relatório e-commerce: tabela de conversão + listas */}
+              {snapshot.ecom && (
+                <ReportEcomInputs
                   slug={slug}
                   period={period}
-                  channels={snapshot.leads.channels}
-                  notes={snapshot.notes}
+                  ecom={snapshot.ecom}
                 />
+              )}
 
-                {/* Relatório e-commerce: tabela de conversão + listas */}
-                {snapshot.ecom && (
-                  <ReportEcomInputs
-                    slug={slug}
-                    period={period}
-                    ecom={snapshot.ecom}
-                  />
-                )}
-
-                {/* Que eventos GA4 contam como lead para este cliente */}
+              {/* Configuração do cliente — afinada uma vez, depois fechada. */}
+              <div className="mb-1 mt-5 text-[11px] font-semibold uppercase tracking-[0.16em] text-white/35">
+                Configuração do cliente
+              </div>
+              <ConfigDisclosure
+                icon={Tags}
+                title="Eventos de lead no GA4"
+                hint={eventsSummary || "por configurar"}
+              >
                 <ReportLeadEvents
                   slug={slug}
                   eventMap={reportConfig.eventMap}
                   extraLeadEvents={reportConfig.extraLeadEvents}
+                  bare
                 />
-
-                {/* Ligação Shopify — só faz sentido num cliente e-commerce */}
-                {snapshot.kind === "ecommerce" && (
+              </ConfigDisclosure>
+              <ConfigDisclosure
+                icon={MapPin}
+                title="Fichas do Google Business Profile"
+                hint={gbpSummary}
+              >
+                <ReportGbpProfiles
+                  slug={slug}
+                  gbpMainLabel={reportConfig.gbpMainLabel}
+                  extraGbpProfiles={reportConfig.extraGbpProfiles}
+                  bare
+                />
+              </ConfigDisclosure>
+              {snapshot.kind === "ecommerce" && (
+                <ConfigDisclosure
+                  icon={Store}
+                  title="Ligação Shopify"
+                  hint={shopifySummary}
+                >
                   <ReportShopifyConfig
                     slug={slug}
                     shopDomain={reportConfig.shopifyShopDomain}
                     currency={reportConfig.currency}
                     tokenSet={Boolean(reportConfig.shopifyAccessToken)}
+                    bare
                   />
-                )}
+                </ConfigDisclosure>
+              )}
 
-                {/* Uma ficha GBP por unidade, para clientes com várias */}
-                <ReportGbpProfiles
-                  slug={slug}
-                  gbpMainLabel={reportConfig.gbpMainLabel}
-                  extraGbpProfiles={reportConfig.extraGbpProfiles}
-                />
-
-                {/* Passo 3 — finalizar + ações do cliente (gated) */}
-                <div className="brand-gradient-border mb-4 rounded-2xl bg-white/[0.035] p-5 backdrop-blur-md">
-                  <div className="mb-3 flex items-center gap-2">
-                    <Rocket className="h-4 w-4 text-[#b79bff]" />
-                    <h3 className="text-sm font-semibold text-white/85">
-                      Passo 3 — Finalizar &amp; partilhar
-                    </h3>
-                  </div>
-
-                  {snapshot.finalizedAt ? (
-                    <>
-                      <p className="mb-4 inline-flex items-center gap-1.5 rounded-lg border border-emerald-400/25 bg-emerald-500/10 px-3 py-1.5 text-[12.5px] text-emerald-100/90">
-                        <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-300" />
-                        Finalizado em {formatDate(snapshot.finalizedAt)} · anunciado no{" "}
-                        #client-wins
-                      </p>
-                      <div className="mb-4 flex flex-wrap items-center gap-2">
-                        <a
-                          href={`/seo/${slug}/report/${period}?print=true`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 rounded-md border border-white/15 bg-white/[0.04] px-3 py-1.5 text-[12px] font-medium text-white/85 transition hover:border-white/30 hover:bg-white/[0.08]"
-                        >
-                          <FileDown className="h-3.5 w-3.5" />
-                          Gerar PDF
-                        </a>
-                        <ReportCopyLinkButton path={publicPath} />
-                        <SendToReviewButton
-                          clientSlug={slug}
-                          task={`Relatório Mensal — ${label}`}
-                          category="Monthly Report"
-                          docLink={publicPath}
-                          sourceType="Monthly Report"
-                          label="Enviar para aprovação"
-                        />
-                      </div>
-                      <FinalizeReportButton slug={slug} period={period} finalized />
-                    </>
-                  ) : (
-                    <>
-                      <p className="mb-4 text-[12px] leading-relaxed text-white/45">
-                        Depois de preencher os dados acima, finaliza o relatório. Só ao
-                        finalizar é disparado o aviso no <b>#client-wins</b> e ficam
-                        disponíveis o <b>PDF</b>, o <b>link público</b> e o <b>envio para
-                        aprovação</b>. Regenerar o relatório volta a exigir finalizar
-                        (novo aviso).
-                      </p>
-                      <FinalizeReportButton
-                        slug={slug}
-                        period={period}
-                        finalized={false}
-                      />
-                    </>
-                  )}
+              {/* Passo 3 — finalizar + ações do cliente (gated) */}
+              <div className="brand-gradient-border mt-5 rounded-2xl bg-white/[0.035] p-5 backdrop-blur-md">
+                <div className="mb-3 flex items-center gap-2">
+                  <Rocket className="h-4 w-4 text-[#b79bff]" />
+                  <h3 className="text-sm font-semibold text-white/85">
+                    Passo 3 — Finalizar &amp; partilhar
+                  </h3>
                 </div>
-              </>
-            )}
 
-            <ReportDocument snapshot={snapshot} variant="internal" />
-          </>
+                {snapshot.finalizedAt ? (
+                  <>
+                    <p className="mb-4 inline-flex items-center gap-1.5 rounded-lg border border-emerald-400/25 bg-emerald-500/10 px-3 py-1.5 text-[12.5px] text-emerald-100/90">
+                      <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-300" />
+                      Finalizado em {formatDate(snapshot.finalizedAt)} · anunciado no{" "}
+                      #client-wins
+                    </p>
+                    <div className="mb-4 flex flex-wrap items-center gap-2">
+                      <a
+                        href={`/seo/${slug}/report/${period}?print=true`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 rounded-md border border-white/15 bg-white/[0.04] px-3 py-1.5 text-[12px] font-medium text-white/85 transition hover:border-white/30 hover:bg-white/[0.08]"
+                      >
+                        <FileDown className="h-3.5 w-3.5" />
+                        Gerar PDF
+                      </a>
+                      <ReportCopyLinkButton path={publicPath} />
+                      <SendToReviewButton
+                        clientSlug={slug}
+                        task={`Relatório Mensal — ${label}`}
+                        category="Monthly Report"
+                        docLink={publicPath}
+                        sourceType="Monthly Report"
+                        label="Enviar para aprovação"
+                      />
+                    </div>
+                    <FinalizeReportButton slug={slug} period={period} finalized />
+                  </>
+                ) : (
+                  <>
+                    <p className="mb-4 text-[12px] leading-relaxed text-white/45">
+                      Finalizar dispara o aviso no <b>#client-wins</b> e desbloqueia
+                      o <b>PDF</b>, o <b>link público</b> e o <b>envio para
+                      aprovação</b>. Regenerar volta a exigir finalizar.
+                    </p>
+                    <FinalizeReportButton
+                      slug={slug}
+                      period={period}
+                      finalized={false}
+                    />
+                  </>
+                )}
+              </div>
+            </div>
+
+            <div className="mt-6 min-w-0 xl:mt-0">
+              <ReportDocument snapshot={snapshot} variant="internal" />
+            </div>
+          </div>
         )}
       </div>
     </PageShell>

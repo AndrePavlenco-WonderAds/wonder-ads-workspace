@@ -249,12 +249,10 @@ export function ReportEcomInputs({
           E-commerce — Conversão orgânica
         </h3>
       </div>
-      <p className="mb-4 text-[12px] leading-relaxed text-white/45">
-        As células puxadas do GA4/GSC/Shopify aparecem bloqueadas com a fonte;
-        as restantes preenchem-se aqui ou marcam-se <b>N/A</b>. O ticket médio e a
-        conversão derivam-se sozinhos quando a receita e as transações existem.
-        Só a coluna de <b>{ecom.columns.find((c) => !c.yoy && c.key === period)?.label ?? "mês do relatório"}</b>{" "}
-        é obrigatória para finalizar.
+      <p className="mb-3 text-[12px] leading-relaxed text-white/45">
+        Preenche ou marca <b>N/A</b> as células livres — só a coluna de{" "}
+        <b>{ecom.columns.find((c) => !c.yoy && c.key === period)?.label ?? "mês do relatório"}</b>{" "}
+        é obrigatória. Ticket médio e conversão derivam-se sozinhos.
       </p>
 
       <div className="overflow-x-auto">

@@ -13,11 +13,15 @@ export function ReportShopifyConfig({
   shopDomain,
   currency,
   tokenSet,
+  bare = false,
 }: {
   slug: string;
   shopDomain: string | null;
   currency: string;
   tokenSet: boolean;
+  /** Sem cartão nem cabeçalho próprios — para viver dentro de um disclosure
+   *  que já traz ambos (v77.1). */
+  bare?: boolean;
 }) {
   const router = useRouter();
   const [domain, setDomain] = useState(shopDomain ?? "");
@@ -60,30 +64,47 @@ export function ReportShopifyConfig({
   }
 
   return (
-    <div className="brand-gradient-border mb-4 rounded-2xl bg-white/[0.035] p-5 backdrop-blur-md">
-      <div className="mb-3 flex items-center gap-2">
-        <Store className="h-4 w-4 text-[#b79bff]" />
-        <h3 className="text-sm font-semibold text-white/85">Ligação Shopify</h3>
-        {tokenSet ? (
-          <span className="rounded-full border border-emerald-400/25 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-200/90">
-            token gravado
-          </span>
-        ) : (
-          <span className="rounded-full border border-white/12 bg-white/[0.04] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white/40">
-            por ligar
-          </span>
-        )}
-      </div>
-      <p className="mb-4 text-[12px] leading-relaxed text-white/45">
-        Fallback de receita, transações e produtos quando o GA4 do cliente não
-        tem purchase tracking — os totais vêm da <b>loja inteira</b> (todos os
-        canais) e o relatório etiqueta-os como tal. No admin da loja:{" "}
-        <b>Settings → Apps and sales channels → Develop apps</b> → criar app com
-        os scopes <code className="rounded bg-white/10 px-1">read_orders</code> e{" "}
-        <code className="rounded bg-white/10 px-1">read_all_orders</code> (sem o
-        segundo só saem os últimos 60 dias — a coluna homóloga precisa de 1 ano)
-        e colar aqui o Admin API access token (<code className="rounded bg-white/10 px-1">shpat_…</code>).
+    <div
+      className={
+        bare
+          ? "p-5"
+          : "brand-gradient-border mb-4 rounded-2xl bg-white/[0.035] p-5 backdrop-blur-md"
+      }
+    >
+      {!bare && (
+        <div className="mb-3 flex items-center gap-2">
+          <Store className="h-4 w-4 text-[#b79bff]" />
+          <h3 className="text-sm font-semibold text-white/85">Ligação Shopify</h3>
+          {tokenSet ? (
+            <span className="rounded-full border border-emerald-400/25 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-200/90">
+              token gravado
+            </span>
+          ) : (
+            <span className="rounded-full border border-white/12 bg-white/[0.04] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white/40">
+              por ligar
+            </span>
+          )}
+        </div>
+      )}
+      <p className="mb-3 text-[12px] leading-relaxed text-white/45">
+        Fallback de receita, transações e produtos quando o GA4 não tem purchase
+        tracking — totais da <b>loja inteira</b> (todos os canais), etiquetados
+        como tal no relatório.
       </p>
+      <details className="mb-4 rounded-lg border border-white/10 bg-white/[0.02]">
+        <summary className="cursor-pointer select-none list-none px-3 py-2 text-[12px] text-white/55 transition hover:text-white/80 [&::-webkit-details-marker]:hidden">
+          Como criar o token na Shopify?
+        </summary>
+        <p className="border-t border-white/8 px-3 py-2.5 text-[12px] leading-relaxed text-white/50">
+          No admin da loja: <b>Settings → Apps and sales channels → Develop
+          apps</b> → criar app com os scopes{" "}
+          <code className="rounded bg-white/10 px-1">read_orders</code> e{" "}
+          <code className="rounded bg-white/10 px-1">read_all_orders</code> (sem
+          o segundo só saem 60 dias — a coluna homóloga precisa de 1 ano) e colar
+          aqui o Admin API access token (
+          <code className="rounded bg-white/10 px-1">shpat_…</code>).
+        </p>
+      </details>
 
       <div className="grid gap-3 sm:grid-cols-[1fr_1fr_92px]">
         <label className="block">

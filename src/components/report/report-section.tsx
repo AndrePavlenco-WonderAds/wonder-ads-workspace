@@ -11,7 +11,6 @@ import {
 import { ReportPeriodPicker } from "@/components/report/report-period-picker";
 import { formatDate } from "@/lib/dates";
 import type { ReportStatus } from "@/lib/report/report-types";
-import { GenerateReportButton } from "./generate-report-button";
 
 const STATUS_PILL: Record<ReportStatus, string> = {
   draft: "border-amber-400/30 bg-amber-500/[0.10] text-amber-200/90",
@@ -76,36 +75,28 @@ export async function ReportSection({
 
         {!readOnly && (
           <div className="mt-4">
-            {canDoCurrent ? (
-              <ReportPeriodPicker
-                slug={slug}
-                ecommerce={config.ecommerce}
-                closed={{
-                  key: next.key,
-                  label: next.label,
-                  coverage: null,
-                  alreadyGenerated: alreadyHasNext,
-                }}
-                current={{
-                  key: inProgress.key,
-                  label: inProgress.label,
-                  coverage: mtd.partial ? `1–${mtd.days}` : null,
-                  alreadyGenerated: reports.some(
-                    (r) => r.period === inProgress.key,
-                  ),
-                }}
-              />
-            ) : (
-              <GenerateReportButton
-                slug={slug}
-                period={next.key}
-                label={
-                  alreadyHasNext
-                    ? `Regenerar ${next.label}`
-                    : `Gerar ${next.label}`
-                }
-              />
-            )}
+            {/* O picker aparece SEMPRE — a escolha normal/e-commerce não pode
+                depender do dia do mês. Nos primeiros dias (cutoff de 3 dias),
+                o mês em curso fica visível mas desativado, com o porquê. */}
+            <ReportPeriodPicker
+              slug={slug}
+              ecommerce={config.ecommerce}
+              closed={{
+                key: next.key,
+                label: next.label,
+                coverage: null,
+                alreadyGenerated: alreadyHasNext,
+              }}
+              current={{
+                key: inProgress.key,
+                label: inProgress.label,
+                coverage: mtd.partial ? `1–${mtd.days}` : null,
+                alreadyGenerated: reports.some(
+                  (r) => r.period === inProgress.key,
+                ),
+                disabled: !canDoCurrent,
+              }}
+            />
           </div>
         )}
 
