@@ -12,6 +12,7 @@ import {
 import { getGa4MonthlyReport, type MetricPair } from "./ga4-report";
 import { getGa4EcomReport } from "./ga4-ecommerce";
 import { getGscMonthlyReport, getGscImpressionsByRange } from "@/lib/gsc";
+import { fetchGscAiBlock } from "./gsc-ai";
 import { getShopifyEcomReport } from "@/lib/shopify";
 import { listTargetKeywords } from "@/lib/target-keywords-store";
 import { fetchSerpstatRanks } from "@/lib/seo-tools/serpstat";
@@ -216,6 +217,11 @@ function aiLabel(source: string): string {
   if (s.includes("perplexity")) return "Perplexity";
   if (s.includes("copilot")) return "Copilot";
   if (s.includes("bing")) return "Bing Chat";
+  if (s.includes("deepseek")) return "DeepSeek";
+  if (s.includes("grok")) return "Grok";
+  if (s.includes("mistral")) return "Mistral";
+  if (s.includes("you.com")) return "You.com";
+  if (s.includes("phind")) return "Phind";
   return source;
 }
 
@@ -892,14 +898,16 @@ export async function buildMonthlyReport(
   const ecom = ecomRaw ? deriveEcomCells(ecomRaw) : null;
 
   // —— Google IA (GSC · Generative AI) ————————————————————————————
-  // O bloco existe em TODOS os relatórios novos. O valor do mês é manual
-  // (a Google não dá API — ver report-types.ts), mas o MoM e o histórico
-  // encadeiam-se sozinhos a partir do relatório do mês anterior em KV.
-  // QUANDO a API abrir, é AQUI que a puxada automática entra.
-  const prevSnap = await getReport(
-    slug,
-    trailingMonths(period.key, 2)[0].key,
-  ).catch(() => null);
+  // O bloco existe em TODOS os relatórios novos. Tenta-se SEMPRE puxar da
+  // API primeiro (ver gsc-ai.ts: a sonda de capacidade corre uma vez por
+  // mês e fica em cache); hoje a Google não a expõe, por isso o valor do
+  // mês vem do CSV colado. O MoM e o histórico são automáticos nos dois
+  // casos, e no dia em que a API abrir o bloco preenche-se sozinho sem
+  // mexer em código.
+  const [prevSnap, aiPull] = await Promise.all([
+    getReport(slug, trailingMonths(period.key, 2)[0].key).catch(() => null),
+    fetchGscAiBlock(slug, windows.current, config.gscSiteUrl),
+  ]);
   const prevAiImpr = prevSnap?.gscAi?.impressions;
   const aiHistory = prevAiImpr
     ? [
@@ -908,14 +916,23 @@ export async function buildMonthlyReport(
       ].slice(-11)
     : [];
   const gscAi: GscAiBlock = {
-    impressions: {
-      ...pendingMetric("count", "manual"),
-      previous: prevAiImpr?.value ?? null,
-      ...(aiHistory.length ? { history: aiHistory } : {}),
-    },
-    topPages: [],
-    byDevice: [],
-    updatedAt: null,
+    impressions: aiPull
+      ? {
+          value: aiPull.impressions,
+          previous: prevAiImpr?.value ?? null,
+          source: "gsc",
+          instrumented: true,
+          unit: "count",
+          ...(aiHistory.length ? { history: aiHistory } : {}),
+        }
+      : {
+          ...pendingMetric("count", "manual"),
+          previous: prevAiImpr?.value ?? null,
+          ...(aiHistory.length ? { history: aiHistory } : {}),
+        },
+    topPages: aiPull?.topPages ?? [],
+    byDevice: aiPull?.byDevice ?? [],
+    updatedAt: aiPull ? nowMs : null,
   };
 
   const ga4Fetch: FetchStatus =
@@ -1130,17 +1147,33 @@ export async function buildMonthlyReport(
       ? {
           totalSessions: {
             value: ga4.ai.totalSessions,
-            previous: null,
+            previous: ga4.ai.previousTotalSessions,
             source: "ga4" as const,
             instrumented: true,
             unit: "count" as const,
           },
+          // O número oficial da Google (canal nativo «AI Assistant»), à
+          // parte do consolidado. Ausente nas propriedades que ainda não
+          // têm o canal — que é diferente de terem zero.
+          ...(ga4.ai.channelSessions !== null
+            ? {
+                channelSessions: {
+                  value: ga4.ai.channelSessions,
+                  previous: ga4.ai.previousChannelSessions,
+                  source: "ga4" as const,
+                  instrumented: true,
+                  unit: "count" as const,
+                },
+              }
+            : {}),
           sources: ga4.ai.sources.map((s) => ({
             source: s.source,
             label: aiLabel(s.source),
             sessions: s.sessions,
             users: s.users,
             engagedSessions: s.engagedSessions,
+            previousSessions: s.previousSessions,
+            native: s.native,
           })),
         }
       : { totalSessions: pendingMetric("count"), sources: [] };

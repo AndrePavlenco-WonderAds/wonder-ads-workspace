@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.4",
+    date: "2026-09-02",
+    title: "AI Visibility com o canal oficial da Google — e o Google IA a puxar-se sozinho no dia em que a API abrir",
+    highlights: [
+      "**🤖 O GA4 tem um canal novo e o relatório passa a usá-lo.** Desde maio de 2026 a Google classifica o tráfego de assistentes num canal próprio, «AI Assistant». O AI Visibility passa a segui-lo — é a classificação da própria Google — somado às origens que ela ainda não classifica. Confirmado nas contas reais: WhiteClinic 48 sessões em agosto (47 pelo canal oficial), GOTU 856 (855).",
+      "**📈 A secção ganhou variação.** O total de sessões de IA passa a ter comparação com o mês anterior (antes não tinha nenhuma) e cada assistente mostra a sua própria subida ou descida. Origens a zero deixam de ocupar espaço, mas continuam a contar para a variação.",
+      "**🔍 Estávamos a perder sessões.** O padrão antigo exigia `perplexity.ai` e o GA4 regista muitas vezes só `perplexity` (sem domínio), que cai em «Unassigned» — essas visitas nunca chegavam ao relatório. Lista alargada (Perplexity sem domínio, DeepSeek, Grok, Mistral, You.com, Phind) e aplicada também aos clientes cuja configuração estava congelada em KV.",
+      "**✨ Google IA fica automático sozinho.** A app testa uma vez por mês se a Search Analytics API já expõe o relatório Generative AI e, no dia em que a Google abrir, o bloco passa a preencher-se sem tocar em código. Até lá continua o CSV colado — verificámos contra a API real (6 propriedades, 12 valores de `type`, 9 de `searchAppearance`, 6 dimensões, v1/v1beta) que hoje não existe mesmo forma de o puxar.",
+    ],
+  },
+  {
     version: "77.3",
     date: "2026-09-02",
     title: "Google IA no Relatório Mensal — o relatório Generative AI do Search Console",

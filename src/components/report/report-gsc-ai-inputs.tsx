@@ -85,6 +85,8 @@ export function ReportGscAiInputs({
 }) {
   const router = useRouter();
   const m = gscAi.impressions;
+  // Puxado da API (o dia em que a Google a abrir) → nada para fazer aqui.
+  const auto = m.source === "gsc" && m.value !== null;
   const [mode, setMode] = useState<"value" | "na" | "pending">(
     m.manualNa ? "na" : m.value !== null ? "value" : "pending",
   );
@@ -167,7 +169,11 @@ export function ReportGscAiInputs({
         <h3 className="text-sm font-semibold text-white/85">
           Google IA — AI Overviews &amp; AI Mode
         </h3>
-        {mode === "value" && value ? (
+        {auto ? (
+          <span className="rounded-full border border-emerald-400/25 bg-emerald-500/10 px-2 py-0.5 text-[10.5px] font-semibold text-emerald-200/90">
+            puxado da API ✓
+          </span>
+        ) : mode === "value" && value ? (
           <span className="rounded-full border border-emerald-400/25 bg-emerald-500/10 px-2 py-0.5 text-[10.5px] font-semibold text-emerald-200/90">
             preenchido
           </span>
@@ -182,9 +188,18 @@ export function ReportGscAiInputs({
         )}
       </div>
       <p className="mb-3 text-[12px] leading-relaxed text-white/45">
-        Cola o export do relatório <b>Generative AI</b> do Search Console — o
-        total do mês, as páginas e os dispositivos preenchem-se sozinhos. MoM e
-        histórico vêm do relatório anterior, automáticos.
+        {auto ? (
+          <>
+            A Google abriu a API deste relatório e os dados já vêm sozinhos —
+            nada para preencher. Podes na mesma corrigir os valores abaixo.
+          </>
+        ) : (
+          <>
+            Cola o export do relatório <b>Generative AI</b> do Search Console — o
+            total do mês, as páginas e os dispositivos preenchem-se sozinhos. MoM
+            e histórico vêm do relatório anterior, automáticos.
+          </>
+        )}
       </p>
 
       <details className="mb-3 rounded-lg border border-white/10 bg-white/[0.02]">

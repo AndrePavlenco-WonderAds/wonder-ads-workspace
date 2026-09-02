@@ -53,9 +53,27 @@ export type Ga4AiSource = {
   sessions: number;
   users: number;
   engagedSessions: number;
+  /** Mês anterior, para a variação por origem. */
+  previousSessions: number | null;
+  /** A Google pôs esta origem no canal nativo «AI Assistant». */
+  native: boolean;
 };
 
-export type Ga4AiBlock = { sources: Ga4AiSource[]; totalSessions: number };
+export type Ga4AiBlock = {
+  sources: Ga4AiSource[];
+  totalSessions: number;
+  previousTotalSessions: number | null;
+  /** Sessões do canal nativo «AI Assistant» (Default Channel Group). null
+   *  quando a propriedade ainda não tem o canal (contas antigas). */
+  channelSessions: number | null;
+  previousChannelSessions: number | null;
+};
+
+/** O canal que a Google criou em maio de 2026 no Default Channel Group.
+ *  Verificado nas propriedades dos clientes a 2026-09-02: o valor devolvido
+ *  pela API é exatamente «AI Assistant». As variantes ficam listadas porque
+ *  o nome é uma string e a Google já renomeou canais antes. */
+const AI_CHANNEL_NAMES = ["AI Assistant", "AI assistant", "AI Assistants"];
 
 /** Série mensal para o gráfico de evolução. Uma entrada por mês pedido, na
  *  mesma ordem (mais antigo primeiro); `null` = mês sem dados na propriedade
@@ -190,7 +208,7 @@ export async function getGa4MonthlyReport(
     : null;
 
   try {
-    const [organicRows, googleOrgRows, leadRows, probeRows, aiRows, trendOrganicRows, trendLeadRows] =
+    const [organicRows, googleOrgRows, leadRows, probeRows, aiRows, aiChannelRows, trendOrganicRows, trendLeadRows] =
       await Promise.all([
         // Organic Search channel — month vs. prior month.
         runReport(token, propertyId, {
@@ -252,9 +270,10 @@ export async function getGa4MonthlyReport(
             },
           },
         }),
-        // AI Visibility — sessions by source (current month only).
+        // AI Visibility — sessions by source, mês e mês anterior (v77.4: o
+        // bloco passou a ter variação, que antes não tinha).
         runReport(token, propertyId, {
-          dateRanges: [{ startDate: current.startDate, endDate: current.endDate }],
+          dateRanges: dateRanges(current, previous),
           dimensions: [{ name: "sessionSource" }],
           metrics: [
             { name: "sessions" },
@@ -264,6 +283,31 @@ export async function getGa4MonthlyReport(
           orderBys: [{ metric: { metricName: "sessions" }, desc: true }],
           limit: 250,
         }),
+        // CANAL NATIVO DE IA (v77.4). Desde maio de 2026 a Google classifica
+        // o tráfego de assistentes num canal próprio do Default Channel
+        // Group — é a classificação DELA, e por isso a autoritativa. Puxa-se
+        // por origem (com o mês anterior) para o relatório poder dizer
+        // quais assistentes trouxeram gente e quanto cresceram.
+        //
+        // Best-effort: uma propriedade antiga que ainda não tenha o canal
+        // devolve zero linhas, e o bloco cai na deteção por domínio.
+        runReport(token, propertyId, {
+          dateRanges: dateRanges(current, previous),
+          dimensions: [{ name: "sessionSource" }],
+          metrics: [
+            { name: "sessions" },
+            { name: "totalUsers" },
+            { name: "engagedSessions" },
+          ],
+          dimensionFilter: {
+            filter: {
+              fieldName: "sessionDefaultChannelGroup",
+              inListFilter: { values: AI_CHANNEL_NAMES },
+            },
+          },
+          orderBys: [{ metric: { metricName: "sessions" }, desc: true }],
+          limit: 100,
+        }).catch(() => [] as Row[]),
         // Evolução mensal — orgânico. Best-effort: se falhar, o relatório
         // sai na mesma, apenas sem o gráfico.
         trendRange
@@ -354,6 +398,13 @@ export async function getGa4MonthlyReport(
     };
 
     // --- AI Visibility ---
+    //
+    // DUAS FONTES DE VERDADE, UNIDAS (v77.4). O canal nativo «AI Assistant»
+    // é a classificação da própria Google e manda; a lista de domínios
+    // apanha o que ela ainda deixa por classificar — verificado nas contas
+    // dos clientes: `perplexity` (sem domínio) cai em Unassigned, e
+    // `chatgpt.com / organic` cai em Organic Search. Sem a segunda rede,
+    // essas sessões desapareciam do relatório.
     const matchers = llmRegex
       .map((s) => {
         try {
@@ -363,21 +414,81 @@ export async function getGa4MonthlyReport(
         }
       })
       .filter((re): re is RegExp => re !== null);
-    const aiSources: Ga4AiSource[] = [];
-    for (const r of aiRows as Row[]) {
-      const source = realDims(r)[0] ?? "";
-      if (source && matchers.some((re) => re.test(source))) {
-        aiSources.push({
-          source,
-          sessions: num(r, 0),
-          users: num(r, 1),
-          engagedSessions: num(r, 2),
-        });
+
+    /** source → {cur, prev, users, engaged} a partir de linhas de 2 ranges. */
+    const collect = (rows: Row[]) => {
+      const map = new Map<
+        string,
+        { cur: number; prev: number; users: number; engaged: number }
+      >();
+      for (const r of rows) {
+        const source = realDims(r)[0] ?? "";
+        if (!source) continue;
+        const e = map.get(source) ?? { cur: 0, prev: 0, users: 0, engaged: 0 };
+        if (isPrevRow(r)) {
+          e.prev += num(r, 0);
+        } else {
+          e.cur += num(r, 0);
+          e.users += num(r, 1);
+          e.engaged += num(r, 2);
+        }
+        map.set(source, e);
       }
+      return map;
+    };
+
+    const nativeMap = collect(aiChannelRows as Row[]);
+    const allMap = collect(aiRows as Row[]);
+
+    const aiSources: Ga4AiSource[] = [];
+    const seenSource = new Set<string>();
+    // 1) O que a Google classificou como assistente de IA.
+    for (const [source, v] of nativeMap) {
+      seenSource.add(source);
+      aiSources.push({
+        source,
+        sessions: v.cur,
+        users: v.users,
+        engagedSessions: v.engaged,
+        previousSessions: v.prev,
+        native: true,
+      });
     }
+    // 2) O que a nossa lista apanha e a Google ainda não classificou.
+    for (const [source, v] of allMap) {
+      if (seenSource.has(source)) continue;
+      if (!matchers.some((re) => re.test(source))) continue;
+      aiSources.push({
+        source,
+        sessions: v.cur,
+        users: v.users,
+        engagedSessions: v.engaged,
+        previousSessions: v.prev,
+        native: false,
+      });
+    }
+    aiSources.sort((a, b) => b.sessions - a.sessions);
+
+    const sumPrev = (rows: Ga4AiSource[]) =>
+      rows.some((s) => s.previousSessions !== null)
+        ? rows.reduce((t, s) => t + (s.previousSessions ?? 0), 0)
+        : null;
+    const nativeRows = aiSources.filter((s) => s.native);
+    // Uma origem com zero sessões ESTE mês (mas com tráfego no anterior)
+    // continua a contar para o total do mês anterior — sem isso a variação
+    // ficava errada —, mas não se desenha: um cartão a dizer «0» não é
+    // informação nenhuma.
+    const shownSources = aiSources.filter((s) => s.sessions > 0);
     const ai: Ga4AiBlock = {
-      sources: aiSources,
+      sources: shownSources,
       totalSessions: aiSources.reduce((t, s) => t + s.sessions, 0),
+      previousTotalSessions: sumPrev(aiSources),
+      // null (e não 0) quando a propriedade nem sequer tem o canal — é
+      // «ainda não classificado», não «zero visitas».
+      channelSessions: nativeMap.size
+        ? nativeRows.reduce((t, s) => t + s.sessions, 0)
+        : null,
+      previousChannelSessions: nativeMap.size ? sumPrev(nativeRows) : null,
     };
 
     // --- Evolução mensal ---

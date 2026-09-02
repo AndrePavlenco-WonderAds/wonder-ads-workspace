@@ -941,10 +941,15 @@ export function ReportDocument({
           <SecLabel n={secN("ai")}>AI Visibility</SecLabel>
           <h3 className="wa-h3">{t("Visitantes vindos de assistentes de IA", "Visitors from AI assistants")}</h3>
           <p className="wa-method">
-            {t(
-              "Sessões cujo referral corresponde a domínios de assistentes de IA (ChatGPT, Gemini, Perplexity, Claude, Copilot…), segmentadas no Google Analytics 4 pela origem da sessão.",
-              "Sessions whose referral matches AI-assistant domains (ChatGPT, Gemini, Perplexity, Claude, Copilot…), segmented in Google Analytics 4 by session source.",
-            )}
+            {ai.channelSessions
+              ? t(
+                  "Visitas que chegaram ao site a partir de um assistente de IA. O número segue o canal «AI Assistant» do Google Analytics 4 — a classificação da própria Google — somado às origens que ela ainda não classifica (Perplexity, por exemplo, chega muitas vezes sem domínio identificado).",
+                  "Visits that arrived from an AI assistant. The figure follows Google Analytics 4's own “AI Assistant” channel — Google's own classification — plus the sources it doesn't classify yet (Perplexity, for instance, often arrives without an identified domain).",
+                )
+              : t(
+                  "Sessões cujo referral corresponde a domínios de assistentes de IA (ChatGPT, Gemini, Perplexity, Claude, Copilot…), segmentadas no Google Analytics 4 pela origem da sessão.",
+                  "Sessions whose referral matches AI-assistant domains (ChatGPT, Gemini, Perplexity, Claude, Copilot…), segmented in Google Analytics 4 by session source.",
+                )}
           </p>
           {ai.sources.length === 0 ? (
             <p className="wa-pending">
@@ -961,16 +966,45 @@ export function ReportDocument({
                 <span className="wa-ai-total-l">
                   {t("sessões de assistentes de IA no total", "total AI-assistant sessions")}
                 </span>
+                {showDeltas && <DeltaChip delta={metricDelta(ai.totalSessions, lang)} />}
               </div>
+              {ai.channelSessions?.value !== undefined &&
+                ai.channelSessions?.value !== null && (
+                  <p className="wa-ai-native">
+                    {t(
+                      `Destas, ${formatRaw(ai.channelSessions.value, "count", lang)} foram classificadas pela própria Google no canal «AI Assistant».`,
+                      `Of these, ${formatRaw(ai.channelSessions.value, "count", lang)} were classified by Google itself in the “AI Assistant” channel.`,
+                    )}
+                  </p>
+                )}
               <div className="wa-ai-grid">
                 {[...ai.sources]
                   .sort((a, b) => b.sessions - a.sessions)
-                  .map((s) => (
-                    <div className="wa-ai-card" key={s.source}>
-                      <div className="wa-ai-src">◆ {s.label}</div>
-                      <div className="wa-ai-sess">{formatRaw(s.sessions, "count", lang)}</div>
-                    </div>
-                  ))}
+                  .map((s) => {
+                    const prev = s.previousSessions;
+                    const growth =
+                      showDeltas && typeof prev === "number" && prev > 0
+                        ? ((s.sessions - prev) / prev) * 100
+                        : null;
+                    return (
+                      <div className="wa-ai-card" key={s.source}>
+                        <div className="wa-ai-src">◆ {s.label}</div>
+                        <div className="wa-ai-sess">{formatRaw(s.sessions, "count", lang)}</div>
+                        {growth !== null && Math.abs(growth) >= 1 && (
+                          <span
+                            className={`wa-delta ${growth > 0 ? "up" : "down"}`}
+                          >
+                            {growth > 0 ? "▲" : "▼"} {Math.abs(growth).toFixed(0)}%
+                          </span>
+                        )}
+                        {variant === "internal" && s.native === false && (
+                          <div className="wa-ai-flag">
+                            {t("fora do canal da Google", "outside Google's channel")}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
               </div>
             </>
           )}
@@ -1399,6 +1433,8 @@ const CSS = GEO_CSS + PRINT_CSS + `
 .wa-ai-card{border:1px solid rgba(120,61,245,.16);background:#fff;border-radius:11px;padding:.75rem .85rem;box-shadow:0 8px 22px -22px rgba(23,22,45,.5);}
 .wa-ai-src{font-size:.72rem;font-weight:700;color:#6b34c9;}
 .wa-ai-sess{font-size:1.4rem;font-weight:800;color:var(--ink);line-height:1.1;margin:.15rem 0 .1rem;font-variant-numeric:tabular-nums;}
+.wa-ai-native{margin:-.45rem 0 .85rem;font-size:.76rem;color:var(--muted);}
+.wa-ai-flag{margin-top:.2rem;font-size:.6rem;letter-spacing:.04em;text-transform:uppercase;color:#a08fb8;font-weight:700;}
 
 /* Keyword stats */
 .wa-kstats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:.65rem;margin-top:.35rem;}

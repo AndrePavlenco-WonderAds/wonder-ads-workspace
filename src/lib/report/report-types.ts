@@ -150,6 +150,13 @@ export type AiSourceRow = {
   sessions: number;
   users: number;
   engagedSessions: number;
+  /** Mês anterior, para variação por fonte. Ausente nos relatórios ≤ v77.3. */
+  previousSessions?: number | null;
+  /** A Google classificou esta origem no canal nativo «AI Assistant»
+   *  (Default Channel Group, desde maio de 2026). false = apanhada pela
+   *  nossa lista de domínios, que cobre o que a Google ainda deixa em
+   *  Unassigned/Referral (ex.: `perplexity` sem domínio). */
+  native?: boolean;
 };
 
 /** Month-end keyword footprint from GSC. */
@@ -640,7 +647,12 @@ export type MonthlyReportSnapshot = {
    *  v76.32 e quando o GA4 não respondeu. */
   trend?: ReportTrend;
   ai: {
+    /** Consolidado: canal nativo da Google ∪ origens que ela ainda não
+     *  classifica. Com `previous` desde a v77.4 (antes era sempre null). */
     totalSessions: ReportMetric;
+    /** Só o canal nativo «AI Assistant» do GA4 — o número oficial da
+     *  Google. Ausente nos relatórios gerados antes da v77.4. */
+    channelSessions?: ReportMetric;
     sources: AiSourceRow[];
   };
   gbp: {

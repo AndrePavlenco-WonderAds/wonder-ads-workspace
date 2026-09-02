@@ -102,6 +102,30 @@ export const DEFAULT_LEAD_EVENT_MAP: LeadEventMap = {
  *  sessionSource against these; kept configurable so new LLM surfaces are a
  *  one-line add, not a code change. */
 export const DEFAULT_LLM_REGEX: string[] = [
+  "chatgpt",
+  "openai",
+  // «perplexity» SEM exigir o domínio: nas contas dos clientes o GA4 regista
+  // `perplexity / (not set)`, que cai em Unassigned — com o padrão antigo
+  // (`perplexity\.ai`) essas sessões desapareciam do relatório (v77.4).
+  "perplexity",
+  "gemini",
+  "claude\\.ai",
+  "copilot",
+  "\\.bing\\.com/chat",
+  "deepseek",
+  "grok",
+  "mistral\\.ai",
+  // Ancorado ao início do host ou a um ponto: sem isto apanhava
+  // «peekyou.com», que apareceu mesmo numa conta de cliente no teste.
+  "(^|\\.)you\\.com",
+  "phind",
+];
+
+/** A lista até à v77.3. Ficou congelada no KV de todos os clientes cuja
+ *  config foi gravada alguma vez (o merge reescreve o objeto inteiro), por
+ *  isso é preciso reconhecê-la e substituí-la — senão a correção do
+ *  «perplexity» sem domínio nunca chegava a esses clientes. */
+const LEGACY_LLM_REGEX = [
   "chatgpt\\.com",
   "chat\\.openai\\.com",
   "gemini\\.google\\.com",
@@ -110,6 +134,9 @@ export const DEFAULT_LLM_REGEX: string[] = [
   "copilot\\.microsoft\\.com",
   "\\.bing\\.com/chat",
 ];
+
+const sameList = (a: string[], b: string[]) =>
+  a.length === b.length && [...a].sort().join("|") === [...b].sort().join("|");
 
 const ALL_SECTIONS: ReportSection[] = [
   "leads",
@@ -282,7 +309,10 @@ function normalizeConfig(raw: unknown, slug: string): ReportConfig {
     reportLang: o.reportLang === "pt" || o.reportLang === "en" ? o.reportLang : null,
     shopifyShopDomain: normalizeShopDomain(o.shopifyShopDomain),
     shopifyAccessToken: asStr(o.shopifyAccessToken),
-    llmRegex: regex && regex.length ? regex : base.llmRegex,
+    llmRegex:
+      regex && regex.length && !sameList(regex, LEGACY_LLM_REGEX)
+        ? regex
+        : base.llmRegex,
     sectionsEnabled: sections,
     updatedAt: typeof o.updatedAt === "number" ? o.updatedAt : 0,
   };
