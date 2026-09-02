@@ -11,6 +11,10 @@ import { getClientBySlug } from "@/lib/notion";
 import { buildMonthlyReport } from "@/lib/report/report-build";
 import { saveReport } from "@/lib/report/report-store";
 import {
+  getReportConfig,
+  saveReportConfig,
+} from "@/lib/report/report-config-store";
+import {
   isValidPeriodKey,
   isPeriodReportable,
   previousCompleteMonth,
@@ -38,12 +42,25 @@ export async function POST(
   // Any period the consultant asks for — the last CLOSED month (default) or
   // the month still in progress, which yields a month-to-date report.
   let period: string;
+  let ecommerce: boolean | undefined;
+  let rememberKind = false;
   try {
-    const body = (await req.json().catch(() => ({}))) as { period?: unknown };
+    const body = (await req.json().catch(() => ({}))) as {
+      period?: unknown;
+      /** Relatório e-commerce (tabela de conversão + páginas + produtos) em
+       *  vez do normal. Sem isto, fica o tipo configurado do cliente. */
+      ecommerce?: unknown;
+      /** True só no gerador da página do cliente — a escolha deliberada de
+       *  tipo, que fica gravada no report-config para os meses seguintes.
+       *  Regenerar um relatório antigo NÃO regrava o tipo do cliente. */
+      rememberKind?: unknown;
+    };
     period =
       typeof body.period === "string" && isValidPeriodKey(body.period)
         ? body.period
         : previousCompleteMonth().key;
+    if (typeof body.ecommerce === "boolean") ecommerce = body.ecommerce;
+    rememberKind = body.rememberKind === true;
   } catch {
     period = previousCompleteMonth().key;
   }
@@ -62,11 +79,27 @@ export async function POST(
   }
 
   try {
+    // A escolha deliberada do gerador fica gravada para os meses seguintes;
+    // um "Regenerar" apenas fixa o tipo daquele relatório, sem tocar no
+    // config do cliente.
+    if (rememberKind && ecommerce !== undefined) {
+      const config = await getReportConfig(slug);
+      if (config.ecommerce !== ecommerce) {
+        await saveReportConfig(slug, { ecommerce }, Date.now());
+      }
+    }
+
     // Generating only pulls data + persists the draft. The #client-wins
     // announcement is deliberately NOT fired here — it fires when the
     // consultant clicks "Finalizar" (see ../[period]/finalize), after the
     // manual data is filled in.
-    const snapshot = await buildMonthlyReport(slug, client.title, period);
+    const snapshot = await buildMonthlyReport(
+      slug,
+      client.title,
+      period,
+      Date.now(),
+      ecommerce !== undefined ? { ecommerce } : {},
+    );
     await saveReport(snapshot);
     revalidatePath(`/seo/${slug}`);
     revalidatePath(`/seo/${slug}/report/${period}`);

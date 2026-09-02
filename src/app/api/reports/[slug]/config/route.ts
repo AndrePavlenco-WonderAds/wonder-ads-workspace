@@ -20,6 +20,7 @@ import {
   LEAD_EVENT_KEYS,
   MAX_EVENT_ALIASES,
   type LeadEventMap,
+  type ReportConfig,
 } from "@/lib/report/report-config-store";
 import {
   MAX_CUSTOM_LEAD_EVENTS,
@@ -35,6 +36,12 @@ async function guard() {
   return Boolean(employee && editableDepts(employee).includes("seo"));
 }
 
+/** O token da Shopify NUNCA volta ao browser — só o facto de existir. */
+function maskConfig(config: ReportConfig) {
+  const { shopifyAccessToken, ...rest } = config;
+  return { ...rest, shopifyAccessToken: null, shopifyTokenSet: Boolean(shopifyAccessToken) };
+}
+
 export async function GET(
   _req: Request,
   { params }: { params: Promise<{ slug: string }> },
@@ -43,7 +50,7 @@ export async function GET(
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
   const { slug } = await params;
-  return NextResponse.json(await getReportConfig(slug));
+  return NextResponse.json(maskConfig(await getReportConfig(slug)));
 }
 
 /** Accepts a list or a single comma/newline-separated string per lead type. */
@@ -82,6 +89,10 @@ export async function PUT(
     gbpLocationId?: unknown;
     ga4PropertyId?: unknown;
     gscSiteUrl?: unknown;
+    ecommerce?: unknown;
+    shopifyShopDomain?: unknown;
+    shopifyAccessToken?: unknown;
+    currency?: unknown;
   };
 
   const patch: {
@@ -92,6 +103,10 @@ export async function PUT(
     gbpLocationId?: string | null;
     ga4PropertyId?: string | null;
     gscSiteUrl?: string | null;
+    ecommerce?: boolean;
+    shopifyShopDomain?: string | null;
+    shopifyAccessToken?: string | null;
+    currency?: string;
   } = {};
 
   if (body.eventMap && typeof body.eventMap === "object") {
@@ -156,6 +171,24 @@ export async function PUT(
     else if (v === null) patch[key] = null;
   }
 
+  // Ligação e-commerce/Shopify. O token só entra no patch quando é MESMO
+  // enviado (string não-vazia grava, null remove) — um form que não mexeu no
+  // campo não pode apagar o token gravado.
+  if (typeof body.ecommerce === "boolean") patch.ecommerce = body.ecommerce;
+  if (typeof body.shopifyShopDomain === "string") {
+    patch.shopifyShopDomain = body.shopifyShopDomain.trim() || null;
+  } else if (body.shopifyShopDomain === null) {
+    patch.shopifyShopDomain = null;
+  }
+  if (typeof body.shopifyAccessToken === "string" && body.shopifyAccessToken.trim()) {
+    patch.shopifyAccessToken = body.shopifyAccessToken.trim();
+  } else if (body.shopifyAccessToken === null) {
+    patch.shopifyAccessToken = null;
+  }
+  if (typeof body.currency === "string" && /^[A-Za-z]{3}$/.test(body.currency.trim())) {
+    patch.currency = body.currency.trim().toUpperCase();
+  }
+
   if (Object.keys(patch).length === 0) {
     return NextResponse.json({ error: "nothing to save" }, { status: 400 });
   }
@@ -163,7 +196,7 @@ export async function PUT(
   try {
     const saved = await saveReportConfig(slug, patch, Date.now());
     revalidatePath(`/seo/${slug}`);
-    return NextResponse.json({ ok: true, config: saved });
+    return NextResponse.json({ ok: true, config: maskConfig(saved) });
   } catch (err) {
     console.error("report config save failed:", err);
     return NextResponse.json({ error: "save_failed" }, { status: 500 });

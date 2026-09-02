@@ -10,7 +10,9 @@ import {
   getConsultantEmailForSlug,
 } from "@/lib/client-overrides";
 import { getGa4MonthlyReport, type MetricPair } from "./ga4-report";
-import { getGscMonthlyReport } from "@/lib/gsc";
+import { getGa4EcomReport } from "./ga4-ecommerce";
+import { getGscMonthlyReport, getGscImpressionsByRange } from "@/lib/gsc";
+import { getShopifyEcomReport } from "@/lib/shopify";
 import { listTargetKeywords } from "@/lib/target-keywords-store";
 import { fetchSerpstatRanks } from "@/lib/seo-tools/serpstat";
 import { fetchGeoReport, hasGeoSignal } from "@/lib/seo-tools/dataforseo-geo";
@@ -21,19 +23,28 @@ import { getReport } from "./report-store";
 import { getGbpMonthlyReport } from "@/lib/gbp";
 import { getReportConfig } from "./report-config-store";
 import {
+  monthRange,
   periodFromKey,
   previousCompleteMonth,
   reportWindows,
   labelWithCoverage,
+  sameMonthLastYear,
   trailingMonths,
   type DateRange,
+  type ReportPeriod,
 } from "./report-dates";
+import type { ReportConfig } from "./report-config-store";
 import {
   GBP_MAIN_PROFILE_ID,
   REPORT_SCHEMA_VERSION,
   gbpChannelKey,
   pendingMetric,
+  pendingEcomCell,
   isUnresolved,
+  isEcomCellUnresolved,
+  type EcomCell,
+  type EcomColumn,
+  type EcommerceBlock,
   type FetchStatus,
   type GbpProfileMetrics,
   type LeadChannel,
@@ -258,6 +269,47 @@ function buildExecSummary(
         `Geraram-se **${fmt(leads.value)}** leads este mês.`,
         `**${fmt(leads.value)}** leads generated this month.`,
       ));
+  }
+
+  // Receita orgânica (relatório e-commerce) — o número que o dono de uma loja
+  // procura primeiro. Só quando validado, e só a variação quando as duas
+  // colunas vêm da MESMA fonte (comparar GA4 com Shopify seria mentir).
+  const ecomCols = snap.ecom?.columns ?? [];
+  const ecomCur = ecomCols.find((c) => !c.yoy && c.key === snap.period);
+  const ecomPrevIdx = ecomCur ? ecomCols.indexOf(ecomCur) - 1 : -1;
+  const ecomPrev = ecomPrevIdx >= 0 ? ecomCols[ecomPrevIdx] : undefined;
+  if (snap.ecom && ecomCur) {
+    const rev = ecomCur.cells.revenue;
+    const prevRev = ecomPrev?.cells.revenue;
+    if (rev.value !== null && rev.value > 0) {
+      const money = rev.value.toLocaleString(pt ? "pt-PT" : "en-GB", {
+        style: "currency",
+        currency: snap.ecom.currency,
+        maximumFractionDigits: 0,
+      });
+      const scope =
+        rev.source === "shopify"
+          ? t(" (loja inteira)", " (whole store)")
+          : "";
+      const growth =
+        !partial &&
+        prevRev?.value != null &&
+        prevRev.value > 0 &&
+        prevRev.source === rev.source
+          ? ((rev.value - prevRev.value) / prevRev.value) * 100
+          : null;
+      if (growth !== null && growth > 0.5) {
+        add(98, t(
+          `A pesquisa orgânica gerou **${money}** em receita${scope} — **+${growth.toFixed(0)}%** face ao mês anterior.`,
+          `Organic search drove **${money}** in revenue${scope} — **+${growth.toFixed(0)}%** vs. last month.`,
+        ));
+      } else {
+        add(95, t(
+          `A pesquisa orgânica gerou **${money}** em receita${scope} este mês.`,
+          `Organic search drove **${money}** in revenue${scope} this month.`,
+        ));
+      }
+    }
   }
 
   const ug = gainOf(snap.organic.users);
@@ -505,6 +557,223 @@ async function fetchRanksAndGeo(
   return out;
 }
 
+// —— Bloco e-commerce ————————————————————————————————————————————————
+
+const FULL_MONTHS_PT = [
+  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+];
+const FULL_MONTHS_EN = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
+/** Cabeçalho de coluna da tabela de conversão: o nome do mês, com o ano
+ *  quando não é o do mês do relatório (a homóloga leva-o sempre). */
+function ecomColumnLabel(
+  key: string,
+  reportKey: string,
+  lang: "pt" | "en",
+): string {
+  const [y, m] = key.split("-").map(Number);
+  const name = (lang === "pt" ? FULL_MONTHS_PT : FULL_MONTHS_EN)[(m || 1) - 1];
+  const reportYear = Number(reportKey.split("-")[0]);
+  return y === reportYear ? name : `${name} ${y}`;
+}
+
+const round2 = (n: number) => Math.round(n * 100) / 100;
+
+/** Monta o bloco e-commerce: GA4 orgânico (a atribuição correta) + GSC
+ *  (impressões), com a Shopify como fallback dos valores de dinheiro quando o
+ *  GA4 não tem purchase tracking — sempre etiquetada «loja inteira». O que
+ *  nenhuma fonte cobrir fica por preencher (célula pendente), nunca a zeros. */
+async function fetchEcomBlock(
+  slug: string,
+  config: ReportConfig,
+  lang: "pt" | "en",
+  reportKey: string,
+  columnPeriods: ReportPeriod[],
+  columnRanges: DateRange[],
+  currentIndex: number,
+): Promise<EcommerceBlock> {
+  const [ga4, gscRes] = await Promise.all([
+    getGa4EcomReport(slug, {
+      ranges: columnRanges,
+      current: columnRanges[currentIndex],
+      propertyIdOverride: config.ga4PropertyId,
+    }),
+    getGscImpressionsByRange(slug, columnRanges, config.gscSiteUrl),
+  ]);
+
+  const ga4Ok = ga4.status === "ok";
+  const purchasesOk = ga4Ok && ga4.purchasesInstrumented;
+
+  // Shopify só é consultada quando faz falta: sem purchase tracking no GA4
+  // (dinheiro) ou sem tracking de items (produtos). Poupa o rate limit da
+  // loja e evita puxar números que nunca seriam usados.
+  const shopifyConfigured = Boolean(
+    config.shopifyShopDomain && config.shopifyAccessToken,
+  );
+  const needShopify =
+    shopifyConfigured &&
+    (!purchasesOk || !ga4Ok || !ga4.itemsInstrumented || ga4.topProducts.length === 0);
+  const shopify = needShopify
+    ? await getShopifyEcomReport({
+        shopDomain: config.shopifyShopDomain!,
+        accessToken: config.shopifyAccessToken!,
+        ranges: columnRanges,
+        currentIndex,
+      })
+    : null;
+  const shopifyOk = shopify?.status === "ok";
+
+  const columns: EcomColumn[] = columnPeriods.map((p, i) => {
+    const m = ga4Ok ? ga4.months[i] : null;
+    const shop = shopifyOk ? shopify.months[i] : null;
+
+    const cells: Record<string, EcomCell> = {};
+
+    // Utilizadores orgânicos — do GA4, com ou sem e-commerce tracking.
+    cells.users = m
+      ? { value: Math.round(m.users), source: "ga4" }
+      : pendingEcomCell();
+
+    // Dinheiro: GA4 orgânico primeiro; loja inteira (Shopify) como fallback
+    // etiquetado; senão fica por preencher.
+    if (m && purchasesOk) {
+      cells.revenue = { value: round2(m.revenue), source: "ga4" };
+      cells.transactions = { value: Math.round(m.transactions), source: "ga4" };
+      cells.avgTicket = {
+        value: m.transactions > 0 ? round2(m.revenue / m.transactions) : 0,
+        source: "ga4",
+      };
+      cells.conversionRate = {
+        value:
+          m.sessions > 0
+            ? round2((m.transactions / m.sessions) * 100)
+            : m.transactions === 0
+              ? 0
+              : null,
+        source: "ga4",
+      };
+    } else if (shop) {
+      cells.revenue = { value: round2(shop.revenue), source: "shopify" };
+      cells.transactions = { value: shop.orders, source: "shopify" };
+      cells.avgTicket = {
+        value: shop.orders > 0 ? round2(shop.revenue / shop.orders) : 0,
+        source: "shopify",
+      };
+      // Encomendas da loja inteira sobre sessões orgânicas seria uma taxa de
+      // metodologia mista — fica para o consultor decidir.
+      cells.conversionRate = pendingEcomCell();
+    } else {
+      cells.revenue = pendingEcomCell();
+      cells.transactions = pendingEcomCell();
+      cells.avgTicket = pendingEcomCell();
+      cells.conversionRate = pendingEcomCell();
+    }
+
+    // Impressões — GSC, janela a janela.
+    const impressions = gscRes.status === "ok" ? gscRes.impressions[i] : null;
+    cells.impressions =
+      impressions !== null && impressions !== undefined
+        ? { value: Math.round(impressions), source: "gsc" }
+        : pendingEcomCell();
+
+    return {
+      key: p.key,
+      label: ecomColumnLabel(p.key, reportKey, lang),
+      yoy: i === columnPeriods.length - 1,
+      cells: cells as EcomColumn["cells"],
+      sessions: m ? Math.round(m.sessions) : null,
+    };
+  });
+
+  // Páginas mais acedidas — só GA4 sabe o que é orgânico.
+  const topPages = ga4Ok ? ga4.topPages : [];
+  // Produtos: GA4 (orgânico) → Shopify (loja inteira) → manual.
+  const ga4Products = ga4Ok && ga4.itemsInstrumented ? ga4.topProducts : [];
+  const shopProducts = shopifyOk ? shopify.topProducts : [];
+  const topProducts = ga4Products.length > 0 ? ga4Products : shopProducts;
+  const topProductsSource =
+    ga4Products.length > 0 ? "ga4" : shopProducts.length > 0 ? "shopify" : "manual";
+
+  const ga4Fetch: FetchStatus = !ga4Ok
+    ? {
+        ok: false,
+        status: ga4.status,
+        message: ga4.status === "error" ? ga4.message : undefined,
+      }
+    : purchasesOk
+      ? { ok: true, status: "ok" }
+      : {
+          ok: false,
+          status: "no-purchases",
+          message:
+            "GA4 respondeu, mas o evento purchase nunca disparou em 365 dias — sem e-commerce tracking, a receita orgânica não se mede.",
+        };
+  const shopifyFetch: FetchStatus = !shopifyConfigured
+    ? { ok: false, status: "not-connected" }
+    : !needShopify
+      ? { ok: true, status: "unused" }
+      : shopifyOk
+        ? { ok: true, status: "ok" }
+        : {
+            ok: false,
+            status: "error",
+            message: shopify?.status === "error" ? shopify.message : undefined,
+          };
+
+  return {
+    currency: (shopifyOk ? shopify.currency : null) ?? config.currency,
+    columns,
+    topPages,
+    topPagesSource: topPages.length > 0 ? "ga4" : "manual",
+    topProducts,
+    topProductsSource,
+    fetch: { ga4: ga4Fetch, shopify: shopifyFetch },
+  };
+}
+
+/** Deriva o que é derivável nas células por preencher: ticket médio a partir
+ *  de receita/transações, taxa de conversão a partir de transações/sessões
+ *  (quando o GA4 deu o denominador). Corre no build E depois de cada edição
+ *  manual — preencher receita e transações à mão dá o ticket de borla. */
+function deriveEcomCells(ecom: EcommerceBlock): EcommerceBlock {
+  return {
+    ...ecom,
+    columns: ecom.columns.map((col) => {
+      const cells = { ...col.cells };
+      const rev = cells.revenue;
+      const trx = cells.transactions;
+      const manualIn = rev.source === "manual" || trx.source === "manual";
+      if (
+        isEcomCellUnresolved(cells.avgTicket) &&
+        rev.value !== null &&
+        trx.value !== null
+      ) {
+        cells.avgTicket = {
+          value: trx.value > 0 ? round2(rev.value / trx.value) : 0,
+          source: manualIn ? "manual" : rev.source,
+        };
+      }
+      if (
+        isEcomCellUnresolved(cells.conversionRate) &&
+        trx.value !== null &&
+        trx.source !== "shopify" &&
+        col.sessions !== null &&
+        col.sessions > 0
+      ) {
+        cells.conversionRate = {
+          value: round2((trx.value / col.sessions) * 100),
+          source: trx.source === "manual" ? "manual" : "ga4",
+        };
+      }
+      return { ...col, cells };
+    }),
+  };
+}
+
 /** Build (do not persist) the monthly report snapshot for a client. Deterministic
  *  given the live data — the caller persists via report-store.saveReport. */
 export async function buildMonthlyReport(
@@ -512,6 +781,11 @@ export async function buildMonthlyReport(
   clientTitle: string,
   periodKey?: string,
   nowMs: number = Date.now(),
+  opts: {
+    /** Fixa o tipo deste build (regenerar um relatório mantém o tipo dele),
+     *  por cima do configurado no report-config. */
+    ecommerce?: boolean;
+  } = {},
 ): Promise<MonthlyReportSnapshot> {
   const period = periodKey ? periodFromKey(periodKey) : previousCompleteMonth(new Date(nowMs));
   // Windows follow the requested period: a complete month gives three full
@@ -537,7 +811,18 @@ export async function buildMonthlyReport(
   const trendPeriods = trailingMonths(period.key, TREND_MONTHS);
   const trendMonthKeys = trendPeriods.map((p) => p.key);
 
-  const [ga4, gsc, gbpRes, dfs] = await Promise.all([
+  // Colunas da tabela de conversão e-commerce: os 3 últimos meses + o mês
+  // homólogo (sempre em último). Num relatório parcial, TODAS as colunas são
+  // cortadas ao mesmo nº de dias — a mesma regra do MoM/YoY.
+  const isEcom = opts.ecommerce ?? config.ecommerce;
+  const ecomPeriods = isEcom
+    ? [...trailingMonths(period.key, 3), sameMonthLastYear(period.key)]
+    : [];
+  const clampDays = windows.coverage.partial ? windows.coverage.days : undefined;
+  const ecomRanges = ecomPeriods.map((p) => monthRange(p.key, clampDays));
+  const ECOM_CURRENT_INDEX = 2; // [mês-2, mês-1, MÊS, homólogo]
+
+  const [ga4, gsc, gbpRes, dfs, ecomRaw] = await Promise.all([
     getGa4MonthlyReport(slug, {
       current: windows.current,
       previous: windows.prevMonth,
@@ -568,7 +853,23 @@ export async function buildMonthlyReport(
       volumeByKeyword,
       trailingMonths(period.key, 2)[0].key,
     ),
+    // Bloco e-commerce — só nos clientes configurados como loja online.
+    isEcom
+      ? fetchEcomBlock(
+          slug,
+          config,
+          lang,
+          period.key,
+          ecomPeriods,
+          ecomRanges,
+          ECOM_CURRENT_INDEX,
+        ).catch((err) => {
+          console.error(`Bloco e-commerce falhou para ${slug}:`, err);
+          return null;
+        })
+      : Promise.resolve(null),
   ]);
+  const ecom = ecomRaw ? deriveEcomCells(ecomRaw) : null;
 
   const ga4Fetch: FetchStatus =
     ga4.status === "ok"
@@ -835,6 +1136,8 @@ export async function buildMonthlyReport(
       name: getConsultantForSlug(slug),
       email: getConsultantEmailForSlug(slug),
     },
+    kind: isEcom ? "ecommerce" : "standard",
+    ...(ecom ? { ecom } : {}),
     leads: { total: leadsTotal, channels },
     organic,
     gsc: gscBlock,
@@ -888,13 +1191,25 @@ export function recomputeDerived(
     })),
   );
   const total = sumConsolidated(snap.leads.channels);
+  // E-commerce: re-derivar ticket/conversão a partir do que o consultor
+  // acabou de preencher.
+  const ecom = snap.ecom ? deriveEcomCells(snap.ecom) : undefined;
   const withLeads: MonthlyReportSnapshot = {
     ...snap,
     gbp,
     leads: { ...snap.leads, total },
+    ...(ecom ? { ecom } : {}),
   };
   const execSummary = buildExecSummary(withLeads, snap.lang);
-  const hasUnresolved = snap.leads.channels.some((c) => isUnresolved(c.metric));
+  // A coluna do MÊS DO RELATÓRIO da tabela e-commerce conta para o estado: o
+  // relatório só fica «pronto» com ela resolvida (valor ou N/A). As outras
+  // colunas podem ficar por preencher — desenham-se como «—», que é honesto.
+  const ecomCurrent = ecom?.columns.find((c) => !c.yoy && c.key === snap.period);
+  const ecomUnresolved = ecomCurrent
+    ? Object.values(ecomCurrent.cells).some(isEcomCellUnresolved)
+    : false;
+  const hasUnresolved =
+    snap.leads.channels.some((c) => isUnresolved(c.metric)) || ecomUnresolved;
   const status: ReportStatus =
     snap.status === "sent" ? "sent" : hasUnresolved ? "draft" : "ready";
   return { ...withLeads, execSummary, status };

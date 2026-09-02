@@ -68,6 +68,19 @@ export type ReportConfig = {
   /** Extra lead lines beyond the four defaults (2nd unit's phone, a form that
    *  only exists on one page…). Empty for most clients. */
   extraLeadEvents: CustomLeadEvent[];
+  /** Relatório e-commerce em vez do normal: acrescenta a tabela de conversão
+   *  orgânica (receita, transações…), páginas mais acedidas e produtos mais
+   *  vendidos. Escolhido no gerador e lembrado aqui para os meses seguintes. */
+  ecommerce: boolean;
+  /** Loja Shopify do cliente ("kingsgym.myshopify.com") — fallback de
+   *  receita/transações/produtos quando o GA4 não tem purchase tracking.
+   *  ATENÇÃO: os números da Shopify são da loja INTEIRA (todos os canais),
+   *  nunca entram como «orgânico» sem essa etiqueta. */
+  shopifyShopDomain: string | null;
+  /** Admin API access token de uma custom app da loja (scopes read_orders +
+   *  read_all_orders). Guardado neste blob KV (encriptado at rest) e NUNCA
+   *  devolvido ao browser — a rota de config mascara-o. */
+  shopifyAccessToken: string | null;
   /** Regex source strings matched against GA4 sessionSource for AI Visibility. */
   llmRegex: string[];
   sectionsEnabled: Record<ReportSection, boolean>;
@@ -128,6 +141,9 @@ export function defaultReportConfig(slug: string, currency = "EUR"): ReportConfi
       whatsapp: [...DEFAULT_LEAD_EVENT_MAP.whatsapp],
     },
     extraLeadEvents: [],
+    ecommerce: false,
+    shopifyShopDomain: null,
+    shopifyAccessToken: null,
     llmRegex: [...DEFAULT_LLM_REGEX],
     sectionsEnabled: Object.fromEntries(
       ALL_SECTIONS.map((s) => [s, true]),
@@ -223,6 +239,16 @@ function normalizeGbpProfiles(v: unknown): GbpProfile[] {
   return out;
 }
 
+/** "https://kingsgym.myshopify.com/" → "kingsgym.myshopify.com". Aceita o
+ *  domínio próprio da loja ou o *.myshopify.com; só se guarda o host. */
+function normalizeShopDomain(v: unknown): string | null {
+  if (typeof v !== "string") return null;
+  const raw = v.trim().toLowerCase();
+  if (!raw) return null;
+  const host = raw.replace(/^https?:\/\//, "").split("/")[0];
+  return /^[a-z0-9][a-z0-9.-]{2,80}\.[a-z]{2,}$/.test(host) ? host : null;
+}
+
 function normalizeConfig(raw: unknown, slug: string): ReportConfig {
   const base = defaultReportConfig(slug, "EUR");
   if (!raw || typeof raw !== "object") return base;
@@ -247,6 +273,9 @@ function normalizeConfig(raw: unknown, slug: string): ReportConfig {
     currency: asStr(o.currency) ?? base.currency,
     eventMap: normalizeEventMap(o.eventMap),
     extraLeadEvents: normalizeExtraLeadEvents(o.extraLeadEvents),
+    ecommerce: o.ecommerce === true,
+    shopifyShopDomain: normalizeShopDomain(o.shopifyShopDomain),
+    shopifyAccessToken: asStr(o.shopifyAccessToken),
     llmRegex: regex && regex.length ? regex : base.llmRegex,
     sectionsEnabled: sections,
     updatedAt: typeof o.updatedAt === "number" ? o.updatedAt : 0,

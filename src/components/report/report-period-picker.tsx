@@ -10,7 +10,13 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, FileBarChart, CalendarCheck, CalendarClock } from "lucide-react";
+import {
+  Loader2,
+  FileBarChart,
+  CalendarCheck,
+  CalendarClock,
+  ShoppingCart,
+} from "lucide-react";
 
 type Option = {
   key: string;
@@ -24,13 +30,19 @@ export function ReportPeriodPicker({
   slug,
   closed,
   current,
+  ecommerce = false,
 }: {
   slug: string;
   closed: Option;
   current: Option;
+  /** Tipo configurado do cliente — pré-seleciona a escolha normal/e-commerce. */
+  ecommerce?: boolean;
 }) {
   const router = useRouter();
   const [choice, setChoice] = useState<"closed" | "current">("closed");
+  const [kind, setKind] = useState<"standard" | "ecommerce">(
+    ecommerce ? "ecommerce" : "standard",
+  );
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -43,7 +55,12 @@ export function ReportPeriodPicker({
       const res = await fetch(`/api/reports/${slug}/generate`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ period: picked.key }),
+        body: JSON.stringify({
+          period: picked.key,
+          ecommerce: kind === "ecommerce",
+          // A escolha do gerador é a deliberada — fica para os meses seguintes.
+          rememberKind: true,
+        }),
       });
       const data = (await res.json().catch(() => ({}))) as {
         ok?: boolean;
@@ -80,8 +97,60 @@ export function ReportPeriodPicker({
       },
     ];
 
+  const kinds: {
+    id: "standard" | "ecommerce";
+    label: string;
+    icon: typeof FileBarChart;
+    hint: string;
+  }[] = [
+    {
+      id: "standard",
+      label: "Relatório normal",
+      icon: FileBarChart,
+      hint: "Leads, orgânico, keywords, GBP e AI Visibility.",
+    },
+    {
+      id: "ecommerce",
+      label: "Relatório e-commerce",
+      icon: ShoppingCart,
+      hint: "Tudo do normal + conversão orgânica (receita, transações, ticket médio — 3 meses + homólogo), páginas mais acedidas e produtos mais vendidos. Puxa do GA4/Shopify; o que faltar preenche-se à mão.",
+    },
+  ];
+
   return (
     <div className="w-full">
+      {/* Tipo de relatório — a escolha fica gravada para os meses seguintes. */}
+      <div className="mb-2 grid gap-2 sm:grid-cols-2">
+        {kinds.map(({ id, label, icon: Icon, hint }) => {
+          const on = kind === id;
+          return (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setKind(id)}
+              className={[
+                "rounded-xl border px-3.5 py-3 text-left transition",
+                on
+                  ? "border-[#783DF5]/50 bg-[#783DF5]/12"
+                  : "border-white/10 bg-white/[0.02] hover:border-white/22",
+              ].join(" ")}
+            >
+              <span className="flex items-center gap-2">
+                <Icon
+                  className={`h-4 w-4 shrink-0 ${on ? "text-[#b79bff]" : "text-white/40"}`}
+                />
+                <span className="text-[13px] font-semibold text-white/90">
+                  {label}
+                </span>
+              </span>
+              <span className="mt-1 block text-[11.5px] leading-relaxed text-white/45">
+                {hint}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
       <div className="grid gap-2 sm:grid-cols-2">
         {opts.map(({ id, opt, icon: Icon, hint }) => {
           const on = choice === id;

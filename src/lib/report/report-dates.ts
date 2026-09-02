@@ -212,6 +212,21 @@ export function trailingMonths(periodKey: string, count: number): ReportPeriod[]
   return out;
 }
 
+/** Full calendar range of a "YYYY-MM" key — or, when `days` is given, its
+ *  first `days` days. Used by the e-commerce conversion table: a partial-month
+ *  report clamps EVERY compared column to the same day count, for the same
+ *  reason reportWindows clamps MoM/YoY. */
+export function monthRange(periodKey: string, days?: number): DateRange {
+  const ym = ymFromKey(periodKey);
+  return typeof days === "number" ? firstDaysOf(ym, days) : rangeOf(ym);
+}
+
+/** O mesmo mês do ano anterior — "2026-09" → "2025-09". A coluna homóloga da
+ *  tabela e-commerce, onde vivem os picos sazonais (Black Friday & afins). */
+export function sameMonthLastYear(periodKey: string): ReportPeriod {
+  return periodFromKey(keyOf(shiftMonth(ymFromKey(periodKey), -12)));
+}
+
 /** GSC data lags ~2-3 days. Only generate once the month's last day (plus the
  *  lag) has passed, so we never report a partial last day as complete. */
 export function isGscDataReady(

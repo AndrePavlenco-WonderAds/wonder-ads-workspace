@@ -11,6 +11,7 @@
 import {
   formatValue,
   formatRaw,
+  formatMoney,
   metricDelta,
   pendingNote,
   type MetricDelta,
@@ -18,9 +19,12 @@ import {
 import { formatDate } from "@/lib/dates";
 import { ReportTrendChart } from "./report-trend-chart";
 import { GEO_CSS, ReportGeoSection } from "./report-geo";
-import type {
-  MonthlyReportSnapshot,
-  ReportMetric,
+import {
+  ECOM_METRIC_KEYS,
+  type EcomCell,
+  type EcomMetricKey,
+  type MonthlyReportSnapshot,
+  type ReportMetric,
 } from "@/lib/report/report-types";
 
 const GRAD = "linear-gradient(135deg,#343ED7 0%,#783DF5 53%,#C535C9 100%)";
@@ -198,6 +202,35 @@ function MetricRow({
   );
 }
 
+/** Rótulos das linhas da tabela de conversão e-commerce, na ordem fixa. */
+const ECOM_ROW_LABELS: Record<EcomMetricKey, { pt: string; en: string }> = {
+  revenue: { pt: "Receita", en: "Revenue" },
+  transactions: { pt: "Transações", en: "Transactions" },
+  conversionRate: { pt: "Conversão", en: "Conversion rate" },
+  users: { pt: "Utilizadores", en: "Users" },
+  impressions: { pt: "Impressões", en: "Impressions" },
+  avgTicket: { pt: "Ticket médio", en: "Avg. order value" },
+};
+
+/** Uma célula da tabela de conversão, formatada pela métrica. */
+function ecomCellText(
+  cell: EcomCell,
+  key: EcomMetricKey,
+  currency: string,
+  lang: "pt" | "en",
+): string {
+  if (cell.manualNa) return "N/A";
+  if (cell.value === null) return "—";
+  const loc = lang === "pt" ? "pt-PT" : "en-GB";
+  if (key === "revenue" || key === "avgTicket") {
+    return formatMoney(cell.value, currency, lang);
+  }
+  if (key === "conversionRate") {
+    return `${cell.value.toLocaleString(loc, { maximumFractionDigits: 2 })}%`;
+  }
+  return Math.round(cell.value).toLocaleString(loc);
+}
+
 export function ReportDocument({
   snapshot,
   variant = "internal",
@@ -356,6 +389,47 @@ export function ReportDocument({
       ),
   );
 
+  // —— Bloco e-commerce (v77.0) ——————————————————————————————————————
+  // A tabela de conversão orgânica + páginas mais acedidas + produtos mais
+  // vendidos. O cliente vê só o que está validado: colunas onde nada foi
+  // preenchido caem, células por preencher desenham «—», listas vazias somem.
+  const ecom = snapshot.ecom;
+  const ecomColumns = (ecom?.columns ?? []).filter(
+    (col) =>
+      variant === "internal" ||
+      ECOM_METRIC_KEYS.some(
+        (k) => col.cells[k].value !== null || col.cells[k].manualNa,
+      ),
+  );
+  const ecomRowKeys = ECOM_METRIC_KEYS.filter(
+    (k) =>
+      variant === "internal" ||
+      ecomColumns.some((col) => col.cells[k].value !== null),
+  );
+  const showEcomTable =
+    Boolean(ecom) &&
+    (variant === "internal" ||
+      (ecomColumns.length > 0 && ecomRowKeys.length > 0));
+  const ecomPages = ecom?.topPages ?? [];
+  const showEcomPages =
+    Boolean(ecom) && (variant === "internal" || ecomPages.length > 0);
+  const ecomProducts = ecom?.topProducts ?? [];
+  const showEcomProducts =
+    Boolean(ecom) && (variant === "internal" || ecomProducts.length > 0);
+  // Nota de metodologia: dinheiro vindo da Shopify é da loja INTEIRA.
+  const ecomMoneyFromShopify = (ecom?.columns ?? []).some((col) =>
+    (["revenue", "transactions", "avgTicket"] as EcomMetricKey[]).some(
+      (k) => col.cells[k].source === "shopify" && col.cells[k].value !== null,
+    ),
+  );
+  const ecomMaxPageViews = Math.max(1, ...ecomPages.map((p) => p.views));
+  const ecomMaxProductRevenue = Math.max(
+    1,
+    ...ecomProducts.map((p) => p.revenue),
+  );
+  const ecomMonthName =
+    ecom?.columns.find((c) => !c.yoy && c.key === snapshot.period)?.label ?? "";
+
   // Hero KPIs — the month's headline numbers. Order = what the client cares
   // about most: leads first, then reach, then search performance.
   const kpiDefs: { label: string; m: ReportMetric }[] = [
@@ -387,6 +461,15 @@ export function ReportDocument({
       ? [{ key: "exec", label: t("Resumo Executivo", "Executive Summary") }]
       : []),
     ...(snapshot.trend ? [{ key: "trend", label: t("Evolução", "Trend") }] : []),
+    ...(showEcomTable
+      ? [{ key: "ecom", label: t("Conversão · SEO Orgânico", "Conversion · Organic SEO") }]
+      : []),
+    ...(showEcomPages
+      ? [{ key: "ecomPages", label: t("Páginas mais acedidas", "Most visited pages") }]
+      : []),
+    ...(showEcomProducts
+      ? [{ key: "ecomProducts", label: t("Produtos mais vendidos", "Best-selling products") }]
+      : []),
     ...(showLeads
       ? [{ key: "leads", label: t("Leads por canal", "Leads by channel") }]
       : []),
@@ -489,6 +572,196 @@ export function ReportDocument({
             )}
           </p>
           <ReportTrendChart trend={snapshot.trend} lang={lang} />
+        </section>
+      )}
+
+      {/* Conversão e-commerce — os 3 últimos meses lado a lado + o mês
+          homólogo (coluna cinza), porque numa loja online o MoM sozinho
+          esconde a sazonalidade (Black Friday & afins). */}
+      {ecom && showEcomTable && (
+        <section className="wa-sec">
+          <SecLabel n={secN("ecom")}>
+            {t("Conversão · SEO Orgânico", "Conversion · Organic SEO")}
+          </SecLabel>
+          <h2 className="wa-h2">
+            {t("O que a pesquisa orgânica vendeu", "What organic search sold")}
+          </h2>
+          <div className="wa-tblwrap">
+            <table className="wa-qtable wa-ectable">
+              <thead>
+                <tr>
+                  <th>{t("Descrição", "Description")}</th>
+                  {ecomColumns.map((col) => (
+                    <th key={col.key} className={`n${col.yoy ? " wa-ec-yoy" : ""}`}>
+                      {col.label}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {ecomRowKeys.map((rowKey) => (
+                  <tr
+                    key={rowKey}
+                    className={rowKey === "revenue" ? "wa-ec-rev" : undefined}
+                  >
+                    <td className="wa-ec-desc">
+                      {ECOM_ROW_LABELS[rowKey][lang]}
+                    </td>
+                    {ecomColumns.map((col) => {
+                      const cell = col.cells[rowKey];
+                      const pending = cell.value === null && !cell.manualNa;
+                      return (
+                        <td
+                          key={col.key}
+                          className={`n${col.yoy ? " wa-ec-yoy" : ""}`}
+                          title={
+                            variant === "internal" && pending
+                              ? t("por preencher", "awaiting input")
+                              : undefined
+                          }
+                        >
+                          {pending ? (
+                            <span className="wa-pending">—</span>
+                          ) : (
+                            ecomCellText(cell, rowKey, ecom.currency, lang)
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="wa-method" style={{ marginTop: ".6rem" }}>
+            {ecomMoneyFromShopify
+              ? t(
+                  "Receita, transações e ticket médio vêm da Shopify — totais da loja inteira (todos os canais), porque o GA4 deste cliente não tem purchase tracking. Utilizadores segmentados ao canal orgânico no GA4; impressões do Search Console.",
+                  "Revenue, transactions and average order value come from Shopify — whole-store totals (all channels), as this client's GA4 has no purchase tracking. Users segmented to the organic channel in GA4; impressions from Search Console.",
+                )
+              : t(
+                  "Receita, transações, conversão e utilizadores segmentados ao canal Organic Search no Google Analytics 4; impressões do Search Console. Ticket médio = receita ÷ transações.",
+                  "Revenue, transactions, conversion and users segmented to the Organic Search channel in Google Analytics 4; impressions from Search Console. Avg. order value = revenue ÷ transactions.",
+                )}
+          </p>
+        </section>
+      )}
+
+      {/* Páginas orgânicas mais acedidas no mês do relatório. */}
+      {ecom && showEcomPages && (
+        <section className="wa-sec">
+          <SecLabel n={secN("ecomPages")}>
+            {t("Páginas mais acedidas · SEO", "Most visited pages · SEO")}
+          </SecLabel>
+          <h3 className="wa-h3">
+            {t(
+              `Top ${ecomPages.length || 10} em ${ecomMonthName}`,
+              `Top ${ecomPages.length || 10} in ${ecomMonthName}`,
+            )}
+          </h3>
+          {ecomPages.length === 0 ? (
+            <p className="wa-pending-lg">
+              {t(
+                "Sem dados do GA4 — preenche a lista manualmente abaixo, ou a secção não sai no relatório do cliente.",
+                "No GA4 data — fill the list manually below, or the section is omitted from the client report.",
+              )}
+            </p>
+          ) : (
+            <div className="wa-toplist">
+              {ecomPages.map((p, i) => (
+                <div className="wa-top-row" key={`${p.page}-${i}`}>
+                  <span className="wa-top-n">{i + 1}</span>
+                  <span className="wa-top-name">{p.page}</span>
+                  <span className="wa-top-bar">
+                    <i
+                      style={{
+                        width: `${(p.views / ecomMaxPageViews) * 100}%`,
+                        background: GRAD,
+                      }}
+                    />
+                  </span>
+                  <span className="wa-top-v">
+                    {formatRaw(p.views, "count", lang)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+          {ecomPages.length > 0 && (
+            <p className="wa-method" style={{ marginTop: ".6rem" }}>
+              {ecom.topPagesSource === "manual"
+                ? t("Preenchido pelo consultor.", "Filled in by the consultant.")
+                : t(
+                    "Visualizações de página de sessões do canal Organic Search (GA4).",
+                    "Page views from Organic Search channel sessions (GA4).",
+                  )}
+            </p>
+          )}
+        </section>
+      )}
+
+      {/* Produtos mais vendidos no mês do relatório, por receita. */}
+      {ecom && showEcomProducts && (
+        <section className="wa-sec">
+          <SecLabel n={secN("ecomProducts")}>
+            {t("Produtos mais vendidos · SEO", "Best-selling products · SEO")}
+          </SecLabel>
+          <h3 className="wa-h3">
+            {t(
+              `Top ${ecomProducts.length || 10} em ${ecomMonthName}`,
+              `Top ${ecomProducts.length || 10} in ${ecomMonthName}`,
+            )}
+          </h3>
+          {ecomProducts.length === 0 ? (
+            <p className="wa-pending-lg">
+              {t(
+                "Sem dados de produtos — nem do GA4 (items) nem da Shopify. Preenche a lista manualmente abaixo, ou a secção não sai no relatório do cliente.",
+                "No product data — neither GA4 (items) nor Shopify. Fill the list manually below, or the section is omitted from the client report.",
+              )}
+            </p>
+          ) : (
+            <div className="wa-toplist">
+              {ecomProducts.map((p, i) => (
+                <div className="wa-top-row" key={`${p.name}-${i}`}>
+                  <span className="wa-top-n">{i + 1}</span>
+                  <span className="wa-top-name">
+                    {p.name}
+                    {p.quantity !== null && p.quantity > 0 && (
+                      <span className="wa-top-qty">
+                        {p.quantity} {t("un.", "un.")}
+                      </span>
+                    )}
+                  </span>
+                  <span className="wa-top-bar">
+                    <i
+                      style={{
+                        width: `${(p.revenue / ecomMaxProductRevenue) * 100}%`,
+                        background: GRAD,
+                      }}
+                    />
+                  </span>
+                  <span className="wa-top-v">
+                    {formatMoney(p.revenue, ecom.currency, lang)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+          {ecomProducts.length > 0 && (
+            <p className="wa-method" style={{ marginTop: ".6rem" }}>
+              {ecom.topProductsSource === "shopify"
+                ? t(
+                    "Vendas da Shopify — loja inteira (todos os canais), porque o GA4 não tem tracking de items.",
+                    "Shopify sales — whole store (all channels), as GA4 has no item tracking.",
+                  )
+                : ecom.topProductsSource === "manual"
+                  ? t("Preenchido pelo consultor.", "Filled in by the consultant.")
+                  : t(
+                      "Receita de items de sessões do canal Organic Search (GA4).",
+                      "Item revenue from Organic Search channel sessions (GA4).",
+                    )}
+            </p>
+          )}
         </section>
       )}
 
@@ -805,7 +1078,8 @@ const PRINT_CSS = `
   .wa-sec{break-inside:auto;padding-top:1rem;padding-bottom:1rem;}
   .wa-h2,.wa-h3,.wa-label{break-after:avoid;}
   .wa-kpi,.wa-card,.wa-exec-card,.wa-geo-stat,.wa-geo-show,.wa-geo-pillar,
-  .wa-geo-check,.wa-geo-bots,.wa-trend-panel,.wa-gbp-unit{break-inside:avoid;}
+  .wa-geo-check,.wa-geo-bots,.wa-trend-panel,.wa-gbp-unit,.wa-top-row{break-inside:avoid;}
+  .wa-ectable tr{break-inside:avoid;}
   .wa-qtable tr{break-inside:avoid;}
   .wa-qtable thead{display:table-header-group;}
   .wa-foot{break-inside:avoid;}
@@ -958,6 +1232,29 @@ const CSS = GEO_CSS + PRINT_CSS + `
 .wa-flat-t{color:#a5a2b8;}
 .wa-kwnew{display:inline-block;font-size:.6rem;font-weight:800;letter-spacing:.02em;color:var(--up);background:rgba(15,157,107,.12);padding:.05rem .34rem;border-radius:5px;text-transform:uppercase;}
 .wa-kstat-new{border-left-color:var(--up);}
+
+/* Conversão e-commerce — a tabela que o cliente já conhece: meses lado a
+   lado, homólogo em cinza no fim, a linha da receita em destaque. */
+.wa-ectable{margin-top:.4rem;font-size:.78rem;}
+.wa-ectable th{font-size:.62rem;padding:.44rem .55rem;}
+.wa-ectable td{padding:.5rem .55rem;}
+.wa-ectable td.wa-ec-desc{font-weight:700;color:var(--ink);text-transform:uppercase;font-size:.68rem;letter-spacing:.06em;}
+.wa-ectable th.wa-ec-yoy,.wa-ectable td.wa-ec-yoy{background:rgba(23,22,45,.055);}
+.wa-ectable th.wa-ec-yoy{color:#5c5a72;}
+.wa-ectable tr.wa-ec-rev td{background:rgba(15,143,98,.10);font-weight:700;}
+.wa-ectable tr.wa-ec-rev td.wa-ec-yoy{background:rgba(15,143,98,.16);}
+
+/* Top 10 (páginas / produtos) — rank, nome, barra, valor. */
+.wa-toplist{display:grid;gap:.45rem;margin-top:.4rem;}
+.wa-top-row{display:grid;grid-template-columns:1.4rem minmax(140px,1.4fr) 1fr 96px;gap:.6rem;align-items:center;
+  font-size:.78rem;border:1px solid var(--line);border-radius:9px;background:#fff;padding:.42rem .6rem;break-inside:avoid;}
+.wa-top-n{font-weight:800;color:var(--plum);font-variant-numeric:tabular-nums;text-align:right;}
+.wa-top-name{color:#34333f;min-width:0;overflow-wrap:anywhere;}
+.wa-top-qty{margin-left:.4rem;padding:.02rem .32rem;border-radius:5px;font-size:.62rem;font-weight:700;
+  background:rgba(23,22,45,.06);color:#5c5a72;white-space:nowrap;}
+.wa-top-bar{height:8px;border-radius:5px;background:rgba(23,22,45,.06);overflow:hidden;}
+.wa-top-bar i{display:block;height:100%;border-radius:5px;}
+.wa-top-v{text-align:right;font-weight:700;font-variant-numeric:tabular-nums;color:var(--ink);white-space:nowrap;}
 
 /* Tables */
 .wa-tblwrap{min-width:0;overflow-x:auto;}

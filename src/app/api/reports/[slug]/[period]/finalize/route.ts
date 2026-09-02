@@ -11,7 +11,11 @@ import { editableDepts } from "@/lib/auth/credentials";
 import { getReport, saveReport } from "@/lib/report/report-store";
 import { recomputeDerived } from "@/lib/report/report-build";
 import { notifyClientWin } from "@/lib/report/report-win-slack";
-import { isUnresolved } from "@/lib/report/report-types";
+import {
+  ECOM_METRIC_KEYS,
+  isEcomCellUnresolved,
+  isUnresolved,
+} from "@/lib/report/report-types";
 
 export const runtime = "nodejs";
 
@@ -36,11 +40,22 @@ export async function POST(
   // not N/A) — that's exactly the data the consultant must complete first.
   const recomputed = recomputeDerived(snap);
   const pending = recomputed.leads.channels.filter((c) => isUnresolved(c.metric));
-  if (pending.length > 0) {
+  // Relatório e-commerce: a coluna do MÊS DO RELATÓRIO da tabela de conversão
+  // também tem de estar resolvida (valor ou N/A) — é a que o cliente lê como
+  // «o resultado do mês». As colunas de contexto podem ficar a «—».
+  const ecomCurrent = recomputed.ecom?.columns.find(
+    (c) => !c.yoy && c.key === recomputed.period,
+  );
+  const ecomPending = ecomCurrent
+    ? ECOM_METRIC_KEYS.filter((k) =>
+        isEcomCellUnresolved(ecomCurrent.cells[k]),
+      ).map((k) => `Conversão · ${k}`)
+    : [];
+  if (pending.length > 0 || ecomPending.length > 0) {
     return NextResponse.json(
       {
         error: "incomplete",
-        pending: pending.map((c) => c.label),
+        pending: [...pending.map((c) => c.label), ...ecomPending],
       },
       { status: 400 },
     );

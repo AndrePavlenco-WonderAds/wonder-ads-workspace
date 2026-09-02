@@ -648,6 +648,48 @@ function buildTargetRanks(
   });
 }
 
+/** Impressões totais para uma lista de janelas arbitrárias — as 4 colunas da
+ *  tabela de conversão e-commerce do relatório. Uma chamada por janela (a API
+ *  não aceita múltiplos ranges); `null` numa posição = essa janela falhou ou
+ *  não tem dados, e a célula fica por preencher em vez de ler 0. */
+export async function getGscImpressionsByRange(
+  slug: string,
+  ranges: { startDate: string; endDate: string }[],
+  siteUrlOverride?: string | null,
+): Promise<
+  | { status: "ok"; siteUrl: string; impressions: (number | null)[] }
+  | { status: "not-configured" }
+  | { status: "no-property" }
+  | { status: "error"; message: string }
+> {
+  if (!googleAuthConfigured) return { status: "not-configured" };
+  const override = siteUrlOverride?.trim() || GSC_PROPERTY_OVERRIDES[slug];
+  const site = CLIENT_WEBSITES[slug];
+  const domain = site ? domainFromUrl(site) : null;
+  if (!override && !domain) return { status: "no-property" };
+  try {
+    const token = await getGoogleAccessToken(SCOPES);
+    let siteUrl: string | null = override ?? null;
+    if (!siteUrl && domain) siteUrl = matchProperty(domain, await listSites(token));
+    if (!siteUrl) return { status: "no-property" };
+    const totals = await Promise.all(
+      ranges.map((r) =>
+        queryTotals(token, siteUrl!, r.startDate, r.endDate).catch(() => null),
+      ),
+    );
+    return {
+      status: "ok",
+      siteUrl,
+      impressions: totals.map((t) => (t ? t.impressions : null)),
+    };
+  } catch (err) {
+    return {
+      status: "error",
+      message: err instanceof Error ? err.message : "GSC request failed",
+    };
+  }
+}
+
 /** Search Console totals + top-N queries/pages for an explicit calendar-month
  *  window (and the prior month for deltas). Unlike getSiteAuditData's rolling
  *  window, the report always covers a complete month — the caller passes the

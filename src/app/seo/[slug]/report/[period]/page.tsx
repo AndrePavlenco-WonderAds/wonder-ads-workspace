@@ -12,6 +12,8 @@ import { ReportDocument } from "@/components/report/report-document";
 import { ReportPrintView } from "@/components/report/report-print-view";
 import { GenerateReportButton } from "@/components/report/generate-report-button";
 import { ReportManualInputs } from "@/components/report/report-manual-inputs";
+import { ReportEcomInputs } from "@/components/report/report-ecom-inputs";
+import { ReportShopifyConfig } from "@/components/report/report-shopify-config";
 import { ReportLeadEvents } from "@/components/report/report-lead-events";
 import { ReportGbpProfiles } from "@/components/report/report-gbp-profiles";
 import { getReportConfig } from "@/lib/report/report-config-store";
@@ -45,6 +47,9 @@ const SOURCE_LABEL: Record<string, string> = {
   partial: "fichas em falta",
   error: "erro",
   deferred: "manual",
+  "no-purchases": "sem purchase tracking",
+  unused: "não usado (GA4 cobre)",
+  "not-connected": "por ligar (opcional)",
 };
 
 /** Actionable explanation for why GBP data isn't flowing yet. */
@@ -69,7 +74,7 @@ function gbpHint(s: FetchStatus): string {
 function SourceChip({ name, s }: { name: string; s: FetchStatus }) {
   const color = s.ok
     ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-200/90"
-    : s.status === "deferred"
+    : s.status === "deferred" || s.status === "not-connected"
       ? "border-white/15 bg-white/5 text-white/55"
       : "border-amber-400/30 bg-amber-500/10 text-amber-200/90";
   return (
@@ -136,6 +141,9 @@ export default async function ReportPage({
               period={period}
               label={snapshot ? "Regenerar" : "Gerar"}
               variant={snapshot ? "ghost" : "solid"}
+              // Regenerar mantém o tipo do relatório já gerado; o tipo
+              // troca-se no gerador da página do cliente.
+              ecommerce={snapshot ? snapshot.kind === "ecommerce" : undefined}
             />
           )}
         </div>
@@ -161,6 +169,12 @@ export default async function ReportPage({
               <SourceChip name="GA4" s={snapshot.fetch.ga4} />
               <SourceChip name="GSC" s={snapshot.fetch.gsc} />
               <SourceChip name="GBP" s={snapshot.fetch.gbp} />
+              {snapshot.ecom && (
+                <>
+                  <SourceChip name="E-comm GA4" s={snapshot.ecom.fetch.ga4} />
+                  <SourceChip name="Shopify" s={snapshot.ecom.fetch.shopify} />
+                </>
+              )}
             </div>
 
             {!readOnly && !snapshot.fetch.gbp.ok && (
@@ -191,12 +205,31 @@ export default async function ReportPage({
                   notes={snapshot.notes}
                 />
 
+                {/* Relatório e-commerce: tabela de conversão + listas */}
+                {snapshot.ecom && (
+                  <ReportEcomInputs
+                    slug={slug}
+                    period={period}
+                    ecom={snapshot.ecom}
+                  />
+                )}
+
                 {/* Que eventos GA4 contam como lead para este cliente */}
                 <ReportLeadEvents
                   slug={slug}
                   eventMap={reportConfig.eventMap}
                   extraLeadEvents={reportConfig.extraLeadEvents}
                 />
+
+                {/* Ligação Shopify — só faz sentido num cliente e-commerce */}
+                {snapshot.kind === "ecommerce" && (
+                  <ReportShopifyConfig
+                    slug={slug}
+                    shopDomain={reportConfig.shopifyShopDomain}
+                    currency={reportConfig.currency}
+                    tokenSet={Boolean(reportConfig.shopifyAccessToken)}
+                  />
+                )}
 
                 {/* Uma ficha GBP por unidade, para clientes com várias */}
                 <ReportGbpProfiles

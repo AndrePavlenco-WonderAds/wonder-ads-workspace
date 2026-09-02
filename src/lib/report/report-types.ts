@@ -3,7 +3,7 @@
 // them without pulling GA4/GSC code into the browser bundle.
 
 /** Where a metric's number came from — always shown, never a bare number. */
-export type MetricSource = "ga4" | "gsc" | "gbp" | "manual" | "na";
+export type MetricSource = "ga4" | "gsc" | "gbp" | "shopify" | "manual" | "na";
 
 export type MetricUnit = "count" | "percent" | "seconds" | "position" | "ratio";
 
@@ -412,6 +412,99 @@ export type ReportTrend = {
   gscImpressions: (number | null)[];
 };
 
+// —— Relatório e-commerce (v77.0) ————————————————————————————————————
+// Um cliente de loja online (ex.: Kings Gyms na Shopify) precisa de um
+// relatório diferente de um cliente de leads: a pergunta dele é «quanto é que
+// o orgânico VENDEU?». O relatório e-commerce acrescenta três secções — a
+// tabela de conversão orgânica (3 últimos meses + o MESMO mês do ano
+// anterior, porque o e-commerce tem picos sazonais tipo Black Friday que um
+// MoM sozinho esconde), as páginas mais acedidas e os produtos mais vendidos.
+//
+// Fontes, por ordem de honestidade: GA4 (canal Organic Search — a única
+// atribuição correta de «receita SEO»), GSC (impressões), Shopify Admin API
+// (totais da LOJA INTEIRA, todos os canais — só como fallback e sempre
+// etiquetado como tal) e, quando nada disto responde, o consultor preenche à
+// mão. Nunca um zero fabricado — a regra de ouro do relatório normal.
+
+export type ReportKind = "standard" | "ecommerce";
+
+export type EcomMetricKey =
+  | "revenue"
+  | "transactions"
+  | "conversionRate"
+  | "users"
+  | "impressions"
+  | "avgTicket";
+
+/** Ordem fixa das linhas da tabela de conversão. */
+export const ECOM_METRIC_KEYS: EcomMetricKey[] = [
+  "revenue",
+  "transactions",
+  "conversionRate",
+  "users",
+  "impressions",
+  "avgTicket",
+];
+
+/** Uma célula da tabela de conversão: valor + proveniência. Sem `previous` —
+ *  a comparação está na própria tabela, coluna contra coluna. */
+export type EcomCell = {
+  value: number | null;
+  source: MetricSource;
+  /** Consultor marcou «N/A» — validado, conta como resolvido. */
+  manualNa?: boolean;
+};
+
+/** Uma coluna (mês) da tabela de conversão. */
+export type EcomColumn = {
+  /** "2026-06". */
+  key: string;
+  /** "Junho" — ou "Setembro 2025" na coluna homóloga. */
+  label: string;
+  /** True na coluna do mesmo mês do ano anterior. */
+  yoy: boolean;
+  cells: Record<EcomMetricKey, EcomCell>;
+  /** Sessões orgânicas do mês (GA4) — não se mostram, mas são o denominador
+   *  da taxa de conversão derivada. null = GA4 não respondeu. */
+  sessions: number | null;
+};
+
+export type EcomTopPage = { page: string; views: number };
+export type EcomTopProduct = {
+  name: string;
+  revenue: number;
+  quantity: number | null;
+};
+
+/** Máximo de linhas nas listas de páginas/produtos. */
+export const ECOM_TOP_LIMIT = 10;
+
+export type EcommerceBlock = {
+  /** "EUR" | "GBP" | … — moeda de receita e ticket médio. */
+  currency: string;
+  /** 4 colunas: [mês-2, mês-1, mês do relatório, mês homólogo] — a homóloga
+   *  SEMPRE em último, como na tabela que o cliente conhece. */
+  columns: EcomColumn[];
+  /** Páginas orgânicas mais acedidas no mês do relatório (GA4). */
+  topPages: EcomTopPage[];
+  topPagesSource: MetricSource;
+  /** Produtos mais vendidos no mês do relatório, por receita. */
+  topProducts: EcomTopProduct[];
+  topProductsSource: MetricSource;
+  /** Proveniência das puxadas — painel interno, nunca no PDF. */
+  fetch: { ga4: FetchStatus; shopify: FetchStatus };
+};
+
+/** True enquanto a célula precisa de atenção (nem valor, nem N/A). */
+export function isEcomCellUnresolved(c: EcomCell): boolean {
+  return c.value === null && !c.manualNa;
+}
+
+/** Célula ainda por preencher. */
+export function pendingEcomCell(): EcomCell {
+  return { value: null, source: "manual" };
+}
+
 export type ReportStatus = "draft" | "ready" | "sent";
 
 export const REPORT_SCHEMA_VERSION = 3;
@@ -432,6 +525,12 @@ export type MonthlyReportSnapshot = {
   lang: "pt" | "en";
   /** SEO consultant who owns this client — shown on the report + PDF footer. */
   consultant: { name: string; email: string };
+  /** "ecommerce" acrescenta a tabela de conversão orgânica + páginas mais
+   *  acedidas + produtos mais vendidos. Ausente nos relatórios pré-v77.0 =
+   *  "standard". */
+  kind?: ReportKind;
+  /** O bloco e-commerce. Só existe nos relatórios kind === "ecommerce". */
+  ecom?: EcommerceBlock;
 
   leads: {
     total: ReportMetric;

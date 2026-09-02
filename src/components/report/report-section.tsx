@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowUpRight, FileBarChart, FileDown } from "lucide-react";
 import { listReports } from "@/lib/report/report-store";
+import { getReportConfig } from "@/lib/report/report-config-store";
 import {
   previousCompleteMonth,
   currentMonth,
@@ -32,7 +33,11 @@ export async function ReportSection({
   slug: string;
   readOnly?: boolean;
 }) {
-  const [reports, next] = [await listReports(slug), previousCompleteMonth()];
+  const [reports, config] = await Promise.all([
+    listReports(slug),
+    getReportConfig(slug),
+  ]);
+  const next = previousCompleteMonth();
   const alreadyHasNext = reports.some((r) => r.period === next.key);
 
   // The month still in progress — offered alongside the closed one so a client
@@ -63,7 +68,8 @@ export async function ReportSection({
               Visibility, com comparação face ao mês anterior nos meses fechados.
             </p>
             <p className="mt-1 text-[12px] text-white/45">
-              Escolhe o mês fechado ou o mês em curso (parcial).
+              Escolhe o tipo (normal ou e-commerce) e o mês — fechado ou em
+              curso (parcial).
             </p>
           </div>
         </div>
@@ -73,6 +79,7 @@ export async function ReportSection({
             {canDoCurrent ? (
               <ReportPeriodPicker
                 slug={slug}
+                ecommerce={config.ecommerce}
                 closed={{
                   key: next.key,
                   label: next.label,

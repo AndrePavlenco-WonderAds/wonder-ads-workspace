@@ -38,6 +38,25 @@ export function formatRaw(
   }
 }
 
+/** Dinheiro na moeda do cliente ("1 824,38 €", "£1,824.38"). Sempre com
+ *  cêntimos — a tabela de conversão é um documento de receita, não um slide. */
+export function formatMoney(
+  value: number,
+  currency: string,
+  lang: Lang,
+): string {
+  try {
+    return value.toLocaleString(numLocale(lang), {
+      style: "currency",
+      currency,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  } catch {
+    return `${value.toLocaleString(numLocale(lang), { maximumFractionDigits: 2 })} ${currency}`;
+  }
+}
+
 export type MetricDelta = {
   /** e.g. "+18,3%" or "▲ 2,4" for position. */
   text: string;

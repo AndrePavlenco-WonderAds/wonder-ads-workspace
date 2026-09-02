@@ -6,17 +6,21 @@ import { Loader2, FileBarChart } from "lucide-react";
 
 /** Triggers a monthly-report generation for a period, then navigates to the
  *  report view. `period` omitted → the API defaults to the previous complete
- *  month. Used both to create the first report and to regenerate. */
+ *  month. Used both to create the first report and to regenerate.
+ *  `ecommerce` omitido → fica o tipo configurado do cliente; passado, fixa o
+ *  tipo (um relatório e-commerce regenera como e-commerce). */
 export function GenerateReportButton({
   slug,
   period,
   label,
   variant = "solid",
+  ecommerce,
 }: {
   slug: string;
   period?: string;
   label: string;
   variant?: "solid" | "ghost";
+  ecommerce?: boolean;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -29,7 +33,10 @@ export function GenerateReportButton({
       const res = await fetch(`/api/reports/${slug}/generate`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify(period ? { period } : {}),
+        body: JSON.stringify({
+          ...(period ? { period } : {}),
+          ...(ecommerce !== undefined ? { ecommerce } : {}),
+        }),
       });
       const data = (await res.json().catch(() => ({}))) as {
         ok?: boolean;

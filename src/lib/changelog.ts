@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.0",
+    date: "2026-09-02",
+    title: "Relatório Mensal e-commerce: conversão orgânica, páginas e produtos",
+    highlights: [
+      "**🛒 Escolher o tipo ao gerar.** O gerador do Relatório Mensal passa a ter dois tipos — normal ou e-commerce — e a escolha fica gravada no cliente para os meses seguintes. O e-commerce traz tudo o que o normal tem, mais três secções.",
+      "**💶 Conversão · SEO Orgânico.** A tabela que o cliente de loja conhece: Receita, Transações, Conversão, Utilizadores, Impressões e Ticket médio, com os 3 últimos meses lado a lado e o mês homólogo do ano anterior em coluna própria (Black Friday e afins não se comparam com o mês anterior). Receita e conversão vêm do GA4 filtrado ao canal Organic Search; impressões do Search Console; ticket médio e conversão derivam-se sozinhos.",
+      "**🏪 Fallback Shopify.** Cliente sem purchase tracking no GA4 (ex.: Kings Gyms)? Liga-se a loja na nova ficha «Ligação Shopify» (domínio + Admin API token, guardado em KV e nunca devolvido ao browser) e a receita/transações/produtos vêm da Shopify — sempre etiquetados «loja inteira (todos os canais)», porque a Shopify não sabe o que é orgânico.",
+      "**✍️ Manual quando nada responde.** Cada célula da tabela preenche-se à mão ou marca-se N/A (com «N/A no resto» por coluna); as listas de páginas e produtos têm editor manual quando nenhuma fonte as puxou. Só a coluna do mês do relatório é obrigatória para finalizar.",
+      "**📄 Top 10 no documento.** «Páginas mais acedidas · SEO» (GA4, canal orgânico) e «Produtos mais vendidos · SEO» (GA4 → Shopify → manual) entram no relatório com barras e valores, no índice e no PDF. No cliente, colunas e secções por validar simplesmente não saem — a regra de sempre.",
+    ],
+  },
+  {
     version: "76.99",
     date: "2026-09-01",
     title: "Target Keywords sem as colunas Vol/mo e KD",
