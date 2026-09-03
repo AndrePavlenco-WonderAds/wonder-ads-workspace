@@ -23,6 +23,11 @@ export const toolsAccessStorageConfigured = Boolean(
 export type ToolAccess = {
   username: string | null;
   password: string | null;
+  /** A ferramenta entra-se pelo botão «Continuar com Google» com esta
+   *  conta, em vez de escrever o email e a password no formulário dela.
+   *  Aparece no cartão a toda a gente — é a diferença entre conseguir
+   *  entrar à primeira e ficar a olhar para um «password incorreta». */
+  googleLogin: boolean;
   /** Quem gravou pela última vez, e quando. Aparece no modal de edição —
    *  uma password partilhada sem dono não se sabe a quem perguntar. */
   updatedAt: number | null;
@@ -36,6 +41,7 @@ export type ToolAccessMap = Record<string, ToolAccess>;
 export const EMPTY_TOOL_ACCESS: ToolAccess = {
   username: null,
   password: null,
+  googleLogin: false,
   updatedAt: null,
   updatedBy: null,
 };
@@ -49,6 +55,7 @@ function hydrateAccess(raw: unknown): ToolAccess {
   return {
     username: typeof o.username === "string" ? o.username : null,
     password: typeof o.password === "string" ? o.password : null,
+    googleLogin: o.googleLogin === true,
     updatedAt: typeof o.updatedAt === "number" ? o.updatedAt : null,
     updatedBy: typeof o.updatedBy === "string" ? o.updatedBy : null,
   };
@@ -74,7 +81,11 @@ export async function listToolAccesses(): Promise<ToolAccessMap> {
  *  Devolve a entrada gravada (já hidratada) ou null sem KV configurado. */
 export async function saveToolAccess(
   id: string,
-  patch: { username: string | null; password: string | null },
+  patch: {
+    username: string | null;
+    password: string | null;
+    googleLogin: boolean;
+  },
   updatedBy: string,
 ): Promise<ToolAccess | null> {
   if (!toolsAccessStorageConfigured) return null;
@@ -82,6 +93,7 @@ export async function saveToolAccess(
   const entry: ToolAccess = {
     username: patch.username,
     password: patch.password,
+    googleLogin: patch.googleLogin,
     updatedAt: Date.now(),
     updatedBy,
   };
@@ -98,12 +110,14 @@ export async function clearToolAccess(id: string): Promise<void> {
   await kv.set(KEY, current);
 }
 
-/** Higieniza o corpo de um PUT. Só os dois campos, com tetos de tamanho
+/** Higieniza o corpo de um PUT. Só os três campos, com tetos de tamanho
  *  para o blob de KV não crescer sem limite. String vazia → null, para
- *  «apagar o campo» e «nunca preenchido» serem o mesmo estado. */
+ *  «apagar o campo» e «nunca preenchido» serem o mesmo estado; o
+ *  googleLogin só é verdade quando vem mesmo `true`. */
 export function sanitiseToolAccessBody(raw: unknown): {
   username: string | null;
   password: string | null;
+  googleLogin: boolean;
 } {
   const o = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
   const trim = (v: unknown, max: number): string | null => {
@@ -114,5 +128,6 @@ export function sanitiseToolAccessBody(raw: unknown): {
   return {
     username: trim(o.username, 200),
     password: trim(o.password, 400),
+    googleLogin: o.googleLogin === true,
   };
 }

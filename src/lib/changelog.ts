@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.7",
+    date: "2026-09-03",
+    title: "Tools: cartões maiores, Searchable, e o selo «Login com conta Google»",
+    highlights: [
+      "**🔑 «Login com conta Google» em cada cartão.** O SuperAdmin marca no editor do acesso se a ferramenta se entra pelo botão «Continuar com Google» com aquela conta — e o cartão passa a mostrar o selo com o «G» a toda a gente. Acaba a dúvida de «escrevo a password ou clico no Google?».",
+      "**🃏 Cartões maiores e página mais limpa.** Sai o parágrafo de introdução e os dois contadores; fica o título, a pesquisa (maior) e logo os cartões. A página usa a largura toda do ecrã, por isso os cinco cartões crescem ~15% num portátil.",
+      "**🔎 Searchable entra no baralho.** Visibilidade da marca nas respostas de IA (ChatGPT, Claude, Perplexity, Google AI). E o Claude Max passa para a frente do ChatGPT Pro.",
+      "**📌 «Tools» é o 1.º item do menu do nome.**",
+    ],
+  },
+  {
     version: "77.6",
     date: "2026-09-03",
     title: "Tools — os acessos das ferramentas da agência num baralho de cartões",

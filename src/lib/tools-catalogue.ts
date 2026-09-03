@@ -91,18 +91,6 @@ export const WORKSPACE_TOOLS: WorkspaceTool[] = [
     aliases: ["Google Tag Manager", "Tag Manager", "Tags", "Pixel"],
   },
   {
-    id: "chatgpt",
-    name: "ChatGPT Pro",
-    category: "IA",
-    description:
-      "Assistente de IA da OpenAI para pesquisa, redação, análise e automatização de tarefas.",
-    url: "https://chatgpt.com/",
-    logo: "/tool-logos/chatgpt.png",
-    logoFit: "cover",
-    accent: "#10A37F",
-    aliases: ["OpenAI", "GPT", "Chat GPT"],
-  },
-  {
     id: "claude",
     name: "Claude Max",
     category: "IA",
@@ -113,6 +101,18 @@ export const WORKSPACE_TOOLS: WorkspaceTool[] = [
     logoFit: "cover",
     accent: "#D97757",
     aliases: ["Anthropic", "Claude AI", "Opus", "Sonnet"],
+  },
+  {
+    id: "chatgpt",
+    name: "ChatGPT Pro",
+    category: "IA",
+    description:
+      "Assistente de IA da OpenAI para pesquisa, redação, análise e automatização de tarefas.",
+    url: "https://chatgpt.com/",
+    logo: "/tool-logos/chatgpt.png",
+    logoFit: "cover",
+    accent: "#10A37F",
+    aliases: ["OpenAI", "GPT", "Chat GPT"],
   },
   {
     id: "semrush",
@@ -173,6 +173,25 @@ export const WORKSPACE_TOOLS: WorkspaceTool[] = [
     logoFit: "cover",
     accent: "#0F5EA8",
     aliases: ["Serp stat", "Keywords", "Volume de pesquisa"],
+  },
+  {
+    id: "searchable",
+    name: "Searchable",
+    category: "GEO",
+    description:
+      "Visibilidade da marca nas respostas de IA: ChatGPT, Claude, Perplexity e Google AI.",
+    url: "https://www.searchable.com/",
+    logo: "/tool-logos/searchable.png",
+    logoFit: "cover",
+    accent: "#D4D4D8",
+    aliases: [
+      "Searchable.com",
+      "AI visibility",
+      "Visibilidade IA",
+      "LLM",
+      "AI Overviews",
+      "Perplexity",
+    ],
   },
 ];
 
