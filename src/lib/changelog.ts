@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.6",
+    date: "2026-09-03",
+    title: "Tools — os acessos das ferramentas da agência num baralho de cartões",
+    highlights: [
+      "**🗝 Novo separador «Tools» no menu do nome.** Para toda a gente com sessão: GA4, GSC, GMB, GTM, ChatGPT Pro, Claude Max, SemRush, Envato Elements Pro, Loom Pro, Figma Pro e Serpstat, cada um no seu cartão com o logótipo oficial, o que a ferramenta faz numa linha, e o username + password a usar.",
+      "**🎴 Cinco cartões de cada vez, a rodar para o lado.** Baralho circular — as setas rodam de um cartão de cada vez e nunca chegam ao fim, por isso não há uma última página com um cartão sozinho. Adapta-se à largura do ecrã (5 → 1 no telemóvel), arrasta-se com o dedo e tem pontos para saltar direto a uma ferramenta.",
+      "**📋 Copiar sem revelar.** A password nasce tapada; o botão de copiar leva-a para a área de transferência sem a mostrar no ecrã — o que importa numa partilha de ecrã. O olho revela-a quando é mesmo preciso, e o username tem o seu próprio botão de copiar.",
+      "**🔍 Pesquisa instantânea.** «SemRush access», «analytics» ou «prototipos» acendem o cartão certo — procura no nome, na categoria, na descrição e nos nomes alternativos («Google Analytics» encontra o GA4), sem acentos. «/» foca a caixa, Esc limpa.",
+      "**🔒 Editar é só dos SuperAdmins.** O lápis no canto do cartão só aparece ao C-Level, e a API volta a verificar quem está a bater à porta — um consultor não muda uma password nem com um `fetch` na consola. Cada alteração fica com o nome de quem a fez e a data.",
+    ],
+  },
+  {
     version: "77.5",
     date: "2026-09-03",
     title: "Inquérito de satisfação: escala de progresso equilibrada e justificação opcional",

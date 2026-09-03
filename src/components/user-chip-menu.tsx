@@ -14,6 +14,7 @@ import {
   ChevronDown,
   Eye,
   GraduationCap,
+  KeyRound,
   LayoutDashboard,
   Loader2,
   LogOut,
@@ -315,6 +316,18 @@ export function UserChipMenu({
               Weekly Reports
             </Link>
           )}
+          {/* Tools — os acessos das ferramentas que a agência paga (GA4,
+              SemRush, Figma…). Para TODA a gente com sessão: a página é de
+              leitura e só o SuperAdmin vê o lápis de editar. */}
+          <Link
+            href="/tools"
+            role="menuitem"
+            onMouseDown={(e) => e.preventDefault()}
+            className="flex w-full items-center gap-2 border-b border-white/8 px-4 py-2.5 text-left text-[12px] font-medium text-white/75 transition hover:bg-white/[0.06] hover:text-white"
+          >
+            <KeyRound className="h-3.5 w-3.5 text-[color:var(--brand-purple)]" />
+            Tools
+          </Link>
           {/* Pedir Ausência — para TODA a gente com sessão: a folha de RH e
               o histórico dos próprios pedidos vivem em /ausencias. */}
           <Link

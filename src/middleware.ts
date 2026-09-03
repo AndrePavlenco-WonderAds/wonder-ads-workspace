@@ -118,6 +118,11 @@ export const config = {
     // assinatura HMAC do próprio payload, não por cookie de sessão.
     "/ausencias/:path*",
     "/api/absences/:path*",
+    // Tools — os acessos das ferramentas da agência. Toda a gente com
+    // sessão VÊ; só o SuperAdmin escreve, e esse gate vive na própria
+    // rota da API (isCurrentUserAdmin), não aqui.
+    "/tools/:path*",
+    "/api/tools/:path*",
     // Internal-only API surfaces. /api/reviews stays public (clients
     // hit it from the (public-review) pages), /api/auth is the gate
     // itself, /api/files is used by both sides so we leave it open
