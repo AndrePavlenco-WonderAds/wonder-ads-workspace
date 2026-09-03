@@ -13,6 +13,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.5",
+    date: "2026-09-03",
+    title: "Inquérito de satisfação: escala de progresso equilibrada e justificação opcional",
+    highlights: [
+      "**📊 A pergunta do progresso deixa de castigar.** As quatro opções passam a valer 10 · 8 · 6 · 4 (antes 10 · 6,7 · 3,3 · 0). Um cliente que responde «Algum progresso» — a resposta mais comum — já não arrasta o resultado global para baixo como se estivesse insatisfeito.",
+      "**✍️ «Justifica a tua resposta» passa a opcional.** Era o único campo de texto obrigatório a meio do inquérito; quem não queria escrever ficava bloqueado ou despachava um «ok». Agora aparece marcado como opcional e o inquérito avança sem ele.",
+    ],
+  },
+  {
     version: "77.4",
     date: "2026-09-02",
     title: "AI Visibility com o canal oficial da Google — e o Google IA a puxar-se sozinho no dia em que a API abrir",

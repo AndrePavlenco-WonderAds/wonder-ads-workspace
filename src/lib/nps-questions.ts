@@ -455,15 +455,17 @@ export const NPS_SECTIONS: NpsSectionDef[] = [
         },
         options: [
           { value: "muito", label: { pt: "Muito progresso", en: "A lot of progress" }, score: 10 },
-          { value: "algum", label: { pt: "Algum progresso", en: "Some progress" }, score: 6.7 },
-          { value: "pouco", label: { pt: "Pouco progresso", en: "Little progress" }, score: 3.3 },
-          { value: "nenhum", label: { pt: "Ainda não houve progresso", en: "No progress yet" }, score: 0 },
+          { value: "algum", label: { pt: "Algum progresso", en: "Some progress" }, score: 8 },
+          { value: "pouco", label: { pt: "Pouco progresso", en: "Little progress" }, score: 6 },
+          { value: "nenhum", label: { pt: "Ainda não houve progresso", en: "No progress yet" }, score: 4 },
         ],
       },
       {
+        // Opcional: quem escolheu uma opção de progresso já disse o essencial;
+        // obrigar a escrever só produz "ok" e abandono a meio do inquérito.
         kind: "open",
         name: "p4_justifica",
-        required: true,
+        required: false,
         q: { pt: "Justifica a tua resposta.", en: "Please justify your answer." },
         placeholder: { pt: "Escreve aqui…", en: "Write here…" },
       },
