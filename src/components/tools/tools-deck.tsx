@@ -45,6 +45,13 @@ export type ToolCard = WorkspaceTool & { access: ToolAccess };
  *  cartão e a do deslocamento da pista têm de usar o mesmo número. */
 const GAP = 18;
 
+/** Altura ÷ largura do cartão. Uma carta de jogo tem ~1,4; aqui é mais
+ *  alta de propósito (pedido do André, v77.8) para o baralho encher o
+ *  ecrã em vez de deixar o rodapé a meio. Proporção e não altura fixa,
+ *  para o cartão de telemóvel (1 por linha) e o de portátil (5 por
+ *  linha) parecerem a mesma carta em tamanhos diferentes. */
+const CARD_RATIO = 1.6;
+
 /** Sem acentos, sem pontuação, minúsculas — «SemRush access», «semrush» e
  *  «Sem Rush» têm de acender o mesmo cartão. */
 function fold(s: string): string {
@@ -358,8 +365,13 @@ function Carousel({
               return (
                 <div
                   key={`${tool.id}-${i}`}
-                  className="shrink-0"
-                  style={{ width: cardW || undefined }}
+                  // `flex`: o artigo estica até esta altura mínima. Com
+                  // `block`, o `h-full` lá dentro não tinha a que se agarrar.
+                  className="flex shrink-0"
+                  style={{
+                    width: cardW || undefined,
+                    minHeight: cardW ? Math.round(cardW * CARD_RATIO) : undefined,
+                  }}
                   aria-hidden={isClone || undefined}
                   inert={isClone || undefined}
                 >
@@ -443,8 +455,11 @@ function ToolCardView({
   onEdit: () => void;
 }) {
   const { access } = tool;
+  // O SuperAdmin pode apontar o cartão para um link de login específico
+  // (SSO, painel de agência, convite); sem ele, abre-se a porta da frente.
+  const href = access.loginUrl ?? tool.url;
   return (
-    <article className="group relative h-full">
+    <article className="group relative flex w-full flex-col">
       {/* Halo da cor da marca — só acende ao passar por cima, senão cinco
           cartões acesos ao mesmo tempo faziam do baralho uma manta. */}
       <div
@@ -457,16 +472,16 @@ function ToolCardView({
       {/* A moldura dupla do cartão de jogo: rebordo claro por fora,
           painel escuro por dentro. */}
       <div
-        className="relative h-full rounded-[22px] p-[2px] transition-transform duration-300 group-hover:-translate-y-1.5"
+        className="relative flex flex-1 flex-col rounded-[22px] p-[2px] transition-transform duration-300 group-hover:-translate-y-1.5"
         style={{
           background: `linear-gradient(155deg, ${tool.accent}b0, rgba(255,255,255,0.30) 34%, rgba(255,255,255,0.08) 66%, rgba(255,255,255,0.22))`,
         }}
       >
-        <div className="relative flex h-full flex-col overflow-hidden rounded-[20px] bg-[#0a0c13] shadow-[0_20px_50px_-24px_rgba(0,0,0,0.95)]">
+        <div className="relative flex flex-1 flex-col overflow-hidden rounded-[20px] bg-[#0a0c13] shadow-[0_20px_50px_-24px_rgba(0,0,0,0.95)]">
           {/* Brilho no topo, como a luz que cai sobre a carta. */}
           <div
             aria-hidden
-            className="pointer-events-none absolute inset-x-0 top-0 h-40"
+            className="pointer-events-none absolute inset-x-0 top-0 h-56"
             style={{
               background: `radial-gradient(90% 100% at 50% -10%, ${tool.accent}2e, transparent 70%)`,
             }}
@@ -496,39 +511,39 @@ function ToolCardView({
           )}
 
           <a
-            href={tool.url}
+            href={href}
             target="_blank"
             rel="noopener noreferrer"
-            className="relative flex flex-col items-center px-4 pb-3 pt-6 text-center outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--brand-purple)]/50"
+            className="relative flex flex-1 flex-col items-center px-5 pb-6 pt-10 text-center outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--brand-purple)]/50"
           >
             <span className="relative">
               <span
                 aria-hidden
-                className="absolute -inset-1.5 rounded-[22px] opacity-35 blur-lg transition-opacity duration-300 group-hover:opacity-70"
+                className="absolute -inset-2 rounded-[30px] opacity-35 blur-xl transition-opacity duration-300 group-hover:opacity-70"
                 style={{ background: tool.accent }}
               />
-              <span className="relative flex h-[74px] w-[74px] items-center justify-center overflow-hidden rounded-[20px] bg-white/[0.07] ring-1 ring-white/15 shadow-[0_10px_28px_-10px_rgba(0,0,0,0.9)]">
+              <span className="relative flex h-[104px] w-[104px] items-center justify-center overflow-hidden rounded-[28px] bg-white/[0.07] ring-1 ring-white/15 shadow-[0_14px_34px_-12px_rgba(0,0,0,0.9)]">
                 <Image
                   src={tool.logo}
                   alt=""
-                  width={148}
-                  height={148}
+                  width={208}
+                  height={208}
                   unoptimized
                   className={
                     tool.logoFit === "cover"
                       ? "h-full w-full object-cover"
-                      : "h-full w-full object-contain p-3"
+                      : "h-full w-full object-contain p-4"
                   }
                 />
               </span>
             </span>
 
-            <h3 className="mt-3.5 flex items-center gap-1.5 text-[15px] font-bold leading-tight tracking-tight text-white drop-shadow-[0_2px_6px_rgba(0,0,0,0.6)]">
+            <h3 className="mt-6 flex items-center gap-1.5 text-[19px] font-bold leading-tight tracking-tight text-white drop-shadow-[0_2px_6px_rgba(0,0,0,0.6)]">
               <span className="truncate">{tool.name}</span>
-              <ExternalLink className="h-3 w-3 shrink-0 text-white/0 transition group-hover:text-white/45" />
+              <ExternalLink className="h-3.5 w-3.5 shrink-0 text-white/0 transition group-hover:text-white/45" />
             </h3>
             <span
-              className="readout mt-1.5 rounded-full px-2 py-0.5"
+              className="readout mt-2.5 rounded-full px-2.5 py-1"
               style={{
                 color: tool.accent,
                 background: `${tool.accent}1a`,
@@ -536,27 +551,39 @@ function ToolCardView({
             >
               {tool.category}
             </span>
-            <p className="mt-2.5 min-h-[46px] text-[11.5px] leading-[1.5] text-white/45">
+            <p className="mt-4 max-w-[26ch] text-[13px] leading-[1.6] text-white/50">
               {tool.description}
             </p>
           </a>
 
           {/* A gaveta das credenciais — encostada ao fundo para que cinco
               cartões de alturas diferentes alinhem o que interessa. */}
-          <div className="mt-auto space-y-1.5 border-t border-white/[0.07] bg-black/35 px-3 py-3">
+          <div className="mt-auto space-y-2.5 border-t border-white/[0.07] bg-black/35 px-4 pb-4 pt-4">
             {access.googleLogin && (
               <div
-                className="mb-2 inline-flex items-center gap-1.5 rounded-full border border-white/12 bg-white/[0.05] py-0.5 pl-1.5 pr-2.5"
+                className="mb-1 inline-flex items-center gap-1.5 rounded-full border border-white/12 bg-white/[0.05] py-1 pl-2 pr-3"
                 title="Entrar com o botão «Continuar com Google», usando esta conta"
               >
-                <GoogleG className="h-3 w-3 shrink-0" />
-                <span className="text-[10px] font-semibold text-white/70">
+                <GoogleG className="h-3.5 w-3.5 shrink-0" />
+                <span className="text-[11px] font-semibold text-white/70">
                   Login com conta Google
                 </span>
               </div>
             )}
             <CredentialRow label="User" value={access.username} />
             <CredentialRow label="Pass" value={access.password} secret />
+            {/* O nome já abre a ferramenta, mas um botão diz-o em voz alta
+                — e é o que se procura a seguir a copiar a password. */}
+            <a
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+              title={href}
+              className="!mt-4 flex items-center justify-center gap-1.5 rounded-full border border-white/12 bg-white/[0.04] py-2 text-[11.5px] font-semibold text-white/70 transition hover:border-[color:var(--brand-purple)]/50 hover:bg-white/[0.08] hover:text-white"
+            >
+              Abrir ferramenta
+              <ExternalLink className="h-3 w-3" />
+            </a>
           </div>
         </div>
       </div>
@@ -600,11 +627,11 @@ function CredentialRow({
       {/* Etiqueta com o tracking apertado (e não o `readout` de 0.22em): num
           cartão de ~225px, cada píxel que a etiqueta larga é um píxel que o
           email deixa de cortar. */}
-      <span className="w-[26px] shrink-0 text-[9px] font-bold uppercase tracking-[0.08em] text-white/25">
+      <span className="w-[30px] shrink-0 text-[9.5px] font-bold uppercase tracking-[0.08em] text-white/25">
         {label}
       </span>
       <span
-        className={`min-w-0 flex-1 truncate text-[11px] ${
+        className={`min-w-0 flex-1 truncate text-[12px] ${
           value
             ? `text-white/80 ${secret ? "font-mono" : ""}`
             : "italic text-white/25"
@@ -684,6 +711,7 @@ function EditAccessModal({
   const [username, setUsername] = useState(tool.access.username ?? "");
   const [password, setPassword] = useState(tool.access.password ?? "");
   const [googleLogin, setGoogleLogin] = useState(tool.access.googleLogin);
+  const [loginUrl, setLoginUrl] = useState(tool.access.loginUrl ?? "");
   const [revealed, setRevealed] = useState(false);
   const [saving, setSaving] = useState(false);
   const [clearing, setClearing] = useState(false);
@@ -709,7 +737,12 @@ function EditAccessModal({
         ...(method === "PUT"
           ? {
               headers: { "content-type": "application/json" },
-              body: JSON.stringify({ username, password, googleLogin }),
+              body: JSON.stringify({
+                username,
+                password,
+                googleLogin,
+                loginUrl: loginUrl.trim() || null,
+              }),
             }
           : {}),
       });
@@ -730,6 +763,15 @@ function EditAccessModal({
   }
 
   async function save() {
+    // A mesma regra da rota, mas antes de sair daqui — o erro aparece por
+    // baixo do campo enquanto ainda se está a olhar para ele.
+    const trimmed = loginUrl.trim();
+    if (trimmed && !/^https?:\/\/\S+$/i.test(trimmed)) {
+      setError(
+        "O link de login tem de ser um endereço completo, a começar por https://",
+      );
+      return;
+    }
     setSaving(true);
     await send("PUT");
     setSaving(false);
@@ -822,6 +864,37 @@ function EditAccessModal({
                   <Eye className="h-4 w-4" />
                 )}
               </button>
+            </span>
+          </label>
+
+          <label className="block">
+            <span className="readout text-white/35">Link de login</span>
+            <span className="relative mt-1.5 block">
+              <input
+                type="url"
+                value={loginUrl}
+                onChange={(e) => setLoginUrl(e.target.value)}
+                autoComplete="off"
+                spellCheck={false}
+                placeholder={tool.url}
+                className="w-full rounded-xl border border-white/12 bg-white/[0.04] px-3.5 py-2.5 pr-10 text-sm text-white/85 outline-none transition placeholder:text-white/25 focus:border-[color:var(--brand-purple)]/50 focus:bg-white/[0.07] focus:ring-2 focus:ring-[color:var(--brand-purple)]/15"
+              />
+              {loginUrl && (
+                <button
+                  type="button"
+                  onClick={() => setLoginUrl("")}
+                  aria-label="Repor o link por defeito"
+                  title="Repor o link por defeito"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-white/40 transition hover:bg-white/[0.07] hover:text-white"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </span>
+            <span className="mt-1.5 block text-[11px] leading-snug text-white/35">
+              Só quando o login é por um link específico (SSO, painel de
+              agência, convite). Vazio abre{" "}
+              <span className="text-white/50">{tool.url}</span>.
             </span>
           </label>
 

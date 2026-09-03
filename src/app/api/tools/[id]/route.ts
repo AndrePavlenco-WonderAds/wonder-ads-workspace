@@ -15,6 +15,7 @@ import { getCurrentEmployee, isCurrentUserAdmin } from "@/lib/auth/server";
 import { getWorkspaceTool } from "@/lib/tools-catalogue";
 import {
   clearToolAccess,
+  isHttpUrl,
   sanitiseToolAccessBody,
   saveToolAccess,
   toolsAccessStorageConfigured,
@@ -70,6 +71,19 @@ export async function PUT(
     raw = await req.json();
   } catch {
     return NextResponse.json({ error: "JSON inválido" }, { status: 400 });
+  }
+  // Um link mal escrito não pode ser engolido em silêncio — o SuperAdmin
+  // gravava «semrush.com/login», o cartão abria o site da ferramenta na
+  // mesma, e ninguém percebia porquê.
+  const rawUrl =
+    raw && typeof raw === "object"
+      ? (raw as Record<string, unknown>).loginUrl
+      : undefined;
+  if (typeof rawUrl === "string" && rawUrl.trim() && !isHttpUrl(rawUrl.trim())) {
+    return NextResponse.json(
+      { error: "O link de login tem de ser um endereço completo, a começar por https://" },
+      { status: 400 },
+    );
   }
   const body = sanitiseToolAccessBody(raw);
   const entry = await saveToolAccess(id, body, g.by);

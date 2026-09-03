@@ -28,6 +28,11 @@ export type ToolAccess = {
    *  Aparece no cartão a toda a gente — é a diferença entre conseguir
    *  entrar à primeira e ficar a olhar para um «password incorreta». */
   googleLogin: boolean;
+  /** Link por onde se entra, quando não é a porta da frente da ferramenta:
+   *  um SSO, um painel de agência, um convite com token. null → o URL do
+   *  catálogo. Sem isto o consultor abria o site, não encontrava onde meter
+   *  a password, e vinha perguntar. */
+  loginUrl: string | null;
   /** Quem gravou pela última vez, e quando. Aparece no modal de edição —
    *  uma password partilhada sem dono não se sabe a quem perguntar. */
   updatedAt: number | null;
@@ -42,6 +47,7 @@ export const EMPTY_TOOL_ACCESS: ToolAccess = {
   username: null,
   password: null,
   googleLogin: false,
+  loginUrl: null,
   updatedAt: null,
   updatedBy: null,
 };
@@ -56,6 +62,7 @@ function hydrateAccess(raw: unknown): ToolAccess {
     username: typeof o.username === "string" ? o.username : null,
     password: typeof o.password === "string" ? o.password : null,
     googleLogin: o.googleLogin === true,
+    loginUrl: isHttpUrl(o.loginUrl) ? (o.loginUrl as string) : null,
     updatedAt: typeof o.updatedAt === "number" ? o.updatedAt : null,
     updatedBy: typeof o.updatedBy === "string" ? o.updatedBy : null,
   };
@@ -85,6 +92,7 @@ export async function saveToolAccess(
     username: string | null;
     password: string | null;
     googleLogin: boolean;
+    loginUrl: string | null;
   },
   updatedBy: string,
 ): Promise<ToolAccess | null> {
@@ -94,6 +102,7 @@ export async function saveToolAccess(
     username: patch.username,
     password: patch.password,
     googleLogin: patch.googleLogin,
+    loginUrl: patch.loginUrl,
     updatedAt: Date.now(),
     updatedBy,
   };
@@ -110,14 +119,28 @@ export async function clearToolAccess(id: string): Promise<void> {
   await kv.set(KEY, current);
 }
 
-/** Higieniza o corpo de um PUT. Só os três campos, com tetos de tamanho
+/** Um URL absoluto http(s) — o único tipo de link que faz sentido abrir
+ *  numa aba nova. `javascript:` e afins ficam de fora aqui, não na UI. */
+export function isHttpUrl(v: unknown): boolean {
+  if (typeof v !== "string" || v.length === 0 || v.length > 600) return false;
+  try {
+    const u = new URL(v);
+    return u.protocol === "https:" || u.protocol === "http:";
+  } catch {
+    return false;
+  }
+}
+
+/** Higieniza o corpo de um PUT. Só os quatro campos, com tetos de tamanho
  *  para o blob de KV não crescer sem limite. String vazia → null, para
  *  «apagar o campo» e «nunca preenchido» serem o mesmo estado; o
- *  googleLogin só é verdade quando vem mesmo `true`. */
+ *  googleLogin só é verdade quando vem mesmo `true`; o loginUrl só entra
+ *  se for um http(s) válido (a rota já devolveu 400 aos inválidos). */
 export function sanitiseToolAccessBody(raw: unknown): {
   username: string | null;
   password: string | null;
   googleLogin: boolean;
+  loginUrl: string | null;
 } {
   const o = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
   const trim = (v: unknown, max: number): string | null => {
@@ -129,5 +152,6 @@ export function sanitiseToolAccessBody(raw: unknown): {
     username: trim(o.username, 200),
     password: trim(o.password, 400),
     googleLogin: o.googleLogin === true,
+    loginUrl: isHttpUrl(trim(o.loginUrl, 600)) ? trim(o.loginUrl, 600) : null,
   };
 }

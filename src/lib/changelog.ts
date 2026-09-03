@@ -13,6 +13,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.8",
+    date: "2026-09-03",
+    title: "Tools: cartões ao alto, como cartas a sério",
+    highlights: [
+      "**🃏 Os cartões ficaram 1,6× mais altos do que largos** e enchem o ecrã em vez de deixar o rodapé a meio da página. O logótipo cresceu (104 px), o nome e a descrição também, e a gaveta das credenciais ganhou ar e um botão «Abrir ferramenta» por baixo do User/Pass.",
+      "**🔗 Link de login editável.** Algumas ferramentas entram-se por um link específico (SSO, painel de agência, convite) e não pela porta da frente. O SuperAdmin escreve-o no editor do acesso e o cartão — o nome e o botão «Abrir ferramenta» — passa a abrir esse link para toda a gente. Vazio volta ao endereço normal; um link incompleto é recusado à entrada.",
+    ],
+  },
+  {
     version: "77.7",
     date: "2026-09-03",
     title: "Tools: cartões maiores, Searchable, e o selo «Login com conta Google»",

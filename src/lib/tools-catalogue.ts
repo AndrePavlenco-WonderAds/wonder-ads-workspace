@@ -147,7 +147,8 @@ export const WORKSPACE_TOOLS: WorkspaceTool[] = [
     url: "https://www.loom.com/",
     logo: "/tool-logos/loom.png",
     logoFit: "cover",
-    accent: "#625DF5",
+    // O azul do ícone, não o índigo da marca — o André queria o halo azul.
+    accent: "#2F6BFF",
     aliases: ["Screen recording", "Gravação de ecrã", "Vídeo"],
   },
   {
@@ -183,7 +184,9 @@ export const WORKSPACE_TOOLS: WorkspaceTool[] = [
     url: "https://www.searchable.com/",
     logo: "/tool-logos/searchable.png",
     logoFit: "cover",
-    accent: "#D4D4D8",
+    // O ícone é preto e branco; o halo branco parecia um cartão apagado.
+    // Laranja como o GA4, a pedido do André.
+    accent: "#E37400",
     aliases: [
       "Searchable.com",
       "AI visibility",
