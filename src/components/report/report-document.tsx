@@ -25,11 +25,40 @@ import {
   type EcomMetricKey,
   type MonthlyReportSnapshot,
   type ReportMetric,
+  gbpLeadTotal,
+  isGbpChannelKey,
+  websiteLeadTotal,
 } from "@/lib/report/report-types";
 
 const GRAD = "linear-gradient(135deg,#343ED7 0%,#783DF5 53%,#C535C9 100%)";
 
 type Variant = "internal" | "client";
+
+/** Links clicáveis nas notas (v77.9) — é lá que o consultor cola os reports
+ *  do Searchable. O texto mostrado é o domínio + caminho, curto, para um
+ *  URL de 200 caracteres não engolir o parágrafo. */
+const URL_RE = /(https?:\/\/[^\s<>()]+[^\s<>().,;:!?'")\]])/g;
+function shortUrl(u: string): string {
+  try {
+    const x = new URL(u);
+    const path = x.pathname === "/" ? "" : x.pathname;
+    const shown = x.hostname.replace(/^www\./, "") + path;
+    return shown.length > 64 ? `${shown.slice(0, 62)}…` : shown;
+  } catch {
+    return u;
+  }
+}
+function linkify(text: string) {
+  return text.split(URL_RE).map((part, i) =>
+    i % 2 === 1 ? (
+      <a key={`u${i}`} href={part} target="_blank" rel="noopener noreferrer">
+        {shortUrl(part)}
+      </a>
+    ) : (
+      <span key={`t${i}`}>{part}</span>
+    ),
+  );
+}
 
 function boldParts(text: string, keyBase: string) {
   return text.split("**").map((part, i) =>
@@ -248,6 +277,16 @@ export function ReportDocument({
   const hidden = new Set(snapshot.hiddenSections ?? []);
 
   const leadTotal = snapshot.leads.total;
+  // DOIS TOTAIS EM VEZ DE UM (v77.9). O site e a Ficha Google medem coisas
+  // diferentes — um formulário preenchido e um clique em «Ligar» no Maps —
+  // e somá-los fazia do Kings Gyms «1.069 leads» com quase tudo a ser ficha.
+  // Derivados dos canais nos relatórios gravados antes de existirem.
+  const leadWebsite =
+    snapshot.leads.website ?? websiteLeadTotal(snapshot.leads.channels);
+  const leadGbp = snapshot.leads.gbp ?? gbpLeadTotal(snapshot.leads.channels);
+  const hasGbpChannels = snapshot.leads.channels.some((c) =>
+    isGbpChannelKey(c.key),
+  );
   const visibleChannels = snapshot.leads.channels.filter(
     (c) =>
       variant === "internal" ||
@@ -313,6 +352,8 @@ export function ReportDocument({
     citedInAio: boolean;
     difficulty: number | null;
     traffic: number | null;
+    /** Acrescentada à mão pelo consultor (v77.9). */
+    manual?: boolean;
   };
   const AIO = "ai_overview";
   const AIO_CITED = ["snip_url_in_aio", "snip_fqdn_in_aio"];
@@ -339,7 +380,7 @@ export function ReportDocument({
     traffic: r.traffic ?? null,
   });
 
-  const kwAll: KwRow[] = live
+  const kwRaw: KwRow[] = live
     ? [
         ...live.ranks.map((r) => rowFrom(r, true)),
         ...(live.others ?? []).map((r) => rowFrom(r, false)),
@@ -347,6 +388,32 @@ export function ReportDocument({
     : (seRanking?.ranks ?? []).map((r) =>
         rowFrom({ ...r, volume: r.volume }, true),
       );
+  // A MÃO DO CONSULTOR (v77.9). O que ele escondeu não sai em NENHUMA vista
+  // — interna, PDF, link público — e o que acrescentou à mão entra com a
+  // posição que verificou. A regra «esconder as fora do top 100» aplica-se
+  // por cima da lista escondida.
+  const curation = snapshot.kwCuration;
+  const kwHiddenSet = new Set(
+    (curation?.hidden ?? []).map((k) => k.toLowerCase()),
+  );
+  const kwRawKeys = new Set(kwRaw.map((r) => r.keyword.toLowerCase()));
+  const kwAll: KwRow[] = [
+    ...kwRaw.filter(
+      (r) =>
+        !kwHiddenSet.has(r.keyword.toLowerCase()) &&
+        !(curation?.hideUnranked && r.position === null),
+    ),
+    ...(curation?.added ?? [])
+      .filter(
+        (a) =>
+          !kwHiddenSet.has(a.keyword.toLowerCase()) &&
+          !kwRawKeys.has(a.keyword.toLowerCase()),
+      )
+      .map((a) => ({
+        ...rowFrom({ keyword: a.keyword, position: a.position, change: null }, true),
+        manual: true,
+      })),
+  ];
 
   // A rankear primeiro, por lugar; as do plano que ainda não entraram no
   // top-100 ficam no fim — continuam a ser trabalho em curso e não uma
@@ -443,7 +510,10 @@ export function ReportDocument({
   // Hero KPIs — the month's headline numbers. Order = what the client cares
   // about most: leads first, then reach, then search performance.
   const kpiDefs: { label: string; m: ReportMetric }[] = [
-    { label: t("Leads geradas", "Leads generated"), m: leadTotal },
+    { label: t("Leads do website", "Website leads"), m: leadWebsite },
+    ...(hasGbpChannels
+      ? [{ label: t("Contactos Ficha Google", "Google listing contacts"), m: leadGbp }]
+      : []),
     { label: t("Utilizadores orgânicos", "Organic users"), m: org.users },
     { label: t("Clicks no Google", "Google clicks"), m: gsc.clicks },
     { label: t("Posição média", "Avg. position"), m: gsc.position },
@@ -541,7 +611,7 @@ export function ReportDocument({
   // Séries do gráfico de evolução reaproveitadas como sparkline dos KPI.
   const tr = snapshot.trend;
   const sparkFor: Record<string, (number | null)[] | undefined> = {
-    [t("Leads geradas", "Leads generated")]: tr?.leads,
+    [t("Leads do website", "Website leads")]: tr?.leads,
     [t("Utilizadores orgânicos", "Organic users")]: tr?.organicUsers,
     [t("Clicks no Google", "Google clicks")]: tr?.gscClicks,
   };
@@ -840,6 +910,22 @@ export function ReportDocument({
             <span className="wa-bignum-l">{t("leads no total", "leads in total")}</span>
             <DeltaChip delta={leadDelta} />
           </div>
+        )}
+        {leadTotal.value !== null && hasGbpChannels && (
+          <p className="wa-lead-split">
+            {leadWebsite.value !== null && (
+              <span>
+                <b>{formatValue(leadWebsite, lang)}</b>{" "}
+                {t("no website", "on the website")}
+              </span>
+            )}
+            {leadGbp.value !== null && (
+              <span>
+                <b>{formatValue(leadGbp, lang)}</b>{" "}
+                {t("na Ficha Google", "via the Google listing")}
+              </span>
+            )}
+          </p>
         )}
         {visibleChannels.length > 0 && (
           <div className="wa-chan">
@@ -1185,6 +1271,9 @@ export function ReportDocument({
                       {k.inPlan && (
                         <span className="wa-kw-plan">{t("plano", "plan")}</span>
                       )}
+                      {variant === "internal" && k.manual && (
+                        <span className="wa-kw-plan">manual</span>
+                      )}
                       {k.citedInAio ? (
                         <span className="wa-kw-aio cited">
                           {t("citado na IA", "cited by AI")}
@@ -1263,9 +1352,43 @@ export function ReportDocument({
             {t("Notas & Próximos Passos", "Notes & Next Steps")}
           </SecLabel>
           {snapshot.notes.trim() ? (
-            <p className="wa-notes">{snapshot.notes}</p>
+            <p className="wa-notes">{linkify(snapshot.notes)}</p>
           ) : (
             <p className="wa-pending">{t("Sem notas — adicione o foco do próximo mês.", "No notes — add next month's focus.")}</p>
+          )}
+          {/* Prints e ficheiros anexados (v77.9): imagens em miniatura, o
+              resto como chip com o nome. Vão para o cliente — é para isso
+              que se anexam. */}
+          {(snapshot.notesAttachments?.length ?? 0) > 0 && (
+            <div className="wa-att">
+              {(snapshot.notesAttachments ?? []).map((a) =>
+                a.type.startsWith("image/") ? (
+                  <a
+                    key={a.url}
+                    href={a.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="wa-att-img"
+                    title={a.name}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={a.url} alt={a.name} />
+                  </a>
+                ) : (
+                  <a
+                    key={a.url}
+                    href={a.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="wa-att-file"
+                    title={a.name}
+                  >
+                    <span aria-hidden>📎</span>
+                    <span className="wa-att-name">{a.name}</span>
+                  </a>
+                ),
+              )}
+            </div>
           )}
         </section>
       )}
@@ -1505,6 +1628,15 @@ const CSS = GEO_CSS + PRINT_CSS + `
   background:rgba(120,61,245,.12);color:var(--violet);font-size:.56rem;font-weight:700;
   letter-spacing:.05em;text-transform:uppercase;vertical-align:middle;}
 .wa-notes{font-size:.86rem;color:#34333f;line-height:1.55;white-space:pre-wrap;margin:.3rem 0 0;}
+.wa-notes a{color:var(--violet);text-decoration:underline;text-underline-offset:2px;word-break:break-all;}
+.wa-att{display:flex;flex-wrap:wrap;gap:.6rem;margin-top:.8rem;}
+.wa-att-img{display:block;width:180px;height:120px;border-radius:10px;overflow:hidden;border:1px solid var(--line);background:#f6f5fb;}
+.wa-att-img img{width:100%;height:100%;object-fit:cover;display:block;}
+.wa-att-file{display:inline-flex;align-items:center;gap:.4rem;max-width:260px;padding:.45rem .7rem;border-radius:999px;
+  border:1px solid var(--line);background:#fff;font-size:.76rem;color:#34333f;text-decoration:none;}
+.wa-att-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.wa-lead-split{display:flex;flex-wrap:wrap;gap:1rem;margin:.35rem 0 0;font-size:.82rem;color:#5b5970;}
+.wa-lead-split b{color:var(--ink);}
 
 /* Footer */
 .wa-foot{display:flex;align-items:center;justify-content:space-between;gap:.6rem;flex-wrap:wrap;

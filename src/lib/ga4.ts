@@ -160,6 +160,10 @@ export type DomainIndex = {
    *  non-empty the index is INCOMPLETE — a client whose property is in
    *  here would wrongly look "Not connected". */
   failedProperties: string[];
+  /** Measurement ID do stream web ("G-ABC123", em maiúsculas) → property id.
+   *  É o código que um consultor encontra no GA4 ou no GTM do site — mais
+   *  fácil de copiar do que o número da propriedade (v77.9). */
+  byMeasurementId: Map<string, string>;
 };
 
 let cachedDomainIndex: { index: DomainIndex; expires: number } | null = null;
@@ -196,7 +200,9 @@ async function getDomainIndex(token: string): Promise<DomainIndex> {
 async function fetchDataStreams(
   propertyId: string,
   token: string,
-): Promise<{ webStreamData?: { defaultUri?: string } }[] | null> {
+): Promise<
+  { webStreamData?: { defaultUri?: string; measurementId?: string } }[] | null
+> {
   const backoff = [250, 750, 2000];
   for (let attempt = 0; attempt <= backoff.length; attempt++) {
     try {
@@ -206,7 +212,9 @@ async function fetchDataStreams(
       );
       if (res.ok) {
         const json = (await res.json()) as {
-          dataStreams?: { webStreamData?: { defaultUri?: string } }[];
+          dataStreams?: {
+            webStreamData?: { defaultUri?: string; measurementId?: string };
+          }[];
         };
         return json.dataStreams ?? [];
       }
@@ -229,6 +237,7 @@ async function buildDomainIndex(token: string): Promise<DomainIndex> {
   const props = await listProperties(token);
   const byHost = new Map<string, string>();
   const byApex = new Map<string, string>();
+  const byMeasurementId = new Map<string, string>();
   const failedProperties: string[] = [];
 
   // Bounded worker pool over the property list.
@@ -244,6 +253,8 @@ async function buildDomainIndex(token: string): Promise<DomainIndex> {
         continue;
       }
       for (const ds of streams) {
+        const mid = ds.webStreamData?.measurementId?.trim().toUpperCase();
+        if (mid && !byMeasurementId.has(mid)) byMeasurementId.set(mid, propertyId);
         const host = ds.webStreamData?.defaultUri
           ? hostFromUrl(ds.webStreamData.defaultUri)
           : null;
@@ -258,7 +269,7 @@ async function buildDomainIndex(token: string): Promise<DomainIndex> {
     Array.from({ length: Math.min(STREAM_CONCURRENCY, props.length) }, worker),
   );
 
-  const index: DomainIndex = { byHost, byApex, failedProperties };
+  const index: DomainIndex = { byHost, byApex, failedProperties, byMeasurementId };
   cachedDomainIndex = {
     index,
     expires:
@@ -386,6 +397,18 @@ export async function explainGa4Resolution(slug: string): Promise<{
           : null,
     propertyId: byHost ?? byApex ?? byName?.propertyId ?? null,
   };
+}
+
+/** Um Measurement ID ("G-ABC123") → o property id numérico a que pertence,
+ *  ou null se nenhum stream visível o tiver. É o que permite ao consultor
+ *  colar o código do GA4/GTM em vez de procurar o número da propriedade. */
+export async function resolveGa4MeasurementId(
+  measurementId: string,
+): Promise<string | null> {
+  if (!googleAuthConfigured) return null;
+  const token = await getGoogleAccessToken(SCOPES);
+  const index = await getDomainIndex(token);
+  return index.byMeasurementId.get(measurementId.trim().toUpperCase()) ?? null;
 }
 
 /** Every GA4 property the connected account can see. When a client is

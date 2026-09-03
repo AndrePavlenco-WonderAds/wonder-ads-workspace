@@ -9,7 +9,7 @@ import { getCurrentEmployee } from "@/lib/auth/server";
 import { editableDepts } from "@/lib/auth/credentials";
 import { getClientBySlug } from "@/lib/notion";
 import { buildMonthlyReport } from "@/lib/report/report-build";
-import { saveReport } from "@/lib/report/report-store";
+import { getReport, saveReport } from "@/lib/report/report-store";
 import {
   getReportConfig,
   saveReportConfig,
@@ -104,7 +104,12 @@ export async function POST(
     // announcement is deliberately NOT fired here — it fires when the
     // consultant clicks "Finalizar" (see ../[period]/finalize), after the
     // manual data is filled in.
-    const snapshot = await buildMonthlyReport(
+    // O que o consultor escreveu à mão sobrevive a um «Regenerar» (v77.9):
+    // as notas e os anexos são dele e não da Google, e as keywords que
+    // acrescentou à mão têm a posição verificada neste mês. O resto do
+    // snapshot é fresco — é para isso que se regenera.
+    const previous = await getReport(slug, period).catch(() => null);
+    const fresh = await buildMonthlyReport(
       slug,
       client.title,
       period,
@@ -114,6 +119,18 @@ export async function POST(
         ...(lang !== undefined ? { lang } : {}),
       },
     );
+    const snapshot = previous
+      ? {
+          ...fresh,
+          ...(previous.notes.trim() ? { notes: previous.notes } : {}),
+          ...(previous.notesAttachments?.length
+            ? { notesAttachments: previous.notesAttachments }
+            : {}),
+          ...(previous.kwCuration?.added.length && fresh.kwCuration
+            ? { kwCuration: { ...fresh.kwCuration, added: previous.kwCuration.added } }
+            : {}),
+        }
+      : fresh;
     await saveReport(snapshot);
     revalidatePath(`/seo/${slug}`);
     revalidatePath(`/seo/${slug}/report/${period}`);

@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.9",
+    date: "2026-09-03",
+    title: "Relatório Mensal: propriedade GA4 à escolha, leads do site separados da Ficha Google, tabela de keywords curada, notas com links e anexos",
+    highlights: [
+      "**📊 Propriedade GA4 à escolha.** Novo cartão «Propriedade GA4» na configuração do cliente: mostra a que propriedade o relatório está ligado (e porquê), lista as que a conta vê, e aceita o número da propriedade ou o código G-… do site — a app traduz o código para a propriedade certa. Resolve o caso Kings Gyms (várias propriedades vazias, o matcher apanhou a errada, «0 utilizadores orgânicos» debaixo de «GA4 ligado»).",
+      "**🧩 Leads do website ≠ contactos da Ficha Google.** Os cartões do topo passam a ser dois — «Leads do website» (formulários, chamadas, email, WhatsApp) e «Contactos Ficha Google» (cliques para o site, direções, chamadas) — em vez de um «1.069 leads» que era quase todo ficha. O Resumo Executivo diz cada um pelo seu nome, e a secção «Leads por canal» reparte o total. Os relatórios já gravados ganham os dois cartões sem regenerar.",
+      "**✂️ Tabela de keywords curada pelo consultor.** Novo cartão «Keywords & posições» na edição: esconde qualquer keyword da tabela (fica escondida também nos próximos meses do cliente), botão «Esconder todas fora do top 100» para as do plano ainda sem posição, e «Adicionar keyword» com a posição verificada à mão. O que se esconde some da vista interna, do PDF e do link público.",
+      "**📎 Notas & próximos passos com links e anexos.** A dica pede os links dos reports do Searchable e outros detalhes; os URLs ficam clicáveis no relatório, e há um botão «Anexar print ou ficheiro» — imagens aparecem em miniatura e os restantes como chips, na mesma secção que o cliente vê.",
+      "**🔁 Regenerar já não apaga as notas.** As notas, os anexos e as keywords acrescentadas à mão sobrevivem a um «Regenerar» — são do consultor, não da Google. O resto continua a vir fresco.",
+    ],
+  },
+  {
     version: "77.8",
     date: "2026-09-03",
     title: "Tools: cartões ao alto, como cartas a sério",

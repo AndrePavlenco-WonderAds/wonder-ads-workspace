@@ -112,6 +112,45 @@ export function isGbpChannelKey(key: string): boolean {
   return key.startsWith("gbp");
 }
 
+/** Soma de um subconjunto dos canais de lead (os do site, ou os da Ficha
+ *  Google). Pendente enquanto nenhum tiver valor; N/A quando todos foram
+ *  marcados N/A; `previous` só quando algum canal o tem. Puro e aqui (não
+ *  no report-build) para o documento poder derivar os dois totais nos
+ *  relatórios gravados antes de eles existirem (v77.9). */
+export function sumLeadChannels(
+  channels: LeadChannel[],
+  pick: (c: LeadChannel) => boolean,
+  source: MetricSource,
+): ReportMetric {
+  const picked = channels.filter(pick);
+  const have = picked.filter((c) => c.metric.value !== null);
+  if (have.length === 0) {
+    return picked.length > 0 && picked.every((c) => c.metric.manualNa)
+      ? naMetric("count")
+      : pendingMetric("count", "na");
+  }
+  const value = have.reduce((t, c) => t + (c.metric.value ?? 0), 0);
+  const prevKnown = have.filter((c) => c.metric.previous !== null);
+  const previous = prevKnown.length
+    ? prevKnown.reduce((t, c) => t + (c.metric.previous ?? 0), 0)
+    : null;
+  return { value, previous, source, instrumented: true, unit: "count" };
+}
+
+/** Leads do SITE: formulários, chamadas, emails, WhatsApp e as linhas extra
+ *  — tudo o que o GA4 mede (ou o consultor preenche) no próprio site. */
+export function websiteLeadTotal(channels: LeadChannel[]): ReportMetric {
+  return sumLeadChannels(channels, (c) => !isGbpChannelKey(c.key), "ga4");
+}
+
+/** Contactos da FICHA GOOGLE: cliques para o site, pedidos de direções e
+ *  chamadas a partir do Business Profile. Separado dos leads do site desde a
+ *  v77.9 — somá-los dava «1.069 leads» num cliente com 20 formulários, e o
+ *  número grande era quase todo a ficha. */
+export function gbpLeadTotal(channels: LeadChannel[]): ReportMetric {
+  return sumLeadChannels(channels, (c) => isGbpChannelKey(c.key), "gbp");
+}
+
 /** One profile's three metrics, kept alongside the consolidated totals so the
  *  report can break a multi-unit client down per listing. */
 export type GbpProfileMetrics = {
@@ -306,6 +345,37 @@ export type LiveRankBlock = {
    *  podem ser falta de cobertura, não ausência de ranking. */
   truncated?: boolean;
 };
+
+/** A mão do consultor sobre a tabela «Keywords & posições» (v77.9). O
+ *  Serpstat devolve TUDO para que o domínio rankeia — nomes de médicos,
+ *  concorrentes, termos que ninguém pediu — e um relatório não é o sítio
+ *  para os mostrar. `hidden` e `hideUnranked` copiam-se do config do
+ *  cliente em cada geração (para não voltarem todos os meses); `added` é
+ *  deste mês, porque uma posição verificada à mão é de um dia. */
+export type KeywordCuration = {
+  /** Keywords retiradas da tabela, em minúsculas. */
+  hidden: string[];
+  /** Esconder as keywords do plano ainda fora do top 100. */
+  hideUnranked: boolean;
+  /** Linhas acrescentadas à mão — posição verificada pelo consultor, ou
+   *  null = fora do top 100. */
+  added: { keyword: string; position: number | null }[];
+};
+
+export const MAX_KEYWORD_CURATION = 400;
+
+/** Um print ou ficheiro anexado às Notas & próximos passos (v77.9). Vive em
+ *  Vercel Blob (público, URL imprevisível) como as faturas e os logótipos. */
+export type ReportAttachment = {
+  url: string;
+  name: string;
+  /** MIME type — decide se o documento o desenha como imagem ou como chip. */
+  type: string;
+  size: number;
+  addedAt: number;
+};
+
+export const MAX_REPORT_ATTACHMENTS = 20;
 
 /** Uma pergunta feita a um LLM (ChatGPT ou AI Overview da Google). */
 export type GeoPromptRow = {
@@ -592,7 +662,14 @@ export type MonthlyReportSnapshot = {
   gscAi?: GscAiBlock;
 
   leads: {
+    /** Site + Ficha Google. Mantido para os relatórios antigos e para o
+     *  «leads no total» da secção; os cartões do topo usam os dois abaixo. */
     total: ReportMetric;
+    /** Só os canais do site. Ausente nos relatórios pré-v77.9 — o
+     *  documento deriva-o dos canais quando falta. */
+    website?: ReportMetric;
+    /** Só os canais da Ficha Google. Ausente nos relatórios pré-v77.9. */
+    gbp?: ReportMetric;
     channels: LeadChannel[];
   };
   organic: {
@@ -675,6 +752,11 @@ export type MonthlyReportSnapshot = {
   finalizedAt?: number | null;
   /** Free text from the account manager (section 8). */
   notes: string;
+  /** Prints e ficheiros anexados às notas. Ausente nos relatórios pré-v77.9. */
+  notesAttachments?: ReportAttachment[];
+  /** O que o consultor tirou/pôs na tabela de keywords. Ausente nos
+   *  relatórios pré-v77.9 = tabela tal como o Serpstat a devolveu. */
+  kwCuration?: KeywordCuration;
   /** Per-source fetch provenance (internal only, stripped from the PDF). */
   fetch: { ga4: FetchStatus; gsc: FetchStatus; gbp: FetchStatus };
   pdfBlobUrl: string | null;

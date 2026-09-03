@@ -57,6 +57,8 @@ import {
   type LiveRankBlock,
   type GeoBlock,
   type GeoIntelBlock,
+  gbpLeadTotal,
+  websiteLeadTotal,
 } from "./report-types";
 
 /** Movers shown in the client-facing report. Candidates are wider (20) so
@@ -262,19 +264,36 @@ function buildExecSummary(
     }
   };
 
-  // Leads (top priority; positive framing whether or not it grew).
-  const leads = snap.leads.total;
-  const leadGain = gainOf(leads);
-  if (leads.value && leads.value > 0) {
-    if (leadGain !== null)
+  // Leads — UMA FRASE POR ORIGEM (v77.9). Somar o site com a Ficha Google
+  // dava «1.069 leads» num cliente com vinte formulários: o número grande
+  // era quase todo cliques na ficha, e o cliente lia-o como pedidos. Cada
+  // origem conta o que é, com o mesmo enquadramento positivo.
+  const website = snap.leads.website ?? websiteLeadTotal(snap.leads.channels);
+  const webGain = gainOf(website);
+  if (website.value && website.value > 0) {
+    if (webGain !== null)
       add(100, t(
-        `Geraram-se **${fmt(leads.value)}** leads — **+${leadGain.toFixed(0)}%** face ao mês anterior.`,
-        `**${fmt(leads.value)}** leads generated — **+${leadGain.toFixed(0)}%** vs. last month.`,
+        `Geraram-se **${fmt(website.value)}** leads no website — **+${webGain.toFixed(0)}%** face ao mês anterior.`,
+        `**${fmt(website.value)}** website leads — **+${webGain.toFixed(0)}%** vs. last month.`,
       ));
     else
       add(96, t(
-        `Geraram-se **${fmt(leads.value)}** leads este mês.`,
-        `**${fmt(leads.value)}** leads generated this month.`,
+        `Geraram-se **${fmt(website.value)}** leads no website este mês.`,
+        `**${fmt(website.value)}** website leads generated this month.`,
+      ));
+  }
+  const gbpLeads = snap.leads.gbp ?? gbpLeadTotal(snap.leads.channels);
+  const gbpGain = gainOf(gbpLeads);
+  if (gbpLeads.value && gbpLeads.value > 0) {
+    if (gbpGain !== null)
+      add(95, t(
+        `A Ficha Google gerou **${fmt(gbpLeads.value)}** contactos (cliques para o site, direções e chamadas) — **+${gbpGain.toFixed(0)}%** face ao mês anterior.`,
+        `The Google Business Profile drove **${fmt(gbpLeads.value)}** contacts (website clicks, directions and calls) — **+${gbpGain.toFixed(0)}%** vs. last month.`,
+      ));
+    else
+      add(93, t(
+        `A Ficha Google gerou **${fmt(gbpLeads.value)}** contactos (cliques para o site, direções e chamadas).`,
+        `The Google Business Profile drove **${fmt(gbpLeads.value)}** contacts (website clicks, directions and calls).`,
       ));
   }
 
@@ -1219,10 +1238,28 @@ export async function buildMonthlyReport(
     kind: isEcom ? "ecommerce" : "standard",
     ...(ecom ? { ecom } : {}),
     gscAi,
-    leads: { total: leadsTotal, channels },
+    leads: {
+      total: leadsTotal,
+      website: websiteLeadTotal(channels),
+      gbp: gbpLeadTotal(channels),
+      channels,
+    },
     organic,
     gsc: gscBlock,
     ...(dfs.liveRanks ? { liveRanks: dfs.liveRanks } : {}),
+    // A curadoria do cliente (o que já tirou da tabela, e se esconde as do
+    // plano fora do top 100) nasce com o relatório — senão «edith b» voltava
+    // todos os meses. O que se acrescenta à mão é deste mês e começa vazio;
+    // o Regenerar preserva-o (ver a rota generate).
+    ...(dfs.liveRanks
+      ? {
+          kwCuration: {
+            hidden: config.keywordsHidden,
+            hideUnranked: config.keywordsHideUnranked,
+            added: [],
+          },
+        }
+      : {}),
     ...(dfs.geo ? { geo: dfs.geo } : {}),
     ...(dfs.geoIntel ? { geoIntel: dfs.geoIntel } : {}),
     ...(trend ? { trend } : {}),
@@ -1278,7 +1315,12 @@ export function recomputeDerived(
   const withLeads: MonthlyReportSnapshot = {
     ...snap,
     gbp,
-    leads: { ...snap.leads, total },
+    leads: {
+      ...snap.leads,
+      total,
+      website: websiteLeadTotal(snap.leads.channels),
+      gbp: gbpLeadTotal(snap.leads.channels),
+    },
     ...(ecom ? { ecom } : {}),
   };
   const execSummary = buildExecSummary(withLeads, snap.lang);

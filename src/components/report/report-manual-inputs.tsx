@@ -1,9 +1,22 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Check, Ban, Pencil } from "lucide-react";
-import type { LeadChannel, LeadChannelKey } from "@/lib/report/report-types";
+import { upload } from "@vercel/blob/client";
+import { Loader2, Check, Ban, Pencil, Paperclip, FileText, X } from "lucide-react";
+import {
+  MAX_REPORT_ATTACHMENTS,
+  type LeadChannel,
+  type LeadChannelKey,
+  type ReportAttachment,
+} from "@/lib/report/report-types";
+
+/** "1,2 MB" / "340 KB" — para o chip do anexo. */
+function fmtSize(bytes: number): string {
+  if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1).replace(".", ",")} MB`;
+  if (bytes >= 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${bytes} B`;
+}
 
 type Mode = "value" | "na" | "pending";
 
@@ -26,11 +39,14 @@ export function ReportManualInputs({
   period,
   channels,
   notes,
+  attachments = [],
 }: {
   slug: string;
   period: string;
   channels: LeadChannel[];
   notes: string;
+  /** Prints e ficheiros já anexados às notas (v77.9). */
+  attachments?: ReportAttachment[];
 }) {
   const router = useRouter();
   // Only channels the app can't pull automatically are editable here.
@@ -59,6 +75,66 @@ export function ReportManualInputs({
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  // Anexos: sobem direto para o Blob e gravam-se LOGO no relatório, sem
+  // esperar pelo «Guardar dados» — um ficheiro carregado não pode perder-se
+  // por causa de um botão que não se clicou (o mesmo princípio das faturas).
+  const [files, setFiles] = useState<ReportAttachment[]>(attachments);
+  const [uploading, setUploading] = useState(false);
+  const [fileErr, setFileErr] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  async function persistFiles(list: ReportAttachment[]) {
+    const res = await fetch(`/api/reports/${slug}/${period}`, {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ notesAttachments: list }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    setFiles(list);
+    router.refresh();
+  }
+
+  async function handleFiles(list: FileList | null) {
+    if (!list || list.length === 0) return;
+    const room = MAX_REPORT_ATTACHMENTS - files.length;
+    if (room <= 0) {
+      setFileErr(`Máximo de ${MAX_REPORT_ATTACHMENTS} anexos por relatório.`);
+      return;
+    }
+    setUploading(true);
+    setFileErr(null);
+    try {
+      const next = [...files];
+      for (const file of Array.from(list).slice(0, room)) {
+        const blob = await upload(
+          `reports/${slug}/${period}/${file.name}`,
+          file,
+          { access: "public", handleUploadUrl: "/api/files/upload" },
+        );
+        next.push({
+          url: blob.url,
+          name: file.name,
+          type: file.type || "application/octet-stream",
+          size: file.size,
+          addedAt: Date.now(),
+        });
+      }
+      await persistFiles(next);
+    } catch (e) {
+      setFileErr(e instanceof Error ? e.message : "O upload falhou.");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function removeFile(url: string) {
+    setFileErr(null);
+    try {
+      await persistFiles(files.filter((f) => f.url !== url));
+    } catch (e) {
+      setFileErr(e instanceof Error ? e.message : "Não foi possível remover.");
+    }
+  }
 
   const setRow = (key: string, patch: Partial<RowState>) =>
     setRows((p) => ({ ...p, [key]: { ...p[key], ...patch } }));
@@ -85,7 +161,11 @@ export function ReportManualInputs({
       const res = await fetch(`/api/reports/${slug}/${period}`, {
         method: "PUT",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ channels: channelsPayload, notes: noteText }),
+        body: JSON.stringify({
+          channels: channelsPayload,
+          notes: noteText,
+          notesAttachments: files,
+        }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       setSaved(true);
@@ -211,13 +291,92 @@ export function ReportManualInputs({
         <label className="mb-1 block text-[12px] font-medium text-white/60">
           Notas &amp; Próximos Passos
         </label>
+        <p className="mb-1.5 text-[11.5px] leading-snug text-white/40">
+          💡 Anexa aqui links para reports do Searchable e outros detalhes
+          interessantes — os links ficam clicáveis no relatório. Prints e
+          ficheiros entram em baixo e aparecem ao cliente na mesma secção.
+        </p>
         <textarea
           value={noteText}
           onChange={(e) => setNoteText(e.target.value)}
-          rows={3}
-          placeholder="Foco do próximo mês, pedidos ao cliente, contexto que os números não mostram…"
+          rows={4}
+          placeholder="Foco do próximo mês, pedidos ao cliente, contexto que os números não mostram… e o link do report do Searchable."
           className="w-full resize-y rounded-xl border border-white/12 bg-white/[0.04] px-3.5 py-2.5 text-[13px] text-white/85 outline-none transition focus:border-[#783DF5]/50 focus:bg-white/[0.06]"
         />
+
+        {/* Anexos — prints e ficheiros, gravados assim que sobem. */}
+        <div className="mt-2">
+          {files.length > 0 && (
+            <ul className="mb-2 flex flex-wrap gap-2">
+              {files.map((f) => (
+                <li
+                  key={f.url}
+                  className="flex max-w-full items-center gap-2 rounded-lg border border-white/12 bg-white/[0.03] py-1 pl-1.5 pr-1"
+                >
+                  {f.type.startsWith("image/") ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={f.url}
+                      alt=""
+                      className="h-8 w-11 shrink-0 rounded object-cover ring-1 ring-white/10"
+                    />
+                  ) : (
+                    <FileText className="h-4 w-4 shrink-0 text-white/45" />
+                  )}
+                  <a
+                    href={f.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="min-w-0 max-w-[180px] truncate text-[12px] text-white/75 hover:text-white"
+                    title={f.name}
+                  >
+                    {f.name}
+                  </a>
+                  <span className="shrink-0 text-[10.5px] text-white/30">{fmtSize(f.size)}</span>
+                  <button
+                    type="button"
+                    onClick={() => void removeFile(f.url)}
+                    title="Remover anexo"
+                    aria-label={`Remover ${f.name}`}
+                    className="shrink-0 rounded-md p-1 text-white/40 transition hover:bg-white/[0.06] hover:text-red-300"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          <input
+            ref={fileRef}
+            type="file"
+            multiple
+            accept="image/*,application/pdf,.csv,.xlsx,.docx,.pptx,.zip"
+            className="hidden"
+            onChange={(e) => {
+              void handleFiles(e.target.files);
+              e.target.value = "";
+            }}
+          />
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              disabled={uploading || files.length >= MAX_REPORT_ATTACHMENTS}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-white/12 px-3 py-1.5 text-[12.5px] font-medium text-white/70 transition hover:border-[#783DF5]/50 hover:text-white disabled:opacity-40"
+            >
+              {uploading ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Paperclip className="h-3.5 w-3.5" />
+              )}
+              {uploading ? "A carregar…" : "Anexar print ou ficheiro"}
+            </button>
+            <span className="text-[11px] text-white/30">
+              {files.length}/{MAX_REPORT_ATTACHMENTS}
+            </span>
+            {fileErr && <span className="text-[12px] text-rose-400">{fileErr}</span>}
+          </div>
+        </div>
       </div>
 
       <div className="mt-3 flex items-center gap-3">

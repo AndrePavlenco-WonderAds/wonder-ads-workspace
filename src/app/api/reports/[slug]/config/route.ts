@@ -16,12 +16,14 @@ import { getCurrentEmployee } from "@/lib/auth/server";
 import { editableDepts } from "@/lib/auth/credentials";
 import {
   getReportConfig,
+  normalizeKeywordList,
   saveReportConfig,
   LEAD_EVENT_KEYS,
   MAX_EVENT_ALIASES,
   type LeadEventMap,
   type ReportConfig,
 } from "@/lib/report/report-config-store";
+import { resolveGa4MeasurementId } from "@/lib/ga4";
 import {
   MAX_CUSTOM_LEAD_EVENTS,
   MAX_GBP_PROFILES,
@@ -93,6 +95,8 @@ export async function PUT(
     shopifyShopDomain?: unknown;
     shopifyAccessToken?: unknown;
     currency?: unknown;
+    keywordsHidden?: unknown;
+    keywordsHideUnranked?: unknown;
   };
 
   const patch: {
@@ -107,6 +111,8 @@ export async function PUT(
     shopifyShopDomain?: string | null;
     shopifyAccessToken?: string | null;
     currency?: string;
+    keywordsHidden?: string[];
+    keywordsHideUnranked?: boolean;
   } = {};
 
   if (body.eventMap && typeof body.eventMap === "object") {
@@ -169,6 +175,43 @@ export async function PUT(
     const v = body[key];
     if (typeof v === "string") patch[key] = v.trim() || null;
     else if (v === null) patch[key] = null;
+  }
+
+  // Propriedade GA4 (v77.9). Um Measurement ID («G-…», o código que está no
+  // site e no GTM) traduz-se para o número da propriedade — é esse que a
+  // Data API quer. Sem correspondência nos streams visíveis, recusa-se em
+  // vez de gravar um id que nunca ia responder; e um id que não é nem
+  // número nem G-… também não entra.
+  if (typeof patch.ga4PropertyId === "string") {
+    const id = patch.ga4PropertyId.replace(/^properties\//, "");
+    if (/^G-[A-Z0-9]{4,}$/i.test(id)) {
+      const resolved = await resolveGa4MeasurementId(id).catch(() => null);
+      if (!resolved) {
+        return NextResponse.json(
+          {
+            error: `Nenhuma propriedade visível tem o stream ${id.toUpperCase()} — confirma que a service account tem acesso a essa propriedade no GA4.`,
+          },
+          { status: 400 },
+        );
+      }
+      patch.ga4PropertyId = resolved;
+    } else if (/^\d{5,16}$/.test(id)) {
+      patch.ga4PropertyId = id;
+    } else {
+      return NextResponse.json(
+        { error: "O ID da propriedade GA4 é um número (ou o código G-… do site)." },
+        { status: 400 },
+      );
+    }
+  }
+
+  // Curadoria persistente da tabela de keywords (também escrita pela rota
+  // do relatório quando o consultor guarda a secção 7).
+  if (Array.isArray(body.keywordsHidden)) {
+    patch.keywordsHidden = normalizeKeywordList(body.keywordsHidden);
+  }
+  if (typeof body.keywordsHideUnranked === "boolean") {
+    patch.keywordsHideUnranked = body.keywordsHideUnranked;
   }
 
   // Ligação e-commerce/Shopify. O token só entra no patch quando é MESMO

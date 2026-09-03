@@ -85,6 +85,14 @@ export type ReportConfig = {
    *  read_all_orders). Guardado neste blob KV (encriptado at rest) e NUNCA
    *  devolvido ao browser — a rota de config mascara-o. */
   shopifyAccessToken: string | null;
+  /** Keywords que o consultor retirou da tabela «Keywords & posições» do
+   *  relatório (nomes de médicos, concorrentes, termos que o Serpstat
+   *  apanhou por engano). Vivem aqui, no cliente, para não voltarem todos
+   *  os meses; cada relatório gerado leva uma cópia (snapshot.kwCuration). */
+  keywordsHidden: string[];
+  /** Esconder as keywords do plano ainda fora do top 100 — a mesma
+   *  persistência. */
+  keywordsHideUnranked: boolean;
   /** Regex source strings matched against GA4 sessionSource for AI Visibility. */
   llmRegex: string[];
   sectionsEnabled: Record<ReportSection, boolean>;
@@ -176,6 +184,8 @@ export function defaultReportConfig(slug: string, currency = "EUR"): ReportConfi
     reportLang: null,
     shopifyShopDomain: null,
     shopifyAccessToken: null,
+    keywordsHidden: [],
+    keywordsHideUnranked: false,
     llmRegex: [...DEFAULT_LLM_REGEX],
     sectionsEnabled: Object.fromEntries(
       ALL_SECTIONS.map((s) => [s, true]),
@@ -281,6 +291,23 @@ function normalizeShopDomain(v: unknown): string | null {
   return /^[a-z0-9][a-z0-9.-]{2,80}\.[a-z]{2,}$/.test(host) ? host : null;
 }
 
+/** Lista de keywords: minúsculas, sem espaços a mais, sem repetidas, com
+ *  teto — o consultor esconde algumas dezenas, não centenas. */
+export function normalizeKeywordList(v: unknown): string[] {
+  if (!Array.isArray(v)) return [];
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const item of v) {
+    if (typeof item !== "string") continue;
+    const k = item.trim().toLowerCase().replace(/\s+/g, " ").slice(0, 120);
+    if (!k || seen.has(k)) continue;
+    seen.add(k);
+    out.push(k);
+    if (out.length >= 400) break;
+  }
+  return out;
+}
+
 function normalizeConfig(raw: unknown, slug: string): ReportConfig {
   const base = defaultReportConfig(slug, "EUR");
   if (!raw || typeof raw !== "object") return base;
@@ -309,6 +336,8 @@ function normalizeConfig(raw: unknown, slug: string): ReportConfig {
     reportLang: o.reportLang === "pt" || o.reportLang === "en" ? o.reportLang : null,
     shopifyShopDomain: normalizeShopDomain(o.shopifyShopDomain),
     shopifyAccessToken: asStr(o.shopifyAccessToken),
+    keywordsHidden: normalizeKeywordList(o.keywordsHidden),
+    keywordsHideUnranked: o.keywordsHideUnranked === true,
     llmRegex:
       regex && regex.length && !sameList(regex, LEGACY_LLM_REGEX)
         ? regex

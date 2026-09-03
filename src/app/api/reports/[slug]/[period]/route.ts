@@ -10,8 +10,15 @@ import { editableDepts } from "@/lib/auth/credentials";
 import { getReport, saveReport } from "@/lib/report/report-store";
 import { recomputeDerived, MAX_SHOWN_MOVERS } from "@/lib/report/report-build";
 import {
+  getReportConfig,
+  normalizeKeywordList,
+  saveReportConfig,
+} from "@/lib/report/report-config-store";
+import {
   ECOM_METRIC_KEYS,
   ECOM_TOP_LIMIT,
+  MAX_KEYWORD_CURATION,
+  MAX_REPORT_ATTACHMENTS,
   REPORT_SECTION_KEYS,
   isGbpChannelKey,
   manualMetric,
@@ -24,8 +31,10 @@ import {
   type EcomTopProduct,
   type GscAiDevice,
   type GscAiTopPage,
+  type KeywordCuration,
   type LeadChannelKey,
   type MonthlyReportSnapshot,
+  type ReportAttachment,
   type ReportSectionKey,
   type ReportStatus,
 } from "@/lib/report/report-types";
@@ -156,6 +165,11 @@ export async function PUT(
     /** Google IA (GSC · Generative AI): impressões do mês (número | "na" |
      *  null=repor pendente) + listas do CSV exportado. */
     gscAi?: { impressions?: unknown; topPages?: unknown; byDevice?: unknown };
+    /** Curadoria da tabela de keywords (secção 7): escondidas, regra das
+     *  fora do top 100, acrescentadas à mão. Substitui por inteiro. */
+    kwCuration?: unknown;
+    /** Prints e ficheiros anexados às notas. Substitui a lista por inteiro. */
+    notesAttachments?: unknown;
   };
 
   let next: MonthlyReportSnapshot = { ...snap };
@@ -285,6 +299,86 @@ export async function PUT(
         updatedAt: Date.now(),
       },
     };
+  }
+
+  // Curadoria da tabela de keywords (v77.9). O snapshot leva a versão
+  // completa; `hidden` e `hideUnranked` espelham-se no config do cliente
+  // para que o próximo relatório nasça já sem o que se tirou.
+  if (body.kwCuration && typeof body.kwCuration === "object") {
+    const c = body.kwCuration as Record<string, unknown>;
+    const hidden = normalizeKeywordList(c.hidden);
+    const hideUnranked = c.hideUnranked === true;
+    const added: KeywordCuration["added"] = [];
+    if (Array.isArray(c.added)) {
+      // Uma keyword que o Serpstat já trouxe não se acrescenta à mão — a
+      // posição dele é a medida; a linha manual só duplicava a contagem.
+      const seen = new Set<string>(
+        [
+          ...(next.liveRanks?.ranks ?? []),
+          ...(next.liveRanks?.others ?? []),
+        ].map((r) => r.keyword.toLowerCase()),
+      );
+      for (const item of c.added.slice(0, MAX_KEYWORD_CURATION)) {
+        if (!item || typeof item !== "object") continue;
+        const o = item as Record<string, unknown>;
+        const keyword =
+          typeof o.keyword === "string"
+            ? o.keyword.trim().replace(/\s+/g, " ").slice(0, 120)
+            : "";
+        if (!keyword || seen.has(keyword.toLowerCase())) continue;
+        seen.add(keyword.toLowerCase());
+        const p = Number(o.position);
+        const position =
+          o.position === null || o.position === undefined || o.position === ""
+            ? null
+            : Number.isFinite(p) && p >= 1 && p <= 100
+              ? Math.round(p)
+              : null;
+        added.push({ keyword, position });
+      }
+    }
+    next = { ...next, kwCuration: { hidden, hideUnranked, added } };
+    try {
+      const cfg = await getReportConfig(slug);
+      if (
+        cfg.keywordsHidden.join("\n") !== hidden.join("\n") ||
+        cfg.keywordsHideUnranked !== hideUnranked
+      ) {
+        await saveReportConfig(
+          slug,
+          { keywordsHidden: hidden, keywordsHideUnranked: hideUnranked },
+          Date.now(),
+        );
+      }
+    } catch (err) {
+      // O relatório grava na mesma — o espelho no config é conveniência
+      // para o mês seguinte, não condição.
+      console.error("keyword curation config mirror failed:", err);
+    }
+  }
+
+  // Anexos das notas (v77.9) — substitui a lista por inteiro (é o browser
+  // que a gere e sabe o que lá está). Só URLs https, com teto.
+  if (Array.isArray(body.notesAttachments)) {
+    const list: ReportAttachment[] = [];
+    for (const item of body.notesAttachments.slice(0, MAX_REPORT_ATTACHMENTS)) {
+      if (!item || typeof item !== "object") continue;
+      const o = item as Record<string, unknown>;
+      const url = typeof o.url === "string" ? o.url.trim() : "";
+      if (!/^https:\/\/\S+$/.test(url) || url.length > 1000) continue;
+      const name = typeof o.name === "string" ? o.name.trim().slice(0, 200) : "";
+      const type = typeof o.type === "string" ? o.type.trim().slice(0, 100) : "";
+      const size = Number(o.size);
+      const addedAt = Number(o.addedAt);
+      list.push({
+        url,
+        name: name || "ficheiro",
+        type,
+        size: Number.isFinite(size) && size >= 0 ? Math.round(size) : 0,
+        addedAt: Number.isFinite(addedAt) && addedAt > 0 ? addedAt : Date.now(),
+      });
+    }
+    next = { ...next, notesAttachments: list };
   }
 
   // Secções retiradas do documento. Só chaves conhecidas entram.

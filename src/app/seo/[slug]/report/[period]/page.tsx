@@ -10,6 +10,7 @@ import {
   MapPin,
   Store,
   Tags,
+  BarChart3,
 } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { getCurrentEmployee } from "@/lib/auth/server";
@@ -31,6 +32,11 @@ import {
 import { ReportShopifyConfig } from "@/components/report/report-shopify-config";
 import { ReportLeadEvents } from "@/components/report/report-lead-events";
 import { ReportGbpProfiles } from "@/components/report/report-gbp-profiles";
+import { ReportGa4Property } from "@/components/report/report-ga4-property";
+import {
+  ReportKeywordsCuration,
+  type CurationRow,
+} from "@/components/report/report-keywords-curation";
 import { getReportConfig } from "@/lib/report/report-config-store";
 import { FinalizeReportButton } from "@/components/report/finalize-report-button";
 import { ReportCopyLinkButton } from "@/components/report/report-copy-link-button";
@@ -181,6 +187,20 @@ export default async function ReportPage({
     : 0;
   const pendingTotal = pendingChannels + pendingEcom;
 
+  // As linhas da secção 7, tal como o Serpstat as devolveu (a rankear
+  // primeiro), para o cartão de curadoria — a lista escondida vem do snapshot.
+  const liveKw =
+    snapshot?.liveRanks?.source === "serpstat" ? snapshot.liveRanks : undefined;
+  const kwRows: CurationRow[] = liveKw
+    ? [
+        ...liveKw.ranks.map((r) => ({ keyword: r.keyword, position: r.position, inPlan: true })),
+        ...(liveKw.others ?? []).map((r) => ({ keyword: r.keyword, position: r.position, inPlan: false })),
+      ].sort(
+        (a, b) =>
+          (a.position ?? 999) - (b.position ?? 999) || a.keyword.localeCompare(b.keyword),
+      )
+    : [];
+
   // As secções que este relatório pode ter — as e-commerce só nos ecommerce.
   const sectionOptions: SectionOption[] = [
     { key: "exec", label: "Resumo Executivo" },
@@ -217,6 +237,9 @@ export default async function ReportPage({
   const shopifySummary = reportConfig.shopifyAccessToken
     ? `${reportConfig.shopifyShopDomain ?? "loja"} · ligada`
     : "por ligar (opcional)";
+  const ga4Summary = reportConfig.ga4PropertyId
+    ? `propriedade ${reportConfig.ga4PropertyId}`
+    : "automática (pelo domínio)";
 
   return (
     <PageShell wide backHref={`/seo/${slug}`} backLabel={client.title}>
@@ -336,6 +359,7 @@ export default async function ReportPage({
                 period={period}
                 channels={snapshot.leads.channels}
                 notes={snapshot.notes}
+                attachments={snapshot.notesAttachments ?? []}
               />
 
               {/* Google IA — impressões nas AI Overviews / AI Mode (GSC) */}
@@ -356,10 +380,31 @@ export default async function ReportPage({
                 />
               )}
 
+              {/* Secção 7 — o que entra na tabela de keywords (v77.9). */}
+              {kwRows.length > 0 && (
+                <ReportKeywordsCuration
+                  slug={slug}
+                  period={period}
+                  rows={kwRows}
+                  curation={snapshot.kwCuration}
+                />
+              )}
+
               {/* Configuração do cliente — afinada uma vez, depois fechada. */}
               <div className="mb-1 mt-5 text-[11px] font-semibold uppercase tracking-[0.16em] text-white/35">
                 Configuração do cliente
               </div>
+              <ConfigDisclosure
+                icon={BarChart3}
+                title="Propriedade GA4"
+                hint={ga4Summary}
+              >
+                <ReportGa4Property
+                  slug={slug}
+                  storedPropertyId={reportConfig.ga4PropertyId}
+                  bare
+                />
+              </ConfigDisclosure>
               <ConfigDisclosure
                 icon={Tags}
                 title="Eventos de lead no GA4"
