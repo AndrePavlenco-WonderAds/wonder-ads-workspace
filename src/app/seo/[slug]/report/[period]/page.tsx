@@ -479,7 +479,7 @@ export default async function ReportPage({
                       }))}
                       imported={reportConfig.shopifyCsvMonths ?? {}}
                       importedProducts={reportConfig.shopifyCsvProducts ?? {}}
-                      currency={reportConfig.currency}
+                      currency={snapshot.ecom?.currency ?? reportConfig.currency}
                     />
                     <details className="rounded-lg border border-white/10 bg-white/[0.02]">
                       <summary className="cursor-pointer select-none list-none px-3 py-2 text-[12px] text-white/55 transition hover:text-white/80 [&::-webkit-details-marker]:hidden">

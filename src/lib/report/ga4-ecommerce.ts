@@ -12,7 +12,11 @@
 // nunca disparou em 365 dias devolve `purchasesInstrumented: false` e as
 // células ficam por preencher, não a zeros.
 
-import { resolveGa4Property, runReport } from "@/lib/ga4";
+import {
+  getGa4PropertyCurrency,
+  resolveGa4Property,
+  runReport,
+} from "@/lib/ga4";
 import { googleAuthConfigured } from "@/lib/google-auth";
 import type { DateRange } from "./report-dates";
 
@@ -43,6 +47,9 @@ export type Ga4EcomReport =
       topProductsScope: "organic" | "store";
       /** O tracking de items (itemRevenue) existe na propriedade? */
       itemsInstrumented: boolean;
+      /** Moeda da propriedade ("GBP"…) — a receita do runReport vem sem
+       *  moeda e o cliente pode não estar em euros. null = desconhecida. */
+      currencyCode: string | null;
       /** Pedidos que a API recusou — cada um só apaga a sua parte. */
       warnings: string[];
     }
@@ -111,7 +118,8 @@ export async function getGa4EcomReport(
     const warnings: string[] = [];
     const empty: Row[] = [];
 
-    const [monthRows, trxProbe, itemProbe, pageRows, products] = await Promise.all([
+    const [monthRows, trxProbe, itemProbe, pageRows, products, currencyCode] =
+      await Promise.all([
       // As 4 colunas numa chamada. Sem dimensões — cada range devolve (no
       // máximo) uma linha, marcada com date_range_N.
       settle(
@@ -213,6 +221,8 @@ export async function getGa4EcomReport(
         );
         return { rows, scope: "store" };
       })(),
+      // Moeda da propriedade — barata e best-effort.
+      getGa4PropertyCurrency(token, propertyId),
     ]);
 
     // Cada linha pertence a um range (date_range_0…3); um range sem linha é
@@ -270,6 +280,7 @@ export async function getGa4EcomReport(
       topProducts,
       topProductsScope: products.scope,
       itemsInstrumented,
+      currencyCode,
       warnings,
     };
   } catch (err) {

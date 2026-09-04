@@ -812,7 +812,14 @@ async function fetchEcomBlock(
       : { ok: false, status: "not-connected" };
 
   return {
-    currency: (shopifyOk ? shopify.currency : null) ?? config.currency,
+    // Moeda: a da fonte que preencheu o dinheiro — a propriedade GA4 quando
+    // a receita é dela (o Kings Gyms é britânico e saía em €), a loja quando
+    // vem da Shopify; a configurada é o último recurso.
+    currency:
+      (purchasesOk && ga4Ok ? ga4.currencyCode : null) ??
+      (shopifyOk ? shopify.currency : null) ??
+      (ga4Ok ? ga4.currencyCode : null) ??
+      config.currency,
     columns,
     topPages,
     topPagesSource: topPages.length > 0 ? "ga4" : "manual",

@@ -193,6 +193,28 @@ async function getDomainIndex(token: string): Promise<DomainIndex> {
   return domainIndexInFlight;
 }
 
+/** Moeda em que a propriedade contabiliza a receita ("GBP", "EUR"…).
+ *  O runReport devolve números sem moeda: sem isto, a receita de uma loja
+ *  britânica saía com o símbolo € do default do cliente (v77.10). null = a
+ *  Admin API não respondeu; o caller cai na moeda configurada. */
+export async function getGa4PropertyCurrency(
+  token: string,
+  propertyId: string,
+): Promise<string | null> {
+  try {
+    const res = await fetch(
+      `https://analyticsadmin.googleapis.com/v1beta/properties/${propertyId}`,
+      { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" },
+    );
+    if (!res.ok) return null;
+    const json = (await res.json()) as { currencyCode?: string };
+    const code = (json.currencyCode ?? "").trim().toUpperCase();
+    return /^[A-Z]{3}$/.test(code) ? code : null;
+  } catch {
+    return null;
+  }
+}
+
 /** One dataStreams call with retry on the transient failures Google
  *  actually returns under fan-out: 429 (quota) and 5xx. Returns null
  *  only when every attempt failed — the caller records that as a gap
