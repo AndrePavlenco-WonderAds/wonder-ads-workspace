@@ -7,10 +7,16 @@
 // A fonte correta de «receita SEO» é o GA4 filtrado ao canal Organic Search
 // (ga4-ecommerce.ts); quando esse existe, a Shopify nem é consultada.
 //
-// Auth: custom app criada no admin da loja do cliente (Settings → Apps →
-// Develop apps) com scopes read_orders + read_all_orders (sem o segundo, a
-// API só devolve os últimos 60 dias — a coluna homóloga precisa de 1 ano).
-// O token (shpat_…) fica no report-config do cliente, em KV.
+// Auth: token de uma app da loja com scopes read_orders + read_all_orders
+// (sem o segundo, a API só devolve os últimos 60 dias — a coluna homóloga
+// precisa de 1 ano). O token (shpat_…) fica no report-config do cliente, em KV.
+//
+// ATENÇÃO (2026): este caminho já só existe para lojas que JÁ tenham token, ou
+// onde o dono da loja crie a app por nós. Desde 1 de janeiro de 2026 a Shopify
+// não deixa criar «legacy custom apps» no admin e mandou o desenvolvimento
+// para o Dev Dashboard (dev.shopify.com), onde as contas de COLABORADOR — as
+// da agência — não entram. Para essas lojas, os números entram por CSV
+// exportado do admin: ver `report/shopify-csv.ts`.
 
 import type { DateRange } from "./report/report-dates";
 

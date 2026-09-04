@@ -879,10 +879,15 @@ export function ReportDocument({
                   )
                 : ecom.topProductsSource === "manual"
                   ? t("Preenchido pelo consultor.", "Filled in by the consultant.")
-                  : t(
-                      "Receita de items de sessões do canal Organic Search (GA4).",
-                      "Item revenue from Organic Search channel sessions (GA4).",
-                    )}
+                  : ecom.topProductsWholeStore
+                    ? t(
+                        "Receita de items no GA4 — loja inteira (todos os canais): o GA4 não permite cruzar produtos com o canal da sessão.",
+                        "Item revenue in GA4 — whole store (all channels): GA4 cannot cross products with the session channel.",
+                      )
+                    : t(
+                        "Receita de items de sessões do canal Organic Search (GA4).",
+                        "Item revenue from Organic Search channel sessions (GA4).",
+                      )}
             </p>
           )}
         </section>

@@ -669,9 +669,19 @@ async function fetchEcomBlock(
     : null;
   const shopifyOk = shopify?.status === "ok";
 
+  // CSV importado à mão (Analytics/Orders → Export): o caminho das lojas onde
+  // a agência não consegue token — desde 1/1/2026 a Shopify não deixa criar
+  // custom apps e as contas de colaborador não entram no Dev Dashboard. Vive
+  // no config do cliente, por isso sobrevive a um «Regenerar» e a coluna
+  // homóloga do próximo ano já vem preenchida.
+  const csvMonths = config.shopifyCsvMonths ?? {};
+  const csvProductsByMonth = config.shopifyCsvProducts ?? {};
+  let csvUsed = 0;
+
   const columns: EcomColumn[] = columnPeriods.map((p, i) => {
     const m = ga4Ok ? ga4.months[i] : null;
     const shop = shopifyOk ? shopify.months[i] : null;
+    const csv = csvMonths[p.key] ?? null;
 
     const cells: Record<string, EcomCell> = {};
 
@@ -698,11 +708,17 @@ async function fetchEcomBlock(
               : null,
         source: "ga4",
       };
-    } else if (shop) {
-      cells.revenue = { value: round2(shop.revenue), source: "shopify" };
-      cells.transactions = { value: shop.orders, source: "shopify" };
+    } else if (shop || csv) {
+      // API primeiro (é viva e completa), CSV a seguir. Nos dois casos os
+      // totais são da LOJA INTEIRA — daí a mesma source "shopify", que é o
+      // que faz sair a etiqueta no documento do cliente.
+      const revenue = shop ? shop.revenue : csv!.revenue;
+      const orders = shop ? shop.orders : csv!.orders;
+      if (!shop) csvUsed++;
+      cells.revenue = { value: round2(revenue), source: "shopify" };
+      cells.transactions = { value: orders, source: "shopify" };
       cells.avgTicket = {
-        value: shop.orders > 0 ? round2(shop.revenue / shop.orders) : 0,
+        value: orders > 0 ? round2(revenue / orders) : 0,
         source: "shopify",
       };
       // Encomendas da loja inteira sobre sessões orgânicas seria uma taxa de
@@ -733,12 +749,28 @@ async function fetchEcomBlock(
 
   // Páginas mais acedidas — só GA4 sabe o que é orgânico.
   const topPages = ga4Ok ? ga4.topPages : [];
-  // Produtos: GA4 (orgânico) → Shopify (loja inteira) → manual.
-  const ga4Products = ga4Ok && ga4.itemsInstrumented ? ga4.topProducts : [];
+  // Produtos: GA4 (orgânico) → Shopify (loja inteira) → manual. A lista que a
+  // API devolveu vale mais do que a sonda de instrumentação: se vieram
+  // produtos, há tracking de items, tenha a sonda respondido ou não (v77.10).
+  const ga4Products = ga4Ok ? ga4.topProducts : [];
   const shopProducts = shopifyOk ? shopify.topProducts : [];
-  const topProducts = ga4Products.length > 0 ? ga4Products : shopProducts;
+  const csvProducts = csvProductsByMonth[reportKey] ?? [];
+  const topProducts =
+    ga4Products.length > 0
+      ? ga4Products
+      : shopProducts.length > 0
+        ? shopProducts
+        : csvProducts;
   const topProductsSource =
-    ga4Products.length > 0 ? "ga4" : shopProducts.length > 0 ? "shopify" : "manual";
+    ga4Products.length > 0
+      ? "ga4"
+      : shopProducts.length > 0 || csvProducts.length > 0
+        ? "shopify"
+        : "manual";
+  // Produtos do GA4 que a API só deu sem o filtro de canal são da loja
+  // inteira — o relatório tem de o dizer, como diz nos da Shopify.
+  const topProductsWholeStore =
+    ga4Products.length > 0 && ga4Ok && ga4.topProductsScope === "store";
 
   const ga4Fetch: FetchStatus = !ga4Ok
     ? {
@@ -747,16 +779,22 @@ async function fetchEcomBlock(
         message: ga4.status === "error" ? ga4.message : undefined,
       }
     : purchasesOk
-      ? { ok: true, status: "ok" }
+      ? {
+          ok: true,
+          status: "ok",
+          message: ga4.warnings.length ? ga4.warnings.join(" · ") : undefined,
+        }
       : {
           ok: false,
           status: "no-purchases",
-          message:
+          message: [
             "GA4 respondeu, mas o evento purchase nunca disparou em 365 dias — sem e-commerce tracking, a receita orgânica não se mede.",
+            ...ga4.warnings,
+          ].join(" · "),
         };
-  const shopifyFetch: FetchStatus = !shopifyConfigured
-    ? { ok: false, status: "not-connected" }
-    : !needShopify
+  const csvCovers = csvUsed > 0 || csvProducts.length > 0;
+  const shopifyFetch: FetchStatus = shopifyConfigured
+    ? !needShopify
       ? { ok: true, status: "unused" }
       : shopifyOk
         ? { ok: true, status: "ok" }
@@ -764,7 +802,14 @@ async function fetchEcomBlock(
             ok: false,
             status: "error",
             message: shopify?.status === "error" ? shopify.message : undefined,
-          };
+          }
+    : csvCovers
+      ? {
+          ok: true,
+          status: "csv",
+          message: `${csvUsed} mês(es) e ${csvProducts.length} produto(s) do CSV importado.`,
+        }
+      : { ok: false, status: "not-connected" };
 
   return {
     currency: (shopifyOk ? shopify.currency : null) ?? config.currency,
@@ -773,6 +818,7 @@ async function fetchEcomBlock(
     topPagesSource: topPages.length > 0 ? "ga4" : "manual",
     topProducts,
     topProductsSource,
+    topProductsWholeStore,
     fetch: { ga4: ga4Fetch, shopify: shopifyFetch },
   };
 }

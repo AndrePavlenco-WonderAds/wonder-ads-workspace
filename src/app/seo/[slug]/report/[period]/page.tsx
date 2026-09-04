@@ -30,6 +30,7 @@ import {
   type SectionOption,
 } from "@/components/report/report-sections-toggle";
 import { ReportShopifyConfig } from "@/components/report/report-shopify-config";
+import { ReportShopifyCsv } from "@/components/report/report-shopify-csv";
 import { ReportLeadEvents } from "@/components/report/report-lead-events";
 import { ReportGbpProfiles } from "@/components/report/report-gbp-profiles";
 import { ReportGa4Property } from "@/components/report/report-ga4-property";
@@ -76,6 +77,7 @@ const SOURCE_LABEL: Record<string, string> = {
   "no-purchases": "sem purchase tracking",
   unused: "não usado (GA4 cobre)",
   "not-connected": "por ligar (opcional)",
+  csv: "CSV importado",
 };
 
 /** Actionable explanation for why GBP data isn't flowing yet. */
@@ -234,9 +236,12 @@ export default async function ReportPage({
     reportConfig.extraGbpProfiles.length > 0
       ? `${reportConfig.extraGbpProfiles.length + 1} localizações`
       : "1 localização (auto)";
+  const csvMonthCount = Object.keys(reportConfig.shopifyCsvMonths ?? {}).length;
   const shopifySummary = reportConfig.shopifyAccessToken
-    ? `${reportConfig.shopifyShopDomain ?? "loja"} · ligada`
-    : "por ligar (opcional)";
+    ? `${reportConfig.shopifyShopDomain ?? "loja"} · token ligado`
+    : csvMonthCount > 0
+      ? `${csvMonthCount} mês(es) importados por CSV`
+      : "sem token — importa o CSV";
   const ga4Summary = reportConfig.ga4PropertyId
     ? `propriedade ${reportConfig.ga4PropertyId}`
     : "automática (pelo domínio)";
@@ -314,6 +319,34 @@ export default async function ReportPage({
                   </>
                 )}
               </div>
+
+              {/* O que o GA4 recusou no bloco e-commerce, à vista. Um chip com
+                  tooltip escondia a única frase que explica uma tabela vazia
+                  (v77.10). */}
+              {snapshot.ecom &&
+                (snapshot.ecom.fetch.ga4.message ||
+                  snapshot.ecom.fetch.shopify.message) && (
+                  <details className="mb-3 rounded-xl border border-white/12 bg-white/[0.03]">
+                    <summary className="flex cursor-pointer select-none list-none items-center gap-2 px-3.5 py-2.5 text-[12px] text-white/60 [&::-webkit-details-marker]:hidden">
+                      <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-white/40" />
+                      Bloco e-commerce — o que as fontes disseram
+                    </summary>
+                    <div className="space-y-1.5 border-t border-white/8 px-3.5 py-2.5 text-[12px] leading-relaxed text-white/55">
+                      {snapshot.ecom.fetch.ga4.message && (
+                        <p>
+                          <b className="text-white/75">GA4:</b>{" "}
+                          {snapshot.ecom.fetch.ga4.message}
+                        </p>
+                      )}
+                      {snapshot.ecom.fetch.shopify.message && (
+                        <p>
+                          <b className="text-white/75">Shopify:</b>{" "}
+                          {snapshot.ecom.fetch.shopify.message}
+                        </p>
+                      )}
+                    </div>
+                  </details>
+                )}
 
               {!snapshot.fetch.gbp.ok && (
                 <details className="mb-3 rounded-xl border border-white/12 bg-white/[0.03]">
@@ -435,13 +468,35 @@ export default async function ReportPage({
                   title="Ligação Shopify"
                   hint={shopifySummary}
                 >
-                  <ReportShopifyConfig
-                    slug={slug}
-                    shopDomain={reportConfig.shopifyShopDomain}
-                    currency={reportConfig.currency}
-                    tokenSet={Boolean(reportConfig.shopifyAccessToken)}
-                    bare
-                  />
+                  <div className="space-y-5 p-5">
+                    <ReportShopifyCsv
+                      slug={slug}
+                      period={period}
+                      needed={(snapshot.ecom?.columns ?? []).map((c) => ({
+                        key: c.key,
+                        label: c.label,
+                        hasMoney: c.cells.revenue.value !== null,
+                      }))}
+                      imported={reportConfig.shopifyCsvMonths ?? {}}
+                      importedProducts={reportConfig.shopifyCsvProducts ?? {}}
+                      currency={reportConfig.currency}
+                    />
+                    <details className="rounded-lg border border-white/10 bg-white/[0.02]">
+                      <summary className="cursor-pointer select-none list-none px-3 py-2 text-[12px] text-white/55 transition hover:text-white/80 [&::-webkit-details-marker]:hidden">
+                        Ligação automática por token (só para lojas que já
+                        tenham um, ou com o cliente a criá-lo)
+                      </summary>
+                      <div className="border-t border-white/8">
+                        <ReportShopifyConfig
+                          slug={slug}
+                          shopDomain={reportConfig.shopifyShopDomain}
+                          currency={reportConfig.currency}
+                          tokenSet={Boolean(reportConfig.shopifyAccessToken)}
+                          bare
+                        />
+                      </div>
+                    </details>
+                  </div>
                 </ConfigDisclosure>
               )}
 

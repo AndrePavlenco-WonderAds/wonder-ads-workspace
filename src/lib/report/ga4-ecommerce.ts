@@ -28,17 +28,23 @@ export type Ga4EcomReport =
       status: "ok";
       propertyId: string;
       /** Um por range pedido, na mesma ordem. Zeros verdadeiros quando o mês
-       *  não teve tráfego orgânico (a propriedade respondeu na mesma). */
-      months: Ga4EcomMonth[];
+       *  não teve tráfego orgânico (a propriedade respondeu na mesma);
+       *  null quando a chamada dos meses falhou. */
+      months: (Ga4EcomMonth | null)[];
       /** O evento purchase disparou alguma vez nos últimos 365 dias? false →
        *  receita/transações não estão instrumentadas e não se mostram zeros. */
       purchasesInstrumented: boolean;
       /** Páginas orgânicas mais vistas no mês do relatório. */
       topPages: { page: string; views: number }[];
-      /** Produtos com receita orgânica no mês do relatório. */
+      /** Produtos com receita no mês do relatório. */
       topProducts: { name: string; revenue: number; quantity: number }[];
+      /** "organic" = filtrados ao canal orgânico; "store" = loja inteira,
+       *  porque a API recusou cruzar produtos com o canal. */
+      topProductsScope: "organic" | "store";
       /** O tracking de items (itemRevenue) existe na propriedade? */
       itemsInstrumented: boolean;
+      /** Pedidos que a API recusou — cada um só apaga a sua parte. */
+      warnings: string[];
     }
   | { status: "not-configured" }
   | { status: "no-property" }
@@ -80,72 +86,147 @@ export async function getGa4EcomReport(
   const ranges = opts.ranges.slice(0, 4);
 
   try {
-    const [monthRows, probeRows, pageRows, itemRows] = await Promise.all([
+    // CADA pedido por si (v77.10). Antes eram quatro dentro de um
+    // Promise.all: bastava a API recusar UM para o bloco inteiro sair como
+    // "error" e a tabela do cliente ficar toda a "—" — utilizadores e páginas
+    // incluídos, que nada têm a ver com o pedido recusado. Foi o que
+    // aconteceu ao Kings Gyms. Agora cada chamada só apaga a sua própria
+    // coluna e o que falhou fica escrito no painel interno.
+    const settle = async <T,>(
+      name: string,
+      run: () => Promise<T>,
+      fallback: T,
+      warnings: string[],
+    ): Promise<T> => {
+      try {
+        return await run();
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        console.error(`GA4 e-commerce · ${name} falhou (${propertyId}):`, message);
+        warnings.push(`${name}: ${message.slice(0, 160)}`);
+        return fallback;
+      }
+    };
+
+    const warnings: string[] = [];
+    const empty: Row[] = [];
+
+    const [monthRows, trxProbe, itemProbe, pageRows, products] = await Promise.all([
       // As 4 colunas numa chamada. Sem dimensões — cada range devolve (no
       // máximo) uma linha, marcada com date_range_N.
-      runReport(token, propertyId, {
-        dateRanges: ranges.map((r) => ({
-          startDate: r.startDate,
-          endDate: r.endDate,
-        })),
-        metrics: [
-          { name: "purchaseRevenue" },
-          { name: "transactions" },
-          { name: "totalUsers" },
-          { name: "sessions" },
-        ],
-        dimensionFilter: ORGANIC_FILTER,
-      }),
+      settle(
+        "meses",
+        () =>
+          runReport(token, propertyId, {
+            dateRanges: ranges.map((r) => ({
+              startDate: r.startDate,
+              endDate: r.endDate,
+            })),
+            metrics: [
+              { name: "purchaseRevenue" },
+              { name: "transactions" },
+              { name: "totalUsers" },
+              { name: "sessions" },
+            ],
+            dimensionFilter: ORGANIC_FILTER,
+          }) as Promise<Row[]>,
+        null as Row[] | null,
+        warnings,
+      ),
       // Sonda de instrumentação (365 dias, TODOS os canais): o purchase
-      // existe? o tracking de items existe? Sem isto, um cliente sem
-      // e-commerce tracking leria «0 €» — que é mentira, não medição.
-      runReport(token, propertyId, {
-        dateRanges: [{ startDate: "365daysAgo", endDate: "yesterday" }],
-        metrics: [{ name: "transactions" }, { name: "itemRevenue" }],
-      }),
+      // existe? Sem isto, um cliente sem e-commerce tracking leria «0 €» —
+      // que é mentira, não medição.
+      //
+      // SEPARADA da sonda de items (v77.10): `transactions` é de âmbito
+      // evento e `itemRevenue` de âmbito item, e a Data API recusa certas
+      // combinações de âmbitos com 400 — uma recusa que, no Promise.all
+      // antigo, levava o bloco inteiro à frente.
+      settle(
+        "sonda purchase",
+        () =>
+          runReport(token, propertyId, {
+            dateRanges: [{ startDate: "365daysAgo", endDate: "yesterday" }],
+            metrics: [{ name: "transactions" }],
+          }) as Promise<Row[]>,
+        empty,
+        warnings,
+      ),
+      settle(
+        "sonda items",
+        () =>
+          runReport(token, propertyId, {
+            dateRanges: [{ startDate: "365daysAgo", endDate: "yesterday" }],
+            metrics: [{ name: "itemRevenue" }],
+          }) as Promise<Row[]>,
+        empty,
+        warnings,
+      ),
       // Páginas orgânicas mais vistas no mês do relatório.
-      runReport(token, propertyId, {
-        dateRanges: [
-          {
-            startDate: opts.current.startDate,
-            endDate: opts.current.endDate,
-          },
-        ],
-        dimensions: [{ name: "pagePath" }],
-        metrics: [{ name: "screenPageViews" }],
-        dimensionFilter: ORGANIC_FILTER,
-        orderBys: [{ metric: { metricName: "screenPageViews" }, desc: true }],
-        limit: 10,
-      }),
-      // Produtos por receita orgânica no mês do relatório. Best-effort: se a
-      // combinação item × canal não for suportada nesta propriedade, a lista
-      // simplesmente não sai (fallback Shopify/manual) — nunca derruba o resto.
-      runReport(token, propertyId, {
-        dateRanges: [
-          {
-            startDate: opts.current.startDate,
-            endDate: opts.current.endDate,
-          },
-        ],
-        dimensions: [{ name: "itemName" }],
-        metrics: [{ name: "itemRevenue" }, { name: "itemsPurchased" }],
-        dimensionFilter: ORGANIC_FILTER,
-        orderBys: [{ metric: { metricName: "itemRevenue" }, desc: true }],
-        limit: 10,
-      }).catch(() => [] as Row[]),
+      settle(
+        "páginas",
+        () =>
+          runReport(token, propertyId, {
+            dateRanges: [
+              { startDate: opts.current.startDate, endDate: opts.current.endDate },
+            ],
+            dimensions: [{ name: "pagePath" }],
+            metrics: [{ name: "screenPageViews" }],
+            dimensionFilter: ORGANIC_FILTER,
+            orderBys: [{ metric: { metricName: "screenPageViews" }, desc: true }],
+            limit: 10,
+          }) as Promise<Row[]>,
+        empty,
+        warnings,
+      ),
+      // Produtos por receita orgânica no mês do relatório. A dimensão itemName
+      // é de âmbito item e o filtro de canal de âmbito sessão: a Data API
+      // recusa esse cruzamento em muitas propriedades. Quando recusa, repete
+      // sem o filtro — dá os produtos da LOJA INTEIRA, e o relatório diz isso
+      // por palavras (nunca se chama orgânico ao que não é).
+      (async (): Promise<{ rows: Row[]; scope: "organic" | "store" }> => {
+        const productsBody = (filtered: boolean) => ({
+          dateRanges: [
+            { startDate: opts.current.startDate, endDate: opts.current.endDate },
+          ],
+          dimensions: [{ name: "itemName" }],
+          metrics: [{ name: "itemRevenue" }, { name: "itemsPurchased" }],
+          ...(filtered ? { dimensionFilter: ORGANIC_FILTER } : {}),
+          orderBys: [{ metric: { metricName: "itemRevenue" }, desc: true }],
+          limit: 10,
+        });
+        try {
+          const rows = (await runReport(
+            token,
+            propertyId,
+            productsBody(true),
+          )) as Row[];
+          if (rows.length) return { rows, scope: "organic" };
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          warnings.push(`produtos (orgânico): ${message.slice(0, 120)}`);
+        }
+        const rows = await settle(
+          "produtos (loja inteira)",
+          () => runReport(token, propertyId, productsBody(false)) as Promise<Row[]>,
+          empty,
+          warnings,
+        );
+        return { rows, scope: "store" };
+      })(),
     ]);
 
     // Cada linha pertence a um range (date_range_0…3); um range sem linha é
     // um mês sem tráfego orgânico — zeros verdadeiros, a propriedade existe.
     const byRange = new Map<number, Row>();
-    for (const r of monthRows as Row[]) {
+    for (const r of monthRows ?? []) {
       const tag = (r.dimensionValues ?? []).find((d) =>
         (d.value ?? "").startsWith("date_range_"),
       )?.value;
       const idx = tag ? Number(tag.replace("date_range_", "")) : 0;
       if (Number.isFinite(idx)) byRange.set(idx, r);
     }
-    const months: Ga4EcomMonth[] = ranges.map((_, i) => {
+    const months: (Ga4EcomMonth | null)[] = ranges.map((_, i) => {
+      if (!monthRows) return null;
       const row = byRange.get(i);
       return {
         revenue: num(row, 0),
@@ -155,18 +236,23 @@ export async function getGa4EcomReport(
       };
     });
 
-    const probe = (probeRows as Row[])[0];
-    const purchasesInstrumented = num(probe, 0) > 0;
-    const itemsInstrumented = num(probe, 1) > 0;
+    // Instrumentação: a sonda é a resposta preferida, mas os próprios meses
+    // provam-na — se houve receita ou transações orgânicas no período, o
+    // purchase está instrumentado, tenha a sonda respondido ou não.
+    const monthsShowSales = months.some(
+      (m) => m !== null && (m.transactions > 0 || m.revenue > 0),
+    );
+    const purchasesInstrumented = num(trxProbe[0], 0) > 0 || monthsShowSales;
+    const itemsInstrumented = num(itemProbe[0], 0) > 0;
 
-    const topPages = (pageRows as Row[])
+    const topPages = pageRows
       .map((r) => ({
         page: r.dimensionValues?.[0]?.value ?? "",
         views: num(r, 0),
       }))
       .filter((p) => p.page && p.views > 0);
 
-    const topProducts = (itemRows as Row[])
+    const topProducts = products.rows
       .map((r) => ({
         name: r.dimensionValues?.[0]?.value ?? "",
         revenue: num(r, 0),
@@ -182,7 +268,9 @@ export async function getGa4EcomReport(
       purchasesInstrumented,
       topPages,
       topProducts,
+      topProductsScope: products.scope,
       itemsInstrumented,
+      warnings,
     };
   } catch (err) {
     return {

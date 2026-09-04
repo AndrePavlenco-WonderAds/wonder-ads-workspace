@@ -16,6 +16,12 @@ import {
   type CustomLeadEvent,
   type GbpProfile,
 } from "./report-types";
+import {
+  normalizeCsvMonths,
+  normalizeCsvProducts,
+  type ShopifyCsvMonthEntry,
+  type ShopifyCsvProduct,
+} from "./shopify-csv";
 
 const KEY_PREFIX = "report-config:";
 
@@ -85,6 +91,14 @@ export type ReportConfig = {
    *  read_all_orders). Guardado neste blob KV (encriptado at rest) e NUNCA
    *  devolvido ao browser — a rota de config mascara-o. */
   shopifyAccessToken: string | null;
+  /** Totais mensais importados do CSV da Shopify ("2026-06" → receita +
+   *  encomendas da loja inteira). O caminho para as lojas onde a agência NÃO
+   *  consegue token: desde 1/1/2026 a Shopify não deixa criar custom apps e
+   *  as contas de colaborador não entram no Dev Dashboard. Sobrevive a um
+   *  «Regenerar» porque vive no cliente, não no snapshot. */
+  shopifyCsvMonths: Record<string, ShopifyCsvMonthEntry>;
+  /** Produtos mais vendidos por mês, da mesma importação. */
+  shopifyCsvProducts: Record<string, ShopifyCsvProduct[]>;
   /** Keywords que o consultor retirou da tabela «Keywords & posições» do
    *  relatório (nomes de médicos, concorrentes, termos que o Serpstat
    *  apanhou por engano). Vivem aqui, no cliente, para não voltarem todos
@@ -184,6 +198,8 @@ export function defaultReportConfig(slug: string, currency = "EUR"): ReportConfi
     reportLang: null,
     shopifyShopDomain: null,
     shopifyAccessToken: null,
+    shopifyCsvMonths: {},
+    shopifyCsvProducts: {},
     keywordsHidden: [],
     keywordsHideUnranked: false,
     llmRegex: [...DEFAULT_LLM_REGEX],
@@ -336,6 +352,8 @@ function normalizeConfig(raw: unknown, slug: string): ReportConfig {
     reportLang: o.reportLang === "pt" || o.reportLang === "en" ? o.reportLang : null,
     shopifyShopDomain: normalizeShopDomain(o.shopifyShopDomain),
     shopifyAccessToken: asStr(o.shopifyAccessToken),
+    shopifyCsvMonths: normalizeCsvMonths(o.shopifyCsvMonths),
+    shopifyCsvProducts: normalizeCsvProducts(o.shopifyCsvProducts),
     keywordsHidden: normalizeKeywordList(o.keywordsHidden),
     keywordsHideUnranked: o.keywordsHideUnranked === true,
     llmRegex:

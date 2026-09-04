@@ -25,6 +25,13 @@ import {
 } from "@/lib/report/report-config-store";
 import { resolveGa4MeasurementId } from "@/lib/ga4";
 import {
+  normalizeCsvMonths,
+  normalizeCsvProducts,
+  MONTH_KEY_RE,
+  type ShopifyCsvMonthEntry,
+  type ShopifyCsvProduct,
+} from "@/lib/report/shopify-csv";
+import {
   MAX_CUSTOM_LEAD_EVENTS,
   MAX_GBP_PROFILES,
   type CustomLeadEvent,
@@ -97,6 +104,11 @@ export async function PUT(
     currency?: unknown;
     keywordsHidden?: unknown;
     keywordsHideUnranked?: unknown;
+    /** Importação de CSV da Shopify: meses + produtos já parseados no
+     *  browser (o ficheiro cru pode ter megabytes e não precisa de subir). */
+    shopifyCsvImport?: unknown;
+    /** "all" ou "2026-06" — apaga o que foi importado. */
+    shopifyCsvClear?: unknown;
   };
 
   const patch: {
@@ -113,6 +125,8 @@ export async function PUT(
     currency?: string;
     keywordsHidden?: string[];
     keywordsHideUnranked?: boolean;
+    shopifyCsvMonths?: Record<string, ShopifyCsvMonthEntry>;
+    shopifyCsvProducts?: Record<string, ShopifyCsvProduct[]>;
   } = {};
 
   if (body.eventMap && typeof body.eventMap === "object") {
@@ -230,6 +244,56 @@ export async function PUT(
   }
   if (typeof body.currency === "string" && /^[A-Za-z]{3}$/.test(body.currency.trim())) {
     patch.currency = body.currency.trim().toUpperCase();
+  }
+
+  // Importação de CSV da Shopify — junta-se ao que já lá está (cada mês
+  // importado uma vez fica bom para sempre, incluindo a coluna homóloga do
+  // ano que vem). Um mês reimportado substitui o anterior.
+  if (body.shopifyCsvImport && typeof body.shopifyCsvImport === "object") {
+    const incoming = body.shopifyCsvImport as {
+      months?: unknown;
+      products?: unknown;
+    };
+    const current = await getReportConfig(slug);
+    const now = Date.now();
+    const monthsIn = normalizeCsvMonths(
+      Object.fromEntries(
+        Object.entries(
+          (incoming.months ?? {}) as Record<string, unknown>,
+        ).map(([k, v]) => [
+          k,
+          { ...(v as Record<string, unknown>), importedAt: now },
+        ]),
+      ),
+    );
+    const productsIn = normalizeCsvProducts(incoming.products);
+    if (
+      Object.keys(monthsIn).length === 0 &&
+      Object.keys(productsIn).length === 0
+    ) {
+      return NextResponse.json(
+        { error: "O CSV não trouxe nenhum mês válido." },
+        { status: 400 },
+      );
+    }
+    patch.shopifyCsvMonths = { ...current.shopifyCsvMonths, ...monthsIn };
+    patch.shopifyCsvProducts = { ...current.shopifyCsvProducts, ...productsIn };
+  }
+
+  if (typeof body.shopifyCsvClear === "string") {
+    const target = body.shopifyCsvClear;
+    if (target === "all") {
+      patch.shopifyCsvMonths = {};
+      patch.shopifyCsvProducts = {};
+    } else if (MONTH_KEY_RE.test(target)) {
+      const current = await getReportConfig(slug);
+      const months = { ...current.shopifyCsvMonths };
+      const products = { ...current.shopifyCsvProducts };
+      delete months[target];
+      delete products[target];
+      patch.shopifyCsvMonths = months;
+      patch.shopifyCsvProducts = products;
+    }
   }
 
   if (Object.keys(patch).length === 0) {

@@ -13,6 +13,20 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.10",
+    date: "2026-09-04",
+    title:
+      "Relatório e-commerce: a tabela vazia do Kings Gyms, e a Shopify a entrar por CSV agora que a API fechou a porta às agências",
+    highlights: [
+      "**🧯 Um pedido recusado já não apaga a tabela inteira.** O bloco e-commerce fazia quatro pedidos ao GA4 dentro do mesmo `Promise.all`: bastava a Google recusar UM (a Data API rejeita certos cruzamentos de âmbito item × sessão com 400) para receita, transações, conversão, utilizadores E páginas saírem todos a «—» — foi o que aconteceu ao Kings Gyms, com a propriedade certa ligada e vendas visíveis no GA4. Agora cada pedido corre por si e só apaga a sua própria parte.",
+      "**🔎 E diz-se o que a Google recusou.** A mensagem de erro do bloco e-commerce estava escondida num tooltip do chip. Passa a haver «Bloco e-commerce — o que as fontes disseram», aberto por um clique, com a frase exata de cada fonte. Há também uma rota de diagnóstico (`/api/reports/<cliente>/ga4-ecom-probe`) que testa pedido a pedido contra a propriedade do cliente.",
+      "**📦 Produtos: segunda tentativa sem o filtro de canal.** Quando o GA4 recusa cruzar produtos com o canal orgânico, o relatório repete sem o filtro e mostra a lista da loja inteira — dizendo-o por palavras no próprio documento, como já fazia com os da Shopify. E se vieram produtos, o tracking de items existe: a lista real vale mais do que a sonda.",
+      "**🛒 Shopify sem token: importa-se o CSV.** Desde 1 de janeiro de 2026 a Shopify não deixa criar custom apps no admin da loja, e o Dev Dashboard que as substituiu não abre a contas de colaborador — as nossas. Novo cartão «Importar CSV da Shopify»: larga-se o ficheiro de *Orders → Export* (ou de *Analytics → Sales over time / Sales by product*), a app reconhece o formato sozinha, ignora encomendas canceladas e anuladas, desconta reembolsos, lê `;` e vírgula decimal à portuguesa, e mostra os meses antes de gravar.",
+      "**🔁 Importa-se uma vez, serve para sempre.** Os meses ficam gravados no cliente, não no relatório: sobrevivem a um «Regenerar» e a coluna homóloga do ano seguinte já vem preenchida. Exporta-se um intervalo de 13 meses de uma vez e não se volta a tocar.",
+      "**✉️ Instruções prontas para o cliente.** Se se preferir a puxada automática, um botão copia o pedido — em português ou em inglês — com o caminho novo do Dev Dashboard, os scopes certos e a garantia de que o token é só de leitura.",
+    ],
+  },
+  {
     version: "77.9",
     date: "2026-09-03",
     title: "Relatório Mensal: propriedade GA4 à escolha, leads do site separados da Ficha Google, tabela de keywords curada, notas com links e anexos",

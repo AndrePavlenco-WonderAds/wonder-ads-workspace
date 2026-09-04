@@ -568,6 +568,9 @@ export type EcommerceBlock = {
   /** Produtos mais vendidos no mês do relatório, por receita. */
   topProducts: EcomTopProduct[];
   topProductsSource: MetricSource;
+  /** Produtos que só saíram sem o filtro de canal (GA4 recusa cruzar items
+   *  com o canal da sessão) — são da loja inteira e o relatório di-lo. */
+  topProductsWholeStore?: boolean;
   /** Proveniência das puxadas — painel interno, nunca no PDF. */
   fetch: { ga4: FetchStatus; shopify: FetchStatus };
 };
