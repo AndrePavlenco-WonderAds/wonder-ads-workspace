@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.11",
+    date: "2026-09-08",
+    title:
+      "Inquérito de satisfação: cada escala de 0 a 10 passa a dizer que só o 9 e o 10 contam como bom resultado",
+    highlights: [
+      "**📏 A régua deixa de ser secreta.** O cliente lê a escala 0–10 como notas de escola: um 7 ou um 8 parecem simpáticos, e é o que a maior parte das pessoas dá quando está satisfeita mas não deslumbrada. Só que a régua da administração é outra — o trabalho do consultor e da equipa só conta como bom resultado a **9** e a **10** — e quem responde não tinha como adivinhar isso. Um 8 dado com boa intenção entrava cá dentro como resultado fraco, e ninguém percebia o desencontro.",
+      "**ℹ️ Aviso em TODAS as perguntas de 0 a 10.** Uma faixa verde discreta, entre a pergunta e a escala, em todas elas: satisfação geral, resultados dos Ads, continuidade e o desempenho de cada pessoa da equipa. Na pergunta por-pessoa aparece uma vez só, por cima de todos os cartões, e não uma vez por cara.",
+      "**🇬🇧 Também em inglês.** Os inquéritos que correm em inglês recebem a mesma nota na sua língua — nada de copy portuguesa a escapar para o link de um cliente estrangeiro.",
+    ],
+  },
+  {
     version: "77.10",
     date: "2026-09-04",
     title:

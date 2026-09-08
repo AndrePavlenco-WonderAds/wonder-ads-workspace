@@ -30,6 +30,7 @@ import {
   ArrowLeft,
   ArrowRight,
   Check,
+  Info,
   Loader2,
   MessageSquareQuote,
   Star,
@@ -214,6 +215,50 @@ function toneFor(n: number): { solid: string; soft: string; glow: string } {
   if (n <= 6) return { solid: "#d97706", soft: "rgba(217,119,6,0.10)", glow: "rgba(217,119,6,0.45)" };
   if (n <= 8) return { solid: "#0d9488", soft: "rgba(13,148,136,0.10)", glow: "rgba(13,148,136,0.4)" };
   return { solid: "#059669", soft: "rgba(5,150,105,0.12)", glow: "rgba(5,150,105,0.45)" };
+}
+
+/** O aviso que acompanha TODAS as perguntas de 0 a 10.
+ *
+ *  Quem responde lê a escala como notas de escola: um 7 ou um 8 parecem
+ *  simpáticos, e é o que a maior parte das pessoas dá quando está satisfeita
+ *  mas não deslumbrada. Só que a régua da administração é outra — o trabalho
+ *  do consultor e da equipa só conta como bom a 9 e a 10 — e o cliente não
+ *  tem como adivinhar isso. Sem o aviso, um 8 dado com boa intenção entra
+ *  cá dentro como resultado fraco, e ninguém percebe o desencontro.
+ *  Dizê-lo em cada pergunta faz a nota significar o mesmo dos dois lados. */
+const SCALE_NOTE: Record<PublicLang, React.ReactNode> = {
+  pt: (
+    <>
+      Para a administração da Wonder Ads, só as notas{" "}
+      <strong className="font-bold text-[#047857]">9</strong> e{" "}
+      <strong className="font-bold text-[#047857]">10</strong> contam como bom
+      resultado do consultor e da equipa — qualquer nota abaixo fica registada
+      como ponto a melhorar.
+    </>
+  ),
+  en: (
+    <>
+      For Wonder Ads management, only a{" "}
+      <strong className="font-bold text-[#047857]">9</strong> or a{" "}
+      <strong className="font-bold text-[#047857]">10</strong> counts as a good
+      result for the consultant and the team — anything below is logged as
+      something to improve.
+    </>
+  ),
+};
+
+function ScaleNote({ lang }: { lang: PublicLang }) {
+  return (
+    <div className="mb-3.5 flex items-start gap-2.5 rounded-xl border border-[#059669]/20 bg-[#059669]/[0.055] px-3.5 py-2.5">
+      <Info
+        className="mt-[2px] h-3.5 w-3.5 shrink-0 text-[#059669]"
+        strokeWidth={2.4}
+      />
+      <p className="text-[12.5px] leading-relaxed text-black/65">
+        {SCALE_NOTE[lang]}
+      </p>
+    </div>
+  );
 }
 
 function Scale10({
@@ -1088,6 +1133,7 @@ export function NpsSurveyForm({
                     {q.q[lang]}
                   </div>
                 )}
+                {(isScale10(q) || isPersonScale(q)) && <ScaleNote lang={lang} />}
                 {isScale10(q) && (
                   <Scale10
                     value={answers[q.name]}
