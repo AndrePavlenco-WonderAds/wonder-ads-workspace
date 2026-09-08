@@ -13,6 +13,22 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.12",
+    date: "2026-09-08",
+    title:
+      "Comercial: templates de proposta em PDF, upload lido pelo Claude, tipo editável e resposta do cliente no próprio cartão",
+    highlights: [
+      "**📄 Dois templates no canto superior direito.** «Template · Renovação» é a estrutura da proposta pública da Fisio Restelo (as 7 secções: resultados, do tráfego ao paciente, plano, foco prioritário, extra incluído, plano e investimento com as duas modalidades, próximos passos) com os dados do cliente substituídos por campos entre [parênteses retos]. «Template · Cross-sell» é o orçamento de serviço pontual (o da sessão fotográfica): ficha do cliente, âmbito, tabela de itens, incluído/não incluído, licença, condições comerciais, responsabilidades do cliente, nota de enquadramento e assinaturas. Gerados a pedido com pdf-lib, com uma caixa amarela de instruções para apagar antes de enviar.",
+      "**⬆️ «Carregar proposta» fecha o ciclo.** O consultor trabalha o template na sessão dele com o Claude, volta com o PDF e larga-o no modal. O ficheiro vai direto para o Blob, o Claude lê-o (documento inteiro, não só o texto) e devolve o rascunho do cartão: cliente (ligado à ficha do workspace quando bate), título, tipo, data, período, investimento, resumo e quem assina. O consultor revê os campos e grava. O cartão aparece na lista e a proposta ganha página pública em /proposta/<slug>, com o PDF embebido na mesma moldura clara e um «Descarregar PDF».",
+      "**🏷️ Tipo editável no chip.** «Renovação» ↔ «Cross-sell» muda-se no próprio chip do cartão (menu de duas opções). Fica em KV por cima do registo em código — a chip da ficha do cliente em /seo/<slug> e a página pública leem a mesma coisa.",
+      "**✅ ✗ A resposta do cliente regista-se no cartão.** Célula «Resposta do cliente» com «Cliente aceitou» / «Cliente recusou»; o estado passa a Aceite ou Recusada, com data, hora e quem registou. «Anular» volta a Enviada. A barra lateral do cartão muda de cor com o estado (roxo à espera, verde aceite, vermelho recusada) e o topo da lista conta enviadas / aceites / recusadas.",
+      "**👤 Consultor com cara.** Em vez de um nome no fim de uma linha de pontos, uma célula com retrato, nome, cargo e e-mail clicável — resolvido pela ficha do cliente (a fonte que manda no resto da app) ou por quem assinou o upload.",
+      "**🧹 Cartão reorganizado.** Linha 1: tipo, estado, data e ações (Abrir proposta, PDF quando há ficheiro, Copy public link). Linha 2: logótipo, título e resumo. Linha 3: células com rótulo — Período, Investimento, Consultor, Resposta do cliente. As propostas carregadas mostram ainda quem as carregou e quando, e podem ser apagadas (as de código continuam a viver no git).",
+      "**🧽 Cabeçalho limpo.** Saíram o ícone do aperto de mão, a frase «Sales pipeline, partnerships and client success…», o contador «1 proposta» e o parágrafo sobre o slug e o código.",
+      "**🔒 Escrita só para quem edita o Comercial.** As rotas /api/commercial/* exigem sessão (middleware) e as escritas exigem poder editar o departamento — o mesmo portão do SEO. Quem só vê tem os botões escondidos E a API fechada.",
+    ],
+  },
+  {
     version: "77.11",
     date: "2026-09-08",
     title:

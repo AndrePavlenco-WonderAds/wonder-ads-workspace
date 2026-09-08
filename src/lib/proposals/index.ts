@@ -12,7 +12,11 @@
 // Substitui os links do antigo proposals.wonder-ads.com (GoHighLevel), que
 // não deixavam reaproveitar dados do workspace nem versionar o texto.
 
-export type ProposalKind = "renovacao" | "nova";
+// v77.12: duas famílias de proposta — a RENOVAÇÃO de um contrato que já
+// existe e o CROSS-SELL de um serviço novo a um cliente que já é nosso
+// (sessão fotográfica, vídeo, CRM…). O tipo escrito aqui é o de partida;
+// no departamento Comercial edita-se por cima (fica em KV, ver ./store).
+export type ProposalKind = "renovacao" | "cross-sell";
 export type ProposalStatus = "rascunho" | "enviada" | "aceite" | "recusada";
 
 export type ProposalMeta = {
@@ -56,8 +60,14 @@ export const PROPOSALS: ProposalMeta[] = [
 
 export const KIND_LABEL: Record<ProposalKind, string> = {
   renovacao: "Renovação",
-  nova: "Nova proposta",
+  "cross-sell": "Cross-sell",
 };
+
+export const PROPOSAL_KINDS: ProposalKind[] = ["renovacao", "cross-sell"];
+
+export function isProposalKind(v: unknown): v is ProposalKind {
+  return v === "renovacao" || v === "cross-sell";
+}
 
 export const STATUS_LABEL: Record<ProposalStatus, string> = {
   rascunho: "Rascunho",

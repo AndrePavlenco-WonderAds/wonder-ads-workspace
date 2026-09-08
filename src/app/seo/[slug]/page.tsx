@@ -32,7 +32,8 @@ import { getClientPalette, paletteToGradient } from "@/lib/client-colors";
 import { getNpsRecord, npsSendDue } from "@/lib/nps-store";
 import { npsScoreColor } from "@/lib/nps-questions";
 import { getLogoOverride } from "@/lib/admin-client-logos-store";
-import { getProposalsForClient, proposalPath, KIND_LABEL } from "@/lib/proposals";
+import { proposalPath, KIND_LABEL } from "@/lib/proposals";
+import { getProposalsForClientAll } from "@/lib/proposals/store";
 import { getCurrentEmployee } from "@/lib/auth/server";
 import { editableDepts } from "@/lib/auth/credentials";
 import { SeoReadOnlyProvider, ReadOnlyBanner } from "@/components/seo-readonly";
@@ -104,7 +105,9 @@ export default async function ClientPage({
   // Propostas publicadas para este cliente (renovações, upsells) — a mais
   // recente vai para o cabeçalho, ao lado do «Onboarded», para que quem
   // abre a ficha do cliente encontre o link sem passar pelo Comercial.
-  const latestProposal = getProposalsForClient(slug)[0] ?? null;
+  // v77.12: lê também as propostas carregadas em PDF e o tipo editado no
+  // Comercial (KV), não só o registo em código.
+  const latestProposal = (await getProposalsForClientAll(slug).catch(() => []))[0] ?? null;
   const latestNps = npsRecord.submissions[0] ?? null;
   const npsScore = latestNps?.scores.overall ?? null;
   // When a send is due (never sent, or within 3 days / overdue), the pill

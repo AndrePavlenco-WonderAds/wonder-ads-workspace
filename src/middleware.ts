@@ -76,6 +76,18 @@ export async function middleware(req: NextRequest) {
         { status: 403 },
       );
     }
+    // O mesmo portão para o Comercial (v77.12): quem só pode VER o
+    // departamento não muda o tipo de uma proposta nem regista decisões.
+    if (
+      WRITE_METHODS.has(req.method) &&
+      req.nextUrl.pathname.startsWith("/api/commercial") &&
+      !canEditDept(effectiveUsername(session), "commercial")
+    ) {
+      return NextResponse.json(
+        { error: "Acesso só de leitura — não podes alterar propostas no departamento Comercial." },
+        { status: 403 },
+      );
+    }
     return NextResponse.next();
   }
   // Build the bounce URL with the original path + search preserved.
@@ -123,6 +135,9 @@ export const config = {
     // rota da API (isCurrentUserAdmin), não aqui.
     "/tools/:path*",
     "/api/tools/:path*",
+    // Comercial — templates, upload e decisões das propostas. Sessão para
+    // tudo; a escrita exige poder editar o departamento (gate abaixo).
+    "/api/commercial/:path*",
     // Internal-only API surfaces. /api/reviews stays public (clients
     // hit it from the (public-review) pages), /api/auth is the gate
     // itself, /api/files is used by both sides so we leave it open

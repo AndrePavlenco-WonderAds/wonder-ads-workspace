@@ -14,7 +14,8 @@ export function DepartmentHeader({
   large = false,
 }: {
   title: string;
-  tagline: string;
+  /** Opcional desde v77.12 — o Comercial vive sem frase de apresentação. */
+  tagline?: string;
   Icon?: LucideIcon;
   count?: number;
   countLabel?: string;
@@ -63,15 +64,17 @@ export function DepartmentHeader({
             >
               {title}
             </h1>
-            <p
-              className={
-                large
-                  ? "mt-5 max-w-2xl text-lg text-white/65 sm:text-xl"
-                  : "mt-3 max-w-2xl text-base text-white/65 sm:text-lg"
-              }
-            >
-              {tagline}
-            </p>
+            {tagline && (
+              <p
+                className={
+                  large
+                    ? "mt-5 max-w-2xl text-lg text-white/65 sm:text-xl"
+                    : "mt-3 max-w-2xl text-base text-white/65 sm:text-lg"
+                }
+              >
+                {tagline}
+              </p>
+            )}
             {(typeof count === "number" || countSuffix) && (
               <div className="mt-5 flex flex-wrap items-center gap-2.5">
                 {typeof count === "number" && (

@@ -229,11 +229,13 @@ export function accessibleDepts(
     case "Founder":
       return [...DEPARTMENTS];
     case "SEO":
-      return ["seo", "web"];
+      // v77.12: + Comercial — os consultores carregam as suas propostas
+      // (renovações e cross-sell) e registam a resposta do cliente lá.
+      return ["seo", "web", "commercial"];
     case "Web":
       return ["web", "seo"];
     case "ADS":
-      return ["ads"];
+      return ["ads", "commercial"];
     case "Commercial":
       return ["commercial"];
     default:
@@ -259,12 +261,14 @@ export function editableDepts(
     case "Founder":
       return [...DEPARTMENTS];
     case "SEO":
-      return ["seo", "web"];
+      // v77.12: + Comercial — sem isto o botão «Carregar proposta» ficava
+      // escondido e a API rejeitava o upload de um consultor de SEO.
+      return ["seo", "web", "commercial"];
     case "Web":
       // Web edits ONLY Web — SEO is view-only for designers.
       return ["web"];
     case "ADS":
-      return ["ads"];
+      return ["ads", "commercial"];
     case "Commercial":
       return ["commercial"];
     default:
