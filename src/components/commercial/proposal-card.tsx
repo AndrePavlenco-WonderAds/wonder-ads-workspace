@@ -10,7 +10,7 @@
 // frase separada por «·». As propostas carregadas em PDF têm ainda o botão
 // de descarregar o ficheiro e, para quem pode editar, o de apagar.
 
-import { useState, useTransition, type ReactNode } from "react";
+import { useEffect, useRef, useState, useTransition, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -98,6 +98,25 @@ export function ProposalCard({ p, canEdit }: { p: ProposalCardData; canEdit: boo
   const [error, setError] = useState<string | null>(null);
   const [kindOpen, setKindOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const kindRef = useRef<HTMLDivElement | null>(null);
+
+  // O menu do tipo fecha com Escape ou com um clique fora dele — senão
+  // ficava aberto até se clicar outra vez no chip.
+  useEffect(() => {
+    if (!kindOpen) return;
+    const onDoc = (e: MouseEvent) => {
+      if (kindRef.current && !kindRef.current.contains(e.target as Node)) setKindOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setKindOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDoc);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [kindOpen]);
 
   async function patch(body: Record<string, unknown>, label: string) {
     setBusy(label);
@@ -152,7 +171,7 @@ export function ProposalCard({ p, canEdit }: { p: ProposalCardData; canEdit: boo
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2">
             {/* Tipo (editável) */}
-            <div className="relative">
+            <div ref={kindRef} className="relative">
               <button
                 type="button"
                 disabled={!canEdit || working}

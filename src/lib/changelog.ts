@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.13",
+    date: "2026-09-08",
+    title: "Comercial: o menu do tipo da proposta fecha com Escape ou com um clique fora",
+    highlights: [
+      "**🖱️ Pequeno acerto no cartão.** O menu «Renovação / Cross-sell» aberto no chip ficava à espera de um segundo clique no próprio chip; passa a fechar com Escape ou ao clicar em qualquer outro sítio, como os outros menus da app.",
+    ],
+  },
+  {
     version: "77.12",
     date: "2026-09-08",
     title:
