@@ -130,7 +130,7 @@ export default async function SeoPage() {
         }
         rightSlot={<WorldMap />}
         extra={
-          <TypewriterPrompt text="Which project are we working on now, boss?" />
+          <TypewriterPrompt text="Em que projeto vamos trabalhar agora, chefe?" />
         }
         large
       />

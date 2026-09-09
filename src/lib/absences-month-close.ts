@@ -22,6 +22,7 @@
 // «hoje é o último dia do mês, em Lisboa?» (`lisbonToday` +
 // `isLastDayOfMonth`). Só num sim é que a mensagem sai.
 
+import { APP_URL } from "./app-url";
 import { getSlackUserId, listImpersonationTargets } from "./auth/credentials";
 import { formatDate } from "./dates";
 import {
@@ -50,7 +51,6 @@ const ANDRE_SLACK_USER_ID =
   process.env.SLACK_ANDRE_USER_ID || getSlackUserId("andre") || "U05QPJZHE56";
 const ANDRE_NAME = "André Pavlenco";
 
-const APP_URL = "https://wonder-ads-workspace.vercel.app";
 
 /* ---------------------------------------------------------------- *
  * O CALENDÁRIO DE LISBOA                                            *

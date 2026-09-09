@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.17",
+    date: "2026-09-09",
+    title:
+      "SEO DPT: a etiqueta orgânica abre o «Pulso orgânico» em hover, a frase do chefe em português com o boneco AI a acenar, e a app pronta para o domínio próprio",
+    highlights: [
+      "**🖱️ Hover na etiqueta «organic · 30d».** A pílula continua do tamanho de sempre na linha dos clientes; ao passar o rato (ou tocar, ou focar com o teclado) abre por baixo o painel inteiro da v77.14 — total em grande, diferença em visitantes face aos 30 dias anteriores, curva diária com o ponto de «ontem», e os três indicadores de equipa (a crescer, maior subida, ontem). Fecha ao sair, com Escape, ou com novo toque.",
+      "**👋 «Em que projeto vamos trabalhar agora, chefe?»** A frase escrita à máquina passa a português e ganha um boneco AI ao lado: cabeça com o gradiente da marca, olhos que pestanejam, antena a piscar e o braço a acenar em loop. É SVG puro, sem gif, e fica quieto para quem pediu menos movimento ao sistema.",
+      "**🌐 Preparação para o domínio próprio.** Os únicos links absolutos escritos à mão na app (as mensagens de Slack das ausências) passam a vir de um sítio só (src/lib/app-url.ts), que lê APP_BASE_URL na Vercel quando existir. Tudo o resto já segue o domínio por onde a pessoa entrou, por isso trocar o «.vercel.app» é configuração, não código.",
+    ],
+  },
+  {
     version: "77.16",
     date: "2026-09-09",
     title: "SEO DPT: o tráfego orgânico volta a ser uma etiqueta na linha dos clientes",

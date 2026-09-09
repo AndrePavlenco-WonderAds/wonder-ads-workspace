@@ -17,6 +17,7 @@
 //     app que a tomasse sozinha estaria a mexer no salário de alguém a
 //     partir de um dropdown.
 
+import { APP_URL } from "./app-url";
 import {
   absencePortionInRange,
   formatDayCount,
@@ -247,7 +248,7 @@ export function monthlyDigestBlocks(d: MonthlyDigest): unknown[] {
         type: "mrkdwn",
         text:
           `A descontar fica ao critério da RH — o resumo separa justificadas de injustificadas, não decide por ninguém. ` +
-          `Folhas completas em <https://wonder-ads-workspace.vercel.app/admin/ausencias|Ausências> e <https://wonder-ads-workspace.vercel.app/admin/faltas|Faltas>.`,
+          `Folhas completas em <${APP_URL}/admin/ausencias|Ausências> e <${APP_URL}/admin/faltas|Faltas>.`,
       },
     ],
   });

@@ -487,8 +487,10 @@ body {
   animation: feedback-nudge 2.4s ease-in-out infinite;
 }
 
-/* Etiqueta «organic · 30d» do SEO DPT: a mini-curva desenha-se da esquerda
-   para a direita e a área enche a seguir (v77.14/16). */
+/* Etiqueta «organic · 30d» do SEO DPT (v77.14/16/17): a mini-curva
+   desenha-se da esquerda para a direita e a área enche a seguir; o painel
+   em hover entra de baixo, os blocos sobem em cascata e um fio de luz
+   varre o topo. */
 @keyframes organic-draw {
   from { stroke-dashoffset: 1; }
   to { stroke-dashoffset: 0; }
@@ -505,6 +507,71 @@ body {
 .organic-fill-in {
   opacity: 0;
   animation: organic-fill-in 0.9s ease-out 1.2s forwards;
+}
+@keyframes organic-rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.organic-rise {
+  opacity: 0;
+  animation: organic-rise 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+@keyframes organic-sweep {
+  0% { transform: translateX(-100%); opacity: 0; }
+  15% { opacity: 1; }
+  85% { opacity: 1; }
+  100% { transform: translateX(200%); opacity: 0; }
+}
+.organic-sweep {
+  animation: organic-sweep 6s ease-in-out 0.8s infinite;
+}
+@keyframes organic-panel-in {
+  from { opacity: 0; transform: translateY(-6px) scale(0.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.organic-panel-in {
+  transform-origin: top left;
+  animation: organic-panel-in 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Boneco AI a acenar (typewriter-prompt, v77.17): flutua devagar, o braço
+   acena a partir do ombro, os olhos pestanejam de vez em quando e a antena
+   pisca. Coordenadas em unidades do viewBox (transform-box: view-box). */
+@keyframes ai-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+}
+.ai-mascot {
+  animation: ai-bob 3s ease-in-out infinite;
+  filter: drop-shadow(0 6px 14px rgba(120, 61, 245, 0.45));
+}
+@keyframes ai-wave {
+  0%, 100% { transform: rotate(0deg); }
+  20% { transform: rotate(-24deg); }
+  40% { transform: rotate(14deg); }
+  60% { transform: rotate(-20deg); }
+  80% { transform: rotate(8deg); }
+}
+.ai-mascot-arm {
+  transform-box: view-box;
+  transform-origin: 34px 37px;
+  animation: ai-wave 2.2s ease-in-out infinite;
+}
+@keyframes ai-blink {
+  0%, 92%, 100% { transform: scaleY(1); }
+  96% { transform: scaleY(0.12); }
+}
+.ai-mascot-eyes {
+  transform-box: view-box;
+  transform-origin: 24px 22px;
+  animation: ai-blink 4.6s ease-in-out infinite;
+}
+@keyframes ai-antenna {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+.ai-mascot-antenna {
+  animation: ai-antenna 1.6s ease-in-out infinite;
 }
 
 /* Respect prefers-reduced-motion */
@@ -532,10 +599,19 @@ body {
     animation: none;
   }
   .organic-draw,
-  .organic-fill-in {
+  .organic-fill-in,
+  .organic-rise,
+  .organic-sweep,
+  .organic-panel-in {
     animation: none;
     opacity: 1;
     stroke-dashoffset: 0;
+  }
+  .ai-mascot,
+  .ai-mascot-arm,
+  .ai-mascot-eyes,
+  .ai-mascot-antenna {
+    animation: none;
   }
   /* O badge do sino perde o movimento mas NÃO perde o destaque — fica com o
      anel fixo, senão quem pediu menos animação ao SO fica sem o sinal. */
