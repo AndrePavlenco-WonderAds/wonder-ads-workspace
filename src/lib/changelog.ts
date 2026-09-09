@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.19",
+    date: "2026-09-09",
+    title: "App pronta para workspace.wonder-ads.com — o domínio antigo vai redirecionar tudo",
+    highlights: [
+      "**🌐 Domínio próprio.** workspace.wonder-ads.com já está ligado ao projeto na Vercel, à espera dos dois registos DNS na Cloudflare (verificação + CNAME). Os links que a app escreve sem pedido por perto (Slack das ausências) já apontam para o domínio novo via APP_BASE_URL.",
+      "**↪️ Redirecionamento do wonder-ads-workspace.vercel.app.** Assim que o domínio novo responder, cada link antigo salta para o mesmo caminho no novo — /a-domingos/pendingreview continua a ser /a-domingos/pendingreview, com a query string intacta. Está no código, desligado por uma variável (LEGACY_HOST_REDIRECT) para não se ligar antes do DNS estar vivo.",
+      "**🔌 As rotas /api ficam nos dois domínios.** A interatividade do Slack, os callbacks OAuth do Ads e os crons continuam a funcionar no host antigo até serem reconfigurados — um redirect aí partia-os.",
+    ],
+  },
+  {
     version: "77.18",
     date: "2026-09-09",
     title: "SEO DPT: o painel da etiqueta orgânica passa por cima dos cartões",
