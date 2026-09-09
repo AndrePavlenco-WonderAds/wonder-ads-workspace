@@ -113,26 +113,27 @@ export default async function SeoPage() {
         tagline="Crescimento orgânico no Google e nas IAs. Agência #1 de SEO & GEO em Portugal."
         count={activeClients.length || undefined}
         countLabel="clients"
+        countSuffix={
+          organic.configured ? (
+            <OrganicPulse
+              total={organic.total}
+              prevTotal={organic.prevTotal}
+              daily={organic.daily}
+              clientsWithData={organic.clientsWithData}
+              clientsStale={organic.clientsStale}
+              computedAt={organic.computedAt}
+              growing={organicTeam.growing}
+              comparable={organicTeam.comparable}
+              topClimber={organicTeam.topClimber}
+            />
+          ) : undefined
+        }
         rightSlot={<WorldMap />}
         extra={
           <TypewriterPrompt text="Which project are we working on now, boss?" />
         }
         large
       />
-
-      {organic.configured && (
-        <OrganicPulse
-          total={organic.total}
-          prevTotal={organic.prevTotal}
-          daily={organic.daily}
-          clientsWithData={organic.clientsWithData}
-          clientsStale={organic.clientsStale}
-          computedAt={organic.computedAt}
-          growing={organicTeam.growing}
-          comparable={organicTeam.comparable}
-          topClimber={organicTeam.topClimber}
-        />
-      )}
 
       <div className="mt-12 lg:mt-16">
         <section aria-label="Clients by Head Consultant">

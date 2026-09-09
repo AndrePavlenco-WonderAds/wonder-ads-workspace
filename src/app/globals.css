@@ -487,9 +487,8 @@ body {
   animation: feedback-nudge 2.4s ease-in-out infinite;
 }
 
-/* «Pulso orgânico» — cartão-herói do SEO DPT (v77.14). A curva desenha-se
-   da esquerda para a direita, a área enche a seguir, os blocos sobem em
-   cascata e um fio de luz varre o topo do cartão. */
+/* Etiqueta «organic · 30d» do SEO DPT: a mini-curva desenha-se da esquerda
+   para a direita e a área enche a seguir (v77.14/16). */
 @keyframes organic-draw {
   from { stroke-dashoffset: 1; }
   to { stroke-dashoffset: 0; }
@@ -497,7 +496,7 @@ body {
 .organic-draw {
   stroke-dasharray: 1;
   stroke-dashoffset: 1;
-  animation: organic-draw 1.8s cubic-bezier(0.22, 1, 0.36, 1) 0.25s forwards;
+  animation: organic-draw 1.4s cubic-bezier(0.22, 1, 0.36, 1) 0.3s forwards;
 }
 @keyframes organic-fill-in {
   from { opacity: 0; }
@@ -505,24 +504,7 @@ body {
 }
 .organic-fill-in {
   opacity: 0;
-  animation: organic-fill-in 1.1s ease-out 1.2s forwards;
-}
-@keyframes organic-rise {
-  from { opacity: 0; transform: translateY(12px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-.organic-rise {
-  opacity: 0;
-  animation: organic-rise 0.75s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-}
-@keyframes organic-sweep {
-  0% { transform: translateX(-100%); opacity: 0; }
-  15% { opacity: 1; }
-  85% { opacity: 1; }
-  100% { transform: translateX(200%); opacity: 0; }
-}
-.organic-sweep {
-  animation: organic-sweep 6s ease-in-out 1s infinite;
+  animation: organic-fill-in 0.9s ease-out 1.2s forwards;
 }
 
 /* Respect prefers-reduced-motion */
@@ -550,9 +532,7 @@ body {
     animation: none;
   }
   .organic-draw,
-  .organic-fill-in,
-  .organic-rise,
-  .organic-sweep {
+  .organic-fill-in {
     animation: none;
     opacity: 1;
     stroke-dashoffset: 0;

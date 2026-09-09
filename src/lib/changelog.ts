@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.16",
+    date: "2026-09-09",
+    title: "SEO DPT: o tráfego orgânico volta a ser uma etiqueta na linha dos clientes",
+    highlights: [
+      "**🏷️ Uma pílula, como antes.** Sai o cartão-herói a toda a largura; ao lado de «20 clients» fica a etiqueta verde com o número (a contar até ao valor real), «organic · 30d», a variação face aos 30 dias anteriores e uma mini-curva dos últimos 30 dias.",
+      "**💬 O resto no tooltip.** Ao passar o rato: a diferença em visitantes, quantos clientes têm GA4 ligado, quantos estão a crescer, a maior subida do mês e há quanto tempo foi atualizado.",
+      "**🔢 A soma continua estável.** O snapshot em KV com refresh em segundo plano da v77.14 fica igual — o número já não oscila entre 3k e 13k.",
+    ],
+  },
+  {
     version: "77.15",
     date: "2026-09-09",
     title: "SEO DPT: legendas dos indicadores do «Pulso orgânico» já não ficam cortadas",
