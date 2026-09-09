@@ -76,7 +76,7 @@ export function DepartmentHeader({
               </p>
             )}
             {(typeof count === "number" || countSuffix) && (
-              <div className="relative mt-5 flex flex-wrap items-center gap-2.5">
+              <div className="mt-5 flex flex-wrap items-center gap-2.5">
                 {typeof count === "number" && (
                   <CountBadge value={count} label={countLabel ?? "clients"} />
                 )}

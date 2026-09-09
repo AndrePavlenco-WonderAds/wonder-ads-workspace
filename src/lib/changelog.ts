@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.18",
+    date: "2026-09-09",
+    title: "SEO DPT: o painel da etiqueta orgânica passa por cima dos cartões",
+    highlights: [
+      "**🪟 Portal para o body.** O cabeçalho do departamento anima com transform, o que o fecha num contexto de empilhamento — o painel em hover ficava atrás dos cartões da board. Passa a ser montado no body, ancorado às coordenadas da pílula (por baixo, alinhado à esquerda da linha dos badges, sem sair do ecrã), e continua a fechar ao sair do rato, com Escape ou com novo toque.",
+    ],
+  },
+  {
     version: "77.17",
     date: "2026-09-09",
     title:

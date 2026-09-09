@@ -8,6 +8,10 @@
 // «Pulso orgânico» inteiro da v77.14 — o total em grande, a diferença em
 // visitantes, a curva diária, e os três indicadores de equipa — que era
 // bom demais para deitar fora mas grande demais para viver sempre aberto.
+//
+// O painel vai por portal para o <body>: o cabeçalho do departamento anima
+// com transform, o que cria um contexto de empilhamento, e um z-index lá
+// dentro nunca passaria por cima dos cartões da board.
 
 import {
   useCallback,
@@ -17,6 +21,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { createPortal } from "react-dom";
 import {
   ArrowDownRight,
   ArrowUpRight,
@@ -88,6 +93,35 @@ export function OrganicPulse(props: OrganicPulseProps) {
     return () => window.removeEventListener("keydown", onKey);
   }, [open]);
 
+  // Onde pousar o painel: por baixo da pílula, alinhado à esquerda da linha
+  // dos badges, sem sair do ecrã. Coordenadas do documento (o portal vive
+  // no body), recalculadas ao redimensionar.
+  const [anchor, setAnchor] = useState<{
+    top: number;
+    left: number;
+    width: number;
+  } | null>(null);
+  const place = useCallback(() => {
+    const wrap = wrapRef.current;
+    if (!wrap) return;
+    const chip = wrap.getBoundingClientRect();
+    const row = (wrap.parentElement ?? wrap).getBoundingClientRect();
+    const vw = window.innerWidth;
+    const width = Math.min(880, vw - 32);
+    const left = Math.max(16, Math.min(row.left, vw - width - 16));
+    setAnchor({
+      top: chip.bottom + 12 + window.scrollY,
+      left: left + window.scrollX,
+      width,
+    });
+  }, []);
+  useEffect(() => {
+    if (!open) return;
+    place();
+    window.addEventListener("resize", place);
+    return () => window.removeEventListener("resize", place);
+  }, [open, place]);
+
   return (
     <span
       ref={wrapRef}
@@ -145,7 +179,19 @@ export function OrganicPulse(props: OrganicPulseProps) {
         )}
       </button>
 
-      {open && <OrganicPanel {...props} id={panelId} svgId={`${id}-panel`} />}
+      {open &&
+        anchor &&
+        createPortal(
+          <OrganicPanel
+            {...props}
+            id={panelId}
+            svgId={`${id}-panel`}
+            anchor={anchor}
+            onEnter={openNow}
+            onLeave={scheduleClose}
+          />,
+          document.body,
+        )}
     </span>
   );
 }
@@ -166,7 +212,16 @@ function OrganicPanel({
   growing,
   comparable,
   topClimber,
-}: OrganicPulseProps & { id: string; svgId: string }) {
+  anchor,
+  onEnter,
+  onLeave,
+}: OrganicPulseProps & {
+  id: string;
+  svgId: string;
+  anchor: { top: number; left: number; width: number };
+  onEnter: () => void;
+  onLeave: () => void;
+}) {
   const hasData = total > 0;
   const shown = useCountUp(hasData ? total : 0, 1500);
   const delta = hasData && prevTotal > 0 ? total - prevTotal : null;
@@ -179,7 +234,10 @@ function OrganicPanel({
       id={id}
       role="group"
       aria-label="Tráfego orgânico do departamento — detalhe"
-      className="organic-panel-in absolute left-0 top-full z-50 mt-3 w-[min(880px,calc(100vw-2rem))] overflow-hidden rounded-[28px] border border-emerald-400/25 bg-[#0c1117]/95 shadow-[0_40px_90px_-30px_rgba(0,0,0,0.85),0_30px_80px_-40px_rgba(52,211,153,0.45)] backdrop-blur-xl"
+      onMouseEnter={onEnter}
+      onMouseLeave={onLeave}
+      style={{ top: anchor.top, left: anchor.left, width: anchor.width }}
+      className="organic-panel-in absolute z-[70] overflow-hidden rounded-[28px] border border-emerald-400/25 bg-[#0c1117]/95 shadow-[0_40px_90px_-30px_rgba(0,0,0,0.85),0_30px_80px_-40px_rgba(52,211,153,0.45)] backdrop-blur-xl"
     >
       <div
         aria-hidden
