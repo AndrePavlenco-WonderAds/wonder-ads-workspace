@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.20",
+    date: "2026-09-09",
+    title: "A app vive em workspace.wonder-ads.com — os links antigos redirecionam",
+    highlights: [
+      "**🌐 workspace.wonder-ads.com está no ar**, verificado, com certificado Let's Encrypt emitido pela Vercel. É a morada oficial da app a partir de agora.",
+      "**↪️ wonder-ads-workspace.vercel.app redireciona (308) para o mesmo caminho no domínio novo.** Links guardados por clientes e equipa — páginas de revisão, propostas, NPS, relatórios, onboarding — continuam a abrir, só que já na morada nova. A query string vai intacta.",
+      "**🔌 /api/* continua a responder nos dois domínios.** Os botões do Slack das ausências, os callbacks OAuth do Ads e os crons não dependem do redirect.",
+      "**🔑 Login uma vez.** O cookie de sessão é por domínio: ao abrir a morada nova, cada pessoa entra uma vez com as credenciais de sempre.",
+    ],
+  },
+  {
     version: "77.19",
     date: "2026-09-09",
     title: "App pronta para workspace.wonder-ads.com — o domínio antigo vai redirecionar tudo",

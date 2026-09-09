@@ -12,7 +12,9 @@
 //
 // Setup (uma vez, na Slack app do workspace):
 //   Interactivity & Shortcuts → ON → Request URL:
-//   https://wonder-ads-workspace.vercel.app/api/slack/absences
+//   https://workspace.wonder-ads.com/api/slack/absences
+//   (o host antigo, wonder-ads-workspace.vercel.app, continua a aceitar
+//   /api/* — o redirect do domínio próprio deixa as rotas de API de fora.)
 
 import { createHmac, timingSafeEqual } from "crypto";
 import { NextResponse } from "next/server";
