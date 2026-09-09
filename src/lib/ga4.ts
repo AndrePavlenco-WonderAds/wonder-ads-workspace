@@ -5,7 +5,6 @@
 // we list the GA4 properties the impersonated user can see, read each one's
 // web data stream, and match clients by website domain.
 
-import { unstable_cache } from "next/cache";
 import { CLIENT_WEBSITES } from "./client-meta";
 import { getGoogleAccessToken, googleAuthConfigured } from "./google-auth";
 import type { Ga4Channel, Ga4Data, Ga4Metric } from "./analytics";
@@ -465,6 +464,17 @@ type ReportRow = {
   metricValues?: { value?: string }[];
 };
 
+/** HTTP failure from the Data API, with the status kept so callers can
+ *  tell a transient 429/5xx (worth a retry) from a permanent 403/404. */
+export class Ga4ApiError extends Error {
+  status: number;
+  constructor(status: number, message: string) {
+    super(message);
+    this.name = "Ga4ApiError";
+    this.status = status;
+  }
+}
+
 export async function runReport(
   token: string,
   propertyId: string,
@@ -483,7 +493,8 @@ export async function runReport(
   );
   if (!res.ok) {
     const text = await res.text().catch(() => "");
-    throw new Error(
+    throw new Ga4ApiError(
+      res.status,
       `Analytics Data API responded ${res.status}. ${text.slice(0, 180)}`,
     );
   }
@@ -716,61 +727,21 @@ export function formatGa4ForKwPrompt(data: Ga4Data): string | null {
 }
 
 // ---------------------------------------------------------------------------
-// Department-wide organic-visitor rollup
+// Warm-up for fan-out callers
 // ---------------------------------------------------------------------------
 
-export type SeoOrganicRollup = {
-  /** Sum of organic-search users across all clients (last 30 days). */
-  total: number;
-  /** How many clients actually returned GA4 data (rest skipped silently). */
-  clientsWithData: number;
-  /** False when the Google service account isn't configured at all. */
-  configured: boolean;
-};
-
-/** Sum of organic-search visitors (GA4 `totalUsers`, Organic Search channel,
- *  last 30 days) across every SEO client. Cached for 30 minutes so the SEO
- *  landing page never blocks on ~20 live GA4 calls on each render — the
- *  rollup only refreshes on a cache miss. Clients without a GA4 property are
- *  skipped (contribute 0), never invented. */
-export const getSeoOrganicVisitors30d = unstable_cache(
-  async (slugs: string[]): Promise<SeoOrganicRollup> => {
-    if (!googleAuthConfigured) {
-      return { total: 0, clientsWithData: 0, configured: false };
-    }
-    // Per-client cap so one slow GA4 report never stalls the SEO page.
-    const withTimeout = <T,>(p: Promise<T>, ms: number): Promise<T | null> =>
-      Promise.race([
-        p,
-        new Promise<null>((resolve) => setTimeout(() => resolve(null), ms)),
-      ]);
-    const perClient = await Promise.all(
-      slugs.map(async (slug) => {
-        try {
-          const data = await withTimeout(
-            getGa4Data(slug, 30, "Organic Search"),
-            12_000,
-          );
-          if (data && data.status === "ok") {
-            const users = data.metrics.find((m) => m.key === "users")?.value;
-            return typeof users === "number" ? Math.round(users) : null;
-          }
-        } catch {
-          /* skip this client — never fabricate a number */
-        }
-        return null;
-      }),
-    );
-    let total = 0;
-    let clientsWithData = 0;
-    for (const v of perClient) {
-      if (v !== null) {
-        total += v;
-        clientsWithData += 1;
-      }
-    }
-    return { total, clientsWithData, configured: true };
-  },
-  ["seo-organic-visitors-30d-v2"],
-  { revalidate: 1800, tags: ["seo-organic-visitors"] },
-);
+/** Build the token + property/domain index once, up front. The SEO organic
+ *  rollup (seo-organic-rollup.ts) calls this before fanning out over ~20
+ *  clients so the cold-start index build (one dataStreams call per visible
+ *  property, with retries) is paid once, outside any per-client timeout.
+ *  Without it the first clients of the batch spent their whole timeout
+ *  waiting for the index and were counted as failures. Never throws. */
+export async function warmGa4Index(): Promise<void> {
+  if (!googleAuthConfigured) return;
+  try {
+    const token = await getGoogleAccessToken(SCOPES);
+    await getDomainIndex(token);
+  } catch {
+    /* per-client resolution retries on its own */
+  }
+}

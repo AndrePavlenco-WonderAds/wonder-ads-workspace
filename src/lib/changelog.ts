@@ -13,6 +13,19 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.14",
+    date: "2026-09-09",
+    title:
+      "SEO DPT: o total orgânico deixa de oscilar entre 3k e 13k, e a pílula dá lugar ao «Pulso orgânico»",
+    highlights: [
+      "**🐛 O número que às vezes aparecia a um terço.** A pílula «organic · 30d» somava ~20 chamadas ao GA4 disparadas de uma vez, cada uma com 12 segundos de limite que incluíam a construção do índice de propriedades em arranque a frio; o que falhasse (429 da Google, índice lento) era ignorado em silêncio e a soma parcial ficava 30 minutos em cache. Daí os 3.739 em vez dos 12–13 mil. Agora os valores vivem num snapshot em KV, cliente a cliente, com os 30 dias anteriores e a série diária ao lado.",
+      "**⚡ A página nunca espera pelo GA4.** Renderiza sempre a partir do snapshot (uma leitura KV) e, quando ele tem mais de 30 minutos, refresca-o depois da resposta, com um lock para não correr duas vezes, 4 clientes de cada vez, retry com backoff nos 429/5xx e o índice do GA4 aquecido antes do lote. Um cliente que ainda assim falhe mantém o último valor conhecido (até 7 dias) em vez de desaparecer da soma, e um snapshot com falhas volta a tentar aos 5 minutos.",
+      "**📈 «Pulso orgânico», o cartão-herói do departamento.** Abaixo do título, a toda a largura: o total em grande, a contar do zero até ao valor real; a variação face aos 30 dias anteriores (chip verde ou vermelho, com a diferença em visitantes); a curva diária das sessões orgânicas de todos os clientes, desenhada da esquerda para a direita com o ponto de «ontem» a pulsar; e três indicadores de equipa — clientes a crescer face ao período anterior, a maior subida do mês (só clientes com pelo menos 100 visitantes antes, para 10 → 20 não contar) e as sessões de ontem.",
+      "**💬 Para quem abre a página.** «Pessoas que chegaram aos nossos clientes pelo Google e pelas IAs. Sem pagar um cêntimo por clique.» — e uma linha que muda com o ritmo do mês. No rodapé do cartão, quantos clientes têm GA4 ligado, «soma real, nunca estimada», há quanto tempo foi atualizado e, se for o caso, quantos estão a usar o último valor conhecido.",
+      "**♿ Sem movimento a pedido.** Com «reduzir movimento» ativo no sistema, o número aparece logo no valor final e a curva já desenhada.",
+    ],
+  },
+  {
     version: "77.13",
     date: "2026-09-08",
     title: "Comercial: o menu do tipo da proposta fecha com Escape ou com um clique fora",

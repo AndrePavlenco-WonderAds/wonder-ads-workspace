@@ -1,4 +1,4 @@
-import { PauseCircle, TrendingUp } from "lucide-react";
+import { PauseCircle } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { AccessDenied } from "@/components/access-denied";
 import { getCurrentEmployee } from "@/lib/auth/server";
@@ -11,7 +11,11 @@ import { hasKeywordGuarantee } from "@/lib/keyword-guarantee";
 import { WorldMap } from "@/components/world-map";
 import { TypewriterPrompt } from "@/components/typewriter-prompt";
 import { getSeoClients, slugify, type NotionClient } from "@/lib/notion";
-import { getSeoOrganicVisitors30d } from "@/lib/ga4";
+import {
+  getSeoOrganicVisitors30d,
+  type SeoOrganicRollup,
+} from "@/lib/seo-organic-rollup";
+import { OrganicPulse } from "@/components/seo/organic-pulse";
 import {
   CONSULTANT_ORDER,
   resolveConsultant,
@@ -34,6 +38,10 @@ export const metadata = {
 
 // ISR — re-fetch from Notion every 60s.
 export const revalidate = 60;
+// A primeira construção do snapshot orgânico (só quando o KV ainda não o
+// tem) corre dentro do pedido; os refreshes seguintes vão para depois da
+// resposta. Ver seo-organic-rollup.ts.
+export const maxDuration = 120;
 
 export default async function SeoPage() {
   // Dept gate — Web-only designers (Mike/Gustavo/Renan) can't open SEO.
@@ -80,12 +88,14 @@ export default async function SeoPage() {
   const consultantColumns = buildConsultantColumns(activeClients);
   const pausedColumns = buildConsultantColumns(pausedClients);
 
-  // Department-wide organic visitors (GA4, Organic Search, last 30 days).
-  // Cached for 30 min so the page doesn't block on ~20 live GA4 calls.
-  // Paused clients are excluded from the headline organic total.
+  // Department-wide organic visitors (GA4, Organic Search, last 30 days),
+  // served from the KV snapshot and refreshed after the response — one KV
+  // read on the render path, never ~20 live GA4 calls (v77.14). Paused
+  // clients are excluded from the headline organic total.
   const organic = await getSeoOrganicVisitors30d(
     activeClients.map((c) => c.slug),
   );
+  const organicTeam = buildOrganicTeamStats(organic, activeClients);
 
   // Custom uploaded logos override the static CLIENT_LOGOS map.
   const logoOverrides = await getLogoOverrides().catch(
@@ -103,17 +113,26 @@ export default async function SeoPage() {
         tagline="Crescimento orgânico no Google e nas IAs. Agência #1 de SEO & GEO em Portugal."
         count={activeClients.length || undefined}
         countLabel="clients"
-        countSuffix={
-          organic.configured ? (
-            <OrganicVisitorsBadge total={organic.total} />
-          ) : undefined
-        }
         rightSlot={<WorldMap />}
         extra={
           <TypewriterPrompt text="Which project are we working on now, boss?" />
         }
         large
       />
+
+      {organic.configured && (
+        <OrganicPulse
+          total={organic.total}
+          prevTotal={organic.prevTotal}
+          daily={organic.daily}
+          clientsWithData={organic.clientsWithData}
+          clientsStale={organic.clientsStale}
+          computedAt={organic.computedAt}
+          growing={organicTeam.growing}
+          comparable={organicTeam.comparable}
+          topClimber={organicTeam.topClimber}
+        />
+      )}
 
       <div className="mt-12 lg:mt-16">
         <section aria-label="Clients by Head Consultant">
@@ -279,26 +298,30 @@ function NotionFallback({ message }: { message: string }) {
   );
 }
 
-/** Department-wide organic visitors pill, shown next to the clients
- *  count. Emerald accent so it reads as a growth signal. Number is the
- *  real GA4 organic-search users sum — only rendered when GA4 is
- *  configured and the total is > 0. */
-function OrganicVisitorsBadge({ total }: { total: number }) {
-  // Full number with thousands separators (e.g. "9,127") — no "k"
-  // abbreviation, so the exact organic total is always visible.
-  const display = total <= 0 ? "—" : total.toLocaleString("en-GB");
-  return (
-    <span
-      className="animate-count-pop inline-flex items-center gap-2 rounded-full border border-emerald-400/35 bg-emerald-500/[0.10] px-3 py-1.5 text-emerald-100 backdrop-blur-md transition-all duration-300 hover:scale-105 hover:border-emerald-400/60 hover:bg-emerald-500/[0.16]"
-      title={`${total.toLocaleString("en-GB")} organic visitors across all SEO clients (GA4 · Organic Search · last 30 days)`}
-    >
-      <TrendingUp className="h-3.5 w-3.5 text-emerald-300" strokeWidth={2.5} />
-      <span className="text-base font-bold leading-none tracking-tight">
-        {display}
-      </span>
-      <span className="text-base font-medium uppercase tracking-[0.16em] leading-none text-emerald-200/80">
-        organic · 30d
-      </span>
-    </span>
-  );
+/** Indicadores de equipa para o «Pulso orgânico»: quantos clientes estão
+ *  acima do período anterior e qual subiu mais. A maior subida só conta
+ *  clientes com pelo menos 100 visitantes no período anterior — 10 → 20 é
+ *  +100 % e não diz nada. */
+function buildOrganicTeamStats(
+  rollup: SeoOrganicRollup,
+  clients: NotionClient[],
+): {
+  growing: number;
+  comparable: number;
+  topClimber: { name: string; pct: number } | null;
+} {
+  const MIN_PREV = 100;
+  const names = new Map(clients.map((c) => [c.slug, c.title]));
+  const comparable = rollup.perClient.filter((c) => c.prevUsers > 0);
+  const growing = comparable.filter((c) => c.users > c.prevUsers).length;
+  let topClimber: { name: string; pct: number } | null = null;
+  for (const c of comparable) {
+    if (c.prevUsers < MIN_PREV) continue;
+    const pct = ((c.users - c.prevUsers) / c.prevUsers) * 100;
+    if (pct <= 0) continue;
+    if (!topClimber || pct > topClimber.pct) {
+      topClimber = { name: names.get(c.slug) ?? c.slug, pct };
+    }
+  }
+  return { growing, comparable: comparable.length, topClimber };
 }
