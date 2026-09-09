@@ -77,8 +77,8 @@ export const EMPLOYEE_CREDENTIALS: EmployeeCredential[] = [
     dept: "All",
     startedAt: "2026-05-12",
     isAdmin: true,
-    salt: "38714f97f8304fa760c306cfebe7f111",
-    hash: "247ed5439504afaf7ff9b63518f8ca7a0048543c54d9e50af74c0498af5be8de9f33aa417eb43671bc3b4c2380c0b3c4e112d6d9a51f2651bd06036dbca1499f",
+    salt: "a969091f02c00e6daf6a5379e7e019b1",
+    hash: "81a12995d5167255c98c7136da7dffea80c6854f25f25721ab33180fff13d317d69fe1d4a63cd9ee94aeaf500b5515fe6c775d8f34272c77cfaec5571f5f1ce0",
   },
   {
     username: "alice",
