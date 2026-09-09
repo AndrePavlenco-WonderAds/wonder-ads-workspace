@@ -184,7 +184,7 @@ export function OrganicPulse({
               value={comparable > 0 ? `${growing}/${comparable}` : "—"}
               hint={
                 comparable > 0
-                  ? "clientes acima do período anterior"
+                  ? "clientes acima dos 30 dias anteriores"
                   : "sem período anterior comparável"
               }
             />
@@ -201,7 +201,7 @@ export function OrganicPulse({
               Icon={Zap}
               label="Ontem"
               value={fmt(yesterday)}
-              hint="sessões orgânicas num só dia"
+              hint="sessões orgânicas, todos os clientes"
             />
           </div>
         </div>
@@ -289,7 +289,10 @@ function Tile({
       <div className="mt-2 truncate text-2xl font-bold tabular-nums text-white">
         {value}
       </div>
-      <div className="mt-1 truncate text-xs text-white/45" title={hint}>
+      <div
+        className="mt-1 line-clamp-2 text-xs leading-snug text-white/45"
+        title={hint}
+      >
         {hint}
       </div>
     </div>

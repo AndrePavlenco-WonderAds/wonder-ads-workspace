@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.15",
+    date: "2026-09-09",
+    title: "SEO DPT: legendas dos indicadores do «Pulso orgânico» já não ficam cortadas",
+    highlights: [
+      "**✂️ Duas linhas em vez de reticências.** «clientes acima do p…» e «sessões orgânicas …» passam a caber, em duas linhas quando é preciso, nos três indicadores à direita do cartão.",
+    ],
+  },
+  {
     version: "77.14",
     date: "2026-09-09",
     title:
