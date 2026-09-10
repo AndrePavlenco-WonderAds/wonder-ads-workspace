@@ -24,6 +24,7 @@ import {
   listImpersonationTargets,
 } from "@/lib/auth/credentials";
 import { getTeamAvatar } from "@/lib/team-avatars";
+import { DailyNumberCard } from "./daily-number-card";
 import { UserChipMenu } from "./user-chip-menu";
 
 export async function UserChip() {
@@ -52,28 +53,35 @@ export async function UserChip() {
   const realDisplay = getEmployeeDisplay(session.u);
 
   return (
-    <UserChipMenu
-      name={display.name}
-      avatar={getTeamAvatar(viewingUsername)}
-      role={display.role}
-      dept={display.dept}
-      isAdmin={display.isAdmin}
-      // Quem edita SEO tem o estúdio de Weekly Reports no menu. Segue a
-      // pessoa que está a ser VISTA, como o resto do chip: com lente ativa,
-      // o menu tem de parecer o dela.
-      canWeeklyReports={canEditDept(viewingUsername, "seo")}
-      expiresLabel={expiresLabel}
-      canImpersonate={realIsAdmin}
-      realName={realDisplay?.name ?? session.u}
-      viewingAs={session.as ?? null}
-      people={
-        realIsAdmin
-          ? listImpersonationTargets().map((p) => ({
-              ...p,
-              avatar: getTeamAvatar(p.username),
-            }))
-          : []
-      }
-    />
+    <>
+      {/* «Número do dia» dos consultores SEO — cartão pequeno ao lado do
+          nome. Segue a pessoa VISTA, como o chip: a ver como o Manuel, o
+          cartão é o do Manuel. Null para quem não está na roda e ao fim de
+          semana. */}
+      <DailyNumberCard username={viewingUsername} />
+      <UserChipMenu
+        name={display.name}
+        avatar={getTeamAvatar(viewingUsername)}
+        role={display.role}
+        dept={display.dept}
+        isAdmin={display.isAdmin}
+        // Quem edita SEO tem o estúdio de Weekly Reports no menu. Segue a
+        // pessoa que está a ser VISTA, como o resto do chip: com lente ativa,
+        // o menu tem de parecer o dela.
+        canWeeklyReports={canEditDept(viewingUsername, "seo")}
+        expiresLabel={expiresLabel}
+        canImpersonate={realIsAdmin}
+        realName={realDisplay?.name ?? session.u}
+        viewingAs={session.as ?? null}
+        people={
+          realIsAdmin
+            ? listImpersonationTargets().map((p) => ({
+                ...p,
+                avatar: getTeamAvatar(p.username),
+              }))
+            : []
+        }
+      />
+    </>
   );
 }

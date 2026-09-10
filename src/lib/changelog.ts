@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.21",
+    date: "2026-09-10",
+    title: "SEO DPT: «Número do dia» — cada consultor recebe um cartão de 1 a 4, de segunda a sexta",
+    highlights: [
+      "**🔢 Um cartão pequeno ao lado do nome, no canto superior direito**, com o número do dia — 1, 2, 3 ou 4 — e cada número com a sua cor: 1 verde, 2 azul, 3 amarelo, 4 rosa. Só para os quatro consultores SEO: Manuel Silva, Fran. Rosa, João B. e André Pereira.",
+      "**🎲 Todos os dias úteis a distribuição é baralhada ao acaso**, e os quatro ficam sempre com números diferentes. Ninguém repete o número do dia útil anterior — é uma rotação a sério, não uma lotaria. Ao sábado e domingo não há cartão.",
+      "**🤝 Toda a gente vê a mesma distribuição.** A semente é a data (hora de Lisboa), por isso um F5 não muda nada e não há nada guardado em KV. Passar o rato por cima do cartão mostra quem tem que número hoje.",
+      "**👁️ Com «Ver como» ativo, o cartão segue a pessoa vista**, como o resto do chip do utilizador.",
+    ],
+  },
+  {
     version: "77.20",
     date: "2026-09-09",
     title: "A app vive em workspace.wonder-ads.com — os links antigos redirecionam",
