@@ -25,19 +25,11 @@ import {
 } from "@/lib/auth/credentials";
 import { getTeamAvatar } from "@/lib/team-avatars";
 import {
-  colorForNumber,
   dailyNumberFor,
-  dailyRoster,
   describeDay,
   lisbonISODate,
 } from "@/lib/seo-daily-number";
 import { UserChipMenu, type DailyNumberView } from "./user-chip-menu";
-
-/** «Manuel Silva» → «Manuel», «Fran. Rosa» → «Fran», «João B.» → «João». Na
- *  roda só há um André (o Pereira), por isso o primeiro nome chega. */
-function firstName(name: string): string {
-  return name.trim().split(/\s+/)[0].replace(/\.$/, "");
-}
 
 export async function UserChip() {
   const cookieStore = await cookies();
@@ -65,27 +57,18 @@ export async function UserChip() {
   const realDisplay = getEmployeeDisplay(session.u);
 
   // «Número do dia» dos consultores SEO — resolvido aqui, no servidor, e
-  // entregue ao chip já sem credenciais (número, cor, roda do dia com
-  // primeiros nomes). Segue a pessoa VISTA, como o resto do chip: a ver
-  // como o Manuel, o número é o do Manuel. Null para quem não está na roda
-  // e ao fim de semana — o chip simplesmente não mostra o azulejo.
+  // entregue ao chip já sem credenciais (número, cor, dia). Segue a pessoa
+  // VISTA, como o resto do chip: a ver como o Manuel, o número é o do
+  // Manuel. Null para quem não está na roda e ao fim de semana — o chip
+  // simplesmente não mostra o azulejo.
   const iso = lisbonISODate();
   const mine = dailyNumberFor(viewingUsername, iso);
-  const day = describeDay(iso);
   const dailyNumber: DailyNumberView | null = mine
     ? {
         number: mine.number,
         hex: mine.color.hex,
         label: mine.color.label,
-        day,
-        weekday: day.split(",")[0],
-        roster: (dailyRoster(iso) ?? []).map((r) => ({
-          username: r.username,
-          number: r.number,
-          hex: colorForNumber(r.number).hex,
-          name: firstName(getEmployeeDisplay(r.username)?.name ?? r.username),
-          me: r.username === viewingUsername,
-        })),
+        day: describeDay(iso),
       }
     : null;
 

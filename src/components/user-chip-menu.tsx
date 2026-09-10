@@ -34,9 +34,8 @@ export type ImpersonationTarget = {
   avatar?: string | null;
 };
 
-/** «Número do dia» do consultor SEO visto — já resolvido no servidor
- *  (número, cor, roda do dia com primeiros nomes), para este ficheiro não
- *  ter de tocar nas credenciais. */
+/** «Número do dia» do consultor SEO visto — já resolvido no servidor, para
+ *  este ficheiro não ter de tocar nas credenciais. */
 export type DailyNumberView = {
   number: number;
   /** Hex sem alfa; fundo, contorno e brilho do azulejo derivam daqui. */
@@ -45,49 +44,20 @@ export type DailyNumberView = {
   label: string;
   /** «quinta-feira, 10/09/2026» — para o tooltip. */
   day: string;
-  /** «quinta-feira» — cabe no cabeçalho do menu. */
-  weekday: string;
-  /** Quem tem que número hoje, por ordem de número. */
-  roster: Array<{
-    username: string;
-    number: number;
-    hex: string;
-    /** Primeiro nome — «Manuel», «Fran», «João», «André». */
-    name: string;
-    me: boolean;
-  }>;
 };
 
-/** Azulejo com o número do dia — o mesmo desenho no chip (22 px) e na roda
- *  do menu (18 px). Cores em estilo inline: vêm de uma tabela, e o Tailwind
- *  só gera as classes que vê escritas no código. */
-function NumberTile({
-  number,
-  hex,
-  size = "sm",
-  muted = false,
-}: {
-  number: number;
-  hex: string;
-  size?: "sm" | "xs";
-  /** Os outros três na roda do menu: presentes, mas sem brilho. */
-  muted?: boolean;
-}) {
-  const box =
-    size === "sm"
-      ? "h-[22px] min-w-[22px] rounded-[7px] text-[12px]"
-      : "h-[18px] min-w-[18px] rounded-md text-[10.5px]";
+/** Azulejo de 22 px com o número do dia. Cores em estilo inline: vêm de
+ *  uma tabela, e o Tailwind só gera as classes que vê escritas no código. */
+function NumberTile({ number, hex }: { number: number; hex: string }) {
   return (
     <span
       aria-hidden
-      className={`inline-flex shrink-0 items-center justify-center border px-1 font-extrabold leading-none tabular-nums ${box}`}
+      className="inline-flex h-[22px] min-w-[22px] shrink-0 items-center justify-center rounded-[7px] border px-1 text-[12px] font-extrabold leading-none tabular-nums"
       style={{
         color: hex,
-        backgroundColor: `${hex}${muted ? "12" : "1F"}`,
-        borderColor: `${hex}${muted ? "40" : "73"}`,
-        boxShadow: muted
-          ? undefined
-          : `inset 0 1px 0 ${hex}40, 0 2px 10px -3px ${hex}8C`,
+        backgroundColor: `${hex}1F`,
+        borderColor: `${hex}73`,
+        boxShadow: `inset 0 1px 0 ${hex}40, 0 2px 10px -3px ${hex}8C`,
       }}
     >
       {number}
@@ -245,15 +215,13 @@ export function UserChipMenu({
         </span>
         {/* «Número do dia» — dentro do chip, entre o cargo e a seta, com um
             separador fino para ler como parte da identidade e não como um
-            botão à parte. Tooltip com a roda toda; no menu vai a mesma roda
-            em grande, que o telemóvel não tem tooltip. */}
+            botão à parte. Só o número: o painel com a roda toda no menu
+            (v77.22) saiu a pedido do André. */}
         {dailyNumber && (
           <span
             role="img"
             aria-label={`Número do dia: ${dailyNumber.number} (${dailyNumber.label})`}
-            title={`Número do dia · ${dailyNumber.day}\n${dailyNumber.roster
-              .map((r) => `${r.number} · ${r.name}`)
-              .join("\n")}`}
+            title={`Número do dia · ${dailyNumber.day}`}
             className="inline-flex items-center gap-2.5"
           >
             <span aria-hidden className="hidden h-5 w-px bg-white/12 sm:block" />
@@ -267,7 +235,7 @@ export function UserChipMenu({
       {open && (
         <div
           role="menu"
-          className="animate-fade-up absolute right-0 top-full z-40 mt-2 w-64 overflow-hidden rounded-xl border border-white/12 bg-[color:var(--background)]/95 shadow-[0_18px_60px_-12px_rgba(0,0,0,0.7)] backdrop-blur-md"
+          className="animate-fade-up absolute right-0 top-full z-40 mt-2 w-60 overflow-hidden rounded-xl border border-white/12 bg-[color:var(--background)]/95 shadow-[0_18px_60px_-12px_rgba(0,0,0,0.7)] backdrop-blur-md"
         >
           <div className="border-b border-white/8 px-4 py-3">
             <div className="flex items-center gap-2.5">
@@ -296,44 +264,6 @@ export function UserChipMenu({
               <p className="mt-2 text-[10.5px] text-white/45">
                 Session expires in ~{expiresLabel}
               </p>
-            )}
-            {/* Roda do dia — os quatro consultores SEO com o seu número e
-                cor, o próprio em destaque. Só aparece a quem tem número. */}
-            {dailyNumber && (
-              <div className="mt-3 rounded-lg border border-white/8 bg-white/[0.03] px-2.5 py-2">
-                <div className="flex items-baseline justify-between gap-2">
-                  <p className="text-[9.5px] uppercase tracking-[0.18em] text-white/40">
-                    Número do dia
-                  </p>
-                  <p className="text-[9.5px] capitalize text-white/35">
-                    {dailyNumber.weekday}
-                  </p>
-                </div>
-                <ul className="mt-2 grid grid-cols-2 gap-1.5">
-                  {dailyNumber.roster.map((r) => (
-                    <li
-                      key={r.username}
-                      className={`flex min-w-0 items-center gap-1.5 rounded-md px-1 py-0.5 ${
-                        r.me ? "bg-white/[0.06] ring-1 ring-white/12" : ""
-                      }`}
-                    >
-                      <NumberTile
-                        number={r.number}
-                        hex={r.hex}
-                        size="xs"
-                        muted={!r.me}
-                      />
-                      <span
-                        className={`truncate text-[11px] ${
-                          r.me ? "font-semibold text-white" : "text-white/60"
-                        }`}
-                      >
-                        {r.name}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
             )}
           </div>
 

@@ -13,6 +13,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.23",
+    date: "2026-09-10",
+    title: "SEO DPT: «Número do dia» só no chip — sai o painel da roda no menu",
+    highlights: [
+      "**🔢 Fica só o azulejo com o número, dentro do chip do nome.** O painel «Número do dia» com os quatro consultores, que abria no menu do nome desde a v77.22, sai a pedido do André — bastava o número lá em cima, perto do nome.",
+      "**Menu do nome volta à largura de sempre.** O tooltip do azulejo mostra o dia da semana.",
+    ],
+  },
+  {
     version: "77.22",
     date: "2026-09-10",
     title: "SEO DPT: o «Número do dia» entra no chip do utilizador — mais pequeno, e o menu mostra a roda toda",
