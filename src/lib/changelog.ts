@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.22",
+    date: "2026-09-10",
+    title: "SEO DPT: o «Número do dia» entra no chip do utilizador — mais pequeno, e o menu mostra a roda toda",
+    highlights: [
+      "**🔢 O número passa a viver dentro do chip do nome**, entre o cargo e a seta, num azulejo de 22 px com um separador fino — mais discreto, e o canto superior direito volta a ser uma peça só em vez de dois cartões lado a lado.",
+      "**📋 O menu do nome mostra a roda do dia**: os quatro consultores SEO com o seu número e cor, o teu em destaque. Serve também no telemóvel, onde não há tooltip.",
+      "**✨ Chip afinado**: nome a negrito, retrato mais encostado à borda, menu um pouco mais largo para a roda caber.",
+    ],
+  },
+  {
     version: "77.21",
     date: "2026-09-10",
     title: "SEO DPT: «Número do dia» — cada consultor recebe um cartão de 1 a 4, de segunda a sexta",
