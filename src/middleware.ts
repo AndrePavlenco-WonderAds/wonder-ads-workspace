@@ -135,6 +135,10 @@ export const config = {
     // rota da API (isCurrentUserAdmin), não aqui.
     "/tools/:path*",
     "/api/tools/:path*",
+    // Medalhas — a galeria da própria pessoa e a escolha das três do
+    // header. Sessão para tudo; a API recusa escrever com «Ver como».
+    "/medalhas/:path*",
+    "/api/medalhas/:path*",
     // Comercial — templates, upload e decisões das propostas. Sessão para
     // tudo; a escrita exige poder editar o departamento (gate abaixo).
     "/api/commercial/:path*",

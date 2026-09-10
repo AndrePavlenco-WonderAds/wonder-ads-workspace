@@ -33,6 +33,9 @@ export type LeaderboardRow = {
   closeRate: number | null;
   /** Fechadas sem valor — o pódio pode estar a subcontar esta pessoa. */
   closedWithoutValue: number;
+  /** O maior negócio fechado (valor de uma só proposta) — para a medalha
+   *  «Grande Caça». */
+  biggestClosedValue: number;
 };
 
 export type Leaderboard = {
@@ -69,6 +72,7 @@ function blankRow(c: ProposalConsultant): LeaderboardRow {
     declined: 0,
     closeRate: null,
     closedWithoutValue: 0,
+    biggestClosedValue: 0,
   };
 }
 
@@ -102,6 +106,7 @@ export function buildLeaderboard(items: LeaderboardItem[], year: number | null):
       if (isRenovacao) row.closedRenovacoes += 1;
       else row.closedCrossSells += 1;
       row.closedValue += value;
+      row.biggestClosedValue = Math.max(row.biggestClosedValue, value);
       totals.closed += 1;
       totals.closedValue += value;
       if (record.valueEur === null) {

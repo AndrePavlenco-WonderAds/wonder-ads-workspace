@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.25",
+    date: "2026-09-11",
+    title: "Medalhas: emblemas militares no header, galeria em /medalhas e escolha das três a exibir",
+    highlights: [
+      "**🎖️ Até três medalhas no header, entre a hora local e o sino.** Emblemas em SVG ao estilo dos patches militares — escudo, chevrons, estrelas, asas, louros, coroa, raios — que escalam com o nível: a medalha seguinte é sempre mais «pro» do que a anterior. As «Top» pulsam e levam a faixa vermelha.",
+      "**35 medalhas em 8 famílias, todas do Comercial.** Fechador, Faturação, Grande Caça (o maior negócio numa só proposta), Apresentador, Renovador, Cross-seller e Sniper (taxa de fecho) por patamar; e três de chefe — Top Fechos, Top Faturado, Top Propostas — de quem lidera agora e que mudam de mãos quando a classificação muda.",
+      "**🏅 /medalhas mostra o que há para ganhar, o que já tens e o progresso em cada uma.** Clicar numa medalha do header abre-a. Aí escolhes quais as três que vão para o header; sem escolha, vão as três de maior prestígio. Também no menu do nome.",
+      "**Com «Ver como» ativo, vês a galeria da pessoa mas a escolha fica só de leitura.** Dados: leaderboard de sempre do Comercial; escolha guardada em KV por pessoa.",
+    ],
+  },
+  {
     version: "77.24",
     date: "2026-09-10",
     title: "COMMERCIAL DPT: pódio comercial — quem mais fechou, por valor, com a classificação completa",

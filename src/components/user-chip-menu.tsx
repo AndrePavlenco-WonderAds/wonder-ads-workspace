@@ -18,6 +18,7 @@ import {
   LayoutDashboard,
   Loader2,
   LogOut,
+  Medal,
   MessageCircle,
   UserMinus,
   UserCircle2,
@@ -299,6 +300,18 @@ export function UserChipMenu({
           >
             <KeyRound className="h-3.5 w-3.5 text-[color:var(--brand-purple)]" />
             Tools
+          </Link>
+          {/* Medalhas — a galeria da pessoa e a escolha das três do header.
+              Para toda a gente com sessão; quem não tem propostas vê o que
+              há para ganhar. */}
+          <Link
+            href="/medalhas"
+            role="menuitem"
+            onMouseDown={(e) => e.preventDefault()}
+            className="flex w-full items-center gap-2 border-b border-white/8 px-4 py-2.5 text-left text-[12px] font-medium text-white/75 transition hover:bg-white/[0.06] hover:text-white"
+          >
+            <Medal className="h-3.5 w-3.5 text-amber-300" />
+            Medalhas
           </Link>
           {/* Ver como — só para quem fez login como SuperAdmin. Dois cliques
               até à lista, três até estar na pele de alguém. */}

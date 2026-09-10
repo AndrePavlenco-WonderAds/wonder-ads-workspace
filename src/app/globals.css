@@ -897,3 +897,16 @@ body {
     animation: none;
   }
 }
+
+/* Medalhas «Top» (chefes) — pulsação do brilho no header e na galeria. */
+@keyframes medal-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+}
+.animate-medal-pulse {
+  animation: medal-pulse 2.6s ease-in-out infinite;
+  transform-origin: center;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-medal-pulse { animation: none; }
+}

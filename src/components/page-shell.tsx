@@ -5,6 +5,7 @@ import { BackgroundDecor } from "./background-decor";
 import { WonderAdsLogo } from "./wonder-ads-logo";
 import { HeaderClock } from "./header-clock";
 import { NotificationsBell } from "./notifications/notifications-bell";
+import { HeaderMedals } from "./medals/header-medals";
 import { UserChip } from "./user-chip";
 import { ImpersonationBanner } from "./impersonation-banner";
 import { getImpersonation } from "@/lib/auth/server";
@@ -102,6 +103,12 @@ export async function PageShell({
           <div className="hidden sm:block">
             <HeaderClock sessionTimer={sessionTimer} />
           </div>
+          {/* Medalhas — até três, entre a hora e o sino (v77.25). Lê as
+              propostas em KV, por isso em Suspense sem esqueleto: aparecem
+              quando chegam e a página nunca espera por elas. */}
+          <Suspense fallback={null}>
+            <HeaderMedals />
+          </Suspense>
           {/* Lembretes em aberto — ao lado do nome, porque é aí que se olha
               quando se chega ao workspace. Também renderiza null sem sessão.
               Em Suspense: o sino lê KV (e, para quem tem carteira, a lista de
