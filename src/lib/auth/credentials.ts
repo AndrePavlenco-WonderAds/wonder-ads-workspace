@@ -96,8 +96,8 @@ export const EMPLOYEE_CREDENTIALS: EmployeeCredential[] = [
     role: "SEO Consultant",
     dept: "SEO",
     startedAt: "2026-05-12",
-    salt: "336026cc21c409c4aebdfb8148c8d0a5",
-    hash: "dfa50f7e60e4f1601e4f6d7c95be9847d63e8b63f354a46bab2b09446ab1b459b003b2f0199522a762b02c97ecc255d640b7877f3f2e7e61e3ad69b1fdeff050",
+    salt: "957bf782098303007b172a4d66b1fc32",
+    hash: "5f07c193d5eec259a3033ce4c1a2d26bec501acf12e68efd4fded78e9a857c23e13d208e560017886748a7ab3f818a2f98a01f0d6e7ba37e1b07a8f9d9040d1f",
   },
   {
     username: "fran-r",
@@ -120,8 +120,8 @@ export const EMPLOYEE_CREDENTIALS: EmployeeCredential[] = [
     dept: "SEO",
     // Confirmada pelo C-Level (v76.31).
     startedAt: "2026-06-17",
-    salt: "6ec1a1e90e4e37f85489011710bc48d7",
-    hash: "82a7a60d6f6352edbb5b352f797ef1b1d1849c8711a919c979f0750158f2c655eb5ab4abf94783d2989789512bccf81dcb27a0d0bddeda03cc71fd0b7eef6d2f",
+    salt: "fe95016ca4be1c060bad56460589845f",
+    hash: "0e61e0b6e2453cc7a1f32aa86c81cc4985fd77d6425c1b0c093b6db10cff2b9482e0626ead648dd5f66d668c7482695804ce9a71bf279b2c2b888fa152d2f0ea",
   },
   {
     // João B. — new SEO consultant (v75.6). `name` must match the SEO
