@@ -2,8 +2,9 @@
 // propostas que entram por upload (PDF preparado pelo consultor).
 //
 // Duas chaves de KV, de propósito:
-//   proposals:overrides → por slug, o tipo editado (Renovação ↔ Cross-sell)
-//                         e a decisão do cliente (aceitou / recusou / anulada).
+//   proposals:overrides → por slug, o tipo editado (Renovação ↔ Cross-sell),
+//                         a decisão do cliente (aceitou / recusou / anulada) e
+//                         o valor total em € escrito por cima (v77.24).
 //                         Serve tanto as propostas em código como as de upload.
 //   proposals:uploads   → a lista das propostas carregadas em PDF, com os
 //                         metadados que o Claude extraiu e o consultor reviu.
@@ -21,6 +22,7 @@ import {
   type ProposalMeta,
   type ProposalStatus,
 } from "./index";
+import { estimateValueEur } from "./value";
 
 const OVERRIDES_KEY = "proposals:overrides";
 const UPLOADS_KEY = "proposals:uploads";
@@ -41,6 +43,8 @@ export type ProposalDecision = {
 export type ProposalOverride = {
   kind: ProposalKind | null;
   decision: ProposalDecision | null;
+  /** Valor total em € escrito por cima no cartão; null = sem override. */
+  valueEur: number | null;
   updatedAt: number | null;
 };
 
@@ -56,6 +60,8 @@ export type UploadedProposal = ProposalMeta & {
   /** Username de quem assina (o seletor do upload); o nome fica em
    *  `consultant` para a lista não depender das credenciais. */
   consultantUsername: string | null;
+  /** Valor total em € (sem IVA) que o consultor confirmou no upload. */
+  valueEur: number | null;
   file: ProposalFile;
   uploadedAt: number;
   uploadedBy: string;
@@ -69,6 +75,10 @@ export type ProposalSource = "code" | "upload";
 export type ProposalRecord = ProposalMeta & {
   source: ProposalSource;
   consultantUsername: string | null;
+  /** Valor total em € já resolvido: override → registo → estimativa. */
+  valueEur: number | null;
+  /** true quando `valueEur` veio da estimativa a partir do texto. */
+  valueEstimated: boolean;
   decision: ProposalDecision | null;
   file: ProposalFile | null;
   uploadedAt: number | null;
@@ -89,12 +99,19 @@ function hydrateDecision(raw: unknown): ProposalDecision | null {
   };
 }
 
+const EMPTY_OVERRIDE: ProposalOverride = { kind: null, decision: null, valueEur: null, updatedAt: null };
+
+function hydrateValue(v: unknown): number | null {
+  return typeof v === "number" && Number.isFinite(v) && v >= 0 ? v : null;
+}
+
 function hydrateOverride(raw: unknown): ProposalOverride {
-  if (!raw || typeof raw !== "object") return { kind: null, decision: null, updatedAt: null };
+  if (!raw || typeof raw !== "object") return { ...EMPTY_OVERRIDE };
   const o = raw as Record<string, unknown>;
   return {
     kind: isProposalKind(o.kind) ? o.kind : null,
     decision: hydrateDecision(o.decision),
+    valueEur: hydrateValue(o.valueEur),
     updatedAt: typeof o.updatedAt === "number" ? o.updatedAt : null,
   };
 }
@@ -126,6 +143,7 @@ function hydrateUpload(raw: unknown): UploadedProposal | null {
     summary: str(o.summary),
     investment: str(o.investment),
     consultantUsername: typeof o.consultantUsername === "string" ? o.consultantUsername : null,
+    valueEur: hydrateValue(o.valueEur),
     file: {
       url: file.url,
       name: str(file.name, "proposta.pdf"),
@@ -176,6 +194,10 @@ function applyOverride(
   ov: ProposalOverride | undefined,
 ): ProposalRecord {
   const decision = ov?.decision ?? null;
+  // Valor: o que o Comercial escreveu por cima → o do registo → estimativa
+  // a partir do texto (marcada, para alguém confirmar no cartão).
+  const explicit = ov?.valueEur ?? base.valueEur ?? null;
+  const estimated = explicit === null ? estimateValueEur(base.investment, base.period) : null;
   return {
     ...base,
     kind: ov?.kind ?? base.kind,
@@ -183,6 +205,8 @@ function applyOverride(
     status: decision ? decision.status : base.status,
     source,
     consultantUsername: extra.consultantUsername ?? null,
+    valueEur: explicit ?? estimated,
+    valueEstimated: explicit === null && estimated !== null,
     decision,
     file: extra.file ?? null,
     uploadedAt: extra.uploadedAt ?? null,
@@ -228,7 +252,7 @@ export async function getProposalsForClientAll(clientSlug: string): Promise<Prop
 async function saveOverride(slug: string, patch: Partial<ProposalOverride>): Promise<ProposalOverride> {
   const all = await getProposalOverrides();
   const next: ProposalOverride = {
-    ...(all[slug] ?? { kind: null, decision: null, updatedAt: null }),
+    ...(all[slug] ?? EMPTY_OVERRIDE),
     ...patch,
     updatedAt: Date.now(),
   };
@@ -238,6 +262,12 @@ async function saveOverride(slug: string, patch: Partial<ProposalOverride>): Pro
 
 export async function setProposalKind(slug: string, kind: ProposalKind): Promise<void> {
   await saveOverride(slug, { kind });
+}
+
+/** Escreve o valor total por cima; `null` limpa (volta ao registo ou à
+ *  estimativa). */
+export async function setProposalValue(slug: string, valueEur: number | null): Promise<void> {
+  await saveOverride(slug, { valueEur });
 }
 
 /** Regista a resposta do cliente; `null` anula (volta a «enviada»). */

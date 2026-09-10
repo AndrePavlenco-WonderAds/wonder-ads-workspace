@@ -28,6 +28,8 @@ type Draft = {
   date: string;
   period: string;
   investment: string;
+  /** Valor total em € sem IVA — o que o pódio pesa. */
+  valueEur: number | null;
   summary: string;
   consultantUsername: string | null;
   consultantName: string | null;
@@ -120,6 +122,7 @@ export function ProposalUploadButton({
       setDraft({
         ...json.draft,
         kind: json.draft.kind ?? kind,
+        valueEur: typeof json.draft.valueEur === "number" ? json.draft.valueEur : null,
         consultantUsername: json.draft.consultantUsername ?? defaultSigner,
       });
       setStep("review");
@@ -317,6 +320,23 @@ export function ProposalUploadButton({
                 <div>
                   <label className={label} htmlFor="pu-investment">Investimento</label>
                   <input id="pu-investment" className={field} value={draft.investment} onChange={(e) => setDraft({ ...draft, investment: e.target.value })} placeholder="ex.: 700 € + IVA" />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className={label} htmlFor="pu-value">Valor total (€, sem IVA)</label>
+                  <input
+                    id="pu-value"
+                    type="number"
+                    min={0}
+                    step={1}
+                    inputMode="decimal"
+                    className={field}
+                    value={draft.valueEur ?? ""}
+                    onChange={(e) => setDraft({ ...draft, valueEur: e.target.value === "" ? null : Number(e.target.value) })}
+                    placeholder="ex.: 36000"
+                  />
+                  <p className="mt-1 text-[11px] text-white/35">
+                    É o que o pódio do Comercial pesa: avença mensal × meses do período, ou o preço único do serviço.
+                  </p>
                 </div>
                 <div className="sm:col-span-2">
                   <label className={label} htmlFor="pu-summary">Resumo (uma frase)</label>

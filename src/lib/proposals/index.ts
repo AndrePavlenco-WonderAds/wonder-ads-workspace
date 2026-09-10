@@ -39,6 +39,12 @@ export type ProposalMeta = {
   summary: string;
   /** Investimento, tal como aparece no cartão de preço. */
   investment: string;
+  /** Valor TOTAL do contrato em €, sem IVA — avença mensal × meses do
+   *  período, ou o preço único do serviço. É o que o pódio do Comercial
+   *  pesa (v77.24). Opcional: sem ele, a lista estima a partir do texto do
+   *  investimento e marca como «estimado»; o Comercial pode escrever por
+   *  cima no cartão (fica em KV). */
+  valueEur?: number | null;
 };
 
 export const PROPOSALS: ProposalMeta[] = [
@@ -55,6 +61,8 @@ export const PROPOSALS: ProposalMeta[] = [
     summary:
       "Resultados dos primeiros 6 meses (fev–ago 2026), roadmap SEO + IA dos próximos 6, foco escoliose no Top 1–3 e CRM incluído.",
     investment: "6.000 € mensal · 5.400 € pré-pago",
+    // 6 meses × 6.000 € (a opção pré-paga seria 32.400 €).
+    valueEur: 36000,
   },
 ];
 

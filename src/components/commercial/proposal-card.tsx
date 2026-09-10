@@ -21,6 +21,7 @@ import {
   FileSignature,
   FileText,
   Mail,
+  Pencil,
   RotateCcw,
   Sparkles,
   Trash2,
@@ -38,6 +39,7 @@ import {
 } from "@/lib/proposals";
 import type { ProposalConsultant } from "@/lib/proposals/consultant";
 import type { ProposalDecision, ProposalFile, ProposalSource } from "@/lib/proposals/store";
+import { formatEur } from "@/lib/proposals/value";
 
 export type ProposalCardData = {
   slug: string;
@@ -52,6 +54,10 @@ export type ProposalCardData = {
   date: string;
   period: string;
   investment: string;
+  /** Valor total em € (sem IVA) já resolvido — o que o pódio pesa. */
+  valueEur: number | null;
+  /** true quando o valor é uma estimativa a partir do texto do investimento. */
+  valueEstimated: boolean;
   summary: string;
   source: ProposalSource;
   decision: ProposalDecision | null;
@@ -98,6 +104,8 @@ export function ProposalCard({ p, canEdit }: { p: ProposalCardData; canEdit: boo
   const [error, setError] = useState<string | null>(null);
   const [kindOpen, setKindOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [valueOpen, setValueOpen] = useState(false);
+  const [valueDraft, setValueDraft] = useState("");
   const kindRef = useRef<HTMLDivElement | null>(null);
 
   // O menu do tipo fecha com Escape ou com um clique fora dele — senão
@@ -278,12 +286,87 @@ export function ProposalCard({ p, canEdit }: { p: ProposalCardData; canEdit: boo
         </div>
 
         {/* ----- Linha 3: células de metadados ----- */}
-        <div className="mt-5 grid gap-2 sm:grid-cols-2 xl:grid-cols-[1fr_1fr_1.3fr_1.3fr]">
+        <div className="mt-5 grid gap-2 sm:grid-cols-2 xl:grid-cols-[1fr_1fr_1fr_1.3fr_1.3fr]">
           <Cell label="Período">
             <span className="text-[13px] font-medium text-white/85">{p.period || "—"}</span>
           </Cell>
           <Cell label="Investimento">
             <span className="text-[13px] font-semibold text-white">{p.investment || "—"}</span>
+          </Cell>
+          {/* Valor total (sem IVA) — o número que o pódio pesa. Editável por
+              quem edita o Comercial; «estimado» quando veio do texto do
+              investimento e ninguém o confirmou ainda. */}
+          <Cell label="Valor total · pódio" highlight={p.valueEstimated}>
+            {valueOpen && canEdit ? (
+              <form
+                className="flex flex-wrap items-center gap-1.5"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const raw = valueDraft.trim().replace(/\s/g, "").replace(/\./g, "").replace(",", ".");
+                  const n = raw === "" ? null : Number(raw);
+                  if (n !== null && (!Number.isFinite(n) || n < 0)) {
+                    setError("Escreve um número em euros, ex.: 36000.");
+                    return;
+                  }
+                  setValueOpen(false);
+                  void patch({ valueEur: n }, "value");
+                }}
+              >
+                <input
+                  autoFocus
+                  inputMode="decimal"
+                  value={valueDraft}
+                  onChange={(e) => setValueDraft(e.target.value)}
+                  placeholder="ex.: 36000"
+                  aria-label="Valor total em euros, sem IVA"
+                  className="w-28 rounded-md border border-white/15 bg-white/[0.05] px-2 py-1 text-[13px] text-white placeholder:text-white/30 focus:border-[#783DF5]/60 focus:outline-none"
+                />
+                <span className="text-[12px] text-white/45">€</span>
+                <button
+                  type="submit"
+                  disabled={working}
+                  className="rounded-md border border-emerald-300/40 bg-emerald-400/10 px-2 py-1 text-[11px] font-semibold text-emerald-100 transition hover:bg-emerald-400/20 disabled:opacity-60"
+                >
+                  Gravar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setValueOpen(false)}
+                  className="rounded-md border border-white/10 px-2 py-1 text-[11px] text-white/60 transition hover:text-white"
+                >
+                  Cancelar
+                </button>
+              </form>
+            ) : (
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[15px] font-bold tabular-nums text-white">
+                  {p.valueEur !== null ? formatEur(p.valueEur) : "—"}
+                </span>
+                {p.valueEstimated && (
+                  <span
+                    title="Calculado a partir do texto do investimento — confirma o valor."
+                    className="inline-flex items-center rounded-full border border-amber-300/40 bg-amber-400/10 px-2 py-0.5 text-[9.5px] font-semibold uppercase tracking-[0.14em] text-amber-100"
+                  >
+                    estimado
+                  </span>
+                )}
+                {canEdit && (
+                  <button
+                    type="button"
+                    disabled={working}
+                    onClick={() => {
+                      setValueDraft(p.valueEur !== null ? String(Math.round(p.valueEur)) : "");
+                      setValueOpen(true);
+                    }}
+                    title="Escrever o valor total (sem IVA)"
+                    className="inline-flex items-center gap-1 rounded-md border border-white/10 px-2 py-1 text-[11px] font-medium text-white/60 transition hover:border-white/25 hover:text-white disabled:opacity-60"
+                  >
+                    <Pencil className="h-3 w-3" />
+                    {busy === "value" ? "A gravar…" : "Editar"}
+                  </button>
+                )}
+              </div>
+            )}
           </Cell>
           <Cell label="Consultor">
             <ConsultantChip c={p.consultant} />

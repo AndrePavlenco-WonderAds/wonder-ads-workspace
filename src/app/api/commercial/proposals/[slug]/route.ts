@@ -1,6 +1,7 @@
 // PATCH /api/commercial/proposals/[slug] — edita o tipo (Renovação ↔
-// Cross-sell) e/ou regista a resposta do cliente: `decision: "aceite" |
-// "recusada"` marca, `decision: null` anula (volta a «enviada»).
+// Cross-sell), regista a resposta do cliente (`decision: "aceite" |
+// "recusada"` marca, `decision: null` anula → «enviada») e/ou escreve o
+// valor total em € por cima (`valueEur: number`, `null` limpa).
 // DELETE apaga uma proposta carregada por upload (as de código são do git).
 
 import { NextResponse } from "next/server";
@@ -11,7 +12,9 @@ import {
   removeUploadedProposal,
   setProposalDecision,
   setProposalKind,
+  setProposalValue,
 } from "@/lib/proposals/store";
+import { sanitizeValueEur } from "@/lib/proposals/value";
 import { guardCommercialWrite } from "@/lib/proposals/api-guard";
 
 export const runtime = "nodejs";
@@ -60,6 +63,13 @@ export async function PATCH(
       } else {
         return NextResponse.json({ error: "Decisão desconhecida." }, { status: 400 });
       }
+    }
+    if ("valueEur" in body) {
+      const v = sanitizeValueEur(body.valueEur);
+      if (v === undefined) {
+        return NextResponse.json({ error: "Valor inválido — um número em euros, sem IVA." }, { status: 400 });
+      }
+      await setProposalValue(slug, v);
     }
     bump(slug, record.clientSlug);
     const next = await getProposalRecord(slug);

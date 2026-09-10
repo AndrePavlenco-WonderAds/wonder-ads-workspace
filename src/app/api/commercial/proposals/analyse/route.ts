@@ -44,6 +44,12 @@ const DraftSchema = z.object({
   investment: z
     .string()
     .describe("Investimento como aparece no cartão de preço, ex.: «6.000 € mensal · 5.400 € pré-pago» ou «700 € + IVA»."),
+  valueEur: z
+    .number()
+    .nullable()
+    .describe(
+      "Valor TOTAL do contrato em euros, sem IVA, como número: avença mensal × número de meses do período (ex.: 6000 × 6 = 36000), ou o preço único do serviço (ex.: 700). null se não se consegue calcular a partir do documento.",
+    ),
   summary: z
     .string()
     .describe("Uma frase em português europeu (máx. 200 caracteres) que resume o que se propõe."),
@@ -124,6 +130,7 @@ export async function POST(req: Request) {
     "- «renovacao» = renovação de um contrato que já existe (SEO, Ads…); «cross-sell» = serviço novo vendido a um cliente que já é nosso (sessão fotográfica, vídeo, CRM, website…). Um orçamento de serviço pontual é cross-sell.",
     "- clientSlug: escolhe APENAS um slug da lista de clientes conhecidos, se o nome do cliente no documento bater com um deles (mesmo com variações de grafia). Senão, null.",
     "- Nunca inventes valores: se um campo não está no documento, devolve null (ou uma string vazia quando o campo é obrigatório).",
+    "- valueEur é o TOTAL do contrato sem IVA, em número: avença mensal × meses do período, ou o preço único do serviço. É o que o pódio do Comercial pesa — se a proposta tem duas opções (mensal vs. pré-pago), usa a mensal × meses.",
     `- Se não houver data de emissão, usa a data de hoje: ${toISODate()}.`,
     hintedKind ? `- O consultor indicou que esta proposta é do tipo «${hintedKind}»; respeita-o salvo evidência clara em contrário.` : "",
     "",

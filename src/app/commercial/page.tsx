@@ -5,12 +5,18 @@
 // botão «Carregar proposta», que fecha o ciclo: template → Claude na sessão
 // do consultor → PDF → cartão aqui, com página pública em /proposta/<slug>.
 // A lista lê código + KV (tipo editado, decisão do cliente, uploads).
+//
+// v77.24: o PÓDIO abre a página — quem mais fechou, por valor. Ordena pelo
+// valor fechado (confirmado pelo cliente), não pelo n.º de fechos: um
+// cross-sell de 5.000 € vale mais do que um de 700 €. O período é o ano
+// civil por defeito; ?periodo=tudo mostra desde sempre.
 
 import { PageShell } from "@/components/page-shell";
 import { DepartmentHeader } from "@/components/department-header";
 import { TemplateChips } from "@/components/commercial/template-chips";
 import { ProposalUploadButton } from "@/components/commercial/proposal-upload-button";
 import { ProposalCard, type ProposalCardData } from "@/components/commercial/proposal-card";
+import { CommercialPodium } from "@/components/commercial/podium";
 import type { ClientOption } from "@/components/client-combobox";
 import { getClientLogo } from "@/lib/client-meta";
 import { getClientPalette, paletteToGradient } from "@/lib/client-colors";
@@ -20,6 +26,7 @@ import { canEditDept } from "@/lib/auth/credentials";
 import { proposalPath } from "@/lib/proposals";
 import { listAllProposals } from "@/lib/proposals/store";
 import { listProposalSigners, resolveProposalConsultant } from "@/lib/proposals/consultant";
+import { buildLeaderboard } from "@/lib/proposals/leaderboard";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -28,15 +35,33 @@ export const metadata = {
   title: "COMMERCIAL DPT — Wonder Ads Workspace",
 };
 
-export default async function CommercialPage() {
-  const [proposals, employee, clients] = await Promise.all([
+export default async function CommercialPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const [proposals, employee, clients, sp] = await Promise.all([
     listAllProposals(),
     getCurrentEmployee(),
     getSeoClients().catch(() => []),
+    searchParams,
   ]);
   const canEdit = Boolean(employee && canEditDept(employee.username, "commercial"));
+  const allTime = sp.periodo === "tudo";
 
-  const cards: ProposalCardData[] = proposals.map((p) => ({
+  // O consultor resolve-se uma vez por proposta: serve o cartão e o pódio.
+  const resolved = proposals.map((record) => ({
+    record,
+    consultant: resolveProposalConsultant({
+      clientSlug: record.clientSlug,
+      consultant: record.consultant,
+      consultantUsername: record.consultantUsername,
+    }),
+  }));
+
+  const board = buildLeaderboard(resolved, allTime ? null : new Date().getFullYear());
+
+  const cards: ProposalCardData[] = resolved.map(({ record: p, consultant }) => ({
     slug: p.slug,
     href: proposalPath(p.slug),
     clientSlug: p.clientSlug,
@@ -49,17 +74,15 @@ export default async function CommercialPage() {
     date: p.date,
     period: p.period,
     investment: p.investment,
+    valueEur: p.valueEur,
+    valueEstimated: p.valueEstimated,
     summary: p.summary,
     source: p.source,
     decision: p.decision,
     file: p.file,
     uploadedAt: p.uploadedAt,
     uploadedByName: p.uploadedByName,
-    consultant: resolveProposalConsultant({
-      clientSlug: p.clientSlug,
-      consultant: p.consultant,
-      consultantUsername: p.consultantUsername,
-    }),
+    consultant,
   }));
 
   const clientOptions: ClientOption[] = clients
@@ -89,6 +112,9 @@ export default async function CommercialPage() {
           </div>
         }
       />
+
+      {/* ----- Pódio ----- */}
+      <CommercialPodium board={board} hasAnyProposals={proposals.length > 0} />
 
       {/* ----- Propostas ----- */}
       <section id="propostas" className="animate-fade-up mt-10 scroll-mt-8 sm:mt-14">

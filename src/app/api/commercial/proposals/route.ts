@@ -8,6 +8,7 @@ import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { isProposalKind } from "@/lib/proposals";
 import { addUploadedProposal } from "@/lib/proposals/store";
+import { sanitizeValueEur } from "@/lib/proposals/value";
 import { guardCommercialWrite } from "@/lib/proposals/api-guard";
 import { EMPLOYEE_CREDENTIALS } from "@/lib/auth/credentials";
 import { toISODate } from "@/lib/dates";
@@ -58,6 +59,9 @@ export async function POST(req: Request) {
       consultantUsername: signer?.username ?? null,
       summary: s(body.summary, 300),
       investment: s(body.investment, 160),
+      // Valor total sem IVA — o que o pódio pesa. Inválido → sem valor (a
+      // lista estima a partir do texto e marca como «estimado»).
+      valueEur: sanitizeValueEur(body.valueEur) ?? null,
       file: {
         url: fileUrl,
         name: s(file?.name, 200) || "proposta.pdf",

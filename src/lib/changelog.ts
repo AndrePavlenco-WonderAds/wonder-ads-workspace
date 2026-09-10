@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.24",
+    date: "2026-09-10",
+    title: "COMMERCIAL DPT: pódio comercial — quem mais fechou, por valor, com a classificação completa",
+    highlights: [
+      "**🏆 O pódio abre o COMMERCIAL DPT.** Três degraus (2.º · 1.º · 3.º) com retrato, valor fechado em grande e as células «fechadas / apresentadas» de renovações e cross-sells. Por baixo, a classificação completa: fechado, apresentado, renovações, cross-sells e taxa de fecho.",
+      "**💶 Ordena pelo valor fechado, não pelo n.º de fechos.** Um cross-sell de 5.000 € vale mais do que um de 700 €, e uma renovação de 36.000 € mais do que os dois. «Fechado» = o cliente aceitou; «apresentado» = enviadas + aceites + recusadas. Desempate pelo n.º de fechos e depois pelo n.º de apresentadas.",
+      "**🔢 Cada proposta ganha um «Valor total · pódio»** (sem IVA): avença mensal × meses do período, ou o preço único. O Claude extrai-o no upload, o consultor confirma no formulário, e o Comercial pode editá-lo no cartão. Sem valor escrito, a lista estima a partir do texto do investimento e marca «estimado».",
+      "**📅 Ano civil por defeito, «Desde sempre» a um clique.** O pódio avisa quando há propostas fechadas sem valor — essas não pesam até alguém as corrigir.",
+    ],
+  },
+  {
     version: "77.23",
     date: "2026-09-10",
     title: "SEO DPT: «Número do dia» só no chip — sai o painel da roda no menu",
