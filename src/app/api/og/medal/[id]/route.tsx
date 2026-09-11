@@ -5,15 +5,16 @@
 // com next/og (satori + resvg) a partir do MESMO desenho SVG do header e
 // da galeria, em modo estático (sem animações, sem elementos de texto),
 // embutido como <img> em data-URI — o satori não desenha SVG inline, mas
-// o resvg rasteriza uma imagem SVG.
+// o resvg rasteriza uma imagem SVG. A string SVG sai de um serializador
+// próprio (svg-string.ts): o Next não deixa importar react-dom/server aqui.
 //
 // Fica fora do matcher do middleware de propósito: o Slack vai buscar a
 // imagem sem cookie. Não há nada de sensível aqui — é um emblema.
 
 import { ImageResponse } from "next/og";
-import { renderToStaticMarkup } from "react-dom/server";
 import { MedalArt } from "@/components/medals/medal-badge";
 import { MEDAL_FAMILIES, medalById, tierAccent, tierLabel } from "@/lib/medals/catalog";
+import { reactSvgToString } from "@/lib/medals/svg-string";
 
 export const runtime = "nodejs";
 
@@ -25,7 +26,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
   const family = MEDAL_FAMILIES.find((f) => f.id === medal.family)?.name ?? "";
   const height = medal.tier >= 4 ? 220 : 250;
   const width = medal.tier >= 4 ? height * 1.5 : height * 0.8;
-  const svg = renderToStaticMarkup(<MedalArt medal={medal} uid="og" size={height} animated={false} />);
+  const svg = reactSvgToString(<MedalArt medal={medal} uid="og" size={height} animated={false} />);
   const src = `data:image/svg+xml;base64,${Buffer.from(svg, "utf8").toString("base64")}`;
 
   return new ImageResponse(
