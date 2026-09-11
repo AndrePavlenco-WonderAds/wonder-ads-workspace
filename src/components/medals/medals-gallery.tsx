@@ -1,18 +1,23 @@
 "use client";
 
-// Galeria de medalhas + seletor das três do header (v77.25).
+// Galeria de medalhas + seletor das três do header (v77.25, refeita v77.26).
 //
-// Recebe tudo já calculado no servidor (catálogo, o que a pessoa tem e o
-// progresso em cada uma) e só trata da escolha: até três medalhas ganhas
-// marcadas «No header», gravadas de uma vez. Uma lista vazia é uma escolha
-// («não mostrar nenhuma»).
+// Recebe tudo já calculado no servidor (catálogo, o que a pessoa tem, o
+// progresso em cada uma, quem lidera nas «Top») e só trata da escolha:
+// até três medalhas ganhas marcadas «No header», gravadas de uma vez. Uma
+// lista vazia é uma escolha («não mostrar nenhuma»).
+//
+// Estrutura: barra fixa com o que vai para o header → estante (as que a
+// pessoa tem, em cartões com descrição) → catálogo por família.
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Lock, Pin, PinOff, Loader2 } from "lucide-react";
+import { Check, Crown, Lock, Pin, PinOff, Loader2 } from "lucide-react";
 import {
   MAX_DISPLAYED,
   MEDAL_FAMILIES,
+  tierAccent,
+  tierLabel,
   type Medal,
   type MedalProgress,
 } from "@/lib/medals/catalog";
@@ -28,11 +33,22 @@ function progressLabel(item: GalleryItem, unit: "count" | "eur" | "rate"): strin
   return `${value} / ${threshold}`;
 }
 
+function familyName(id: Medal["family"]): string {
+  return MEDAL_FAMILIES.find((f) => f.id === id)?.name ?? id;
+}
+
+function joinNames(names: string[]): string {
+  if (names.length <= 1) return names[0] ?? "";
+  return `${names.slice(0, -1).join(", ")} e ${names[names.length - 1]}`;
+}
+
 export function MedalsGallery({
   items,
   chosen,
   defaultDisplay,
   canChoose,
+  leaders,
+  viewerName,
 }: {
   items: GalleryItem[];
   /** A escolha gravada (ids), ou null se nunca escolheu. */
@@ -41,6 +57,10 @@ export function MedalsGallery({
   defaultDisplay: string[];
   /** false com «Ver como» ativo — a lente é só de leitura. */
   canChoose: boolean;
+  /** Quem lidera em cada medalha «Top» (nomes). */
+  leaders: Record<string, string[]>;
+  /** Nome da pessoa vista, para o «És tu» nas «Top». */
+  viewerName: string;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -49,7 +69,10 @@ export function MedalsGallery({
   const [error, setError] = useState<string | null>(null);
   const [savedAt, setSavedAt] = useState<number | null>(null);
 
-  const earnedCount = items.filter((i) => i.progress.earned).length;
+  const earnedItems = useMemo(
+    () => items.filter((i) => i.progress.earned).sort((a, b) => b.medal.prestige - a.medal.prestige),
+    [items],
+  );
   const byId = useMemo(() => new Map(items.map((i) => [i.medal.id, i])), [items]);
   const dirty = JSON.stringify(selected) !== JSON.stringify(chosen ?? defaultDisplay);
 
@@ -85,39 +108,57 @@ export function MedalsGallery({
     }
   }
 
+  function PinButton({ id, compact = false }: { id: string; compact?: boolean }) {
+    if (!canChoose) return null;
+    const isSelected = selected.includes(id);
+    return (
+      <button
+        type="button"
+        onClick={() => toggle(id)}
+        className={`inline-flex items-center gap-1.5 rounded-full border font-semibold transition ${
+          compact ? "px-2.5 py-1 text-[10.5px]" : "px-3 py-1 text-[11px]"
+        } ${
+          isSelected
+            ? "border-[#783DF5]/60 bg-[#783DF5]/25 text-white hover:bg-[#783DF5]/35"
+            : "border-white/12 bg-white/[0.03] text-white/70 hover:border-white/25 hover:text-white"
+        }`}
+      >
+        {isSelected ? <PinOff className="h-3 w-3" /> : <Pin className="h-3 w-3" />}
+        {isSelected ? "Tirar do header" : "Pôr no header"}
+      </button>
+    );
+  }
+
   return (
     <div>
       {/* ----- Barra do header: o que está em exibição ----- */}
       <div className="sticky top-[72px] z-20 mb-8 rounded-2xl border border-white/10 bg-[color:var(--background)]/90 p-4 backdrop-blur-md sm:p-5">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <div className="flex min-h-[44px] items-center gap-2">
-              {selected.length === 0 ? (
-                <span className="text-[12px] text-white/40">Nenhuma medalha no header.</span>
-              ) : (
-                selected.map((id) => {
-                  const item = byId.get(id);
-                  return item ? (
-                    <span key={id} title={item.medal.name} className="inline-flex">
-                      <MedalBadge medal={item.medal} size={44} />
-                    </span>
-                  ) : null;
-                })
-              )}
+            <div className="flex min-h-[48px] items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1">
+              {selected.length === 0 && <span className="px-1 text-[12px] text-white/40">Nenhuma medalha no header.</span>}
+              {selected.map((id) => {
+                const item = byId.get(id);
+                return item ? (
+                  <span key={id} title={item.medal.name} className="inline-flex">
+                    <MedalBadge medal={item.medal} size={40} />
+                  </span>
+                ) : null;
+              })}
               {Array.from({ length: Math.max(0, MAX_DISPLAYED - selected.length) }, (_, i) => (
                 <span
                   key={`slot-${i}`}
                   aria-hidden
-                  className="inline-flex h-[44px] w-[66px] items-center justify-center rounded-lg border border-dashed border-white/12 text-[10px] text-white/25"
+                  className="inline-flex h-[34px] w-[30px] items-center justify-center rounded-md border border-dashed border-white/15 text-[9px] text-white/25"
                 >
-                  livre
+                  +
                 </span>
               ))}
             </div>
             <div className="leading-tight">
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/45">No header</p>
               <p className="text-[12px] text-white/55">
-                {selected.length} de {MAX_DISPLAYED} · escolhe entre as {earnedCount} que já tens
+                {selected.length} de {MAX_DISPLAYED} · escolhe entre as {earnedItems.length} que já tens
               </p>
             </div>
           </div>
@@ -145,27 +186,101 @@ export function MedalsGallery({
         {error && <p className="mt-2 text-[12px] text-rose-300">{error}</p>}
       </div>
 
-      {/* ----- Famílias ----- */}
+      {/* ----- Estante: as que a pessoa tem ----- */}
+      <section className="mb-12">
+        <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/40">A tua estante</p>
+            <h3 className="mt-1 text-xl font-semibold tracking-tight text-white">
+              {earnedItems.length === 0
+                ? "Ainda sem medalhas"
+                : `${earnedItems.length} ${earnedItems.length === 1 ? "medalha conquistada" : "medalhas conquistadas"}`}
+            </h3>
+          </div>
+        </div>
+        {earnedItems.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-white/15 bg-white/[0.02] p-8 text-center text-sm text-white/50">
+            A primeira cai com a primeira proposta apresentada. Depois é fechar.
+          </div>
+        ) : (
+          <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {earnedItems.map(({ medal }) => {
+              const accent = tierAccent(medal);
+              const isSelected = selected.includes(medal.id);
+              return (
+                <li
+                  key={medal.id}
+                  className="relative overflow-hidden rounded-2xl border p-5"
+                  style={{
+                    borderColor: `${accent}55`,
+                    background: `radial-gradient(120% 90% at 50% -10%, ${accent}2E 0%, rgba(255,255,255,0.03) 55%, rgba(255,255,255,0.02) 100%)`,
+                    boxShadow: medal.boss || medal.tier >= 4 ? `0 24px 60px -30px ${accent}` : undefined,
+                  }}
+                >
+                  {isSelected && (
+                    <span
+                      className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-full bg-[#783DF5]/30 px-2 py-0.5 text-[9.5px] font-semibold uppercase tracking-[0.14em] text-white"
+                      title="Está no header"
+                    >
+                      <Pin className="h-2.5 w-2.5" /> header
+                    </span>
+                  )}
+                  <div className="flex h-[96px] items-center justify-center">
+                    <MedalBadge medal={medal} size={88} />
+                  </div>
+                  <div className="mt-3 flex items-center justify-center gap-2">
+                    <span
+                      className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-[0.16em]"
+                      style={{ color: accent, borderColor: `${accent}66`, backgroundColor: `${accent}14` }}
+                    >
+                      {medal.boss && <Crown className="h-2.5 w-2.5" />}
+                      {tierLabel(medal)}
+                    </span>
+                    <span className="text-[10px] uppercase tracking-[0.14em] text-white/35">{familyName(medal.family)}</span>
+                  </div>
+                  <p className="mt-2 text-center text-[15px] font-semibold text-white">{medal.name}</p>
+                  <p className="mt-1 text-center text-[12px] leading-relaxed text-white/60">{medal.blurb}</p>
+                  {canChoose && (
+                    <div className="mt-4 flex justify-center">
+                      <PinButton id={medal.id} />
+                    </div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
+
+      {/* ----- Catálogo por família ----- */}
       <div className="space-y-10">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/40">Catálogo</p>
+          <h3 className="mt-1 text-xl font-semibold tracking-tight text-white">Tudo o que há para ganhar</h3>
+        </div>
         {MEDAL_FAMILIES.map((fam) => {
           const list = items.filter((i) => i.medal.family === fam.id);
           const have = list.filter((i) => i.progress.earned).length;
+          const isTop = fam.id === "top";
           return (
             <section key={fam.id}>
               <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
                 <div>
-                  <h3 className="text-lg font-semibold tracking-tight text-white">{fam.name}</h3>
+                  <h4 className="text-lg font-semibold tracking-tight text-white">{fam.name}</h4>
                   <p className="text-[12.5px] text-white/50">{fam.description}</p>
                 </div>
                 <span className="rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/55">
                   {have} / {list.length}
                 </span>
               </div>
-              <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+              <ul className={`grid gap-3 sm:grid-cols-2 ${isTop ? "lg:grid-cols-3" : "lg:grid-cols-3 xl:grid-cols-5"}`}>
                 {list.map((item) => {
                   const { medal, progress } = item;
                   const isSelected = selected.includes(medal.id);
+                  const accent = tierAccent(medal);
                   const pct = progress.earned ? 100 : Math.min(100, Math.round((progress.value / progress.threshold) * 100));
+                  const who = leaders[medal.id] ?? [];
+                  const others = who.filter((n) => n !== viewerName);
                   return (
                     <li
                       key={medal.id}
@@ -175,19 +290,24 @@ export function MedalsGallery({
                             ? "border-[#783DF5]/60 bg-[#783DF5]/[0.12] shadow-[0_14px_40px_-20px_rgba(120,61,245,0.9)]"
                             : "border-white/12 bg-white/[0.035]"
                           : "border-white/8 bg-white/[0.015]"
-                      }`}
+                      } ${isTop ? "p-6" : ""}`}
+                      style={
+                        progress.earned && isTop
+                          ? { background: `radial-gradient(120% 90% at 50% -10%, ${accent}33 0%, rgba(255,255,255,0.03) 60%)`, borderColor: `${accent}66` }
+                          : undefined
+                      }
                     >
                       {!progress.earned && (
                         <span className="absolute right-3 top-3 text-white/30" title="Por ganhar">
                           <Lock className="h-3.5 w-3.5" />
                         </span>
                       )}
-                      <div className="flex h-[72px] items-center">
-                        <MedalBadge medal={medal} size={64} earned={progress.earned} />
+                      <div className={`flex items-center ${isTop ? "h-[112px]" : "h-[76px]"}`}>
+                        <MedalBadge medal={medal} size={isTop ? 100 : 66} earned={progress.earned} />
                       </div>
                       <p className={`mt-3 text-[13.5px] font-semibold ${progress.earned ? "text-white" : "text-white/55"}`}>{medal.name}</p>
                       <p className="mt-0.5 text-[11.5px] text-white/45">{medal.requirement}</p>
-                      {medal.family !== "top" && (
+                      {!isTop && (
                         <div className="mt-3 w-full">
                           <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/[0.06]">
                             <div
@@ -198,24 +318,21 @@ export function MedalsGallery({
                           <p className="mt-1 text-[10.5px] tabular-nums text-white/40">{progressLabel(item, fam.unit)}</p>
                         </div>
                       )}
-                      {medal.family === "top" && (
-                        <p className={`mt-3 text-[10.5px] font-semibold uppercase tracking-[0.16em] ${progress.earned ? "text-amber-200" : "text-white/30"}`}>
-                          {progress.earned ? "És tu, agora" : "Ainda não lideras"}
+                      {isTop && (
+                        <p className={`mt-3 text-[10.5px] font-semibold uppercase tracking-[0.16em] ${progress.earned ? "text-amber-200" : "text-white/40"}`}>
+                          {progress.earned
+                            ? others.length
+                              ? `És tu, com ${joinNames(others)}`
+                              : "És tu, agora"
+                            : who.length
+                              ? `Lidera: ${joinNames(who)}`
+                              : "Ninguém lidera ainda"}
                         </p>
                       )}
                       {progress.earned && canChoose && (
-                        <button
-                          type="button"
-                          onClick={() => toggle(medal.id)}
-                          className={`mt-3 inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-semibold transition ${
-                            isSelected
-                              ? "border-[#783DF5]/60 bg-[#783DF5]/25 text-white hover:bg-[#783DF5]/35"
-                              : "border-white/12 bg-white/[0.03] text-white/70 hover:border-white/25 hover:text-white"
-                          }`}
-                        >
-                          {isSelected ? <PinOff className="h-3 w-3" /> : <Pin className="h-3 w-3" />}
-                          {isSelected ? "Tirar do header" : "Pôr no header"}
-                        </button>
+                        <div className="mt-3">
+                          <PinButton id={medal.id} compact />
+                        </div>
                       )}
                     </li>
                   );

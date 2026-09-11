@@ -898,15 +898,26 @@ body {
   }
 }
 
-/* Medalhas «Top» (chefes) — pulsação do brilho no header e na galeria. */
+/* Medalhas — pulso (nível 3+) e pulso forte (chefes «Top»). As estrelas em
+   órbita são SMIL dentro do SVG (.medal-orbit); com movimento reduzido
+   escondem-se e os pulsos param. */
 @keyframes medal-pulse {
   0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.06); }
+  50% { transform: scale(1.035); }
+}
+@keyframes medal-pulse-strong {
+  0%, 100% { transform: scale(1); filter: brightness(1); }
+  50% { transform: scale(1.08); filter: brightness(1.22); }
 }
 .animate-medal-pulse {
-  animation: medal-pulse 2.6s ease-in-out infinite;
+  animation: medal-pulse 2.8s ease-in-out infinite;
+  transform-origin: center;
+}
+.animate-medal-pulse-strong {
+  animation: medal-pulse-strong 2.2s ease-in-out infinite;
   transform-origin: center;
 }
 @media (prefers-reduced-motion: reduce) {
-  .animate-medal-pulse { animation: none; }
+  .animate-medal-pulse, .animate-medal-pulse-strong { animation: none; }
+  .medal-orbit { display: none; }
 }

@@ -42,6 +42,8 @@ export type Medal = {
   name: string;
   /** «5 propostas fechadas». */
   requirement: string;
+  /** Uma frase sobre o que a medalha é — para a estante. */
+  blurb: string;
   /** Medalha de chefe («Top …») — muda de mãos, desenho mais carregado. */
   boss: boolean;
   glyph: MedalGlyph;
@@ -70,11 +72,39 @@ export const MEDAL_FAMILIES: MedalFamily[] = [
 
 const ROMAN = ["I", "II", "III", "IV", "V"];
 
+/** Nome de cada tier — o «material» do emblema. */
+export const TIER_NAMES: Record<MedalTier, string> = {
+  1: "Bronze",
+  2: "Prata",
+  3: "Ouro",
+  4: "Diamante",
+  5: "Lendária",
+};
+
+/** Cor sólida por tier, para pílulas e brilhos fora do SVG. */
+export const TIER_ACCENT: Record<MedalTier, string> = {
+  1: "#D2A05A",
+  2: "#E2E8F0",
+  3: "#FFD166",
+  4: "#9EEBFF",
+  5: "#C77DFF",
+};
+
+export const BOSS_ACCENT = "#FF4D6D";
+
+export function tierLabel(medal: Medal): string {
+  return medal.boss ? "Chefe" : TIER_NAMES[medal.tier];
+}
+
+export function tierAccent(medal: Medal): string {
+  return medal.boss ? BOSS_ACCENT : TIER_ACCENT[medal.tier];
+}
+
 function ladder(
   family: MedalFamilyId,
   name: string,
   glyph: MedalGlyph,
-  steps: Array<{ threshold: number; tier: MedalTier; requirement: string }>,
+  steps: Array<{ threshold: number; tier: MedalTier; requirement: string; blurb: string }>,
   base: number,
 ): Medal[] {
   return steps.map((s, i) => ({
@@ -84,10 +114,15 @@ function ladder(
     level: ROMAN[i],
     name: `${name} ${ROMAN[i]}`,
     requirement: s.requirement,
+    blurb: s.blurb,
     boss: false,
     glyph,
     prestige: base + s.tier * 100 + i,
   }));
+}
+
+function plural(n: number, one: string, many: string): string {
+  return `${n} ${n === 1 ? one : many}`;
 }
 
 function eur(n: number): string {
@@ -110,13 +145,15 @@ const FECHADOR = withThresholds(
     "fechador",
     "Fechador",
     "check",
-    [
-      { threshold: 1, tier: 1, requirement: "1 proposta fechada" },
-      { threshold: 3, tier: 2, requirement: "3 propostas fechadas" },
-      { threshold: 5, tier: 3, requirement: "5 propostas fechadas" },
-      { threshold: 10, tier: 4, requirement: "10 propostas fechadas" },
-      { threshold: 25, tier: 5, requirement: "25 propostas fechadas" },
-    ],
+    [1, 3, 5, 10, 25].map((n, i) => ({
+      threshold: n,
+      tier: (i + 1) as MedalTier,
+      requirement: plural(n, "proposta fechada", "propostas fechadas"),
+      blurb:
+        n === 1
+          ? "A primeira vez que um cliente disse «sim» a uma proposta tua."
+          : `${plural(n, "proposta fechada", "propostas fechadas")} — renovações e cross-sells confirmados pelo cliente.`,
+    })),
     30,
   ),
   [1, 3, 5, 10, 25],
@@ -127,16 +164,18 @@ const APRESENTADOR = withThresholds(
     "apresentador",
     "Apresentador",
     "plane",
-    [
-      { threshold: 1, tier: 1, requirement: "1 proposta apresentada" },
-      { threshold: 5, tier: 2, requirement: "5 propostas apresentadas" },
-      { threshold: 10, tier: 3, requirement: "10 propostas apresentadas" },
-      { threshold: 25, tier: 4, requirement: "25 propostas apresentadas" },
-      { threshold: 50, tier: 5, requirement: "50 propostas apresentadas" },
-    ],
+    [1, 3, 5, 10, 20].map((n, i) => ({
+      threshold: n,
+      tier: (i + 1) as MedalTier,
+      requirement: plural(n, "proposta apresentada", "propostas apresentadas"),
+      blurb:
+        n === 1
+          ? "A primeira proposta que saiu da gaveta e chegou ao cliente."
+          : `${plural(n, "proposta apresentada", "propostas apresentadas")} ao cliente — enviadas, aceites ou recusadas.`,
+    })),
     10,
   ),
-  [1, 5, 10, 25, 50],
+  [1, 3, 5, 10, 20],
 );
 
 const FATURACAO = withThresholds(
@@ -144,13 +183,12 @@ const FATURACAO = withThresholds(
     "faturacao",
     "Faturação",
     "euro",
-    [
-      { threshold: 5_000, tier: 1, requirement: `${eur(5_000)} fechados` },
-      { threshold: 25_000, tier: 2, requirement: `${eur(25_000)} fechados` },
-      { threshold: 50_000, tier: 3, requirement: `${eur(50_000)} fechados` },
-      { threshold: 100_000, tier: 4, requirement: `${eur(100_000)} fechados` },
-      { threshold: 250_000, tier: 5, requirement: `${eur(250_000)} fechados` },
-    ],
+    [5_000, 25_000, 50_000, 100_000, 250_000].map((n, i) => ({
+      threshold: n,
+      tier: (i + 1) as MedalTier,
+      requirement: `${eur(n)} fechados`,
+      blurb: `${eur(n)} de valor fechado, sem IVA, somando todas as propostas que o cliente aceitou.`,
+    })),
     40,
   ),
   [5_000, 25_000, 50_000, 100_000, 250_000],
@@ -161,16 +199,18 @@ const RENOVADOR = withThresholds(
     "renovador",
     "Renovador",
     "cycle",
-    [
-      { threshold: 1, tier: 1, requirement: "1 renovação fechada" },
-      { threshold: 3, tier: 2, requirement: "3 renovações fechadas" },
-      { threshold: 5, tier: 3, requirement: "5 renovações fechadas" },
-      { threshold: 10, tier: 4, requirement: "10 renovações fechadas" },
-      { threshold: 20, tier: 5, requirement: "20 renovações fechadas" },
-    ],
+    [1, 2, 3, 5, 10].map((n, i) => ({
+      threshold: n,
+      tier: (i + 1) as MedalTier,
+      requirement: plural(n, "renovação fechada", "renovações fechadas"),
+      blurb:
+        n === 1
+          ? "Um cliente que já era nosso decidiu ficar mais um ciclo contigo."
+          : `${plural(n, "renovação fechada", "renovações fechadas")} — clientes que voltaram a assinar.`,
+    })),
     20,
   ),
-  [1, 3, 5, 10, 20],
+  [1, 2, 3, 5, 10],
 );
 
 const CROSSSELLER = withThresholds(
@@ -178,13 +218,15 @@ const CROSSSELLER = withThresholds(
     "crossseller",
     "Cross-seller",
     "sparkle",
-    [
-      { threshold: 1, tier: 1, requirement: "1 cross-sell fechado" },
-      { threshold: 3, tier: 2, requirement: "3 cross-sells fechados" },
-      { threshold: 5, tier: 3, requirement: "5 cross-sells fechados" },
-      { threshold: 10, tier: 4, requirement: "10 cross-sells fechados" },
-      { threshold: 20, tier: 5, requirement: "20 cross-sells fechados" },
-    ],
+    [1, 3, 5, 10, 20].map((n, i) => ({
+      threshold: n,
+      tier: (i + 1) as MedalTier,
+      requirement: plural(n, "cross-sell fechado", "cross-sells fechados"),
+      blurb:
+        n === 1
+          ? "Vendeste um serviço novo a um cliente que já era nosso."
+          : `${plural(n, "cross-sell fechado", "cross-sells fechados")} — serviços novos a clientes da casa.`,
+    })),
     20,
   ),
   [1, 3, 5, 10, 20],
@@ -204,9 +246,9 @@ const SNIPER = withThresholds(
     "Sniper",
     "crosshair",
     [
-      { threshold: 0.5, tier: 2, requirement: "50 % de fecho em 3+ propostas" },
-      { threshold: 0.75, tier: 3, requirement: "75 % de fecho em 5+ propostas" },
-      { threshold: 0.9, tier: 5, requirement: "90 % de fecho em 10+ propostas" },
+      { threshold: 0.5, tier: 2, requirement: "50 % de fecho em 3+ propostas", blurb: "Metade das propostas que apresentas fecham. Com pelo menos três apresentadas." },
+      { threshold: 0.75, tier: 3, requirement: "75 % de fecho em 5+ propostas", blurb: "Três em cada quatro propostas fecham. Com pelo menos cinco apresentadas." },
+      { threshold: 0.9, tier: 5, requirement: "90 % de fecho em 10+ propostas", blurb: "Nove em cada dez propostas fecham. Com pelo menos dez apresentadas — quase não falhas." },
     ],
     50,
   ),
@@ -218,15 +260,15 @@ const GRANDE_CACA = withThresholds(
     "grande-caca",
     "Grande Caça",
     "diamond",
-    [
-      { threshold: 5_000, tier: 2, requirement: `Um negócio de ${eur(5_000)}+` },
-      { threshold: 15_000, tier: 3, requirement: `Um negócio de ${eur(15_000)}+` },
-      { threshold: 30_000, tier: 4, requirement: `Um negócio de ${eur(30_000)}+` },
-      { threshold: 50_000, tier: 5, requirement: `Um negócio de ${eur(50_000)}+` },
-    ],
+    [3_000, 5_000, 10_000, 20_000, 30_000].map((n, i) => ({
+      threshold: n,
+      tier: (i + 1) as MedalTier,
+      requirement: `Um negócio de ${eur(n)}+`,
+      blurb: `Uma só proposta fechada de ${eur(n)} ou mais. Conta o maior negócio, não a soma.`,
+    })),
     45,
   ),
-  [5_000, 15_000, 30_000, 50_000],
+  [3_000, 5_000, 10_000, 20_000, 30_000],
 );
 
 const TOP: Medal[] = [
@@ -237,6 +279,7 @@ const TOP: Medal[] = [
     level: "★",
     name: "Top Fechos",
     requirement: "Lidera em propostas fechadas",
+    blurb: "Ninguém na agência fechou mais propostas do que tu. Muda de mãos quando a classificação muda.",
     boss: true,
     glyph: "star",
     prestige: 1100,
@@ -248,6 +291,7 @@ const TOP: Medal[] = [
     level: "★",
     name: "Top Faturado",
     requirement: "Lidera em valor fechado",
+    blurb: "És quem mais euros fechou, sem IVA. Muda de mãos quando a classificação muda.",
     boss: true,
     glyph: "euro",
     prestige: 1200,
@@ -259,6 +303,7 @@ const TOP: Medal[] = [
     level: "★",
     name: "Top Propostas",
     requirement: "Lidera em propostas apresentadas",
+    blurb: "Ninguém apresentou mais propostas do que tu. Muda de mãos quando a classificação muda.",
     boss: true,
     glyph: "plane",
     prestige: 1000,
@@ -350,6 +395,17 @@ export function progressFor(medal: Medal, row: LeaderboardRow | null, board: Lea
     return { value, threshold, earned };
   }
   return { value, threshold, earned: value >= threshold };
+}
+
+/** Quem lidera em cada medalha «Top» agora — nomes, para a galeria dizer
+ *  a quem não lidera quem é que lidera. Vazio = ninguém ainda. */
+export function topLeaders(board: Leaderboard): Record<string, string[]> {
+  const out: Record<string, string[]> = {};
+  for (const medal of MEDALS) {
+    if (medal.family !== "top") continue;
+    out[medal.id] = board.rows.filter((row) => progressFor(medal, row, board).earned).map((row) => row.name);
+  }
+  return out;
 }
 
 export type EarnedMedal = { medal: Medal; progress: MedalProgress };

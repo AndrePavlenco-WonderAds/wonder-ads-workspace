@@ -13,7 +13,7 @@ export async function HeaderMedals() {
   return (
     <Link
       href="/medalhas"
-      className="group hidden items-center gap-1 rounded-full border border-transparent px-1 py-0.5 transition hover:border-white/12 hover:bg-white/[0.04] sm:flex"
+      className="group hidden items-center gap-0.5 rounded-full border border-transparent px-1.5 py-0.5 transition hover:border-white/12 hover:bg-white/[0.04] sm:flex"
       aria-label={`As tuas medalhas: ${mine.display.map((m) => m.name).join(", ")}. Abrir a galeria.`}
     >
       {mine.display.map((m) => (

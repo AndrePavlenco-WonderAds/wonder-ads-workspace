@@ -310,7 +310,7 @@ export function UserChipMenu({
             onMouseDown={(e) => e.preventDefault()}
             className="flex w-full items-center gap-2 border-b border-white/8 px-4 py-2.5 text-left text-[12px] font-medium text-white/75 transition hover:bg-white/[0.06] hover:text-white"
           >
-            <Medal className="h-3.5 w-3.5 text-amber-300" />
+            <Medal className="h-3.5 w-3.5 text-[color:var(--brand-purple)]" />
             Medalhas
           </Link>
           {/* Ver como — só para quem fez login como SuperAdmin. Dois cliques

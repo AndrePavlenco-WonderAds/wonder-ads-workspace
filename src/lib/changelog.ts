@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.26",
+    date: "2026-09-11",
+    title: "Medalhas: emblemas redesenhados, «Top» muito mais carregadas, estante com descrições e novos patamares",
+    highlights: [
+      "**🎖️ Emblemas redesenhados de raiz**: escudo com bisel e brilho, medalhão com o glifo, asas com três penas a partir do Diamante, coroa com gemas na Lendária. As «Top» ganham um sol de raios atrás, faixa vermelha com pontas e o pulso forte — são as que se veem de longe.",
+      "**✨ A partir do Ouro (nível 3) há três estrelas em órbita** à volta do emblema, ao estilo das cartas lendárias, e um pulso suave. As cores deixam de andar: o degradê das «Top» e das Lendárias é fixo.",
+      "**🪜 Novos patamares**: Grande Caça passa a 5 níveis (3.000 · 5.000 · 10.000 · 20.000 · 30.000 €), Apresentador 1 · 3 · 5 · 10 · 20 e Renovador 1 · 2 · 3 · 5 · 10.",
+      "**🏆 Nas «Top» vê-se quem lidera** quando não és tu («Lidera: Fran. Rosa»), e «És tu, com …» quando há empate.",
+      "**🗄️ A estante foi refeita**: cada medalha ganha num cartão com o material (Bronze → Lendária, Chefe), a família, uma frase sobre o que é e o pin para o header. As três do header ficam mais juntas — os emblemas sem asas deixam de reservar espaço para elas. Item «Medalhas» do menu na cor dos restantes.",
+    ],
+  },
+  {
     version: "77.25",
     date: "2026-09-11",
     title: "Medalhas: emblemas militares no header, galeria em /medalhas e escolha das três a exibir",

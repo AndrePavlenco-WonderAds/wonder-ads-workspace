@@ -7,10 +7,9 @@
 
 import { Medal as MedalIcon } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
-import { MedalBadge } from "@/components/medals/medal-badge";
 import { MedalsGallery, type GalleryItem } from "@/components/medals/medals-gallery";
 import { getCurrentEmployee, getImpersonation } from "@/lib/auth/server";
-import { MEDALS, progressFor } from "@/lib/medals/catalog";
+import { MEDALS, progressFor, topLeaders } from "@/lib/medals/catalog";
 import { getMedalsForUser } from "@/lib/medals/server";
 import { closedCount, presentedCount } from "@/lib/proposals/leaderboard";
 import { formatEur } from "@/lib/proposals/value";
@@ -56,16 +55,6 @@ export default async function MedalhasPage() {
           </div>
         </div>
 
-        {/* As que tem, em grande — a estante. */}
-        {mine.earned.length > 0 && (
-          <div className="mt-8 flex flex-wrap items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.025] p-4 sm:p-5">
-            {mine.earned.map(({ medal }) => (
-              <span key={medal.id} title={`${medal.name} · ${medal.requirement}`} className="inline-flex">
-                <MedalBadge medal={medal} size={48} />
-              </span>
-            ))}
-          </div>
-        )}
       </section>
 
       <section className="animate-fade-up mt-10 sm:mt-12">
@@ -74,6 +63,8 @@ export default async function MedalhasPage() {
           chosen={mine.chosen}
           defaultDisplay={mine.display.map((m) => m.id)}
           canChoose={!impersonation}
+          leaders={topLeaders(mine.board)}
+          viewerName={mine.row?.name ?? employee.name}
         />
       </section>
     </PageShell>
