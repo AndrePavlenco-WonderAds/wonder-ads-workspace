@@ -4,12 +4,13 @@
 // registo. A partir daqui a proposta aparece no Comercial e em
 // /proposta/<slug>, como as que vivem em código.
 
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { revalidatePath } from "next/cache";
 import { isProposalKind } from "@/lib/proposals";
 import { addUploadedProposal } from "@/lib/proposals/store";
 import { sanitizeValueEur } from "@/lib/proposals/value";
 import { guardCommercialWrite } from "@/lib/proposals/api-guard";
+import { syncMedalsAndNotify } from "@/lib/medals/notify";
 import { EMPLOYEE_CREDENTIALS } from "@/lib/auth/credentials";
 import { toISODate } from "@/lib/dates";
 
@@ -75,6 +76,8 @@ export async function POST(req: Request) {
     });
     revalidatePath("/commercial");
     if (record.clientSlug) revalidatePath(`/seo/${record.clientSlug}`);
+    // Medalhas novas → #team-wins, depois da resposta.
+    after(() => syncMedalsAndNotify(`post:${record.slug}`));
     return NextResponse.json({ ok: true, slug: record.slug });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

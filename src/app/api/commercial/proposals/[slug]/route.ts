@@ -4,7 +4,7 @@
 // valor total em € por cima (`valueEur: number`, `null` limpa).
 // DELETE apaga uma proposta carregada por upload (as de código são do git).
 
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { revalidatePath } from "next/cache";
 import { isProposalKind } from "@/lib/proposals";
 import {
@@ -16,6 +16,7 @@ import {
 } from "@/lib/proposals/store";
 import { sanitizeValueEur } from "@/lib/proposals/value";
 import { guardCommercialWrite } from "@/lib/proposals/api-guard";
+import { syncMedalsAndNotify } from "@/lib/medals/notify";
 
 export const runtime = "nodejs";
 
@@ -72,6 +73,8 @@ export async function PATCH(
       await setProposalValue(slug, v);
     }
     bump(slug, record.clientSlug);
+    // Medalhas novas → #team-wins, depois da resposta.
+    after(() => syncMedalsAndNotify(`patch:${slug}`));
     const next = await getProposalRecord(slug);
     return NextResponse.json({ ok: true, proposal: next });
   } catch (err) {
@@ -100,6 +103,7 @@ export async function DELETE(
   try {
     await removeUploadedProposal(slug);
     bump(slug, record.clientSlug);
+    after(() => syncMedalsAndNotify(`delete:${slug}`));
     return NextResponse.json({ ok: true });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

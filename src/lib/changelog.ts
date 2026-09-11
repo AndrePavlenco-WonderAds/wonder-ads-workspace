@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.27",
+    date: "2026-09-11",
+    title: "Medalhas no Slack: cada medalha nova vai para o #team-wins com a imagem do emblema e @channel",
+    highlights: [
+      "**📣 Nova medalha → #team-wins.** Sempre que uma proposta muda (upload, tipo, resposta do cliente, valor, apagar), o workspace recalcula as medalhas de toda a gente e avisa o canal das novas — uma mensagem por pessoa com todas as que ganhou nessa jogada, a mais prestigiada em imagem, o resto em lista, e o total que passa a ter. Com `<!channel>`, para toda a gente ver.",
+      "**🖼️ O emblema em PNG.** Nova rota pública `/api/og/medal/<id>.png` desenha a medalha em grande (o mesmo SVG do header e da galeria, em modo estático) com o nome, o material e o que a medalha pede — é isso que aparece no Slack.",
+      "**👑 As «Top» também avisam** de cada vez que mudam de mãos: quem passa a liderar recebe a mensagem; perder não avisa ninguém.",
+      "**🔧 Precisa de um webhook novo**: `SLACK_TEAM_WINS_WEBHOOK_URL` na Vercel (Production), apontado ao #team-wins. Sem ele, nada é enviado e a app segue em frente.",
+    ],
+  },
+  {
     version: "77.26",
     date: "2026-09-11",
     title: "Medalhas: emblemas redesenhados, «Top» muito mais carregadas, estante com descrições e novos patamares",

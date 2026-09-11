@@ -85,6 +85,25 @@ export async function postAusenciasToSlack(payload: {
   return postToWebhook(ausenciasWebhookUrl(), payload);
 }
 
+/** Webhook do canal #team-wins — medalhas conquistadas (v77.27). Sem
+ *  fallback para outros canais; sem SLACK_TEAM_WINS_WEBHOOK_URL no Vercel,
+ *  cada post é um no-op silencioso. */
+function teamWinsWebhookUrl(): string | undefined {
+  return process.env.SLACK_TEAM_WINS_WEBHOOK_URL || undefined;
+}
+
+export function teamWinsSlackConfigured(): boolean {
+  return Boolean(teamWinsWebhookUrl());
+}
+
+/** Post para o #team-wins. Mesmo contrato never-throws dos restantes. */
+export async function postTeamWinToSlack(payload: {
+  text: string;
+  blocks?: unknown[];
+}): Promise<boolean> {
+  return postToWebhook(teamWinsWebhookUrl(), payload);
+}
+
 async function postToWebhook(
   url: string | undefined,
   payload: { text: string; blocks?: unknown[] },
