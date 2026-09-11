@@ -44,7 +44,7 @@ export default async function MedalhasPage() {
             <h1 className="mt-2 text-4xl font-semibold leading-[1.05] tracking-tight text-white sm:text-5xl">Medalhas</h1>
             <p className="mt-3 max-w-2xl text-base text-white/65 sm:text-lg">
               <span className="font-semibold text-white">{earned}</span> de {MEDALS.length} conquistadas. As de patamar
-              ficam para sempre; as «Top» são de quem lidera agora. Escolhe até três para o header.
+              ficam para sempre; as «Top» são de quem lidera agora e vão sempre para o header. Os lugares que sobram são teus.
             </p>
           </div>
           <div className="flex flex-wrap gap-2 text-[11px] font-medium uppercase tracking-[0.14em]">
@@ -61,7 +61,7 @@ export default async function MedalhasPage() {
         <MedalsGallery
           items={items}
           chosen={mine.chosen}
-          defaultDisplay={mine.display.map((m) => m.id)}
+          display={mine.display.map((m) => m.id)}
           canChoose={!impersonation}
           leaders={topLeaders(mine.board)}
           viewerName={mine.row?.name ?? employee.name}

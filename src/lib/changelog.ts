@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.28",
+    date: "2026-09-11",
+    title: "Medalhas: as «Top» vão sempre para o header, o resto por dificuldade; estante mais limpa; «Leader»",
+    highlights: [
+      "**👑 As «Top» que tens entram automaticamente no header** e não se tiram. Os lugares que sobram são teus — sem escolha, enchem-se por ordem de dificuldade: Lendária, Diamante, Ouro, Prata, Bronze.",
+      "**🏷️ «Chefe» passa a «Leader»**, e os cartões da estante ficam só com o material (Bronze, Prata, Ouro…) — sai a etiqueta da família.",
+      "**Na galeria, as «Top» mostram «No header · automático»** em vez do pin, e o contador diz quantos lugares estão ocupados por elas.",
+    ],
+  },
+  {
     version: "77.27",
     date: "2026-09-11",
     title: "Medalhas no Slack: cada medalha nova vai para o #team-wins com a imagem do emblema e @channel",

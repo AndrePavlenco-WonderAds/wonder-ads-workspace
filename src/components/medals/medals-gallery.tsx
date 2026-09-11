@@ -4,8 +4,9 @@
 //
 // Recebe tudo já calculado no servidor (catálogo, o que a pessoa tem, o
 // progresso em cada uma, quem lidera nas «Top») e só trata da escolha:
-// até três medalhas ganhas marcadas «No header», gravadas de uma vez. Uma
-// lista vazia é uma escolha («não mostrar nenhuma»).
+// até três medalhas ganhas marcadas «No header», gravadas de uma vez. As
+// «Top» ocupam lugar automaticamente e não se tiram; os lugares que sobram
+// são da pessoa. Uma lista vazia é uma escolha («só as automáticas»).
 //
 // Estrutura: barra fixa com o que vai para o header → estante (as que a
 // pessoa tem, em cartões com descrição) → catálogo por família.
@@ -33,10 +34,6 @@ function progressLabel(item: GalleryItem, unit: "count" | "eur" | "rate"): strin
   return `${value} / ${threshold}`;
 }
 
-function familyName(id: Medal["family"]): string {
-  return MEDAL_FAMILIES.find((f) => f.id === id)?.name ?? id;
-}
-
 function joinNames(names: string[]): string {
   if (names.length <= 1) return names[0] ?? "";
   return `${names.slice(0, -1).join(", ")} e ${names[names.length - 1]}`;
@@ -45,7 +42,7 @@ function joinNames(names: string[]): string {
 export function MedalsGallery({
   items,
   chosen,
-  defaultDisplay,
+  display,
   canChoose,
   leaders,
   viewerName,
@@ -53,8 +50,8 @@ export function MedalsGallery({
   items: GalleryItem[];
   /** A escolha gravada (ids), ou null se nunca escolheu. */
   chosen: string[] | null;
-  /** O que o header mostra quando não há escolha (3 de maior prestígio). */
-  defaultDisplay: string[];
+  /** O que o header mostra agora (Top automáticas + escolha / dificuldade). */
+  display: string[];
   /** false com «Ver como» ativo — a lente é só de leitura. */
   canChoose: boolean;
   /** Quem lidera em cada medalha «Top» (nomes). */
@@ -64,24 +61,39 @@ export function MedalsGallery({
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const [selected, setSelected] = useState<string[]>(chosen ?? defaultDisplay);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [savedAt, setSavedAt] = useState<number | null>(null);
-
   const earnedItems = useMemo(
     () => items.filter((i) => i.progress.earned).sort((a, b) => b.medal.prestige - a.medal.prestige),
     [items],
   );
   const byId = useMemo(() => new Map(items.map((i) => [i.medal.id, i])), [items]);
-  const dirty = JSON.stringify(selected) !== JSON.stringify(chosen ?? defaultDisplay);
+  // As «Top» ganhas vão sempre para o header — ocupam lugar sem se poder tirar.
+  const autoIds = useMemo(
+    () => earnedItems.filter((i) => i.medal.boss).map((i) => i.medal.id).slice(0, MAX_DISPLAYED),
+    [earnedItems],
+  );
+  const freeSlots = MAX_DISPLAYED - autoIds.length;
+  const initialPicked = useMemo(
+    () => display.filter((id) => !autoIds.includes(id)).slice(0, Math.max(0, freeSlots)),
+    [display, autoIds, freeSlots],
+  );
+  const [picked, setPicked] = useState<string[]>(initialPicked);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [savedAt, setSavedAt] = useState<number | null>(null);
+  const selected = useMemo(() => [...autoIds, ...picked].slice(0, MAX_DISPLAYED), [autoIds, picked]);
+  const dirty = JSON.stringify(picked) !== JSON.stringify(initialPicked);
 
   function toggle(id: string) {
     setError(null);
-    setSelected((cur) => {
+    if (autoIds.includes(id)) return;
+    setPicked((cur) => {
       if (cur.includes(id)) return cur.filter((x) => x !== id);
-      if (cur.length >= MAX_DISPLAYED) {
-        setError(`Só cabem ${MAX_DISPLAYED} medalhas no header — tira uma primeiro.`);
+      if (cur.length >= freeSlots) {
+        setError(
+          autoIds.length
+            ? `Só cabem ${MAX_DISPLAYED} no header e as ${autoIds.length === 1 ? "Top ocupa" : `${autoIds.length} Top ocupam`} lugar automaticamente — tira uma primeiro.`
+            : `Só cabem ${MAX_DISPLAYED} medalhas no header — tira uma primeiro.`,
+        );
         return cur;
       }
       return [...cur, id];
@@ -110,6 +122,19 @@ export function MedalsGallery({
 
   function PinButton({ id, compact = false }: { id: string; compact?: boolean }) {
     if (!canChoose) return null;
+    if (autoIds.includes(id)) {
+      return (
+        <span
+          className={`inline-flex items-center gap-1.5 rounded-full border border-amber-300/40 bg-amber-400/10 font-semibold text-amber-100 ${
+            compact ? "px-2.5 py-1 text-[10.5px]" : "px-3 py-1 text-[11px]"
+          }`}
+          title="As «Top» vão sempre para o header"
+        >
+          <Crown className="h-3 w-3" />
+          No header · automático
+        </span>
+      );
+    }
     const isSelected = selected.includes(id);
     return (
       <button
@@ -158,7 +183,9 @@ export function MedalsGallery({
             <div className="leading-tight">
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/45">No header</p>
               <p className="text-[12px] text-white/55">
-                {selected.length} de {MAX_DISPLAYED} · escolhe entre as {earnedItems.length} que já tens
+                {selected.length} de {MAX_DISPLAYED}
+                {autoIds.length ? ` · ${autoIds.length} Top automática${autoIds.length === 1 ? "" : "s"}` : ""} · escolhe entre as{" "}
+                {earnedItems.length} que já tens
               </p>
             </div>
           </div>
@@ -228,7 +255,7 @@ export function MedalsGallery({
                   <div className="flex h-[96px] items-center justify-center">
                     <MedalBadge medal={medal} size={88} />
                   </div>
-                  <div className="mt-3 flex items-center justify-center gap-2">
+                  <div className="mt-3 flex items-center justify-center">
                     <span
                       className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-[0.16em]"
                       style={{ color: accent, borderColor: `${accent}66`, backgroundColor: `${accent}14` }}
@@ -236,7 +263,6 @@ export function MedalsGallery({
                       {medal.boss && <Crown className="h-2.5 w-2.5" />}
                       {tierLabel(medal)}
                     </span>
-                    <span className="text-[10px] uppercase tracking-[0.14em] text-white/35">{familyName(medal.family)}</span>
                   </div>
                   <p className="mt-2 text-center text-[15px] font-semibold text-white">{medal.name}</p>
                   <p className="mt-1 text-center text-[12px] leading-relaxed text-white/60">{medal.blurb}</p>

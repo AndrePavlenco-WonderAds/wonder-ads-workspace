@@ -93,7 +93,7 @@ export const TIER_ACCENT: Record<MedalTier, string> = {
 export const BOSS_ACCENT = "#FF4D6D";
 
 export function tierLabel(medal: Medal): string {
-  return medal.boss ? "Chefe" : TIER_NAMES[medal.tier];
+  return medal.boss ? "Leader" : TIER_NAMES[medal.tier];
 }
 
 export function tierAccent(medal: Medal): string {
@@ -417,15 +417,20 @@ export function computeEarned(row: LeaderboardRow | null, board: Leaderboard): E
     .sort((a, b) => b.medal.prestige - a.medal.prestige);
 }
 
-/** As medalhas que vão para o header: a escolha da pessoa (só as que
- *  continua a ter), ou, sem escolha, as três de maior prestígio. */
+/** As medalhas que vão para o header (v77.28):
+ *  1. as «Top» que a pessoa tem entram SEMPRE, automaticamente;
+ *  2. depois a escolha da pessoa (só as que continua a ter);
+ *  3. sem escolha, as restantes por ordem de dificuldade — Lendária, Ouro,
+ *     Prata, Bronze (é a ordem de `earned`, por prestígio). */
 export function resolveDisplay(chosen: string[] | null, earned: EarnedMedal[]): Medal[] {
-  const have = new Map(earned.map((e) => [e.medal.id, e.medal]));
-  if (chosen) {
-    return chosen
-      .map((id) => have.get(id))
-      .filter((m): m is Medal => Boolean(m))
-      .slice(0, MAX_DISPLAYED);
+  const tops = earned.filter((e) => e.medal.boss).map((e) => e.medal);
+  const rest = earned.filter((e) => !e.medal.boss).map((e) => e.medal);
+  const have = new Map(rest.map((m) => [m.id, m]));
+  const manual = chosen ? chosen.map((id) => have.get(id)).filter((m): m is Medal => Boolean(m)) : rest;
+  const out: Medal[] = [];
+  for (const m of [...tops, ...manual]) {
+    if (!out.some((x) => x.id === m.id)) out.push(m);
+    if (out.length === MAX_DISPLAYED) break;
   }
-  return earned.slice(0, MAX_DISPLAYED).map((e) => e.medal);
+  return out;
 }
