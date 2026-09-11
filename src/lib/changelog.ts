@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.29",
+    date: "2026-09-11",
+    title: "SEO DPT · GMB Posts: o tema pedido passa a mandar — acabou o post sobre vasectomia quando se pediu ginecologia",
+    highlights: [
+      "**🎯 «Theme / focus» é agora regra obrigatória.** Vai ao topo do prompt, antes do site audit, e o system prompt diz preto no branco: todos os posts do lote são sobre esse tema, ângulos diferentes do MESMO tema, nunca outro serviço. Antes era uma secção discreta a meio e a regra «weave 1–2 target keywords» puxava o modelo para as keywords de mais volume do cliente — na Aeger Prima, vasectomia.",
+      "**🔑 Target keywords filtradas pelo tema.** Com tema, o prompt só mostra as keywords que lhe dizem respeito; se nenhuma servir, diz explicitamente para não forçar nenhuma. Sem tema, tudo como antes.",
+      "**🛡️ Guarda pós-geração.** Se nenhum post tocar no tema (legenda, raciocínio, prompt da imagem ou keywords), a app repete a chamada com a ordem em maiúsculas — nos dois caminhos, imagens geradas e fotos do cliente — e mostra «retrying strictly on-theme» na barra de progresso.",
+      "**🧹 Sai do prompt o exemplo que chamava a Aeger Prima «clínica dentária»** — não é, e um exemplo errado no system prompt é meio caminho para um post errado.",
+    ],
+  },
+  {
     version: "77.28",
     date: "2026-09-11",
     title: "Medalhas: as «Top» vão sempre para o header, o resto por dificuldade; estante mais limpa; «Leader»",

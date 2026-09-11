@@ -106,7 +106,7 @@ const PostSchema = z.object({
     .min(0)
     .max(5)
     .describe(
-      "1-5 target keywords this post is intentionally seeding. Pick from the consultant's tracked target keyword list when there's a fit.",
+      "1-5 target keywords this post is intentionally seeding. Pick from the consultant's tracked target keyword list when there's a fit. When a Theme / focus is given, ONLY keywords that belong to that theme — an empty list is the right answer when none fit.",
     ),
   reasoning: z
     .string()
@@ -149,6 +149,8 @@ export async function POST(
   const postCount = clampPostCount(inputs.postCount);
   const postTypeInput = parsePostType(inputs.postGoal);
   const theme = (inputs.theme ?? "").trim();
+  // Radicais do tema para a guarda pós-geração (v77.29). Vazio = sem tema.
+  const stems = themeStems(theme);
   // Build the "Hard facts" block from the post-type-specific inputs.
   // The form surfaces different fields for Offer / Event / Product /
   // Update; we collapse them into a single markdown block so the
@@ -371,44 +373,55 @@ export async function POST(
               visionMime = bytes.mimeType;
             }
             try {
-              const captionResult = await generateObject({
-                model: anthropic(CAPTION_MODEL),
-                schema: SinglePostSchema,
-                system: clientFilesSystemPrompt(geo.languageCode),
-                messages: [
-                  {
-                    role: "user",
-                    content: [
-                      {
-                        type: "image",
-                        image: visionBytes,
-                        mediaType: visionMime,
-                      },
-                      {
-                        type: "text",
-                        text: buildClientFilesPrompt({
-                          clientName: client.title,
-                          website,
-                          brief,
-                          onboardingText: onboarding?.extractedText ?? null,
-                          targets,
-                          postType: postTypeInput,
-                          theme,
-                          details,
-                          ctaUrlDefault,
-                          siteAuditBlock,
-                          languageCode: geo.languageCode,
-                          imageFilename: bytes.filename,
-                          postIndex: i,
-                          totalPosts: actualCount,
-                        }),
-                      },
-                    ],
-                  },
-                ],
-                maxOutputTokens: 1200,
+              const photoPrompt = buildClientFilesPrompt({
+                clientName: client.title,
+                website,
+                brief,
+                onboardingText: onboarding?.extractedText ?? null,
+                targets,
+                postType: postTypeInput,
+                theme,
+                details,
+                ctaUrlDefault,
+                siteAuditBlock,
+                languageCode: geo.languageCode,
+                imageFilename: bytes.filename,
+                postIndex: i,
+                totalPosts: actualCount,
               });
-              const cap = captionResult.object;
+              const runCaption = (extra?: string) =>
+                generateObject({
+                  model: anthropic(CAPTION_MODEL),
+                  schema: SinglePostSchema,
+                  system: clientFilesSystemPrompt(geo.languageCode),
+                  messages: [
+                    {
+                      role: "user",
+                      content: [
+                        {
+                          type: "image",
+                          image: visionBytes,
+                          mediaType: visionMime,
+                        },
+                        {
+                          type: "text",
+                          text: extra ? `${photoPrompt}\n\n${extra}` : photoPrompt,
+                        },
+                      ],
+                    },
+                  ],
+                  maxOutputTokens: 1200,
+                });
+              let cap = (await runCaption()).object;
+              // Guarda de tema (v77.29) — ver o caminho das imagens geradas.
+              if (stems.length > 0 && !postMentionsTheme(cap, stems)) {
+                send({
+                  event: "progress",
+                  phase: "captions",
+                  message: `Caption ${i + 1} drifted off the theme — retrying strictly on-theme…`,
+                });
+                cap = (await runCaption(offThemeRetryDirective(theme))).object;
+              }
               posts.push({
                 id: newGmbPostId(),
                 postType: cap.postType,
@@ -683,18 +696,34 @@ export async function POST(
 - NEVER make medical claims for YMYL clinics, NEVER promise outcomes;
 - ${languageDirective}.
 
-**ABSOLUTE RULE — read the Site Audit before writing anything.** The user prompt contains a "## Site audit" block with homepage + about-page text. THAT is the source of truth about what the business actually does. **NEVER infer from the brand name.** Many client names are wordplay (e.g. "Sea Yourself" is a mental-health clinic, NOT a diving school; "Aeger Prima" is a dental clinic, not a beauty brand). If the brief is weak (few/no Do's/Don'ts/Notes), lean MORE on the site audit, not less. If you cannot confidently identify the business from the site audit + brief + onboarding, write a SAFE generic local-business post (welcome, opening hours, how to find us) rather than guessing.
+**THEME RULE — when the user prompt has a "## Theme / focus" block, it is MANDATORY.** Every post in the batch is about THAT theme (different angles on the same theme, never different services). Tracked target keywords are a tool, not a brief: use only the ones that belong to the theme, and none if none fit. A post about another service — however high its keyword volume — is a failed post.
+
+**ABSOLUTE RULE — read the Site Audit before writing anything.** The user prompt contains a "## Site audit" block with homepage + about-page text. THAT is the source of truth about what the business actually does. **NEVER infer from the brand name.** Many client names are wordplay (e.g. "Sea Yourself" is a mental-health clinic, NOT a diving school). If the brief is weak (few/no Do's/Don'ts/Notes), lean MORE on the site audit, not less. If you cannot confidently identify the business from the site audit + brief + onboarding, write a SAFE generic local-business post (welcome, opening hours, how to find us) rather than guessing.
 
 Output STRICT JSON matching the schema. Caption MAX 1500 characters. Do NOT include hashtags. Do NOT include markdown. Do NOT include the brand name in the image prompt — the reference images handle that.`;
 
-        const claudeResult = await generateObject({
-          model: anthropic(CAPTION_MODEL),
-          schema: BatchSchema,
-          system,
-          prompt: userPrompt,
-          maxOutputTokens: 1800,
-        });
-        const draft = claudeResult.object;
+        const runBatch = (extra?: string) =>
+          generateObject({
+            model: anthropic(CAPTION_MODEL),
+            schema: BatchSchema,
+            system,
+            prompt: extra ? `${userPrompt}\n\n${extra}` : userPrompt,
+            maxOutputTokens: 1800,
+          });
+        let draft = (await runBatch()).object;
+        // Guarda de tema (v77.29): o consultor pediu um tema e NENHUM post lhe
+        // toca → o modelo desviou-se (tipicamente para as target keywords de
+        // mais volume de outro serviço). Uma segunda tentativa, com a ordem
+        // repetida em maiúsculas; se ainda assim falhar, segue o que veio.
+        if (stems.length > 0 && draft.posts.length > 0 && !draft.posts.some((p) => postMentionsTheme(p, stems))) {
+          send({
+            event: "progress",
+            phase: "captions",
+            message: "Captions drifted off the theme — retrying strictly on-theme…",
+          });
+          const retry = (await runBatch(offThemeRetryDirective(theme))).object;
+          if (retry.posts.length > 0) draft = retry;
+        }
         if (draft.posts.length === 0) {
           send({
             event: "error",
@@ -914,6 +943,94 @@ function buildHardFactsBlock(
   return lines.join("\n");
 }
 
+// ---------------------------------------------------------------------------
+// Tema / foco (v77.29)
+//
+// O campo «Theme / focus» é a ordem do consultor para o lote — e até aqui
+// entrava no prompt como uma secção discreta a meio, depois do site audit,
+// enquanto a regra «weave 1–2 target keywords» puxava o modelo para as
+// keywords de mais volume do cliente (na Aeger Prima: vasectomia, quando
+// se pediu ginecologia). Agora: o tema vai ao topo como regra obrigatória,
+// as target keywords mostradas são só as que lhe dizem respeito, e há uma
+// guarda pós-geração que repete a chamada quando nenhum post toca no tema.
+// ---------------------------------------------------------------------------
+
+const THEME_STOPWORDS = new Set([
+  "para", "sobre", "post", "posts", "semana", "este", "esta", "estes", "estas", "com", "sem",
+  "uma", "umas", "dos", "das", "nos", "nas", "pelo", "pela", "como", "mais", "menos", "nosso",
+  "nossa", "nossos", "nossas", "clinica", "cliente", "servico", "servicos", "consulta", "consultas",
+  "marcar", "marcacao", "marcacoes", "agendar", "hoje", "novo", "nova", "novos", "novas", "the", "and",
+  "for", "about", "this", "week", "that", "with", "from", "into",
+]);
+
+function normalizeText(s: string): string {
+  return s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+}
+
+/** Radicais (5 letras) das palavras do tema com ≥4 letras, sem stopwords —
+ *  «ginecologia» apanha «ginecológica» e «ginecologista». */
+function themeStems(theme: string): string[] {
+  return Array.from(
+    new Set(
+      normalizeText(theme)
+        .split(/[^a-z0-9]+/)
+        .filter((w) => w.length >= 4 && !THEME_STOPWORDS.has(w))
+        .map((w) => w.slice(0, 5)),
+    ),
+  );
+}
+
+function mentionsTheme(text: string, stems: string[]): boolean {
+  if (stems.length === 0) return true;
+  const t = normalizeText(text);
+  return stems.some((stem) => t.includes(stem));
+}
+
+/** Um post toca no tema quando o tema aparece na legenda, no raciocínio,
+ *  no prompt da imagem ou nas keywords escolhidas. */
+function postMentionsTheme(
+  post: { caption: string; reasoning: string; imagePrompt?: string; targetKeywords?: string[] },
+  stems: string[],
+): boolean {
+  return mentionsTheme(
+    [post.caption, post.reasoning, post.imagePrompt ?? "", ...(post.targetKeywords ?? [])].join(" "),
+    stems,
+  );
+}
+
+function themeBlockFor(theme: string, postCount: number): string {
+  if (!theme) return "";
+  return `\n## Theme / focus — MANDATORY for this batch\n${theme}\n\n**${postCount === 1 ? "The caption" : `All ${postCount} posts`} MUST be about this theme.** Do not drift to other services, even when the tracked keywords or the site audit emphasise them. Different posts = different angles on THIS theme.`;
+}
+
+/** Com tema, só as target keywords que lhe dizem respeito (por radical); sem
+ *  nenhuma que sirva, o bloco diz explicitamente para não forçar keywords —
+ *  é isto que impede «vasectomia lisboa» de aparecer num post de
+ *  ginecologia só porque tem mais volume. */
+function targetsBlockFor(
+  targets: { keyword: string; searchVolume?: number | null }[],
+  theme: string,
+): string {
+  if (targets.length === 0) return "";
+  const sorted = [...targets].sort((a, b) => (b.searchVolume ?? 0) - (a.searchVolume ?? 0));
+  const stems = themeStems(theme);
+  if (stems.length === 0) {
+    return `## Tracked target keywords (top 15 by volume)\n${sorted
+      .slice(0, 15)
+      .map((t) => `- ${t.keyword}`)
+      .join("\n")}`;
+  }
+  const onTheme = sorted.filter((t) => mentionsTheme(t.keyword, stems)).slice(0, 15);
+  if (onTheme.length === 0) {
+    return `## Tracked target keywords\n_None of the tracked keywords belong to the theme above. Do NOT force any tracked keyword into these posts — write them on the theme, with natural local phrasing instead._`;
+  }
+  return `## Tracked target keywords that belong to the theme\n${onTheme.map((t) => `- ${t.keyword}`).join("\n")}\n_(Other tracked keywords exist but are off-theme — do not use them.)_`;
+}
+
+function offThemeRetryDirective(theme: string): string {
+  return `## ⚠️ Your previous draft drifted OFF-THEME\nIt was about other services. Rewrite from scratch, STRICTLY about this theme and nothing else:\n${theme}\nDo not mention any other service. If no tracked keyword fits the theme, use none.`;
+}
+
 function buildPrompt(opts: {
   clientName: string;
   website: string | null;
@@ -932,21 +1049,17 @@ function buildPrompt(opts: {
   const onboardingBlock = opts.onboardingText
     ? `## Onboarding form excerpt\n\`\`\`\n${opts.onboardingText.slice(0, 2200)}${opts.onboardingText.length > 2200 ? "\n…[truncated]" : ""}\n\`\`\``
     : "";
-  const targetsBlock =
-    opts.targets.length > 0
-      ? `## Tracked target keywords (top 15 by volume)\n${[...opts.targets]
-          .sort((a, b) => (b.searchVolume ?? 0) - (a.searchVolume ?? 0))
-          .slice(0, 15)
-          .map((t) => `- ${t.keyword}`)
-          .join("\n")}`
-      : "";
+  const targetsBlock = targetsBlockFor(opts.targets, opts.theme);
   return [
     `# Generate ${opts.postCount} DIFFERENT GMB post(s) for **${opts.clientName}**`,
     `Type for this batch: **${opts.postType}**. Website: ${opts.website ?? "(none on file)"}.`,
-    // Site audit FIRST — Claude reads top-down, so this is what it sees
+    // Tema ANTES do audit (v77.29): é a ordem do consultor para este lote e
+    // manda sobre tudo o resto — o audit diz o que o negócio é, o tema diz
+    // sobre o que É este post.
+    themeBlockFor(opts.theme, opts.postCount),
+    // Site audit next — Claude reads top-down, so this is what it sees
     // before brief/onboarding/targets. Reinforces the absolute rule.
     opts.siteAuditBlock,
-    opts.theme ? `\n## Theme / focus\n${opts.theme}` : "",
     opts.details ? `\n## Hard facts that MUST appear literally\n${opts.details}` : "",
     opts.ctaUrlDefault
       ? `\n## Default CTA URL\n${opts.ctaUrlDefault}`
@@ -956,7 +1069,9 @@ function buildPrompt(opts: {
     targetsBlock,
     `\n## Rules`,
     `- **Read the Site Audit above first.** What the business does is determined by the audit, NOT by the brand name.`,
-    `- Produce ${opts.postCount} DIFFERENT posts (distinct angles, NOT variants of the same idea).`,
+    opts.theme
+      ? `- **Every post is about the Theme / focus above.** ${opts.postCount} DIFFERENT angles ON THAT THEME — never a different service. If a tracked keyword does not belong to the theme, leave it out.`
+      : `- Produce ${opts.postCount} DIFFERENT posts (distinct angles, NOT variants of the same idea).`,
     `- Each caption max 1500 characters, plain text, no markdown.`,
     `- Weave 1-2 target keywords per caption naturally — no stuffing.`,
     `- NEVER make medical claims, NEVER promise outcomes for YMYL clinics.`,
@@ -1215,6 +1330,8 @@ function clientFilesSystemPrompt(languageCode: string): string {
 - NEVER makes medical claims for YMYL clinics, NEVER promises outcomes;
 - ${languageInstructionFor(languageCode)}.
 
+**THEME RULE — when the user prompt has a "## Theme / focus" block, it is MANDATORY.** The caption is about THAT theme, connected to what the photo shows. Tracked target keywords are a tool, not a brief: use only the ones that belong to the theme, and none if none fit. A caption about another service — however high its keyword volume — is a failed caption.
+
 **ABSOLUTE RULE — read the Site Audit before writing.** The user prompt contains a "## Site audit" block describing what the business actually does. NEVER infer business type from the brand name. If the brief + onboarding + audit don't give you a confident read, write a SAFE generic local-business caption.
 
 Output STRICT JSON matching the schema. Caption MAX 1500 characters. No hashtags. No markdown.`;
@@ -1240,20 +1357,13 @@ function buildClientFilesPrompt(opts: {
   const onboardingBlock = opts.onboardingText
     ? `## Onboarding form excerpt\n\`\`\`\n${opts.onboardingText.slice(0, 2000)}${opts.onboardingText.length > 2000 ? "\n…[truncated]" : ""}\n\`\`\``
     : "";
-  const targetsBlock =
-    opts.targets.length > 0
-      ? `## Tracked target keywords (top 15 by volume)\n${[...opts.targets]
-          .sort((a, b) => (b.searchVolume ?? 0) - (a.searchVolume ?? 0))
-          .slice(0, 15)
-          .map((t) => `- ${t.keyword}`)
-          .join("\n")}`
-      : "";
+  const targetsBlock = targetsBlockFor(opts.targets, opts.theme);
   return [
     `# Write a GMB post caption for **${opts.clientName}**`,
     `Image (attached above): \`${opts.imageFilename}\` — this is a real photo from the client. Look at it.`,
     `This is post ${opts.postIndex + 1} of ${opts.totalPosts} in this batch. Default post type: **${opts.postType}** (you can change if the photo clearly suggests a different type).`,
     `Website: ${opts.website ?? "(none on file)"}.`,
-    opts.theme ? `\n## Theme / focus\n${opts.theme}` : "",
+    themeBlockFor(opts.theme, 1),
     opts.details ? `\n## Hard facts that MUST appear literally\n${opts.details}` : "",
     opts.ctaUrlDefault
       ? `\n## Default CTA URL\n${opts.ctaUrlDefault}`
@@ -1264,6 +1374,9 @@ function buildClientFilesPrompt(opts: {
     targetsBlock,
     `\n## Rules`,
     `- **Read the Site Audit first** before writing. Brand name is NEVER the source of truth — the audit is.`,
+    opts.theme
+      ? `- **The caption is about the Theme / focus above**, connected to what the photo shows — never a different service. If a tracked keyword does not belong to the theme, leave it out.`
+      : "",
     `- **Look at the image** and ground the caption in what's actually visible: who/what/where in the photo. The caption should make sense alongside this specific image.`,
     `- Caption max 1500 chars, plain text, no markdown.`,
     `- Weave 1–2 target keywords naturally — no stuffing.`,
