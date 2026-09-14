@@ -83,7 +83,9 @@ export async function listWorkspaceTools(): Promise<WorkspaceTool[]> {
   const hiddenSet = new Set(hidden);
   return [
     ...BUILTIN_WORKSPACE_TOOLS.filter((t) => !hiddenSet.has(t.id)),
-    ...custom,
+    // Uma app acrescentada na página que depois passou a ser de base (o
+    // Ahrefs, v77.31) ficava duas vezes no baralho com o mesmo id.
+    ...custom.filter((t) => !BUILTIN_IDS.has(t.id)),
   ];
 }
 

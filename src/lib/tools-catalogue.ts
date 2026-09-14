@@ -181,6 +181,19 @@ export const BUILTIN_WORKSPACE_TOOLS: WorkspaceTool[] = [
     aliases: ["Serp stat", "Keywords", "Volume de pesquisa"],
   },
   {
+    id: "ahrefs",
+    name: "Ahrefs",
+    category: "SEO",
+    description:
+      "SEO de referência para backlinks, keywords, auditorias ao site e análise da concorrência.",
+    url: "https://app.ahrefs.com/",
+    logo: "/tool-logos/ahrefs.png",
+    logoFit: "cover",
+    // O laranja da marca (o do mask-icon), não o azul do fundo do ícone.
+    accent: "#FF8D00",
+    aliases: ["A hrefs", "Site Explorer", "Backlinks", "Keywords Explorer"],
+  },
+  {
     id: "searchable",
     name: "Searchable",
     category: "GEO",

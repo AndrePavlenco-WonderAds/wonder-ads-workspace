@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.31",
+    date: "2026-09-14",
+    title: "Tools: Ahrefs no baralho",
+    highlights: [
+      "**🔗 Ahrefs.** Novo cartão SEO em /tools, ao lado do Serpstat, com o logótipo e o laranja da marca. Entra-se com a conta Google do SEO da Wonder Ads.",
+    ],
+  },
+  {
     version: "77.30",
     date: "2026-09-14",
     title: "Tools: os SuperAdmins acrescentam e removem apps diretamente na página",
