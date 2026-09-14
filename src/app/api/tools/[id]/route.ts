@@ -12,7 +12,7 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { getCurrentEmployee, isCurrentUserAdmin } from "@/lib/auth/server";
-import { getWorkspaceTool } from "@/lib/tools-catalogue";
+import { getWorkspaceToolById } from "@/lib/tools-catalogue-store";
 import {
   clearToolAccess,
   isHttpUrl,
@@ -36,7 +36,7 @@ async function guard(id: string): Promise<
       ),
     };
   }
-  if (!getWorkspaceTool(id)) {
+  if (!(await getWorkspaceToolById(id))) {
     return {
       ok: false,
       res: NextResponse.json(

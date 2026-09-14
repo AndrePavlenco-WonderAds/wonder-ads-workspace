@@ -3,12 +3,13 @@
 // Entra toda a gente com sessão (o item «Tools» vive no dropdown do nome,
 // no header) e para quase toda a gente a página é só de leitura: ver o
 // username, revelar a password, copiar. Só os SuperAdmins veem o lápis
-// no canto do cartão — e a API volta a verificar isso, porque esconder
-// um botão não protege nada.
+// no canto do cartão e o «Adicionar app» (e podem remover apps no modal
+// de edição) — e a API volta a verificar isso, porque esconder um botão
+// não protege nada.
 
 import { PageShell } from "@/components/page-shell";
 import { getCurrentEmployee, isCurrentUserAdmin } from "@/lib/auth/server";
-import { WORKSPACE_TOOLS } from "@/lib/tools-catalogue";
+import { listWorkspaceTools } from "@/lib/tools-catalogue-store";
 import {
   EMPTY_TOOL_ACCESS,
   listToolAccesses,
@@ -27,12 +28,13 @@ export default async function ToolsPage() {
   // O middleware já mandou quem não tem sessão para /login.
   if (!employee) return null;
 
-  const [accesses, canEdit] = await Promise.all([
+  const [tools, accesses, canEdit] = await Promise.all([
+    listWorkspaceTools(),
     listToolAccesses(),
     isCurrentUserAdmin(),
   ]);
 
-  const cards: ToolCard[] = WORKSPACE_TOOLS.map((tool) => ({
+  const cards: ToolCard[] = tools.map((tool) => ({
     ...tool,
     access: accesses[tool.id] ?? EMPTY_TOOL_ACCESS,
   }));

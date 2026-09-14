@@ -31,11 +31,15 @@ import {
   EyeOff,
   Loader2,
   Pencil,
+  Plus,
   Search,
   Trash2,
   X,
 } from "lucide-react";
-import type { WorkspaceTool } from "@/lib/tools-catalogue";
+import {
+  DEFAULT_TOOL_ACCENT,
+  type WorkspaceTool,
+} from "@/lib/tools-catalogue";
 import type { ToolAccess } from "@/lib/tools-access-store";
 import { formatDateTime } from "@/lib/dates";
 
@@ -92,6 +96,7 @@ export function ToolsDeck({
 }) {
   const [query, setQuery] = useState("");
   const [editing, setEditing] = useState<string | null>(null);
+  const [adding, setAdding] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const filtered = useMemo(() => {
@@ -140,9 +145,26 @@ export function ToolsDeck({
 
   return (
     <div>
-      <SearchBar ref={inputRef} value={query} onChange={setQuery} />
+      <div className="animate-fade-up flex flex-wrap items-center gap-3">
+        <SearchBar ref={inputRef} value={query} onChange={setQuery} />
+        {canEdit && (
+          <button
+            type="button"
+            onClick={() => setAdding(true)}
+            title="Adicionar uma app ao baralho"
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-amber-400/25 bg-amber-500/[0.10] px-4 py-3 text-[13px] font-semibold text-amber-100 transition hover:border-amber-300/50 hover:bg-amber-500/20"
+          >
+            <Plus className="h-4 w-4" />
+            Adicionar app
+          </button>
+        )}
+      </div>
 
-      {filtered.length === 0 ? (
+      {tools.length === 0 ? (
+        <div className="animate-fade-up mt-6 rounded-2xl border border-white/[0.08] bg-white/[0.02] px-6 py-14 text-center text-sm text-white/60">
+          Ainda não há ferramentas no baralho.
+        </div>
+      ) : filtered.length === 0 ? (
         <EmptyResults query={query} onClear={() => setQuery("")} />
       ) : (
         <Carousel
@@ -158,6 +180,8 @@ export function ToolsDeck({
           onClose={() => setEditing(null)}
         />
       )}
+
+      {adding && <AddToolModal onClose={() => setAdding(false)} />}
     </div>
   );
 }
@@ -176,8 +200,8 @@ function SearchBar({
   onChange: (v: string) => void;
 }) {
   return (
-    <div className="animate-fade-up">
-      <div className="relative w-full max-w-[760px]">
+    <div className="min-w-0 flex-1 basis-[320px] sm:max-w-[760px]">
+      <div className="relative w-full">
         <Search className="pointer-events-none absolute left-4 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-white/30" />
         <input
           ref={ref}
@@ -523,18 +547,7 @@ function ToolCardView({
                 style={{ background: tool.accent }}
               />
               <span className="relative flex h-[104px] w-[104px] items-center justify-center overflow-hidden rounded-[28px] bg-white/[0.07] ring-1 ring-white/15 shadow-[0_14px_34px_-12px_rgba(0,0,0,0.9)]">
-                <Image
-                  src={tool.logo}
-                  alt=""
-                  width={208}
-                  height={208}
-                  unoptimized
-                  className={
-                    tool.logoFit === "cover"
-                      ? "h-full w-full object-cover"
-                      : "h-full w-full object-contain p-4"
-                  }
-                />
+                <ToolLogo tool={tool} size={104} />
               </span>
             </span>
 
@@ -588,6 +601,46 @@ function ToolCardView({
         </div>
       </div>
     </article>
+  );
+}
+
+/** O logótipo dentro do azulejo. As apps acrescentadas sem ficheiro mostram
+ *  a inicial do nome sobre a cor da marca — um azulejo vazio parecia um
+ *  ícone partido. */
+function ToolLogo({
+  tool,
+  size,
+}: {
+  tool: Pick<WorkspaceTool, "name" | "logo" | "logoFit" | "accent">;
+  size: number;
+}) {
+  if (!tool.logo) {
+    return (
+      <span
+        aria-hidden
+        className="flex h-full w-full items-center justify-center font-bold text-white"
+        style={{
+          fontSize: Math.round(size * 0.42),
+          background: `linear-gradient(145deg, ${tool.accent}, ${tool.accent}88)`,
+        }}
+      >
+        {tool.name.trim().charAt(0).toUpperCase() || "?"}
+      </span>
+    );
+  }
+  return (
+    <Image
+      src={tool.logo}
+      alt=""
+      width={size * 2}
+      height={size * 2}
+      unoptimized
+      className={
+        tool.logoFit === "cover"
+          ? "h-full w-full object-cover"
+          : `h-full w-full object-contain ${size > 60 ? "p-4" : "p-1.5"}`
+      }
+    />
   );
 }
 
@@ -716,6 +769,8 @@ function EditAccessModal({
   const [saving, setSaving] = useState(false);
   const [clearing, setClearing] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
+  const [removing, setRemoving] = useState(false);
+  const [confirmRemove, setConfirmRemove] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
 
@@ -728,6 +783,30 @@ function EditAccessModal({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
+
+  async function removeApp() {
+    setError(null);
+    setRemoving(true);
+    try {
+      const res = await fetch(
+        `/api/tools/catalogue/${encodeURIComponent(tool.id)}`,
+        { method: "DELETE" },
+      );
+      if (!res.ok) {
+        const body = (await res.json().catch(() => null)) as {
+          error?: string;
+        } | null;
+        setError(body?.error ?? "Não foi possível remover a app.");
+        setRemoving(false);
+        return;
+      }
+      router.refresh();
+      onClose();
+    } catch {
+      setError("Sem ligação ao servidor.");
+      setRemoving(false);
+    }
+  }
 
   async function send(method: "PUT" | "DELETE") {
     setError(null);
@@ -783,7 +862,7 @@ function EditAccessModal({
     setClearing(false);
   }
 
-  const busy = saving || clearing;
+  const busy = saving || clearing || removing;
 
   const body = (
     <div
@@ -798,18 +877,7 @@ function EditAccessModal({
       <div className="animate-fade-up w-full max-w-md overflow-hidden rounded-2xl border border-white/12 bg-[color:var(--background)] shadow-[0_30px_90px_-20px_rgba(0,0,0,0.9)]">
         <div className="flex items-center gap-3 border-b border-white/8 px-5 py-4">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white/[0.07] ring-1 ring-white/15">
-            <Image
-              src={tool.logo}
-              alt=""
-              width={80}
-              height={80}
-              unoptimized
-              className={
-                tool.logoFit === "cover"
-                  ? "h-full w-full object-cover"
-                  : "h-full w-full object-contain p-1.5"
-              }
-            />
+            <ToolLogo tool={tool} size={40} />
           </span>
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold text-white">
@@ -940,6 +1008,51 @@ function EditAccessModal({
           {error && <p className="text-[12px] text-rose-300">{error}</p>}
         </div>
 
+        {/* Remover a app inteira — separado do «Limpar» das credenciais,
+            porque um apaga dois campos e o outro tira o cartão a todos. */}
+        <div className="flex items-center gap-3 border-t border-white/8 bg-rose-500/[0.03] px-5 py-3">
+          <p className="min-w-0 flex-1 text-[11px] leading-snug text-white/40">
+            {confirmRemove
+              ? "O cartão e as credenciais saem para toda a equipa."
+              : "Tirar esta app do baralho de toda a equipa."}
+          </p>
+          {confirmRemove ? (
+            <>
+              <button
+                type="button"
+                onClick={() => setConfirmRemove(false)}
+                disabled={busy}
+                className="shrink-0 rounded-full px-3 py-1.5 text-xs font-medium text-white/55 transition hover:text-white disabled:opacity-60"
+              >
+                Não
+              </button>
+              <button
+                type="button"
+                onClick={removeApp}
+                disabled={busy}
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-rose-400/40 bg-rose-500/15 px-3.5 py-1.5 text-xs font-semibold text-rose-100 transition hover:bg-rose-500/25 disabled:opacity-60"
+              >
+                {removing ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Trash2 className="h-3.5 w-3.5" />
+                )}
+                Remover app
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setConfirmRemove(true)}
+              disabled={busy}
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-white/12 px-3.5 py-1.5 text-xs font-medium text-white/55 transition hover:border-rose-400/40 hover:text-rose-200 disabled:opacity-60"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              Remover app
+            </button>
+          )}
+        </div>
+
         <div className="flex items-center gap-2 border-t border-white/8 px-5 py-4">
           {(tool.access.username || tool.access.password) &&
             (confirmClear ? (
@@ -990,6 +1103,320 @@ function EditAccessModal({
               Guardar
             </button>
           </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  if (!mounted) return null;
+  return createPortal(body, document.body);
+}
+
+/* ---------------------------------------------------------------------------
+   Adicionar app (só SuperAdmin)
+   --------------------------------------------------------------------------- */
+
+const FIELD_CLASS =
+  "mt-1.5 w-full rounded-xl border border-white/12 bg-white/[0.04] px-3.5 py-2.5 text-sm text-white/85 outline-none transition placeholder:text-white/25 focus:border-[color:var(--brand-purple)]/50 focus:bg-white/[0.07] focus:ring-2 focus:ring-[color:var(--brand-purple)]/15";
+
+function AddToolModal({ onClose }: { onClose: () => void }) {
+  const router = useRouter();
+  const [name, setName] = useState("");
+  const [category, setCategory] = useState("");
+  const [description, setDescription] = useState("");
+  const [url, setUrl] = useState("");
+  const [accent, setAccent] = useState(DEFAULT_TOOL_ACCENT);
+  const [logoFit, setLogoFit] = useState<"cover" | "contain">("cover");
+  const [aliases, setAliases] = useState("");
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape" && !saving) onClose();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose, saving]);
+
+  // A pré-visualização do ficheiro escolhido é um blob: local — liberta-se
+  // quando muda ou quando o modal fecha.
+  useEffect(() => {
+    if (!logoFile) {
+      setLogoPreview(null);
+      return;
+    }
+    const objectUrl = URL.createObjectURL(logoFile);
+    setLogoPreview(objectUrl);
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [logoFile]);
+
+  function pickLogo(file: File | null) {
+    setError(null);
+    if (file && file.size > 2 * 1024 * 1024) {
+      setError("O logótipo não pode passar de 2 MB.");
+      return;
+    }
+    setLogoFile(file);
+  }
+
+  async function save() {
+    setError(null);
+    if (!name.trim()) {
+      setError("A app precisa de um nome.");
+      return;
+    }
+    if (!/^https?:\/\/\S+$/i.test(url.trim())) {
+      setError("O link tem de ser um endereço completo, a começar por https://");
+      return;
+    }
+    setSaving(true);
+    try {
+      const form = new FormData();
+      form.set("name", name);
+      form.set("category", category);
+      form.set("description", description);
+      form.set("url", url.trim());
+      form.set("accent", accent);
+      form.set("logoFit", logoFit);
+      form.set("aliases", aliases);
+      if (logoFile) form.set("logo", logoFile);
+      const res = await fetch("/api/tools/catalogue", {
+        method: "POST",
+        body: form,
+      });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => null)) as {
+          error?: string;
+        } | null;
+        setError(body?.error ?? "Não foi possível adicionar a app.");
+        setSaving(false);
+        return;
+      }
+      router.refresh();
+      onClose();
+    } catch {
+      setError("Sem ligação ao servidor.");
+      setSaving(false);
+    }
+  }
+
+  const preview = {
+    name: name || "Nova app",
+    logo: logoPreview,
+    logoFit,
+    accent,
+  };
+
+  const body = (
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Adicionar app"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget && !saving) onClose();
+      }}
+    >
+      <div className="animate-fade-up flex max-h-[calc(100vh-2rem)] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-white/12 bg-[color:var(--background)] shadow-[0_30px_90px_-20px_rgba(0,0,0,0.9)]">
+        <div className="flex items-center gap-3 border-b border-white/8 px-5 py-4">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white/[0.07] ring-1 ring-white/15">
+            <ToolLogo tool={preview} size={40} />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold text-white">
+              {preview.name}
+            </p>
+            <p className="readout text-white/35">Adicionar app</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={saving}
+            aria-label="Fechar"
+            className="rounded-lg p-1.5 text-white/45 transition hover:bg-white/[0.07] hover:text-white disabled:opacity-40"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="space-y-4 overflow-y-auto px-5 py-5">
+          <div className="grid gap-4 sm:grid-cols-[1fr_160px]">
+            <label className="block">
+              <span className="readout text-white/35">Nome *</span>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                maxLength={60}
+                autoFocus
+                placeholder="ex.: Ahrefs"
+                className={FIELD_CLASS}
+              />
+            </label>
+            <label className="block">
+              <span className="readout text-white/35">Categoria</span>
+              <input
+                type="text"
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                maxLength={30}
+                placeholder="ex.: SEO"
+                className={FIELD_CLASS}
+              />
+            </label>
+          </div>
+
+          <label className="block">
+            <span className="readout text-white/35">Link *</span>
+            <input
+              type="url"
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              autoComplete="off"
+              spellCheck={false}
+              placeholder="https://"
+              className={FIELD_CLASS}
+            />
+          </label>
+
+          <label className="block">
+            <span className="readout text-white/35">Descrição</span>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              maxLength={160}
+              rows={2}
+              placeholder="10–15 palavras: o que a ferramenta faz."
+              className={`${FIELD_CLASS} resize-none`}
+            />
+          </label>
+
+          <div>
+            <span className="readout text-white/35">Logótipo</span>
+            <div className="mt-1.5 flex flex-wrap items-center gap-3">
+              <span className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white/[0.07] ring-1 ring-white/15">
+                <ToolLogo tool={preview} size={64} />
+              </span>
+              <div className="flex min-w-0 flex-1 flex-col gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-white/12 bg-white/[0.04] px-3.5 py-1.5 text-xs font-medium text-white/70 transition hover:border-[color:var(--brand-purple)]/50 hover:text-white">
+                    <Plus className="h-3.5 w-3.5" />
+                    {logoFile ? "Trocar ficheiro" : "Escolher ficheiro"}
+                    <input
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml"
+                      className="sr-only"
+                      onChange={(e) => pickLogo(e.target.files?.[0] ?? null)}
+                    />
+                  </label>
+                  {logoFile && (
+                    <button
+                      type="button"
+                      onClick={() => setLogoFile(null)}
+                      className="rounded-full px-2.5 py-1.5 text-xs text-white/45 transition hover:text-white"
+                    >
+                      Tirar
+                    </button>
+                  )}
+                </div>
+                <div
+                  role="radiogroup"
+                  aria-label="Ajuste do logótipo"
+                  className="inline-flex w-fit rounded-full border border-white/12 bg-white/[0.03] p-0.5 text-[11px]"
+                >
+                  {(
+                    [
+                      ["cover", "Ícone com fundo"],
+                      ["contain", "Transparente"],
+                    ] as const
+                  ).map(([value, label]) => (
+                    <button
+                      key={value}
+                      type="button"
+                      role="radio"
+                      aria-checked={logoFit === value}
+                      onClick={() => setLogoFit(value)}
+                      className={`rounded-full px-2.5 py-1 font-medium transition ${
+                        logoFit === value
+                          ? "bg-white/[0.12] text-white"
+                          : "text-white/45 hover:text-white/75"
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <span className="mt-1.5 block text-[11px] leading-snug text-white/35">
+              PNG, JPG, WebP, GIF ou SVG até 2 MB. Sem ficheiro, o cartão
+              mostra a inicial do nome.
+            </span>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-[120px_1fr]">
+            <label className="block">
+              <span className="readout text-white/35">Cor</span>
+              <span className="mt-1.5 flex items-center gap-2 rounded-xl border border-white/12 bg-white/[0.04] px-2.5 py-1.5">
+                <input
+                  type="color"
+                  value={accent}
+                  onChange={(e) => setAccent(e.target.value)}
+                  className="h-7 w-8 cursor-pointer rounded border-0 bg-transparent p-0"
+                />
+                <span className="font-mono text-xs uppercase text-white/55">
+                  {accent}
+                </span>
+              </span>
+            </label>
+            <label className="block">
+              <span className="readout text-white/35">Outros nomes</span>
+              <input
+                type="text"
+                value={aliases}
+                onChange={(e) => setAliases(e.target.value)}
+                placeholder="separados por vírgulas — entram na pesquisa"
+                className={FIELD_CLASS}
+              />
+            </label>
+          </div>
+
+          <p className="text-[11px] leading-relaxed text-white/35">
+            A app aparece a toda a equipa com sessão. Username e password
+            definem-se depois, no lápis do cartão.
+          </p>
+
+          {error && <p className="text-[12px] text-rose-300">{error}</p>}
+        </div>
+
+        <div className="flex items-center justify-end gap-2 border-t border-white/8 px-5 py-4">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={saving}
+            className="rounded-full px-3.5 py-2 text-xs font-medium text-white/55 transition hover:text-white disabled:opacity-60"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            onClick={save}
+            disabled={saving}
+            className="brand-gradient-bg inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
+          >
+            {saving ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Plus className="h-3.5 w-3.5" />
+            )}
+            Adicionar app
+          </button>
         </div>
       </div>
     </div>

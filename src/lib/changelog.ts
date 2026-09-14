@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.30",
+    date: "2026-09-14",
+    title: "Tools: os SuperAdmins acrescentam e removem apps diretamente na página",
+    highlights: [
+      "**➕ «Adicionar app».** Ao lado da pesquisa em /tools, só para SuperAdmins: nome, categoria, link, descrição, logótipo (upload até 2 MB, ou a inicial do nome sobre a cor escolhida), cor da marca e outros nomes para a pesquisa. A app entra no fim do baralho para toda a equipa; username e password definem-se depois no lápis do cartão.",
+      "**🗑️ «Remover app».** No modal de edição de cada cartão, com confirmação. Sai o cartão e as credenciais para toda a gente; o logótipo carregado é apagado do Blob.",
+      "**🔒 A API verifica SuperAdmin** em acrescentar e remover — o botão escondido é só cortesia, um consultor com a consola aberta leva 403.",
+      "**🧱 Catálogo em duas camadas.** As 12 apps de base continuam em código; o KV só guarda as acrescentadas e os ids das de base removidas. Nada a migrar, e uma app de base nova num deploy aparece sozinha.",
+    ],
+  },
+  {
     version: "77.29",
     date: "2026-09-11",
     title: "SEO DPT · GMB Posts: o tema pedido passa a mandar — acabou o post sobre vasectomia quando se pediu ginecologia",
