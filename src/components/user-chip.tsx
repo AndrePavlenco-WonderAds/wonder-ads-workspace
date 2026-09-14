@@ -79,6 +79,7 @@ export async function UserChip() {
       role={display.role}
       dept={display.dept}
       isAdmin={display.isAdmin}
+      isViewer={Boolean(display.viewerOf)}
       // Quem edita SEO tem o estúdio de Weekly Reports no menu. Segue a
       // pessoa que está a ser VISTA, como o resto do chip: com lente ativa,
       // o menu tem de parecer o dela.

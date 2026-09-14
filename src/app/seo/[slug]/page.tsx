@@ -244,7 +244,7 @@ export default async function ClientPage({
           </div>
         </div>
 
-        <ProjectSectionNav />
+        <ProjectSectionNav hideAccesses={Boolean(employee?.viewerOf)} />
       </section>
 
       <div className="animate-fade-up mt-10 sm:mt-14">
@@ -278,9 +278,13 @@ export default async function ClientPage({
         <SeoActions clientName={client.title} clientSlug={slug} />
       </section>
 
-      <section className="animate-fade-up mt-10 sm:mt-14">
-        <ClientAccesses slug={slug} clientName={client.title} />
-      </section>
+      {/* O cofre de acessos do cliente não é para perfis viewer — a API
+          recusa-lhes a leitura no middleware, e aqui nem se desenha. */}
+      {!employee?.viewerOf && (
+        <section className="animate-fade-up mt-10 sm:mt-14">
+          <ClientAccesses slug={slug} clientName={client.title} />
+        </section>
+      )}
     </PageShell>
     </SeoReadOnlyProvider>
   );

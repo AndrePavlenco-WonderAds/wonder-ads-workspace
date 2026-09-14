@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.32",
+    date: "2026-09-14",
+    title: "Perfis viewer: só leitura, um departamento — e a primeira conta, Gabi (SEO Specialty)",
+    highlights: [
+      "**👁️ Um perfil viewer por departamento.** SEO Specialty, ADS Specialty, Web Specialty e Commercial Specialty: a pessoa entra, vê o seu departamento e não altera nada. Todos os botões de edição e geração ficam escondidos, como já acontecia com os web designers no SEO.",
+      "**🔒 O portão vive no servidor.** O middleware recusa qualquer escrita a um viewer, em qualquer rota, e só lhe abre as páginas e as APIs de leitura do seu departamento. O seletor de departamentos, as Tools, as Medalhas, as Ausências, a Formação e o /admin levam-no de volta ao seu DPT.",
+      "**🗝️ Sem cofres.** Um viewer não vê as passwords das Tools nem os acessos dos clientes, e os «reveal» dos projetos Web ficam fechados.",
+      "**🙋 Gabi — SEO Specialty.** Primeira conta viewer (username `gabi`). Fica fora das atribuições de trabalho e das propostas.",
+    ],
+  },
+  {
     version: "77.31",
     date: "2026-09-14",
     title: "Tools: Ahrefs no baralho",

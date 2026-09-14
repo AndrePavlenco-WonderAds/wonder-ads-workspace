@@ -55,6 +55,37 @@ export type EmployeeCredential = {
    *  novo. Tirá-la de `EMPLOYEE_CREDENTIALS` fá-la-ia perder o login e
    *  transformaria o nome nos tickets antigos num username órfão. */
   assignable?: boolean;
+  /** PERFIL VIEWER (v77.32) — o único departamento que a pessoa VÊ, e onde
+   *  não mexe em nada. Quando está definido ganha a tudo o resto: `dept`
+   *  passa a ser só o rótulo do chip, `accessibleDepts` devolve apenas este
+   *  departamento e `editableDepts` devolve vazio.
+   *
+   *  O middleware faz o resto no servidor: recusa qualquer escrita, só abre
+   *  as páginas e as APIs de leitura deste departamento, e nunca os cofres de
+   *  credenciais (Tools, acessos dos clientes, «reveal» dos projetos Web).
+   *  O `role` destas linhas vem de `VIEWER_ROLES`. */
+  viewerOf?: DeptSlug;
+};
+
+/** Department slugs used across the workspace router. */
+export const DEPARTMENTS = ["seo", "ads", "web", "commercial"] as const;
+export type DeptSlug = (typeof DEPARTMENTS)[number];
+
+/** O título do perfil só de leitura de cada departamento. Uma linha com
+ *  `viewerOf: "seo"` leva `role: VIEWER_ROLES.seo`. */
+export const VIEWER_ROLES: Record<DeptSlug, string> = {
+  seo: "SEO Specialty",
+  ads: "ADS Specialty",
+  web: "Web Specialty",
+  commercial: "Commercial Specialty",
+};
+
+/** A forma mínima de uma linha que os cálculos de acesso precisam — serve
+ *  tanto a credencial como a vista que `getCurrentEmployee()` devolve. */
+type AccessRow = {
+  dept: string;
+  isAdmin?: boolean;
+  viewerOf?: DeptSlug | null;
 };
 
 export const EMPLOYEE_CREDENTIALS: EmployeeCredential[] = [
@@ -196,11 +227,24 @@ export const EMPLOYEE_CREDENTIALS: EmployeeCredential[] = [
     salt: "e6877b670567eb571892c306e349a3c6",
     hash: "cebf6a2effe99af74ffe71655f70d72fbd4d52ec369c9101168d0902b9e0567ebb9a916e1c282b33d4d6a9a1e27cf50d7867f6469fdb56ffcd3a8c8529d3c7e0",
   },
+  // Viewers — só leitura, um departamento (v77.32). Ver `viewerOf`.
+  {
+    // Gabi — SEO Specialty: vê o SEO DPT, não altera nada. Password gerada
+    // fora do repo e entregue ao André.
+    username: "gabi",
+    name: "Gabi",
+    fullName: "Gabi",
+    role: VIEWER_ROLES.seo,
+    dept: "SEO",
+    viewerOf: "seo",
+    // Não é consultora: fica fora das atribuições e das propostas.
+    assignable: false,
+    startedAt: "2026-09-14",
+    salt: "3ff0fac950513054fc4d32a0d2bb0d85",
+    hash: "b6b56cb6154be0f09e467b680807658f21aa3c48ac94c8762f1194ef8e5433cc417fc4d42e014f95c9f1175b273960ba7ff146bb472848be03ec53fce1390106",
+  },
 ];
 
-/** Department slugs used across the workspace router. */
-export const DEPARTMENTS = ["seo", "ads", "web", "commercial"] as const;
-export type DeptSlug = (typeof DEPARTMENTS)[number];
 
 /** Which department dashboards a credential row may open — VIEW access.
  *
@@ -220,10 +264,11 @@ export type DeptSlug = (typeof DEPARTMENTS)[number];
  *  subset of this. Web → SEO is view-only, so "seo" appears here but NOT
  *  in `editableDepts`. */
 export function accessibleDepts(
-  row: Pick<EmployeeCredential, "dept" | "isAdmin"> | null | undefined,
+  row: AccessRow | null | undefined,
 ): DeptSlug[] {
   if (!row) return [];
   if (row.isAdmin) return [...DEPARTMENTS];
+  if (row.viewerOf) return [row.viewerOf];
   switch (row.dept) {
     case "All":
     case "Founder":
@@ -252,10 +297,12 @@ export function accessibleDepts(
  *  for their own department). Enforced server-side in middleware (the
  *  write-gate) and used client-side to hide edit/generation controls. */
 export function editableDepts(
-  row: Pick<EmployeeCredential, "dept" | "isAdmin"> | null | undefined,
+  row: AccessRow | null | undefined,
 ): DeptSlug[] {
   if (!row) return [];
   if (row.isAdmin) return [...DEPARTMENTS];
+  // Viewer: vê um departamento, não edita nenhum.
+  if (row.viewerOf) return [];
   switch (row.dept) {
     case "All":
     case "Founder":
@@ -320,9 +367,10 @@ export function canEditDept(
  *  os componentes "use client" o possam importar sem puxar esta tabela de
  *  hashes para o bundle. */
 export function webDeliveryRights(
-  row: Pick<EmployeeCredential, "dept" | "isAdmin"> | null | undefined,
+  row: AccessRow | null | undefined,
 ): WebDeliveryRights {
   if (!row) return { canSet: false, canOverride: false };
+  if (row.viewerOf && !row.isAdmin) return { canSet: false, canOverride: false };
   const admin = Boolean(row.isAdmin);
   return {
     canSet: admin || row.dept === "Web",
@@ -341,7 +389,7 @@ export function getWebAssignees(): {
   photo?: string;
 }[] {
   return EMPLOYEE_CREDENTIALS.filter(
-    (c) => c.dept === "Web" && c.assignable !== false,
+    (c) => c.dept === "Web" && c.assignable !== false && !c.viewerOf,
   ).map((c) => ({
     username: c.username,
     name: c.name,
@@ -427,6 +475,7 @@ export function getEmployeeDisplay(username: string): {
   role: string;
   dept: string;
   isAdmin: boolean;
+  viewerOf: DeptSlug | null;
 } | null {
   const row = findEmployeeByUsername(username);
   return row
@@ -435,8 +484,21 @@ export function getEmployeeDisplay(username: string): {
         role: row.role,
         dept: row.dept,
         isAdmin: Boolean(row.isAdmin),
+        viewerOf: row.viewerOf ?? null,
       }
     : null;
+}
+
+/** O departamento que um viewer pode ver, ou null para toda a gente que não
+ *  é viewer. SuperAdmin nunca é viewer, mesmo que alguém ponha os dois
+ *  campos na mesma linha. Edge-safe — o middleware usa-a. */
+export function viewerDeptOf(
+  username: string | null | undefined,
+): DeptSlug | null {
+  if (!username) return null;
+  const row = findEmployeeByUsername(username);
+  if (!row || row.isAdmin) return null;
+  return row.viewerOf ?? null;
 }
 
 /** Toda a gente que um SuperAdmin pode espreitar no «Ver como» — só os

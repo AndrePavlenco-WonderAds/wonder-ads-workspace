@@ -11,8 +11,16 @@ const SECTIONS = [
 ];
 
 /** Numbered section nav for a project page — highlights the section in view
- *  and smooth-scrolls to a section on click. */
-export function ProjectSectionNav() {
+ *  and smooth-scrolls to a section on click. `hideAccesses` tira o «05» a
+ *  quem não vê o cofre de acessos (perfis viewer). */
+export function ProjectSectionNav({
+  hideAccesses = false,
+}: {
+  hideAccesses?: boolean;
+}) {
+  const sections = hideAccesses
+    ? SECTIONS.filter((s) => s.id !== "section-accesses")
+    : SECTIONS;
   const [active, setActive] = useState(SECTIONS[0].id);
 
   useEffect(() => {
@@ -47,7 +55,7 @@ export function ProjectSectionNav() {
       aria-label="Project sections"
       className="flex flex-col gap-2 sm:items-end"
     >
-      {SECTIONS.map((s) => {
+      {sections.map((s) => {
         const isActive = active === s.id;
         return (
           <button

@@ -33,6 +33,7 @@ import {
 import {
   getEmployeeDisplay,
   isAdminUsername,
+  type DeptSlug,
   type EmployeeCredential,
 } from "./credentials";
 
@@ -44,7 +45,11 @@ export async function getCurrentSession(): Promise<SessionPayload | null> {
 type EmployeeView = Pick<
   EmployeeCredential,
   "username" | "name" | "role" | "dept"
-> & { isAdmin: boolean };
+> & {
+  isAdmin: boolean;
+  /** Perfil viewer: o único departamento que vê. null para os restantes. */
+  viewerOf: DeptSlug | null;
+};
 
 function toView(username: string | null): EmployeeView | null {
   if (!username) return null;

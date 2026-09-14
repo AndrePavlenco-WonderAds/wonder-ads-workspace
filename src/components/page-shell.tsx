@@ -8,7 +8,7 @@ import { NotificationsBell } from "./notifications/notifications-bell";
 import { HeaderMedals } from "./medals/header-medals";
 import { UserChip } from "./user-chip";
 import { ImpersonationBanner } from "./impersonation-banner";
-import { getImpersonation } from "@/lib/auth/server";
+import { getCurrentEmployee, getImpersonation } from "@/lib/auth/server";
 import { getCurrentVersion } from "@/lib/changelog";
 
 /** O sino antes de o servidor saber quantos lembretes há. Mesma caixa, mesmo
@@ -66,6 +66,12 @@ export async function PageShell({
   // Fica aqui (e não dentro da faixa) porque o shell também precisa dele
   // para abrir a margem em baixo e a faixa não tapar o rodapé.
   const impersonation = await getImpersonation().catch(() => null);
+  // Perfil viewer: header e rodapé sem as portas que ele não pode abrir
+  // (medalhas, lembretes, SuperAdmin, changelog). O middleware fecha-as de
+  // qualquer forma; isto é para não as oferecer.
+  const isViewer = Boolean(
+    (await getCurrentEmployee().catch(() => null))?.viewerOf,
+  );
   return (
     <div
       className={`relative min-h-screen overflow-hidden bg-[color:var(--background)] text-[color:var(--foreground)] ${
@@ -106,17 +112,21 @@ export async function PageShell({
           {/* Medalhas — até três, entre a hora e o sino (v77.25). Lê as
               propostas em KV, por isso em Suspense sem esqueleto: aparecem
               quando chegam e a página nunca espera por elas. */}
-          <Suspense fallback={null}>
-            <HeaderMedals />
-          </Suspense>
+          {!isViewer && (
+            <Suspense fallback={null}>
+              <HeaderMedals />
+            </Suspense>
+          )}
           {/* Lembretes em aberto — ao lado do nome, porque é aí que se olha
               quando se chega ao workspace. Também renderiza null sem sessão.
               Em Suspense: o sino lê KV (e, para quem tem carteira, a lista de
               clientes) e nenhuma página do workspace pode ficar à espera do
               header para começar a desenhar. */}
-          <Suspense fallback={<BellSkeleton />}>
-            <NotificationsBell />
-          </Suspense>
+          {!isViewer && (
+            <Suspense fallback={<BellSkeleton />}>
+              <NotificationsBell />
+            </Suspense>
+          )}
           {/* Identity + session controls — server component, renders
               null when there's no valid session (e.g. on /login). */}
           <UserChip />
@@ -131,6 +141,8 @@ export async function PageShell({
         {!hideFooter && (
         <footer className="mt-16 flex flex-wrap items-center justify-between gap-x-5 gap-y-2 text-xs text-white/40 sm:mt-20">
           <span>© {new Date().getFullYear()} Wonder Ads. All Rights Reserved.</span>
+          {!isViewer && (
+          <>
           <Link
             href="/admin"
             className="group inline-flex items-center gap-1.5 rounded-md border border-[#783DF5]/45 bg-[#783DF5]/10 px-2.5 py-1 text-[11px] font-semibold tracking-tight text-white/90 shadow-[0_4px_18px_-6px_rgba(120,61,245,0.55)] transition hover:border-[#C535C9]/70 hover:bg-[#783DF5]/18 hover:text-white"
@@ -149,6 +161,8 @@ export async function PageShell({
           >
             workspace.v{version}
           </Link>
+          </>
+          )}
         </footer>
         )}
       </main>

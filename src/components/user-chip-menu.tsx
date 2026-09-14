@@ -107,6 +107,7 @@ export function UserChipMenu({
   role,
   dept,
   isAdmin = false,
+  isViewer = false,
   canWeeklyReports = false,
   expiresLabel,
   canImpersonate = false,
@@ -122,6 +123,9 @@ export function UserChipMenu({
   dept: string;
   /** SuperAdmin (Andre / Alex / Alice) — vê a área de Superadmin da Formação. */
   isAdmin?: boolean;
+  /** Perfil viewer (só leitura, um departamento) — o menu fica só com o
+   *  logout: Tools, Medalhas, Ausências e Formação estão fechadas a ele. */
+  isViewer?: boolean;
   /** Quem edita SEO vê o estúdio de Weekly Reports no menu. */
   canWeeklyReports?: boolean;
   /** Pre-formatted "X days" / "Yh" — server picks the granularity. */
@@ -292,6 +296,8 @@ export function UserChipMenu({
               SemRush, Figma…). Para TODA a gente com sessão: a página é de
               leitura e só o SuperAdmin vê o lápis de editar. Em 1.º lugar a
               pedido do André — é o item do menu que se abre mais vezes. */}
+          {!isViewer && (
+          <>
           <Link
             href="/tools"
             role="menuitem"
@@ -313,6 +319,8 @@ export function UserChipMenu({
             <Medal className="h-3.5 w-3.5 text-[color:var(--brand-purple)]" />
             Medalhas
           </Link>
+          </>
+          )}
           {/* Ver como — só para quem fez login como SuperAdmin. Dois cliques
               até à lista, três até estar na pele de alguém. */}
           {canImpersonate && (
@@ -395,6 +403,7 @@ export function UserChipMenu({
           )}
           {/* Pedir Ausência — para TODA a gente com sessão: a folha de RH e
               o histórico dos próprios pedidos vivem em /ausencias. */}
+          {!isViewer && (
           <Link
             href="/ausencias"
             role="menuitem"
@@ -404,6 +413,7 @@ export function UserChipMenu({
             <CalendarOff className="h-3.5 w-3.5 text-[color:var(--brand-purple)]" />
             Pedir Ausência
           </Link>
+          )}
           {/* Registar Falta — só o C-Level. A rota vive sob /admin, por isso o
               gate verdadeiro é o layout (isAdmin) e a API volta a verificar;
               esconder aqui é só para o menu de um consultor não oferecer uma
@@ -423,6 +433,7 @@ export function UserChipMenu({
               Superadmin só aparece aos SuperAdmins; a rota está protegida no
               servidor de qualquer forma (o layout de /formacao/admin verifica
               isAdmin, e cada rota da API volta a verificar). */}
+          {!isViewer && (
           <Link
             href="/formacao"
             role="menuitem"
@@ -432,6 +443,7 @@ export function UserChipMenu({
             <GraduationCap className="h-3.5 w-3.5 text-[color:var(--brand-purple)]" />
             Formação
           </Link>
+          )}
           {isAdmin && (
             <Link
               href="/formacao/admin"
