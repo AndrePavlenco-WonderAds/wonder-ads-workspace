@@ -17,7 +17,7 @@ import { getClientLogo } from "@/lib/client-meta";
 import {
   getConsultantEmailForSlug,
   getConsultantForSlug,
-} from "@/lib/client-overrides";
+} from "@/lib/consultant-assignments";
 import {
   getHistoryEntry,
   formatDisplayResultId,
@@ -55,8 +55,8 @@ export default async function PublicActionPreviewPage({
   const analysisText = wrapJsonLdBlocks(extractAnalysis(history.output));
 
   const logo = getClientLogo(slug);
-  const consultantEmail = getConsultantEmailForSlug(slug);
-  const consultantName = getConsultantForSlug(slug);
+  const consultantEmail = await getConsultantEmailForSlug(slug);
+  const consultantName = await getConsultantForSlug(slug);
   const lang = pickLang(slug);
 
   // Footer phrasing — same helpers used by the meta-tags / gmb / pending-

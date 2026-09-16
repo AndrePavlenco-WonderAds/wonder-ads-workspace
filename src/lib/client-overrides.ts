@@ -71,58 +71,38 @@ const JOAO_B = new Set([
 // IHN → Manuel; White Clinic + Spine Center + CDT → André Pereira;
 // Monte Mar + Fisio Restelo → Fran. A coluna dela desapareceu do board.
 
-/** Returns the Head Consultant for a given client slug. */
-export function getConsultantForSlug(slug: string): string {
+/** Os consultores de SEO que podem ter carteira — nome de exibição (tem de
+ *  bater com as colunas da board e com `name` nas credenciais) + email de
+ *  trabalho. A ordem é a das colunas da board. */
+export const SEO_CONSULTANTS = [
+  { name: "Fran. Rosa", email: "fran@wonder-ads.com" },
+  { name: "Manuel Silva", email: "manuel@wonder-ads.com" },
+  { name: "André Pereira", email: "andre.pereira@wonder-ads.com" },
+  { name: "João B.", email: "joao.batista@wonder-ads.com" },
+] as const;
+
+/** Display order used for grouping client cards into columns. */
+export const CONSULTANT_ORDER = SEO_CONSULTANTS.map((c) => c.name);
+
+/** O email de trabalho de um consultor pelo nome; seo@ para quem não é
+ *  consultor de SEO conhecido (ou "Unassigned"). */
+export function consultantEmailByName(name: string | null | undefined): string {
+  return (
+    SEO_CONSULTANTS.find((c) => c.name === name)?.email ?? "seo@wonder-ads.com"
+  );
+}
+
+/** A carteira ESCRITA EM CÓDIGO (os Sets acima) — sem as migrações feitas
+ *  pelo SuperAdmin na board (v77.34), que vivem no KV.
+ *
+ *  ⚠️ Não usar para mostrar o consultor de um cliente: isso é o
+ *  `getConsultantForSlug` de `@/lib/consultant-assignments`, que aplica as
+ *  migrações por cima destes defaults. Isto só serve a quem não pode ler o
+ *  KV (a cache da Notion, que é re-resolvida à saída de qualquer forma). */
+export function defaultConsultantForSlug(slug: string): string {
   if (MANUEL.has(slug)) return "Manuel Silva";
   if (FRAN_R.has(slug)) return "Fran. Rosa";
   if (ANDRE_PEREIRA.has(slug)) return "André Pereira";
   if (JOAO_B.has(slug)) return "João B.";
   return "Unassigned";
 }
-
-/** O consultor em vigor para um cliente, com rede para os que ainda não
- *  estão neste ficheiro.
- *
- *  PORQUE EXISTE (v76.47): a board e o motor de notificações resolviam o
- *  consultor SÓ pelo slug, de propósito — `getSeoClients()` está em cache de
- *  1 hora, e confiar no campo `consultant` dela fazia um cliente que mudou de
- *  mãos apontar à pessoa errada durante esse tempo.
- *
- *  Só que um cliente que entra pelo ONBOARDING não está aqui: o slug dele
- *  nasce quando o SuperAdmin cria o link, e a atribuição vive no registo de
- *  onboarding. Resolver só pelo slug devolvia "Unassigned" — e como as
- *  colunas da board são as do `CONSULTANT_ORDER`, o cliente não aparecia em
- *  coluna NENHUMA. Ficava invisível no departamento até alguém se lembrar de
- *  o acrescentar a este ficheiro e fazer deploy.
- *
- *  A ordem resolve as duas coisas: quem está aqui manda sempre (uma passagem
- *  de carteira escrita em código continua a ganhar à cache), e quem não está
- *  usa a atribuição que veio com ele. */
-export function resolveConsultant(
-  slug: string,
-  fallback: string | null | undefined,
-): string {
-  const known = getConsultantForSlug(slug);
-  if (known !== "Unassigned") return known;
-  const f = typeof fallback === "string" ? fallback.trim() : "";
-  return f || "Unassigned";
-}
-
-/** Returns the work email of the Head Consultant for a given client slug.
- *  Used on PDF/DOCX deliverables so replies land in the inbox of the
- *  consultant actually managing the project (not the shared seo@ alias). */
-export function getConsultantEmailForSlug(slug: string): string {
-  if (MANUEL.has(slug)) return "manuel@wonder-ads.com";
-  if (FRAN_R.has(slug)) return "fran@wonder-ads.com";
-  if (ANDRE_PEREIRA.has(slug)) return "andre.pereira@wonder-ads.com";
-  if (JOAO_B.has(slug)) return "joao.batista@wonder-ads.com";
-  return "seo@wonder-ads.com";
-}
-
-/** Display order used for grouping client cards into columns. */
-export const CONSULTANT_ORDER = [
-  "Fran. Rosa",
-  "Manuel Silva",
-  "André Pereira",
-  "João B.",
-] as const;

@@ -21,8 +21,12 @@ import {
   type RoadmapStatus,
   type RoadmapPillar,
 } from "./roadmap-store";
-import { getConsultantForSlug, CONSULTANT_ORDER } from "./client-overrides";
-import { EXCLUDED_SLUGS } from "./client-overrides";
+import {
+  CONSULTANT_ORDER,
+  EXCLUDED_SLUGS,
+  consultantEmailByName,
+} from "./client-overrides";
+import { getConsultantResolver } from "./consultant-assignments";
 import { getPausedSlugSet } from "./admin-paused-clients-store";
 import { getSeoClients } from "./notion";
 
@@ -103,12 +107,12 @@ export type RoadmapAdminSummary = {
   notionUnavailable: boolean;
 };
 
-const EMAIL_BY_CONSULTANT: Record<string, string> = {
-  "Fran. Rosa": "fran@wonder-ads.com",
-  "Manuel Silva": "manuel@wonder-ads.com",
-  "André Pereira": "andre.pereira@wonder-ads.com",
-  "João B.": "joao.batista@wonder-ads.com",
-};
+/** Email de um consultor de SEO conhecido, ou null. */
+function emailForConsultant(name: string): string | null {
+  return (CONSULTANT_ORDER as readonly string[]).includes(name)
+    ? consultantEmailByName(name)
+    : null;
+}
 
 function classifyHealth(
   hasRoadmap: boolean,
@@ -253,8 +257,9 @@ export async function getRoadmapAdminSummary(
   // Group by consultant (live re-resolution from slug — never trust a
   // cached `consultant` field per the v74.x cached-rename trap).
   const byConsultant = new Map<string, ConsultantClientRow[]>();
+  const consultants = await getConsultantResolver();
   for (const r of rows) {
-    const consultant = getConsultantForSlug(r.slug);
+    const consultant = consultants.consultantFor(r.slug);
     const bucket = byConsultant.get(consultant) ?? [];
     bucket.push(r);
     byConsultant.set(consultant, bucket);
@@ -311,7 +316,7 @@ export async function getRoadmapAdminSummary(
         : 0;
     sections.push({
       consultant,
-      email: EMAIL_BY_CONSULTANT[consultant] ?? null,
+      email: emailForConsultant(consultant),
       clients,
       withRoadmap,
       totalDone,
@@ -410,6 +415,7 @@ export async function getConsultantWeekView(
   let seoClients: { slug: string; title: string }[] = [];
   let notionUnavailable = false;
   const paused = await pausedSet();
+  const consultants = await getConsultantResolver();
   try {
     const fetched = await getSeoClients();
     seoClients = fetched
@@ -417,7 +423,7 @@ export async function getConsultantWeekView(
         (c) =>
           !EXCLUDED_SLUGS.has(c.slug) &&
           !paused.has(c.slug) &&
-          getConsultantForSlug(c.slug) === consultantName,
+          consultants.resolve(c.slug, c.consultant) === consultantName,
       )
       .map((c) => ({ slug: c.slug, title: c.title }));
   } catch {
@@ -501,7 +507,7 @@ export async function getConsultantWeekView(
 
   return {
     consultant: consultantName,
-    email: EMAIL_BY_CONSULTANT[consultantName] ?? null,
+    email: emailForConsultant(consultantName),
     clients,
     totals: {
       clients: clients.length,

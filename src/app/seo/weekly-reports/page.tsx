@@ -22,7 +22,7 @@ import { WeeklyReportStudio } from "@/components/weekly-report-studio";
 import { getCurrentEmployee } from "@/lib/auth/server";
 import { editableDepts } from "@/lib/auth/credentials";
 import { getSeoClients } from "@/lib/notion";
-import { resolveConsultant } from "@/lib/client-overrides";
+import { getConsultantResolver } from "@/lib/consultant-assignments";
 import { weekdayBlocks } from "@/lib/seo-tools/daily-updates";
 
 export const dynamic = "force-dynamic";
@@ -40,8 +40,9 @@ export default async function WeeklyReportsPage() {
   // A carteira do consultor é o contrato da página: um cartão de mensagem por
   // cliente dela, sempre. Resolve-se por resolveConsultant e não pelo campo em
   // cache — uma passagem de carteira em código ganha à cache de 1 hora.
+  const consultants = await getConsultantResolver();
   const portfolio = (await getSeoClients().catch(() => []))
-    .filter((c) => resolveConsultant(c.slug, c.consultant) === employee.name)
+    .filter((c) => consultants.resolve(c.slug, c.consultant) === employee.name)
     .map((c) => ({ slug: c.slug, title: c.title }));
 
   const days = weekdayBlocks(new Date());

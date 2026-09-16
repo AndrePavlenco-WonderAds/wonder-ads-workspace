@@ -5,6 +5,7 @@
 // dropped on read rather than deleted, so the format can evolve safely.
 
 import { kv } from "@vercel/kv";
+import { getConsultantResolver } from "@/lib/consultant-assignments";
 import {
   REPORT_SCHEMA_VERSION,
   type MonthlyReportSnapshot,
@@ -40,7 +41,10 @@ export async function getReport(
   try {
     const snap = await kv.get<MonthlyReportSnapshot>(snapKey(slug, period));
     if (!snap || snap.schemaVersion !== REPORT_SCHEMA_VERSION) return null;
-    return snap;
+    // O consultor gravado é o de quando o relatório foi gerado. Depois de
+    // uma migração de carteira (v77.34) o relatório — página, pré-visualização
+    // pública e rodapé — tem de mostrar quem acompanha o cliente hoje.
+    return { ...snap, consultant: await liveReportConsultant(slug) };
   } catch (err) {
     console.error("KV report read failed:", err);
     return null;
@@ -122,4 +126,16 @@ export async function deleteReport(
   } catch (err) {
     console.error("KV report delete failed:", err);
   }
+}
+
+/** O consultor que assina o relatório — com as migrações de carteira
+ *  aplicadas (v77.34). Usado ao gerar e ao ler um relatório gravado. */
+export async function liveReportConsultant(
+  slug: string,
+): Promise<{ name: string; email: string }> {
+  const consultants = await getConsultantResolver();
+  return {
+    name: consultants.consultantFor(slug),
+    email: consultants.emailFor(slug),
+  };
 }

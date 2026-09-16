@@ -28,7 +28,7 @@ import { SeoReadOnlyProvider, ReadOnlyBanner } from "@/components/seo-readonly";
 import {
   getConsultantForSlug,
   getConsultantEmailForSlug,
-} from "@/lib/client-overrides";
+} from "@/lib/consultant-assignments";
 import { formatDate, formatDateLong } from "@/lib/dates";
 import { listTargetKeywords } from "@/lib/target-keywords-store";
 
@@ -102,8 +102,8 @@ export default async function ResultPage({
         generatedDate={
           existing ? formatDateLong(existing.createdAt) : formatDateLong(new Date())
         }
-        consultant={getConsultantForSlug(slug)}
-        consultantEmail={getConsultantEmailForSlug(slug)}
+        consultant={await getConsultantForSlug(slug)}
+        consultantEmail={await getConsultantEmailForSlug(slug)}
         analysisText={analysisText}
         metrics={existing?.metrics ?? null}
         vitals={existing?.vitals ?? null}

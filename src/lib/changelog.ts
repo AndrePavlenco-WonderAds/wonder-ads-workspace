@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.34",
+    date: "2026-09-16",
+    title: "SEO DPT: migrar um cliente para outro consultor, e o favicon passa a ser a borboleta",
+    highlights: [
+      "**🔀 Migrar cliente.** Nos cartões da board do SEO, ao lado do botão de pausa, os SuperAdmins têm um novo botão ⇄: escolhe-se o consultor de destino e o cliente muda de coluna na hora.",
+      "**🌐 Muda em todo o lado.** O novo consultor passa a aparecer nos roadmaps e weekly reports, nos rodapés «Dúvidas? Envia email a…» das páginas públicas (roadmap, brief, target keywords, meta tags, GMB posts, pending review, inquérito NPS), nos PDFs/DOCX, no relatório mensal (incluindo os já gerados), no onboarding e na página pública da proposta. A linha SEO em /admin/clients e o registo de onboarding também são atualizados.",
+      "**🏆 O pódio comercial não mexe.** O mérito de uma proposta fechada continua de quem a fechou: migrar um cliente não altera o pódio nem dispara medalhas.",
+      "**🦋 Favicon novo.** O separador do browser (e o ícone no ecrã inicial do iPhone) mostra agora a borboleta da Wonder Ads.",
+    ],
+  },
+  {
     version: "77.33",
     date: "2026-09-16",
     title: "Web DPT: o cartão mostra a entrega dos ajustes, e os comentários levam anexos",

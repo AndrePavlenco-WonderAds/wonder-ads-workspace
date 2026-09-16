@@ -22,7 +22,7 @@ import { NextResponse } from "next/server";
 import { getCurrentEmployee } from "@/lib/auth/server";
 import { editableDepts } from "@/lib/auth/credentials";
 import { getSeoClients } from "@/lib/notion";
-import { resolveConsultant } from "@/lib/client-overrides";
+import { getConsultantResolver } from "@/lib/consultant-assignments";
 import { buildWeeklyPlan } from "@/lib/seo-tools/weekly-plan";
 import type { DailyBlock } from "@/lib/seo-tools/daily-updates";
 
@@ -72,10 +72,11 @@ export async function POST(req: Request) {
     );
   }
 
+  const consultants = await getConsultantResolver();
   const roster = (await getSeoClients().catch(() => [])).map((c) => ({
     slug: c.slug,
     title: c.title,
-    consultant: resolveConsultant(c.slug, c.consultant),
+    consultant: consultants.resolve(c.slug, c.consultant),
   }));
   const portfolio = roster.filter((c) => c.consultant === employee.name);
   const all = await buildWeeklyPlan(blocks, roster, portfolio, employee.name);

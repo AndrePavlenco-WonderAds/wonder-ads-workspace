@@ -8,9 +8,10 @@
 
 import { EMPLOYEE_CREDENTIALS } from "@/lib/auth/credentials";
 import {
-  getConsultantEmailForSlug,
-  getConsultantForSlug,
+  consultantEmailByName,
+  defaultConsultantForSlug,
 } from "@/lib/client-overrides";
+import type { ConsultantResolver } from "@/lib/consultant-assignments";
 import { getTeamAvatar } from "@/lib/team-avatars";
 
 export type ProposalConsultant = {
@@ -62,12 +63,22 @@ export function findUsernameByEmail(email: string | null | undefined): string | 
   return hit ? hit[0] : null;
 }
 
-export function resolveProposalConsultant(input: {
-  clientSlug: string | null;
-  consultant: string;
-  consultantUsername?: string | null;
-}): ProposalConsultant {
-  const fromSlug = input.clientSlug ? getConsultantForSlug(input.clientSlug) : "Unassigned";
+/** `live` — o resolvedor com as migrações de carteira (v77.34). A página
+ *  pública da proposta passa-o: o contacto que o cliente vê é o consultor
+ *  que o acompanha HOJE. O Comercial, o pódio e as medalhas NÃO o passam, de
+ *  propósito: o mérito de uma proposta fechada é de quem a fechou, e migrar
+ *  um cliente na board do SEO não pode mexer no pódio nem disparar medalhas
+ *  no #team-wins. */
+export function resolveProposalConsultant(
+  input: {
+    clientSlug: string | null;
+    consultant: string;
+    consultantUsername?: string | null;
+  },
+  live?: ConsultantResolver,
+): ProposalConsultant {
+  const consultantFor = live?.consultantFor ?? defaultConsultantForSlug;
+  const fromSlug = input.clientSlug ? consultantFor(input.clientSlug) : "Unassigned";
   const byUsername = input.consultantUsername
     ? EMPLOYEE_CREDENTIALS.find((c) => c.username === input.consultantUsername) ?? null
     : null;
@@ -79,7 +90,7 @@ export function resolveProposalConsultant(input: {
   const username = row?.username ?? null;
   const email =
     input.clientSlug && fromSlug !== "Unassigned"
-      ? getConsultantEmailForSlug(input.clientSlug)
+      ? consultantEmailByName(fromSlug)
       : (username && EMAIL_BY_USERNAME[username]) || "info@wonder-ads.com";
   return {
     name,

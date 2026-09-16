@@ -9,7 +9,7 @@ import { getClientLogo } from "@/lib/client-meta";
 import {
   getConsultantEmailForSlug,
   getConsultantForSlug,
-} from "@/lib/client-overrides";
+} from "@/lib/consultant-assignments";
 import { getBriefForSlug } from "@/lib/briefs-storage";
 import { briefToMarkdown } from "@/lib/brief-to-markdown";
 import { formatDate } from "@/lib/dates";
@@ -35,8 +35,8 @@ export default async function PublicBriefPreviewPage({
   const analysisText = briefToMarkdown(brief, lang);
 
   const logo = getClientLogo(slug);
-  const consultantEmail = getConsultantEmailForSlug(slug);
-  const consultantName = getConsultantForSlug(slug);
+  const consultantEmail = await getConsultantEmailForSlug(slug);
+  const consultantName = await getConsultantForSlug(slug);
   const actionLabel = lang === "pt" ? "Brief do Cliente" : "Client Brief";
 
   const footerQuestionsHtml = t(lang, "footerQuestions", {

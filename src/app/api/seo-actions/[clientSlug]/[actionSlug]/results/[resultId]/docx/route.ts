@@ -23,7 +23,7 @@ import { wrapJsonLdBlocks } from "@/lib/jsonld-script";
 import {
   getConsultantForSlug,
   getConsultantEmailForSlug,
-} from "@/lib/client-overrides";
+} from "@/lib/consultant-assignments";
 import { formatDateLong } from "@/lib/dates";
 import { markdownToDocxBlocks } from "@/lib/md-to-docx";
 
@@ -56,8 +56,8 @@ export async function GET(
   }
 
   const { action } = entry;
-  const consultant = getConsultantForSlug(clientSlug);
-  const consultantEmail = getConsultantEmailForSlug(clientSlug);
+  const consultant = await getConsultantForSlug(clientSlug);
+  const consultantEmail = await getConsultantEmailForSlug(clientSlug);
   const generatedDate = formatDateLong(existing.createdAt);
   const displayResultId = formatDisplayResultId(resultId);
 

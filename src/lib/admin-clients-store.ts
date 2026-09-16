@@ -7,7 +7,7 @@
 // renders sensibly. Saving any field promotes the record to KV.
 
 import { kv } from "@vercel/kv";
-import { getConsultantForSlug } from "./client-overrides";
+import { defaultConsultantForSlug } from "./client-overrides";
 
 const KEY_PREFIX = "admin-client:";
 
@@ -213,7 +213,7 @@ export function defaultAdminRecord(
   // aligns with the row's department — otherwise leave empty so the
   // consultant picker reflects reality (the SEO consultant on the SEO row
   // of a shared client, Germano on the ADS row, etc.).
-  const seedName = getConsultantForSlug(slug);
+  const seedName = defaultConsultantForSlug(slug);
   const seedDept =
     seedName !== "Unassigned" ? CONSULTANT_DEPARTMENT[seedName] : undefined;
   return {

@@ -5,10 +5,6 @@
 // report stays "draft" until it's filled or marked N/A — never a fake 0.
 
 import { getClientLocale } from "@/lib/client-locale";
-import {
-  getConsultantForSlug,
-  getConsultantEmailForSlug,
-} from "@/lib/client-overrides";
 import { getGa4MonthlyReport, type MetricPair } from "./ga4-report";
 import { getGa4EcomReport } from "./ga4-ecommerce";
 import { getGscMonthlyReport, getGscImpressionsByRange } from "@/lib/gsc";
@@ -20,7 +16,7 @@ import { fetchGeoReport, hasGeoSignal } from "@/lib/seo-tools/dataforseo-geo";
 import { fetchGeoIntel, hasGeoIntelSignal } from "@/lib/seo-tools/geo-intel";
 import { getClientGeo } from "@/lib/client-geo";
 import { CLIENT_WEBSITES } from "@/lib/client-meta";
-import { getReport } from "./report-store";
+import { getReport, liveReportConsultant } from "./report-store";
 import { getGbpMonthlyReport } from "@/lib/gbp";
 import { getReportConfig } from "./report-config-store";
 import {
@@ -1284,10 +1280,7 @@ export async function buildMonthlyReport(
     generatedAt: nowMs,
     status: "draft" as ReportStatus,
     lang,
-    consultant: {
-      name: getConsultantForSlug(slug),
-      email: getConsultantEmailForSlug(slug),
-    },
+    consultant: await liveReportConsultant(slug),
     kind: isEcom ? "ecommerce" : "standard",
     ...(ecom ? { ecom } : {}),
     gscAi,
@@ -1390,3 +1383,4 @@ export function recomputeDerived(
     snap.status === "sent" ? "sent" : hasUnresolved ? "draft" : "ready";
   return { ...withLeads, execSummary, status };
 }
+

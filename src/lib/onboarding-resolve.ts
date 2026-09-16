@@ -7,7 +7,7 @@
 import "server-only";
 import { getClientBySlug } from "@/lib/notion";
 import { getClientLogo } from "@/lib/client-meta";
-import { getConsultantForSlug } from "@/lib/client-overrides";
+import { getConsultantResolver } from "@/lib/consultant-assignments";
 import { getOnboardingClient } from "@/lib/onboarding-clients-store";
 import { tracksForServices, type OnbService } from "@/lib/onboarding-tracks";
 
@@ -31,10 +31,15 @@ export type ResolvedOnboardingClient = {
 export async function resolveOnboardingClient(
   slug: string,
 ): Promise<ResolvedOnboardingClient | null> {
-  const [seo, reg] = await Promise.all([
+  const [seo, reg, consultants] = await Promise.all([
     getClientBySlug(slug).catch(() => null),
     getOnboardingClient(slug),
+    getConsultantResolver(),
   ]);
+  // Migração de carteira (KV) e carteira em código mandam sobre o nome
+  // gravado no registo de onboarding — este é só a rede (v77.34).
+  const live = consultants.resolve(slug, reg?.consultant);
+  const consultant = live !== "Unassigned" ? live : null;
   if (!seo && !reg) return null;
 
   // Services come from the onboarding record if one exists, else default to
@@ -44,15 +49,12 @@ export async function resolveOnboardingClient(
   const ecommerce = Boolean(reg?.ecommerce);
 
   if (seo) {
-    const consultant = getConsultantForSlug(slug);
     return {
       slug,
       title: seo.title,
       icon: seo.icon,
       logo: getClientLogo(slug),
-      consultant:
-        reg?.consultant ??
-        (consultant && consultant !== "Unassigned" ? consultant : null),
+      consultant,
       onBoard: true,
       services,
       tracks,
@@ -65,7 +67,7 @@ export async function resolveOnboardingClient(
     title: reg!.title,
     icon: reg!.icon,
     logo: getClientLogo(slug),
-    consultant: reg!.consultant,
+    consultant,
     onBoard: false,
     services,
     tracks,

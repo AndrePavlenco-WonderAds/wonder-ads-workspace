@@ -18,6 +18,7 @@ import type { LogoBgMode, LogoSizing } from "@/lib/client-meta";
 import { npsScoreColor } from "@/lib/nps-questions";
 import { ClientCard } from "./client-card";
 import { SeoPauseToggle } from "./seo-pause-toggle";
+import { SeoConsultantMigrate } from "./seo-consultant-migrate";
 
 export type SeoBoardCard = {
   slug: string;
@@ -163,7 +164,14 @@ function ColumnView({
               />
             </div>
             {isAdmin && (
-              <SeoPauseToggle slug={c.slug} title={c.title} paused={paused} />
+              <>
+                <SeoConsultantMigrate
+                  slug={c.slug}
+                  title={c.title}
+                  currentConsultant={column.name}
+                />
+                <SeoPauseToggle slug={c.slug} title={c.title} paused={paused} />
+              </>
             )}
           </div>
         ))}

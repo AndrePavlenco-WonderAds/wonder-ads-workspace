@@ -13,7 +13,7 @@ import { getClientLogo } from "@/lib/client-meta";
 import {
   getConsultantEmailForSlug,
   getConsultantForSlug,
-} from "@/lib/client-overrides";
+} from "@/lib/consultant-assignments";
 import { listReviewItems } from "@/lib/review-store";
 import { ReviewTable } from "@/components/review-table";
 import { pickLang, t } from "@/lib/public-i18n";
@@ -54,8 +54,8 @@ export default async function PublicReviewPage({
   const items = await listReviewItems(slug);
   const logo = getClientLogo(slug);
   const lang = pickLang(slug);
-  const consultantEmail = getConsultantEmailForSlug(slug);
-  const consultantName = getConsultantForSlug(slug);
+  const consultantEmail = await getConsultantEmailForSlug(slug);
+  const consultantName = await getConsultantForSlug(slug);
 
   return (
     <main className="mx-auto min-h-screen max-w-6xl px-4 py-10 sm:px-8">

@@ -11,7 +11,7 @@ import { getClientLogo } from "@/lib/client-meta";
 import {
   getConsultantEmailForSlug,
   getConsultantForSlug,
-} from "@/lib/client-overrides";
+} from "@/lib/consultant-assignments";
 import { getMetaTagsResult } from "@/lib/meta-tags-store";
 import { MetaTagsTable } from "@/components/meta-tags-table";
 import { formatDate } from "@/lib/dates";
@@ -32,8 +32,8 @@ export default async function PublicMetaTagsPreview({
   const result = await getMetaTagsResult(slug, resultId);
   if (!result) notFound();
   const logo = getClientLogo(slug);
-  const consultantEmail = getConsultantEmailForSlug(slug);
-  const consultantName = getConsultantForSlug(slug);
+  const consultantEmail = await getConsultantEmailForSlug(slug);
+  const consultantName = await getConsultantForSlug(slug);
   const lang = pickLang(slug);
   // Resolve the matching Pending Review row by docLink so the panel
   // and the table share the same thread.

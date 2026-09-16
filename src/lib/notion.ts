@@ -5,7 +5,7 @@ import { getClientPalette, type ClientPalette } from "./client-colors";
 import {
   EXCLUDED_SLUGS,
   TITLE_OVERRIDES,
-  getConsultantForSlug,
+  defaultConsultantForSlug,
 } from "./client-overrides";
 import { getClientTier, type ClientTier } from "./client-tiers";
 import { getPromotedOnboardingClients } from "./onboarding-clients-store";
@@ -123,7 +123,7 @@ const _fetchSeoClients = unstable_cache(
           title,
           slug,
           icon,
-          consultant: getConsultantForSlug(slug),
+          consultant: defaultConsultantForSlug(slug),
           palette: getClientPalette(slug),
           tier: getClientTier(slug),
         });
@@ -142,7 +142,7 @@ const _fetchSeoClients = unstable_cache(
         title: extra.title,
         slug,
         icon: extra.icon,
-        consultant: getConsultantForSlug(slug),
+        consultant: defaultConsultantForSlug(slug),
         palette: getClientPalette(slug),
         tier: getClientTier(slug),
       });
@@ -160,7 +160,7 @@ const _fetchSeoClients = unstable_cache(
           title: oc.title,
           slug: oc.slug,
           icon: oc.icon,
-          consultant: oc.consultant ?? getConsultantForSlug(oc.slug),
+          consultant: oc.consultant ?? defaultConsultantForSlug(oc.slug),
           palette: getClientPalette(oc.slug),
           tier: getClientTier(oc.slug),
         });

@@ -16,7 +16,7 @@ import {
   getAdminRecords,
   DEFAULT_STARTING_DATES,
 } from "@/lib/admin-clients-store";
-import { resolveConsultant } from "@/lib/client-overrides";
+import { getConsultantResolver } from "@/lib/consultant-assignments";
 import { getPausedSlugSet } from "@/lib/admin-paused-clients-store";
 import { getNpsRecord } from "@/lib/nps-store";
 import {
@@ -105,9 +105,10 @@ async function seoBooksByConsultant(
   // delas. O sino corre em TODAS as páginas; uma leitura por cliente por
   // render seria a coisa mais cara da app a servir uma regra opcional.
   const startDates = withStartDates ? await getSeoStartDates() : {};
+  const consultants = await getConsultantResolver();
   for (const c of all) {
     if (paused.has(c.slug)) continue;
-    const consultant = resolveConsultant(c.slug, c.consultant);
+    const consultant = consultants.resolve(c.slug, c.consultant);
     if (!consultant) continue;
     const list = out.get(consultant) ?? [];
     list.push({
@@ -685,6 +686,7 @@ const getRecentNpsSubmissions = unstable_cache(
       return [];
     }
     const floor = Date.now() - NPS_NOTIFICATION_WINDOW_MS;
+    const consultants = await getConsultantResolver();
     const out: Awaited<ReturnType<typeof getRecentNpsSubmissions>> = [];
     await Promise.all(
       all.map(async (c) => {
@@ -702,7 +704,7 @@ const getRecentNpsSubmissions = unstable_cache(
               overall: s.scores.overall,
               category: s.scores.category,
               consultant: s.consultant,
-              currentConsultant: resolveConsultant(c.slug, c.consultant),
+              currentConsultant: consultants.resolve(c.slug, c.consultant),
               identification: s.identification,
             });
           }

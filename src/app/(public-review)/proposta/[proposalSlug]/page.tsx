@@ -15,7 +15,7 @@ import { notFound } from "next/navigation";
 import { getProposal } from "@/lib/proposals";
 import { getProposalRecord } from "@/lib/proposals/store";
 import { getClientLogo } from "@/lib/client-meta";
-import { getConsultantEmailForSlug, getConsultantForSlug } from "@/lib/client-overrides";
+import { getConsultantResolver } from "@/lib/consultant-assignments";
 import { resolveProposalConsultant } from "@/lib/proposals/consultant";
 import { ProposalDocument } from "@/components/proposals/proposal-document";
 import { ProposalPdfDocument } from "@/components/proposals/proposal-pdf-document";
@@ -49,6 +49,8 @@ export default async function ProposalPage({
   if (!record) notFound();
 
   const clientLogo = record.clientSlug ? getClientLogo(record.clientSlug) : null;
+  // Com as migrações de carteira: o contacto é quem acompanha o cliente hoje.
+  const consultants = await getConsultantResolver();
 
   // ---- Proposta carregada em PDF ----
   if (record.source === "upload") {
@@ -57,7 +59,7 @@ export default async function ProposalPage({
       clientSlug: record.clientSlug,
       consultant: record.consultant,
       consultantUsername: record.consultantUsername,
-    });
+    }, consultants);
     return (
       <ProposalPdfDocument
         meta={record}
@@ -77,10 +79,10 @@ export default async function ProposalPage({
   // O consultor vem do slug do cliente (a fonte que manda no resto da app);
   // o nome escrito nos metadados é a rede para prospects sem ficha.
   const consultantName = meta.clientSlug
-    ? getConsultantForSlug(meta.clientSlug)
+    ? consultants.consultantFor(meta.clientSlug)
     : meta.consultant;
   const consultantEmail = meta.clientSlug
-    ? getConsultantEmailForSlug(meta.clientSlug)
+    ? consultants.emailFor(meta.clientSlug)
     : "info@wonder-ads.com";
   const { Body } = render;
   const name = consultantName === "Unassigned" ? meta.consultant : consultantName;

@@ -21,7 +21,7 @@ import {
 } from "@/lib/client-meta";
 import { getClientPalette, paletteToGradient } from "@/lib/client-colors";
 import { listReviewItems } from "@/lib/review-store";
-import { getConsultantForSlug } from "@/lib/client-overrides";
+import { getConsultantForSlug } from "@/lib/consultant-assignments";
 
 export const dynamic = "force-dynamic";
 
@@ -75,7 +75,7 @@ export default async function InternalReviewPage({
   ]);
   if (!client) notFound();
   const pendingCount = items.filter((it) => !it.archived).length;
-  const consultantName = getConsultantForSlug(slug);
+  const consultantName = await getConsultantForSlug(slug);
   const logo = getClientLogo(slug);
   const logoBgMode = getLogoBgMode(slug);
   const logoSizing = getLogoSizing(slug);

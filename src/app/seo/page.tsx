@@ -16,10 +16,11 @@ import {
   type SeoOrganicRollup,
 } from "@/lib/seo-organic-rollup";
 import { OrganicPulse } from "@/components/seo/organic-pulse";
+import { CONSULTANT_ORDER } from "@/lib/client-overrides";
 import {
-  CONSULTANT_ORDER,
-  resolveConsultant,
-} from "@/lib/client-overrides";
+  getConsultantResolver,
+  type ConsultantResolver,
+} from "@/lib/consultant-assignments";
 import { TIER_RANK } from "@/lib/client-tiers";
 import {
   displayDomain,
@@ -85,8 +86,10 @@ export default async function SeoPage() {
   const activeClients = clients.filter((c) => !pausedSet.has(c.slug));
   const pausedClients = clients.filter((c) => pausedSet.has(c.slug));
 
-  const consultantColumns = buildConsultantColumns(activeClients);
-  const pausedColumns = buildConsultantColumns(pausedClients);
+  // Carteiras com as migrações do SuperAdmin aplicadas (uma leitura KV).
+  const consultants = await getConsultantResolver();
+  const consultantColumns = buildConsultantColumns(activeClients, consultants);
+  const pausedColumns = buildConsultantColumns(pausedClients, consultants);
 
   // Department-wide organic visitors (GA4, Organic Search, last 30 days),
   // served from the KV snapshot and refreshed after the response — one KV
@@ -205,15 +208,18 @@ type ConsultantColumn = { name: string; clients: NotionClient[] };
  *  and the cached value can lag behind code-level consultant renames in
  *  client-overrides.ts. O campo em cache só entra como REDE, para os
  *  clientes que entraram pelo onboarding e ainda não estão em
- *  client-overrides.ts (ver `resolveConsultant`) — sem isso caíam em
+ *  client-overrides.ts (ver `ConsultantResolver.resolve`) — sem isso caíam em
  *  "Unassigned" e não apareciam em coluna nenhuma. Re-resolving here means any consultant rename
  *  ships instantly, even before the cache evicts. The bug it fixes:
  *  renaming a consultant to a shorter form dropped 5 clients off the board
  *  because the cached consultant string didn't match the new column name. */
-function buildConsultantColumns(clients: NotionClient[]): ConsultantColumn[] {
+function buildConsultantColumns(
+  clients: NotionClient[],
+  consultants: ConsultantResolver,
+): ConsultantColumn[] {
   const grouped: Record<string, NotionClient[]> = {};
   for (const c of clients) {
-    const consultant = resolveConsultant(c.slug, c.consultant);
+    const consultant = consultants.resolve(c.slug, c.consultant);
     (grouped[consultant] ??= []).push({ ...c, consultant });
   }
   for (const list of Object.values(grouped)) {

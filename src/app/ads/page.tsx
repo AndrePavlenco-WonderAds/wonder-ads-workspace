@@ -6,7 +6,7 @@ import { TypewriterPrompt } from "@/components/typewriter-prompt";
 import { ADS_CLIENTS } from "@/lib/ads-clients";
 import { getClientPalette } from "@/lib/client-colors";
 import { getClientTier } from "@/lib/client-tiers";
-import { getConsultantForSlug } from "@/lib/client-overrides";
+import { getConsultantResolver } from "@/lib/consultant-assignments";
 import {
   getClientLogo,
   getLogoBgMode,
@@ -20,7 +20,8 @@ export const metadata = {
 // ISO numeric codes — Canada, Portugal, Australia (padded + unpadded for AU).
 const ADS_HIGHLIGHTED_COUNTRIES = ["124", "620", "036", "36"];
 
-export default function AdsPage() {
+export default async function AdsPage() {
+  const consultants = await getConsultantResolver();
   return (
     <PageShell>
       <DepartmentHeader
@@ -52,7 +53,7 @@ export default function AdsPage() {
               logoBgMode={getLogoBgMode(c.slug)}
               logoSizing={getLogoSizing(c.slug)}
               href={`/ads/${c.slug}`}
-              consultant={c.consultant ?? getConsultantForSlug(c.slug)}
+              consultant={c.consultant ?? consultants.consultantFor(c.slug)}
               palette={getClientPalette(c.slug)}
               tier={c.tier ?? getClientTier(c.slug)}
               channels={c.channels}

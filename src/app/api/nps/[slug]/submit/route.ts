@@ -20,7 +20,7 @@ import {
   isQuestionVisible,
   personScaleKey,
 } from "@/lib/nps-questions";
-import { getConsultantForSlug } from "@/lib/client-overrides";
+import { getConsultantForSlug } from "@/lib/consultant-assignments";
 
 export const runtime = "nodejs";
 
@@ -188,7 +188,7 @@ export async function POST(
       ? body.identification.trim() || null
       : null;
 
-  const consultant = getConsultantForSlug(slug);
+  const consultant = await getConsultantForSlug(slug);
   const submission = await addNpsSubmission(
     slug,
     {

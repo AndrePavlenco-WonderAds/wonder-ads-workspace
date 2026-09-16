@@ -9,7 +9,7 @@ import { getClientLogo } from "@/lib/client-meta";
 import {
   getConsultantEmailForSlug,
   getConsultantForSlug,
-} from "@/lib/client-overrides";
+} from "@/lib/consultant-assignments";
 import {
   getCurrentRoadmap,
   currentWeekIndex,
@@ -55,8 +55,8 @@ export default async function PublicRoadmapMonthPreviewPage({
   const { month, weeks } = currentMonth(cw, roadmapWeeks(roadmap));
 
   const logo = getClientLogo(slug);
-  const consultantEmail = getConsultantEmailForSlug(slug);
-  const consultantName = getConsultantForSlug(slug);
+  const consultantEmail = await getConsultantEmailForSlug(slug);
+  const consultantName = await getConsultantForSlug(slug);
   const actionLabel =
     lang === "pt" ? `Roadmap SEO — Mês ${month}` : `SEO Roadmap — Month ${month}`;
 

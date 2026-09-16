@@ -18,7 +18,7 @@ import { getClientLogo } from "@/lib/client-meta";
 import {
   getConsultantEmailForSlug,
   getConsultantForSlug,
-} from "@/lib/client-overrides";
+} from "@/lib/consultant-assignments";
 import { getClientGeo } from "@/lib/client-geo";
 import { getGmbResult, localizeCta } from "@/lib/gmb-posts-store";
 import { formatDate } from "@/lib/dates";
@@ -39,8 +39,8 @@ export default async function PublicGmbPreviewPage({
   const result = await getGmbResult(slug, resultId);
   if (!result) notFound();
   const logo = getClientLogo(slug);
-  const consultantEmail = getConsultantEmailForSlug(slug);
-  const consultantName = getConsultantForSlug(slug);
+  const consultantEmail = await getConsultantEmailForSlug(slug);
+  const consultantName = await getConsultantForSlug(slug);
   const languageCode = getClientGeo(slug).languageCode;
   const lang = pickLang(slug);
   // Look up the Pending Review row that points at this preview URL —
