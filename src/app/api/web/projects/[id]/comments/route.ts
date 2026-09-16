@@ -5,6 +5,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentEmployee } from "@/lib/auth/server";
 import { accessibleDepts } from "@/lib/auth/credentials";
+import { normaliseCommentAttachments } from "@/lib/web-shared";
 import {
   getProject,
   logActivity,
@@ -46,7 +47,11 @@ export async function POST(
     typeof (body as { body?: unknown })?.body === "string"
       ? (body as { body: string }).body.trim()
       : "";
-  if (!text) {
+  // Anexos já carregados para o Blob pelo browser (v77.33).
+  const attachments = normaliseCommentAttachments(
+    (body as { attachments?: unknown })?.attachments,
+  );
+  if (!text && attachments.length === 0) {
     return NextResponse.json(
       { error: "Comment body is required." },
       { status: 400 },
@@ -58,6 +63,7 @@ export async function POST(
     authorName: employee.name,
     body: text,
     createdAt: Date.now(),
+    ...(attachments.length > 0 ? { attachments } : {}),
   };
   project.comments.push(comment);
   project.updatedAt = Date.now();

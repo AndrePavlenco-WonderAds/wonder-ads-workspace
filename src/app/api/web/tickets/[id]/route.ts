@@ -17,6 +17,7 @@ import {
 import { DEADLINE_DENIAL_MESSAGE, deadlineWriteDenial } from "@/lib/web-projects-store";
 import {
   DELIVERY_REVISION_REQUIRED_MESSAGE,
+  normaliseCommentAttachments,
   normaliseDeliveryRevision,
   requiresDeliveryRevision,
 } from "@/lib/web-shared";
@@ -88,13 +89,18 @@ export async function PATCH(
   const o = (body ?? {}) as Record<string, unknown>;
 
   // --- Comment-only patch ---
-  if (typeof o.comment === "string" && o.comment.trim()) {
+  // Texto, anexos, ou os dois (v77.33). Os ficheiros já foram para o Blob
+  // pelo browser; aqui só chegam os URLs.
+  const commentText = typeof o.comment === "string" ? o.comment.trim() : "";
+  const commentFiles = normaliseCommentAttachments(o.commentAttachments);
+  if (commentText || commentFiles.length > 0) {
     const comment = {
       id: `cm_${Date.now().toString(36)}`,
       authorUsername: employee.username,
       authorName: employee.name,
-      body: o.comment.trim(),
+      body: commentText,
       createdAt: Date.now(),
+      ...(commentFiles.length > 0 ? { attachments: commentFiles } : {}),
     };
     const next = normaliseTicket(
       {
@@ -102,7 +108,9 @@ export async function PATCH(
         comments: [...prev.comments, comment],
         history: [
           ...prev.history,
-          evt("comment", employee.username, employee.name, `${employee.name} comentou.`),
+          evt("comment", employee.username, employee.name, commentFiles.length > 0
+              ? `${employee.name} comentou com ${commentFiles.length} anexo${commentFiles.length === 1 ? "" : "s"}.`
+              : `${employee.name} comentou.`),
         ],
       },
       prev.id,

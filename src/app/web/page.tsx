@@ -87,6 +87,7 @@ export default async function WebPage() {
       priorityTag: TICKET_PRIORITY_META[t.priority].tag,
       deadline: t.deadline,
       deadlineSetByName: t.deadlineSetByName,
+      deliveryRevisions: t.deliveryRevisions,
       authorName: t.authorName,
       requestingDeptLabel:
         REQUESTING_DEPT_LABEL[t.requestingDept] ?? t.requestingDept,

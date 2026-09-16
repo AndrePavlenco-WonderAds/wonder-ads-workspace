@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.33",
+    date: "2026-09-16",
+    title: "Web DPT: o cartão mostra a entrega dos ajustes, e os comentários levam anexos",
+    highlights: [
+      "**📅 A data verde passa a ser a que está em vigor.** Quando um trabalho volta de Client Feedback para In Progress e o designer marca a nova entrega no pop-up, o cartão do board mostra essa data (com a etiqueta «Ajuste»), e já não a primeira promessa. O tooltip guarda a data inicial e o motivo do ajuste. O cartão atualiza logo, sem recarregar a página.",
+      "**🗂️ Também na ficha do projeto.** A «Entrega prevista» dos detalhes mostra a revisão em vigor, e a coluna da direita ganha o mesmo histórico de entregas que os tickets já tinham.",
+      "**📎 Anexos nos comentários.** Tickets e projetos: botão «Anexar» por baixo da caixa (até 10 ficheiros: imagens, PDFs, vídeos…), ou colar um print com Cmd+V. Pode enviar-se um comentário só com anexos. As imagens aparecem em miniatura e os outros ficheiros como links.",
+    ],
+  },
+  {
     version: "77.32",
     date: "2026-09-14",
     title: "Perfis viewer: só leitura, um departamento — e a primeira conta, Gabi (SEO Specialty)",

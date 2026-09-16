@@ -16,7 +16,7 @@
 
 import { CalendarClock, CornerDownRight } from "lucide-react";
 import { formatDate, formatDateTime } from "@/lib/dates";
-import type { DeliveryRevision } from "@/lib/web-shared";
+import { currentDeliveryDate, type DeliveryRevision } from "@/lib/web-shared";
 
 export function DeliveryRevisions({
   original,
@@ -31,8 +31,7 @@ export function DeliveryRevisions({
   revisions: DeliveryRevision[] | undefined;
 }) {
   const revisions = revisionsProp ?? [];
-  const current =
-    revisions.length > 0 ? revisions[revisions.length - 1].date : original;
+  const current = currentDeliveryDate(original, revisions);
 
   return (
     <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-4">

@@ -28,6 +28,8 @@ import {
   WEB_PRIORITY_META,
   WEB_STATUSES,
   WEB_STATUS_META,
+  currentDeliveryDate,
+  type DeliveryRevision,
   type PublicWebProject,
   type WebDeliveryRights,
   type WebPriority,
@@ -57,6 +59,9 @@ export type BoardTicket = {
   /** Entrega prevista — as mesmas regras dos projetos (v76.50). */
   deadline: string | null;
   deadlineSetByName: string | null;
+  /** Linhas de re-planeamento (v76.52). O cartão mostra a ÚLTIMA, não a
+   *  `deadline` original — ver `currentDeliveryDate`. */
+  deliveryRevisions: DeliveryRevision[];
   /** Quem PEDIU o ticket, e de que departamento (v76.51). */
   authorName: string;
   requestingDeptLabel: string;
@@ -298,9 +303,18 @@ export function WebBoard({
         });
         if (!res.ok) throw new Error("falhou");
         const data = await res.json();
+        // A linha nova tem de chegar ao cartão já — sem isto o verde
+        // continuava na data antiga até alguém recarregar a página.
         setTickets((list) =>
           list.map((t) =>
-            t.id === revPrompt.id ? { ...t, status: data.ticket.status } : t,
+            t.id === revPrompt.id
+              ? {
+                  ...t,
+                  status: data.ticket.status,
+                  deadline: data.ticket.deadline ?? null,
+                  deliveryRevisions: data.ticket.deliveryRevisions ?? [],
+                }
+              : t,
           ),
         );
       } else {
@@ -610,6 +624,10 @@ function TicketCard({
   onDragStart: () => void;
   onDragEnd: () => void;
 }) {
+  const ticketDelivery = currentDeliveryDate(
+    ticket.deadline,
+    ticket.deliveryRevisions,
+  );
   return (
     <Link
       href={`/web/tickets/${ticket.id}`}
@@ -664,18 +682,13 @@ function TicketCard({
         {/* Entrega prevista — a mesma linha que os projetos já tinham. Um
             ticket sem data marcada é exatamente o que se quer ver de
             relance, por isso a linha aparece mesmo vazia. */}
-        {ticket.deadline ? (
-          <span
-            className="inline-flex items-center gap-1.5 font-medium text-emerald-200/85"
-            title={
-              ticket.deadlineSetByName
-                ? `Entrega prevista definida por ${ticket.deadlineSetByName}`
-                : "Entrega prevista trancada"
-            }
-          >
-            <Lock className="h-3 w-3" />
-            Entrega prevista {formatDate(ticket.deadline)}
-          </span>
+        {ticketDelivery ? (
+          <DeliveryLine
+            date={ticketDelivery}
+            original={ticket.deadline}
+            setByName={ticket.deadlineSetByName}
+            revisions={ticket.deliveryRevisions}
+          />
         ) : (
           <span className="inline-flex items-center gap-1.5 text-amber-200/70">
             <CalendarClock className="h-3 w-3" />
@@ -684,6 +697,45 @@ function TicketCard({
         )}
       </div>
     </Link>
+  );
+}
+
+/** A linha verde do cartão: a entrega EM VIGOR. Depois de um ajuste mostra
+ *  a data da última revisão e marca-a como tal; o tooltip guarda a data
+ *  inicial, que continua a ser a história. */
+function DeliveryLine({
+  date,
+  original,
+  setByName,
+  revisions,
+}: {
+  date: string;
+  original: string | null;
+  setByName: string | null;
+  revisions: DeliveryRevision[] | undefined;
+}) {
+  const revs = revisions ?? [];
+  const last = revs.length > 0 ? revs[revs.length - 1] : null;
+  const title = last
+    ? `${revs.length}ª revisão por ${last.byName}: ${last.note}${
+        original ? ` · Inicial ${formatDate(original)}` : ""
+      }`
+    : setByName
+      ? `Entrega prevista definida por ${setByName}`
+      : "Entrega prevista trancada";
+  return (
+    <span
+      className="inline-flex items-center gap-1.5 font-medium text-emerald-200/85"
+      title={title}
+    >
+      <Lock className="h-3 w-3" />
+      Entrega prevista {formatDate(date)}
+      {last && (
+        <span className="rounded-full border border-amber-300/30 bg-amber-400/10 px-1.5 text-[9px] font-semibold uppercase tracking-wide text-amber-100/85">
+          Ajuste{revs.length > 1 ? ` ${revs.length}` : ""}
+        </span>
+      )}
+    </span>
   );
 }
 
@@ -698,6 +750,10 @@ function BoardCard({
 }) {
   const meta = WEB_STATUS_META[project.status];
   const prio = WEB_PRIORITY_META[project.priority];
+  const projectDelivery = currentDeliveryDate(
+    project.deadline,
+    project.deliveryRevisions,
+  );
   return (
     <Link
       href={`/web/${project.id}`}
@@ -748,18 +804,13 @@ function BoardCard({
         {/* Entrega prevista — o compromisso trancado. Sem data, o card
             di-lo em vez de omitir a linha: um projeto sem entrega
             marcada é exatamente o que se quer ver de relance. */}
-        {project.deadline ? (
-          <span
-            className="inline-flex items-center gap-1.5 font-medium text-emerald-200/85"
-            title={
-              project.deadlineSetByName
-                ? `Entrega prevista definida por ${project.deadlineSetByName}`
-                : "Entrega prevista trancada"
-            }
-          >
-            <Lock className="h-3 w-3" />
-            Entrega prevista {formatDate(project.deadline)}
-          </span>
+        {projectDelivery ? (
+          <DeliveryLine
+            date={projectDelivery}
+            original={project.deadline}
+            setByName={project.deadlineSetByName}
+            revisions={project.deliveryRevisions}
+          />
         ) : (
           <span className="inline-flex items-center gap-1.5 text-amber-200/70">
             <CalendarClock className="h-3 w-3" />

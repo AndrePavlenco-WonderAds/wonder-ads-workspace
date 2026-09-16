@@ -31,6 +31,7 @@ import {
   type WebDeliveryRights,
   type WebResource,
   type WebStatus,
+  normaliseCommentAttachments,
 } from "./web-shared";
 
 // Re-export the shared presentation enums/labels so server callers can
@@ -353,13 +354,16 @@ function resolveDeadline(
 function normaliseComment(v: unknown): WebComment | null {
   const o = (v ?? {}) as Record<string, unknown>;
   const body = str(o.body).trim();
-  if (!body) return null;
+  const attachments = normaliseCommentAttachments(o.attachments);
+  // Um comentário só com anexo (sem texto) é válido desde a v77.33.
+  if (!body && attachments.length === 0) return null;
   return {
     id: str(o.id) || newId("m"),
     authorUsername: str(o.authorUsername),
     authorName: str(o.authorName) || "Someone",
     body,
     createdAt: num(o.createdAt, Date.now()),
+    ...(attachments.length > 0 ? { attachments } : {}),
   };
 }
 

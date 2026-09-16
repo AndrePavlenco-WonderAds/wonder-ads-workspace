@@ -31,6 +31,7 @@ import {
   WEB_PRIORITY_META,
   WEB_STATUSES,
   WEB_STATUS_META,
+  currentDeliveryDate,
   type PublicWebCredential,
   type PublicWebProject,
   type WebAssetFile,
@@ -41,6 +42,12 @@ import {
   type WebStatus,
 } from "@/lib/web-shared";
 import { detectKind } from "@/lib/client-files";
+import {
+  CommentAttachmentList,
+  CommentAttachmentPicker,
+  useCommentAttachments,
+} from "@/components/comment-attachments";
+import { DeliveryRevisions } from "@/components/delivery-revisions";
 import { formatDate, formatDateTime } from "@/lib/dates";
 
 type Assignee = { username: string; name: string };
@@ -162,6 +169,10 @@ export function WebProjectDetail({
 
         {/* RIGHT: assets vault */}
         <div className="flex flex-col gap-6">
+          <DeliveryRevisions
+            original={project.deadline}
+            revisions={project.deliveryRevisions}
+          />
           <NotesCard
             project={project}
             saving={savingTag === "notes"}
@@ -227,6 +238,10 @@ function DetailsCard({
   // está trancado nunca enviamos um valor diferente do guardado, para um
   // save de outro campo qualquer não bater no 403 da API.
   const deliveryLocked = Boolean(project.deadline) && !deliveryRights.canOverride;
+  const currentDelivery = currentDeliveryDate(
+    project.deadline,
+    project.deliveryRevisions,
+  );
   const canEditDelivery = project.deadline
     ? deliveryRights.canOverride
     : deliveryRights.canSet;
@@ -268,10 +283,10 @@ function DetailsCard({
           <Meta
             label="Entrega prevista"
             value={
-              project.deadline ? formatDate(project.deadline) : "Por definir"
+              currentDelivery ? formatDate(currentDelivery) : "Por definir"
             }
-            icon={project.deadline ? Lock : undefined}
-            tone={project.deadline ? "locked" : "pending"}
+            icon={currentDelivery ? Lock : undefined}
+            tone={currentDelivery ? "locked" : "pending"}
             hint={deliveryHint(project)}
           />
           <Meta label="Status" value={WEB_STATUS_META[project.status].label} />
@@ -423,21 +438,25 @@ function CommentsCard({
 }) {
   const [body, setBody] = useState("");
   const [posting, setPosting] = useState(false);
+  const files = useCommentAttachments();
+  const canPost =
+    !files.uploading && (Boolean(body.trim()) || files.ready.length > 0);
 
   const post = async () => {
     const text = body.trim();
-    if (!text) return;
+    if (!canPost) return;
     setPosting(true);
     try {
       const res = await fetch(`/api/web/projects/${project.id}/comments`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ body: text }),
+        body: JSON.stringify({ body: text, attachments: files.ready }),
       });
       if (!res.ok) throw new Error();
       const data = await res.json();
       onProject(data.project);
       setBody("");
+      files.reset();
     } catch {
       onError("Couldn't post the comment — try again.");
     } finally {
@@ -456,17 +475,19 @@ function CommentsCard({
         <textarea
           value={body}
           onChange={(e) => setBody(e.target.value)}
+          onPaste={files.onPaste}
           rows={3}
           placeholder={`Add an update as ${currentUser.name}…`}
           className="modal-input resize-y"
         />
-        <div className="flex justify-end">
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <CommentAttachmentPicker state={files} disabled={posting} />
           <SaveButton
             saving={posting}
             onClick={post}
             label="Post update"
             icon={MessageSquarePlus}
-            disabled={!body.trim()}
+            disabled={!canPost}
           />
         </div>
       </div>
@@ -490,9 +511,12 @@ function CommentsCard({
                 {formatDateTime(c.createdAt)}
               </time>
             </div>
-            <p className="mt-1 whitespace-pre-wrap text-[13px] leading-relaxed text-white/75">
-              {c.body}
-            </p>
+            {c.body && (
+              <p className="mt-1 whitespace-pre-wrap text-[13px] leading-relaxed text-white/75">
+                {c.body}
+              </p>
+            )}
+            <CommentAttachmentList attachments={c.attachments} />
           </div>
         ))}
       </div>
@@ -1395,6 +1419,16 @@ function CardHead({
  *  ou quando o projeto é anterior à regra (v76.29) e por isso não tem
  *  autor registado. */
 function deliveryHint(project: PublicWebProject): string | null {
+  // Depois de um ajuste, o valor mostrado é a revisão — diz-se de onde veio
+  // para ninguém a confundir com a promessa inicial.
+  const revs = project.deliveryRevisions ?? [];
+  if (revs.length > 0) {
+    const last = revs[revs.length - 1];
+    const initial = project.deadline
+      ? ` (inicial ${formatDate(project.deadline)})`
+      : "";
+    return `${revs.length}ª revisão por ${last.byName}${initial}.`;
+  }
   if (!project.deadline) return null;
   if (!project.deadlineSetByName) return "Trancada.";
   const when = project.deadlineSetAt

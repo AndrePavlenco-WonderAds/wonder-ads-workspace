@@ -170,6 +170,8 @@ export type TicketComment = {
   authorName: string;
   body: string;
   createdAt: number;
+  /** Ficheiros anexados ao comentário (v77.33). */
+  attachments?: TicketAttachment[];
 };
 
 export type TicketEventKind =

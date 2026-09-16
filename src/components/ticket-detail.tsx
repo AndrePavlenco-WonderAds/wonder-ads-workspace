@@ -25,6 +25,11 @@ import {
   DeliveryRevisionPrompt,
   DeliveryRevisions,
 } from "@/components/delivery-revisions";
+import {
+  CommentAttachmentList,
+  CommentAttachmentPicker,
+  useCommentAttachments,
+} from "@/components/comment-attachments";
 
 type Assignee = { username: string; name: string };
 
@@ -51,6 +56,7 @@ export function TicketDetail({
   const [revNote, setRevNote] = useState("");
   const [revError, setRevError] = useState<string | null>(null);
   const [posting, setPosting] = useState(false);
+  const commentFiles = useCommentAttachments();
 
   const patch = useCallback(
     async (body: Record<string, unknown>) => {
@@ -102,24 +108,32 @@ export function TicketDetail({
     }
   }, [patch, revPrompt, revDate, revNote]);
 
+  const canPost =
+    !commentFiles.uploading &&
+    (Boolean(comment.trim()) || commentFiles.ready.length > 0);
+
   const postComment = useCallback(async () => {
-    if (!comment.trim()) return;
+    if (!canPost) return;
     setPosting(true);
     try {
       const res = await fetch(`/api/web/tickets/${ticket.id}`, {
         method: "PATCH",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ comment: comment.trim() }),
+        body: JSON.stringify({
+          comment: comment.trim(),
+          commentAttachments: commentFiles.ready,
+        }),
       });
       const data = (await res.json()) as { ticket?: WebTicket };
       if (res.ok && data.ticket) {
         setTicket(data.ticket);
         setComment("");
+        commentFiles.reset();
       }
     } finally {
       setPosting(false);
     }
-  }, [comment, ticket.id]);
+  }, [canPost, comment, commentFiles, ticket.id]);
 
   const prio = TICKET_PRIORITY_META[ticket.priority];
 
@@ -210,9 +224,12 @@ export function TicketDetail({
                   <span className="font-medium text-white/80">{c.authorName}</span>
                   <span className="text-white/40">{formatDateTime(c.createdAt)}</span>
                 </div>
-                <p className="mt-1 whitespace-pre-line text-[13px] text-white/75">
-                  {c.body}
-                </p>
+                {c.body && (
+                  <p className="mt-1 whitespace-pre-line text-[13px] text-white/75">
+                    {c.body}
+                  </p>
+                )}
+                <CommentAttachmentList attachments={c.attachments} />
               </li>
             ))}
             {ticket.comments.length === 0 && (
@@ -223,6 +240,7 @@ export function TicketDetail({
             <textarea
               value={comment}
               onChange={(e) => setComment(e.target.value)}
+              onPaste={commentFiles.onPaste}
               rows={2}
               placeholder="Escreve um comentário interno…"
               className="flex-1 resize-y rounded-lg border border-white/12 bg-white/[0.04] px-3 py-2 text-[13px] text-white outline-none placeholder:text-white/35 focus:border-white/30"
@@ -230,7 +248,7 @@ export function TicketDetail({
             <button
               type="button"
               onClick={postComment}
-              disabled={posting || !comment.trim()}
+              disabled={posting || !canPost}
               className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-[12px] font-semibold text-white shadow-lg shadow-[#783DF5]/25 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
               style={{
                 background:
@@ -244,6 +262,9 @@ export function TicketDetail({
               )}
               Enviar
             </button>
+          </div>
+          <div className="mt-2">
+            <CommentAttachmentPicker state={commentFiles} disabled={posting} />
           </div>
         </div>
       </div>

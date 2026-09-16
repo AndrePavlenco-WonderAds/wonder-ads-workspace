@@ -121,6 +121,22 @@ export function requiresDeliveryRevision(
   return prevStatus === "client_feedback" && nextStatus === "in_progress";
 }
 
+/** A ENTREGA PREVISTA EM VIGOR (v77.33) — a última linha de revisão, ou a
+ *  data original quando o trabalho nunca voltou para a mesa. O cartão do
+ *  board mostrava sempre `deadline` (a promessa inicial), por isso depois
+ *  de um ajuste o verde continuava a dizer a data velha. Todos os sítios
+ *  que mostram «a data» passam por aqui; `deadline` sozinho é só a
+ *  primeira linha da história. */
+export function currentDeliveryDate(
+  original: string | null,
+  revisions: DeliveryRevision[] | undefined,
+): string | null {
+  if (revisions && revisions.length > 0) {
+    return revisions[revisions.length - 1].date;
+  }
+  return original;
+}
+
 export const DELIVERY_REVISION_REQUIRED_MESSAGE =
   "Ao devolver este trabalho a In Progress tens de indicar a nova data de entrega prevista e o que falta.";
 
@@ -213,7 +229,53 @@ export type WebComment = {
   authorName: string;
   body: string;
   createdAt: number;
+  /** Ficheiros anexados ao comentário (v77.33). Opcional: os comentários
+   *  gravados antes não o têm. */
+  attachments?: CommentAttachment[];
 };
+
+/** Um ficheiro (já no Blob) pendurado num comentário — mesma forma dos
+ *  anexos de tickets e ficheiros de projeto. */
+export type CommentAttachment = {
+  id: string;
+  name: string;
+  url: string;
+  kind: "image" | "video" | "document" | "link";
+  addedAt: number;
+};
+
+export const MAX_COMMENT_ATTACHMENTS = 10;
+
+/** Normaliza os anexos de um comentário vindos do payload. Só aceita URLs
+ *  http(s) — o upload vai direto ao Blob, portanto é isso que chega. */
+export function normaliseCommentAttachments(v: unknown): CommentAttachment[] {
+  if (!Array.isArray(v)) return [];
+  const out: CommentAttachment[] = [];
+  for (const raw of v) {
+    const o = (raw ?? {}) as Record<string, unknown>;
+    const url = typeof o.url === "string" ? o.url.trim() : "";
+    if (!/^https?:\/\//i.test(url)) continue;
+    const kind =
+      o.kind === "image" || o.kind === "video" || o.kind === "link"
+        ? o.kind
+        : "document";
+    out.push({
+      id:
+        typeof o.id === "string" && o.id
+          ? o.id
+          : `ca_${Date.now().toString(36)}_${out.length}`,
+      name:
+        typeof o.name === "string" && o.name.trim()
+          ? o.name.trim().slice(0, 200)
+          : url,
+      url,
+      kind,
+      addedAt: typeof o.addedAt === "number" ? o.addedAt : Date.now(),
+    });
+    if (out.length >= MAX_COMMENT_ATTACHMENTS) break;
+  }
+  return out;
+}
 
 export type WebAssetFile = {
   id: string;
@@ -279,6 +341,9 @@ export type PublicWebProject = {
   deadlineSetByUsername: string | null;
   deadlineSetByName: string | null;
   deadlineSetAt: number | null;
+  /** Linhas de re-planeamento da entrega — ver DeliveryRevision. A data em
+   *  vigor é `currentDeliveryDate(deadline, deliveryRevisions)`. */
+  deliveryRevisions: DeliveryRevision[];
   order: number;
   comments: WebComment[];
   assets: PublicWebAssets;
