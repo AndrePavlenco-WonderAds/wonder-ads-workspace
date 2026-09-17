@@ -92,7 +92,8 @@ export const DEFAULT_STARTING_DATES: Record<string, string> = {
 export const CONSULTANTS = [
   "Manuel Silva",
   "Fran. Rosa",
-  "Germano C.",
+  // v77.36: o Hugo S. entrou no lugar do Germano C. (ver CONSULTANT_RENAMES).
+  "Hugo S.",
   "André Pereira",
   // v76.31: já tinha login, carteira (client-overrides) e coluna no board —
   // só faltava aqui, e por isso não aparecia no dropdown de atribuição.
@@ -121,6 +122,9 @@ const CONSULTANT_RENAMES: Record<string, string> = {
   "Yenisey R.": "Yenisey Rodriguez",
   "André P.": "Manuel Silva",
   "Luana N.": "Manuel Silva", // older legacy → handover chain
+  // v77.36: passagem de pasta do ADS — os registos gravados em KV com o
+  // Germano passam a ler-se com o Hugo, sem mexer em produção.
+  "Germano C.": "Hugo S.",
 };
 
 /** Departments a client row can belong to. Used as a typed dimension
@@ -136,7 +140,7 @@ export type ClientDepartment = (typeof CLIENT_DEPARTMENTS)[number];
 export const CONSULTANT_DEPARTMENT: Record<string, ClientDepartment> = {
   "Manuel Silva": "SEO",
   "Fran. Rosa": "SEO",
-  "Germano C.": "ADS",
+  "Hugo S.": "ADS",
   "André Pereira": "SEO",
   "João B.": "SEO",
 };

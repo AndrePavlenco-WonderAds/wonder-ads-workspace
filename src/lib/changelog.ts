@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.36",
+    date: "2026-09-17",
+    title: "ADS DPT: os clientes do Germano passam para o Hugo Silva",
+    highlights: [
+      "**🔀 Carteira do ADS.** IHN, InSync Design, White Clinic, Clínica Empatia e Wonder Ads passam a ter o **Hugo S.** como consultor no ADS DPT.",
+      "**🗂️ /admin/clients.** O Hugo S. entra na lista de consultores (no lugar do Germano C.), e as linhas ADS já gravadas com o Germano passam a mostrar o Hugo automaticamente.",
+      "**📧 Onboarding.** Nos passos de acesso de Google Ads, Merchant Center e Meta, o cliente passa a adicionar **hugo@wonder-ads.com** (com a alice@) em vez do germano@.",
+    ],
+  },
+  {
     version: "77.35",
     date: "2026-09-17",
     title: "Equipa ADS: entra o Hugo Silva, sai o Germano Cunha",

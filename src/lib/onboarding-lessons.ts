@@ -20,7 +20,7 @@ import type { OnbTrack, OnbService } from "@/lib/onboarding-tracks";
 /** Acessos de publicidade — Google Ads, Merchant Center, Meta Business. */
 export const ADS_ADMIN_EMAILS = [
   "alice@wonder-ads.com",
-  "germano@wonder-ads.com",
+  "hugo@wonder-ads.com",
 ];
 
 /** Acessos de SEO — Analytics, Search Console, Perfil de Empresa, website. */
