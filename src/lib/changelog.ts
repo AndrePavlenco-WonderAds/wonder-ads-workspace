@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.37",
+    date: "2026-09-17",
+    title: "SEO DPT: Medway com logótipo, site e data de onboarding",
+    highlights: [
+      "**🦷 Medway.** O cartão e a página do projeto mostram o logótipo do site medway.pt em vez do emoji, com o link para o site.",
+      "**📅 Onboarded a 22/09/2026.** A data aparece no cabeçalho do projeto e na tabela de Clients, e é daí que o roadmap conta.",
+      "**🔑 Acessos.** Ficaram guardados no fundo da página o painel do site (medway.pt/admin) e o painel do alojamento (WebHS).",
+      "**📝 Brief da Medway.** Do's, Don'ts e Notes com a análise técnica ao CMS: o que se faz pela base de dados, o que exige templates PHP e o que é desenvolvimento novo (alt text, BreadcrumbList, LocalBusiness, FAQs, blocos e páginas novas).",
+    ],
+  },
+  {
     version: "77.36",
     date: "2026-09-17",
     title: "ADS DPT: os clientes do Germano passam para o Hugo Silva",

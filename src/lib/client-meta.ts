@@ -31,6 +31,9 @@ export const CLIENT_LOGOS: Record<string, string> = {
   // quadrado com object-contain, e um wordmark de 7:1 aterrava com 4px de
   // altura num chip de 44px.
   brancoptica: "/logos/brancoptica.png",
+  // Medway (v77.37) — o logótipo do cabeçalho de medway.pt (azul sobre
+  // transparente). O site serve-o como SVG que só embrulha este PNG.
+  medway: "/logos/medway.png",
 };
 
 export function getClientLogo(slug: string): string | null {
@@ -67,6 +70,8 @@ export type LogoSizing = "normal" | "tight";
 const LOGO_SIZING_OVERRIDES: Record<string, LogoSizing> = {
   "white-clinic": "tight",
   "b-life": "tight",
+  // Wordmark largo (≈3,4:1) — sem isto fica minúsculo no chip quadrado.
+  medway: "tight",
 };
 
 export function getLogoSizing(slug: string): LogoSizing {
@@ -97,6 +102,7 @@ export const CLIENT_WEBSITES: Record<string, string> = {
   "clinica-fernando-almeida": "https://www.clinicasdentariasfa.pt/",
   cuidamais: "https://cuidamais.pt/",
   brancoptica: "https://www.brancoptica.pt/",
+  medway: "https://medway.pt/",
   // ADS-only — not known yet
   "clinica-empatia": "",
 };

@@ -84,6 +84,8 @@ export const DEFAULT_STARTING_DATES: Record<string, string> = {
   "maratona-clube-de-portugal": "2026-09-01",
   // v76.82: Brancóptica — onboarding a 21/08/2026.
   brancoptica: "2026-08-21",
+  // v77.37: Medway — onboarding a 22/09/2026.
+  medway: "2026-09-22",
 };
 
 /** Full agency consultant roster — drives the multi-select dropdown on

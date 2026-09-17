@@ -85,6 +85,30 @@ const BRIEFS: Record<string, ClientBrief> = {
     ],
   },
 
+  // Medway (v77.37) — notas da análise técnica ao CMS (site PHP à medida).
+  medway: {
+    dos: [
+      "Separar o plano de implementação em três frentes: (1) alterações na base de dados, (2) alterações nos templates PHP e (3) funcionalidades novas no CMS — cada uma com esforço e dono diferentes.",
+      "Alt text nas imagens em HTML guardado na BD (ex. blog_lang.text): gerar SQL seguro e transacional, com parser de HTML, que altera só o atributo alt da tag <img>.",
+      "BreadcrumbList e LocalBusiness: implementar no template PHP (global, ou por rota/slug nas páginas de clínicas) em vez de página a página.",
+      "Páginas comerciais (homepage, sobre nós, tratamentos): confirmar primeiro se o conteúdo vem da BD ou está hardcoded no PHP antes de estimar.",
+    ],
+    donts: [
+      "Não prometer ao cliente que tudo se faz pelo painel — parte do trabalho exige mexer na BD e/ou nos templates PHP.",
+      "Não vender blocos de conteúdo novos nem FAQs como «editáveis pelo cliente» enquanto o CMS não tiver essa funcionalidade — é desenvolvimento.",
+      "Não tomar a cobertura de um campo (100% vs 0%) como prova de que uma página foi feita à mão: percentagens irregulares também vêm de templates antigos, campos opcionais, várias tabelas, conteúdos migrados ou HTML colado em campos do CMS.",
+    ],
+    notes: [
+      "CMS: muito conteúdo vive em tabelas — blog_lang.text, blog_lang_*, menu_lang, menu_block_lang, menu_footer_lang, cms_option, etc. Muitas alterações fazem-se na BD ou no código, mesmo sem campos próprios no backend.",
+      "Resumo: conseguimos implementar uma parte significativa, mas não tudo só pelo painel.",
+      "Alt text — artigos/blog: SIM na maioria dos casos (HTML na BD). Páginas comerciais: provavelmente sim — BD se estiver lá, PHP/template se estiver hardcoded.",
+      "Dados estruturados — BreadcrumbList: SIM, via template PHP global. LocalBusiness nas clínicas: SIM, via template das clínicas ou lógica por rota/slug.",
+      "FAQs novas/editáveis: tecnicamente SIM — BD se já houver tabelas/estrutura, senão código/template.",
+      "Blocos de conteúdo novos: DEPENDE — se o CMS não suporta blocos, é desenvolvimento PHP/CMS. Páginas novas: DEPENDE — sim se já houver tabela/rota no CMS, senão código.",
+      "Páginas «fechadas» no código não se resolvem com formação no painel; com acesso ao código/backup alteram-se os templates ou criam-se campos novos.",
+    ],
+  },
+
   // ADS-only clients
   "clinica-empatia": EMPTY,
 };
