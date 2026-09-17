@@ -9,7 +9,7 @@
 
 import { NextResponse } from "next/server";
 import { getCurrentEmployee } from "@/lib/auth/server";
-import { accessibleDepts } from "@/lib/auth/credentials";
+import { editableDepts } from "@/lib/auth/credentials";
 import { decryptSecret } from "@/lib/web-creds";
 import {
   getProject,
@@ -24,7 +24,9 @@ export async function POST(
   ctx: { params: Promise<{ id: string }> },
 ) {
   const employee = await getCurrentEmployee();
-  if (!employee || !accessibleDepts(employee).includes("web")) {
+  // Cofre: só quem EDITA o Web (v77.35) — um acesso só de leitura não
+  // desencripta credenciais.
+  if (!employee || !editableDepts(employee).includes("web")) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
   if (!webStorageConfigured) {

@@ -224,11 +224,9 @@ const TEAM_OPTIONS: NpsMultiOption[] = [
     label: { pt: "João Batista", en: "João Batista" },
     photo: "/team/avatar/joao-b.jpg",
   },
-  {
-    value: "germano-c",
-    label: { pt: "Germano Cunha", en: "Germano Cunha" },
-    photo: "/team/avatar/germano-c.jpg",
-  },
+  // Hugo Silva entrou no lugar do Germano Cunha (v77.35). Sem retrato
+  // publicado ainda — cai na inicial.
+  { value: "hugo-s", label: { pt: "Hugo Silva", en: "Hugo Silva" } },
   {
     value: "mike",
     label: { pt: "Mike Nobre", en: "Mike Nobre" },
@@ -836,13 +834,23 @@ export function getQuestion(name: string): NpsQuestion | null {
 }
 
 /** Display label for a person option value (from the source multi question). */
+/** Quem saiu do formulário mas continua nas respostas já gravadas — sem
+ *  isto o histórico mostrava o `value` cru («germano-c»). */
+const FORMER_TEAM_LABELS: Record<string, string> = {
+  "germano-c": "Germano Cunha",
+};
+
 export function personLabel(
   source: string,
   value: string,
   lang: PublicLang,
 ): string {
   const src = getMultiQuestion(source);
-  return src?.options.find((o) => o.value === value)?.label[lang] ?? value;
+  return (
+    src?.options.find((o) => o.value === value)?.label[lang] ??
+    FORMER_TEAM_LABELS[value] ??
+    value
+  );
 }
 
 /** Headline / score maximum — everything is out of 10. */

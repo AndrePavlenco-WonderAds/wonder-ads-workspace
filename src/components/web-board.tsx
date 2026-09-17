@@ -103,6 +103,7 @@ export function WebBoard({
   openTickets = [],
   clientOptions = [],
   deliveryRights,
+  readOnly = false,
 }: {
   initialProjects: PublicWebProject[];
   assignees: Assignee[];
@@ -115,6 +116,9 @@ export function WebBoard({
   /** Resolvido no servidor — decide se o formulário de criação mostra o
    *  campo da entrega prevista. A regra a sério vive na API. */
   deliveryRights: WebDeliveryRights;
+  /** Web só de leitura (v77.35, `readOnlyDepts`): sem criar projetos, sem
+   *  backlog e sem arrastar cartões. O portão a sério vive no middleware. */
+  readOnly?: boolean;
 }) {
   const [projects, setProjects] = useState<PublicWebProject[]>(initialProjects);
   const [tickets, setTickets] = useState<BoardTicket[]>(openTickets);
@@ -443,6 +447,7 @@ export function WebBoard({
             <Users className="h-4 w-4" />
             Clientes
           </Link>
+          {!readOnly && (<>
           <button
             onClick={() => setShowBacklog(true)}
             className="inline-flex items-center gap-2 rounded-xl border border-[color:var(--brand-purple)]/45 bg-[#783DF5]/10 px-3.5 py-2.5 text-sm font-medium text-white/90 transition hover:bg-[#783DF5]/18 hover:text-white"
@@ -457,13 +462,16 @@ export function WebBoard({
             <Plus className="h-4 w-4" strokeWidth={2.5} />
             New project
           </button>
+          </>)}
         </div>
       </div>
 
       <p className="mt-3 text-xs text-white/45">
         {filtered.length} of {projects.length} project
-        {projects.length === 1 ? "" : "s"} · drag a card between columns to
-        change its status
+        {projects.length === 1 ? "" : "s"}
+        {readOnly
+          ? " · só leitura — podes abrir os cartões e pedir tickets"
+          : " · drag a card between columns to change its status"}
       </p>
 
       {error && (
@@ -491,6 +499,7 @@ export function WebBoard({
                 if (e.currentTarget === e.target) setOverCol(null);
               }}
               onDrop={() => {
+                if (readOnly) return;
                 if (dragTicketId) moveTicket(dragTicketId, status);
                 else if (dragId) moveTo(dragId, status);
                 setDragId(null);
@@ -525,6 +534,7 @@ export function WebBoard({
                         <TicketCard
                           key={t.id}
                           ticket={t}
+                          draggable={!readOnly}
                           onDragStart={() => setDragTicketId(t.id)}
                           onDragEnd={() => {
                             setDragTicketId(null);
@@ -536,6 +546,7 @@ export function WebBoard({
                         <BoardCard
                           key={p.id}
                           project={p}
+                          draggable={!readOnly}
                           onDragStart={() => setDragId(p.id)}
                           onDragEnd={() => {
                             setDragId(null);
@@ -617,10 +628,12 @@ function FilterChip({
  *  (clicking opens the ticket detail; dragging changes its status). */
 function TicketCard({
   ticket,
+  draggable = true,
   onDragStart,
   onDragEnd,
 }: {
   ticket: BoardTicket;
+  draggable?: boolean;
   onDragStart: () => void;
   onDragEnd: () => void;
 }) {
@@ -631,14 +644,14 @@ function TicketCard({
   return (
     <Link
       href={`/web/tickets/${ticket.id}`}
-      draggable
+      draggable={draggable}
       onDragStart={(e) => {
         e.dataTransfer.effectAllowed = "move";
         e.dataTransfer.setData("text/plain", ticket.id);
         onDragStart();
       }}
       onDragEnd={onDragEnd}
-      className="group block cursor-grab rounded-xl border border-white/10 bg-white/[0.04] p-3 transition hover:border-white/25 hover:bg-white/[0.07] active:cursor-grabbing"
+      className={`group block rounded-xl border border-white/10 bg-white/[0.04] p-3 transition hover:border-white/25 hover:bg-white/[0.07] ${draggable ? "cursor-grab active:cursor-grabbing" : ""}`}
     >
       <div className="mb-1 flex items-center gap-1.5">
         <Ticket className="h-3 w-3 text-[color:var(--brand-magenta)]" />
@@ -741,10 +754,12 @@ function DeliveryLine({
 
 function BoardCard({
   project,
+  draggable = true,
   onDragStart,
   onDragEnd,
 }: {
   project: PublicWebProject;
+  draggable?: boolean;
   onDragStart: () => void;
   onDragEnd: () => void;
 }) {
@@ -757,14 +772,14 @@ function BoardCard({
   return (
     <Link
       href={`/web/${project.id}`}
-      draggable
+      draggable={draggable}
       onDragStart={(e) => {
         e.dataTransfer.effectAllowed = "move";
         e.dataTransfer.setData("text/plain", project.id);
         onDragStart();
       }}
       onDragEnd={onDragEnd}
-      className="group block cursor-grab rounded-xl border border-white/10 bg-white/[0.04] p-3 transition hover:border-white/25 hover:bg-white/[0.07] active:cursor-grabbing"
+      className={`group block rounded-xl border border-white/10 bg-white/[0.04] p-3 transition hover:border-white/25 hover:bg-white/[0.07] ${draggable ? "cursor-grab active:cursor-grabbing" : ""}`}
     >
       <div className="flex items-start justify-between gap-2">
         <h3 className="text-[15px] font-bold leading-snug tracking-tight text-white group-hover:text-white">

@@ -12,7 +12,11 @@ import { PageShell } from "@/components/page-shell";
 import { AccessDenied } from "@/components/access-denied";
 import { WebClientDetail } from "@/components/web-client-detail";
 import { getCurrentEmployee } from "@/lib/auth/server";
-import { accessibleDepts, getWebAssignees } from "@/lib/auth/credentials";
+import {
+  accessibleDepts,
+  editableDepts,
+  getWebAssignees,
+} from "@/lib/auth/credentials";
 import {
   getAllProjects,
   webStorageConfigured,
@@ -112,11 +116,17 @@ export default async function WebClientPage({
 
       <div className="mt-7 grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
         {/* LEFT: editable profile + vault */}
-        <WebClientDetail
-          initialClient={client}
-          registered={Boolean(record)}
-          assignees={assignees}
-        />
+        {/* Web só de leitura (v77.35): campos e cofre desligados. */}
+        <fieldset
+          disabled={!editableDepts(employee).includes("web")}
+          className="m-0 min-w-0 border-0 p-0"
+        >
+          <WebClientDetail
+            initialClient={client}
+            registered={Boolean(record)}
+            assignees={assignees}
+          />
+        </fieldset>
 
         {/* RIGHT: everything tied to this client */}
         <div className="flex flex-col gap-6">

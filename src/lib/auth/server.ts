@@ -49,6 +49,8 @@ type EmployeeView = Pick<
   isAdmin: boolean;
   /** Perfil viewer: o único departamento que vê. null para os restantes. */
   viewerOf: DeptSlug | null;
+  /** Departamentos extra só de leitura (v77.35). Vazio para quase todos. */
+  readOnlyDepts: DeptSlug[];
 };
 
 function toView(username: string | null): EmployeeView | null {

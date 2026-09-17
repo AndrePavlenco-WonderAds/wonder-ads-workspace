@@ -5,6 +5,7 @@ import { WebBoard } from "@/components/web-board";
 import { getCurrentEmployee } from "@/lib/auth/server";
 import {
   accessibleDepts,
+  editableDepts,
   getWebAssignees,
   webDeliveryRights,
 } from "@/lib/auth/credentials";
@@ -109,6 +110,7 @@ export default async function WebPage() {
         openTickets={openTickets}
         clientOptions={clientOptions}
         deliveryRights={webDeliveryRights(employee)}
+        readOnly={!editableDepts(employee).includes("web")}
       />
     </PageShell>
   );

@@ -5,6 +5,7 @@ import { WebProjectDetail } from "@/components/web-project-detail";
 import { getCurrentEmployee } from "@/lib/auth/server";
 import {
   accessibleDepts,
+  editableDepts,
   getWebAssignees,
   webDeliveryRights,
 } from "@/lib/auth/credentials";
@@ -50,12 +51,19 @@ export default async function WebProjectPage({
 
   return (
     <PageShell wide backHref="/web" backLabel="Web board" sessionTimer>
-      <WebProjectDetail
-        initialProject={toPublicProject(project)}
-        assignees={getWebAssignees()}
-        currentUser={{ username: employee.username, name: employee.name }}
-        deliveryRights={webDeliveryRights(employee)}
-      />
+      {/* Web só de leitura (v77.35): o fieldset desliga todos os campos e
+          botões da ficha; o middleware recusa a escrita de qualquer forma. */}
+      <fieldset
+        disabled={!editableDepts(employee).includes("web")}
+        className="m-0 min-w-0 border-0 p-0"
+      >
+        <WebProjectDetail
+          initialProject={toPublicProject(project)}
+          assignees={getWebAssignees()}
+          currentUser={{ username: employee.username, name: employee.name }}
+          deliveryRights={webDeliveryRights(employee)}
+        />
+      </fieldset>
     </PageShell>
   );
 }

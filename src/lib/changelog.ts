@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.35",
+    date: "2026-09-17",
+    title: "Equipa ADS: entra o Hugo Silva, sai o Germano Cunha",
+    highlights: [
+      "**🙋 Hugo Silva — ADS Consultant.** Nova conta (username `hugo-s`) com o ADS DPT e o Comercial completos, e o SEO DPT e o Web DPT só em leitura.",
+      "**🎫 Tickets continuam abertos.** No Web o Hugo abre o board, os projetos e os clientes sem os poder alterar (sem criar projetos, sem backlog, sem arrastar cartões, sem ver passwords do cofre), mas pede tickets e comenta-os normalmente.",
+      "**🔒 Novo portão no servidor.** Qualquer escrita em /api/web (fora dos tickets) exige poder editar o Web, e os «reveal» dos cofres do Web também. Para quem já tinha o Web nada muda.",
+      "**👋 Germano Cunha sem acesso.** A conta `germano-c` deixou de existir: o login deixa de funcionar e uma sessão aberta deixa de ser reconhecida. Tickets e registos antigos mantêm o nome dele.",
+      "**⭐ Inquérito NPS.** Na pergunta «quem te acompanhou», o Germano Cunha sai e entra o Hugo Silva. As respostas antigas que o escolheram continuam a mostrar o nome dele.",
+    ],
+  },
+  {
     version: "77.34",
     date: "2026-09-16",
     title: "SEO DPT: migrar um cliente para outro consultor, e o favicon passa a ser a borboleta",

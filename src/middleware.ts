@@ -206,6 +206,22 @@ export async function middleware(req: NextRequest) {
         { status: 403 },
       );
     }
+    // Web só de leitura (v77.35) — quem abre o Web sem o poder editar (o
+    // Hugo, de ADS, via `readOnlyDepts`) não cria nem altera projetos,
+    // clientes, backlog ou comentários de projeto. Os TICKETS ficam de
+    // fora de propósito: são o canal global de pedidos ao Web e qualquer
+    // pessoa com sessão os abre e comenta.
+    if (
+      WRITE_METHODS.has(req.method) &&
+      underPrefix(req.nextUrl.pathname, "/api/web") &&
+      !underPrefix(req.nextUrl.pathname, "/api/web/tickets") &&
+      !canEditDept(effectiveUsername(session), "web")
+    ) {
+      return NextResponse.json(
+        { error: "Acesso só de leitura — no Web podes pedir tickets, mas não alterar projetos nem clientes." },
+        { status: 403 },
+      );
+    }
     // O mesmo portão para o Comercial (v77.12): quem só pode VER o
     // departamento não muda o tipo de uma proposta nem regista decisões.
     if (

@@ -65,6 +65,13 @@ export type EmployeeCredential = {
    *  credenciais (Tools, acessos dos clientes, «reveal» dos projetos Web).
    *  O `role` destas linhas vem de `VIEWER_ROLES`. */
   viewerOf?: DeptSlug;
+  /** DEPARTAMENTOS EXTRA SÓ DE LEITURA (v77.35) — somam-se aos do `dept`
+   *  em `accessibleDepts`, mas nunca entram em `editableDepts`. É o caso de
+   *  quem tem o seu departamento a sério e precisa de espreitar outros: o
+   *  Hugo (ADS) vê o SEO e o Web sem mexer, e continua a poder pedir
+   *  tickets ao Web (os tickets são globais — ver o portão do Web no
+   *  middleware). Os cofres de credenciais do Web ficam fechados. */
+  readOnlyDepts?: DeptSlug[];
 };
 
 /** Department slugs used across the workspace router. */
@@ -86,6 +93,7 @@ type AccessRow = {
   dept: string;
   isAdmin?: boolean;
   viewerOf?: DeptSlug | null;
+  readOnlyDepts?: DeptSlug[] | null;
 };
 
 export const EMPLOYEE_CREDENTIALS: EmployeeCredential[] = [
@@ -169,13 +177,18 @@ export const EMPLOYEE_CREDENTIALS: EmployeeCredential[] = [
     hash: "188972f4fbf52acdb335489c79bc32b7443c4185a9bdee0e34c04fa5a5fc99f4ba4a824e84ab2b615dbf12f310220bb12588ec46d34ba155b86f47f879d0f446",
   },
   {
-    username: "germano-c",
-    name: "Germano C.",
+    // Hugo Silva — ADS Consultant (v77.35), entra no lugar do Germano Cunha.
+    // ADS (e Comercial) a sério; SEO e Web só leitura, com pedido de tickets
+    // ao Web. Password gerada fora do repo e entregue ao André.
+    username: "hugo-s",
+    name: "Hugo S.",
+    fullName: "Hugo Silva",
     role: "ADS Consultant",
     dept: "ADS",
-    startedAt: "2026-05-12",
-    salt: "bb6622826ccaefd1b6f0a9ba4283b69c",
-    hash: "416eece1b238b1dd4175b548cfa7ada44f4c12343fe49191cbf6c73329b63ed960f32b94e5966156917504dfc04ad4af72cbc4b42e090a5678d991f895b6dcf6",
+    readOnlyDepts: ["seo", "web"],
+    startedAt: "2026-09-17",
+    salt: "0906ea09634a2e3d5fc2def4a894eb09",
+    hash: "cf9dba38e5a4f0be12aa305f3d2e4509d075c7649c4d673eed7f5e15dc4b81eeb63cae1d419a659d48b5be66ae823817249c9b7e9e4270282b4e3679402a0ff6",
   },
   // Web designers — added v74.29. Web Dept only (see accessibleDepts):
   // they get /web but NOT /seo. Plain passwords were generated once and
@@ -269,6 +282,12 @@ export function accessibleDepts(
   if (!row) return [];
   if (row.isAdmin) return [...DEPARTMENTS];
   if (row.viewerOf) return [row.viewerOf];
+  const base = editableDepts(row);
+  const extra = (row.readOnlyDepts ?? []).filter((d) => !base.includes(d));
+  // Mantém a ordem canónica dos departamentos.
+  if (extra.length > 0) {
+    return DEPARTMENTS.filter((d) => base.includes(d) || extra.includes(d));
+  }
   switch (row.dept) {
     case "All":
     case "Founder":
@@ -476,6 +495,7 @@ export function getEmployeeDisplay(username: string): {
   dept: string;
   isAdmin: boolean;
   viewerOf: DeptSlug | null;
+  readOnlyDepts: DeptSlug[];
 } | null {
   const row = findEmployeeByUsername(username);
   return row
@@ -485,6 +505,7 @@ export function getEmployeeDisplay(username: string): {
         dept: row.dept,
         isAdmin: Boolean(row.isAdmin),
         viewerOf: row.viewerOf ?? null,
+        readOnlyDepts: row.readOnlyDepts ?? [],
       }
     : null;
 }
