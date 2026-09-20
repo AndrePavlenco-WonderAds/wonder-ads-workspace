@@ -10,9 +10,14 @@ import { Clock } from "lucide-react";
 export function NpsIntro({
   text,
   minutesLabel,
+  aside,
 }: {
   text: string;
   minutesLabel: string;
+  /** O que aparece ao lado do chip dos minutos — o chip de contexto do
+   *  inquérito (v77.39). Entra com o mesmo fade, depois de o texto acabar
+   *  de ser escrito. */
+  aside?: React.ReactNode;
 }) {
   const [shown, setShown] = useState(0);
   const done = shown >= text.length;
@@ -40,10 +45,15 @@ export function NpsIntro({
           done ? "translate-y-0 opacity-100" : "translate-y-1 opacity-0"
         }`}
       >
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-black/10 bg-white/60 px-2.5 py-1 text-[11px] font-medium text-black/55">
-          <Clock className="h-3 w-3 text-[#783DF5]" />
-          {minutesLabel}
-        </span>
+        {/* h-7 fixo: o chip de contexto ao lado tem a mesma altura, para os
+            dois parecerem irmãos e não um botão ao lado de uma etiqueta. */}
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="inline-flex h-7 items-center gap-1.5 rounded-full border border-black/10 bg-white/60 px-2.5 text-[11px] font-medium text-black/55">
+            <Clock className="h-3 w-3 text-[#783DF5]" />
+            {minutesLabel}
+          </span>
+          {aside}
+        </div>
       </div>
     </div>
   );

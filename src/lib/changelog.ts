@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.39",
+    date: "2026-09-20",
+    title: "Inquérito NPS: pastilha fixa «Last Report · Trabalho feito» e o trabalho concluído em linha do tempo",
+    highlights: [
+      "**📌 Pastilha sempre presente.** A barra grande que ficava por cima das perguntas saiu. No seu lugar, a pastilha «Consultar · Last Report · Trabalho feito» fica fixa no canto inferior direito do princípio ao fim do formulário — em todos os passos, a qualquer scroll — e abre o mesmo painel lateral.",
+      "**⏱️ Chip junto ao «Formulário de 5 minutos».** A mesma pastilha, em miniatura e com a altura exata desse chip, aparece na introdução assim que o texto acaba de ser escrito.",
+      "**🗓️ Trabalho concluído em linha do tempo.** Em vez de repetir a data em cada linha, cada dia tem um selo (dia, mês, dia da semana e semana do roadmap) e as tarefas desse dia empilham-se num cartão só, com a área de cada uma pela cor da margem e da pastilha. Cada mês mostra a contagem e o fio da linha do tempo liga os dias.",
+    ],
+  },
+  {
     version: "77.38",
     date: "2026-09-20",
     title: "Inquérito NPS: o último relatório e o trabalho feito ao lado das perguntas",

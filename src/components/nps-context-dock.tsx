@@ -1,38 +1,48 @@
 "use client";
 
-// O PAINEL DE CONTEXTO DO INQUÉRITO NPS (v77.38).
+// O PAINEL DE CONTEXTO DO INQUÉRITO NPS (v77.38 → v77.39).
 //
-// Vive na página pública do inquérito, entre a introdução e o formulário,
-// e dá ao cliente — sem sair da página — as duas coisas de que precisa para
-// avaliar com factos e não de memória: o último relatório mensal e o
-// trabalho concluído nos últimos 3 meses. Três peças:
+// Vive na página pública do inquérito e dá ao cliente — sem sair da página
+// — as duas coisas de que precisa para avaliar com factos e não de memória:
+// o último relatório mensal e o trabalho concluído nos últimos 3 meses.
 //
-//  • A BARRA, por cima do formulário: um cartão por fonte (relatório /
-//    trabalho), com uma amostra do conteúdo (o mês, três números; a
-//    contagem, três títulos). Clicar abre o painel nessa aba; o «↗» no
-//    canto abre a versão pública noutro separador.
-//  • A PASTILHA FLUTUANTE, no canto inferior direito: só aparece quando a
-//    barra saiu do ecrã (o cliente está a meio de uma secção comprida) e o
-//    painel está fechado. Nunca tapa nada enquanto a barra está à vista.
+// Três peças (v77.39, depois de o Andre ver a primeira versão):
+//
+//  • A PASTILHA FIXA no canto inferior direito — «Consultar · Last Report ·
+//    Trabalho feito» — presente do princípio ao fim do formulário, em todos
+//    os passos e a qualquer scroll. A barra grande que havia por cima das
+//    perguntas saiu: empurrava o formulário para baixo e repetia o que a
+//    pastilha já diz.
+//  • O CHIP JUNTO AO «Formulário de 5 minutos», com o mesmo tamanho desse
+//    chip: a mesma pastilha, em miniatura, no sítio onde o olho pousa antes
+//    de começar.
 //  • O PAINEL, lateral no desktop e de baixo para cima no telemóvel: abas
 //    Relatório / Trabalho, Esc e clique fora fecham, o foco vai para o
 //    botão de fechar e volta a quem abriu. O relatório completo carrega
 //    dentro do painel só quando se pede (um iframe da página pública —
-//    ~140 KB que não pesam no formulário até serem precisos).
+//    ~140 KB que não pesam no formulário até serem precisos). O trabalho
+//    concluído lê-se como uma linha do tempo: um dia de cada vez, com as
+//    tarefas desse dia empilhadas e a área de cada uma pela cor.
 //
-// Só tipos vêm dos stores; os dados chegam já serializados do servidor
-// (getNpsSurveyContext), por isso este ficheiro não sabe o que é o KV.
+// O componente é um PROVIDER: embrulha a introdução e o formulário, e é
+// por contexto React que o chip da introdução abre o mesmo painel que a
+// pastilha do canto. Só tipos vêm dos stores; os dados chegam já
+// serializados do servidor (getNpsSurveyContext).
 
-import { useEffect, useId, useRef, useState } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { createPortal } from "react-dom";
 import {
-  ArrowUpRight,
   BarChart3,
   BookOpenText,
-  CalendarDays,
-  Check,
   ChevronDown,
-  ChevronRight,
   ExternalLink,
   FileText,
   ListChecks,
@@ -47,6 +57,7 @@ import type { PublicLang } from "@/lib/public-i18n";
 import {
   NPS_PILLAR_LABEL,
   NPS_PILLAR_TONE,
+  type NpsDoneAction,
   type NpsKpiDelta,
   type NpsReportDigest,
   type NpsSurveyContext,
@@ -61,19 +72,6 @@ type Tab = "report" | "work";
 
 const COPY = {
   pt: {
-    eyebrow: "Antes de avaliar",
-    lead: "Consulta o que fizemos por ti — sem sair do formulário.",
-    sub: "O último relatório mensal e o trabalho concluído nos últimos 3 meses, à mão para cada resposta.",
-    reportCard: "Relatório mensal",
-    workCard: "Trabalho concluído",
-    open: "Consultar",
-    newTab: "Abrir noutro separador",
-    last3: "últimos 3 meses",
-    actions: (n: number) =>
-      n === 1 ? "1 ação concluída" : `${n} ações concluídas`,
-    implemented: (n: number) =>
-      n === 1 ? "1 ação implementada" : `${n} ações implementadas`,
-    window: (a: string, b: string) => `de ${a} a ${b} · últimos 3 meses`,
     tabReport: "Relatório mensal",
     tabWork: "Trabalho concluído",
     drawerEyebrow: "Contexto da tua conta",
@@ -88,34 +86,30 @@ const COPY = {
     deltaNote: "Variação face ao mês anterior.",
     readFull: "Ler o relatório completo aqui",
     hideFull: "Fechar o relatório completo",
+    newTab: "Abrir noutro separador",
     fullHint:
       "O documento completo — com evolução, keywords, IA e Ficha Google — abre aqui dentro ou num separador novo.",
     loadingReport: "A carregar o relatório…",
     frameTitle: "Relatório mensal completo",
+    implemented: (n: number) =>
+      n === 1 ? "1 ação implementada" : `${n} ações implementadas`,
+    window: (a: string, b: string) => `de ${a} a ${b} · últimos 3 meses`,
     byArea: "Por área",
     weekAbbr: "Sem.",
+    tasksOnDay: (n: number) => (n === 1 ? "1 tarefa" : `${n} tarefas`),
     openRoadmap: "Abrir o roadmap completo",
     close: "Fechar",
     pillLabel: "Consultar",
-    pillReport: "Relatório",
+    pillReport: "Last Report",
     pillWork: "Trabalho feito",
-    pillMobile: "Relatório & trabalho feito",
     emptyWork: "Ainda não há ações concluídas nos últimos 3 meses.",
+    months: [
+      "jan", "fev", "mar", "abr", "mai", "jun",
+      "jul", "ago", "set", "out", "nov", "dez",
+    ],
+    weekdays: ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"],
   },
   en: {
-    eyebrow: "Before you rate",
-    lead: "See what we did for you — without leaving the form.",
-    sub: "The latest monthly report and the work completed in the last 3 months, at hand for every answer.",
-    reportCard: "Monthly report",
-    workCard: "Work completed",
-    open: "View",
-    newTab: "Open in a new tab",
-    last3: "last 3 months",
-    actions: (n: number) =>
-      n === 1 ? "1 action completed" : `${n} actions completed`,
-    implemented: (n: number) =>
-      n === 1 ? "1 action implemented" : `${n} actions implemented`,
-    window: (a: string, b: string) => `from ${a} to ${b} · last 3 months`,
     tabReport: "Monthly report",
     tabWork: "Work completed",
     drawerEyebrow: "Your account in context",
@@ -130,19 +124,28 @@ const COPY = {
     deltaNote: "Change vs. the previous month.",
     readFull: "Read the full report here",
     hideFull: "Close the full report",
+    newTab: "Open in a new tab",
     fullHint:
       "The full document — trend, keywords, AI and Google listing — opens right here or in a new tab.",
     loadingReport: "Loading the report…",
     frameTitle: "Full monthly report",
+    implemented: (n: number) =>
+      n === 1 ? "1 action implemented" : `${n} actions implemented`,
+    window: (a: string, b: string) => `from ${a} to ${b} · last 3 months`,
     byArea: "By area",
     weekAbbr: "Wk",
+    tasksOnDay: (n: number) => (n === 1 ? "1 task" : `${n} tasks`),
     openRoadmap: "Open the full roadmap",
     close: "Close",
     pillLabel: "Look up",
-    pillReport: "Report",
+    pillReport: "Last Report",
     pillWork: "Work done",
-    pillMobile: "Report & work done",
     emptyWork: "No actions completed in the last 3 months yet.",
+    months: [
+      "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+    ],
+    weekdays: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
   },
 } as const;
 
@@ -216,7 +219,7 @@ function PillarChip({
   const tone = NPS_PILLAR_TONE[pillar];
   return (
     <span
-      className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-semibold"
+      className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-semibold"
       style={{
         color: tone,
         background: `${tone}14`,
@@ -236,71 +239,65 @@ function PillarChip({
   );
 }
 
-/** Um cartão da barra: o botão é o cartão inteiro; o «↗» é um link à parte
- *  (um link dentro de um botão não é HTML válido nem acessível). */
-function ContextCard({
-  icon,
-  title,
-  headline,
-  meta,
-  preview,
-  href,
-  onOpen,
+// ─── A pastilha ──────────────────────────────────────────────────────────
+//
+// A MESMA peça em dois tamanhos: «md» é a do canto (fixa, com sombra);
+// «sm» é o chip da introdução, com a altura do «Formulário de 5 minutos»
+// (h-7, texto 11px, fundo branco translúcido) para os dois parecerem
+// irmãos e não um botão ao lado de uma etiqueta.
+
+function ContextPill({
+  size,
+  report,
+  work,
   lang,
+  onOpen,
 }: {
-  icon: React.ReactNode;
-  title: string;
-  headline: string;
-  meta: string;
-  preview: React.ReactNode;
-  href: string | null;
-  onOpen: () => void;
+  size: "sm" | "md";
+  report: boolean;
+  work: boolean;
   lang: PublicLang;
+  onOpen: (tab: Tab) => void;
 }) {
   const t = COPY[lang];
+  const sm = size === "sm";
+  const btn = `inline-flex items-center rounded-full font-semibold text-black/70 transition-colors duration-150 hover:bg-[#783DF5]/10 hover:text-[#783DF5] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#783DF5]/40 ${
+    sm ? "h-[22px] gap-1 px-2 text-[11px]" : "gap-1.5 px-3 py-2 text-[12.5px]"
+  }`;
+  const icon = sm ? "h-3 w-3" : "h-3.5 w-3.5";
   return (
-    <div className="relative">
-      <button
-        type="button"
-        onClick={onOpen}
-        className="group flex h-full w-full flex-col rounded-2xl border border-black/[0.08] bg-white p-4 text-left shadow-[0_1px_2px_rgba(0,0,0,0.03)] transition-all duration-200 hover:-translate-y-[2px] hover:border-[#783DF5]/40 hover:shadow-[0_16px_34px_-22px_rgba(120,61,245,0.55)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#783DF5]/40 active:scale-[0.995]"
+    <div
+      className={
+        sm
+          ? "inline-flex h-7 items-center gap-0.5 rounded-full border border-black/10 bg-white/60 p-[3px] pl-2"
+          : "flex items-center gap-1 rounded-full border border-black/10 bg-white/95 p-1 shadow-[0_18px_40px_-16px_rgba(23,22,45,0.55)] backdrop-blur-md"
+      }
+    >
+      <span
+        className={`inline-flex items-center gap-1 font-semibold uppercase tracking-[0.14em] text-black/40 ${
+          sm ? "pr-1 text-[10px]" : "hidden pl-3 pr-1 text-[10.5px] sm:inline-flex"
+        }`}
       >
-        <span className="flex items-center gap-2">
-          <span
-            className="flex h-7 w-7 items-center justify-center rounded-lg text-white shadow-sm shadow-[#783DF5]/30"
-            style={{ background: BRAND_GRADIENT }}
-          >
-            {icon}
-          </span>
-          <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-black/50">
-            {title}
-          </span>
-        </span>
-        <span className="mt-3 pr-8 text-[17px] font-semibold leading-tight tracking-tight text-black/85">
-          {headline}
-        </span>
-        <span className="mt-0.5 text-[12px] text-black/45">{meta}</span>
-        <span className="mt-3 flex-1">{preview}</span>
-        <span className="mt-3 inline-flex items-center gap-1 text-[12.5px] font-semibold text-[#783DF5]">
-          {t.open}
-          <ChevronRight className="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-0.5" />
-        </span>
-      </button>
-      {href && (
-        <a
-          href={href}
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label={t.newTab}
-          title={t.newTab}
-          className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full border border-black/10 bg-white text-black/45 transition-all duration-200 hover:-translate-y-[1px] hover:border-[#783DF5]/40 hover:text-[#783DF5] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#783DF5]/40"
-        >
-          <ArrowUpRight className="h-4 w-4" />
-        </a>
+        <Sparkles className="h-3 w-3 text-[#783DF5]" />
+        {t.pillLabel}
+      </span>
+      {report && (
+        <button type="button" onClick={() => onOpen("report")} className={btn}>
+          <BarChart3 className={icon} />
+          {t.pillReport}
+        </button>
+      )}
+      {work && (
+        <button type="button" onClick={() => onOpen("work")} className={btn}>
+          <ListChecks className={icon} />
+          {t.pillWork}
+        </button>
       )}
     </div>
   );
 }
+
+// ─── O relatório ─────────────────────────────────────────────────────────
 
 function ReportPanel({
   report,
@@ -491,6 +488,61 @@ function ReportPanel({
   );
 }
 
+// ─── O trabalho concluído ────────────────────────────────────────────────
+//
+// LINHA DO TEMPO POR DIA (v77.39). A primeira versão repetia «Sem. 10 ·
+// 17/09/2026» em cada linha — e quando o consultor marca dez tarefas na
+// mesma tarde, isso é a mesma data dez vezes seguidas. Agora a data
+// aparece UMA vez, num selo à esquerda (dia grande, mês, dia da semana e
+// semana do roadmap), e as tarefas desse dia empilham-se à direita num
+// cartão só, cada uma com a área pela cor da margem e da pastilha. Lê-se
+// de cima a baixo como um diário do que foi feito.
+
+type DayGroup = {
+  key: string;
+  at: number;
+  items: NpsDoneAction[];
+};
+
+function groupByDay(items: NpsDoneAction[]): DayGroup[] {
+  const map = new Map<string, DayGroup>();
+  for (const it of items) {
+    const key = formatDate(it.doneAt);
+    const g = map.get(key);
+    if (g) g.items.push(it);
+    else map.set(key, { key, at: it.doneAt, items: [it] });
+  }
+  return [...map.values()].sort((a, b) => b.at - a.at);
+}
+
+function DayBadge({
+  at,
+  week,
+  lang,
+}: {
+  at: number;
+  week: number;
+  lang: PublicLang;
+}) {
+  const t = COPY[lang];
+  const d = new Date(at);
+  return (
+    <div className="w-[58px] rounded-2xl border border-black/[0.07] bg-white px-1 py-2 text-center shadow-[0_8px_20px_-16px_rgba(23,22,45,0.5)] sm:w-[64px]">
+      <div className="text-[20px] font-semibold leading-none tabular-nums tracking-tight text-black/85">
+        {d.getDate()}
+      </div>
+      <div className="mt-1 text-[9.5px] font-bold uppercase tracking-[0.14em] text-[#783DF5]">
+        {t.months[d.getMonth()]}
+      </div>
+      <div className="mt-1 border-t border-black/[0.06] pt-1 text-[9.5px] leading-tight text-black/45">
+        {t.weekdays[d.getDay()]}
+        <br />
+        {t.weekAbbr} {week}
+      </div>
+    </div>
+  );
+}
+
 function WorkPanel({ work, lang }: { work: NpsWorkDigest; lang: PublicLang }) {
   const t = COPY[lang];
   return (
@@ -543,62 +595,84 @@ function WorkPanel({ work, lang }: { work: NpsWorkDigest; lang: PublicLang }) {
         </p>
       )}
 
-      {work.months.map((m, mi) => (
-        <section
-          key={m.key}
-          className="nps-q-in"
-          style={{ animationDelay: `${120 + mi * 80}ms` }}
-        >
-          <div className="flex items-baseline gap-2.5">
-            <h4 className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#783DF5]">
-              {m.label}
-            </h4>
-            <span
-              aria-hidden
-              className="h-px flex-1"
-              style={{
-                background:
-                  "linear-gradient(90deg, rgba(120,61,245,0.35), rgba(197,53,201,0))",
-              }}
-            />
-            <span className="text-[11px] font-semibold tabular-nums text-black/40">
-              {m.items.length}
-            </span>
-          </div>
-          <ol className="mt-3 space-y-2">
-            {m.items.map((it, i) => (
-              <li
-                key={it.id}
-                className="nps-q-in flex items-start gap-3 rounded-2xl border border-black/[0.07] bg-white px-4 py-3 transition-colors duration-200 hover:border-black/[0.14]"
-                style={{ animationDelay: `${160 + mi * 80 + Math.min(i, 8) * 40}ms` }}
-              >
-                <span
-                  className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full"
-                  style={{ background: "rgba(5,150,105,0.12)", color: "#059669" }}
-                >
-                  <Check className="h-3.5 w-3.5" strokeWidth={3} />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-[14px] font-medium leading-snug text-black/85">
-                    {it.title}
-                  </p>
-                  <p className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11.5px] text-black/45">
-                    <PillarChip pillar={it.pillar} lang={lang} />
-                    <span>
-                      {t.weekAbbr} {it.week}
-                    </span>
-                    <span aria-hidden>·</span>
-                    <span className="inline-flex items-center gap-1">
-                      <CalendarDays className="h-3 w-3" />
-                      {formatDate(it.doneAt)}
-                    </span>
-                  </p>
-                </div>
-              </li>
-            ))}
-          </ol>
-        </section>
-      ))}
+      {work.months.map((m, mi) => {
+        const days = groupByDay(m.items);
+        return (
+          <section
+            key={m.key}
+            className="nps-q-in"
+            style={{ animationDelay: `${120 + mi * 80}ms` }}
+          >
+            <div className="flex items-baseline gap-2.5">
+              <h4 className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#783DF5]">
+                {m.label}
+              </h4>
+              <span
+                aria-hidden
+                className="h-px flex-1"
+                style={{
+                  background:
+                    "linear-gradient(90deg, rgba(120,61,245,0.35), rgba(197,53,201,0))",
+                }}
+              />
+              <span className="rounded-full bg-black/[0.05] px-2 py-0.5 text-[11px] font-semibold tabular-nums text-black/50">
+                {m.items.length}
+              </span>
+            </div>
+
+            {/* A linha do tempo: o fio à esquerda, os selos de dia em cima
+                dele, as tarefas do dia à direita. */}
+            <div className="relative mt-4 pl-[72px] sm:pl-[80px]">
+              <span
+                aria-hidden
+                className="absolute bottom-4 left-[29px] top-3 w-px sm:left-[32px]"
+                style={{
+                  background:
+                    "linear-gradient(180deg, rgba(120,61,245,0.45), rgba(120,61,245,0.12) 70%, transparent)",
+                }}
+              />
+              <div className="space-y-3.5">
+                {days.map((day, di) => (
+                  <div
+                    key={day.key}
+                    className="nps-q-in relative"
+                    style={{ animationDelay: `${160 + mi * 80 + Math.min(di, 6) * 50}ms` }}
+                  >
+                    <div className="absolute -left-[72px] top-0 sm:-left-[80px]">
+                      <DayBadge at={day.at} week={day.items[0].week} lang={lang} />
+                    </div>
+                    <div className="min-h-[76px] overflow-hidden rounded-2xl border border-black/[0.07] bg-white shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
+                      <div className="flex items-center justify-between border-b border-black/[0.05] bg-[#fbfaf7] px-3.5 py-1.5 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-black/40">
+                        <span>{day.key}</span>
+                        <span className="tabular-nums">{t.tasksOnDay(day.items.length)}</span>
+                      </div>
+                      <ol className="divide-y divide-black/[0.06]">
+                        {day.items.map((it) => {
+                          const tone = NPS_PILLAR_TONE[it.pillar];
+                          return (
+                            <li
+                              key={it.id}
+                              className="flex flex-wrap items-start gap-x-3 gap-y-1.5 py-2.5 pl-3 pr-3.5 transition-colors duration-150 hover:bg-[#f7f5fe]"
+                              style={{ boxShadow: `inset 3px 0 0 ${tone}` }}
+                            >
+                              <span className="min-w-[60%] flex-1 text-pretty text-[13.5px] font-medium leading-snug text-black/80">
+                                {it.title}
+                              </span>
+                              <span className="ml-auto shrink-0">
+                                <PillarChip pillar={it.pillar} lang={lang} />
+                              </span>
+                            </li>
+                          );
+                        })}
+                      </ol>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        );
+      })}
 
       {work.roadmapHref && (
         <a
@@ -616,18 +690,47 @@ function WorkPanel({ work, lang }: { work: NpsWorkDigest; lang: PublicLang }) {
   );
 }
 
+// ─── O provider, a pastilha do canto e o painel ──────────────────────────
+
+type DockApi = {
+  openAt: (tab: Tab) => void;
+  hasReport: boolean;
+  hasWork: boolean;
+  lang: PublicLang;
+};
+
+const DockContext = createContext<DockApi | null>(null);
+
+/** O chip da introdução — junto ao «Formulário de 5 minutos». Só existe
+ *  dentro de um NpsContextDock com alguma coisa para mostrar. */
+export function NpsContextChip() {
+  const dock = useContext(DockContext);
+  if (!dock || (!dock.hasReport && !dock.hasWork)) return null;
+  return (
+    <ContextPill
+      size="sm"
+      report={dock.hasReport}
+      work={dock.hasWork}
+      lang={dock.lang}
+      onOpen={dock.openAt}
+    />
+  );
+}
+
 export function NpsContextDock({
   context,
   lang,
   clientName,
+  children,
 }: {
   context: NpsSurveyContext;
   lang: PublicLang;
   clientName: string;
+  children: React.ReactNode;
 }) {
   const t = COPY[lang];
   const report = context.report;
-  // Um roadmap sem nada concluído nos últimos 3 meses não tem cartão: um
+  // Um roadmap sem nada concluído nos últimos 3 meses não tem entrada: um
   // «0 ações» ao lado de um pedido de avaliação é a pior introdução possível.
   const work = context.work && context.work.total > 0 ? context.work : null;
   const tabs: Tab[] = [
@@ -637,25 +740,12 @@ export function NpsContextDock({
 
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<Tab>(tabs[0] ?? "report");
-  const [barVisible, setBarVisible] = useState(true);
-  const barRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
   const lastFocus = useRef<HTMLElement | null>(null);
   const titleId = useId();
 
-  // A pastilha flutuante só entra quando a barra saiu de cena.
-  useEffect(() => {
-    const el = barRef.current;
-    if (!el || typeof IntersectionObserver === "undefined") return;
-    const io = new IntersectionObserver(
-      ([entry]) => setBarVisible(entry.isIntersecting),
-      { rootMargin: "-24px 0px 0px 0px", threshold: 0 },
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, []);
-
-  // Painel aberto: a página por trás não rola, Esc fecha, o foco entra.
+  // Painel aberto: a página por trás não rola, Esc fecha, o foco entra —
+  // e volta a quem abriu quando fecha.
   useEffect(() => {
     if (!open) return;
     const prevOverflow = document.body.style.overflow;
@@ -673,156 +763,39 @@ export function NpsContextDock({
     };
   }, [open]);
 
-  if (tabs.length === 0) return null;
-
-  function openAt(next: Tab) {
-    lastFocus.current = document.activeElement as HTMLElement | null;
-    setTab(next);
-    setOpen(true);
-  }
+  const api = useMemo<DockApi>(
+    () => ({
+      openAt: (next: Tab) => {
+        lastFocus.current = document.activeElement as HTMLElement | null;
+        setTab(next);
+        setOpen(true);
+      },
+      hasReport: Boolean(report),
+      hasWork: Boolean(work),
+      lang,
+    }),
+    [report, work, lang],
+  );
   const close = () => setOpen(false);
 
-  const reportPreview = report ? (
-    <span className="flex flex-wrap gap-1.5">
-      {report.kpis.slice(0, 3).map((k) => (
-        <span
-          key={k.label}
-          className="inline-flex items-baseline gap-1 rounded-lg bg-[#f7f5fe] px-2 py-1 text-[11px] text-black/55"
-        >
-          <span className="text-[13px] font-semibold tabular-nums text-black/80">
-            {k.value}
-          </span>
-          {k.label}
-        </span>
-      ))}
-      {report.kpis.length === 0 && report.highlights[0] && (
-        <span className="line-clamp-2 text-[12px] leading-relaxed text-black/55">
-          {report.highlights[0].replaceAll("**", "")}
-        </span>
-      )}
-    </span>
-  ) : null;
-
-  const workPreview = work ? (
-    <span className="flex flex-col gap-1">
-      {work.months
-        .flatMap((m) => m.items)
-        .slice(0, 3)
-        .map((it) => (
-          <span
-            key={it.id}
-            className="flex items-center gap-2 text-[12px] text-black/60"
-          >
-            <span
-              aria-hidden
-              className="h-1.5 w-1.5 shrink-0 rounded-full"
-              style={{ background: NPS_PILLAR_TONE[it.pillar] }}
-            />
-            <span className="truncate">{it.title}</span>
-          </span>
-        ))}
-      {work.total > 3 && (
-        <span className="text-[11px] text-black/40">+{work.total - 3}</span>
-      )}
-    </span>
-  ) : null;
-
   return (
-    <>
-      {/* A barra */}
-      <div ref={barRef} className="nps-q-in mb-8">
-        <div className="relative overflow-hidden rounded-3xl border border-black/8 bg-white/75 p-5 shadow-[0_18px_50px_-36px_rgba(0,0,0,0.45)] backdrop-blur-sm sm:p-6">
-          <span
-            aria-hidden
-            className="pointer-events-none absolute inset-x-0 top-0 h-[3px]"
-            style={{ background: BRAND_GRADIENT }}
-          />
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <Eyebrow>{t.eyebrow}</Eyebrow>
-              <p className="mt-1 text-[15.5px] font-semibold leading-snug tracking-tight text-black/85">
-                {t.lead}
-              </p>
-              <p className="mt-1 max-w-lg text-[12.5px] leading-relaxed text-black/50">
-                {t.sub}
-              </p>
-            </div>
-            <Sparkles className="mt-1 h-5 w-5 shrink-0 text-[#783DF5]" />
-          </div>
-          <div
-            className={`mt-4 grid gap-3 ${tabs.length > 1 ? "sm:grid-cols-2" : ""}`}
-          >
-            {report && (
-              <ContextCard
-                icon={<BarChart3 className="h-3.5 w-3.5" />}
-                title={t.reportCard}
-                headline={report.periodLabel}
-                meta={
-                  report.finalizedAt
-                    ? `${t.finalized} ${formatDate(report.finalizedAt)}`
-                    : `${t.generated} ${formatDate(report.generatedAt)}`
-                }
-                preview={reportPreview}
-                href={report.href}
-                onOpen={() => openAt("report")}
-                lang={lang}
-              />
-            )}
-            {work && (
-              <ContextCard
-                icon={<ListChecks className="h-3.5 w-3.5" />}
-                title={t.workCard}
-                headline={t.actions(work.total)}
-                meta={t.last3}
-                preview={workPreview}
-                href={work.roadmapHref}
-                onOpen={() => openAt("work")}
-                lang={lang}
-              />
-            )}
-          </div>
-        </div>
-      </div>
+    <DockContext.Provider value={api}>
+      {children}
 
-      {/* A pastilha flutuante */}
-      {!barVisible && !open && (
-        <div className="nps-pill-in fixed bottom-4 right-4 z-[90] sm:bottom-6 sm:right-6">
-          <div className="flex items-center gap-1 rounded-full border border-black/10 bg-white/95 p-1 shadow-[0_18px_40px_-16px_rgba(23,22,45,0.55)] backdrop-blur-md">
-            <span className="hidden items-center gap-1 pl-3 pr-1 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-black/40 sm:inline-flex">
-              <Sparkles className="h-3 w-3 text-[#783DF5]" />
-              {t.pillLabel}
-            </span>
-            {report && (
-              <button
-                type="button"
-                onClick={() => openAt("report")}
-                className="hidden items-center gap-1.5 rounded-full px-3 py-2 text-[12.5px] font-semibold text-black/70 transition hover:bg-[#783DF5]/10 hover:text-[#783DF5] sm:inline-flex"
-              >
-                <BarChart3 className="h-3.5 w-3.5" />
-                {t.pillReport}
-              </button>
-            )}
-            {work && (
-              <button
-                type="button"
-                onClick={() => openAt("work")}
-                className="hidden items-center gap-1.5 rounded-full px-3 py-2 text-[12.5px] font-semibold text-black/70 transition hover:bg-[#783DF5]/10 hover:text-[#783DF5] sm:inline-flex"
-              >
-                <ListChecks className="h-3.5 w-3.5" />
-                {t.pillWork}
-              </button>
-            )}
-            {/* Telemóvel: um botão só; as abas ficam dentro do painel. */}
-            <button
-              type="button"
-              onClick={() => openAt(tabs[0])}
-              className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-[12.5px] font-semibold text-white sm:hidden"
-              style={{ background: BRAND_GRADIENT }}
-            >
-              <Sparkles className="h-3.5 w-3.5" />
-              {t.pillMobile}
-            </button>
-          </div>
+      {/* A pastilha do canto — fixa, do primeiro ao último passo. Escondida
+          só enquanto o painel está aberto (o véu já a tapava). */}
+      {tabs.length > 0 && !open && (
+        <div
+          className="nps-pill-in fixed right-4 z-[90] sm:right-6"
+          style={{ bottom: "max(1rem, env(safe-area-inset-bottom, 0px))" }}
+        >
+          <ContextPill
+            size="md"
+            report={Boolean(report)}
+            work={Boolean(work)}
+            lang={lang}
+            onOpen={api.openAt}
+          />
         </div>
       )}
 
@@ -910,6 +883,6 @@ export function NpsContextDock({
           </div>,
           document.body,
         )}
-    </>
+    </DockContext.Provider>
   );
 }

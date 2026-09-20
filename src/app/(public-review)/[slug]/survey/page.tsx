@@ -14,7 +14,7 @@ import {
 import { pickLang } from "@/lib/public-i18n";
 import { NpsSurveyForm } from "@/components/nps-survey-form";
 import { NpsIntro } from "@/components/nps-intro";
-import { NpsContextDock } from "@/components/nps-context-dock";
+import { NpsContextChip, NpsContextDock } from "@/components/nps-context-dock";
 import { getNpsSurveyContext } from "@/lib/nps-context";
 
 export const dynamic = "force-dynamic";
@@ -107,7 +107,7 @@ export default async function PublicSurveyPage({
   // mensal finalizado e o trabalho concluído nos últimos 3 meses. Só para
   // clientes do SEO DPT — e é por construção: `getClientBySlug` resolve a
   // partir da carteira SEO, por isso qualquer slug que chegue aqui é uma
-  // conta de SEO. Sem relatório nem ações concluídas, o painel não entra.
+  // conta de SEO.
   const context = await getNpsSurveyContext(slug, lang);
 
   return (
@@ -153,11 +153,18 @@ export default async function PublicSurveyPage({
         </div>
       </header>
 
-      <NpsIntro text={INTRO[lang]} minutesLabel={MINUTES[lang]} />
+      {/* O dock é um provider: a pastilha fixa do canto, o chip junto ao
+          «Formulário de 5 minutos» e o painel lateral partilham o mesmo
+          estado. Sem relatório nem ações concluídas, nada disto aparece. */}
+      <NpsContextDock context={context} lang={lang} clientName={client.title}>
+        <NpsIntro
+          text={INTRO[lang]}
+          minutesLabel={MINUTES[lang]}
+          aside={<NpsContextChip />}
+        />
 
-      <NpsContextDock context={context} lang={lang} clientName={client.title} />
-
-      <NpsSurveyForm slug={slug} clientName={client.title} lang={lang} />
+        <NpsSurveyForm slug={slug} clientName={client.title} lang={lang} />
+      </NpsContextDock>
 
       {/* Footer */}
       <footer className="mt-12 border-t border-black/8 pt-6 text-center text-[11px] text-black/45">
