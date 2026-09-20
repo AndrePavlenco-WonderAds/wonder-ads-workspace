@@ -12,13 +12,21 @@ import type { PublicLang } from "@/lib/public-i18n";
 const MAIL = {
   pt: {
     subject: (c: string) => `Avaliação do serviço de SEO — ${c}`,
-    body: (link: string) =>
-      `Olá,\n\nGostaríamos de saber a sua opinião sobre o nosso serviço de SEO. É um formulário curto (cerca de 5 minutos) e o seu retorno ajuda-nos muito.\n\nBasta preencher aqui:\n${link}\n\nObrigado!\nEquipa Wonder Ads`,
+    body: (link: string, withContext: boolean) =>
+      `Olá,\n\nGostaríamos de saber a sua opinião sobre o nosso serviço de SEO. É um formulário curto (cerca de 5 minutos) e o seu retorno ajuda-nos muito.${
+        withContext
+          ? "\n\nNo próprio formulário pode consultar o último relatório mensal e a lista do trabalho concluído nos últimos 3 meses — para avaliar com tudo à mão."
+          : ""
+      }\n\nBasta preencher aqui:\n${link}\n\nObrigado!\nEquipa Wonder Ads`,
   },
   en: {
     subject: (c: string) => `SEO service evaluation — ${c}`,
-    body: (link: string) =>
-      `Hi,\n\nWe'd love to hear your thoughts on our SEO service. It's a short form (about 5 minutes) and your feedback means a lot.\n\nJust fill it in here:\n${link}\n\nThank you!\nThe Wonder Ads team`,
+    body: (link: string, withContext: boolean) =>
+      `Hi,\n\nWe'd love to hear your thoughts on our SEO service. It's a short form (about 5 minutes) and your feedback means a lot.${
+        withContext
+          ? "\n\nInside the form you can also check the latest monthly report and the list of work completed over the last 3 months — so you can rate with everything at hand."
+          : ""
+      }\n\nJust fill it in here:\n${link}\n\nThank you!\nThe Wonder Ads team`,
   },
 } as const;
 
@@ -29,6 +37,7 @@ export function NpsManagerActions({
   cadenceDays,
   lang,
   readOnly,
+  contextAvailable = false,
 }: {
   slug: string;
   surveyPath: string;
@@ -36,6 +45,9 @@ export function NpsManagerActions({
   cadenceDays: number;
   lang: PublicLang;
   readOnly: boolean;
+  /** True quando o formulário traz o relatório e/ou o trabalho concluído
+   *  (v77.38) — o email de envio passa a dizê-lo ao cliente. */
+  contextAvailable?: boolean;
 }) {
   const [copied, setCopied] = useState(false);
   const [sendState, setSendState] = useState<"idle" | "sending" | "sent">(
@@ -79,7 +91,7 @@ export function NpsManagerActions({
     await logSend();
     const href = `mailto:?subject=${encodeURIComponent(
       m.subject(clientName),
-    )}&body=${encodeURIComponent(m.body(link))}`;
+    )}&body=${encodeURIComponent(m.body(link, contextAvailable))}`;
     if (typeof window !== "undefined") window.location.href = href;
   }
 

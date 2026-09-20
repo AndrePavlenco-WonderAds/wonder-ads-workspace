@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.38",
+    date: "2026-09-20",
+    title: "Inquérito NPS: o último relatório e o trabalho feito ao lado das perguntas",
+    highlights: [
+      "**📊 Relatório mensal no formulário.** O cliente do SEO DPT passa a ter, por cima das perguntas, um cartão com o último relatório mensal finalizado — o mês, os números do topo e os destaques. Abre num painel lateral (de baixo para cima no telemóvel) com o relatório completo a um clique, dentro do painel ou noutro separador.",
+      "**✅ Trabalho concluído nos últimos 3 meses.** Um segundo cartão lista as ações do roadmap SEO/GEO marcadas como Implemented nos últimos 90 dias (do roadmap atual e dos arquivados), agrupadas por mês, com o pilar, a semana e a data de conclusão. O roadmap completo abre noutro separador.",
+      "**✨ Sempre à mão.** Quando a barra sai do ecrã a meio de uma secção, entra uma pastilha flutuante no canto para reabrir o painel. Esc e clique fora fecham; o foco volta a quem abriu. Sem relatório finalizado nem ações concluídas, nada disto aparece — o formulário fica como estava.",
+      "**🧭 Na ficha interna do NPS.** Antes de enviar, o consultor vê exatamente o que o cliente vai encontrar — que relatório e quantas ações — com aviso quando falta finalizar o relatório ou marcar tarefas no roadmap. O email de envio passa a dizer ao cliente que pode consultar tudo no formulário.",
+    ],
+  },
+  {
     version: "77.37",
     date: "2026-09-17",
     title: "SEO DPT: Medway com logótipo, site e data de onboarding",

@@ -921,3 +921,42 @@ body {
   .animate-medal-pulse, .animate-medal-pulse-strong { animation: none; }
   .medal-orbit { display: none; }
 }
+
+/* ------------------------------------------------------------------ */
+/* Painel de contexto do inquérito NPS (v77.38)                        */
+/* O painel entra de baixo no telemóvel e da direita no desktop; a     */
+/* pastilha flutuante e o véu por trás só desvanecem. Nada disto mexe  */
+/* com quem pediu menos movimento.                                     */
+/* ------------------------------------------------------------------ */
+@keyframes nps-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.nps-overlay-in { animation: nps-fade-in 0.25s ease-out both; }
+
+@keyframes nps-sheet-up {
+  from { transform: translateY(6%); opacity: 0; }
+  to   { transform: translateY(0); opacity: 1; }
+}
+@keyframes nps-sheet-right {
+  from { transform: translateX(32px); opacity: 0; }
+  to   { transform: translateX(0); opacity: 1; }
+}
+.nps-sheet { animation: nps-sheet-up 0.42s cubic-bezier(0.22, 1, 0.36, 1) both; }
+@media (min-width: 640px) {
+  .nps-sheet { animation-name: nps-sheet-right; }
+}
+
+@keyframes nps-pill-in {
+  from { transform: translateY(12px); opacity: 0; }
+  to   { transform: translateY(0); opacity: 1; }
+}
+.nps-pill-in { animation: nps-pill-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .nps-overlay-in,
+  .nps-sheet,
+  .nps-pill-in {
+    animation: none;
+  }
+}

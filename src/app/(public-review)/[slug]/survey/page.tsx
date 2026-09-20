@@ -14,6 +14,8 @@ import {
 import { pickLang } from "@/lib/public-i18n";
 import { NpsSurveyForm } from "@/components/nps-survey-form";
 import { NpsIntro } from "@/components/nps-intro";
+import { NpsContextDock } from "@/components/nps-context-dock";
+import { getNpsSurveyContext } from "@/lib/nps-context";
 
 export const dynamic = "force-dynamic";
 
@@ -101,6 +103,13 @@ export default async function PublicSurveyPage({
   const consultantName = await getConsultantForSlug(slug);
   const consultantEmail = await getConsultantEmailForSlug(slug);
 
+  // O contexto que acompanha as perguntas (v77.38): o último relatório
+  // mensal finalizado e o trabalho concluído nos últimos 3 meses. Só para
+  // clientes do SEO DPT — e é por construção: `getClientBySlug` resolve a
+  // partir da carteira SEO, por isso qualquer slug que chegue aqui é uma
+  // conta de SEO. Sem relatório nem ações concluídas, o painel não entra.
+  const context = await getNpsSurveyContext(slug, lang);
+
   return (
     <main className="relative mx-auto min-h-screen max-w-2xl px-4 py-10 sm:px-6">
       {/* Auras da marca por trás de tudo. O fundo creme do layout público é
@@ -145,6 +154,8 @@ export default async function PublicSurveyPage({
       </header>
 
       <NpsIntro text={INTRO[lang]} minutesLabel={MINUTES[lang]} />
+
+      <NpsContextDock context={context} lang={lang} clientName={client.title} />
 
       <NpsSurveyForm slug={slug} clientName={client.title} lang={lang} />
 

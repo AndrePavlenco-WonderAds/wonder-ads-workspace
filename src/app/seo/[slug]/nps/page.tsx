@@ -13,6 +13,7 @@ import { PageShell } from "@/components/page-shell";
 import { LogoChip } from "@/components/logo-chip";
 import { NpsManagerActions } from "@/components/nps-manager-actions";
 import { NpsDeleteLatestButton } from "@/components/nps-delete-latest-button";
+import { NpsClientContextCard } from "@/components/nps-client-context-card";
 import { getClientBySlug } from "@/lib/notion";
 import {
   getClientLogo,
@@ -38,6 +39,7 @@ import {
   questionsForSubmission,
 } from "@/lib/nps-questions";
 import { pickLang } from "@/lib/public-i18n";
+import { getNpsSurveyContext } from "@/lib/nps-context";
 import { getCurrentEmployee } from "@/lib/auth/server";
 import { editableDepts } from "@/lib/auth/credentials";
 import { formatDate, formatDateTime, daysUntilISO, toISODate } from "@/lib/dates";
@@ -127,6 +129,13 @@ export default async function NpsPage({
   const gradient = paletteToGradient(getClientPalette(slug));
   const lang = pickLang(slug);
   const latest = record.submissions[0] ?? null;
+
+  // O que o cliente vai encontrar ao lado das perguntas (v77.38). Sempre em
+  // PT aqui dentro — é a ficha interna, não a página do cliente.
+  const context = await getNpsSurveyContext(slug, "pt");
+  const contextAvailable = Boolean(
+    context.report || (context.work && context.work.total > 0),
+  );
 
   const nextDueIso = record.meta.nextDueAt
     ? toISODate(new Date(record.meta.nextDueAt))
@@ -228,9 +237,12 @@ export default async function NpsPage({
             cadenceDays={record.meta.cadenceDays}
             lang={lang}
             readOnly={readOnly}
+            contextAvailable={contextAvailable}
           />
         </div>
       </section>
+
+      <NpsClientContextCard slug={slug} context={context} />
 
       {latest ? (
         <>
