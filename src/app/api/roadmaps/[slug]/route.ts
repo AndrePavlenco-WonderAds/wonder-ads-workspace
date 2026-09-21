@@ -1,15 +1,17 @@
 // CRUD endpoints for a single client's current roadmap.
 //
-// - GET  → returns the current roadmap (or null) + computed warnings.
+// - GET  → returns the current roadmap (or null).
 // - PUT  → replaces the current roadmap with the supplied state. Used by
 //          the board UI when the consultant edits tasks. The payload is
 //          run through `normaliseRoadmap` so the KV blob can't be
 //          corrupted by a bad client.
+//
+// v77.42: the computed warnings (stalled reviews, falling behind, empty
+// week) left the API together with the banners on the board.
 
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import {
-  computeWarnings,
   getCurrentRoadmap,
   normaliseRoadmap,
   saveCurrentRoadmap,
@@ -26,16 +28,7 @@ export async function GET(
 ) {
   const { slug } = await ctx.params;
   const roadmap = await getCurrentRoadmap(slug);
-  if (!roadmap) {
-    return NextResponse.json({ roadmap: null, warnings: [] });
-  }
-  const dismissed = new Set(
-    roadmap.dismissedWarnings.map((d) => d.id),
-  );
-  const warnings = computeWarnings(roadmap).filter(
-    (w) => !dismissed.has(w.id),
-  );
-  return NextResponse.json({ roadmap, warnings });
+  return NextResponse.json({ roadmap: roadmap ?? null });
 }
 
 export async function PUT(
@@ -71,7 +64,5 @@ export async function PUT(
   // on its 60s revalidate window and keeps showing the stale "No
   // roadmap yet" badge after a generation finishes.
   revalidatePath(`/seo/${slug}`);
-  const dismissed = new Set(next.dismissedWarnings.map((d) => d.id));
-  const warnings = computeWarnings(next).filter((w) => !dismissed.has(w.id));
-  return NextResponse.json({ roadmap: next, warnings });
+  return NextResponse.json({ roadmap: next });
 }

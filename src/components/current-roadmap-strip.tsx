@@ -10,6 +10,8 @@ import { ArrowRight, Map, Sparkles } from "lucide-react";
 import {
   getCurrentRoadmap,
   currentWeekIndex,
+  monthIndexOfWeek,
+  roadmapMonthCount,
   roadmapWeeks,
   taskCoversWeek,
   taskEndWeek,
@@ -24,7 +26,7 @@ export async function CurrentRoadmapStrip({ slug }: { slug: string }) {
         className="brand-gradient-border group mt-3 inline-flex max-w-full items-center gap-2 rounded-full bg-white/[0.04] px-3.5 py-1.5 text-xs text-white/65 transition hover:text-white"
       >
         <Sparkles className="h-3.5 w-3.5 text-[color:var(--brand-purple)]" />
-        <span>No roadmap yet — generate a 12-week plan</span>
+        <span>No roadmap yet — generate the plan</span>
         <ArrowRight className="h-3 w-3 transition group-hover:translate-x-0.5" />
       </Link>
     );
@@ -32,6 +34,8 @@ export async function CurrentRoadmapStrip({ slug }: { slug: string }) {
 
   const week = currentWeekIndex(roadmap);
   const totalWeeks = roadmapWeeks(roadmap);
+  const totalMonths = roadmapMonthCount(roadmap);
+  const monthIdx = monthIndexOfWeek(roadmap, week);
   const inHorizon = week >= 1 && week <= totalWeeks;
   const currentTasks = roadmap.tasks
     .filter((t) => taskCoversWeek(t, week))
@@ -47,7 +51,11 @@ export async function CurrentRoadmapStrip({ slug }: { slug: string }) {
   const pastPending = roadmap.tasks.filter(
     (t) => taskEndWeek(t) < week && t.status !== "implemented",
   );
-  const summary = `Week ${inHorizon ? week : "—"} of ${totalWeeks} · ${currentPending.length} task${currentPending.length === 1 ? "" : "s"} pending`;
+  // Week AND calendar month: the team thinks of a package in months
+  // ("month 5 of 6"), the board works in weeks — show both.
+  const summary = inHorizon
+    ? `Week ${week} of ${totalWeeks} · Month ${monthIdx} of ${totalMonths} · ${currentPending.length} task${currentPending.length === 1 ? "" : "s"} pending`
+    : `Week — of ${totalWeeks} · ${totalMonths} months · ${currentPending.length} task${currentPending.length === 1 ? "" : "s"} pending`;
 
   return (
     <div className="mt-3 flex flex-wrap items-center gap-2">

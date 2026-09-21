@@ -134,7 +134,9 @@ export function RoadmapReportBody({
   // the month's last week).
   const lastShownWeek = weeks.length > 0 ? Math.max(...weeks) : roadmapWeeks(roadmap);
 
-  const monthsToShow = roadmapMonths(roadmapWeeks(roadmap)).filter((m) =>
+  // Calendar months (4–5 weeks each) — only the ones that hold at least
+  // one of the requested weeks, so the month view shows a single month.
+  const monthsToShow = roadmapMonths(roadmap).filter((m) =>
     m.weeks.some((w) => weekSet.has(w)),
   );
 
@@ -168,6 +170,15 @@ export function RoadmapReportBody({
                 }}
               >
                 {c.month} {m.index + 1}
+              </span>
+              <span
+                style={{
+                  fontSize: "0.72rem",
+                  color: "#94a3b8",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {formatDate(m.start)} – {formatDate(m.end)}
               </span>
               <span
                 style={{

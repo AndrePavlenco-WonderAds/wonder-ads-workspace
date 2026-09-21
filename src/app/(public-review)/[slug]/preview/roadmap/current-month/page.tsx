@@ -1,7 +1,7 @@
 // Public, read-only preview of just the CURRENT MONTH of a client's SEO
-// roadmap (the 4 weeks the consultant is working through right now). Sent
-// via "Send current month" on the roadmap board. Same branded chrome +
-// rich week-card layout as the full roadmap preview.
+// roadmap (the 4–5 weeks of the calendar month the consultant is working
+// through right now). Sent via "Send current month" on the roadmap board.
+// Same branded chrome + rich week-card layout as the full roadmap preview.
 
 import { notFound } from "next/navigation";
 import { getClientBySlug } from "@/lib/notion";
@@ -13,7 +13,9 @@ import {
 import {
   getCurrentRoadmap,
   currentWeekIndex,
+  roadmapMonths,
   roadmapWeeks,
+  type Roadmap,
 } from "@/lib/roadmap-store";
 import { formatDate } from "@/lib/dates";
 import { pickLang, t } from "@/lib/public-i18n";
@@ -24,17 +26,21 @@ import { CommentsThread } from "@/components/comments-thread";
 
 export const dynamic = "force-dynamic";
 
-/** Current month + its 4 week numbers, from the live current week. Clamped
- *  into the roadmap's real span so a plan that's run past its final week
- *  still sends the last month rather than an out-of-range one. */
+/** The calendar month the live current week falls in, with its week
+ *  numbers (4 or 5). Clamped into the roadmap's real span so a plan that's
+ *  run past its final week still sends the last month rather than an
+ *  out-of-range one. */
 function currentMonth(
+  roadmap: Roadmap,
   week: number,
-  totalWeeks: number,
 ): { month: number; weeks: number[] } {
+  const totalWeeks = roadmapWeeks(roadmap);
   const clampedWeek = Math.min(totalWeeks, Math.max(1, week || 1));
-  const month = Math.ceil(clampedWeek / 4);
-  const start = (month - 1) * 4 + 1;
-  return { month, weeks: [start, start + 1, start + 2, start + 3] };
+  const months = roadmapMonths(roadmap);
+  const hit =
+    months.find((m) => m.weeks.includes(clampedWeek)) ??
+    months[months.length - 1];
+  return { month: hit.index + 1, weeks: hit.weeks };
 }
 
 export default async function PublicRoadmapMonthPreviewPage({
@@ -52,7 +58,7 @@ export default async function PublicRoadmapMonthPreviewPage({
 
   const lang = pickLang(slug);
   const cw = currentWeekIndex(roadmap);
-  const { month, weeks } = currentMonth(cw, roadmapWeeks(roadmap));
+  const { month, weeks } = currentMonth(roadmap, cw);
 
   const logo = getClientLogo(slug);
   const consultantEmail = await getConsultantEmailForSlug(slug);

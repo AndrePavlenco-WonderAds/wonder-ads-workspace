@@ -1,4 +1,5 @@
-// Public, read-only preview of a client's 12-week SEO Roadmap.
+// Public, read-only preview of a client's full SEO Roadmap (every
+// calendar month of the plan).
 //
 // The internal board at /seo/[slug]/roadmap is fully editable (drag,
 // add, regenerate). This page renders the SAME roadmap as a branded,
@@ -20,6 +21,7 @@ import {
 import {
   getCurrentRoadmap,
   currentWeekIndex,
+  roadmapMonthCount,
   roadmapWeeks,
 } from "@/lib/roadmap-store";
 import { formatDate } from "@/lib/dates";
@@ -47,15 +49,18 @@ export default async function PublicRoadmapPreviewPage({
   const lang = pickLang(slug);
   const currentWeek = currentWeekIndex(roadmap);
   const totalWeeks = roadmapWeeks(roadmap);
+  const totalMonths = roadmapMonthCount(roadmap);
   const allWeeks = Array.from({ length: totalWeeks }, (_, i) => i + 1);
 
   const logo = getClientLogo(slug);
   const consultantEmail = await getConsultantEmailForSlug(slug);
   const consultantName = await getConsultantForSlug(slug);
+  // The client signed for months, so the document is titled in months;
+  // the week count stays in the meta strip underneath.
   const actionLabel =
     lang === "pt"
-      ? `Roadmap SEO — ${totalWeeks} semanas`
-      : `SEO Roadmap — ${totalWeeks} weeks`;
+      ? `Roadmap SEO — ${totalMonths} meses`
+      : `SEO Roadmap — ${totalMonths} months`;
 
   const footerQuestionsHtml = t(lang, "footerQuestions", {
     consultant: consultantName,

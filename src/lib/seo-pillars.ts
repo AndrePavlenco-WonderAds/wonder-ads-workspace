@@ -126,7 +126,7 @@ export const PILLARS: Pillar[] = [
         slug: "client-roadmap",
         label: "Roadmap",
         blurb:
-          "Live 12-week operational board — Claude fills it, you edit, status moves with the work.",
+          "Live operational board in calendar months — Claude fills it, you edit, status moves with the work.",
         usesBrief: true,
         href: (clientSlug) => `/seo/${clientSlug}/roadmap`,
         fields: [

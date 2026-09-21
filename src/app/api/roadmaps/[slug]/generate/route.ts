@@ -1,4 +1,5 @@
-// Generate a fresh 12-week SEO roadmap for a client.
+// Generate a fresh SEO roadmap for a client — 3, 6, 9 or 12 CALENDAR
+// months from the chosen start date (v77.42; it was a flat 12 weeks).
 //
 // Uses Anthropic via the AI SDK's `generateObject` with a Zod schema so
 // the output is *guaranteed* valid JSON matching our `Roadmap` shape —
@@ -14,12 +15,16 @@
 // screenshots, competitor SERPs, anything visual). Photos are shrunk
 // to a vision-safe size and passed natively to Sonnet so the roadmap
 // reflects what the model actually saw.
+//
+// v77.42 — the schema's week range, the task budget, the output-token
+// budget and the "design rules" all scale with the plan length, and the
+// prompt carries the real month calendar (which weeks belong to which
+// calendar month, with dates) so the model plans against actual months.
 
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { anthropic } from "@ai-sdk/anthropic";
 import { generateObject, NoObjectGeneratedError } from "ai";
-import { z } from "zod";
 import { getBriefForSlug } from "@/lib/briefs-storage";
 import { getClientBySlug } from "@/lib/notion";
 import { getClientWebsite } from "@/lib/client-meta";
@@ -37,13 +42,25 @@ import { getCurrentEmployee } from "@/lib/auth/server";
 import {
   archiveAndReplace,
   getCurrentRoadmap,
-  MIN_ROADMAP_WEEKS,
+  MIN_ROADMAP_MONTHS,
+  ROADMAP_GENERATE_MONTHS,
   newRoadmapId,
   newTaskId,
   nextMondayISO,
+  roadmapLastDay,
+  roadmapWeeks,
   type Roadmap,
   type RoadmapTask,
 } from "@/lib/roadmap-store";
+import {
+  SYSTEM_PROMPT,
+  buildRoadmapSchema,
+  designRules,
+  formatMonthCalendar,
+  outputTokenBudget,
+  retryInstructions,
+  type GeneratedRoadmap,
+} from "@/lib/roadmap-generate-prompt";
 
 // 5-minute ceiling matches the rest of the heavy AI routes — Vercel
 // Pro is now active so the full value is honoured. Photo fetch + sharp
@@ -63,88 +80,10 @@ const MAX_PHOTOS = 8;
 const MAX_PHOTO_BYTES = 25 * 1024 * 1024; // 25 MB per photo on the wire
 const PHOTO_FETCH_TIMEOUT_MS = 8000;
 
-// Forgiving pillar parser — Sonnet occasionally renders the same value
-// as "On-Page" / "on page" / "off_page" / "OffPage". We accept the
-// common aliases and coerce to the canonical 6-value enum; anything
-// else falls back to "technical" rather than failing the whole
-// generation. Worst case the consultant re-pillars a couple of tasks
-// in the editor — far better than getting nothing back.
-const PILLAR_CANONICAL = [
-  "technical",
-  "on-page",
-  "off-page",
-  "local",
-  "content",
-  "research",
-] as const;
-const PILLAR_ALIASES: Record<string, (typeof PILLAR_CANONICAL)[number]> = {
-  technical: "technical",
-  tech: "technical",
-  "on-page": "on-page",
-  onpage: "on-page",
-  on_page: "on-page",
-  "on page": "on-page",
-  "off-page": "off-page",
-  offpage: "off-page",
-  off_page: "off-page",
-  "off page": "off-page",
-  local: "local",
-  "local seo": "local",
-  content: "content",
-  research: "research",
-  investigation: "research",
-};
-const PillarSchema = z
-  .string()
-  .transform((raw) => {
-    const key = raw.toLowerCase().trim();
-    return PILLAR_ALIASES[key] ?? "technical";
-  })
-  .describe(
-    "SEO pillar: one of technical, on-page, off-page, local, content, research. Mix pillars within each week.",
-  );
-
-const RoadmapTaskSchema = z.object({
-  week: z
-    .number()
-    .int()
-    .min(1)
-    .max(12)
-    .describe("Week column 1-12 inclusive."),
-  title: z
-    .string()
-    .min(2)
-    .max(240)
-    .describe(
-      "Short imperative task title — what the team will actually do. Examples: 'Website Deep Audit', '2 Blog Articles (all-on-4 cluster)', 'GMB Post 1', 'Scan and Optimize Header Tags'. No vague verbs like 'improve SEO'. Aim for under 120 chars; we'll truncate gracefully at 240.",
-    ),
-  pillar: PillarSchema,
-});
-
-// Schema is intentionally permissive on lower bounds — Sonnet sometimes
-// returns 18-23 tasks or a 25-char auditSummary, and rejecting the WHOLE
-// response over that is the wrong trade-off. The prompt still ASKS for
-// 36-48 tasks; the schema just won't 502 when the model lands a hair
-// short.
-const RoadmapSchema = z.object({
-  auditSummary: z
-    .string()
-    .min(1)
-    .max(2000)
-    .describe(
-      "2–5 sentence SEO-audit headline: site identity inferred from the homepage, the 2-3 biggest gaps you see (technical, on-page, local, content, off-page, AI visibility), and what each uploaded photo contributed. Plain prose, no bullets. This anchors the roadmap to a real diagnosis. Aim for 120-600 chars.",
-    ),
-  tasks: z
-    .array(RoadmapTaskSchema)
-    .min(12)
-    .max(60)
-    .describe(
-      "Tasks across the 12 weeks. AIM for 3-4 per week (36-48 total). Sequence: weeks 1-2 = audit + tracking setup + tech hygiene; weeks 3-8 = on-page + content + local + off-page execution; weeks 9-12 = strategic plays + measurement. Every week should have at least 3 tasks; the minimum is 12 only so a near-complete response isn't rejected.",
-    ),
-});
-
 type GenerateBody = {
   startDate?: string;
+  /** Plan length in calendar months — one of ROADMAP_GENERATE_MONTHS. */
+  months?: number;
   strategicFocus?: string;
   constraints?: string;
   photos?: string[];
@@ -204,6 +143,17 @@ export async function POST(
     /^\d{4}-\d{2}-\d{2}$/.test(body.startDate)
       ? body.startDate
       : nextMondayISO();
+  // Plan length: one of the terms the agency sells. Anything else (or an
+  // older client that doesn't send it) falls back to a quarter.
+  const months = (ROADMAP_GENERATE_MONTHS as readonly number[]).includes(
+    Number(body.months),
+  )
+    ? Number(body.months)
+    : MIN_ROADMAP_MONTHS;
+  const horizon = { startDate, months };
+  const totalWeeks = roadmapWeeks(horizon);
+  const lastDay = roadmapLastDay(horizon);
+  const RoadmapSchema = buildRoadmapSchema(totalWeeks);
 
   const briefBlock = formatBrief(brief);
   const historyBlock = formatHistory(history);
@@ -228,9 +178,11 @@ export async function POST(
     : `## Reference photos\n_None uploaded — proceed with the textual context only._`;
 
   const userPrompt = [
-    `# Generate a fresh 12-week SEO roadmap for **${client.title}**`,
-    `Start date (week 1 begins): **${startDate}**`,
+    `# Generate a fresh ${months}-month (${totalWeeks}-week) SEO roadmap for **${client.title}**`,
+    `Start date (week 1 begins): **${startDate}** · last day of the plan: **${lastDay}**`,
     `Website: ${website ?? "(none on file)"}`,
+    "",
+    formatMonthCalendar(horizon),
     body.strategicFocus?.trim()
       ? `\n## Strategic focus from the consultant\n${body.strategicFocus.trim()}`
       : "",
@@ -251,13 +203,7 @@ export async function POST(
     "4. **YMYL discipline.** Health & Wellness clients can't promise cures or guaranteed outcomes. Skip any task whose deliverable would force a non-compliant claim.",
     "5. **Honour the brief.** Client Don'ts are NEVER violated. Client Do's bias every choice. Notes are context — integrate them.",
     "\n## Design rules",
-    "- Weeks 1-2: deep audit + GA4/GSC/GMB tracking setup + E-E-A-T scaffolding + fix anything broken the audit surfaces.",
-    "- Weeks 3-8: content (1-2 articles/week tied to onboarding-form themes), backlink batches (relevance > raw DR), weekly GMB posts (cadence the photos may already show is missing), on-page passes, landing pages.",
-    "- Weeks 9-12: AI/entity/schema work, follow-up linkbuilding, content insights, AI Overview / LLM-mention monitoring, reports.",
-    "- Every week has at least 3 tasks. Aim 3-4 per week (36-48 total). Mix pillars within each week.",
-    "- Be specific. Bad: 'Improve SEO'. Good: 'Scan and Optimize Image Alt Tags', 'GMB Reviews Responder — April batch', '2 Blog Articles (all-on-4 cluster)', 'Add MedicalClinic schema to /servicos pages'.",
-    "- Honour Do's / Don'ts and consultant constraints.",
-    "- If the previous roadmap just shipped an audit, propose the next step instead.",
+    ...designRules(totalWeeks, months),
   ]
     .filter(Boolean)
     .join("\n");
@@ -286,7 +232,7 @@ export async function POST(
   // EXACTLY" reminder before failing. On a true second-attempt failure
   // we surface the raw text Claude produced so the consultant can see
   // what came back instead of a generic "did not match schema".
-  let parsed: z.infer<typeof RoadmapSchema> | null = null;
+  let parsed: GeneratedRoadmap | null = null;
   let lastError: unknown = null;
   let lastRawText: string | null = null;
   for (let attempt = 1; attempt <= 2 && !parsed; attempt++) {
@@ -297,7 +243,7 @@ export async function POST(
             ...userContent,
             {
               type: "text" as const,
-              text: "\n\n## ⚠️ RETRY — previous attempt failed schema validation\nReturn the structured object EXACTLY as specified. Required fields: `auditSummary` (string, 1-2000 chars) and `tasks` (array of 12-60 items). Each task needs `week` (integer 1-12), `title` (string 2-240 chars), and `pillar` (one of exactly these lowercase strings: `technical`, `on-page`, `off-page`, `local`, `content`, `research`). Do NOT include any other fields. Do NOT wrap the response in extra prose. Aim for 36-48 tasks total, but 12 is acceptable if you genuinely can't justify more.",
+              text: retryInstructions(totalWeeks),
             },
           ] satisfies typeof userContent);
     try {
@@ -306,9 +252,7 @@ export async function POST(
         schema: RoadmapSchema,
         system,
         messages: [{ role: "user", content: attemptContent }],
-        // Sized for ~48 short tasks + the auditSummary prose. Sonnet at
-        // this budget runs 25-55s typical, well under the 300s ceiling.
-        maxOutputTokens: 3000,
+        maxOutputTokens: outputTokenBudget(totalWeeks),
       });
       parsed = result.object;
     } catch (err) {
@@ -365,9 +309,11 @@ export async function POST(
   const next: Roadmap = {
     id: newRoadmapId(),
     clientSlug: slug,
-    // Generating always produces a fresh single-quarter plan; the
-    // consultant grows it later via "Extend +3 months" on the board.
-    weeks: MIN_ROADMAP_WEEKS,
+    // The plan length the consultant picked (calendar months); the week
+    // count is derived and stored only for older readers. The consultant
+    // grows or trims it later via Extend / Remove months on the board.
+    months,
+    weeks: totalWeeks,
     startDate,
     generatedAt: now,
     tasks,
@@ -391,22 +337,6 @@ export async function POST(
   return NextResponse.json({ roadmap: next });
 }
 
-const SYSTEM_PROMPT = `You are an internal SEO planning assistant at Wonder Ads (a Health & Wellness growth agency). You build operational 12-week roadmaps for one client at a time.
-
-Think like a senior SEO consultant before you plan:
-- **Diagnose first.** Read the live site audit + uploaded photos + brief + onboarding form. Form a verdict before sequencing tasks.
-- **One page = one dominant intent.** Tasks that touch content respect search intent before chasing volume.
-- **E-E-A-T is the lens.** Real experience, real expertise, real authority, real trust. YMYL bar applies to every Health & Wellness client — never plan tasks whose deliverable would force a medical claim, guaranteed outcome, or diagnosis.
-- **Sequence to first principles.** Foundations (indexation, tracking, schema, NAP, Core Web Vitals) → on-page + content + GMB → off-page + AI/entity work → measurement. Don't propose link-building before the site is crawlable.
-- **Local SEO.** NAP byte-identical across GMB, footer, schema, citations. GMB: one best-fit primary category, weekly posts, weekly photo uploads, 24-48h review response cadence.
-- **AI visibility.** Plan for AI Overviews / ChatGPT citations: structured H2 answers, FAQPage schema, named entities, statistics.
-- **Off-page.** Relevance > raw DR. Plan digital PR, broken-link replacement, resource-page mentions, expert quotes — never PBNs / paid networks / comment spam.
-- **What to refuse.** Cloaking, doorway pages, link schemes, AI-spam at scale, fake reviews, medical-claim guarantees.
-
-Output style:
-- Tasks read like real action items a consultant would assign in a standup — short, specific, sequenced.
-- The auditSummary is terse, factual prose. No marketing language. State the gap, name the photo or measurement that surfaced it.
-- Match exactly the schema you're given.`;
 
 async function fetchAndShrinkPhotos(urls: string[]): Promise<PhotoInput[]> {
   const out: PhotoInput[] = [];

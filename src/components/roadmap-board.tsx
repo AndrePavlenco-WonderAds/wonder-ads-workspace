@@ -8,9 +8,10 @@ import {
   useState,
   type DragEvent,
 } from "react";
+import { createPortal } from "react-dom";
 import {
-  AlertTriangle,
   Calendar,
+  CalendarMinus,
   CalendarPlus,
   Check,
   ChevronDown,
@@ -18,7 +19,6 @@ import {
   ChevronRight,
   CornerDownRight,
   ImagePlus,
-  Info,
   Loader2,
   Pencil,
   Plus,
@@ -29,14 +29,19 @@ import {
 } from "lucide-react";
 import { upload } from "@vercel/blob/client";
 import {
-  MAX_ROADMAP_WEEKS,
+  MAX_ROADMAP_MONTHS,
+  MIN_ROADMAP_MONTHS,
   ROADMAP_EXTEND_MONTHS,
-  WEEKS_PER_MONTH,
-  weeksAfterExtend,
+  ROADMAP_GENERATE_MONTHS,
   ROADMAP_PILLARS,
   ROADMAP_STATUSES,
   currentWeekIndex,
+  monthIndexOfWeek,
+  monthsAfterExtend,
+  monthsAfterRemove,
   newTaskId,
+  roadmapLastDay,
+  roadmapMonthCount,
   roadmapMonths,
   roadmapWeeks,
   taskEndWeek,
@@ -46,7 +51,6 @@ import {
   type RoadmapPillar,
   type RoadmapStatus,
   type RoadmapTask,
-  type RoadmapWarning,
 } from "@/lib/roadmap-store";
 import { formatDate } from "@/lib/dates";
 import { RoadmapRenewalChip } from "./roadmap-renewal-chip";
@@ -123,10 +127,15 @@ const GENERATE_PHASES = [
   "Crawling the homepage + about page for a live mini-audit…",
   "Sending your reference photos to Claude (vision)…",
   "Diagnosing gaps like an SEO pro before sequencing tasks…",
-  "Drafting 12 weeks of tasks with Claude Sonnet (usually 30–60s)…",
-  "Sequencing tasks across the 4-week / 3-month grid…",
+  "Drafting the plan week by week with Claude Sonnet (30–90s)…",
+  "Sequencing tasks across the calendar months…",
   "Saving to your workspace and archiving the previous roadmap…",
 ];
+
+/** The typed word that unlocks "Remove months". Deleting weeks of planned
+ *  work is the one destructive thing on this board, so it costs a word,
+ *  not a click. */
+const REMOVE_CONFIRM_WORD = "DELETE";
 
 /** One rendered slot inside a week column. A multi-week task produces one
  *  cell per week it covers: `isStart` on its first week (the full,
@@ -141,7 +150,6 @@ type Props = {
   initialRenewalDate: string | null;
   initialTermMonths: number;
   initialRoadmap: Roadmap;
-  initialWarnings: RoadmapWarning[];
 };
 
 export function RoadmapBoard({
@@ -150,11 +158,9 @@ export function RoadmapBoard({
   initialRenewalDate,
   initialTermMonths,
   initialRoadmap,
-  initialWarnings,
 }: Props) {
   const readOnly = useSeoReadOnly();
   const [roadmap, setRoadmap] = useState<Roadmap>(initialRoadmap);
-  const [warnings, setWarnings] = useState<RoadmapWarning[]>(initialWarnings);
   const [saving, setSaving] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
@@ -167,9 +173,18 @@ export function RoadmapBoard({
   const [generateStartDate, setGenerateStartDate] = useState(
     initialRoadmap.startDate,
   );
+  // Plan length for a fresh generation. Defaults to the client's contract
+  // term (6 months for almost everyone) so the roadmap covers the package
+  // the client actually signed, not one quarter of it.
+  const [generateMonths, setGenerateMonths] = useState<number>(
+    (ROADMAP_GENERATE_MONTHS as readonly number[]).includes(initialTermMonths)
+      ? initialTermMonths
+      : 6,
+  );
   const [generateFocus, setGenerateFocus] = useState("");
   const [generateConstraints, setGenerateConstraints] = useState("");
   const [generatePhotos, setGeneratePhotos] = useState<UploadedPhoto[]>([]);
+  const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
 
   // Debounced auto-save: any roadmap mutation triggers a PUT after 600ms.
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -181,7 +196,7 @@ export function RoadmapBoard({
     }
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
-      void persistRoadmap(roadmap, setSaving, setWarnings);
+      void persistRoadmap(roadmap, setSaving);
     }, 600);
     return () => {
       if (saveTimer.current) clearTimeout(saveTimer.current);
@@ -190,13 +205,11 @@ export function RoadmapBoard({
 
   const week = useMemo(() => currentWeekIndex(roadmap), [roadmap]);
   const totalWeeks = useMemo(() => roadmapWeeks(roadmap), [roadmap]);
-  const months = useMemo(() => roadmapMonths(totalWeeks), [totalWeeks]);
+  const totalMonths = useMemo(() => roadmapMonthCount(roadmap), [roadmap]);
+  const months = useMemo(() => roadmapMonths(roadmap), [roadmap]);
+  const lastDay = useMemo(() => roadmapLastDay(roadmap), [roadmap]);
+  const monthNow = useMemo(() => monthIndexOfWeek(roadmap, week), [roadmap, week]);
   const inHorizon = week >= 1 && week <= totalWeeks;
-  const atMaxWeeks = totalWeeks >= MAX_ROADMAP_WEEKS;
-  // Surface the extend nudge when the consultant is in the final month of
-  // the current plan (or already past its end) — that's exactly when a
-  // finishing roadmap needs its next 3 months.
-  const nearingEnd = week >= totalWeeks - (WEEKS_PER_MONTH - 1);
   // Place every task in each week column its span covers. The start week
   // gets the full editable card (isStart); later weeks get a slim
   // continuation bar so a Week 2–4 task visibly runs across all three
@@ -220,11 +233,6 @@ export function RoadmapBoard({
     }
     return map;
   }, [roadmap, totalWeeks]);
-  const flaggedTaskIds = useMemo(() => {
-    const s = new Set<string>();
-    for (const w of warnings) for (const id of w.taskIds) s.add(id);
-    return s;
-  }, [warnings]);
 
   // ----- Generate -----
   const generate = useCallback(async () => {
@@ -248,6 +256,7 @@ export function RoadmapBoard({
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           startDate: generateStartDate,
+          months: generateMonths,
           strategicFocus: generateFocus.trim() || undefined,
           constraints: generateConstraints.trim() || undefined,
           photos: readyPhotos.length > 0 ? readyPhotos : undefined,
@@ -276,7 +285,6 @@ export function RoadmapBoard({
       }
       skipNextSave.current = true;
       setRoadmap(data.roadmap);
-      setWarnings([]);
       setGeneratePanelOpen(false);
       setGenerateFocus("");
       setGenerateConstraints("");
@@ -297,6 +305,7 @@ export function RoadmapBoard({
   }, [
     clientSlug,
     generateStartDate,
+    generateMonths,
     generateFocus,
     generateConstraints,
     generatePhotos,
@@ -430,33 +439,54 @@ export function RoadmapBoard({
       return { ...prev, tasks };
     });
   }, []);
-  const dismissWarning = useCallback((id: string) => {
+  const updateStartDate = useCallback((next: string) => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(next)) return; // ignore a half-typed date
     setRoadmap((prev) => ({
       ...prev,
-      dismissedWarnings: [
-        ...prev.dismissedWarnings,
-        { id, dismissedAt: Date.now() },
-      ],
+      startDate: next,
+      weeks: roadmapWeeks({ ...prev, startDate: next }),
     }));
-    setWarnings((prev) => prev.filter((w) => w.id !== id));
   }, []);
-  const updateStartDate = useCallback((next: string) => {
-    setRoadmap((prev) => ({ ...prev, startDate: next }));
-  }, []);
-  // "Extend" — grows the plan by 1, 3 or 6 months (up to the 1-year cap).
-  // Existing tasks/weeks are untouched; the new weeks land as empty
-  // columns ready to plan. The debounced auto-save persists the new
-  // `weeks` and the changelog records an "extend" event.
-  const extendRoadmap = useCallback((months: number) => {
+  // "Extend" — grows the plan by 1, 3 or 6 CALENDAR months (up to the
+  // 1-year cap). Existing tasks/weeks are untouched; the new weeks land as
+  // empty columns ready to plan. The debounced auto-save persists the new
+  // `months` and the changelog records an "extend" event.
+  const extendRoadmap = useCallback((add: number) => {
     setRoadmap((prev) => {
-      const current = roadmapWeeks(prev);
-      const next = weeksAfterExtend(current, months);
+      const current = roadmapMonthCount(prev);
+      const next = monthsAfterExtend(current, add);
       if (next <= current) return prev;
-      return { ...prev, weeks: next };
+      return {
+        ...prev,
+        months: next,
+        weeks: roadmapWeeks({ ...prev, months: next }),
+      };
+    });
+  }, []);
+  // "Remove months" — cuts N calendar months off the END of the plan
+  // (never below one quarter). Tasks that START in the removed weeks are
+  // deleted; a multi-week task that merely runs into them is cut short at
+  // the new last week. The dialog spells out exactly what goes before the
+  // consultant types the confirmation word.
+  const removeMonths = useCallback((remove: number) => {
+    setRoadmap((prev) => {
+      const current = roadmapMonthCount(prev);
+      const next = monthsAfterRemove(current, remove);
+      if (next >= current) return prev;
+      const keepWeeks = roadmapWeeks({ ...prev, months: next });
+      const tasks = prev.tasks
+        .filter((t) => t.week <= keepWeeks)
+        .map((t) =>
+          taskEndWeek(t) > keepWeeks
+            ? { ...t, endWeek: keepWeeks > t.week ? keepWeeks : undefined }
+            : t,
+        );
+      return { ...prev, months: next, weeks: keepWeeks, tasks };
     });
   }, []);
 
   const isEmpty = roadmap.tasks.length === 0;
+  const canRemoveMonths = totalMonths > MIN_ROADMAP_MONTHS;
 
   return (
     <div className="space-y-5">
@@ -496,6 +526,26 @@ export function RoadmapBoard({
           initialTermMonths={initialTermMonths}
           readOnly={readOnly}
         />
+        {/* Horizon pill — where we are in weeks AND calendar months, and
+            the real end date. The team sells packages in months, so
+            "Month 5 of 6" is the number they actually reason about. */}
+        <span
+          className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.02] px-2.5 py-1 text-[10px] text-white/55"
+          title={`${totalMonths} calendar months from ${formatDate(roadmap.startDate)} · ${totalWeeks} weeks · ends ${formatDate(lastDay)}`}
+        >
+          <span className="font-medium text-white/75">
+            {inHorizon
+              ? `Week ${week} of ${totalWeeks} · Month ${monthNow} of ${totalMonths}`
+              : week < 1
+                ? `${totalMonths} months · ${totalWeeks} weeks · starts ${formatDate(roadmap.startDate)}`
+                : `${totalMonths} months · ${totalWeeks} weeks · past the last week`}
+          </span>
+          <span className="text-white/35">·</span>
+          <span className="text-[9px] uppercase tracking-[0.13em] text-white/40">
+            ends
+          </span>
+          <span className="font-medium text-white/75">{formatDate(lastDay)}</span>
+        </span>
         <span className="text-[11px] text-white/45">
           {roadmap.tasks.length} task{roadmap.tasks.length === 1 ? "" : "s"}
         </span>
@@ -506,11 +556,23 @@ export function RoadmapBoard({
             </span>
           )}
           {!readOnly && !isEmpty && (
-            <ExtendControl
-              totalWeeks={totalWeeks}
-              highlight={nearingEnd}
-              onExtend={extendRoadmap}
-            />
+            <ExtendControl totalMonths={totalMonths} onExtend={extendRoadmap} />
+          )}
+          {!readOnly && !isEmpty && (
+            <button
+              type="button"
+              disabled={!canRemoveMonths}
+              onClick={() => setRemoveDialogOpen(true)}
+              title={
+                canRemoveMonths
+                  ? "Cut months off the end of this roadmap (asks for a typed confirmation)"
+                  : `A roadmap can't be shorter than ${MIN_ROADMAP_MONTHS} months.`
+              }
+              className="inline-flex items-center gap-1.5 rounded-md border border-rose-400/25 bg-rose-500/[0.07] px-2.5 py-1.5 text-[11px] font-medium text-rose-100/85 transition hover:border-rose-400/55 hover:bg-rose-500/15 hover:text-rose-50 disabled:cursor-not-allowed disabled:opacity-35"
+            >
+              <CalendarMinus className="h-3.5 w-3.5" />
+              Remove months
+            </button>
           )}
           {!readOnly && (
             <button
@@ -536,10 +598,24 @@ export function RoadmapBoard({
         </span>
       </div>
 
+      {removeDialogOpen && (
+        <RemoveMonthsDialog
+          roadmap={roadmap}
+          clientName={clientName}
+          onConfirm={(n) => {
+            removeMonths(n);
+            setRemoveDialogOpen(false);
+          }}
+          onClose={() => setRemoveDialogOpen(false)}
+        />
+      )}
+
       {generatePanelOpen && (
         <GeneratePanel
           startDate={generateStartDate}
           setStartDate={setGenerateStartDate}
+          months={generateMonths}
+          setMonths={setGenerateMonths}
           focus={generateFocus}
           setFocus={setGenerateFocus}
           constraints={generateConstraints}
@@ -562,81 +638,19 @@ export function RoadmapBoard({
         />
       )}
 
-      {!readOnly && warnings.length > 0 && (
-        <ul className="space-y-2">
-          {warnings.map((w) => (
-            <li
-              key={w.id}
-              className={
-                w.severity === "critical"
-                  ? "flex items-start gap-3 rounded-lg border border-rose-400/40 bg-rose-500/10 px-3.5 py-2.5 text-xs text-rose-100"
-                  : w.severity === "warning"
-                    ? "flex items-start gap-3 rounded-lg border border-amber-400/40 bg-amber-500/10 px-3.5 py-2.5 text-xs text-amber-100"
-                    : "flex items-start gap-3 rounded-lg border border-sky-400/30 bg-sky-500/10 px-3.5 py-2.5 text-xs text-sky-100"
-              }
-            >
-              {w.severity === "info" ? (
-                <Info className="mt-0.5 h-4 w-4 shrink-0" />
-              ) : (
-                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-              )}
-              <span className="flex-1">{w.message}</span>
-              <button
-                type="button"
-                onClick={() => dismissWarning(w.id)}
-                className="rounded-md p-1 text-white/55 transition hover:bg-white/[0.08] hover:text-white"
-                aria-label="Dismiss"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {/* End-of-roadmap nudge — appears once the consultant reaches the
-          final month (or runs past the end) so a finishing plan gets its
-          next quarter without anyone having to remember to add it. */}
-      {!isEmpty && nearingEnd && (
-        <div className="animate-fade-up brand-gradient-border flex flex-col gap-3 rounded-xl bg-white/[0.03] p-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-start gap-3">
-            <span className="brand-gradient-bg mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-white shadow-[0_8px_24px_-8px_rgba(120,61,245,0.7)]">
-              <CalendarPlus className="h-4 w-4" />
-            </span>
-            <div>
-              <p className="text-sm font-semibold text-white">
-                {atMaxWeeks
-                  ? "This plan has reached its full 12-month horizon"
-                  : week > totalWeeks
-                    ? "This roadmap has run past its last week"
-                    : "You're in the final month of this roadmap"}
-              </p>
-              <p className="mt-0.5 text-[12px] leading-relaxed text-white/60">
-                {atMaxWeeks
-                  ? "You can’t extend further — regenerate for a fresh cycle when this engagement rolls over."
-                  : `Add another month, quarter or half-year and keep the momentum going — pick the one that matches what the client signed. Existing weeks and tasks stay exactly as they are; the new weeks land as empty columns from Week ${
-                      totalWeeks + 1
-                    } onwards, ready to plan.`}
-              </p>
-            </div>
-          </div>
-          {!atMaxWeeks && (
-            <ExtendControl
-              totalWeeks={totalWeeks}
-              highlight
-              size="lg"
-              onExtend={extendRoadmap}
-            />
-          )}
-        </div>
-      )}
+      {/* v77.42: the warning banners (stalled reviews, falling behind,
+          empty week) and the "final month — extend?" nudge that used to
+          stack here are gone. Andre asked for them out: the board is the
+          plan, not an inbox. Extend / Remove live in the top bar. */}
 
       {/* Months + weeks — month label centred with horizontal connector
-          like the mind-map, weeks underneath in a 4-up grid. The month
-          that contains the current week + the current week column itself
-          get a stronger brand-gradient treatment so a consultant can
-          tell at a glance "we're in Week 6, Month 2" without doing the
-          maths from the date pills. */}
+          like the mind-map, weeks underneath. Each month is a CALENDAR
+          month of the plan (startDate + k months), so it holds 4 or 5
+          week columns and carries its real date range in the label. The
+          month that contains the current week + the current week column
+          itself get a stronger brand-gradient treatment so a consultant
+          can tell at a glance "we're in Week 6, Month 2" without doing
+          the maths from the date pills. */}
       <div className="space-y-8">
         {months.map((m) => {
           const monthIsCurrent = m.weeks.includes(week);
@@ -654,6 +668,7 @@ export function RoadmapBoard({
                     ? "brand-gradient-bg text-white shadow-[0_8px_28px_-6px_rgba(120,61,245,0.55)] ring-2 ring-[color:var(--brand-purple)]/40"
                     : "brand-gradient-border bg-[color:var(--brand-purple)]/15 text-white/65"
                 }`}
+                title={`${m.weeks.length} weeks · ${formatDate(m.start)} – ${formatDate(m.end)}`}
               >
                 {monthIsCurrent && (
                   <span
@@ -662,6 +677,13 @@ export function RoadmapBoard({
                   />
                 )}
                 {m.name}
+                <span
+                  className={`ml-1 text-[9.5px] font-medium normal-case tracking-[0.04em] tabular-nums ${
+                    monthIsCurrent ? "text-white/85" : "text-white/45"
+                  }`}
+                >
+                  {formatDate(m.start)} – {formatDate(m.end)}
+                </span>
                 {monthIsCurrent && (
                   <span className="ml-1 rounded-full bg-white/20 px-1.5 py-px text-[9px] font-bold tracking-wider">
                     NOW
@@ -674,7 +696,11 @@ export function RoadmapBoard({
                 }`}
               />
             </div>
-            <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <div
+              className={`mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 ${
+                m.weeks.length >= 5 ? "xl:grid-cols-5" : "xl:grid-cols-4"
+              }`}
+            >
               {m.weeks.map((w) => {
                 const cells = cellsByWeek.get(w) ?? [];
                 const isCurrent = w === week;
@@ -700,7 +726,6 @@ export function RoadmapBoard({
                       shiftTask(id, targetWeek);
                       setDraggingTaskId(null);
                     }}
-                    flaggedTaskIds={flaggedTaskIds}
                   />
                 );
               })}
@@ -727,60 +752,36 @@ export function RoadmapBoard({
  *  A step that would run past the 12-month ceiling is DISABLED, not
  *  silently clamped — clicking "+6" and getting one month is the kind of
  *  small lie that teaches people to stop trusting the button. The
- *  tooltip says how much room is actually left.
- *
- *  +3 stays the visually recommended step in the end-of-roadmap nudge:
- *  three equally loud buttons turn a reminder into a quiz. */
+ *  tooltip says how much room is actually left. */
 function ExtendControl({
-  totalWeeks,
-  highlight,
-  size = "sm",
+  totalMonths,
   onExtend,
 }: {
-  totalWeeks: number;
-  /** Final month of the plan (or past it) — when the choice actually
-   *  matters and the control earns the extra colour. */
-  highlight: boolean;
-  size?: "sm" | "lg";
+  totalMonths: number;
   onExtend: (months: number) => void;
 }) {
-  const lg = size === "lg";
-
-  if (totalWeeks >= MAX_ROADMAP_WEEKS) {
+  if (totalMonths >= MAX_ROADMAP_MONTHS) {
     return (
       <span
         className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-white/12 bg-white/[0.03] px-3 py-1.5 text-[11px] font-medium text-white/45"
-        title={`This roadmap is at the ${MAX_ROADMAP_WEEKS}-week (12-month) maximum.`}
+        title={`This roadmap is at the ${MAX_ROADMAP_MONTHS}-month maximum.`}
       >
         <CalendarPlus className="h-3.5 w-3.5" />
-        Max 12 months
+        Max {MAX_ROADMAP_MONTHS} months
       </span>
     );
   }
 
+  const roomMonths = MAX_ROADMAP_MONTHS - totalMonths;
   return (
-    <span
-      className={`inline-flex shrink-0 items-center gap-1 rounded-md border px-1.5 py-1 ${
-        highlight
-          ? "border-[color:var(--brand-purple)]/45 bg-[color:var(--brand-purple)]/10"
-          : "border-white/12 bg-white/[0.03]"
-      }`}
-    >
-      <span
-        className={`inline-flex items-center gap-1.5 pl-1 pr-0.5 font-medium ${
-          lg ? "text-[11.5px] text-white/75" : "text-[11px] text-white/65"
-        }`}
-      >
-        <CalendarPlus className={lg ? "h-4 w-4" : "h-3.5 w-3.5"} />
+    <span className="inline-flex shrink-0 items-center gap-1 rounded-md border border-white/12 bg-white/[0.03] px-1.5 py-1">
+      <span className="inline-flex items-center gap-1.5 pl-1 pr-0.5 text-[11px] font-medium text-white/65">
+        <CalendarPlus className="h-3.5 w-3.5" />
         Extend
       </span>
       {ROADMAP_EXTEND_MONTHS.map((m) => {
-        const next = weeksAfterExtend(totalWeeks, m);
-        // Room left, in months — the honest version of "+6" when only two
-        // months fit under the ceiling.
-        const roomMonths = (MAX_ROADMAP_WEEKS - totalWeeks) / WEEKS_PER_MONTH;
         const fits = m <= roomMonths;
-        const featured = highlight && m === 3;
+        const featured = m === 3;
         return (
           <button
             key={m}
@@ -789,21 +790,20 @@ function ExtendControl({
             onClick={() => onExtend(m)}
             title={
               fits
-                ? `Weeks ${totalWeeks + 1}–${next} land as empty columns — ${
-                    next / WEEKS_PER_MONTH
-                  } months in total.`
+                ? `Add ${m} calendar month${m === 1 ? "" : "s"} — ${
+                    totalMonths + m
+                  } months in total. The new weeks land as empty columns.`
                 : `Only ${roomMonths} more month${
                     roomMonths === 1 ? "" : "s"
-                  } fit before the 12-month ceiling.`
+                  } fit before the ${MAX_ROADMAP_MONTHS}-month ceiling.`
             }
-            className={`rounded ${lg ? "px-2.5 py-1 text-[11.5px]" : "px-2 py-0.5 text-[11px]"} font-semibold tabular-nums transition disabled:cursor-not-allowed disabled:opacity-35 ${
+            className={`rounded px-2 py-0.5 text-[11px] font-semibold tabular-nums transition disabled:cursor-not-allowed disabled:opacity-35 ${
               featured
                 ? "bg-gradient-to-br from-[#343ED7] via-[#783DF5] to-[#C535C9] text-white shadow-md shadow-[#783DF5]/25 hover:brightness-110"
                 : "border border-white/12 bg-white/[0.04] text-white/80 hover:border-white/30 hover:bg-white/[0.09] hover:text-white"
             }`}
           >
-            +{m}
-            {lg ? (m === 1 ? " month" : " months") : "m"}
+            +{m}m
           </button>
         );
       })}
@@ -811,9 +811,219 @@ function ExtendControl({
   );
 }
 
+/** REMOVE MONTHS — the mirror of Extend, behind a typed confirmation.
+ *
+ *  Cutting months deletes every task that starts in the removed weeks,
+ *  which is the only destructive thing this board can do to planned work.
+ *  So the dialog shows the exact consequence first — the new end date, the
+ *  week numbers that disappear, the tasks that go with them by name — and
+ *  only then asks the consultant to type DELETE. A click-through "Are you
+ *  sure?" would be read as noise within a week; a word is a decision.
+ *
+ *  Portalled to <body>: the board sits under PageShell, and a `fixed`
+ *  overlay must not inherit a blurred ancestor as its containing block. */
+function RemoveMonthsDialog({
+  roadmap,
+  clientName,
+  onConfirm,
+  onClose,
+}: {
+  roadmap: Roadmap;
+  clientName: string;
+  onConfirm: (months: number) => void;
+  onClose: () => void;
+}) {
+  const totalMonths = roadmapMonthCount(roadmap);
+  const totalWeeks = roadmapWeeks(roadmap);
+  const maxRemovable = Math.max(0, totalMonths - MIN_ROADMAP_MONTHS);
+  const [remove, setRemove] = useState(1);
+  const [typed, setTyped] = useState("");
+
+  const nextMonths = monthsAfterRemove(totalMonths, remove);
+  const keepWeeks = roadmapWeeks({ ...roadmap, months: nextMonths });
+  const nextLastDay = roadmapLastDay({ ...roadmap, months: nextMonths });
+  const doomed = roadmap.tasks
+    .filter((t) => t.week > keepWeeks)
+    .sort((a, b) => a.week - b.week || a.order - b.order);
+  const trimmed = roadmap.tasks.filter(
+    (t) => t.week <= keepWeeks && taskEndWeek(t) > keepWeeks,
+  );
+  const confirmed = typed.trim().toUpperCase() === REMOVE_CONFIRM_WORD;
+
+  // Escape closes; the overlay click closes; the card itself swallows it.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  if (typeof document === "undefined") return null;
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[80] flex items-center justify-center bg-black/65 p-4 backdrop-blur-sm"
+      onClick={onClose}
+      role="presentation"
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="remove-months-title"
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-lg rounded-2xl border border-rose-400/30 bg-[#12101c] p-5 text-white shadow-[0_30px_80px_-20px_rgba(0,0,0,0.8)]"
+      >
+        <div className="flex items-start gap-3">
+          <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-rose-400/40 bg-rose-500/15 text-rose-200">
+            <CalendarMinus className="h-4 w-4" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <h2
+              id="remove-months-title"
+              className="text-[15px] font-semibold leading-tight"
+            >
+              Remove months from the end of this roadmap
+            </h2>
+            <p className="mt-1 text-[12px] leading-relaxed text-white/60">
+              {clientName} · {totalMonths} months today ({totalWeeks} weeks,
+              ends {formatDate(roadmapLastDay(roadmap))}). A roadmap can&apos;t
+              go below {MIN_ROADMAP_MONTHS} months.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className="rounded-md p-1 text-white/50 transition hover:bg-white/[0.08] hover:text-white"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* How many months to cut */}
+        <div className="mt-4">
+          <p className="text-[10px] uppercase tracking-[0.13em] text-white/50">
+            Months to remove
+          </p>
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {Array.from({ length: maxRemovable }, (_, i) => i + 1).map((n) => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => setRemove(n)}
+                className={`rounded-md px-2.5 py-1 text-[11.5px] font-semibold tabular-nums transition ${
+                  remove === n
+                    ? "border border-rose-400/60 bg-rose-500/25 text-rose-50"
+                    : "border border-white/12 bg-white/[0.04] text-white/75 hover:border-white/30 hover:text-white"
+                }`}
+              >
+                −{n}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* The consequence, spelled out */}
+        <div className="mt-4 rounded-xl border border-white/10 bg-white/[0.03] p-3.5 text-[12px] leading-relaxed">
+          <p className="text-white/85">
+            <span className="font-semibold">{totalMonths} → {nextMonths} months.</span>{" "}
+            The plan will end on{" "}
+            <span className="font-semibold">{formatDate(nextLastDay)}</span>{" "}
+            instead of {formatDate(roadmapLastDay(roadmap))}.{" "}
+            {totalWeeks > keepWeeks && (
+              <>
+                Week{totalWeeks - keepWeeks === 1 ? "" : "s"}{" "}
+                <span className="font-semibold tabular-nums">
+                  {keepWeeks + 1}
+                  {totalWeeks - keepWeeks === 1 ? "" : `–${totalWeeks}`}
+                </span>{" "}
+                disappear.
+              </>
+            )}
+          </p>
+          {doomed.length > 0 ? (
+            <div className="mt-2.5">
+              <p className="font-semibold text-rose-200">
+                {doomed.length} task{doomed.length === 1 ? "" : "s"} will be
+                deleted:
+              </p>
+              <ul className="mt-1 max-h-40 space-y-0.5 overflow-y-auto pr-1 text-white/70">
+                {doomed.map((t) => (
+                  <li key={t.id} className="flex items-baseline gap-2">
+                    <span className="shrink-0 text-[10px] uppercase tracking-[0.1em] text-white/40">
+                      Wk {t.week}
+                    </span>
+                    <span className="min-w-0 flex-1 truncate">{t.title}</span>
+                    <span className="shrink-0 text-[10px] uppercase tracking-[0.08em] text-white/40">
+                      {STATUS_META[t.status].label}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : (
+            <p className="mt-2 text-emerald-200/85">
+              No tasks are planned in the removed weeks — nothing gets deleted.
+            </p>
+          )}
+          {trimmed.length > 0 && (
+            <p className="mt-2 text-amber-200/85">
+              {trimmed.length} multi-week task{trimmed.length === 1 ? "" : "s"}{" "}
+              will be cut short at week {keepWeeks}.
+            </p>
+          )}
+        </div>
+
+        {/* Typed confirmation */}
+        <label className="mt-4 block text-[10px] uppercase tracking-[0.13em] text-white/50">
+          Type {REMOVE_CONFIRM_WORD} to confirm
+          <input
+            type="text"
+            autoFocus
+            value={typed}
+            onChange={(e) => setTyped(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && confirmed) onConfirm(remove);
+            }}
+            placeholder={REMOVE_CONFIRM_WORD}
+            autoComplete="off"
+            spellCheck={false}
+            className="mt-1 w-full rounded-md border border-white/12 bg-white/[0.04] px-3 py-2 text-[13px] font-semibold uppercase tracking-[0.12em] text-white outline-none placeholder:text-white/25 focus:border-rose-400/60"
+          />
+        </label>
+
+        <div className="mt-4 flex items-center justify-end gap-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-md border border-white/15 bg-white/[0.04] px-3 py-1.5 text-[11.5px] font-medium text-white/80 transition hover:border-white/30 hover:text-white"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            disabled={!confirmed}
+            onClick={() => onConfirm(remove)}
+            className="inline-flex items-center gap-1.5 rounded-md border border-rose-400/50 bg-rose-500/25 px-3 py-1.5 text-[11.5px] font-semibold text-rose-50 transition hover:bg-rose-500/40 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            Remove {remove} month{remove === 1 ? "" : "s"}
+            {doomed.length > 0
+              ? ` · delete ${doomed.length} task${doomed.length === 1 ? "" : "s"}`
+              : ""}
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
 function GeneratePanel({
   startDate,
   setStartDate,
+  months,
+  setMonths,
   focus,
   setFocus,
   constraints,
@@ -829,6 +1039,8 @@ function GeneratePanel({
 }: {
   startDate: string;
   setStartDate: (v: string) => void;
+  months: number;
+  setMonths: (v: number) => void;
   focus: string;
   setFocus: (v: string) => void;
   constraints: string;
@@ -853,7 +1065,7 @@ function GeneratePanel({
           : "mt-5 rounded-xl border border-white/10 bg-white/[0.025] p-4"
       }
     >
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
         <label className="block text-xs">
           <span className="text-[11px] uppercase tracking-[0.13em] text-white/55">
             Start date (any day — week 1 begins here)
@@ -864,6 +1076,29 @@ function GeneratePanel({
             onChange={(e) => setStartDate(e.target.value)}
             className="mt-1 w-full rounded-md border border-white/10 bg-white/[0.03] px-2.5 py-1.5 text-xs text-white outline-none focus:border-white/30"
           />
+        </label>
+        {/* Plan length in CALENDAR months — the package the client signed.
+            The week count follows from the start date (a 6-month plan is
+            26 or 27 weeks), so it's shown, not chosen. */}
+        <label className="block text-xs">
+          <span className="text-[11px] uppercase tracking-[0.13em] text-white/55">
+            Plan length
+          </span>
+          <select
+            value={months}
+            onChange={(e) => setMonths(Number(e.target.value))}
+            className="mt-1 w-full rounded-md border border-white/10 bg-white/[0.03] px-2.5 py-1.5 text-xs text-white outline-none focus:border-white/30 [color-scheme:dark]"
+          >
+            {ROADMAP_GENERATE_MONTHS.map((m) => (
+              <option key={m} value={m}>
+                {m} months ·{" "}
+                {/^\d{4}-\d{2}-\d{2}$/.test(startDate)
+                  ? roadmapWeeks({ startDate, months: m })
+                  : Math.ceil((m * 30.4375) / 7)}{" "}
+                weeks
+              </option>
+            ))}
+          </select>
         </label>
         <label className="block text-xs md:col-span-2">
           <span className="text-[11px] uppercase tracking-[0.13em] text-white/55">
@@ -1022,7 +1257,6 @@ function WeekColumn({
   onDragStartTask,
   onDragEndTask,
   onDropTaskToWeek,
-  flaggedTaskIds,
 }: {
   week: number;
   totalWeeks: number;
@@ -1040,7 +1274,6 @@ function WeekColumn({
   onDragStartTask: (id: string) => void;
   onDragEndTask: () => void;
   onDropTaskToWeek: (id: string, targetWeek: number) => void;
-  flaggedTaskIds: Set<string>;
 }) {
   const readOnly = useSeoReadOnly();
   // True while a card is mid-drag AND hovering this column — drives the
@@ -1131,7 +1364,6 @@ function WeekColumn({
               task={cell.task}
               totalWeeks={totalWeeks}
               editing={editingTaskId === cell.task.id}
-              flagged={flaggedTaskIds.has(cell.task.id)}
               dragging={draggingTaskId === cell.task.id}
               onStartEdit={() => onStartEdit(cell.task.id)}
               onStopEdit={onStopEdit}
@@ -1216,7 +1448,6 @@ function TaskCard({
   task,
   totalWeeks,
   editing,
-  flagged,
   dragging,
   onStartEdit,
   onStopEdit,
@@ -1229,7 +1460,6 @@ function TaskCard({
   task: RoadmapTask;
   totalWeeks: number;
   editing: boolean;
-  flagged: boolean;
   dragging: boolean;
   onStartEdit: () => void;
   onStopEdit: () => void;
@@ -1260,9 +1490,7 @@ function TaskCard({
     // Read-only viewers see the task as a static card — no click-to-edit,
     // no pencil, no inline form.
     return (
-      <li
-        className={`relative rounded-lg ${meta.bgClass} ${flagged ? "ring-1 ring-amber-300/60" : ""}`}
-      >
+      <li className={`relative rounded-lg ${meta.bgClass}`}>
         <div className="block w-full px-2.5 py-2 text-left text-[11.5px] leading-snug">
           <span className="font-medium">{task.title}</span>
           <span className="mt-1 flex flex-wrap items-center gap-1.5 text-[9.5px] uppercase tracking-[0.1em]">
@@ -1290,7 +1518,7 @@ function TaskCard({
           onDragStart();
         }}
         onDragEnd={onDragEnd}
-        className={`group relative cursor-grab rounded-lg active:cursor-grabbing ${meta.bgClass} ${flagged ? "ring-1 ring-amber-300/60" : ""} ${dragging ? "opacity-40 ring-2 ring-[color:var(--brand-purple)]/70" : ""}`}
+        className={`group relative cursor-grab rounded-lg active:cursor-grabbing ${meta.bgClass} ${dragging ? "opacity-40 ring-2 ring-[color:var(--brand-purple)]/70" : ""}`}
       >
         <button
           type="button"
@@ -1578,7 +1806,6 @@ function tryParseJson<T>(raw: string): T | null {
 async function persistRoadmap(
   roadmap: Roadmap,
   setSaving: (v: boolean) => void,
-  setWarnings: (v: RoadmapWarning[]) => void,
 ) {
   setSaving(true);
   try {
@@ -1587,13 +1814,11 @@ async function persistRoadmap(
       headers: { "content-type": "application/json" },
       body: JSON.stringify(roadmap),
     });
-    const data = (await res.json()) as {
-      roadmap?: Roadmap;
-      warnings?: RoadmapWarning[];
-      error?: string;
-    };
-    if (res.ok && data.warnings) {
-      setWarnings(data.warnings);
+    if (!res.ok) {
+      const data = (await res.json().catch(() => null)) as {
+        error?: string;
+      } | null;
+      console.error("roadmap save failed:", data?.error ?? `HTTP ${res.status}`);
     }
   } catch (err) {
     console.error("roadmap save failed:", err);

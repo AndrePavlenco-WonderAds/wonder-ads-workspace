@@ -22,6 +22,7 @@ import { getNpsRecord } from "@/lib/nps-store";
 import {
   currentWeekIndex,
   getCurrentRoadmap,
+  roadmapMonthsElapsed,
   roadmapWeeks,
 } from "@/lib/roadmap-store";
 import { EMPLOYEE_CREDENTIALS, isAdminUsername } from "@/lib/auth/credentials";
@@ -558,10 +559,12 @@ async function pendingReviewNotifications(
  *  pessoal em ruído para quem não a pode marcar. */
 const SITUATION_POINT_OWNER = "andre";
 
-/** A partir de quantas SEMANAS de roadmap o cliente entra na lista. Quatro
- *  meses completos: com `WEEKS_PER_MONTH = 4`, o mês 4 acaba na semana 16, e
- *  na 17 o cliente tem quatro meses feitos. */
-const SITUATION_POINT_WEEK = 17;
+/** A partir de quantos MESES DE CALENDÁRIO cumpridos o cliente entra na
+ *  lista. v77.42: deixou de ser «semana 17» — com meses de 4 semanas, os
+ *  quatro meses fechavam 8 a 12 dias antes do calendário. Agora é a data:
+ *  um roadmap que começou a 4 de maio tem quatro meses feitos a 4 de
+ *  setembro, e é aí que o lembrete entra. */
+const SITUATION_POINT_MONTHS = 4;
 
 /** Clientes SEO com quatro meses de roadmap cumpridos.
  *
@@ -598,8 +601,8 @@ const getSituationPointCandidates = unstable_cache(
         try {
           const roadmap = await getCurrentRoadmap(c.slug);
           if (!roadmap || roadmap.tasks.length === 0) return;
+          if (roadmapMonthsElapsed(roadmap) < SITUATION_POINT_MONTHS) return;
           const week = currentWeekIndex(roadmap);
-          if (week < SITUATION_POINT_WEEK) return;
           out.push({ slug: c.slug, title: c.title, icon: c.icon, week });
         } catch {
           /* um roadmap ilegível não pode calar o sino inteiro */
@@ -608,7 +611,7 @@ const getSituationPointCandidates = unstable_cache(
     );
     return out.sort((a, b) => b.week - a.week);
   },
-  ["notifications-situation-point-v1"],
+  ["notifications-situation-point-v2-calendar-months"],
   { revalidate: 1800 },
 );
 

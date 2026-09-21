@@ -13,6 +13,20 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.42",
+    date: "2026-09-21",
+    title: "Roadmap SEO em meses de calendário, botão «Remove months» e fim dos alertas no board",
+    highlights: [
+      "**📅 Meses de calendário, não blocos de 4 semanas.** O comprimento do roadmap passa a ser um número de **meses de calendário** (3 a 12) contados a partir da data de início; as semanas derivam daí. Um mês de 4 semanas tinha 28 dias e cada mês encurtava 2 a 3 dias face ao calendário — ao fim de cinco, um pacote de 6 meses começado a 4 de maio lia «Month 6» a 21 de setembro e acabava a 18 de outubro. Agora a Clínica Mimus está na **semana 21 · mês 5 de 6** e o plano acaba a **03/11/2026**, como o contrato. Cada mês do board mostra o intervalo de datas real e tem 4 **ou 5** colunas de semanas.",
+      "**🔁 Migração silenciosa, sem mexer em dados.** Os roadmaps guardados com `weeks` (múltiplos de 4) são lidos como `weeks / 4` meses e ganham as semanas de calendário que faltavam **na leitura** — nenhuma tarefa muda de semana nem de data, só aparecem colunas vazias no fim. Todos os 26 roadmaps ativos foram verificados um a um: nenhum tem tarefas fora do novo horizonte.",
+      "**➖ «Remove months» com confirmação escrita.** Ao lado do Extend nasce o espelho: cortar 1, 2, … meses ao fim do plano (nunca abaixo de 3). A janela diz antes o que acontece — nova data de fim, semanas que desaparecem, **as tarefas que serão apagadas, pelo nome** — e só liberta o botão depois de escrever **DELETE**. Fica registado no changelog do roadmap como «Shortened roadmap to N months».",
+      "**🔕 Alertas fora do board.** As três faixas (tarefas paradas em revisão, semanas em atraso, semana sem nada em curso) e o painel «You're in the final month — extend?» saíram. O board é o plano; o Extend continua na barra de cima e os alertas de saúde por cliente continuam no painel de admin e na vista semanal do consultor.",
+      "**✨ Gerar com a duração do pacote.** O painel «Fill with AI / Regenerate» ganha **Plan length** (3 · 6 · 9 · 12 meses, por omissão o prazo do contrato — 6). O Claude recebe o calendário real de meses e semanas, um orçamento de 3–4 tarefas por semana proporcional ao comprimento, e regras de sequência que se repetem mês a mês em planos longos, com revisão trimestral.",
+      "**🔔 Situation Point Call por data.** O lembrete dos 4 meses deixa de disparar na «semana 17» e passa a disparar quando se cumprem **4 meses de calendário** desde o início do roadmap.",
+      "**📄 Pré-visualizações e faixa.** O documento público chama-se «Roadmap SEO — 6 meses» (em vez de «24 semanas»), cada mês leva o intervalo de datas, o «Send current month» envia o mês de calendário certo, e a faixa da ficha do cliente mostra «Week 21 of 27 · Month 5 of 6».",
+    ],
+  },
+  {
     version: "77.41",
     date: "2026-09-21",
     title: "Destaques do relatório: «touch points ao website» com % face ao mês anterior",

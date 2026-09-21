@@ -19,6 +19,7 @@ import {
   Sparkles,
   CircleDot,
   CalendarPlus,
+  CalendarMinus,
 } from "lucide-react";
 import {
   ROADMAP_STATUS_LABELS,
@@ -40,6 +41,7 @@ const KIND_META: Record<
   weekly: { Icon: CircleDot, tint: "text-white/60" },
   reset: { Icon: RefreshCw, tint: "text-amber-300" },
   extend: { Icon: CalendarPlus, tint: "text-[#c08bff]" },
+  shrink: { Icon: CalendarMinus, tint: "text-rose-300" },
 };
 
 function describe(e: RoadmapLogEntry): string {
@@ -63,9 +65,19 @@ function describe(e: RoadmapLogEntry): string {
     case "reset":
       return "Reset roadmap";
     case "extend":
+      // v77.42+ entries carry the new length in calendar months; older
+      // ones carry the 4-week total (`count`), kept readable as-is.
       return `Extended roadmap${
-        e.count != null ? ` to ${e.count} weeks (${e.count / 4} months)` : " by 3 months"
+        e.months != null
+          ? ` to ${e.months} months`
+          : e.count != null
+            ? ` to ${e.count} weeks (${e.count / 4} months)`
+            : " by 3 months"
       }`;
+    case "shrink":
+      return `Shortened roadmap${
+        e.months != null ? ` to ${e.months} months` : ""
+      } — tasks in the removed weeks were deleted`;
     case "weekly":
       return "Weekly update sent";
     default:

@@ -1,4 +1,5 @@
-// Per-client 12-week SEO Roadmap — operational Kanban-style state.
+// Per-client SEO Roadmap (3–12 calendar months) — operational
+// Kanban-style state.
 //
 // Distinct from the `client-roadmap` action which produces a narrative
 // markdown deliverable for the client. This is the INTERNAL execution
@@ -6,7 +7,7 @@
 // status colour-coded, current-week highlighted by `startDate` offset.
 //
 // One "current" roadmap per client at a time. When the consultant
-// regenerates (typically every 3 months / 12 weeks), the previous one is
+// regenerates (typically when a package renews), the previous one is
 // pushed to the archive so the history stays auditable.
 
 import { kv } from "@vercel/kv";
@@ -16,14 +17,36 @@ const CURRENT_PREFIX = "roadmap:current:";
 const ARCHIVE_PREFIX = "roadmap:archive:";
 const MAX_ARCHIVE = 12; // ~3 years of quarterly roadmaps
 
-/** One month = 4 week columns. Roadmap length is always a whole number of
- *  these so the month grid never has a ragged final row. */
-export const WEEKS_PER_MONTH = 4;
-/** A brand-new roadmap covers one quarter (3 months / 12 weeks). */
-export const MIN_ROADMAP_WEEKS = 12;
+// ---------- Horizon: CALENDAR months, derived weeks ----------
+//
+// v77.42 — the plan's length is a number of CALENDAR months, anchored to
+// `startDate`. Until now a "month" was a fixed 4-week block (28 days), so
+// every month drifted 2–3 days short of the calendar and, after five of
+// them, a 6-month package that began on 4 May was reading "Month 6" in
+// late September and ending on 18 October instead of running into
+// November. Weeks are still the unit the board works in (one column per
+// 7 days from `startDate`), but how many of them a plan has — and which
+// month each one belongs to — now falls out of real dates:
+//
+//   • `months`  = the package length the client signed (3–12).
+//   • end date  = startDate + `months` calendar months (exclusive).
+//   • weeks     = every 7-day column that starts before the end date, so
+//                 a 6-month plan is 26 or 27 weeks depending on the
+//                 start date, never a flat 24.
+//   • month k   = the weeks whose first day falls inside
+//                 [startDate + k months, startDate + k+1 months). Months
+//                 therefore hold 4 OR 5 week columns.
+//
+// Legacy blobs carry `weeks` (a multiple of 4) and no `months`; they are
+// read as `weeks / 4` months and gain their missing calendar weeks on the
+// spot. No task moves: week N still starts on the same date as before, so
+// nothing written under the old model is lost or shifted.
+
+/** A brand-new roadmap covers at least one quarter. */
+export const MIN_ROADMAP_MONTHS = 3;
 /** Hard ceiling: a full year. Keeps the board (and the KV blob) bounded
  *  no matter how many times the plan is extended. */
-export const MAX_ROADMAP_WEEKS = 48;
+export const MAX_ROADMAP_MONTHS = 12;
 /** The extension steps the consultant can pick, in months. Three sizes
  *  because three different situations: +1 closes out a plan that only
  *  needs a few more weeks, +3 is the ordinary quarterly renewal, and +6
@@ -31,48 +54,161 @@ export const MAX_ROADMAP_WEEKS = 48;
  *  that consultant click "+3" twice was busywork that also logged two
  *  extensions for one decision. */
 export const ROADMAP_EXTEND_MONTHS = [1, 3, 6] as const;
+/** Plan lengths offered when generating. The same terms the agency sells
+ *  (see client-renewal-store), so a fresh roadmap can cover the whole
+ *  package instead of one quarter of it. */
+export const ROADMAP_GENERATE_MONTHS = [3, 6, 9, 12] as const;
+/** Week count shown for a client with NO roadmap on file (admin tables).
+ *  Display-only; a real roadmap always derives its own count. */
+export const FALLBACK_TOTAL_WEEKS = 13;
 
-/** Total weeks after growing `currentWeeks` by `months`, already capped at
- *  the 12-month ceiling. Single source of the clamp so the button label,
- *  the tooltip and the state update can never disagree. */
-export function weeksAfterExtend(
-  currentWeeks: number,
-  months: number,
-): number {
-  return Math.min(
-    MAX_ROADMAP_WEEKS,
-    currentWeeks + months * WEEKS_PER_MONTH,
+const DAY_MS = 86_400_000;
+
+function parseISO(iso: string): number {
+  return new Date(`${iso}T00:00:00Z`).getTime();
+}
+
+function toISO(ms: number): string {
+  return new Date(ms).toISOString().slice(0, 10);
+}
+
+/** `iso` plus `months` calendar months, keeping the day-of-month when it
+ *  exists in the target month and clamping to its last day otherwise
+ *  (31 Jan + 1 → 28/29 Feb). Negative `months` walks backwards. */
+export function addCalendarMonths(iso: string, months: number): string {
+  const d = new Date(`${iso}T00:00:00Z`);
+  if (Number.isNaN(d.getTime())) return iso;
+  const day = d.getUTCDate();
+  const target = new Date(
+    Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + months, 1),
   );
+  const lastDay = new Date(
+    Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0),
+  ).getUTCDate();
+  target.setUTCDate(Math.min(day, lastDay));
+  return target.toISOString().slice(0, 10);
 }
 
-/** The trusted total-week span of a roadmap. Defaults to 12 when unset
- *  (pre-v74.65 roadmaps), snaps to a whole number of months, and clamps
- *  into [MIN, MAX]. Every render path derives its week/month count from
- *  this so extending is a one-field change. */
-export function roadmapWeeks(roadmap: Pick<Roadmap, "weeks">): number {
-  const raw = roadmap.weeks;
-  if (typeof raw !== "number" || !Number.isFinite(raw)) return MIN_ROADMAP_WEEKS;
-  const snapped = Math.round(raw / WEEKS_PER_MONTH) * WEEKS_PER_MONTH;
-  return Math.max(MIN_ROADMAP_WEEKS, Math.min(MAX_ROADMAP_WEEKS, snapped));
+/** The plan's length in calendar months, clamped into [MIN, MAX].
+ *  Reads `months` when present; falls back to the legacy 4-week `weeks`
+ *  field (`24 → 6`), and to one quarter when neither is set. */
+export function roadmapMonthCount(
+  roadmap: Pick<Roadmap, "months" | "weeks">,
+): number {
+  const raw =
+    typeof roadmap.months === "number" && Number.isFinite(roadmap.months)
+      ? Math.round(roadmap.months)
+      : typeof roadmap.weeks === "number" && Number.isFinite(roadmap.weeks)
+        ? Math.round(roadmap.weeks / 4)
+        : MIN_ROADMAP_MONTHS;
+  return Math.max(MIN_ROADMAP_MONTHS, Math.min(MAX_ROADMAP_MONTHS, raw));
 }
 
-/** Group a roadmap's weeks into 4-week months for the board / report
- *  grids. `Month 1 → [1,2,3,4]`, `Month 2 → [5,6,7,8]`, … up to
- *  `totalWeeks`. */
-export function roadmapMonths(
-  totalWeeks: number,
-): { name: string; index: number; weeks: number[] }[] {
-  const monthCount = Math.ceil(totalWeeks / WEEKS_PER_MONTH);
-  const out: { name: string; index: number; weeks: number[] }[] = [];
-  for (let m = 0; m < monthCount; m++) {
-    const start = m * WEEKS_PER_MONTH + 1;
-    const weeks: number[] = [];
-    for (let w = start; w <= Math.min(start + WEEKS_PER_MONTH - 1, totalWeeks); w++) {
-      weeks.push(w);
-    }
-    out.push({ name: `Month ${m + 1}`, index: m, weeks });
+type Horizon = Pick<Roadmap, "startDate" | "months" | "weeks">;
+
+/** Month count after growing the plan by `add` months, capped at a year. */
+export function monthsAfterExtend(current: number, add: number): number {
+  return Math.min(MAX_ROADMAP_MONTHS, current + add);
+}
+
+/** Month count after cutting `remove` months off the end, floored at the
+ *  one-quarter minimum. */
+export function monthsAfterRemove(current: number, remove: number): number {
+  return Math.max(MIN_ROADMAP_MONTHS, current - remove);
+}
+
+/** First day AFTER the plan (exclusive end): startDate + months. */
+export function roadmapEndDate(roadmap: Horizon): string {
+  return addCalendarMonths(roadmap.startDate, roadmapMonthCount(roadmap));
+}
+
+/** The plan's last day (inclusive) — what "ends on" means to a human. */
+export function roadmapLastDay(roadmap: Horizon): string {
+  const end = parseISO(roadmapEndDate(roadmap));
+  if (Number.isNaN(end)) return roadmap.startDate;
+  return toISO(end - DAY_MS);
+}
+
+/** How many 7-day week columns the plan has: every week that STARTS
+ *  before the end date. 13–14 for a quarter, 26–27 for six months, 52–53
+ *  for a year — the exact number depends on the start date. */
+export function roadmapWeeks(roadmap: Horizon): number {
+  const months = roadmapMonthCount(roadmap);
+  const start = parseISO(roadmap.startDate);
+  const end = parseISO(addCalendarMonths(roadmap.startDate, months));
+  if (Number.isNaN(start) || Number.isNaN(end) || end <= start) {
+    // Unparseable start date (never written by normaliseRoadmap, but KV
+    // is KV): fall back to the average month length.
+    return Math.ceil((months * 30.4375) / 7);
+  }
+  return Math.max(1, Math.ceil((end - start) / (7 * DAY_MS)));
+}
+
+export type RoadmapMonth = {
+  /** "Month 3" */
+  name: string;
+  /** 0-based. */
+  index: number;
+  /** The week numbers whose first day falls inside this month (4 or 5). */
+  weeks: number[];
+  /** ISO — first day of the month bucket. */
+  start: string;
+  /** ISO — last day of the month bucket (inclusive). */
+  end: string;
+};
+
+/** Group a roadmap's weeks into its calendar months for the board /
+ *  report grids. Month k covers [startDate + k months, startDate + k+1
+ *  months) and owns every week that begins inside that window. */
+export function roadmapMonths(roadmap: Horizon): RoadmapMonth[] {
+  const monthCount = roadmapMonthCount(roadmap);
+  const totalWeeks = roadmapWeeks(roadmap);
+  const bounds: number[] = [];
+  for (let k = 0; k <= monthCount; k++) {
+    bounds.push(parseISO(addCalendarMonths(roadmap.startDate, k)));
+  }
+  const out: RoadmapMonth[] = [];
+  for (let k = 0; k < monthCount; k++) {
+    out.push({
+      name: `Month ${k + 1}`,
+      index: k,
+      weeks: [],
+      start: toISO(bounds[k]),
+      end: toISO(bounds[k + 1] - DAY_MS),
+    });
+  }
+  for (let w = 1; w <= totalWeeks; w++) {
+    const ws = parseISO(weekStartDate(roadmap, w));
+    let k = out.findIndex((_, i) => ws >= bounds[i] && ws < bounds[i + 1]);
+    if (k < 0) k = out.length - 1; // unparseable dates: park in the last month
+    out[k].weeks.push(w);
   }
   return out;
+}
+
+/** 1-based calendar month a week column belongs to. 0 before the plan
+ *  (week 0), `months + 1` once past its last week. */
+export function monthIndexOfWeek(roadmap: Horizon, week: number): number {
+  if (week < 1) return 0;
+  const months = roadmapMonths(roadmap);
+  const hit = months.find((m) => m.weeks.includes(week));
+  return hit ? hit.index + 1 : months.length + 1;
+}
+
+/** Whole calendar months of the plan already behind us at `now`: 0 during
+ *  month 1, 4 once the day that starts month 5 arrives. Used for the
+ *  "four months in" Situation Point reminder. */
+export function roadmapMonthsElapsed(
+  roadmap: Pick<Roadmap, "startDate">,
+  now: number = Date.now(),
+): number {
+  let elapsed = 0;
+  for (let k = 1; k <= MAX_ROADMAP_MONTHS + 1; k++) {
+    const boundary = parseISO(addCalendarMonths(roadmap.startDate, k));
+    if (Number.isNaN(boundary) || now < boundary) break;
+    elapsed = k;
+  }
+  return elapsed;
 }
 
 export const roadmapStorageConfigured = Boolean(
@@ -157,13 +293,16 @@ export type RoadmapSourcePhoto = {
 export type Roadmap = {
   id: string;
   clientSlug: string;
-  /** Total number of weeks this roadmap spans. Always a multiple of 4
-   *  (one month = 4 weeks) between {@link MIN_ROADMAP_WEEKS} and
-   *  {@link MAX_ROADMAP_WEEKS}. Optional for backward compatibility —
-   *  roadmaps generated before v74.65 have no `weeks` and are treated as
-   *  a 12-week (3-month) plan. The consultant grows this in 1-, 3- or
-   *  6-month steps via "Extend" on the board (see
-   *  {@link ROADMAP_EXTEND_MONTHS}) as an engagement continues. */
+  /** Length of the plan in CALENDAR months, between
+   *  {@link MIN_ROADMAP_MONTHS} and {@link MAX_ROADMAP_MONTHS}. The source
+   *  of truth for the horizon since v77.42: the week count and the month
+   *  grid derive from `startDate + months` (see {@link roadmapWeeks} /
+   *  {@link roadmapMonths}). Optional only for blobs written before that
+   *  version — {@link roadmapMonthCount} reads `weeks / 4` for those. */
+  months?: number;
+  /** LEGACY (pre-v77.42): total weeks as a multiple of 4. Still written
+   *  on every save as the DERIVED week count so older readers keep
+   *  working, but never read when `months` is present. */
   weeks?: number;
   /** ISO date (YYYY-MM-DD) — Monday of week 1 of THIS roadmap cycle.
    *  Distinct from `onboardingDate`: when a roadmap is regenerated /
@@ -260,7 +399,8 @@ export async function ensureRoadmap(slug: string): Promise<Roadmap> {
   const blank: Roadmap = {
     id: newRoadmapId(),
     clientSlug: slug,
-    weeks: MIN_ROADMAP_WEEKS,
+    months: MIN_ROADMAP_MONTHS,
+    weeks: roadmapWeeks({ startDate: today, months: MIN_ROADMAP_MONTHS }),
     startDate: today,
     onboardingDate: await resolveOnboardingDate(slug, undefined),
     generatedAt: Date.now(),
@@ -314,8 +454,8 @@ export async function listArchivedRoadmaps(slug: string): Promise<Roadmap[]> {
 }
 
 /** 1-based week index given the roadmap's startDate and a clock value.
- *  Returns 0 if the roadmap hasn't started yet, and a value > 12 if it's
- *  already past. */
+ *  Returns 0 if the roadmap hasn't started yet, and a value above
+ *  {@link roadmapWeeks} once it's already past. */
 export function currentWeekIndex(
   roadmap: Pick<Roadmap, "startDate">,
   now: number = Date.now(),
@@ -357,146 +497,24 @@ export function newTaskId(): string {
   return `t_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
 }
 
-// ---------- Warnings ----------
-
-export type RoadmapWarning = {
-  /** Stable hash of the trigger so dismissals tie to the same cause. */
-  id: string;
-  severity: "info" | "warning" | "critical";
-  message: string;
-  /** Task ids the warning references — clicking the warning can scroll
-   *  to / highlight these. */
-  taskIds: string[];
-};
-
-const PENDING_REVIEW_DAY_THRESHOLD = 7;
-const FALLING_BEHIND_TASK_THRESHOLD = 2;
-
-/** Compute the warnings that should currently be shown for this roadmap.
- *  Pure function — given the roadmap and a clock value, returns the
- *  warnings the consultant would see now. The caller filters out the
- *  ones in `dismissedWarnings`. */
-export function computeWarnings(
-  roadmap: Roadmap,
-  now: number = Date.now(),
-): RoadmapWarning[] {
-  const out: RoadmapWarning[] = [];
-  const week = currentWeekIndex(roadmap, now);
-  const totalWeeks = roadmapWeeks(roadmap);
-
-  // Pending-review stalls: any task in pending_review for > N days.
-  const stalledReviews = roadmap.tasks.filter((t) => {
-    if (t.status !== "pending_review") return false;
-    const days = Math.floor((now - t.statusChangedAt) / (1000 * 60 * 60 * 24));
-    return days >= PENDING_REVIEW_DAY_THRESHOLD;
-  });
-  if (stalledReviews.length > 0) {
-    const daysList = stalledReviews
-      .map((t) => Math.floor((now - t.statusChangedAt) / (86400 * 1000)))
-      .sort((a, b) => b - a);
-    out.push({
-      id: `stalled-review:${stalledReviews
-        .map((t) => t.id)
-        .sort()
-        .join(",")}`,
-      severity: "warning",
-      message:
-        stalledReviews.length === 1
-          ? `1 task has been pending client review for ${daysList[0]} days — chase the approval.`
-          : `${stalledReviews.length} tasks have been pending client review for ${daysList[0]}+ days — chase the approvals.`,
-      taskIds: stalledReviews.map((t) => t.id),
-    });
-  }
-
-  // Falling-behind: tasks NOT in `implemented` whose week is BEFORE the
-  // current week. Excludes the current week itself (those are still in
-  // play). Only flags when the backlog exceeds the threshold.
-  //
-  // v74.23.2: split the message by reason so the consultant can tell at
-  // a glance "5 of these are stuck with the client, not with me" vs
-  // "12 of these I never touched". The breakdown drives whether you
-  // need to chase the client, sit down and do the work, or both.
-  if (week >= 2) {
-    // A multi-week task isn't "behind" until its LAST week has passed —
-    // while the current week still falls inside its span it's in play.
-    const overdue = roadmap.tasks.filter(
-      (t) => taskEndWeek(t) < week && t.status !== "implemented",
-    );
-    if (overdue.length >= FALLING_BEHIND_TASK_THRESHOLD) {
-      const stuckWithClient = overdue.filter(
-        (t) => t.status === "pending_review",
-      );
-      const inFlight = overdue.filter((t) => t.status === "in_progress");
-      const untouched = overdue.filter((t) => t.status === "not_started");
-      const parts: string[] = [];
-      if (stuckWithClient.length > 0) {
-        parts.push(
-          `${stuckWithClient.length} stuck with client (pending review)`,
-        );
-      }
-      if (inFlight.length > 0) {
-        parts.push(`${inFlight.length} still in progress`);
-      }
-      if (untouched.length > 0) {
-        parts.push(`${untouched.length} not started yet`);
-      }
-      const breakdown = parts.length > 0 ? ` — ${parts.join(" · ")}.` : ".";
-      out.push({
-        id: `falling-behind:${overdue
-          .map((t) => t.id)
-          .sort()
-          .join(",")}`,
-        severity: overdue.length >= 5 ? "critical" : "warning",
-        message: `${overdue.length} task${overdue.length === 1 ? "" : "s"} from past weeks aren't done yet${breakdown}`,
-        taskIds: overdue.map((t) => t.id),
-      });
-    }
-  }
-
-  // Empty current week: useful early-warning when nothing is actively in
-  // flight in the column you should be working on.
-  if (week >= 1 && week <= totalWeeks) {
-    // Count any task whose span covers this week — a Week 2–4 task is still
-    // "this week's work" when the consultant is in Week 3.
-    const currentTasks = roadmap.tasks.filter((t) => taskCoversWeek(t, week));
-    const inFlight = currentTasks.filter(
-      (t) => t.status === "in_progress" || t.status === "pending_review",
-    );
-    if (currentTasks.length === 0) {
-      out.push({
-        id: `empty-current-week:${week}`,
-        severity: "info",
-        message: `Week ${week} has no tasks scheduled — add something or pull work from a later week.`,
-        taskIds: [],
-      });
-    } else if (inFlight.length === 0 && week <= totalWeeks) {
-      out.push({
-        id: `nothing-in-flight:${week}:${currentTasks.length}`,
-        severity: "info",
-        message: `Week ${week}: ${currentTasks.length} task${currentTasks.length === 1 ? "" : "s"} scheduled but nothing in flight yet.`,
-        taskIds: currentTasks.map((t) => t.id),
-      });
-    }
-  }
-
-  return out;
-}
-
 /** Sanitise an incoming Roadmap to the shape we trust. Used in the PUT
  *  route so consultant edits can't corrupt the KV blob. */
 export function normaliseRoadmap(input: unknown, clientSlug: string): Roadmap {
   const raw = (input ?? {}) as Partial<Roadmap>;
   const now = Date.now();
-  const totalWeeks = roadmapWeeks(raw);
+  const startDate =
+    typeof raw.startDate === "string" &&
+    /^\d{4}-\d{2}-\d{2}$/.test(raw.startDate)
+      ? raw.startDate
+      : nextMondayISO();
+  const months = roadmapMonthCount(raw);
+  const totalWeeks = roadmapWeeks({ startDate, months });
   return {
     id: typeof raw.id === "string" && raw.id ? raw.id : newRoadmapId(),
     clientSlug,
+    months,
     weeks: totalWeeks,
-    startDate:
-      typeof raw.startDate === "string" &&
-      /^\d{4}-\d{2}-\d{2}$/.test(raw.startDate)
-        ? raw.startDate
-        : nextMondayISO(),
+    startDate,
     onboardingDate:
       typeof raw.onboardingDate === "string" &&
       /^\d{4}-\d{2}-\d{2}$/.test(raw.onboardingDate)
@@ -542,7 +560,7 @@ function normaliseTask(
   input: unknown,
   fallbackOrder: number,
   now: number,
-  maxWeek: number = MIN_ROADMAP_WEEKS,
+  maxWeek: number,
 ): RoadmapTask | null {
   const raw = (input ?? {}) as Partial<RoadmapTask>;
   if (!raw.title || typeof raw.title !== "string") return null;

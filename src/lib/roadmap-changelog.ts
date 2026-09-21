@@ -36,7 +36,17 @@ function sFromIdx(i: number | undefined): RoadmapStatus | undefined {
   return i == null ? undefined : (STATUS_ORDER[i] ?? undefined);
 }
 
-export type LogKindCode = "+" | "x" | "s" | "m" | "e" | "g" | "w" | "r" | "X";
+export type LogKindCode =
+  | "+"
+  | "x"
+  | "s"
+  | "m"
+  | "e"
+  | "g"
+  | "w"
+  | "r"
+  | "X"
+  | "-";
 
 /** Compact on-disk entry — short keys keep the KV blob small. */
 export type RoadmapLogCompact = {
@@ -48,7 +58,8 @@ export type RoadmapLogCompact = {
   f?: number; // from-status index
   o?: number; // to-status index
   fw?: number; // from-week (move)
-  c?: number; // count (generate)
+  c?: number; // count (generate: tasks; legacy extend: total WEEKS)
+  mo?: number; // new total MONTHS (extend / shrink, v77.42+)
 };
 
 export type RoadmapLogKind =
@@ -60,7 +71,8 @@ export type RoadmapLogKind =
   | "generated"
   | "weekly"
   | "reset"
-  | "extend";
+  | "extend"
+  | "shrink";
 
 /** Decoded, UI-friendly entry. */
 export type RoadmapLogEntry = {
@@ -73,6 +85,8 @@ export type RoadmapLogEntry = {
   toStatus?: RoadmapStatus;
   fromWeek?: number;
   count?: number;
+  /** New plan length in calendar months (extend / shrink entries). */
+  months?: number;
 };
 
 const KIND_DECODE: Record<LogKindCode, RoadmapLogKind> = {
@@ -85,6 +99,7 @@ const KIND_DECODE: Record<LogKindCode, RoadmapLogKind> = {
   w: "weekly",
   r: "reset",
   X: "extend",
+  "-": "shrink",
 };
 
 export function decodeLog(list: RoadmapLogCompact[]): RoadmapLogEntry[] {
@@ -98,7 +113,22 @@ export function decodeLog(list: RoadmapLogCompact[]): RoadmapLogEntry[] {
     toStatus: sFromIdx(e.o),
     fromWeek: e.fw,
     count: e.c,
+    months: e.mo,
   }));
+}
+
+/** Plan length in calendar months. Local copy of roadmap-store's
+ *  `roadmapMonthCount` so this module stays kv-free: `months` when set,
+ *  else the legacy 4-week `weeks` field, else one quarter. */
+function monthsOf(r: Pick<Roadmap, "months" | "weeks"> | null): number {
+  if (!r) return 3;
+  if (typeof r.months === "number" && Number.isFinite(r.months)) {
+    return Math.round(r.months);
+  }
+  if (typeof r.weeks === "number" && Number.isFinite(r.weeks)) {
+    return Math.round(r.weeks / 4);
+  }
+  return 3;
 }
 
 const TITLE_MAX = 60;
@@ -153,13 +183,18 @@ export function diffRoadmaps(
     }
   }
 
-  // Roadmap horizon grown ("Extend +3 months"). `c` carries the NEW total
-  // week count so the log reads "Extended to 24 weeks". Default 12 keeps
-  // pre-v74.65 roadmaps (no `weeks` field) from spuriously logging.
-  const prevWeeks = prev?.weeks ?? 12;
-  const nextWeeks = next.weeks ?? 12;
-  if (nextWeeks > prevWeeks) {
-    events.push({ k: "X", c: nextWeeks });
+  // Roadmap horizon grown ("Extend +3 months") or cut ("Remove months").
+  // `mo` carries the NEW length in calendar months so the log reads
+  // "Extended to 9 months" / "Shortened to 5 months". Legacy entries
+  // (pre-v77.42) carry `c` = total weeks instead. A first save of a
+  // legacy blob compares `weeks / 4` on both sides, so the silent
+  // migration to `months` never logs a spurious extension.
+  const prevMonths = monthsOf(prev);
+  const nextMonths = monthsOf(next);
+  if (nextMonths > prevMonths) {
+    events.push({ k: "X", mo: nextMonths });
+  } else if (nextMonths < prevMonths) {
+    events.push({ k: "-", mo: nextMonths });
   }
 
   return events;

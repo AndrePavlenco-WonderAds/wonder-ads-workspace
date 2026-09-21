@@ -14,10 +14,12 @@ import {
 } from "@/lib/client-meta";
 import { getClientPalette, paletteToGradient } from "@/lib/client-colors";
 import {
-  computeWarnings,
   ensureRoadmap,
+  roadmapLastDay,
+  roadmapMonthCount,
   roadmapWeeks,
 } from "@/lib/roadmap-store";
+import { formatDate } from "@/lib/dates";
 import { getRoadmapLog } from "@/lib/roadmap-changelog-store";
 import { getClientRenewal } from "@/lib/client-renewal-store";
 import { getCurrentEmployee } from "@/lib/auth/server";
@@ -61,9 +63,8 @@ export default async function RoadmapPage({
     termMonths: 6 as const,
   }));
   const totalWeeks = roadmapWeeks(roadmap);
-  const initialWarnings = computeWarnings(roadmap).filter(
-    (w) => !new Set(roadmap.dismissedWarnings.map((d) => d.id)).has(w.id),
-  );
+  const totalMonths = roadmapMonthCount(roadmap);
+  const lastDay = roadmapLastDay(roadmap);
   const changelog = await getRoadmapLog(slug);
 
   const employee = await getCurrentEmployee();
@@ -98,9 +99,15 @@ export default async function RoadmapPage({
             </div>
             <h1 className="mt-1 text-2xl font-semibold leading-tight tracking-tight sm:text-3xl">
               <span className="brand-gradient-text">
-                {totalWeeks}-week roadmap
+                {totalMonths}-month roadmap
               </span>
             </h1>
+            {/* Months are what the client signed; weeks are what the
+                board works in. Both, plus the real end date. */}
+            <p className="mt-1 text-[12px] text-white/50">
+              {totalWeeks} weeks · {formatDate(roadmap.startDate)} →{" "}
+              {formatDate(lastDay)}
+            </p>
           </div>
         </div>
         {/* O «Gerar Weekly Report» viveu aqui até à v76.73. Saiu para o menu
@@ -122,7 +129,7 @@ export default async function RoadmapPage({
             <SendToReviewButton
               variant="prominent"
               clientSlug={slug}
-              task={`SEO Roadmap (${totalWeeks} weeks) · ${client.title}`}
+              task={`SEO Roadmap (${totalMonths} months) · ${client.title}`}
               category="Roadmap"
               docLink={`/${slug}/preview/roadmap`}
               sourceType="roadmap"
@@ -139,7 +146,6 @@ export default async function RoadmapPage({
           initialRenewalDate={renewal.renewalDate}
           initialTermMonths={renewal.termMonths}
           initialRoadmap={roadmap}
-          initialWarnings={initialWarnings}
         />
         <RoadmapChangelog clientSlug={slug} initialEntries={changelog} />
       </section>

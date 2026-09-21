@@ -16,7 +16,7 @@ import {
   roadmapWeeks,
   taskCoversWeek,
   taskEndWeek,
-  MIN_ROADMAP_WEEKS,
+  FALLBACK_TOTAL_WEEKS,
   type Roadmap,
   type RoadmapStatus,
   type RoadmapPillar,
@@ -45,8 +45,9 @@ export type ConsultantClientRow = {
   /** 1–totalWeeks normally, 0 if not started, >totalWeeks if past the
    *  horizon. */
   currentWeek: number;
-  /** The roadmap's full span in weeks (12, 24, 36, …) — grows as the
-   *  consultant extends the plan. 12 when no roadmap is on file. */
+  /** The roadmap's full span in weeks (13–14 for a quarter, 26–27 for six
+   *  months — derived from its calendar months). A display fallback when
+   *  no roadmap is on file. */
   totalWeeks: number;
   /** Total task count in the roadmap. */
   totalTasks: number;
@@ -225,7 +226,7 @@ export async function getRoadmapAdminSummary(
         startDate: null,
         onboardingDate: null,
         currentWeek: 0,
-        totalWeeks: MIN_ROADMAP_WEEKS,
+        totalWeeks: FALLBACK_TOTAL_WEEKS,
         totalTasks: 0,
         doneTasks: 0,
         donePastWeeks: 0,
@@ -381,7 +382,8 @@ export type ConsultantWeekClient = {
   title: string;
   hasRoadmap: boolean;
   currentWeek: number;
-  /** The roadmap's full span in weeks (12, 24, …). 12 when no roadmap. */
+  /** The roadmap's full span in weeks (derived from its calendar months).
+   *  A display fallback when no roadmap. */
   totalWeeks: number;
   totalTasks: number;
   doneTasks: number;
@@ -444,7 +446,7 @@ export async function getConsultantWeekView(
         title: client.title,
         hasRoadmap: false,
         currentWeek: 0,
-        totalWeeks: MIN_ROADMAP_WEEKS,
+        totalWeeks: FALLBACK_TOTAL_WEEKS,
         totalTasks: 0,
         doneTasks: 0,
         health: "no-roadmap",
