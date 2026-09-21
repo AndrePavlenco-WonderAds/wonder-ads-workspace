@@ -194,7 +194,8 @@ const _fetchSeoClients = unstable_cache(
   // v13: Maratona Clube de Portugal entra na carteira do João B. (v76.39).
   // v14: PhysioHub (Manuel Silva) + Real Hotels Group (João B.) entram na
   // carteira (v77.44).
-  ["seo-clients-v14"],
+  // v15: Real Hotels Group renomeado — slug «real-hotels-group» (v77.45).
+  ["seo-clients-v15"],
   { revalidate: 3600, tags: ["seo-clients"] },
 );
 

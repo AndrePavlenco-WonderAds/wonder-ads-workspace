@@ -18,7 +18,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     title: "Real Hotels Group sem «Santa Eulália» e o sino deixa de pedir relatórios de meses anteriores ao onboarding",
     highlights: [
       "**🔔 Sem relatórios do passado para quem acabou de entrar.** O lembrete «Enviar Monthly Report» (e qualquer regra mensal por cliente) só conta os meses em que o cliente já estava a bordo desde o **dia 1**: o primeiro relatório pedido é o do primeiro mês completo (um cliente que entra a 24/09 recebe o primeiro pedido a 02/11, pelo mês de outubro). O João B. tinha no sino julho e agosto do Real Hotels Group, que ainda nem começou.",
-      "**🏨 Real Hotels Group** passa a chamar-se só isso, com o slug `real-hotels-group` — sem a unidade «Santa Eulália» no nome nem no endereço. O registo do fluxo de onboarding e o roadmap em branco foram movidos para o slug novo; a página pública é agora /real-hotels-group/onboarding.",
+      "**🏨 Real Hotels Group** passa a chamar-se só isso, com o slug `real-hotels-group` — sem a unidade «Santa Eulália» no nome nem no endereço. O registo do fluxo de onboarding e o roadmap em branco foram movidos para o slug novo, a cache do roster subiu para v15, e a página pública é agora /real-hotels-group/onboarding.",
     ],
   },
   {
