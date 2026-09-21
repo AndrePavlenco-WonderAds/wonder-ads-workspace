@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.40",
+    date: "2026-09-21",
+    title: "Retrato do Manuel, limpar notificações da equipa, escudos só nos cartões e António Gaspar",
+    highlights: [
+      "**🖼️ Manuel Silva com retrato.** A foto de estúdio entra no formulário de NPS (lista da equipa) e no círculo do utilizador no canto superior direito — com o mesmo enquadramento 300×400 dos outros.",
+      "**🧹 Limpar notificações da equipa.** No separador «Equipa» do sino, o Superadmin pode limpar uma linha (✕), todas as de uma pessoa ou as da equipa inteira. Os «limpar todas» pedem confirmação no próprio botão. Limpar marca como concluído em nome da pessoa: some do sino dela e desce para as «Concluídas», onde pode reabrir.",
+      "**🛡️ Escudo só nos cartões.** No SEO DPT overview, o cabeçalho de cada consultor fica apenas com a nota média de NPS; o escudo com o 3 continua nos cartões dos clientes com garantia — e passam a tê-lo também a **Medway** e o **António Gaspar**.",
+      "**🗓️ Pending Review sem «Publishing date».** A coluna sai de todas as tabelas de Pending Review do SEO (interna e do cliente); o Doc link e a Task ganham o espaço.",
+      "**🩺 António Gaspar.** O cartão e a página do projeto mostram o logótipo do menu de antoniogaspar.pt, com o link para o site, e **onboarded a 23/09/2026**.",
+    ],
+  },
+  {
     version: "77.39",
     date: "2026-09-20",
     title: "Inquérito NPS: pastilha fixa «Last Report · Trabalho feito» e o trabalho concluído em linha do tempo",

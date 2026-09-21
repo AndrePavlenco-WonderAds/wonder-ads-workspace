@@ -11,7 +11,7 @@
 // por decisão dele: as fotos ficam no header e no «Ver como…».
 
 import Link from "next/link";
-import { ArrowUpRight, ShieldCheck, Star } from "lucide-react";
+import { ArrowUpRight, Star } from "lucide-react";
 import type { ClientPalette } from "@/lib/client-colors";
 import type { ClientTier } from "@/lib/client-tiers";
 import type { LogoBgMode, LogoSizing } from "@/lib/client-meta";
@@ -83,7 +83,6 @@ function ColumnView({
     rated.length > 0
       ? rated.reduce((s, c) => s + (c.npsOverall ?? 0), 0) / rated.length
       : null;
-  const guarantees = column.clients.filter((c) => c.keywordGuarantee).length;
 
   return (
     <div className="space-y-5">
@@ -109,30 +108,21 @@ function ColumnView({
             {column.clients.length}
           </span>
         </div>
-        {(avgNps !== null || guarantees > 0) && (
+        {/* Só a nota NPS do consultor. O escudo da garantia de Premium
+            Keywords vive apenas nos cartões dos clientes (v77.40). */}
+        {avgNps !== null && (
           <div className="mt-2 flex items-center gap-1.5">
-            {avgNps !== null && (
-              <span
-                title={`Média de satisfação (NPS) da carteira — ${rated.length} cliente(s) com inquérito`}
-                className="inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-semibold"
-                style={{
-                  color: npsScoreColor(avgNps),
-                  background: `${npsScoreColor(avgNps)}1a`,
-                }}
-              >
-                <Star className="h-2.5 w-2.5" fill="currentColor" strokeWidth={0} />
-                {avgNps.toFixed(1)}
-              </span>
-            )}
-            {guarantees > 0 && (
-              <span
-                title={`${guarantees} cliente(s) com contrato de garantia de Premium Keywords`}
-                className="inline-flex items-center gap-1 rounded-full bg-amber-400/[0.12] px-1.5 py-0.5 text-[10px] font-semibold text-amber-200"
-              >
-                <ShieldCheck className="h-2.5 w-2.5" />
-                {guarantees}
-              </span>
-            )}
+            <span
+              title={`Média de satisfação (NPS) da carteira — ${rated.length} cliente(s) com inquérito`}
+              className="inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-semibold"
+              style={{
+                color: npsScoreColor(avgNps),
+                background: `${npsScoreColor(avgNps)}1a`,
+              }}
+            >
+              <Star className="h-2.5 w-2.5" fill="currentColor" strokeWidth={0} />
+              {avgNps.toFixed(1)}
+            </span>
           </div>
         )}
       </header>

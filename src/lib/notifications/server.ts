@@ -39,6 +39,7 @@ import { getNotificationRules } from "@/lib/notifications/rules-store";
 import {
   getNotificationState,
   getNotificationStateMany,
+  resolveNotificationsMany,
   type NotificationState,
 } from "@/lib/notifications/state-store";
 import {
@@ -1041,9 +1042,9 @@ export async function getUserNotifications(
 // ---------------------------------------------------------------------------
 
 /** Quantas linhas em aberto de cada pessoa se mandam para o cliente. O painel
- *  é para SABER QUEM ESTÁ EM DÍVIDA, não para o C-Level despachar o trabalho
- *  dos outros — sem teto, um consultor com 30 clientes enchia o payload do
- *  header de toda a gente. */
+ *  é para SABER QUEM ESTÁ EM DÍVIDA — sem teto, um consultor com 30 clientes
+ *  enchia o payload do header de toda a gente. O «Limpar todas» da pessoa
+ *  não depende deste teto: o servidor limpa a lista completa. */
 const TEAM_ITEMS_PER_PERSON = 8;
 
 export type TeamNotificationRow = {
@@ -1057,8 +1058,16 @@ export type TeamNotificationRow = {
   oldestDueAt: number | null;
   /** Agrupado por lembrete + período, como no painel do próprio. */
   groups: { key: string; title: string; periodLabel: string; count: number }[];
-  /** Amostra das linhas em aberto (ver TEAM_ITEMS_PER_PERSON). */
-  items: { id: string; label: string; periodLabel: string; icon: string | null }[];
+  /** Amostra das linhas em aberto (ver TEAM_ITEMS_PER_PERSON). `groupKey`
+   *  liga cada linha ao seu grupo, para o painel descontar a contagem certa
+   *  quando o Superadmin limpa uma linha. */
+  items: {
+    id: string;
+    groupKey: string;
+    label: string;
+    periodLabel: string;
+    icon: string | null;
+  }[];
   /** Verdadeiro quando há mais do que os que vão em `items`. */
   truncated: number;
 };
@@ -1069,16 +1078,16 @@ export type TeamNotificationSummary = {
   peopleWithPending: number;
 };
 
-/** Fotografia das notificações de TODA a equipa — o que o Superadmin vê no
- *  seu painel lateral, por baixo das dele.
- *
- *  Uma leitura de regras, uma da carteira SEO inteira e UM `mget` para os
- *  estados de toda a gente. O custo é praticamente o mesmo de calcular só as
- *  do próprio. */
-export async function getTeamNotificationSummary(
-  now: Date = new Date(),
-): Promise<TeamNotificationSummary> {
-  const people = EMPLOYEE_CREDENTIALS.map((c) => ({
+type TeamPerson = Viewer & { role: string };
+
+/** As notificações de regra de cada pessoa da equipa, calculadas como no
+ *  painel dela. Partilhado pelo resumo do Superadmin e pela limpeza em nome
+ *  dos outros — a limpeza TEM de ver exatamente a mesma lista que o painel
+ *  mostrou, senão limpava ids que ninguém viu. */
+async function teamNotificationLists(
+  now: Date,
+): Promise<{ person: TeamPerson; list: UserNotification[] }[]> {
+  const people: TeamPerson[] = EMPLOYEE_CREDENTIALS.map((c) => ({
     username: c.username,
     name: c.name,
     role: c.role,
@@ -1087,9 +1096,7 @@ export async function getTeamNotificationSummary(
 
   const rules = await getNotificationRules();
   const enabled = rules.filter((r) => r.enabled);
-  if (enabled.length === 0) {
-    return { rows: [], totalPending: 0, peopleWithPending: 0 };
-  }
+  if (enabled.length === 0) return [];
 
   const needsBook = enabled.some((r) => r.scope === "seo-client");
   const needsStartDates = enabled.some(
@@ -1102,15 +1109,31 @@ export async function getTeamNotificationSummary(
       : Promise.resolve(new Map<string, ClientRef[]>()),
   ]);
 
-  const rows: TeamNotificationRow[] = [];
-  for (const person of people) {
-    const list = buildNotifications(
+  return people.map((person) => ({
+    person,
+    list: buildNotifications(
       person,
       rules,
       states[person.username] ?? {},
       books.get(person.name) ?? [],
       now,
-    );
+    ),
+  }));
+}
+
+/** Fotografia das notificações de TODA a equipa — o que o Superadmin vê no
+ *  seu painel lateral, por baixo das dele.
+ *
+ *  Uma leitura de regras, uma da carteira SEO inteira e UM `mget` para os
+ *  estados de toda a gente. O custo é praticamente o mesmo de calcular só as
+ *  do próprio. */
+export async function getTeamNotificationSummary(
+  now: Date = new Date(),
+): Promise<TeamNotificationSummary> {
+  const lists = await teamNotificationLists(now);
+
+  const rows: TeamNotificationRow[] = [];
+  for (const { person, list } of lists) {
     if (list.length === 0) continue;
 
     const pending = list.filter((n) => !n.resolved);
@@ -1141,6 +1164,7 @@ export async function getTeamNotificationSummary(
       groups: Array.from(groups.values()),
       items: pending.slice(0, TEAM_ITEMS_PER_PERSON).map((n) => ({
         id: n.id,
+        groupKey: `${n.ruleId}|${n.periodLabel}`,
         label: n.client ? n.client.title : n.title,
         periodLabel: n.periodLabel,
         icon: n.client?.icon ?? null,
@@ -1161,6 +1185,49 @@ export async function getTeamNotificationSummary(
     rows,
     totalPending: rows.reduce((s, r) => s + r.pending, 0),
     peopleWithPending: rows.filter((r) => r.pending > 0).length,
+  };
+}
+
+/** O Superadmin limpa notificações em nome de outra pessoa (v77.40): ficam
+ *  marcadas como concluídas no estado DELA — descem para as «Concluídas» do
+ *  painel da pessoa e deixam de contar no sino de toda a gente.
+ *
+ *  Só se tocam ids EM ABERTO que o motor gera mesmo para essa pessoa (a
+ *  mesma lista do painel de equipa); um id forjado ou já fora do período é
+ *  ignorado. Sem `ids`, limpa tudo o que a pessoa tem em aberto. Sem
+ *  `username`, limpa a equipa toda — menos quem está a limpar, cujas
+ *  notificações se resolvem no separador «As minhas».
+ *
+ *  Uma escrita KV por pessoa afetada, nunca uma por notificação. */
+export async function clearTeamNotifications(
+  target: { username: string | null; ids: string[] | null },
+  by: string,
+  now: Date = new Date(),
+): Promise<{ cleared: number; people: number }> {
+  const lists = await teamNotificationLists(now);
+  const wanted = target.ids ? new Set(target.ids) : null;
+
+  const writes: { username: string; ids: string[] }[] = [];
+  for (const { person, list } of lists) {
+    const isTarget = target.username
+      ? person.username === target.username
+      : person.username !== by;
+    if (!isTarget) continue;
+    const ids = list
+      .filter((n) => !n.resolved && (!wanted || wanted.has(n.id)))
+      .map((n) => n.id);
+    if (ids.length > 0) writes.push({ username: person.username, ids });
+  }
+
+  await Promise.all(
+    writes.map((w) =>
+      resolveNotificationsMany(w.username, w.ids, now.getTime(), by),
+    ),
+  );
+
+  return {
+    cleared: writes.reduce((s, w) => s + w.ids.length, 0),
+    people: writes.length,
   };
 }
 

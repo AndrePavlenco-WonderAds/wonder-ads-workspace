@@ -108,7 +108,6 @@ export default async function PublicReviewPage({
         clientSlug={slug}
         initialItems={items}
         allowDelete={false}
-        hidePublishingDate={true}
         readonlyApprovalDate={true}
         allowArchive={true}
         commentAuthorRole="client"

@@ -24,6 +24,9 @@ const GUARANTEE_SLUGS = new Set<string>([
   "clinica-fernando-almeida",
   "spine-center",
   "sentir-saude",
+  // v77.40 — acrescentados pelo André.
+  "medway",
+  "antonio-gaspar",
 ]);
 
 /** True quando o cliente assinou contrato com garantia de keywords. */

@@ -34,6 +34,9 @@ export const CLIENT_LOGOS: Record<string, string> = {
   // Medway (v77.37) — o logótipo do cabeçalho de medway.pt (azul sobre
   // transparente). O site serve-o como SVG que só embrulha este PNG.
   medway: "/logos/medway.png",
+  // António Gaspar (v77.40) — o logótipo do canto superior esquerdo do menu
+  // de antoniogaspar.pt (monograma AG + wordmark, preto sobre transparente).
+  "antonio-gaspar": "/logos/antonio-gaspar.svg",
 };
 
 export function getClientLogo(slug: string): string | null {
@@ -72,6 +75,8 @@ const LOGO_SIZING_OVERRIDES: Record<string, LogoSizing> = {
   "b-life": "tight",
   // Wordmark largo (≈3,4:1) — sem isto fica minúsculo no chip quadrado.
   medway: "tight",
+  // Monograma + wordmark (≈3,2:1) — o mesmo caso da Medway.
+  "antonio-gaspar": "tight",
 };
 
 export function getLogoSizing(slug: string): LogoSizing {
@@ -103,6 +108,7 @@ export const CLIENT_WEBSITES: Record<string, string> = {
   cuidamais: "https://cuidamais.pt/",
   brancoptica: "https://www.brancoptica.pt/",
   medway: "https://medway.pt/",
+  "antonio-gaspar": "https://antoniogaspar.pt/",
   // ADS-only — not known yet
   "clinica-empatia": "",
 };

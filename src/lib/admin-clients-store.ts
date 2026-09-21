@@ -86,6 +86,8 @@ export const DEFAULT_STARTING_DATES: Record<string, string> = {
   brancoptica: "2026-08-21",
   // v77.37: Medway — onboarding a 22/09/2026.
   medway: "2026-09-22",
+  // v77.40: António Gaspar — onboarding a 23/09/2026.
+  "antonio-gaspar": "2026-09-23",
 };
 
 /** Full agency consultant roster — drives the multi-select dropdown on

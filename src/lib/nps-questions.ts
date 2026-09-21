@@ -213,7 +213,11 @@ const TEAM_OPTIONS: NpsMultiOption[] = [
     label: { pt: "André Pereira", en: "André Pereira" },
     photo: "/team/avatar/andre-pereira.jpg",
   },
-  { value: "manuel-s", label: { pt: "Manuel Silva", en: "Manuel Silva" } },
+  {
+    value: "manuel-s",
+    label: { pt: "Manuel Silva", en: "Manuel Silva" },
+    photo: "/team/avatar/manuel-s.jpg",
+  },
   {
     value: "fran-r",
     label: { pt: "Fran. Rosa", en: "Fran. Rosa" },

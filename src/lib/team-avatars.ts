@@ -4,8 +4,9 @@
 // do SuperAdmin (v76.88). A board de SEO fica SEM fotos, por decisão do
 // André — os cabeçalhos das colunas mantêm só o nome.
 //
-// Manuel Silva não tem retrato publicado; devolve null e a UI cai na
-// inicial, como no formulário de NPS.
+// Quem não tem retrato publicado (Hugo Silva, por agora) devolve null e a UI
+// cai na inicial, como no formulário de NPS. Manuel Silva ganhou o dele na
+// v77.40.
 
 const AVATARS: Record<string, string> = {
   andre: "/team/avatar/andre.jpg",
@@ -19,6 +20,7 @@ const AVATARS: Record<string, string> = {
   gustavo: "/team/avatar/gustavo.jpg",
   renan: "/team/avatar/renan.jpg",
   cylas: "/team/avatar/cylas.jpg",
+  "manuel-s": "/team/avatar/manuel-s.jpg",
 };
 
 /** Caminho do retrato para um username de login, ou null se não há foto. */

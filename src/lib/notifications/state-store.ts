@@ -13,6 +13,9 @@ import { kv } from "@vercel/kv";
 
 export type ResolvedEntry = {
   resolvedAt: number;
+  /** Quem a limpou, quando não foi a própria pessoa — o Superadmin a limpar
+   *  pelo painel de equipa (v77.40). Ausente nas que a pessoa concluiu. */
+  by?: string;
 };
 
 export type NotificationState = Record<string, ResolvedEntry>;
@@ -37,7 +40,8 @@ function normalize(raw: unknown): NotificationState {
     if (!value || typeof value !== "object") continue;
     const at = (value as Record<string, unknown>).resolvedAt;
     if (typeof at !== "number" || !Number.isFinite(at)) continue;
-    out[id] = { resolvedAt: at };
+    const by = (value as Record<string, unknown>).by;
+    out[id] = typeof by === "string" ? { resolvedAt: at, by } : { resolvedAt: at };
   }
   return out;
 }
@@ -93,7 +97,31 @@ export async function setNotificationResolved(
   const next: NotificationState = { ...current };
   if (resolved) next[id] = { resolvedAt: nowMs };
   else delete next[id];
+  return writeState(username, next);
+}
 
+/** Marca várias notificações de uma pessoa como concluídas de uma vez — o
+ *  «Limpar» do Superadmin no painel de equipa. Uma leitura e uma escrita,
+ *  seja um id ou trinta. */
+export async function resolveNotificationsMany(
+  username: string,
+  ids: string[],
+  nowMs: number,
+  by: string,
+): Promise<NotificationState> {
+  if (!notificationStateConfigured) {
+    throw new Error("KV storage not configured on this deployment.");
+  }
+  const current = await getNotificationState(username);
+  const next: NotificationState = { ...current };
+  for (const id of ids) next[id] = { resolvedAt: nowMs, by };
+  return writeState(username, next);
+}
+
+async function writeState(
+  username: string,
+  next: NotificationState,
+): Promise<NotificationState> {
   const ids = Object.keys(next);
   if (ids.length > MAX_ENTRIES) {
     const keep = ids

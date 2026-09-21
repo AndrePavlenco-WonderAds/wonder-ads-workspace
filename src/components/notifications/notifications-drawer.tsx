@@ -27,10 +27,12 @@
 //    confirma com o servidor. Se falhar, volta e diz porquê.
 //
 // SUPERADMIN — o painel ganha um separador "Equipa" com o que está em aberto
-// em cada consultor. É deliberadamente SÓ DE LEITURA: o C-Level precisa de
-// saber quem está em dívida e há quanto tempo, não de despachar em nome de
-// outra pessoa (marcar por ela destruiria o único sinal fiável que o painel
-// dá). Daí o link para o drill-down em vez de um botão de "concluído".
+// em cada consultor. Nasceu só de leitura; desde a v77.40 o Superadmin pode
+// LIMPAR em nome da pessoa — uma linha, tudo o que ela tem em aberto, ou a
+// equipa toda — para varrer lembretes que já não fazem sentido. Limpar marca
+// como concluído no estado DELA (desce para as «Concluídas» dela, onde pode
+// reabrir). Os «limpar tudo» pedem confirmação no próprio botão: é trabalho
+// de outra pessoa, e um clique perdido não pode apagar o mês de alguém.
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
@@ -40,6 +42,7 @@ import {
   ArrowRight,
   Bell,
   CheckCircle2,
+  Eraser,
   Loader2,
   RotateCcw,
   ShieldCheck,
@@ -72,7 +75,13 @@ export type TeamRow = {
   resolved: number;
   oldestDueAt: number | null;
   groups: { key: string; title: string; periodLabel: string; count: number }[];
-  items: { id: string; label: string; periodLabel: string; icon: string | null }[];
+  items: {
+    id: string;
+    groupKey: string;
+    label: string;
+    periodLabel: string;
+    icon: string | null;
+  }[];
   truncated: number;
 };
 
@@ -110,6 +119,58 @@ function groupOf(items: DrawerNotification[]): Group[] {
   return Array.from(map.values()).sort((a, b) => a.dueAt - b.dueAt);
 }
 
+/** O que o Superadmin pediu para limpar no painel de equipa. */
+type TeamClear =
+  | { kind: "item"; username: string; id: string }
+  | { kind: "person"; username: string }
+  | { kind: "all" };
+
+function clearRow(row: TeamRow): TeamRow {
+  return {
+    ...row,
+    pending: 0,
+    resolved: row.resolved + row.pending,
+    oldestDueAt: null,
+    groups: [],
+    items: [],
+    truncated: 0,
+  };
+}
+
+/** A mesma limpeza que o servidor vai fazer, aplicada já ao painel — a linha
+ *  some no clique e só volta se a gravação falhar. */
+function applyTeamClear(
+  team: TeamSummary,
+  action: TeamClear,
+  viewerUsername?: string,
+): TeamSummary {
+  const rows = team.rows.map((row) => {
+    if (action.kind === "all") {
+      return row.username === viewerUsername ? row : clearRow(row);
+    }
+    if (row.username !== action.username) return row;
+    if (action.kind === "person") return clearRow(row);
+
+    const item = row.items.find((it) => it.id === action.id);
+    if (!item) return row;
+    return {
+      ...row,
+      pending: Math.max(0, row.pending - 1),
+      resolved: row.resolved + 1,
+      oldestDueAt: row.pending > 1 ? row.oldestDueAt : null,
+      items: row.items.filter((it) => it.id !== action.id),
+      groups: row.groups
+        .map((g) => (g.key === item.groupKey ? { ...g, count: g.count - 1 } : g))
+        .filter((g) => g.count > 0),
+    };
+  });
+  return {
+    rows,
+    totalPending: rows.reduce((s, r) => s + r.pending, 0),
+    peopleWithPending: rows.filter((r) => r.pending > 0).length,
+  };
+}
+
 export function NotificationsDrawer({
   initial,
   team = null,
@@ -126,6 +187,9 @@ export function NotificationsDrawer({
   const [items, setItems] = useState(initial);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Cópia local do painel de equipa, para a limpeza ser otimista.
+  const [teamState, setTeamState] = useState(team);
+  const [teamBusy, setTeamBusy] = useState<string | null>(null);
   // O painel sai para o <body> por portal. NÃO É COSMÉTICO: o header do
   // workspace tem `backdrop-blur`, e um elemento com backdrop-filter passa a
   // ser o bloco de contenção dos descendentes `position: fixed`. Renderizado
@@ -137,6 +201,7 @@ export function NotificationsDrawer({
   // O servidor volta a calcular a lista em cada navegação; sem isto o painel
   // ficaria preso ao estado do primeiro render da sessão.
   useEffect(() => setItems(initial), [initial]);
+  useEffect(() => setTeamState(team), [team]);
 
   const pending = useMemo(() => items.filter((n) => !n.resolved), [items]);
   const done = useMemo(
@@ -200,17 +265,61 @@ export function NotificationsDrawer({
     [items, router],
   );
 
+  const clearTeam = useCallback(
+    async (action: TeamClear) => {
+      if (!teamState) return;
+      const key =
+        action.kind === "item"
+          ? `item:${action.id}`
+          : action.kind === "person"
+            ? `person:${action.username}`
+            : "all";
+      setTeamBusy(key);
+      setError(null);
+      const before = teamState;
+      setTeamState(applyTeamClear(teamState, action, viewerUsername));
+      try {
+        const res = await fetch("/api/notifications/team", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(
+            action.kind === "item"
+              ? { username: action.username, ids: [action.id] }
+              : action.kind === "person"
+                ? { username: action.username }
+                : {},
+          ),
+        });
+        if (!res.ok) {
+          const data = (await res.json().catch(() => ({}))) as {
+            error?: string;
+          };
+          setTeamState(before);
+          setError(data.error ?? "Não foi possível limpar.");
+          return;
+        }
+        router.refresh();
+      } catch {
+        setTeamState(before);
+        setError("Falha de rede — tenta outra vez.");
+      } finally {
+        setTeamBusy(null);
+      }
+    },
+    [teamState, viewerUsername, router],
+  );
+
   const count = pending.length;
   // O que o C-Level tem em aberto na equipa (fora o dele próprio) — entra no
   // sino, porque o trabalho parado de um consultor é trabalho parado da casa.
   const teamOther = useMemo(
     () =>
-      team
-        ? team.rows
+      teamState
+        ? teamState.rows
             .filter((r) => r.username !== viewerUsername)
             .reduce((s, r) => s + r.pending, 0)
         : 0,
-    [team, viewerUsername],
+    [teamState, viewerUsername],
   );
   const badgeCount = count + teamOther;
   // VERMELHO = MEU. Quando o contador só traz trabalho de outra pessoa, o
@@ -342,11 +451,13 @@ export function NotificationsDrawer({
             )}
 
             <div className="flex-1 overflow-y-auto px-5 py-5">
-              {team && tab === "team" ? (
+              {teamState && tab === "team" ? (
                 <TeamPanel
-                  team={team}
+                  team={teamState}
                   viewerUsername={viewerUsername}
                   onNavigate={() => setOpen(false)}
+                  busyKey={teamBusy}
+                  onClear={clearTeam}
                 />
               ) : count === 0 && done.length === 0 ? (
                 <EmptyState />
@@ -434,7 +545,7 @@ export function NotificationsDrawer({
             <footer className="border-t border-white/[0.07] px-5 py-3">
               <p className="text-[10.5px] leading-relaxed text-white/30">
                 {team && tab === "team"
-                  ? "Vista de leitura: o que cada consultor tem em aberto. Marcar como concluído é sempre da pessoa a quem o trabalho pertence."
+                  ? "O que cada pessoa tem em aberto. Limpar marca como concluído em nome dela — desce para as Concluídas do painel dela, onde pode reabrir."
                   : "Os lembretes são gerados pelo calendário — não há nada a despachar, só a resolver. Quem os configura é o Superadmin."}
               </p>
             </footer>
@@ -503,10 +614,14 @@ function TeamPanel({
   team,
   viewerUsername,
   onNavigate,
+  busyKey,
+  onClear,
 }: {
   team: TeamSummary;
   viewerUsername?: string;
   onNavigate: () => void;
+  busyKey: string | null;
+  onClear: (action: TeamClear) => void;
 }) {
   const others = team.rows.filter((r) => r.username !== viewerUsername);
   const late = others.filter((r) => r.pending > 0);
@@ -558,12 +673,28 @@ function TeamPanel({
             {late.reduce((s, r) => s + r.pending, 0)} no total
           </span>
         )}
+        {late.length > 0 && (
+          <ConfirmClearButton
+            label="Limpar tudo"
+            confirmLabel={`Limpar as ${late.reduce((s, r) => s + r.pending, 0)}?`}
+            title="Marcar como concluídas todas as notificações em aberto da equipa"
+            busy={busyKey === "all"}
+            disabled={busyKey !== null}
+            onConfirm={() => onClear({ kind: "all" })}
+            className="ml-auto"
+          />
+        )}
       </div>
 
       <ul className="space-y-2">
         {late.map((r) => (
           <li key={r.username}>
-            <TeamPersonRow row={r} onNavigate={onNavigate} />
+            <TeamPersonRow
+              row={r}
+              onNavigate={onNavigate}
+              busyKey={busyKey}
+              onClear={onClear}
+            />
           </li>
         ))}
       </ul>
@@ -596,9 +727,13 @@ function TeamPanel({
 function TeamPersonRow({
   row,
   onNavigate,
+  busyKey,
+  onClear,
 }: {
   row: TeamRow;
   onNavigate: () => void;
+  busyKey: string | null;
+  onClear: (action: TeamClear) => void;
 }) {
   return (
     <details className="group rounded-xl border border-sky-400/20 bg-sky-500/[0.04] p-3 transition open:border-sky-400/35">
@@ -639,7 +774,7 @@ function TeamPersonRow({
           {row.items.map((it) => (
             <li
               key={it.id}
-              className="flex items-center gap-2 rounded-lg bg-white/[0.02] px-2 py-1.5"
+              className="flex items-center gap-2 rounded-lg bg-white/[0.02] py-1 pl-2 pr-1"
             >
               <span aria-hidden className="shrink-0 text-[13px]">
                 {it.icon ?? "•"}
@@ -650,6 +785,22 @@ function TeamPersonRow({
               <span className="tabular shrink-0 text-[10px] text-white/30">
                 {it.periodLabel}
               </span>
+              <button
+                type="button"
+                onClick={() =>
+                  onClear({ kind: "item", username: row.username, id: it.id })
+                }
+                disabled={busyKey !== null}
+                title={`Limpar — marcar como concluída em nome de ${row.name}`}
+                aria-label={`Limpar ${it.label} (${it.periodLabel}) de ${row.name}`}
+                className="shrink-0 rounded-md p-1 text-white/30 transition hover:bg-rose-500/[0.12] hover:text-rose-200 disabled:opacity-40"
+              >
+                {busyKey === `item:${it.id}` ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <X className="h-3.5 w-3.5" />
+                )}
+              </button>
             </li>
           ))}
           {row.truncated > 0 && (
@@ -659,16 +810,83 @@ function TeamPersonRow({
           )}
         </ul>
 
-        <Link
-          href={`/formacao/admin/${row.username}`}
-          onClick={onNavigate}
-          className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-white/12 px-2.5 py-1.5 text-[11.5px] font-medium text-white/65 transition hover:border-[#783DF5]/45 hover:text-white"
-        >
-          Ver ficha
-          <ArrowRight className="h-3 w-3" />
-        </Link>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <Link
+            href={`/formacao/admin/${row.username}`}
+            onClick={onNavigate}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-white/12 px-2.5 py-1.5 text-[11.5px] font-medium text-white/65 transition hover:border-[#783DF5]/45 hover:text-white"
+          >
+            Ver ficha
+            <ArrowRight className="h-3 w-3" />
+          </Link>
+          <ConfirmClearButton
+            label={`Limpar todas (${row.pending})`}
+            confirmLabel={`Limpar as ${row.pending} de ${row.name}?`}
+            title={`Marcar como concluídas todas as notificações em aberto de ${row.name}`}
+            busy={busyKey === `person:${row.username}`}
+            disabled={busyKey !== null}
+            onConfirm={() => onClear({ kind: "person", username: row.username })}
+            className="ml-auto"
+          />
+        </div>
       </div>
     </details>
+  );
+}
+
+/** Botão de limpeza em massa com confirmação no próprio botão: o 1.º clique
+ *  arma-o (fica vermelho e diz quanto vai limpar), o 2.º limpa. Desarma
+ *  sozinho ao fim de 4 s. Nada de `window.confirm` — bloqueia o separador. */
+function ConfirmClearButton({
+  label,
+  confirmLabel,
+  title,
+  busy,
+  disabled,
+  onConfirm,
+  className = "",
+}: {
+  label: string;
+  confirmLabel: string;
+  title: string;
+  busy: boolean;
+  disabled: boolean;
+  onConfirm: () => void;
+  className?: string;
+}) {
+  const [armed, setArmed] = useState(false);
+  useEffect(() => {
+    if (!armed) return;
+    const t = window.setTimeout(() => setArmed(false), 4000);
+    return () => window.clearTimeout(t);
+  }, [armed]);
+
+  return (
+    <button
+      type="button"
+      title={title}
+      disabled={disabled}
+      onClick={() => {
+        if (!armed) {
+          setArmed(true);
+          return;
+        }
+        setArmed(false);
+        onConfirm();
+      }}
+      className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[11.5px] font-medium transition disabled:opacity-45 ${
+        armed
+          ? "border-rose-400/60 bg-rose-500/[0.16] text-rose-100"
+          : "border-white/12 text-white/55 hover:border-rose-400/45 hover:bg-rose-500/[0.08] hover:text-rose-200"
+      } ${className}`}
+    >
+      {busy ? (
+        <Loader2 className="h-3 w-3 animate-spin" />
+      ) : (
+        <Eraser className="h-3 w-3" />
+      )}
+      {armed ? confirmLabel : label}
+    </button>
   );
 }
 

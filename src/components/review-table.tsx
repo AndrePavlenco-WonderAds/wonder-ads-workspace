@@ -53,9 +53,6 @@ export function ReviewTable({
    *  público: é informação de entrega interna, não algo que o cliente
    *  precise de ver ao aprovar. */
   showAddedDate = false,
-  /** When true (public/client side), hide the Publishing date column.
-   *  Clients don't need to set publishing dates — that's internal. */
-  hidePublishingDate = false,
   /** When true (public/client side), the Approval date column renders
    *  as static text rather than a date input. The date auto-fills
    *  server-side when the client flips status to Approved, so clients
@@ -95,7 +92,6 @@ export function ReviewTable({
   initialItems: ReviewItem[];
   allowDelete?: boolean;
   showAddedDate?: boolean;
-  hidePublishingDate?: boolean;
   readonlyApprovalDate?: boolean;
   allowArchive?: boolean;
   allowArchiveActions?: boolean;
@@ -416,23 +412,17 @@ export function ReviewTable({
         ) : (
           <>
             {/* Mais uma coluna precisa de mais chão antes de o scroll
-                horizontal começar a espremer o Doc link. */}
+                horizontal começar a espremer o Doc link. A coluna
+                «Publishing date» saiu de todas as tabelas na v77.40 — o
+                campo continua gravado, só deixou de se mostrar. */}
             <table
               className={`w-full border-collapse text-left text-sm ${
-                showAddedDate ? "min-w-[1020px]" : "min-w-[920px]"
+                showAddedDate ? "min-w-[940px]" : "min-w-[920px]"
               }`}
             >
               <thead className="bg-[#4a5d3a] text-white">
                 <tr>
-                  <Th
-                    className={
-                      hidePublishingDate
-                        ? "w-[30%]"
-                        : showAddedDate
-                          ? "w-[24%]"
-                          : "w-[28%]"
-                    }
-                  >
+                  <Th className={showAddedDate ? "w-[29%]" : "w-[30%]"}>
                     Task
                   </Th>
                   <Th className={showAddedDate ? "w-[12%]" : "w-[13%]"}>Status</Th>
@@ -442,20 +432,7 @@ export function ReviewTable({
                   <Th className={showAddedDate ? "w-[9%]" : "w-[10%]"}>
                     Approval date
                   </Th>
-                  {!hidePublishingDate && (
-                    <Th className={showAddedDate ? "w-[9%]" : "w-[10%]"}>
-                      Publishing date
-                    </Th>
-                  )}
-                  <Th
-                    className={
-                      hidePublishingDate
-                        ? "w-[20%]"
-                        : showAddedDate
-                          ? "w-[13%]"
-                          : "w-[14%]"
-                    }
-                  >
+                  <Th className={showAddedDate ? "w-[17%]" : "w-[20%]"}>
                     Doc link
                   </Th>
                   {showAddedDate && (
@@ -489,7 +466,6 @@ export function ReviewTable({
                   // above so the subrow spans the whole table.
                   const cols =
                     6 /* task,status,category,approval,doc,comments */ +
-                    (hidePublishingDate ? 0 : 1) +
                     (showAddedDate ? 1 : 0) +
                     (allowArchiveActions ? 1 : 0) +
                     (allowDelete ? 1 : 0);
@@ -551,20 +527,6 @@ export function ReviewTable({
                           />
                         )}
                       </Td>
-                      {!hidePublishingDate && (
-                        <Td>
-                          <input
-                            type="date"
-                            value={it.publishingDate ?? ""}
-                            onChange={(e) =>
-                              updateAndSave(it.id, {
-                                publishingDate: e.target.value || null,
-                              })
-                            }
-                            className="w-full rounded-md border border-black/10 bg-white px-2 py-1 text-xs text-black/75 outline-none focus:border-black/30"
-                          />
-                        </Td>
-                      )}
                       <Td>
                         <DocLinkCell
                           value={it.docLink}
