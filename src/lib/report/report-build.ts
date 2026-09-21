@@ -225,7 +225,8 @@ function aiLabel(source: string): string {
 
 /** Executive summary — POSITIVE highlights only, never a negative. Aims for
  *  3–5 bullets. A metric that fell is simply omitted (or shown as a neutral
- *  total), never framed as a drop. */
+ *  total), never framed as a drop — except website touch points, which always
+ *  carry their MoM % (v77.41). */
 function buildExecSummary(
   snap: Omit<MonthlyReportSnapshot, "execSummary">,
   lang: "pt" | "en",
@@ -264,18 +265,27 @@ function buildExecSummary(
   // dava «1.069 leads» num cliente com vinte formulários: o número grande
   // era quase todo cliques na ficha, e o cliente lia-o como pedidos. Cada
   // origem conta o que é, com o mesmo enquadramento positivo.
+  // v77.41: no site são «touch points», não leads (o número mistura cliques,
+  // chamadas e formulários), e o % face ao mês anterior vai SEMPRE — também
+  // quando desce (pedido do Andre, CDT ago/26: 2.655 vs 3.604 → −26%). É a
+  // única excepção ao «só positivos»; parcial / sem mês anterior = sem %.
   const website = snap.leads.website ?? websiteLeadTotal(snap.leads.channels);
-  const webGain = gainOf(website);
+  const webMom =
+    !partial && website.value !== null && website.previous
+      ? ((website.value - website.previous) / website.previous) * 100
+      : null;
   if (website.value && website.value > 0) {
-    if (webGain !== null)
-      add(100, t(
-        `Geraram-se **${fmt(website.value)}** leads no website — **+${webGain.toFixed(0)}%** face ao mês anterior.`,
-        `**${fmt(website.value)}** website leads — **+${webGain.toFixed(0)}%** vs. last month.`,
+    if (webMom !== null) {
+      const pct = Math.round(webMom);
+      const signed = pct > 0 ? `+${pct}%` : pct < 0 ? `−${Math.abs(pct)}%` : "0%";
+      add(pct > 0 ? 100 : 96, t(
+        `O website registou **${fmt(website.value)}** touch points — **${signed}** face ao mês anterior.`,
+        `**${fmt(website.value)}** website touch points — **${signed}** vs. last month.`,
       ));
-    else
+    } else
       add(96, t(
-        `Geraram-se **${fmt(website.value)}** leads no website este mês.`,
-        `**${fmt(website.value)}** website leads generated this month.`,
+        `O website registou **${fmt(website.value)}** touch points este mês.`,
+        `**${fmt(website.value)}** website touch points this month.`,
       ));
   }
   const gbpLeads = snap.leads.gbp ?? gbpLeadTotal(snap.leads.channels);

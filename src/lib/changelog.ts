@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.41",
+    date: "2026-09-21",
+    title: "Destaques do relatório: «touch points ao website» com % face ao mês anterior",
+    highlights: [
+      "**📈 Touch points, não leads.** Nos Destaques do mês (post de #client-wins no Slack e resumo do relatório), o número do site passa a ler-se «O website registou **2.655** touch points — **−26%** face ao mês anterior». A variação aparece sempre, a subir ou a descer; só fica de fora num relatório parcial ou sem mês anterior.",
+    ],
+  },
+  {
     version: "77.40",
     date: "2026-09-21",
     title: "Retrato do Manuel, limpar notificações da equipa, escudos só nos cartões e António Gaspar",
