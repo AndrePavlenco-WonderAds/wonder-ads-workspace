@@ -47,6 +47,7 @@ import {
   audienceMatches,
   clientMonthOccurrences,
   notificationId,
+  occurrenceAppliesToClient,
   occurrencesFor,
   resolveHref,
   type NotificationOccurrence,
@@ -215,9 +216,16 @@ function buildNotifications(
       continue;
     }
     for (const occ of occurrencesFor(rule, now)) {
-      const targets: (ClientRef | null)[] =
-        rule.scope === "seo-client" ? book : [null];
-      for (const client of targets) push(rule, occ, client);
+      if (rule.scope !== "seo-client") {
+        push(rule, occ, null);
+        continue;
+      }
+      // Por cliente: só os períodos em que o cliente já estava a bordo. Um
+      // cliente que entrou a 24/09 não deve relatório de julho a ninguém.
+      for (const client of book) {
+        if (!occurrenceAppliesToClient(rule, occ, client.startedAt)) continue;
+        push(rule, occ, client);
+      }
     }
   }
 

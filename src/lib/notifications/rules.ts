@@ -180,6 +180,44 @@ function referenceMonthLabel(year: number, month: number): string {
   return `${MONTHS_PT[prev.getMonth()]} de ${prev.getFullYear()}`;
 }
 
+/** O primeiro dia do mês a que uma ocorrência MENSAL diz respeito — o mês
+ *  fechado: para a ocorrência «2026-08» (dispara a 2 de agosto) é 1 de
+ *  julho. null para os outros tipos de agenda. */
+function monthlyReferenceMonthStart(
+  rule: NotificationRule,
+  occ: NotificationOccurrence,
+): Date | null {
+  if (rule.schedule.kind !== "monthly") return null;
+  const m = /^(\d{4})-(\d{2})$/.exec(occ.periodKey);
+  if (!m) return null;
+  return new Date(Number(m[1]), Number(m[2]) - 2, 1);
+}
+
+/** Se uma ocorrência de uma regra por cliente cabe a um cliente que começou
+ *  em `startedAt` (ISO yyyy-mm-dd).
+ *
+ *  v77.45: um cliente que entrou a 24/09 aparecia no sino do consultor com
+ *  «Enviar Monthly Report · julho» e «· agosto» — meses em que nem cliente
+ *  era. Nas regras mensais só contam os meses em que o cliente já estava a
+ *  bordo desde o DIA 1: o primeiro relatório pedido é o do primeiro mês
+ *  completo (entrou a 24/09 → o de outubro, pedido a 2 de novembro; entrou a
+ *  01/09 → o de setembro). Sem data de início não há como saber melhor e a
+ *  ocorrência aplica-se; os outros tipos de agenda aplicam-se sempre. */
+export function occurrenceAppliesToClient(
+  rule: NotificationRule,
+  occ: NotificationOccurrence,
+  startedAt: string | null,
+): boolean {
+  if (!startedAt) return true;
+  const refStart = monthlyReferenceMonthStart(rule, occ);
+  if (!refStart) return true;
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(startedAt);
+  if (!m) return true;
+  const start = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  if (Number.isNaN(start.getTime())) return true;
+  return start.getTime() <= refStart.getTime();
+}
+
 /** Ocorrências ativas de uma regra à data de `now`, da mais recente para a
  *  mais antiga. Uma ocorrência mensal só existe depois de o dia N ter chegado
  *  — no dia 1 ninguém é avisado de nada. */

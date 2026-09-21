@@ -69,9 +69,9 @@ const JOAO_B = new Set([
   // para `getConsultantEmailForSlug` também a reconhecer — sem isto, as
   // entregas em PDF/DOCX saíam com o alias seo@ em vez do email dele.
   "brancoptica",
-  // v77.44: Real Hotels Group (Santa Eulália) — onboarding 24/09/2026,
-  // formulário ainda por preencher.
-  "real-hotels-group-santa-eulalia",
+  // v77.44: Real Hotels Group — onboarding 24/09/2026, formulário ainda por
+  // preencher (slug sem «santa-eulalia» desde a v77.45).
+  "real-hotels-group",
 ]);
 
 // v75.4: uma consultora de SEO saiu e a carteira dela foi redistribuída:

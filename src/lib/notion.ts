@@ -98,14 +98,11 @@ const EXTRA_SEO_CLIENTS: Array<{
   // registo do fluxo de onboarding já existia com esse nome — assim a
   // página pública /physio-hub/onboarding e a ficha SEO são o mesmo cliente.
   { title: "PhysioHub", slug: "physio-hub", icon: "🏥" },
-  // Real Hotels Group — Santa Eulália (realhotelsgroup.com, v77.44) — João
-  // B., onboarding 24/09/2026, formulário ainda por preencher. Slug igual ao
-  // do registo do fluxo de onboarding, pelo mesmo motivo da PhysioHub.
-  {
-    title: "Real Hotels Group (Santa Eulália)",
-    slug: "real-hotels-group-santa-eulalia",
-    icon: "🏨",
-  },
+  // Real Hotels Group (realhotelsgroup.com, v77.44) — João B., onboarding
+  // 24/09/2026, formulário ainda por preencher. v77.45: o registo de
+  // onboarding chamava-se «(Santa Eulália)»; passou a ser o grupo, sem a
+  // unidade no nome nem no slug.
+  { title: "Real Hotels Group", slug: "real-hotels-group", icon: "🏨" },
 ];
 
 const _fetchSeoClients = unstable_cache(

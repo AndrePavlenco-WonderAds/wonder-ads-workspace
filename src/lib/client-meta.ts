@@ -44,7 +44,7 @@ export const CLIENT_LOGOS: Record<string, string> = {
   // Real Hotels Group (v77.44) — o monograma «RHG» do ícone do site
   // (apple-touch-icon, branco sobre preto). O wordmark do cabeçalho é um
   // SVG de 8:1 que num chip quadrado ficava reduzido a um traço.
-  "real-hotels-group-santa-eulalia": "/logos/real-hotels-group-santa-eulalia.png",
+  "real-hotels-group": "/logos/real-hotels-group.png",
 };
 
 export function getClientLogo(slug: string): string | null {
@@ -71,7 +71,7 @@ const LOGO_BG_OVERRIDES: Record<string, LogoBgMode> = {
   // PhysioHub — wordmark branco; num chip claro desaparecia por completo.
   "physio-hub": "dark",
   // Real Hotels Group — o monograma vem no seu próprio quadrado preto.
-  "real-hotels-group-santa-eulalia": "dark",
+  "real-hotels-group": "dark",
 };
 
 export function getLogoBgMode(slug: string): LogoBgMode {
@@ -93,7 +93,7 @@ const LOGO_SIZING_OVERRIDES: Record<string, LogoSizing> = {
   // Losango + wordmark largo (≈4:1) — sem isto fica ilegível no chip.
   "physio-hub": "tight",
   // Quadrado preto de canto a canto — o preenchimento é o próprio painel.
-  "real-hotels-group-santa-eulalia": "tight",
+  "real-hotels-group": "tight",
 };
 
 export function getLogoSizing(slug: string): LogoSizing {
@@ -127,7 +127,7 @@ export const CLIENT_WEBSITES: Record<string, string> = {
   medway: "https://medway.pt/",
   "antonio-gaspar": "https://antoniogaspar.pt/",
   "physio-hub": "https://www.physiohub.pt/",
-  "real-hotels-group-santa-eulalia": "https://realhotelsgroup.com/",
+  "real-hotels-group": "https://realhotelsgroup.com/",
   // ADS-only — not known yet
   "clinica-empatia": "",
 };
