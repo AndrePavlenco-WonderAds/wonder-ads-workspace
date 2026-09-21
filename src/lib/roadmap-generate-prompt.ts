@@ -125,9 +125,9 @@ export function formatMonthCalendar(
 ): string {
   const lines = roadmapMonths(roadmap).map(
     (m) =>
-      `- ${m.name}: weeks ${m.weeks[0]}–${m.weeks[m.weeks.length - 1]} (${m.weeks.length} weeks · ${formatDate(m.start)} – ${formatDate(m.end)})`,
+      `- ${m.name}: weeks ${m.weeks[0]}–${m.weeks[m.weeks.length - 1]} (${formatDate(m.start)} – ${formatDate(m.end)})`,
   );
-  return `## Month calendar (calendar months from the start date — 4 or 5 weeks each)\n${lines.join("\n")}`;
+  return `## Month calendar (calendar months from the start date, four weeks each — week 4 of a month runs to the month's last day, so it is 8–10 days)\n${lines.join("\n")}`;
 }
 
 /** Sequencing guidance that scales with the plan: a quarter is

@@ -46,6 +46,8 @@ import {
   roadmapWeeks,
   taskEndWeek,
   taskSpanWeeks,
+  weekDayCount,
+  weekEndDate,
   weekStartDate,
   type Roadmap,
   type RoadmapPillar,
@@ -439,13 +441,11 @@ export function RoadmapBoard({
       return { ...prev, tasks };
     });
   }, []);
+  // The week count is months × 4, so moving the start date only slides
+  // the calendar under the same columns.
   const updateStartDate = useCallback((next: string) => {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(next)) return; // ignore a half-typed date
-    setRoadmap((prev) => ({
-      ...prev,
-      startDate: next,
-      weeks: roadmapWeeks({ ...prev, startDate: next }),
-    }));
+    setRoadmap((prev) => ({ ...prev, startDate: next }));
   }, []);
   // "Extend" — grows the plan by 1, 3 or 6 CALENDAR months (up to the
   // 1-year cap). Existing tasks/weeks are untouched; the new weeks land as
@@ -645,8 +645,9 @@ export function RoadmapBoard({
 
       {/* Months + weeks — month label centred with horizontal connector
           like the mind-map, weeks underneath. Each month is a CALENDAR
-          month of the plan (startDate + k months), so it holds 4 or 5
-          week columns and carries its real date range in the label. The
+          month of the plan (startDate + k months) with exactly four week
+          columns (the 4th runs to the month's last day) and carries its
+          real date range in the label. The
           month that contains the current week + the current week column
           itself get a stronger brand-gradient treatment so a consultant
           can tell at a glance "we're in Week 6, Month 2" without doing
@@ -668,7 +669,7 @@ export function RoadmapBoard({
                     ? "brand-gradient-bg text-white shadow-[0_8px_28px_-6px_rgba(120,61,245,0.55)] ring-2 ring-[color:var(--brand-purple)]/40"
                     : "brand-gradient-border bg-[color:var(--brand-purple)]/15 text-white/65"
                 }`}
-                title={`${m.weeks.length} weeks · ${formatDate(m.start)} – ${formatDate(m.end)}`}
+                title={`Calendar month ${m.index + 1} of the plan · ${formatDate(m.start)} – ${formatDate(m.end)}`}
               >
                 {monthIsCurrent && (
                   <span
@@ -696,11 +697,7 @@ export function RoadmapBoard({
                 }`}
               />
             </div>
-            <div
-              className={`mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 ${
-                m.weeks.length >= 5 ? "xl:grid-cols-5" : "xl:grid-cols-4"
-              }`}
-            >
+            <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
               {m.weeks.map((w) => {
                 const cells = cellsByWeek.get(w) ?? [];
                 const isCurrent = w === week;
@@ -710,6 +707,8 @@ export function RoadmapBoard({
                     week={w}
                     totalWeeks={totalWeeks}
                     weekDate={weekStartDate(roadmap, w)}
+                    weekEnd={weekEndDate(roadmap, w)}
+                    weekDays={weekDayCount(roadmap, w)}
                     cells={cells}
                     isCurrent={isCurrent}
                     editingTaskId={editingTaskId}
@@ -1078,8 +1077,8 @@ function GeneratePanel({
           />
         </label>
         {/* Plan length in CALENDAR months — the package the client signed.
-            The week count follows from the start date (a 6-month plan is
-            26 or 27 weeks), so it's shown, not chosen. */}
+            Four week columns per month, so the week count is fixed by the
+            choice. */}
         <label className="block text-xs">
           <span className="text-[11px] uppercase tracking-[0.13em] text-white/55">
             Plan length
@@ -1091,11 +1090,7 @@ function GeneratePanel({
           >
             {ROADMAP_GENERATE_MONTHS.map((m) => (
               <option key={m} value={m}>
-                {m} months ·{" "}
-                {/^\d{4}-\d{2}-\d{2}$/.test(startDate)
-                  ? roadmapWeeks({ startDate, months: m })
-                  : Math.ceil((m * 30.4375) / 7)}{" "}
-                weeks
+                {m} months · {roadmapWeeks({ months: m })} weeks
               </option>
             ))}
           </select>
@@ -1244,6 +1239,8 @@ function WeekColumn({
   week,
   totalWeeks,
   weekDate,
+  weekEnd,
+  weekDays,
   cells,
   isCurrent,
   editingTaskId,
@@ -1261,6 +1258,10 @@ function WeekColumn({
   week: number;
   totalWeeks: number;
   weekDate: string;
+  /** Last day of the column (inclusive) — week 4 of a month runs to the
+   *  month's last day. */
+  weekEnd: string;
+  weekDays: number;
   cells: WeekCell[];
   isCurrent: boolean;
   editingTaskId: string | null;
@@ -1342,8 +1343,19 @@ function WeekColumn({
             )}
             Week {week}
           </h3>
-          <span className="text-[10px] uppercase tracking-[0.13em] text-white/40">
+          <span
+            className="text-[10px] uppercase tracking-[0.13em] text-white/40"
+            title={`${formatDate(weekDate)} – ${formatDate(weekEnd)} · ${weekDays} days`}
+          >
             {formatDate(weekDate)}
+            {/* The 4th week of a month absorbs the month's remaining days
+                (8–10). Say so, quietly, so nobody plans 7 days of work
+                into a 10-day column without knowing. */}
+            {weekDays > 7 && (
+              <span className="ml-1 normal-case tracking-normal text-white/30">
+                · {weekDays}d
+              </span>
+            )}
           </span>
         </div>
         {isCurrent && (

@@ -8,6 +8,7 @@ import {
   roadmapWeeks,
   taskEndWeek,
   taskSpanWeeks,
+  weekEndDate,
   weekStartDate,
   type Roadmap,
   type RoadmapPillar,
@@ -133,6 +134,7 @@ export function RoadmapReportBody({
   // (the full plan ends at the roadmap's final week; a month view ends at
   // the month's last week).
   const lastShownWeek = weeks.length > 0 ? Math.max(...weeks) : roadmapWeeks(roadmap);
+  const firstShownWeek = weeks.length > 0 ? Math.min(...weeks) : 1;
 
   // Calendar months (4–5 weeks each) — only the ones that hold at least
   // one of the requested weeks, so the month view shows a single month.
@@ -144,8 +146,8 @@ export function RoadmapReportBody({
     <div style={{ marginTop: "0.5rem" }}>
       {/* Meta strip */}
       <p style={{ color: "#64748b", fontSize: "0.85rem", margin: "0 0 1.5rem" }}>
-        {shownTaskCount} {c.tasks} · {formatDate(roadmap.startDate)} →{" "}
-        {formatDate(weekStartDate(roadmap, lastShownWeek))}
+        {shownTaskCount} {c.tasks} · {formatDate(weekStartDate(roadmap, firstShownWeek))} →{" "}
+        {formatDate(weekEndDate(roadmap, lastShownWeek))}
       </p>
 
       {monthsToShow.map((m) => {

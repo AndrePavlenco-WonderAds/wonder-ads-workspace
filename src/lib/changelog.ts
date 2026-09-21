@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.43",
+    date: "2026-09-21",
+    title: "Roadmap: sempre 4 semanas por mês de calendário (a 4.ª vai até ao fim do mês)",
+    highlights: [
+      "**4️⃣ Quatro colunas por mês, sem exceção.** Um mês de calendário tem ~4,35 semanas de 7 dias, e por isso a v77.42 mostrava uma 5.ª coluna sempre que o 5.º início de semana ainda caía dentro do mês (Medway: 22/09, 29/09, 06/10, 13/10 **e 20/10**). Agora cada mês divide-se em 4 semanas: as três primeiras de 7 dias e a **4.ª a absorver os dias que sobram** até ao último dia do mês (8 a 10 dias; só num mês de 28 dias fica em 7). A coluna diz «· 9d» quando é mais longa, e o tooltip mostra o intervalo completo.",
+      "**📅 Continua tudo a bater com o calendário.** «Month 5» é o 5.º mês de calendário desde o início, o plano de 6 meses acaba quando o contrato acaba (Mimus: 03/11/2026) e a semana atual sai da data de hoje (Mimus: **semana 19 de 24 · mês 5 de 6**). Um plano de 6 meses volta a ter 24 semanas, de 3 meses 12, de 12 meses 48.",
+      "**🔁 Migração pela data, na leitura.** As tarefas guardadas com o modelo antigo (semanas de 7 dias a contar do início, incluindo as geradas na v77.42) são remapeadas para a semana cujo intervalo contém o dia em que começavam — **nada muda de sítio no calendário**. Quando dois inícios de semana antigos caem no mesmo intervalo (o 5.º de cada mês), as tarefas juntam-se na semana 4 desse mês. O blob só é reescrito na próxima gravação do consultor (`weekModel: 2`); um separador antigo que ainda grave índices de 7 dias é remapeado de novo na leitura seguinte.",
+      "**📄 Documento público.** A faixa «N tarefas · início → fim» passa a mostrar o último dia da última semana (e não o primeiro), e o mês atual continua a sair com as suas 4 semanas.",
+    ],
+  },
+  {
     version: "77.42",
     date: "2026-09-21",
     title: "Roadmap SEO em meses de calendário, botão «Remove months» e fim dos alertas no board",

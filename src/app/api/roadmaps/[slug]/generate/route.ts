@@ -44,6 +44,7 @@ import {
   getCurrentRoadmap,
   MIN_ROADMAP_MONTHS,
   ROADMAP_GENERATE_MONTHS,
+  WEEK_MODEL_MONTH_QUARTERS,
   newRoadmapId,
   newTaskId,
   nextMondayISO,
@@ -314,6 +315,7 @@ export async function POST(
     // grows or trims it later via Extend / Remove months on the board.
     months,
     weeks: totalWeeks,
+    weekModel: WEEK_MODEL_MONTH_QUARTERS,
     startDate,
     generatedAt: now,
     tasks,
