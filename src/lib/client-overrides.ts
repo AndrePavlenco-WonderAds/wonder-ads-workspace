@@ -21,6 +21,10 @@ const MANUEL = new Set([
   "safe-away",
   "clinica-em-casa",
   "ihn",
+  // v77.44: PhysioHub (physiohub.pt) — clínicas de fisioterapia do grupo do
+  // António Gaspar, que já é dele. Fixado aqui para o email das entregas e
+  // a coluna do board o reconhecerem sem depender do registo de onboarding.
+  "physio-hub",
 ]);
 
 // v75.4: Monte Mar + Fisio Restelo moved here when the previous SEO
@@ -65,6 +69,9 @@ const JOAO_B = new Set([
   // para `getConsultantEmailForSlug` também a reconhecer — sem isto, as
   // entregas em PDF/DOCX saíam com o alias seo@ em vez do email dele.
   "brancoptica",
+  // v77.44: Real Hotels Group (Santa Eulália) — onboarding 24/09/2026,
+  // formulário ainda por preencher.
+  "real-hotels-group-santa-eulalia",
 ]);
 
 // v75.4: uma consultora de SEO saiu e a carteira dela foi redistribuída:

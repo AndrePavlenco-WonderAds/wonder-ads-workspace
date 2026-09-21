@@ -92,6 +92,20 @@ const EXTRA_SEO_CLIENTS: Array<{
   // Maratona Clube de Portugal (v76.39) — organizador da EDP Maratona de
   // Lisboa, Meia Maratona e restantes provas. João B., onboarding 01/09/2026.
   { title: "Maratona Clube de Portugal", icon: "🏃" },
+  // PhysioHub (physiohub.pt, v77.44) — rede de clínicas de fisioterapia do
+  // grupo do António Gaspar; Manuel Silva, onboarding 23/09/2026 (a mesma
+  // data e o mesmo formulário do AG). O slug fica «physio-hub» porque o
+  // registo do fluxo de onboarding já existia com esse nome — assim a
+  // página pública /physio-hub/onboarding e a ficha SEO são o mesmo cliente.
+  { title: "PhysioHub", slug: "physio-hub", icon: "🏥" },
+  // Real Hotels Group — Santa Eulália (realhotelsgroup.com, v77.44) — João
+  // B., onboarding 24/09/2026, formulário ainda por preencher. Slug igual ao
+  // do registo do fluxo de onboarding, pelo mesmo motivo da PhysioHub.
+  {
+    title: "Real Hotels Group (Santa Eulália)",
+    slug: "real-hotels-group-santa-eulalia",
+    icon: "🏨",
+  },
 ];
 
 const _fetchSeoClients = unstable_cache(
@@ -181,7 +195,9 @@ const _fetchSeoClients = unstable_cache(
   // v12: uma consultora saiu e a carteira foi redistribuída; João B. joins with
   // Cidália Cabeleireiros + MyMedic (synthetic, still in onboarding) (v75.4).
   // v13: Maratona Clube de Portugal entra na carteira do João B. (v76.39).
-  ["seo-clients-v13"],
+  // v14: PhysioHub (Manuel Silva) + Real Hotels Group (João B.) entram na
+  // carteira (v77.44).
+  ["seo-clients-v14"],
   { revalidate: 3600, tags: ["seo-clients"] },
 );
 

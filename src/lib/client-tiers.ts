@@ -18,6 +18,8 @@ const TIERS: Record<string, ClientTier> = {
   "sea-yourself": "core",
   "hds-learning": "core",
   "fisio-restelo": "core",
+  // v77.44: Real Hotels Group (Santa Eulália) — «Core size», dito pelo André.
+  "real-hotels-group-santa-eulalia": "core",
 
   // 3. Growth — premium tier
   "a-domingos": "growth",

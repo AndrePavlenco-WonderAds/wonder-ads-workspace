@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.44",
+    date: "2026-09-21",
+    title: "Novos clientes SEO: PhysioHub (Manuel Silva) e Real Hotels Group (João B.)",
+    highlights: [
+      "**🏥 PhysioHub** (physiohub.pt) entra na carteira do **Manuel Silva** com onboarding a **23/09/2026**, a mesma data do António Gaspar, de cujo grupo faz parte. O formulário de onboarding é o **mesmo que o AG preencheu**: o PDF e as 37 respostas foram copiados para a PhysioHub e o texto extraído (15 mil caracteres, com os concorrentes minerados) já alimenta as ações de IA. Logótipo do cabeçalho do site (wordmark branco, chip escuro). O slug é `physio-hub`, o mesmo do registo de onboarding que já existia, para a página pública e a ficha SEO serem o mesmo cliente.",
+      "**🏨 Real Hotels Group (Santa Eulália)** (realhotelsgroup.com) entra na carteira do **João B.**, tier **Core**, onboarding a **24/09/2026**, formulário ainda por preencher — quando o cliente o submeter em /real-hotels-group-santa-eulalia/onboarding, anexa-se sozinho à ficha. Logótipo branco do cabeçalho do site em SVG, chip escuro.",
+      "**🔧 Bastidores.** Ambos os registos do fluxo de onboarding ficaram com o consultor certo (e a PhysioHub com o nome «PhysioHub»); a cache do roster (`seo-clients`) subiu para v14 para os dois aparecerem no board sem esperar uma hora.",
+    ],
+  },
+  {
     version: "77.43",
     date: "2026-09-21",
     title: "Roadmap: sempre 4 semanas por mês de calendário (a 4.ª vai até ao fim do mês)",

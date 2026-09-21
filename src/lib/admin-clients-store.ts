@@ -88,6 +88,10 @@ export const DEFAULT_STARTING_DATES: Record<string, string> = {
   medway: "2026-09-22",
   // v77.40: António Gaspar — onboarding a 23/09/2026.
   "antonio-gaspar": "2026-09-23",
+  // v77.44: PhysioHub — a mesma data de onboarding do António Gaspar.
+  "physio-hub": "2026-09-23",
+  // v77.44: Real Hotels Group (Santa Eulália) — onboarding a 24/09/2026.
+  "real-hotels-group-santa-eulalia": "2026-09-24",
 };
 
 /** Full agency consultant roster — drives the multi-select dropdown on

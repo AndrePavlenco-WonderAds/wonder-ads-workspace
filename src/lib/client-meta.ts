@@ -37,6 +37,14 @@ export const CLIENT_LOGOS: Record<string, string> = {
   // António Gaspar (v77.40) — o logótipo do canto superior esquerdo do menu
   // de antoniogaspar.pt (monograma AG + wordmark, preto sobre transparente).
   "antonio-gaspar": "/logos/antonio-gaspar.svg",
+  // PhysioHub (v77.44) — o logótipo do cabeçalho de physiohub.pt (Squarespace,
+  // «logo-site.png»): losango + wordmark PHYSIOHUB / PHYSIOTHERAPY CLINICS,
+  // BRANCO sobre transparente, recortado às margens do desenho.
+  "physio-hub": "/logos/physio-hub.png",
+  // Real Hotels Group (v77.44) — o monograma «RHG» do ícone do site
+  // (apple-touch-icon, branco sobre preto). O wordmark do cabeçalho é um
+  // SVG de 8:1 que num chip quadrado ficava reduzido a um traço.
+  "real-hotels-group-santa-eulalia": "/logos/real-hotels-group-santa-eulalia.png",
 };
 
 export function getClientLogo(slug: string): string | null {
@@ -59,7 +67,12 @@ const LOGO_BG_OVERRIDES: Record<string, LogoBgMode> = {
   "maratona-clube-de-portugal": "dark",
   // CDT's logo asset sits on #F6A800 — match the chip exactly. IHN follows.
   ihn: { custom: "#F6A800" },
-  cdt: { custom: "#F6A800" },};
+  cdt: { custom: "#F6A800" },
+  // PhysioHub — wordmark branco; num chip claro desaparecia por completo.
+  "physio-hub": "dark",
+  // Real Hotels Group — o monograma vem no seu próprio quadrado preto.
+  "real-hotels-group-santa-eulalia": "dark",
+};
 
 export function getLogoBgMode(slug: string): LogoBgMode {
   return LOGO_BG_OVERRIDES[slug] ?? "white";
@@ -77,6 +90,10 @@ const LOGO_SIZING_OVERRIDES: Record<string, LogoSizing> = {
   medway: "tight",
   // Monograma + wordmark (≈3,2:1) — o mesmo caso da Medway.
   "antonio-gaspar": "tight",
+  // Losango + wordmark largo (≈4:1) — sem isto fica ilegível no chip.
+  "physio-hub": "tight",
+  // Quadrado preto de canto a canto — o preenchimento é o próprio painel.
+  "real-hotels-group-santa-eulalia": "tight",
 };
 
 export function getLogoSizing(slug: string): LogoSizing {
@@ -109,6 +126,8 @@ export const CLIENT_WEBSITES: Record<string, string> = {
   brancoptica: "https://www.brancoptica.pt/",
   medway: "https://medway.pt/",
   "antonio-gaspar": "https://antoniogaspar.pt/",
+  "physio-hub": "https://www.physiohub.pt/",
+  "real-hotels-group-santa-eulalia": "https://realhotelsgroup.com/",
   // ADS-only — not known yet
   "clinica-empatia": "",
 };
