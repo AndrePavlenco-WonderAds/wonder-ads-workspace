@@ -28,6 +28,7 @@ import {
 import { PageShell } from "@/components/page-shell";
 import { TrainingPlayer } from "@/components/training/training-player";
 import {
+  LessonAttachments,
   LessonInstructors,
   LessonKeyPoints,
 } from "@/components/training/lesson-aside";
@@ -333,6 +334,9 @@ export default async function LessonPage({
               alcance de quem tem a página fixa. */}
           <aside className="animate-fade-up space-y-4 lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:self-start lg:overflow-y-auto lg:pr-1">
             <LessonKeyPoints points={lesson.keyPoints} />
+            {/* Anexos logo a seguir ao Remember: é o que o vídeo manda ir
+                buscar («anexar por baixo do vídeo»), e lê-se junto. */}
+            <LessonAttachments attachments={lesson.attachments ?? []} />
             <LessonInstructors presenter={lesson.presenter} />
             {/* Logo por baixo de quem deu a aula — é sobre ele, sobre o vídeo
                 e sobre o processo que se pergunta. */}

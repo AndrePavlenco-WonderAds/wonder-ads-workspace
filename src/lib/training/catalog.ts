@@ -18,6 +18,12 @@
 // Vídeos ainda por gravar ficam com `videoUrl: null` — aparecem como
 // "Brevemente" ao consultor, não bloqueiam a progressão, e saltam à vista no
 // checklist de gravação do admin.
+//
+// A Especialização SEO/GEO segue um documento de especificação
+// (docs/formacao/especializacao-seo-geo.md): 11 módulos, 54 aulas e 272
+// perguntas. O banco de perguntas é gerado desse documento por
+// scripts/formacao/build-seo-geo-questions.mjs; os ids de módulo e de aula
+// daqui têm de bater com os do script.
 
 import { TRAINING_QUESTIONS } from "@/lib/training/questions";
 
@@ -49,6 +55,14 @@ export const QUESTION_TYPES = [
 ] as const;
 export type TrainingQuestionType = (typeof QUESTION_TYPES)[number];
 
+/** Ficheiro ou link que acompanha a aula («anexar por baixo do vídeo»). Um
+ *  `url` relativo (/ficheiro.pdf) é um ficheiro nosso e descarrega-se; um URL
+ *  externo abre noutro separador. */
+export type TrainingAttachment = {
+  label: string;
+  url: string;
+};
+
 export type TrainingQuestionOption = {
   id: string;
   text: string;
@@ -65,6 +79,16 @@ export type TrainingQuestion = {
   options: TrainingQuestionOption[];
   /** Explicação mostrada na correção, depois de submeter. */
   explanation?: string | null;
+  /** Aula que a pergunta avalia (id de uma aula do mesmo módulo). É
+   *  informativo — o CMS e o admin mostram-no; a correção não depende dele. */
+  lessonId?: string | null;
+  /** True quando a resposta marcada é a mais provável mas ainda não foi
+   *  confirmada pelo C-Level (o documento original não a tinha marcada). O
+   *  CMS mostra o badge «a confirmar»; a pergunta conta na mesma para a nota.
+   *  Confirmar = desligar isto no CMS. */
+  needsReview?: boolean;
+  /** O porquê da dúvida e a resposta assumida — acompanha `needsReview`. */
+  reviewNote?: string | null;
 };
 
 export type TrainingQuiz = {
@@ -95,6 +119,8 @@ export type TrainingLesson = {
    *  lado do vídeo e é o que a pessoa relê antes do teste. Lista vazia é um
    *  estado legítimo (a aula ainda não foi destilada), não um erro. */
   keyPoints: string[];
+  /** Documentos, ficheiros e links da aula. Ausente = sem anexos. */
+  attachments?: TrainingAttachment[];
   isPublished: boolean;
 };
 
@@ -146,6 +172,7 @@ type LessonSeed = {
   /** Pontos do "Remember". Omitir enquanto a aula não estiver destilada — a
    *  página mostra o estado vazio em vez de inventar conteúdo. */
   keyPoints?: string[];
+  attachments?: TrainingAttachment[];
 };
 
 function lessons(seeds: LessonSeed[]): TrainingLesson[] {
@@ -160,6 +187,7 @@ function lessons(seeds: LessonSeed[]): TrainingLesson[] {
     videoProvider: s.videoUrl ? detectProvider(s.videoUrl) : null,
     ...(s.estMinutes ? { estMinutes: s.estMinutes } : {}),
     keyPoints: s.keyPoints ?? [],
+    ...(s.attachments?.length ? { attachments: s.attachments } : {}),
     isPublished: true,
   }));
 }
@@ -176,36 +204,6 @@ function quizFor(moduleId: string, title: string): TrainingQuiz {
     maxAttempts: null,
     shuffleQuestions: true,
     questions: TRAINING_QUESTIONS[moduleId] ?? [],
-  };
-}
-
-/** Quiz de um módulo que ABSORVEU outros. Quando dois capítulos se fundem num
- *  (a reorganização do SEO na v76.43), o banco de perguntas dos capítulos que
- *  desapareceram não se deita fora: junta-se ao do que ficou. Perguntas
- *  escritas à mão são das coisas mais caras da formação — perdê-las numa
- *  mudança de arrumação seria pagá-las duas vezes.
- *
- *  Dedupe por id, porque a mesma pergunta podia existir em dois bancos. */
-function quizFrom(
-  moduleId: string,
-  title: string,
-  sourceModuleIds: string[],
-): TrainingQuiz {
-  const seen = new Set<string>();
-  const questions = sourceModuleIds
-    .flatMap((id) => TRAINING_QUESTIONS[id] ?? [])
-    .filter((q) => {
-      if (seen.has(q.id)) return false;
-      seen.add(q.id);
-      return true;
-    });
-  return {
-    id: `${moduleId}-quiz`,
-    title,
-    passingScore: 80,
-    maxAttempts: null,
-    shuffleQuestions: true,
-    questions,
   };
 }
 
@@ -356,52 +354,61 @@ const COMMON_TRACK: TrainingTrack = {
 // ---------------------------------------------------------------------------
 // 2a · SEO/GEO
 // ---------------------------------------------------------------------------
+//
+// ESTRUTURA (v77.46) — onze módulos, pela ordem em que as coisas acontecem a
+// um consultor novo: primeiro o que é preciso para «funcionar» na WonderAds,
+// depois as rotinas com o cliente, depois as situações difíceis, depois o
+// trabalho técnico de SEO pela ordem em que acontece num projeto (auditoria e
+// research → roadmap e onboarding → on-page → conteúdo → local → backlinks) e,
+// por fim, o crescimento de conta, que exige domínio de todo o resto.
+//
+// FONTE: docs/formacao/especializacao-seo-geo.md — Bibl. 1 (33 vídeos),
+// Bibl. 2 (22 entradas) e EXAM_QUIZ_QUESTIONS (272 perguntas). Cada aula é um
+// vídeo; o quiz de cada módulo só usa perguntas dos vídeos desse módulo (o
+// banco vive em `seo-geo-questions.ts`, gerado a partir do documento).
+//
+// IDS PRESERVADOS. As aulas que já existiam na arrumação anterior (v76.44)
+// mantêm o id — é por ele que o progresso está guardado, e trocá-lo apagava o
+// que a equipa já viu. As aulas novas recebem slugs descritivos, nunca o
+// número do documento (1.3, 4.2…), para uma reordenação não as desligar.
+//
+// Três aulas ainda não têm vídeo (2.5, 4.2, 4.3): ficam `videoUrl: null`,
+// aparecem como «Brevemente», não bloqueiam ninguém e não contam para a
+// percentagem — a regra geral do catálogo.
+//
+// O vídeo «Postar GMB Post» (qO-XAuRbl_E) estava nas duas bibliotecas; fica
+// uma vez só, no módulo de Local SEO.
+// ---------------------------------------------------------------------------
 
 const SEO_TRACK: TrainingTrack = {
   slug: "seo-geo",
   name: "Especialização SEO/GEO",
   description:
-    "Dois sub-módulos: COMUNICAÇÃO (o que se diz ao cliente em cada momento da parceria, com roleplay para cada situação) e CLIENT DELIVERY (o que se produz e onde fica registado). No fim sabes conduzir uma conta do onboarding ao upsell, e entregar o trabalho pela app sem depender de ninguém.",
+    "Onze módulos, do mindset e ferramentas internas até ao cross-sell e à renovação, pela ordem em que as coisas acontecem num projeto: o que é preciso para funcionar na WonderAds, as rotinas com o cliente, as situações difíceis, o trabalho técnico de SEO (auditoria → roadmap → on-page → conteúdo → local → backlinks) e, por fim, o crescimento de conta. Cada módulo termina com um quiz.",
   order: 2,
   isCommon: false,
   modules: [
     // -----------------------------------------------------------------------
-    // ARRUMAÇÃO (v76.44) — NOVE capítulos temáticos, agrupados nos dois
-    // sub-módulos que o C-Level escreveu.
-    //
-    // PORQUÊ NOVE E NÃO DOIS: um capítulo tem um quiz no fim, e um quiz só
-    // significa alguma coisa se as aulas antes dele falarem todas do MESMO
-    // assunto. Um teste no fim de dezassete aulas que vão do mindset ao
-    // upsell não mede compreensão — mede memória de curto prazo. Cada
-    // capítulo aqui é um tema fechado: entra-se, treina-se com o roleplay do
-    // próprio tema, e responde-se sobre ele.
-    //
-    // O AGRUPADOR `section` mantém os dois sub-módulos à vista, para não se
-    // perder a leitura de alto nível («isto é comunicação, aquilo é
-    // entrega») ao ganhar granularidade.
-    //
-    // IDs PRESERVADOS. As onze aulas que já existiam mantêm o id — trocá-lo
-    // apagava o progresso de quem já as viu e desligava o vídeo que lá está.
-    // O mesmo para os dois capítulos que guardam os maiores bancos de
-    // perguntas (`seo-m2` e `seo-m3`): mudam de título e de lugar, mas o id
-    // fica, e com ele as tentativas de quiz já feitas.
+    // 1 · Boas-vindas, Mindset e Ferramentas Internas
     // -----------------------------------------------------------------------
     {
-      id: "seo-com-1",
-      title: "Mindset e primeira reunião de parceria",
+      id: "seo-01-mindset",
+      title: "Boas-vindas, Mindset e Ferramentas Internas",
       description:
-        "Como pensa quem é dono de uma conta, e como se conduz a primeira reunião — a que alinha expectativas de prazos para o resto do ano.",
+        "O consultor percebe o que se espera dele, conhece os protocolos base e configura as ferramentas obrigatórias no primeiro dia.",
       order: 1,
-      section: "Comunicação",
+      section: null,
       lessons: lessons([
         {
-          // Era "Comunicação com o cliente" (a aula de abertura genérica do
-          // capítulo). Mesmo lugar, mesmo id, o título do documento.
+          // Era a aula de abertura do antigo capítulo «Mindset e primeira
+          // reunião de parceria». Mesmo id, mesmo vídeo.
           id: "seo-m2-a1",
-          title: "Mindset de Consultor de SEO/GEO e de DPT de SEO/GEO",
+          title:
+            "Bem-vindos ao Departamento de SEO e GEO │ Mindset de Consultor de SEO/GEO",
           description:
             "Como pensa quem é dono de uma conta: o que se assume, o que se pergunta, o que nunca se promete, e a diferença entre executar tarefas e responder pelo resultado do cliente.",
           presenter: "André",
+          videoUrl: "https://youtu.be/rHyBzn8XUkE",
           keyPoints: [
             "Cadência combinada e cumprida vale mais do que contacto abundante e irregular.",
             "Traduz sempre o técnico para o negócio do cliente: não são impressões, são pessoas a encontrar-te.",
@@ -409,259 +416,85 @@ const SEO_TRACK: TrainingTrack = {
           ],
         },
         {
-          // Era "O que preparar quando um novo cliente dá onboard".
-          id: "seo-m4-a1",
-          title:
-            "Como fazer uma primeira reunião de parceria (onboarding) e gerir expectativas de timings de aprovações do cliente",
-          description:
-            "O que trazer para a reunião de onboarding de um cliente, como se conduz a primeira reunião de parceria e como se deixam alinhados desde o dia 1 os prazos de aprovação que dependem dele.",
-          presenter: "André",
-          keyPoints: [
-            "Chega-se à reunião de onboarding com o trabalho de casa feito: site visto, concorrentes vistos, perguntas preparadas.",
-            "Acessos e formulário pedem-se antes, não durante — a reunião é para estratégia, não para logística.",
-            "Os primeiros 30 dias definem a confiança do ano inteiro da conta.",
-          ],
-        },
-        {
-          id: "seo-m4-a2",
-          title: "Reunião real de onboarding com um cliente novo",
-          description:
-            "Vídeo de exemplo de uma reunião real de onboarding com um cliente novo, do início ao fim.",
-          type: "call_real",
-          presenter: "André",
-          keyPoints: [
-            "Começa-se pelo negócio do cliente, nunca pelo SEO: o que vende, a quem, e o que é uma lead boa para ele.",
-            "Alinha-se expectativa de tempo logo no dia 1 — SEO tem curva, e é melhor dizê-lo antes de o cliente perguntar.",
-            "A reunião fecha com próximos passos datados e com quem faz o quê.",
-          ],
-        },
-        {
-          id: "seo-m2-a2",
-          title: "Call real — onboarding pendente, sem sessão de estratégia",
-          description:
-            "Gravação real do André a ligar a um cliente que tinha o onboarding pendente e ainda não tinha feito a sessão de estratégia para contar como dia 1.",
-          type: "call_real",
-          presenter: "André",
-          keyPoints: [
-            "O relógio do serviço só arranca na sessão de estratégia — e é responsabilidade do consultor explicar isso sem soar a desculpa.",
-            "Ligar é mais rápido do que escrever quando o assunto já ficou parado uma vez.",
-            "Sai da chamada com data marcada, não com «depois combinamos».",
-          ],
-        },
-      ]),
-      // Herdou o banco de perguntas do antigo capítulo de onboarding.
-      quiz: quizFrom("seo-com-1", "Quiz — Mindset e onboarding", ["seo-m4"]),
-    },
-    {
-      id: "seo-com-2",
-      title: "NPS e Surprise News",
-      description:
-        "As duas comunicações que se fazem fora da cadência do relatório: pedir a opinião do cliente e dar-lhe uma boa notícia. Cada uma com o seu roleplay.",
-      order: 2,
-      section: "Comunicação",
-      lessons: lessons([
-        {
-          id: "seo-com-nps",
-          title: "Como Enviar NPS Form ao Cliente",
-          description:
-            "A sequência completa: SMS, uma semana de espera, um follow up, e uma chamada uma semana depois. Cada passo tem uma razão e um prazo.",
-          presenter: "André",
-        },
-        {
-          id: "seo-com-nps-rp",
-          title: "Roleplay: Como Enviar NPS Form ao Cliente",
-          description:
-            "Roleplay da sequência de NPS — o SMS, o follow up e a chamada final, com as respostas mais comuns do cliente.",
-          type: "scenario",
-          presenter: "André",
-        },
-        {
-          id: "seo-com-news",
-          title: "Como Enviar Surprise News ao Cliente",
-          description:
-            "Quando e como se dá uma boa notícia fora da cadência combinada — o que conta como surprise news e o que é só ruído.",
-          presenter: "André",
-        },
-        {
-          id: "seo-com-news-rp",
-          title: "Roleplay: Como Enviar Surprise News ao Cliente",
-          description:
-            "Roleplay do envio de uma surprise news, com o enquadramento que a transforma em confiança em vez de mais uma mensagem.",
-          type: "scenario",
-          presenter: "André",
-        },
-      ]),
-      quiz: quizFor("seo-com-2", "Quiz — NPS e Surprise News"),
-    },
-    {
-      id: "seo-com-3",
-      title: "Entrega do relatório mensal ao cliente",
-      description:
-        "O momento mais visível da parceria: como se envia o relatório com Loom e como se conduz a reunião mensal — incluindo o mês mau.",
-      order: 3,
-      section: "Comunicação",
-      lessons: lessons([
-        {
-          id: "seo-com-mr",
-          title: "Como Enviar um Monthly Report c/ Loom Video",
-          description:
-            "O envio do relatório mensal acompanhado de um Loom: o que se grava, por que ordem, e o que se escreve na mensagem que o acompanha.",
-          presenter: "André",
-        },
-        {
-          id: "seo-com-mr-rp",
-          title: "Roleplay: Como Enviar um Monthly Report",
-          description:
-            "Roleplay do envio do relatório mensal, incluindo o caso difícil: apresentar um mês mau sem perder a conta.",
-          type: "scenario",
-          presenter: "André",
-        },
-        {
-          id: "seo-m5-a2",
-          title: "Reunião mensal real — dados e trabalho apresentados ao cliente",
-          description:
-            "Gravação de uma reunião mensal com apresentação de dados e do trabalho feito ao cliente.",
-          type: "call_real",
-          presenter: "André",
-          keyPoints: [
-            "Mostra-se o que foi feito e o que isso produziu — trabalho sem efeito medido é só atividade.",
-            "O cliente tem de sair da reunião a saber o que vem a seguir e o que precisa de aprovar.",
-            "Números que o cliente não percebe não são impressionantes: são ruído.",
-          ],
-        },
-      ]),
-      // Herdou o banco do antigo capítulo de reporting.
-      quiz: quizFrom("seo-com-3", "Quiz — Relatório mensal com o cliente", ["seo-m5"]),
-    },
-    {
-      id: "seo-com-4",
-      title: "Upsell e cross sell",
-      description:
-        "Quando a conta está pronta para mais serviço, como se identifica a necessidade real e como se propõe sem queimar a relação.",
-      order: 4,
-      section: "Comunicação",
-      lessons: lessons([
-        {
-          id: "seo-com-upsell",
-          title: "Como Considerar um Upsell e Cross Sell",
-          description:
-            "Quando é que a conta está pronta para mais serviço, como se identifica a necessidade real e como se propõe sem queimar a relação.",
-          presenter: "André",
-        },
-        {
-          id: "seo-com-upsell-rp",
-          title: "Roleplay: Como Considerar um Up-sell ou Cross Sell",
-          description:
-            "Roleplay da conversa de upsell e cross sell, com as objeções que aparecem sempre.",
-          type: "scenario",
-          presenter: "André",
-        },
-      ]),
-      quiz: quizFor("seo-com-4", "Quiz — Upsell e cross sell"),
-    },
-    {
-      id: "seo-m2",
-      title: "Aprovações, follow ups e problemas do dia a dia",
-      description:
-        "O que desbloqueia contas paradas: cobrar aprovações sem parecer cobrança, dar follow ups, responder a dúvidas administrativas e saber quando se deixa de escrever e se liga.",
-      order: 5,
-      section: "Comunicação",
-      lessons: lessons([
-        {
-          id: "seo-com-aprov",
-          title:
-            "Como reforçar a aprovação do cliente em materiais, dar follow ups e ligar quando é necessário",
-          description:
-            "Os timings que o cliente tem de cumprir, como se dão os follow ups sem parecer cobrança, e o momento em que se deixa de escrever e se liga.",
-          presenter: "André",
-        },
-        {
-          id: "seo-m2-a3",
-          title: "Call real — documentos pendentes na tabela de aprovações",
-          description:
-            "Gravação real do André a ligar a um cliente sobre documentos pendentes na tabela de aprovações.",
-          type: "call_real",
-          presenter: "André",
-          keyPoints: [
-            "Aprovação pendente é trabalho já pago que não está a produzir efeito — trata-se como urgência, não como recordatório.",
-            "Cobra-se o pendente pelo impacto para o cliente, nunca pelo incómodo para nós.",
-            "Se o cliente não responde há três dias, a responsabilidade de desbloquear é tua.",
-          ],
-        },
-        {
-          id: "seo-com-admin",
-          title: "Como solucionar um problema administrativo",
-          description:
-            "O cliente tem dúvidas sobre o processo — por exemplo o preço de uma página de Wikipédia. Como se responde a uma dúvida administrativa sem a transformar numa negociação.",
-          presenter: "André",
-        },
-        {
-          id: "seo-m2-a4",
-          title: "Roleplays de chamadas telefónicas",
-          description:
-            "Gravação do André e de outros consultores a fazer roleplays de chamadas telefónicas — os cenários que mais se repetem na carteira.",
-          type: "scenario",
-          presenter: "André",
-          keyPoints: [
-            "Os cenários repetem-se: quem os treina antes não improvisa ao telefone com o cliente.",
-            "Silêncio depois de uma pergunta é ferramenta — deixa o cliente responder.",
-            "Fecha sempre com o resumo do que ficou combinado e por escrito a seguir.",
-          ],
-        },
-      ]),
-      // Mantém o id `seo-m2` — e com ele o banco e as tentativas já feitas.
-      quiz: quizFrom("seo-m2", "Quiz — Acompanhamento do cliente", ["seo-m2"]),
-    },
-    {
-      id: "seo-m3",
-      title: "A app e as ferramentas",
-      description:
-        "Onde vive o trabalho: os protocolos internos, a app do workspace e as ferramentas de SEO da casa.",
-      order: 6,
-      section: "Client Delivery",
-      lessons: lessons([
-        {
-          id: "seo-m1-a1",
-          title: "Como trabalhamos internamente",
-          description:
-            "Os protocolos internos do departamento de SEO: o que se faz, por que ordem, em quanto tempo e onde fica registado.",
-          presenter: "André",
-          keyPoints: [
-            "A ordem dos protocolos não é sugestão: cada passo assume que o anterior está feito e registado.",
-            "Horas registadas fora do dia em que aconteceram deixam de servir para gerir carteira.",
-            "O roadmap do cliente é o contrato de trabalho da semana — se mudou, muda-se lá primeiro.",
-          ],
-        },
-        {
           id: "seo-cd-app",
-          title: "Como utilizar app interna",
+          title: "Como utilizar a app interna",
           description:
             "A app do workspace de ponta a ponta: onde vive cada cliente, o que se regista, o que se gera e o que se envia para aprovação.",
           presenter: "André",
+          videoUrl: "https://youtu.be/PIh_7uEJ-Sw",
         },
         {
-          id: "seo-m3-a1",
-          title: "Overview das Ferramentas",
+          id: "seo-gmail-assinatura",
+          title: "Como criar assinatura Gmail e aplicar",
           description:
-            "Tour pelas ferramentas de SEO da casa e pelo que cada uma resolve.",
+            "A assinatura de email da casa, em português e em inglês, aplicada no Gmail da empresa desde o primeiro dia.",
           presenter: "André",
+          videoUrl: "https://youtu.be/Dc5QNdWRCLc",
+          attachments: [
+            {
+              label: "Borboleta Wonder Ads (imagem da assinatura)",
+              url: "/wonder-ads-butterfly.png",
+            },
+          ],
           keyPoints: [
-            "Cada ferramenta responde a uma pergunta diferente — usar a errada dá uma resposta certa à pergunta que ninguém fez.",
-            "Os dados de GA4 e GSC são a base do relatório: se não confias no número, resolve-se antes do relatório, não durante.",
-            "O output da ferramenta é matéria-prima; a decisão continua a ser do consultor.",
+            "A assinatura existe em português E em inglês desde o primeiro dia — não é opcional, é responsabilidade tua.",
+            "Leva email, nome, cargo, telefone, link de agendamento e logótipo; morada e dados empresariais ficam de fora.",
+            "Não se inventa uma assinatura própria: usa-se o modelo da casa.",
+          ],
+        },
+        {
+          id: "seo-fathom",
+          title: "Como instalar o Fathom e utilizar o mesmo",
+          description:
+            "Instalar o Fathom e gravar todas as reuniões — de equipa e com clientes — com a autorização certa.",
+          presenter: "André",
+          videoUrl: "https://youtu.be/0aJevETkcPc",
+          keyPoints: [
+            "O Fathom grava reuniões — todas, incluindo as de equipa e as de 15 minutos com clientes, e pede-se sempre autorização.",
+            "É obrigatório para toda a gente: consultores, administração e web designers.",
+            "Serve para nos proteger em caso de conflito e para formar colegas; a administração pode pedir gravações a qualquer momento.",
+          ],
+        },
+        {
+          id: "seo-agendar-reuniao",
+          title:
+            "Como agendar reunião com a equipa/André/Administração presente",
+          description:
+            "Onde se vê a disponibilidade de um colega e como se marca uma reunião sem atropelar a agenda de ninguém.",
+          presenter: "André",
+          videoUrl: "https://youtu.be/RDn6aFO_oiw",
+          keyPoints: [
+            "Antes de marcar, vê-se a agenda do colega no Google Calendar («Meet with…», do lado esquerdo) — mesmo quando é urgente.",
+            "Evita-se a hora de almoço; nunca se marca às cegas.",
+          ],
+        },
+        {
+          id: "seo-pedido-ausencia",
+          title: "Como fazer um pedido de ausência",
+          description:
+            "O protocolo de ausências: quando é preciso pedir, onde se pede e a partir de quando conta.",
+          presenter: "André",
+          videoUrl: "https://youtu.be/DcrZE67Lm80",
+          keyPoints: [
+            "Ausências acima de 30 minutos pedem-se na app, pelo protocolo — nunca pelo WhatsApp.",
+            "O pedido só entra em efetivo depois de aceite por alguém da administração.",
+            "Sem pedido aprovado, és responsável por estar disponível para reuniões, mensagens e chamadas no horário de trabalho.",
           ],
         },
       ]),
-      // Mantém o id `seo-m3` e absorveu o banco do antigo trabalho interno.
-      quiz: quizFrom("seo-m3", "Quiz — App e ferramentas", ["seo-m3", "seo-m1"]),
+      quiz: quizFor("seo-01-mindset", "Quiz — Boas-vindas, mindset e ferramentas"),
     },
+
+    // -----------------------------------------------------------------------
+    // 2 · Rotinas de Reporting e Comunicação com o Cliente
+    // -----------------------------------------------------------------------
     {
-      id: "seo-cd-2",
-      title: "Updates e relatórios",
+      id: "seo-02-reporting",
+      title: "Rotinas de Reporting e Comunicação com o Cliente",
       description:
-        "O que se escreve e com que frequência: o update diário interno, o relatório semanal do cliente e a construção do relatório mensal na app.",
-      order: 7,
-      section: "Client Delivery",
+        "Dominar o ciclo diário → semanal → mensal de comunicação, o NPS e as surprise news.",
+      order: 2,
+      section: null,
       lessons: lessons([
         {
           id: "seo-cd-daily",
@@ -669,6 +502,7 @@ const SEO_TRACK: TrainingTrack = {
           description:
             "O update diário interno: o que entra, o que não entra, e para que serve a quem o lê depois.",
           presenter: "André",
+          videoUrl: "https://youtu.be/53hU0LqoIhw",
         },
         {
           id: "seo-cd-weekly",
@@ -676,91 +510,304 @@ const SEO_TRACK: TrainingTrack = {
           description:
             "O relatório semanal que vai para o cliente: o que se mostra, como se escreve e o que fica de fora.",
           presenter: "André",
+          videoUrl: "https://youtu.be/btQ0c57SQV8",
         },
         {
-          id: "seo-cd-weekly-rp",
-          title: "Como criar um Weekly Report — Exemplos e Roleplay",
-          description:
-            "Exemplos reais de relatórios semanais e roleplay da sua construção, do dado em bruto à frase que o cliente lê.",
-          type: "scenario",
-          presenter: "André",
-        },
-        {
-          // Era "Reporting e reunião mensal" — a parte de CONSTRUIR o
-          // relatório. A parte de o APRESENTAR vive agora em Comunicação.
           id: "seo-m5-a1",
-          title: "Como criar um Monthly Report (app)",
+          title: "Como criar um Monthly Report (pela app)",
           description:
             "Como se constrói o relatório mensal na app: que dados entram, o que é automático, o que é preenchido à mão e o que se revê antes de finalizar.",
           presenter: "André",
+          videoUrl: "https://youtu.be/rxVJOnzqogg",
           keyPoints: [
             "O relatório sai no início do mês seguinte, sempre — a pontualidade é metade da credibilidade do número.",
             "Um mês mau apresenta-se com a leitura do porquê e o plano do mês seguinte já ao lado.",
             "Leads e receita primeiro; impressões e posições são a explicação, não o título.",
           ],
         },
-      ]),
-      quiz: quizFor("seo-cd-2", "Quiz — Updates e relatórios"),
-    },
-    {
-      id: "seo-cd-3",
-      title: "Roadmap e produção de conteúdo",
-      description:
-        "O plano da conta e o que dele sai: roadmap inicial, checklists e o artigo otimizado, do briefing à publicação.",
-      order: 8,
-      section: "Client Delivery",
-      lessons: lessons([
         {
-          id: "seo-cd-roadmap",
-          title: "Como fazer um SEO Roadmap Inicial e Checklists",
+          id: "seo-com-mr-rp",
+          title: "Roleplay: Como enviar um Monthly Report em vídeo",
           description:
-            "O roadmap inicial de uma conta nova e as checklists que garantem que nada do essencial fica por fazer nas primeiras semanas.",
-          presenter: "André",
-        },
-        {
-          id: "seo-m3-a2",
-          title: "Roleplay com as ferramentas — roadmap e artigo ao vivo",
-          description:
-            "Gravação real do André em roleplay com as ferramentas: fazer ao vivo um roadmap e um artigo de blog.",
+            "Roleplay do envio do relatório mensal em vídeo — o que se pergunta ao cliente antes, o que se estuda antes de gravar e o que se diz.",
           type: "scenario",
           presenter: "André",
+          videoUrl: "https://youtu.be/0OsdUmWc83M",
           keyPoints: [
-            "Um roadmap faz-se a partir do negócio do cliente e só depois a partir das keywords.",
-            "Artigo gerado não é artigo entregue: revê-se intenção, factos e tom antes de sair.",
-            "O tempo que ganhas na ferramenta é para gastar no que ela não faz — critério e contexto do cliente.",
+            "Pergunta-se sempre ao cliente se prefere um vídeo de overview ou uma reunião de dúvidas sobre o relatório.",
+            "Estuda-se o report antes de gravar; o vídeo não é um PowerPoint nem uma aula técnica.",
+            "O cliente conta as leads do mês e pergunta-lhes de onde vieram (Google, AIs, Instagram…) — e nós sabemos sempre se a taxa de conversão está boa.",
           ],
         },
         {
-          id: "seo-cd-artigo",
-          title: "Como criar um artigo otimizado e corretamente seo-wise",
+          id: "seo-mr-ecommerce",
+          title:
+            "Como gerar o Monthly Report para cliente e-commerce (Shopify, etc.)",
           description:
-            "Da intenção de pesquisa ao artigo publicado: estrutura, keywords, links internos e o que se revê antes de sair.",
+            "O relatório mensal para lojas online. Depende de alterações à action Monthly Report na app antes de ser gravado.",
+          presenter: "André Pereira",
+        },
+        {
+          id: "seo-com-news-rp",
+          title: "Roleplay: Como enviar Surprise News ao cliente",
+          description:
+            "Roleplay do envio de uma boa notícia fora da cadência combinada — o que conta como surprise news e como se escreve no grupo.",
+          type: "scenario",
           presenter: "André",
+          videoUrl: "https://youtu.be/v4BX2Z_8Fno",
+          keyPoints: [
+            "Surprise news é qualquer salto real: cliques orgânicos, posições de uma keyword importante, impressões.",
+            "Na mensagem para o grupo identifica-se sempre o chefe máximo da empresa.",
+          ],
+        },
+        {
+          id: "seo-com-nps",
+          title:
+            "Como enviar NPS Form ao cliente (SMS, 1 semana de espera, 1 follow-up e 1 semana depois call)",
+          description:
+            "A sequência completa: SMS, uma semana de espera, um follow-up, e uma chamada uma semana depois. Cada passo tem uma razão e um prazo.",
+          presenter: "André",
+          videoUrl: "https://youtu.be/5WWjo9BsXbY",
+          keyPoints: [
+            "SMS → uma semana → follow-up → uma semana → chamada. Ao 14.º dia sem resposta, liga-se.",
+            "O NPS form da WonderAds leva 5 a 10 minutos a preencher — diz-se isso ao cliente.",
+          ],
+        },
+        {
+          id: "seo-com-nps-rp",
+          title:
+            "Roleplay: Follow-up call de NPS Form a cliente que ainda não respondeu",
+          description:
+            "Roleplay da chamada final da sequência de NPS, com as respostas mais comuns do cliente.",
+          type: "scenario",
+          presenter: "André",
+          videoUrl: "https://youtu.be/sJsGrgB-GcA",
         },
       ]),
-      quiz: quizFor("seo-cd-3", "Quiz — Roadmap e conteúdo"),
+      quiz: quizFor("seo-02-reporting", "Quiz — Reporting e comunicação"),
     },
+
+    // -----------------------------------------------------------------------
+    // 3 · Gestão de Situações com o Cliente
+    // -----------------------------------------------------------------------
     {
-      id: "seo-cd-4",
-      title: "Técnico e tracking",
+      id: "seo-03-situacoes",
+      title: "Gestão de Situações com o Cliente",
       description:
-        "O que quebra e o que se mede: tickets para o departamento Web, diagnóstico de problemas técnicos e os eventos de GA4 sem os quais o relatório não conta leads.",
-      order: 9,
-      section: "Client Delivery",
+        "Reagir bem quando o cliente não aprova, tem dúvidas administrativas, reporta um problema técnico ou precisa de alterações web.",
+      order: 3,
+      section: null,
       lessons: lessons([
         {
-          id: "seo-cd-ticket",
-          title: "Como criar um ticket de alterações WEB",
+          id: "seo-com-aprov",
+          title:
+            "Como reforçar a aprovação do cliente em materiais + follow-ups (1.º aviso na tabela, 2.º aviso 3 dias depois, 3.º aviso call 5 dias depois) c/ roleplay",
           description:
-            "Como se pede uma alteração ao departamento Web: o que tem de estar no ticket para não voltar, e como se acompanha até estar em produção.",
+            "Os timings que o cliente tem de cumprir, como se dão os follow-ups sem parecer cobrança, e o momento em que se deixa de escrever e se liga.",
           presenter: "André",
+          videoUrl: "https://youtu.be/BqvAx7cFKdk",
+          keyPoints: [
+            "Avisa-se o cliente mal se adiciona um documento à tabela de pending review; 3 dias depois vai o lembrete por mensagem; aos 5 dias liga-se.",
+            "Na chamada explica-se que o atraso nas aprovações atrasa o roadmap e os frutos do SEO/faturação.",
+            "Ligar é obrigatório quando o cliente não responde a mensagens nem a emails.",
+          ],
+        },
+        {
+          id: "seo-com-admin",
+          title:
+            "Como solucionar um problema administrativo (ex.: dúvida sobre preço da Wikipedia page)",
+          description:
+            "O cliente tem dúvidas sobre o processo. Como se responde a uma dúvida administrativa sem a transformar numa negociação — e a quem se pergunta quando não se sabe.",
+          presenter: "André",
+          videoUrl: "https://youtu.be/4-KCE7JJ2Js",
+          keyPoints: [
+            "Diz-se ao cliente que respondemos no máximo em 24 horas — um problema administrativo tem sempre resposta.",
+            "Se não sabes: mantém a calma, informa que voltas com resposta, pergunta primeiro à equipa do DPT no grupo e só depois ao André.",
+          ],
         },
         {
           id: "seo-cd-tecnico",
           title: "Como solucionar um problema técnico",
           description:
-            "O caminho de diagnóstico de um problema técnico no site do cliente — o que se verifica primeiro e quando se escala.",
+            "O caminho de diagnóstico de um problema técnico no site do cliente — o que se verifica primeiro, o que se escreve ao cliente e quando se escala.",
           presenter: "André",
+          videoUrl: "https://youtu.be/5a9lbODTF8c",
+          keyPoints: [
+            "Primeiro passo: perceber se sabemos a solução a 100% antes de responder. Se sim: «a solução é X, estamos a resolver enquanto falamos».",
+            "Estancar → perceber o problema em detalhe → Web + bug: ticket com urgência máxima e Slack; Não Web: Claude + Net e suporte da plataforma, avisando o cliente.",
+            "Recorrer à equipa não é o primeiro passo; quando acontece, resolve-se por WhatsApp ou em reunião com um colega.",
+          ],
+        },
+        {
+          id: "seo-cd-ticket",
+          title: "Como criar um ticket de alterações WEB corretamente",
+          description:
+            "Como se pede uma alteração ao departamento Web: a quem se atribui, o que tem de estar no ticket para não voltar, e onde ficam os acessos do cliente.",
+          presenter: "André",
+          videoUrl: "https://youtu.be/u0euxplXZro",
+          keyPoints: [
+            "Atribui-se ao designer com menos tasks Not Started e In Progress; em equilíbrio, ao que está mais habituado ao cliente.",
+            "Explica-se e numera-se ao máximo as secções que a página deve ter; o nome do cliente não vai no título.",
+            "Os acessos do cliente ficam todos no fundo da página do cliente na app.",
+          ],
+        },
+      ]),
+      quiz: quizFor("seo-03-situacoes", "Quiz — Situações com o cliente"),
+    },
+
+    // -----------------------------------------------------------------------
+    // 4 · Auditoria Técnica e Keyword Research
+    // -----------------------------------------------------------------------
+    {
+      id: "seo-04-auditoria",
+      title: "Auditoria Técnica e Keyword Research",
+      description:
+        "Saber diagnosticar um site (app WonderAds, ScreamingFrog) e construir a lista de keywords de um projeto com Semrush.",
+      order: 4,
+      section: null,
+      lessons: lessons([
+        {
+          id: "seo-audit-1",
+          title:
+            "Website SEO Audit para boas práticas de SEO (APP WA) — Parte 1",
+          description:
+            "Detalhes de design, técnicos, on-page, off-page e velocidade — o primeiro diagnóstico de um site, gerado na app.",
+          presenter: "André Pereira",
+          videoUrl: "https://youtu.be/EmAfTeK96lM",
+          keyPoints: [
+            "O onboarding form tem de estar preenchido antes de gerar o audit; verifica-se também se as Live Tools (Data for SEO) estão a funcionar.",
+            "Primeiro audit de um cliente novo: profundidade «All» + focus «Everything». Os comentários servem para sinalizar contexto que não está no onboarding.",
+            "O overview vem em inglês — usa-se «Adjust Result» para o reescrever em português de Portugal.",
+          ],
+        },
+        {
+          id: "seo-audit-2",
+          title: "Website SEO Audit para boas práticas de SEO — Parte 2",
+          description:
+            "Continuação da auditoria na app. Consultor por atribuir.",
+        },
+        {
+          id: "seo-screamingfrog",
+          title: "ScreamingFrog",
+          description:
+            "O crawler de secretária: o que se vê nele que a app não mostra, e como se lê o resultado.",
+          presenter: "Fran R",
+        },
+        {
+          id: "seo-kw-1",
+          title: "Keyword Research │ Parte 1",
+          description:
+            "A keyword research na app: o que lê do onboarding form, o que se acrescenta, e como se validam as sugestões no Semrush.",
+          presenter: "João B",
+          videoUrl: "https://youtu.be/Z8OSZPVtHPE",
+          keyPoints: [
+            "Overall SEO > Keyword Research lê o onboarding form; em «Comments or Additions» acrescenta-se o que surgiu depois, em conversas com o cliente.",
+            "Cada sugestão do Claude passa pelo Semrush (volume real, dificuldade, localização); selecionam-se 30 a 40 antes da revisão final, para chegar às 25.",
+            "Nos projetos com garantia entram 5-6 quick wins (top 8-15). Aprovar envia para a Pending Review do cliente; o documento guarda-se sempre.",
+          ],
+        },
+        {
+          id: "seo-kw-2",
+          title: "Keyword Research │ Parte 2",
+          description:
+            "Quantas keywords por tipo de projeto, como se preenche o foco e o geotarget, e o que acontece depois da aprovação do cliente.",
+          presenter: "André Pereira",
+          videoUrl: "https://youtu.be/iBw6ZmZSZ4M",
+          keyPoints: [
+            "Keywords de foco por tipo de projeto: Light 15 · Core 20 · Growth 25 — alinhado com as horas de cada projeto.",
+            "Reforça-se o que o cliente pediu no Additional Focus, define-se o Geotarget e mantêm-se todas as intenções de pesquisa ativas.",
+            "Depois da aprovação do cliente: selecionar as keywords e «Send it to Track». A seleção revisita-se ao longo do contrato.",
+          ],
+        },
+        {
+          id: "seo-kw-3",
+          title: "Keyword Research │ Parte 3 — Semrush para a keyword research",
+          description:
+            "As três ferramentas do Semrush que servem a keyword research e o que se lê em cada uma.",
+          presenter: "André Pereira",
+          videoUrl: "https://youtu.be/-Y_232vvfhQ",
+          keyPoints: [
+            "Antes de olhar para dados, define-se o país do cliente no Semrush.",
+            "Domain Overview → Organic Rankings > Positions mostra o histórico; filtrar posições 11-20 revela quick wins; a estrela de quatro pontas marca respostas em IA.",
+            "Keyword Magic Tool com Phrase Match dá long tail com intenção clara. As três ferramentas: Keyword Magic Tool, Domain Overview e Organic Rankings.",
+          ],
+        },
+      ]),
+      quiz: quizFor("seo-04-auditoria", "Quiz — Auditoria e keyword research"),
+    },
+
+    // -----------------------------------------------------------------------
+    // 5 · Roadmap e Onboarding de Cliente Novo
+    // -----------------------------------------------------------------------
+    {
+      id: "seo-05-roadmap",
+      title: "Roadmap e Onboarding de Cliente Novo",
+      description:
+        "Transformar auditoria e research num roadmap, preparar e conduzir a onboarding call, e deixar o cliente configurado (Searchable, GA4).",
+      order: 5,
+      section: null,
+      lessons: lessons([
+        {
+          id: "seo-cd-roadmap",
+          title: "Como fazer um SEO Roadmap inicial e checklists",
+          description:
+            "O roadmap inicial de uma conta nova e as checklists que garantem que nada do essencial fica por fazer nas primeiras semanas. Tem documentos a anexar por baixo do vídeo.",
+          presenter: "André",
+          videoUrl: "https://youtu.be/zdL3DcOkpCM",
+          keyPoints: [
+            "Todos os projetos têm um projeto no Claude da empresa (seo@wonder-ads.com) com o onboarding form em memória e os DO's, DONT's e NOTES preenchidos.",
+            "Um roadmap com qualidade leva no mínimo 2 horas, está pronto 24 horas antes da reunião e segue para aprovação de um superior ou colega.",
+            "Quick wins primeiro (páginas existentes, GMB, técnico); o roadmap de GEO não é opcional; o roadmap muda com o projeto.",
+          ],
+        },
+        {
+          id: "seo-m4-a1",
+          title:
+            "Como fazer uma primeira reunião de parceria (onboarding) e gerir expectativas de timings/aprovações",
+          description:
+            "O que trazer para a reunião de onboarding de um cliente, como se conduz a primeira reunião de parceria e como se deixam alinhados desde o dia 1 os prazos de aprovação que dependem dele.",
+          presenter: "André",
+          videoUrl: "https://youtu.be/IUoZxz4RRg0",
+          attachments: [
+            {
+              label: "Guidelines Pré-Onboarding Call │ WonderAds SEO/GEO DPT",
+              url: "https://docs.google.com/document/d/1tA3u3ir4N1hKYRwwi1MrIdj4dZVM5qcFtkoyxIDddO8/edit?usp=sharing",
+            },
+          ],
+          keyPoints: [
+            "Materiais prontos para rever na reunião: Do's/Dont's/Notes, Site Audit, Keyword Research e Roadmap Client — nada fica para «o primeiro mês».",
+            "Acessos a pedir e registar na app: site, GMB, GA4, GSC e fotos/materiais. Pedem-se antes, não durante.",
+            "Protocolos a dizer sem falta: WhatsApp ativo, aprovações pelo menos semanais, Weekly Updates à sexta-feira, Monthly Report + pelo menos uma call por mês.",
+          ],
+        },
+        {
+          id: "seo-m4-a2",
+          title:
+            "Actual Call: Onboarding call de um cliente novo por um consultor",
+          description:
+            "Gravação real de uma reunião de onboarding com um cliente novo, do início ao fim.",
+          type: "call_real",
+          presenter: "André",
+          videoUrl: "https://youtu.be/T97p9o6m9JE",
+          keyPoints: [
+            "Começa-se pelo negócio do cliente, nunca pelo SEO: o que vende, a quem, e o que é uma lead boa para ele.",
+            "Alinha-se expectativa de tempo logo no dia 1 — SEO tem curva, e é melhor dizê-lo antes de o cliente perguntar.",
+            "A reunião fecha com próximos passos datados e com quem faz o quê.",
+          ],
+        },
+        {
+          id: "seo-searchable-setup",
+          title:
+            "Como dar setup de um cliente novo no searchable.com (Searchable Parte 1)",
+          description:
+            "O setup do Searchable para um cliente novo: os campos obrigatórios, a ordem certa e o que acontece quando fica mal feito.",
+          presenter: "André",
+          videoUrl: "https://youtu.be/kzbSFY35bUk",
+          keyPoints: [
+            "Campos obrigatórios: Tom de Voz, Memória, Onboarding Form carregado, Competidores e Zona Regional do negócio.",
+            "Sem onboarding form não há setup; os competidores validam-se com o cliente antes de guardar.",
+            "O Searchable é obrigatório em todos os projetos — mal configurado, o output falha no tom, nos concorrentes e na região.",
+          ],
         },
         {
           id: "seo-cd-ga4",
@@ -769,9 +816,434 @@ const SEO_TRACK: TrainingTrack = {
           description:
             "Os eventos que têm de existir no GA4 para o relatório mensal contar leads a sério — como se criam e como se confirma que disparam.",
           presenter: "André",
+          videoUrl: "https://youtu.be/7SX3As-Uwy8",
         },
       ]),
-      quiz: quizFor("seo-cd-4", "Quiz — Técnico e tracking"),
+      quiz: quizFor("seo-05-roadmap", "Quiz — Roadmap e onboarding"),
+    },
+
+    // -----------------------------------------------------------------------
+    // 6 · On-Page SEO
+    // -----------------------------------------------------------------------
+    {
+      id: "seo-06-onpage",
+      title: "On-Page SEO",
+      description:
+        "Otimizar uma página existente ponto a ponto com as actions da app WonderAds.",
+      order: 6,
+      section: null,
+      lessons: lessons([
+        {
+          id: "seo-header-tags",
+          title:
+            "Header Tags — Como estruturar H1/H2/H3 e gerar com a action da app",
+          description:
+            "A hierarquia de headers de uma página, os tamanhos certos e a action da app que os gera.",
+          presenter: "Manuel S",
+          videoUrl: "https://youtu.be/rm-xN5LqnJA",
+          keyPoints: [
+            "Um único H1 por página, com keywords, entre 60 e 70 caracteres; nunca se saltam níveis (H2 → H4 não existe).",
+            "H2 com 50-60 caracteres, com ou sem keyword; H3 a H5 diretos ao ponto, 30-40 caracteres.",
+            "A estrutura gera-se com a action da app, não à mão; a extensão Detailed SEO confirma a contagem.",
+          ],
+        },
+        {
+          id: "seo-meta-tags",
+          title: "Meta Titles & Descriptions — boas práticas + action da app",
+          description:
+            "O que são os meta tags, onde vivem, os limites de caracteres e a action da app que os gera para várias páginas de uma vez.",
+          presenter: "Manuel S",
+          videoUrl: "https://youtu.be/DKdcn0N9sWY",
+          keyPoints: [
+            "Meta title até 60 caracteres com a keyword principal no início; meta description entre 150 e 160, com as keywords a rankear.",
+            "Vivem no <head>, não no corpo da página — o Google e o utilizador leem-nos antes de clicar.",
+            "Na app: cliente → click actions → «MetaTitles e MetaDescriptions», URL, n.º de páginas (10/25/50) e focus word.",
+          ],
+        },
+        {
+          id: "seo-alt-text",
+          title:
+            "Image Alt Text — como gerar alt text SEO-friendly + action da app",
+          description:
+            "Para que serve o alt text, como se escreve bem e como se verifica numa página.",
+          presenter: "André Pereira",
+          videoUrl: "https://youtu.be/bl5KVi8IKaA",
+          keyPoints: [
+            "O alt text não é visível: serve acessibilidade, Google Imagens e contexto da imagem para o Google.",
+            "Descreve a imagem com a keyword quando faz sentido — nunca só a keyword, nunca forçada em imagens decorativas.",
+            "Verifica-se com botão direito → Inspecionar → atributo alt.",
+          ],
+        },
+        {
+          id: "seo-internal-linking",
+          title:
+            "Internal Linking — estratégia de linking interno + action da app",
+          description:
+            "O que é um link interno, para que serve e como se decide o que ligar a quê numa página de serviço.",
+          presenter: "André Pereira",
+          videoUrl: "https://youtu.be/1ku2t6Sp5sQ",
+          keyPoints: [
+            "Link interno = link entre páginas do mesmo site; distribui autoridade, ajuda os bots a ler o site e o utilizador a navegar.",
+            "Liga-se a serviços relacionados e à página de agendamento, em botão ou dentro do texto — não a políticas de privacidade.",
+            "Não substitui backlinks e não é só da homepage para dentro.",
+          ],
+        },
+        {
+          id: "seo-schema",
+          title: "Schema Markup com boas práticas SEO",
+          description:
+            "O bloco JSON-LD que descreve a página aos motores de busca e aos sistemas de IA: para que serve, como se gera na app, onde se cola e como se valida.",
+          presenter: "Fran R",
+          videoUrl: "https://youtu.be/uvW5_gObUN4",
+          keyPoints: [
+            "JSON-LD invisível ao utilizador: resultados enriquecidos, definir a entidade e ser lido por sistemas de IA.",
+            "Regra de ouro: só descreve o que está visível na página. Na app o default é «auto @graph»; Market e Language ficam em Autodetected.",
+            "Cola-se no widget HTML (nunca no editor de texto) e valida-se com Rich Results Test E Schema Markup Validator.",
+          ],
+        },
+      ]),
+      quiz: quizFor("seo-06-onpage", "Quiz — On-Page SEO"),
+    },
+
+    // -----------------------------------------------------------------------
+    // 7 · Estratégia de Conteúdo
+    // -----------------------------------------------------------------------
+    {
+      id: "seo-07-estrategia",
+      title: "Estratégia de Conteúdo",
+      description:
+        "Decidir o que escrever e quando, com base em dados (Searchable, Content Gap, Content Calendar).",
+      order: 7,
+      section: null,
+      lessons: lessons([
+        {
+          id: "seo-searchable-topics",
+          title:
+            "Como encontrar tópicos e prompts atualizados para dar target num cliente (Searchable Parte 2)",
+          description:
+            "Usar o Searchable para encontrar tópicos e prompts relevantes para as target keywords do cliente — e o que fazer com eles.",
+          presenter: "André",
+          videoUrl: "https://youtu.be/8POIya1_KtI",
+          keyPoints: [
+            "Seed Keywords no Searchable dá prompts para artigos, FAQs, landing pages e blocos de conteúdo.",
+            "O setup faz-se nos primeiros dias do cliente, em todos os projetos; os prompts validam-se com o cliente.",
+            "Se o Searchable atingir o limite, pergunta-se à equipa se é geral e passa-se ao André.",
+          ],
+        },
+        {
+          id: "seo-content-gap",
+          title:
+            "Content Gap Analysis — identificar gaps vs concorrência e transformar em backlog editorial",
+          description:
+            "O que os concorrentes têm no site e o cliente não tem — como se gera a análise na app e como se transforma em plano de conteúdo.",
+          presenter: "João B",
+          videoUrl: "https://youtu.be/lTg5D-zgnIA",
+          keyPoints: [
+            "Antes de gerar, os Do's, Dont's e Notes têm de estar preenchidos; na app: Departamento SEO > On-Page SEO > Content Gap Analysis.",
+            "Dos tópicos devolvidos escolhem-se os que chamam a atenção, analisa-se a página do concorrente e lança-se algo 10x melhor.",
+            "Equilíbrio entre transacional, informacional, navegacional e local; o report analisado vai ao cliente para aprovação.",
+          ],
+        },
+        {
+          id: "seo-content-calendar",
+          title:
+            "Content Calendar — como construir um calendário de postagens GMB/Blog",
+          description:
+            "Planear a postagem de conteúdo (blog e GMB) ao longo do tempo na app: frequência, dias e o que se faz com o output.",
+          presenter: "João B",
+          videoUrl: "https://youtu.be/7mxDOE8f4BI",
+          keyPoints: [
+            "Do's, Dont's e Notes primeiro; depois timeframe (1, 3 ou 6 meses), temas cluster e frequência.",
+            "Site sem conteúdo: pelo menos bi-weekly; cliente com centenas de posts e foco em qualidade: monthly. Dias constantes.",
+            "Revê-se o output à mão, envia-se para approval via docs e, aprovado, criam-se tasks específicas no roadmap.",
+          ],
+        },
+      ]),
+      quiz: quizFor("seo-07-estrategia", "Quiz — Estratégia de conteúdo"),
+    },
+
+    // -----------------------------------------------------------------------
+    // 8 · Produção e Otimização de Conteúdo
+    // -----------------------------------------------------------------------
+    {
+      id: "seo-08-conteudo",
+      title: "Produção e Otimização de Conteúdo",
+      description:
+        "Escrever, publicar e renovar conteúdo com qualidade SEO/GEO usando a app.",
+      order: 8,
+      section: null,
+      lessons: lessons([
+        {
+          id: "seo-cd-artigo",
+          title:
+            "Como criar um artigo otimizado SEO-wise na APP Central da WonderAds — Parte 1 (APP)",
+          description:
+            "Da intenção de pesquisa ao artigo gerado na app: keyword primária, secundárias, word count, links internos e CTA.",
+          presenter: "André",
+          videoUrl: "https://youtu.be/-bdNcJ-lJJo",
+          keyPoints: [
+            "Quick Actions > Write Blog Article: o tópico é a keyword primária; secundárias uma por linha, escolhidas das target keywords do projeto.",
+            "Word count decide-se pelo que já está rankeado — não são sempre 1.200 palavras. Internal links e CTA são responsabilidade do consultor.",
+            "Depois de gerar: transformar em HTML e reforçar os pontos de SEO antes de sair.",
+          ],
+        },
+        {
+          id: "seo-publicar-html",
+          title:
+            "Como publicar os artigos blog da app e páginas SEO em HTML (UX 10/10) — Parte 2",
+          description:
+            "Como se publica o artigo em HTML com a UX certa — assinatura, CTA, FAQs e links. Ficheiros e copy box a anexar por baixo do vídeo.",
+          presenter: "André",
+          videoUrl: "https://youtu.be/6B_u_9zBqvY",
+          keyPoints: [
+            "Todos os artigos levam assinatura, CTA, FAQs com schema e internal linking.",
+            "As target keywords ficam em negrito.",
+            "Assina a maior referência do cliente/clínica.",
+          ],
+        },
+        {
+          id: "seo-faq",
+          title: "FAQ Section Generator — como criar FAQ com Google e IA",
+          description:
+            "De onde vêm as perguntas de um FAQ, como se escolhem as melhores com o Claude e como se implementam na página.",
+          presenter: "Fran R",
+          videoUrl: "https://youtu.be/lLGlEIKMKV4",
+          keyPoints: [
+            "As perguntas vêm de dados (People Also Ask do Google, GSC, People Also Asked, atendimento do cliente), nunca da nossa cabeça.",
+            "A resposta vem sempre no início — é isso que os AIs leem. Perguntas em H3, respostas em texto normal.",
+            "O Claude tira as já respondidas, junta duplicadas e devolve as 6 melhores; as respostas completam-se com dados reais (preço, duração, processo).",
+          ],
+        },
+        {
+          id: "seo-content-refresh",
+          title:
+            "Content Refresh — como otimizar e renovar páginas existentes do site do cliente",
+          description:
+            "Porque é que refrescar uma página costuma render mais do que criar uma nova, o que se avalia e como se faz a análise do concorrente antes do Claude.",
+          presenter: "Manuel S",
+          videoUrl: "https://youtu.be/q322H3Eq81w",
+          keyPoints: [
+            "Refrescar uma página existente costuma render mais do que criar do zero; é processo contínuo, no roadmap.",
+            "Pilares: links internos quebrados, meta tags, conteúdo parado sem keywords, páginas de serviços em falta ou a mais. Serviço bem otimizado: 1.200 a 2.000 palavras.",
+            "Análise manual do concorrente primeiro (keywords, blocos, imagens, FAQs) antes de pedir ao Claude; o conteúdo vai para doc live e Pending Review.",
+          ],
+        },
+      ]),
+      quiz: quizFor("seo-08-conteudo", "Quiz — Produção de conteúdo"),
+    },
+
+    // -----------------------------------------------------------------------
+    // 9 · Local SEO — Google Business Profile
+    // -----------------------------------------------------------------------
+    {
+      id: "seo-09-local",
+      title: "Local SEO — Google Business Profile",
+      description:
+        "Auditar, alimentar e gerir a reputação do perfil GMB de um cliente.",
+      order: 9,
+      section: null,
+      lessons: lessons([
+        {
+          id: "seo-gmb-audit",
+          title:
+            "GMB Profile Audit — checklist completa (categorias, NAP, fotos, produtos, atributos, Q&A)",
+          description:
+            "A auditoria ao perfil de Google Business na app e o que se faz com o que ela devolve.",
+          presenter: "João B",
+          videoUrl: "https://youtu.be/yj8N3apW6hg",
+          keyPoints: [
+            "O report pede o link de partilha do perfil e notas sobre o estado atual.",
+            "NAP = Nome, Morada e Telefone iguais, carácter a carácter, no GMB e na página da loja no site.",
+            "Até 9 categorias secundárias com keywords do projeto; a execução (site + GMB + calendário) é do consultor.",
+          ],
+        },
+        {
+          id: "seo-gmb-posts",
+          title:
+            "Criar GMB Posts — o que é, para que serve, que fotos usar, e se o cliente não tiver fotos",
+          description:
+            "O que é um GMB post, que imagens e textos leva, e o que se faz quando o cliente não tem fotos.",
+          presenter: "Manuel S",
+          videoUrl: "https://youtu.be/IEPBz1JbXh8",
+          keyPoints: [
+            "Imagens de qualidade do cliente em primeiro lugar; nunca geradas por defeito com ChatGPT.",
+            "Todos os textos adaptados com target keywords.",
+            "Cliente sem imagens: fala-se com a equipa e o team leader sobre um cross-sell de sessão fotográfica.",
+          ],
+        },
+        {
+          id: "seo-gmb-publicar",
+          title: "Publicar um GMB Post no GMB Profile",
+          description:
+            "Publicar o post no perfil de Google Business do cliente, passo a passo.",
+          presenter: "André",
+          videoUrl: "https://youtu.be/qO-XAuRbl_E",
+        },
+        {
+          id: "seo-gmb-reviews",
+          title:
+            "GMB Reviews Responder — como responder a reviews positivas e negativas + action para drafts",
+          description:
+            "Prazos, tamanhos e tom das respostas a reviews, e a action da app que gera os rascunhos.",
+          presenter: "André Pereira",
+          videoUrl: "https://youtu.be/GzmUAU36CCI",
+          keyPoints: [
+            "Negativa: menos de 24 horas, até 100 palavras, sem detalhes do caso em público — direciona-se para contacto particular.",
+            "Positiva: 24 a 48 horas, 40 a 60 palavras, específica; 5 estrelas sem texto pode ser mais simples.",
+            "Cada resposta é diferente, com keywords quando faz sentido, e passa pela aprovação do cliente.",
+          ],
+        },
+      ]),
+      quiz: quizFor("seo-09-local", "Quiz — Local SEO"),
+    },
+
+    // -----------------------------------------------------------------------
+    // 10 · Off-Page SEO — Backlinks
+    // -----------------------------------------------------------------------
+    {
+      id: "seo-10-backlinks",
+      title: "Off-Page SEO — Backlinks",
+      description:
+        "Perceber o que é um bom backlink, criar backlinks, analisar a concorrência e corrigir links quebrados.",
+      order: 10,
+      section: null,
+      lessons: lessons([
+        {
+          id: "seo-backlinks-1",
+          title: "Como fazer a gestão de backlinks — Parte 1",
+          description:
+            "O que é um backlink, o que distingue um bom de um mau, e o que prejudica mesmo o SEO do cliente.",
+          presenter: "André",
+          videoUrl: "https://youtu.be/9PylOS6OZFY",
+          keyPoints: [
+            "Backlink = link de um site externo para o site do cliente. Mais não é sempre melhor; comprar em massa é o mais prejudicial.",
+            "Vale a relevância temática + tráfego real + perfil do site, não só o DA/DR.",
+            "Anchor text sempre igual não ajuda — varia-se.",
+          ],
+        },
+        {
+          id: "seo-backlinks-2",
+          title:
+            "Como fazer a gestão de backlinks e o que são — Parte 2 (call c/ equipa)",
+          description:
+            "Continuação da gestão de backlinks, em call com a equipa.",
+          presenter: "André",
+          videoUrl: "https://youtu.be/1M9MD0hXnRg",
+        },
+        {
+          id: "seo-backlink-doctoralia",
+          title: "Roleplay: Criação de 1 backlink live para um cliente (Doctoralia)",
+          description:
+            "Criação ao vivo de um backlink num diretório clínico, do perfil ao link.",
+          type: "scenario",
+          presenter: "André",
+          videoUrl: "https://youtu.be/Z3LNfnoAhlU",
+          keyPoints: [
+            "Autoridade e relevância decidem onde se cria o backlink.",
+            "Um perfil só é backlink quando tem o website do cliente — sem link não conta.",
+          ],
+        },
+        {
+          id: "seo-backlink-gap",
+          title:
+            "Competitor Backlink Gap — ler o gap vs concorrência e priorizar oportunidades",
+          description:
+            "Encontrar os backlinks que os concorrentes têm e o cliente não, escolher os que valem a pena e gerar o estudo na app.",
+          presenter: "André Pereira",
+          videoUrl: "https://youtu.be/1R86p-A0R8o",
+          keyPoints: [
+            "Concorrentes = onboarding form + Semrush (Domain Overview / Competitive Positioning Map), validados serviço a serviço.",
+            "Milhares de links de um site sem relação temática são comprados — ignoram-se.",
+            "Na app: action Backlink Competitor Gap com concorrentes + tópicos foco; o output organiza por tipo de fonte (imprensa, diretórios, blogs…).",
+          ],
+        },
+        {
+          id: "seo-broken-links",
+          title:
+            "Broken-Link Building — encontrar e resolver links com erros 4xx e links com defeito",
+          description:
+            "Do Site Audit no Ahrefs ao redirect no WordPress: encontrar, agrupar, decidir e confirmar.",
+          presenter: "Fran R",
+          videoUrl: "https://youtu.be/hMicZK0NQRg",
+          keyPoints: [
+            "Site Audit no Ahrefs → filtrar 4xx → exportar CSV → Claude com o sitemap agrupa e sugere destinos; valida-se caso a caso.",
+            "301 é permanente e passa autoridade; 302 não. Nunca tudo para a homepage; sem equivalente, recria-se a página.",
+            "Redirects no plugin Redirection; volta-se a correr o crawl para confirmar (sem cadeias A → B → C) e agenda-se semanalmente.",
+          ],
+        },
+      ]),
+      quiz: quizFor("seo-10-backlinks", "Quiz — Backlinks"),
+    },
+
+    // -----------------------------------------------------------------------
+    // 11 · Crescimento de Conta: Cross-sell, Up-sell e Renovação
+    // -----------------------------------------------------------------------
+    {
+      id: "seo-11-crescimento",
+      title: "Crescimento de Conta: Cross-sell, Up-sell e Renovação",
+      description:
+        "Identificar oportunidades de crescimento no cliente, registá-las internamente e preparar renovações. Último módulo porque exige domínio de todos os anteriores.",
+      order: 11,
+      section: null,
+      lessons: lessons([
+        {
+          id: "seo-com-upsell",
+          title: "Como encontrar/considerar um up-sell e cross-sell — Parte 1",
+          description:
+            "Quando é que a conta está pronta para mais serviço, como se identifica a necessidade real e como se juntam os argumentos.",
+          presenter: "André",
+          videoUrl: "https://youtu.be/EKLoRs7oUk4",
+          keyPoints: [
+            "Fase 1: perceber se há oportunidades — a falar com o cliente E a visitar o site (tempo na página, bounce rate).",
+            "Juntam-se argumentos que falem ao dono: faturação perdida, concorrentes com sites melhores, análise de como a concorrência faz esse serviço.",
+            "A WonderAds vende internamente CRM, Web Design, Email Marketing, META Ads e sessões fotográficas.",
+          ],
+        },
+        {
+          id: "seo-com-upsell-rp",
+          title:
+            "Roleplay: Como considerar um up-sell ou cross-sell para web design de site completo — Parte 2",
+          description:
+            "Roleplay da conversa de cross-sell para um site novo, com as objeções que aparecem sempre.",
+          type: "scenario",
+          presenter: "André",
+          videoUrl: "https://youtu.be/IwNmucpVg0Y",
+        },
+        {
+          id: "seo-registar-cross",
+          title:
+            "Como registar um cross-sell ou uma proposta de renovação internamente",
+          description:
+            "Onde e como se regista internamente uma oportunidade de cross-sell ou uma proposta de renovação.",
+          presenter: "André",
+          videoUrl: "https://youtu.be/AGqu9w37GOU",
+        },
+        {
+          id: "seo-renovacao",
+          title:
+            "Protocolo de preparar uma renovação (5% de comissão ao consultor por renovação ganha)",
+          description:
+            "O que se leva à reunião de renovação: o documento de 7 pontos dos últimos 6 meses, a proposta de roadmap para os próximos 6 e as plataformas abertas.",
+          presenter: "André",
+          videoUrl: "https://youtu.be/WuR4iMTerBo",
+          attachments: [
+            {
+              label: "HDS Learning — Renewal Review (exemplo)",
+              url: "https://docs.google.com/document/d/1LDYepNTQ8Q3L6bm2Ij-g6DQvsmjmcNvc/edit",
+            },
+            {
+              label: "HDS Roadmap — 6 meses (exemplo)",
+              url: "https://docs.google.com/document/d/1hyo9_2hBHnnL8IIrGSN-a_47vGKUTLYn/edit?usp=sharing",
+            },
+          ],
+          keyPoints: [
+            "Leva-se à reunião o documento de 7 pontos dos últimos 6 meses, a proposta de roadmap para os próximos 6 e as abas de analytics abertas.",
+            "O documento: resumo executivo, keywords e Authority Score, GA/GSC, AI Visibility (Searchable), GMB, próximos passos e sources.",
+            "A conversa é sobre como correram os 6 meses e o que propomos para os próximos 6.",
+          ],
+        },
+      ]),
+      quiz: quizFor("seo-11-crescimento", "Quiz — Crescimento de conta"),
     },
   ],
 };
@@ -1325,6 +1797,8 @@ function normalizeQuestion(raw: unknown, i: number): TrainingQuestion | null {
   // Uma pergunta de escolha sem opções — ou sem nenhuma correta — não é
   // corrigível; descartá-la é melhor do que deixá-la reprovar toda a gente.
   if (type !== "open_text" && !options.some((op) => op.isCorrect)) return null;
+  const lessonId = str(o.lessonId).trim();
+  const needsReview = bool(o.needsReview);
   return {
     id: str(o.id) || `q-${i + 1}`,
     prompt,
@@ -1333,6 +1807,11 @@ function normalizeQuestion(raw: unknown, i: number): TrainingQuestion | null {
     points: Math.max(1, num(o.points, 1)),
     options,
     explanation: typeof o.explanation === "string" ? o.explanation : null,
+    ...(lessonId ? { lessonId } : {}),
+    // Confirmada → a nota vai com ela; não há razão para a guardar.
+    ...(needsReview
+      ? { needsReview: true, reviewNote: str(o.reviewNote).trim() || null }
+      : {}),
   };
 }
 
@@ -1354,6 +1833,15 @@ function normalizeQuiz(raw: unknown, moduleId: string): TrainingQuiz {
   };
 }
 
+function normalizeAttachment(raw: unknown): TrainingAttachment | null {
+  if (!raw || typeof raw !== "object") return null;
+  const o = raw as Record<string, unknown>;
+  const url = str(o.url).trim();
+  if (!url) return null;
+  // Sem rótulo, o URL serve de rótulo — um anexo sem link é que não é anexo.
+  return { label: str(o.label).trim() || url, url };
+}
+
 function normalizeLesson(raw: unknown, i: number): TrainingLesson | null {
   if (!raw || typeof raw !== "object") return null;
   const o = raw as Record<string, unknown>;
@@ -1370,6 +1858,9 @@ function normalizeLesson(raw: unknown, i: number): TrainingLesson | null {
     ? (o.videoProvider as VideoProvider)
     : null;
   const est = o.estMinutes;
+  const attachments = (Array.isArray(o.attachments) ? o.attachments : [])
+    .map(normalizeAttachment)
+    .filter((x): x is TrainingAttachment => x !== null);
   return {
     id,
     title,
@@ -1385,6 +1876,7 @@ function normalizeLesson(raw: unknown, i: number): TrainingLesson | null {
     keyPoints: (Array.isArray(o.keyPoints) ? o.keyPoints : [])
       .map((k) => str(k).trim())
       .filter((k) => k.length > 0),
+    ...(attachments.length ? { attachments } : {}),
     isPublished: bool(o.isPublished, true),
   };
 }

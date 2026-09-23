@@ -13,11 +13,13 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
+  AlertTriangle,
   ChevronDown,
   ChevronUp,
   ClipboardCheck,
   Film,
   Loader2,
+  Paperclip,
   Plus,
   RotateCcw,
   Save,
@@ -28,6 +30,7 @@ import {
   LESSON_TYPE_LABEL,
   VIDEO_PROVIDERS,
   detectProvider,
+  type TrainingAttachment,
   type TrainingLesson,
   type TrainingLessonType,
   type TrainingModule,
@@ -251,10 +254,11 @@ export function TrainingCms({
         acc.lessons += m.lessons.length;
         acc.questions += m.quiz.questions.length;
         acc.missing += m.lessons.filter((l) => !l.videoUrl).length;
+        acc.review += m.quiz.questions.filter((q) => q.needsReview).length;
       }
       return acc;
     },
-    { modules: 0, lessons: 0, questions: 0, missing: 0 },
+    { modules: 0, lessons: 0, questions: 0, missing: 0, review: 0 },
   );
 
   return (
@@ -266,6 +270,13 @@ export function TrainingCms({
           aulas · {totals.questions} perguntas
           {totals.missing > 0 && (
             <span className="text-amber-200/70"> · {totals.missing} brevemente</span>
+          )}
+          {totals.review > 0 && (
+            <span className="text-rose-200/80">
+              {" "}
+              · {totals.review} pergunta{totals.review === 1 ? "" : "s"} a
+              confirmar
+            </span>
           )}
         </span>
         {isCustom && (
@@ -418,6 +429,13 @@ export function TrainingCms({
                                     <ClipboardCheck className="h-2.5 w-2.5" />
                                     {mod.quiz.questions.length}
                                   </span>
+                                  {mod.quiz.questions.some((q) => q.needsReview) && (
+                                    <span className="inline-flex items-center gap-1 text-rose-200/80">
+                                      <AlertTriangle className="h-2.5 w-2.5" />
+                                      {mod.quiz.questions.filter((q) => q.needsReview).length}{" "}
+                                      a confirmar
+                                    </span>
+                                  )}
                                   {mod.section && <span>· {mod.section}</span>}
                                 </span>
                               </span>
@@ -779,6 +797,8 @@ function LessonEditor({
               ) : (
                 <span className="text-amber-200/60">sem Remember</span>
               )}
+              {(lesson.attachments?.length ?? 0) > 0 &&
+                ` · ${lesson.attachments!.length} anexo${lesson.attachments!.length === 1 ? "" : "s"}`}
             </span>
           </span>
         </button>
@@ -910,8 +930,74 @@ function LessonEditor({
           <p className="self-center text-[10.5px] text-white/25 sm:text-right">
             id: {lesson.id}
           </p>
+          <div className="sm:col-span-2">
+            <AttachmentsEditor
+              attachments={lesson.attachments ?? []}
+              onChange={(attachments) =>
+                onChange({
+                  attachments: attachments.length ? attachments : undefined,
+                })
+              }
+            />
+          </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/** Anexos da aula — rótulo + link, um por linha. Um caminho relativo
+ *  (/ficheiro.pdf, em public/) descarrega-se; um URL externo abre à parte.
+ *  Linhas sem link caem na normalização do servidor, ao gravar. */
+function AttachmentsEditor({
+  attachments,
+  onChange,
+}: {
+  attachments: TrainingAttachment[];
+  onChange: (next: TrainingAttachment[]) => void;
+}) {
+  return (
+    <div>
+      <span className="mb-1 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-white/40">
+        <Paperclip className="h-3 w-3" />
+        Anexos — por baixo do vídeo
+      </span>
+      <div className="space-y-1.5">
+        {attachments.map((a, i) => (
+          <div key={i} className="flex flex-wrap items-center gap-2 sm:flex-nowrap">
+            <input
+              className={inputCls}
+              placeholder="Rótulo (ex.: Guidelines Pré-Onboarding Call)"
+              value={a.label}
+              onChange={(e) =>
+                onChange(updateAt(attachments, i, { ...a, label: e.target.value }))
+              }
+            />
+            <input
+              className={inputCls}
+              placeholder="https://docs.google.com/… ou /ficheiro.pdf"
+              value={a.url}
+              onChange={(e) =>
+                onChange(updateAt(attachments, i, { ...a, url: e.target.value }))
+              }
+            />
+            <button
+              type="button"
+              title="Remover anexo"
+              onClick={() => onChange(attachments.filter((_, k) => k !== i))}
+              className="shrink-0 rounded-md p-1.5 text-rose-300/70 transition hover:bg-rose-500/15"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        ))}
+      </div>
+      <div className="mt-2">
+        <AddBtn
+          label="Adicionar anexo"
+          onClick={() => onChange([...attachments, { label: "", url: "" }])}
+        />
+      </div>
     </div>
   );
 }
@@ -945,12 +1031,23 @@ function QuestionEditor({
             className={`h-3.5 w-3.5 shrink-0 text-white/30 transition ${open ? "" : "-rotate-90"}`}
           />
           <span className="min-w-0">
-            <span className="block truncate text-[13px] text-white/85">
-              {index + 1}. {question.prompt}
+            <span className="flex min-w-0 items-center gap-2 text-[13px] text-white/85">
+              <span className="truncate">
+                {index + 1}. {question.prompt}
+              </span>
+              {question.needsReview && (
+                <span
+                  title={question.reviewNote ?? "Resposta por confirmar"}
+                  className="inline-flex shrink-0 items-center gap-1 rounded-full border border-rose-400/35 bg-rose-500/12 px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-wide text-rose-200"
+                >
+                  <AlertTriangle className="h-2.5 w-2.5" />a confirmar
+                </span>
+              )}
             </span>
             <span className="block text-[10.5px] text-white/35">
               {question.type} · {question.options.length} opções · {correct}{" "}
               correta(s)
+              {question.lessonId && ` · aula ${question.lessonId}`}
               {correct === 0 && (
                 <span className="text-rose-300">
                   {" "}
@@ -969,6 +1066,33 @@ function QuestionEditor({
       </div>
       {open && (
         <div className="space-y-3 border-t border-white/8 p-3">
+          {/* «A confirmar» — o documento de origem não tinha resposta marcada
+              e o seed assumiu a mais provável. Confirmar é um clique; a nota
+              diz o porquê. A pergunta conta para a nota em qualquer dos
+              casos: o badge é um lembrete para o C-Level, não uma quarentena. */}
+          {question.needsReview && (
+            <div className="rounded-lg border border-rose-400/25 bg-rose-500/[0.06] p-3">
+              <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-rose-200">
+                <AlertTriangle className="h-3 w-3" />
+                Resposta por confirmar
+              </p>
+              {question.reviewNote && (
+                <p className="mt-1 text-[12px] leading-relaxed text-white/65">
+                  {question.reviewNote}
+                </p>
+              )}
+              <label className="mt-2 flex items-center gap-2 text-[12px] text-white/75">
+                <input
+                  type="checkbox"
+                  checked={false}
+                  onChange={() =>
+                    onChange({ needsReview: false, reviewNote: null })
+                  }
+                />
+                Confirmo a resposta marcada (retira o aviso ao gravar)
+              </label>
+            </div>
+          )}
           <Labeled label="Enunciado">
             <textarea
               className={inputCls}

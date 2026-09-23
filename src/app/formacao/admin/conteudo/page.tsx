@@ -7,6 +7,7 @@
 
 import Link from "next/link";
 import {
+  AlertTriangle,
   ArrowLeft,
   CheckCircle2,
   ClipboardCheck,
@@ -69,6 +70,22 @@ export default async function ContentChecklistPage() {
     return b[1].pending.length - a[1].pending.length;
   });
 
+  // Perguntas cuja resposta foi assumida (o documento de origem não a tinha
+  // marcada). Vivem no CMS, mas é aqui, na página de produção, que o C-Level
+  // vê de uma vez o que ainda lhe falta confirmar.
+  const toReview = tracks.flatMap((t) =>
+    t.modules.flatMap((m) =>
+      m.quiz.questions
+        .filter((q) => q.needsReview)
+        .map((q) => ({
+          track: t,
+          module: m,
+          question: q,
+          lesson: m.lessons.find((l) => l.id === q.lessonId) ?? null,
+        })),
+    ),
+  );
+
   return (
     <PageShell wide>
       <Link
@@ -93,7 +110,7 @@ export default async function ContentChecklistPage() {
         <TrainingAdminNav />
       </div>
 
-      <section className="animate-fade-up mt-8 grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <section className="animate-fade-up mt-8 grid grid-cols-2 gap-3 lg:grid-cols-5">
         <StatTile
           label="Gravadas"
           value={`${recorded}/${allLessons.length}`}
@@ -121,11 +138,68 @@ export default async function ContentChecklistPage() {
           tone={stats.quizzesMissing > 0 ? "warn" : "good"}
           icon={<ClipboardCheck className="h-3 w-3" />}
         />
+        <StatTile
+          label="Perguntas a confirmar"
+          value={stats.questionsToReview}
+          hint="resposta assumida"
+          tone={stats.questionsToReview > 0 ? "warn" : "good"}
+          icon={<AlertTriangle className="h-3 w-3" />}
+        />
       </section>
 
       <div className="animate-fade-up mt-5">
         <ProgressBar percent={percent} />
       </div>
+
+      {/* Perguntas a confirmar — a lista inteira, com a nota do porquê. A
+          confirmação faz-se no CMS (abre-se a pergunta e marca-se a caixa). */}
+      {toReview.length > 0 && (
+        <section className="animate-fade-up mt-10">
+          <h2 className="mb-3 flex flex-wrap items-center gap-2 text-sm font-semibold uppercase tracking-[0.14em] text-white/55">
+            <AlertTriangle className="h-3.5 w-3.5 text-rose-300" />
+            Perguntas a confirmar
+            <span className="text-[11px] font-medium normal-case tracking-normal text-white/35">
+              {toReview.length} · a resposta marcada é a mais provável, não a
+              confirmada ·{" "}
+              <Link
+                href="/formacao/admin/cms"
+                className="underline decoration-white/25 underline-offset-2 hover:text-white/70"
+              >
+                confirmar no CMS
+              </Link>
+            </span>
+          </h2>
+          <ul className="space-y-2">
+            {toReview.map(({ track, module, question, lesson }) => {
+              const correct = question.options
+                .filter((o) => o.isCorrect)
+                .map((o) => o.text);
+              return (
+                <li
+                  key={question.id}
+                  className="rounded-xl border border-rose-400/20 bg-rose-500/[0.04] px-4 py-3"
+                >
+                  <p className="text-[10.5px] uppercase tracking-wide text-white/35">
+                    {track.name} · {module.title}
+                    {lesson && ` · ${lesson.title}`}
+                  </p>
+                  <p className="mt-1 text-[13px] font-medium text-white/85">
+                    {question.prompt}
+                  </p>
+                  <p className="mt-1 text-[12px] text-emerald-200/80">
+                    Assumida: {correct.join(" · ")}
+                  </p>
+                  {question.reviewNote && (
+                    <p className="mt-1 text-[11.5px] leading-relaxed text-white/50">
+                      {question.reviewNote}
+                    </p>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
 
       {/* Por apresentador */}
       <section className="animate-fade-up mt-10">

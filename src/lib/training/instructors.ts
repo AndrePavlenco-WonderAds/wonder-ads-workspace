@@ -20,6 +20,34 @@ export type TrainingInstructor = {
   objectPosition?: string;
 };
 
+/** Os consultores SEO/GEO que gravaram a Biblioteca 2 (v77.46) — a mesma
+ *  foto do avatar do roster. Declarados antes do elenco porque o objeto
+ *  literal os lê ao carregar o módulo. */
+const SEO_MANUEL: TrainingInstructor = {
+  key: "manuel-s",
+  name: "Manuel Silva",
+  role: "Consultor SEO/GEO",
+  photo: "/team/avatar/manuel-s.jpg",
+};
+const SEO_FRAN: TrainingInstructor = {
+  key: "fran-r",
+  name: "Fran. Rosa",
+  role: "Consultora SEO/GEO",
+  photo: "/team/avatar/fran-r.jpg",
+};
+const SEO_JOAO: TrainingInstructor = {
+  key: "joao-b",
+  name: "João B.",
+  role: "Consultor SEO/GEO",
+  photo: "/team/avatar/joao-b.jpg",
+};
+const SEO_ANDRE_PEREIRA: TrainingInstructor = {
+  key: "andre-pereira",
+  name: "André Pereira",
+  role: "Consultor SEO/GEO",
+  photo: "/team/avatar/andre-pereira.jpg",
+};
+
 /** Elenco conhecido, indexado pelas formas como aparece escrito no catálogo
  *  (sem acentos e em minúsculas — ver `normalizeKey`). */
 const CAST: Record<string, TrainingInstructor> = {
@@ -70,6 +98,16 @@ const CAST: Record<string, TrainingInstructor> = {
     photo: "/team/germano-cunha.jpg",
     objectPosition: "50% 25%",
   },
+  // Consultores SEO/GEO que gravaram a Biblioteca 2 (v77.46). As chaves são as
+  // formas como o documento de especificação os escreve ("Manuel S", "Fran R",
+  // "João B", "André Pereira") mais o nome completo, para o CMS aceitar ambas.
+  "manuel s": SEO_MANUEL,
+  "manuel silva": SEO_MANUEL,
+  "fran r": SEO_FRAN,
+  "fran rosa": SEO_FRAN,
+  "joao b": SEO_JOAO,
+  "joao batista": SEO_JOAO,
+  "andre pereira": SEO_ANDRE_PEREIRA,
 };
 
 /** Sem acentos, sem pontuação final, minúsculas — para que "André", "andre" e

@@ -10,11 +10,64 @@
 // painel diz isso em vez de desaparecer — um espaço vazio anunciado é honesto,
 // um painel que às vezes existe e às vezes não é que confunde.
 
-import { BookMarked, Mic } from "lucide-react";
+import { BookMarked, Download, ExternalLink, Mic, Paperclip } from "lucide-react";
 import {
   initialsOf,
   instructorsForPresenter,
 } from "@/lib/training/instructors";
+import type { TrainingAttachment } from "@/lib/training/catalog";
+
+/** Anexos da aula — documentos, ficheiros e links que o vídeo manda ir buscar
+ *  («anexar por baixo do vídeo»). Um caminho relativo é um ficheiro nosso e
+ *  descarrega-se; um URL externo (Google Docs, etc.) abre noutro separador.
+ *  Sem anexos o painel não existe: ao contrário do Remember, não é um estado
+ *  que valha a pena anunciar. */
+export function LessonAttachments({
+  attachments,
+}: {
+  attachments: TrainingAttachment[];
+}) {
+  if (attachments.length === 0) return null;
+  return (
+    <section className="overflow-hidden rounded-2xl border border-white/[0.07] bg-white/[0.018]">
+      <header className="flex items-center gap-2 border-b border-white/[0.06] px-4 py-3">
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-[#783DF5]/30 bg-[#783DF5]/10 text-[#c3aaff]">
+          <Paperclip className="h-3.5 w-3.5" />
+        </span>
+        <div className="min-w-0">
+          <p className="readout text-white/40">Anexos</p>
+          <p className="text-[10.5px] text-white/30">
+            {attachments.length} {attachments.length === 1 ? "ficheiro" : "ficheiros"}{" "}
+            desta aula
+          </p>
+        </div>
+      </header>
+      <ul className="space-y-1 px-2 py-2">
+        {attachments.map((a) => {
+          const external = /^https?:\/\//i.test(a.url);
+          return (
+            <li key={a.url}>
+              <a
+                href={a.url}
+                target={external ? "_blank" : undefined}
+                rel={external ? "noopener noreferrer" : undefined}
+                download={external ? undefined : true}
+                className="group flex items-center gap-2.5 rounded-lg px-2 py-2 text-[12.5px] text-white/70 transition hover:bg-white/[0.05] hover:text-white"
+              >
+                {external ? (
+                  <ExternalLink className="h-3.5 w-3.5 shrink-0 text-white/35 group-hover:text-[#c3aaff]" />
+                ) : (
+                  <Download className="h-3.5 w-3.5 shrink-0 text-white/35 group-hover:text-[#c3aaff]" />
+                )}
+                <span className="min-w-0 flex-1 leading-snug">{a.label}</span>
+              </a>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
 
 export function LessonKeyPoints({ points }: { points: string[] }) {
   const has = points.length > 0;

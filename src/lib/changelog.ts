@@ -13,6 +13,19 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.46",
+    date: "2026-09-23",
+    title: "Especialização SEO/GEO com a estrutura completa: 11 módulos, 54 aulas, 272 perguntas",
+    highlights: [
+      "**🎓 A Especialização SEO/GEO deixa de ser «em preparação».** Os dois sub-módulos (Comunicação / Client Delivery) dão lugar a **11 módulos** pela ordem em que as coisas acontecem a um consultor novo: Boas-vindas e ferramentas → Reporting e comunicação → Situações com o cliente → Auditoria e keyword research → Roadmap e onboarding → On-Page → Estratégia de conteúdo → Produção de conteúdo → Local SEO (GMB) → Backlinks → Crescimento de conta. **51 das 54 aulas já têm vídeo** (YouTube); as 3 por gravar (Monthly Report e-commerce, Site Audit Parte 2, ScreamingFrog) aparecem como «Brevemente» e não bloqueiam ninguém.",
+      "**📝 272 perguntas de quiz**, uma por módulo, só sobre os vídeos desse módulo — geradas do documento de especificação (docs/formacao/especializacao-seo-geo.md) por um script, para se poderem regenerar. 80% para passar, tentativas ilimitadas, perguntas baralhadas. Os rascunhos antigos de SEO (escritos antes de haver vídeos) saíram.",
+      "**⚠️ «A confirmar».** As 10 perguntas cujo documento original não tinha resposta marcada (Anexo B) entram com a resposta mais provável e um badge no CMS, com a nota do porquê; um checkbox marca-as como confirmadas. Contam para a nota como as outras. A página de Gravações lista-as.",
+      "**📎 Anexos por aula.** As aulas passam a poder ter ficheiros e links por baixo do vídeo (Guidelines Pré-Onboarding, HDS Renewal Review e Roadmap 6 meses, borboleta da assinatura). Editam-se no CMS.",
+      "**👥 Instrutores** Manuel Silva, Fran. Rosa, André Pereira e João B. aparecem com foto e cargo na página de aula. **Remember** preenchido para 40 aulas com os factos que o quiz avalia (prazos, contagens, regras).",
+      "**🔧 Bastidores.** As 20 aulas que já existiam mantêm o id (o progresso já registado continua a contar); cada pergunta guarda a aula que avalia (`lessonId`). O percentual do cartão continua a ser aulas vistas + quizzes passados sobre o total disponível, como nas outras especializações; «X/11 capítulos concluídos» aparece por baixo da fita.",
+    ],
+  },
+  {
     version: "77.45",
     date: "2026-09-21",
     title: "Real Hotels Group sem «Santa Eulália» e o sino deixa de pedir relatórios de meses anteriores ao onboarding",

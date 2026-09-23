@@ -13,6 +13,9 @@
 //  • ESPECIALIZAÇÕES — responsabilidade concreta do departamento e o cuidar
 //    da conta do cliente: o que é entregue, em que prazo, por quem, e o que
 //    fazer quando falha.
+//  • SEO/GEO é a exceção: o banco não é rascunho — são as 272 perguntas do
+//    documento de especificação, escritas sobre os vídeos que já existem.
+//    Vive em `seo-geo-questions.ts` (gerado) e entra aqui por spread.
 //
 // Só se usam tipos auto-corrigíveis (escolha múltipla, múltipla seleção,
 // verdadeiro/falso). Perguntas de resposta aberta existem no modelo e no CMS,
@@ -20,6 +23,7 @@
 // alguém por causa disso seria injusto (o motor trata-as como revisão manual).
 
 import type { TrainingQuestion } from "@/lib/training/catalog";
+import { SEO_GEO_QUESTIONS } from "@/lib/training/seo-geo-questions";
 
 /** Escolha múltipla / múltipla seleção. `opts` = [texto, é correta]. */
 function q(
@@ -390,315 +394,6 @@ const COMUM_M3 = build("comum-m3", [
     "Se o cliente não se queixa, é sinal de que está satisfeito.",
     false,
     "Silêncio não é satisfação — muitas vezes é desinteresse a caminho da saída. Quem cuida da conta procura o sinal em vez de esperar pela queixa.",
-  ),
-]);
-
-// ===========================================================================
-// 2a · SEO/GEO
-// ===========================================================================
-
-const SEO_M1 = build("seo-m1", [
-  mc(
-    "Qual é a responsabilidade central de um consultor SEO sobre a sua carteira?",
-    [
-      ["Garantir que cada conta tem trabalho planeado, executado e comunicado dentro do mês", true],
-      ["Executar as tarefas que o roadmap gera", false],
-      ["Cumprir o número de horas atribuídas a cada cliente", false],
-      ["Responder aos pedidos que os clientes fazem", false],
-    ],
-    "A conta é tua: planear, executar e comunicar. Reagir a pedidos é o mínimo de quem não é dono da conta.",
-  ),
-  vf(
-    "O registo de horas serve só para efeitos internos de pagamento.",
-    false,
-    "Serve sobretudo para saber se a conta é sustentável e onde está a fugir esforço. Sem registo honesto, uma conta a perder dinheiro só se descobre tarde de mais.",
-  ),
-  mc(
-    "O que tem de estar sempre atualizado numa conta de SEO? (escolhe todas)",
-    [
-      ["O roadmap do mês em curso", true],
-      ["O que já foi entregue e o que está pendente do cliente", true],
-      ["As decisões tomadas em reuniões com o cliente", true],
-      ["As palavras-passe pessoais do consultor", false],
-    ],
-    "Estado do plano, do entregue e do combinado. É isto que permite outra pessoa pegar na conta sem perder um dia.",
-  ),
-  mc(
-    "Uma tarefa do roadmap não vai ser feita este mês. O procedimento correto é:",
-    [
-      ["Registar o motivo, repriorizar e comunicar o impacto ao cliente", true],
-      ["Passá-la para o mês seguinte em silêncio", false],
-      ["Substituí-la por outra tarefa equivalente sem registar", false],
-      ["Mantê-la no plano e resolver quando houver tempo", false],
-    ],
-    "Um plano que muda sem registo deixa de ser plano. E um plano que muda sem o cliente saber é uma promessa quebrada em silêncio.",
-  ),
-  vf(
-    "Reuniões-tipo (semanal interna, mensal com cliente) são opcionais quando a conta está a correr bem.",
-    false,
-    "A cadência é o que faz a conta correr bem. Quando se cortam reuniões porque está tudo calmo, o próximo problema é descoberto pelo cliente.",
-  ),
-  mc(
-    "Gestão de tempo numa carteira de vários clientes significa sobretudo:",
-    [
-      ["Proteger blocos para trabalho de fundo, em vez de viver a reagir", true],
-      ["Responder a tudo o que entra, o mais depressa possível", false],
-      ["Distribuir as horas por igual entre todos os clientes", false],
-      ["Concentrar o trabalho na semana do relatório", false],
-    ],
-    "SEO é trabalho de fundo. Uma agenda feita só de reações produz meses cheios de atividade e vazios de resultado.",
-  ),
-]);
-
-const SEO_M2 = build("seo-m2", [
-  mc(
-    "Um cliente ainda não fez o onboarding e não há sessão de estratégia marcada. O que fazes?",
-    [
-      ["Ligas, explicas porque é que o dia 1 ainda não começou e fechas a marcação na chamada", true],
-      ["Envias novo email com o link do onboarding", false],
-      ["Começas o trabalho técnico e deixas o onboarding para depois", false],
-      ["Registas como bloqueio do cliente e aguardas", false],
-    ],
-    "Uma chamada resolve em cinco minutos o que três emails não resolvem em duas semanas. O objetivo é sair da chamada com data marcada.",
-  ),
-  mc(
-    "Ao ligar sobre documentos pendentes na tabela de aprovações, o que não pode faltar? (escolhe todas)",
-    [
-      ["Dizer exatamente o que está pendente e desde quando", true],
-      ["Explicar o que fica bloqueado enquanto não for aprovado", true],
-      ["Sair da chamada com um compromisso de data", true],
-      ["Pedir desculpa por estar a insistir", false],
-    ],
-    "O que está pendente, o que isso trava e quando fica resolvido. Insistir por trabalho parado não é incomodar — é fazer o teu trabalho.",
-  ),
-  vf(
-    "Depois de uma chamada, basta o registo mental do que foi combinado.",
-    false,
-    "O que não fica escrito não existe para a equipa nem para o cliente. Uma chamada fecha-se sempre com um resumo escrito do que foi acordado.",
-  ),
-  mc(
-    "O cliente questiona resultados a meio do mês, fora da reunião mensal. A resposta correta é:",
-    [
-      ["Dar leitura honesta do que se sabe até àquele momento e o que ainda não é conclusivo", true],
-      ["Remeter para a reunião mensal", false],
-      ["Enviar já um relatório completo fora de ciclo", false],
-      ["Apresentar só as métricas que estão a subir", false],
-    ],
-    "Estar disponível não obriga a antecipar o relatório. Obriga a ser honesto sobre o que já se sabe — e sobre o que ainda não se pode concluir.",
-  ),
-  mc(
-    "Para que servem os roleplays de chamadas?",
-    [
-      ["Treinar as conversas difíceis antes de as ter com um cliente real", true],
-      ["Avaliar a performance individual dos consultores", false],
-      ["Criar material de marketing", false],
-      ["Documentar processos para a base de conhecimento", false],
-    ],
-    "As conversas difíceis treinam-se onde o erro não custa a conta.",
-  ),
-  vf(
-    "Um consultor SEO deve saber conduzir uma conversa com o cliente em qualquer momento da parceria, e não apenas nas reuniões mensais.",
-    true,
-    "Onboarding, meio do mês, crise, renovação — a conversa faz parte do serviço tanto como o trabalho técnico.",
-  ),
-  mc(
-    "O cliente pede uma alteração que sabes que vai prejudicar o SEO. O que fazes?",
-    [
-      ["Explicas o risco com dados, propões alternativa e registas a decisão final dele", true],
-      ["Executas — o cliente é que manda", false],
-      ["Recusas executar", false],
-      ["Executas e não registas nada, para evitar atrito", false],
-    ],
-    "O nosso papel é dar a melhor recomendação com evidência. A decisão pode ser do cliente — mas fica registada, para que o resultado se leia à luz dela.",
-  ),
-  mc(
-    "Qual é o objetivo de uma chamada de cobrança de pendentes?",
-    [
-      ["Desbloquear o trabalho, mantendo a relação intacta", true],
-      ["Deixar registado que a culpa do atraso é do cliente", false],
-      ["Reduzir o âmbito do mês para compensar o atraso", false],
-      ["Renegociar prazos contratuais", false],
-    ],
-    "O objetivo é o trabalho andar. Ter razão sobre o atraso não entrega nada a ninguém.",
-  ),
-]);
-
-const SEO_M3 = build("seo-m3", [
-  mc(
-    "Para que serve o conjunto de ferramentas do departamento de SEO?",
-    [
-      ["Fundamentar decisões com dados em vez de opinião", true],
-      ["Acelerar a produção de entregáveis", false],
-      ["Justificar o valor do serviço perante o cliente", false],
-      ["Cumprir requisitos técnicos das plataformas", false],
-    ],
-    "A ferramenta não substitui o critério: dá-lhe base. Uma recomendação sem dados é palpite bem apresentado.",
-  ),
-  vf(
-    "Um output gerado por ferramenta pode ir para o cliente sem revisão do consultor.",
-    false,
-    "Quem assina é o consultor. Tudo o que sai leva revisão — o que a ferramenta poupa é tempo de produção, não responsabilidade.",
-  ),
-  mc(
-    "Ao construir um roadmap, o que determina a prioridade das tarefas? (escolhe todas)",
-    [
-      ["O impacto esperado no objetivo do cliente", true],
-      ["O que está a bloquear resultados agora", true],
-      ["A dependência de terceiros (cliente, web, dev)", true],
-      ["A ordem pela qual as tarefas foram identificadas", false],
-    ],
-    "Impacto, bloqueios e dependências. A ordem de descoberta não tem nada que ver com a ordem de execução.",
-  ),
-  mc(
-    "Um artigo de blog produzido para um cliente deve, antes de mais:",
-    [
-      ["Responder à intenção de pesquisa do termo que quer trabalhar", true],
-      ["Cumprir a contagem de palavras definida", false],
-      ["Mencionar a marca o maior número de vezes possível", false],
-      ["Ser publicado o mais depressa possível", false],
-    ],
-    "Volume e frequência não salvam um artigo que não responde ao que a pessoa foi procurar.",
-  ),
-  vf(
-    "Se uma ferramenta devolve um dado estranho, deve usar-se à mesma — o dado é o dado.",
-    false,
-    "Dados absurdos vão para o cliente como erros teus. Verifica a fonte e cruza antes de usar.",
-  ),
-  mc(
-    "Qual é a diferença entre fazer o trabalho e cuidar da conta?",
-    [
-      ["Cuidar da conta é garantir que o trabalho feito produz o resultado prometido e que o cliente o percebe", true],
-      ["Cuidar da conta é responder mais depressa aos pedidos", false],
-      ["Cuidar da conta é executar mais tarefas por mês", false],
-      ["Não há diferença prática", false],
-    ],
-    "Tarefas executadas não são resultado entregue. E resultado que o cliente não percebe não conta como resultado.",
-  ),
-]);
-
-const SEO_M4 = build("seo-m4", [
-  mc(
-    "O que tem de estar pronto ANTES da reunião de onboarding? (escolhe todas)",
-    [
-      ["Os acessos pedidos e, sempre que possível, já validados", true],
-      ["Uma leitura inicial do negócio e do site do cliente", true],
-      ["A agenda da reunião e o que se vai decidir nela", true],
-      ["O roadmap completo dos 12 meses", false],
-    ],
-    "Acessos, leitura do negócio e agenda. O roadmap fechado antes de ouvir o cliente é um roadmap escrito às cegas.",
-  ),
-  mc(
-    "Qual é o objetivo principal da reunião de onboarding?",
-    [
-      ["Perceber o negócio, alinhar objetivos e fixar o modo de trabalho conjunto", true],
-      ["Explicar detalhadamente a metodologia de SEO", false],
-      ["Recolher os acessos em falta", false],
-      ["Apresentar a equipa da WonderAds", false],
-    ],
-    "Sai-se do onboarding com objetivos alinhados e regras de trabalho claras. A metodologia demonstra-se ao longo dos meses.",
-  ),
-  vf(
-    "O dia 1 de uma parceria conta a partir da assinatura do contrato.",
-    false,
-    "Conta a partir do momento em que há onboarding feito e sessão de estratégia — é aí que o trabalho pode mesmo começar.",
-  ),
-  mc(
-    "Depois da reunião de onboarding, o que é entregue ao cliente?",
-    [
-      ["O resumo do que foi alinhado e o plano dos primeiros passos, com datas", true],
-      ["A auditoria técnica completa", false],
-      ["A lista final de palavras-chave", false],
-      ["O primeiro relatório mensal", false],
-    ],
-    "O cliente sai com alinhamento escrito e próximos passos datados — é isso que transforma uma boa reunião em confiança.",
-  ),
-  mc(
-    "O cliente não fornece um acesso essencial. Como se trata?",
-    [
-      ["Explicas o que fica bloqueado, insistes por chamada e registas o bloqueio", true],
-      ["Avanças com o que é possível e não voltas ao assunto", false],
-      ["Suspendes o trabalho até haver acesso", false],
-      ["Pedes ao cliente que execute ele essa parte", false],
-    ],
-    "Explicar o custo do bloqueio, insistir pelo canal que resolve e deixar registo. Bloqueios que ninguém regista transformam-se em culpa nossa três meses depois.",
-  ),
-  vf(
-    "O pré-onboarding é dispensável quando o cliente já trabalhou com outra agência de SEO.",
-    false,
-    "É ainda mais importante: percebe-se o que foi feito antes, o que correu mal e que expectativas ficaram — bem ou mal — instaladas.",
-  ),
-  mc(
-    "Um cliente novo chega com expectativas irrealistas de prazo. Quando se corrige?",
-    [
-      ["No onboarding, com explicação do que é razoável e porquê", true],
-      ["Ao terceiro mês, se os resultados não chegarem", false],
-      ["Nunca — a expectativa alta mantém o cliente motivado", false],
-      ["Só se o cliente levantar o tema", false],
-    ],
-    "Expectativa mal calibrada no início é conta perdida no quarto mês. Corrige-se cedo, com argumento, não com promessa.",
-  ),
-]);
-
-const SEO_M5 = build("seo-m5", [
-  mc(
-    "O relatório mensal serve sobretudo para:",
-    [
-      ["Ligar o trabalho feito ao resultado do negócio do cliente", true],
-      ["Demonstrar o volume de tarefas executadas", false],
-      ["Cumprir a obrigação contratual de reporting", false],
-      ["Registar as métricas das plataformas", false],
-    ],
-    "Métricas sem leitura são um extrato. O relatório existe para explicar o que aconteceu ao negócio e porquê.",
-  ),
-  mc(
-    "Como se apresenta um mês mau? (escolhe todas)",
-    [
-      ["Dizendo o que caiu e porquê, sem rodeios", true],
-      ["Mostrando o que já está a ser feito para corrigir", true],
-      ["Mantendo a comparação honesta com o período anterior", true],
-      ["Destacando apenas as métricas que subiram", false],
-    ],
-    "Facto, causa, correção. Um mês mau bem apresentado consolida a relação; um mês mau maquilhado destrói-a quando o cliente descobre.",
-  ),
-  vf(
-    "Se o cliente não percebe o relatório, o problema é do cliente.",
-    false,
-    "Um relatório que não é entendido não cumpriu a sua função. A clareza é responsabilidade de quem o faz.",
-  ),
-  mc(
-    "Numa reunião mensal, a maior parte do tempo deve ser gasta a:",
-    [
-      ["Explicar a leitura dos dados e o plano do mês seguinte", true],
-      ["Passar métrica a métrica do relatório", false],
-      ["Recolher pedidos do cliente", false],
-      ["Rever a lista de tarefas executadas", false],
-    ],
-    "Leitura e plano. Ler o relatório em voz alta é desperdiçar a única hora do mês em que o cliente está a olhar para nós.",
-  ),
-  mc(
-    "Uma métrica caiu por um fator externo (sazonalidade, alteração no site do cliente). O que fazes?",
-    [
-      ["Mostras a queda, explicas a causa e o que muda no plano", true],
-      ["Omites, porque não foi responsabilidade nossa", false],
-      ["Mostras sem explicar, para não parecer desculpa", false],
-      ["Compensas com outra métrica positiva", false],
-    ],
-    "Explicar a causa não é desculpar-se — é dar ao cliente a leitura correta. Omitir é que se paga caro na reunião seguinte.",
-  ),
-  vf(
-    "O relatório deve ser preparado no próprio dia da reunião, para ter os dados mais recentes.",
-    false,
-    "Preparar em cima da hora produz erros e leituras superficiais. Os dados fecham-se com margem para haver tempo de pensar no que dizem.",
-  ),
-  mc(
-    "Qual é o sinal de que uma reunião mensal correu bem?",
-    [
-      ["O cliente sabe o que aconteceu, porquê, e o que vai acontecer a seguir", true],
-      ["O cliente não fez perguntas difíceis", false],
-      ["Todas as métricas subiram", false],
-      ["A reunião terminou antes do tempo previsto", false],
-    ],
-    "O critério é o entendimento do cliente, não a ausência de perguntas nem a cor dos gráficos.",
   ),
 ]);
 
@@ -1367,11 +1062,9 @@ export const TRAINING_QUESTIONS: Record<string, TrainingQuestion[]> = {
   "comum-m1": COMUM_M1,
   "comum-m2": COMUM_M2,
   "comum-m3": COMUM_M3,
-  "seo-m1": SEO_M1,
-  "seo-m2": SEO_M2,
-  "seo-m3": SEO_M3,
-  "seo-m4": SEO_M4,
-  "seo-m5": SEO_M5,
+  // Especialização SEO/GEO — 11 módulos, 272 perguntas geradas a partir do
+  // documento de especificação (ver seo-geo-questions.ts).
+  ...SEO_GEO_QUESTIONS,
   "ads-m1": ADS_M1,
   "ads-m2": ADS_M2,
   "ads-m3": ADS_M3,

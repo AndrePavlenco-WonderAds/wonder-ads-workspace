@@ -143,16 +143,24 @@ export function contentStats(tracks: TrainingTrack[]) {
   let missingVideos = 0;
   let unassignedPresenters = 0;
   let quizzesMissing = 0;
+  let questionsToReview = 0;
   for (const t of tracks) {
     for (const m of t.modules) {
       if (m.quiz.questions.length === 0) quizzesMissing += 1;
+      questionsToReview += m.quiz.questions.filter((q) => q.needsReview).length;
       for (const l of m.lessons) {
         if (!l.videoUrl) missingVideos += 1;
         if (!l.presenter) unassignedPresenters += 1;
       }
     }
   }
-  return { missingVideos, unassignedPresenters, quizzesMissing };
+  return {
+    missingVideos,
+    unassignedPresenters,
+    quizzesMissing,
+    /** Perguntas com resposta assumida, ainda por confirmar pelo C-Level. */
+    questionsToReview,
+  };
 }
 
 export async function getTrainingOverview(): Promise<TrainingOverview> {
