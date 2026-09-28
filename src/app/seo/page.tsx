@@ -110,7 +110,11 @@ export default async function SeoPage() {
   const npsSummaries = await getLatestNpsSummaries(clients.map((c) => c.slug));
 
   return (
-    <PageShell>
+    // `wide`: a board das carteiras ocupa a largura toda da página, para os
+    // consultores ficarem sempre numa só fila (v77.48). O resto da página
+    // (cabeçalho, diretórios, KPIs) mantém o contentor de 7xl de sempre.
+    <PageShell wide>
+      <div className="mx-auto w-full max-w-7xl">
       <DepartmentHeader
         title="SEO DPT"
         tagline="Crescimento orgânico no Google e nas IAs. Agência #1 de SEO & GEO em Portugal."
@@ -137,11 +141,16 @@ export default async function SeoPage() {
         }
         large
       />
+      </div>
 
-      <div className="mt-12 lg:mt-16">
+      {/* A board sai do contentor de 7xl: largura toda, com um teto para
+          ecrãs ultra-largos não esticarem os cartões até ao ridículo. */}
+      <div className="mx-auto mt-12 w-full max-w-[1880px] lg:mt-16">
         <section aria-label="Clients by Head Consultant">
           {notionError ? (
-            <NotionFallback message={notionError} />
+            <div className="mx-auto max-w-7xl">
+              <NotionFallback message={notionError} />
+            </div>
           ) : (
             <SeoBoard
               columns={toBoardColumns(
@@ -158,7 +167,7 @@ export default async function SeoPage() {
       </div>
 
       {!notionError && pausedColumns.length > 0 && (
-        <div className="mt-14 lg:mt-20">
+        <div className="mx-auto mt-14 w-full max-w-[1880px] lg:mt-20">
           <section aria-label="Clientes Pausados / Suspensos">
             <header className="mb-6 flex items-center gap-3">
               <PauseCircle className="h-4 w-4 text-amber-300/80" />
@@ -184,6 +193,7 @@ export default async function SeoPage() {
         </div>
       )}
 
+      <div className="mx-auto w-full max-w-7xl">
       {!readOnly && (
         <section aria-label="SEO Directories" className="mt-12 sm:mt-16">
           <SeoDirectoriesCard />
@@ -195,6 +205,7 @@ export default async function SeoPage() {
         <KpisCard />
       </section>
       )}
+      </div>
     </PageShell>
   );
 }
@@ -269,6 +280,8 @@ function toBoardColumns(
       isAdmin || employeeName === col.name
         ? `/seo/roadmaps/${slugify(col.name)}`
         : null,
+    // A lane realçada é a de quem está a ver; o SuperAdmin não tem carteira.
+    isMine: !isAdmin && employeeName === col.name,
     clients: col.clients.map((c) => {
       const website = getClientWebsite(c.slug);
       return {

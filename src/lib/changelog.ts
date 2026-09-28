@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.48",
+    date: "2026-09-28",
+    title: "SEO DPT: a equipa toda numa só fila — lanes por consultor, largura total",
+    highlights: [
+      "**🧭 Uma fila, sempre.** A grelha de 4 colunas mandava o 5.º consultor para uma segunda linha — a Maria ficava por baixo da equipa, não ao lado do João B. A board passa a ser uma **fila de lanes**, uma por consultor, que ocupa a largura toda da página (o cabeçalho, os diretórios e os KPIs mantêm a largura de sempre). Cinco, seis ou sete consultores continuam a ser uma linha; cada lane fica só mais estreita.",
+      "**📌 Cabeçalhos fixos.** Ao descer por uma carteira comprida, o nome de quem é a lane fica colado ao topo, com o n.º de clientes e a média de NPS. A **tua lane** aparece realçada («A tua carteira»); «Por atribuir» é âmbar de propósito.",
+      "**📱 Em ecrãs mais pequenos** (portátil pequeno, tablet, telemóvel) as lanes deslizam na horizontal com snap, e uma faixa de atalhos por cima diz onde estás e salta para cada consultor — nunca mais colunas empilhadas.",
+    ],
+  },
+  {
     version: "77.47.1",
     date: "2026-09-28",
     title: "Maria Assena: Slack ID e data de onboarding da ATN Medical (01/10/2026)",

@@ -73,8 +73,14 @@ export async function PageShell({
     (await getCurrentEmployee().catch(() => null))?.viewerOf,
   );
   return (
+    // `overflow-clip`, não `overflow-hidden` (v77.48): os dois recortam as
+    // manchas do BackgroundDecor da mesma maneira, mas `hidden` faz deste
+    // contentor um «scroll container» e isso prende qualquer `position:
+    // sticky` lá dentro a ele (que nunca rola) em vez de à janela — os
+    // cabeçalhos das lanes do SEO DPT ficavam parados no sítio. `clip` não
+    // cria scroll container nenhum.
     <div
-      className={`relative min-h-screen overflow-hidden bg-[color:var(--background)] text-[color:var(--foreground)] ${
+      className={`relative min-h-screen overflow-clip bg-[color:var(--background)] text-[color:var(--foreground)] ${
         impersonation ? "pb-10" : ""
       }`}
     >
