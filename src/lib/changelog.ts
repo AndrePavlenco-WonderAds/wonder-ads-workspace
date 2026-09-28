@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.49",
+    date: "2026-09-28",
+    title: "SEO DPT: afinações da board — retratos, nomes maiores, mais cor nos cartões, pausados discretos",
+    highlights: [
+      "**👤 Retrato + nome grande no topo de cada lane.** Saiu a linha «Consultor 01/02/…» por cima do nome e saiu o «N clientes» por baixo; fica o retrato do consultor (a inicial para quem ainda não tem foto), o nome em destaque, a média de NPS e o total na bola do canto. Os cabeçalhos **já não são sticky**: ao descer, a lista é que manda.",
+      "**🎨 Mais cor de cliente nos cartões.** Um véu do degradê da marca entra pelo canto superior esquerdo e a mancha de luz do canto oposto ficou mais forte — a Clínica Mimus lê-se rosa, a B-Life azul, a IHN terracota, sem perder a legibilidade do texto.",
+      "**🏥 ATN Medical** com o logótipo certo: o wordmark do cabeçalho de atnmedical.pt (azul sobre branco) em vez do ícone quadrado, que ficava um borrão no chip; paleta de azuis própria.",
+      "**📐 Cabeçalho do SEO DPT à largura toda**, alinhado com as lanes (teto de 1880px). **Pausados / suspensos** muito mais discretos: título pequeno e apagado, lanes compactas com uma linha por cliente em vez de cartões.",
+    ],
+  },
+  {
     version: "77.48",
     date: "2026-09-28",
     title: "SEO DPT: a equipa toda numa só fila — lanes por consultor, largura total",

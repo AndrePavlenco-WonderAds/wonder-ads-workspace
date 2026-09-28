@@ -57,6 +57,9 @@ const PALETTES: Record<string, ClientPalette> = {
     via: "#248430",
     to: "#053266",
   },
+  // atnmedical.pt — os azuis do logótipo (ciano-claro do monograma → azul da
+  // marca #00B2F4 → azul profundo).
+  "atn-medical": { from: "#7FE3FF", via: "#00B2F4", to: "#0B4F8A" },
 };
 
 const DEFAULT_PALETTE: ClientPalette = {

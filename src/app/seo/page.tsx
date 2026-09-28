@@ -30,6 +30,8 @@ import {
   getLogoSizing,
 } from "@/lib/client-meta";
 import { getLogoOverrides } from "@/lib/admin-client-logos-store";
+import { getTeamAvatar } from "@/lib/team-avatars";
+import { findEmployeeByName } from "@/lib/proposals/consultant";
 import { getPausedSlugSet } from "@/lib/admin-paused-clients-store";
 import { getLatestNpsSummaries, type NpsSummary } from "@/lib/nps-store";
 
@@ -110,11 +112,12 @@ export default async function SeoPage() {
   const npsSummaries = await getLatestNpsSummaries(clients.map((c) => c.slug));
 
   return (
-    // `wide`: a board das carteiras ocupa a largura toda da página, para os
-    // consultores ficarem sempre numa só fila (v77.48). O resto da página
-    // (cabeçalho, diretórios, KPIs) mantém o contentor de 7xl de sempre.
+    // `wide`: a página ocupa a largura toda (v77.48), para os consultores
+    // ficarem sempre numa só fila. Na v77.49 o cabeçalho passou a acompanhar
+    // a board (a pedido do André); tudo partilha o mesmo teto de 1880px para
+    // ecrãs ultra-largos não esticarem os cartões até ao ridículo.
     <PageShell wide>
-      <div className="mx-auto w-full max-w-7xl">
+      <div className="mx-auto w-full max-w-[1880px]">
       <DepartmentHeader
         title="SEO DPT"
         tagline="Crescimento orgânico no Google e nas IAs. Agência #1 de SEO & GEO em Portugal."
@@ -166,17 +169,21 @@ export default async function SeoPage() {
         </section>
       </div>
 
+      {/* Pausados / suspensos — discreto de propósito (v77.49): título
+          pequeno e apagado, lanes compactas. Está cá para se saber, não para
+          competir com a carteira ativa. */}
       {!notionError && pausedColumns.length > 0 && (
-        <div className="mx-auto mt-14 w-full max-w-[1880px] lg:mt-20">
+        <div className="mx-auto mt-10 w-full max-w-[1880px] lg:mt-14">
           <section aria-label="Clientes Pausados / Suspensos">
-            <header className="mb-6 flex items-center gap-3">
-              <PauseCircle className="h-4 w-4 text-amber-300/80" />
-              <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-white/60">
+            <header className="mb-3 flex items-center gap-2">
+              <PauseCircle className="h-3 w-3 text-amber-300/50" />
+              <h2 className="text-[10.5px] font-semibold uppercase tracking-[0.2em] text-white/35">
                 Pausados / Suspensos
               </h2>
-              <span className="rounded-full border border-amber-400/25 bg-amber-500/[0.08] px-2.5 py-0.5 text-xs font-medium uppercase tracking-[0.16em] text-amber-200/80">
+              <span className="tabular rounded-full bg-white/[0.05] px-1.5 py-px text-[10px] font-medium text-white/40">
                 {pausedClients.length}
               </span>
+              <span className="h-px flex-1 bg-gradient-to-r from-white/10 to-transparent" />
             </header>
             <SeoBoard
               columns={toBoardColumns(
@@ -193,7 +200,7 @@ export default async function SeoPage() {
         </div>
       )}
 
-      <div className="mx-auto w-full max-w-7xl">
+      <div className="mx-auto w-full max-w-[1880px]">
       {!readOnly && (
         <section aria-label="SEO Directories" className="mt-12 sm:mt-16">
           <SeoDirectoriesCard />
@@ -282,6 +289,9 @@ function toBoardColumns(
         : null,
     // A lane realçada é a de quem está a ver; o SuperAdmin não tem carteira.
     isMine: !isAdmin && employeeName === col.name,
+    // Retrato do consultor (v77.49) — pelo nome da coluna até à credencial e
+    // daí ao ficheiro em public/team/avatar; null → inicial.
+    avatar: getTeamAvatar(findEmployeeByName(col.name)?.username),
     clients: col.clients.map((c) => {
       const website = getClientWebsite(c.slug);
       return {

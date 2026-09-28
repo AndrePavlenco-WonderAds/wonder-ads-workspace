@@ -75,14 +75,30 @@ export function ClientCard({
       }
       className="brand-gradient-border animate-fade-up group relative flex flex-col gap-4 overflow-hidden rounded-2xl bg-white/[0.035] p-5 backdrop-blur-md transition-all duration-500 hover:-translate-y-1 hover:bg-white/[0.06]"
     >
+      {/* A cor do cliente no cartão (v77.49): um véu do degradê da marca a
+          entrar pelo canto superior esquerdo e a esbater-se, mais a mancha
+          de luz do canto oposto, mais forte do que era. A Clínica Mimus fica
+          rosada, a B-Life azul, a IHN terracota — lê-se a carteira pelas
+          cores antes de se ler os nomes. */}
       <div
         aria-hidden
-        className="pointer-events-none absolute -right-12 -top-12 h-32 w-32 rounded-full opacity-15 blur-2xl transition-all duration-500 group-hover:opacity-55"
+        className="pointer-events-none absolute inset-0 opacity-[0.16] transition-opacity duration-500 group-hover:opacity-[0.26]"
+        style={{
+          background: gradient,
+          maskImage:
+            "linear-gradient(155deg, rgba(0,0,0,1) 0%, rgba(0,0,0,0.55) 35%, rgba(0,0,0,0) 72%)",
+          WebkitMaskImage:
+            "linear-gradient(155deg, rgba(0,0,0,1) 0%, rgba(0,0,0,0.55) 35%, rgba(0,0,0,0) 72%)",
+        }}
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -right-14 -top-14 h-40 w-40 rounded-full opacity-35 blur-2xl transition-all duration-500 group-hover:opacity-70"
         style={{ background: gradient, animationDelay: `${index * 0.04}s` }}
       />
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 -bottom-px h-px opacity-50 transition-opacity duration-500 group-hover:opacity-100"
+        className="pointer-events-none absolute inset-x-0 -bottom-px h-px opacity-80 transition-opacity duration-500 group-hover:opacity-100"
         style={{ background: gradient }}
       />
 
