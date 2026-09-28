@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.50",
+    date: "2026-09-28",
+    title: "Tools: toda a equipa atualiza os acessos · Formação: SEO Audit Parte 2 com vídeo",
+    highlights: [
+      "**🔑 O lápis dos cartões das Tools é de toda a equipa.** Quem muda a password de uma ferramenta atualiza-a logo no cartão (username, password, link de login, login com Google), sem ter de pedir a um SuperAdmin. O modal continua a mostrar quem gravou por último e quando.",
+      "**🛡️ O baralho continua do SuperAdmin.** Adicionar e remover apps e «Limpar» um cartão inteiro ficam só para SuperAdmins; os perfis viewer continuam só de leitura. A API verifica as duas regras, não só os botões.",
+      "**🎬 «Website SEO Audit para boas práticas de SEO — Parte 2»** (Capítulo 04) já tem vídeo, apresentado pelo **Manuel Silva**: a auditoria de um cliente novo feita do zero — o site página a página, o Semrush, o PageSpeed e os erros do Screaming Frog — com os pontos-chave por baixo. Sai o «Brevemente».",
+    ],
+  },
+  {
     version: "77.49.3",
     date: "2026-09-28",
     title: "Maria Assena com retrato",

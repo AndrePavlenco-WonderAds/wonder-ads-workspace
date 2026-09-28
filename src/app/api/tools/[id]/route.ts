@@ -2,12 +2,12 @@
 //
 // PUT grava o username + password de uma ferramenta; DELETE limpa-os.
 //
-// DOIS PORTÕES, DE PROPÓSITO. O middleware já exige sessão para
-// /api/tools/* — mas sessão TEM toda a gente, e esta página é de leitura
-// para toda a gente menos os SuperAdmins. O portão que interessa é o
-// isCurrentUserAdmin() daqui: é ele que impede um consultor de trocar a
-// password do SemRush com um `fetch` na consola. Esconder o lápis no
-// cartão é só cortesia.
+// QUEM PODE O QUÊ (v77.50). O PUT é de toda a equipa com sessão: quem
+// muda a password de uma ferramenta atualiza-a logo no cartão, sem ter de
+// pedir a um SuperAdmin — e o cartão guarda quem gravou e quando. Os
+// viewers ficam de fora (só leitura; o middleware já lhes recusa escritas
+// e este portão repete-o). O DELETE — limpar o cartão inteiro — continua
+// só SuperAdmin.
 
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
@@ -23,15 +23,24 @@ import {
 
 export const runtime = "nodejs";
 
-async function guard(id: string): Promise<
+async function guard(
+  id: string,
+  adminOnly: boolean,
+): Promise<
   | { ok: true; by: string }
   | { ok: false; res: NextResponse }
 > {
-  if (!(await isCurrentUserAdmin())) {
+  const me = await getCurrentEmployee();
+  const isAdmin = await isCurrentUserAdmin();
+  if (!me || (adminOnly ? !isAdmin : !isAdmin && me.viewerOf)) {
     return {
       ok: false,
       res: NextResponse.json(
-        { error: "Só os SuperAdmins podem editar acessos." },
+        {
+          error: adminOnly
+            ? "Só os SuperAdmins podem limpar acessos."
+            : "Este perfil é só de leitura.",
+        },
         { status: 403 },
       ),
     };
@@ -54,8 +63,7 @@ async function guard(id: string): Promise<
       ),
     };
   }
-  const me = await getCurrentEmployee();
-  return { ok: true, by: me?.name ?? "SuperAdmin" };
+  return { ok: true, by: me.name };
 }
 
 export async function PUT(
@@ -63,7 +71,7 @@ export async function PUT(
   ctx: { params: Promise<{ id: string }> },
 ) {
   const { id } = await ctx.params;
-  const g = await guard(id);
+  const g = await guard(id, false);
   if (!g.ok) return g.res;
 
   let raw: unknown;
@@ -72,8 +80,8 @@ export async function PUT(
   } catch {
     return NextResponse.json({ error: "JSON inválido" }, { status: 400 });
   }
-  // Um link mal escrito não pode ser engolido em silêncio — o SuperAdmin
-  // gravava «semrush.com/login», o cartão abria o site da ferramenta na
+  // Um link mal escrito não pode ser engolido em silêncio — gravava-se
+  // «semrush.com/login», o cartão abria o site da ferramenta na
   // mesma, e ninguém percebia porquê.
   const rawUrl =
     raw && typeof raw === "object"
@@ -96,7 +104,7 @@ export async function DELETE(
   ctx: { params: Promise<{ id: string }> },
 ) {
   const { id } = await ctx.params;
-  const g = await guard(id);
+  const g = await guard(id, true);
   if (!g.ok) return g.res;
 
   await clearToolAccess(id);

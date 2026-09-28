@@ -687,7 +687,14 @@ const SEO_TRACK: TrainingTrack = {
           id: "seo-audit-2",
           title: "Website SEO Audit para boas práticas de SEO — Parte 2",
           description:
-            "Continuação da auditoria na app. Consultor por atribuir.",
+            "A auditoria de um cliente novo feita à mão, do zero: o site página a página, o Semrush, o PageSpeed e os erros do Screaming Frog.",
+          presenter: "Manuel Silva",
+          videoUrl: "https://youtu.be/HkkHBjwK5Rw",
+          keyPoints: [
+            "Percorre-se o site como um visitante: botões e idiomas a funcionar, headers (um só H1), meta title e meta description em cada página — sobretudo nas de serviços.",
+            "Aponta-se o que baixa a confiança: páginas com designs desiguais, um blog sem nome claro, autores sem página de equipa, uma loja escondida fora do menu.",
+            "Semrush para o retrato geral (AI visibility, authority score, tráfego, keywords, concorrência), PageSpeed para a velocidade e o Screaming Frog para ver os erros do site inteiro de uma vez, ordenados por prioridade.",
+          ],
         },
         {
           id: "seo-screamingfrog",

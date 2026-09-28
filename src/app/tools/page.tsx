@@ -1,11 +1,12 @@
 // Tools — os acessos das ferramentas da agência, num baralho de cartões.
 //
 // Entra toda a gente com sessão (o item «Tools» vive no dropdown do nome,
-// no header) e para quase toda a gente a página é só de leitura: ver o
-// username, revelar a password, copiar. Só os SuperAdmins veem o lápis
-// no canto do cartão e o «Adicionar app» (e podem remover apps no modal
-// de edição) — e a API volta a verificar isso, porque esconder um botão
-// não protege nada.
+// no header). Ver o username, revelar a password, copiar — e, desde a
+// v77.50, o lápis do cartão é de toda a equipa (menos os viewers): quem
+// muda a password de uma ferramenta atualiza-a logo aqui, sem ter de
+// pedir a um SuperAdmin. Adicionar/remover apps e limpar um cartão
+// continuam só SuperAdmin — e a API volta a verificar tudo isto, porque
+// esconder um botão não protege nada.
 
 import { PageShell } from "@/components/page-shell";
 import { getCurrentEmployee, isCurrentUserAdmin } from "@/lib/auth/server";
@@ -28,11 +29,14 @@ export default async function ToolsPage() {
   // O middleware já mandou quem não tem sessão para /login.
   if (!employee) return null;
 
-  const [tools, accesses, canEdit] = await Promise.all([
+  const [tools, accesses, canManage] = await Promise.all([
     listWorkspaceTools(),
     listToolAccesses(),
     isCurrentUserAdmin(),
   ]);
+  // Os viewers são só de leitura em todo o lado — o middleware já lhes
+  // recusa qualquer escrita em /api.
+  const canEdit = canManage || !employee.viewerOf;
 
   const cards: ToolCard[] = tools.map((tool) => ({
     ...tool,
@@ -53,7 +57,7 @@ export default async function ToolsPage() {
         </header>
 
         <section className="mt-6">
-          <ToolsDeck tools={cards} canEdit={canEdit} />
+          <ToolsDeck tools={cards} canEdit={canEdit} canManage={canManage} />
         </section>
       </div>
     </PageShell>

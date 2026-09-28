@@ -6,7 +6,7 @@
 //     cifra em repouso).
 //   - Texto simples. A UI mascara a password com revelar/copiar, e não
 //     existe caminho de leitura público — a página vive atrás do
-//     middleware e a escrita atrás de isCurrentUserAdmin().
+//     middleware e a escrita atrás da sessão (sem viewers; v77.50).
 //
 // UM ÚNICO REGISTO, NÃO UM POR FERRAMENTA. São ~11 ferramentas lidas
 // sempre todas de uma vez (a página mostra o baralho inteiro): um GET de

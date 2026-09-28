@@ -90,9 +90,15 @@ function perViewFor(width: number): number {
 export function ToolsDeck({
   tools,
   canEdit,
+  canManage,
 }: {
   tools: ToolCard[];
+  /** Editar as credenciais de um cartão — toda a equipa menos os viewers
+   *  (v77.50): quem troca a password de uma ferramenta atualiza-a aqui. */
   canEdit: boolean;
+  /** Mexer no baralho (adicionar/remover apps, limpar um cartão) — só
+   *  SuperAdmins. */
+  canManage: boolean;
 }) {
   const [query, setQuery] = useState("");
   const [editing, setEditing] = useState<string | null>(null);
@@ -147,7 +153,7 @@ export function ToolsDeck({
     <div>
       <div className="animate-fade-up flex flex-wrap items-center gap-3">
         <SearchBar ref={inputRef} value={query} onChange={setQuery} />
-        {canEdit && (
+        {canManage && (
           <button
             type="button"
             onClick={() => setAdding(true)}
@@ -177,6 +183,7 @@ export function ToolsDeck({
       {editingTool && (
         <EditAccessModal
           tool={editingTool}
+          canManage={canManage}
           onClose={() => setEditing(null)}
         />
       )}
@@ -479,7 +486,7 @@ function ToolCardView({
   onEdit: () => void;
 }) {
   const { access } = tool;
-  // O SuperAdmin pode apontar o cartão para um link de login específico
+  // Quem edita o acesso pode apontar o cartão para um link de login específico
   // (SSO, painel de agência, convite); sem ele, abre-se a porta da frente.
   const href = access.loginUrl ?? tool.url;
   return (
@@ -750,14 +757,16 @@ function GoogleG({ className }: { className?: string }) {
 }
 
 /* ---------------------------------------------------------------------------
-   Edição (só SuperAdmin)
+   Edição das credenciais (toda a equipa; remover/limpar só SuperAdmin)
    --------------------------------------------------------------------------- */
 
 function EditAccessModal({
   tool,
+  canManage,
   onClose,
 }: {
   tool: ToolCard;
+  canManage: boolean;
   onClose: () => void;
 }) {
   const router = useRouter();
@@ -1010,51 +1019,54 @@ function EditAccessModal({
 
         {/* Remover a app inteira — separado do «Limpar» das credenciais,
             porque um apaga dois campos e o outro tira o cartão a todos. */}
-        <div className="flex items-center gap-3 border-t border-white/8 bg-rose-500/[0.03] px-5 py-3">
-          <p className="min-w-0 flex-1 text-[11px] leading-snug text-white/40">
-            {confirmRemove
-              ? "O cartão e as credenciais saem para toda a equipa."
-              : "Tirar esta app do baralho de toda a equipa."}
-          </p>
-          {confirmRemove ? (
-            <>
+        {canManage && (
+          <div className="flex items-center gap-3 border-t border-white/8 bg-rose-500/[0.03] px-5 py-3">
+            <p className="min-w-0 flex-1 text-[11px] leading-snug text-white/40">
+              {confirmRemove
+                ? "O cartão e as credenciais saem para toda a equipa."
+                : "Tirar esta app do baralho de toda a equipa."}
+            </p>
+            {confirmRemove ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setConfirmRemove(false)}
+                  disabled={busy}
+                  className="shrink-0 rounded-full px-3 py-1.5 text-xs font-medium text-white/55 transition hover:text-white disabled:opacity-60"
+                >
+                  Não
+                </button>
+                <button
+                  type="button"
+                  onClick={removeApp}
+                  disabled={busy}
+                  className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-rose-400/40 bg-rose-500/15 px-3.5 py-1.5 text-xs font-semibold text-rose-100 transition hover:bg-rose-500/25 disabled:opacity-60"
+                >
+                  {removing ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-3.5 w-3.5" />
+                  )}
+                  Remover app
+                </button>
+              </>
+            ) : (
               <button
                 type="button"
-                onClick={() => setConfirmRemove(false)}
+                onClick={() => setConfirmRemove(true)}
                 disabled={busy}
-                className="shrink-0 rounded-full px-3 py-1.5 text-xs font-medium text-white/55 transition hover:text-white disabled:opacity-60"
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-white/12 px-3.5 py-1.5 text-xs font-medium text-white/55 transition hover:border-rose-400/40 hover:text-rose-200 disabled:opacity-60"
               >
-                Não
-              </button>
-              <button
-                type="button"
-                onClick={removeApp}
-                disabled={busy}
-                className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-rose-400/40 bg-rose-500/15 px-3.5 py-1.5 text-xs font-semibold text-rose-100 transition hover:bg-rose-500/25 disabled:opacity-60"
-              >
-                {removing ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <Trash2 className="h-3.5 w-3.5" />
-                )}
+                <Trash2 className="h-3.5 w-3.5" />
                 Remover app
               </button>
-            </>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setConfirmRemove(true)}
-              disabled={busy}
-              className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-white/12 px-3.5 py-1.5 text-xs font-medium text-white/55 transition hover:border-rose-400/40 hover:text-rose-200 disabled:opacity-60"
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-              Remover app
-            </button>
-          )}
-        </div>
+            )}
+          </div>
+        )}
 
         <div className="flex items-center gap-2 border-t border-white/8 px-5 py-4">
-          {(tool.access.username || tool.access.password) &&
+          {canManage &&
+            (tool.access.username || tool.access.password) &&
             (confirmClear ? (
               <button
                 type="button"
