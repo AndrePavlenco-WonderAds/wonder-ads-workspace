@@ -92,6 +92,8 @@ export const DEFAULT_STARTING_DATES: Record<string, string> = {
   "physio-hub": "2026-09-23",
   // v77.44: Real Hotels Group — onboarding a 24/09/2026.
   "real-hotels-group": "2026-09-24",
+  // v77.47.1: ATN Medical (Maria Assena) — onboarding a 01/10/2026.
+  "atn-medical": "2026-10-01",
 };
 
 /** Full agency consultant roster — drives the multi-select dropdown on

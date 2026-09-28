@@ -13,6 +13,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.47.1",
+    date: "2026-09-28",
+    title: "Maria Assena: Slack ID e data de onboarding da ATN Medical (01/10/2026)",
+    highlights: [
+      "**💬 Slack.** O Generate Backlog passa a produzir menções clicáveis à Maria Assena (member ID registado).",
+      "**🏥 ATN Medical** com data de onboarding **01/10/2026**: chip «Onboarded» e a linha do Admin › Clients já a mostram; o lembrete de Monthly Report só pede o primeiro relatório pelo mês de outubro (a 02/11). A data de entrada da Maria fica confirmada a 28/09/2026.",
+    ],
+  },
+  {
     version: "77.47",
     date: "2026-09-28",
     title: "Maria Assena entra na equipa de SEO, com a ATN Medical",

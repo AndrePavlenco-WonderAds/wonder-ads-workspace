@@ -454,6 +454,8 @@ export const SLACK_USER_IDS: Record<string, string> = {
   // no fecho do mês, no último dia.
   alice: "U05PZR0UWAX",
   "andre-pereira": "U0BBED0K6NA",
+  // Maria Assena — dado pelo André (v77.47.1).
+  "maria-a": "U0C4G4976ET",
   mike: "U0ACN1V6Y74",
   gustavo: "U07R9FV85GR",
   renan: "U0AF149CU0P",
