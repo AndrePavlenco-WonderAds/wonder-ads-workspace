@@ -228,9 +228,12 @@ const TEAM_OPTIONS: NpsMultiOption[] = [
     label: { pt: "João Batista", en: "João Batista" },
     photo: "/team/avatar/joao-b.jpg",
   },
-  // Maria Assena — consultora SEO (v77.47). Sem retrato publicado ainda —
-  // cai na inicial.
-  { value: "maria-a", label: { pt: "Maria Assena", en: "Maria Assena" } },
+  // Maria Assena — consultora SEO (v77.47).
+  {
+    value: "maria-a",
+    label: { pt: "Maria Assena", en: "Maria Assena" },
+    photo: "/team/avatar/maria-a.jpg",
+  },
   // Hugo Silva entrou no lugar do Germano Cunha (v77.35). Sem retrato
   // publicado ainda — cai na inicial.
   { value: "hugo-s", label: { pt: "Hugo Silva", en: "Hugo Silva" } },

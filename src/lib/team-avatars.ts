@@ -21,6 +21,7 @@ const AVATARS: Record<string, string> = {
   renan: "/team/avatar/renan.jpg",
   cylas: "/team/avatar/cylas.jpg",
   "manuel-s": "/team/avatar/manuel-s.jpg",
+  "maria-a": "/team/avatar/maria-a.jpg",
 };
 
 /** Caminho do retrato para um username de login, ou null se não há foto. */

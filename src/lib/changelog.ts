@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.49.3",
+    date: "2026-09-28",
+    title: "Maria Assena com retrato",
+    highlights: [
+      "**📸 A Maria Assena já tem foto.** O retrato de estúdio (cortado com a mesma regra dos outros: 3:4, cabeça a 40% da altura) aparece no círculo do header, na lista «Ver como…», no formulário de NPS, na assinatura das propostas e no Pódio comercial. Até aqui caía na inicial.",
+    ],
+  },
+  {
     version: "77.49.2",
     date: "2026-09-28",
     title: "Formação: pacote da assinatura Gmail para download e cartões sem «~12 min»",

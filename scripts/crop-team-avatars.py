@@ -43,6 +43,7 @@ PEOPLE = [
     ("tiago-s", "TiagoSilveira.png", 145, 521, 554),
     ("gustavo", "Gustavo.png", 109, 492, 548),
     ("manuel-s", "ManuelSilva.png", 197, 468, 551),
+    ("maria-a", "MariaAssena.png", 165, 408, 525),
 ]
 
 
