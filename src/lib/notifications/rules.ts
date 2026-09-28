@@ -218,6 +218,27 @@ export function occurrenceAppliesToClient(
   return start.getTime() <= refStart.getTime();
 }
 
+/** Se uma ocorrência cabe a uma PESSOA que entrou em `startedAt` (ISO
+ *  yyyy-mm-dd) — a data de entrada do Team Roster.
+ *
+ *  v77.49.1: a Maria entrou a 28/09 e no mesmo dia tinha três «Enviar os
+ *  Weekly Reports» em aberto — das sextas 11/09, 18/09 e 25/09, semanas em
+ *  que nem cá estava. Nada do que venceu antes do dia 1 de alguém é dívida
+ *  dessa pessoa: o lembrete de sexta passada era de quem tinha a carteira na
+ *  altura. Sem data de entrada não há como saber melhor e a ocorrência
+ *  aplica-se. */
+export function occurrenceAppliesToPerson(
+  occ: NotificationOccurrence,
+  startedAt: string | null,
+): boolean {
+  if (!startedAt) return true;
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(startedAt);
+  if (!m) return true;
+  const start = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  if (Number.isNaN(start.getTime())) return true;
+  return occ.dueAt >= start.getTime();
+}
+
 /** Ocorrências ativas de uma regra à data de `now`, da mais recente para a
  *  mais antiga. Uma ocorrência mensal só existe depois de o dia N ter chegado
  *  — no dia 1 ninguém é avisado de nada. */

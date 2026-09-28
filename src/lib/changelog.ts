@@ -13,6 +13,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.49.1",
+    date: "2026-09-28",
+    title: "Sino: nada anterior à data de entrada de cada pessoa, e viewers sem lembretes",
+    highlights: [
+      "**🔔 Quem entra hoje não deve nada de ontem.** A Maria entrou a 28/09 e tinha logo três «Enviar os Weekly Reports nos grupos» em aberto (sextas 11/09, 18/09 e 25/09). As regras do sino passam a respeitar a **data de entrada do Team Roster**: nenhuma ocorrência vencida antes do dia 1 da pessoa lhe é atribuída — a sexta passada era de quem tinha a carteira na altura. Vale para o próprio sino e para o painel de equipa do C-Level.",
+      "**👓 Viewers fora do sino.** Um perfil só de leitura (a Gabi, SEO Specialty) não tem carteira nem nada que lhe possa ser pedido — deixa de receber lembretes de regra e desaparece do painel de equipa, mesmo tendo «SEO» como departamento.",
+    ],
+  },
+  {
     version: "77.49",
     date: "2026-09-28",
     title: "SEO DPT: afinações da board — retratos, nomes maiores, mais cor nos cartões, pausados discretos",

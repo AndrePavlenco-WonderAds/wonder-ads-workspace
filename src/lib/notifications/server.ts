@@ -25,7 +25,15 @@ import {
   roadmapMonthsElapsed,
   roadmapWeeks,
 } from "@/lib/roadmap-store";
-import { EMPLOYEE_CREDENTIALS, isAdminUsername } from "@/lib/auth/credentials";
+import {
+  EMPLOYEE_CREDENTIALS,
+  findEmployeeByUsername,
+  isAdminUsername,
+} from "@/lib/auth/credentials";
+import {
+  getStartDates,
+  resolveStartDate,
+} from "@/lib/training/start-dates-store";
 import { listTrainingFeedback } from "@/lib/training/feedback-store";
 import { listAbsences } from "@/lib/absences-store";
 import { listReviewItems } from "@/lib/review-store";
@@ -48,6 +56,7 @@ import {
   clientMonthOccurrences,
   notificationId,
   occurrenceAppliesToClient,
+  occurrenceAppliesToPerson,
   occurrencesFor,
   resolveHref,
   type NotificationOccurrence,
@@ -163,16 +172,40 @@ const getSeoStartDates = unstable_cache(
   { revalidate: 1800 },
 );
 
+/** Data de entrada de cada pessoa (override do Team Roster em KV, senão o
+ *  default da credencial) — o chão pessoal das notificações de regra. É uma
+ *  leitura de uma chave só, mas o sino corre em todas as páginas; cinco
+ *  minutos de cache chegam para uma data que muda uma vez na vida. */
+const getEmployeeStartDates = unstable_cache(
+  async () => getStartDates(),
+  ["notifications-employee-start-dates-v1"],
+  { revalidate: 300 },
+);
+
+/** Perfil viewer (só leitura, um departamento): não tem carteira, não envia
+ *  relatórios, não pede NPS — nenhuma regra lhe diz respeito, mesmo que o
+ *  `dept` da credencial coincida com a audiência da regra (v77.49.1: a Gabi,
+ *  SEO Specialty, aparecia no painel de equipa com o lembrete dos Weekly
+ *  Reports). */
+function isViewerProfile(username: string): boolean {
+  return Boolean(findEmployeeByUsername(username)?.viewerOf);
+}
+
 /** O cálculo em si — sem I/O, para poder ser corrido uma vez por pessoa a
  *  partir de leituras já feitas. É esta função que garante que o sino de um
- *  consultor e o painel de equipa do C-Level nunca divergem: é a mesma. */
+ *  consultor e o painel de equipa do C-Level nunca divergem: é a mesma.
+ *
+ *  `startedAt` é a data de entrada da pessoa: nada que tenha vencido antes do
+ *  dia 1 dela é dívida dela (ver `occurrenceAppliesToPerson`). */
 function buildNotifications(
   viewer: Viewer,
   rules: NotificationRule[],
   state: NotificationState,
   book: ClientRef[],
   now: Date,
+  startedAt: string | null,
 ): UserNotification[] {
+  if (isViewerProfile(viewer.username)) return [];
   const applicable = rules.filter(
     (r) => r.enabled && audienceMatches(r.audience, viewer),
   );
@@ -210,12 +243,16 @@ function buildNotifications(
       if (rule.scope !== "seo-client") continue; // sem cliente não há relógio
       for (const client of book) {
         for (const occ of clientMonthOccurrences(rule, client.startedAt, now)) {
+          if (!occurrenceAppliesToPerson(occ, startedAt)) continue;
           push(rule, occ, client);
         }
       }
       continue;
     }
     for (const occ of occurrencesFor(rule, now)) {
+      // Nada anterior ao dia 1 desta pessoa — a sexta-feira passada era de
+      // quem tinha a carteira nessa altura.
+      if (!occurrenceAppliesToPerson(occ, startedAt)) continue;
       if (rule.scope !== "seo-client") {
         push(rule, occ, null);
         continue;
@@ -986,18 +1023,21 @@ export async function getUserNotifications(
   viewer: Viewer,
   now: Date = new Date(),
 ): Promise<UserNotification[]> {
-  const [rules, state] = await Promise.all([
+  const [rules, state, startDates] = await Promise.all([
     getNotificationRules(),
     getNotificationState(viewer.username),
+    getEmployeeStartDates().catch(() => ({})),
   ]);
+  const startedAt = resolveStartDate(viewer.username, startDates);
 
   // O feedback da Formação corre mesmo quando não há regra nenhuma aplicável
   // — não depende delas.
   const feedback = await trainingFeedbackNotifications(viewer, state, now);
 
-  const applicable = rules.filter(
-    (r) => r.enabled && audienceMatches(r.audience, viewer),
-  );
+  // Um viewer não tem regra nenhuma que lhe diga respeito (nem carteira).
+  const applicable = isViewerProfile(viewer.username)
+    ? []
+    : rules.filter((r) => r.enabled && audienceMatches(r.audience, viewer));
 
   // A carteira lê-se quando alguma regra precisa dela OU para o aviso de
   // roadmap a acabar, que é por cliente e não depende de regra nenhuma.
@@ -1006,7 +1046,7 @@ export async function getUserNotifications(
     (r) => r.schedule.kind === "client-month",
   );
   const book =
-    needsBook || viewer.dept === "SEO"
+    (needsBook || viewer.dept === "SEO") && !isViewerProfile(viewer.username)
       ? ((await seoBooksByConsultant(needsStartDates)).get(viewer.name) ?? [])
       : [];
 
@@ -1044,7 +1084,7 @@ export async function getUserNotifications(
     ...situationPoints,
     ...feedback,
     ...ending,
-    ...buildNotifications(viewer, rules, state, book, now),
+    ...buildNotifications(viewer, rules, state, book, now, startedAt),
   ];
 }
 
@@ -1098,7 +1138,11 @@ type TeamPerson = Viewer & { role: string };
 async function teamNotificationLists(
   now: Date,
 ): Promise<{ person: TeamPerson; list: UserNotification[] }[]> {
-  const people: TeamPerson[] = EMPLOYEE_CREDENTIALS.map((c) => ({
+  // Viewers ficam de fora: não têm nada que lhes possa ser pedido, e uma
+  // linha deles no painel só confundia quem procura quem está em dívida.
+  const people: TeamPerson[] = EMPLOYEE_CREDENTIALS.filter(
+    (c) => !c.viewerOf,
+  ).map((c) => ({
     username: c.username,
     name: c.name,
     role: c.role,
@@ -1113,11 +1157,12 @@ async function teamNotificationLists(
   const needsStartDates = enabled.some(
     (r) => r.schedule.kind === "client-month",
   );
-  const [states, books] = await Promise.all([
+  const [states, books, startDates] = await Promise.all([
     getNotificationStateMany(people.map((p) => p.username)),
     needsBook
       ? seoBooksByConsultant(needsStartDates)
       : Promise.resolve(new Map<string, ClientRef[]>()),
+    getEmployeeStartDates().catch(() => ({})),
   ]);
 
   return people.map((person) => ({
@@ -1128,6 +1173,7 @@ async function teamNotificationLists(
       states[person.username] ?? {},
       books.get(person.name) ?? [],
       now,
+      resolveStartDate(person.username, startDates),
     ),
   }));
 }
