@@ -430,10 +430,13 @@ const SEO_TRACK: TrainingTrack = {
             "A assinatura de email da casa, em português e em inglês, aplicada no Gmail da empresa desde o primeiro dia.",
           presenter: "André",
           videoUrl: "https://youtu.be/Dc5QNdWRCLc",
+          // v77.49.2: o pacote da assinatura (HTML + borboleta animada) que o
+          // André entregou — em public/formacao, para se descarregar aqui.
           attachments: [
             {
-              label: "Borboleta Wonder Ads (imagem da assinatura)",
-              url: "/wonder-ads-butterfly.png",
+              label:
+                "Assinatura Gmail Wonder Ads — HTML + borboleta animada (.zip)",
+              url: "/formacao/assinatura-gmail-wonderads.zip",
             },
           ],
           keyPoints: [

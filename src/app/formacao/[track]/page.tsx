@@ -43,7 +43,6 @@ import {
   type TrackSearchEntry,
 } from "@/components/training/track-search";
 import { getTrainingContext, trackStateFor } from "@/lib/training/server";
-import { lessonMinutes } from "@/lib/training/catalog";
 import type { ModuleState, TrackState } from "@/lib/training/progress";
 
 export const dynamic = "force-dynamic";
@@ -494,10 +493,6 @@ function ModuleStation({
                             apresentador por atribuir
                           </span>
                         )}
-                        <span>·</span>
-                        <span className="tabular">
-                          ~{lessonMinutes(l.lesson)} min
-                        </span>
                         {!l.watched && l.percent > 0 && (
                           <>
                             <span>·</span>

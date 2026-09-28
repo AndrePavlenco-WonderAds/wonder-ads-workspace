@@ -61,7 +61,6 @@ import { getTrainingContext, userTracks } from "@/lib/training/server";
 import { overallPercent } from "@/lib/training/progress";
 import type { TrackState } from "@/lib/training/progress";
 import { championQuote } from "@/lib/training/champion";
-import { lessonMinutes } from "@/lib/training/catalog";
 import { formatDate } from "@/lib/dates";
 
 export const dynamic = "force-dynamic";
@@ -137,7 +136,6 @@ export default async function FormacaoPage() {
         trackName: t.track.name,
         moduleTitle: m.module.title,
         type: l.lesson.type,
-        minutes: lessonMinutes(l.lesson),
         watched: l.watched,
         comingSoon: l.comingSoon,
       })),
@@ -313,7 +311,7 @@ export default async function FormacaoPage() {
             <p className="mt-0.5 text-[11.5px] text-white/55">
               {active.track.name} ·{" "}
               {nextLesson
-                ? `${nextLesson.module.title} · ~${lessonMinutes(nextLesson.lesson)} min`
+                ? nextLesson.module.title
                 : `${nextQuiz?.title} · ${nextQuiz?.quiz.questions.length} perguntas`}
             </p>
           </div>

@@ -14,7 +14,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Clock, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import { LessonThumb } from "@/components/training/training-ui";
 import type { TrainingLessonType } from "@/lib/training/catalog";
 
@@ -25,7 +25,6 @@ export type LibraryEntry = {
   trackName: string;
   moduleTitle: string;
   type: TrainingLessonType;
-  minutes: number;
   watched: boolean;
   comingSoon: boolean;
 };
@@ -132,10 +131,10 @@ export function ReviewLibrary({ entries }: { entries: LibraryEntry[] }) {
                         <span className="block truncate text-[13px] font-medium text-white/85 group-hover:text-white">
                           {e.title}
                         </span>
-                        <span className="tabular mt-0.5 flex items-center gap-1.5 text-[11px] text-white/35">
-                          <Clock className="h-2.5 w-2.5" />~{e.minutes} min
+                        <span className="mt-0.5 flex items-center gap-1.5 text-[11px] text-white/35">
+                          <span className="truncate">{e.moduleTitle}</span>
                           {e.comingSoon && (
-                            <span className="text-amber-200/70">
+                            <span className="shrink-0 text-amber-200/70">
                               · por publicar
                             </span>
                           )}

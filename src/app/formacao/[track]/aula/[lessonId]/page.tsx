@@ -21,7 +21,6 @@ import {
   ChevronRight,
   CheckCircle2,
   ClipboardCheck,
-  Clock,
   Lock,
   UserRound,
 } from "lucide-react";
@@ -223,9 +222,6 @@ export default async function LessonPage({
               </span>
               <span className="h-3 w-px bg-white/10" />
               <LessonTypeBadge type={lesson.type} />
-              <span className="tabular inline-flex items-center gap-1.5 text-[11.5px] text-white/40">
-                <Clock className="h-3 w-3" />~{lessonMinutes(lesson)} min
-              </span>
               {lesson.presenter && (
                 <span className="inline-flex items-center gap-1.5 text-[11.5px] text-white/40">
                   <UserRound className="h-3 w-3" />

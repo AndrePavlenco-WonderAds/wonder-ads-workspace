@@ -13,6 +13,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.49.2",
+    date: "2026-09-28",
+    title: "Formação: pacote da assinatura Gmail para download e cartões sem «~12 min»",
+    highlights: [
+      "**📎 Assinatura Gmail Wonder Ads.** A aula «Como criar assinatura Gmail e aplicar» (Especialização SEO/GEO) passa a ter, por baixo do vídeo, o .zip com o HTML da assinatura e a borboleta animada — é descarregar, abrir o HTML e colar no Gmail.",
+      "**⏱️ Saiu o «~12 min»** dos cartões de vídeo: na sequência do módulo, na faixa da aula, no índice «Rever» e no cartão «Continuar onde ficaste». Era uma estimativa por tipo de aula, não a duração real do vídeo, e lia-se como se fosse.",
+    ],
+  },
+  {
     version: "77.49.1",
     date: "2026-09-28",
     title: "Sino: nada anterior à data de entrada de cada pessoa, e viewers sem lembretes",
