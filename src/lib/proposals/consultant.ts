@@ -30,6 +30,7 @@ const EMAIL_BY_USERNAME: Record<string, string> = {
   "manuel-s": "manuel@wonder-ads.com",
   "andre-pereira": "andre.pereira@wonder-ads.com",
   "joao-b": "joao.batista@wonder-ads.com",
+  "maria-a": "maria@wonder-ads.com",
 };
 
 function normalise(s: string): string {

@@ -177,6 +177,20 @@ export const EMPLOYEE_CREDENTIALS: EmployeeCredential[] = [
     hash: "188972f4fbf52acdb335489c79bc32b7443c4185a9bdee0e34c04fa5a5fc99f4ba4a824e84ab2b615dbf12f310220bb12588ec46d34ba155b86f47f879d0f446",
   },
   {
+    // Maria Assena — consultora SEO nova (v77.47). `name` tem de bater com a
+    // coluna dela no SEO DPT. Password temporária gerada fora do repo e
+    // deixada ao André para entregar em mão + rodar. Data de entrada = o dia
+    // em que o acesso foi criado; o C-Level corrige no Team Roster.
+    username: "maria-a",
+    name: "Maria Assena",
+    fullName: "Maria Assena",
+    role: "SEO Consultant",
+    dept: "SEO",
+    startedAt: "2026-09-28",
+    salt: "2a8c4e9b7666eb6d08b309cba1bfc56d",
+    hash: "062708168957591b8f54af4b5a0d996bc4fd778d9f350d0cdbb62e9b5e0051c578855abe0316a15b2c97bd8aa9295b5a7cdc74b6b364f0af06116c813ba5d444",
+  },
+  {
     // Hugo Silva — ADS Consultant (v77.35), entra no lugar do Germano Cunha.
     // ADS (e Comercial) a sério; SEO e Web só leitura, com pedido de tickets
     // ao Web. Password gerada fora do repo e entregue ao André.

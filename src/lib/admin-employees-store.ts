@@ -159,6 +159,16 @@ export const SEED_EMPLOYEES: SeedEmployee[] = [
     departments: ["SEO"],
     startingDate: "2026-07-23",
   },
+  {
+    // Maria Assena — consultora SEO (v77.47). Data de entrada = o dia em que
+    // o acesso foi criado; o C-Level corrige no Team Roster se for outra.
+    id: "maria-a",
+    name: "Maria Assena",
+    emailHandle: "maria",
+    role: "SEO Consultant",
+    departments: ["SEO"],
+    startingDate: "2026-09-28",
+  },
   // ── ADS ──────────────────────────────────────────────────────────────
   {
     id: "germano-c",

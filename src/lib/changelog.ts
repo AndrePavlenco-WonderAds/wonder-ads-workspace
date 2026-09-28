@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.47",
+    date: "2026-09-28",
+    title: "Maria Assena entra na equipa de SEO, com a ATN Medical",
+    highlights: [
+      "**👩‍💼 Nova consultora SEO: Maria Assena** (`maria-a`, maria@wonder-ads.com). Entra em todo o lado onde os outros consultores estão: login com acesso ao SEO, Web e Comercial; coluna própria no SEO DPT; dropdown de consultores no Admin › Clients; Team Roster (data de entrada 28/09/2026, a corrigir se for outra); formulário de NPS; assinatura de propostas; Especialização SEO/GEO na Formação (pelo departamento) e a roda do **«número do dia», que passa a 1..5** com o 5 a laranja.",
+      "**🏥 ATN Medical** (atnmedical.pt) entra na carteira dela. O registo do fluxo de onboarding já existia com o slug `atn-medical` (formulário ainda por preencher) e passou a ter a Maria como consultora — quando o cliente submeter em /atn-medical/onboarding, anexa-se sozinho à ficha. Logótipo do ícone do site (monograma sobre azul), chip no mesmo azul. Tier Core por defeito; data de onboarding por definir no Admin › Clients.",
+      "**🔧 Bastidores.** A cache do roster (`seo-clients`) subiu para v16 para a coluna aparecer sem esperar uma hora. Sem retrato publicado ainda — cai na inicial no header, no «Ver como» e no NPS.",
+    ],
+  },
+  {
     version: "77.46",
     date: "2026-09-23",
     title: "Especialização SEO/GEO com a estrutura completa: 11 módulos, 54 aulas, 272 perguntas",

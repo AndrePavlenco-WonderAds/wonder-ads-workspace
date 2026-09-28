@@ -1,9 +1,10 @@
 // «Número do dia» dos consultores SEO.
 //
-// Todos os dias úteis (segunda a sexta, hora de Lisboa) cada um dos quatro
-// consultores SEO recebe um número de 1 a 4 — todos diferentes entre si — que
+// Todos os dias úteis (segunda a sexta, hora de Lisboa) cada um dos cinco
+// consultores SEO recebe um número de 1 a 5 — todos diferentes entre si — que
 // aparece num cartão pequeno ao lado do nome, no canto superior direito do
-// header. Ao sábado e domingo não há cartão.
+// header. Ao sábado e domingo não há cartão. (Eram quatro e 1..4 até à
+// v77.47, quando a Maria Assena entrou na roda.)
 //
 // A distribuição é ALEATÓRIA MAS DETERMINÍSTICA: a semente é a data, por isso
 // toda a gente vê a mesma distribuição no mesmo dia, um F5 não a muda e não há
@@ -17,15 +18,17 @@
 // Módulo puro de propósito — sem KV, sem credenciais — para o header o poder
 // chamar em todas as páginas sem custo e para se testar num `node` a seco.
 
-/** Quem entra na roda — os quatro consultores SEO, por username. Só estes:
+/** Quem entra na roda — os cinco consultores SEO, por username. Só estes:
  *  o Founder e os SuperAdmins ficam de fora (o «andre» da roda é o André
  *  Pereira, consultor, não o Founder). Acrescentar alguém aqui = a roda passa
- *  a 1..5 sozinha; é preciso dar-lhe uma cor em `DAILY_NUMBER_COLORS`. */
+ *  a 1..N sozinha; é preciso dar-lhe uma cor em `DAILY_NUMBER_COLORS`. */
 export const SEO_ROTATION_USERNAMES = [
   "manuel-s",
   "fran-r",
   "joao-b",
   "andre-pereira",
+  // v77.47: Maria Assena.
+  "maria-a",
 ] as const;
 
 /** Dia-âncora da roda (uma segunda-feira). Antes disto não há número. */
@@ -46,6 +49,9 @@ export const DAILY_NUMBER_COLORS: DailyNumberColor[] = [
   { hex: "#38BDF8", label: "azul" },
   { hex: "#FBBF24", label: "amarelo" },
   { hex: "#FB7185", label: "rosa" },
+  // v77.47: o 5 — laranja, mais fundo do que o amarelo e mais quente do que
+  // o rosa, para se ler à primeira ao lado dos outros quatro.
+  { hex: "#F97316", label: "laranja" },
 ];
 
 const FALLBACK_COLOR: DailyNumberColor = { hex: "#A78BFA", label: "lilás" };
@@ -144,9 +150,13 @@ function seededPermutation(seed: string, size: number): number[] {
 
 /** Escolhe a permutação do dia: a primeira semente cujo resultado não deixa
  *  ninguém com o número do dia útil anterior. Com 4 pessoas, 9 em cada 24
- *  permutações servem — falhar 48 tentativas seguidas é impossível na
- *  prática, mas o último recurso (rodar a de ontem uma casa) é sempre um
- *  desarranjo válido, para nunca sair daqui nada que não seja uma roda. */
+ *  permutações servem (com 5, 44 em cada 120) — falhar 48 tentativas
+ *  seguidas é impossível na prática, mas o último recurso (rodar a de ontem
+ *  uma casa) é sempre um desarranjo válido, para nunca sair daqui nada que
+ *  não seja uma roda.
+ *
+ *  Quando a roda cresce (v77.47: 4 → 5), a cadeia recomeça da âncora com o
+ *  tamanho novo — os números do passado mudam, mas ninguém os consulta. */
 function pickPermutation(iso: string, prev: number[] | null): number[] {
   const size = SEO_ROTATION_USERNAMES.length;
   for (let attempt = 0; attempt < 48; attempt++) {

@@ -78,6 +78,12 @@ const JOAO_B = new Set([
 // IHN → Manuel; White Clinic + Spine Center + CDT → André Pereira;
 // Monte Mar + Fisio Restelo → Fran. A coluna dela desapareceu do board.
 
+// Maria Assena — consultora SEO nova (v77.47). Primeiro cliente: ATN Medical
+// (atnmedical.pt), que já existia no registo do fluxo de onboarding com o
+// slug «atn-medical» (formulário por preencher). Fixado aqui para a coluna
+// do board e o email das entregas a reconhecerem sem depender do registo.
+const MARIA_A = new Set(["atn-medical"]);
+
 /** Os consultores de SEO que podem ter carteira — nome de exibição (tem de
  *  bater com as colunas da board e com `name` nas credenciais) + email de
  *  trabalho. A ordem é a das colunas da board. */
@@ -86,6 +92,7 @@ export const SEO_CONSULTANTS = [
   { name: "Manuel Silva", email: "manuel@wonder-ads.com" },
   { name: "André Pereira", email: "andre.pereira@wonder-ads.com" },
   { name: "João B.", email: "joao.batista@wonder-ads.com" },
+  { name: "Maria Assena", email: "maria@wonder-ads.com" },
 ] as const;
 
 /** Display order used for grouping client cards into columns. */
@@ -111,5 +118,6 @@ export function defaultConsultantForSlug(slug: string): string {
   if (FRAN_R.has(slug)) return "Fran. Rosa";
   if (ANDRE_PEREIRA.has(slug)) return "André Pereira";
   if (JOAO_B.has(slug)) return "João B.";
+  if (MARIA_A.has(slug)) return "Maria Assena";
   return "Unassigned";
 }

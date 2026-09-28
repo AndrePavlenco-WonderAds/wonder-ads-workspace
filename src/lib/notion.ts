@@ -103,6 +103,10 @@ const EXTRA_SEO_CLIENTS: Array<{
   // onboarding chamava-se «(Santa Eulália)»; passou a ser o grupo, sem a
   // unidade no nome nem no slug.
   { title: "Real Hotels Group", slug: "real-hotels-group", icon: "🏨" },
+  // ATN Medical (atnmedical.pt, v77.47) — o primeiro cliente da Maria Assena.
+  // Já existia no registo do fluxo de onboarding com este slug (formulário
+  // por preencher); fica aqui para aparecer na coluna dela desde já.
+  { title: "ATN Medical", slug: "atn-medical", icon: "🏥" },
 ];
 
 const _fetchSeoClients = unstable_cache(
@@ -195,7 +199,8 @@ const _fetchSeoClients = unstable_cache(
   // v14: PhysioHub (Manuel Silva) + Real Hotels Group (João B.) entram na
   // carteira (v77.44).
   // v15: Real Hotels Group renomeado — slug «real-hotels-group» (v77.45).
-  ["seo-clients-v15"],
+  // v16: Maria Assena entra com a ATN Medical (v77.47).
+  ["seo-clients-v16"],
   { revalidate: 3600, tags: ["seo-clients"] },
 );
 

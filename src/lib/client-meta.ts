@@ -45,6 +45,11 @@ export const CLIENT_LOGOS: Record<string, string> = {
   // (apple-touch-icon, branco sobre preto). O wordmark do cabeçalho é um
   // SVG de 8:1 que num chip quadrado ficava reduzido a um traço.
   "real-hotels-group": "/logos/real-hotels-group.png",
+  // ATN Medical (v77.47) — o ícone do site (atnmedical.pt, «ATN-medical-min»,
+  // 1012×1012 reduzido a 256): monograma branco e azul-claro sobre um
+  // quadrado azul de canto a canto. O cabeçalho do site não tem um wordmark
+  // à parte.
+  "atn-medical": "/logos/atn-medical.png",
 };
 
 export function getClientLogo(slug: string): string | null {
@@ -72,6 +77,9 @@ const LOGO_BG_OVERRIDES: Record<string, LogoBgMode> = {
   "physio-hub": "dark",
   // Real Hotels Group — o monograma vem no seu próprio quadrado preto.
   "real-hotels-group": "dark",
+  // ATN Medical — o quadrado azul do ícone é o próprio painel; o chip leva
+  // o mesmo azul para os cantos arredondados não mostrarem uma moldura.
+  "atn-medical": { custom: "#00B2F4" },
 };
 
 export function getLogoBgMode(slug: string): LogoBgMode {
@@ -94,6 +102,8 @@ const LOGO_SIZING_OVERRIDES: Record<string, LogoSizing> = {
   "physio-hub": "tight",
   // Quadrado preto de canto a canto — o preenchimento é o próprio painel.
   "real-hotels-group": "tight",
+  // O mesmo caso: quadrado azul de canto a canto.
+  "atn-medical": "tight",
 };
 
 export function getLogoSizing(slug: string): LogoSizing {
@@ -128,6 +138,7 @@ export const CLIENT_WEBSITES: Record<string, string> = {
   "antonio-gaspar": "https://antoniogaspar.pt/",
   "physio-hub": "https://www.physiohub.pt/",
   "real-hotels-group": "https://realhotelsgroup.com/",
+  "atn-medical": "https://atnmedical.pt/",
   // ADS-only — not known yet
   "clinica-empatia": "",
 };
