@@ -20,7 +20,7 @@
 // checklist de gravação do admin.
 //
 // A Especialização SEO/GEO segue um documento de especificação
-// (docs/formacao/especializacao-seo-geo.md): 11 módulos, 54 aulas e 272
+// (docs/formacao/especializacao-seo-geo.md): 11 módulos, 54 aulas e 281
 // perguntas. O banco de perguntas é gerado desse documento por
 // scripts/formacao/build-seo-geo-questions.mjs; os ids de módulo e de aula
 // daqui têm de bater com os do script.
@@ -363,7 +363,7 @@ const COMMON_TRACK: TrainingTrack = {
 // por fim, o crescimento de conta, que exige domínio de todo o resto.
 //
 // FONTE: docs/formacao/especializacao-seo-geo.md — Bibl. 1 (33 vídeos),
-// Bibl. 2 (22 entradas) e EXAM_QUIZ_QUESTIONS (272 perguntas). Cada aula é um
+// Bibl. 2 (22 entradas) e EXAM_QUIZ_QUESTIONS (281 perguntas). Cada aula é um
 // vídeo; o quiz de cada módulo só usa perguntas dos vídeos desse módulo (o
 // banco vive em `seo-geo-questions.ts`, gerado a partir do documento).
 //
@@ -706,10 +706,16 @@ const SEO_TRACK: TrainingTrack = {
         },
         {
           id: "seo-screamingfrog",
-          title: "ScreamingFrog",
+          title: "Website Audit via Screaming Frog",
           description:
-            "O crawler de secretária: o que se vê nele que a app não mostra, e como se lê o resultado.",
+            "A auditoria técnica com o Screaming Frog, obrigatória em todos os projetos: links externos suspeitos, links partidos, títulos e descrições, imagens, noindex e canonicals — e o que fazer quando o site passa os 500 URLs.",
           presenter: "Fran R",
+          videoUrl: "https://youtu.be/r8hBOgvlSNE",
+          keyPoints: [
+            "Obrigatório em todos os projetos. Em External procura-se o que não é normal (apostas, casino, farmácia online, empréstimos, sites noutra língua); sem origem à vista → Search Console (Segurança e ações manuais) e novo rastreio, e só depois a gestão, com tudo na mão.",
+            "Ordem de leitura: External → Response Codes (4xx) → Directives e Canonicals → Page Titles, Meta Description e H1 → Images. O painel de baixo (Inlinks) diz em que página se corrige.",
+            "Versão gratuita: 500 URLs e o rastreio não fica guardado — exporta-se antes de fechar. Sites maiores rastreiam-se por pastas. Rastreio completo 1×/mês (no máximo a cada 2) e depois de qualquer mudança grande.",
+          ],
         },
         {
           id: "seo-kw-1",

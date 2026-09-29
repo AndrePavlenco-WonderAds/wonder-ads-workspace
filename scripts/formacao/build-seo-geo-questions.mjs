@@ -4,7 +4,7 @@
 //   node scripts/formacao/build-seo-geo-questions.mjs
 //
 // O documento é a fonte de verdade das perguntas dos 11 módulos da
-// Especialização SEO/GEO (272 perguntas). Regras de parse (Anexo E do doc):
+// Especialização SEO/GEO (281 perguntas). Regras de parse (Anexo E do doc):
 //   • `## Módulo N — …` abre um módulo; `### Quiz Módulo N` abre o banco.
 //   • `Qn [single|multi|vf] enunciado` abre uma pergunta; `[vf]` termina em
 //     `→ V` / `→ F`; `[single]`/`[multi]` têm opções `- [x]` / `- [ ]`.
@@ -193,8 +193,11 @@ for (const raw of lines) {
   }
 
   // Linha "Aula 1.3 — …", "Aulas 2.7–2.8 — …" ou "Protocolos gerais (aulas 2.1–2.3)".
+  // Fecha a pergunta anterior: sem isto, a linha era ignorada (a pergunta
+  // ficava aberta até ao Q seguinte) e o módulo inteiro caía na 1.ª aula.
   const lesson = line.match(/(?:^|\()(?:Aulas?|aulas)\s+(\d+\.\d+)/u);
-  if (lesson && !current) {
+  if (lesson) {
+    closeQuestion();
     currentLesson = lesson[1];
     continue;
   }
@@ -206,7 +209,7 @@ for (const raw of lines) {
 closeQuestion();
 
 // ---- validação ----
-const EXPECTED = { 1: 19, 2: 12, 3: 25, 4: 26, 5: 37, 6: 31, 7: 20, 8: 31, 9: 15, 10: 35, 11: 21 };
+const EXPECTED = { 1: 19, 2: 12, 3: 25, 4: 35, 5: 37, 6: 31, 7: 20, 8: 31, 9: 15, 10: 35, 11: 21 };
 let total = 0;
 let review = 0;
 for (const [num, { questions }] of modules) {
@@ -234,7 +237,7 @@ for (const [num, { questions }] of modules) {
     if (q.note) review += 1;
   }
 }
-if (total !== 272) throw new Error(`Total ${total}, esperava 272`);
+if (total !== 281) throw new Error(`Total ${total}, esperava 281`);
 
 // ---- emissão ----
 const esc = (s) => JSON.stringify(s);

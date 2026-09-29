@@ -39,7 +39,7 @@ Sugestão de regra de aprovação: 80% para desbloquear o módulo seguinte, tent
 | 1 | Boas-vindas, Mindset e Ferramentas Internas | 6 | 19 | 0 |
 | 2 | Rotinas de Reporting e Comunicação com o Cliente | 8 | 12 | 1 |
 | 3 | Gestão de Situações com o Cliente | 4 | 25 | 0 |
-| 4 | Auditoria Técnica e Keyword Research | 6 | 26 | 2 |
+| 4 | Auditoria Técnica e Keyword Research | 6 | 35 | 0 |
 | 5 | Roadmap e Onboarding de Cliente Novo | 5 | 37 | 0 |
 | 6 | On-Page SEO | 5 | 31 | 0 |
 | 7 | Estratégia de Conteúdo | 3 | 20 | 0 |
@@ -47,7 +47,7 @@ Sugestão de regra de aprovação: 80% para desbloquear o módulo seguinte, tent
 | 9 | Local SEO — Google Business Profile | 4 | 15 | 0 |
 | 10 | Off-Page SEO — Backlinks | 5 | 35 | 0 |
 | 11 | Crescimento de Conta: Cross-sell, Up-sell e Renovação | 4 | 21 | 0 |
-| | Total | 54 | 272 | 3 |
+| | Total | 54 | 281 | 1 |
 
 ---
 
@@ -373,13 +373,13 @@ Objetivo: saber diagnosticar um site (app WonderAds, ScreamingFrog) e construir 
 | Aula | Título | Vídeo | Origem | Anexos / notas | Estado |
 |------|--------|-------|--------|----------------|--------|
 | 4.1 | Website SEO Audit para boas práticas de SEO (APP WA) — Parte 1 | https://youtu.be/EmAfTeK96lM | B2 | Detalhes de design, técnicos, on-page, off-page, velocidade (André Pereira) | OK |
-| 4.2 | Website SEO Audit para boas práticas de SEO — Parte 2 | — | B2 | Consultor por atribuir | A GRAVAR |
-| 4.3 | ScreamingFrog | — | B2 | Fran R | A GRAVAR |
+| 4.2 | Website SEO Audit para boas práticas de SEO — Parte 2 | https://youtu.be/HkkHBjwK5Rw | B2 | Manuel Silva | OK |
+| 4.3 | Website Audit via Screaming Frog | https://youtu.be/r8hBOgvlSNE | B2 | Fran R | OK |
 | 4.4 | Keyword Research │ Parte 1 | https://youtu.be/Z8OSZPVtHPE | B2 | João B | OK |
 | 4.5 | Keyword Research │ Parte 2 | https://youtu.be/iBw6ZmZSZ4M | B2 | André Pereira | OK |
 | 4.6 | Keyword Research │ Parte 3 — Semrush para a keyword research | https://youtu.be/-Y_232vvfhQ | B2 | André Pereira | OK |
 
-### Quiz Módulo 4 (26 perguntas)
+### Quiz Módulo 4 (35 perguntas)
 
 Aula 4.1 — Website SEO Audit (Parte 1)
 
@@ -533,7 +533,48 @@ Q26 [multi] Quais são as 3 ferramentas do Semrush recomendadas para trabalhar a
 - [ ] Site Audit
 - [ ] Social Media Poster
 
-Sem perguntas: aulas 4.2 e 4.3 (a gravar).
+Aula 4.3 — Website Audit via Screaming Frog
+
+Q27 [vf] Correr o Screaming Frog nos projetos — a olhar para os erros, os links internos e os links externos — fica ao critério de cada consultor, conforme o tempo que tiver. → F
+
+Q28 [single] Cenário: No separador External do Screaming Frog, encontro no site de uma clínica cliente um link para um site de apostas que ninguém se lembra de ter colocado. Qual é a abordagem mais correta?
+- [ ] Remover o link e seguir em frente — não vale a pena falar disso a ninguém
+- [ ] Avisar a gestão de imediato, antes de verificar mais nada
+- [x] Descobrir a origem (histórico de revisões no WordPress, perguntar à equipa, ver se vem de um plugin ou do tema); se não houver explicação, ver Segurança e ações manuais no Search Console e voltar a correr o rastreio à procura de outros links estranhos — e só então avisar a gestão, com tudo na mão
+- [ ] Esperar pelo rastreio do mês seguinte para confirmar se o link continua lá
+
+Q29 [single] Encontrei um erro 404 em Response Codes > Client Error (4xx). Como descubro em que página tenho de ir corrigir?
+- [ ] Pesquisando o URL no Google
+- [x] Clicando na linha desse URL e abrindo, no painel de baixo, o separador dos links (Inlinks), que mostra de que páginas saem os links para esse endereço
+- [ ] No resumo do lado direito, que lista a página de origem de cada erro
+- [ ] Não dá para ver no Screaming Frog; é preciso o Semrush
+
+Q30 [multi] Em Page Titles e Meta Description, que filtros se verificam?
+- [x] Missing (em falta)
+- [x] Duplicate (duplicados)
+- [x] Over 60 characters nos títulos e over 155 characters nas descrições (cortados pelo Google)
+- [ ] Under 10 words
+- [ ] Contains emoji
+
+Q31 [vf] Um ícone ou uma imagem decorativa não precisa de texto alternativo descritivo, mas deve ter o atributo alt vazio no código — senão aparece como «Missing Alt Text» no Screaming Frog. → V
+
+Q32 [vf] Um noindex posto por engano numa página de serviço ou um canonical a apontar para outra versão da página não se veem a navegar pelo site — por isso verificam-se sempre em Directives e Canonicals. Uma página de serviço com noindex, para o Google, não existe. → V
+
+Q33 [vf] Na versão gratuita do Screaming Frog o rastreio fica guardado, por isso posso fechar o programa e exportar os relatórios mais tarde. → F
+
+Q34 [single] Cenário: O rastreio parou nos 500 endereços (o limite da versão gratuita) e a maior parte são imagens, CSS e JavaScript, não páginas. O que se faz? ⚠️ CONFIRMAR (no vídeo ouve-se «site audit web tools» — assumido Site Audit do Ahrefs Webmaster Tools)
+- [ ] Assume-se que o resto do site está bem, porque os erros graves aparecem sempre primeiro
+- [x] Rastreia-se por partes (o endereço com a pasta, ex.: /pt/) e, se mesmo assim não chegar, usa-se o Site Audit do Ahrefs Webmaster Tools, gratuito e sem esse limite — o que não foi rastreado não foi verificado
+- [ ] Usa-se o modo List com os primeiros 500 URLs e dá-se o site por auditado
+- [ ] Reduz-se a auditoria à homepage e às páginas de serviço
+
+Q35 [single] Com que frequência se faz o rastreio completo de cada projeto?
+- [ ] Uma vez por ano, na renovação do contrato
+- [ ] Só quando o cliente se queixa de alguma coisa
+- [x] Uma vez por mês (no máximo de dois em dois meses) e sempre depois de uma mudança grande no site — migração, tema novo, plugin novo, uma queda resolvida
+- [ ] Todas as semanas, com o Weekly Report
+
+Sem perguntas: aula 4.2.
 
 ---
 
@@ -1601,8 +1642,6 @@ Q21 [multi] O documento de overview dos últimos 6 meses para trazer para a reun
 | Aula | Título | Consultor | Nota |
 |------|--------|-----------|------|
 | 2.5 | Monthly Report para cliente e-commerce (Shopify, etc.) | André Pereira | Enviar primeiro alterações a implementar na action Monthly Report; gravar depois de feitas |
-| 4.2 | Website SEO Audit — Parte 2 | por atribuir | — |
-| 4.3 | ScreamingFrog | Fran R | Falado na reunião |
 
 No workspace: mostrar como "Em breve", bloqueadas, sem contar para a percentagem de conclusão do módulo até terem vídeo.
 
@@ -1638,8 +1677,6 @@ Estas aulas ficam sem avaliação no quiz do módulo (o módulo continua a ter q
 | 2.1 | Daily Update (parcialmente coberta pela Q1 do M2) |
 | 2.2 | Weekly Report (parcialmente coberta pela Q1 do M2) |
 | 2.5 | Monthly Report e-commerce (a gravar) |
-| 4.2 | Site Audit Parte 2 (a gravar) |
-| 4.3 | ScreamingFrog (a gravar) |
 | 5.3 | Actual Call: Onboarding (coberta pelas perguntas de pré-onboarding 5.2) |
 | 5.5 | Eventos GA4 |
 | 11.3 | Registar cross-sell/renovação internamente |
@@ -1684,8 +1721,8 @@ Para verificar que nenhum vídeo ficou de fora.
 | 1M9MD0hXnRg | 1 CD | 10.2 |
 | Z3LNfnoAhlU | 1 CD | 10.3 |
 | EmAfTeK96lM | 2 | 4.1 |
-| (sem link) Site Audit Pt 2 | 2 | 4.2 |
-| (sem link) ScreamingFrog | 2 | 4.3 |
+| HkkHBjwK5Rw | 2 | 4.2 |
+| r8hBOgvlSNE | 2 | 4.3 |
 | rm-xN5LqnJA | 2 | 6.1 |
 | DKdcn0N9sWY | 2 | 6.2 |
 | IEPBz1JbXh8 | 2 | 9.2 |

@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.52",
+    date: "2026-09-29",
+    title: "Formação: Website Audit via Screaming Frog com vídeo e 9 perguntas",
+    highlights: [
+      "**🐸 «Website Audit via Screaming Frog»** (Capítulo 04, a seguir ao SEO Audit Parte 2) já tem vídeo, apresentado pela **Fran R**: a auditoria técnica obrigatória em todos os projetos — links externos suspeitos (apostas, casino, farmácias), links partidos, títulos e descrições, imagens, noindex e canonicals — e o que fazer quando o site passa os 500 URLs da versão gratuita. Sai o «Brevemente».",
+      "**📝 9 perguntas novas no quiz do Capítulo 04** sobre o Screaming Frog (35 no total). Uma fica «a confirmar»: no vídeo ouve-se «site audit web tools», assumido como o Site Audit do Ahrefs Webmaster Tools.",
+      "**🎬 O SEO Audit Parte 2 (Manuel Silva) e os anexos do Roadmap inicial e do NPS** (v77.50–77.51) passam a aparecer também em produção — o catálogo gravado pelo CMS estava a tapá-los.",
+      "**🔧 Cada pergunta da Especialização SEO/GEO fica ligada à aula certa.** O gerador do banco ligava todas as perguntas de um módulo à 1.ª aula; agora respeita as linhas «Aula X.Y» do documento (os ids das perguntas não mudam).",
+    ],
+  },
+  {
     version: "77.51",
     date: "2026-09-29",
     title: "Formação: anexos do Roadmap inicial e das mensagens do NPS",

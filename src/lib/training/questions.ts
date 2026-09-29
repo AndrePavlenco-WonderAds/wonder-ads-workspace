@@ -13,7 +13,7 @@
 //  • ESPECIALIZAÇÕES — responsabilidade concreta do departamento e o cuidar
 //    da conta do cliente: o que é entregue, em que prazo, por quem, e o que
 //    fazer quando falha.
-//  • SEO/GEO é a exceção: o banco não é rascunho — são as 272 perguntas do
+//  • SEO/GEO é a exceção: o banco não é rascunho — são as 281 perguntas do
 //    documento de especificação, escritas sobre os vídeos que já existem.
 //    Vive em `seo-geo-questions.ts` (gerado) e entra aqui por spread.
 //
@@ -1062,7 +1062,7 @@ export const TRAINING_QUESTIONS: Record<string, TrainingQuestion[]> = {
   "comum-m1": COMUM_M1,
   "comum-m2": COMUM_M2,
   "comum-m3": COMUM_M3,
-  // Especialização SEO/GEO — 11 módulos, 272 perguntas geradas a partir do
+  // Especialização SEO/GEO — 11 módulos, 281 perguntas geradas a partir do
   // documento de especificação (ver seo-geo-questions.ts).
   ...SEO_GEO_QUESTIONS,
   "ads-m1": ADS_M1,

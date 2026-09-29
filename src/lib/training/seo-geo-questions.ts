@@ -1,4 +1,4 @@
-// Banco de perguntas da Especialização SEO/GEO — 11 módulos, 272 perguntas.
+// Banco de perguntas da Especialização SEO/GEO — 11 módulos, 281 perguntas.
 //
 // FICHEIRO GERADO por scripts/formacao/build-seo-geo-questions.mjs a partir
 // de docs/formacao/especializacao-seo-geo.md. Não editar à mão: corrige o
@@ -7,7 +7,7 @@
 //
 // Cada pergunta traz a aula a que pertence (`lessonId`) e, quando o
 // documento original não tinha resposta marcada, `needsReview` + a nota com
-// a resposta assumida (10 perguntas). O CMS mostra-as com um badge
+// a resposta assumida (11 perguntas). O CMS mostra-as com um badge
 // «a confirmar» e deixa marcá-las como confirmadas; não bloqueiam nada.
 
 import type { TrainingQuestion } from "@/lib/training/catalog";
@@ -108,13 +108,13 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       a: true,
     },
     {
-      l: "seo-gmail-assinatura",
+      l: "seo-fathom",
       t: "vf",
       p: "Em reuniões de equipa não preciso de utilizar o Fathom para gravar a reunião.",
       a: false,
     },
     {
-      l: "seo-gmail-assinatura",
+      l: "seo-fathom",
       t: "mc",
       p: "O Fathom é utilizado para:",
       o: [
@@ -125,7 +125,7 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-gmail-assinatura",
+      l: "seo-fathom",
       t: "mc",
       p: "O Fathom é obrigatório ser usado por:",
       o: [
@@ -136,19 +136,19 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-gmail-assinatura",
+      l: "seo-fathom",
       t: "vf",
       p: "O Fathom serve para nos protegermos em caso de conflito mas também para formação de colegas.",
       a: true,
     },
     {
-      l: "seo-gmail-assinatura",
+      l: "seo-fathom",
       t: "vf",
       p: "O Fathom em reuniões de 15 minutos com clientes não é obrigatório ser autorizado na reunião.",
       a: false,
     },
     {
-      l: "seo-gmail-assinatura",
+      l: "seo-fathom",
       t: "mc",
       p: "A administração da WonderAds tem como protocolo pedir as gravações de reuniões de colegas:",
       o: [
@@ -159,7 +159,7 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-gmail-assinatura",
+      l: "seo-agendar-reuniao",
       t: "mc",
       p: "Devo sempre verificar qual plataforma antes de agendar uma reunião com um colega:",
       o: [
@@ -171,19 +171,19 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-gmail-assinatura",
+      l: "seo-agendar-reuniao",
       t: "vf",
       p: "Para verificar a agenda/calendário de um colega devo sempre ir ao Google Calendar e selecionar do lado esquerdo onde diz \"Meet with…\" o email do colega em questão.",
       a: true,
     },
     {
-      l: "seo-gmail-assinatura",
+      l: "seo-agendar-reuniao",
       t: "vf",
       p: "Quando quero agendar uma reunião de urgência com a administração da WonderAds, neste caso, é opcional verificar os agendamentos no Google Calendar.",
       a: false,
     },
     {
-      l: "seo-gmail-assinatura",
+      l: "seo-agendar-reuniao",
       t: "ms",
       p: "Cenário: Quero agendar uma reunião de acompanhamento extra com o André, devo:",
       o: [
@@ -195,13 +195,13 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-gmail-assinatura",
+      l: "seo-pedido-ausencia",
       t: "vf",
       p: "O pedido de ausência só entra em efetivo depois de este ser aceite por um membro da equipa administrativa.",
       a: true,
     },
     {
-      l: "seo-gmail-assinatura",
+      l: "seo-pedido-ausencia",
       t: "mc",
       p: "Um pedido de ausência só é obrigatório ser pedido caso a ausência seja superior a:",
       o: [
@@ -213,13 +213,13 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-gmail-assinatura",
+      l: "seo-pedido-ausencia",
       t: "vf",
       p: "Posso fazer um pedido de ausência diretamente pelo grupo no WhatsApp a um membro da administração em vez de submeter na app pelo protocolo.",
       a: false,
     },
     {
-      l: "seo-gmail-assinatura",
+      l: "seo-pedido-ausencia",
       t: "vf",
       p: "É total responsabilidade do consultor estar disponível para reuniões, mensagens e chamadas dentro do horário de trabalho, desde que não haja um pedido de ausência aprovado.",
       a: true,
@@ -242,25 +242,25 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-cd-daily",
+      l: "seo-m5-a1",
       t: "vf",
       p: "O consultor na altura do report mensal deve sempre perguntar se o cliente prefere ter um vídeo de overview do relatório para poder ver no seu tempo ou perguntar se o cliente prefere ter uma reunião de esclarecimento de dúvidas sobre o relatório mensal.",
       a: true,
     },
     {
-      l: "seo-cd-daily",
+      l: "seo-m5-a1",
       t: "vf",
       p: "Caso o cliente prefira ter o relatório com vídeo de overview do relatório, o consultor deve estudar e analisar bem o report antes de começar o vídeo.",
       a: true,
     },
     {
-      l: "seo-cd-daily",
+      l: "seo-m5-a1",
       t: "vf",
       p: "Caso o consultor prefira ter um vídeo de overview do relatório, o consultor deve fazer uma apresentação PowerPoint para apresentar o report mensal.",
       a: false,
     },
     {
-      l: "seo-cd-daily",
+      l: "seo-m5-a1",
       t: "mc",
       p: "O consultor deve sempre deixar claro que:",
       o: [
@@ -272,13 +272,13 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       r: "sem resposta marcada; a mais completa é a 3.ª opção",
     },
     {
-      l: "seo-cd-daily",
+      l: "seo-m5-a1",
       t: "vf",
       p: "O consultor deve sempre saber se o cliente está a ter uma boa taxa de conversão.",
       a: true,
     },
     {
-      l: "seo-cd-daily",
+      l: "seo-m5-a1",
       t: "mc",
       p: "Cenário: O cliente tem bastantes leads a chegar e a taxa de conversão/fecho na receção/primeira barreira do cliente está muito baixa. Devo:",
       o: [
@@ -291,13 +291,13 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       r: "sem resposta marcada; a mais completa é a 4.ª opção",
     },
     {
-      l: "seo-cd-daily",
+      l: "seo-m5-a1",
       t: "vf",
       p: "O vídeo de overview do relatório e/ou a reunião de apresentação do roadmap devem mencionar detalhes técnicos e ir fundo.",
       a: false,
     },
     {
-      l: "seo-cd-daily",
+      l: "seo-com-news-rp",
       t: "mc",
       p: "Quais dos seguintes pode ser uma surprise news?",
       o: [
@@ -308,13 +308,13 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-cd-daily",
+      l: "seo-com-news-rp",
       t: "vf",
       p: "Na mensagem de envio de surprise news para enviar no grupo com o cliente temos sempre que identificar sem falta o chefe máximo da empresa.",
       a: true,
     },
     {
-      l: "seo-cd-daily",
+      l: "seo-com-nps",
       t: "mc",
       p: "Dentro de quantos dias deve-se ligar a um cliente que não preencheu o NPS form?",
       o: [
@@ -326,7 +326,7 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       r: "sem opções no doc original; pelo título do vídeo 2.7 o protocolo é SMS → 1 semana → follow-up → 1 semana → call, logo ~14 dias",
     },
     {
-      l: "seo-cd-daily",
+      l: "seo-com-nps",
       t: "mc",
       p: "Quanto tempo leva o NPS form da WonderAds?",
       o: [
@@ -396,7 +396,7 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-com-aprov",
+      l: "seo-com-admin",
       t: "mc",
       p: "É importante dizer ao cliente que iremos dar resposta à pergunta/problema no máximo dentro de:",
       o: [
@@ -407,7 +407,7 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-com-aprov",
+      l: "seo-com-admin",
       t: "mc",
       p: "Se não souber responder a uma questão administrativa do cliente devo sempre perguntar primeiro a quem:",
       o: [
@@ -419,13 +419,13 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       r: "sem resposta marcada; pela Q10 o primeiro passo é a equipa/colegas",
     },
     {
-      l: "seo-com-aprov",
+      l: "seo-com-admin",
       t: "vf",
       p: "Um problema administrativo tem sempre resposta.",
       a: true,
     },
     {
-      l: "seo-com-aprov",
+      l: "seo-com-admin",
       t: "mc",
       p: "Se o meu cliente vier com uma pergunta que não sei responder, é minha total responsabilidade:",
       o: [
@@ -436,13 +436,13 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-com-aprov",
+      l: "seo-cd-tecnico",
       t: "vf",
       p: "Ao receber um problema técnico de um cliente (por reunião, mensagem ou email), o primeiro passo é sempre perceber se sabemos ou não a solução a 100% antes de responder ao cliente.",
       a: true,
     },
     {
-      l: "seo-com-aprov",
+      l: "seo-cd-tecnico",
       t: "mc",
       p: "Quando sabemos a solução a 100%, a mensagem correta a enviar ao cliente é:",
       o: [
@@ -453,13 +453,13 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-com-aprov",
+      l: "seo-cd-tecnico",
       t: "vf",
       p: "O fluxo \"Como solucionar um problema técnico\" aplica-se também e igualzinho a problemas administrativos, desde que sejam urgentes.",
       a: false,
     },
     {
-      l: "seo-com-aprov",
+      l: "seo-cd-tecnico",
       t: "mc",
       p: "Um cliente reporta que o formulário do site não está a enviar leads. Após estancar o cliente, o passo imediatamente a seguir é:",
       o: [
@@ -470,13 +470,13 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-com-aprov",
+      l: "seo-cd-tecnico",
       t: "vf",
       p: "Num problema Web, o ticket deve ser sempre criado com urgência máxima porque afeta a operação do cliente.",
       a: false,
     },
     {
-      l: "seo-com-aprov",
+      l: "seo-cd-tecnico",
       t: "mc",
       p: "O cliente reporta que o Google Search Console deixou de mostrar dados corretamente e o problema é claramente da plataforma (Não Web). Devo:",
       o: [
@@ -487,7 +487,7 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-com-aprov",
+      l: "seo-cd-tecnico",
       t: "mc",
       p: "Ao contactar o suporte de uma plataforma externa (ex.: GSC, Meta, CRM do cliente) para resolver um problema Não Web:",
       o: [
@@ -497,13 +497,13 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-com-aprov",
+      l: "seo-cd-tecnico",
       t: "vf",
       p: "\"Recorrer à equipa\" é o primeiro passo sempre que o problema técnico parece complexo, para poupar tempo.",
       a: false,
     },
     {
-      l: "seo-com-aprov",
+      l: "seo-cd-tecnico",
       t: "ms",
       p: "Quando recorro à equipa para me ajudar a resolver um problema técnico, o fluxo pode terminar em:",
       o: [
@@ -515,7 +515,7 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-com-aprov",
+      l: "seo-cd-tecnico",
       t: "mc",
       p: "Cenário: Um cliente envia por WhatsApp \"o site está em baixo, não consigo aceder a nada\". Estou em reunião com outro cliente e só vejo a mensagem 15 min depois. A ação mais correta é:",
       o: [
@@ -526,7 +526,7 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-com-aprov",
+      l: "seo-cd-ticket",
       t: "ms",
       p: "Quando vamos criar um ticket de web design devemos sempre:",
       o: [
@@ -539,31 +539,31 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-com-aprov",
+      l: "seo-cd-ticket",
       t: "vf",
       p: "Quando vou criar um ticket de web design e todos os designers estão em equilíbrio devo selecionar aquele que está mais habituado ao cliente em questão (branding, tom, etc.).",
       a: true,
     },
     {
-      l: "seo-com-aprov",
+      l: "seo-cd-ticket",
       t: "vf",
       p: "Quando vou criar um ticket de web design é a minha responsabilidade total atribuir o ticket ao web designer com menos tarefas para obter o design/resposta o mais rápido possível de forma efetiva.",
       a: true,
     },
     {
-      l: "seo-com-aprov",
+      l: "seo-cd-ticket",
       t: "vf",
       p: "No título do ticket de web design devo escrever sempre o nome do cliente no título sem falta.",
       a: false,
     },
     {
-      l: "seo-com-aprov",
+      l: "seo-cd-ticket",
       t: "vf",
       p: "É a minha total responsabilidade deixar no fundo da página do cliente na app os acessos todos que temos do cliente.",
       a: true,
     },
   ]),
-  // Módulo 4 · 26 perguntas
+  // Módulo 4 · 35 perguntas
   "seo-04-auditoria": bank("seo-04-auditoria", [
     {
       l: "seo-audit-1",
@@ -623,13 +623,13 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-audit-1",
+      l: "seo-kw-1",
       t: "vf",
       p: "A Keyword Research na app da WonderAds encontra-se em Overall SEO > Keyword Research, e lê automaticamente o onboarding form do cliente para trazer informação inicial antes de o consultor preencher os campos adicionais.",
       a: true,
     },
     {
-      l: "seo-audit-1",
+      l: "seo-kw-1",
       t: "mc",
       p: "Ao preencher a Keyword Research na app, o campo \"Comments or Additions\" serve para:",
       o: [
@@ -640,7 +640,7 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-audit-1",
+      l: "seo-kw-1",
       t: "mc",
       p: "Qual é o número ideal de keywords que devemos ter definidas por projeto para investir bem os recursos e alcançar resultados rápidos?",
       o: [
@@ -652,7 +652,7 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-audit-1",
+      l: "seo-kw-1",
       t: "mc",
       p: "Nos projetos com garantias (top 3 para pelo menos 3 keywords), o que devemos fazer na hora de selecionar as keywords?",
       o: [
@@ -663,7 +663,7 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-audit-1",
+      l: "seo-kw-1",
       t: "mc",
       p: "Cenário: Estou a fazer keyword research para um cabeleireiro com salões em várias localizações. Aparece a keyword \"balayage\" com 8.100 pesquisas e dificuldade fácil, mas o volume está a vir maioritariamente dos Estados Unidos. Devo:",
       o: [
@@ -674,7 +674,7 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-audit-1",
+      l: "seo-kw-1",
       t: "ms",
       p: "Sobre o fluxo correto para validar as sugestões de keywords devolvidas pelo Claude:",
       o: [
@@ -688,7 +688,7 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-audit-1",
+      l: "seo-kw-1",
       t: "mc",
       p: "Depois de adicionar as keywords selecionadas ao sistema (com a possibilidade de guardar variantes junto de cada uma), o próximo passo é:",
       o: [
@@ -699,7 +699,7 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-audit-1",
+      l: "seo-kw-2",
       t: "mc",
       p: "O número de keywords a selecionar para o foco do projeto depende do tamanho do cliente. Quantas keywords devemos selecionar para cada tipo de projeto?",
       o: [
@@ -710,7 +710,7 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-audit-1",
+      l: "seo-kw-2",
       t: "mc",
       p: "Porque é que o número de keywords não deve exceder as médias definidas por tipo de projeto (Light/Core/Growth)?",
       o: [
@@ -721,7 +721,7 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-audit-1",
+      l: "seo-kw-2",
       t: "mc",
       p: "Cenário: Estou a fazer a Keyword Research de um cliente novo em Vila Nova de Gaia. O onboarding form já foi lido automaticamente pela app, mas o cliente reforçou 3 keywords prioritárias por WhatsApp e, em conversa, disse que quer priorizar um serviço específico como venda interna. Devo:",
       o: [
@@ -732,7 +732,7 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-audit-1",
+      l: "seo-kw-2",
       t: "mc",
       p: "Uma vez selecionadas as keywords no report e enviadas para aprovação (Pending Review), o passo seguinte, depois da validação do cliente, é:",
       o: [
@@ -743,13 +743,13 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-audit-1",
+      l: "seo-kw-2",
       t: "vf",
       p: "A seleção de keywords feita agora é definitiva até ao fim do contrato e não pode ser revisitada, para manter a consistência da estratégia.",
       a: false,
     },
     {
-      l: "seo-audit-1",
+      l: "seo-kw-3",
       t: "mc",
       p: "Cenário: Estou a analisar um cliente novo (Medway) no Semrush pela primeira vez. Depois de meter o domínio, qual é o primeiro cuidado que devo ter antes de olhar para os dados?",
       o: [
@@ -760,7 +760,7 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-audit-1",
+      l: "seo-kw-3",
       t: "mc",
       p: "Dentro do Domain Overview do Semrush, para ver o histórico de posições orgânicas do cliente ao longo do tempo, o consultor deve ir a:",
       o: [
@@ -771,13 +771,13 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-audit-1",
+      l: "seo-kw-3",
       t: "vf",
       p: "O gráfico de barras em Organic Rankings > Positions permite navegar pelo histórico dos últimos meses (ex.: até 6 meses, 1 ou 2 anos) e ao clicar num mês específico mostra as keywords que estavam a rankear nesse mês.",
       a: true,
     },
     {
-      l: "seo-audit-1",
+      l: "seo-kw-3",
       t: "mc",
       p: "Na aba Organic Rankings > Positions, algumas keywords aparecem sem posição atribuída, com um símbolo específico de uma estrela de quatro pontas. O que representam essas keywords?",
       o: [
@@ -789,7 +789,7 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-audit-1",
+      l: "seo-kw-3",
       t: "mc",
       p: "Cenário: Estou a analisar o Organic Rankings do Medway. Quero encontrar oportunidades rápidas para o cliente (quick wins). Uma tática eficaz é:",
       o: [
@@ -800,7 +800,7 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-audit-1",
+      l: "seo-kw-3",
       t: "mc",
       p: "O consultor está a validar/enriquecer a lista de keywords do cliente e quer explorar variações e ideias novas em torno de uma keyword específica (ex.: \"Invisalign\"). Qual ferramenta do Semrush deve usar?",
       o: [
@@ -811,7 +811,7 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-audit-1",
+      l: "seo-kw-3",
       t: "mc",
       p: "O que devolve o filtro Phrase Match dentro do Keyword Magic Tool, e porque é útil?",
       o: [
@@ -822,7 +822,7 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-audit-1",
+      l: "seo-kw-3",
       t: "ms",
       p: "Quais são as 3 ferramentas do Semrush recomendadas para trabalhar a keyword research de um cliente?",
       o: [
@@ -832,6 +832,87 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
         ["Backlink Gap Analysis", false],
         ["Site Audit", false],
         ["Social Media Poster", false],
+      ],
+    },
+    {
+      l: "seo-screamingfrog",
+      t: "vf",
+      p: "Correr o Screaming Frog nos projetos — a olhar para os erros, os links internos e os links externos — fica ao critério de cada consultor, conforme o tempo que tiver.",
+      a: false,
+    },
+    {
+      l: "seo-screamingfrog",
+      t: "mc",
+      p: "Cenário: No separador External do Screaming Frog, encontro no site de uma clínica cliente um link para um site de apostas que ninguém se lembra de ter colocado. Qual é a abordagem mais correta?",
+      o: [
+        ["Remover o link e seguir em frente — não vale a pena falar disso a ninguém", false],
+        ["Avisar a gestão de imediato, antes de verificar mais nada", false],
+        ["Descobrir a origem (histórico de revisões no WordPress, perguntar à equipa, ver se vem de um plugin ou do tema); se não houver explicação, ver Segurança e ações manuais no Search Console e voltar a correr o rastreio à procura de outros links estranhos — e só então avisar a gestão, com tudo na mão", true],
+        ["Esperar pelo rastreio do mês seguinte para confirmar se o link continua lá", false],
+      ],
+    },
+    {
+      l: "seo-screamingfrog",
+      t: "mc",
+      p: "Encontrei um erro 404 em Response Codes > Client Error (4xx). Como descubro em que página tenho de ir corrigir?",
+      o: [
+        ["Pesquisando o URL no Google", false],
+        ["Clicando na linha desse URL e abrindo, no painel de baixo, o separador dos links (Inlinks), que mostra de que páginas saem os links para esse endereço", true],
+        ["No resumo do lado direito, que lista a página de origem de cada erro", false],
+        ["Não dá para ver no Screaming Frog; é preciso o Semrush", false],
+      ],
+    },
+    {
+      l: "seo-screamingfrog",
+      t: "ms",
+      p: "Em Page Titles e Meta Description, que filtros se verificam?",
+      o: [
+        ["Missing (em falta)", true],
+        ["Duplicate (duplicados)", true],
+        ["Over 60 characters nos títulos e over 155 characters nas descrições (cortados pelo Google)", true],
+        ["Under 10 words", false],
+        ["Contains emoji", false],
+      ],
+    },
+    {
+      l: "seo-screamingfrog",
+      t: "vf",
+      p: "Um ícone ou uma imagem decorativa não precisa de texto alternativo descritivo, mas deve ter o atributo alt vazio no código — senão aparece como «Missing Alt Text» no Screaming Frog.",
+      a: true,
+    },
+    {
+      l: "seo-screamingfrog",
+      t: "vf",
+      p: "Um noindex posto por engano numa página de serviço ou um canonical a apontar para outra versão da página não se veem a navegar pelo site — por isso verificam-se sempre em Directives e Canonicals. Uma página de serviço com noindex, para o Google, não existe.",
+      a: true,
+    },
+    {
+      l: "seo-screamingfrog",
+      t: "vf",
+      p: "Na versão gratuita do Screaming Frog o rastreio fica guardado, por isso posso fechar o programa e exportar os relatórios mais tarde.",
+      a: false,
+    },
+    {
+      l: "seo-screamingfrog",
+      t: "mc",
+      p: "Cenário: O rastreio parou nos 500 endereços (o limite da versão gratuita) e a maior parte são imagens, CSS e JavaScript, não páginas. O que se faz?",
+      o: [
+        ["Assume-se que o resto do site está bem, porque os erros graves aparecem sempre primeiro", false],
+        ["Rastreia-se por partes (o endereço com a pasta, ex.: /pt/) e, se mesmo assim não chegar, usa-se o Site Audit do Ahrefs Webmaster Tools, gratuito e sem esse limite — o que não foi rastreado não foi verificado", true],
+        ["Usa-se o modo List com os primeiros 500 URLs e dá-se o site por auditado", false],
+        ["Reduz-se a auditoria à homepage e às páginas de serviço", false],
+      ],
+      r: "no vídeo ouve-se «site audit web tools» — assumido Site Audit do Ahrefs Webmaster Tools",
+    },
+    {
+      l: "seo-screamingfrog",
+      t: "mc",
+      p: "Com que frequência se faz o rastreio completo de cada projeto?",
+      o: [
+        ["Uma vez por ano, na renovação do contrato", false],
+        ["Só quando o cliente se queixa de alguma coisa", false],
+        ["Uma vez por mês (no máximo de dois em dois meses) e sempre depois de uma mudança grande no site — migração, tema novo, plugin novo, uma queda resolvida", true],
+        ["Todas as semanas, com o Weekly Report", false],
       ],
     },
   ]),
@@ -968,13 +1049,13 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       a: true,
     },
     {
-      l: "seo-cd-roadmap",
+      l: "seo-m4-a1",
       t: "vf",
       p: "Para uma reunião de onboarding, basta o consultor levar o Roadmap Client pronto, porque os restantes materiais (Do's/Dont's/Notes, Site Audit, Keyword Research) podem ser trabalhados no decorrer do primeiro mês de parceria.",
       a: false,
     },
     {
-      l: "seo-cd-roadmap",
+      l: "seo-m4-a1",
       t: "ms",
       p: "Quais dos seguintes materiais devem estar prontos para rever na reunião de onboarding?",
       o: [
@@ -988,13 +1069,13 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-cd-roadmap",
+      l: "seo-m4-a1",
       t: "vf",
       p: "A keyword research pode ser deixada para ser feita ao vivo com o cliente na própria onboarding call, para envolver o cliente na escolha das keywords desde o início.",
       a: false,
     },
     {
-      l: "seo-cd-roadmap",
+      l: "seo-m4-a1",
       t: "mc",
       p: "Qual destes acessos NÃO faz parte da lista obrigatória que devemos pedir e registar na app caso o cliente ainda não tenha fornecido?",
       o: [
@@ -1006,7 +1087,7 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-cd-roadmap",
+      l: "seo-m4-a1",
       t: "ms",
       p: "Quais são os acessos e materiais que devemos pedir e registar na app caso o cliente ainda não os tenha fornecido?",
       o: [
@@ -1021,13 +1102,13 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-cd-roadmap",
+      l: "seo-m4-a1",
       t: "vf",
       p: "As Fotos/Materiais do cliente são opcionais de pedir no arranque do projeto, uma vez que podemos sempre gerar imagens via IA e recorrer a bancos de imagens da internet (Envato Elements).",
       a: false,
     },
     {
-      l: "seo-cd-roadmap",
+      l: "seo-m4-a1",
       t: "mc",
       p: "Segundo os protocolos que devemos mencionar sem falta na onboarding call, os Weekly Updates são enviados ao cliente no WhatsApp:",
       o: [
@@ -1039,19 +1120,19 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-cd-roadmap",
+      l: "seo-m4-a1",
       t: "vf",
       p: "Nos protocolos apresentados na onboarding call devemos deixar claro ao cliente que preferimos comunicação exclusivamente por email, para manter tudo registado por escrito e evitar mensagens de WhatsApp fora de horas.",
       a: false,
     },
     {
-      l: "seo-cd-roadmap",
+      l: "seo-m4-a1",
       t: "vf",
       p: "É obrigatório mencionar ao cliente na onboarding call que precisamos de aprovações e resposta pelo menos todas as semanas.",
       a: true,
     },
     {
-      l: "seo-cd-roadmap",
+      l: "seo-m4-a1",
       t: "mc",
       p: "Segundo os protocolos a mencionar sem falta na onboarding call, qual é a frequência mínima de reporting formal + call com o cliente?",
       o: [
@@ -1063,7 +1144,7 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-cd-roadmap",
+      l: "seo-m4-a1",
       t: "ms",
       p: "Quais dos seguintes protocolos devem ser mencionados sem falta ao cliente na reunião de onboarding?",
       o: [
@@ -1077,13 +1158,13 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-cd-roadmap",
+      l: "seo-m4-a1",
       t: "vf",
       p: "Os Do's, Dont's e Notes só precisam de estar preenchidos depois da onboarding call, com base no que for discutido na própria reunião com o cliente.",
       a: false,
     },
     {
-      l: "seo-cd-roadmap",
+      l: "seo-m4-a1",
       t: "mc",
       p: "Cenário: Tenho reunião de onboarding com um cliente novo daqui a 3 dias. O cliente ainda não me enviou os acessos ao GMB nem ao GA4, e eu ainda não fiz keyword research. Devo:",
       o: [
@@ -1094,13 +1175,13 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-cd-roadmap",
+      l: "seo-m4-a1",
       t: "vf",
       p: "Na onboarding call podemos deixar claro que o cliente pode responder às nossas aprovações quando lhe for conveniente, desde que garanta pelo menos uma resposta por mês.",
       a: false,
     },
     {
-      l: "seo-cd-roadmap",
+      l: "seo-m4-a1",
       t: "mc",
       p: "Cenário: Estou a preparar a onboarding call de um cliente novo de uma clínica dentária. Já tenho o Site Audit e o Roadmap Client prontos, mas ainda não preenchi os Do's/Dont's/Notes nem fiz keyword research. Devo:",
       o: [
@@ -1111,7 +1192,7 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-cd-roadmap",
+      l: "seo-searchable-setup",
       t: "ms",
       p: "Quais destes campos são obrigatórios no setup do Searchable?",
       o: [
@@ -1127,7 +1208,7 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-cd-roadmap",
+      l: "seo-searchable-setup",
       t: "ms",
       p: "Quais destes passos fazem parte do fluxo correto de setup?",
       o: [
@@ -1141,19 +1222,19 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-cd-roadmap",
+      l: "seo-searchable-setup",
       t: "vf",
       p: "O Searchable tem que ser sempre preenchido e é obrigatório ter setup e ativo para todos os meus projetos.",
       a: true,
     },
     {
-      l: "seo-cd-roadmap",
+      l: "seo-searchable-setup",
       t: "vf",
       p: "O setup do Searchable pode ser efetuado sem darmos upload do onboarding form do cliente.",
       a: false,
     },
     {
-      l: "seo-cd-roadmap",
+      l: "seo-searchable-setup",
       t: "ms",
       p: "O que acontece se o Searchable for usado num projeto sem estar corretamente configurado no início?",
       o: [
@@ -1223,13 +1304,13 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       a: true,
     },
     {
-      l: "seo-header-tags",
+      l: "seo-meta-tags",
       t: "vf",
       p: "Os meta tags são conteúdos HTML visíveis no topo da página, que aparecem em bold para o utilizador logo que este entra no site.",
       a: false,
     },
     {
-      l: "seo-header-tags",
+      l: "seo-meta-tags",
       t: "mc",
       p: "Qual é o limite de caracteres recomendado para o meta title?",
       o: [
@@ -1241,7 +1322,7 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-header-tags",
+      l: "seo-meta-tags",
       t: "mc",
       p: "Qual é o intervalo de caracteres recomendado para a meta description?",
       o: [
@@ -1253,7 +1334,7 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-header-tags",
+      l: "seo-meta-tags",
       t: "ms",
       p: "Sobre boas práticas de meta titles e descriptions, seleciona todas as afirmações corretas:",
       o: [
@@ -1266,7 +1347,7 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-header-tags",
+      l: "seo-meta-tags",
       t: "mc",
       p: "Cenário: Vou criar/otimizar os meta titles e descriptions de um cliente novo, uma clínica dentária cujo foco principal é implantologia. Devo:",
       o: [
@@ -1277,19 +1358,19 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-header-tags",
+      l: "seo-meta-tags",
       t: "vf",
       p: "O meta title e a meta description são conteúdos que ficam dentro do `<head>` da página, não visíveis no corpo da página, mas que o Google e o utilizador leem antes de clicarem no resultado da pesquisa.",
       a: true,
     },
     {
-      l: "seo-header-tags",
+      l: "seo-alt-text",
       t: "vf",
       p: "O alt text é um conteúdo que aparece visível por baixo da imagem no website, servindo como legenda para o utilizador.",
       a: false,
     },
     {
-      l: "seo-header-tags",
+      l: "seo-alt-text",
       t: "ms",
       p: "Para que serve o alt text?",
       o: [
@@ -1302,13 +1383,13 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-header-tags",
+      l: "seo-alt-text",
       t: "vf",
       p: "O alt text deve conter apenas a keyword primária da página, sem descrição, para não diluir o ranqueamento.",
       a: false,
     },
     {
-      l: "seo-header-tags",
+      l: "seo-alt-text",
       t: "mc",
       p: "Cenário: Estou a otimizar as imagens de uma página de serviço \"Cirurgia à Ciática\" de uma clínica de coluna. Uma das imagens mostra o Dr. em consulta com um paciente a apontar para uma zona lombar num modelo anatómico. O alt text mais correto é:",
       o: [
@@ -1319,7 +1400,7 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-header-tags",
+      l: "seo-alt-text",
       t: "mc",
       p: "Qual é a melhor forma de verificar rapidamente o alt text de uma imagem específica numa página?",
       o: [
@@ -1330,13 +1411,13 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-header-tags",
+      l: "seo-alt-text",
       t: "vf",
       p: "Numa imagem meramente decorativa/genérica (ex.: um selo ou ícone que não tem relação direta com um serviço específico), é boa prática forçar sempre uma keyword da página no alt text, mesmo que fique fora de contexto.",
       a: false,
     },
     {
-      l: "seo-header-tags",
+      l: "seo-internal-linking",
       t: "mc",
       p: "O que é um link interno?",
       o: [
@@ -1347,7 +1428,7 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-header-tags",
+      l: "seo-internal-linking",
       t: "ms",
       p: "Para que servem os links internos?",
       o: [
@@ -1360,13 +1441,13 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-header-tags",
+      l: "seo-internal-linking",
       t: "vf",
       p: "Os links internos devem ser feitos exclusivamente da homepage para as páginas internas, nunca entre páginas de serviços do mesmo nível.",
       a: false,
     },
     {
-      l: "seo-header-tags",
+      l: "seo-internal-linking",
       t: "mc",
       p: "Cenário: Estou a otimizar a página do serviço \"Implantologia\" de uma clínica dentária. No final da página quero adicionar internal linking. A abordagem mais correta é:",
       o: [
@@ -1377,19 +1458,19 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-header-tags",
+      l: "seo-internal-linking",
       t: "vf",
       p: "Os links internos só podem ser inseridos em formato de botão no final da página; não é boa prática colocá-los diretamente dentro do texto/parágrafo.",
       a: false,
     },
     {
-      l: "seo-header-tags",
+      l: "seo-schema",
       t: "vf",
       p: "O Schema Markup é um bloco de código, no formato JSON-LD recomendado pelo Google, que descreve o conteúdo da página aos motores de busca e sistemas de IA, sendo uma camada invisível para o utilizador.",
       a: true,
     },
     {
-      l: "seo-header-tags",
+      l: "seo-schema",
       t: "ms",
       p: "Quais são as três razões principais para implementar Schema Markup numa página?",
       o: [
@@ -1401,7 +1482,7 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-header-tags",
+      l: "seo-schema",
       t: "mc",
       p: "Qual é a regra mais importante do Schema Markup, que se aplica a todos os campos e nunca deve ser violada?",
       o: [
@@ -1412,7 +1493,7 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-header-tags",
+      l: "seo-schema",
       t: "mc",
       p: "Ao gerar Schema Markup na app da WonderAds (SEO Actions > Schema Markup), qual é a opção que vem marcada por defeito no campo Schema Type e porquê?",
       o: [
@@ -1423,7 +1504,7 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-header-tags",
+      l: "seo-schema",
       t: "mc",
       p: "Cenário: Estou a gerar o Schema Markup na app para a página de serviço de um cliente. Nos campos Market e Language vejo a opção \"Autodetected\". Devo:",
       o: [
@@ -1434,7 +1515,7 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-header-tags",
+      l: "seo-schema",
       t: "mc",
       p: "Cenário: Publiquei o Schema Markup na página. Como devo validar o resultado?",
       o: [
@@ -1445,7 +1526,7 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-header-tags",
+      l: "seo-schema",
       t: "ms",
       p: "Quanto ao local onde colar o bloco de Schema Markup na página, seleciona todas as afirmações corretas:",
       o: [
@@ -1458,7 +1539,7 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-header-tags",
+      l: "seo-schema",
       t: "mc",
       p: "Cenário: Depois de gerar o Schema na app e validar, o Rich Results Test aponta um erro em breadcrumbs, mas o Schema Markup Validator diz que está tudo correto. O elemento em causa não é essencial para esta página. Devo:",
       o: [
@@ -1533,19 +1614,19 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       a: true,
     },
     {
-      l: "seo-searchable-topics",
+      l: "seo-content-gap",
       t: "vf",
       p: "Uma Content Gap Analysis serve para identificar tópicos e páginas que os concorrentes do cliente têm no site e o cliente não tem, para depois preencher essas lacunas com conteúdo próprio.",
       a: true,
     },
     {
-      l: "seo-searchable-topics",
+      l: "seo-content-gap",
       t: "vf",
       p: "Antes de gerar uma Content Gap Analysis na app, o consultor pode ir direto à dashboard e clicar em Generate sem preencher os Do's, Dont's e Notes do projeto, uma vez que a IA consegue perceber sozinha o contexto do cliente.",
       a: false,
     },
     {
-      l: "seo-searchable-topics",
+      l: "seo-content-gap",
       t: "ms",
       p: "Ao preencher a Content Gap Analysis na app da WonderAds (Departamento SEO > On-Page SEO > Content Gap Analysis), o consultor deve preencher:",
       o: [
@@ -1559,7 +1640,7 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-searchable-topics",
+      l: "seo-content-gap",
       t: "mc",
       p: "Cenário: A Content Gap Analysis devolveu 30 tópicos que os concorrentes têm e o cliente não. Devo:",
       o: [
@@ -1570,7 +1651,7 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-searchable-topics",
+      l: "seo-content-gap",
       t: "mc",
       p: "Sobre a intenção de pesquisa a manter no plano de conteúdo sugerido pela Content Gap Analysis, seleciona a afirmação mais correta:",
       o: [
@@ -1581,7 +1662,7 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-searchable-topics",
+      l: "seo-content-gap",
       t: "mc",
       p: "Depois de o consultor validar os tópicos, prioridades e intenções sugeridas pela Content Gap Analysis, o passo seguinte é:",
       o: [
@@ -1592,19 +1673,19 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-searchable-topics",
+      l: "seo-content-calendar",
       t: "vf",
       p: "O Content Calendar é uma ferramenta dentro da app da WonderAds que serve para planear a postagem de conteúdo (blog posts e/ou GMB posts) do cliente ao longo do tempo.",
       a: true,
     },
     {
-      l: "seo-searchable-topics",
+      l: "seo-content-calendar",
       t: "vf",
       p: "Posso ir direto à dashboard do Content Calendar e clicar em Generate sem preencher primeiro os Do's, Dont's e Notes do projeto, uma vez que a IA da app já conhece o cliente por outros contextos anteriores.",
       a: false,
     },
     {
-      l: "seo-searchable-topics",
+      l: "seo-content-calendar",
       t: "mc",
       p: "Cenário: Estou a preparar o Content Calendar da Brancóptica, que é um cliente novo cujo site NÃO tem conteúdo nenhum. Devo:",
       o: [
@@ -1615,7 +1696,7 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-searchable-topics",
+      l: "seo-content-calendar",
       t: "mc",
       p: "Cenário: Um cliente meu já tem 300-400 blog posts publicados e prefere fazer conteúdo super elaborado (qualidade acima de quantidade). Para este cliente devo:",
       o: [
@@ -1626,7 +1707,7 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-searchable-topics",
+      l: "seo-content-calendar",
       t: "mc",
       p: "Sobre a escolha dos dias da semana para publicar conteúdo, seleciona a afirmação MAIS correta:",
       o: [
@@ -1637,7 +1718,7 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-searchable-topics",
+      l: "seo-content-calendar",
       t: "ms",
       p: "Quais destes passos fazem parte do fluxo correto de criação e implementação do Content Calendar?",
       o: [
@@ -1746,7 +1827,7 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-cd-artigo",
+      l: "seo-publicar-html",
       t: "mc",
       p: "Quem deve assinar os artigos blog?",
       o: [
@@ -1758,13 +1839,13 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       r: "sem resposta marcada; a mais provável é \"A maior referência no cliente/clínica\"",
     },
     {
-      l: "seo-cd-artigo",
+      l: "seo-publicar-html",
       t: "vf",
       p: "Todos os artigos devem ter um CTA.",
       a: true,
     },
     {
-      l: "seo-cd-artigo",
+      l: "seo-publicar-html",
       t: "mc",
       p: "Todos os artigos devem ter:",
       o: [
@@ -1776,7 +1857,7 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-cd-artigo",
+      l: "seo-publicar-html",
       t: "mc",
       p: "As target keywords (palavras-chave do projeto) nos artigos blog e páginas do site devem estar:",
       o: [
@@ -1787,19 +1868,19 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-cd-artigo",
+      l: "seo-faq",
       t: "vf",
       p: "Duas regras resumem a criação de um FAQ bem feito: as perguntas vêm sempre de dados (não da nossa cabeça) e a resposta vem sempre no começo para os AIs lerem (não no fim).",
       a: true,
     },
     {
-      l: "seo-cd-artigo",
+      l: "seo-faq",
       t: "vf",
       p: "É importante a resposta vir sempre no início para o ChatGPT, Claude, etc. lerem e nos mencionarem a possíveis clientes.",
       a: true,
     },
     {
-      l: "seo-cd-artigo",
+      l: "seo-faq",
       t: "mc",
       p: "Ao pesquisar o termo principal no Google para encontrar perguntas para o FAQ, a secção mais importante a analisar é:",
       o: [
@@ -1810,13 +1891,13 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-cd-artigo",
+      l: "seo-faq",
       t: "vf",
       p: "Quando o consultor está a fazer o FAQ fora do país onde o cliente atende (clientes estrangeiros, por ex. Inglaterra), deve usar as ferramentas de pesquisa avançada do Google e definir a região onde o cliente opera, para os resultados serem locais e relevantes.",
       a: true,
     },
     {
-      l: "seo-cd-artigo",
+      l: "seo-faq",
       t: "ms",
       p: "Quais destas ferramentas fazem parte do fluxo apresentado para recolher perguntas para o FAQ?",
       o: [
@@ -1830,13 +1911,13 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-cd-artigo",
+      l: "seo-faq",
       t: "vf",
       p: "Todas as perguntas que aparecem no Google Search Console para o cliente são relevantes para o FAQ e devem ser incluídas sem filtro.",
       a: false,
     },
     {
-      l: "seo-cd-artigo",
+      l: "seo-faq",
       t: "mc",
       p: "Cenário: Reuni as perguntas do Google (\"As pessoas também perguntam\"), o CSV do People Also Asked, o export do GSC e o link da página. Colei tudo no Claude. O prompt mais correto para pedir ao Claude é:",
       o: [
@@ -1847,13 +1928,13 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-cd-artigo",
+      l: "seo-faq",
       t: "vf",
       p: "O Claude, por defeito, já conhece o preço que a agência/cliente cobra, os horários, a duração dos tratamentos e outros dados específicos do negócio, por isso as respostas geradas não precisam de ser complementadas com informação adicional.",
       a: false,
     },
     {
-      l: "seo-cd-artigo",
+      l: "seo-faq",
       t: "mc",
       p: "Cenário: O Claude devolveu 6 perguntas com respostas para o FAQ da página. Uma das respostas é genérica e termina com \"entre em contacto para saber mais\". Devo:",
       o: [
@@ -1864,19 +1945,19 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-cd-artigo",
+      l: "seo-faq",
       t: "vf",
       p: "Na implementação do FAQ na página, as perguntas devem estar em H3 e as respostas em estilo normal (texto).",
       a: true,
     },
     {
-      l: "seo-cd-artigo",
+      l: "seo-content-refresh",
       t: "vf",
       p: "Fazer refresh a uma página existente do site do cliente é normalmente mais eficaz e mais eficiente do que criar uma página nova do zero, porque a página antiga já tem alguma força e visibilidade acumuladas. Atenção que não é regra geral e por vezes pode acontecer uma página nova dar rank melhor e mais rápido que uma página antiga.",
       a: true,
     },
     {
-      l: "seo-cd-artigo",
+      l: "seo-content-refresh",
       t: "ms",
       p: "Quais destas são razões válidas para fazer refresh regular ao conteúdo das páginas de um cliente?",
       o: [
@@ -1889,7 +1970,7 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-cd-artigo",
+      l: "seo-content-refresh",
       t: "ms",
       p: "Quais destes são pilares a avaliar quando se decide o que precisa de refresh numa página?",
       o: [
@@ -1902,7 +1983,7 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-cd-artigo",
+      l: "seo-content-refresh",
       t: "mc",
       p: "Qual é o n.º de palavras recomendado no mínimo para uma página de serviço bem otimizada?",
       o: [
@@ -1913,7 +1994,7 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-cd-artigo",
+      l: "seo-content-refresh",
       t: "mc",
       p: "Cenário: Vou otimizar a página de \"Ginecologia\" de um cliente. Um colega diz-me para poupar tempo copiando o link da página do concorrente que está em 1.º lugar, colar no Claude e pedir \"analisa isto e faz-me uma versão melhor\". Devo:",
       o: [
@@ -1924,7 +2005,7 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-cd-artigo",
+      l: "seo-content-refresh",
       t: "ms",
       p: "Porque é que não devemos limitar-nos a dar o link do concorrente ao Claude e pedir para \"analisar e replicar melhor\"?",
       o: [
@@ -1936,7 +2017,7 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-cd-artigo",
+      l: "seo-content-refresh",
       t: "mc",
       p: "Cenário: Já fiz a análise manual do concorrente que está em 1.º lugar para \"ginecologia\" e contei: keyword mencionada 16 vezes, 6 blocos de texto, 5 imagens, 1 FAQ com 11 perguntas. Passei tudo ao Claude, gerei o conteúdo otimizado 2x melhor. O passo seguinte é:",
       o: [
@@ -1947,7 +2028,7 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-cd-artigo",
+      l: "seo-content-refresh",
       t: "vf",
       p: "Depois de o conteúdo otimizado estar live no site do cliente, o trabalho está terminado — não é necessário monitorizar a evolução da página.",
       a: false,
@@ -2013,7 +2094,7 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-gmb-audit",
+      l: "seo-gmb-posts",
       t: "ms",
       p: "Na publicação de um GMB Post, o consultor deve (seleciona duas):",
       o: [
@@ -2024,13 +2105,13 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-gmb-audit",
+      l: "seo-gmb-posts",
       t: "vf",
       p: "Na publicação de um GMB Post, o consultor deve sempre gerar imagens com o ChatGPT.",
       a: false,
     },
     {
-      l: "seo-gmb-audit",
+      l: "seo-gmb-posts",
       t: "mc",
       p: "Na publicação de um GMB Post de um cliente sem conteúdo (imagens) devemos logo:",
       o: [
@@ -2042,13 +2123,13 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       r: "sem resposta marcada; pela Q6/Q7 e pelo módulo de cross-sell, a mais provável é a 2.ª opção",
     },
     {
-      l: "seo-gmb-audit",
+      l: "seo-gmb-reviews",
       t: "vf",
       p: "Numa review negativa é boa prática responder publicamente com todos os detalhes do caso do cliente, incluindo o que aconteceu no atendimento, para mostrar transparência a quem lê.",
       a: false,
     },
     {
-      l: "seo-gmb-audit",
+      l: "seo-gmb-reviews",
       t: "mc",
       p: "Qual é o tempo de resposta ideal a uma review negativa no perfil do Google Business?",
       o: [
@@ -2060,7 +2141,7 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-gmb-audit",
+      l: "seo-gmb-reviews",
       t: "mc",
       p: "Qual é o tempo de resposta aceitável a uma review positiva no perfil do Google Business?",
       o: [
@@ -2072,7 +2153,7 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-gmb-audit",
+      l: "seo-gmb-reviews",
       t: "mc",
       p: "Qual é o tamanho recomendado para uma resposta a uma review positiva?",
       o: [
@@ -2084,7 +2165,7 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-gmb-audit",
+      l: "seo-gmb-reviews",
       t: "mc",
       p: "Qual é o tamanho máximo recomendado para uma resposta a uma review negativa?",
       o: [
@@ -2096,7 +2177,7 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-gmb-audit",
+      l: "seo-gmb-reviews",
       t: "ms",
       p: "Sobre boas práticas na resposta a reviews do GMB, seleciona todas as corretas:",
       o: [
@@ -2109,7 +2190,7 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-gmb-audit",
+      l: "seo-gmb-reviews",
       t: "mc",
       p: "Cenário: A White Clinic recebeu uma review de 1 estrela às 14h com uma reclamação sobre o tempo de espera na consulta. Devo:",
       o: [
@@ -2203,13 +2284,13 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-backlinks-1",
+      l: "seo-backlink-doctoralia",
       t: "vf",
       p: "Todos os backlinks são bons para o SEO do cliente.",
       a: false,
     },
     {
-      l: "seo-backlinks-1",
+      l: "seo-backlink-doctoralia",
       t: "mc",
       p: "O que é mais importante na hora de escolher onde colocar um backlink?",
       o: [
@@ -2220,7 +2301,7 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-backlinks-1",
+      l: "seo-backlink-doctoralia",
       t: "mc",
       p: "Qual é o aspeto mais importante do perfil do backlink que devemos sempre colocar para criar o propriamente dito \"backlink\"?",
       o: [
@@ -2231,25 +2312,25 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-backlinks-1",
+      l: "seo-backlink-doctoralia",
       t: "vf",
       p: "Um perfil backlink sem link do site do cliente na Wonder é considerado um backlink.",
       a: false,
     },
     {
-      l: "seo-backlinks-1",
+      l: "seo-backlink-gap",
       t: "vf",
       p: "O Competitor Backlink Gap é uma pesquisa que serve para encontrar oportunidades de backlink que os concorrentes do nosso cliente já têm, para conseguirmos replicar essas oportunidades para o nosso cliente.",
       a: true,
     },
     {
-      l: "seo-backlinks-1",
+      l: "seo-backlink-gap",
       t: "vf",
       p: "Os competidores indicados pelo cliente no onboarding form são sempre concorrentes de SEO relevantes para o Backlink Gap e têm sempre backlinks que podemos \"ir buscar\" para os nossos clientes.",
       a: false,
     },
     {
-      l: "seo-backlinks-1",
+      l: "seo-backlink-gap",
       t: "mc",
       p: "Para escolher os concorrentes a colocar na análise de Backlink Gap, como consultor devo:",
       o: [
@@ -2260,7 +2341,7 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-backlinks-1",
+      l: "seo-backlink-gap",
       t: "mc",
       p: "Cenário: Na análise do Backlink Gap para um cliente de fisioterapia, aparece que um dos concorrentes tem 21.000 backlinks vindos de um único site chamado \"Vietnam Rice Code\", que não tem qualquer ligação temática com fisioterapia nem saúde. Devo:",
       o: [
@@ -2271,7 +2352,7 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-backlinks-1",
+      l: "seo-backlink-gap",
       t: "ms",
       p: "Quando estamos a analisar quais os sites do Backlink Gap que fazem sentido para o cliente, o que devemos ter em conta?",
       o: [
@@ -2283,7 +2364,7 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-backlinks-1",
+      l: "seo-backlink-gap",
       t: "mc",
       p: "Depois de identificar os concorrentes relevantes no Semrush, o passo seguinte no fluxo de uma análise \"Backlinks Competitor Gap\" é:",
       o: [
@@ -2294,7 +2375,7 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-backlinks-1",
+      l: "seo-backlink-gap",
       t: "ms",
       p: "O estudo gerado pelo Competitor Backlink Gap na app da WonderAds organiza as oportunidades por tipo de fonte. Que tipos de fonte podem aparecer no output?",
       o: [
@@ -2309,25 +2390,25 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-backlinks-1",
+      l: "seo-broken-links",
       t: "vf",
       p: "Um link quebrado é um link que aponta para uma página que devolve erro 404.",
       a: true,
     },
     {
-      l: "seo-backlinks-1",
+      l: "seo-broken-links",
       t: "vf",
       p: "Como o Ahrefs corre na nuvem e envia email quando termina, posso e devo deixar o site audit a correr e trabalhar noutras coisas em paralelo.",
       a: true,
     },
     {
-      l: "seo-backlinks-1",
+      l: "seo-broken-links",
       t: "vf",
       p: "Quando não encontro uma página equivalente para redirecionar, a solução mais segura é redirecionar todos os URLs quebrados para a homepage.",
       a: false,
     },
     {
-      l: "seo-backlinks-1",
+      l: "seo-broken-links",
       t: "mc",
       p: "Cenário: O cliente tem várias páginas 404 antigas que já não têm equivalente no site atual, mas o serviço/tema continua a ser oferecido pelo cliente. Devo:",
       o: [
@@ -2338,7 +2419,7 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-backlinks-1",
+      l: "seo-broken-links",
       t: "mc",
       p: "Qual é a diferença entre um redirect 301 e um redirect 302?",
       o: [
@@ -2349,13 +2430,13 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-backlinks-1",
+      l: "seo-broken-links",
       t: "vf",
       p: "Posso usar um redirect 302 sempre que quiser porque, se ficar ativo mais de 30 dias, acaba por ter o mesmo efeito de um 301.",
       a: false,
     },
     {
-      l: "seo-backlinks-1",
+      l: "seo-broken-links",
       t: "ms",
       p: "Ao usar o Claude para trabalhar o relatório de links quebrados exportado do Ahrefs, o que é que o Claude faz por nós?",
       o: [
@@ -2368,7 +2449,7 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-backlinks-1",
+      l: "seo-broken-links",
       t: "mc",
       p: "Cenário: O consultor exportou o relatório do Ahrefs e o CSV tem 380 URLs 4xx. Depois de colar o CSV e o sitemap no Claude, a plataforma agrupa as URLs e sugere destinos. Devo:",
       o: [
@@ -2379,13 +2460,13 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-backlinks-1",
+      l: "seo-broken-links",
       t: "vf",
       p: "Uma cadeia de redirecionamentos (A → B → C) é a forma mais eficiente de organizar redirects antigos porque preserva o histórico da URL.",
       a: false,
     },
     {
-      l: "seo-backlinks-1",
+      l: "seo-broken-links",
       t: "mc",
       p: "Depois de aplicar as correções e voltar a correr o crawl no Ahrefs, o consultor deve verificar:",
       o: [
@@ -2396,13 +2477,13 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-backlinks-1",
+      l: "seo-broken-links",
       t: "vf",
       p: "O Ahrefs permite agendar um crawl automático semanal que envia email quando aparece um 404 novo, deixando de ser um trabalho reativo e passando a ser corretivo.",
       a: true,
     },
     {
-      l: "seo-backlinks-1",
+      l: "seo-broken-links",
       t: "mc",
       p: "Para criar redirects num site em WordPress, qual é o plugin utilizado no fluxo?",
       o: [
@@ -2413,13 +2494,13 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-backlinks-1",
+      l: "seo-broken-links",
       t: "vf",
       p: "O Claude conhece o site do cliente e o histórico do projeto o suficiente para decidir sozinho os destinos finais dos redirects, sem necessidade de validação do consultor.",
       a: false,
     },
     {
-      l: "seo-backlinks-1",
+      l: "seo-broken-links",
       t: "ms",
       p: "Quais destes passos fazem parte do fluxo correto para encontrar e resolver links 4xx e links com defeito?",
       o: [
@@ -2570,7 +2651,7 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       a: false,
     },
     {
-      l: "seo-com-upsell",
+      l: "seo-renovacao",
       t: "ms",
       p: "Para a renovação de um cliente tenho como responsabilidade trazer para a reunião:",
       o: [
@@ -2582,13 +2663,13 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
     {
-      l: "seo-com-upsell",
+      l: "seo-renovacao",
       t: "vf",
       p: "Durante a call de renovação o objetivo é falarmos sobre como correram os passados 6 meses e o que propomos serem os próximos 6 meses com o cliente.",
       a: true,
     },
     {
-      l: "seo-com-upsell",
+      l: "seo-renovacao",
       t: "mc",
       p: "Para a preparação de renovação de um cliente, o documento de overview dos últimos 6 meses tem quantas partes?",
       o: [
@@ -2600,20 +2681,20 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       r: "sem resposta marcada; pela Q16 \"documento de 7 pontos\" e pelas 7 secções marcadas na Q21, a correta é 7",
     },
     {
-      l: "seo-com-upsell",
+      l: "seo-renovacao",
       t: "vf",
       p: "Para a preparação de renovação de um cliente de SEO é responsabilidade minha como consultor de SEO deste projeto trazer o roadmap proposto para os próximos 3 meses.",
       a: true,
       r: "o doc original marca V, mas contradiz a Q16 que fala em roadmap para 6 meses; provavelmente deve ser F ou a pergunta deve dizer \"6 meses\"",
     },
     {
-      l: "seo-com-upsell",
+      l: "seo-renovacao",
       t: "vf",
       p: "Para a preparação de reunião de renovação de um cliente é opcional ter as abas das plataformas de analytics abertas no computador para a reunião.",
       a: false,
     },
     {
-      l: "seo-com-upsell",
+      l: "seo-renovacao",
       t: "ms",
       p: "O documento de overview dos últimos 6 meses para trazer para a reunião de renovação deve ter:",
       o: [
