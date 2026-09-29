@@ -571,6 +571,14 @@ const SEO_TRACK: TrainingTrack = {
             "A sequência completa: SMS, uma semana de espera, um follow-up, e uma chamada uma semana depois. Cada passo tem uma razão e um prazo.",
           presenter: "André",
           videoUrl: "https://youtu.be/5WWjo9BsXbY",
+          // v77.51: as três versões da mensagem do NPS form (PDF montado a
+          // partir dos prints do André) — em public/formacao.
+          attachments: [
+            {
+              label: "Mensagens do NPS Form para o cliente — 3 versões (.pdf)",
+              url: "/formacao/mensagens-nps-form-cliente.pdf",
+            },
+          ],
           keyPoints: [
             "SMS → uma semana → follow-up → uma semana → chamada. Ao 14.º dia sem resposta, liga-se.",
             "O NPS form da WonderAds leva 5 a 10 minutos a preencher — diz-se isso ao cliente.",
@@ -761,9 +769,19 @@ const SEO_TRACK: TrainingTrack = {
           id: "seo-cd-roadmap",
           title: "Como fazer um SEO Roadmap inicial e checklists",
           description:
-            "O roadmap inicial de uma conta nova e as checklists que garantem que nada do essencial fica por fazer nas primeiras semanas. Tem documentos a anexar por baixo do vídeo.",
+            "O roadmap inicial de uma conta nova e as checklists que garantem que nada do essencial fica por fazer nas primeiras semanas. Os documentos estão para descarregar por baixo do vídeo.",
           presenter: "André",
           videoUrl: "https://youtu.be/zdL3DcOkpCM",
+          // v77.51: as instruções do projeto Claude + as 6 checklists
+          // (auditoria, concorrência, keywords, conversão/UX, GEO, local) que o
+          // André entregou — em public/formacao, sem o lixo __MACOSX do zip.
+          attachments: [
+            {
+              label:
+                "SEO Roadmap Inicial e Checklists — instruções + 6 checklists (.zip)",
+              url: "/formacao/seo-roadmap-inicial-checklists.zip",
+            },
+          ],
           keyPoints: [
             "Todos os projetos têm um projeto no Claude da empresa (seo@wonder-ads.com) com o onboarding form em memória e os DO's, DONT's e NOTES preenchidos.",
             "Um roadmap com qualidade leva no mínimo 2 horas, está pronto 24 horas antes da reunião e segue para aprovação de um superior ou colega.",

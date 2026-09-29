@@ -543,7 +543,7 @@ Objetivo: transformar auditoria e research num roadmap, preparar e conduzir a on
 
 | Aula | Título | Vídeo | Origem | Anexos / notas | Estado |
 |------|--------|-------|--------|----------------|--------|
-| 5.1 | Como fazer um SEO Roadmap inicial e checklists | https://youtu.be/zdL3DcOkpCM | CD | Tem docs a anexar por baixo do vídeo | OK |
+| 5.1 | Como fazer um SEO Roadmap inicial e checklists | https://youtu.be/zdL3DcOkpCM | CD | Docs para descarregar por baixo do vídeo (v77.51) | OK |
 | 5.2 | Como fazer uma primeira reunião de parceria (onboarding) e gerir expectativas de timings/aprovações | https://youtu.be/IUoZxz4RRg0 | COM | Anexar: [Guidelines Pré-Onboarding Call │ WonderAds SEO/GEO DPT](https://docs.google.com/document/d/1tA3u3ir4N1hKYRwwi1MrIdj4dZVM5qcFtkoyxIDddO8/edit?usp=sharing). Materiais a trazer: Site Audit, Keyword Research, Roadmap Client, acessos Site/GMB/GA4/GSC, fotos. Protocolos: WhatsApp ativo, Weekly Updates, Monthly Report + call | OK |
 | 5.3 | Actual Call: Onboarding call de um cliente novo por um consultor | https://youtu.be/T97p9o6m9JE | COM | — | OK |
 | 5.4 | Como dar setup de um cliente novo no searchable.com (Searchable Parte 1) | https://youtu.be/kzbSFY35bUk | CD | — | OK |

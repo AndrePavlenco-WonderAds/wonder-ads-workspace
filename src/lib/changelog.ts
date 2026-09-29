@@ -13,6 +13,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.51",
+    date: "2026-09-29",
+    title: "Formação: anexos do Roadmap inicial e das mensagens do NPS",
+    highlights: [
+      "**📎 «Como fazer um SEO Roadmap inicial e checklists»** (Capítulo 05) já tem os documentos por baixo do vídeo: um .zip com as instruções do projeto Claude e as 6 checklists (Auditoria Básica, Análise de concorrência, Keyword Research, Auditoria de Conversão e UX, GEO Audit, Local SEO).",
+      "**📎 «Como enviar NPS Form ao cliente»** (Capítulo 02) passa a ter o PDF com as 3 versões da mensagem a enviar, com os campos a substituir (nome, consultorias, data e link) marcados a rosa.",
+    ],
+  },
+  {
     version: "77.50",
     date: "2026-09-28",
     title: "Tools: toda a equipa atualiza os acessos · Formação: SEO Audit Parte 2 com vídeo",
