@@ -80,7 +80,14 @@ type SourceRun = {
   firstError: GbpError | null;
   fullDone: boolean;
   pending: number;
+  /** Na troca DataForSEO → Google: id antigo → chave (salão|autor|dia|estrelas),
+   *  para os rascunhos passarem para a mesma review com o id novo. */
+  oldKeys: Map<string, string>;
 };
+
+function reviewKey(r: HubReview): string {
+  return `${r.loc}|${r.author.trim().toLowerCase()}|${r.created.slice(0, 10)}|${r.stars}`;
+}
 
 /** A marca «via hub/auto/manual» de uma resposta nossa sobrevive à sync, e
  *  uma resposta que marcámos há menos de 48 h continua marcada enquanto o
@@ -133,6 +140,7 @@ function emptyRun(): SourceRun {
     firstError: null,
     fullDone: false,
     pending: 0,
+    oldKeys: new Map(),
   };
 }
 
@@ -156,6 +164,7 @@ async function syncFromGoogle(
     try {
       const stored = await getReviewsForLocation(slug, loc.id);
       const knownIds = new Set(stored.map((r) => r.id));
+      if (switching) for (const r of stored) run.oldKeys.set(r.id, reviewKey(r));
       const readAll = full || switching || stored.length === 0 || !since;
       const fetched: HubReview[] = [];
       let totals: { average: number | null; total: number | null } = {
@@ -391,11 +400,27 @@ export async function syncReviews(
 
     await saveLocations(slug, locations);
 
+    const drafts = await getDrafts(slug);
+    let draftsChanged = false;
+
+    // Troca DataForSEO → Google: os ids das reviews mudam. Os rascunhos passam
+    // para a mesma review (salão, autor, dia e estrelas iguais) e a DataForSEO
+    // deixa de ser chamada.
+    if (source === "gbp" && run.oldKeys.size > 0) {
+      const byKey = new Map(run.allReviews.map((r) => [reviewKey(r), r]));
+      for (const [oldId, draft] of Object.entries(drafts)) {
+        const key = run.oldKeys.get(oldId);
+        const match = key ? byKey.get(key) : undefined;
+        delete drafts[oldId];
+        if (match && !drafts[match.id]) drafts[match.id] = { ...draft, reviewId: match.id, loc: match.loc };
+        draftsChanged = true;
+      }
+      await saveDfsState(slug, { tasks: {}, lastPostAt: {}, fullAt: {} });
+    }
+
     // Uma review respondida fora da plataforma depois de o rascunho ter sido
     // feito deixa de precisar dele. Um rascunho mais novo do que a resposta é
     // alguém a reescrevê-la aqui — fica.
-    const drafts = await getDrafts(slug);
-    let draftsChanged = false;
     for (const [id, draft] of Object.entries(drafts)) {
       const at = run.repliedAt.get(id);
       if (at !== undefined && at >= draft.updatedAt) {

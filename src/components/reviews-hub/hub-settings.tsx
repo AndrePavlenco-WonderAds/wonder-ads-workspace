@@ -17,11 +17,13 @@ import {
   Info,
   RotateCcw,
   Save,
+  Sparkles,
   TriangleAlert,
   Zap,
 } from "lucide-react";
 import { formatDateTime } from "@/lib/dates";
 import { DEFAULT_STRATEGIES } from "@/lib/reviews-hub/defaults";
+import { REPLY_EXAMPLES, REPLY_GUIDE, REPLY_MODEL_LABEL } from "@/lib/reviews-hub/reply-guide";
 import type { HubSettings, ResponseMode, StarLevel } from "@/lib/reviews-hub/types";
 import { useHub } from "./hub-context";
 import { LEVELS, LevelFace, Panel, StarRow, formatRating, relativeTime } from "./hub-ui";
@@ -75,6 +77,7 @@ export function SettingsView() {
         <GoogleCard />
       </div>
       <StrategiesCard draft={draft} setStrategy={setStrategy} readOnly={readOnly} />
+      <GuideCard signature={draft.signature} />
 
       <AnimatePresence>
         {dirty && !readOnly && (
@@ -451,7 +454,8 @@ function GoogleCard() {
                 </>
               ) : (
                 <>
-                  Fonte: <span className="font-semibold text-violet-200">modo de leitura (DataForSEO)</span> — publicar com
+                  Fonte: <span className="font-semibold text-violet-200">DataForSEO, temporariamente</span> — só até a API de
+                  reviews da Google ser ativada; aí a plataforma passa sozinha para a Google. Publicar, por agora, com
                   «Copiar e responder no Google».
                   {s.dfsPending ? ` ${s.dfsPending} ${s.dfsPending === 1 ? "salão" : "salões"} a caminho.` : ""}
                   {viewer.kind === "team" && s.gbpFixUrl && (
@@ -541,6 +545,82 @@ function GoogleCard() {
           </button>
         </div>
       )}
+    </Panel>
+  );
+}
+
+// ── O guia que o Claude segue ─────────────────────────────────────────
+function GuideCard({ signature }: { signature: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <Panel delay={0.12} className="p-5 sm:p-6">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="max-w-2xl">
+          <h2 className="flex items-center gap-2.5 text-lg font-semibold text-white">
+            <Sparkles className="h-5 w-5 text-violet-300" /> O guia que o {REPLY_MODEL_LABEL} segue
+          </h2>
+          <p className="mt-1 text-[13px] leading-relaxed text-white/50">
+            As respostas são escritas pelo {REPLY_MODEL_LABEL} (Anthropic). Antes de cada resposta recebe este guia base
+            da Wonder Ads e, por cima, a estratégia do nível de estrelas, o tom, o contacto e as regras desta página, e o
+            brief da marca.
+          </p>
+        </div>
+        <button
+          onClick={() => setOpen((v) => !v)}
+          className="inline-flex items-center gap-1.5 rounded-xl border border-white/12 px-3 py-1.5 text-[12px] font-medium text-white/70 transition hover:border-white/25 hover:text-white"
+        >
+          {open ? "Esconder o guia" : "Ver o guia"}
+          <motion.span animate={{ rotate: open ? 180 : 0 }}>
+            <ChevronDown className="h-3.5 w-3.5" />
+          </motion.span>
+        </button>
+      </div>
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+            className="overflow-hidden"
+          >
+            <div className="mt-5 grid gap-4 lg:grid-cols-2">
+              {REPLY_GUIDE.map((section, i) => (
+                <motion.div
+                  key={section.title}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.05 + i * 0.05 }}
+                  className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4"
+                >
+                  <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-white/45">{section.title}</p>
+                  <ul className="mt-2.5 space-y-1.5">
+                    {section.rules.map((r) => (
+                      <li key={r} className="flex gap-2 text-[13px] leading-relaxed text-white/70">
+                        <span className="mt-[7px] h-1 w-1 shrink-0 rounded-full bg-violet-300/70" />
+                        {r}
+                      </li>
+                    ))}
+                  </ul>
+                </motion.div>
+              ))}
+            </div>
+            <p className="mt-6 text-[12px] font-semibold uppercase tracking-[0.12em] text-white/45">Exemplos de tom</p>
+            <div className="mt-3 grid gap-3 lg:grid-cols-2">
+              {REPLY_EXAMPLES.map((e) => (
+                <div key={e.review} className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
+                  <p className="flex items-center gap-2 text-[12px] text-white/50">
+                    <StarRow value={e.stars} size={11} /> {e.review}
+                  </p>
+                  <p className="mt-2.5 whitespace-pre-line border-l-2 border-violet-400/40 pl-3 text-[13px] leading-relaxed text-white/75">
+                    {e.reply.replace("{assinatura}", signature).replace("{contacto}", "pode falar connosco diretamente no salão")}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </Panel>
   );
 }

@@ -1,12 +1,17 @@
-// A IA que escreve as respostas do Reviews Hub.
+// A IA que escreve as respostas do Reviews Hub — o Claude Sonnet.
 //
-// Modelo: Claude Opus 5.5 com esforço «low» — é texto curto, e a página mostra
-// a resposta a ser escrita em tempo real, por isso a latência conta mais do
-// que raciocínio profundo. Se o Opus falhar antes de escrever a primeira
-// palavra (modelo indisponível na conta, sobrecarga), a mesma resposta é
-// pedida ao Sonnet 4.6 — o modelo que o resto da app já usa em produção.
-// A estratégia do nível de estrelas, o tom, as regras e o brief do cliente
-// vão no system; a review vai na mensagem.
+// Modelo: Claude Sonnet 5.5 (o plano Anthropic da agência), com esforço
+// «low» na página — é texto curto e aparece a ser escrito em tempo real — e
+// «medium» na automação, onde ninguém está à espera. Se o Sonnet 5.5 falhar
+// antes de escrever a primeira palavra (modelo indisponível na conta,
+// sobrecarga), a mesma resposta é pedida ao Sonnet 4.6, que o resto da app
+// já usa em produção.
+//
+// O que o Claude recebe, por esta ordem: quem é a marca → o guia base
+// (reply-guide.ts: estrutura, casos sensíveis, português de Portugal, o que
+// nunca fazer, tamanhos e exemplos) → a estratégia do nível de estrelas → o
+// tom, o contacto e as regras que o cliente escreveu em Definições → o brief.
+// A review vai na mensagem.
 
 import { anthropic } from "@ai-sdk/anthropic";
 import { generateText, streamText } from "ai";
@@ -14,11 +19,13 @@ import { getBriefForSlug } from "@/lib/briefs-storage";
 import { formatDate } from "@/lib/dates";
 import { getHubConfig } from "./config";
 import { levelKey } from "./defaults";
+import { renderGuide } from "./reply-guide";
 import type { HubSettings } from "./types";
 
-const MODEL_ID = "claude-opus-5-5";
+const MODEL_ID = "claude-sonnet-5-5";
 const FALLBACK_MODEL_ID = "claude-sonnet-4-6";
-const PROVIDER_OPTIONS = { anthropic: { effort: "low" as const } };
+const INTERACTIVE = { anthropic: { effort: "low" as const } };
+const BACKGROUND = { anthropic: { effort: "medium" as const } };
 /** A Google aceita até 4096 bytes; a regra do prompt fica bem abaixo. */
 export const MAX_REPLY_CHARS = 4000;
 
@@ -41,16 +48,15 @@ async function buildSystem(slug: string, settings: HubSettings, stars: number): 
   const key = levelKey(stars) ?? "5";
   const strategy = settings.strategies[key];
   const brief = await getBriefForSlug(slug).catch(() => null);
-
   const contact = settings.contactLine.trim()
-    ? `Quando convidares a pessoa a falar connosco em privado, usa exatamente este contacto: ${settings.contactLine.trim()}`
-    : "Quando convidares a pessoa a falar connosco em privado, não inventes emails nem telefones — diz apenas que gostaríamos de falar com ela diretamente ou no salão.";
+    ? `pode contactar-nos através de ${settings.contactLine.trim()}`
+    : "pode falar connosco diretamente no salão";
 
   const briefBlock =
     brief && (brief.dos.length || brief.donts.length || brief.notes.length)
       ? [
-          "## Contexto da marca (brief do cliente)",
-          "Usa só o que fizer sentido numa resposta curta a uma review — no máximo um destes pontos por resposta, e nunca à força.",
+          "# Contexto da marca (brief do cliente)",
+          "Usa só o que fizer sentido numa resposta curta — no máximo um destes pontos por resposta, e nunca à força.",
           brief.dos.length ? `Fazer:\n${brief.dos.map((d) => `- ${d}`).join("\n")}` : "",
           brief.donts.length ? `Evitar:\n${brief.donts.map((d) => `- ${d}`).join("\n")}` : "",
           brief.notes.length ? `Notas:\n${brief.notes.map((d) => `- ${d}`).join("\n")}` : "",
@@ -60,22 +66,17 @@ async function buildSystem(slug: string, settings: HubSettings, stars: number): 
       : "";
 
   return [
-    `Escreves as respostas públicas da ${brand} às reviews do Google. ${cfg?.aboutLine ?? ""}`.trim(),
-    "Recebes uma review e escreves UMA resposta, pronta a publicar no perfil do salão.",
-    `## Estratégia para reviews de ${key} ${key === "1" ? "estrela" : "estrelas"}: «${strategy.title}»\n${strategy.description}\n${strategy.guidelines}`,
-    `## Tom de voz\n${settings.tone}`,
+    `# Quem és\nÉs quem escreve as respostas públicas da ${brand} às reviews do Google. ${cfg?.aboutLine ?? ""} Escreves como a marca, nunca como uma IA. Cada resposta é lida pela pessoa que deixou a review e por todos os futuros clientes que visitam o perfil do salão.`,
+    `# Guia base (segue-o sempre)\n${renderGuide({ signature: settings.signature, contact })}`,
+    `# Estratégia para reviews de ${key} ${key === "1" ? "estrela" : "estrelas"}: «${strategy.title}»\n${strategy.description}\n${strategy.guidelines}`,
+    `# Tom de voz definido pela marca\n${settings.tone}`,
     [
-      "## Regras",
-      "- Responde no idioma da review. Se a review estiver em português ou não tiver texto, escreve em português de Portugal (equipa, contacto, receber — nunca português do Brasil).",
-      "- Abre com uma saudação com o primeiro nome da pessoa («Olá Mariana,»). Se o nome não parecer um nome próprio, ou a review for anónima, usa só «Olá,».",
-      "- Refere-te a coisas concretas que a review diz. Nunca inventes factos, serviços, profissionais, datas ou causas que lá não estejam.",
-      "- Quando for natural, menciona o salão e o serviço referido — uma vez, sem forçar palavras-chave.",
-      "- Nada de descontos, ofertas ou compensações, nem garantias de resultado.",
-      "- Tamanho: 2 a 4 frases curtas para 4–5 estrelas; até 6 frases para 1–3 estrelas. Nunca mais de 900 caracteres.",
-      `- ${contact}`,
-      "- Varia a abertura e a estrutura — nada de fórmulas repetidas em todas as respostas.",
+      "# Regras finais",
+      settings.contactLine.trim()
+        ? `- Quando convidares a pessoa a falar connosco em privado, usa exatamente este contacto: ${settings.contactLine.trim()}.`
+        : "- Quando convidares a pessoa a falar connosco em privado, não inventes emails nem telefones — convida-a a falar connosco no salão.",
       settings.extraRules.trim() ? `- ${settings.extraRules.trim()}` : "",
-      `- Termina numa linha própria com a assinatura: ${settings.signature}`,
+      `- A última linha é sempre a assinatura, sozinha: ${settings.signature}`,
       "- Devolve só o texto da resposta: sem aspas, sem markdown, sem notas tuas.",
     ]
       .filter(Boolean)
@@ -137,7 +138,7 @@ export async function streamReplyResponse(
             maxOutputTokens: 4000,
             maxRetries: 1,
             // O esforço só existe nos modelos novos — o Sonnet 4.6 dispensa-o.
-            ...(i === 0 ? { providerOptions: PROVIDER_OPTIONS } : {}),
+            ...(i === 0 ? { providerOptions: INTERACTIVE } : {}),
           });
           for await (const part of result.fullStream) {
             if (part.type === "text-delta") {
@@ -178,7 +179,7 @@ export async function generateReply(
       prompt,
       maxOutputTokens: 4000,
       maxRetries: 3,
-      providerOptions: PROVIDER_OPTIONS,
+      providerOptions: BACKGROUND,
     });
     if (text.trim()) return cleanReply(text);
     throw new Error("Resposta vazia");

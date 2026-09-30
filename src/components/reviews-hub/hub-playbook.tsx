@@ -19,6 +19,7 @@ import {
 import type { HubDraft, HubReview, ResponseMode, StarLevel } from "@/lib/reviews-hub/types";
 import { useHub } from "./hub-context";
 import { Avatar, GoogleG, LEVELS, LevelFace, STAR_GOLD, StarRow, relativeTime } from "./hub-ui";
+import { REPLY_MODEL_LABEL } from "@/lib/reviews-hub/reply-guide";
 import { useReplyStream } from "./use-reply-stream";
 
 const MODE_LABEL: Record<ResponseMode, string> = {
@@ -259,6 +260,9 @@ function StrategyPreview({ level }: { level: StarLevel }) {
           <div className="flex items-center justify-between gap-2">
             <h4 className="flex items-center gap-2 text-[15px] font-semibold text-white">
               <Sparkles className="h-4 w-4 text-violet-300" /> Resposta gerada
+              <span className="rounded-full border border-white/10 px-2 py-0.5 text-[10px] font-medium text-white/45">
+                {REPLY_MODEL_LABEL}
+              </span>
             </h4>
             {stream.text && viewer.canWrite && (
               <button

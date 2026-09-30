@@ -27,6 +27,7 @@ import { formatDate } from "@/lib/dates";
 import type { HubDraft, HubReview } from "@/lib/reviews-hub/types";
 import { useHub } from "./hub-context";
 import { Avatar, GoogleG, LEVELS, StarRow, levelOf, relativeTime } from "./hub-ui";
+import { REPLY_MODEL_LABEL } from "@/lib/reviews-hub/reply-guide";
 import { useReplyStream } from "./use-reply-stream";
 
 type SaveState = "idle" | "saving" | "saved";
@@ -381,6 +382,12 @@ export function Composer({
                     title={strategy.description}
                   >
                     {strategy.title}
+                  </span>
+                  <span
+                    className="hidden shrink-0 rounded-full border border-white/10 px-2 py-0.5 text-[10px] font-medium text-white/45 sm:inline"
+                    title="As respostas são escritas pelo Claude (Anthropic), com o guia de respostas da marca"
+                  >
+                    {REPLY_MODEL_LABEL}
                   </span>
                 </div>
                 {text && canWrite && (

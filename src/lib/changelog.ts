@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.58",
+    date: "2026-09-30",
+    title: "Reviews Hub — respostas escritas pelo Claude Sonnet com um guia de respostas pronto",
+    highlights: [
+      "**✍️ As respostas passam a ser escritas pelo Claude Sonnet** (Sonnet 5.5, com o Sonnet 4.6 de reserva), do plano Anthropic da agência. A DataForSEO nunca escreveu respostas — só vai buscar as reviews enquanto a API de reviews da Google está desligada.",
+      "**📘 Guia base das respostas, pronto e sempre aplicado:** objetivo, estrutura, casos sensíveis (danos no cabelo, alergias, críticas a um profissional pelo nome, preço, espera, ofensas, reviews só com estrelas, perguntas, outras línguas), português de Portugal, o que nunca fazer, tamanhos por nível e exemplos de tom. Por cima entram a estratégia do nível, o tom, o contacto e as regras das Definições, e o brief. Fica visível em Definições → «O guia que o Claude Sonnet segue».",
+      "**🔄 Pronto para a API da Google:** no dia em que a «Google My Business API» for ativada, a sincronização passa sozinha para a Google, os rascunhos passam para as mesmas reviews (os ids mudam) e a DataForSEO deixa de ser chamada.",
+    ],
+  },
+  {
     version: "77.57",
     date: "2026-09-30",
     title: "Reviews Hub — a lista de salões pede-se à Google só uma vez por semana",
