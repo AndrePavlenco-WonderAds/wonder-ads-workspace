@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.63",
+    date: "2026-09-30",
+    title: "«Treinador» — gradiente branco, rosa, lilás e roxo, sem ícone",
+    highlights: [
+      "**🎨 A etiqueta «Treinador» fica só com branco, rosa, lilás e roxo** a circular pelas letras, e perde o capelo do lado esquerdo — só a palavra.",
+    ],
+  },
+  {
     version: "77.62",
     date: "2026-09-30",
     title: "«Consultor/Consultora de SEO» e a etiqueta «Treinador» com gradiente animado",

@@ -105,17 +105,11 @@ function AvatarCircle({
   );
 }
 
-/** Etiqueta só de apresentação («Treinador») — texto com um capelo, sem
- *  caixa (um chip dentro do chip ficava pesado), e um gradiente de cor que
- *  corre devagar pelas letras (`.tag-flow` em globals.css). Não dá acesso a
- *  nada. */
+/** Etiqueta só de apresentação («Treinador») — só o texto, sem caixa nem
+ *  ícone, com um gradiente branco → rosa → lilás → roxo que corre devagar
+ *  pelas letras (`.tag-flow` em globals.css). Não dá acesso a nada. */
 function TagText({ label, className = "" }: { label: string; className?: string }) {
-  return (
-    <span className={`inline-flex shrink-0 items-center gap-1 font-semibold ${className}`}>
-      <GraduationCap className="tag-flow-icon h-3 w-3 text-fuchsia-300" aria-hidden />
-      <span className="tag-flow">{label}</span>
-    </span>
-  );
+  return <span className={`tag-flow shrink-0 font-semibold ${className}`}>{label}</span>;
 }
 
 /** O cargo + departamento só quando o cargo ainda não o diz — nada de
