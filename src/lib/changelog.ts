@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.55",
+    date: "2026-09-30",
+    title: "Reviews Hub — reviews já a chegar dos 14 salões, sem esperar pela API de reviews da Google",
+    highlights: [
+      "**🔀 Duas fontes, troca sozinha.** Os perfis continuam a vir da conta aprovada do relatório mensal. Enquanto a «Google My Business API» (a única onde vivem as reviews) estiver desligada nesse projeto, as reviews de cada salão chegam pelo Google Reviews API da DataForSEO, pelo place_id que a própria Google dá. Cada sincronização testa a API da Google — no dia em que for ligada, a plataforma passa sozinha a ler e a publicar pela Google.",
+      "**📋 «Copiar e responder no Google».** No modo de leitura, o botão principal copia a resposta e abre a review certa no Google, com os passos à vista; «Já publiquei no Google» marca-a logo como respondida e a sincronização seguinte confirma com a resposta real (se em 48 h não aparecer no Google, a review volta a «Por responder»).",
+      "**🤖 Automação honesta:** sem publicação direta, o modo «Automático» deixa a resposta pronta à espera de aprovação em vez de fingir que publicou.",
+      "**💶 Custos da DataForSEO controlados:** leitura completa inicial em prioridade (chega em ~1 min), depois só as 10 mais recentes de cada salão de 2 em 2 horas e uma leitura completa por semana.",
+      "**🔗 «made by WonderAds» com link para wonder-ads.com** no rodapé, no ecrã da password e por baixo do logótipo da barra lateral.",
+    ],
+  },
+  {
     version: "77.54",
     date: "2026-09-30",
     title: "Reviews Hub — avisos da ligação ao Google mais claros",

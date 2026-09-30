@@ -27,7 +27,7 @@ import {
 } from "lucide-react";
 import { formatDateTime } from "@/lib/dates";
 import { useHub, type HubView, type Toast } from "./hub-context";
-import { formatRating, relativeTime, STAR_GOLD } from "./hub-ui";
+import { MadeBy, formatRating, relativeTime, STAR_GOLD } from "./hub-ui";
 
 const NAV: { view: HubView; label: string; Icon: LucideIcon }[] = [
   { view: "dashboard", label: "Dashboard", Icon: House },
@@ -73,9 +73,10 @@ export function Sidebar() {
     <aside className="sticky top-0 hidden h-screen w-[268px] shrink-0 flex-col border-r border-white/[0.06] bg-white/[0.012] px-5 py-8 lg:flex">
       <div className="px-2">
         <BrandTile />
+        <MadeBy className="mt-3 pl-1" />
       </div>
       <LayoutGroup id="rhub-side">
-        <nav className="mt-10 flex flex-col gap-1.5">
+        <nav className="mt-8 flex flex-col gap-1.5">
           {NAV.map(({ view: v, label, Icon }, i) => {
             const active = view === v;
             const badge = v === "reviews" ? badges.reviews : 0;
@@ -355,7 +356,10 @@ export function MobileNav() {
   return (
     <div className="lg:hidden">
       <div className="flex items-center justify-between gap-3">
-        <BrandTile compact />
+        <div className="flex flex-col items-start gap-1.5">
+          <BrandTile compact />
+          <MadeBy className="text-[10px]" />
+        </div>
         <div className="w-[62%] max-w-[300px]">
           <LocationPicker placement="down" />
         </div>
@@ -524,10 +528,72 @@ function SyncStatus() {
 }
 
 function SyncBanner() {
-  const { data, viewer, go } = useHub();
+  const { data, viewer, go, slug } = useHub();
   const s = data.sync;
-  if (s.ok || !s.error) return null;
   const team = viewer.kind === "team";
+  const dismissKey = `rhub-readonly-banner:${slug}`;
+  const [dismissed, setDismissed] = useState(true);
+  useEffect(() => {
+    try {
+      setDismissed(window.localStorage.getItem(dismissKey) === "1");
+    } catch {
+      setDismissed(false);
+    }
+  }, [dismissKey]);
+
+  // Modo leitura (DataForSEO): não é um erro — é um aviso de como publicar.
+  if (s.ok && s.source === "dfs") {
+    if (dismissed && !s.dfsPending) return null;
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: -6 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="relative mt-5 flex items-start gap-3 overflow-hidden rounded-2xl border border-violet-400/25 bg-[linear-gradient(135deg,rgba(79,70,229,0.10),rgba(168,85,247,0.06))] px-4 py-3 text-[13px] text-violet-50/90"
+      >
+        <Info className="mt-0.5 h-4 w-4 shrink-0 text-violet-300" />
+        <div className="min-w-0 flex-1">
+          <p className="font-medium text-violet-100">
+            {s.dfsPending
+              ? `A receber as reviews do Google — ${s.dfsPending} ${s.dfsPending === 1 ? "salão ainda a caminho" : "salões ainda a caminho"}…`
+              : "As reviews chegam do Google em modo de leitura."}
+          </p>
+          <p className="mt-0.5 text-violet-50/65">
+            {team
+              ? "Para publicar daqui com um clique falta ligar a «Google My Business API» no projeto da conta de serviço — a aprovação da Google já existe, é só «Ativar». Até lá, «Copiar e responder no Google» copia a resposta e abre a review certa."
+              : "Para publicar uma resposta, use «Copiar e responder no Google»: copiamos o texto e abrimos a review certa no Google — é só colar e publicar."}
+          </p>
+          {team && s.gbpFixUrl && (
+            <a
+              href={s.gbpFixUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-1 inline-block font-semibold text-violet-200 underline underline-offset-2"
+            >
+              Ativar a publicação direta na Google Cloud →
+            </a>
+          )}
+        </div>
+        {!s.dfsPending && (
+          <button
+            onClick={() => {
+              setDismissed(true);
+              try {
+                window.localStorage.setItem(dismissKey, "1");
+              } catch {
+                /* sem storage — fica só nesta visita */
+              }
+            }}
+            className="shrink-0 rounded-lg p-1 text-violet-200/50 transition hover:bg-white/5 hover:text-violet-100"
+            aria-label="Fechar aviso"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
+      </motion.div>
+    );
+  }
+
+  if (s.ok || !s.error) return null;
   return (
     <motion.div
       initial={{ opacity: 0, y: -6 }}

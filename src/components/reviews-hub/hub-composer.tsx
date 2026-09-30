@@ -51,7 +51,11 @@ export function Composer({
   const [publishing, setPublishing] = useState(false);
   const [publishError, setPublishError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  const [celebrate, setCelebrate] = useState(false);
+  const [celebrate, setCelebrate] = useState<null | "published" | "marked">(null);
+  // Modo leitura (reviews pela DataForSEO): publica-se à mão no Google.
+  const publishAvailable = Boolean(data.sync.publishAvailable);
+  const [handoff, setHandoff] = useState(false);
+  const [marking, setMarking] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const savedText = useRef(draft?.text ?? "");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -68,6 +72,7 @@ export function Composer({
     setPublishError(null);
     setSave("idle");
     setExpanded(false);
+    setHandoff(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [review.id]);
 
@@ -171,12 +176,12 @@ export function Composer({
       });
       const j = (await res.json().catch(() => ({}))) as { error?: string; review?: HubReview };
       if (!res.ok || !j.review) throw new Error(j.error ?? "Não foi possível publicar no Google.");
-      setCelebrate(true);
+      setCelebrate("published");
       setDraft(review.id, null);
       savedText.current = "";
       toast(`Resposta publicada no Google — ${review.author}`);
       setTimeout(() => {
-        setCelebrate(false);
+        setCelebrate(null);
         applyReview(j.review!);
         setEditing(false);
         onPublished?.(j.review!);
@@ -185,6 +190,47 @@ export function Composer({
       setPublishError(err instanceof Error ? err.message : "Não foi possível publicar no Google.");
     } finally {
       setPublishing(false);
+    }
+  }
+
+  /** Copia a resposta e abre a review no Google (modo leitura). O
+   *  window.open tem de ser síncrono, ainda dentro do clique, senão o
+   *  browser bloqueia o separador. */
+  function copyAndOpen() {
+    const url = review.url ?? loc?.mapsUri;
+    if (url) window.open(url, "_blank", "noopener,noreferrer");
+    void navigator.clipboard.writeText(text).catch(() => undefined);
+    setHandoff(true);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1600);
+  }
+
+  async function markReplied() {
+    setMarking(true);
+    setPublishError(null);
+    try {
+      const res = await fetch(`/api/reviews-hub/${slug}/mark-replied`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reviewId: review.id, loc: review.loc, text }),
+      });
+      const j = (await res.json().catch(() => ({}))) as { error?: string; review?: HubReview };
+      if (!res.ok || !j.review) throw new Error(j.error ?? "Não foi possível marcar a review.");
+      setCelebrate("marked");
+      setDraft(review.id, null);
+      savedText.current = "";
+      toast(`Resposta a ${review.author} marcada como publicada`);
+      setTimeout(() => {
+        setCelebrate(null);
+        setHandoff(false);
+        applyReview(j.review!);
+        setEditing(false);
+        onPublished?.(j.review!);
+      }, 1500);
+    } catch (err) {
+      setPublishError(err instanceof Error ? err.message : "Não foi possível marcar a review.");
+    } finally {
+      setMarking(false);
     }
   }
 
@@ -206,14 +252,14 @@ export function Composer({
         <h3 className="flex items-center gap-2.5 text-[15px] font-semibold text-white">
           <MessageSquareText className="h-[18px] w-[18px] text-white/60" /> Pré-visualização
         </h3>
-        {loc?.mapsUri && (
+        {(review.url || loc?.mapsUri) && (
           <a
-            href={loc.mapsUri}
+            href={review.url ?? loc?.mapsUri}
             target="_blank"
             rel="noreferrer"
             className="inline-flex items-center gap-1.5 rounded-full border border-white/10 px-2.5 py-1 text-[11px] font-medium text-white/55 transition hover:border-white/25 hover:text-white"
           >
-            Ver no Google Maps <ExternalLink className="h-3 w-3" />
+            {review.url ? "Ver a review no Google" : "Ver no Google Maps"} <ExternalLink className="h-3 w-3" />
           </a>
         )}
       </div>
@@ -278,6 +324,11 @@ export function Composer({
                     {review.reply.via === "auto" && (
                       <span className="inline-flex items-center gap-1 rounded-full bg-emerald-400/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-200/80">
                         <Bot className="h-3 w-3" /> automática
+                      </span>
+                    )}
+                    {review.reply.via === "manual" && (
+                      <span className="rounded-full bg-violet-400/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-violet-200/80">
+                        escrita aqui
                       </span>
                     )}
                     {review.reply.via === "hub" && (
@@ -438,6 +489,10 @@ export function Composer({
                     <PrimaryButton onClick={() => void generate(false)} disabled={streaming} busy={streaming}>
                       <Sparkles className="h-[18px] w-[18px]" /> {streaming ? "A gerar…" : "Gerar resposta"}
                     </PrimaryButton>
+                  ) : !publishAvailable ? (
+                    <PrimaryButton onClick={copyAndOpen}>
+                      <ExternalLink className="h-[18px] w-[18px]" /> Copiar e responder no Google
+                    </PrimaryButton>
                   ) : (
                     <PrimaryButton onClick={() => void publish()} busy={publishing} armed={armed}>
                       {publishing ? (
@@ -477,6 +532,62 @@ export function Composer({
                 <p className="mt-4 text-[12px] text-white/40">Perfil só de leitura — não pode gerar nem publicar respostas.</p>
               )}
 
+              <AnimatePresence>
+                {handoff && canWrite && !publishAvailable && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0, y: -6 }}
+                    animate={{ opacity: 1, height: "auto", y: 0 }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+                    className="overflow-hidden"
+                  >
+                    <div className="mt-4 rounded-2xl border border-violet-400/25 bg-[linear-gradient(135deg,rgba(79,70,229,0.12),rgba(168,85,247,0.06))] p-4">
+                      <ol className="space-y-2.5 text-[13px] text-white/75">
+                        {[
+                          "Copiámos a resposta.",
+                          "No separador que abriu, com a conta que gere o perfil, carregue em «Responder».",
+                          "Cole (⌘V / Ctrl+V) e publique.",
+                        ].map((step, i) => (
+                          <motion.li
+                            key={step}
+                            initial={{ opacity: 0, x: -8 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: 0.1 + i * 0.12 }}
+                            className="flex items-start gap-3"
+                          >
+                            <span
+                              className={`mt-px flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${
+                                i === 0 ? "bg-emerald-400/20 text-emerald-300" : "bg-violet-400/20 text-violet-200"
+                              }`}
+                            >
+                              {i === 0 ? <Check className="h-3 w-3" /> : i + 1}
+                            </span>
+                            {step}
+                          </motion.li>
+                        ))}
+                      </ol>
+                      <div className="mt-4 flex flex-wrap items-center gap-2">
+                        <motion.button
+                          onClick={() => void markReplied()}
+                          disabled={marking}
+                          whileTap={{ scale: 0.97 }}
+                          className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-br from-emerald-400 to-teal-500 px-4 py-2.5 text-[13px] font-semibold text-white shadow-[0_10px_30px_-12px_rgba(52,211,153,0.8)] disabled:opacity-70"
+                        >
+                          {marking ? <Loader2 className="h-4 w-4 animate-spin" /> : <BadgeCheck className="h-4 w-4" />}
+                          Já publiquei no Google
+                        </motion.button>
+                        <button
+                          onClick={copyAndOpen}
+                          className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2.5 text-[12px] font-medium text-white/55 transition hover:text-white"
+                        >
+                          <ExternalLink className="h-3.5 w-3.5" /> Abrir outra vez
+                        </button>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
               {canWrite && (text || review.reply) && !streaming && (
                 <div className="mt-3 flex items-center justify-between text-[12px]">
                   <AnimatePresence>
@@ -501,7 +612,7 @@ export function Composer({
 
       {/* Publicada! */}
       <AnimatePresence>
-        {celebrate && (
+        {celebrate !== null && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -543,10 +654,12 @@ export function Composer({
               transition={{ delay: 0.25 }}
               className="mt-5 text-lg font-semibold text-white"
             >
-              Publicada no Google
+              {celebrate === "marked" ? "Respondida" : "Publicada no Google"}
             </motion.p>
             <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }} className="text-[13px] text-white/50">
-              {review.author} já pode ver a resposta.
+              {celebrate === "marked"
+                ? "A próxima sincronização confirma a resposta no Google."
+                : `${review.author} já pode ver a resposta.`}
             </motion.p>
           </motion.div>
         )}

@@ -30,8 +30,9 @@ export type HubReply = {
   text: string;
   /** ISO — a Google devolve a data da última edição da resposta. */
   updated: string;
-  /** Quem publicou pela plataforma, quando foi por aqui. */
-  via?: "hub" | "auto";
+  /** Quem publicou pela plataforma, quando foi por aqui. «manual» = copiada
+   *  daqui e publicada à mão no Google (modo só de leitura). */
+  via?: "hub" | "auto" | "manual";
   by?: string;
 };
 
@@ -50,6 +51,8 @@ export type HubReview = {
   created: string;
   /** ISO */
   updated: string;
+  /** Link direto para a review no Google Maps (vem da DataForSEO). */
+  url?: string;
   reply?: HubReply;
 };
 
@@ -112,6 +115,15 @@ export type HubSyncState = {
   reviewsStored?: number;
   locations?: number;
   newLastRun?: number;
+  /** De onde vieram as reviews na última sync: a API da Google (lê e
+   *  publica) ou a DataForSEO (só lê, enquanto a API v4 está desligada). */
+  source?: "gbp" | "dfs" | null;
+  /** Dá para publicar respostas no Google a partir da plataforma. */
+  publishAvailable?: boolean;
+  /** Link para ligar a API v4 na Google Cloud (quando é isso que falta). */
+  gbpFixUrl?: string | null;
+  /** Salões com leitura da DataForSEO ainda a caminho. */
+  dfsPending?: number;
 };
 
 export type HubActivityKind = "reply" | "auto-reply" | "auto-draft" | "sync" | "settings";

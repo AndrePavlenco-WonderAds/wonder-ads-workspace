@@ -6,7 +6,7 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion, useAnimationControls } from "motion/react";
 import { ArrowRight, Check, Eye, EyeOff, Loader2, Lock } from "lucide-react";
-import { HairStrands, StarRow } from "./hub-ui";
+import { HairStrands, MadeBy, StarRow } from "./hub-ui";
 
 export function HubGate({ slug, brand, logo }: { slug: string; brand: string; logo: string | null }) {
   const router = useRouter();
@@ -188,9 +188,7 @@ export function HubGate({ slug, brand, logo }: { slug: string; brand: string; lo
           </motion.form>
           </motion.div>
 
-          <p className="mt-10 text-xs text-white/30">
-            made by <span className="font-semibold text-white/55">WonderAds</span>
-          </p>
+          <MadeBy className="mt-10" />
         </div>
       </motion.div>
     </main>

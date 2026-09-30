@@ -4,7 +4,8 @@
 // (settings.automation.enabledAt): ligar a automação nunca faz a plataforma
 // responder sozinha ao histórico. Para cada uma, o modo do nível de estrelas
 // decide: «auto» publica logo no Google, «approval» deixa um rascunho à
-// espera de aprovação, «manual» não faz nada.
+// espera de aprovação, «manual» não faz nada. Em modo só de leitura (reviews
+// pela DataForSEO) o «auto» vira «approval».
 
 import { generateReply } from "./ai";
 import { putReply, gbpToken } from "./google";
@@ -14,6 +15,7 @@ import {
   getDrafts,
   getLocations,
   getSettings,
+  getSyncState,
   logActivity,
   refreshSummary,
   updateDrafts,
@@ -37,6 +39,9 @@ export async function runAutomation(slug: string): Promise<AutomationResult> {
   if (!settings.automation.enabled || !settings.automation.enabledAt) return result;
   const since = settings.automation.enabledAt;
 
+  // Sem a API v4 da Google (modo leitura pela DataForSEO) não há como
+  // publicar sozinho: o «Automático» deixa a resposta pronta para aprovar.
+  const canPublish = Boolean((await getSyncState(slug)).publishAvailable);
   const locations = await getLocations(slug);
   const byId = new Map(locations.map((l) => [l.id, l]));
   const [reviews, drafts] = await Promise.all([getAllReviews(slug, locations), getDrafts(slug)]);
@@ -52,8 +57,9 @@ export async function runAutomation(slug: string): Promise<AutomationResult> {
     const key = levelKey(review.stars);
     const loc = byId.get(review.loc);
     if (!key || !loc) continue;
-    const mode = settings.strategies[key].mode;
-    if (mode === "manual") continue;
+    const configured = settings.strategies[key].mode;
+    if (configured === "manual") continue;
+    const mode = configured === "auto" && !canPublish ? "approval" : configured;
 
     let text: string;
     try {

@@ -12,11 +12,13 @@
 //   rhub:<slug>:summary          HubSummary     (o chip do SEO lê só isto)
 //   rhub:<slug>:activity         HubActivity[]  (as últimas 150)
 //   rhub:<slug>:lock             trinco da sync (SET NX EX)
+//   rhub:<slug>:dfs              DfsState (tarefas da DataForSEO em curso)
 
 import { kv } from "@vercel/kv";
 import { getHubConfig } from "./config";
 import { hydrateSettings } from "./defaults";
 import { computeSummary } from "./stats";
+import type { DfsTask } from "./dataforseo";
 import type {
   HubActivity,
   HubDraft,
@@ -41,6 +43,7 @@ const k = {
   summary: (s: string) => `rhub:${s}:summary`,
   activity: (s: string) => `rhub:${s}:activity`,
   lock: (s: string) => `rhub:${s}:lock`,
+  dfs: (s: string) => `rhub:${s}:dfs`,
 };
 
 const ACTIVITY_CAP = 150;
@@ -236,4 +239,22 @@ export async function applyReplyToStoredReview(
     return chunk[idx];
   }
   return null;
+}
+
+/** O que está em curso na DataForSEO (só no modo de leitura). */
+export type DfsState = {
+  tasks: Record<string, DfsTask>;
+  /** Última tarefa pedida por salão. */
+  lastPostAt: Record<string, number>;
+  /** Última leitura completa por salão. */
+  fullAt: Record<string, number>;
+};
+
+export async function getDfsState(slug: string): Promise<DfsState> {
+  const v = hubStoreConfigured ? await kv.get<Partial<DfsState>>(k.dfs(slug)) : null;
+  return { tasks: v?.tasks ?? {}, lastPostAt: v?.lastPostAt ?? {}, fullAt: v?.fullAt ?? {} };
+}
+
+export async function saveDfsState(slug: string, state: DfsState): Promise<void> {
+  await kv.set(k.dfs(slug), state);
 }

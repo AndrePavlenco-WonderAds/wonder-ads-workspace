@@ -14,6 +14,7 @@ import {
   Loader2,
   MapPin,
   RefreshCw,
+  Info,
   RotateCcw,
   Save,
   TriangleAlert,
@@ -121,6 +122,8 @@ function AutomationCard({
   setStrategy: (l: StarLevel, p: Partial<HubSettings["strategies"]["1"]>) => void;
   readOnly: boolean;
 }) {
+  const { data } = useHub();
+  const publishAvailable = Boolean(data.sync.publishAvailable);
   const on = draft.automation.enabled;
   const autoLevels = ([1, 2, 3, 4, 5] as StarLevel[]).filter((l) => draft.strategies[`${l}`].mode === "auto");
   return (
@@ -214,7 +217,14 @@ function AutomationCard({
           );
         })}
       </div>
-      {on && autoLevels.length > 0 && (
+      {!publishAvailable && (
+        <p className="relative mt-4 flex items-start gap-2 text-[12px] text-violet-100/70">
+          <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-violet-300" />
+          Enquanto as reviews chegam em modo de leitura, o «Automático» deixa a resposta pronta à espera de aprovação —
+          publicar exige a publicação direta ligada.
+        </p>
+      )}
+      {on && autoLevels.length > 0 && publishAvailable && (
         <p className="relative mt-4 flex items-start gap-2 text-[12px] text-amber-100/70">
           <Zap className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-300" />
           As reviews novas de{" "}
@@ -432,6 +442,27 @@ function GoogleCard() {
           <p className="mt-1 text-[13px] text-white/45">
             {data.locations.length} perfis Google Business · sincroniza a cada 30 minutos
           </p>
+          {s.source && (
+            <p className="mt-2 text-[12px] text-white/55">
+              {s.source === "gbp" ? (
+                <>
+                  Fonte: <span className="font-semibold text-emerald-300">API da Google</span> — lê as reviews e publica as
+                  respostas daqui.
+                </>
+              ) : (
+                <>
+                  Fonte: <span className="font-semibold text-violet-200">modo de leitura (DataForSEO)</span> — publicar com
+                  «Copiar e responder no Google».
+                  {s.dfsPending ? ` ${s.dfsPending} ${s.dfsPending === 1 ? "salão" : "salões"} a caminho.` : ""}
+                  {viewer.kind === "team" && s.gbpFixUrl && (
+                    <a href={s.gbpFixUrl} target="_blank" rel="noreferrer" className="ml-1 font-semibold text-violet-200 underline">
+                      Ativar publicação direta →
+                    </a>
+                  )}
+                </>
+              )}
+            </p>
+          )}
         </div>
         <span
           className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-semibold ${
@@ -439,7 +470,7 @@ function GoogleCard() {
           }`}
         >
           {s.ok && s.lastSyncAt ? <CircleCheck className="h-3.5 w-3.5" /> : <TriangleAlert className="h-3.5 w-3.5" />}
-          {s.ok && s.lastSyncAt ? "Ligado" : s.lastSyncAt ? "Com avisos" : "Por ligar"}
+          {s.ok && s.lastSyncAt ? (s.source === "dfs" ? "Ligado · leitura" : "Ligado") : s.lastSyncAt ? "Com avisos" : "Por ligar"}
         </span>
       </div>
 

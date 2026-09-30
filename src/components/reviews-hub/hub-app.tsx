@@ -19,7 +19,7 @@ import {
   type InboxPreset,
   type Toast,
 } from "./hub-context";
-import { HairStrands } from "./hub-ui";
+import { HairStrands, MadeBy } from "./hub-ui";
 import { MobileNav, PageHeader, Sidebar, Toasts } from "./hub-shell";
 import { DashboardView } from "./hub-dashboard";
 import { InboxView } from "./hub-inbox";
@@ -120,6 +120,23 @@ export function ReviewsHubApp({ bootstrap }: { bootstrap: HubBootstrap }) {
     const t = setTimeout(() => void refresh().catch(() => undefined), 5000);
     return () => clearTimeout(t);
   }, [data.running, syncing, refresh, data.sync.lastSyncAt]);
+
+  // Salões com reviews ainda a caminho da DataForSEO — recolhe de 20 em 20 s
+  // (só recolhe; não pede nada novo, não custa nada).
+  const [pollTick, setPollTick] = useState(0);
+  useEffect(() => {
+    if (!data.sync.dfsPending || syncing || !viewer.canWrite || pollTick > 20) return;
+    const t = setTimeout(async () => {
+      await fetch(`/api/reviews-hub/${slug}/sync`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ collect: true }),
+      }).catch(() => undefined);
+      await refresh().catch(() => undefined);
+      setPollTick((n) => n + 1);
+    }, 20_000);
+    return () => clearTimeout(t);
+  }, [data.sync.dfsPending, syncing, viewer.canWrite, pollTick, slug, refresh]);
 
   // A vista vive no #hash — dá para partilhar «…/reviews#respostas».
   useEffect(() => {
@@ -224,9 +241,9 @@ export function ReviewsHubApp({ bootstrap }: { bootstrap: HubBootstrap }) {
                   {view === "respostas" && <PlaybookView />}
                   {view === "definicoes" && <SettingsView />}
                 </motion.div>
-                <p className="mt-16 text-right text-xs text-white/30">
-                  made by <span className="font-semibold text-white/55">WonderAds</span>
-                </p>
+                <div className="mt-16 flex justify-end">
+                  <MadeBy />
+                </div>
               </div>
             </main>
           </div>

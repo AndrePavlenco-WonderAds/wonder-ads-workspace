@@ -650,6 +650,8 @@ function DashboardSkeleton() {
 
 export function EmptyState({ syncing }: { syncing: boolean }) {
   const { data, runSync, viewer } = useHub();
+  const arriving = Boolean(data.sync.dfsPending);
+  const ready = data.locations.filter((l) => l.syncedAt && !l.error).length;
   return (
     <Panel className="relative overflow-hidden px-6 py-16 text-center">
       <div className="relative mx-auto flex h-28 w-28 items-center justify-center">
@@ -658,8 +660,8 @@ export function EmptyState({ syncing }: { syncing: boolean }) {
             key={i}
             className="absolute text-2xl"
             style={{ color: STAR_GOLD }}
-            animate={syncing ? { rotate: 360 } : { rotate: 0 }}
-            transition={{ duration: 6, repeat: syncing ? Infinity : 0, ease: "linear" }}
+            animate={syncing || arriving ? { rotate: 360 } : { rotate: 0 }}
+            transition={{ duration: 6, repeat: syncing || arriving ? Infinity : 0, ease: "linear" }}
           >
             <span style={{ display: "inline-block", transform: `rotate(${i * 72}deg) translateY(-46px)` }}>★</span>
           </motion.span>
@@ -669,16 +671,31 @@ export function EmptyState({ syncing }: { syncing: boolean }) {
         </span>
       </div>
       <h2 className="mt-6 text-xl font-semibold text-white">
-        {syncing ? "A ligar aos perfis Google…" : "Ainda sem reviews"}
+        {syncing || arriving ? "A receber as reviews dos salões…" : "Ainda sem reviews"}
       </h2>
       <p className="mx-auto mt-2 max-w-md text-[14px] text-white/50">
-        {syncing
-          ? "Estamos a ir buscar todas as reviews de todos os salões. Na primeira vez pode demorar um minuto."
+        {syncing || arriving
+          ? "Estamos a ir buscar todas as reviews de todos os salões ao Google. Na primeira vez pode demorar uns minutos — esta página atualiza-se sozinha."
           : data.sync.error
             ? "A ligação ao Google ainda não está a funcionar — veja o aviso acima."
             : "Sincronize com o Google para trazer as reviews de todos os salões."}
       </p>
-      {!syncing && viewer.canWrite && (
+      {arriving && data.locations.length > 0 && (
+        <div className="mx-auto mt-5 max-w-xs">
+          <div className="h-1.5 overflow-hidden rounded-full bg-white/[0.07]">
+            <motion.div
+              className="h-full rounded-full bg-[linear-gradient(90deg,#4f46e5,#a855f7,#d946ef)]"
+              initial={{ width: 0 }}
+              animate={{ width: `${(ready / data.locations.length) * 100}%` }}
+              transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+            />
+          </div>
+          <p className="mt-2 text-[12px] text-white/40">
+            {ready} de {data.locations.length} salões já chegaram
+          </p>
+        </div>
+      )}
+      {!syncing && !arriving && viewer.canWrite && (
         <button
           onClick={() => void runSync(true)}
           className="mt-6 inline-flex items-center gap-2 rounded-xl bg-[linear-gradient(135deg,#343ed7,#783df5_55%,#c535c9)] px-5 py-3 text-[14px] font-semibold text-white shadow-[0_14px_40px_-16px_rgba(120,61,245,0.9)] transition hover:brightness-110"

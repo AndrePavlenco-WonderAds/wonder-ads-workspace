@@ -5,7 +5,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { animate, motion, useInView, useMotionValue, useTransform } from "motion/react";
-import { Annoyed, Frown, Laugh, Meh, Smile, Star, type LucideIcon } from "lucide-react";
+import { Annoyed, ArrowUpRight, Frown, Laugh, Meh, Smile, Star, type LucideIcon } from "lucide-react";
 import type { StarLevel } from "@/lib/reviews-hub/types";
 
 // ── Paleta por nível de estrelas ───────────────────────────────────────
@@ -291,6 +291,34 @@ export function Panel({
     >
       {children}
     </motion.section>
+  );
+}
+
+// ── «made by WonderAds» — sempre com link para o site ────────────────
+export const WONDER_ADS_URL = "https://www.wonder-ads.com";
+
+export function MadeBy({ className = "" }: { className?: string }) {
+  return (
+    <a
+      href={WONDER_ADS_URL}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={`group inline-flex items-center gap-1 text-xs text-white/30 transition-colors hover:text-white/60 ${className}`}
+      title="wonder-ads.com"
+    >
+      made by
+      <span className="relative font-semibold text-white/55 transition-colors group-hover:text-white">
+        WonderAds
+        <span
+          className="absolute -bottom-0.5 left-0 h-px w-full origin-left scale-x-0 bg-[linear-gradient(90deg,#343ed7,#783df5,#c535c9)] transition-transform duration-300 group-hover:scale-x-100"
+          aria-hidden
+        />
+      </span>
+      <ArrowUpRight
+        className="h-3 w-3 -translate-x-1 opacity-0 transition-all duration-300 group-hover:translate-x-0 group-hover:opacity-100"
+        aria-hidden
+      />
+    </a>
   );
 }
 
