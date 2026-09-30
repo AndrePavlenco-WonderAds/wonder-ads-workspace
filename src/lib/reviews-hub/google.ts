@@ -117,7 +117,7 @@ async function gfetch(
     });
     if (res.ok) return res;
     const retriable = res.status === 503 || res.status === 500 || res.status === 429;
-    if (!retriable || attempt >= 3) throw await toGbpError(res, what);
+    if (!retriable || attempt >= (res.status === 429 ? 4 : 3)) throw await toGbpError(res, what);
     // Quota zero não passa com espera — não vale a pena insistir.
     if (res.status === 429) {
       const peek = await res.clone().text().catch(() => "");
@@ -125,10 +125,16 @@ async function gfetch(
         throw await toGbpError(res, what);
       }
     }
+    // Limite por minuto: espera a sério (5 s, 10 s, 20 s, 30 s); erro do
+    // servidor: recuo curto.
     const retryAfter = Number(res.headers.get("retry-after"));
     const wait =
-      Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : 800 * 2 ** attempt;
-    await sleep(Math.min(wait, 8000));
+      Number.isFinite(retryAfter) && retryAfter > 0
+        ? retryAfter * 1000
+        : res.status === 429
+          ? 5000 * 2 ** attempt
+          : 800 * 2 ** attempt;
+    await sleep(Math.min(wait, 30_000));
     attempt++;
   }
 }

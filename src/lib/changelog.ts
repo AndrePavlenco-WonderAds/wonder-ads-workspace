@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.59",
+    date: "2026-09-30",
+    title: "Reviews Hub — pronto para passar da DataForSEO para a API da Google",
+    highlights: [
+      "**🔁 A troca faz-se salão a salão.** A «Google My Business API» foi ativada no projeto da conta de serviço; a sincronização seguinte passa sozinha para a Google. Cada salão guarda de onde vêm as suas reviews, por isso um salão que falhe a meio nunca mistura reviews da DataForSEO com as da Google.",
+      "**⏱️ Leituras completas com orçamento de tempo:** a primeira leitura pela Google (≈7 000 reviews) avança salão a salão e, se não couber numa volta, continua na seguinte — sem voltar a ler os salões que já passaram.",
+      "**🧘 Limites de quota da Google:** um 429 por limite por minuto espera 5, 10, 20 e 30 segundos antes de desistir, em vez de meio segundo.",
+    ],
+  },
+  {
     version: "77.58",
     date: "2026-09-30",
     title: "Reviews Hub — respostas escritas pelo Claude Sonnet com um guia de respostas pronto",

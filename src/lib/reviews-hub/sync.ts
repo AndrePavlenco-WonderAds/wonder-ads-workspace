@@ -58,6 +58,9 @@ const DFS_INCREMENTAL_EVERY = 2 * HOUR;
 const DFS_TASK_TIMEOUT = 3 * HOUR;
 /** DataForSEO: quanto tempo uma sync espera pelas tarefas prioritárias. */
 const DFS_WAIT_MS = 150_000;
+/** Google: a partir daqui não se começa mais nenhum salão nesta volta — os
+ *  que faltarem seguem no cron seguinte (a função tem 300 s). */
+const GBP_BUDGET_MS = 200_000;
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -150,22 +153,37 @@ async function syncFromGoogle(
   token: string,
   locations: HubLocation[],
   prev: HubSyncState,
-  full: boolean,
+  forceFull: boolean,
   firstPage: ReviewsPage,
 ): Promise<SourceRun> {
   // Vindo da DataForSEO os ids são outros — a primeira leitura pela Google
   // é sempre completa, para substituir tudo.
   const switching = prev.source !== "gbp";
   const since = prev.lastSyncAt && !switching ? prev.lastSyncAt - 2 * DAY : null;
+  const started = Date.now();
   const run = emptyRun();
-  run.fullDone = full || switching;
 
   for (const [idx, loc] of locations.entries()) {
+    if (Date.now() - started > GBP_BUDGET_MS) {
+      // Sem tempo para mais nesta volta: fica com o que tem e segue depois.
+      run.pending++;
+      run.allReviews.push(...(await getReviewsForLocation(slug, loc.id)));
+      continue;
+    }
     try {
       const stored = await getReviewsForLocation(slug, loc.id);
       const knownIds = new Set(stored.map((r) => r.id));
-      if (switching) for (const r of stored) run.oldKeys.set(r.id, reviewKey(r));
-      const readAll = full || switching || stored.length === 0 || !since;
+      // Este salão ainda tem as reviews da DataForSEO (ou nunca foi lido pela
+      // Google): leitura completa, que substitui tudo.
+      const locSwitching = switching || loc.source !== "gbp";
+      if (locSwitching) for (const r of stored) run.oldKeys.set(r.id, reviewKey(r));
+      const readAll =
+        forceFull ||
+        locSwitching ||
+        stored.length === 0 ||
+        !since ||
+        !loc.fullAt ||
+        Date.now() - loc.fullAt > FULL_SYNC_EVERY;
       const fetched: HubReview[] = [];
       let totals: { average: number | null; total: number | null } = {
         average: null,
@@ -189,7 +207,7 @@ async function syncFromGoogle(
 
       const merged = merge(stored, fetched, readAll);
       for (const r of fetched) {
-        if (!knownIds.has(r.id) && stored.length > 0 && !switching) run.newReviews.push(r);
+        if (!knownIds.has(r.id) && stored.length > 0 && !locSwitching) run.newReviews.push(r);
         if (r.reply) run.repliedAt.set(r.id, Date.parse(r.reply.updated) || 0);
       }
       await saveReviewsForLocation(slug, loc.id, merged);
@@ -198,6 +216,8 @@ async function syncFromGoogle(
       loc.average = totals.average ?? loc.average;
       loc.syncedAt = Date.now();
       loc.error = null;
+      loc.source = "gbp";
+      if (readAll) loc.fullAt = Date.now();
     } catch (err) {
       run.failures++;
       const e = err instanceof GbpError ? err : new GbpError(String(err), "other", 0);
@@ -207,6 +227,7 @@ async function syncFromGoogle(
     }
     await sleep(PAUSE_MS);
   }
+  run.fullDone = locations.every((l) => l.source === "gbp" && l.fullAt);
   return run;
 }
 
@@ -258,6 +279,7 @@ async function syncFromDataForSeo(
     loc.average = res.average ?? loc.average;
     loc.syncedAt = Date.now();
     loc.error = null;
+    loc.source = "dfs";
     if (task.full) dfs.fullAt[locId] = Date.now();
   };
 
@@ -335,8 +357,6 @@ export async function syncReviews(
 
   const prev = await getSyncState(slug);
   const now = Date.now();
-  const full =
-    Boolean(opts.full) || !prev.lastFullSyncAt || now - prev.lastFullSyncAt > FULL_SYNC_EVERY;
 
   try {
     const token = await gbpToken();
@@ -386,7 +406,7 @@ export async function syncReviews(
     let source: "gbp" | "dfs";
     if (!gbpError && firstPage) {
       source = "gbp";
-      run = await syncFromGoogle(slug, token, locations, prev, full, firstPage);
+      run = await syncFromGoogle(slug, token, locations, prev, Boolean(opts.full), firstPage);
     } else if (dfsConfigured()) {
       source = "dfs";
       run = await syncFromDataForSeo(slug, locations, {
@@ -410,12 +430,18 @@ export async function syncReviews(
       const byKey = new Map(run.allReviews.map((r) => [reviewKey(r), r]));
       for (const [oldId, draft] of Object.entries(drafts)) {
         const key = run.oldKeys.get(oldId);
-        const match = key ? byKey.get(key) : undefined;
+        if (!key) continue;
+        const match = byKey.get(key);
+        // O salão falhou nesta volta (continua com as reviews antigas): o
+        // rascunho fica como está até ao salão passar para a Google.
+        if (!match && locations.find((l) => l.id === draft.loc)?.source !== "gbp") continue;
         delete drafts[oldId];
         if (match && !drafts[match.id]) drafts[match.id] = { ...draft, reviewId: match.id, loc: match.loc };
         draftsChanged = true;
       }
-      await saveDfsState(slug, { tasks: {}, lastPostAt: {}, fullAt: {} });
+      if (locations.every((l) => l.source === "gbp")) {
+        await saveDfsState(slug, { tasks: {}, lastPostAt: {}, fullAt: {} });
+      }
     }
 
     // Uma review respondida fora da plataforma depois de o rascunho ter sido
@@ -432,7 +458,7 @@ export async function syncReviews(
 
     const allFailed = run.failures >= locations.length;
     const e = run.firstError;
-    const fullDone = source === "gbp" ? full || run.fullDone : run.fullDone;
+    const fullDone = run.fullDone;
     const state: HubSyncState = {
       lastSyncAt: allFailed ? prev.lastSyncAt : Date.now(),
       lastFullSyncAt: fullDone && run.failures === 0 ? Date.now() : prev.lastFullSyncAt,
@@ -451,6 +477,7 @@ export async function syncReviews(
       publishAvailable: source === "gbp",
       gbpFixUrl: source === "dfs" ? (gbpError?.fixUrl ?? prev.gbpFixUrl ?? null) : null,
       dfsPending: source === "dfs" ? run.pending : 0,
+      gbpPending: source === "gbp" ? run.pending : 0,
       locationsAt: relist ? Date.now() : (prev.locationsAt ?? null),
     };
     await saveSyncState(slug, state);

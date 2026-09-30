@@ -24,6 +24,11 @@ export type HubLocation = {
   syncedAt?: number;
   /** O último erro deste perfil em particular (os outros seguem). */
   error?: string | null;
+  /** De onde vêm as reviews guardadas deste salão — os ids são diferentes
+   *  entre a Google e a DataForSEO, nunca se misturam no mesmo salão. */
+  source?: "gbp" | "dfs";
+  /** Última leitura completa deste salão pela Google. */
+  fullAt?: number;
 };
 
 export type HubReply = {
@@ -124,6 +129,8 @@ export type HubSyncState = {
   gbpFixUrl?: string | null;
   /** Salões com leitura da DataForSEO ainda a caminho. */
   dfsPending?: number;
+  /** Salões que ficaram para a volta seguinte na leitura pela Google. */
+  gbpPending?: number;
   /** Quando a lista de perfis foi pedida à Google pela última vez. */
   locationsAt?: number | null;
 };
