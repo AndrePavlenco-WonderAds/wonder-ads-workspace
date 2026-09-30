@@ -14,6 +14,7 @@
 import { cookies } from "next/headers";
 import {
   SESSION_COOKIE,
+  SESSION_MAX_AGE_MS,
   effectiveUsername,
   readSession,
 } from "@/lib/auth/session";
@@ -47,8 +48,10 @@ export async function UserChip() {
   const hoursLeft = Math.round(msLeft / (60 * 60 * 1000));
   const expiresLabel =
     daysLeft >= 1
-      ? `${daysLeft} day${daysLeft === 1 ? "" : "s"}`
-      : `${hoursLeft}h`;
+      ? `${daysLeft} ${daysLeft === 1 ? "dia" : "dias"}`
+      : `${hoursLeft} h`;
+  // Fração da sessão que ainda falta — a barrinha no topo do menu.
+  const sessionLeft = msLeft / SESSION_MAX_AGE_MS;
 
   // O seletor só existe para quem FEZ LOGIN como SuperAdmin — e continua a
   // existir enquanto ele está na pele de outra pessoa, para poder saltar
@@ -86,6 +89,7 @@ export async function UserChip() {
       // o menu tem de parecer o dela.
       canWeeklyReports={canEditDept(viewingUsername, "seo")}
       expiresLabel={expiresLabel}
+      sessionLeft={sessionLeft}
       canImpersonate={realIsAdmin}
       realName={realDisplay?.name ?? session.u}
       viewingAs={session.as ?? null}

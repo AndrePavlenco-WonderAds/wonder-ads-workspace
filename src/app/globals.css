@@ -1019,3 +1019,18 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .rhub-strands path, .rhub-sway, .rhub-skeleton, .rhub-ping, .rhub-aurora, .rhub-caret { animation: none; }
 }
+
+/* ── Menu da conta (chip do topo, v77.61) ── */
+@keyframes chip-menu-in {
+  from { opacity: 0; transform: translateY(-6px) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes chip-item-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+.chip-menu-in { animation: chip-menu-in 0.24s cubic-bezier(0.16, 1, 0.3, 1) both; transform-origin: top right; }
+.chip-item-in { animation: chip-item-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) both; }
+@media (prefers-reduced-motion: reduce) {
+  .chip-menu-in, .chip-item-in { animation: none; }
+}

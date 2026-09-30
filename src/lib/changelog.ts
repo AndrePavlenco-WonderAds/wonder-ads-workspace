@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.61",
+    date: "2026-09-30",
+    title: "Chip do topo e menu da conta redesenhados",
+    highlights: [
+      "**🪪 Chip do topo mais limpo:** retrato com anel da marca, nome e cargo — e o «Formador» passa a texto com um capelo (sem caixa dentro da caixa). O número do dia continua lá.",
+      "**✨ Menu da conta novo:** cabeçalho com retrato grande, cargo sem repetir o departamento (adeus «SEO Consultant · SEO»), a etiqueta «Formador» e a sessão com uma barrinha do tempo que falta. Os itens aparecem agrupados (Atalhos, Pessoal, SuperAdmin), cada um com ícone e uma linha a dizer para que serve.",
+      "**⌨️ Mais fácil de usar:** fecha com um clique fora ou com Esc, as setas ↑/↓ andam pelos itens, e o «Ver como» tem pesquisa quando a equipa é grande.",
+    ],
+  },
+  {
     version: "77.60",
     date: "2026-09-30",
     title: "Etiqueta «Formador» para o João Batista e o André Pereira",
