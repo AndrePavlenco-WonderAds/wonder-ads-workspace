@@ -97,6 +97,22 @@ export type DfsTaskResult =
   | { status: "error"; message: string }
   | { status: "done"; reviews: HubReview[]; total: number | null; average: number | null };
 
+/** A DataForSEO devolve as quebras de linha como <br> e alguns caracteres
+ *  como entidades HTML — passa tudo a texto simples. */
+export function plainText(v: string | null | undefined): string {
+  return (v ?? "")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;|&apos;/g, "'")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 /** «2024-05-12 10:23:45 +00:00» → ISO. */
 function dfsDate(v: string | null | undefined): string | null {
   if (!v) return null;
@@ -109,14 +125,14 @@ function toReview(item: DfsItem, loc: string): HubReview | null {
   if (!item.review_id) return null;
   const created = dfsDate(item.timestamp) ?? new Date(0).toISOString();
   const stars = Math.round(item.rating?.value ?? 0);
-  const replyText = (item.original_owner_answer ?? item.owner_answer ?? "").trim();
+  const replyText = plainText(item.original_owner_answer ?? item.owner_answer);
   return {
     id: item.review_id,
     loc,
     author: item.profile_name?.trim() || "Cliente Google",
     ...(item.profile_image_url ? { photo: item.profile_image_url } : {}),
     stars: (stars >= 1 && stars <= 5 ? stars : 0) as 0 | StarLevel,
-    text: (item.original_review_text ?? item.review_text ?? "").trim(),
+    text: plainText(item.original_review_text ?? item.review_text),
     created,
     updated: created,
     ...(item.review_url ? { url: item.review_url } : {}),

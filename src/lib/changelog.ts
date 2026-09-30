@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.56",
+    date: "2026-09-30",
+    title: "Reviews Hub — respostas do Google sem <br> à vista",
+    highlights: [
+      "**🧹 As respostas e reviews que chegam pela DataForSEO trazem as quebras de linha como `<br>`** (e alguns caracteres como entidades HTML). Passam a texto simples na chegada — e também na leitura, para os salões que já tinham chegado assim.",
+    ],
+  },
+  {
     version: "77.55",
     date: "2026-09-30",
     title: "Reviews Hub — reviews já a chegar dos 14 salões, sem esperar pela API de reviews da Google",

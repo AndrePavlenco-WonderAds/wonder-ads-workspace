@@ -18,7 +18,7 @@ import { kv } from "@vercel/kv";
 import { getHubConfig } from "./config";
 import { hydrateSettings } from "./defaults";
 import { computeSummary } from "./stats";
-import type { DfsTask } from "./dataforseo";
+import { plainText, type DfsTask } from "./dataforseo";
 import type {
   HubActivity,
   HubDraft,
@@ -72,12 +72,24 @@ async function getChunkMap(slug: string): Promise<Record<string, number>> {
   return v && typeof v === "object" ? v : {};
 }
 
+/** Texto guardado antes da limpeza de HTML da DataForSEO (v77.56) ainda
+ *  pode trazer <br> — limpa na leitura, custa nada. */
+function tidy(r: HubReview): HubReview {
+  const dirty = (t: string | undefined) => Boolean(t && /<br|&[a-z#0-9]+;/i.test(t));
+  if (!dirty(r.text) && !dirty(r.reply?.text)) return r;
+  return {
+    ...r,
+    text: plainText(r.text),
+    ...(r.reply ? { reply: { ...r.reply, text: plainText(r.reply.text) } } : {}),
+  };
+}
+
 async function readChunks(slug: string, loc: string, n: number): Promise<HubReview[]> {
   if (n <= 0) return [];
   const keys = Array.from({ length: n }, (_, i) => k.reviews(slug, loc, i));
   const values = await kv.mget<(HubReview[] | null)[]>(...keys);
   const out: HubReview[] = [];
-  for (const v of values) if (Array.isArray(v)) out.push(...v);
+  for (const v of values) if (Array.isArray(v)) out.push(...v.map(tidy));
   return out;
 }
 
