@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.57",
+    date: "2026-09-30",
+    title: "Reviews Hub — a lista de salões pede-se à Google só uma vez por semana",
+    highlights: [
+      "**🛡️ Poupança de quota da Google.** Enquanto há salões a caminho, a página vai recolhendo as reviews de 20 em 20 segundos; essas voltas já não pedem a lista de perfis à Google (APIs com quota curta, as mesmas do relatório mensal). A lista refresca-se uma vez por semana ou numa sincronização completa pedida à mão.",
+    ],
+  },
+  {
     version: "77.56",
     date: "2026-09-30",
     title: "Reviews Hub — respostas do Google sem <br> à vista",

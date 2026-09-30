@@ -332,8 +332,14 @@ export async function syncReviews(
   try {
     const token = await gbpToken();
 
+    // A lista de perfis pede-se pouco (a quota destas APIs é curta): numa
+    // sync completa pedida à mão, quando não há lista, ou uma vez por semana.
     let locations = await getLocations(slug);
-    if (opts.full || locations.length === 0 || now - (prev.lastFullSyncAt ?? 0) > FULL_SYNC_EVERY) {
+    const relist =
+      locations.length === 0 ||
+      (!opts.collectOnly &&
+        (Boolean(opts.full) || now - (prev.locationsAt ?? 0) > FULL_SYNC_EVERY));
+    if (relist) {
       const fresh = await listClientLocations(token, cfg);
       // Guarda os números da última leitura enquanto os novos não chegam.
       const old = new Map(locations.map((l) => [l.id, l]));
@@ -420,6 +426,7 @@ export async function syncReviews(
       publishAvailable: source === "gbp",
       gbpFixUrl: source === "dfs" ? (gbpError?.fixUrl ?? prev.gbpFixUrl ?? null) : null,
       dfsPending: source === "dfs" ? run.pending : 0,
+      locationsAt: relist ? Date.now() : (prev.locationsAt ?? null),
     };
     await saveSyncState(slug, state);
     await refreshSummary(slug, { reviews: run.allReviews, locations, drafts });

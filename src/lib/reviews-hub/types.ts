@@ -124,6 +124,8 @@ export type HubSyncState = {
   gbpFixUrl?: string | null;
   /** Salões com leitura da DataForSEO ainda a caminho. */
   dfsPending?: number;
+  /** Quando a lista de perfis foi pedida à Google pela última vez. */
+  locationsAt?: number | null;
 };
 
 export type HubActivityKind = "reply" | "auto-reply" | "auto-draft" | "sync" | "settings";
