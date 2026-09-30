@@ -33,7 +33,7 @@ export type ImpersonationTarget = {
   role: string;
   dept: string;
   isAdmin: boolean;
-  /** Etiquetas só de apresentação («Formador»). */
+  /** Etiquetas só de apresentação («Treinador»). */
   tags?: string[];
   /** Retrato de public/team/avatar, ou null → inicial. */
   avatar?: string | null;
@@ -105,21 +105,21 @@ function AvatarCircle({
   );
 }
 
-/** Etiqueta só de apresentação («Formador») — texto com um capelo, sem
- *  caixa: um chip dentro do chip ficava pesado. Não dá acesso a nada. */
+/** Etiqueta só de apresentação («Treinador») — texto com um capelo, sem
+ *  caixa (um chip dentro do chip ficava pesado), e um gradiente de cor que
+ *  corre devagar pelas letras (`.tag-flow` em globals.css). Não dá acesso a
+ *  nada. */
 function TagText({ label, className = "" }: { label: string; className?: string }) {
   return (
     <span className={`inline-flex shrink-0 items-center gap-1 font-semibold ${className}`}>
-      <GraduationCap className="h-3 w-3 text-fuchsia-300/90" aria-hidden />
-      <span className="bg-[linear-gradient(90deg,#c4b5fd,#f0abfc)] bg-clip-text text-transparent">
-        {label}
-      </span>
+      <GraduationCap className="tag-flow-icon h-3 w-3 text-fuchsia-300" aria-hidden />
+      <span className="tag-flow">{label}</span>
     </span>
   );
 }
 
-/** «SEO Consultant» + departamento só quando o cargo ainda não o diz —
- *  nada de «SEO Consultant · SEO». */
+/** O cargo + departamento só quando o cargo ainda não o diz — nada de
+ *  «Consultor de SEO · SEO». */
 function roleWithDept(role: string, dept: string): string {
   if (!dept || role.toLowerCase().includes(dept.toLowerCase())) return role;
   return `${role} · ${dept === "All" ? "Todos os departamentos" : dept}`;
@@ -150,7 +150,7 @@ export function UserChipMenu({
   /** Retrato da pessoa VISTA (segue a lente, como o nome). */
   avatar?: string | null;
   role: string;
-  /** Etiquetas só de apresentação, ao lado do cargo («Formador»). */
+  /** Etiquetas só de apresentação, ao lado do cargo («Treinador»). */
   tags?: string[];
   dept: string;
   /** SuperAdmin (Andre / Alex / Alice) — vê a área de Superadmin da Formação. */

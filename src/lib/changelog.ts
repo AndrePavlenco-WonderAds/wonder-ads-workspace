@@ -13,6 +13,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.62",
+    date: "2026-09-30",
+    title: "«Consultor/Consultora de SEO» e a etiqueta «Treinador» com gradiente animado",
+    highlights: [
+      "**🏷️ Cargos em português:** o Manuel, o André Pereira e o João passam a «Consultor de SEO»; a Fran e a Maria a «Consultora de SEO» — no chip do topo, no menu, no «Ver como» e no Team Roster (quem tiver lá um cargo escrito à mão mantém o seu).",
+      "**🌈 «Formador» passa a «Treinador»** (João Batista e André Pereira), com um gradiente de cor que corre devagar pelas letras e um capelo que muda de cor com ele. Continua a ser só uma etiqueta.",
+    ],
+  },
+  {
     version: "77.61",
     date: "2026-09-30",
     title: "Chip do topo e menu da conta redesenhados",

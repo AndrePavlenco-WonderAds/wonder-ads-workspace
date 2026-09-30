@@ -279,7 +279,7 @@ export function AdminEmployeeRow({
           type="text"
           value={draft.role}
           onChange={(e) => setDraft({ ...draft, role: e.target.value })}
-          placeholder="e.g. SEO Consultant"
+          placeholder="ex.: Consultor de SEO"
           className="w-full rounded-md border border-white/10 bg-white/[0.04] px-2 py-1.5 text-[12px] text-white outline-none transition focus:border-white/30 placeholder:text-white/35"
         />
       </td>

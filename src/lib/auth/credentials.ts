@@ -73,7 +73,7 @@ export type EmployeeCredential = {
    *  middleware). Os cofres de credenciais do Web ficam fechados. */
   readOnlyDepts?: DeptSlug[];
   /** ETIQUETAS SÓ DE APRESENTAÇÃO (v77.60) — aparecem ao lado do cargo no
-   *  chip do topo e no menu («Formador»). Não dão nem tiram acesso nenhum:
+   *  chip do topo e no menu («Treinador», com gradiente animado). Não dão nem tiram acesso nenhum:
    *  nada na app decide permissões por aqui. */
   tags?: string[];
 };
@@ -136,7 +136,7 @@ export const EMPLOYEE_CREDENTIALS: EmployeeCredential[] = [
   {
     username: "manuel-s",
     name: "Manuel Silva",
-    role: "SEO Consultant",
+    role: "Consultor de SEO",
     dept: "SEO",
     startedAt: "2026-05-12",
     salt: "957bf782098303007b172a4d66b1fc32",
@@ -145,7 +145,7 @@ export const EMPLOYEE_CREDENTIALS: EmployeeCredential[] = [
   {
     username: "fran-r",
     name: "Fran. Rosa",
-    role: "SEO Consultant",
+    role: "Consultora de SEO",
     dept: "SEO",
     // Confirmada pelo C-Level (v76.31) — entrou muito antes do workspace
     // existir, por isso o default herdado do arranque estava errado.
@@ -159,9 +159,9 @@ export const EMPLOYEE_CREDENTIALS: EmployeeCredential[] = [
     username: "andre-pereira",
     name: "André Pereira",
     fullName: "André Pereira",
-    role: "SEO Consultant",
+    role: "Consultor de SEO",
     dept: "SEO",
-    tags: ["Formador"],
+    tags: ["Treinador"],
     // Confirmada pelo C-Level (v76.31).
     startedAt: "2026-06-17",
     salt: "fe95016ca4be1c060bad56460589845f",
@@ -174,9 +174,9 @@ export const EMPLOYEE_CREDENTIALS: EmployeeCredential[] = [
     username: "joao-b",
     name: "João B.",
     fullName: "João Batista",
-    role: "SEO Consultant",
+    role: "Consultor de SEO",
     dept: "SEO",
-    tags: ["Formador"],
+    tags: ["Treinador"],
     // Confirmada pelo C-Level (v76.31).
     startedAt: "2026-07-23",
     salt: "d7d60d6aa538084e6b6385a29274d7b8",
@@ -190,7 +190,7 @@ export const EMPLOYEE_CREDENTIALS: EmployeeCredential[] = [
     username: "maria-a",
     name: "Maria Assena",
     fullName: "Maria Assena",
-    role: "SEO Consultant",
+    role: "Consultora de SEO",
     dept: "SEO",
     startedAt: "2026-09-28",
     salt: "2a8c4e9b7666eb6d08b309cba1bfc56d",

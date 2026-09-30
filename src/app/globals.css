@@ -1034,3 +1034,25 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .chip-menu-in, .chip-item-in { animation: none; }
 }
+
+/* Etiqueta «Treinador» (v77.62): gradiente que corre pelas letras. O
+   tamanho do fundo é 200% e a animação anda exatamente um azulejo, por isso
+   o ciclo recomeça sem salto (as pontas do gradiente são da mesma cor). */
+@keyframes tag-flow {
+  to { background-position: 200% center; }
+}
+@keyframes tag-flow-hue {
+  to { filter: hue-rotate(360deg); }
+}
+.tag-flow {
+  background-image: linear-gradient(90deg, #a78bfa, #f0abfc, #fda4af, #fcd34d, #67e8f9, #a78bfa);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: tag-flow 5s linear infinite;
+}
+.tag-flow-icon { animation: tag-flow-hue 5s linear infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .tag-flow, .tag-flow-icon { animation: none; }
+}

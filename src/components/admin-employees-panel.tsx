@@ -305,7 +305,7 @@ export function AdminEmployeesPanel({
                 type="text"
                 value={addRole}
                 onChange={(e) => setAddRole(e.target.value)}
-                placeholder="e.g. SEO Consultant"
+                placeholder="ex.: Consultor de SEO"
                 className="w-full rounded-md border border-white/12 bg-white/[0.05] px-3 py-2 text-[12.5px] text-white outline-none transition placeholder:text-white/35 focus:border-white/30"
               />
             </FormField>
