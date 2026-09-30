@@ -13,6 +13,19 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.53",
+    date: "2026-09-30",
+    title: "Reviews Hub da Cidália Cabeleireiros — respostas às reviews Google dos 14 salões",
+    highlights: [
+      "**⭐ Nova plataforma de respostas a reviews em `/cidalia-cabeleireiros/reviews`**, só para a Cidália Cabeleireiros (João B.). O cliente entra com password; a equipa Wonder Ads entra direto com a sessão do workspace. Tem Dashboard, Reviews, Respostas e Definições, e um seletor «Perfil da empresa» para ver um salão de cada vez.",
+      "**🔗 Liga-se aos 14 perfis Google Business da marca** pela conta de serviço que o relatório mensal já usa (seo@wonder-ads.com) — não precisa do projeto «cidalia-reviews», que ainda está com a quota da Google a 0. Sincroniza a cada 30 minutos (cron novo) e sempre que se carrega em «Sincronizar agora».",
+      "**✨ A IA escreve a resposta a cada review** com a estratégia do nível de estrelas (1★ «Recuperar a confiança» … 5★ «Agradecer e fidelizar»), o tom da marca, as regras e o brief do cliente. A resposta aparece a ser escrita em tempo real, fica editável e guarda-se sozinha como rascunho. Depois é copiar ou publicar no Google com um clique (com confirmação).",
+      "**🤖 Automação por nível de estrelas**: automático, com aprovação ou manual. Nasce desligada e, quando se liga, só trata as reviews recebidas a partir desse momento — nunca responde sozinha ao histórico.",
+      "**📊 Dashboard** com a média Google, as reviews por responder (e as negativas), a taxa e o tempo de resposta, a evolução dos últimos 12 meses, o ranking dos salões e a atividade recente.",
+      "**🏷️ Chip «Reviews» no cabeçalho do cliente**, ao lado do NPS: média Google + quantas faltam responder (a vermelho quando há negativas). Abre a plataforma numa janela nova.",
+    ],
+  },
+  {
     version: "77.52",
     date: "2026-09-29",
     title: "Formação: Website Audit via Screaming Frog com vídeo e 9 perguntas",

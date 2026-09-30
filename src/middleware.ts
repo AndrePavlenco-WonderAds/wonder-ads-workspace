@@ -120,6 +120,8 @@ const VIEWER_READ_APIS: Record<DeptSlug, string[]> = {
     "/api/seo",
     "/api/seo-directories",
     "/api/files",
+    // O Reviews Hub (v77.53) — a própria API recusa escritas a viewers.
+    "/api/reviews-hub",
   ],
   ads: ["/api/ads", "/api/files"],
   web: ["/api/web", "/api/files"],

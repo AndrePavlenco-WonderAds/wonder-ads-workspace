@@ -13,6 +13,7 @@ import { SeoProjectContainers } from "@/components/seo-project-containers";
 import { SeoActions } from "@/components/seo-actions";
 import { ProjectSectionNav } from "@/components/project-section-nav";
 import { LogoChip } from "@/components/logo-chip";
+import { ReviewsHubChip } from "@/components/reviews-hub-chip";
 import {
   getCurrentRoadmap,
   resolveOnboardingDate,
@@ -233,6 +234,7 @@ export default async function ClientPage({
                   <span className="text-white/40">—</span>
                 )}
               </Link>
+              <ReviewsHubChip slug={slug} />
             </div>
             <h1 className="mt-2 text-4xl font-semibold leading-[1.05] tracking-tight sm:text-5xl">
               <span className="brand-gradient-text">{client.title}</span>
