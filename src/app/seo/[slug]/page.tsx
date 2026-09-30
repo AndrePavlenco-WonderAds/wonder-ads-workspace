@@ -21,7 +21,7 @@ import {
 import { formatDate } from "@/lib/dates";
 import { getBriefForSlug } from "@/lib/briefs-storage";
 import { isSharedWithSeo } from "@/lib/ads-clients";
-import { getClientBySlug, getSeoClients } from "@/lib/notion";
+import { getClientBySlug } from "@/lib/notion";
 import {
   getClientWebsite,
   displayDomain,
@@ -41,14 +41,13 @@ import { SeoReadOnlyProvider, ReadOnlyBanner } from "@/components/seo-readonly";
 
 export const revalidate = 60;
 
+// Nenhuma página de cliente é pré-gerada no build (v77.64). Pré-gerar as ~29
+// em paralelo fazia cada worker revalidar a lista de clientes do Notion
+// (~35 pedidos cada) sempre que a cache estava expirada — o Notion respondia
+// 429 e o deploy falhava. Assim cada página nasce no primeiro acesso e fica
+// em ISR de 60 s, exatamente como já ficava depois do deploy.
 export async function generateStaticParams() {
-  if (!process.env.NOTION_API_KEY) return [];
-  try {
-    const clients = await getSeoClients();
-    return clients.map((c) => ({ slug: c.slug }));
-  } catch {
-    return [];
-  }
+  return [];
 }
 
 export async function generateMetadata({

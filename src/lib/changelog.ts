@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.64",
+    date: "2026-09-30",
+    title: "Deploys deixam de falhar por causa do limite do Notion",
+    highlights: [
+      "**🛠️ O build já não pré-gera as páginas dos clientes SEO.** Gerar as ~29 em paralelo fazia cada uma pedir a lista de clientes ao Notion quando a cache estava expirada; o Notion respondia «rate limited» (429) e o deploy falhava (foi o que travou a v77.63). As páginas passam a nascer no primeiro acesso e ficam em cache de 60 s, como já ficavam depois de cada deploy.",
+    ],
+  },
+  {
     version: "77.63",
     date: "2026-09-30",
     title: "«Treinador» — gradiente branco, rosa, lilás e roxo, sem ícone",
