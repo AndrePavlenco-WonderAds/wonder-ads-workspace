@@ -1,74 +1,114 @@
-// «Um cliente respondeu ao NPS» → grupo de WhatsApp do DPT de SEO.
+// «Um cliente respondeu ao NPS» → WhatsApp privado ao consultor da conta e ao
+// André, pelo número oficial da agência no GHL (ver src/lib/ghl.ts).
 //
-// O sino já avisa o COO e o consultor da conta; o grupo existe para a equipa
-// inteira saber na hora — um detrator é assunto de toda a gente, e um
-// promotor é uma vitória que vale a pena ver passar.
+// Os mesmos dois destinatários do sino, pelo mesmo motivo: o consultor é quem
+// liga ao cliente, o André lê a carteira inteira. Um pedido ao webhook POR
+// DESTINATÁRIO — assim o workflow do GHL é uma linha reta (contacto pelo email
+// → modelo de WhatsApp), sem ramos.
 //
-// A MENSAGEM LEVA A NOTA, pela mesma razão do sino: um 9 e um 4 pedem coisas
-// opostas, e quem lê no telemóvel tem de perceber qual é sem abrir o link.
-// As respostas escritas NÃO vão para o grupo — ficam na página do NPS, atrás
-// do login; o WhatsApp só diz que há uma e onde ler.
+// A MENSAGEM LEVA A NOTA: um 9 e um 4 pedem coisas opostas, e quem lê no
+// telemóvel tem de perceber qual é sem abrir o link. As respostas escritas NÃO
+// saem do Workspace — o WhatsApp só diz que há uma e onde ler.
+//
+// Os valores vão já formatados e numa linha só: as variáveis de um modelo de
+// WhatsApp não aceitam quebras de linha nem podem ir vazias.
 
 import { getClientBySlug } from "@/lib/notion";
+import { consultantEmailByName } from "@/lib/client-overrides";
 import type { NpsScores } from "@/lib/nps-questions";
-import { postToSeoWhatsAppGroup, seoGroupConfigured } from "@/lib/whatsapp";
+import { ghlNpsWebhookConfigured, postToGhlNpsWebhook } from "@/lib/ghl";
 
-const oneDecimal = (n: number) => n.toFixed(1).replace(".", ",");
+/** Recebe TODAS as respostas, seja de quem for a conta. É também o email do
+ *  contacto dele no GHL — o workflow encontra o contacto por aqui. */
+export const NPS_ALWAYS_NOTIFY = {
+  name: "André",
+  email: "seo@wonder-ads.com",
+} as const;
 
-export function buildNpsWhatsAppMessage(input: {
+type Recipient = { name: string; email: string; role: "consultor" | "direcao" };
+
+const oneLine = (s: string, max = 120) =>
+  s.replace(/\s+/g, " ").trim().slice(0, max);
+
+/** «Fran. Rosa» → «Fran», «João B.» → «João». */
+const firstName = (full: string) => full.split(" ")[0].replace(/\.$/, "");
+
+export function buildNpsGhlPayloads(input: {
+  slug: string;
   clientTitle: string;
   scores: NpsScores;
   consultant: string | null;
   identification: string | null;
   npsUrl: string;
-}): string {
+  submittedAt: number;
+  isTest?: boolean;
+}): Record<string, string | number | boolean>[] {
   const { scores } = input;
-  const [dot, label, nudge] =
+  const [emoji, category, nudge] =
     scores.category === "detractor"
       ? ["🔴", "detrator", "Vale uma chamada esta semana, antes de a renovação chegar."]
       : scores.category === "promoter"
         ? ["🟢", "promotor", "Bom momento para pedir uma referência ou uma review."]
-        : ["🟡", "neutro", null];
+        : ["🟡", "neutro", "Vale ler o que escreveu antes da próxima call."];
 
-  return [
-    `${dot} *Novo NPS — ${input.clientTitle}*`,
-    `Continuidade: *${scores.nps}/10* · ${label}`,
-    `Média geral: ${oneDecimal(scores.overall)}/10`,
-    input.consultant ? `Conta: ${input.consultant}` : null,
-    input.identification ? `Respondeu: ${input.identification}` : null,
-    "",
+  const recipients: Recipient[] = [];
+  if (input.consultant) {
+    recipients.push({
+      name: firstName(input.consultant),
+      email: consultantEmailByName(input.consultant),
+      role: "consultor",
+    });
+  }
+  // Sem duplicar quando a conta é do próprio André (ou o consultor é
+  // desconhecido e o email cai no seo@).
+  if (!recipients.some((r) => r.email === NPS_ALWAYS_NOTIFY.email)) {
+    recipients.push({ ...NPS_ALWAYS_NOTIFY, role: "direcao" });
+  }
+
+  return recipients.map((r) => ({
+    event: "nps_submitted",
+    is_test: Boolean(input.isTest),
+    recipient_email: r.email,
+    recipient_name: r.name,
+    recipient_role: r.role,
+    client: oneLine(input.clientTitle),
+    client_slug: input.slug,
+    nps: scores.nps,
+    category,
+    category_emoji: emoji,
+    overall: scores.overall.toFixed(1).replace(".", ","),
+    consultant: input.consultant ? oneLine(input.consultant) : "sem consultor",
+    respondent: input.identification ? oneLine(input.identification) : "anónimo",
     nudge,
-    `👉 ${input.npsUrl}`,
-  ]
-    .filter((line): line is string => line !== null)
-    .join("\n");
+    url: input.npsUrl,
+    submitted_at: new Date(input.submittedAt).toISOString(),
+  }));
 }
 
-/** Avisa o grupo de SEO. Nunca lança; no-op (false) enquanto WHAPI_TOKEN e
- *  WHATSAPP_SEO_GROUP_ID não estiverem na Vercel. */
+/** Dispara um webhook por destinatário. Nunca lança; no-op (0) enquanto
+ *  GHL_NPS_WEBHOOK_URL não estiver na Vercel. Devolve quantos passaram. */
 export async function notifyNpsOnWhatsApp(input: {
   slug: string;
   scores: NpsScores;
   consultant: string | null;
   identification: string | null;
+  submittedAt: number;
   origin: string;
-}): Promise<boolean> {
-  if (!seoGroupConfigured()) return false;
+}): Promise<number> {
+  if (!ghlNpsWebhookConfigured()) return 0;
   try {
     // O nome vem do Notion (em cache); se o Notion falhar, o slug serve —
     // antes um aviso com o slug do que aviso nenhum.
     const client = await getClientBySlug(input.slug).catch(() => null);
-    return await postToSeoWhatsAppGroup(
-      buildNpsWhatsAppMessage({
-        clientTitle: client?.title ?? input.slug,
-        scores: input.scores,
-        consultant: input.consultant,
-        identification: input.identification,
-        npsUrl: `${input.origin}/seo/${input.slug}/nps`,
-      }),
-    );
+    const payloads = buildNpsGhlPayloads({
+      ...input,
+      clientTitle: client?.title ?? input.slug,
+      npsUrl: `${input.origin}/seo/${input.slug}/nps`,
+    });
+    const results = await Promise.all(payloads.map(postToGhlNpsWebhook));
+    return results.filter(Boolean).length;
   } catch (err) {
     console.error("[nps-whatsapp] notify failed:", err);
-    return false;
+    return 0;
   }
 }

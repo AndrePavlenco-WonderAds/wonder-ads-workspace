@@ -13,6 +13,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.67",
+    date: "2026-09-30",
+    title: "NPS respondido → WhatsApp privado ao consultor e ao André, pelo número da agência no GHL",
+    highlights: [
+      "**📲 Troca de caminho:** em vez do grupo (que exigia um número extra numa ligação não oficial), cada NPS passa a gerar uma mensagem privada de WhatsApp para o **consultor da conta** e para o **André**, enviada pelo número oficial da agência no GHL. Leva o cliente, a nota de continuidade (🔴 detrator · 🟡 neutro · 🟢 promotor), a média geral, quem respondeu e o link para ler as respostas.",
+      "**🔌 Ainda desligado:** liga-se quando o workflow do GHL estiver publicado e o URL do webhook estiver na Vercel (GHL_NPS_WEBHOOK_URL). O envio corre depois de gravar a resposta, por isso uma falha nunca atrasa nem estraga o formulário do cliente.",
+    ],
+  },
+  {
     version: "77.66",
     date: "2026-09-30",
     title: "NPS respondido → aviso no grupo de WhatsApp do DPT de SEO (a ligar)",

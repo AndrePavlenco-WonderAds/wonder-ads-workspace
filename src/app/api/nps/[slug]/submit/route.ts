@@ -206,9 +206,9 @@ export async function POST(
   revalidatePath(`/seo/${slug}/nps`);
   revalidatePath(`/seo/${slug}`);
 
-  // Aviso no grupo de WhatsApp do DPT de SEO. Em `after()` para o cliente
-  // não esperar pela Whapi, e nunca lança — no-op até WHAPI_TOKEN e
-  // WHATSAPP_SEO_GROUP_ID estarem na Vercel.
+  // WhatsApp privado ao consultor da conta e ao André, via workflow do GHL.
+  // Em `after()` para o cliente não esperar pelo GHL, e nunca lança — no-op
+  // até GHL_NPS_WEBHOOK_URL estar na Vercel.
   const origin = new URL(req.url).origin;
   after(() =>
     notifyNpsOnWhatsApp({
@@ -216,6 +216,7 @@ export async function POST(
       scores: submission.scores,
       consultant: submission.consultant,
       identification: submission.identification,
+      submittedAt: submission.submittedAt,
       origin,
     }),
   );
