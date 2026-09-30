@@ -2,7 +2,7 @@
 // No auth — the client reaches it from the public /[slug]/survey page.
 // The slug is the share secret, mirroring /api/reviews.
 
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { revalidatePath } from "next/cache";
 import { addNpsSubmission } from "@/lib/nps-store";
 import {
@@ -21,6 +21,7 @@ import {
   personScaleKey,
 } from "@/lib/nps-questions";
 import { getConsultantForSlug } from "@/lib/consultant-assignments";
+import { notifyNpsOnWhatsApp } from "@/lib/nps-whatsapp";
 
 export const runtime = "nodejs";
 
@@ -204,6 +205,20 @@ export async function POST(
   // Refresh the internal management page + client page badge.
   revalidatePath(`/seo/${slug}/nps`);
   revalidatePath(`/seo/${slug}`);
+
+  // Aviso no grupo de WhatsApp do DPT de SEO. Em `after()` para o cliente
+  // não esperar pela Whapi, e nunca lança — no-op até WHAPI_TOKEN e
+  // WHATSAPP_SEO_GROUP_ID estarem na Vercel.
+  const origin = new URL(req.url).origin;
+  after(() =>
+    notifyNpsOnWhatsApp({
+      slug,
+      scores: submission.scores,
+      consultant: submission.consultant,
+      identification: submission.identification,
+      origin,
+    }),
+  );
 
   return NextResponse.json({
     ok: true,

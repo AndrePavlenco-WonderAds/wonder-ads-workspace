@@ -13,6 +13,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.66",
+    date: "2026-09-30",
+    title: "NPS respondido → aviso no grupo de WhatsApp do DPT de SEO (a ligar)",
+    highlights: [
+      "**📲 Cada NPS que um cliente de SEO submete passa a ser anunciado no grupo de WhatsApp da equipa:** cliente, nota de continuidade (🔴 detrator · 🟡 neutro · 🟢 promotor), média geral, consultor da conta, quem respondeu e o link para ler as respostas. As respostas escritas ficam no Workspace — o grupo só recebe as notas.",
+      "**🔌 Ainda desligado:** liga-se sozinho quando a Whapi.cloud estiver configurada (WHAPI_TOKEN + WHATSAPP_SEO_GROUP_ID na Vercel). O envio corre depois de gravar a resposta, por isso uma falha do WhatsApp nunca atrasa nem estraga o formulário do cliente.",
+    ],
+  },
+  {
     version: "77.65",
     date: "2026-09-30",
     title: "Páginas de cliente SEO de volta — corrigido o erro 500",
