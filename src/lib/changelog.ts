@@ -13,6 +13,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.54",
+    date: "2026-09-30",
+    title: "Reviews Hub — avisos da ligação ao Google mais claros",
+    highlights: [
+      "**🔧 Quando a Google recusa todos os salões pela mesma razão** (API desligada, quota a 0), o aviso já não diz «1 de 14 salões falharam» — diz o que se passa, com o link para ativar a API, e a hora da última sincronização boa não avança.",
+      "**📍 O perfil GMB que tem só o nome da marca** passa a aparecer com a localidade (Aldeia Paio Pires) em vez de «Salão principal».",
+    ],
+  },
+  {
     version: "77.53",
     date: "2026-09-30",
     title: "Reviews Hub da Cidália Cabeleireiros — respostas às reviews Google dos 14 salões",

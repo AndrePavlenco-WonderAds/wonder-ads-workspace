@@ -143,13 +143,14 @@ type ApiLocation = {
   metadata?: { mapsUri?: string; newReviewUri?: string; placeId?: string };
 };
 
-/** «Cidália Cabeleireiros - Alma Shopping» → «Alma Shopping». */
+/** «Cidália Cabeleireiros - Alma Shopping» → «Alma Shopping». Vazio quando o
+ *  perfil tem só o nome da marca (quem chama usa a localidade). */
 export function shortLocationName(title: string, brand: string): string {
   const escaped = brand.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const stripped = title
     .replace(new RegExp(`^\\s*${escaped}\\s*[-–—|·:]?\\s*`, "i"), "")
     .trim();
-  return stripped || "Salão principal";
+  return stripped;
 }
 
 /** Todos os perfis do cliente que a conta de serviço vê, com a conta de
@@ -200,7 +201,7 @@ export async function listClientLocations(
           id,
           accountId: account.replace(/^accounts\//, ""),
           title,
-          short: shortLocationName(title, cfg.brand),
+          short: shortLocationName(title, cfg.brand) || addr?.locality || "Salão principal",
           locality: addr?.locality,
           address: addr?.addressLines?.join(", "),
           mapsUri: l.metadata?.mapsUri,

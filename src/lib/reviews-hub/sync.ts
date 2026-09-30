@@ -179,6 +179,7 @@ export async function syncReviews(
             rest.error = e.message;
             allReviews.push(...(await getReviewsForLocation(slug, rest.id)));
           }
+          failures = locations.length;
           break;
         }
       }
@@ -207,7 +208,7 @@ export async function syncReviews(
       lastFullSyncAt: full && failures === 0 ? Date.now() : prev.lastFullSyncAt,
       ok: failures === 0,
       error: firstError
-        ? failures === locations.length
+        ? allFailed
           ? firstError.message
           : `${failures} de ${locations.length} salões falharam: ${firstError.message}`
         : null,
