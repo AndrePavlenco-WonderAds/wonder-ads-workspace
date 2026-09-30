@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.60",
+    date: "2026-09-30",
+    title: "Etiqueta «Formador» para o João Batista e o André Pereira",
+    highlights: [
+      "**🎓 «Formador» no chip do topo**, ao lado do cargo (SEO Consultant), no menu da pessoa e na lista do «Ver como» — para o **João Batista** e o **André Pereira**. É só uma etiqueta: não dá acesso novo nem muda nenhuma função.",
+    ],
+  },
+  {
     version: "77.59",
     date: "2026-09-30",
     title: "Reviews Hub — pronto para passar da DataForSEO para a API da Google",

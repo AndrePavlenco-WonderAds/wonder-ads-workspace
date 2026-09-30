@@ -31,6 +31,8 @@ export type ImpersonationTarget = {
   role: string;
   dept: string;
   isAdmin: boolean;
+  /** Etiquetas só de apresentação («Formador»). */
+  tags?: string[];
   /** Retrato de public/team/avatar, ou null → inicial. */
   avatar?: string | null;
 };
@@ -101,10 +103,28 @@ function AvatarCircle({
   );
 }
 
+/** Etiqueta só de apresentação ao lado do cargo («Formador»). Não dá
+ *  acesso a nada — é um rótulo. */
+function TagPill({ label, size = "sm" }: { label: string; size?: "xs" | "sm" }) {
+  return (
+    <span
+      className={`inline-flex shrink-0 items-center gap-0.5 rounded-full border border-violet-300/35 bg-violet-400/[0.12] font-semibold uppercase text-violet-100 ${
+        size === "xs"
+          ? "px-1 py-px text-[7.5px] tracking-[0.1em]"
+          : "px-1.5 py-px text-[8.5px] tracking-[0.12em]"
+      }`}
+    >
+      <GraduationCap className={size === "xs" ? "h-2 w-2" : "h-2.5 w-2.5"} aria-hidden />
+      {label}
+    </span>
+  );
+}
+
 export function UserChipMenu({
   name,
   avatar = null,
   role,
+  tags = [],
   dept,
   isAdmin = false,
   isViewer = false,
@@ -120,6 +140,8 @@ export function UserChipMenu({
   /** Retrato da pessoa VISTA (segue a lente, como o nome). */
   avatar?: string | null;
   role: string;
+  /** Etiquetas só de apresentação, ao lado do cargo («Formador»). */
+  tags?: string[];
   dept: string;
   /** SuperAdmin (Andre / Alex / Alice) — vê a área de Superadmin da Formação. */
   isAdmin?: boolean;
@@ -214,8 +236,11 @@ export function UserChipMenu({
           <span className="text-[12px] font-semibold tracking-tight">
             {name}
           </span>
-          <span className="text-[9.5px] font-normal text-white/45">
+          <span className="flex items-center gap-1.5 text-[9.5px] font-normal text-white/45">
             {role}
+            {tags.map((t) => (
+              <TagPill key={t} label={t} size="xs" />
+            ))}
           </span>
         </span>
         {/* «Número do dia» — dentro do chip, entre o cargo e a seta, com um
@@ -258,6 +283,13 @@ export function UserChipMenu({
                 <p className="text-[10.5px] uppercase tracking-[0.18em] text-white/45">
                   {role} · {dept}
                 </p>
+                {tags.length > 0 && (
+                  <p className="mt-1 flex flex-wrap gap-1">
+                    {tags.map((t) => (
+                      <TagPill key={t} label={t} />
+                    ))}
+                  </p>
+                )}
               </div>
             </div>
             {viewingAs ? (
@@ -371,8 +403,13 @@ export function UserChipMenu({
                           <span className="block truncate text-[12px] font-medium text-white/85">
                             {p.name}
                           </span>
-                          <span className="block truncate text-[10px] text-white/40">
-                            {p.role} · {p.dept}
+                          <span className="flex items-center gap-1.5 truncate text-[10px] text-white/40">
+                            <span className="truncate">
+                              {p.role} · {p.dept}
+                            </span>
+                            {p.tags?.map((t) => (
+                              <TagPill key={t} label={t} size="xs" />
+                            ))}
                           </span>
                         </span>
                         {active && (

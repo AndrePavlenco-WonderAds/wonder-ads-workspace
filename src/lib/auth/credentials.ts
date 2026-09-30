@@ -72,6 +72,10 @@ export type EmployeeCredential = {
    *  tickets ao Web (os tickets são globais — ver o portão do Web no
    *  middleware). Os cofres de credenciais do Web ficam fechados. */
   readOnlyDepts?: DeptSlug[];
+  /** ETIQUETAS SÓ DE APRESENTAÇÃO (v77.60) — aparecem ao lado do cargo no
+   *  chip do topo e no menu («Formador»). Não dão nem tiram acesso nenhum:
+   *  nada na app decide permissões por aqui. */
+  tags?: string[];
 };
 
 /** Department slugs used across the workspace router. */
@@ -157,6 +161,7 @@ export const EMPLOYEE_CREDENTIALS: EmployeeCredential[] = [
     fullName: "André Pereira",
     role: "SEO Consultant",
     dept: "SEO",
+    tags: ["Formador"],
     // Confirmada pelo C-Level (v76.31).
     startedAt: "2026-06-17",
     salt: "fe95016ca4be1c060bad56460589845f",
@@ -171,6 +176,7 @@ export const EMPLOYEE_CREDENTIALS: EmployeeCredential[] = [
     fullName: "João Batista",
     role: "SEO Consultant",
     dept: "SEO",
+    tags: ["Formador"],
     // Confirmada pelo C-Level (v76.31).
     startedAt: "2026-07-23",
     salt: "d7d60d6aa538084e6b6385a29274d7b8",
@@ -512,6 +518,7 @@ export function getEmployeeDisplay(username: string): {
   isAdmin: boolean;
   viewerOf: DeptSlug | null;
   readOnlyDepts: DeptSlug[];
+  tags: string[];
 } | null {
   const row = findEmployeeByUsername(username);
   return row
@@ -522,6 +529,7 @@ export function getEmployeeDisplay(username: string): {
         isAdmin: Boolean(row.isAdmin),
         viewerOf: row.viewerOf ?? null,
         readOnlyDepts: row.readOnlyDepts ?? [],
+        tags: row.tags ?? [],
       }
     : null;
 }
@@ -551,6 +559,7 @@ export function listImpersonationTargets(): Array<{
   role: string;
   dept: string;
   isAdmin: boolean;
+  tags: string[];
 }> {
   const deptOrder = ["All", "SEO", "ADS", "Web", "Commercial"];
   return EMPLOYEE_CREDENTIALS.map((c) => ({
@@ -559,6 +568,7 @@ export function listImpersonationTargets(): Array<{
     role: c.role,
     dept: c.dept,
     isAdmin: Boolean(c.isAdmin),
+    tags: c.tags ?? [],
   })).sort((a, b) => {
     const da = deptOrder.indexOf(a.dept);
     const db = deptOrder.indexOf(b.dept);
