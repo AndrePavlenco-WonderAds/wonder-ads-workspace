@@ -39,16 +39,17 @@ import { getCurrentEmployee } from "@/lib/auth/server";
 import { editableDepts } from "@/lib/auth/credentials";
 import { SeoReadOnlyProvider, ReadOnlyBanner } from "@/components/seo-readonly";
 
-export const revalidate = 60;
-
-// Nenhuma página de cliente é pré-gerada no build (v77.64). Pré-gerar as ~29
-// em paralelo fazia cada worker revalidar a lista de clientes do Notion
-// (~35 pedidos cada) sempre que a cache estava expirada — o Notion respondia
-// 429 e o deploy falhava. Assim cada página nasce no primeiro acesso e fica
-// em ISR de 60 s, exatamente como já ficava depois do deploy.
-export async function generateStaticParams() {
-  return [];
-}
+// RENDER A CADA PEDIDO, SEM PRÉ-GERAR NO BUILD (v77.65).
+//
+// A página lê a sessão (`getCurrentEmployee` → cookies), por isso nunca foi
+// estática: no build o Next tentava gerá-la, encontrava os cookies e passava-a a
+// dinâmica. Pré-gerar as ~29 fazia cada worker pedir a lista ao Notion e o
+// Notion respondia 429 — o deploy falhava. A v77.64 tirou o pré-render com um
+// `generateStaticParams` vazio, mas assim o Next deixou de descobrir que a
+// página é dinâmica, tratou-a como ISR e cada visita rebentava com
+// DYNAMIC_SERVER_USAGE (500 em todos os clientes). `force-dynamic` diz-lho
+// explicitamente: nada no build, render no pedido — como sempre foi na prática.
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({
   params,

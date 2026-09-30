@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.65",
+    date: "2026-09-30",
+    title: "Páginas de cliente SEO de volta — corrigido o erro 500",
+    highlights: [
+      "**🚑 As páginas de cliente SEO (/seo/<cliente>) voltam a abrir.** A v77.64 tirou-lhes o pré-render do build, mas o Next passou a tratá-las como estáticas — e como leem a sessão de quem está logado, cada visita dava «500 Internal Server Error». Agora geram-se a cada visita, como sempre aconteceu na prática, e o deploy continua sem pedir nada ao Notion durante o build.",
+    ],
+  },
+  {
     version: "77.64",
     date: "2026-09-30",
     title: "Deploys deixam de falhar por causa do limite do Notion",
