@@ -452,7 +452,12 @@ export default async function ConsultantDrillDownPage({
                                   <XCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-rose-300" />
                                 )}
                                 <span>
-                                  {i + 1}. {q?.prompt ?? ans.questionId}
+                                  {i + 1}.{" "}
+                                  {q?.prompt ?? (
+                                    <span className="italic text-white/45">
+                                      Pergunta entretanto removida do quiz
+                                    </span>
+                                  )}
                                 </span>
                               </p>
                               <p className="mt-1 pl-5.5 text-white/50">
@@ -461,15 +466,17 @@ export default async function ConsultantDrillDownPage({
                                 </span>
                                 {ans.text
                                   ? ans.text
-                                  : ans.optionIds.length === 0
-                                    ? "— (em branco)"
-                                    : ans.optionIds
-                                        .map(
-                                          (id) =>
-                                            q?.options.find((o) => o.id === id)
-                                              ?.text ?? id,
-                                        )
-                                        .join(" · ")}
+                                  : !q
+                                    ? "—"
+                                    : ans.optionIds.length === 0
+                                      ? "— (em branco)"
+                                      : ans.optionIds
+                                          .map(
+                                            (id) =>
+                                              q.options.find((o) => o.id === id)
+                                                ?.text ?? id,
+                                          )
+                                          .join(" · ")}
                               </p>
                               {!ans.isCorrect && q && (
                                 <p className="mt-0.5 pl-5.5 text-emerald-200/70">

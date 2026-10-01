@@ -1,4 +1,4 @@
-// Banco de perguntas da Especialização SEO/GEO — 11 módulos, 281 perguntas.
+// Banco de perguntas da Especialização SEO/GEO — 11 módulos, 280 perguntas.
 //
 // FICHEIRO GERADO por scripts/formacao/build-seo-geo-questions.mjs a partir
 // de docs/formacao/especializacao-seo-geo.md. Não editar à mão: corrige o
@@ -7,7 +7,7 @@
 //
 // Cada pergunta traz a aula a que pertence (`lessonId`) e, quando o
 // documento original não tinha resposta marcada, `needsReview` + a nota com
-// a resposta assumida (11 perguntas). O CMS mostra-as com um badge
+// a resposta assumida (10 perguntas). O CMS mostra-as com um badge
 // «a confirmar» e deixa marcá-las como confirmadas; não bloqueiam nada.
 
 import type { TrainingQuestion } from "@/lib/training/catalog";
@@ -22,13 +22,15 @@ type Seed = {
   o?: [string, boolean][];
   /** Resposta (vf). */
   a?: boolean;
+  /** N.º da pergunta no documento, quando não é a posição (houve remoções). */
+  n?: number;
   /** Nota de revisão — presente quando a resposta está por confirmar. */
   r?: string;
 };
 
 function bank(moduleId: string, seeds: Seed[]): TrainingQuestion[] {
   return seeds.map((s, i) => {
-    const id = `${moduleId}-q${i + 1}`;
+    const id = `${moduleId}-q${s.n ?? i + 1}`;
     const options =
       s.t === "vf"
         ? [
@@ -92,7 +94,7 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
         ["Link para agendamento", true],
         ["Morada", false],
         ["Logotipo da empresa", true],
-        ["Dados empresariais da WonderAds", false],
+        ["Dados empresariais da WonderAds (dados fiscais)", false],
       ],
     },
     {
@@ -284,11 +286,10 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       o: [
         ["Apresentar ao cliente um novo roadmap", false],
         ["Dizer ao cliente que se calhar a receção tem que ser despedida", false],
-        ["Sugerir ao cliente a nossa consultoria de vendas", false],
-        ["Dizer ao cliente que a melhor estratégia é uma formação comercial com a receção (primeiro gate do cliente) e para isso vamos ver internamente o melhor preço/roadmap para o cliente dando um desconto de cliente. Escalar depois ao André/Alex.", true],
+        ["Sugerir na call ao cliente a nossa consultoria de vendas, orçamentar depois com a equipa interna e dar retorno ao cliente o mais rápido possível", true],
+        ["Dizer ao cliente que a melhor estratégia é uma formação comercial com a receção (primeiro gate do cliente) e para isso vamos ver internamente o melhor preço/roadmap para o cliente dando um desconto de cliente. Escalar depois ao André/Alex.", false],
         ["Todas as anteriores estão corretas", false],
       ],
-      r: "sem resposta marcada; a mais completa é a 4.ª opção",
     },
     {
       l: "seo-m5-a1",
@@ -337,7 +338,7 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       ],
     },
   ]),
-  // Módulo 3 · 25 perguntas
+  // Módulo 3 · 24 perguntas
   "seo-03-situacoes": bank("seo-03-situacoes", [
     {
       l: "seo-com-aprov",
@@ -527,40 +528,31 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
     },
     {
       l: "seo-cd-ticket",
-      t: "ms",
-      p: "Quando vamos criar um ticket de web design devemos sempre:",
-      o: [
-        ["Verificar quem é o designer com menos tasks Not Started", true],
-        ["Verificar quem é o designer com menos tasks In Progress", true],
-        ["Verificar quem é o designer com mais tasks Done", false],
-        ["Explicar e numerar ao máximo as secções que a nova página deve ter", true],
-        ["Escolher sempre o designer que está mais habituado ao projeto em questão", false],
-        ["Todas as anteriores", false],
-      ],
-    },
-    {
-      l: "seo-cd-ticket",
       t: "vf",
       p: "Quando vou criar um ticket de web design e todos os designers estão em equilíbrio devo selecionar aquele que está mais habituado ao cliente em questão (branding, tom, etc.).",
       a: true,
+      n: 22,
     },
     {
       l: "seo-cd-ticket",
       t: "vf",
       p: "Quando vou criar um ticket de web design é a minha responsabilidade total atribuir o ticket ao web designer com menos tarefas para obter o design/resposta o mais rápido possível de forma efetiva.",
       a: true,
+      n: 23,
     },
     {
       l: "seo-cd-ticket",
       t: "vf",
       p: "No título do ticket de web design devo escrever sempre o nome do cliente no título sem falta.",
       a: false,
+      n: 24,
     },
     {
       l: "seo-cd-ticket",
       t: "vf",
       p: "É a minha total responsabilidade deixar no fundo da página do cliente na app os acessos todos que temos do cliente.",
       a: true,
+      n: 25,
     },
   ]),
   // Módulo 4 · 35 perguntas

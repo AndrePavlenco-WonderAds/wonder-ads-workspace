@@ -38,7 +38,7 @@ Sugestão de regra de aprovação: 80% para desbloquear o módulo seguinte, tent
 |---|--------|-------|-----------|-----------------|
 | 1 | Boas-vindas, Mindset e Ferramentas Internas | 6 | 19 | 0 |
 | 2 | Rotinas de Reporting e Comunicação com o Cliente | 8 | 12 | 1 |
-| 3 | Gestão de Situações com o Cliente | 4 | 25 | 0 |
+| 3 | Gestão de Situações com o Cliente | 4 | 24 | 0 |
 | 4 | Auditoria Técnica e Keyword Research | 6 | 35 | 0 |
 | 5 | Roadmap e Onboarding de Cliente Novo | 5 | 37 | 0 |
 | 6 | On-Page SEO | 5 | 31 | 0 |
@@ -47,7 +47,7 @@ Sugestão de regra de aprovação: 80% para desbloquear o módulo seguinte, tent
 | 9 | Local SEO — Google Business Profile | 4 | 15 | 0 |
 | 10 | Off-Page SEO — Backlinks | 5 | 35 | 0 |
 | 11 | Crescimento de Conta: Cross-sell, Up-sell e Renovação | 4 | 21 | 0 |
-| | Total | 54 | 281 | 1 |
+| | Total | 54 | 280 | 1 |
 
 ---
 
@@ -83,7 +83,7 @@ Q3 [multi] A minha assinatura de Gmail da empresa apenas precisa de ter:
 - [x] Link para agendamento
 - [ ] Morada
 - [x] Logotipo da empresa
-- [ ] Dados empresariais da WonderAds
+- [ ] Dados empresariais da WonderAds (dados fiscais)
 
 Q4 [vf] Posso ter uma assinatura de empresa que eu decida criar por mim mesmo no meu Gmail da empresa. → F
 
@@ -198,11 +198,11 @@ Q5 [single] O consultor deve sempre deixar claro que: ⚠️ CONFIRMAR (sem resp
 
 Q6 [vf] O consultor deve sempre saber se o cliente está a ter uma boa taxa de conversão. → V
 
-Q7 [single] Cenário: O cliente tem bastantes leads a chegar e a taxa de conversão/fecho na receção/primeira barreira do cliente está muito baixa. Devo: ⚠️ CONFIRMAR (sem resposta marcada; a mais completa é a 4.ª opção)
+Q7 [single] Cenário: O cliente tem bastantes leads a chegar e a taxa de conversão/fecho na receção/primeira barreira do cliente está muito baixa. Devo:
 - [ ] Apresentar ao cliente um novo roadmap
 - [ ] Dizer ao cliente que se calhar a receção tem que ser despedida
-- [ ] Sugerir ao cliente a nossa consultoria de vendas
-- [x] Dizer ao cliente que a melhor estratégia é uma formação comercial com a receção (primeiro gate do cliente) e para isso vamos ver internamente o melhor preço/roadmap para o cliente dando um desconto de cliente. Escalar depois ao André/Alex.
+- [x] Sugerir na call ao cliente a nossa consultoria de vendas, orçamentar depois com a equipa interna e dar retorno ao cliente o mais rápido possível
+- [ ] Dizer ao cliente que a melhor estratégia é uma formação comercial com a receção (primeiro gate do cliente) e para isso vamos ver internamente o melhor preço/roadmap para o cliente dando um desconto de cliente. Escalar depois ao André/Alex.
 - [ ] Todas as anteriores estão corretas
 
 Q8 [vf] O vídeo de overview do relatório e/ou a reunião de apresentação do roadmap devem mencionar detalhes técnicos e ir fundo. → F
@@ -246,7 +246,7 @@ Objetivo: reagir bem quando o cliente não aprova, tem dúvidas administrativas,
 | 3.3 | Como solucionar um problema técnico | https://youtu.be/5a9lbODTF8c | CD | — | OK |
 | 3.4 | Como criar um ticket de alterações WEB corretamente | https://youtu.be/u0euxplXZro | CD | — | OK |
 
-### Quiz Módulo 3 (25 perguntas)
+### Quiz Módulo 3 (24 perguntas)
 
 Aula 3.1 — Pedir aprovações aos clientes
 
@@ -348,13 +348,7 @@ Q20 [single] Cenário: Um cliente envia por WhatsApp "o site está em baixo, nã
 
 Aula 3.4 — Criação de tickets de web design
 
-Q21 [multi] Quando vamos criar um ticket de web design devemos sempre:
-- [x] Verificar quem é o designer com menos tasks Not Started
-- [x] Verificar quem é o designer com menos tasks In Progress
-- [ ] Verificar quem é o designer com mais tasks Done
-- [x] Explicar e numerar ao máximo as secções que a nova página deve ter
-- [ ] Escolher sempre o designer que está mais habituado ao projeto em questão
-- [ ] Todas as anteriores
+<!-- Q21 («Quando vamos criar um ticket de web design devemos sempre») removida a 2026-10-01. A numeração das seguintes mantém-se: é dela que saem os ids das perguntas (e das respostas já dadas). -->
 
 Q22 [vf] Quando vou criar um ticket de web design e todos os designers estão em equilíbrio devo selecionar aquele que está mais habituado ao cliente em questão (branding, tom, etc.). → V
 
@@ -1645,13 +1639,12 @@ Q21 [multi] O documento de overview dos últimos 6 meses para trazer para a reun
 
 No workspace: mostrar como "Em breve", bloqueadas, sem contar para a percentagem de conclusão do módulo até terem vídeo.
 
-## Anexo B — Perguntas a confirmar antes de publicar (10)
+## Anexo B — Perguntas a confirmar antes de publicar (9)
 
 | Módulo | Pergunta | Problema | Resposta assumida |
 |--------|----------|----------|-------------------|
 | 1 | Q2 Basta ter a assinatura em… | Sem resposta marcada | Ambas |
 | 2 | Q5 O consultor deve sempre deixar claro que… | Sem resposta marcada | Cliente conta leads/mês + origem |
-| 2 | Q7 Cenário leads vs conversão baixa | Sem resposta marcada | Formação comercial à receção + escalar |
 | 2 | Q11 Dentro de quantos dias ligar (NPS) | Sem opções no doc original | 14 dias (opções criadas a partir do título do vídeo 2.7) |
 | 3 | Q8 A quem perguntar primeiro (admin) | Sem resposta marcada | Colega de equipa |
 | 8 | Q10 Quem assina os artigos blog | Sem resposta marcada | Maior referência no cliente/clínica |

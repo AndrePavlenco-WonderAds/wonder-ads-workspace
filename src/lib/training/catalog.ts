@@ -20,7 +20,7 @@
 // checklist de gravação do admin.
 //
 // A Especialização SEO/GEO segue um documento de especificação
-// (docs/formacao/especializacao-seo-geo.md): 11 módulos, 54 aulas e 281
+// (docs/formacao/especializacao-seo-geo.md): 11 módulos, 54 aulas e 280
 // perguntas. O banco de perguntas é gerado desse documento por
 // scripts/formacao/build-seo-geo-questions.mjs; os ids de módulo e de aula
 // daqui têm de bater com os do script.

@@ -4,7 +4,7 @@
 //   node scripts/formacao/build-seo-geo-questions.mjs
 //
 // O documento é a fonte de verdade das perguntas dos 11 módulos da
-// Especialização SEO/GEO (281 perguntas). Regras de parse (Anexo E do doc):
+// Especialização SEO/GEO (280 perguntas). Regras de parse (Anexo E do doc):
 //   • `## Módulo N — …` abre um módulo; `### Quiz Módulo N` abre o banco.
 //   • `Qn [single|multi|vf] enunciado` abre uma pergunta; `[vf]` termina em
 //     `→ V` / `→ F`; `[single]`/`[multi]` têm opções `- [x]` / `- [ ]`.
@@ -15,6 +15,8 @@
 //
 // Os ids são estáveis: `<módulo>-q<n>` pela numeração do documento. Se o
 // documento for reordenado, os ids mudam — e com eles as respostas já dadas.
+// Para remover uma pergunta, apaga-a SEM renumerar as seguintes: o buraco na
+// numeração (ex.: M3 Q21, removida a 2026-10-01) é o que mantém os ids.
 
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
@@ -209,7 +211,7 @@ for (const raw of lines) {
 closeQuestion();
 
 // ---- validação ----
-const EXPECTED = { 1: 19, 2: 12, 3: 25, 4: 35, 5: 37, 6: 31, 7: 20, 8: 31, 9: 15, 10: 35, 11: 21 };
+const EXPECTED = { 1: 19, 2: 12, 3: 24, 4: 35, 5: 37, 6: 31, 7: 20, 8: 31, 9: 15, 10: 35, 11: 21 };
 let total = 0;
 let review = 0;
 for (const [num, { questions }] of modules) {
@@ -237,7 +239,7 @@ for (const [num, { questions }] of modules) {
     if (q.note) review += 1;
   }
 }
-if (total !== 281) throw new Error(`Total ${total}, esperava 281`);
+if (total !== 280) throw new Error(`Total ${total}, esperava 280`);
 
 // ---- emissão ----
 const esc = (s) => JSON.stringify(s);
@@ -266,13 +268,15 @@ out.push(`  /** Opções [texto, correta] (mc/ms). */`);
 out.push(`  o?: [string, boolean][];`);
 out.push(`  /** Resposta (vf). */`);
 out.push(`  a?: boolean;`);
+out.push(`  /** N.º da pergunta no documento, quando não é a posição (houve remoções). */`);
+out.push(`  n?: number;`);
 out.push(`  /** Nota de revisão — presente quando a resposta está por confirmar. */`);
 out.push(`  r?: string;`);
 out.push(`};`);
 out.push(``);
 out.push(`function bank(moduleId: string, seeds: Seed[]): TrainingQuestion[] {`);
 out.push(`  return seeds.map((s, i) => {`);
-out.push(`    const id = \`\${moduleId}-q\${i + 1}\`;`);
+out.push(`    const id = \`\${moduleId}-q\${s.n ?? i + 1}\`;`);
 out.push(`    const options =`);
 out.push(`      s.t === "vf"`);
 out.push(`        ? [`);
@@ -309,7 +313,7 @@ for (const [num, { questions }] of [...modules].sort((a, b) => a[0] - b[0])) {
   const moduleId = MODULE_IDS[num];
   out.push(`  // Módulo ${num} · ${questions.length} perguntas`);
   out.push(`  ${esc(moduleId)}: bank(${esc(moduleId)}, [`);
-  for (const q of questions) {
+  for (const [i, q] of questions.entries()) {
     const t = q.kind === "vf" ? "vf" : q.kind === "multi" ? "ms" : "mc";
     out.push(`    {`);
     out.push(`      l: ${esc(LESSON_IDS[q.lessonCode])},`);
@@ -324,6 +328,7 @@ for (const [num, { questions }] of [...modules].sort((a, b) => a[0] - b[0])) {
       }
       out.push(`      ],`);
     }
+    if (q.n !== i + 1) out.push(`      n: ${q.n},`);
     if (q.note) out.push(`      r: ${esc(q.note)},`);
     out.push(`    },`);
   }

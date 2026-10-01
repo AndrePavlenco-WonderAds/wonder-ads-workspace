@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.70",
+    date: "2026-10-01",
+    title: "Especialização SEO/GEO — três perguntas de quiz corrigidas",
+    highlights: [
+      "**🗑️ Sai do quiz «Situações com o cliente» a pergunta «Quando vamos criar um ticket de web design devemos sempre…».** O quiz passa a ter 24 perguntas (280 na especialização); as tentativas antigas que a incluíam mostram-na no histórico como «Pergunta entretanto removida do quiz».",
+      "**🧭 Cenário «muitas leads, conversão baixa na receção» com uma só resposta certa e sem ambiguidade:** sugerir na call a nossa consultoria de vendas, orçamentar depois com a equipa interna e dar retorno ao cliente o mais rápido possível. A opção da formação comercial com desconto + escalar ao André/Alex passa a ser errada (antes estavam as duas marcadas como certas numa pergunta de resposta única, o que a tornava impossível de acertar).",
+      "**✍️ Assinatura de Gmail:** a opção errada passa a ler «Dados empresariais da WonderAds (dados fiscais)».",
+    ],
+  },
+  {
     version: "77.69",
     date: "2026-10-01",
     title: "Teste completo do aviso de NPS por WhatsApp",
