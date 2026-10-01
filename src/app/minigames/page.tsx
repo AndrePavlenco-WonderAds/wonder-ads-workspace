@@ -1,15 +1,17 @@
 // /minigames — a zona de Mini-games da equipa (v77.71).
 //
 // Um hub de blocos de jogos; por agora há um, «Uma verdade, duas mentiras».
-// Toda a gente com sessão pode entrar numa sala aberta (chega cá pelo aviso
-// do header ou pelo link); só o SuperAdmin abre salas — a entrada no menu é
-// dele. Os viewers ficam de fora pelo middleware, como no resto da app.
+// SÓ OS SUPERADMINS ABREM SALAS (o botão só existe para eles e a API
+// recusa os outros). Os consultores chegam cá pelo URL ou pelo link da sala
+// e só podem ENTRAR — o hub atualiza-se sozinho quando uma sala abre. Os
+// viewers ficam de fora pelo middleware, como no resto da app.
 
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { ArrowRight, Gamepad2, Sparkles, Timer, Trophy, Users } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { CreateRoomButton } from "@/components/minigames/create-room-button";
+import { HubWatcher } from "@/components/minigames/hub-watcher";
 import { FannedCards } from "@/components/minigames/ui";
 import { getCurrentEmployee } from "@/lib/auth/server";
 import { formatDate } from "@/lib/dates";
@@ -133,11 +135,8 @@ export default async function MinigamesPage() {
               </Link>
             ) : employee.isAdmin ? (
               <CreateRoomButton />
-            ) : (
-              <p className="text-sm text-white/50">
-                Ainda não há sala aberta. Quando um SuperAdmin abrir uma, aparece um aviso «Jogo ao vivo» no topo da app.
-              </p>
-            )}
+            ) : null}
+            <HubWatcher activeId={active?.id ?? null} waiting={!active && !employee.isAdmin} />
           </div>
         </article>
 

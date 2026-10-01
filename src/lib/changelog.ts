@@ -13,6 +13,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.72",
+    date: "2026-10-01",
+    title: "Mini-games — sai o aviso do topo; o hub é a porta de entrada",
+    highlights: [
+      "**🧹 Sai o «Jogo ao vivo» do topo da app.** Para jogar vai-se a `/minigames` (ou ao link da sala que o anfitrião partilha).",
+      "**🔐 Só os SuperAdmins abrem salas.** No hub, os consultores não têm o botão «Abrir sala»: só veem «Entrar na sala» quando há uma aberta (e a API continua a recusar a quem não é SuperAdmin). Sem sala aberta, o hub mostra que está à espera e atualiza-se sozinho de 5 em 5 segundos — o «Entrar» aparece sem ser preciso recarregar.",
+    ],
+  },
+  {
     version: "77.71.1",
     date: "2026-10-01",
     title: "Mini-games — as páginas passam pelo portão de login",

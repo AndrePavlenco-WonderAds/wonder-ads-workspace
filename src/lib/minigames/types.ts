@@ -98,7 +98,7 @@ export type GameView = {
   final: { ranking: FinalRow[]; awards: Award[] } | null;
 };
 
-/** Cartão de uma sala no hub / no aviso do header. */
+/** Cartão de uma sala no hub. */
 export type GameSummary = {
   id: string;
   kind: MinigameKind;

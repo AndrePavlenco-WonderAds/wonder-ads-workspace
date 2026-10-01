@@ -1,5 +1,6 @@
-// GET /api/minigames/active — a sala aberta, para o aviso do header.
-// Um único GET de KV (o ponteiro), porque corre em todas as páginas abertas.
+// GET /api/minigames/active — a sala aberta. O hub /minigames pergunta de
+// poucos em poucos segundos para mostrar «Entrar» mal uma sala abra.
+// Um único GET de KV (o ponteiro).
 
 import { NextResponse } from "next/server";
 import { getCurrentEmployee } from "@/lib/auth/server";

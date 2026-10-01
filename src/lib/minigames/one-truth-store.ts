@@ -38,7 +38,7 @@ const GAME_KEY = (id: string) => `minigames:game:${id}`;
 const ACTIVE_KEY = "minigames:active";
 const HISTORY_KEY = "minigames:history";
 const GAME_TTL_SECONDS = 60 * 24 * 60 * 60; // 60 dias
-const ACTIVE_TTL_SECONDS = 2 * 24 * 60 * 60; // uma sala esquecida sai do header ao fim de 2 dias
+const ACTIVE_TTL_SECONDS = 2 * 24 * 60 * 60; // uma sala esquecida deixa de aparecer no hub ao fim de 2 dias
 const HISTORY_MAX = 30;
 /** Folga antes de o relógio da ronda arrancar — o tempo do ecrã «Ronda N». */
 const ROUND_INTRO_MS = 2500;
@@ -362,7 +362,7 @@ export async function getGameView(
 }
 
 // ---------------------------------------------------------------------------
-// Hub e header
+// Hub
 // ---------------------------------------------------------------------------
 
 export async function getActiveGame(): Promise<ActivePointer | null> {

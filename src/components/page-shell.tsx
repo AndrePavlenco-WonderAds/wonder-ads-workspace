@@ -6,7 +6,6 @@ import { WonderAdsLogo } from "./wonder-ads-logo";
 import { HeaderClock } from "./header-clock";
 import { NotificationsBell } from "./notifications/notifications-bell";
 import { HeaderMedals } from "./medals/header-medals";
-import { HeaderLiveGame } from "./minigames/header-live-game";
 import { UserChip } from "./user-chip";
 import { ImpersonationBanner } from "./impersonation-banner";
 import { getCurrentEmployee, getImpersonation } from "@/lib/auth/server";
@@ -116,13 +115,6 @@ export async function PageShell({
           <div className="hidden sm:block">
             <HeaderClock sessionTimer={sessionTimer} />
           </div>
-          {/* «Jogo ao vivo» — só enquanto há uma sala de Mini-games aberta
-              (v77.71). Um GET de KV, em Suspense como as medalhas. */}
-          {!isViewer && (
-            <Suspense fallback={null}>
-              <HeaderLiveGame />
-            </Suspense>
-          )}
           {/* Medalhas — até três, entre a hora e o sino (v77.25). Lê as
               propostas em KV, por isso em Suspense sem esqueleto: aparecem
               quando chegam e a página nunca espera por elas. */}

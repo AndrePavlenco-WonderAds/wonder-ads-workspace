@@ -1,6 +1,6 @@
-// POST /api/minigames — o SuperAdmin abre uma sala nova de «Uma verdade,
-// duas mentiras» (v77.71). Só há uma sala aberta de cada vez: é a que o
-// aviso do header mostra a toda a equipa.
+// POST /api/minigames — abre uma sala nova de «Uma verdade, duas mentiras»
+// (v77.71). SÓ SUPERADMIN: os consultores só podem entrar em salas abertas.
+// Só há uma sala aberta de cada vez — é a que o hub mostra a toda a equipa.
 
 import { NextResponse } from "next/server";
 import { getCurrentEmployee } from "@/lib/auth/server";
