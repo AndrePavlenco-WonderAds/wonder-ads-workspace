@@ -14,6 +14,7 @@ import {
   ChevronDown,
   ChevronRight,
   Eye,
+  Gamepad2,
   GraduationCap,
   KeyRound,
   LayoutDashboard,
@@ -478,6 +479,9 @@ export function UserChipMenu({
                 )}
                 {isAdmin && (
                   <MenuLink href="/formacao/admin" icon={LayoutDashboard} label="Formação — Superadmin" hint="Inscrições, conteúdos e resultados" tone="amber" index={7} onPick={close} />
+                )}
+                {isAdmin && (
+                  <MenuLink href="/minigames" icon={Gamepad2} label="Mini-games" hint="Jogos de equipa ao vivo" tone="amber" index={8} onPick={close} />
                 )}
               </MenuSection>
             )}

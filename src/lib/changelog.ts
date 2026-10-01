@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.71",
+    date: "2026-10-01",
+    title: "Mini-games — nasce a zona de jogos da equipa, com «Uma verdade, duas mentiras»",
+    highlights: [
+      "**🎮 Nova zona `/minigames`**, com entrada «Mini-games» no menu SuperAdmin. É um hub de blocos de jogos — por agora um só, e um bloco «Mais jogos a caminho» à espera dos próximos — e guarda o histórico das salas jogadas, com o vencedor de cada uma.",
+      "**🃏 «Uma verdade, duas mentiras», ao vivo e cada pessoa no seu ecrã.** O SuperAdmin abre uma sala (30 s, 60 s, 90 s ou sem limite por ronda); quem entra escreve 3 frases sobre si — uma verdadeira, duas inventadas — e marca a verdade, com ideias para começar e o rascunho guardado se a página recarregar. Ao lado vê-se quem está na sala e quem já tem as frases prontas.",
+      "**🕵️ Rondas com palpite, contagem decrescente e revelação com carimbos.** Cada ronda é de uma pessoa: os outros escolhem qual é a verdade (dá para mudar até à revelação) e vê-se quem já votou sem se ver em quê. Quando todos votam, ou o tempo acaba, as mentiras levam o carimbo «MENTIRA» e a verdade acende, com os votos de cada frase, os pontos da ronda e a classificação. +100 por cada verdade descoberta, +50 ao autor por cada pessoa enganada.",
+      "**🏆 Pódio no fim**, com confetes, os prémios Detetive / Mestre da mentira / Livro aberto e a tabela completa. O anfitrião tem uma barra própria (começar, revelar já, próxima ronda, terminar) e quem chega atrasado entra a meio, só a adivinhar.",
+      "**🔴 «Jogo ao vivo» no topo da app** para toda a equipa enquanto há uma sala aberta — um clique e está lá dentro. A verdade de cada pessoa só sai do servidor quando a ronda dela é revelada.",
+    ],
+  },
+  {
     version: "77.70",
     date: "2026-10-01",
     title: "Especialização SEO/GEO — três perguntas de quiz corrigidas",
