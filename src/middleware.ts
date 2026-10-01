@@ -292,6 +292,10 @@ export const config = {
     // header. Sessão para tudo; a API recusa escrever com «Ver como».
     "/medalhas/:path*",
     "/api/medalhas/:path*",
+    // Mini-games (v77.71) — o hub e as salas. Sessão para tudo; abrir e
+    // controlar uma sala é só SuperAdmin, verificado na própria API.
+    "/minigames/:path*",
+    "/api/minigames/:path*",
     // Comercial — templates, upload e decisões das propostas. Sessão para
     // tudo; a escrita exige poder editar o departamento (gate abaixo).
     "/api/commercial/:path*",

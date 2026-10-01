@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.71.1",
+    date: "2026-10-01",
+    title: "Mini-games — as páginas passam pelo portão de login",
+    highlights: [
+      "**🔒 `/minigames` e as salas entram no matcher do middleware.** A API já pedia sessão e a página não mostrava nada a quem não a tinha, mas o link de uma sala aberto sem login dava uma página vazia em vez de levar ao login — e os perfis só de leitura não eram reencaminhados para o seu departamento.",
+    ],
+  },
+  {
     version: "77.71",
     date: "2026-10-01",
     title: "Mini-games — nasce a zona de jogos da equipa, com «Uma verdade, duas mentiras»",
