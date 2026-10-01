@@ -14,7 +14,7 @@
 // WhatsApp não aceitam quebras de linha nem podem ir vazias.
 
 import { getClientBySlug } from "@/lib/notion";
-import { consultantEmailByName } from "@/lib/client-overrides";
+import { SEO_CONSULTANTS } from "@/lib/client-overrides";
 import type { NpsScores } from "@/lib/nps-questions";
 import { ghlNpsWebhookConfigured, postToGhlNpsWebhook } from "@/lib/ghl";
 
@@ -22,7 +22,7 @@ import { ghlNpsWebhookConfigured, postToGhlNpsWebhook } from "@/lib/ghl";
  *  contacto dele no GHL — o workflow encontra o contacto por aqui. */
 export const NPS_ALWAYS_NOTIFY = {
   name: "André",
-  email: "seo@wonder-ads.com",
+  email: "andre@wonder-ads.com",
 } as const;
 
 type Recipient = { name: string; email: string; role: "consultor" | "direcao" };
@@ -51,16 +51,18 @@ export function buildNpsGhlPayloads(input: {
         ? ["🟢", "promotor", "Bom momento para pedir uma referência ou uma review."]
         : ["🟡", "neutro", "Vale ler o que escreveu antes da próxima call."];
 
+  // Só consultores de SEO conhecidos: um email que não seja de um contacto
+  // da equipa no GHL faria o workflow criar um contacto SEM telemóvel (e o
+  // WhatsApp falhava em silêncio). Conta sem consultor → só o André.
   const recipients: Recipient[] = [];
-  if (input.consultant) {
+  const consultant = SEO_CONSULTANTS.find((c) => c.name === input.consultant);
+  if (consultant) {
     recipients.push({
-      name: firstName(input.consultant),
-      email: consultantEmailByName(input.consultant),
+      name: firstName(consultant.name),
+      email: consultant.email,
       role: "consultor",
     });
   }
-  // Sem duplicar quando a conta é do próprio André (ou o consultor é
-  // desconhecido e o email cai no seo@).
   if (!recipients.some((r) => r.email === NPS_ALWAYS_NOTIFY.email)) {
     recipients.push({ ...NPS_ALWAYS_NOTIFY, role: "direcao" });
   }

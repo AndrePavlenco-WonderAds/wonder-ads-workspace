@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.68",
+    date: "2026-10-01",
+    title: "Aviso de NPS por WhatsApp — o André passa a ser encontrado pelo andre@",
+    highlights: [
+      "**📇 O aviso de NPS para o André vai agora para o contacto `andre@wonder-ads.com` no GHL** (era o seo@). E só seguem avisos para consultores de SEO conhecidos: uma conta sem consultor avisa apenas o André, em vez de criar no GHL um contacto sem telemóvel.",
+    ],
+  },
+  {
     version: "77.67",
     date: "2026-09-30",
     title: "NPS respondido → WhatsApp privado ao consultor e ao André, pelo número da agência no GHL",
