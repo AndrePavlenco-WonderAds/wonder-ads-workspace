@@ -87,8 +87,9 @@ export function buildNpsGhlPayloads(input: {
   }));
 }
 
-/** Dispara um webhook por destinatário. Nunca lança; no-op (0) enquanto
- *  GHL_NPS_WEBHOOK_URL não estiver na Vercel. Devolve quantos passaram. */
+/** Dispara um webhook por destinatário. Nunca lança; no-op ([]) enquanto
+ *  GHL_NPS_WEBHOOK_URL não estiver na Vercel. Devolve, por destinatário, se
+ *  o GHL aceitou — o teste em /api/admin/ghl/nps-webhook mostra isto. */
 export async function notifyNpsOnWhatsApp(input: {
   slug: string;
   scores: NpsScores;
@@ -96,8 +97,9 @@ export async function notifyNpsOnWhatsApp(input: {
   identification: string | null;
   submittedAt: number;
   origin: string;
-}): Promise<number> {
-  if (!ghlNpsWebhookConfigured()) return 0;
+  isTest?: boolean;
+}): Promise<{ recipient: string; role: string; ok: boolean }[]> {
+  if (!ghlNpsWebhookConfigured()) return [];
   try {
     // O nome vem do Notion (em cache); se o Notion falhar, o slug serve —
     // antes um aviso com o slug do que aviso nenhum.
@@ -108,9 +110,13 @@ export async function notifyNpsOnWhatsApp(input: {
       npsUrl: `${input.origin}/seo/${input.slug}/nps`,
     });
     const results = await Promise.all(payloads.map(postToGhlNpsWebhook));
-    return results.filter(Boolean).length;
+    return payloads.map((p, i) => ({
+      recipient: String(p.recipient_email),
+      role: String(p.recipient_role),
+      ok: results[i],
+    }));
   } catch (err) {
     console.error("[nps-whatsapp] notify failed:", err);
-    return 0;
+    return [];
   }
 }

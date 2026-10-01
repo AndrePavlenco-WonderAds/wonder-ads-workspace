@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.69",
+    date: "2026-10-01",
+    title: "Teste completo do aviso de NPS por WhatsApp",
+    highlights: [
+      "**🧪 `/api/admin/ghl/nps-webhook?send=1&slug=<cliente>` simula um NPS real submetido agora:** corre exatamente o mesmo envio do formulário — consultor atual da conta + André — com as notas da última resposta real desse cliente, e mostra, pessoa a pessoa, se o GHL aceitou. Não grava nada no NPS do cliente.",
+    ],
+  },
+  {
     version: "77.68",
     date: "2026-10-01",
     title: "Aviso de NPS por WhatsApp — o André passa a ser encontrado pelo andre@",
