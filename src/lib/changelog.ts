@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.73",
+    date: "2026-10-02",
+    title: "Plano de Probation — planos de 30 dias com duas avaliações, guardados e em PDF (só SuperAdmin)",
+    highlights: [
+      "**📋 Nova entrada «Plano de Probation» no menu SuperAdmin** (o dropdown do teu nome). Abre `/admin/probation`: a lista de planos com consultor, início, próxima avaliação e estado (em curso, estendido, recuperado, saída), o «Novo plano» e o template em branco para imprimir.",
+      "**✍️ O plano escreve-se numa folha com o papel das Ausências e grava sozinho.** Consultor escolhido da equipa (ou escrito à mão), função, responsável direto e direção (vêm com o teu nome), data de início, KPIs dos 15 e dos 30 dias (KPI, meta, como medimos — quantas linhas quiseres) e o apoio (check-in semanal, recursos, pessoa de apoio, ferramenta, prazo da confirmação). As datas dos 15 e dos 30 dias calculam-se sozinhas, sem erro de um dia na mudança da hora. Ao lado, o documento redesenha-se a cada tecla.",
+      "**⚖️ Avaliações aos 15 e aos 30 dias**, com resultado e «Cumprido» (Sim / Parcial / Não) por KPI, o que correu bem, o que ficou aquém, comentário do consultor, quem decidiu e a decisão — sempre uma de três. Extensão aos 15 segue para a avaliação dos 30; extensão aos 30 abre um período novo de 30 dias (novas datas, KPIs para rever) e o anterior fica no histórico, com o seu próprio PDF.",
+      "**📄 PDF a sério, gerado no servidor:** texto selecionável em Be Vietnam Pro, logótipo, A4 com margens iguais e «Página X de Y», nenhum bloco cortado a meio e sem páginas quase vazias. Nome do ficheiro: «Plano de Probation - <consultor>.pdf».",
+      "**🔒 Dados de RH:** a página e todas as APIs verificam SuperAdmin no servidor (com «Ver como» ativo, fecha-se também); nada do conteúdo dos planos vai para os logs nem fica em cache.",
+    ],
+  },
+  {
     version: "77.72",
     date: "2026-10-01",
     title: "Mini-games — sai o aviso do topo; o hub é a porta de entrada",

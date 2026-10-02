@@ -13,6 +13,7 @@ import {
   CalendarOff,
   ChevronDown,
   ChevronRight,
+  ClipboardCheck,
   Eye,
   Gamepad2,
   GraduationCap,
@@ -477,11 +478,16 @@ export function UserChipMenu({
                 {isAdmin && (
                   <MenuLink href="/admin/faltas" icon={UserMinus} label="Registar Falta" hint="Faltas da equipa (RH)" tone="amber" index={6} onPick={close} />
                 )}
+                {/* Plano de Probation — dados de RH: o gate verdadeiro é o
+                    layout de /admin e cada API de /api/admin/probation. */}
                 {isAdmin && (
-                  <MenuLink href="/formacao/admin" icon={LayoutDashboard} label="Formação — Superadmin" hint="Inscrições, conteúdos e resultados" tone="amber" index={7} onPick={close} />
+                  <MenuLink href="/admin/probation" icon={ClipboardCheck} label="Plano de Probation" hint="Planos de 30 dias e avaliações (RH)" tone="amber" index={7} onPick={close} />
                 )}
                 {isAdmin && (
-                  <MenuLink href="/minigames" icon={Gamepad2} label="Mini-games" hint="Jogos de equipa ao vivo" tone="amber" index={8} onPick={close} />
+                  <MenuLink href="/formacao/admin" icon={LayoutDashboard} label="Formação — Superadmin" hint="Inscrições, conteúdos e resultados" tone="amber" index={8} onPick={close} />
+                )}
+                {isAdmin && (
+                  <MenuLink href="/minigames" icon={Gamepad2} label="Mini-games" hint="Jogos de equipa ao vivo" tone="amber" index={9} onPick={close} />
                 )}
               </MenuSection>
             )}

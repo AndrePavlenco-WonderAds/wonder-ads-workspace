@@ -1053,3 +1053,128 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .tag-flow { animation: none; }
 }
+
+/* ------------------------------------------------------------------ */
+/* Plano de Probation — a folha da pré-visualização (v77.73)           */
+/* ------------------------------------------------------------------ */
+/* Copiada do protótipo revisto pela direção, com tudo sob `.probation-doc`
+   para não tocar no resto da app. Largura fixa de 860 px, como o
+   protótipo: quem a mostra mais pequena aplica `zoom` no contentor, e a
+   folha mantém a mesma paginação de linhas que o PDF. */
+.probation-doc {
+  --pd-bg: #07080d;
+  --pd-ink: #20202a;
+  --pd-muted: #6b6b7b;
+  --pd-line: #e4e2ee;
+  --pd-soft: #f6f4fd;
+  --pd-purple: #783df5;
+  --pd-magenta: #c535c9;
+  position: relative;
+  width: 860px;
+  background: #fff;
+  color: var(--pd-ink);
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 30px 80px -30px rgba(120, 61, 245, 0.55);
+  font-family: var(--font-be-vietnam-pro), system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  text-align: left;
+}
+.probation-doc .pd-hero {
+  position: relative;
+  overflow: hidden;
+  background: var(--pd-bg);
+  color: #f5f6fa;
+  padding: 34px 48px 36px;
+}
+.probation-doc .pd-hero::before {
+  content: "";
+  position: absolute;
+  width: 420px;
+  height: 420px;
+  right: -120px;
+  top: -160px;
+  border-radius: 50%;
+  background: radial-gradient(circle at center, rgba(120, 61, 245, 0.75) 0%, rgba(52, 62, 215, 0.3) 45%, rgba(197, 53, 201, 0.12) 68%, transparent 100%);
+}
+.probation-doc .pd-hero::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 4px;
+  background: var(--brand-gradient);
+}
+.probation-doc .pd-hero > * { position: relative; }
+.probation-doc .pd-brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 19px; letter-spacing: -0.01em; }
+.probation-doc .pd-brand img { height: 36px; width: auto; display: block; }
+.probation-doc .pd-eyebrow { font-size: 10px; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase; color: rgba(255, 255, 255, 0.62); margin: 30px 0 6px; }
+.probation-doc h1 { font-size: 34px; line-height: 1.15; margin: 0; font-weight: 800; letter-spacing: -0.02em; }
+.probation-doc .pd-sub { margin: 8px 0 0; color: rgba(255, 255, 255, 0.72); font-size: 14px; }
+.probation-doc .pd-hero .pd-empty { color: rgba(255, 255, 255, 0.38); }
+.probation-doc .pd-dates { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 26px; }
+.probation-doc .pd-tile { border: 1px solid rgba(255, 255, 255, 0.16); background: rgba(255, 255, 255, 0.05); border-radius: 12px; padding: 12px 14px; }
+.probation-doc .pd-tile .pd-lab { display: block; font-size: 9.5px; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase; color: rgba(255, 255, 255, 0.6); margin: 0; }
+.probation-doc .pd-tile b { display: block; font-size: 21px; font-weight: 700; font-variant-numeric: tabular-nums; margin: 2px 0; }
+.probation-doc .pd-tile small { color: rgba(255, 255, 255, 0.6); font-size: 11.5px; }
+
+.probation-doc .pd-body { padding: 34px 48px 44px; }
+.probation-doc section { margin-top: 34px; }
+.probation-doc h2 { font-size: 19px; font-weight: 700; letter-spacing: -0.01em; margin: 0 0 10px; display: flex; gap: 12px; align-items: baseline; }
+.probation-doc .pd-num { font-size: 12px; font-weight: 800; letter-spacing: 0.12em; background: var(--brand-gradient); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.probation-doc p { margin: 0 0 10px; }
+.probation-doc ul { margin: 0 0 10px; padding-left: 20px; list-style: disc; }
+.probation-doc li { margin-bottom: 5px; }
+.probation-doc li::marker { color: var(--pd-purple); }
+.probation-doc strong, .probation-doc b { font-weight: 700; }
+.probation-doc .pd-empty { color: #a9a7b8; }
+/* Campo por preencher: o marcador do protótipo, a cinzento. No PDF é uma
+   linha em branco para escrever à mão. */
+.probation-doc .pd-fill { color: #a9a7b8; }
+
+.probation-doc table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.probation-doc th { font-size: 9.5px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--pd-muted); text-align: left; padding: 8px 10px; border-bottom: 2px solid var(--pd-ink); }
+.probation-doc td { padding: 9px 10px; border-bottom: 1px solid var(--pd-line); vertical-align: top; overflow-wrap: anywhere; }
+.probation-doc .pd-info td:first-child { width: 34%; font-weight: 600; }
+.probation-doc table.pd-kpi { table-layout: fixed; }
+.probation-doc .pd-kpi th.c-n { width: 34px; }
+.probation-doc .pd-kpi th.c-k { width: 28%; }
+.probation-doc .pd-kpi th.c-m { width: 15%; }
+.probation-doc .pd-kpi th.c-s { width: 15%; }
+.probation-doc .pd-kpi th.c-r { width: 12%; }
+.probation-doc .pd-kpi td { height: 38px; }
+.probation-doc td.n { font-weight: 700; color: var(--pd-purple); }
+
+.probation-doc .pd-opt { display: inline-flex; align-items: center; gap: 5px; margin: 0 8px 2px 0; font-size: 12px; white-space: nowrap; }
+.probation-doc .pd-opt::before { content: ""; width: 12px; height: 12px; flex: none; border: 1.5px solid #8a8799; border-radius: 3px; background: #fff; }
+.probation-doc .pd-opt.on { font-weight: 600; }
+.probation-doc .pd-opt.on::before { background: var(--pd-purple); border-color: var(--pd-purple); box-shadow: inset 0 0 0 2px #fff; }
+
+.probation-doc .pd-note { background: var(--pd-soft); border-left: 3px solid var(--pd-purple); border-radius: 0 10px 10px 0; padding: 12px 16px; margin: 14px 0 0; }
+.probation-doc .pd-note p:last-child { margin: 0; }
+.probation-doc .pd-note ul { margin-bottom: 0; }
+
+.probation-doc .pd-lab { display: block; font-size: 9.5px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: rgba(0, 0, 0, 0.45); margin-top: 10px; }
+.probation-doc .pd-outs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 12px; }
+.probation-doc .pd-out { position: relative; border: 1px solid var(--pd-line); border-radius: 14px; padding: 18px 16px 14px; overflow: hidden; }
+.probation-doc .pd-out::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 4px; background: var(--c); }
+.probation-doc .pd-out .k { font-size: 9.5px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--c); }
+.probation-doc .pd-out h3 { font-size: 15px; font-weight: 700; margin: 2px 0 8px; line-height: 1.25; }
+.probation-doc .pd-out p { font-size: 12.5px; margin: 2px 0 0; line-height: 1.5; }
+
+.probation-doc .pd-evals { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 12px; }
+.probation-doc .pd-eval { border: 1px solid var(--pd-line); border-radius: 14px; padding: 16px; }
+.probation-doc .pd-eval h3 { margin: 0; font-size: 15px; font-weight: 700; }
+.probation-doc .pd-when { color: var(--pd-muted); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.probation-doc .pd-box { min-height: 64px; border: 1px solid var(--pd-line); border-radius: 8px; padding: 7px 10px; margin-top: 4px; font-size: 13px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.probation-doc .pd-inline { margin-top: 4px; font-size: 13px; }
+.probation-doc .pd-decision { margin-top: 4px; padding: 10px 12px; border-radius: 10px; background: var(--pd-soft); }
+.probation-doc .pd-decision .pd-opt { display: flex; margin: 3px 0; font-size: 13px; }
+
+.probation-doc .pd-sigs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; margin-top: 8px; }
+.probation-doc .pd-sig .ln { height: 58px; border-bottom: 1.5px solid var(--pd-ink); }
+.probation-doc .pd-sig b { display: block; margin-top: 6px; font-size: 13px; }
+.probation-doc .pd-sig small { color: var(--pd-muted); font-size: 11.5px; }
+.probation-doc .pd-foot { margin-top: 30px; padding-top: 14px; border-top: 1px solid var(--pd-line); color: var(--pd-muted); font-size: 11.5px; display: flex; justify-content: space-between; gap: 16px; }
