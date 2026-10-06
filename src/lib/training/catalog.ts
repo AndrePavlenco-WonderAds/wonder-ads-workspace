@@ -63,6 +63,14 @@ export type TrainingAttachment = {
   url: string;
 };
 
+/** Texto pronto a copiar que acompanha a aula — tipicamente o prompt que o
+ *  vídeo usa. Mostra-se por baixo do vídeo com botão «Copiar»; o texto vai
+ *  tal e qual (quebras de linha incluídas). */
+export type TrainingCopyBox = {
+  label: string;
+  text: string;
+};
+
 export type TrainingQuestionOption = {
   id: string;
   text: string;
@@ -121,6 +129,8 @@ export type TrainingLesson = {
   keyPoints: string[];
   /** Documentos, ficheiros e links da aula. Ausente = sem anexos. */
   attachments?: TrainingAttachment[];
+  /** Prompts e outros textos para copiar. Ausente = nenhum. */
+  copyBoxes?: TrainingCopyBox[];
   isPublished: boolean;
 };
 
@@ -173,6 +183,7 @@ type LessonSeed = {
    *  página mostra o estado vazio em vez de inventar conteúdo. */
   keyPoints?: string[];
   attachments?: TrainingAttachment[];
+  copyBoxes?: TrainingCopyBox[];
 };
 
 function lessons(seeds: LessonSeed[]): TrainingLesson[] {
@@ -188,6 +199,7 @@ function lessons(seeds: LessonSeed[]): TrainingLesson[] {
     ...(s.estMinutes ? { estMinutes: s.estMinutes } : {}),
     keyPoints: s.keyPoints ?? [],
     ...(s.attachments?.length ? { attachments: s.attachments } : {}),
+    ...(s.copyBoxes?.length ? { copyBoxes: s.copyBoxes } : {}),
     isPublished: true,
   }));
 }
@@ -1026,9 +1038,30 @@ const SEO_TRACK: TrainingTrack = {
           title:
             "Como publicar os artigos blog da app e páginas SEO em HTML (UX 10/10) — Parte 2",
           description:
-            "Como se publica o artigo em HTML com a UX certa — assinatura, CTA, FAQs e links. Ficheiros e copy box a anexar por baixo do vídeo.",
+            "Como se publica o artigo em HTML com a UX certa — assinatura, CTA, FAQs e links. Por baixo do vídeo: dois exemplos em HTML e o prompt base para pedir o HTML do teu cliente.",
           presenter: "André",
           videoUrl: "https://youtu.be/6B_u_9zBqvY",
+          // v77.75: os dois exemplos que se anexam ao Claude junto com o prompt
+          // — uma página de serviço (pillar) e um artigo de blog, ambos já
+          // publicados em cliente.
+          attachments: [
+            {
+              label:
+                "Exemplo HTML — página de serviço (pillar): Odontopediatria · Clínicas Dentárias FA",
+              url: "/formacao/exemplo-html-pagina-servico-odontopediatria.html",
+            },
+            {
+              label:
+                "Exemplo HTML — artigo de blog: Medicina Dentária Biológica · White Clinic",
+              url: "/formacao/exemplo-html-artigo-blog-medicina-dentaria-biologica.html",
+            },
+          ],
+          copyBoxes: [
+            {
+              label: "Prompt — HTML no design do site do cliente",
+              text: 'Criar para mim em HTML com o design, fontes, cores e padrões de formato do site de "SEU CLIENTE" (adicionar nome da empresa e link do site) de acordo com HTML que estou deixando de exemplo, com alguns conteúdos em listas HTML, palavras-chave em negrito, links para outras páginas do site, botões para marcar consulta com id=marcar-consulta-blog (Aqui decides qual id queres), com referências em box, números de destaque em box, FAQ com schema (pode pedir outros tipos de schema), links para outras páginas do site (usar links do menu) e chamada para lead/marcar consulta adicionar também a signature criada para o "SEU CLIENTE" (usar a maior referência dentro da empresa). (Depois deste ponto pode pedir coisas específicas para teu caso) Neste caso pode fazer ajustes de design para deixar mais elegante e minimalista.\n\nDeixo em anexo um exemplo em HTML e o conteúdo já revisado pelo cliente em docx. (anexar outros itens que deixamos de referência e o conteúdo aprovado pelo cliente)',
+            },
+          ],
           keyPoints: [
             "Todos os artigos levam assinatura, CTA, FAQs com schema e internal linking.",
             "As target keywords ficam em negrito.",
@@ -1876,6 +1909,15 @@ function normalizeAttachment(raw: unknown): TrainingAttachment | null {
   return { label: str(o.label).trim() || url, url };
 }
 
+function normalizeCopyBox(raw: unknown): TrainingCopyBox | null {
+  if (!raw || typeof raw !== "object") return null;
+  const o = raw as Record<string, unknown>;
+  // O texto guarda-se sem trim interno: as quebras de linha fazem parte dele.
+  const text = str(o.text).replace(/\r\n/g, "\n").trim();
+  if (!text) return null;
+  return { label: str(o.label).trim() || "Prompt", text };
+}
+
 function normalizeLesson(raw: unknown, i: number): TrainingLesson | null {
   if (!raw || typeof raw !== "object") return null;
   const o = raw as Record<string, unknown>;
@@ -1895,6 +1937,9 @@ function normalizeLesson(raw: unknown, i: number): TrainingLesson | null {
   const attachments = (Array.isArray(o.attachments) ? o.attachments : [])
     .map(normalizeAttachment)
     .filter((x): x is TrainingAttachment => x !== null);
+  const copyBoxes = (Array.isArray(o.copyBoxes) ? o.copyBoxes : [])
+    .map(normalizeCopyBox)
+    .filter((x): x is TrainingCopyBox => x !== null);
   return {
     id,
     title,
@@ -1911,6 +1956,7 @@ function normalizeLesson(raw: unknown, i: number): TrainingLesson | null {
       .map((k) => str(k).trim())
       .filter((k) => k.length > 0),
     ...(attachments.length ? { attachments } : {}),
+    ...(copyBoxes.length ? { copyBoxes } : {}),
     isPublished: bool(o.isPublished, true),
   };
 }

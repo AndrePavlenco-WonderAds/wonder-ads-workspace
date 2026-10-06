@@ -1,0 +1,398 @@
+<!--
+============================================================================
+  ODONTOPEDIATRIA · Página de Serviço (PILLAR) · Clínicas Dentárias FA
+  Bloco pronto a colar (widget "HTML Personalizado" do WordPress / HTML do Elementor).
+  Copie TODO o ficheiro. Inclui SCHEMA (JSON-LD) da FAQ no fim.
+
+  SUGESTOES SEO (para os campos do RankMath/Yoast, NAO no corpo):
+   . Slug:              /tratamentos/odontopediatria/  (mantém-se o atual)
+   . H1 / Titulo:       Odontopediatria em Vila Nova de Gaia e Lisboa
+   . Meta Title:        Odontopediatria em Gaia e Lisboa | Dentista para Crianças | Clínicas FA
+   . Meta Description:  Odontopediatria nas Clínicas Dentárias FA — primeira consulta,
+                        prevenção, selantes e tratamento da cárie infantil, num ambiente
+                        tranquilo. Gaia e Lisboa. Marque a consulta do seu filho.
+
+  Keywords-alvo: odontopediatria gaia · dentista para crianças · dentista infantil
+                 vila nova de gaia · dentista carvalhos
+
+  NOTA: substitui o conteúdo atual da página (que mantém o texto clínico original,
+  agora reorganizado em H2 por área, com FAQ, sinal local e CTA).
+  O bloco começa nos H2 para não duplicar o H1 gerado pelo tema.
+  Botão de conversão: id marcar-consulta-odonto (na secção final).
+  Cores: nas variáveis no topo (secção .fa-odonto).
+============================================================================
+-->
+
+<style>
+.fa-odonto{
+  --fa-primary:#F58320;
+  --fa-primary-dark:#D96E14;
+  --fa-accent:#F9A64C;
+  --fa-ink:#17323B;
+  --fa-body:#39505A;
+  --fa-muted:#6B7B82;
+  --fa-soft:#FEF2E7;
+  --fa-line:#F6DFC9;
+
+  font-family:"Helvetica Neue",Helvetica,Arial,"Segoe UI",Roboto,system-ui,sans-serif;
+  color:var(--fa-body);line-height:1.72;font-size:17px;
+  max-width:860px;margin:0 auto;padding:8px 20px 4px;-webkit-font-smoothing:antialiased;
+}
+.fa-odonto *{box-sizing:border-box;}
+.fa-odonto .fa-lead{font-size:1.16em;line-height:1.7;color:var(--fa-ink);margin:0 0 1.7em;}
+.fa-odonto h2{color:var(--fa-primary);font-size:1.55em;line-height:1.25;font-weight:700;margin:2.4em 0 .7em;padding-bottom:.45em;border-bottom:2px solid var(--fa-line);}
+.fa-odonto h2:first-of-type{margin-top:.6em;}
+.fa-odonto h3{color:var(--fa-ink);font-size:1.15em;font-weight:700;margin:1.6em 0 .5em;}
+.fa-odonto p{margin:0 0 1.1em;}
+.fa-odonto strong{color:var(--fa-ink);font-weight:700;}
+.fa-odonto a{color:var(--fa-primary);text-decoration:underline;text-underline-offset:2px;text-decoration-thickness:1px;font-weight:600;transition:color .15s ease;}
+.fa-odonto a:hover{color:var(--fa-primary-dark);}
+.fa-odonto a:focus-visible{outline:2px solid var(--fa-accent);outline-offset:2px;border-radius:3px;}
+
+/* Sumário */
+.fa-odonto .fa-toc{background:var(--fa-soft);border-radius:10px;padding:1.1em 1.4em .9em;margin:0 0 1.8em;}
+.fa-odonto .fa-toc p{margin:0 0 .5em;font-size:.82em;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--fa-muted);}
+.fa-odonto .fa-toc ul{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:.2em 1.2em;}
+.fa-odonto .fa-toc li{position:relative;padding:.15em 0 .15em 1em;font-size:.95em;}
+.fa-odonto .fa-toc li::before{content:"\203A";position:absolute;left:0;color:var(--fa-primary);font-weight:700;}
+
+/* Lista com checkmarks */
+.fa-odonto .fa-list{list-style:none;margin:0 0 1.3em;padding:0;}
+.fa-odonto .fa-list li{position:relative;padding:.18em 0 .18em 2em;margin:0 0 .5em;}
+.fa-odonto .fa-list li::before{content:"";position:absolute;left:0;top:.42em;width:1.25em;height:1.25em;border-radius:50%;background:var(--fa-primary);background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:center;background-size:.8em;}
+
+/* Cartões */
+.fa-odonto .fa-card{background:#fff;border:1px solid var(--fa-line);border-left:4px solid var(--fa-primary);border-radius:10px;padding:1.2em 1.4em .4em;margin:0 0 1em;}
+.fa-odonto .fa-card h3{margin-top:0;}
+
+/* Tabela */
+.fa-odonto .fa-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:1.5em 0;border:1px solid var(--fa-line);border-radius:10px;background:#fff;}
+.fa-odonto table.fa-table{width:100%;min-width:560px;border-collapse:collapse;font-size:.95em;}
+.fa-odonto table.fa-table th,.fa-odonto table.fa-table td{padding:.85em 1em;text-align:left;vertical-align:top;border-bottom:1px solid var(--fa-line);}
+.fa-odonto table.fa-table thead th{background:var(--fa-primary);color:#fff;font-weight:700;font-size:.95em;line-height:1.35;}
+.fa-odonto table.fa-table tbody th{background:var(--fa-soft);color:var(--fa-ink);font-weight:700;width:30%;}
+.fa-odonto table.fa-table tbody tr:last-child th,.fa-odonto table.fa-table tbody tr:last-child td{border-bottom:0;}
+.fa-odonto .fa-table-note{font-size:.88em;color:var(--fa-muted);margin:-.6em 0 1.4em;}
+
+/* Caixa de destaque */
+.fa-odonto .fa-callout{background:var(--fa-soft);border-left:4px solid var(--fa-primary);border-radius:8px;padding:1.3em 1.5em .3em;margin:1.6em 0;}
+.fa-odonto .fa-callout h2,.fa-odonto .fa-callout h3{margin-top:0;border:0;padding:0;}
+
+/* Números de destaque */
+.fa-odonto .fa-stats{display:flex;flex-wrap:wrap;gap:14px;margin:.4em 0 1.4em;}
+.fa-odonto .fa-stats > div{flex:1 1 150px;text-align:center;background:var(--fa-soft);border-radius:10px;padding:1.2em .6em;}
+.fa-odonto .fa-stats b{display:block;color:var(--fa-primary);font-size:1.9em;font-weight:800;line-height:1.1;}
+.fa-odonto .fa-stats span{display:block;color:var(--fa-muted);font-size:.86em;margin-top:.25em;}
+
+/* Referências */
+.fa-odonto .fa-refs{border:1px solid var(--fa-line);border-radius:10px;background:#fff;padding:1em 1.3em .5em;margin:1.4em 0;}
+.fa-odonto .fa-refs .fa-refs-t{margin:.1em 0 .6em;font-size:.82em;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--fa-muted);}
+.fa-odonto .fa-refs ul{list-style:none;margin:0;padding:0;}
+.fa-odonto .fa-refs li{position:relative;padding:.35em 0 .35em 1.1em;font-size:.92em;border-bottom:1px solid var(--fa-line);}
+.fa-odonto .fa-refs li:last-child{border-bottom:0;}
+.fa-odonto .fa-refs li::before{content:"\203A";position:absolute;left:0;color:var(--fa-primary);font-weight:700;}
+
+/* CTA / botões */
+.fa-odonto .fa-cta{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin:1.3em 0 .4em;}
+.fa-odonto .fa-btn{display:inline-block;background:var(--fa-primary);color:#fff;text-decoration:none;font-weight:700;font-size:1em;padding:.85em 1.9em;border-radius:40px;border:2px solid var(--fa-primary);transition:background .15s ease,transform .15s ease;}
+.fa-odonto .fa-btn:hover{background:var(--fa-primary-dark);border-color:var(--fa-primary-dark);color:#fff;transform:translateY(-1px);}
+.fa-odonto .fa-btn-outline{display:inline-block;background:transparent;color:var(--fa-primary);text-decoration:none;font-weight:700;font-size:.96em;padding:.8em 1.5em;border-radius:40px;border:2px solid var(--fa-primary);transition:background .15s ease,color .15s ease;}
+.fa-odonto .fa-btn-outline:hover{background:var(--fa-primary);color:#fff;}
+.fa-odonto .fa-btn:focus-visible,.fa-odonto .fa-btn-outline:focus-visible{outline:3px solid var(--fa-accent);outline-offset:2px;}
+
+/* FAQ */
+.fa-odonto .fa-faq{border:1px solid var(--fa-line);border-radius:8px;margin:0 0 .7em;overflow:hidden;background:#fff;}
+.fa-odonto .fa-faq summary{list-style:none;cursor:pointer;padding:1em 2.6em 1em 1.2em;position:relative;font-weight:700;color:var(--fa-ink);font-size:1.02em;line-height:1.4;}
+.fa-odonto .fa-faq summary::-webkit-details-marker{display:none;}
+.fa-odonto .fa-faq summary::after{content:"+";position:absolute;right:1.1em;top:50%;transform:translateY(-50%);color:var(--fa-primary);font-size:1.4em;font-weight:700;line-height:1;}
+.fa-odonto .fa-faq[open] summary::after{content:"\2013";}
+.fa-odonto .fa-faq summary:hover{color:var(--fa-primary);}
+.fa-odonto .fa-faq .fa-faq-body{padding:0 1.2em 1.1em;}
+.fa-odonto .fa-faq .fa-faq-body p{margin:0 0 .7em;}
+.fa-odonto .fa-faq .fa-faq-body p:last-child{margin:0;}
+
+/* Outros tratamentos */
+.fa-odonto .fa-related{margin:1.2em 0 .4em;}
+.fa-odonto .fa-related-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-top:.6em;}
+.fa-odonto .fa-related-grid a{display:block;text-decoration:none;font-weight:600;color:var(--fa-ink);background:var(--fa-soft);border:1px solid var(--fa-line);border-radius:8px;padding:.85em 1em;transition:border-color .15s ease,color .15s ease,background .15s ease;}
+.fa-odonto .fa-related-grid a:hover{border-color:var(--fa-primary);color:var(--fa-primary);background:#fff;}
+.fa-odonto .fa-related-grid a::after{content:" \2192";color:var(--fa-primary);}
+
+/* Bloco final */
+.fa-odonto .fa-final{background:var(--fa-soft);border-radius:12px;padding:1.4em 1.5em .6em;margin:1.4em 0;}
+.fa-odonto .fa-final h2{margin-top:.2em;border:0;padding:0;}
+
+@media (max-width:600px){
+  .fa-odonto{font-size:16px;padding:6px 4px 4px;}
+  .fa-odonto h2{font-size:1.3em;}
+  .fa-odonto .fa-btn,.fa-odonto .fa-btn-outline{display:block;text-align:center;width:100%;}
+  .fa-odonto table.fa-table{font-size:.9em;}
+}
+@media (prefers-reduced-motion:reduce){.fa-odonto *{transition:none!important;}}
+</style>
+
+<div class="fa-odonto">
+
+  <p class="fa-lead">A <strong>Odontopediatria</strong> é a área da medicina dentária dedicada à saúde oral de bebés, crianças e adolescentes. O objetivo vai muito além de tratar: passa por prevenir, acompanhar o crescimento e criar uma relação tranquila com o médico dentista, para que a criança chegue à idade adulta com uma boca saudável, funcional e bonita. Nas Clínicas Dentárias FA, em <strong>Vila Nova de Gaia</strong> e em <strong>Lisboa</strong>, recebemos os mais novos com tempo, calma e linguagem adaptada à idade.</p>
+
+  <div class="fa-toc">
+    <p>Nesta página</p>
+    <ul>
+      <li><a href="#o-que-e">O que é a Odontopediatria</a></li>
+      <li><a href="#primeira-consulta">A primeira consulta</a></li>
+      <li><a href="#erupcao">Erupção dos dentes, fase a fase</a></li>
+      <li><a href="#prevencao">Prevenção: selantes, flúor e higiene</a></li>
+      <li><a href="#carie">Cárie em dentes de leite</a></li>
+      <li><a href="#traumatismos">Traumatismos dentários</a></li>
+      <li><a href="#habitos">Chupeta, dedo e outros hábitos</a></li>
+      <li><a href="#ortodontia">Quando avaliar o alinhamento</a></li>
+      <li><a href="#medo">Crianças ansiosas na consulta</a></li>
+      <li><a href="#faq">Perguntas frequentes</a></li>
+    </ul>
+  </div>
+
+  <h2 id="o-que-e">O que é a Odontopediatria?</h2>
+  <p>A <strong>Odontopediatria</strong> acompanha a saúde oral desde o nascimento até à adolescência. Inclui tratamentos preventivos — os mais importantes nesta fase — e também curativos, adaptados a uma boca em crescimento, com dentes temporários, dentes definitivos e ossos ainda em desenvolvimento.</p>
+  <p>Uma criança não é um adulto em ponto pequeno: os dentes de leite têm anatomia própria, a cárie progride mais depressa e cada fase do crescimento tem os seus riscos e as suas janelas de oportunidade. É por isso que o acompanhamento regular faz tanta diferença.</p>
+
+  <h2 id="primeira-consulta">A partir de que idade e com que regularidade a criança deve ir ao dentista?</h2>
+  <p>A <strong>primeira consulta de Odontopediatria</strong> deve realizar-se quando erupcionam os primeiros dentes temporários (os «dentes de leite») ou, no máximo, até a criança completar o <strong>primeiro ano de vida</strong>. Esta consulta serve para estabelecer um programa preventivo de saúde oral e para intercetar precocemente hábitos que possam vir a ser prejudiciais.</p>
+  <p>Depois disso, e quando existe boa saúde oral, a criança deve ser observada <strong>cada seis meses</strong>. Em situações de elevado risco de cárie, essa periodicidade deve reduzir-se para intervalos de <strong>três meses</strong>.</p>
+  <div class="fa-callout">
+    <h3>O que acontece na primeira consulta</h3>
+    <p>A primeira visita é sobretudo de contacto e observação: conhecer o consultório, ver os dentes com calma, esclarecer as dúvidas dos pais sobre higiene, alimentação e hábitos. Quando corre bem — e corre, na esmagadora maioria dos casos —, fica criada a base de confiança para todas as consultas seguintes.</p>
+  </div>
+
+  <h2 id="erupcao">Em que idade aparecem os dentes e quando se completam as dentições?</h2>
+  <p>Em média, a erupção da primeira dentição começa entre os <strong>6 e os 8 meses</strong> de idade, sendo as meninas geralmente mais precoces. Entre os 2 anos e meio e os 3 anos, os <strong>20 dentes temporários</strong> já estarão presentes na cavidade oral.</p>
+  <p>A dentição permanente inicia-se entre os <strong>5 e os 7 anos</strong> e poderá constituir-se de <strong>32 dentes</strong>.</p>
+
+  <div class="fa-table-wrap">
+    <table class="fa-table">
+      <thead>
+        <tr>
+          <th scope="col">Fase</th>
+          <th scope="col">Idade aproximada</th>
+          <th scope="col">O que acontece</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <th scope="row">Primeiros dentes de leite</th>
+          <td>6 a 8 meses</td>
+          <td>Início da erupção da dentição temporária</td>
+        </tr>
+        <tr>
+          <th scope="row">Dentição temporária completa</th>
+          <td>2,5 a 3 anos</td>
+          <td>Os 20 dentes temporários já estão presentes</td>
+        </tr>
+        <tr>
+          <th scope="row">Início da dentição definitiva</th>
+          <td>5 a 7 anos</td>
+          <td>Começa a substituição pelos dentes permanentes</td>
+        </tr>
+        <tr>
+          <th scope="row">Primeiros e segundos molares definitivos</th>
+          <td>5 a 8 anos</td>
+          <td>Período habitual de aplicação de selantes de fissuras</td>
+        </tr>
+        <tr>
+          <th scope="row">Pré-molares</th>
+          <td>11 a 14 anos</td>
+          <td>Erupção mais tardia; também indicados para selante</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="fa-table-note">Valores médios e indicativos. A erupção mais precoce ou mais tardia não está necessariamente relacionada com patologia.</p>
+
+  <p>Ainda assim, se a criança <strong>não apresentar qualquer dente após completar 1 ano de vida</strong>, deverá ser observada em consulta de odontopediatria.</p>
+
+  <h3>Queixas associadas à erupção dos dentes</h3>
+  <p>Os sintomas mais comuns são gengivas avermelhadas, aumento da salivação, perda de apetite e alteração dos hábitos nutricionais, ansiedade e dificuldade em dormir. O desconforto pode ser aliviado limpando a boca 2 a 3 vezes por dia com uma gaze molhada, ou recorrendo a mordedores e géis disponíveis no mercado.</p>
+  <p>Se a criança apresentar <strong>febre, vómitos ou diarreia</strong>, deverá ser observada pelo seu médico assistente, pois poderá existir outra causa subjacente.</p>
+
+  <h2 id="prevencao">Prevenção: selantes, flúor e higiene oral</h2>
+  <p>A prevenção é o coração da odontopediatria — e é também o que evita tratamentos mais complexos (e mais desconfortáveis) mais tarde.</p>
+
+  <div class="fa-card">
+    <h3>Selantes de fissuras</h3>
+    <p>Um <strong>selante de fissuras</strong> é uma espécie de «verniz» aplicado na superfície fissurada de dentes saudáveis, com o objetivo de prevenir o aparecimento de lesões de cárie dentária. É um recurso eficaz, mas a sua aplicação deve basear-se na avaliação do risco de cárie e integrar-se num programa de prevenção mais alargado, e não constituir uma medida isolada.</p>
+    <p>Está, por norma, indicada nos primeiros e segundos molares definitivos e nos pré-molares. Em caso de perda parcial ou total do selante, a reaplicação está indicada, maximizando a sua eficácia.</p>
+  </div>
+
+  <div class="fa-card">
+    <h3>Flúor e escovagem</h3>
+    <p>A escovagem deve começar com o primeiro dente, realizada por um adulto, duas vezes por dia — e supervisionada até a criança ter destreza suficiente para escovar sozinha. A quantidade e a concentração de flúor da pasta dependem da idade e do risco de cárie de cada criança.</p>
+    <p>Na <strong>dentição temporária</strong> (dentes de leite), a quantidade de flúor na pasta deve ser de <strong>1000 ppm</strong>. Quando erupciona o primeiro dente definitivo, deve passar-se para uma pasta com <strong>1450 ppm</strong> de flúor.</p>
+  </div>
+
+  <div class="fa-card">
+    <h3>Alimentação e risco de cárie</h3>
+    <p>Mais do que a quantidade de açúcar, é a <strong>frequência</strong> que determina o risco: pequenas ingestões repetidas ao longo do dia são mais nocivas do que uma única exposição. Merecem atenção especial os sumos e leites açucarados no biberão, sobretudo ao deitar, e os xaropes de toma prolongada.</p>
+  </div>
+
+  <p>Complementarmente, as consultas de <a href="https://clinicasdentariasfa.pt/tratamentos/higiene-oral/">higiene oral</a> permitem remover placa bacteriana, aplicar flúor profissional e reforçar a técnica de escovagem com a própria criança.</p>
+
+  <h2 id="carie">Cárie em dentes de leite: tratar ou esperar?</h2>
+  <p>É uma dúvida frequente entre os pais, e a resposta é clara: <strong>trata-se</strong>. Os dentes temporários mantêm o espaço para os definitivos, são essenciais à mastigação e à fala, e uma infeção pode afetar o dente permanente que está a formar-se por baixo. Além disso, a cárie progride mais rapidamente num dente de leite do que num dente adulto.</p>
+  <ul class="fa-list">
+    <li><strong>Lesões iniciais</strong> — podem ser controladas com medidas preventivas reforçadas e vigilância;</li>
+    <li><strong>Cáries estabelecidas</strong> — resolvem-se com <a href="https://clinicasdentariasfa.pt/tratamentos/restauracoes-esteticas/">restaurações</a> adaptadas ao dente temporário;</li>
+    <li><strong>Lesões profundas</strong> — podem exigir tratamento pulpar específico, o equivalente pediátrico da <a href="https://clinicasdentariasfa.pt/tratamentos/endodontia/">endodontia</a>;</li>
+    <li><strong>Dentes não recuperáveis</strong> — a extração é o último recurso, por vezes acompanhada de mantenedor de espaço.</li>
+  </ul>
+
+  <h2 id="traumatismos">Traumatismos dentários: o que fazer em caso de queda</h2>
+  <p>Quedas e pancadas na boca são frequentes em idade escolar e nas atividades desportivas. A regra essencial é simples: <strong>observar sempre, mesmo que pareça pouco grave</strong>. Um dente aparentemente intacto pode ter sofrido lesão na raiz ou no nervo, com consequências que só se manifestam semanas ou meses depois.</p>
+  <ul class="fa-list">
+    <li>Manter a calma e controlar a hemorragia com compressão suave;</li>
+    <li>Se um <strong>dente definitivo</strong> for expulso, procurar ajuda com urgência — os primeiros minutos são decisivos;</li>
+    <li>Guardar sempre os fragmentos do dente, se existirem;</li>
+    <li>Contactar de imediato a clínica para uma observação prioritária;</li>
+    <li>Prevenir: usar <strong>protetor bucal</strong> em desportos de contacto.</li>
+  </ul>
+
+  <h2 id="habitos">Chupeta, dedo e outros hábitos</h2>
+  <p>Hábitos como a sucção do dedo ou o uso prolongado da chupeta são normais nos primeiros anos, mas, quando persistem, podem alterar a posição dos dentes e o desenvolvimento do palato. O mesmo se aplica à <strong>respiração pela boca</strong> e ao <strong>bruxismo</strong> (ranger os dentes durante o sono), que merecem avaliação.</p>
+  <p>O acompanhamento regular permite identificar estas situações a tempo e definir, sem dramatismos, a melhor estratégia para as corrigir — muitas vezes com medidas simples e progressivas.</p>
+
+  <h2 id="ortodontia">Quando avaliar o alinhamento dos dentes</h2>
+  <p>Uma primeira avaliação ortodôntica é habitualmente recomendada por volta dos <strong>6 aos 7 anos</strong>, quando começam a erupcionar os primeiros dentes definitivos. Nesta idade, algumas alterações de crescimento podem ser intercetadas de forma mais simples do que na adolescência.</p>
+  <p>Nem toda a criança avaliada precisa de tratamento imediato — muitas vezes a conclusão é apenas vigiar. Saiba mais na nossa página de <a href="https://clinicasdentariasfa.pt/tratamentos/aparelhos-ortodonticos/">aparelhos ortodônticos</a>.</p>
+
+  <h2 id="medo">E se a criança tiver medo do dentista?</h2>
+  <p>O medo é comum e, na maior parte dos casos, resolve-se com tempo e abordagem certa. Trabalhamos com uma lógica de aproximação gradual: explicar antes de fazer, mostrar os instrumentos, deixar a criança tocar, dividir o tratamento em etapas curtas. Sempre que necessário, recorremos a anestesia local com técnicas de aplicação confortáveis.</p>
+  <p>Aos pais, sugerimos três coisas simples: falar da consulta com naturalidade, evitar palavras como «dor» ou «picar» na preparação, e marcar preferencialmente numa hora em que a criança esteja descansada.</p>
+
+  <h2>Porque escolher as Clínicas Dentárias FA</h2>
+  <div class="fa-stats">
+    <div><b>+40</b><span>Anos de experiência</span></div>
+    <div><b>15</b><span>Gabinetes equipados</span></div>
+    <div><b>2</b><span>Clínicas: Gaia e Lisboa</span></div>
+  </div>
+  <ul class="fa-list">
+    <li>Equipa habituada a trabalhar com bebés, crianças e adolescentes;</li>
+    <li>Abordagem preventiva, com planos ajustados ao risco de cárie de cada criança;</li>
+    <li>Ambiente calmo e consultas sem pressa de relógio;</li>
+    <li>Acompanhamento continuado, da primeira consulta à adolescência;</li>
+    <li>Equipa multidisciplinar, para encaminhar casos de ortodontia ou outras áreas sem sair da clínica;</li>
+    <li>Duas localizações — Vila Nova de Gaia (Carvalhos, Pedroso) e Lisboa (Belém);</li>
+    <li>Facilidades de pagamento.</li>
+  </ul>
+  <p>Conheça a nossa <a href="https://clinicasdentariasfa.pt/equipa/">equipa clínica</a> e saiba mais <a href="https://clinicasdentariasfa.pt/sobre-nos/">sobre nós</a>.</p>
+
+  <div class="fa-cta">
+    <a class="fa-btn" href="https://clinicasdentariasfa.pt/contactos/">Marcar consulta do meu filho</a>
+    <a class="fa-btn-outline" href="tel:+351227845903">Ligar Gaia · 227 845 903</a>
+    <a class="fa-btn-outline" href="tel:+351213041580">Ligar Lisboa · 213 041 580</a>
+  </div>
+
+  <h2>Odontopediatria em Vila Nova de Gaia e em Lisboa</h2>
+  <p>Se procura um <strong>dentista para crianças em Vila Nova de Gaia</strong>, a nossa clínica fica na Rua Gonçalves de Castro, 118, em Pedroso, no centro dos Carvalhos — com fácil acesso a partir do centro de Gaia, de Espinho e da A1, e com atendimento também ao sábado de manhã, prático para famílias em idade escolar.</p>
+  <p>Em Lisboa, a <strong>Clínica Dentária Infante Sagres</strong> recebe as famílias de Belém, Restelo, Ajuda e de toda a zona ocidental da cidade. Consulte todas as moradas e horários na página de <a href="https://clinicasdentariasfa.pt/contactos/">contactos</a>.</p>
+
+  <h2 id="faq">Perguntas Frequentes sobre Odontopediatria</h2>
+
+  <details class="fa-faq">
+    <summary>Com que idade devo levar o meu filho ao dentista pela primeira vez?</summary>
+    <div class="fa-faq-body"><p>Quando erupcionarem os primeiros dentes de leite ou, no máximo, até completar o primeiro ano de vida. Esta consulta permite estabelecer um programa preventivo e intercetar hábitos que possam ser prejudiciais.</p></div>
+  </details>
+
+  <details class="fa-faq">
+    <summary>De quanto em quanto tempo deve ir às consultas?</summary>
+    <div class="fa-faq-body"><p>Havendo boa saúde oral, a cada seis meses. Em crianças com elevado risco de cárie, o intervalo deve reduzir-se para três meses ou conforme indicação do médico dentista.</p></div>
+  </details>
+
+  <details class="fa-faq">
+    <summary>É preciso tratar as cáries dos dentes de leite?</summary>
+    <div class="fa-faq-body"><p>Sim. Os dentes temporários mantêm o espaço para os definitivos e são essenciais à mastigação e à fala. Além disso, a cárie progride mais depressa nestes dentes e uma infeção pode afetar o dente permanente em formação.</p></div>
+  </details>
+
+  <details class="fa-faq">
+    <summary>O que é um selante de fissuras e para que serve?</summary>
+    <div class="fa-faq-body"><p>É uma espécie de «verniz» aplicado na superfície fissurada de dentes sãos, para prevenir lesões de cárie. Está indicado sobretudo nos primeiros e segundos molares definitivos e nos pré-molares, e deve integrar-se num programa de prevenção mais alargado, com base na avaliação do risco de cárie.</p></div>
+  </details>
+
+  <details class="fa-faq">
+    <summary>O meu filho ainda não tem dentes com 1 ano. É preocupante?</summary>
+    <div class="fa-faq-body"><p>A erupção mais precoce ou mais tardia não indica necessariamente patologia. Ainda assim, se a criança não apresentar qualquer dente depois de completar 1 ano de vida, deve ser observada em consulta de odontopediatria e pelo médico assistente.</p></div>
+  </details>
+
+  <details class="fa-faq">
+    <summary>Os tratamentos doem?</summary>
+    <div class="fa-faq-body"><p>A maioria das consultas é de observação e prevenção, sem qualquer desconforto. Quando é necessário tratar, recorre-se a anestesia local com técnicas de aplicação confortáveis, e o tratamento é dividido em etapas curtas, adaptadas ao ritmo da criança.</p></div>
+  </details>
+
+  <details class="fa-faq">
+    <summary>O que fazer se o meu filho partir ou perder um dente numa queda?</summary>
+    <div class="fa-faq-body"><p>Contacte de imediato a clínica para observação prioritária, mesmo que a lesão pareça ligeira. Guarde os fragmentos do dente, se existirem. Tratando-se de um dente definitivo expulso, os primeiros minutos são decisivos, pelo que deve procurar ajuda com urgência.</p></div>
+  </details>
+
+  <details class="fa-faq">
+    <summary>Com que idade se deve avaliar a necessidade de aparelho?</summary>
+    <div class="fa-faq-body"><p>Habitualmente por volta dos 6 aos 7 anos, quando erupcionam os primeiros dentes definitivos. Muitas crianças avaliadas nesta idade não precisam de tratamento imediato, apenas de vigilância.</p></div>
+  </details>
+
+  <details class="fa-faq">
+    <summary>Onde fazem consultas de odontopediatria?</summary>
+    <div class="fa-faq-body"><p>Em Vila Nova de Gaia, na Rua Gonçalves de Castro, 118, Pedroso (Carvalhos), pelo 227 845 903; e em Lisboa, na Clínica Dentária Infante Sagres, em Belém, pelo 213 041 580.</p></div>
+  </details>
+
+  <!-- Referências: organizações de referência em saúde oral. Podem ser substituídas
+       por artigos/normas específicas para reforçar o E-E-A-T. -->
+  <div class="fa-refs">
+    <p class="fa-refs-t">Referências e fontes</p>
+    <ul>
+      <li>Direção-Geral da Saúde — Programa Nacional de Promoção da Saúde Oral (<a href="https://www.dgs.pt/" target="_blank" rel="noopener">dgs.pt</a>)</li>
+      <li>Organização Mundial da Saúde — Saúde Oral (<a href="https://www.who.int/health-topics/oral-health" target="_blank" rel="noopener">who.int</a>)</li>
+      <li>Ordem dos Médicos Dentistas (<a href="https://www.omd.pt/" target="_blank" rel="noopener">omd.pt</a>)</li>
+      <li>Sociedade Portuguesa de Estomatologia e Medicina Dentária (<a href="https://www.spemd.pt/" target="_blank" rel="noopener">spemd.pt</a>)</li>
+    </ul>
+  </div>
+
+  <div class="fa-related">
+    <h2>Outros Tratamentos</h2>
+    <div class="fa-related-grid">
+      <a href="https://clinicasdentariasfa.pt/tratamentos/higiene-oral/">Higiene Oral</a>
+      <a href="https://clinicasdentariasfa.pt/tratamentos/aparelhos-ortodonticos/">Aparelhos Ortodônticos</a>
+      <a href="https://clinicasdentariasfa.pt/tratamentos/restauracoes-esteticas/">Restaurações Estéticas</a>
+      <a href="https://clinicasdentariasfa.pt/tratamentos/endodontia/">Endodontia</a>
+      <a href="https://clinicasdentariasfa.pt/tratamentos/facetas-ceramicas/">Facetas Cerâmicas</a>
+      <a href="https://clinicasdentariasfa.pt/contactos/">Contactos</a>
+    </div>
+  </div>
+
+  <div class="fa-final">
+    <h2>Marque a consulta do seu filho</h2>
+    <p>O melhor momento para começar a cuidar do sorriso do seu filho é agora. Marque uma consulta de <strong>odontopediatria</strong> nas Clínicas Dentárias FA: avaliamos a saúde oral da criança, definimos um plano preventivo à medida e esclarecemos todas as suas dúvidas, sem pressas.</p>
+    <div class="fa-cta">
+      <a class="fa-btn" id="marcar-consulta-odonto" href="https://clinicasdentariasfa.pt/contactos/">Marcar Consulta</a>
+      <a class="fa-btn-outline" href="tel:+351227845903">Ligar Gaia · 227 845 903</a>
+      <a class="fa-btn-outline" href="tel:+351213041580">Ligar Lisboa · 213 041 580</a>
+    </div>
+  </div>
+
+</div>
+
+
+<!-- ===================== INÍCIO DO SCHEMA (JSON-LD) ===================== -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    { "@type": "Question", "name": "Com que idade devo levar o meu filho ao dentista pela primeira vez?", "acceptedAnswer": { "@type": "Answer", "text": "Quando erupcionarem os primeiros dentes de leite ou, no máximo, até completar o primeiro ano de vida. Esta consulta permite estabelecer um programa preventivo e intercetar hábitos que possam ser prejudiciais." } },
+    { "@type": "Question", "name": "De quanto em quanto tempo deve ir às consultas?", "acceptedAnswer": { "@type": "Answer", "text": "Havendo boa saúde oral, a cada seis meses. Em crianças com elevado risco de cárie, o intervalo deve reduzir-se para três meses ou conforme indicação do médico dentista." } },
+    { "@type": "Question", "name": "É preciso tratar as cáries dos dentes de leite?", "acceptedAnswer": { "@type": "Answer", "text": "Sim. Os dentes temporários mantêm o espaço para os definitivos e são essenciais à mastigação e à fala. Além disso, a cárie progride mais depressa nestes dentes e uma infeção pode afetar o dente permanente em formação." } },
+    { "@type": "Question", "name": "O que é um selante de fissuras e para que serve?", "acceptedAnswer": { "@type": "Answer", "text": "É uma espécie de «verniz» aplicado na superfície fissurada de dentes sãos, para prevenir lesões de cárie. Está indicado sobretudo nos primeiros e segundos molares definitivos e nos pré-molares, e deve integrar-se num programa de prevenção mais alargado, com base na avaliação do risco de cárie." } },
+    { "@type": "Question", "name": "O meu filho ainda não tem dentes com 1 ano. É preocupante?", "acceptedAnswer": { "@type": "Answer", "text": "A erupção mais precoce ou mais tardia não indica necessariamente patologia. Ainda assim, se a criança não apresentar qualquer dente depois de completar 1 ano de vida, deve ser observada em consulta de odontopediatria e pelo médico assistente." } },
+    { "@type": "Question", "name": "Os tratamentos doem?", "acceptedAnswer": { "@type": "Answer", "text": "A maioria das consultas é de observação e prevenção, sem qualquer desconforto. Quando é necessário tratar, recorre-se a anestesia local com técnicas de aplicação confortáveis, e o tratamento é dividido em etapas curtas, adaptadas ao ritmo da criança." } },
+    { "@type": "Question", "name": "O que fazer se o meu filho partir ou perder um dente numa queda?", "acceptedAnswer": { "@type": "Answer", "text": "Contacte de imediato a clínica para observação prioritária, mesmo que a lesão pareça ligeira. Guarde os fragmentos do dente, se existirem. Tratando-se de um dente definitivo expulso, os primeiros minutos são decisivos, pelo que deve procurar ajuda com urgência." } },
+    { "@type": "Question", "name": "Com que idade se deve avaliar a necessidade de aparelho?", "acceptedAnswer": { "@type": "Answer", "text": "Habitualmente por volta dos 6 aos 7 anos, quando erupcionam os primeiros dentes definitivos. Muitas crianças avaliadas nesta idade não precisam de tratamento imediato, apenas de vigilância." } },
+    { "@type": "Question", "name": "Onde fazem consultas de odontopediatria?", "acceptedAnswer": { "@type": "Answer", "text": "Em Vila Nova de Gaia, na Rua Gonçalves de Castro, 118, Pedroso (Carvalhos), pelo 227 845 903; e em Lisboa, na Clínica Dentária Infante Sagres, em Belém, pelo 213 041 580." } }
+  ]
+}
+</script>
+<!-- ====================== FIM DO SCHEMA (JSON-LD) ====================== -->

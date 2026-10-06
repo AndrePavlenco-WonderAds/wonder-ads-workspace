@@ -23,6 +23,7 @@ import {
   Plus,
   RotateCcw,
   Save,
+  TerminalSquare,
   Trash2,
 } from "lucide-react";
 import {
@@ -31,6 +32,7 @@ import {
   VIDEO_PROVIDERS,
   detectProvider,
   type TrainingAttachment,
+  type TrainingCopyBox,
   type TrainingLesson,
   type TrainingLessonType,
   type TrainingModule,
@@ -799,6 +801,8 @@ function LessonEditor({
               )}
               {(lesson.attachments?.length ?? 0) > 0 &&
                 ` · ${lesson.attachments!.length} anexo${lesson.attachments!.length === 1 ? "" : "s"}`}
+              {(lesson.copyBoxes?.length ?? 0) > 0 &&
+                ` · ${lesson.copyBoxes!.length} copy box${lesson.copyBoxes!.length === 1 ? "" : "es"}`}
             </span>
           </span>
         </button>
@@ -940,6 +944,16 @@ function LessonEditor({
               }
             />
           </div>
+          <div className="sm:col-span-2">
+            <CopyBoxesEditor
+              boxes={lesson.copyBoxes ?? []}
+              onChange={(copyBoxes) =>
+                onChange({
+                  copyBoxes: copyBoxes.length ? copyBoxes : undefined,
+                })
+              }
+            />
+          </div>
         </div>
       )}
     </div>
@@ -996,6 +1010,64 @@ function AttachmentsEditor({
         <AddBtn
           label="Adicionar anexo"
           onClick={() => onChange([...attachments, { label: "", url: "" }])}
+        />
+      </div>
+    </div>
+  );
+}
+
+/** Copy boxes da aula — rótulo + texto (tipicamente um prompt), com botão
+ *  «Copiar» na página. Caixas sem texto caem na normalização ao gravar. */
+function CopyBoxesEditor({
+  boxes,
+  onChange,
+}: {
+  boxes: TrainingCopyBox[];
+  onChange: (next: TrainingCopyBox[]) => void;
+}) {
+  return (
+    <div>
+      <span className="mb-1 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-white/40">
+        <TerminalSquare className="h-3 w-3" />
+        Copy boxes — prompts por baixo do vídeo
+      </span>
+      <div className="space-y-2">
+        {boxes.map((b, i) => (
+          <div key={i} className="space-y-1.5 rounded-lg border border-white/8 p-2">
+            <div className="flex items-center gap-2">
+              <input
+                className={inputCls}
+                placeholder="Rótulo (ex.: Prompt — HTML no design do site do cliente)"
+                value={b.label}
+                onChange={(e) =>
+                  onChange(updateAt(boxes, i, { ...b, label: e.target.value }))
+                }
+              />
+              <button
+                type="button"
+                title="Remover copy box"
+                onClick={() => onChange(boxes.filter((_, k) => k !== i))}
+                className="shrink-0 rounded-md p-1.5 text-rose-300/70 transition hover:bg-rose-500/15"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            </div>
+            <textarea
+              className={inputCls}
+              rows={6}
+              placeholder="Texto a copiar, tal e qual"
+              value={b.text}
+              onChange={(e) =>
+                onChange(updateAt(boxes, i, { ...b, text: e.target.value }))
+              }
+            />
+          </div>
+        ))}
+      </div>
+      <div className="mt-2">
+        <AddBtn
+          label="Adicionar copy box"
+          onClick={() => onChange([...boxes, { label: "", text: "" }])}
         />
       </div>
     </div>

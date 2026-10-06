@@ -31,6 +31,7 @@ import {
   LessonInstructors,
   LessonKeyPoints,
 } from "@/components/training/lesson-aside";
+import { LessonCopyBoxes } from "@/components/training/lesson-copy-box";
 import { LessonTypeBadge } from "@/components/training/training-ui";
 import { LessonFeedback } from "@/components/training/lesson-feedback";
 import {
@@ -249,6 +250,18 @@ export default async function LessonPage({
               </div>
             )}
 
+            {/* ---------- Materiais da aula ----------
+                Anexos e copy boxes por baixo do vídeo (v77.75 — antes os
+                anexos viviam na coluna direita). É o que o vídeo manda ir
+                buscar, e um prompt longo não cabe nos 310 px da barra. */}
+            {((lesson.attachments?.length ?? 0) > 0 ||
+              (lesson.copyBoxes?.length ?? 0) > 0) && (
+              <div className="mt-4 space-y-4">
+                <LessonAttachments attachments={lesson.attachments ?? []} />
+                <LessonCopyBoxes boxes={lesson.copyBoxes ?? []} />
+              </div>
+            )}
+
             {/* ---------- Navegação ----------
                 UMA BARRA, NÃO DOIS BOTÕES SOLTOS. Antes era um flex
                 `justify-between` sem moldura: na primeira aula de um capítulo
@@ -330,9 +343,6 @@ export default async function LessonPage({
               alcance de quem tem a página fixa. */}
           <aside className="animate-fade-up space-y-4 lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:self-start lg:overflow-y-auto lg:pr-1">
             <LessonKeyPoints points={lesson.keyPoints} />
-            {/* Anexos logo a seguir ao Remember: é o que o vídeo manda ir
-                buscar («anexar por baixo do vídeo»), e lê-se junto. */}
-            <LessonAttachments attachments={lesson.attachments ?? []} />
             <LessonInstructors presenter={lesson.presenter} />
             {/* Logo por baixo de quem deu a aula — é sobre ele, sobre o vídeo
                 e sobre o processo que se pergunta. */}

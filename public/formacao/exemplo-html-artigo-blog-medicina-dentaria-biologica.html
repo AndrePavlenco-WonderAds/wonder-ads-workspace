@@ -1,0 +1,498 @@
+<!--
+============================================================================
+  MEDICINA DENTÁRIA BIOLÓGICA · White Clinic — artigo de blog (PT-PT)
+  Bloco pronto a colar no widget HTML do Elementor.
+
+  IMPORTANTE — COLAR TUDO DE UMA VEZ, INCLUINDO ESTE COMENTARIO E AS
+  ETIQUETAS <style> E <script>. Sem elas o CSS e o JSON aparecem como
+  texto visivel na pagina.
+
+  METADADOS (campos do Yoast / RankMath, nao entram no corpo):
+   . Slug:             medicina-dentaria-biologica
+   . Meta title:       Medicina Dentaria Biologica e Saude Global | White Clinic
+   . Meta description: Como a medicina dentaria biologica liga a saude oral
+                       a saude geral e porque o diagnostico vem antes do
+                       tratamento. White Clinic, Oeiras, Lisboa.
+   . Palavra-chave:    medicina dentaria biologica
+   . Par hreflang:     /en/biological-dentistry-oral-health-whole-body/
+
+  H1 DA PAGINA: gerado pelo tema a partir do titulo do post, por isso este
+  bloco comeca no paragrafo de entrada para nao duplicar o H1.
+
+  FOTOGRAFIAS: os tres <img> apontam para os ficheiros que ja estao na
+  biblioteca de media. O alt text esta escrito para o que a fotografia
+  deveria mostrar; confirmar que corresponde a imagem real, sobretudo na
+  segunda, cujo nome de ficheiro sugere um banner e nao uma fotografia de
+  consulta.
+============================================================================
+-->
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
+
+.wc-article{
+  /* ---------------- BRAND PALETTE ---------------- */
+  --wc-green:#0F341F;      /* deep green — headings & detail */
+  --wc-green-2:#1E4D30;    /* mid green — sub-headings */
+  --wc-gold:#AE895D;       /* links & accents */
+  --wc-gold-2:#8E6C42;     /* link hover (darker gold) */
+  --wc-ink:#3E3E3E;        /* body text */
+  --wc-soft:#F4F7F4;       /* pale green — callouts */
+  --wc-gold-soft:#FBF6EF;  /* warm pale — alt surfaces */
+  --wc-line:#E6E1D7;       /* warm hairline */
+  --wc-line-green:#D8E0D9; /* green hairline */
+  --wc-white:#FFFFFF;
+  --wc-display:"Manrope","Helvetica Neue",Arial,system-ui,sans-serif;
+  /* ----------------------------------------------- */
+
+  font-family:"Manrope","Helvetica Neue",Helvetica,Arial,system-ui,sans-serif;
+  color:var(--wc-ink);
+  line-height:1.78;
+  font-size:17.5px;
+  max-width:760px;
+  margin:0 auto;
+  padding:6px 22px 8px;
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+}
+.wc-article *{box-sizing:border-box;}
+
+/* Eyebrow */
+.wc-article .wc-eyebrow{
+  font-size:.72rem;
+  letter-spacing:.24em;
+  text-transform:uppercase;
+  font-weight:700;
+  color:var(--wc-gold);
+  margin:.2em 0 1.1em;
+}
+
+/* Lead paragraph */
+.wc-article .wc-lead{
+  font-family:var(--wc-display);
+  font-size:1.32em;
+  line-height:1.5;
+  font-weight:500;
+  color:var(--wc-green);
+  margin:0 0 1.3em;
+  letter-spacing:0;
+}
+
+/* Body */
+.wc-article p{margin:0 0 1.15em;}
+.wc-article strong{color:var(--wc-green);font-weight:700;}
+
+/* Headings */
+.wc-article h2{
+  font-family:var(--wc-display);
+  color:var(--wc-green);
+  font-size:1.9em;
+  line-height:1.18;
+  font-weight:800;
+  letter-spacing:-.012em;
+  margin:2.5em 0 .6em;
+}
+.wc-article h2::before{
+  content:"";
+  display:block;
+  width:46px;height:2px;
+  background:var(--wc-gold);
+  margin-bottom:.62em;
+}
+.wc-article h2:first-of-type{margin-top:.4em;}
+.wc-article h3{
+  font-family:var(--wc-display);
+  color:var(--wc-green-2);
+  font-size:1.3em;
+  line-height:1.3;
+  font-weight:700;
+  letter-spacing:-.008em;
+  margin:1.8em 0 .45em;
+}
+
+/* Inline links */
+.wc-article a{
+  color:var(--wc-gold);
+  text-decoration:underline;
+  text-underline-offset:3px;
+  text-decoration-thickness:1px;
+  font-weight:600;
+  transition:color .15s ease;
+}
+.wc-article a:hover{color:var(--wc-gold-2);}
+.wc-article a:focus-visible{
+  outline:2px solid var(--wc-gold);
+  outline-offset:3px;border-radius:2px;
+}
+
+/* Definition rows */
+.wc-article .wc-layers{margin:0 0 1.4em;padding:0;}
+.wc-article .wc-layers > div{
+  padding:.95em 0;
+  border-top:1px solid var(--wc-line-green);
+}
+.wc-article .wc-layers > div:last-child{border-bottom:1px solid var(--wc-line-green);}
+.wc-article .wc-layers dt{
+  font-family:var(--wc-display);
+  font-size:1.12em;
+  font-weight:700;
+  color:var(--wc-green);
+  letter-spacing:-.005em;
+  margin-bottom:.15em;
+}
+.wc-article .wc-layers dd{margin:0;}
+
+/* Numbered process */
+.wc-article .wc-steps{
+  list-style:none;counter-reset:step;
+  margin:0 0 1.4em;padding:0;
+}
+.wc-article .wc-steps li{
+  position:relative;counter-increment:step;
+  padding:.15em 0 .15em 3em;margin:0 0 .7em;
+  min-height:2em;
+}
+.wc-article .wc-steps li::before{
+  content:counter(step);
+  position:absolute;left:0;top:-.05em;
+  width:2em;height:2em;border-radius:50%;
+  background:var(--wc-soft);
+  border:1px solid var(--wc-gold);
+  color:var(--wc-green);
+  font-family:var(--wc-display);font-weight:700;font-size:.95em;
+  display:flex;align-items:center;justify-content:center;
+}
+
+/* Callout */
+.wc-article .wc-callout{
+  background:var(--wc-soft);
+  border-left:3px solid var(--wc-gold);
+  padding:1.15em 1.5em;
+  margin:1.7em 0;
+}
+.wc-article .wc-callout p{margin:0;}
+.wc-article .wc-callout p + p{margin-top:.7em;}
+
+/* Pull-quote */
+.wc-article .wc-quote{
+  margin:1.9em 0;
+  padding:.2em 0 .2em 1.4em;
+  border-left:2px solid var(--wc-gold);
+}
+.wc-article .wc-quote p{
+  font-family:var(--wc-display);
+  font-size:1.5em;
+  line-height:1.32;
+  font-weight:700;
+  color:var(--wc-green);
+  margin:0 0 .4em;
+  letter-spacing:-.01em;
+}
+.wc-article .wc-quote cite{
+  display:block;
+  font-style:normal;
+  font-size:.78rem;
+  letter-spacing:.16em;
+  text-transform:uppercase;
+  font-weight:700;
+  color:var(--wc-gold);
+}
+
+/* FAQ */
+.wc-article .wc-faq{
+  border-top:1px solid var(--wc-line);
+}
+.wc-article .wc-faq summary{
+  list-style:none;cursor:pointer;
+  font-family:var(--wc-display);
+  font-size:1.14em;font-weight:700;
+  color:var(--wc-green);letter-spacing:-.005em;
+  padding:.85em 2.2em .85em 0;
+  position:relative;
+  transition:color .15s ease;
+}
+.wc-article .wc-faq summary::-webkit-details-marker{display:none;}
+.wc-article .wc-faq summary:hover{color:var(--wc-green-2);}
+.wc-article .wc-faq summary::after{
+  content:"";
+  position:absolute;right:.1em;top:50%;
+  width:.68em;height:.68em;margin-top:-.34em;
+  border-right:2px solid var(--wc-gold);
+  border-bottom:2px solid var(--wc-gold);
+  transform:rotate(45deg);
+  transition:transform .2s ease;
+}
+.wc-article .wc-faq[open] summary::after{transform:rotate(-135deg);}
+.wc-article .wc-faq .wc-faq-body{padding:0 0 1em;}
+.wc-article .wc-faq .wc-faq-body p{margin:0 0 .6em;}
+
+/* Closing CTA */
+.wc-article .wc-cta{
+  margin:2.6em 0 .6em;
+  padding:1.6em 1.7em;
+  background:var(--wc-green);
+  color:var(--wc-white);
+  text-align:center;
+}
+.wc-article .wc-cta p{
+  font-family:var(--wc-display);
+  font-size:1.28em;line-height:1.35;font-weight:700;
+  color:var(--wc-white);
+  margin:0 0 .7em;
+}
+.wc-article .wc-cta a{
+  display:inline-block;
+  color:var(--wc-green);
+  background:var(--wc-gold);
+  text-decoration:none;
+  font-weight:700;
+  letter-spacing:.03em;
+  padding:.7em 1.6em;
+  transition:background .15s ease;
+}
+.wc-article .wc-cta a:hover{background:#c39b6c;}
+.wc-article .wc-cta .wc-cta-phone{
+  font-family:var(--wc-sans,inherit);
+  font-size:.9rem;font-weight:400;line-height:1.5;
+  letter-spacing:.02em;
+  color:rgba(255,255,255,.72);
+  margin:1em 0 0;
+}
+
+/* Figures */
+.wc-article .wc-figure{margin:2.4em 0;}
+.wc-article .wc-figure img{width:100%;height:auto;display:block;}
+.wc-article .wc-figure figcaption{
+  font-size:.82rem;
+  color:var(--wc-gold-2);
+  letter-spacing:.015em;
+  margin-top:.7em;
+  padding-left:.8em;
+  border-left:2px solid var(--wc-gold);
+}
+
+/* Responsive */
+@media (max-width:600px){
+  .wc-article{font-size:16.5px;padding:4px 4px 8px;}
+  .wc-article .wc-lead{font-size:1.28em;}
+  .wc-article h2{font-size:1.65em;}
+  .wc-article h3{font-size:1.24em;}
+  .wc-article .wc-quote p{font-size:1.4em;}
+}
+@media (prefers-reduced-motion:reduce){
+  .wc-article *,.wc-article *::after{transition:none !important;}
+}
+
+/* ─── Additions for this article ─────────────────────────────── */
+
+/* Bulleted lists */
+.wc-article ul{
+  list-style:none;
+  margin:0 0 1.5em;
+  padding:0;
+}
+.wc-article ul li{
+  position:relative;
+  padding-left:1.5em;
+  margin-bottom:.55em;
+}
+.wc-article ul li::before{
+  content:"";
+  position:absolute;
+  left:.15em;top:.72em;
+  width:.4em;height:.4em;
+  border-radius:50%;
+  background:var(--wc-gold);
+}
+
+/* Numbered references */
+.wc-article .wc-refs{
+  list-style:none;
+  counter-reset:ref;
+  margin:0;padding:0;
+  font-size:.88rem;
+  line-height:1.6;
+  color:#6B6B6B;
+}
+.wc-article .wc-refs li{
+  counter-increment:ref;
+  position:relative;
+  padding-left:2.1em;
+  margin-bottom:.85em;
+}
+.wc-article .wc-refs li::before{
+  content:counter(ref) ".";
+  position:absolute;left:0;top:0;
+  font-weight:700;
+  color:var(--wc-gold);
+}
+.wc-article .wc-refs a{font-weight:400;word-break:break-word;}
+
+/* Byline under the title */
+.wc-article .wc-byline{
+  font-size:.86rem;
+  color:#6B6B6B;
+  margin:0 0 2em;
+  padding-bottom:1.4em;
+  border-bottom:1px solid var(--wc-line);
+}
+</style>
+
+<div class="wc-article">
+
+  <p class="wc-eyebrow">Medicina Dentária Biológica</p>
+
+  <p class="wc-lead">Durante muitos anos, a medicina dentária foi vista sobretudo como uma área dedicada a tratar cáries, substituir dentes em falta e melhorar a estética do sorriso. Hoje, a evidência científica aponta para uma realidade mais ampla: a saúde oral está profundamente ligada ao equilíbrio geral do corpo e pode influenciar vários sistemas do organismo.</p>
+
+  <figure class="wc-figure">
+    <img src="https://whiteclinic.pt/wp-content/uploads/2025/09/de-tela-2025-09-18-a204128s-12-08-57-scaled-e1758208228412.webp" alt="Médico dentista da White Clinic a explicar uma radiografia panorâmica a um paciente">
+  </figure>
+
+  <p>É este o fundamento da <a href="https://whiteclinic.pt/pt-pt/medicina-dentaria-biologica/"><strong>medicina dentária biológica</strong></a>, uma abordagem que integra a saúde oral no bem-estar global do paciente e procura compreender de que forma a inflamação oral, o microbioma e os materiais dentários podem afectar a saúde geral.</p>
+
+  <p>Na White Clinic, fundada em 1999 pelo <a href="https://whiteclinic.pt/pt-pt/dr-miguel-stanley/">Dr. Miguel Stanley</a>, esta filosofia esteve desde o início no centro da prática clínica. O nosso objectivo não é apenas tratar dentes, mas ajudar cada paciente a alcançar uma melhor qualidade de vida.</p>
+
+  <h2>O que é a medicina dentária biológica?</h2>
+  <p>A medicina dentária biológica não é uma alternativa à medicina dentária convencional. É uma forma de a praticar assente em evidência científica, que reconhece a ligação entre a saúde oral e a saúde geral e procura compreender não só o problema, mas também as suas causas e o seu impacto no corpo como um todo.</p>
+  <p>Esta abordagem assenta em princípios claros:</p>
+  <ul>
+    <li>Diagnóstico aprofundado antes de qualquer tratamento</li>
+    <li>Redução da inflamação crónica sempre que possível</li>
+    <li>Preservação máxima dos tecidos naturais</li>
+    <li>Utilização criteriosa de materiais biocompatíveis, quando clinicamente indicado</li>
+    <li>Integração entre medicina dentária, medicina integrativa e outras áreas da saúde</li>
+  </ul>
+  <p>O objectivo não é apenas restaurar dentes, mas criar as condições para que a cavidade oral contribua para a saúde a longo prazo.</p>
+
+  <h2>De que forma pode a boca influenciar o resto do corpo?</h2>
+  <p>A boca é um dos ecossistemas microbianos mais complexos do corpo humano. O <strong>microbioma oral</strong> é composto por centenas de espécies bacterianas que, quando em equilíbrio, ajudam a proteger os tecidos orais.</p>
+  <p>Quando esse equilíbrio é perturbado, por exemplo devido a doença periodontal, infecções persistentes ou higiene oral deficiente, podem desenvolver-se processos inflamatórios crónicos. Em determinadas circunstâncias, bactérias e mediadores inflamatórios entram na corrente sanguínea e desencadeiam respostas que se estendem muito para além da boca.</p>
+  <p>Ao longo das últimas décadas, numerosos estudos identificaram associações entre a inflamação oral e várias condições sistémicas.<sup><a href="#ref-2">2</a></sup> Uma revisão global de quase 300 meta-análises, publicada em 2022, encontrou doenças orais fortemente associadas a 28 doenças não transmissíveis,<sup><a href="#ref-1">1</a></sup> entre as quais:</p>
+  <ul>
+    <li>Doença cardiovascular</li>
+    <li>Diabetes tipo 2</li>
+    <li>Artrite reumatóide</li>
+    <li>Algumas doenças neurodegenerativas</li>
+    <li>Algumas doenças auto-imunes</li>
+  </ul>
+  <p>Embora estas associações não representem necessariamente uma relação directa de causa e efeito, reforçam a importância de controlar a inflamação oral como parte de uma estratégia de saúde mais ampla.</p>
+
+  <aside class="wc-callout">
+    <p><strong>Associação não é o mesmo que causa.</strong></p>
+    <p>Na diabetes, a ligação faz-se nos dois sentidos, e o tratamento da doença gengival demonstrou produzir uma melhoria modesta no controlo da glicemia.<sup><a href="#ref-3">3</a></sup></p>
+  </aside>
+
+  <p>É esta a essência da <strong>saúde oral-sistémica</strong>: entender a boca não como uma cavidade isolada, mas como participante activo no equilíbrio geral do corpo.</p>
+
+  <h2>Porque ganhou esta abordagem mais relevância agora?</h2>
+  <p>Durante muito tempo, a medicina dentária evoluiu separada da medicina geral, privilegiando uma visão centrada nos aspectos mecânicos do tratamento. À medida que a investigação científica avançou, tornou-se cada vez mais claro o impacto da inflamação oral, do microbioma e da biocompatibilidade dos materiais na saúde global.</p>
+  <p>A medicina dentária biológica representa um regresso a uma visão integrada, em que o médico dentista considera o contexto clínico completo do paciente antes de definir qualquer plano de tratamento. Não é uma nova tendência, mas a evolução natural daquilo que uma prática clínica rigorosa e baseada em evidência sempre deveria ter sido.</p>
+
+  <h2>Como a White Clinic pratica medicina dentária biológica</h2>
+  <blockquote class="wc-quote">
+    <p>O diagnóstico vem sempre antes do tratamento.</p>
+    <cite>A abordagem da White Clinic</cite>
+  </blockquote>
+  <p>Antes de qualquer intervenção, realizamos uma avaliação completa para identificar não só os problemas visíveis, mas também os factores que podem comprometer a saúde oral e sistémica a médio e longo prazo.</p>
+
+  <figure class="wc-figure">
+    <img src="https://whiteclinic.pt/wp-content/uploads/2025/10/wc-site-banner-lp-e1719495066495.webp" alt="Consulta de avaliação na White Clinic, em Miraflores, Oeiras">
+  </figure>
+
+  <h3>O que pode incluir uma primeira consulta</h3>
+  <ul>
+    <li>Análise detalhada da história clínica</li>
+    <li>Avaliação funcional da cavidade oral</li>
+    <li>Tomografia Computorizada de Feixe Cónico (CBCT)</li>
+    <li>Scan intra-oral digital</li>
+    <li><a href="https://whiteclinic.pt/pt-pt/apneia-do-sono/">Avaliação da via aérea</a></li>
+    <li>Avaliação ortodôntica</li>
+    <li>Medição dos níveis de vitamina D na própria consulta</li>
+    <li>Testes salivares para detecção precoce de marcadores inflamatórios, como a MMP-8 activa</li>
+  </ul>
+  <p>Esta abordagem permite-nos detectar alterações que um check-up de rotina não foi concebido para procurar e construir planos de tratamento verdadeiramente personalizados.</p>
+  <p>Mais do que resolver um problema imediato, procuramos compreender de que forma cada decisão clínica pode ajudar a preservar a função, reduzir a inflamação crónica e promover a saúde global do paciente.</p>
+
+  <h2>Materiais: critério, não dogma</h2>
+  <p>A White Clinic é uma clínica <strong>livre de mercúrio</strong>, e as antigas restaurações de amálgama são removidas sob um protocolo de protecção. Não consideramos o titânio prejudicial para todas as pessoas: em casos seleccionados, como pacientes com historial de reacções a metais ou com doenças auto-imunes, podemos recomendar testes de hipersensibilidade a metais, e existem implantes cerâmicos quando são a melhor opção. Também não somos contra o tratamento endodôntico: um tratamento endodôntico bem executado pode salvar um dente.</p>
+
+  <h2>Revision Dentistry: porque também importa rever tratamentos anteriores</h2>
+  <p>Muitos pacientes assumem que uma coroa, um implante ou uma restauração duram indefinidamente. Na prática, os tratamentos dentários também envelhecem: os materiais desgastam-se, os tecidos mudam e a medicina dentária evolui, trazendo soluções mais conservadoras e biocompatíveis. Nem todo o trabalho dentário é executado com o mesmo critério, e grande parte do que avaliamos foi colocado há anos ou décadas, com técnicas e materiais diferentes.</p>
+  <p>Desta reflexão nasceu o conceito de <a href="https://whiteclinic.pt/pt-pt/medicina-dentaria-de-revisao/"><strong>Revision Dentistry</strong></a>, desenvolvido pelo Dr. Miguel Stanley. Tal como as próteses da anca e os pacemakers são monitorizados ao longo do tempo, esta abordagem defende a reavaliação periódica da saúde oral, com recurso a tecnologia de diagnóstico avançada.</p>
+
+  <figure class="wc-figure">
+    <img src="https://whiteclinic.pt/wp-content/uploads/2025/07/our-team-e1777892041260.webp" alt="Equipa clínica da White Clinic">
+  </figure>
+
+  <p>O objectivo não é substituir tratamentos desnecessariamente. A idade de uma restauração não é, por si só, razão para a substituir. O que se pretende é identificar sinais precoces de infiltração, inflamação silenciosa ou alterações ósseas que podem progredir sem sintomas durante anos. Quando detectados a tempo, permitem intervenções mais conservadoras e previsíveis.</p>
+
+  <h2>Medicina dentária biológica e longevidade</h2>
+  <p>Falar de longevidade não é apenas falar de viver mais tempo. É falar de viver melhor. A capacidade de mastigar correctamente, manter tecidos saudáveis e controlar processos inflamatórios crónicos influencia directamente a qualidade de vida ao longo do envelhecimento. Reduzir as fontes de inflamação oral pode fazer parte de uma estratégia global de saúde, em articulação com outras áreas da medicina.</p>
+  <p>Na White Clinic, esta abordagem traduz-se numa medicina dentária personalizada, apoiada em diagnóstico rigoroso, tecnologia avançada e numa <a href="https://whiteclinic.pt/pt-pt/clinica/equipa/">equipa multidisciplinar</a> com uma visão global da saúde.</p>
+
+  <h2>Porquê escolher um médico dentista biológico?</h2>
+  <p>Escolher um médico dentista que pratica medicina dentária biológica não significa procurar uma abordagem alternativa. Significa escolher um profissional que valoriza o diagnóstico, a prevenção e a relação entre a saúde oral e a saúde geral.</p>
+  <p>Na White Clinic, cada plano de tratamento é desenvolvido individualmente, tendo em conta a história clínica do paciente, a função oral, os factores de risco e o impacto sistémico de cada decisão clínica. É a isto que alguns chamam medicina dentária holística: não uma filosofia desligada da ciência, mas uma forma mais completa de cuidar do paciente.</p>
+
+  <h2>Cuidar da boca é cuidar da saúde</h2>
+  <p>A evidência mostra cada vez mais que a boca não pode ser vista isoladamente. A prevenção, o diagnóstico precoce e o controlo da inflamação oral desempenham um papel importante na saúde e na qualidade de vida. A medicina dentária biológica coloca o paciente no centro da decisão clínica e procura compreender as causas dos problemas antes de definir qualquer tratamento.</p>
+  <p>Na White Clinic, esta filosofia faz parte da nossa prática diária. Se quiser compreender melhor a relação entre a sua saúde oral e o resto do corpo, o primeiro passo é uma consulta.</p>
+
+  <h2>Perguntas frequentes sobre medicina dentária biológica</h2>
+
+  <details class="wc-faq">
+    <summary>O que distingue a medicina dentária biológica?</summary>
+    <div class="wc-faq-body"><p>Integra a medicina dentária convencional numa visão mais ampla da saúde. Para além de tratar problemas dentários, valoriza o diagnóstico, a prevenção e a relação entre a boca e o corpo.</p></div>
+  </details>
+
+  <details class="wc-faq">
+    <summary>A medicina dentária biológica tem base científica?</summary>
+    <div class="wc-faq-body"><p>A associação entre inflamação oral, doença periodontal e várias condições sistémicas é sustentada por um corpo de investigação substancial e crescente, embora grande parte demonstre associação e não causa directa. Trabalhamos a partir dessa evidência e somos claros com os pacientes sobre onde ela é sólida e onde ainda está em desenvolvimento.</p></div>
+  </details>
+
+  <details class="wc-faq">
+    <summary>Um médico dentista biológico em Lisboa realiza os mesmos tratamentos?</summary>
+    <div class="wc-faq-body"><p>Sim. A White Clinic, em Miraflores (Oeiras), junto a Lisboa, é também uma clínica familiar completa. A diferença está na abordagem clínica, que inclui uma avaliação mais completa da saúde oral e geral antes de definir qualquer tratamento.</p></div>
+  </details>
+
+  <details class="wc-faq">
+    <summary>Quem pode beneficiar desta abordagem?</summary>
+    <div class="wc-faq-body"><p>Qualquer pessoa que procure uma avaliação mais abrangente, em particular pacientes com inflamação gengival recorrente, doença periodontal, múltiplos tratamentos dentários ou condições sistémicas crónicas.</p></div>
+  </details>
+
+  <details class="wc-faq">
+    <summary>A White Clinic avalia tratamentos realizados noutras clínicas?</summary>
+    <div class="wc-faq-body"><p>Sim. A nossa equipa pode rever tratamentos anteriores e avaliar a sua estabilidade, funcionalidade e adequação às necessidades actuais do paciente.</p></div>
+  </details>
+
+  <h3>Referências</h3>
+  <ol class="wc-refs">
+    <li id="ref-1">Botelho J, Mascarenhas P, Viana J, et al. An umbrella review of the evidence linking oral health and systemic noncommunicable diseases. <em>Nature Communications</em>. 2022;13:7614. <a href="https://doi.org/10.1038/s41467-022-35337-8" target="_blank" rel="noopener">doi.org/10.1038/s41467-022-35337-8</a></li>
+    <li id="ref-2">Herrera D, Sanz M, Shapira L, et al. Association between periodontal diseases and cardiovascular diseases, diabetes and respiratory diseases: Consensus report of the Joint Workshop by the EFP and WONCA Europe. <em>Journal of Clinical Periodontology</em>. 2023;50(6):819–841. <a href="https://doi.org/10.1111/jcpe.13807" target="_blank" rel="noopener">doi.org/10.1111/jcpe.13807</a></li>
+    <li id="ref-3">Simpson TC, Clarkson JE, Worthington HV, et al. Treatment of periodontitis for glycaemic control in people with diabetes mellitus. <em>Cochrane Database of Systematic Reviews</em>. 2022;4:CD004714. <a href="https://doi.org/10.1002/14651858.CD004714.pub4" target="_blank" rel="noopener">doi.org/10.1002/14651858.CD004714.pub4</a></li>
+  </ol>
+  <p style="font-size:.86rem;color:#6B6B6B;margin-top:1.4em;">Autor: equipa clínica da White Clinic</p>
+
+  <div class="wc-cta">
+    <p>Compreenda como a sua saúde oral se relaciona com o resto do corpo. Marque uma consulta na White Clinic, Miraflores, Oeiras (Lisboa).</p>
+    <a href="https://whiteclinic.pt/pt-pt/contacto/">Marcar consulta</a>
+    <p class="wc-cta-phone">Ou ligue (+351) 21 396 2727</p>
+  </div>
+
+</div>
+
+<!-- Dados estruturados FAQPage. Remover este bloco se o plugin de SEO já gerar FAQ schema nesta página. -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "inLanguage": "pt-PT",
+  "mainEntity": [
+    {"@type":"Question","name":"O que distingue a medicina dentária biológica?","acceptedAnswer":{"@type":"Answer","text":"Integra a medicina dentária convencional numa visão mais ampla da saúde. Para além de tratar problemas dentários, valoriza o diagnóstico, a prevenção e a relação entre a boca e o corpo."}},
+    {"@type":"Question","name":"A medicina dentária biológica tem base científica?","acceptedAnswer":{"@type":"Answer","text":"A associação entre inflamação oral, doença periodontal e várias condições sistémicas é sustentada por um corpo de investigação substancial e crescente, embora grande parte demonstre associação e não causa directa. Trabalhamos a partir dessa evidência e somos claros com os pacientes sobre onde ela é sólida e onde ainda está em desenvolvimento."}},
+    {"@type":"Question","name":"Um médico dentista biológico em Lisboa realiza os mesmos tratamentos?","acceptedAnswer":{"@type":"Answer","text":"Sim. A White Clinic, em Miraflores (Oeiras), junto a Lisboa, é também uma clínica familiar completa. A diferença está na abordagem clínica, que inclui uma avaliação mais completa da saúde oral e geral antes de definir qualquer tratamento."}},
+    {"@type":"Question","name":"Quem pode beneficiar desta abordagem?","acceptedAnswer":{"@type":"Answer","text":"Qualquer pessoa que procure uma avaliação mais abrangente, em particular pacientes com inflamação gengival recorrente, doença periodontal, múltiplos tratamentos dentários ou condições sistémicas crónicas."}},
+    {"@type":"Question","name":"A White Clinic avalia tratamentos realizados noutras clínicas?","acceptedAnswer":{"@type":"Answer","text":"Sim. A nossa equipa pode rever tratamentos anteriores e avaliar a sua estabilidade, funcionalidade e adequação às necessidades actuais do paciente."}}
+  ]
+}
+</script>

@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.75",
+    date: "2026-10-06",
+    title: "Formação — exemplos HTML e prompt com «Copiar» por baixo do vídeo do HTML em cliente",
+    highlights: [
+      "**📎 Aula 8.2 («Como publicar os artigos blog da app e páginas SEO em HTML») ganha os materiais:** dois exemplos para descarregar (página de serviço pillar de Odontopediatria das Clínicas Dentárias FA e artigo de blog de Medicina Dentária Biológica da White Clinic) e o prompt base para pedir o HTML no design do site do cliente.",
+      "**📋 Nova «copy box» nas aulas:** o prompt aparece por inteiro, com botão «Copiar» que o mete no clipboard tal e qual (quebras de linha incluídas). Edita-se no CMS da Formação, por baixo dos anexos, em qualquer aula.",
+      "**⬇️ Os anexos passam para baixo do vídeo** em todas as aulas (antes estavam na coluna da direita, por baixo do Remember): ficam no fluxo de quem acabou de ver o vídeo, junto com o prompt.",
+    ],
+  },
+  {
     version: "77.74",
     date: "2026-10-06",
     title: "Relatório mensal — a Ficha Google que já vem da API deixa de pedir preenchimento",
