@@ -13,6 +13,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.74",
+    date: "2026-10-06",
+    title: "Relatório mensal — a Ficha Google que já vem da API deixa de pedir preenchimento",
+    highlights: [
+      "**📍 «Preencher dados em falta» só mostra o que falta mesmo.** As linhas da Ficha Google (cliques p/ website, direções, chamadas) que o relatório já puxou da API apareciam vazias e contavam como «por resolver», obrigando a escrever outra vez o número que o relatório já tinha. Agora saem da grelha e aparece em verde quantos valores da Ficha Google entraram sozinhos.",
+      "**🛡️ «Guardar dados» deixa de apagar os números da Ficha Google.** Gravar com essas linhas vazias repunha-as como pendentes e o número da API (com a variação face ao mês anterior) perdia-se. A API passa a ignorar um «vazio» sobre um valor puxado automaticamente.",
+    ],
+  },
+  {
     version: "77.73",
     date: "2026-10-02",
     title: "Plano de Probation — planos de 30 dias com duas avaliações, guardados e em PDF (só SuperAdmin)",

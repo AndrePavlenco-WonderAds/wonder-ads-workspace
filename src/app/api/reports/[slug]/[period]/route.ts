@@ -20,6 +20,7 @@ import {
   MAX_KEYWORD_CURATION,
   MAX_REPORT_ATTACHMENTS,
   REPORT_SECTION_KEYS,
+  isAutoPulled,
   isGbpChannelKey,
   manualMetric,
   naMetric,
@@ -183,6 +184,9 @@ export async function PUT(
         channels: next.leads.channels.map((c) => {
           if (!(c.key in body.channels!)) return c;
           const edit = body.channels![c.key];
+          // "Clear" never wipes a number the API pulled — an older grid sent
+          // null for the Ficha Google rows it showed empty (pre-v77.74).
+          if (edit === null && isAutoPulled(c.metric)) return c;
           // Every Business Profile row — main or per-unit — resets to "manual"
           // (the API is often unavailable); GA4 rows reset to "na".
           const resetSource = isGbpChannelKey(c.key) ? "manual" : "na";

@@ -6,6 +6,8 @@ import { upload } from "@vercel/blob/client";
 import { Loader2, Check, Ban, Pencil, Paperclip, FileText, X } from "lucide-react";
 import {
   MAX_REPORT_ATTACHMENTS,
+  isAutoPulled,
+  isGbpChannelKey,
   type LeadChannel,
   type LeadChannelKey,
   type ReportAttachment,
@@ -49,9 +51,15 @@ export function ReportManualInputs({
   attachments?: ReportAttachment[];
 }) {
   const router = useRouter();
-  // Only channels the app can't pull automatically are editable here.
+  // Only channels the app couldn't pull are editable here. A Ficha Google row
+  // the API already filled is NOT a GBP row to retype — before v77.74 it
+  // showed up empty («por resolver») and saving the grid wiped the API value.
   const editable = useMemo(
-    () => channels.filter((c) => c.metric.source !== "ga4"),
+    () => channels.filter((c) => !isAutoPulled(c.metric)),
+    [channels],
+  );
+  const pulledGbp = useMemo(
+    () => channels.filter((c) => isGbpChannelKey(c.key) && isAutoPulled(c.metric)).length,
     [channels],
   );
   // Lead events that GA4 isn't sending — the ones a GTM setup would automate.
@@ -195,6 +203,14 @@ export function ReportManualInputs({
       <p className="mb-3 text-[12px] text-white/45">
         Valor do mês ou <b>N/A</b> — o relatório fica pronto quando nada sobrar.
       </p>
+      {pulledGbp > 0 && (
+        <p className="mb-3 flex items-center gap-1.5 text-[12px] text-emerald-200/80">
+          <Check className="h-3.5 w-3.5 shrink-0" />
+          {pulledGbp === 1
+            ? "1 valor da Ficha Google veio automaticamente — não é preciso preenchê-lo."
+            : `${pulledGbp} valores da Ficha Google vieram automaticamente — não é preciso preenchê-los.`}
+        </p>
+      )}
 
       {uninstrumentedLeads && (
         <details className="mb-3 rounded-lg border border-sky-400/20 bg-sky-500/[0.05]">

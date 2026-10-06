@@ -789,6 +789,13 @@ export function isUnresolved(m: ReportMetric): boolean {
   return m.value === null && !m.manualNa;
 }
 
+/** True when the number came from an API (GA4, Ficha Google…) rather than the
+ *  consultant. These never go in the fill-in grid: the report already shows
+ *  them, and re-typing would turn them into a manual number without the MoM. */
+export function isAutoPulled(m: ReportMetric): boolean {
+  return m.value !== null && m.source !== "manual";
+}
+
 /** Percentage change of a metric, or null when it can't be computed. */
 export function momPercent(m: ReportMetric): number | null {
   if (m.value === null || m.previous === null || m.previous === 0) return null;

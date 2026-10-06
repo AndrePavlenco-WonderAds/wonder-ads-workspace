@@ -193,8 +193,8 @@ export const EMPLOYEE_CREDENTIALS: EmployeeCredential[] = [
     role: "Consultora de SEO",
     dept: "SEO",
     startedAt: "2026-09-28",
-    salt: "2a8c4e9b7666eb6d08b309cba1bfc56d",
-    hash: "062708168957591b8f54af4b5a0d996bc4fd778d9f350d0cdbb62e9b5e0051c578855abe0316a15b2c97bd8aa9295b5a7cdc74b6b364f0af06116c813ba5d444",
+    salt: "ec519baf91e6d137ac640c92a2311b3a",
+    hash: "93035876c48b74f347a31fbcb5177f301f8c4d5bf87e94c135f6be8bf321b09d89d7fb96e5be3a25871d42e2132be377830ccef0656762c9031f465a86a77578",
   },
   {
     // Hugo Silva — ADS Consultant (v77.35), entra no lugar do Germano Cunha.
