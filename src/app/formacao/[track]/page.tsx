@@ -23,6 +23,7 @@ import {
   CheckCircle2,
   ClipboardCheck,
   Clock,
+  Eye,
   Film,
   Lock,
   PartyPopper,
@@ -42,7 +43,11 @@ import {
   TrackSearch,
   type TrackSearchEntry,
 } from "@/components/training/track-search";
-import { getTrainingContext, trackStateFor } from "@/lib/training/server";
+import {
+  canPreviewLocked,
+  getTrainingContext,
+  trackStateFor,
+} from "@/lib/training/server";
 import type { ModuleState, TrackState } from "@/lib/training/progress";
 
 export const dynamic = "force-dynamic";
@@ -86,6 +91,8 @@ export default async function TrackPage({
   // de outro departamento devolve 404, não uma página vazia.
   const state = trackStateFor(ctx, slug);
   if (!state) notFound();
+  // SuperAdmin: os capítulos fechados mostram as aulas na mesma («só ver»).
+  const preview = canPreviewLocked(ctx);
 
   // Agrupar capítulos consecutivos com a mesma secção (ex.: Service Delivery).
   const groups: { section: string | null; modules: ModuleState[] }[] = [];
@@ -115,7 +122,7 @@ export default async function TrackPage({
       type: l.lesson.type,
       watched: l.watched,
       comingSoon: l.comingSoon,
-      locked: m.status === "locked",
+      locked: m.status === "locked" && !preview,
     })),
   );
 
@@ -317,6 +324,7 @@ export default async function TrackPage({
                 index={orderIndex.get(m.module.id) ?? 1}
                 isCurrent={m.module.id === currentModuleId}
                 isLast={orderIndex.get(m.module.id) === state.modules.length}
+                preview={preview}
               />
             ))}
           </section>
@@ -336,14 +344,18 @@ function ModuleStation({
   index,
   isCurrent,
   isLast,
+  preview,
 }: {
   state: ModuleState;
   trackSlug: string;
   index: number;
   isCurrent: boolean;
   isLast: boolean;
+  preview: boolean;
 }) {
   const locked = state.status === "locked";
+  // Fechado na sequência, mas o SuperAdmin abre as aulas para as ver.
+  const previewing = locked && preview;
   const { module } = state;
   const done = state.status === "completed" && state.hasContent;
 
@@ -396,7 +408,7 @@ function ModuleStation({
           isCurrent
             ? "border-[#783DF5]/55 bg-white/[0.075] shadow-[0_20px_60px_-32px_rgba(120,61,245,1)]"
             : "border-white/[0.13] bg-white/[0.05]"
-        } ${locked ? "opacity-50" : ""}`}
+        } ${locked && !previewing ? "opacity-50" : ""}`}
       >
         {/* Medidor do capítulo — encostado ao topo do cartão, como uma régua
             de nível. Substitui a barra solta que existia a meio. */}
@@ -440,13 +452,20 @@ function ModuleStation({
             </div>
           </header>
 
-          {locked ? (
+          {locked && !previewing ? (
             <p className="mt-5 inline-flex items-center gap-2 rounded-lg border border-white/[0.14] bg-white/[0.05] px-3 py-2 text-[12.5px] text-white/60">
               <Lock className="h-3.5 w-3.5" />
               Abre quando concluíres o capítulo anterior.
             </p>
           ) : (
             <ul className="mt-5 space-y-1.5">
+              {previewing && (
+                <li className="flex items-center gap-2 px-1 pb-1 text-[11.5px] text-[#c3aaff]/80">
+                  <Eye className="h-3.5 w-3.5" />
+                  Bloqueado na tua sequência · abres as aulas só para ver, sem
+                  contar progresso
+                </li>
+              )}
               {state.lessons.map((l) => (
                 <li key={l.lesson.id}>
                   <Link
@@ -508,7 +527,9 @@ function ModuleStation({
                 </li>
               ))}
 
-              {/* Paragem final do capítulo: o quiz. */}
+              {/* Paragem final do capítulo: o quiz. Em pré-visualização fica
+                  de fora — «só ver» é para as aulas. */}
+              {!previewing && (
               <li>
                 {state.quizRequired ? (
                   <Link
@@ -568,6 +589,7 @@ function ModuleStation({
                   </div>
                 )}
               </li>
+              )}
             </ul>
           )}
         </div>

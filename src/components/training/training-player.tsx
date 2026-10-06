@@ -37,6 +37,9 @@ type Props = {
   initialCompleted: boolean;
   /** Minutos estimados — define quando o botão manual do Loom desbloqueia. */
   estMinutes: number;
+  /** Pré-visualização do SuperAdmin numa aula ainda bloqueada na sequência
+   *  dele: o vídeo toca, mas nada é gravado — «só ver» não mexe no progresso. */
+  previewOnly?: boolean;
 };
 
 declare global {
@@ -118,6 +121,7 @@ export function TrainingPlayer({
   initialPercent,
   initialCompleted,
   estMinutes,
+  previewOnly = false,
 }: Props) {
   const router = useRouter();
   const hostRef = useRef<HTMLDivElement>(null);
@@ -132,6 +136,7 @@ export function TrainingPlayer({
 
   const save = useCallback(
     async (opts: { force?: boolean; manual?: boolean } = {}) => {
+      if (previewOnly) return;
       const { seconds, percent: pct } = latest.current;
       if (!opts.manual && pct <= 0) return;
       const now = Date.now();
@@ -158,7 +163,7 @@ export function TrainingPlayer({
         /* offline ou pedido cancelado — a próxima amostra volta a tentar */
       }
     },
-    [lessonId],
+    [lessonId, previewOnly],
   );
 
   /** Recebe uma amostra do player, atualiza a UI e grava quando é devido. */
@@ -350,7 +355,11 @@ export function TrainingPlayer({
             style={{ width: `${percent}%` }}
           />
         </div>
-        {completed ? (
+        {previewOnly ? (
+          <span className="tabular text-[11.5px] font-medium text-white/50">
+            Pré-visualização · não conta para o teu progresso
+          </span>
+        ) : completed ? (
           <span className="inline-flex items-center gap-1.5 text-[11.5px] font-semibold text-emerald-300">
             <CheckCircle2 className="h-3.5 w-3.5" />
             Aula concluída
@@ -363,7 +372,7 @@ export function TrainingPlayer({
       </div>
 
       {/* Loom não reporta progresso — confirmação manual, marcada como tal. */}
-      {provider === "loom" && !completed && (
+      {provider === "loom" && !completed && !previewOnly && (
         <div className="rounded-xl border border-amber-400/25 bg-amber-500/[0.07] px-4 py-3">
           <p className="text-[12px] text-amber-100/85">
             O Loom não permite medir automaticamente quanto do vídeo foi visto.

@@ -21,6 +21,7 @@ import {
   ChevronRight,
   CheckCircle2,
   ClipboardCheck,
+  Eye,
   Lock,
   UserRound,
 } from "lucide-react";
@@ -35,6 +36,7 @@ import { LessonCopyBoxes } from "@/components/training/lesson-copy-box";
 import { LessonTypeBadge } from "@/components/training/training-ui";
 import { LessonFeedback } from "@/components/training/lesson-feedback";
 import {
+  canPreviewLocked,
   getTrainingContext,
   trackStateFor,
   userTracks,
@@ -120,7 +122,11 @@ export default async function LessonPage({
 
   // Capítulo bloqueado → mostra-se o motivo em vez do vídeo. Sem isto, um link
   // partilhado dava acesso a conteúdo que a sequência ainda não abriu.
-  const locked = moduleState.status === "locked" || state.lockedReason !== null;
+  const sequenceLocked =
+    moduleState.status === "locked" || state.lockedReason !== null;
+  // SuperAdmin: «só ver» — a aula abre na mesma, sem gravar progresso.
+  const preview = sequenceLocked && canPreviewLocked(ctx);
+  const locked = sequenceLocked && !preview;
 
   const flat = flatLessons(state);
   const idx = flat.findIndex((l) => l.lesson.id === lessonId);
@@ -193,6 +199,18 @@ export default async function LessonPage({
       ) : (
         <div className="mt-6 grid gap-8 lg:grid-cols-[1fr_310px]">
           <div className="animate-fade-up min-w-0">
+            {preview && (
+              <div className="mb-5 flex items-start gap-2.5 rounded-xl border border-[#783DF5]/30 bg-[#783DF5]/[0.08] px-4 py-3">
+                <Eye className="mt-0.5 h-4 w-4 shrink-0 text-[#c3aaff]" />
+                <p className="text-[12.5px] leading-relaxed text-white/70">
+                  <span className="font-semibold text-white/90">
+                    Pré-visualização SuperAdmin.
+                  </span>{" "}
+                  Esta aula ainda está bloqueada na tua sequência. Podes vê-la,
+                  mas não conta para o teu progresso.
+                </p>
+              </div>
+            )}
             {/* ---------- Viewport ---------- */}
             <div className="relative">
               <span
@@ -209,6 +227,7 @@ export default async function LessonPage({
                   initialPercent={lessonState.percent}
                   initialCompleted={lessonState.completedAt !== null}
                   estMinutes={lessonMinutes(lesson)}
+                  previewOnly={preview}
                 />
                 <ViewportBrackets />
               </div>
@@ -296,7 +315,7 @@ export default async function LessonPage({
                   </span>
                 </span>
               )}
-              {next && !next.locked ? (
+              {next && (!next.locked || canPreviewLocked(ctx)) ? (
                 <Link
                   href={`/formacao/${slug}/aula/${next.lesson.id}`}
                   className="brand-gradient-bg group flex min-w-0 items-center justify-end gap-2.5 rounded-xl px-4 py-2.5 text-right transition hover:brightness-110"

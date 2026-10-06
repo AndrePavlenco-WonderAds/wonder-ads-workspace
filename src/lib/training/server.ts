@@ -17,7 +17,11 @@ import {
 } from "@/lib/training/start-dates-store";
 import { reconcileExpiredExams } from "@/lib/training/exam-proctor";
 import { computeExamJourney, type ExamJourney } from "@/lib/training/exams";
-import { computeUserTraining, type TrackState } from "@/lib/training/progress";
+import {
+  computeTrackState,
+  computeUserTraining,
+  type TrackState,
+} from "@/lib/training/progress";
 import type { TrainingTrack } from "@/lib/training/catalog";
 import type { UserTrainingProgress } from "@/lib/training/progress-store";
 import type { QuizAttempt } from "@/lib/training/attempts-store";
@@ -108,5 +112,18 @@ export function trackStateFor(
   ctx: TrainingContext,
   slug: string,
 ): TrackState | null {
-  return userTracks(ctx).find((t) => t.track.slug === slug) ?? null;
+  const own = userTracks(ctx).find((t) => t.track.slug === slug);
+  if (own) return own;
+  // O SuperAdmin abre qualquer track, mesmo sem estar inscrito — com o
+  // progresso dele, para se ver o que já viu e o que não.
+  if (!canPreviewLocked(ctx)) return null;
+  const track = ctx.tracks.find((t) => t.slug === slug);
+  return track ? computeTrackState(track, ctx.progress, ctx.attempts) : null;
+}
+
+/** «Só ver»: o SuperAdmin abre aulas que a sequência dele ainda não abriu.
+ *  O vídeo toca, mas não grava progresso. Com o «Ver como» ativo, `isAdmin`
+ *  segue a pessoa vista — e a pré-visualização desliga-se com ele. */
+export function canPreviewLocked(ctx: TrainingContext): boolean {
+  return ctx.employee.isAdmin;
 }

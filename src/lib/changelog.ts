@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.76",
+    date: "2026-10-06",
+    title: "Formação — o SuperAdmin abre as aulas que ainda não fez («só ver»)",
+    highlights: [
+      "**👁️ Capítulos bloqueados abrem-se para o SuperAdmin.** Na página do percurso, os capítulos que a tua sequência ainda não abriu mostram as aulas (com o aviso «só para ver»); na aula aparece «Pré-visualização SuperAdmin» por cima do vídeo e o «A seguir» deixa avançar mesmo para aulas trancadas.",
+      "**🧮 Ver não conta.** Em pré-visualização o vídeo toca mas não grava progresso nenhum — quando chegares lá pela sequência normal, a aula está por ver como devia. O quiz do capítulo fica de fora.",
+      "**🗂️ Qualquer percurso, mesmo sem inscrição.** O SuperAdmin abre `/formacao/<percurso>` de qualquer especialização, com o progresso dele. Com o «Ver como» ativo, nada disto se aplica — vês exatamente o que o consultor vê.",
+    ],
+  },
+  {
     version: "77.75",
     date: "2026-10-06",
     title: "Formação — exemplos HTML e prompt com «Copiar» por baixo do vídeo do HTML em cliente",
