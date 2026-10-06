@@ -63,6 +63,7 @@ const INTERNAL_PREFIXES = [
   "/tools",
   "/medalhas",
   "/minigames",
+  "/probation",
   "/api/absences",
   "/api/tools",
   "/api/medalhas",
@@ -84,6 +85,7 @@ const INTERNAL_PREFIXES = [
   "/api/ga4",
   "/api/chat",
   "/api/formacao",
+  "/api/probation",
 ];
 
 function underPrefix(pathname: string, prefix: string): boolean {
@@ -296,6 +298,11 @@ export const config = {
     // controlar uma sala é só SuperAdmin, verificado na própria API.
     "/minigames/:path*",
     "/api/minigames/:path*",
+    // Plano de probation do próprio (v77.77) — o que a direção lhe enviou.
+    // Sessão para tudo; a API filtra pelo username da sessão e recusa
+    // confirmar com «Ver como».
+    "/probation/:path*",
+    "/api/probation/:path*",
     // Comercial — templates, upload e decisões das propostas. Sessão para
     // tudo; a escrita exige poder editar o departamento (gate abaixo).
     "/api/commercial/:path*",

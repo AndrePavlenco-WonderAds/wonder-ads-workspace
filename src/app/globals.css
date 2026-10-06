@@ -1177,4 +1177,5 @@ body {
 .probation-doc .pd-sig .ln { height: 58px; border-bottom: 1.5px solid var(--pd-ink); }
 .probation-doc .pd-sig b { display: block; margin-top: 6px; font-size: 13px; }
 .probation-doc .pd-sig small { color: var(--pd-muted); font-size: 11.5px; }
+.probation-doc .pd-sig .pd-signote { display: block; margin-top: 4px; color: #0f7a4a; font-weight: 600; font-size: 11px; }
 .probation-doc .pd-foot { margin-top: 30px; padding-top: 14px; border-top: 1px solid var(--pd-line); color: var(--pd-muted); font-size: 11.5px; display: flex; justify-content: space-between; gap: 16px; }

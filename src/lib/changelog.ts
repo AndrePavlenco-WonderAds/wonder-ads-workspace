@@ -13,6 +13,20 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.77",
+    date: "2026-10-06",
+    title: "Plano de Probation 2.0 — check-ins semanais, «só direção», pré-visualização de tudo e o plano entregue ao consultor na app",
+    highlights: [
+      "**🧭 Cockpit em cada plano.** Ao abrir um plano vê-se primeiro o ponto de situação: os 30 dias numa linha (check-ins por baixo, avaliações por cima, o dia de hoje marcado), «O que fazer a seguir» por urgência (atrasado / agora / em breve), os KPIs semana a semana em semáforo e o que o consultor já recebeu e leu. O editor passa a ter separadores: Plano · Check-ins semanais · Avaliações · Envios ao consultor.",
+      "**🗓️ Check-in semanal da chefia, 4 por período.** As datas saem do dia combinado (ex.: sextas-feiras) e podem mudar-se à mão. Em cada semana: semáforo (no caminho / em risco / fora), o ponto de situação de cada KPI (os dos 15 dias até à 1.ª avaliação, os dos 30 depois), o que foi combinado na semana anterior e se ficou feito, o que correu bem, o que travou, o apoio que a WonderAds deu, os próximos passos, o comentário do consultor e uma **nota interna que nunca sai**.",
+      "**👤 «Só a direção» quando ainda não há chefia intermédia.** Um interruptor no Plano: a direção faz os check-ins, decide e assina sozinha — o documento (e o PDF) passa a dizer «A decisão é tomada pela Direção», o responsável direto é a direção e ficam só duas assinaturas. Planos novos começam assim; os antigos mantêm a chefia.",
+      "**👁️ Nada chega ao consultor sem pré-visualização.** Plano, cada check-in e cada avaliação têm «Pré-visualizar e enviar», que abre a página do consultor exatamente como vai ficar, com o item novo destacado — e só aí se envia. Envia-se sempre o que se viu (se o plano mudar entretanto, o envio é recusado). Depois do envio, o editor avisa «Alterado desde o envio» quando há alterações por reenviar.",
+      "**📬 O consultor recebe o plano na app.** Nova página «O meu plano de probation» (`/probation`): o documento como foi enviado (com PDF), os check-ins e as avaliações, a linha dos 30 dias e quem o acompanha. Confirma que leu cada coisa (com comentário opcional) — a confirmação fica por baixo da assinatura dele no documento e no PDF, e o comentário chega à direção. Só vê o que lhe foi enviado, nunca o rascunho nem as notas internas.",
+      "**🔔 Sino dos dois lados.** O consultor é avisado de cada envio até confirmar. O SuperAdmin é avisado do check-in e da avaliação que chegaram à data por fazer, e de cada confirmação (com o comentário) do consultor.",
+      "**📋 Lista de planos em painel:** números do momento (em aberto, próximos 7 dias, atrasados, por confirmar), agenda dos próximos 7 dias e um cartão por plano com o dia X/30, os check-ins em semáforo, o próximo passo e o estado do envio; os planos fechados ficam numa lista compacta.",
+    ],
+  },
+  {
     version: "77.76",
     date: "2026-10-06",
     title: "Formação — o SuperAdmin abre as aulas que ainda não fez («só ver»)",

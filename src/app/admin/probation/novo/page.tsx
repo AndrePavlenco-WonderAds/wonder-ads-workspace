@@ -5,6 +5,7 @@ import { PageShell } from "@/components/page-shell";
 import { ProbationEditor } from "@/components/probation/probation-editor";
 import { getCurrentEmployee } from "@/lib/auth/server";
 import { probationRoster } from "@/lib/probation/roster";
+import { todayLisbonISO } from "@/lib/probation/progress";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -26,6 +27,7 @@ export default async function NewProbationPage() {
         initial={null}
         defaults={{ manager: employee.name, direction: employee.name }}
         people={probationRoster()}
+        today={todayLisbonISO()}
       />
     </PageShell>
   );

@@ -43,6 +43,23 @@ import {
   justifiedLabel,
 } from "@/lib/absences-shared";
 import { listProposalConfirmations } from "@/lib/proposal-events-store";
+import {
+  getPublishedMany,
+  listPlans,
+  listPublishedForUser,
+} from "@/lib/probation/store";
+import {
+  finalDecision,
+  firstName,
+  periodDates,
+  weekDate,
+} from "@/lib/probation/shared";
+import {
+  pendingAcks,
+  sendItemLabel,
+  type PublishedPlan,
+} from "@/lib/probation/published";
+import { todayLisbonISO } from "@/lib/probation/progress";
 import { getProposal, proposalPath } from "@/lib/proposals";
 import { getNotificationRules } from "@/lib/notifications/rules-store";
 import {
@@ -969,6 +986,172 @@ async function absenceNotifications(
   return out.sort((a, b) => b.dueAt - a.dueAt);
 }
 
+/** Janela em que uma confirmação de leitura do consultor aparece no sino do
+ *  SuperAdmin. Depois disso vive só no plano (separador «Envios»). */
+const PROBATION_ACK_WINDOW_MS = 14 * 24 * 60 * 60 * 1000;
+
+const WEEKDAY_SHORT = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
+function probationDay(iso: string): string {
+  if (!iso) return "—";
+  const [y, m, d] = iso.split("-").map(Number);
+  const wd = WEEKDAY_SHORT[new Date(Date.UTC(y, m - 1, d)).getUTCDay()];
+  return `${wd} ${iso.split("-").reverse().join("/")}`;
+}
+
+/** Plano de probation → sino. Acontecimentos, como as ausências — derivados
+ *  do registo em cada leitura, nada é «enviado» que possa falhar:
+ *   • ao CONSULTOR: cada coisa que a direção lhe enviou e ele ainda não
+ *     confirmou (plano, check-in, avaliação). Sai quando confirma.
+ *   • ao SUPERADMIN: o check-in semanal e a avaliação que já chegaram à data
+ *     e estão por fazer, e as confirmações (com comentário) dos consultores.
+ *  Para quem não tem plano custa uma leitura (o índice dele, vazio). */
+async function probationNotifications(
+  viewer: Viewer,
+  state: NotificationState,
+  now: Date,
+): Promise<UserNotification[]> {
+  const out: UserNotification[] = [];
+  const today = todayLisbonISO(now);
+
+  try {
+    for (const pub of await listPublishedForUser(viewer.username)) {
+      for (const p of pendingAcks(pub)) {
+        const id = `probation-sent:${pub.id}:${p.periodIndex}:${p.item}:${p.sentAt}`;
+        const period = pub.periods.find((x) => x.index === p.periodIndex);
+        let title = `📄 Recebeste o teu plano de probation`;
+        let body =
+          "Lê com calma o que é esperado, os KPIs e os três desfechos possíveis, e confirma que leste — fica registado por baixo da tua assinatura.";
+        if (p.item.startsWith("week:")) {
+          const w = period?.weeks.find((x) => `week:${x.view.n}` === p.item)?.view;
+          title = `🗓️ Check-in da semana ${p.item.slice(5)} do teu plano`;
+          body = w
+            ? `Com ${w.conductedBy || pub.lead || "a direção"} · ${probationDay(w.date)}${
+                w.actions.length ? ` · ${w.actions.length} ${w.actions.length === 1 ? "passo" : "passos"} para a próxima semana` : ""
+              }. Confirma que tomaste conhecimento.`
+            : "Confirma que tomaste conhecimento.";
+        } else if (p.item.startsWith("eval:")) {
+          const e = period?.evals.find((x) => `eval:${x.view.which}` === p.item)?.view;
+          title = `⚖️ Resultado da avaliação dos ${p.item.slice(5)} dias`;
+          body = e
+            ? `Decisão: ${e.decisionLabel}${e.metTotal ? ` · ${e.metN} de ${e.metTotal} KPIs cumpridos` : ""}. Confirma que a recebeste.`
+            : "Confirma que recebeste a decisão.";
+        }
+        out.push({
+          id,
+          ruleId: "probation-sent",
+          title,
+          body,
+          periodLabel: p.label,
+          dueAt: p.sentAt,
+          client: null,
+          actionLabel: "Abrir o meu plano",
+          actionHref: "/probation",
+          resolved: Boolean(state[id]),
+          resolvedAt: state[id]?.resolvedAt ?? null,
+        });
+      }
+    }
+  } catch (err) {
+    console.error("Notificações: probation (consultor) falhou:", err instanceof Error ? err.message : "erro");
+  }
+
+  if (!isAdminUsername(viewer.username)) return out;
+
+  try {
+    const plans = await listPlans();
+    if (plans.length === 0) return out;
+    const pubs = await getPublishedMany(plans.map((p) => p.id));
+    for (const plan of plans) {
+      const period = plan.period;
+      const idx = plan.history.length;
+      const who = firstName(plan.consultantName) || plan.consultantName;
+      const href = `/admin/probation/${plan.id}`;
+      const final = finalDecision(period);
+      const open = !final || final === "extensao";
+
+      if (open && period.startDate) {
+        // O check-in por fazer mais antigo que já chegou à data.
+        const w = period.weeks.find((x) => !x.done);
+        const date = w ? weekDate(w, period.startDate, plan.checkinDay) : "";
+        if (w && date && date <= today) {
+          const id = `probation-checkin:${plan.id}:${idx}:${w.n}`;
+          out.push({
+            id,
+            ruleId: "probation-checkin",
+            title: `🗓️ Check-in da semana ${w.n} com ${who}`,
+            body: `Previsto para ${probationDay(date)}${date < today ? " — está atrasado" : " — é hoje"}. Regista o ponto de situação dos KPIs, o que correu bem e o que travou, e envia-o ao consultor.`,
+            periodLabel: `Plano de probation · ${who}`,
+            dueAt: Date.parse(`${date}T09:00:00Z`) || now.getTime(),
+            client: null,
+            actionLabel: "Fazer o check-in",
+            actionHref: `${href}?tab=semanas&semana=${w.n}`,
+            resolved: Boolean(state[id]),
+            resolvedAt: state[id]?.resolvedAt ?? null,
+          });
+        }
+        // A avaliação que chegou à data sem decisão.
+        const { d15, d30 } = periodDates(period);
+        const due: [15 | 30, string] | null = !period.eval15.decision
+          ? [15, d15]
+          : period.eval15.decision === "extensao" && !period.eval30.decision
+            ? [30, d30]
+            : null;
+        if (due && due[1] && due[1] <= today) {
+          const id = `probation-eval:${plan.id}:${idx}:${due[0]}`;
+          out.push({
+            id,
+            ruleId: "probation-eval",
+            title: `⚖️ Avaliação dos ${due[0]} dias de ${who}`,
+            body: `Prevista para ${probationDay(due[1])}${due[1] < today ? " — está atrasada" : " — é hoje"}. Resultado por KPI, decisão e envio por escrito ao consultor.`,
+            periodLabel: `Plano de probation · ${who}`,
+            dueAt: Date.parse(`${due[1]}T09:00:00Z`) || now.getTime(),
+            client: null,
+            actionLabel: "Registar a avaliação",
+            actionHref: `${href}?tab=avaliacoes`,
+            resolved: Boolean(state[id]),
+            resolvedAt: state[id]?.resolvedAt ?? null,
+          });
+        }
+      }
+
+      // As confirmações do consultor, das duas últimas semanas.
+      const pub: PublishedPlan | undefined = pubs.get(plan.id);
+      for (const p of pub?.periods ?? []) {
+        const entries = [
+          ...(p.doc ? [{ item: "plan" as const, e: p.doc }] : []),
+          ...p.weeks.map((w) => ({ item: `week:${w.view.n}` as const, e: w })),
+          ...p.evals.map((e) => ({ item: `eval:${e.view.which}` as const, e })),
+        ];
+        for (const { item, e } of entries) {
+          if (!e.ack || now.getTime() - e.ack.at > PROBATION_ACK_WINDOW_MS) continue;
+          const id = `probation-ack:${plan.id}:${p.index}:${item}:${e.ack.at}`;
+          const entry = state[id];
+          out.push({
+            id,
+            ruleId: "probation-ack",
+            title: `✅ ${who} confirmou: ${sendItemLabel(item)}`,
+            body: e.ack.comment ? `«${e.ack.comment.slice(0, 220)}${e.ack.comment.length > 220 ? "…" : ""}»` : "Sem comentário.",
+            periodLabel: `Plano de probation · ${who}`,
+            dueAt: e.ack.at,
+            client: null,
+            actionLabel: "Abrir o plano",
+            actionHref: `${href}?tab=envios`,
+            resolved: Boolean(entry),
+            resolvedAt: entry?.resolvedAt ?? null,
+          });
+        }
+      }
+    }
+  } catch (err) {
+    console.error("Notificações: probation (direção) falhou:", err instanceof Error ? err.message : "erro");
+  }
+
+  return out.sort((a, b) => {
+    if (a.resolved !== b.resolved) return a.resolved ? 1 : -1;
+    return b.dueAt - a.dueAt;
+  });
+}
+
 /** Um cliente clicou em «Confirmar a renovação» numa proposta pública. Vai
  *  ao sino do SuperAdmin (o André) à cabeça de tudo: é dinheiro à espera de
  *  resposta, não um lembrete de calendário. */
@@ -1050,7 +1233,7 @@ export async function getUserNotifications(
       ? ((await seoBooksByConsultant(needsStartDates)).get(viewer.name) ?? [])
       : [];
 
-  const [ending, situationPoints, nps, absences, reviews, proposals] =
+  const [ending, situationPoints, nps, absences, reviews, proposals, probation] =
     await Promise.all([
       roadmapEndingNotifications(viewer, book, state, now),
       situationPointNotifications(viewer, state, now),
@@ -1058,6 +1241,7 @@ export async function getUserNotifications(
       absenceNotifications(viewer, state),
       pendingReviewNotifications(book, state, now),
       proposalConfirmationNotifications(viewer, state),
+      probationNotifications(viewer, state, now),
     ]);
 
   // Ausências à cabeça: um pedido por decidir (ou uma resposta por ler) é
@@ -1067,6 +1251,7 @@ export async function getUserNotifications(
   if (applicable.length === 0) {
     return [
       ...proposals,
+      ...probation,
       ...absences,
       ...reviews,
       ...nps,
@@ -1078,6 +1263,7 @@ export async function getUserNotifications(
 
   return [
     ...proposals,
+    ...probation,
     ...absences,
     ...reviews,
     ...nps,

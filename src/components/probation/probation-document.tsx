@@ -19,7 +19,10 @@ import {
   S06,
   S07,
   S08,
+  decisionNoteFor,
+  infoRowsFor,
   kpiColumns,
+  signaturesFor,
   type DocEval,
   type DocKpiRow,
   type DocModel,
@@ -197,7 +200,7 @@ export function ProbationDocument({ model }: { model: DocModel }) {
           <H2 n={S01.n}>{S01.title}</H2>
           <table className="pd-info">
             <tbody>
-              {S01.rows.map((r) => (
+              {infoRowsFor(model).map((r) => (
                 <tr key={r.label}>
                   <td>{r.label}</td>
                   <td>
@@ -271,7 +274,7 @@ export function ProbationDocument({ model }: { model: DocModel }) {
           </div>
           <div className="pd-note">
             <p>
-              <Segs para={S05.note} model={model} />
+              <Segs para={decisionNoteFor(model)} model={model} />
             </p>
           </div>
         </section>
@@ -316,12 +319,16 @@ export function ProbationDocument({ model }: { model: DocModel }) {
           <p>
             <Segs para={S08.text} model={model} />
           </p>
-          <div className="pd-sigs">
-            {S08.sigs.map((s) => (
+          <div
+            className="pd-sigs"
+            style={{ gridTemplateColumns: `repeat(${signaturesFor(model).length}, minmax(0, 1fr))` }}
+          >
+            {signaturesFor(model).map((s) => (
               <div key={s.role} className="pd-sig">
                 <div className="ln" />
                 <b className={b[s.bind] ? undefined : "pd-empty"}>{b[s.bind] || s.empty}</b>
                 <small>{s.role}</small>
+                {model.sigNotes[s.bind] && <small className="pd-signote">{model.sigNotes[s.bind]}</small>}
               </div>
             ))}
           </div>

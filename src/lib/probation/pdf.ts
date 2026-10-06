@@ -57,7 +57,10 @@ import {
   S06,
   S07,
   S08,
+  decisionNoteFor,
+  infoRowsFor,
   kpiColumns,
+  signaturesFor,
   type DocEval,
   type DocKpiRow,
   type DocModel,
@@ -102,6 +105,9 @@ const C = {
   footer: hex("#8c8a9b"),
   white: rgb(1, 1, 1),
 };
+
+/** A confirmação de leitura feita na app, por baixo da assinatura. */
+const SIG_NOTE = hex("#0f7a4a");
 
 /** Gradiente da marca (135°, #343ED7 → #783DF5 a 53,65% → #C535C9), ao
  *  longo de t ∈ [0, 1]. */
@@ -640,7 +646,7 @@ function tableRow(
 
 function infoTable(ctx: Ctx): Block[] {
   const widths = [CW * 0.34, CW * 0.66];
-  return S01.rows.map((r) =>
+  return infoRowsFor(ctx.model).map((r) =>
     tableRow(
       [
         { runs: [{ text: r.label, style: { font: ctx.f.sb, size: 9.2, color: C.ink } }] },
@@ -918,11 +924,15 @@ function evalRows(ctx: Ctx): Item[] {
 
 function signatures(ctx: Ctx): Block {
   const gap = 15;
-  const w = (CW - gap * 2) / 3;
+  // Três assinaturas, ou duas quando a direção assina sozinha (sem chefia
+  // intermédia) — as colunas alargam para ocupar a linha toda.
+  const sigs = signaturesFor(ctx.model);
+  const w = (CW - gap * (sigs.length - 1)) / sigs.length;
   const b = ctx.model.binds;
   const roleStyle: TextStyle = { font: ctx.f.r, size: 7.6, color: C.muted };
-  const roles = S08.sigs.map((s) => textBlock([{ text: s.role, style: roleStyle }], w, 7.6, 11));
-  const names = S08.sigs.map((s) =>
+  const noteStyle: TextStyle = { font: ctx.f.sb, size: 7.4, color: SIG_NOTE };
+  const roles = sigs.map((s) => textBlock([{ text: s.role, style: roleStyle }], w, 7.6, 11));
+  const names = sigs.map((s) =>
     textBlock(
       [{ text: b[s.bind] || s.empty, style: { font: ctx.f.b, size: 9, color: b[s.bind] ? C.ink : C.empty } }],
       w,
@@ -930,16 +940,26 @@ function signatures(ctx: Ctx): Block {
       12.5,
     ),
   );
+  const notes = sigs.map((s) => {
+    const t = ctx.model.sigNotes[s.bind];
+    return t ? textBlock([{ text: t, style: noteStyle }], w, 7.4, 10.5) : null;
+  });
   const lineAt = 40;
-  const h = lineAt + 4 + Math.max(...names.map((n) => n.h)) + Math.max(...roles.map((r) => r.h));
+  const h =
+    lineAt +
+    4 +
+    Math.max(...names.map((n) => n.h)) +
+    Math.max(...roles.map((r) => r.h)) +
+    Math.max(0, ...notes.map((n) => (n ? n.h + 2 : 0)));
   return {
     h,
     draw: (page, top) => {
-      S08.sigs.forEach((_, i) => {
+      sigs.forEach((_, i) => {
         const x = M + i * (w + gap);
         hline(page, x, top - lineAt, w, C.ink, 1.1);
         names[i].draw(page, x, top - lineAt - 4);
         roles[i].draw(page, x, top - lineAt - 4 - names[i].h);
+        notes[i]?.draw(page, x, top - lineAt - 4 - names[i].h - roles[i].h - 2);
       });
     },
   };
@@ -1131,7 +1151,7 @@ function sections(ctx: Ctx): Section[] {
       { block: H(S05.n, S05.title), gap: 0, keepWithNext: true },
       { block: paragraph(ctx, S05.intro), gap: 6, keepWithNext: true },
       { block: outcomeCards(ctx), gap: 9 },
-      { block: note(ctx, (x, w) => paragraph(ctx, S05.note, { x, w })), gap: 10 },
+      { block: note(ctx, (x, w) => paragraph(ctx, decisionNoteFor(ctx.model), { x, w })), gap: 10 },
     ],
   };
 

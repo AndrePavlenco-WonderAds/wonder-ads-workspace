@@ -20,6 +20,8 @@
 // poder contradizer o que está no registo.
 
 export type KpiMet = "sim" | "parcial" | "nao";
+/** O semáforo do check-in semanal — da semana toda e de cada KPI. */
+export type WeekPulse = "no-caminho" | "em-risco" | "fora";
 export type ProbationDecision = "extensao" | "recuperacao" | "saida";
 export type ProbationStatus = "em-curso" | "estendido" | "recuperado" | "saida";
 
@@ -46,6 +48,46 @@ export type ProbationEvaluation = {
   decidedAt: number | null;
 };
 
+/** Ponto de situação de um KPI num check-in semanal. */
+export type ProbationWeekKpi = {
+  kpiId: string;
+  /** Onde está o número nesta semana («6 de 10», «2 reuniões»…). */
+  value: string;
+  pulse: WeekPulse | null;
+};
+
+/** Próximo passo combinado no check-in; a semana seguinte confirma se foi
+ *  feito. */
+export type ProbationAction = {
+  id: string;
+  text: string;
+  done: boolean;
+};
+
+/** O check-in semanal com a chefia (ou com a direção, quando ainda não há
+ *  chefia intermédia). Quatro por período. */
+export type ProbationWeek = {
+  /** 1–4. */
+  n: number;
+  /** YYYY-MM-DD; "" = a data calculada a partir do dia do check-in. */
+  date: string;
+  /** Quem fez o check-in; "" = a chefia do plano. */
+  conductedBy: string;
+  done: boolean;
+  /** Quando foi marcado como feito (ms). Posto pelo servidor. */
+  doneAt: number | null;
+  pulse: WeekPulse | null;
+  kpis: ProbationWeekKpi[];
+  wins: string;
+  blockers: string;
+  /** O apoio que a WonderAds deu nesta semana. */
+  support: string;
+  actions: ProbationAction[];
+  consultantComment: string;
+  /** NUNCA sai para o consultor — nem na pré-visualização do envio. */
+  internalNote: string;
+};
+
 export type ProbationPeriod = {
   /** Dia 0, YYYY-MM-DD. */
   startDate: string;
@@ -53,6 +95,8 @@ export type ProbationPeriod = {
   kpis30: ProbationKpi[];
   eval15: ProbationEvaluation;
   eval30: ProbationEvaluation;
+  /** Sempre quatro (ver `WEEKS_PER_PERIOD`). */
+  weeks: ProbationWeek[];
 };
 
 export type ProbationPlan = {
@@ -65,6 +109,9 @@ export type ProbationPlan = {
   consultantUsername: string | null;
   consultantName: string;
   roleTeam: string;
+  /** false = ainda não há chefia intermédia: a direção acompanha, decide e
+   *  assina sozinha (o documento deixa de pedir um «responsável direto»). */
+  hasManager: boolean;
   manager: string;
   direction: string;
   /** Campos de apoio do documento (secções 05 e 06). */
@@ -91,6 +138,7 @@ export type ProbationDraft = Pick<
   | "consultantUsername"
   | "consultantName"
   | "roleTeam"
+  | "hasManager"
   | "manager"
   | "direction"
   | "checkinDay"
@@ -114,6 +162,20 @@ export type ProbationSummary = {
 };
 
 export const MAX_KPIS = 15;
+export const WEEKS_PER_PERIOD = 4;
+export const MAX_ACTIONS = 12;
+
+export const PULSE_OPTIONS: { id: WeekPulse; label: string; short: string }[] = [
+  { id: "no-caminho", label: "No caminho", short: "No caminho" },
+  { id: "em-risco", label: "Em risco", short: "Em risco" },
+  { id: "fora", label: "Fora do caminho", short: "Fora" },
+];
+
+export const PULSE_LABEL: Record<WeekPulse, string> = {
+  "no-caminho": "No caminho",
+  "em-risco": "Em risco",
+  fora: "Fora do caminho",
+};
 
 export const KPI_MET_OPTIONS: { id: KpiMet; label: string }[] = [
   { id: "sim", label: "Sim" },
@@ -181,6 +243,106 @@ export function periodDates(p: Pick<ProbationPeriod, "startDate">): {
     d15: addDaysISO(p.startDate, 15),
     d30: addDaysISO(p.startDate, 30),
   };
+}
+
+/* --------------------------- chefia e semanas --------------------------- */
+
+/** Quem acompanha o plano no dia a dia: a chefia intermédia ou, quando ainda
+ *  não existe, a direção. É quem faz os check-ins semanais. */
+export function leadName(plan: Pick<ProbationPlan, "hasManager" | "manager" | "direction">): string {
+  return (plan.hasManager ? plan.manager : plan.direction).trim();
+}
+
+/** «Ana e Rui» quando há chefia e direção distintas; senão só um nome. É a
+ *  sugestão de quem decide cada avaliação. */
+export function decidersName(plan: Pick<ProbationPlan, "hasManager" | "manager" | "direction">): string {
+  const a = plan.hasManager ? plan.manager.trim() : "";
+  const b = plan.direction.trim();
+  if (a && b && a !== b) return `${a} e ${b}`;
+  return a || b;
+}
+
+const WEEKDAY_PREFIX: [RegExp, number][] = [
+  [/^dom/, 0],
+  [/^seg/, 1],
+  [/^ter/, 2],
+  [/^qua/, 3],
+  [/^qui/, 4],
+  [/^sex/, 5],
+  [/^s[áa]b/, 6],
+];
+
+/** «sextas-feiras» → 5. null quando o texto não é um dia da semana. */
+export function checkinWeekday(day: string): number | null {
+  const t = day.trim().toLowerCase();
+  for (const [re, n] of WEEKDAY_PREFIX) if (re.test(t)) return n;
+  return null;
+}
+
+function weekdayOfISO(iso: string): number {
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d)).getUTCDay();
+}
+
+/** As datas calculadas dos quatro check-ins: o dia da semana combinado (a
+ *  primeira ocorrência depois do dia 0) e daí de 7 em 7; sem dia combinado,
+ *  os dias 7, 14, 21 e 28. Ficam sempre dentro dos 30 dias. */
+export function defaultWeekDates(startDate: string, checkinDay: string): string[] {
+  if (!isISODate(startDate)) return Array.from({ length: WEEKS_PER_PERIOD }, () => "");
+  const wd = checkinWeekday(checkinDay);
+  let first = 7;
+  if (wd !== null) {
+    const diff = (wd - weekdayOfISO(startDate) + 7) % 7;
+    first = diff === 0 ? 7 : diff;
+  }
+  return Array.from({ length: WEEKS_PER_PERIOD }, (_, i) => addDaysISO(startDate, first + 7 * i));
+}
+
+/** A data de um check-in: a escrita à mão, ou a calculada. */
+export function weekDate(week: ProbationWeek, startDate: string, checkinDay: string): string {
+  if (isISODate(week.date)) return week.date;
+  return defaultWeekDates(startDate, checkinDay)[week.n - 1] ?? "";
+}
+
+/** Que KPIs um check-in acompanha: os dos 15 dias até à 1.ª avaliação
+ *  (inclusive), os dos 30 depois dela. */
+export function weekTrack(period: ProbationPeriod, week: ProbationWeek, checkinDay: string): 15 | 30 {
+  const date = weekDate(week, period.startDate, checkinDay);
+  const { d15 } = periodDates(period);
+  return date && d15 && date > d15 ? 30 : 15;
+}
+
+export function weekKpiSet(period: ProbationPeriod, week: ProbationWeek, checkinDay: string): ProbationKpi[] {
+  return (weekTrack(period, week, checkinDay) === 15 ? period.kpis15 : period.kpis30).filter(kpiFilled);
+}
+
+/** As ações combinadas na semana anterior — a semana N confirma-as. */
+export function previousActions(period: ProbationPeriod, n: number): ProbationAction[] {
+  if (n <= 1) return [];
+  return (period.weeks.find((w) => w.n === n - 1)?.actions ?? []).filter((a) => a.text.trim());
+}
+
+/** Dia do período (0 = início, 30 = avaliação final), contado até `todayISO`.
+ *  null sem data de início; pode passar de 30 ou ficar negativo. */
+export function periodDay(period: Pick<ProbationPeriod, "startDate">, todayISO: string): number | null {
+  if (!isISODate(period.startDate) || !isISODate(todayISO)) return null;
+  const [a, b] = [period.startDate, todayISO].map((iso) => {
+    const [y, m, d] = iso.split("-").map(Number);
+    return Date.UTC(y, m - 1, d);
+  });
+  return Math.round((b - a) / 86_400_000);
+}
+
+/** O próximo check-in por fazer (data e número), ou null. */
+export function nextCheckin(
+  period: ProbationPeriod,
+  checkinDay: string,
+): { n: number; date: string } | null {
+  for (const w of period.weeks) {
+    if (w.done) continue;
+    return { n: w.n, date: weekDate(w, period.startDate, checkinDay) };
+  }
+  return null;
 }
 
 /* ------------------------- estado e prazos ------------------------ */
@@ -257,6 +419,7 @@ export function nextPeriodFrom(p: ProbationPeriod, newId: () => string): Probati
     kpis30: p.kpis30.map(fresh),
     eval15: emptyEvaluation(),
     eval30: emptyEvaluation(),
+    weeks: emptyWeeks(),
   };
 }
 
@@ -292,6 +455,28 @@ export function emptyKpi(id: string): ProbationKpi {
   return { id, kpi: "", target: "", measure: "", result: "", met: null };
 }
 
+export function emptyWeek(n: number): ProbationWeek {
+  return {
+    n,
+    date: "",
+    conductedBy: "",
+    done: false,
+    doneAt: null,
+    pulse: null,
+    kpis: [],
+    wins: "",
+    blockers: "",
+    support: "",
+    actions: [],
+    consultantComment: "",
+    internalNote: "",
+  };
+}
+
+export function emptyWeeks(): ProbationWeek[] {
+  return Array.from({ length: WEEKS_PER_PERIOD }, (_, i) => emptyWeek(i + 1));
+}
+
 export function emptyPeriod(startDate = ""): ProbationPeriod {
   return {
     startDate,
@@ -299,6 +484,7 @@ export function emptyPeriod(startDate = ""): ProbationPeriod {
     kpis30: [],
     eval15: emptyEvaluation(),
     eval30: emptyEvaluation(),
+    weeks: emptyWeeks(),
   };
 }
 
@@ -336,6 +522,75 @@ function oneOf<T extends string>(v: unknown, allowed: readonly T[]): T | null {
 
 const MET_IDS = KPI_MET_OPTIONS.map((o) => o.id);
 const DECISION_IDS = DECISIONS.map((d) => d.id);
+const PULSE_IDS = PULSE_OPTIONS.map((o) => o.id);
+
+function msOrNull(v: unknown): number | null {
+  return typeof v === "number" && Number.isFinite(v) ? v : null;
+}
+
+function sanitizeActions(raw: unknown, newId: () => string): ProbationAction[] {
+  if (!Array.isArray(raw)) return [];
+  const seen = new Set<string>();
+  const out: ProbationAction[] = [];
+  for (const row of raw.slice(0, MAX_ACTIONS)) {
+    if (!row || typeof row !== "object") continue;
+    const r = row as Record<string, unknown>;
+    let id = str(r.id, LIM.id);
+    if (!id || seen.has(id)) id = newId();
+    seen.add(id);
+    out.push({ id, text: str(r.text, LIM.kpi), done: r.done === true });
+  }
+  return out;
+}
+
+function sanitizeWeekKpis(raw: unknown): ProbationWeekKpi[] {
+  if (!Array.isArray(raw)) return [];
+  const seen = new Set<string>();
+  const out: ProbationWeekKpi[] = [];
+  for (const row of raw.slice(0, MAX_KPIS * 2)) {
+    if (!row || typeof row !== "object") continue;
+    const r = row as Record<string, unknown>;
+    const kpiId = str(r.kpiId, LIM.id);
+    if (!kpiId || seen.has(kpiId)) continue;
+    seen.add(kpiId);
+    out.push({ kpiId, value: str(r.value, LIM.line), pulse: oneOf(r.pulse, PULSE_IDS) });
+  }
+  return out;
+}
+
+function sanitizeWeek(r: Record<string, unknown>, n: number, newId: () => string): ProbationWeek {
+  return {
+    n,
+    date: isISODate(r.date) ? r.date : "",
+    conductedBy: str(r.conductedBy, LIM.name),
+    done: r.done === true,
+    doneAt: msOrNull(r.doneAt),
+    pulse: oneOf(r.pulse, PULSE_IDS),
+    kpis: sanitizeWeekKpis(r.kpis),
+    wins: str(r.wins, LIM.text),
+    blockers: str(r.blockers, LIM.text),
+    support: str(r.support, LIM.text),
+    actions: sanitizeActions(r.actions, newId),
+    consultantComment: str(r.consultantComment, LIM.text),
+    internalNote: str(r.internalNote, LIM.text),
+  };
+}
+
+/** Sempre quatro semanas, pela ordem — planos gravados antes dos check-ins
+ *  (v77.73) ganham-nas vazias na primeira leitura. */
+function sanitizeWeeks(raw: unknown, newId: () => string): ProbationWeek[] {
+  const byN = new Map<number, Record<string, unknown>>();
+  for (const row of Array.isArray(raw) ? raw : []) {
+    if (!row || typeof row !== "object") continue;
+    const r = row as Record<string, unknown>;
+    const n = Number(r.n);
+    if (Number.isInteger(n) && n >= 1 && n <= WEEKS_PER_PERIOD && !byN.has(n)) byN.set(n, r);
+  }
+  return Array.from({ length: WEEKS_PER_PERIOD }, (_, i) => {
+    const r = byN.get(i + 1);
+    return r ? sanitizeWeek(r, i + 1, newId) : emptyWeek(i + 1);
+  });
+}
 
 function sanitizeKpis(raw: unknown, newId: () => string): ProbationKpi[] {
   if (!Array.isArray(raw)) return [];
@@ -380,6 +635,7 @@ export function sanitizePeriod(raw: unknown, newId: () => string): ProbationPeri
     kpis30: sanitizeKpis(p.kpis30, newId),
     eval15: sanitizeEvaluation(p.eval15),
     eval30: sanitizeEvaluation(p.eval30),
+    weeks: sanitizeWeeks(p.weeks, newId),
   };
 }
 
@@ -390,11 +646,14 @@ export function sanitizeDraft(raw: unknown, newId: () => string): ProbationDraft
   const period = sanitizePeriod(b.period, newId);
   period.eval15.decidedAt = null;
   period.eval30.decidedAt = null;
+  for (const w of period.weeks) w.doneAt = null;
   const username = str(b.consultantUsername, LIM.id).trim().toLowerCase();
   return {
     consultantUsername: username || null,
     consultantName: str(b.consultantName, LIM.name),
     roleTeam: str(b.roleTeam, LIM.line),
+    // Planos anteriores ao interruptor (v77.73) tinham sempre chefia.
+    hasManager: b.hasManager !== false,
     manager: str(b.manager, LIM.name),
     direction: str(b.direction, LIM.name),
     checkinDay: str(b.checkinDay, LIM.line),
@@ -450,6 +709,11 @@ export function stampDecisions(
     ...next,
     eval15: stamp(next.eval15, prev?.eval15 ?? null),
     eval30: stamp(next.eval30, prev?.eval30 ?? null),
+    weeks: next.weeks.map((w) => {
+      if (!w.done) return { ...w, doneAt: null };
+      const old = prev?.weeks.find((x) => x.n === w.n);
+      return { ...w, doneAt: old?.done ? (old.doneAt ?? now) : now };
+    }),
   };
 }
 

@@ -1,45 +1,64 @@
 "use client";
 
-// O editor de um Plano de Probation (só SuperAdmin): a folha de RH à
-// esquerda, com o mesmo papel das Ausências, e o documento à direita, a
-// redesenhar-se a cada tecla.
+// O editor de um Plano de Probation (só SuperAdmin).
 //
-// GRAVA SOZINHO. Num plano já criado, cada alteração é gravada ~1 s depois
-// de parar de escrever (e ao sair da página), para que reabrir o plano o
-// mostre exatamente como ficou. As gravações vão uma de cada vez e levam a
-// `rev` que o editor leu; se o plano mudou noutro sítio entretanto, a API
-// recusa e o editor pára de gravar até se recarregar — nunca se apaga o
-// trabalho de outra pessoa em silêncio.
+// v77.77 — de folha única a cockpit de acompanhamento:
+//   • em cima, o ponto de situação: os 30 dias numa linha, o que fazer a
+//     seguir, os KPIs semana a semana e o que o consultor já recebeu;
+//   • quatro separadores: o Plano (a folha + o documento ao vivo), os
+//     Check-ins semanais da chefia, as Avaliações e os Envios;
+//   • NADA chega ao consultor sem pré-visualização: cada envio abre a página
+//     dele tal como vai ficar, e só o «Enviar» publica (ver published.ts).
+//
+// GRAVA SOZINHO (como na v77.73). Num plano já criado, cada alteração é
+// gravada ~1 s depois de parar de escrever (e ao sair da página). As
+// gravações vão uma de cada vez e levam a `rev` que o editor leu; se o plano
+// mudou noutro sítio, a API recusa e o editor pára de gravar até se
+// recarregar — nunca se apaga o trabalho de outra pessoa em silêncio.
 //
 // Um plano novo só passa a existir no «Criar plano»: abrir o formulário e
 // desistir não deixa registos vazios no KV.
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   AlertTriangle,
   ArrowLeft,
+  CalendarCheck2,
   CalendarClock,
   Check,
   CircleDashed,
   Download,
+  Eye,
+  FileText,
   History,
   Loader2,
   Plus,
   RefreshCw,
+  Scale,
+  Send,
   Trash2,
-  X,
+  UserRound,
+  UsersRound,
 } from "lucide-react";
 import { SheetSection } from "@/components/absences/sheet";
 import { ProbationDocument } from "./probation-document";
 import { StatusChip } from "./status-chip";
+import { FitToWidth } from "./fit-to-width";
+import { Field, SendBadge } from "./sheet-bits";
+import { EvaluationEditor, KpiDefinitions } from "./plan-pieces";
+import { WeekEditor } from "./week-editor";
+import { Cockpit, SEND_ITEMS } from "./cockpit";
+import { PreviewModal } from "./preview-modal";
+import { EvalCardView, PulseDot, WeekCardView, dayLabel } from "./views";
 import { buildDocModel } from "@/lib/probation/document";
+import { formatDateTime } from "@/lib/dates";
 import {
   DECISIONS,
-  KPI_MET_OPTIONS,
-  MAX_KPIS,
   awaitingNewPeriod,
+  decidersName,
+  defaultWeekDates,
   emptyKpi,
   emptyPeriod,
   eval30Open,
@@ -47,19 +66,31 @@ import {
   formatISODate,
   isISODate,
   kpiFilled,
+  leadName,
   metCount,
   periodDates,
   planStatus,
   roleTeamFor,
   validateDraft,
-  type KpiMet,
+  weekDate,
+  type ProbationAction,
   type ProbationDecision,
   type ProbationDraft,
-  type ProbationEvaluation,
-  type ProbationKpi,
   type ProbationPeriod,
   type ProbationPlan,
+  type ProbationWeek,
 } from "@/lib/probation/shared";
+import {
+  evalView,
+  pubEntry,
+  sendItemLabel,
+  sendState,
+  snapshotFor,
+  weekView,
+  type PublishedPlan,
+  type SendItem,
+} from "@/lib/probation/published";
+import type { NextStep } from "@/lib/probation/progress";
 
 export type RosterPerson = {
   username: string;
@@ -67,6 +98,8 @@ export type RosterPerson = {
   role: string;
   dept: string;
 };
+
+export type EditorTab = "plano" | "semanas" | "avaliacoes" | "envios";
 
 const newId = () =>
   typeof crypto !== "undefined" && "randomUUID" in crypto
@@ -90,6 +123,7 @@ function draftFromPlan(plan: ProbationPlan): ProbationDraft {
     consultantUsername: plan.consultantUsername,
     consultantName: plan.consultantName,
     roleTeam: plan.roleTeam,
+    hasManager: plan.hasManager,
     manager: plan.manager,
     direction: plan.direction,
     checkinDay: plan.checkinDay,
@@ -101,7 +135,7 @@ function draftFromPlan(plan: ProbationPlan): ProbationDraft {
   };
 }
 
-function newDraft(defaults: { manager: string; direction: string }): ProbationDraft {
+function newDraft(defaults: { direction: string }): ProbationDraft {
   const period = emptyPeriod("");
   period.kpis15 = Array.from({ length: START_ROWS }, () => emptyKpi(newId()));
   period.kpis30 = Array.from({ length: START_ROWS }, () => emptyKpi(newId()));
@@ -109,7 +143,10 @@ function newDraft(defaults: { manager: string; direction: string }): ProbationDr
     consultantUsername: null,
     consultantName: "",
     roleTeam: "",
-    manager: defaults.manager,
+    // Por agora não há chefia intermédia na casa: a direção acompanha e
+    // decide sozinha. Um clique liga a chefia quando existir.
+    hasManager: false,
+    manager: "",
     direction: defaults.direction,
     checkinDay: "",
     resources: "",
@@ -130,14 +167,23 @@ type SaveState =
 
 export function ProbationEditor({
   initial,
+  initialPub = null,
   defaults,
   people,
+  today,
+  initialTab = "plano",
+  initialWeek,
 }: {
   /** null → plano novo. */
   initial: ProbationPlan | null;
-  /** Responsável direto e direção por defeito: o superadmin com sessão. */
+  initialPub?: PublishedPlan | null;
+  /** Direção por defeito: o superadmin com sessão. */
   defaults: { manager: string; direction: string };
   people: RosterPerson[];
+  /** Hoje em Lisboa (YYYY-MM-DD), vindo do servidor. */
+  today: string;
+  initialTab?: EditorTab;
+  initialWeek?: number;
 }) {
   const router = useRouter();
   const [draft, setDraft] = useState<ProbationDraft>(() =>
@@ -146,9 +192,19 @@ export function ProbationEditor({
   // O que veio do servidor na última gravação: rev, histórico, datas das
   // decisões, autoria. O rascunho é do editor; isto é do servidor.
   const [server, setServer] = useState<ProbationPlan | null>(initial);
+  const [pub, setPub] = useState<PublishedPlan | null>(initialPub);
   const [save, setSave] = useState<SaveState>({ kind: "idle" });
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [tab, setTab] = useState<EditorTab>(initial ? initialTab : "plano");
+  const [weekN, setWeekN] = useState<number>(() => {
+    if (initialWeek && initialWeek >= 1 && initialWeek <= 4) return initialWeek;
+    return initial?.period.weeks.find((w) => !w.done)?.n ?? 1;
+  });
+  const [preview, setPreview] = useState<{ item: SendItem | null } | null>(null);
+  const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
+  const [flash, setFlash] = useState<string | null>(null);
 
   const id = server?.id ?? null;
   const latest = useRef(draft);
@@ -161,6 +217,12 @@ export function ProbationEditor({
   useEffect(() => {
     latest.current = draft;
   }, [draft]);
+
+  useEffect(() => {
+    if (!flash) return;
+    const t = setTimeout(() => setFlash(null), 3500);
+    return () => clearTimeout(t);
+  }, [flash]);
 
   /** Grava o rascunho atual, se houver alterações. Uma gravação de cada
    *  vez: se já há uma a caminho, espera por ela e depois grava o resto. */
@@ -260,6 +322,11 @@ export function ProbationEditor({
   const setPeriod = (fn: (p: ProbationPeriod) => ProbationPeriod) =>
     update((d) => ({ ...d, period: fn(d.period) }));
 
+  const setWeek = (n: number, patch: Partial<ProbationWeek>) =>
+    setPeriod((p) => ({ ...p, weeks: p.weeks.map((w) => (w.n === n ? { ...w, ...patch } : w)) }));
+
+  const setPrevActions = (n: number, actions: ProbationAction[]) => setWeek(n - 1, { actions });
+
   const period = draft.period;
   const dates = periodDates(period);
   const history = server?.history ?? [];
@@ -270,6 +337,19 @@ export function ProbationEditor({
     [draft, periodIndex],
   );
   const problem = validateDraft(draft);
+  const lead = leadName(draft);
+  const canSend = Boolean(draft.consultantUsername);
+
+  const stateOf = (item: SendItem) => {
+    const snap = snapshotFor(draft, period, periodIndex, item);
+    return sendState(pubEntry(pub, periodIndex, item), snap?.sig ?? null);
+  };
+  const pendingSends = SEND_ITEMS.filter((item) => {
+    const snap = snapshotFor(draft, period, periodIndex, item);
+    if (!snap) return false;
+    if (item.startsWith("week:") && !period.weeks.find((w) => `week:${w.n}` === item)?.done) return false;
+    return stateOf(item).kind !== "sent";
+  }).length;
 
   function pickPerson(username: string) {
     if (username === "__other__" || username === "") {
@@ -364,6 +444,7 @@ export function ProbationEditor({
       setDraft(draftFromPlan(data.plan));
       setSave({ kind: "saved", at: data.plan.updatedAt });
       setOpening(false);
+      setTab("plano");
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch {
       setOpenError("Sem ligação — tenta outra vez.");
@@ -371,13 +452,99 @@ export function ProbationEditor({
     }
   }
 
+  /* ------------------------- pré-visualizar e enviar ------------------------- */
+
+  /** Porque é que um item não se pode enviar — o mesmo critério da API. */
+  function blockerFor(item: SendItem): string | null {
+    if (!draft.consultantUsername) {
+      return "Escolhe o consultor da lista da equipa (secção 1 do Plano) — um nome escrito à mão não tem conta na app.";
+    }
+    if (item === "plan") {
+      if (problem) return problem;
+      if (!period.kpis15.some(kpiFilled) && !period.kpis30.some(kpiFilled)) return "Escreve pelo menos um KPI antes de enviar o plano.";
+    } else if (item.startsWith("week:")) {
+      if (!period.weeks.find((w) => `week:${w.n}` === item)?.done) return "Marca o check-in como feito antes de o enviar.";
+    } else if (!snapshotFor(draft, period, periodIndex, item)) {
+      return "Ainda não há decisão nesta avaliação.";
+    }
+    return null;
+  }
+
+  async function openPreview(item: SendItem | null) {
+    setSendError(null);
+    // A pré-visualização tem de ser o que está gravado: é isso que a API
+    // fotografa no «Enviar».
+    if (item && (dirty.current || inFlight.current)) {
+      const ok = await flush();
+      if (!ok) setSendError("Não foi possível gravar as últimas alterações — o envio fica bloqueado até gravar.");
+    }
+    setPreview({ item });
+  }
+
+  async function sendNow() {
+    if (!id || !preview?.item) return;
+    setSending(true);
+    setSendError(null);
+    if (dirty.current || inFlight.current) {
+      const ok = await flush();
+      if (!ok) {
+        setSending(false);
+        setSendError("Não foi possível gravar as últimas alterações — tenta outra vez.");
+        return;
+      }
+    }
+    try {
+      const res = await fetch(`/api/admin/probation/${id}/enviar`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ rev: revRef.current, item: preview.item }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { pub?: PublishedPlan; error?: string };
+      if (!res.ok || !data.pub) {
+        setSendError(data.error ?? "Não foi possível enviar.");
+        setSending(false);
+        return;
+      }
+      setPub(data.pub);
+      setSending(false);
+      setFlash(`${sendItemLabel(preview.item)} enviado a ${draft.consultantName.trim().split(/\s+/)[0] || "o consultor"}.`);
+      setPreview(null);
+    } catch {
+      setSendError("Sem ligação — tenta outra vez.");
+      setSending(false);
+    }
+  }
+
+  /** Um «o que fazer a seguir» do cockpit: abre o envio quando o item já se
+   *  pode enviar; senão leva ao separador onde está o trabalho. */
+  function goStep(s: NextStep) {
+    if (s.week) setWeekN(s.week);
+    setTab(s.tab);
+    if (s.item && !blockerFor(s.item)) {
+      void openPreview(s.item);
+      return;
+    }
+    requestAnimationFrame(() =>
+      document.getElementById("probation-tabs")?.scrollIntoView({ behavior: "smooth", block: "start" }),
+    );
+  }
+
   /* ------------------------------ render ----------------------------- */
 
   const title = draft.consultantName.trim() || "Novo plano";
+  const week = period.weeks.find((w) => w.n === weekN) ?? period.weeks[0];
+  const weekDates = defaultWeekDates(period.startDate, draft.checkinDay);
+
+  const TABS: { id: EditorTab; label: string; icon: React.ReactNode; badge?: number }[] = [
+    { id: "plano", label: "Plano", icon: <FileText className="h-3.5 w-3.5" /> },
+    { id: "semanas", label: "Check-ins semanais", icon: <CalendarCheck2 className="h-3.5 w-3.5" />, badge: period.weeks.filter((w) => w.done).length },
+    { id: "avaliacoes", label: "Avaliações", icon: <Scale className="h-3.5 w-3.5" /> },
+    { id: "envios", label: "Envios ao consultor", icon: <Send className="h-3.5 w-3.5" />, badge: pendingSends || undefined },
+  ];
 
   return (
     <div className="animate-fade-up">
-      {/* Barra do topo: voltar, quem é, estado, gravação e PDF. */}
+      {/* Barra do topo: voltar, gravação, PDF e envio. */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Link
           href="/admin/probation"
@@ -392,11 +559,21 @@ export function ProbationEditor({
             <button
               type="button"
               onClick={() => void downloadPdf(`/api/admin/probation/${id}/pdf`)}
+              className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.04] px-4 py-2 text-[12.5px] font-medium text-white/80 transition hover:border-white/25 hover:text-white"
+            >
+              <Download className="h-3.5 w-3.5" />
+              PDF
+            </button>
+          )}
+          {id && (
+            <button
+              type="button"
+              onClick={() => void openPreview("plan")}
               className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-[12.5px] font-semibold text-white shadow-[0_8px_22px_-8px_rgba(120,61,245,0.7)] transition hover:-translate-y-px"
               style={{ background: "var(--brand-gradient)" }}
             >
-              <Download className="h-3.5 w-3.5" />
-              Descarregar PDF
+              <Eye className="h-3.5 w-3.5" />
+              {stateOf("plan").kind === "never" ? "Pré-visualizar e enviar plano" : "Plano · pré-visualizar"}
             </button>
           )}
         </div>
@@ -407,13 +584,28 @@ export function ProbationEditor({
         <h1 className="mt-1 flex flex-wrap items-center gap-3 text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">
           <span className="brand-gradient-text">{title}</span>
           {id && <StatusChip status={status} />}
+          {id && <SendBadge state={stateOf("plan")} />}
         </h1>
-        <p className="mt-1.5 max-w-[680px] text-[12.5px] leading-relaxed text-white/45">
-          {id
-            ? `Plano de probation · ${periodIndex + 1}.º período. Tudo o que escreves fica gravado; o documento à direita é o que sai no PDF.`
-            : "Preenche os dados do plano e cria-o. Depois disso, tudo o que escreves fica gravado sozinho."}
-        </p>
+        <div className="mt-2 flex flex-wrap items-center gap-2 text-[12px] text-white/50">
+          {draft.roleTeam && <span>{draft.roleTeam}</span>}
+          {draft.roleTeam && <span className="text-white/20">·</span>}
+          <span className="inline-flex items-center gap-1.5">
+            {draft.hasManager ? <UsersRound className="h-3.5 w-3.5" /> : <UserRound className="h-3.5 w-3.5" />}
+            {draft.hasManager
+              ? `Chefia: ${draft.manager.trim() || "—"} · Direção: ${draft.direction.trim() || "—"}`
+              : `Só direção: ${draft.direction.trim() || "—"}`}
+          </span>
+          {id && <span className="text-white/20">·</span>}
+          {id && <span>{periodIndex + 1}.º período</span>}
+        </div>
       </header>
+
+      {flash && (
+        <div className="mt-4 flex items-center gap-2 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-2.5 text-[12.5px] text-emerald-100">
+          <Check className="h-4 w-4" />
+          {flash}
+        </div>
+      )}
 
       {save.kind === "conflict" && (
         <div className="mt-4 flex flex-wrap items-center gap-3 rounded-xl border border-amber-400/40 bg-amber-500/10 px-4 py-3 text-[12.5px] text-amber-100">
@@ -430,45 +622,74 @@ export function ProbationEditor({
         </div>
       )}
 
-      <div className="mt-6 grid grid-cols-1 gap-8 xl:grid-cols-[minmax(0,600px)_minmax(0,1fr)]">
-        {/* ------------------------------ a folha ------------------------------ */}
-        <section
-          aria-label="Folha do plano de probation"
-          className="relative min-w-0 overflow-hidden rounded-[6px] bg-gradient-to-b from-[#fbfaf7] to-[#f0eee8] text-[#20202a] shadow-[0_40px_120px_-30px_rgba(0,0,0,0.8),0_0_0_1px_rgba(255,255,255,0.06)]"
-        >
-          <div aria-hidden className="h-1.5 w-full" style={{ background: "var(--brand-gradient)" }} />
-          <header className="flex flex-wrap items-start justify-between gap-4 border-b border-black/10 px-6 pb-5 pt-6 sm:px-8">
-            <div>
-              <p className="text-[19px] font-extrabold tracking-tight">
-                Wonder{" "}
-                <span className="bg-clip-text text-transparent" style={{ backgroundImage: "var(--brand-gradient)" }}>
-                  Ads
-                </span>
-              </p>
-              <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.24em] text-black/45">
-                Recursos Humanos · Direção
-              </p>
-            </div>
-            <div className="rounded border border-violet-600/25 bg-violet-50/80 px-3.5 py-2 text-right">
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-violet-800/70">Documento interno</p>
-              <p className="text-[13px] font-extrabold uppercase tracking-[0.08em] text-violet-950">
-                Plano de Probation
-              </p>
-              <p className="mt-0.5 font-mono text-[10.5px] text-violet-800/60">
-                {id ? `${periodIndex + 1}.º período · 30 dias` : "30 dias · 2 avaliações"}
-              </p>
-            </div>
-          </header>
+      {id && (
+        <Cockpit
+          planId={id}
+          draft={draft}
+          periodIndex={periodIndex}
+          pub={pub}
+          today={today}
+          onStep={goStep}
+          onPreviewPage={() => void openPreview(null)}
+        />
+      )}
 
-          <div className="px-6 py-6 sm:px-8 sm:py-8">
-            {/* 1 — Consultor e responsáveis */}
+      {/* ------------------------------ separadores ------------------------------ */}
+      <nav
+        id="probation-tabs"
+        className="mt-8 flex scroll-mt-24 flex-wrap gap-1.5 border-b border-white/[0.08]"
+        aria-label="Secções do plano"
+      >
+        {TABS.map((t) => {
+          const disabled = !id && t.id !== "plano";
+          return (
+            <button
+              key={t.id}
+              type="button"
+              disabled={disabled}
+              onClick={() => setTab(t.id)}
+              className={`-mb-px inline-flex items-center gap-1.5 border-b-2 px-3.5 py-2.5 text-[13px] font-medium transition disabled:cursor-not-allowed disabled:opacity-35 ${
+                tab === t.id ? "border-[#783DF5] text-white" : "border-transparent text-white/45 hover:text-white/80"
+              }`}
+            >
+              {t.icon}
+              {t.label}
+              {typeof t.badge === "number" && (
+                <span
+                  className={`rounded-full px-1.5 text-[10.5px] tabular-nums ${
+                    t.id === "envios" ? "bg-[#783DF5] text-white" : "bg-white/10 text-white/60"
+                  }`}
+                >
+                  {t.id === "semanas" ? `${t.badge}/4` : t.badge}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </nav>
+
+      {/* ================================ PLANO ================================ */}
+      {tab === "plano" && (
+        <div className="mt-6 grid grid-cols-1 gap-8 xl:grid-cols-[minmax(0,600px)_minmax(0,1fr)]">
+          <Sheet label="Folha do plano de probation" subtitle={id ? `${periodIndex + 1}.º período · 30 dias` : "30 dias · 2 avaliações"}>
+            {/* 1 — Consultor e quem acompanha */}
             <SheetSection
               n={1}
-              title="Consultor e responsáveis"
-              done={Boolean(draft.consultantName.trim() && draft.manager.trim() && draft.direction.trim())}
+              title="Consultor e quem acompanha"
+              done={Boolean(
+                draft.consultantName.trim() && draft.direction.trim() && (!draft.hasManager || draft.manager.trim()),
+              )}
             >
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <Field label="Escolher da equipa" className="sm:col-span-2">
+                <Field
+                  label="Escolher da equipa"
+                  className="sm:col-span-2"
+                  hint={
+                    draft.consultantName && !draft.consultantUsername
+                      ? "Nome escrito à mão: dá para o PDF, mas não para enviar o plano na app."
+                      : "Vindo da equipa, o plano pode ser enviado ao consultor na app."
+                  }
+                >
                   <select
                     className="sheet-input"
                     value={draft.consultantUsername ?? (draft.consultantName ? "__other__" : "")}
@@ -499,15 +720,55 @@ export function ProbationEditor({
                     placeholder="Ex.: Consultor SEO · Equipa SEO"
                   />
                 </Field>
-                <Field label="Responsável direto">
-                  <input
-                    className="sheet-input"
-                    value={draft.manager}
-                    onChange={(e) => setField("manager", e.target.value)}
-                    placeholder="Nome"
-                  />
-                </Field>
-                <Field label="Direção">
+
+                <div className="sm:col-span-2">
+                  <span className="sheet-label mb-1.5">Quem acompanha e decide</span>
+                  <div role="radiogroup" aria-label="Chefia" className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    {[
+                      { on: false, title: "Só a direção", sub: "Ainda não há chefia intermédia: a direção faz os check-ins, decide e assina." },
+                      { on: true, title: "Chefia intermédia + direção", sub: "A chefia acompanha a semana a semana; decidem e assinam os dois." },
+                    ].map((o) => {
+                      const active = draft.hasManager === o.on;
+                      return (
+                        <button
+                          key={o.title}
+                          type="button"
+                          role="radio"
+                          aria-checked={active}
+                          onClick={() => setField("hasManager", o.on)}
+                          className={`rounded-lg border px-3 py-2.5 text-left transition ${
+                            active
+                              ? "border-[#783df5] bg-[#f3eefe] shadow-[0_0_0_3px_rgba(120,61,245,0.14)]"
+                              : "border-black/15 bg-white/70 hover:border-black/30"
+                          }`}
+                        >
+                          <span className={`flex items-center gap-1.5 text-[12.5px] font-bold ${active ? "text-[#3b1d8f]" : "text-black/75"}`}>
+                            {o.on ? <UsersRound className="h-3.5 w-3.5" /> : <UserRound className="h-3.5 w-3.5" />}
+                            {o.title}
+                          </span>
+                          <span className="mt-0.5 block text-[11px] leading-snug text-black/50">{o.sub}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {draft.hasManager && (
+                  <Field label="Chefia intermédia (responsável direto)">
+                    <input
+                      className="sheet-input"
+                      list="probation-people"
+                      value={draft.manager}
+                      onChange={(e) => setField("manager", e.target.value)}
+                      placeholder="Nome"
+                    />
+                  </Field>
+                )}
+                <Field
+                  label="Direção"
+                  className={draft.hasManager ? "" : "sm:col-span-2"}
+                  hint={draft.hasManager ? undefined : "No documento, a direção aparece como responsável direto e assinam só o consultor e a direção."}
+                >
                   <input
                     className="sheet-input"
                     value={draft.direction}
@@ -554,6 +815,7 @@ export function ProbationEditor({
             <SheetSection
               n={5}
               title="Acompanhamento e apoio"
+              last={Boolean(id)}
               done={Boolean(
                 draft.checkinDay.trim() &&
                   draft.resources.trim() &&
@@ -563,7 +825,7 @@ export function ProbationEditor({
               )}
             >
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <Field label="Dia do check-in semanal">
+                <Field label="Dia do check-in semanal" hint={`Com ${lead || "a chefia"}. Define as datas dos quatro check-ins.`}>
                   <input
                     className="sheet-input"
                     list="probation-weekdays"
@@ -591,6 +853,21 @@ export function ProbationEditor({
                     ))}
                   </datalist>
                 </Field>
+                {isISODate(period.startDate) && (
+                  <div className="sm:col-span-2">
+                    <span className="sheet-label mb-1.5">Check-ins previstos</span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {period.weeks.map((w, i) => (
+                        <span
+                          key={w.n}
+                          className="rounded-md border border-black/10 bg-white/70 px-2 py-1 text-[11.5px] font-semibold tabular-nums text-black/70"
+                        >
+                          S{w.n} · {dayLabel(weekDate(w, period.startDate, draft.checkinDay) || weekDates[i])}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 <Field label="Recursos e formação" className="sm:col-span-2">
                   <textarea
                     className="sheet-input min-h-[64px] resize-y"
@@ -618,78 +895,10 @@ export function ProbationEditor({
               </div>
             </SheetSection>
 
-            {/* 6 e 7 — Avaliações */}
-            {id ? (
-              <>
-                <SheetSection n={6} title={`Avaliação dos 15 dias · ${formatISODate(dates.d15) || "—"}`} done={Boolean(period.eval15.decision)}>
-                  <EvaluationEditor
-                    which={15}
-                    kpis={period.kpis15}
-                    evaluation={period.eval15}
-                    decidedAt={server?.period.eval15.decidedAt ?? null}
-                    extensionHint={`Segue para a avaliação dos 30 dias, a ${formatISODate(extensionDate(period, 15)) || "—"}.`}
-                    suggestedDecider={suggestDecider(draft)}
-                    onKpis={(rows) => setPeriod((p) => ({ ...p, kpis15: rows }))}
-                    onEval={(ev) => setPeriod((p) => ({ ...p, eval15: ev }))}
-                  />
-                </SheetSection>
-                <SheetSection
-                  n={7}
-                  title={`Avaliação dos 30 dias · ${formatISODate(dates.d30) || "—"}`}
-                  done={Boolean(period.eval30.decision)}
-                  last
-                >
-                  {eval30Open(period) ? (
-                    <>
-                      <EvaluationEditor
-                        which={30}
-                        kpis={period.kpis30}
-                        evaluation={period.eval30}
-                        decidedAt={server?.period.eval30.decidedAt ?? null}
-                        extensionHint={`Abre-se um novo período de 30 dias a começar a ${formatISODate(dates.d30) || "—"}, com novas datas e novos KPIs. Este período fica guardado no histórico.`}
-                        suggestedDecider={suggestDecider(draft)}
-                        onKpis={(rows) => setPeriod((p) => ({ ...p, kpis30: rows }))}
-                        onEval={(ev) => setPeriod((p) => ({ ...p, eval30: ev }))}
-                      />
-                      {awaitingNewPeriod(period) && (
-                        <div className="mt-5 rounded-xl border border-blue-600/25 bg-blue-50 px-4 py-4">
-                          <p className="flex items-center gap-2 text-[13px] font-bold text-blue-950">
-                            <CalendarClock className="h-4 w-4" />
-                            Extensão aos 30 dias: abrir o novo período
-                          </p>
-                          <p className="mt-1 text-[12.5px] leading-relaxed text-blue-950/75">
-                            O período novo começa a {formatISODate(dates.d30)}, com avaliações a{" "}
-                            {formatISODate(extensionDate(period, 30))} e{" "}
-                            {formatISODate(periodDates({ startDate: dates.d30 }).d30)}. Os KPIs atuais são copiados como
-                            rascunho (sem resultados) para os reescreveres. Este período, com as duas avaliações, fica no
-                            histórico do plano.
-                          </p>
-                          <button
-                            type="button"
-                            disabled={opening || save.kind === "conflict"}
-                            onClick={() => void openNewPeriod()}
-                            className="mt-3 inline-flex items-center gap-2 rounded-full bg-blue-700 px-4 py-2 text-[12.5px] font-semibold text-white transition hover:bg-blue-800 disabled:opacity-60"
-                          >
-                            {opening ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
-                            Abrir novo período de 30 dias
-                          </button>
-                          {openError && <p className="mt-2 text-[12px] font-medium text-rose-700">{openError}</p>}
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    <p className="rounded-lg border border-dashed border-black/15 bg-white/50 px-4 py-3 text-[12.5px] text-black/55">
-                      {period.eval15.decision
-                        ? "Não se aplica: o plano terminou na avaliação dos 15 dias."
-                        : "Abre quando a avaliação dos 15 dias decidir extensão."}
-                    </p>
-                  )}
-                </SheetSection>
-              </>
-            ) : (
+            {!id && (
               <div className="mt-2 border-t border-black/[0.07] pt-6">
                 <p className="text-[12.5px] leading-relaxed text-black/55">
-                  As avaliações dos 15 e dos 30 dias registam-se depois de o plano estar criado.
+                  Depois de criado: check-ins semanais, avaliações e envio ao consultor, sempre com pré-visualização.
                 </p>
                 <button
                   type="button"
@@ -706,50 +915,262 @@ export function ProbationEditor({
                 )}
               </div>
             )}
-          </div>
-        </section>
+          </Sheet>
 
-        {/* -------------------------- o documento -------------------------- */}
-        <aside className="min-w-0 xl:sticky xl:top-24 xl:max-h-[calc(100vh-7rem)] xl:overflow-y-auto xl:pr-1">
-          <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/35">
-            Pré-visualização do documento
-          </p>
-          <FitToWidth width={860}>
-            <ProbationDocument model={model} />
-          </FitToWidth>
-        </aside>
-      </div>
+          <aside className="min-w-0 xl:sticky xl:top-24 xl:max-h-[calc(100vh-7rem)] xl:overflow-y-auto xl:pr-1">
+            <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/35">
+              Documento ao vivo · é o que sai no PDF e o que se envia
+            </p>
+            <FitToWidth width={860}>
+              <ProbationDocument model={model} />
+            </FitToWidth>
+          </aside>
+        </div>
+      )}
+
+      {/* ============================== CHECK-INS ============================== */}
+      {tab === "semanas" && id && week && (
+        <div className="mt-6">
+          <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+            {period.weeks.map((w) => {
+              const d = weekDate(w, period.startDate, draft.checkinDay);
+              const st = stateOf(`week:${w.n}` as SendItem);
+              const late = !w.done && d && d < today;
+              return (
+                <button
+                  key={w.n}
+                  type="button"
+                  onClick={() => setWeekN(w.n)}
+                  className={`flex flex-col items-stretch justify-start rounded-2xl border p-3.5 text-left transition ${
+                    w.n === weekN
+                      ? "border-[#783DF5]/60 bg-[#783DF5]/[0.12] shadow-[0_14px_40px_-24px_rgba(120,61,245,1)]"
+                      : "border-white/[0.08] bg-white/[0.02] hover:border-white/20"
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="readout text-white/45">Semana {w.n}</span>
+                    {w.done ? (
+                      <PulseDot pulse={w.pulse} />
+                    ) : (
+                      <CircleDashed className={`h-3.5 w-3.5 ${late ? "text-rose-300" : "text-white/25"}`} />
+                    )}
+                  </div>
+                  <p className="mt-1 text-[14px] font-semibold tabular-nums text-white">{dayLabel(d)}</p>
+                  <p className={`text-[11px] ${w.done ? "text-emerald-300/80" : late ? "text-rose-300/90" : "text-white/40"}`}>
+                    {w.done ? "Feito" : late ? "Por fazer · atrasado" : "Por fazer"}
+                  </p>
+                  {w.done && (
+                    <div className="mt-2">
+                      <SendBadge compact state={st} />
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="mt-6 grid grid-cols-1 gap-8 xl:grid-cols-[minmax(0,600px)_minmax(0,1fr)]">
+            <Sheet label={`Check-in da semana ${week.n}`} subtitle={`Semana ${week.n} de 4`}>
+              <WeekEditor
+                period={period}
+                week={week}
+                checkinDay={draft.checkinDay}
+                lead={lead}
+                send={stateOf(`week:${week.n}` as SendItem)}
+                canSend={canSend}
+                onWeek={(patch) => setWeek(week.n, patch)}
+                onPrevActions={(actions) => setPrevActions(week.n, actions)}
+                onPreview={() => void openPreview(`week:${week.n}` as SendItem)}
+              />
+            </Sheet>
+            <aside className="min-w-0 xl:sticky xl:top-24 xl:self-start">
+              <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/35">
+                Como o consultor vai receber · ao vivo, sem a nota interna
+              </p>
+              {(() => {
+                const v = weekView(draft, period, week.n);
+                return v ? <WeekCardView view={v} /> : null;
+              })()}
+            </aside>
+          </div>
+        </div>
+      )}
+
+      {/* ============================= AVALIAÇÕES ============================= */}
+      {tab === "avaliacoes" && id && (
+        <div className="mt-6 grid grid-cols-1 gap-8 xl:grid-cols-[minmax(0,600px)_minmax(0,1fr)]">
+          <Sheet label="Avaliações" subtitle="Dia 15 · Dia 30">
+            <SheetSection n={6} title={`Avaliação dos 15 dias · ${formatISODate(dates.d15) || "—"}`} done={Boolean(period.eval15.decision)}>
+              <EvaluationEditor
+                which={15}
+                kpis={period.kpis15}
+                evaluation={period.eval15}
+                decidedAt={server?.period.eval15.decidedAt ?? null}
+                extensionHint={`Segue para a avaliação dos 30 dias, a ${formatISODate(extensionDate(period, 15)) || "—"}.`}
+                suggestedDecider={decidersName(draft)}
+                onKpis={(rows) => setPeriod((p) => ({ ...p, kpis15: rows }))}
+                onEval={(ev) => setPeriod((p) => ({ ...p, eval15: ev }))}
+              />
+            </SheetSection>
+            <SheetSection
+              n={7}
+              title={`Avaliação dos 30 dias · ${formatISODate(dates.d30) || "—"}`}
+              done={Boolean(period.eval30.decision)}
+              last
+            >
+              {eval30Open(period) ? (
+                <>
+                  <EvaluationEditor
+                    which={30}
+                    kpis={period.kpis30}
+                    evaluation={period.eval30}
+                    decidedAt={server?.period.eval30.decidedAt ?? null}
+                    extensionHint={`Abre-se um novo período de 30 dias a começar a ${formatISODate(dates.d30) || "—"}, com novas datas e novos KPIs. Este período fica guardado no histórico.`}
+                    suggestedDecider={decidersName(draft)}
+                    onKpis={(rows) => setPeriod((p) => ({ ...p, kpis30: rows }))}
+                    onEval={(ev) => setPeriod((p) => ({ ...p, eval30: ev }))}
+                  />
+                  {awaitingNewPeriod(period) && (
+                    <div className="mt-5 rounded-xl border border-blue-600/25 bg-blue-50 px-4 py-4">
+                      <p className="flex items-center gap-2 text-[13px] font-bold text-blue-950">
+                        <CalendarClock className="h-4 w-4" />
+                        Extensão aos 30 dias: abrir o novo período
+                      </p>
+                      <p className="mt-1 text-[12.5px] leading-relaxed text-blue-950/75">
+                        O período novo começa a {formatISODate(dates.d30)}, com avaliações a{" "}
+                        {formatISODate(extensionDate(period, 30))} e{" "}
+                        {formatISODate(periodDates({ startDate: dates.d30 }).d30)}. Os KPIs atuais são copiados como
+                        rascunho (sem resultados) e há quatro check-ins novos. Envia a avaliação dos 30 dias ao
+                        consultor antes de abrir o período novo.
+                      </p>
+                      <button
+                        type="button"
+                        disabled={opening || save.kind === "conflict"}
+                        onClick={() => void openNewPeriod()}
+                        className="mt-3 inline-flex items-center gap-2 rounded-full bg-blue-700 px-4 py-2 text-[12.5px] font-semibold text-white transition hover:bg-blue-800 disabled:opacity-60"
+                      >
+                        {opening ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+                        Abrir novo período de 30 dias
+                      </button>
+                      {openError && <p className="mt-2 text-[12px] font-medium text-rose-700">{openError}</p>}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <p className="rounded-lg border border-dashed border-black/15 bg-white/50 px-4 py-3 text-[12.5px] text-black/55">
+                  {period.eval15.decision
+                    ? "Não se aplica: o plano terminou na avaliação dos 15 dias."
+                    : "Abre quando a avaliação dos 15 dias decidir extensão."}
+                </p>
+              )}
+            </SheetSection>
+          </Sheet>
+
+          <aside className="min-w-0 space-y-6 xl:sticky xl:top-24 xl:max-h-[calc(100vh-7rem)] xl:self-start xl:overflow-y-auto xl:pr-1">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/35">
+              Como o consultor vai receber · ao vivo
+            </p>
+            {([15, 30] as const).map((which) => {
+              const v = evalView(draft, period, which);
+              const item = `eval:${which}` as SendItem;
+              if (!v) {
+                return (
+                  <div key={which} className="rounded-2xl border border-dashed border-white/12 px-5 py-6 text-[12.5px] text-white/45">
+                    Avaliação dos {which} dias: aparece aqui quando houver decisão.
+                  </div>
+                );
+              }
+              return (
+                <div key={which}>
+                  <EvalCardView view={v} />
+                  <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => void openPreview(item)}
+                      className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-[12.5px] font-semibold text-white transition hover:-translate-y-px"
+                      style={{ background: "var(--brand-gradient)" }}
+                    >
+                      <Eye className="h-3.5 w-3.5" />
+                      Pré-visualizar e enviar
+                    </button>
+                    <SendBadge state={stateOf(item)} />
+                  </div>
+                </div>
+              );
+            })}
+          </aside>
+        </div>
+      )}
+
+      {/* =============================== ENVIOS =============================== */}
+      {tab === "envios" && id && (
+        <SendCenter
+          draft={draft}
+          period={period}
+          periodIndex={periodIndex}
+          pub={pub}
+          stateOf={stateOf}
+          blockerFor={blockerFor}
+          onPreview={(item) => void openPreview(item)}
+        />
+      )}
 
       {id && history.length > 0 && <HistoryList id={id} history={history} onDownload={downloadPdf} />}
 
       {id && <DeletePlan id={id} name={title} />}
+
+      {preview && id && (
+        <PreviewModal
+          planId={id}
+          draft={draft}
+          periodIndex={periodIndex}
+          pub={pub}
+          item={preview.item}
+          today={today}
+          blocker={preview.item ? blockerFor(preview.item) : null}
+          sending={sending}
+          error={sendError}
+          onClose={() => {
+            setPreview(null);
+            setSendError(null);
+          }}
+          onSend={() => void sendNow()}
+        />
+      )}
     </div>
   );
 }
 
 /* ============================ peças da folha ============================ */
 
-function suggestDecider(d: ProbationDraft): string {
-  const a = d.manager.trim();
-  const b = d.direction.trim();
-  if (a && b && a !== b) return `${a} e ${b}`;
-  return a || b;
-}
-
-function Field({
-  label,
-  className = "",
-  children,
-}: {
-  label: string;
-  className?: string;
-  children: ReactNode;
-}) {
+/** O papel claro onde se escreve (o mesmo das Ausências). */
+function Sheet({ label, subtitle, children }: { label: string; subtitle: string; children: React.ReactNode }) {
   return (
-    <label className={`block ${className}`}>
-      <span className="sheet-label mb-1.5">{label}</span>
-      {children}
-    </label>
+    <section
+      aria-label={label}
+      className="relative min-w-0 self-start overflow-hidden rounded-[6px] bg-gradient-to-b from-[#fbfaf7] to-[#f0eee8] text-[#20202a] shadow-[0_40px_120px_-30px_rgba(0,0,0,0.8),0_0_0_1px_rgba(255,255,255,0.06)]"
+    >
+      <div aria-hidden className="h-1.5 w-full" style={{ background: "var(--brand-gradient)" }} />
+      <header className="flex flex-wrap items-start justify-between gap-4 border-b border-black/10 px-6 pb-5 pt-6 sm:px-8">
+        <div>
+          <p className="text-[19px] font-extrabold tracking-tight">
+            Wonder{" "}
+            <span className="bg-clip-text text-transparent" style={{ backgroundImage: "var(--brand-gradient)" }}>
+              Ads
+            </span>
+          </p>
+          <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.24em] text-black/45">
+            Recursos Humanos · Direção
+          </p>
+        </div>
+        <div className="rounded border border-violet-600/25 bg-violet-50/80 px-3.5 py-2 text-right">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-violet-800/70">Documento interno</p>
+          <p className="text-[13px] font-extrabold uppercase tracking-[0.08em] text-violet-950">Plano de Probation</p>
+          <p className="mt-0.5 font-mono text-[10.5px] text-violet-800/60">{subtitle}</p>
+        </div>
+      </header>
+      <div className="px-6 py-6 sm:px-8 sm:py-8">{children}</div>
+    </section>
   );
 }
 
@@ -765,273 +1186,106 @@ function DateReadout({ label, iso, hint }: { label: string; iso: string; hint: s
   );
 }
 
-function KpiDefinitions({
-  which,
-  rows,
-  onChange,
+/* =============================== envios =============================== */
+
+function SendCenter({
+  draft,
+  period,
+  periodIndex,
+  pub,
+  stateOf,
+  blockerFor,
+  onPreview,
 }: {
-  which: 15 | 30;
-  rows: ProbationKpi[];
-  onChange: (rows: ProbationKpi[]) => void;
+  draft: ProbationDraft;
+  period: ProbationPeriod;
+  periodIndex: number;
+  pub: PublishedPlan | null;
+  stateOf: (item: SendItem) => ReturnType<typeof sendState>;
+  blockerFor: (item: SendItem) => string | null;
+  onPreview: (item: SendItem | null) => void;
 }) {
-  const set = (i: number, patch: Partial<ProbationKpi>) =>
-    onChange(rows.map((r, j) => (j === i ? { ...r, ...patch } : r)));
-  return (
-    <div>
-      {rows.length > 0 && (
-        <div className="hidden grid-cols-[22px_minmax(0,1.6fr)_minmax(0,0.8fr)_minmax(0,0.9fr)_28px] gap-2 px-0.5 pb-1.5 sm:grid">
-          <span />
-          <span className="sheet-label">KPI</span>
-          <span className="sheet-label">Meta dia {which}</span>
-          <span className="sheet-label">Como medimos</span>
-          <span />
-        </div>
-      )}
-      <div className="flex flex-col gap-2">
-        {rows.map((r, i) => (
-          <div
-            key={r.id}
-            className="grid grid-cols-[22px_minmax(0,1fr)_28px] items-start gap-2 sm:grid-cols-[22px_minmax(0,1.6fr)_minmax(0,0.8fr)_minmax(0,0.9fr)_28px]"
-          >
-            <span className="pt-2.5 text-center text-[12px] font-bold text-[#783df5]">{i + 1}</span>
-            <input
-              className="sheet-input"
-              aria-label={`KPI ${i + 1}`}
-              value={r.kpi}
-              onChange={(e) => set(i, { kpi: e.target.value })}
-              placeholder="Ex.: reuniões qualificadas marcadas"
-            />
-            <div className="col-start-2 sm:col-start-auto">
-              <input
-                className="sheet-input"
-                aria-label={`Meta dia ${which} do KPI ${i + 1}`}
-                value={r.target}
-                onChange={(e) => set(i, { target: e.target.value })}
-                placeholder="Número"
-              />
-            </div>
-            <div className="col-start-2 sm:col-start-auto">
-              <input
-                className="sheet-input"
-                aria-label={`Como medimos o KPI ${i + 1}`}
-                value={r.measure}
-                onChange={(e) => set(i, { measure: e.target.value })}
-                placeholder="Ex.: CRM"
-              />
-            </div>
-            <button
-              type="button"
-              aria-label={`Remover KPI ${i + 1}`}
-              onClick={() => onChange(rows.filter((_, j) => j !== i))}
-              className="col-start-3 row-start-1 mt-1.5 flex h-7 w-7 items-center justify-center rounded-md text-black/30 transition hover:bg-rose-50 hover:text-rose-600 sm:col-start-auto sm:row-start-auto"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        ))}
-      </div>
-      <button
-        type="button"
-        disabled={rows.length >= MAX_KPIS}
-        onClick={() => onChange([...rows, emptyKpi(newId())])}
-        className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-dashed border-[#c9c5dc] px-3 py-1.5 text-[12px] font-semibold text-[#783df5] transition hover:bg-[#f6f4fd] disabled:opacity-40"
-      >
-        <Plus className="h-3.5 w-3.5" />
-        Adicionar KPI
-      </button>
-    </div>
-  );
-}
-
-function EvaluationEditor({
-  which,
-  kpis,
-  evaluation,
-  decidedAt,
-  extensionHint,
-  suggestedDecider,
-  onKpis,
-  onEval,
-}: {
-  which: 15 | 30;
-  kpis: ProbationKpi[];
-  evaluation: ProbationEvaluation;
-  decidedAt: number | null;
-  extensionHint: string;
-  suggestedDecider: string;
-  onKpis: (rows: ProbationKpi[]) => void;
-  onEval: (ev: ProbationEvaluation) => void;
-}) {
-  const filled = kpis.filter(kpiFilled);
-  const count = metCount(kpis);
-  const setKpi = (id: string, patch: Partial<ProbationKpi>) =>
-    onKpis(kpis.map((k) => (k.id === id ? { ...k, ...patch } : k)));
-  const set = (patch: Partial<ProbationEvaluation>) => onEval({ ...evaluation, ...patch });
-
-  function decide(d: ProbationDecision | null) {
-    set({
-      decision: d,
-      // Quem decide vem sugerido (responsável e direção) na primeira decisão.
-      decidedBy: d && !evaluation.decidedBy.trim() ? suggestedDecider : evaluation.decidedBy,
-    });
-  }
-
-  return (
-    <div className="flex flex-col gap-5">
-      <div>
-        <div className="mb-2 flex items-baseline justify-between gap-3">
-          <span className="sheet-label">Resultado por KPI</span>
-          {count.recorded && (
-            <span className="text-[11.5px] font-semibold text-black/55">
-              {count.met} de {count.total} cumpridos
-            </span>
-          )}
-        </div>
-        {filled.length === 0 ? (
-          <p className="rounded-lg border border-dashed border-black/15 bg-white/50 px-3 py-2.5 text-[12.5px] text-black/45">
-            Ainda não há KPIs dos {which} dias — escreve-os na secção {which === 15 ? 3 : 4}.
-          </p>
-        ) : (
-          <div className="flex flex-col gap-2.5">
-            {filled.map((k, i) => (
-              <div key={k.id} className="rounded-lg border border-black/[0.08] bg-white/60 p-3">
-                <p className="text-[12.5px] font-semibold leading-snug">
-                  <span className="mr-1.5 text-[#783df5]">{i + 1}</span>
-                  {k.kpi || <span className="font-normal text-black/35">KPI sem nome</span>}
-                  {k.target && <span className="font-normal text-black/45"> · meta {k.target}</span>}
-                </p>
-                <div className="mt-2 flex flex-wrap items-center gap-2">
-                  <input
-                    className="sheet-input min-w-[140px] flex-1 !py-1.5"
-                    aria-label={`Resultado do KPI ${i + 1}`}
-                    value={k.result}
-                    onChange={(e) => setKpi(k.id, { result: e.target.value })}
-                    placeholder="Resultado"
-                  />
-                  <MetToggle value={k.met} onChange={(m) => setKpi(k.id, { met: m })} label={`Cumprido, KPI ${i + 1}`} />
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div className="grid grid-cols-1 gap-4">
-        <Field label="O que correu bem">
-          <textarea
-            className="sheet-input min-h-[72px] resize-y"
-            value={evaluation.wentWell}
-            onChange={(e) => set({ wentWell: e.target.value })}
-          />
-        </Field>
-        <Field label="O que ficou aquém">
-          <textarea
-            className="sheet-input min-h-[72px] resize-y"
-            value={evaluation.fellShort}
-            onChange={(e) => set({ fellShort: e.target.value })}
-          />
-        </Field>
-        <Field label="Comentário do consultor">
-          <textarea
-            className="sheet-input min-h-[72px] resize-y"
-            value={evaluation.consultantComment}
-            onChange={(e) => set({ consultantComment: e.target.value })}
-          />
-        </Field>
-      </div>
-
-      <div>
-        <div className="mb-2 flex items-baseline justify-between gap-3">
-          <span className="sheet-label">Decisão</span>
-          {evaluation.decision && (
-            <button
-              type="button"
-              onClick={() => decide(null)}
-              className="text-[11px] font-medium text-black/40 underline-offset-2 hover:text-black/70 hover:underline"
-            >
-              Limpar decisão
-            </button>
-          )}
-        </div>
-        <div role="radiogroup" aria-label={`Decisão da avaliação dos ${which} dias`} className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-          {DECISIONS.map((d) => {
-            const on = evaluation.decision === d.id;
-            return (
-              <button
-                key={d.id}
-                type="button"
-                role="radio"
-                aria-checked={on}
-                onClick={() => decide(d.id)}
-                className={`rounded-lg border px-3 py-2.5 text-left text-[12.5px] transition ${
-                  on
-                    ? "border-[#783df5] bg-[#f3eefe] font-semibold text-[#3b1d8f] shadow-[0_0_0_3px_rgba(120,61,245,0.14)]"
-                    : "border-black/15 bg-white/70 text-black/70 hover:border-black/30"
-                }`}
-              >
-                <span className="block text-[10px] font-bold uppercase tracking-[0.16em] opacity-60">Opção {d.n}</span>
-                {d.label}
-              </button>
-            );
-          })}
-        </div>
-        {evaluation.decision && (
-          <p className="mt-2 text-[12px] leading-relaxed text-black/55">
-            {evaluation.decision === "extensao" ? extensionHint : "O plano termina nesta avaliação."}
-            {decidedAt ? ` Decisão registada a ${new Date(decidedAt).toLocaleDateString("en-GB")}.` : ""}
-          </p>
-        )}
-      </div>
-
-      <Field label="Decisão tomada por">
-        <input
-          className="sheet-input"
-          value={evaluation.decidedBy}
-          onChange={(e) => set({ decidedBy: e.target.value })}
-          placeholder={suggestedDecider || "Nome"}
-        />
-      </Field>
-    </div>
-  );
-}
-
-function MetToggle({
-  value,
-  onChange,
-  label,
-}: {
-  value: KpiMet | null;
-  onChange: (m: KpiMet | null) => void;
-  label: string;
-}) {
-  const tone: Record<KpiMet, string> = {
-    sim: "border-emerald-600 bg-emerald-600 text-white",
-    parcial: "border-amber-500 bg-amber-500 text-white",
-    nao: "border-rose-600 bg-rose-600 text-white",
+  const { d15, d30 } = periodDates(period);
+  const describe = (item: SendItem): string => {
+    if (item === "plan") return "O documento do plano, com os KPIs, os desfechos possíveis e as assinaturas.";
+    if (item === "eval:15") return `Resultado e decisão da avaliação de ${formatISODate(d15) || "—"}.`;
+    if (item === "eval:30") return `Resultado e decisão da avaliação de ${formatISODate(d30) || "—"}.`;
+    const w = period.weeks.find((x) => `week:${x.n}` === item);
+    return w ? `Check-in de ${dayLabel(weekDate(w, period.startDate, draft.checkinDay))}${w.done ? "" : " · ainda por fazer"}.` : "";
   };
   return (
-    <div role="radiogroup" aria-label={label} className="inline-flex overflow-hidden rounded-lg border border-black/15 bg-white">
-      {KPI_MET_OPTIONS.map((o) => {
-        const on = value === o.id;
-        return (
-          <button
-            key={o.id}
-            type="button"
-            role="radio"
-            aria-checked={on}
-            // Carregar outra vez na mesma opção limpa-a.
-            onClick={() => onChange(on ? null : o.id)}
-            className={`border-l px-3 py-1.5 text-[12px] font-semibold transition first:border-l-0 ${
-              on ? tone[o.id] : "border-black/10 text-black/55 hover:bg-black/[0.04]"
-            }`}
-          >
-            {o.label}
-          </button>
-        );
-      })}
+    <div className="mt-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="max-w-2xl text-[12.5px] leading-relaxed text-white/50">
+          Nada chega a {draft.consultantName.trim() || "o consultor"} sem passar pela pré-visualização. Depois de enviado,
+          aparece-lhe no sino e na página «O meu plano de probation», onde confirma que leu — e o comentário dele aparece aqui.
+        </p>
+        <button
+          type="button"
+          onClick={() => onPreview(null)}
+          className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.04] px-4 py-2 text-[12.5px] font-medium text-white/80 transition hover:border-white/25 hover:text-white"
+        >
+          <Eye className="h-3.5 w-3.5" />
+          Ver a página do consultor
+        </button>
+      </div>
+      {!draft.consultantUsername && (
+        <p className="mt-4 rounded-xl border border-amber-400/30 bg-amber-500/10 px-4 py-3 text-[12.5px] text-amber-100">
+          O consultor foi escrito à mão — escolhe-o da lista da equipa (Plano → secção 1) para poderes enviar na app.
+        </p>
+      )}
+      <div className="mt-5 overflow-hidden rounded-2xl border border-white/[0.08]">
+        {SEND_ITEMS.map((item, i) => {
+          const st = stateOf(item);
+          const blocker = blockerFor(item);
+          const entry = pubEntry(pub, periodIndex, item);
+          return (
+            <div
+              key={item}
+              className={`flex flex-wrap items-center gap-4 bg-white/[0.02] px-5 py-4 ${i ? "border-t border-white/[0.06]" : ""}`}
+            >
+              <div className="min-w-0 flex-1">
+                <p className="flex flex-wrap items-center gap-2 text-[13.5px] font-semibold text-white">
+                  {sendItemLabel(item)}
+                  {st.kind === "never" && blocker && !blocker.startsWith("Escolhe") ? (
+                    <span className="rounded-full bg-white/[0.04] px-2 py-0.5 text-[10.5px] font-semibold text-white/35">
+                      {item.startsWith("eval:") ? "Sem decisão" : item === "plan" ? "Incompleto" : "Por fazer"}
+                    </span>
+                  ) : (
+                    <SendBadge compact state={st} />
+                  )}
+                </p>
+                <p className="mt-0.5 text-[12px] text-white/45">{describe(item)}</p>
+                {entry?.ack?.comment && (
+                  <p className="mt-1.5 rounded-lg border border-white/[0.07] bg-white/[0.03] px-3 py-2 text-[12px] italic text-white/70">
+                    «{entry.ack.comment}» — {formatDateTime(entry.ack.at)}
+                  </p>
+                )}
+              </div>
+              <button
+                type="button"
+                disabled={Boolean(blocker) && st.kind === "never"}
+                title={blocker ?? undefined}
+                onClick={() => onPreview(item)}
+                className={`inline-flex shrink-0 items-center gap-2 rounded-full px-4 py-2 text-[12.5px] font-semibold transition disabled:cursor-not-allowed disabled:opacity-35 ${
+                  st.kind === "sent"
+                    ? "border border-white/12 text-white/70 hover:text-white"
+                    : "text-white shadow-[0_8px_22px_-10px_rgba(120,61,245,0.8)] hover:-translate-y-px"
+                }`}
+                style={st.kind === "sent" ? undefined : { background: "var(--brand-gradient)" }}
+              >
+                <Eye className="h-3.5 w-3.5" />
+                {st.kind === "never" ? "Pré-visualizar e enviar" : st.kind === "changed" ? "Rever e reenviar" : "Ver o que foi enviado"}
+              </button>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
+
+/* ============================ gravação e afins ============================ */
 
 function SaveIndicator({ state, onRetry }: { state: SaveState; onRetry: () => void }) {
   const base = "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11.5px] font-medium";
@@ -1076,28 +1330,6 @@ function SaveIndicator({ state, onRetry }: { state: SaveState; onRetry: () => vo
   );
 }
 
-/** Mostra um filho de largura fixa encolhido para caber no contentor (nunca
- *  maior do que o natural). `zoom` e não `transform`: o zoom conta para o
- *  layout, por isso a altura acompanha sem contas à mão. */
-function FitToWidth({ width, children }: { width: number; children: ReactNode }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [zoom, setZoom] = useState(1);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const measure = () => setZoom(Math.min(1, el.clientWidth / width));
-    measure();
-    const ro = new ResizeObserver(measure);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [width]);
-  return (
-    <div ref={ref} className="w-full">
-      <div style={{ zoom, width }}>{children}</div>
-    </div>
-  );
-}
-
 function HistoryList({
   id,
   history,
@@ -1128,7 +1360,8 @@ function HistoryList({
               </p>
               <p className="mt-1 text-[12px] text-white/40">
                 KPIs cumpridos: {metCount(p.kpis15).met}/{metCount(p.kpis15).total} aos 15 ·{" "}
-                {metCount(p.kpis30).met}/{metCount(p.kpis30).total} aos 30
+                {metCount(p.kpis30).met}/{metCount(p.kpis30).total} aos 30 · check-ins feitos:{" "}
+                {p.weeks.filter((w) => w.done).length}/4
               </p>
               <button
                 type="button"
@@ -1175,7 +1408,9 @@ function DeletePlan({ id, name }: { id: string; name: string }) {
     <div className="mt-12 border-t border-white/[0.06] pt-5">
       {confirming ? (
         <div className="flex flex-wrap items-center gap-3 text-[12.5px] text-white/60">
-          <span>Apagar o plano de {name}, com o histórico? Não dá para desfazer.</span>
+          <span>
+            Apagar o plano de {name}, com o histórico? O consultor deixa de o ver na app. Não dá para desfazer.
+          </span>
           <button
             type="button"
             disabled={busy}

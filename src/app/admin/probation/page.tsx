@@ -1,16 +1,39 @@
-// SuperAdmin → Planos de Probation: a lista de todos os planos (consultor,
-// início, próxima avaliação, estado) e as portas para um plano novo e para o
-// template em branco. Só SuperAdmin: a página verifica isAdmin antes de ler
-// o KV (o layout de /admin sozinho não basta — ver abaixo) e as APIs voltam a
-// verificar por conta própria.
+// SuperAdmin → Planos de Probation: o painel de todos os planos.
+//
+// v77.77 — deixa de ser uma tabela e passa a ser um painel de
+// acompanhamento: os números do momento, a agenda dos próximos 7 dias
+// (check-ins e avaliações, atrasados à cabeça), um cartão por plano em
+// aberto com os 30 dias, os check-ins semana a semana e o que o consultor
+// já recebeu e confirmou; os fechados ficam numa lista compacta por baixo.
+//
+// Só SuperAdmin: a página verifica isAdmin antes de ler o KV (o layout de
+// /admin sozinho não basta — ver abaixo) e as APIs voltam a verificar.
 
 import Link from "next/link";
-import { ArrowLeft, ClipboardCheck, FileDown, Plus } from "lucide-react";
+import {
+  ArrowLeft,
+  CalendarCheck2,
+  CheckCheck,
+  ClipboardCheck,
+  FileDown,
+  Plus,
+  Scale,
+} from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { StatusChip } from "@/components/probation/status-chip";
-import { listPlans, probationConfigured } from "@/lib/probation/store";
-import { formatISODate, summarize, type ProbationSummary } from "@/lib/probation/shared";
-import { daysUntilISO } from "@/lib/dates";
+import { PlanCard } from "@/components/probation/plan-card";
+import { getPublishedMany, listPlans, probationConfigured } from "@/lib/probation/store";
+import {
+  addDaysISO,
+  finalDecision,
+  formatISODate,
+  periodDates,
+  planStatus,
+  weekDate,
+  type ProbationPlan,
+} from "@/lib/probation/shared";
+import { todayLisbonISO } from "@/lib/probation/progress";
+import { pendingAcks } from "@/lib/probation/published";
 import { getCurrentEmployee } from "@/lib/auth/server";
 
 export const dynamic = "force-dynamic";
@@ -23,29 +46,49 @@ export const metadata = {
 /** O template em branco — uma rota de API (descarga), não uma página. */
 const TEMPLATE_PDF = "/api/admin/probation/template/pdf";
 
-/** Abertos primeiro, pela próxima avaliação; fechados depois, pelos mais
- *  recentes. */
-function order(a: ProbationSummary, b: ProbationSummary): number {
-  if (a.next && b.next) return a.next.date.localeCompare(b.next.date);
-  if (a.next) return -1;
-  if (b.next) return 1;
-  return b.updatedAt - a.updatedAt;
+const WEEKDAY_SHORT = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
+function day(iso: string): string {
+  const f = formatISODate(iso);
+  if (!f) return "—";
+  const [y, m, d] = iso.split("-").map(Number);
+  return `${WEEKDAY_SHORT[new Date(Date.UTC(y, m - 1, d)).getUTCDay()]} ${f.slice(0, 5)}`;
 }
 
-function NextCell({ s }: { s: ProbationSummary }) {
-  if (!s.next) return <span className="text-white/30">—</span>;
-  const days = daysUntilISO(s.next.date);
-  const when =
-    Number.isNaN(days) ? "" : days === 0 ? "hoje" : days > 0 ? `daqui a ${days} d` : `há ${-days} d`;
-  return (
-    <span className="flex flex-col">
-      <span className="tabular font-semibold text-white/85">{formatISODate(s.next.date)}</span>
-      <span className={`text-[11px] ${days < 0 ? "text-amber-300/80" : "text-white/40"}`}>
-        {s.next.label}
-        {when ? ` · ${when}` : ""}
-      </span>
-    </span>
-  );
+function isOpen(plan: ProbationPlan): boolean {
+  const f = finalDecision(plan.period);
+  return !f || f === "extensao";
+}
+
+type AgendaItem = {
+  key: string;
+  date: string;
+  kind: "checkin" | "eval";
+  title: string;
+  who: string;
+  href: string;
+};
+
+function agendaFor(plans: ProbationPlan[], today: string): AgendaItem[] {
+  const horizon = addDaysISO(today, 7);
+  const out: AgendaItem[] = [];
+  for (const plan of plans) {
+    if (!isOpen(plan) || !plan.period.startDate) continue;
+    const href = `/admin/probation/${plan.id}`;
+    for (const w of plan.period.weeks) {
+      if (w.done) continue;
+      const date = weekDate(w, plan.period.startDate, plan.checkinDay);
+      if (date && date <= horizon) {
+        out.push({ key: `${plan.id}-w${w.n}`, date, kind: "checkin", title: `Check-in · semana ${w.n}`, who: plan.consultantName, href: `${href}?tab=semanas&semana=${w.n}` });
+      }
+    }
+    const { d15, d30 } = periodDates(plan.period);
+    if (!plan.period.eval15.decision && d15 <= horizon) {
+      out.push({ key: `${plan.id}-e15`, date: d15, kind: "eval", title: "Avaliação dos 15 dias", who: plan.consultantName, href: `${href}?tab=avaliacoes` });
+    } else if (plan.period.eval15.decision === "extensao" && !plan.period.eval30.decision && d30 <= horizon) {
+      out.push({ key: `${plan.id}-e30`, date: d30, kind: "eval", title: "Avaliação dos 30 dias", who: plan.consultantName, href: `${href}?tab=avaliacoes` });
+    }
+  }
+  return out.sort((a, b) => a.date.localeCompare(b.date));
 }
 
 export default async function ProbationListPage() {
@@ -55,8 +98,15 @@ export default async function ProbationListPage() {
   // verifica por conta própria, ANTES de ler o que quer que seja.
   const employee = await getCurrentEmployee();
   if (!employee?.isAdmin) return null;
-  const plans = (await listPlans()).map(summarize).sort(order);
-  const open = plans.filter((p) => p.next).length;
+  const today = todayLisbonISO();
+  const plans = await listPlans();
+  const pubs = await getPublishedMany(plans.map((p) => p.id));
+
+  const open = plans.filter(isOpen).sort((a, b) => (a.period.startDate || "").localeCompare(b.period.startDate || ""));
+  const closed = plans.filter((p) => !isOpen(p)).sort((a, b) => b.updatedAt - a.updatedAt);
+  const agenda = agendaFor(open, today);
+  const toConfirm = open.reduce((s, p) => s + (pubs.get(p.id) ? pendingAcks(pubs.get(p.id)!).length : 0), 0);
+  const late = agenda.filter((a) => a.date < today).length;
 
   return (
     <PageShell>
@@ -75,8 +125,8 @@ export default async function ProbationListPage() {
             <span className="brand-gradient-text">Planos de Probation</span>
           </h1>
           <p className="mt-1.5 max-w-[640px] text-[12.5px] leading-relaxed text-white/45">
-            30 dias, duas avaliações (aos 15 e aos 30) e acompanhamento semanal. Cada avaliação acaba numa de
-            três decisões: extensão, recuperação para a equipa ou saída.
+            30 dias, um check-in por semana com a chefia (ou a direção) e duas avaliações. Tudo o que o consultor
+            recebe passa antes pela pré-visualização, e fica registado quando ele confirma que leu.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -104,55 +154,116 @@ export default async function ProbationListPage() {
         </p>
       )}
 
-      <section className="animate-fade-up mt-8">
-        <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.2em] text-white/35">
-          {plans.length === 0
-            ? "Ainda não há planos"
-            : `${plans.length} ${plans.length === 1 ? "plano" : "planos"} · ${open} em aberto`}
-        </p>
+      {plans.length === 0 ? (
+        <div className="animate-fade-up mt-8 rounded-2xl border border-dashed border-white/12 px-6 py-10 text-center">
+          <ClipboardCheck className="mx-auto h-6 w-6 text-white/30" />
+          <p className="mt-3 text-[13px] text-white/55">Nenhum plano de probation criado.</p>
+        </div>
+      ) : (
+        <>
+          {/* números do momento */}
+          <section className="animate-fade-up mt-8 grid grid-cols-2 gap-3 md:grid-cols-4">
+            {[
+              { label: "Planos em aberto", value: open.length, tone: "text-white" },
+              { label: "Para os próximos 7 dias", value: agenda.length, tone: "text-[#c3aaff]" },
+              { label: "Atrasados", value: late, tone: late ? "text-rose-300" : "text-white/60" },
+              { label: "Por confirmar pelos consultores", value: toConfirm, tone: toConfirm ? "text-amber-200" : "text-white/60" },
+            ].map((k) => (
+              <div key={k.label} className="rounded-2xl border border-white/[0.08] bg-white/[0.025] px-4 py-3.5">
+                <p className={`text-[26px] font-bold leading-none tabular-nums ${k.tone}`}>{k.value}</p>
+                <p className="mt-1.5 text-[11.5px] text-white/45">{k.label}</p>
+              </div>
+            ))}
+          </section>
 
-        {plans.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-white/12 px-6 py-10 text-center">
-            <ClipboardCheck className="mx-auto h-6 w-6 text-white/30" />
-            <p className="mt-3 text-[13px] text-white/55">Nenhum plano de probation criado.</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto rounded-2xl border border-white/[0.08] bg-white/[0.02]">
-            <table className="w-full min-w-[640px] text-left text-[13px]">
-              <thead>
-                <tr className="border-b border-white/[0.08] text-[10px] font-semibold uppercase tracking-[0.16em] text-white/40">
-                  <th className="px-4 py-3 font-semibold">Consultor</th>
-                  <th className="px-4 py-3 font-semibold">Início</th>
-                  <th className="px-4 py-3 font-semibold">Próxima avaliação</th>
-                  <th className="px-4 py-3 font-semibold">Estado</th>
-                </tr>
-              </thead>
-              <tbody>
-                {plans.map((p) => (
-                  <tr key={p.id} className="border-b border-white/[0.05] transition last:border-b-0 hover:bg-white/[0.03]">
-                    <td className="px-4 py-3">
-                      <Link href={`/admin/probation/${p.id}`} className="group block">
-                        <span className="font-semibold text-white group-hover:underline">{p.consultantName}</span>
-                        <span className="block text-[11.5px] text-white/40">
-                          {p.roleTeam || "—"}
-                          {p.periodNumber > 1 ? ` · ${p.periodNumber}.º período` : ""}
+          <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
+            {/* planos em aberto */}
+            <section className="animate-fade-up min-w-0">
+              <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.2em] text-white/35">
+                Em aberto · {open.length}
+              </p>
+              {open.length === 0 ? (
+                <p className="rounded-2xl border border-dashed border-white/12 px-5 py-6 text-[12.5px] text-white/45">
+                  Nenhum plano em curso.
+                </p>
+              ) : (
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  {open.map((p) => (
+                    <PlanCard key={p.id} plan={p} pub={pubs.get(p.id) ?? null} today={today} />
+                  ))}
+                </div>
+              )}
+            </section>
+
+            {/* agenda */}
+            <aside className="animate-fade-up">
+              <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.2em] text-white/35">Agenda · próximos 7 dias</p>
+              <div className="overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.02]">
+                {agenda.length === 0 ? (
+                  <p className="flex items-center gap-2 px-4 py-5 text-[12.5px] text-white/45">
+                    <CheckCheck className="h-4 w-4 text-emerald-300/70" />
+                    Nada marcado para os próximos dias.
+                  </p>
+                ) : (
+                  agenda.map((a, i) => {
+                    const lateItem = a.date < today;
+                    const isToday = a.date === today;
+                    return (
+                      <Link
+                        key={a.key}
+                        href={a.href}
+                        className={`flex items-center gap-3 px-4 py-3 transition hover:bg-white/[0.04] ${i ? "border-t border-white/[0.05]" : ""}`}
+                      >
+                        <span
+                          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
+                            a.kind === "eval" ? "bg-[#783DF5]/15 text-[#c3aaff]" : "bg-white/[0.06] text-white/60"
+                          }`}
+                        >
+                          {a.kind === "eval" ? <Scale className="h-4 w-4" /> : <CalendarCheck2 className="h-4 w-4" />}
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-[12.5px] font-semibold text-white/85">{a.who}</span>
+                          <span className="block truncate text-[11.5px] text-white/45">{a.title}</span>
+                        </span>
+                        <span
+                          className={`shrink-0 text-right text-[11px] font-semibold tabular-nums ${
+                            lateItem ? "text-rose-300" : isToday ? "text-[#c3aaff]" : "text-white/50"
+                          }`}
+                        >
+                          {lateItem ? "atrasado" : isToday ? "hoje" : day(a.date)}
                         </span>
                       </Link>
-                    </td>
-                    <td className="tabular px-4 py-3 text-white/70">{formatISODate(p.startDate) || "—"}</td>
-                    <td className="px-4 py-3">
-                      <NextCell s={p} />
-                    </td>
-                    <td className="px-4 py-3">
-                      <StatusChip status={p.status} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    );
+                  })
+                )}
+              </div>
+            </aside>
           </div>
-        )}
-      </section>
+
+          {closed.length > 0 && (
+            <section className="animate-fade-up mt-10">
+              <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.2em] text-white/35">Fechados · {closed.length}</p>
+              <div className="overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.02]">
+                {closed.map((p, i) => (
+                  <Link
+                    key={p.id}
+                    href={`/admin/probation/${p.id}`}
+                    className={`flex flex-wrap items-center gap-3 px-4 py-3 transition hover:bg-white/[0.04] ${i ? "border-t border-white/[0.05]" : ""}`}
+                  >
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[13px] font-semibold text-white/85">{p.consultantName}</span>
+                      <span className="block truncate text-[11.5px] text-white/40">
+                        {p.roleTeam || "—"} · início {formatISODate(p.period.startDate) || "—"}
+                      </span>
+                    </span>
+                    <StatusChip status={planStatus(p)} />
+                  </Link>
+                ))}
+              </div>
+            </section>
+          )}
+        </>
+      )}
     </PageShell>
   );
 }

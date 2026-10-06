@@ -210,6 +210,14 @@ export const S05 = {
     { fill: "prazo", ph: "[24 horas]" },
     " depois. Qualquer que seja o desfecho, vais ouvi-lo primeiro de nós, cara a cara.",
   ] as Para,
+  /** Sem chefia intermédia: decide a direção, sozinha. */
+  noteSolo: [
+    "A decisão é tomada pela Direção, ",
+    { bind: "direcao", empty: "[Direção]", strong: true },
+    ", comunicada na reunião de avaliação e confirmada por escrito até ",
+    { fill: "prazo", ph: "[24 horas]" },
+    " depois. Qualquer que seja o desfecho, vais ouvi-lo primeiro de nós, cara a cara.",
+  ] as Para,
 };
 
 export const S06 = {
@@ -302,6 +310,30 @@ export const S08 = {
   ],
 };
 
+/* ------------- variantes «só direção» (sem chefia intermédia) ------------- */
+// O texto acima é o do protótipo. Quando ainda não há chefia intermédia, a
+// direção é o responsável direto: o `responsavel` passa a ser o nome da
+// direção (no herói, no check-in da secção 06…) e só mudam as três peças que
+// diriam o mesmo nome duas vezes — a linha da secção 01, a nota da 05 e as
+// assinaturas da 08.
+
+export function infoRowsFor(model: Pick<DocModel, "soloDirection">): { label: string; value: Para }[] {
+  if (!model.soloDirection) return S01.rows;
+  return S01.rows.map((r) =>
+    r.label === "Responsável direto"
+      ? { label: r.label, value: [responsavel("[Direção]"), " (Direção)"] }
+      : r,
+  );
+}
+
+export function decisionNoteFor(model: Pick<DocModel, "soloDirection">): Para {
+  return model.soloDirection ? S05.noteSolo : S05.note;
+}
+
+export function signaturesFor(model: Pick<DocModel, "soloDirection">): (typeof S08.sigs)[number][] {
+  return model.soloDirection ? S08.sigs.filter((s) => s.bind !== "responsavel") : S08.sigs;
+}
+
 export const PAGE_FOOTER = "WonderAds · Plano de Probation · Documento interno e confidencial";
 
 export const KPI_OPTIONS = KPI_MET_OPTIONS;
@@ -335,6 +367,10 @@ export type DocEval = {
 export type DocModel = {
   /** Template em branco — para imprimir e preencher à mão. */
   blank: boolean;
+  /** Sem chefia intermédia: a direção acompanha, decide e assina sozinha. */
+  soloDirection: boolean;
+  /** Linha por baixo de uma assinatura — «Lido e confirmado na app · …». */
+  sigNotes: Partial<Record<Bind, string>>;
   /** «2.º período» depois de uma extensão aos 30 dias; null no primeiro. */
   periodLabel: string | null;
   binds: Record<Bind, string>;
@@ -410,6 +446,7 @@ type PlanFields = Pick<
   ProbationPlan,
   | "consultantName"
   | "roleTeam"
+  | "hasManager"
   | "manager"
   | "direction"
   | "checkinDay"
@@ -425,18 +462,23 @@ export function buildDocModel(
   plan: PlanFields,
   period: ProbationPeriod,
   periodIndex: number,
+  opts: { sigNotes?: Partial<Record<Bind, string>> } = {},
 ): DocModel {
   const { d0, d15, d30 } = periodDates(period);
   const name = plan.consultantName.trim();
   const closedAt15 = Boolean(period.eval15.decision) && !eval30Open(period);
+  const solo = !plan.hasManager;
   return {
     blank: false,
+    soloDirection: solo,
+    sigNotes: opts.sigNotes ?? {},
     periodLabel: periodIndex > 0 ? `${periodIndex + 1}.º período` : null,
     binds: {
       consultor: name,
       primeiro: firstName(name),
       funcao: plan.roleTeam.trim(),
-      responsavel: plan.manager.trim(),
+      // Sem chefia intermédia, o responsável direto é a direção.
+      responsavel: (solo ? plan.direction : plan.manager).trim(),
       direcao: plan.direction.trim(),
       d0: formatISODate(d0),
       d15: formatISODate(d15),
@@ -463,6 +505,8 @@ export function blankDocModel(): DocModel {
     Object.fromEntries(keys.map((k) => [k, ""])) as Record<K, string>;
   return {
     blank: true,
+    soloDirection: false,
+    sigNotes: {},
     periodLabel: null,
     binds: empty<Bind>(["consultor", "primeiro", "funcao", "responsavel", "direcao", "d0", "d15", "d30"]),
     fills: empty<Fill>(["prazo", "checkin", "recursos", "apoio", "ferramenta"]),
