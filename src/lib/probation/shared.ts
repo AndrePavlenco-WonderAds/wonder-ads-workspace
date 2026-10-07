@@ -23,7 +23,7 @@ export type KpiMet = "sim" | "parcial" | "nao";
 /** O semáforo do check-in semanal — da semana toda e de cada KPI. */
 export type WeekPulse = "no-caminho" | "em-risco" | "fora";
 export type ProbationDecision = "extensao" | "recuperacao" | "saida";
-export type ProbationStatus = "em-curso" | "estendido" | "recuperado" | "saida";
+export type ProbationStatus = "rascunho" | "em-curso" | "estendido" | "recuperado" | "saida";
 
 export type ProbationKpi = {
   id: string;
@@ -109,9 +109,13 @@ export type ProbationPlan = {
   consultantUsername: string | null;
   consultantName: string;
   roleTeam: string;
-  /** false = ainda não há chefia intermédia: a direção acompanha, decide e
-   *  assina sozinha (o documento deixa de pedir um «responsável direto»). */
+  /** false = ainda não há chefia intermédia: a direção acompanha e decide
+   *  sozinha (no documento, a direção é o «responsável direto»). */
   hasManager: boolean;
+  /** Rascunho (v77.78): guardado para continuar depois. Não entra na agenda
+   *  nem nos lembretes e grava-se mesmo incompleto. Ativa-se à mão ou no
+   *  primeiro envio ao consultor. */
+  isDraft: boolean;
   manager: string;
   direction: string;
   /** Campos de apoio do documento (secções 05 e 06). */
@@ -139,6 +143,7 @@ export type ProbationDraft = Pick<
   | "consultantName"
   | "roleTeam"
   | "hasManager"
+  | "isDraft"
   | "manager"
   | "direction"
   | "checkinDay"
@@ -190,6 +195,7 @@ export const DECISIONS: { id: ProbationDecision; n: number; label: string }[] = 
 ];
 
 export const STATUS_LABEL: Record<ProbationStatus, string> = {
+  rascunho: "Rascunho",
   "em-curso": "Em curso",
   estendido: "Estendido",
   recuperado: "Recuperado",
@@ -366,7 +372,10 @@ export function awaitingNewPeriod(p: ProbationPeriod): boolean {
   return finalDecision(p) === "extensao";
 }
 
-export function planStatus(plan: Pick<ProbationPlan, "period" | "history">): ProbationStatus {
+export function planStatus(
+  plan: Pick<ProbationPlan, "period" | "history"> & { isDraft?: boolean },
+): ProbationStatus {
+  if (plan.isDraft) return "rascunho";
   const final = finalDecision(plan.period);
   if (final === "recuperacao") return "recuperado";
   if (final === "saida") return "saida";
@@ -654,6 +663,7 @@ export function sanitizeDraft(raw: unknown, newId: () => string): ProbationDraft
     roleTeam: str(b.roleTeam, LIM.line),
     // Planos anteriores ao interruptor (v77.73) tinham sempre chefia.
     hasManager: b.hasManager !== false,
+    isDraft: b.isDraft === true,
     manager: str(b.manager, LIM.name),
     direction: str(b.direction, LIM.name),
     checkinDay: str(b.checkinDay, LIM.line),
@@ -667,6 +677,8 @@ export function sanitizeDraft(raw: unknown, newId: () => string): ProbationDraft
 
 /** O que impede gravar um plano, em português para o editor; null = ok. */
 export function validateDraft(d: ProbationDraft): string | null {
+  // Um rascunho grava-se como estiver — é para continuar depois.
+  if (d.isDraft) return null;
   if (!d.consultantName.trim()) return "Falta o nome do consultor.";
   if (!isISODate(d.period.startDate)) return "Falta a data de início.";
   return null;
@@ -715,6 +727,11 @@ export function stampDecisions(
       return { ...w, doneAt: old?.done ? (old.doneAt ?? now) : now };
     }),
   };
+}
+
+/** O que falta para um rascunho poder ser ativado; null = pronto. */
+export function activationProblem(d: ProbationDraft): string | null {
+  return validateDraft({ ...d, isDraft: false });
 }
 
 export function summarize(plan: ProbationPlan): ProbationSummary {

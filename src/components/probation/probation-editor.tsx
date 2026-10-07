@@ -34,6 +34,8 @@ import {
   FileText,
   History,
   Loader2,
+  LogOut,
+  PencilLine,
   Plus,
   RefreshCw,
   Scale,
@@ -56,6 +58,7 @@ import { buildDocModel } from "@/lib/probation/document";
 import { formatDateTime } from "@/lib/dates";
 import {
   DECISIONS,
+  activationProblem,
   awaitingNewPeriod,
   decidersName,
   defaultWeekDates,
@@ -110,6 +113,11 @@ const newId = () =>
  *  protótipo. */
 const START_ROWS = 3;
 
+/** O apoio de sempre — vem escrito em cada plano novo (pedido do André,
+ *  v77.78) e edita-se como qualquer outro campo. */
+const DEFAULT_RESOURCES =
+  "https://workspace.wonder-ads.com/formacao + shadowing nas reuniões + acompanhamento semanal";
+
 const WEEKDAYS = [
   "segundas-feiras",
   "terças-feiras",
@@ -124,6 +132,7 @@ function draftFromPlan(plan: ProbationPlan): ProbationDraft {
     consultantName: plan.consultantName,
     roleTeam: plan.roleTeam,
     hasManager: plan.hasManager,
+    isDraft: plan.isDraft,
     manager: plan.manager,
     direction: plan.direction,
     checkinDay: plan.checkinDay,
@@ -146,10 +155,11 @@ function newDraft(defaults: { direction: string }): ProbationDraft {
     // Por agora não há chefia intermédia na casa: a direção acompanha e
     // decide sozinha. Um clique liga a chefia quando existir.
     hasManager: false,
+    isDraft: false,
     manager: "",
     direction: defaults.direction,
     checkinDay: "",
-    resources: "",
+    resources: DEFAULT_RESOURCES,
     supportPerson: "",
     trackingTool: "",
     confirmationDeadline: "",
@@ -331,12 +341,13 @@ export function ProbationEditor({
   const dates = periodDates(period);
   const history = server?.history ?? [];
   const periodIndex = history.length;
-  const status = planStatus({ period, history });
+  const status = planStatus({ period, history, isDraft: draft.isDraft });
   const model = useMemo(
     () => buildDocModel(draft, draft.period, periodIndex),
     [draft, periodIndex],
   );
   const problem = validateDraft(draft);
+  const toActivate = activationProblem(draft);
   const lead = leadName(draft);
   const canSend = Boolean(draft.consultantUsername);
 
@@ -377,8 +388,11 @@ export function ProbationEditor({
     });
   }
 
-  async function create() {
-    const issue = validateDraft(draft);
+  /** Cria o plano. Como rascunho grava-se como estiver e volta-se à lista
+   *  (fica em «Rascunhos» para continuar depois). */
+  async function create(asDraft: boolean) {
+    const body = { ...draft, isDraft: asDraft };
+    const issue = validateDraft(body);
     if (issue) {
       setCreateError(issue);
       return;
@@ -389,7 +403,7 @@ export function ProbationEditor({
       const res = await fetch("/api/admin/probation", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify(draft),
+        body: JSON.stringify(body),
       });
       const data = (await res.json().catch(() => ({}))) as { plan?: ProbationPlan; error?: string };
       if (!res.ok || !data.plan) {
@@ -397,12 +411,31 @@ export function ProbationEditor({
         setCreating(false);
         return;
       }
-      router.replace(`/admin/probation/${data.plan.id}`);
+      if (asDraft) {
+        router.push("/admin/probation?guardado=1");
+      } else {
+        router.replace(`/admin/probation/${data.plan.id}`);
+      }
       router.refresh();
     } catch {
       setCreateError("Sem ligação — tenta outra vez.");
       setCreating(false);
     }
+  }
+
+  /** «Guardar e sair»: grava o que faltar e volta à lista. */
+  const [leaving, setLeaving] = useState(false);
+  async function saveAndExit() {
+    setLeaving(true);
+    if (dirty.current || inFlight.current) {
+      const ok = await flush();
+      if (!ok) {
+        setLeaving(false);
+        return;
+      }
+    }
+    router.push(`/admin/probation${draft.isDraft ? "?guardado=1" : ""}`);
+    router.refresh();
   }
 
   /** Descarrega o PDF depois de gravar o que faltar — o PDF é gerado a
@@ -456,6 +489,7 @@ export function ProbationEditor({
 
   /** Porque é que um item não se pode enviar — o mesmo critério da API. */
   function blockerFor(item: SendItem): string | null {
+    if (draft.isDraft && toActivate) return `É um rascunho e ainda não pode ser ativado: ${toActivate}`;
     if (!draft.consultantUsername) {
       return "Escolhe o consultor da lista da equipa (secção 1 do Plano) — um nome escrito à mão não tem conta na app.";
     }
@@ -499,13 +533,24 @@ export function ProbationEditor({
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ rev: revRef.current, item: preview.item }),
       });
-      const data = (await res.json().catch(() => ({}))) as { pub?: PublishedPlan; error?: string };
+      const data = (await res.json().catch(() => ({}))) as {
+        pub?: PublishedPlan;
+        plan?: ProbationPlan;
+        error?: string;
+      };
       if (!res.ok || !data.pub) {
         setSendError(data.error ?? "Não foi possível enviar.");
         setSending(false);
         return;
       }
       setPub(data.pub);
+      // O primeiro envio de um rascunho ativa-o no servidor (rev + 1).
+      if (data.plan && data.plan.rev !== revRef.current) {
+        const activated = data.plan;
+        revRef.current = activated.rev;
+        setServer(activated);
+        setDraft((d) => ({ ...d, isDraft: activated.isDraft }));
+      }
       setSending(false);
       setFlash(`${sendItemLabel(preview.item)} enviado a ${draft.consultantName.trim().split(/\s+/)[0] || "o consultor"}.`);
       setPreview(null);
@@ -558,6 +603,17 @@ export function ProbationEditor({
           {id && (
             <button
               type="button"
+              disabled={leaving || save.kind === "conflict"}
+              onClick={() => void saveAndExit()}
+              className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.04] px-4 py-2 text-[12.5px] font-medium text-white/80 transition hover:border-white/25 hover:text-white disabled:opacity-50"
+            >
+              {leaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <LogOut className="h-3.5 w-3.5" />}
+              Guardar e sair
+            </button>
+          )}
+          {id && (
+            <button
+              type="button"
               onClick={() => void downloadPdf(`/api/admin/probation/${id}/pdf`)}
               className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.04] px-4 py-2 text-[12.5px] font-medium text-white/80 transition hover:border-white/25 hover:text-white"
             >
@@ -597,8 +653,45 @@ export function ProbationEditor({
           </span>
           {id && <span className="text-white/20">·</span>}
           {id && <span>{periodIndex + 1}.º período</span>}
+          {/* Voltar a rascunho só enquanto nada foi enviado ao consultor. */}
+          {id && !draft.isDraft && !pub && (
+            <>
+              <span className="text-white/20">·</span>
+              <button
+                type="button"
+                onClick={() => update((d) => ({ ...d, isDraft: true }))}
+                className="inline-flex items-center gap-1 text-white/45 underline-offset-2 transition hover:text-white hover:underline"
+              >
+                <PencilLine className="h-3 w-3" />
+                Passar a rascunho
+              </button>
+            </>
+          )}
         </div>
       </header>
+
+      {id && draft.isDraft && (
+        <div className="mt-4 flex flex-wrap items-center gap-3 rounded-2xl border border-dashed border-white/20 bg-white/[0.03] px-4 py-3.5">
+          <PencilLine className="h-4 w-4 shrink-0 text-white/50" />
+          <div className="min-w-0 flex-1">
+            <p className="text-[13px] font-semibold text-white/90">Rascunho</p>
+            <p className="text-[12px] text-white/50">
+              Grava sozinho, mesmo incompleto. Não entra na agenda nem nos lembretes e o consultor não vê nada.
+              {toActivate ? ` Para ativar falta: ${toActivate.replace(/^Falta /, "").replace(/\.$/, "")}.` : " Está pronto a ativar."}
+            </p>
+          </div>
+          <button
+            type="button"
+            disabled={Boolean(toActivate) || save.kind === "conflict"}
+            onClick={() => update((d) => ({ ...d, isDraft: false }))}
+            className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-[12.5px] font-semibold text-white shadow-[0_8px_22px_-8px_rgba(120,61,245,0.7)] transition hover:-translate-y-px disabled:cursor-not-allowed disabled:opacity-40"
+            style={{ background: "var(--brand-gradient)" }}
+          >
+            <Check className="h-3.5 w-3.5" />
+            Ativar plano
+          </button>
+        </div>
+      )}
 
       {flash && (
         <div className="mt-4 flex items-center gap-2 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-2.5 text-[12.5px] text-emerald-100">
@@ -725,8 +818,8 @@ export function ProbationEditor({
                   <span className="sheet-label mb-1.5">Quem acompanha e decide</span>
                   <div role="radiogroup" aria-label="Chefia" className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                     {[
-                      { on: false, title: "Só a direção", sub: "Ainda não há chefia intermédia: a direção faz os check-ins, decide e assina." },
-                      { on: true, title: "Chefia intermédia + direção", sub: "A chefia acompanha a semana a semana; decidem e assinam os dois." },
+                      { on: false, title: "Só a direção", sub: "Ainda não há chefia intermédia: a direção faz os check-ins e decide." },
+                      { on: true, title: "Chefia intermédia + direção", sub: "A chefia acompanha semana a semana; decidem os dois." },
                     ].map((o) => {
                       const active = draft.hasManager === o.on;
                       return (
@@ -767,7 +860,7 @@ export function ProbationEditor({
                 <Field
                   label="Direção"
                   className={draft.hasManager ? "" : "sm:col-span-2"}
-                  hint={draft.hasManager ? undefined : "No documento, a direção aparece como responsável direto e assinam só o consultor e a direção."}
+                  hint={draft.hasManager ? undefined : "No documento, a direção aparece como responsável direto."}
                 >
                   <input
                     className="sheet-input"
@@ -815,7 +908,7 @@ export function ProbationEditor({
             <SheetSection
               n={5}
               title="Acompanhamento e apoio"
-              last={Boolean(id)}
+              last
               done={Boolean(
                 draft.checkinDay.trim() &&
                   draft.resources.trim() &&
@@ -898,20 +991,34 @@ export function ProbationEditor({
             {!id && (
               <div className="mt-2 border-t border-black/[0.07] pt-6">
                 <p className="text-[12.5px] leading-relaxed text-black/55">
-                  Depois de criado: check-ins semanais, avaliações e envio ao consultor, sempre com pré-visualização.
+                  Ainda não está pronto? Guarda como rascunho e continua depois — fica em «Rascunhos» na lista. Depois
+                  de criado: check-ins semanais, avaliações e envio ao consultor, sempre com pré-visualização.
                 </p>
-                <button
-                  type="button"
-                  disabled={creating || Boolean(problem)}
-                  onClick={() => void create()}
-                  className="mt-4 inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-[13px] font-bold text-white shadow-[0_8px_22px_-8px_rgba(120,61,245,0.7)] transition hover:-translate-y-px disabled:cursor-not-allowed disabled:opacity-50"
-                  style={{ background: "var(--brand-gradient)" }}
-                >
-                  {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                  Criar plano
-                </button>
-                {(createError || problem) && (
-                  <p className="mt-2 text-[12px] font-medium text-black/50">{createError ?? problem}</p>
+                <div className="mt-4 flex flex-wrap items-center gap-2.5">
+                  <button
+                    type="button"
+                    disabled={creating}
+                    onClick={() => void create(true)}
+                    className="inline-flex items-center gap-2 rounded-full border border-black/20 bg-white px-5 py-2.5 text-[13px] font-bold text-black/75 transition hover:border-black/40 disabled:opacity-50"
+                  >
+                    {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <PencilLine className="h-4 w-4" />}
+                    Guardar rascunho
+                  </button>
+                  <button
+                    type="button"
+                    disabled={creating || Boolean(toActivate)}
+                    onClick={() => void create(false)}
+                    className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-[13px] font-bold text-white shadow-[0_8px_22px_-8px_rgba(120,61,245,0.7)] transition hover:-translate-y-px disabled:cursor-not-allowed disabled:opacity-50"
+                    style={{ background: "var(--brand-gradient)" }}
+                  >
+                    {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                    Criar plano
+                  </button>
+                </div>
+                {(createError || toActivate) && (
+                  <p className="mt-2 text-[12px] font-medium text-black/50">
+                    {createError ?? `Para criar o plano: ${toActivate} O rascunho grava-se mesmo assim.`}
+                  </p>
                 )}
               </div>
             )}
@@ -1207,7 +1314,7 @@ function SendCenter({
 }) {
   const { d15, d30 } = periodDates(period);
   const describe = (item: SendItem): string => {
-    if (item === "plan") return "O documento do plano, com os KPIs, os desfechos possíveis e as assinaturas.";
+    if (item === "plan") return "O documento do plano, com os KPIs e os desfechos possíveis.";
     if (item === "eval:15") return `Resultado e decisão da avaliação de ${formatISODate(d15) || "—"}.`;
     if (item === "eval:30") return `Resultado e decisão da avaliação de ${formatISODate(d30) || "—"}.`;
     const w = period.weeks.find((x) => `week:${x.n}` === item);

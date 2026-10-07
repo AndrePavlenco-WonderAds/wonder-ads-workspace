@@ -13,7 +13,7 @@
 //      parte-se ENTRE blocos — com o título sempre agarrado ao primeiro
 //      bloco, o cabeçalho das tabelas repetido e cada pedaço de um cartão
 //      partido fechado na sua página;
-//   3. a secção 08 (confirmação + assinaturas) nunca se separa;
+//   3. o fecho (nota de confidencialidade) nunca se separa;
 //   4. qual das duas (saltar ou partir) decide-se plano a plano: geram-se
 //      vários planos de paginação (só com alturas) e fica o que deixa a
 //      página menos cheia o mais cheia possível, com penalização por cada
@@ -56,11 +56,10 @@ import {
   S05,
   S06,
   S07,
-  S08,
+  DOC_FOOT,
   decisionNoteFor,
   infoRowsFor,
   kpiColumns,
-  signaturesFor,
   type DocEval,
   type DocKpiRow,
   type DocModel,
@@ -105,9 +104,6 @@ const C = {
   footer: hex("#8c8a9b"),
   white: rgb(1, 1, 1),
 };
-
-/** A confirmação de leitura feita na app, por baixo da assinatura. */
-const SIG_NOTE = hex("#0f7a4a");
 
 /** Gradiente da marca (135°, #343ED7 → #783DF5 a 53,65% → #C535C9), ao
  *  longo de t ∈ [0, 1]. */
@@ -922,55 +918,12 @@ function evalRows(ctx: Ctx): Item[] {
   ];
 }
 
-function signatures(ctx: Ctx): Block {
-  const gap = 15;
-  // Três assinaturas, ou duas quando a direção assina sozinha (sem chefia
-  // intermédia) — as colunas alargam para ocupar a linha toda.
-  const sigs = signaturesFor(ctx.model);
-  const w = (CW - gap * (sigs.length - 1)) / sigs.length;
-  const b = ctx.model.binds;
-  const roleStyle: TextStyle = { font: ctx.f.r, size: 7.6, color: C.muted };
-  const noteStyle: TextStyle = { font: ctx.f.sb, size: 7.4, color: SIG_NOTE };
-  const roles = sigs.map((s) => textBlock([{ text: s.role, style: roleStyle }], w, 7.6, 11));
-  const names = sigs.map((s) =>
-    textBlock(
-      [{ text: b[s.bind] || s.empty, style: { font: ctx.f.b, size: 9, color: b[s.bind] ? C.ink : C.empty } }],
-      w,
-      9,
-      12.5,
-    ),
-  );
-  const notes = sigs.map((s) => {
-    const t = ctx.model.sigNotes[s.bind];
-    return t ? textBlock([{ text: t, style: noteStyle }], w, 7.4, 10.5) : null;
-  });
-  const lineAt = 40;
-  const h =
-    lineAt +
-    4 +
-    Math.max(...names.map((n) => n.h)) +
-    Math.max(...roles.map((r) => r.h)) +
-    Math.max(0, ...notes.map((n) => (n ? n.h + 2 : 0)));
-  return {
-    h,
-    draw: (page, top) => {
-      sigs.forEach((_, i) => {
-        const x = M + i * (w + gap);
-        hline(page, x, top - lineAt, w, C.ink, 1.1);
-        names[i].draw(page, x, top - lineAt - 4);
-        roles[i].draw(page, x, top - lineAt - 4 - names[i].h);
-        notes[i]?.draw(page, x, top - lineAt - 4 - names[i].h - roles[i].h - 2);
-      });
-    },
-  };
-}
-
 function docFoot(ctx: Ctx): Block {
   const st: TextStyle = { font: ctx.f.r, size: 7.6, color: C.muted };
-  const left = S08.foot[0];
+  const left = DOC_FOOT[0];
   const leftW = textWidth(left, st);
   const gap = 16;
-  const right = textBlock([{ text: S08.foot[1], style: st }], CW - leftW - gap, 7.6, 11);
+  const right = textBlock([{ text: DOC_FOOT[1], style: st }], CW - leftW - gap, 7.6, 11);
   const h = 10 + Math.max(11, right.h);
   return {
     h,
@@ -1142,7 +1095,6 @@ function sections(ctx: Ctx): Section[] {
       { block: H(s.n, s.title), gap: 0, keepWithNext: true },
       { block: paragraph(ctx, s.intro), gap: 6, keepWithNext: true },
       ...kpiTable(ctx, rows, which),
-      { block: paragraph(ctx, s.outro), gap: 9 },
     ],
   });
 
@@ -1173,14 +1125,10 @@ function sections(ctx: Ctx): Section[] {
     ],
   };
 
-  const s08: Section = {
+  // O fecho: só a nota de confidencialidade (sem assinaturas desde v77.78).
+  const foot: Section = {
     keepTogether: true,
-    items: [
-      { block: H(S08.n, S08.title), gap: 0, keepWithNext: true },
-      { block: paragraph(ctx, S08.text), gap: 6 },
-      { block: signatures(ctx), gap: 4 },
-      { block: docFoot(ctx), gap: 20 },
-    ],
+    items: [{ block: docFoot(ctx), gap: 20 }],
   };
 
   return [
@@ -1191,7 +1139,7 @@ function sections(ctx: Ctx): Section[] {
     s05,
     s06,
     s07,
-    s08,
+    foot,
   ];
 }
 

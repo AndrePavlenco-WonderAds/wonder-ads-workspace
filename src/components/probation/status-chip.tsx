@@ -1,9 +1,11 @@
-// A etiqueta do estado de um plano (em curso, estendido, recuperado, saída)
+// A etiqueta do estado de um plano (rascunho, em curso, estendido, recuperado,
+// saída)
 // — na lista e no topo do editor, sobre o fundo escuro da app.
 
 import { STATUS_LABEL, type ProbationStatus } from "@/lib/probation/shared";
 
 const TONE: Record<ProbationStatus, string> = {
+  rascunho: "border-white/20 border-dashed bg-white/[0.04] text-white/60",
   "em-curso": "border-violet-400/35 bg-violet-500/10 text-violet-200",
   estendido: "border-sky-400/35 bg-sky-500/10 text-sky-200",
   recuperado: "border-emerald-400/35 bg-emerald-500/10 text-emerald-200",

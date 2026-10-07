@@ -1173,9 +1173,4 @@ body {
 .probation-doc .pd-decision { margin-top: 4px; padding: 10px 12px; border-radius: 10px; background: var(--pd-soft); }
 .probation-doc .pd-decision .pd-opt { display: flex; margin: 3px 0; font-size: 13px; }
 
-.probation-doc .pd-sigs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; margin-top: 8px; }
-.probation-doc .pd-sig .ln { height: 58px; border-bottom: 1.5px solid var(--pd-ink); }
-.probation-doc .pd-sig b { display: block; margin-top: 6px; font-size: 13px; }
-.probation-doc .pd-sig small { color: var(--pd-muted); font-size: 11.5px; }
-.probation-doc .pd-sig .pd-signote { display: block; margin-top: 4px; color: #0f7a4a; font-weight: 600; font-size: 11px; }
-.probation-doc .pd-foot { margin-top: 30px; padding-top: 14px; border-top: 1px solid var(--pd-line); color: var(--pd-muted); font-size: 11.5px; display: flex; justify-content: space-between; gap: 16px; }
+.probation-doc .pd-foot { margin-top: 40px; padding-top: 14px; border-top: 1px solid var(--pd-line); color: var(--pd-muted); font-size: 11.5px; display: flex; justify-content: space-between; gap: 16px; }

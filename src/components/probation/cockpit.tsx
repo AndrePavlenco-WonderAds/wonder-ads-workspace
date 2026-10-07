@@ -82,9 +82,15 @@ export function Cockpit({
           <p className="text-[12px] text-white/45">Fim do período: {d30 ? d30.split("-").reverse().join("/") : "—"}</p>
         </div>
       </div>
-      <div className="px-2">
-        <ProbationTimeline startDate={period.startDate} today={today} weeks={tl.weeks} evals={tl.evals} />
-      </div>
+      {period.startDate ? (
+        <div className="px-2">
+          <ProbationTimeline startDate={period.startDate} today={today} weeks={tl.weeks} evals={tl.evals} />
+        </div>
+      ) : (
+        <p className="px-6 py-8 text-[12.5px] text-white/40">
+          A linha dos 30 dias aparece quando houver data de início (Plano → secção 2).
+        </p>
+      )}
 
       <div className="grid grid-cols-1 gap-px border-t border-white/[0.06] bg-white/[0.06] lg:grid-cols-3">
         {/* próximos passos */}

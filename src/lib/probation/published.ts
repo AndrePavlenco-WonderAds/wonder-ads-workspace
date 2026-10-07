@@ -291,8 +291,8 @@ export function pendingAcks(
   return out.sort((a, b) => a.sentAt - b.sentAt);
 }
 
-/** «Lido e confirmado na app · 06/10/2026 21:40» — hora de Lisboa, igual no
- *  servidor (PDF) e no browser. */
+/** «Lido na app · 06/10/2026 21:40» — hora de Lisboa, igual no servidor e
+ *  no browser. */
 export function ackStamp(at: number): string {
   const d = new Date(at).toLocaleString("en-GB", {
     timeZone: "Europe/Lisbon",
@@ -303,14 +303,14 @@ export function ackStamp(at: number): string {
     minute: "2-digit",
     hour12: false,
   });
-  return `Lido e confirmado na app · ${d.replace(",", "")}`;
+  return `Lido na app · ${d.replace(",", "")}`;
 }
 
-/** O documento enviado, com a confirmação do consultor por baixo da
- *  assinatura dele quando já confirmou. */
+/** O documento tal como foi enviado. (Até à v77.77 levava a confirmação por
+ *  baixo da assinatura do consultor; desde a v77.78 não há assinaturas — a
+ *  leitura vive só na app.) */
 export function docForDisplay(doc: PubDoc): DocModel {
-  if (!doc.ack) return doc.model;
-  return { ...doc.model, sigNotes: { ...doc.model.sigNotes, consultor: ackStamp(doc.ack.at) } };
+  return doc.model;
 }
 
 /* ------------------------------ escrita ------------------------------ */

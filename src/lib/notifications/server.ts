@@ -1020,21 +1020,21 @@ async function probationNotifications(
         const period = pub.periods.find((x) => x.index === p.periodIndex);
         let title = `📄 Recebeste o teu plano de probation`;
         let body =
-          "Lê com calma o que é esperado, os KPIs e os três desfechos possíveis, e confirma que leste — fica registado por baixo da tua assinatura.";
+          "Lê com calma o que é esperado, os KPIs e os três desfechos possíveis, e marca como lido — a direção fica a saber.";
         if (p.item.startsWith("week:")) {
           const w = period?.weeks.find((x) => `week:${x.view.n}` === p.item)?.view;
           title = `🗓️ Check-in da semana ${p.item.slice(5)} do teu plano`;
           body = w
             ? `Com ${w.conductedBy || pub.lead || "a direção"} · ${probationDay(w.date)}${
                 w.actions.length ? ` · ${w.actions.length} ${w.actions.length === 1 ? "passo" : "passos"} para a próxima semana` : ""
-              }. Confirma que tomaste conhecimento.`
-            : "Confirma que tomaste conhecimento.";
+              }. Marca como lido quando o leres.`
+            : "Marca como lido quando o leres.";
         } else if (p.item.startsWith("eval:")) {
           const e = period?.evals.find((x) => `eval:${x.view.which}` === p.item)?.view;
           title = `⚖️ Resultado da avaliação dos ${p.item.slice(5)} dias`;
           body = e
-            ? `Decisão: ${e.decisionLabel}${e.metTotal ? ` · ${e.metN} de ${e.metTotal} KPIs cumpridos` : ""}. Confirma que a recebeste.`
-            : "Confirma que recebeste a decisão.";
+            ? `Decisão: ${e.decisionLabel}${e.metTotal ? ` · ${e.metN} de ${e.metTotal} KPIs cumpridos` : ""}. Marca como lido quando a leres.`
+            : "Marca como lido quando a leres.";
         }
         out.push({
           id,
@@ -1062,6 +1062,8 @@ async function probationNotifications(
     if (plans.length === 0) return out;
     const pubs = await getPublishedMany(plans.map((p) => p.id));
     for (const plan of plans) {
+      // Rascunhos não lembram nada a ninguém.
+      if (plan.isDraft) continue;
       const period = plan.period;
       const idx = plan.history.length;
       const who = firstName(plan.consultantName) || plan.consultantName;
@@ -1129,7 +1131,7 @@ async function probationNotifications(
           out.push({
             id,
             ruleId: "probation-ack",
-            title: `✅ ${who} confirmou: ${sendItemLabel(item)}`,
+            title: `✅ ${who} leu: ${sendItemLabel(item)}`,
             body: e.ack.comment ? `«${e.ack.comment.slice(0, 220)}${e.ack.comment.length > 220 ? "…" : ""}»` : "Sem comentário.",
             periodLabel: `Plano de probation · ${who}`,
             dueAt: e.ack.at,

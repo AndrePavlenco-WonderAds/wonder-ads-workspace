@@ -12,10 +12,12 @@
 import Link from "next/link";
 import {
   ArrowLeft,
+  ArrowRight,
   CalendarCheck2,
   CheckCheck,
   ClipboardCheck,
   FileDown,
+  PencilLine,
   Plus,
   Scale,
 } from "lucide-react";
@@ -24,6 +26,7 @@ import { StatusChip } from "@/components/probation/status-chip";
 import { PlanCard } from "@/components/probation/plan-card";
 import { getPublishedMany, listPlans, probationConfigured } from "@/lib/probation/store";
 import {
+  activationProblem,
   addDaysISO,
   finalDecision,
   formatISODate,
@@ -35,6 +38,7 @@ import {
 import { todayLisbonISO } from "@/lib/probation/progress";
 import { pendingAcks } from "@/lib/probation/published";
 import { getCurrentEmployee } from "@/lib/auth/server";
+import { formatDateTime } from "@/lib/dates";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -55,6 +59,7 @@ function day(iso: string): string {
 }
 
 function isOpen(plan: ProbationPlan): boolean {
+  if (plan.isDraft) return false;
   const f = finalDecision(plan.period);
   return !f || f === "extensao";
 }
@@ -91,7 +96,11 @@ function agendaFor(plans: ProbationPlan[], today: string): AgendaItem[] {
   return out.sort((a, b) => a.date.localeCompare(b.date));
 }
 
-export default async function ProbationListPage() {
+export default async function ProbationListPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ guardado?: string }>;
+}) {
   // O layout de /admin mostra o «SuperAdmin only», mas NÃO chega: no App
   // Router a página renderiza em paralelo com o layout e o payload dela
   // segue na resposta mesmo quando o layout recusa. Dados de RH → a página
@@ -103,7 +112,9 @@ export default async function ProbationListPage() {
   const pubs = await getPublishedMany(plans.map((p) => p.id));
 
   const open = plans.filter(isOpen).sort((a, b) => (a.period.startDate || "").localeCompare(b.period.startDate || ""));
-  const closed = plans.filter((p) => !isOpen(p)).sort((a, b) => b.updatedAt - a.updatedAt);
+  const drafts = plans.filter((p) => p.isDraft).sort((a, b) => b.updatedAt - a.updatedAt);
+  const closed = plans.filter((p) => !p.isDraft && !isOpen(p)).sort((a, b) => b.updatedAt - a.updatedAt);
+  const justSaved = (await searchParams).guardado === "1";
   const agenda = agendaFor(open, today);
   const toConfirm = open.reduce((s, p) => s + (pubs.get(p.id) ? pendingAcks(pubs.get(p.id)!).length : 0), 0);
   const late = agenda.filter((a) => a.date < today).length;
@@ -147,6 +158,13 @@ export default async function ProbationListPage() {
           </Link>
         </div>
       </header>
+
+      {justSaved && (
+        <p className="animate-fade-up mt-6 flex items-center gap-2 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-3 text-[12.5px] text-emerald-100">
+          <PencilLine className="h-4 w-4" />
+          Rascunho guardado — está em «Rascunhos», mais abaixo. Abre-o quando quiseres continuar.
+        </p>
+      )}
 
       {!probationConfigured && (
         <p className="mt-6 rounded-xl border border-amber-400/30 bg-amber-500/10 px-4 py-3 text-[12.5px] text-amber-100">
@@ -239,6 +257,41 @@ export default async function ProbationListPage() {
               </div>
             </aside>
           </div>
+
+          {drafts.length > 0 && (
+            <section className="animate-fade-up mt-10">
+              <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.2em] text-white/35">
+                Rascunhos · {drafts.length}
+              </p>
+              <div className="overflow-hidden rounded-2xl border border-dashed border-white/15 bg-white/[0.015]">
+                {drafts.map((p, i) => {
+                  const missing = activationProblem(p);
+                  return (
+                    <Link
+                      key={p.id}
+                      href={`/admin/probation/${p.id}`}
+                      className={`group flex flex-wrap items-center gap-3 px-4 py-3 transition hover:bg-white/[0.04] ${i ? "border-t border-white/[0.05]" : ""}`}
+                    >
+                      <PencilLine className="h-4 w-4 shrink-0 text-white/35" />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-[13px] font-semibold text-white/85">
+                          {p.consultantName.trim() || "Rascunho sem nome"}
+                        </span>
+                        <span className="block truncate text-[11.5px] text-white/40">
+                          Guardado a {formatDateTime(p.updatedAt)}
+                          {missing ? ` · falta ${missing.replace(/^Falta /, "").replace(/\.$/, "")}` : " · pronto a ativar"}
+                        </span>
+                      </span>
+                      <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-[#c3aaff] group-hover:underline">
+                        Continuar
+                        <ArrowRight className="h-3.5 w-3.5" />
+                      </span>
+                    </Link>
+                  );
+                })}
+              </div>
+            </section>
+          )}
 
           {closed.length > 0 && (
             <section className="animate-fade-up mt-10">

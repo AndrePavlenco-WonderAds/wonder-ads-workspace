@@ -18,11 +18,10 @@ import {
   S05,
   S06,
   S07,
-  S08,
+  DOC_FOOT,
   decisionNoteFor,
   infoRowsFor,
   kpiColumns,
-  signaturesFor,
   type DocEval,
   type DocKpiRow,
   type DocModel,
@@ -239,9 +238,6 @@ export function ProbationDocument({ model }: { model: DocModel }) {
             <Segs para={S03.intro} model={model} />
           </p>
           <KpiTable rows={model.kpis15} which={15} />
-          <p style={{ marginTop: 12 }}>
-            <Segs para={S03.outro} model={model} />
-          </p>
         </section>
 
         <section>
@@ -250,9 +246,6 @@ export function ProbationDocument({ model }: { model: DocModel }) {
             <Segs para={S04.intro} model={model} />
           </p>
           <KpiTable rows={model.kpis30} which={30} />
-          <p style={{ marginTop: 12 }}>
-            <Segs para={S04.outro} model={model} />
-          </p>
         </section>
 
         <section>
@@ -314,29 +307,12 @@ export function ProbationDocument({ model }: { model: DocModel }) {
           </div>
         </section>
 
-        <section>
-          <H2 n={S08.n}>{S08.title}</H2>
-          <p>
-            <Segs para={S08.text} model={model} />
-          </p>
-          <div
-            className="pd-sigs"
-            style={{ gridTemplateColumns: `repeat(${signaturesFor(model).length}, minmax(0, 1fr))` }}
-          >
-            {signaturesFor(model).map((s) => (
-              <div key={s.role} className="pd-sig">
-                <div className="ln" />
-                <b className={b[s.bind] ? undefined : "pd-empty"}>{b[s.bind] || s.empty}</b>
-                <small>{s.role}</small>
-                {model.sigNotes[s.bind] && <small className="pd-signote">{model.sigNotes[s.bind]}</small>}
-              </div>
-            ))}
-          </div>
-          <div className="pd-foot">
-            <span>{S08.foot[0]}</span>
-            <span>{S08.foot[1]}</span>
-          </div>
-        </section>
+        {/* Sem secção de assinaturas (v77.78): o probation não é uma opção
+            do consultor. Fica só a nota de confidencialidade. */}
+        <div className="pd-foot">
+          <span>{DOC_FOOT[0]}</span>
+          <span>{DOC_FOOT[1]}</span>
+        </div>
       </div>
     </article>
   );

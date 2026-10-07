@@ -1,7 +1,6 @@
 // GET /api/probation/pdf?plano=<id>&periodo=<n> — o PDF do plano que FOI
-// ENVIADO ao consultor (a fotografia, não o rascunho da direção), com a
-// confirmação de leitura dele por baixo da assinatura. Só o próprio: o
-// username vem da sessão e um plano alheio responde 404.
+// ENVIADO ao consultor (a fotografia, não o rascunho da direção). Só o
+// próprio: o username vem da sessão e um plano alheio responde 404.
 
 import { NextResponse } from "next/server";
 import { getCurrentEmployee } from "@/lib/auth/server";

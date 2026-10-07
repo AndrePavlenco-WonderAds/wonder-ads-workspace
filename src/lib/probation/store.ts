@@ -24,6 +24,7 @@ import {
   sanitizePlan,
   stampDecisions,
   awaitingNewPeriod,
+  activationProblem,
   kpiFilled,
   validateDraft,
   type ProbationDraft,
@@ -282,6 +283,11 @@ export async function sendToConsultant(
     };
   }
   const period = plan.period;
+  // Enviar ativa um rascunho — mas só se já estiver completo.
+  if (plan.isDraft) {
+    const issue = activationProblem(plan);
+    if (issue) return { ok: false, reason: "not-ready", message: `É um rascunho e ainda não pode ser ativado: ${issue}` };
+  }
   if (item === "plan") {
     const issue = validateDraft(plan);
     if (issue) return { ok: false, reason: "not-ready", message: issue };
@@ -317,6 +323,14 @@ export async function sendToConsultant(
   // Índice do consultor sem duplicados, o mais recente à cabeça.
   await kv.lrem(userKey(username), 0, id);
   await kv.lpush(userKey(username), id);
+  if (plan.isDraft) {
+    // Primeiro envio de um rascunho → o plano passa a ativo. A `rev` sobe e
+    // volta ao editor na resposta, para a gravação seguinte não dar conflito.
+    const now = Date.now();
+    const active: ProbationPlan = { ...plan, isDraft: false, rev: plan.rev + 1, updatedAt: now, updatedBy: actor };
+    await kv.set(recordKey(id), active);
+    return { ok: true, plan: active, pub };
+  }
   return { ok: true, plan, pub };
 }
 

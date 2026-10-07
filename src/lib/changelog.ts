@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.78",
+    date: "2026-10-07",
+    title: "Probation — rascunhos para continuar depois, sem assinaturas e texto mais curto",
+    highlights: [
+      "**📝 Rascunhos.** No plano novo há «Guardar rascunho»: grava como estiver (mesmo sem nome ou data) e volta à lista, onde fica em «Rascunhos» com o que falta e «Continuar». Dentro de um plano há «Guardar e sair», e um rascunho mostra «Ativar plano» quando estiver completo. Rascunhos não entram na agenda nem nos lembretes, e o primeiro envio ao consultor ativa-os. Um plano que ainda não foi enviado pode «Passar a rascunho».",
+      "**✂️ Sem assinaturas.** Sai a secção 08 «Confirmação e assinaturas» do documento e do PDF — o probation não é uma opção do consultor, não há o que assinar. O consultor continua a marcar na app que leu (plano, check-ins, avaliações), sem assinatura nem confirmação no documento.",
+      "**🧹 Texto mais curto:** saem as frases «Um bom KPI é um número…» (secção 03) e «Se os KPIs forem ajustados na primeira avaliação…» (secção 04).",
+      "**🎓 «Recursos e formação» vem pré-escrito** em cada plano novo: «https://workspace.wonder-ads.com/formacao + shadowing nas reuniões + acompanhamento semanal» (edita-se como qualquer campo).",
+    ],
+  },
+  {
     version: "77.77",
     date: "2026-10-06",
     title: "Plano de Probation 2.0 — check-ins semanais, «só direção», pré-visualização de tudo e o plano entregue ao consultor na app",

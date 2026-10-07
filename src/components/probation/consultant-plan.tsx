@@ -150,7 +150,7 @@ export function ConsultantPlan({
       {pending.length > 0 && !preview && (
         <section className="mt-5 rounded-2xl border border-amber-400/30 bg-amber-500/[0.07] px-5 py-4">
           <p className="text-[13px] font-semibold text-amber-100">
-            Tens {pending.length} {pending.length === 1 ? "coisa" : "coisas"} para ler e confirmar
+            Tens {pending.length} {pending.length === 1 ? "coisa nova" : "coisas novas"} para ler
           </p>
           <div className="mt-2 flex flex-wrap gap-2">
             {pending.map((p) => (
@@ -308,16 +308,16 @@ function Empty({ text }: { text: string }) {
 
 const ACK_COPY: Record<"plan" | "week" | "eval", { cta: string; hint: string }> = {
   plan: {
-    cta: "Li o plano e sei o que é esperado",
-    hint: "Confirmar não é concordar com tudo: é dizer que leste e sabes o que é esperado e o que pode acontecer. Fica registado com a data, por baixo da tua assinatura.",
+    cta: "Li o plano",
+    hint: "Lê o plano com calma. Ao marcares como lido, a direção fica a saber — e se tiveres dúvidas, escreve-as aqui.",
   },
   week: {
-    cta: "Tomei conhecimento deste check-in",
+    cta: "Li este check-in",
     hint: "Se alguma coisa não bate certo com o que foi falado, escreve aqui — chega à direção.",
   },
   eval: {
-    cta: "Tomei conhecimento desta avaliação",
-    hint: "Fica registado que recebeste a decisão por escrito. Podes deixar um comentário.",
+    cta: "Li esta avaliação",
+    hint: "A direção fica a saber que recebeste a decisão por escrito. Podes deixar um comentário.",
   },
 };
 
@@ -374,7 +374,7 @@ function AckBox({
       });
       const data = (await res.json().catch(() => ({}))) as { pub?: PublishedPlan; error?: string };
       if (!res.ok || !data.pub) {
-        setError(data.error ?? "Não foi possível confirmar.");
+        setError(data.error ?? "Não foi possível marcar como lido.");
         setBusy(false);
         return;
       }
@@ -406,7 +406,7 @@ function AckBox({
           {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
           {copy.cta}
         </button>
-        {preview && <span className="text-[11.5px] text-white/40">O consultor confirma aqui.</span>}
+        {preview && <span className="text-[11.5px] text-white/40">O consultor marca aqui que leu.</span>}
         {error && <span className="text-[12px] text-rose-300">{error}</span>}
       </div>
     </div>

@@ -184,6 +184,19 @@ export function nextSteps(
     });
   }
 
+  // Sem data de início não há calendário: o passo é esse.
+  if (!period.startDate) {
+    out.push({
+      key: "start-date",
+      tone: "info",
+      title: "Definir a data de início",
+      detail: "Dela saem as datas dos check-ins e das avaliações.",
+      tab: "plano",
+    });
+    const rank0: Record<NextStep["tone"], number> = { late: 0, today: 1, soon: 2, info: 3, done: 4 };
+    return out.sort((a, b) => rank0[a.tone] - rank0[b.tone]);
+  }
+
   // 2. Check-ins: o próximo por fazer e os feitos por enviar.
   for (const w of period.weeks) {
     const date = weekDate(w, period.startDate, plan.checkinDay);

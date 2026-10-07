@@ -149,9 +149,6 @@ export const S03 = {
     { bind: "d15", empty: "[data dos 15 dias]", strong: true },
     '. As colunas "Resultado" e "Cumprido" preenchem-se na reunião de avaliação.',
   ] as Para,
-  outro: [
-    "Um bom KPI é um número, com uma data e uma fonte que ambos podem consultar. Se algum objetivo não te parecer claro ou realista, diz-nos antes de assinar.",
-  ] as Para,
 };
 
 export const S04 = {
@@ -161,9 +158,6 @@ export const S04 = {
     "Estes são os objetivos que tens de cumprir até ",
     { bind: "d30", empty: "[data dos 30 dias]", strong: true },
     ". Contam os resultados acumulados desde a data de início, salvo indicação em contrário na meta.",
-  ] as Para,
-  outro: [
-    "Se os KPIs forem ajustados na primeira avaliação, a versão atualizada fica registada aqui e é a que conta.",
   ] as Para,
 };
 
@@ -289,33 +283,19 @@ export const S07 = {
   options: DECISIONS.map((d) => ({ id: d.id, label: `${d.n} · ${d.label}` })),
 };
 
-const SIG_DATE = "Data: ____ / ____ / ______".replace(/ /g, "\u00a0");
-
-export const S08 = {
-  n: "08",
-  title: "Confirmação e assinaturas",
-  text: [
-    "Ao assinar, confirmo que li este plano, que os KPIs dos 15 e dos 30 dias me foram explicados e que compreendo os três desfechos possíveis em cada avaliação. Assinar não significa concordar com tudo: significa que sei o que é esperado e o que pode acontecer.",
-  ] as Para,
-  // A data vai com espaços não separáveis: numa coluna estreita a linha parte
-  // antes de «Data:», e nunca a meio dos traços.
-  sigs: [
-    { bind: "consultor" as Bind, empty: "[Nome do consultor]", role: `Consultor · ${SIG_DATE}` },
-    { bind: "responsavel" as Bind, empty: "[Responsável direto]", role: `Responsável direto · ${SIG_DATE}` },
-    { bind: "direcao" as Bind, empty: "[Direção]", role: `Direção WonderAds · ${SIG_DATE}` },
-  ],
-  foot: [
-    "WonderAds · Documento interno e confidencial",
-    "Este plano é um instrumento interno de acompanhamento e não altera nem substitui o contrato em vigor.",
-  ],
-};
+/** O fecho do documento. (v77.78: sai a secção 08 de confirmação e
+ *  assinaturas — o probation não é uma opção do consultor, não há o que
+ *  assinar. Fica só a nota de confidencialidade.) */
+export const DOC_FOOT = [
+  "WonderAds · Documento interno e confidencial",
+  "Este plano é um instrumento interno de acompanhamento e não altera nem substitui o contrato em vigor.",
+];
 
 /* ------------- variantes «só direção» (sem chefia intermédia) ------------- */
 // O texto acima é o do protótipo. Quando ainda não há chefia intermédia, a
 // direção é o responsável direto: o `responsavel` passa a ser o nome da
-// direção (no herói, no check-in da secção 06…) e só mudam as três peças que
-// diriam o mesmo nome duas vezes — a linha da secção 01, a nota da 05 e as
-// assinaturas da 08.
+// direção (no herói, no check-in da secção 06…) e só mudam as duas peças que
+// diriam o mesmo nome duas vezes — a linha da secção 01 e a nota da 05.
 
 export function infoRowsFor(model: Pick<DocModel, "soloDirection">): { label: string; value: Para }[] {
   if (!model.soloDirection) return S01.rows;
@@ -328,10 +308,6 @@ export function infoRowsFor(model: Pick<DocModel, "soloDirection">): { label: st
 
 export function decisionNoteFor(model: Pick<DocModel, "soloDirection">): Para {
   return model.soloDirection ? S05.noteSolo : S05.note;
-}
-
-export function signaturesFor(model: Pick<DocModel, "soloDirection">): (typeof S08.sigs)[number][] {
-  return model.soloDirection ? S08.sigs.filter((s) => s.bind !== "responsavel") : S08.sigs;
 }
 
 export const PAGE_FOOTER = "WonderAds · Plano de Probation · Documento interno e confidencial";
@@ -367,10 +343,8 @@ export type DocEval = {
 export type DocModel = {
   /** Template em branco — para imprimir e preencher à mão. */
   blank: boolean;
-  /** Sem chefia intermédia: a direção acompanha, decide e assina sozinha. */
+  /** Sem chefia intermédia: a direção acompanha e decide sozinha. */
   soloDirection: boolean;
-  /** Linha por baixo de uma assinatura — «Lido e confirmado na app · …». */
-  sigNotes: Partial<Record<Bind, string>>;
   /** «2.º período» depois de uma extensão aos 30 dias; null no primeiro. */
   periodLabel: string | null;
   binds: Record<Bind, string>;
@@ -462,7 +436,6 @@ export function buildDocModel(
   plan: PlanFields,
   period: ProbationPeriod,
   periodIndex: number,
-  opts: { sigNotes?: Partial<Record<Bind, string>> } = {},
 ): DocModel {
   const { d0, d15, d30 } = periodDates(period);
   const name = plan.consultantName.trim();
@@ -471,7 +444,6 @@ export function buildDocModel(
   return {
     blank: false,
     soloDirection: solo,
-    sigNotes: opts.sigNotes ?? {},
     periodLabel: periodIndex > 0 ? `${periodIndex + 1}.º período` : null,
     binds: {
       consultor: name,
@@ -506,7 +478,6 @@ export function blankDocModel(): DocModel {
   return {
     blank: true,
     soloDirection: false,
-    sigNotes: {},
     periodLabel: null,
     binds: empty<Bind>(["consultor", "primeiro", "funcao", "responsavel", "direcao", "d0", "d15", "d30"]),
     fills: empty<Fill>(["prazo", "checkin", "recursos", "apoio", "ferramenta"]),
