@@ -27,7 +27,11 @@ import {
   type ReportMetric,
   gbpLeadTotal,
   isGbpChannelKey,
+  kwRankChange,
+  shownRank,
   websiteLeadTotal,
+  type KwRankSource,
+  type KwRankValue,
 } from "@/lib/report/report-types";
 
 const GRAD = "linear-gradient(135deg,#343ED7 0%,#783DF5 53%,#C535C9 100%)";
@@ -73,15 +77,18 @@ function boldParts(text: string, keyBase: string) {
  *  números são a única forma de alguém dizer «vê o ponto 6». */
 function SecLabel({
   n,
+  id,
   children,
   onTint,
 }: {
   n: number;
+  /** Âncora do índice de navegação do cliente (`wa-sec-<chave>`). */
+  id?: string;
   children: React.ReactNode;
   onTint?: boolean;
 }) {
   return (
-    <div className={`wa-label${onTint ? " wa-label-on-tint" : ""}`}>
+    <div id={id} className={`wa-label${onTint ? " wa-label-on-tint" : ""}`}>
       <span className="wa-secn">{String(n).padStart(2, "0")}</span>
       {children}
     </div>
@@ -149,6 +156,76 @@ function PlaceCell({ change }: { change: number | null }) {
   if (change > 0) return <span className="wa-up">▲ {change}</span>;
   if (change < 0) return <span className="wa-down-t">▼ {Math.abs(change)}</span>;
   return <span className="wa-flat-t">—</span>;
+}
+
+/* —— Keyword tracking (v77.82) ——————————————————————————————————————— */
+
+const KWT_SOURCE: Record<KwRankSource, { pt: string; en: string }> = {
+  semrush: { pt: "Semrush", en: "Semrush" },
+  gsc: { pt: "Search Console", en: "Search Console" },
+  google: { pt: "Pesquisa Google", en: "Google search" },
+};
+
+/** «7», «6,8» (GSC), «100+» (não aparece) ou «—» (por preencher). */
+function rankText(v: KwRankValue, lang: "pt" | "en"): string {
+  if (v === null) return "—";
+  if (v === "out") return "100+";
+  return Number.isInteger(v)
+    ? String(v)
+    : v.toLocaleString(lang === "pt" ? "pt-PT" : "en-GB", {
+        maximumFractionDigits: 1,
+      });
+}
+
+function rankBand(v: KwRankValue): string {
+  if (typeof v !== "number") return "p5";
+  return v <= 3 ? "p1" : v <= 10 ? "p2" : v <= 20 ? "p3" : "p4";
+}
+
+/** A régua de 1 a 100 — em escala logarítmica, porque subir de 3 para 1 vale
+ *  mais do que de 60 para 40, e é assim que a Google se lê. A primeira
+ *  página fica marcada. */
+function RankTrack({ pos }: { pos: KwRankValue }) {
+  const x =
+    typeof pos === "number"
+      ? Math.max(0, Math.min(1, Math.log(pos) / Math.log(100)))
+      : 1;
+  return (
+    <span className="wa-track" aria-hidden>
+      <span className="wa-track-p1" />
+      {pos !== null && (
+        <span
+          className={`wa-track-dot ${rankBand(pos)}`}
+          style={{ left: `${(x * 100).toFixed(1)}%` }}
+        />
+      )}
+    </span>
+  );
+}
+
+/** Δ mês de uma keyword acompanhada. */
+function MoveChip({
+  change,
+  lang,
+}: {
+  change: number | "in" | "lost" | null;
+  lang: "pt" | "en";
+}) {
+  const pt = lang === "pt";
+  if (change === "in")
+    return <span className="wa-move up">{pt ? "▲ entrou" : "▲ new"}</span>;
+  if (change === "lost")
+    return <span className="wa-move down">{pt ? "▼ saiu" : "▼ lost"}</span>;
+  if (change === null || change === 0)
+    return <span className="wa-move flat">{change === 0 ? "=" : "—"}</span>;
+  const n = Math.abs(change).toLocaleString(pt ? "pt-PT" : "en-GB", {
+    maximumFractionDigits: 1,
+  });
+  return change > 0 ? (
+    <span className="wa-move up">▲ {n}</span>
+  ) : (
+    <span className="wa-move down">▼ {n}</span>
+  );
 }
 
 /** A headline KPI tile for the hero band. Hidden in client variant when the
@@ -415,31 +492,37 @@ export function ReportDocument({
       })),
   ];
 
+  // O MODO DA TABELA DO SERPSTAT (v77.82). O consultor decide: todas (o que
+  // a app recomenda — quanta mais informação o cliente tiver, melhor), só
+  // algumas que ele escolheu, ou nenhuma. A escolha mexe só nesta tabela: a
+  // das AI Overviews (GEO) continua a ler a lista inteira.
+  const serpMode = curation?.mode ?? "all";
+  const pickedSet = new Set((curation?.picked ?? []).map((k) => k.toLowerCase()));
+  const kwShown =
+    serpMode === "some"
+      ? kwAll.filter((r) => pickedSet.has(r.keyword.toLowerCase()))
+      : kwAll;
+
   // A rankear primeiro, por lugar; as do plano que ainda não entraram no
   // top-100 ficam no fim — continuam a ser trabalho em curso e não uma
   // falha, mas não podem roubar o topo da tabela a quem já lá está.
-  const kwRanked = kwAll
-    .filter((r) => r.position !== null)
-    .sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
-  const kwPending = kwAll.filter((r) => r.position === null);
+  const byPos = (a: KwRow, b: KwRow) => (a.position ?? 0) - (b.position ?? 0);
+  const kwRanked = kwShown.filter((r) => r.position !== null).sort(byPos);
+  const kwPending = kwShown.filter((r) => r.position === null);
   // O cliente vê o que rankeia (princípio v76.32); o consultor vê a lista
-  // toda, porque a lacuna é que é acionável.
-  // TETO DE 70 LINHAS. A lista completa do Serpstat chega às centenas e uma
-  // tabela dessas deixa de se ler — ninguém percorre 123 linhas à procura de
-  // nada. As 70 melhores posições são a presença orgânica real; o resto é
-  // cauda, e a cauda conta-se, não se lista.
-  const KW_CAP = 70;
-  const kwVisible = (
-    variant === "internal" ? [...kwRanked, ...kwPending] : kwRanked
-  ).slice(0, KW_CAP);
-  const kwHidden = Math.max(0, kwRanked.length - KW_CAP);
+  // toda, porque a lacuna é que é acionável. SEM TETO desde a v77.82 (era
+  // 70): a lista inteira vai, mas só as primeiras KW_FOLD se veem de início —
+  // o resto abre com «Ver todas», e no PDF sai tudo.
+  const KW_FOLD = 20;
+  const kwVisible =
+    variant === "internal" ? [...kwRanked, ...kwPending] : kwRanked;
   const kwDecimals = false;
-  const kwInPlan = kwRanked.filter((r) => r.inPlan).length;
   // AI OVERVIEW, do Serpstat, na mesma resposta que deu a tabela acima. É a
   // prova mais concreta de GEO que existe: a Google mostra resposta gerada
-  // nesta pesquisa, e ou cita este site ou cita outro.
-  const aioRows = kwRanked
-    .filter((r) => r.aiOverview || r.citedInAio)
+  // nesta pesquisa, e ou cita este site ou cita outro. Lê a lista inteira
+  // (só sem o que o consultor escondeu), seja qual for o modo da tabela.
+  const aioRows = kwAll
+    .filter((r) => r.position !== null && (r.aiOverview || r.citedInAio))
     .sort(
       (a, b) =>
         Number(b.citedInAio) - Number(a.citedInAio) ||
@@ -447,6 +530,32 @@ export function ReportDocument({
         (a.position ?? 999) - (b.position ?? 999),
     );
   const kwTop10 = kwRanked.filter((r) => (r.position ?? 999) <= 10).length;
+
+  // —— KEYWORD TRACKING (v77.82) ——————————————————————————————————————
+  // As 15 que o consultor escolheu e verificou à mão. Cada linha mostra a
+  // fonte que ele escolheu e diz qual é — Semrush, Search Console e uma
+  // pesquisa Google não são a mesma medição (v76.58).
+  const kwt = snapshot.kwTracking;
+  const kwtRows = (kwt?.keywords ?? [])
+    .map((k) => ({ k, pos: shownRank(k), change: kwRankChange(k) }))
+    .filter((r) => variant === "internal" || r.pos !== null)
+    .sort((a, b) => {
+      const va = typeof a.pos === "number" ? a.pos : a.pos === "out" ? 1000 : 2000;
+      const vb = typeof b.pos === "number" ? b.pos : b.pos === "out" ? 1000 : 2000;
+      return va - vb || (b.k.volume ?? 0) - (a.k.volume ?? 0);
+    });
+  const kwtNums = kwtRows
+    .map((r) => r.pos)
+    .filter((v): v is number => typeof v === "number");
+  const kwtTop3 = kwtNums.filter((v) => v <= 3).length;
+  const kwtTop10 = kwtNums.filter((v) => v <= 10).length;
+  const kwtUp = kwtRows.filter(
+    (r) => r.change === "in" || (typeof r.change === "number" && r.change > 0),
+  ).length;
+  const kwtAvg = kwtNums.length
+    ? kwtNums.reduce((a, b) => a + b, 0) / kwtNums.length
+    : null;
+  const kwtSources = Array.from(new Set(kwtRows.map((r) => r.k.show)));
 
   const ai = snapshot.ai;
   const gbp = snapshot.gbp;
@@ -542,7 +651,10 @@ export function ReportDocument({
   const showTrend = Boolean(snapshot.trend) && !hidden.has("trend");
   const showTraffic = !hidden.has("traffic");
   const showKw =
-    !hidden.has("kw") && (kwVisible.length > 0 || variant === "internal");
+    !hidden.has("kw") &&
+    serpMode !== "off" &&
+    (kwVisible.length > 0 || variant === "internal");
+  const showKwt = !hidden.has("kwt") && kwtRows.length > 0;
 
   // Google IA — impressões nas AI Overviews / AI Mode (GSC · Generative AI).
   // O cliente só vê a secção com um número validado; a interna mostra-a
@@ -598,8 +710,11 @@ export function ReportDocument({
     ...(showGscAi
       ? [{ key: "gscAi", label: t("Google IA · AI Overviews", "Google AI · AI Overviews") }]
       : []),
+    ...(showKwt
+      ? [{ key: "kwt", label: t("Keywords acompanhadas", "Tracked keywords") }]
+      : []),
     ...(showKw
-      ? [{ key: "kw", label: t("Keywords & posições", "Keywords & positions") }]
+      ? [{ key: "kw", label: t("Onde o site aparece", "Where the site shows up") }]
       : []),
     ...(showGeo ? [{ key: "geo", label: t("GEO · SEO para IA", "GEO · SEO for AI") }] : []),
     ...(showNotes
@@ -630,11 +745,21 @@ export function ReportDocument({
           </div>
           <span className="wa-cbadge">{snapshot.periodLabel}</span>
         </div>
-        <h1 className="wa-ctitle">{t("Relatório de SEO & Leads", "SEO & Leads Report")}</h1>
-        <div className="wa-cmeta">{snapshot.clientTitle}</div>
+        {/* O CLIENTE É O TÍTULO (v77.82). O relatório é dele — o tipo de
+            relatório passa a sobretítulo. */}
+        <div className="wa-ckicker">
+          {t("Relatório mensal de SEO & Leads", "Monthly SEO & Leads report")}
+        </div>
+        <h1 className="wa-ctitle">{snapshot.clientTitle}</h1>
         <div className="wa-cconsult">
-          {t("Consultor", "Consultant")}: {snapshot.consultant.name}
-          {snapshot.consultant.email ? ` · ${snapshot.consultant.email}` : ""}
+          <span className="wa-cavatar" aria-hidden>
+            {(snapshot.consultant.name || "W").trim().charAt(0).toUpperCase()}
+          </span>
+          <span>
+            {t("O teu consultor", "Your consultant")}:{" "}
+            <b>{snapshot.consultant.name}</b>
+            {snapshot.consultant.email ? ` · ${snapshot.consultant.email}` : ""}
+          </span>
         </div>
         {coverage?.partial && (
           <div className="wa-cpartial">
@@ -648,7 +773,7 @@ export function ReportDocument({
 
       {/* Hero KPI band */}
       {kpis.length > 0 && (
-        <section className="wa-kpis">
+        <section className={`wa-kpis n${Math.min(kpis.length, 6)}`}>
           {kpis.map((k) => (
             <KpiTile
               key={k.label}
@@ -663,16 +788,36 @@ export function ReportDocument({
         </section>
       )}
 
+      {/* ÍNDICE (v77.82) — só no link do cliente e só no ecrã: uma fila de
+          atalhos que fica presa ao topo enquanto se lê. */}
+      {variant === "client" && secs.length > 2 && (
+        <nav className="wa-nav" aria-label={t("Secções do relatório", "Report sections")}>
+          {secs.map((x) => (
+            <a key={x.key} href={`#wa-sec-${x.key}`}>
+              {x.label}
+            </a>
+          ))}
+        </nav>
+      )}
+
       {/* Executive Summary — the wins, up front */}
       {showExec && (
         <section className="wa-sec">
           <div className="wa-exec-card">
-            <SecLabel n={secN("exec")} onTint>
+            <SecLabel n={secN("exec")} id="wa-sec-exec" onTint>
               {t("Resumo Executivo", "Executive Summary")}
             </SecLabel>
+            <h2 className="wa-h2 wa-exec-h">
+              {t("O mês em destaque", "The month at a glance")}
+            </h2>
             <ul className="wa-exec">
               {execSummary.map((b, i) => (
-                <li key={i}>{boldParts(b, `ex${i}`)}</li>
+                <li key={i}>
+                  <span className="wa-exec-ic" aria-hidden>
+                    ✓
+                  </span>
+                  <span>{boldParts(b, `ex${i}`)}</span>
+                </li>
               ))}
             </ul>
           </div>
@@ -684,7 +829,7 @@ export function ReportDocument({
           nenhum número de um mês sozinho a responde. */}
       {showTrend && snapshot.trend && (
         <section className="wa-sec wa-sec-trend">
-          <SecLabel n={secN("trend")}>{t("Evolução", "Trend")}</SecLabel>
+          <SecLabel n={secN("trend")} id="wa-sec-trend">{t("Evolução", "Trend")}</SecLabel>
           <h2 className="wa-h2">
             {t("Os últimos 12 meses", "The last 12 months")}
           </h2>
@@ -703,7 +848,7 @@ export function ReportDocument({
           esconde a sazonalidade (Black Friday & afins). */}
       {ecom && showEcomTable && (
         <section className="wa-sec">
-          <SecLabel n={secN("ecom")}>
+          <SecLabel n={secN("ecom")} id="wa-sec-ecom">
             {t("Conversão · SEO Orgânico", "Conversion · Organic SEO")}
           </SecLabel>
           <h2 className="wa-h2">
@@ -773,7 +918,7 @@ export function ReportDocument({
       {/* Páginas orgânicas mais acedidas no mês do relatório. */}
       {ecom && showEcomPages && (
         <section className="wa-sec">
-          <SecLabel n={secN("ecomPages")}>
+          <SecLabel n={secN("ecomPages")} id="wa-sec-ecomPages">
             {t("Páginas mais acedidas · SEO", "Most visited pages · SEO")}
           </SecLabel>
           <h3 className="wa-h3">
@@ -826,7 +971,7 @@ export function ReportDocument({
       {/* Produtos mais vendidos no mês do relatório, por receita. */}
       {ecom && showEcomProducts && (
         <section className="wa-sec">
-          <SecLabel n={secN("ecomProducts")}>
+          <SecLabel n={secN("ecomProducts")} id="wa-sec-ecomProducts">
             {t("Produtos mais vendidos · SEO", "Best-selling products · SEO")}
           </SecLabel>
           <h3 className="wa-h3">
@@ -898,7 +1043,7 @@ export function ReportDocument({
           coisa que o cliente lê da página inteira. */}
       {showLeads && (
       <section className="wa-sec">
-        <SecLabel n={secN("leads")}>
+        <SecLabel n={secN("leads")} id="wa-sec-leads">
           {t("Leads por canal", "Leads by channel")}
         </SecLabel>
         <h2 className="wa-h2">{t("De onde vieram os contactos", "Where the contacts came from")}</h2>
@@ -963,7 +1108,7 @@ export function ReportDocument({
       {/* GBP + Organic side by side */}
       {showTraffic && (
       <section className="wa-sec">
-        <SecLabel n={secN("traffic")}>
+        <SecLabel n={secN("traffic")} id="wa-sec-traffic">
           {t("Tráfego & Ficha Google", "Traffic & Google listing")}
         </SecLabel>
         <div className="wa-two wa-two-sp">
@@ -1029,7 +1174,7 @@ export function ReportDocument({
       {/* AI Visibility */}
       {showAi && (
         <section className="wa-sec">
-          <SecLabel n={secN("ai")}>AI Visibility</SecLabel>
+          <SecLabel n={secN("ai")} id="wa-sec-ai">AI Visibility</SecLabel>
           <h3 className="wa-h3">{t("Visitantes vindos de assistentes de IA", "Visitors from AI assistants")}</h3>
           <p className="wa-method">
             {ai.channelSessions
@@ -1109,7 +1254,7 @@ export function ReportDocument({
           assistentes) — aqui é presença nas respostas, medida na origem. */}
       {showGscAi && gscAiB && (
         <section className="wa-sec">
-          <SecLabel n={secN("gscAi")}>
+          <SecLabel n={secN("gscAi")} id="wa-sec-gscAi">
             {t("Google IA · AI Overviews", "Google AI · AI Overviews")}
           </SecLabel>
           <h3 className="wa-h3">
@@ -1223,41 +1368,168 @@ export function ReportDocument({
         </section>
       )}
 
-      {/* A tabela única das keywords trabalhadas — todas as target keywords
-          da client file, com a posição atual na location certa. Substituiu o
-          Top queries/páginas, as Maiores subidas e a média do GSC por
-          keyword (v76.38). */}
-      {showKw && kwVisible.length > 0 && (
-        <section className="wa-sec">
-          <SecLabel n={secN("kw")}>
-            {t("Keywords & Posições", "Keywords & Positions")}
+      {/* KEYWORD TRACKING (v77.82) — as 15 pesquisas que a equipa escolheu e
+          verificou à mão este mês. Vem antes da lista do Serpstat porque é
+          a resposta à pergunta que o cliente faz («e as keywords que
+          estamos a trabalhar?»). */}
+      {showKwt && kwt && (
+        <section className="wa-sec wa-kwt">
+          <SecLabel n={secN("kwt")} id="wa-sec-kwt">
+            {t("Keywords acompanhadas", "Tracked keywords")}
           </SecLabel>
-          <h3 className="wa-h3">
+          <h2 className="wa-h2">
             {t(
-              `Onde o site aparece na Google (${kwRanked.length})`,
-              `Where the site shows up on Google (${kwRanked.length})`,
+              `As ${kwtRows.length} pesquisas que estamos a trabalhar`,
+              `The ${kwtRows.length} searches we're working on`,
             )}
-          </h3>
+          </h2>
           <p className="wa-method">
             {t(
-              `Pesquisas em que o site já aparece na Google, na região deste cliente${
-                kwHidden > 0 ? `. Mostram-se as ${KW_CAP} melhores posições de ${kwRanked.length}` : ""
-              } — ${kwTop10} ${kwTop10 === 1 ? "está" : "estão"} na primeira página. Verificado a ${formatDate(
+              "Escolhidas do plano de keywords do projeto e verificadas uma a uma pela equipa este mês. Ao lado de cada posição está a fonte da medição.",
+              "Chosen from the project's keyword plan and checked one by one by the team this month. Each position shows where it was measured.",
+            )}
+          </p>
+          <div className="wa-kwt-stats">
+            <div className="wa-kwt-stat hero">
+              <span className="wa-kwt-sv">
+                {kwtTop10}
+                <small>/{kwtRows.length}</small>
+              </span>
+              <span className="wa-kwt-sl">{t("na 1.ª página", "on page one")}</span>
+            </div>
+            <div className="wa-kwt-stat">
+              <span className="wa-kwt-sv">{kwtTop3}</span>
+              <span className="wa-kwt-sl">{t("no top 3", "in the top 3")}</span>
+            </div>
+            {showDeltas && (
+              <div className="wa-kwt-stat">
+                <span className={`wa-kwt-sv${kwtUp > 0 ? " up" : ""}`}>{kwtUp}</span>
+                <span className="wa-kwt-sl">{t("a subir este mês", "moving up")}</span>
+              </div>
+            )}
+            {kwtAvg !== null && (
+              <div className="wa-kwt-stat">
+                <span className="wa-kwt-sv">
+                  {kwtAvg.toLocaleString(pt ? "pt-PT" : "en-GB", {
+                    maximumFractionDigits: 1,
+                  })}
+                </span>
+                <span className="wa-kwt-sl">{t("posição média", "avg. position")}</span>
+              </div>
+            )}
+          </div>
+          <div className="wa-kwt-head" aria-hidden>
+            <span>{t("Posição", "Position")}</span>
+            <span>Keyword</span>
+            <span className="wa-kwt-scale">
+              <i>1</i>
+              <i>10</i>
+              <i>100</i>
+            </span>
+            {showDeltas && <span className="r">{t("Δ mês", "MoM")}</span>}
+          </div>
+          <ol className="wa-kwt-list">
+            {kwtRows.map(({ k, pos, change }) => (
+              <li key={k.keyword} className={`wa-kwt-row ${rankBand(pos)}`}>
+                <span className={`wa-kwt-rank ${rankBand(pos)}`}>
+                  {rankText(pos, lang)}
+                </span>
+                <span className="wa-kwt-main">
+                  <span className="wa-kwt-kw">
+                    {k.keyword}
+                    {k.premium && (
+                      <span className="wa-kwt-star">
+                        ★ {t("prioritária", "priority")}
+                      </span>
+                    )}
+                  </span>
+                  <span className="wa-kwt-meta">
+                    <span className={`wa-kwt-src ${k.show}`}>
+                      {pt ? KWT_SOURCE[k.show].pt : KWT_SOURCE[k.show].en}
+                    </span>
+                    {k.volume !== null && k.volume > 0 && (
+                      <span>
+                        {k.volume.toLocaleString(pt ? "pt-PT" : "en-GB")}{" "}
+                        {t("pesquisas/mês", "searches/mo")}
+                      </span>
+                    )}
+                    {pos === "out" && (
+                      <span className="wa-kwt-wip">
+                        {t("em trabalho — ainda fora do top 100", "in progress — not in the top 100 yet")}
+                      </span>
+                    )}
+                    {variant === "internal" && (
+                      <span className="wa-kwt-int">
+                        S {rankText(k.semrush, lang)} · GSC {rankText(k.gsc, lang)} · G{" "}
+                        {rankText(k.google, lang)}
+                      </span>
+                    )}
+                  </span>
+                </span>
+                <RankTrack pos={pos} />
+                {showDeltas && <MoveChip change={change} lang={lang} />}
+              </li>
+            ))}
+          </ol>
+          <p className="wa-method wa-kwt-legend">
+            {kwtSources.includes("semrush") &&
+              t(
+                "Semrush — a posição que a ferramenta regista na Google. ",
+                "Semrush — the position the tool records on Google. ",
+              )}
+            {kwtSources.includes("gsc") &&
+              t(
+                "Search Console — a posição média na Google ao longo do mês, medida pela própria Google. ",
+                "Search Console — the average Google position over the month, measured by Google itself. ",
+              )}
+            {kwtSources.includes("google") &&
+              t(
+                `Pesquisa Google — verificada à mão pela equipa${kwt.googleLocation ? `, a partir de ${kwt.googleLocation}` : " na localização do cliente"}. `,
+                `Google search — checked by hand by the team${kwt.googleLocation ? `, from ${kwt.googleLocation}` : " in the client's location"}. `,
+              )}
+            {t("«100+» = ainda fora das 100 primeiras posições.", "“100+” = not in the top 100 yet.")}
+          </p>
+        </section>
+      )}
+
+      {/* TODAS AS PESQUISAS ONDE O SITE APARECE — a lista do Serpstat
+          (domínio + subdomínios, base regional). Entra como o consultor
+          escolheu: toda (recomendado), só algumas, ou nada (v77.82). */}
+      {showKw && kwVisible.length > 0 && (
+        <section className="wa-sec">
+          <SecLabel n={secN("kw")} id="wa-sec-kw">
+            {t("Onde o site aparece", "Where the site shows up")}
+          </SecLabel>
+          <h2 className="wa-h2">
+            {serpMode === "some"
+              ? t(
+                  `Outras pesquisas onde o site aparece na Google (${kwRanked.length})`,
+                  `Other searches where the site shows up on Google (${kwRanked.length})`,
+                )
+              : t(
+                  `Todas as pesquisas onde o site aparece na Google (${kwRanked.length})`,
+                  `Every search where the site shows up on Google (${kwRanked.length})`,
+                )}
+          </h2>
+          <p className="wa-method">
+            {t(
+              `Recolhidas automaticamente pelo Serpstat na região deste cliente — ${kwTop10} ${kwTop10 === 1 ? "está" : "estão"} na primeira página. Verificado a ${formatDate(
                 live?.checkedOn ?? seRanking?.checkedOn ?? snapshot.generatedAt,
               )}.`,
-              `Searches where the site already shows up on Google, in this client's region${
-                kwHidden > 0 ? `. Showing the top ${KW_CAP} of ${kwRanked.length}` : ""
-              } — ${kwTop10} on page one. Checked on ${formatDate(
+              `Collected automatically by Serpstat in this client's region — ${kwTop10} on page one. Checked on ${formatDate(
                 live?.checkedOn ?? seRanking?.checkedOn ?? snapshot.generatedAt,
               )}.`,
             )}
             {variant === "internal" && kwPending.length > 0 &&
               " " +
                 t(
-                  `As últimas ${kwPending.length} linhas são keywords do plano que ainda não entraram no top 100.`,
-                  `The last ${kwPending.length} rows are plan keywords that haven't entered the top 100 yet.`,
+                  `As últimas ${kwPending.length} linhas são keywords do plano que ainda não entraram no top 100 (o cliente não as vê).`,
+                  `The last ${kwPending.length} rows are plan keywords that haven't entered the top 100 yet (hidden from the client).`,
                 )}
           </p>
+          {/* «Ver todas» sem JavaScript: a caixa escondida abre as linhas
+              dobradas; no PDF saem todas (ver PRINT_CSS). */}
+          <input type="checkbox" id="wa-kw-more" className="wa-more-cb" />
           <div className="wa-tblwrap" style={{ marginTop: ".6rem" }}>
             <table className="wa-qtable">
               <thead>
@@ -1269,8 +1541,8 @@ export function ReportDocument({
                 </tr>
               </thead>
               <tbody>
-                {kwVisible.map((k) => (
-                  <tr key={k.keyword}>
+                {kwVisible.map((k, i) => (
+                  <tr key={k.keyword} className={i >= KW_FOLD ? "wa-fold" : undefined}>
                     <td>
                       {k.keyword}
                       {k.inPlan && (
@@ -1309,24 +1581,45 @@ export function ReportDocument({
               </tbody>
             </table>
           </div>
+          {kwVisible.length > KW_FOLD && (
+            <label htmlFor="wa-kw-more" className="wa-more-btn">
+              <span className="wa-more-open">
+                {t(
+                  `Ver todas as ${kwVisible.length} pesquisas`,
+                  `Show all ${kwVisible.length} searches`,
+                )}
+              </span>
+              <span className="wa-more-close">{t("Mostrar menos", "Show less")}</span>
+            </label>
+          )}
           {variant === "internal" && live && (
             <p className="wa-method" style={{ marginTop: ".6rem" }}>
               {`Serpstat · base ${live.se ?? "g_pt"} · domínio + subdomínios · ${live.domain}${
                 live.truncated
                   ? " · ⚠ cobertura truncada — posições em falta podem ser falta de cobertura"
                   : ""
-              }`}
+              }${serpMode === "some" ? ` · modo «só algumas» (${pickedSet.size} escolhidas)` : ""}`}
             </p>
           )}
+        </section>
+      )}
+
+      {/* A tabela do Serpstat ficou fora deste relatório por escolha do
+          consultor — a vista interna lembra-o, o cliente não vê nada. */}
+      {variant === "internal" && serpMode === "off" && !hidden.has("kw") && live && (
+        <section className="wa-sec wa-sec-note">
+          <p className="wa-method" style={{ margin: 0 }}>
+            {`Tabela do Serpstat fora do relatório (${kwRanked.length + kwPending.length} pesquisas disponíveis). A app recomenda mostrá-la — quanta mais informação o cliente tiver, melhor.`}
+          </p>
         </section>
       )}
 
       {/* SEM SERPSTAT NÃO HÁ TABELA. O consultor precisa de saber porquê —
           quase sempre são créditos da API esgotados — e o cliente não pode
           ver uma secção vazia nem números de outra fonte. */}
-      {showKw && kwVisible.length === 0 && variant === "internal" && (
+      {showKw && kwVisible.length === 0 && variant === "internal" && serpMode === "all" && (
         <section className="wa-sec">
-          <SecLabel n={secN("kw")}>
+          <SecLabel n={secN("kw")} id="wa-sec-kw">
             {t("Keywords Trabalhadas", "Target Keywords")}
           </SecLabel>
           <p className="wa-pending-lg">
@@ -1353,7 +1646,7 @@ export function ReportDocument({
       {/* Notes */}
       {showNotes && (
         <section className="wa-sec">
-          <SecLabel n={secN("notes")}>
+          <SecLabel n={secN("notes")} id="wa-sec-notes">
             {t("Notas & Próximos Passos", "Notes & Next Steps")}
           </SecLabel>
           {snapshot.notes.trim() ? (
@@ -1400,10 +1693,30 @@ export function ReportDocument({
 
       {/* Footer band */}
       <footer className="wa-foot">
-        <span className="wa-foot-brand">Wonder Ads</span>
-        <span className="wa-foot-sub">
-          {t("Relatório mensal de SEO & Leads", "Monthly SEO & Leads report")} · {snapshot.periodLabel}
-        </span>
+        {snapshot.consultant.name && (
+          <div className="wa-foot-cta">
+            <span className="wa-foot-q">
+              {t("Dúvidas sobre este relatório?", "Questions about this report?")}
+            </span>
+            <span className="wa-foot-who">
+              {t("Fala com", "Talk to")} <b>{snapshot.consultant.name}</b>
+              {snapshot.consultant.email && (
+                <>
+                  {" · "}
+                  <a href={`mailto:${snapshot.consultant.email}`}>
+                    {snapshot.consultant.email}
+                  </a>
+                </>
+              )}
+            </span>
+          </div>
+        )}
+        <div className="wa-foot-meta">
+          <span className="wa-foot-brand">Wonder Ads</span>
+          <span className="wa-foot-sub">
+            {t("Relatório mensal de SEO & Leads", "Monthly SEO & Leads report")} · {snapshot.periodLabel}
+          </span>
+        </div>
       </footer>
     </div>
   );
@@ -1423,18 +1736,27 @@ const PRINT_CSS = `
   .wa-qtable tr{break-inside:avoid;}
   .wa-qtable thead{display:table-header-group;}
   .wa-foot{break-inside:avoid;}
+  .wa-nav,.wa-more-btn,.wa-more-cb{display:none!important;}
+  .wa-qtable tr.wa-fold{display:table-row!important;}
+  .wa-kwt-row,.wa-kwt-stat,.wa-exec li{break-inside:avoid;}
+  .wa-sec{box-shadow:none!important;margin:0 0 .7rem!important;}
+  .wa-kpis{margin-top:0!important;}
+  .wa-cover{padding-bottom:2.2rem!important;}
 }
 `;
 
 const CSS = GEO_CSS + PRINT_CSS + `
 .wa-report{--ink:#17162d;--muted:#6d6b86;--line:rgba(23,22,45,.08);--violet:#783df5;--plum:#8a4fd0;--tint:#f7f5fe;--up:#0f8f62;--down:#c93a52;
-  background:var(--tint);color:var(--ink);border-radius:16px;overflow:hidden;
+  background:var(--tint);color:var(--ink);border-radius:18px;overflow:hidden;overflow:clip;
   font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
   box-shadow:0 24px 70px -34px rgba(23,22,45,.5);border:1px solid rgba(23,22,45,.06);}
 .wa-report *{box-sizing:border-box;}
 
 /* Cover */
-.wa-cover{position:relative;color:#fff;padding:2.1rem 1.9rem 2.3rem;overflow:hidden;}
+.wa-cover{position:relative;color:#fff;padding:2.1rem 1.9rem 4.6rem;overflow:hidden;}
+.wa-cover::before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.5;
+  background-image:radial-gradient(rgba(255,255,255,.16) 1px,transparent 1px);background-size:18px 18px;
+  -webkit-mask-image:linear-gradient(115deg,transparent 35%,#000 100%);mask-image:linear-gradient(115deg,transparent 35%,#000 100%);}
 .wa-cover::after{content:"";position:absolute;right:-70px;top:-70px;width:230px;height:230px;border-radius:50%;
   background:radial-gradient(circle at center,rgba(255,255,255,.22),transparent 68%);pointer-events:none;}
 .wa-cover-top{display:flex;align-items:center;justify-content:space-between;gap:1rem;position:relative;z-index:1;}
@@ -1442,14 +1764,27 @@ const CSS = GEO_CSS + PRINT_CSS + `
 .wa-cglyph{width:30px;height:30px;border-radius:8px;background:#fff;padding:4px;object-fit:contain;display:inline-block;box-shadow:0 4px 12px -4px rgba(0,0,0,.35);}
 .wa-cbadge{display:inline-block;padding:.32rem .7rem;border-radius:999px;font-size:.72rem;font-weight:700;
   background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.3);font-variant-numeric:tabular-nums;backdrop-filter:blur(2px);}
-.wa-ctitle{margin:1.5rem 0 .3rem;font-size:1.7rem;letter-spacing:-.025em;font-weight:800;line-height:1.05;position:relative;z-index:1;}
+.wa-ckicker{margin-top:1.7rem;font-size:.7rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;opacity:.8;position:relative;z-index:1;}
+.wa-ctitle{margin:.35rem 0 0;font-size:2.35rem;letter-spacing:-.035em;font-weight:800;line-height:1.02;position:relative;z-index:1;}
 .wa-cmeta{font-size:1rem;font-weight:600;opacity:.97;position:relative;z-index:1;}
-.wa-cconsult{margin-top:.55rem;font-size:.72rem;opacity:.85;position:relative;z-index:1;}
+.wa-cconsult{margin-top:1rem;display:inline-flex;align-items:center;gap:.55rem;font-size:.74rem;position:relative;z-index:1;
+  padding:.3rem .75rem .3rem .3rem;border-radius:999px;background:rgba(255,255,255,.13);border:1px solid rgba(255,255,255,.22);}
+.wa-cconsult b{font-weight:700;}
+.wa-cavatar{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;
+  background:#fff;color:#6b34c9;font-weight:800;font-size:.72rem;}
 
 /* Hero KPI band */
-.wa-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.7rem;padding:1.15rem 1.6rem;}
-.wa-kpi{position:relative;background:#fff;border:1px solid var(--line);border-radius:12px;padding:.9rem .95rem 1rem;overflow:hidden;
-  box-shadow:0 8px 24px -20px rgba(23,22,45,.55);}
+.wa-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.7rem;padding:0 1.6rem 1.2rem;
+  margin-top:-3rem;position:relative;z-index:2;}
+/* Cinco cartões: 3 em cima, 2 em baixo, todos com largura útil — nunca um
+   órfão sozinho na segunda linha (v77.82). */
+.wa-kpis.n5{grid-template-columns:repeat(6,1fr);}
+.wa-kpis.n5 .wa-kpi{grid-column:span 2;}
+.wa-kpis.n5 .wa-kpi:nth-child(n+4){grid-column:span 3;}
+.wa-kpis.n4{grid-template-columns:repeat(4,1fr);}
+.wa-kpis.n3{grid-template-columns:repeat(3,1fr);}
+.wa-kpi{position:relative;background:#fff;border:1px solid var(--line);border-radius:14px;padding:.95rem 1rem 1rem;overflow:hidden;
+  box-shadow:0 18px 40px -26px rgba(23,22,45,.55);}
 .wa-kpi::before{content:"";position:absolute;left:0;top:0;height:3px;width:100%;background:${"linear-gradient(90deg,#343ED7,#783DF5,#C535C9)"};}
 .wa-kpi-l{font-size:.62rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--plum);}
 .wa-kpi-v{font-size:1.9rem;font-weight:800;letter-spacing:-.03em;line-height:1.05;margin:.35rem 0 .4rem;color:var(--ink);font-variant-numeric:tabular-nums;}
@@ -1480,20 +1815,32 @@ const CSS = GEO_CSS + PRINT_CSS + `
 .wa-pos.p4{background:rgba(23,22,45,.06);color:#5c5a72;}
 
 /* Sections */
-.wa-sec{padding:1.25rem 1.6rem;}
+/* SECÇÕES EM CARTÃO (v77.82): cada secção é um bloco branco sobre o fundo
+   lilás, com espaço entre elas — lê-se como um painel, não como uma folha
+   contínua. Os cartões de dentro passam a um lilás muito claro. */
+.wa-sec{padding:1.35rem 1.45rem;margin:0 1.1rem 1rem;background:#fff;border:1px solid var(--line);border-radius:16px;
+  box-shadow:0 14px 34px -30px rgba(23,22,45,.45);}
+.wa-sec .wa-card,.wa-sec .wa-trend-panel,.wa-sec .wa-ai-card,.wa-sec .wa-kstat,.wa-sec .wa-top-row,
+.wa-sec .wa-geo-stat,.wa-sec .wa-geo li{background:#fbfaff;box-shadow:none;}
+.wa-sec-note{background:transparent;border-style:dashed;box-shadow:none;padding:.8rem 1.1rem;}
 .wa-two-sp{margin-top:.55rem;}
-.wa-sec + .wa-sec{border-top:1px solid var(--line);}
+.wa-label[id]{scroll-margin-top:64px;}
 .wa-label{font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;color:var(--plum);font-weight:700;}
-.wa-h2{margin:.35rem 0 .7rem;font-size:1.1rem;letter-spacing:-.015em;font-weight:700;}
+.wa-h2{margin:.4rem 0 .7rem;font-size:1.22rem;letter-spacing:-.02em;font-weight:750;line-height:1.25;}
 .wa-h3{margin:.2rem 0 .6rem;font-size:.95rem;letter-spacing:-.01em;font-weight:700;}
 
 /* Executive summary — wins ribbon */
 .wa-exec-card{background:linear-gradient(135deg,rgba(52,62,215,.07),rgba(197,53,201,.07));
   border:1px solid rgba(120,61,245,.16);border-radius:14px;padding:1.05rem 1.15rem;}
+/* O resumo já é um cartão — a secção à volta não leva outro. */
+.wa-sec:has(> .wa-exec-card){background:transparent;border:none;box-shadow:none;padding:0;}
 .wa-label-on-tint{color:#6b34c9;}
-.wa-exec{margin:.55rem 0 0;padding:0;display:grid;gap:.5rem;}
-.wa-exec li{list-style:none;padding-left:1.3rem;position:relative;font-size:.9rem;color:#2f2e3d;line-height:1.5;}
-.wa-exec li::before{content:"◆";position:absolute;left:0;color:var(--violet);font-size:.62rem;top:.28rem;}
+.wa-exec-h{margin-bottom:.2rem;}
+.wa-exec{margin:.6rem 0 0;padding:0;display:grid;gap:.6rem;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));}
+.wa-exec li{list-style:none;display:flex;gap:.65rem;align-items:flex-start;font-size:.88rem;color:#2f2e3d;line-height:1.5;
+  background:rgba(255,255,255,.78);border:1px solid rgba(120,61,245,.14);border-radius:12px;padding:.75rem .85rem;}
+.wa-exec-ic{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;
+  background:${GRAD};color:#fff;font-size:.7rem;font-weight:800;margin-top:.05rem;}
 
 /* Leads */
 .wa-bignum{display:flex;align-items:baseline;gap:.6rem;flex-wrap:wrap;margin-bottom:.4rem;}
@@ -1644,15 +1991,97 @@ const CSS = GEO_CSS + PRINT_CSS + `
 .wa-lead-split b{color:var(--ink);}
 
 /* Footer */
-.wa-foot{display:flex;align-items:center;justify-content:space-between;gap:.6rem;flex-wrap:wrap;
-  padding:1.1rem 1.6rem;border-top:1px solid var(--line);background:#fff;}
+.wa-foot{padding:1.2rem 1.6rem 1.3rem;border-top:1px solid var(--line);background:#fff;margin-top:.4rem;}
+.wa-foot-cta{display:flex;flex-direction:column;gap:.15rem;padding:.9rem 1rem;margin-bottom:1rem;border-radius:12px;
+  background:linear-gradient(135deg,rgba(52,62,215,.06),rgba(197,53,201,.06));border:1px solid rgba(120,61,245,.14);}
+.wa-foot-q{font-size:.9rem;font-weight:700;color:var(--ink);}
+.wa-foot-who{font-size:.8rem;color:#45435c;}
+.wa-foot-who a{color:var(--violet);text-decoration:none;font-weight:600;}
+.wa-foot-meta{display:flex;align-items:center;justify-content:space-between;gap:.6rem;flex-wrap:wrap;}
 .wa-foot-brand{font-weight:800;font-size:.9rem;background:${GRAD};-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;}
 .wa-foot-sub{font-size:.72rem;color:var(--muted);font-variant-numeric:tabular-nums;}
+
+/* Índice fixo do cliente (v77.82) */
+.wa-nav{position:sticky;top:0;z-index:5;display:flex;gap:.35rem;overflow-x:auto;scrollbar-width:none;
+  margin:0 0 1rem;padding:.6rem 1.1rem;background:rgba(247,245,254,.88);backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--line);}
+.wa-nav::-webkit-scrollbar{display:none;}
+.wa-nav a{flex:0 0 auto;padding:.32rem .7rem;border-radius:999px;font-size:.72rem;font-weight:600;color:#4a4863;
+  text-decoration:none;background:#fff;border:1px solid var(--line);white-space:nowrap;transition:all .15s;}
+.wa-nav a:hover{color:#fff;background:${GRAD};border-color:transparent;}
+
+/* Keyword tracking (v77.82) */
+.wa-kwt-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:.6rem;margin:.2rem 0 1rem;}
+.wa-kwt-stat{border:1px solid var(--line);border-radius:12px;padding:.7rem .85rem;background:#fbfaff;}
+.wa-kwt-stat.hero{background:${GRAD};border-color:transparent;color:#fff;}
+.wa-kwt-sv{display:block;font-size:1.65rem;font-weight:800;letter-spacing:-.03em;line-height:1.05;font-variant-numeric:tabular-nums;}
+.wa-kwt-sv small{font-size:.9rem;font-weight:700;opacity:.7;}
+.wa-kwt-sv.up{color:var(--up);}
+.wa-kwt-sl{display:block;margin-top:.2rem;font-size:.6rem;letter-spacing:.09em;text-transform:uppercase;font-weight:700;color:var(--plum);}
+.wa-kwt-stat.hero .wa-kwt-sl{color:rgba(255,255,255,.85);}
+.wa-kwt-head,.wa-kwt-row{display:grid;grid-template-columns:3.1rem minmax(0,1.5fr) minmax(90px,1fr) 4.6rem;gap:.8rem;align-items:center;}
+.wa-kwt-head{padding:0 .7rem .35rem;font-size:.56rem;letter-spacing:.09em;text-transform:uppercase;font-weight:700;color:var(--plum);}
+.wa-kwt-head .r{text-align:right;}
+.wa-kwt-scale{display:flex;justify-content:space-between;color:#a09eb4;}
+.wa-kwt-scale i{font-style:normal;}
+.wa-kwt-list{list-style:none;margin:0;padding:0;display:grid;gap:.4rem;}
+.wa-kwt-row{padding:.55rem .7rem;border:1px solid var(--line);border-radius:12px;background:#fff;}
+.wa-kwt-row.p1{border-color:rgba(15,143,98,.22);background:linear-gradient(90deg,rgba(15,143,98,.05),#fff 60%);}
+.wa-kwt-rank{display:inline-flex;align-items:center;justify-content:center;height:2.3rem;border-radius:10px;font-weight:800;
+  font-size:1rem;font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+.wa-kwt-rank.p1{background:rgba(15,143,98,.14);color:#0b6f4c;}
+.wa-kwt-rank.p2{background:rgba(52,62,215,.12);color:#2f38b8;}
+.wa-kwt-rank.p3{background:rgba(201,138,21,.14);color:#8a5a1f;}
+.wa-kwt-rank.p4,.wa-kwt-rank.p5{background:rgba(23,22,45,.06);color:#5c5a72;font-size:.85rem;}
+.wa-kwt-main{display:flex;flex-direction:column;gap:.18rem;min-width:0;}
+.wa-kwt-kw{font-size:.86rem;font-weight:650;color:var(--ink);overflow-wrap:anywhere;}
+.wa-kwt-star{margin-left:.4rem;padding:.04rem .34rem;border-radius:5px;font-size:.58rem;font-weight:800;letter-spacing:.04em;
+  text-transform:uppercase;background:rgba(197,53,201,.12);color:#9a2aa0;vertical-align:.1em;}
+.wa-kwt-meta{display:flex;flex-wrap:wrap;gap:.25rem .6rem;align-items:center;font-size:.68rem;color:var(--muted);}
+.wa-kwt-src{padding:.02rem .36rem;border-radius:5px;font-weight:700;font-size:.6rem;letter-spacing:.03em;}
+.wa-kwt-src.semrush{background:rgba(255,100,45,.12);color:#b4441a;}
+.wa-kwt-src.gsc{background:rgba(52,62,215,.1);color:#2f38b8;}
+.wa-kwt-src.google{background:rgba(15,143,98,.12);color:#0b6f4c;}
+.wa-kwt-wip{font-style:italic;color:#a08fb8;}
+.wa-kwt-int{font-variant-numeric:tabular-nums;color:#a09eb4;}
+.wa-track{position:relative;display:block;height:8px;border-radius:5px;background:rgba(23,22,45,.06);}
+.wa-track-p1{position:absolute;left:0;top:0;bottom:0;width:50%;border-radius:5px 0 0 5px;
+  background:linear-gradient(90deg,rgba(15,143,98,.22),rgba(15,143,98,.06));}
+.wa-track-dot{position:absolute;top:50%;width:13px;height:13px;margin:-6.5px 0 0 -6.5px;border-radius:50%;
+  border:2px solid #fff;box-shadow:0 1px 4px rgba(23,22,45,.3);}
+.wa-track-dot.p1{background:#0f8f62;}
+.wa-track-dot.p2{background:#343ed7;}
+.wa-track-dot.p3{background:#c98a15;}
+.wa-track-dot.p4,.wa-track-dot.p5{background:#9a97ae;}
+.wa-move{justify-self:end;font-size:.74rem;font-weight:800;font-variant-numeric:tabular-nums;padding:.16rem .42rem;border-radius:6px;white-space:nowrap;}
+.wa-move.up{color:var(--up);background:rgba(15,157,107,.12);}
+.wa-move.down{color:var(--down);background:rgba(209,67,90,.1);}
+.wa-move.flat{color:#a5a2b8;}
+.wa-kwt-legend{margin-top:.8rem;margin-bottom:0;}
+
+/* «Ver todas» sem JS (v77.82) */
+.wa-more-cb{position:absolute;opacity:0;pointer-events:none;width:0;height:0;}
+.wa-qtable tr.wa-fold{display:none;}
+.wa-more-cb:checked ~ .wa-tblwrap tr.wa-fold{display:table-row;}
+.wa-more-btn{display:inline-flex;align-items:center;gap:.35rem;margin-top:.7rem;padding:.45rem .9rem;border-radius:999px;cursor:pointer;
+  font-size:.76rem;font-weight:700;color:#6b34c9;background:rgba(120,61,245,.08);border:1px solid rgba(120,61,245,.2);user-select:none;}
+.wa-more-btn:hover{background:rgba(120,61,245,.14);}
+.wa-more-close{display:none;}
+.wa-more-cb:checked ~ .wa-more-btn .wa-more-open{display:none;}
+.wa-more-cb:checked ~ .wa-more-btn .wa-more-close{display:inline;}
 
 @media (max-width:640px){
   .wa-two{grid-template-columns:1fr;}
   .wa-chan-row{grid-template-columns:110px 1fr 60px;}
-  .wa-ctitle{font-size:1.45rem;}
+  .wa-ctitle{font-size:1.7rem;}
+  .wa-cover{padding:1.6rem 1.2rem 4.2rem;}
+  .wa-kpis,.wa-kpis.n3,.wa-kpis.n4,.wa-kpis.n5{grid-template-columns:repeat(2,1fr);padding:0 1rem 1rem;}
+  .wa-kpis.n5 .wa-kpi,.wa-kpis.n5 .wa-kpi:nth-child(n+4){grid-column:auto;}
+  .wa-kpis.n5 .wa-kpi:first-child{grid-column:span 2;}
+  .wa-sec{margin:0 .6rem .8rem;padding:1.1rem 1rem;}
+  .wa-kwt-head{display:none;}
+  .wa-kwt-row{grid-template-columns:2.7rem minmax(0,1fr) auto;}
+  .wa-kwt-row .wa-track{grid-column:2 / span 2;grid-row:2;}
 }
 @media print{
   .wa-report{box-shadow:none;border:none;border-radius:0;background:#fff;}

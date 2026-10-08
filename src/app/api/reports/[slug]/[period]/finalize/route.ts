@@ -15,6 +15,7 @@ import {
   ECOM_METRIC_KEYS,
   isEcomCellUnresolved,
   isUnresolved,
+  kwTrackingIssues,
 } from "@/lib/report/report-types";
 
 export const runtime = "nodejs";
@@ -51,11 +52,14 @@ export async function POST(
         isEcomCellUnresolved(ecomCurrent.cells[k]),
       ).map((k) => `Conversão · ${k}`)
     : [];
-  if (pending.length > 0 || ecomPending.length > 0) {
+  // Keyword tracking (v77.82): as 15 keywords escolhidas, com Semrush e
+  // Search Console verificados. Os relatórios antigos não têm o bloco.
+  const kwPending = kwTrackingIssues(recomputed.kwTracking);
+  if (pending.length > 0 || ecomPending.length > 0 || kwPending.length > 0) {
     return NextResponse.json(
       {
         error: "incomplete",
-        pending: [...pending.map((c) => c.label), ...ecomPending],
+        pending: [...pending.map((c) => c.label), ...ecomPending, ...kwPending],
       },
       { status: 400 },
     );

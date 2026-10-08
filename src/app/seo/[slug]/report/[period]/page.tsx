@@ -39,6 +39,13 @@ import {
   type CurationRow,
 } from "@/components/report/report-keywords-curation";
 import { getReportConfig } from "@/lib/report/report-config-store";
+import {
+  ReportKeywordTracking,
+  type TrackingLinks,
+} from "@/components/report/report-keyword-tracking";
+import { listTargetKeywords } from "@/lib/target-keywords-store";
+import { getClientGeo } from "@/lib/client-geo";
+import { getClientWebsite } from "@/lib/client-meta";
 import { FinalizeReportButton } from "@/components/report/finalize-report-button";
 import { ReportCopyLinkButton } from "@/components/report/report-copy-link-button";
 import { SendToReviewButton } from "@/components/send-to-review-button";
@@ -46,6 +53,8 @@ import {
   ECOM_METRIC_KEYS,
   isEcomCellUnresolved,
   isUnresolved,
+  kwTrackingIssues,
+  shownRank,
   type FetchStatus,
 } from "@/lib/report/report-types";
 
@@ -113,6 +122,115 @@ function SourceChip({ name, s }: { name: string; s: FetchStatus }) {
       <span className="font-semibold">{name}</span>
       <span className="opacity-75">{SOURCE_LABEL[s.status] ?? s.status}</span>
     </span>
+  );
+}
+
+/** Base do Semrush e país/língua da Google por código de localização. */
+const SEMRUSH_DB: Record<number, string> = {
+  2620: "pt",
+  2840: "us",
+  2826: "uk",
+  2724: "es",
+  2250: "fr",
+  2276: "de",
+  2380: "it",
+  2056: "be",
+  2124: "ca",
+  2036: "au",
+  2076: "br",
+};
+const GOOGLE_GL: Record<number, string> = {
+  2620: "pt",
+  2840: "us",
+  2826: "gb",
+  2724: "es",
+  2250: "fr",
+  2276: "de",
+  2380: "it",
+  2056: "be",
+  2124: "ca",
+  2036: "au",
+  2076: "br",
+};
+
+/** Os atalhos do Passo 1: o domínio no Semrush (base do país), a
+ *  propriedade no Search Console e a pesquisa Google sem personalização. */
+function trackingLinks(
+  slug: string,
+  domainHint: string | undefined,
+  gscSiteUrl: string | null,
+): TrackingLinks {
+  const geo = getClientGeo(slug);
+  const website = getClientWebsite(slug);
+  let domain = domainHint ?? "";
+  if (!domain && website) {
+    try {
+      domain = new URL(website).hostname.replace(/^www\./, "");
+    } catch {
+      domain = "";
+    }
+  }
+  const gl = GOOGLE_GL[geo.locationCode] ?? "pt";
+  return {
+    semrush: domain
+      ? `https://www.semrush.com/analytics/organic/positions/?db=${SEMRUSH_DB[geo.locationCode] ?? "pt"}&q=${encodeURIComponent(domain)}&searchType=domain`
+      : null,
+    gsc: gscSiteUrl
+      ? `https://search.google.com/search-console/performance/search-analytics?resource_id=${encodeURIComponent(gscSiteUrl)}`
+      : null,
+    gl,
+    hl: `${geo.languageCode}-${gl.toUpperCase()}`,
+  };
+}
+
+/** A barra de passos no topo — onde está o relatório, num relance. */
+function StepBar({
+  steps,
+}: {
+  steps: { n: number; title: string; detail: string; done: boolean; href: string }[];
+}) {
+  const current = steps.find((x) => !x.done)?.n ?? null;
+  return (
+    <ol className="mb-5 grid gap-2 sm:grid-cols-3">
+      {steps.map((x) => {
+        const isCurrent = x.n === current;
+        return (
+          <li key={x.n}>
+            <a
+              href={x.href}
+              className={`flex items-center gap-3 rounded-xl border px-3.5 py-2.5 transition ${
+                x.done
+                  ? "border-emerald-400/25 bg-emerald-500/[0.06] hover:border-emerald-400/40"
+                  : isCurrent
+                    ? "border-[#783DF5]/50 bg-[#783DF5]/[0.1] hover:border-[#783DF5]/70"
+                    : "border-white/10 bg-white/[0.02] hover:border-white/20"
+              }`}
+            >
+              <span
+                className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[12px] font-bold ${
+                  x.done
+                    ? "bg-emerald-500/20 text-emerald-200"
+                    : isCurrent
+                      ? "text-white"
+                      : "bg-white/[0.06] text-white/45"
+                }`}
+                style={
+                  isCurrent && !x.done
+                    ? { background: "linear-gradient(135deg,#343ED7,#783DF5,#C535C9)" }
+                    : undefined
+                }
+              >
+                {x.done ? <CheckCircle2 className="h-4 w-4" /> : x.n}
+              </span>
+              <span className="min-w-0">
+                <span className="block text-[13px] font-semibold text-white/85">{x.title}</span>
+                <span className="block truncate text-[11.5px] text-white/45">{x.detail}</span>
+              </span>
+            </a>
+          </li>
+        );
+      })}
+    </ol>
   );
 }
 
@@ -189,6 +307,21 @@ export default async function ReportPage({
     : 0;
   const pendingTotal = pendingChannels + pendingEcom;
 
+  // Passo 1 — keyword tracking (v77.82). As target keywords da client file
+  // alimentam a escolha; o bloco do snapshot diz o que já está escolhido.
+  const kwt = snapshot?.kwTracking;
+  const targetRows = kwt ? await listTargetKeywords(slug).catch(() => []) : [];
+  const trackingTargets = targetRows.map((t) => ({
+    keyword: t.keyword,
+    volume: t.searchVolume ?? null,
+    premium: Boolean(t.premium),
+  }));
+  const kwIssues = kwTrackingIssues(kwt);
+  const kwRequired = Math.min(15, targetRows.length);
+  const kwVerified = (kwt?.keywords ?? []).filter(
+    (k) => k.semrush !== null && k.gsc !== null && shownRank(k) !== null,
+  ).length;
+
   // As linhas da secção 7, tal como o Serpstat as devolveu (a rankear
   // primeiro), para o cartão de curadoria — a lista escondida vem do snapshot.
   const liveKw =
@@ -220,7 +353,6 @@ export default async function ReportPage({
     ...(snapshot?.gscAi
       ? ([{ key: "gscAi", label: "Google IA (AI Overviews)" }] as SectionOption[])
       : []),
-    { key: "kw", label: "Keywords & posições" },
     { key: "geo", label: "GEO · SEO para IA" },
     { key: "notes", label: "Notas & próximos passos" },
   ];
@@ -300,9 +432,65 @@ export default async function ReportPage({
             <ReportDocument snapshot={snapshot} variant="internal" />
           </div>
         ) : (
-          /* Dois painéis a partir de xl: preencher à esquerda, documento à
+          <>
+          {/* Onde está o relatório, num relance (v77.82). */}
+          <StepBar
+            steps={[
+              {
+                n: 1,
+                title: "Keyword tracking",
+                detail: !kwt
+                  ? "relatório anterior à v77.82"
+                  : kwRequired === 0
+                    ? "sem target keywords na client file"
+                    : kwIssues.length === 0
+                      ? `${kwVerified} keywords verificadas`
+                      : kwt.keywords.length < kwRequired
+                        ? `${kwt.keywords.length}/${kwRequired} escolhidas`
+                        : `${kwVerified}/${kwRequired} verificadas`,
+                done: kwIssues.length === 0,
+                href: "#passo-1",
+              },
+              {
+                n: 2,
+                title: "Dados do mês",
+                detail:
+                  pendingTotal > 0
+                    ? `${pendingTotal} ${pendingTotal === 1 ? "métrica" : "métricas"} por validar`
+                    : "tudo validado",
+                done: pendingTotal === 0,
+                href: "#passo-2",
+              },
+              {
+                n: 3,
+                title: "Finalizar & partilhar",
+                detail: snapshot.finalizedAt
+                  ? `finalizado a ${formatDate(snapshot.finalizedAt)}`
+                  : "PDF, link e aprovação",
+                done: Boolean(snapshot.finalizedAt),
+                href: "#passo-3",
+              },
+            ]}
+          />
+
+          {/* Passo 1 — a toda a largura: a grelha das 15 precisa de espaço. */}
+          {kwt && (
+            <ReportKeywordTracking
+              slug={slug}
+              period={period}
+              block={kwt}
+              targets={trackingTargets}
+              links={trackingLinks(
+                slug,
+                snapshot.liveRanks?.domain,
+                reportConfig.gscSiteUrl,
+              )}
+            />
+          )}
+
+          {/* Dois painéis a partir de xl: preencher à esquerda, documento à
              direita — o consultor guarda um valor e vê logo onde ele cai,
-             sem fazer scroll por um manual inteiro. */
+             sem fazer scroll por um manual inteiro. */}
           <div className="gap-6 xl:grid xl:grid-cols-[480px_minmax(0,1fr)] xl:items-start">
             {/* Sem sticky nem scroll próprio (v77.2): a coluna corre com a
                 página até ao fim, como o documento ao lado. */}
@@ -360,15 +548,25 @@ export default async function ReportPage({
                 </details>
               )}
 
-              {/* Passo 1 — uma linha com o número, não um parágrafo. */}
-              {snapshot.status === "draft" ? (
+              {/* Passo 2 — uma linha com o número, não um parágrafo. */}
+              <div id="passo-2" className="scroll-mt-24" />
+              {pendingTotal > 0 ? (
                 <div className="mb-3 flex items-center gap-2.5 rounded-xl border border-amber-400/25 bg-amber-500/[0.07] px-3.5 py-2.5 text-[12.5px] text-amber-100/90">
                   <AlertTriangle className="h-4 w-4 shrink-0 text-amber-300" />
                   <span>
-                    <b>Passo 1 — preencher.</b>{" "}
-                    {pendingTotal > 0
-                      ? `${pendingTotal} ${pendingTotal === 1 ? "métrica" : "métricas"} por validar.`
-                      : "Há métricas por validar abaixo."}
+                    <b>Passo 2 — dados do mês.</b>{" "}
+                    {`${pendingTotal} ${pendingTotal === 1 ? "métrica" : "métricas"} por validar.`}
+                  </span>
+                </div>
+              ) : kwIssues.length > 0 ? (
+                <div className="mb-3 flex items-center gap-2.5 rounded-xl border border-amber-400/25 bg-amber-500/[0.07] px-3.5 py-2.5 text-[12.5px] text-amber-100/90">
+                  <AlertTriangle className="h-4 w-4 shrink-0 text-amber-300" />
+                  <span>
+                    <b>Dados validados.</b> Falta o{" "}
+                    <a href="#passo-1" className="underline underline-offset-2">
+                      keyword tracking (Passo 1)
+                    </a>
+                    .
                   </span>
                 </div>
               ) : (
@@ -501,7 +699,10 @@ export default async function ReportPage({
               )}
 
               {/* Passo 3 — finalizar + ações do cliente (gated) */}
-              <div className="brand-gradient-border mt-5 rounded-2xl bg-white/[0.035] p-5 backdrop-blur-md">
+              <div
+                id="passo-3"
+                className="brand-gradient-border mt-5 scroll-mt-24 rounded-2xl bg-white/[0.035] p-5 backdrop-blur-md"
+              >
                 <div className="mb-3 flex items-center gap-2">
                   <Rocket className="h-4 w-4 text-[#b79bff]" />
                   <h3 className="text-sm font-semibold text-white/85">
@@ -559,6 +760,7 @@ export default async function ReportPage({
               <ReportDocument snapshot={snapshot} variant="internal" />
             </div>
           </div>
+          </>
         )}
       </div>
     </PageShell>

@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.82",
+    date: "2026-10-08",
+    title: "Relatório mensal — keyword tracking manual das 15 keywords e um relatório do cliente redesenhado",
+    highlights: [
+      "**🎯 Passo 1 · Keyword tracking.** Cada relatório passa a exigir 15 keywords escolhidas da client file (ou todas, se houver menos). As do mês passado já vêm marcadas — trocam-se à vontade — e há «Completar com as de maior volume». Para cada uma, o consultor escreve a posição que vê no **Semrush** e no **Search Console** (obrigatórias) e, se quiser, numa **pesquisa Google** em janela anónima com VPN ou pela pesquisa avançada (com a localização onde pesquisou). Linha a linha escolhe qual o cliente vê; há atalhos para o Semrush, o Search Console e a pesquisa Google de cada keyword. Grava sozinho e o «Finalizar» só passa com tudo verificado.",
+      "**📈 «Keywords acompanhadas» no relatório do cliente.** Uma secção nova com as 15: cartões com quantas estão na 1.ª página, no top 3, a subir e a posição média, e por keyword a posição, a régua de 1 a 100, o Δ mês (pela mesma fonte do mês anterior: «▲ 3», «entrou», «saiu») e de onde veio o número (Semrush / Search Console / Pesquisa Google) — com a legenda de cada fonte. O resumo executivo ganha a frase das keywords na primeira página.",
+      "**🗂️ A tabela do Serpstat fica, à escolha do consultor.** Passa a chamar-se «Onde o site aparece» e entra por baixo das acompanhadas como ele decidir: **todas** (recomendado — quanta mais informação o cliente tiver, melhor), **só algumas** que ele escolhe, ou **não mostrar**. Sem teto de 70 linhas: o cliente vê as primeiras 20 e abre o resto em «Ver todas»; no PDF sai tudo. A escolha passa para os meses seguintes.",
+      "**✨ Relatório do cliente redesenhado.** O nome do cliente é o título da capa, com o consultor em destaque; os KPIs sobem para cima da capa e cinco cartões ficam 3+2 (acabou o cartão órfão); cada secção é um cartão próprio; o Resumo Executivo vira «O mês em destaque» em cartões; no link público há um índice preso ao topo para saltar entre secções; o rodapé tem o contacto do consultor. Funciona no telemóvel e no PDF.",
+      "**🧭 Página do relatório por passos.** No topo, a barra «1 Keyword tracking · 2 Dados do mês · 3 Finalizar & partilhar» com o estado de cada um; o Passo 1 ocupa a largura toda e fecha-se num resumo quando está completo. Os relatórios já gerados antes desta versão não exigem nada — para ter o Passo 1 num relatório deste mês já gerado, carrega em «Regenerar» (as notas e o trabalho manual mantêm-se).",
+    ],
+  },
+  {
     version: "77.81",
     date: "2026-10-08",
     title: "«O meu probation» no menu do nome, enquanto o probation durar",

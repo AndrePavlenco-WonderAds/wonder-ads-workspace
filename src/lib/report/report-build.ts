@@ -19,6 +19,7 @@ import { CLIENT_WEBSITES } from "@/lib/client-meta";
 import { getReport, liveReportConsultant } from "./report-store";
 import { getGbpMonthlyReport } from "@/lib/gbp";
 import { getReportConfig } from "./report-config-store";
+import { initKwTracking } from "./kw-tracking";
 import {
   monthRange,
   periodFromKey,
@@ -32,6 +33,9 @@ import {
 } from "./report-dates";
 import type { ReportConfig } from "./report-config-store";
 import {
+  kwRankChange,
+  kwTrackingIssues,
+  shownRank,
   GBP_MAIN_PROFILE_ID,
   REPORT_SCHEMA_VERSION,
   gbpChannelKey,
@@ -385,6 +389,32 @@ function buildExecSummary(
         `**${fmt(ks.improved)}** keywords subiram de posição face ao mês anterior.`,
         `**${fmt(ks.improved)}** keywords improved their position vs. last month.`,
       ));
+  }
+
+  // Keyword tracking (v77.82) — só com as posições todas verificadas.
+  const kwt = snap.kwTracking;
+  if (kwt && kwt.keywords.length > 0 && kwTrackingIssues(kwt).length === 0) {
+    const positions = kwt.keywords
+      .map(shownRank)
+      .filter((v): v is number => typeof v === "number");
+    const top10 = positions.filter((v) => v <= 10).length;
+    const top3 = positions.filter((v) => v <= 3).length;
+    if (top10 > 0)
+      add(74, t(
+        `**${top10}** das ${kwt.keywords.length} keywords acompanhadas estão na primeira página da Google${top3 > 0 ? ` — **${top3}** no top 3` : ""}.`,
+        `**${top10}** of the ${kwt.keywords.length} tracked keywords are on Google's first page${top3 > 0 ? ` — **${top3}** in the top 3` : ""}.`,
+      ));
+    if (!partial) {
+      const up = kwt.keywords.filter((k) => {
+        const c = kwRankChange(k);
+        return c === "in" || (typeof c === "number" && c > 0);
+      }).length;
+      if (up > 0)
+        add(63, t(
+          `**${up}** ${up === 1 ? "keyword acompanhada subiu" : "keywords acompanhadas subiram"} de posição face ao mês anterior.`,
+          `**${up}** tracked ${up === 1 ? "keyword" : "keywords"} moved up vs. last month.`,
+        ));
+    }
   }
 
   const eg = gainOf(snap.organic.engagementRate);
@@ -1313,9 +1343,14 @@ export async function buildMonthlyReport(
             hidden: config.keywordsHidden,
             hideUnranked: config.keywordsHideUnranked,
             added: [],
+            mode: config.keywordsTableMode,
+            picked: config.keywordsPicked,
           },
         }
       : {}),
+    // Keyword tracking (v77.82): nasce com a seleção do mês anterior e as
+    // posições em branco — o consultor verifica-as à mão neste mês.
+    kwTracking: initKwTracking(targetKeywordRows, prevSnap),
     ...(dfs.geo ? { geo: dfs.geo } : {}),
     ...(dfs.geoIntel ? { geoIntel: dfs.geoIntel } : {}),
     ...(trend ? { trend } : {}),
@@ -1387,8 +1422,12 @@ export function recomputeDerived(
   const ecomUnresolved = ecomCurrent
     ? Object.values(ecomCurrent.cells).some(isEcomCellUnresolved)
     : false;
+  // Keyword tracking (v77.82): as 15 escolhidas, com Semrush e Search
+  // Console verificados. Os relatórios anteriores não têm o bloco.
   const hasUnresolved =
-    snap.leads.channels.some((c) => isUnresolved(c.metric)) || ecomUnresolved;
+    snap.leads.channels.some((c) => isUnresolved(c.metric)) ||
+    ecomUnresolved ||
+    kwTrackingIssues(snap.kwTracking).length > 0;
   const status: ReportStatus =
     snap.status === "sent" ? "sent" : hasUnresolved ? "draft" : "ready";
   return { ...withLeads, execSummary, status };

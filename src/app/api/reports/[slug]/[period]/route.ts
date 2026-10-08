@@ -9,6 +9,9 @@ import { getCurrentEmployee } from "@/lib/auth/server";
 import { editableDepts } from "@/lib/auth/credentials";
 import { getReport, saveReport } from "@/lib/report/report-store";
 import { recomputeDerived, MAX_SHOWN_MOVERS } from "@/lib/report/report-build";
+import { sanitizeKwTracking } from "@/lib/report/kw-tracking";
+import { listTargetKeywords } from "@/lib/target-keywords-store";
+import { trailingMonths } from "@/lib/report/report-dates";
 import {
   getReportConfig,
   normalizeKeywordList,
@@ -171,6 +174,9 @@ export async function PUT(
     kwCuration?: unknown;
     /** Prints e ficheiros anexados às notas. Substitui a lista por inteiro. */
     notesAttachments?: unknown;
+    /** Keyword tracking (v77.82): as 15 keywords + as posições verificadas
+     *  à mão + qual se mostra. Substitui o bloco por inteiro. */
+    kwTracking?: unknown;
   };
 
   let next: MonthlyReportSnapshot = { ...snap };
@@ -312,6 +318,9 @@ export async function PUT(
     const c = body.kwCuration as Record<string, unknown>;
     const hidden = normalizeKeywordList(c.hidden);
     const hideUnranked = c.hideUnranked === true;
+    const mode =
+      c.mode === "some" || c.mode === "off" ? c.mode : ("all" as const);
+    const picked = normalizeKeywordList(c.picked);
     const added: KeywordCuration["added"] = [];
     if (Array.isArray(c.added)) {
       // Uma keyword que o Serpstat já trouxe não se acrescenta à mão — a
@@ -341,16 +350,31 @@ export async function PUT(
         added.push({ keyword, position });
       }
     }
-    next = { ...next, kwCuration: { hidden, hideUnranked, added } };
+    next = {
+      ...next,
+      kwCuration: { hidden, hideUnranked, added, mode, picked },
+      // O cartão do Serpstat passou a ser o único controlo desta tabela
+      // (v77.82): o «kw» antigo da lista de secções escondidas sai.
+      ...(next.hiddenSections?.includes("kw")
+        ? { hiddenSections: next.hiddenSections.filter((k) => k !== "kw") }
+        : {}),
+    };
     try {
       const cfg = await getReportConfig(slug);
       if (
         cfg.keywordsHidden.join("\n") !== hidden.join("\n") ||
-        cfg.keywordsHideUnranked !== hideUnranked
+        cfg.keywordsHideUnranked !== hideUnranked ||
+        cfg.keywordsTableMode !== mode ||
+        cfg.keywordsPicked.join("\n") !== picked.join("\n")
       ) {
         await saveReportConfig(
           slug,
-          { keywordsHidden: hidden, keywordsHideUnranked: hideUnranked },
+          {
+            keywordsHidden: hidden,
+            keywordsHideUnranked: hideUnranked,
+            keywordsTableMode: mode,
+            keywordsPicked: picked,
+          },
           Date.now(),
         );
       }
@@ -359,6 +383,23 @@ export async function PUT(
       // para o mês seguinte, não condição.
       console.error("keyword curation config mirror failed:", err);
     }
+  }
+
+  // Keyword tracking (v77.82). Só entram keywords da client file; o volume e
+  // o «mês anterior» vêm do servidor (client file + relatório anterior).
+  if (body.kwTracking && typeof body.kwTracking === "object") {
+    const [targets, prevSnap] = await Promise.all([
+      listTargetKeywords(slug).catch(() => []),
+      getReport(slug, trailingMonths(period, 2)[0].key).catch(() => null),
+    ]);
+    const block = sanitizeKwTracking(
+      body.kwTracking,
+      targets,
+      prevSnap,
+      employee.name,
+      Date.now(),
+    );
+    if (block) next = { ...next, kwTracking: block };
   }
 
   // Anexos das notas (v77.9) — substitui a lista por inteiro (é o browser

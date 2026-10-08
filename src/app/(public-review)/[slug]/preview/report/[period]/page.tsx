@@ -39,7 +39,7 @@ export default async function PublicReportPage({
   const isLive = snapshot.status === "sent" || Boolean(snapshot.finalizedAt);
 
   return (
-    <main style={{ maxWidth: "820px", margin: "0 auto", padding: "24px 16px 64px" }}>
+    <main style={{ maxWidth: "880px", margin: "0 auto", padding: "24px 16px 64px" }}>
       {!isLive ? (
         <div
           style={{

@@ -1,6 +1,13 @@
 "use client";
 
-// A mão do consultor sobre a secção «Keywords & posições» (v77.9).
+// A mão do consultor sobre a tabela automática do Serpstat — «Onde o site
+// aparece» (v77.9; modos na v77.82).
+//
+// v77.82: o consultor decide COMO a tabela entra — toda (o que a app
+// recomenda: quanta mais informação o cliente tiver, melhor), só algumas
+// escolhidas por ele, ou nenhuma. As keywords que a equipa trabalha têm agora
+// a secção própria (Keyword tracking, Passo 1), por isso o «acrescentar à
+// mão» saiu daqui; as linhas manuais dos relatórios antigos continuam.
 //
 // O Serpstat devolve TUDO para que o domínio rankeia — «edith b», «helder
 // dores», nomes de concorrentes — e as keywords do plano que ainda não
@@ -18,11 +25,11 @@ import {
   EyeOff,
   ListFilter,
   Loader2,
-  Plus,
   Search,
+  ThumbsUp,
   X,
 } from "lucide-react";
-import type { KeywordCuration } from "@/lib/report/report-types";
+import type { KeywordCuration, SerpstatTableMode } from "@/lib/report/report-types";
 import { MAX_KEYWORD_CURATION } from "@/lib/report/report-types";
 
 export type CurationRow = {
@@ -53,12 +60,16 @@ export function ReportKeywordsCuration({
   const [hideUnranked, setHideUnranked] = useState(
     curation?.hideUnranked ?? false,
   );
+  // As linhas manuais dos relatórios antigos seguem como estavam (podem
+  // remover-se, já não se acrescentam).
   const [added, setAdded] = useState<{ keyword: string; position: number | null }[]>(
     () => curation?.added ?? [],
   );
+  const [mode, setMode] = useState<SerpstatTableMode>(curation?.mode ?? "all");
+  const [picked, setPicked] = useState<Set<string>>(
+    () => new Set((curation?.picked ?? []).map(norm)),
+  );
   const [query, setQuery] = useState("");
-  const [newKw, setNewKw] = useState("");
-  const [newPos, setNewPos] = useState("");
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -70,7 +81,6 @@ export function ReportKeywordsCuration({
   };
 
   const unrankedCount = rows.filter((r) => r.position === null).length;
-  const existing = useMemo(() => new Set(rows.map((r) => norm(r.keyword))), [rows]);
 
   const isHidden = (r: CurationRow) =>
     hidden.has(norm(r.keyword)) || (hideUnranked && r.position === null);
@@ -96,29 +106,19 @@ export function ReportKeywordsCuration({
     touch();
   };
 
-  function addKeyword() {
-    const k = norm(newKw);
-    if (!k) return;
-    if (existing.has(k) || added.some((a) => norm(a.keyword) === k)) {
-      setErr("Essa keyword já está na tabela — se está escondida, mostra-a.");
-      return;
-    }
-    const posRaw = newPos.trim();
-    let position: number | null = null;
-    if (posRaw) {
-      const n = Number(posRaw);
-      if (!Number.isFinite(n) || n < 1 || n > 100) {
-        setErr("A posição tem de ser um número de 1 a 100 (ou vazio = fora do top 100).");
-        return;
-      }
-      position = Math.round(n);
-    }
-    setErr(null);
-    setAdded((p) => [...p, { keyword: newKw.trim().slice(0, 120), position }]);
-    setNewKw("");
-    setNewPos("");
+  const togglePick = (keyword: string) => {
+    const k = norm(keyword);
+    setPicked((p) => {
+      const next = new Set(p);
+      if (next.has(k)) next.delete(k);
+      else next.add(k);
+      return next;
+    });
     touch();
-  }
+  };
+
+  const rankedRows = rows.filter((r) => r.position !== null);
+  const pickedCount = rankedRows.filter((r) => picked.has(norm(r.keyword))).length;
 
   async function save() {
     setBusy(true);
@@ -128,6 +128,8 @@ export function ReportKeywordsCuration({
         hidden: Array.from(hidden).slice(0, MAX_KEYWORD_CURATION),
         hideUnranked,
         added,
+        mode,
+        picked: Array.from(picked).slice(0, MAX_KEYWORD_CURATION),
       };
       const res = await fetch(`/api/reports/${slug}/${period}`, {
         method: "PUT",
@@ -168,17 +170,70 @@ export function ReportKeywordsCuration({
     <div className="brand-gradient-border mb-4 rounded-2xl bg-white/[0.035] p-5 backdrop-blur-md">
       <div className="mb-1 flex flex-wrap items-center gap-2">
         <ListFilter className="h-4 w-4 text-[#b79bff]" />
-        <h3 className="text-sm font-semibold text-white/85">Keywords &amp; posições</h3>
+        <h3 className="text-sm font-semibold text-white/85">
+          Tabela «Onde o site aparece» · Serpstat
+        </h3>
         <span className="rounded-full border border-white/12 bg-white/[0.04] px-2 py-0.5 text-[10.5px] font-semibold text-white/60">
-          {visibleCount} na tabela
-          {hiddenCount > 0 ? ` · ${hiddenCount} escondidas` : ""}
+          {mode === "off"
+            ? "fora do relatório"
+            : mode === "some"
+              ? `${pickedCount} escolhidas`
+              : `${visibleCount} na tabela${hiddenCount > 0 ? ` · ${hiddenCount} escondidas` : ""}`}
         </span>
       </div>
       <p className="mb-3 text-[12px] leading-relaxed text-white/45">
-        O que o cliente vê na secção de keywords. Esconde o que não faz sentido
-        (fica escondido nos próximos meses) e acrescenta o que falta.
+        Todas as pesquisas onde o site aparece na Google, recolhidas
+        automaticamente. Vai por baixo das keywords acompanhadas. Decide como
+        entra no relatório — a escolha passa para os próximos meses.
       </p>
 
+      <div className="mb-2 grid grid-cols-3 gap-1 rounded-xl border border-white/10 bg-black/25 p-1">
+        {(
+          [
+            ["all", "Todas"],
+            ["some", "Só algumas"],
+            ["off", "Não mostrar"],
+          ] as [SerpstatTableMode, string][]
+        ).map(([m, label]) => (
+          <button
+            key={m}
+            type="button"
+            onClick={() => {
+              setMode(m);
+              touch();
+            }}
+            className={`rounded-lg px-2 py-1.5 text-[12px] font-semibold transition ${
+              mode === m
+                ? "bg-[#783DF5] text-white shadow-sm"
+                : "text-white/55 hover:bg-white/[0.05] hover:text-white"
+            }`}
+          >
+            {label}
+            {m === "all" && (
+              <span className={`ml-1 text-[10px] font-medium ${mode === m ? "text-white/80" : "text-emerald-300/80"}`}>
+                · recomendado
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+      <p
+        className={`mb-3 flex items-start gap-1.5 rounded-lg px-2.5 py-2 text-[11.5px] leading-relaxed ${
+          mode === "all"
+            ? "bg-emerald-500/[0.08] text-emerald-100/80"
+            : "bg-amber-500/[0.08] text-amber-100/80"
+        }`}
+      >
+        <ThumbsUp className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+        {mode === "all"
+          ? "Boa escolha — quanta mais informação o cliente tiver, melhor. O cliente vê as primeiras 20 e abre o resto em «Ver todas»."
+          : mode === "some"
+            ? "A app recomenda mostrar tudo — quanta mais informação o cliente tiver, melhor. Se preferires, escolhe abaixo as que entram."
+            : "A tabela não entra no relatório. A app recomenda mostrá-la — quanta mais informação o cliente tiver, melhor."}
+      </p>
+
+      {mode === "all" && (
+        <>
       {/* O botão pedido: as do plano ainda sem posição, todas de uma vez. */}
       {unrankedCount > 0 && (
         <button
@@ -293,48 +348,81 @@ export function ReportKeywordsCuration({
         )}
       </div>
 
-      {/* Acrescentar à mão — posição verificada pelo consultor. */}
-      <div className="mt-3 flex flex-wrap items-center gap-2">
-        <input
-          type="text"
-          value={newKw}
-          onChange={(e) => setNewKw(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              addKeyword();
-            }
-          }}
-          placeholder="adicionar keyword…"
-          maxLength={120}
-          className="min-w-0 flex-1 rounded-lg border border-white/12 bg-black/25 px-3 py-1.5 text-[12.5px] text-white outline-none placeholder:text-white/25 focus:border-[#783DF5]/50"
-        />
-        <input
-          type="number"
-          min={1}
-          max={100}
-          value={newPos}
-          onChange={(e) => setNewPos(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              addKeyword();
-            }
-          }}
-          placeholder="pos."
-          title="Posição na Google (vazio = fora do top 100)"
-          className="w-16 rounded-lg border border-white/12 bg-black/25 px-2 py-1.5 text-right text-[12.5px] text-white outline-none placeholder:text-white/25 focus:border-[#783DF5]/50"
-        />
-        <button
-          type="button"
-          onClick={addKeyword}
-          disabled={!newKw.trim()}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-white/12 px-3 py-1.5 text-[12.5px] font-medium text-white/70 transition hover:border-[#783DF5]/50 hover:text-white disabled:opacity-40"
-        >
-          <Plus className="h-3.5 w-3.5" />
-          Adicionar
-        </button>
-      </div>
+        </>
+      )}
+
+      {mode === "some" && (
+        <>
+          <div className="relative mb-2">
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-white/30" />
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="procurar…"
+              className="w-full rounded-lg border border-white/12 bg-black/25 py-1.5 pl-8 pr-3 text-[12.5px] text-white outline-none placeholder:text-white/25 focus:border-[#783DF5]/50"
+            />
+          </div>
+          <div className="mb-1 flex flex-wrap gap-2 text-[11.5px]">
+            <button
+              type="button"
+              onClick={() => {
+                setPicked(
+                  new Set(
+                    rankedRows
+                      .filter((r) => (r.position ?? 999) <= 10)
+                      .map((r) => norm(r.keyword)),
+                  ),
+                );
+                touch();
+              }}
+              className="rounded-md border border-white/12 px-2 py-0.5 text-white/65 transition hover:text-white"
+            >
+              Escolher as da 1.ª página
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setPicked(new Set());
+                touch();
+              }}
+              className="rounded-md px-2 py-0.5 text-white/40 transition hover:text-white"
+            >
+              Limpar
+            </button>
+          </div>
+          <div className="max-h-72 overflow-y-auto rounded-xl border border-white/10 bg-black/20 p-1.5">
+            <ul className="flex flex-col gap-0.5">
+              {filtered
+                .filter((r) => r.position !== null)
+                .map((r) => {
+                  const on = picked.has(norm(r.keyword));
+                  return (
+                    <li key={r.keyword}>
+                      <button
+                        type="button"
+                        onClick={() => togglePick(r.keyword)}
+                        className={`flex w-full items-center gap-2 rounded-lg px-2 py-1 text-left text-[12px] transition ${
+                          on ? "bg-[#783DF5]/12 text-white" : "text-white/55 hover:bg-white/[0.04]"
+                        }`}
+                      >
+                        <span
+                          className={`flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded border ${
+                            on ? "border-transparent bg-[#783DF5]" : "border-white/25"
+                          }`}
+                        >
+                          {on && <Check className="h-2.5 w-2.5" />}
+                        </span>
+                        <span className="min-w-0 flex-1 truncate">{r.keyword}</span>
+                        {pill(r.position)}
+                      </button>
+                    </li>
+                  );
+                })}
+            </ul>
+          </div>
+        </>
+      )}
 
       <div className="mt-3 flex flex-wrap items-center gap-3">
         <button

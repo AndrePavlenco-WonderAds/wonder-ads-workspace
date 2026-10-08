@@ -15,6 +15,7 @@ import {
   MAX_GBP_PROFILES,
   type CustomLeadEvent,
   type GbpProfile,
+  type SerpstatTableMode,
 } from "./report-types";
 import {
   normalizeCsvMonths,
@@ -107,6 +108,12 @@ export type ReportConfig = {
   /** Esconder as keywords do plano ainda fora do top 100 — a mesma
    *  persistência. */
   keywordsHideUnranked: boolean;
+  /** Como entra a tabela automática do Serpstat (v77.82) — "all" por
+   *  defeito, que é o que a app recomenda. A mesma persistência das duas de
+   *  cima: a escolha do consultor passa para o relatório seguinte. */
+  keywordsTableMode: SerpstatTableMode;
+  /** Modo "some": as keywords escolhidas, em minúsculas. */
+  keywordsPicked: string[];
   /** Regex source strings matched against GA4 sessionSource for AI Visibility. */
   llmRegex: string[];
   sectionsEnabled: Record<ReportSection, boolean>;
@@ -202,6 +209,8 @@ export function defaultReportConfig(slug: string, currency = "EUR"): ReportConfi
     shopifyCsvProducts: {},
     keywordsHidden: [],
     keywordsHideUnranked: false,
+    keywordsTableMode: "all",
+    keywordsPicked: [],
     llmRegex: [...DEFAULT_LLM_REGEX],
     sectionsEnabled: Object.fromEntries(
       ALL_SECTIONS.map((s) => [s, true]),
@@ -356,6 +365,11 @@ function normalizeConfig(raw: unknown, slug: string): ReportConfig {
     shopifyCsvProducts: normalizeCsvProducts(o.shopifyCsvProducts),
     keywordsHidden: normalizeKeywordList(o.keywordsHidden),
     keywordsHideUnranked: o.keywordsHideUnranked === true,
+    keywordsTableMode:
+      o.keywordsTableMode === "some" || o.keywordsTableMode === "off"
+        ? o.keywordsTableMode
+        : "all",
+    keywordsPicked: normalizeKeywordList(o.keywordsPicked),
     llmRegex:
       regex && regex.length && !sameList(regex, LEGACY_LLM_REGEX)
         ? regex

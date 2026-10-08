@@ -106,7 +106,8 @@ export async function POST(
     // manual data is filled in.
     // O que o consultor escreveu à mão sobrevive a um «Regenerar» (v77.9):
     // as notas e os anexos são dele e não da Google, e as keywords que
-    // acrescentou à mão têm a posição verificada neste mês. O resto do
+    // acrescentou à mão têm a posição verificada neste mês — tal como o
+    // keyword tracking (v77.82). O resto do
     // snapshot é fresco — é para isso que se regenera.
     const previous = await getReport(slug, period).catch(() => null);
     const fresh = await buildMonthlyReport(
@@ -128,6 +129,17 @@ export async function POST(
             : {}),
           ...(previous.kwCuration?.added.length && fresh.kwCuration
             ? { kwCuration: { ...fresh.kwCuration, added: previous.kwCuration.added } }
+            : {}),
+          // As 15 keywords e as posições verificadas à mão (v77.82) são
+          // trabalho do consultor, não da API — regenerar não as apaga. O
+          // `required` vem fresco (a client file pode ter mudado).
+          ...(previous.kwTracking?.keywords.length && fresh.kwTracking
+            ? {
+                kwTracking: {
+                  ...previous.kwTracking,
+                  required: fresh.kwTracking.required,
+                },
+              }
             : {}),
         }
       : fresh;

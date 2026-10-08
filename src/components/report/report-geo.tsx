@@ -91,7 +91,8 @@ export function ReportGeoSection({
 
   return (
     <section className="wa-sec wa-geo2">
-      <div className="wa-label">
+      {/* Âncora do índice do cliente (v77.82). */}
+      <div className="wa-label" id="wa-sec-geo">
         {sectionNumber ? (
           <span className="wa-secn">
             {String(sectionNumber).padStart(2, "0")}

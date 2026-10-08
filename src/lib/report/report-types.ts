@@ -360,9 +360,124 @@ export type KeywordCuration = {
   /** Linhas acrescentadas à mão — posição verificada pelo consultor, ou
    *  null = fora do top 100. */
   added: { keyword: string; position: number | null }[];
+  /** Como entra a tabela do Serpstat (v77.82). Ausente = "all". */
+  mode?: SerpstatTableMode;
+  /** Modo "some": as keywords escolhidas para mostrar, em minúsculas. */
+  picked?: string[];
 };
 
 export const MAX_KEYWORD_CURATION = 400;
+
+/** O que se mostra da tabela automática do Serpstat (v77.82):
+ *  - "all"  → todas as pesquisas onde o site aparece (menos as escondidas);
+ *  - "some" → só as que o consultor escolheu (`picked`);
+ *  - "off"  → a tabela não entra no relatório.
+ *  A app recomenda "all" — quanta mais informação o cliente tiver, melhor. */
+export type SerpstatTableMode = "all" | "some" | "off";
+
+/* —— KEYWORD TRACKING (v77.82) ————————————————————————————————————————
+ *
+ * As 15 keywords que o consultor escolhe da client file em cada relatório,
+ * com a posição verificada À MÃO em três sítios:
+ *   • Semrush         — obrigatório;
+ *   • Search Console  — obrigatório (posição média do mês);
+ *   • Google          — opcional: pesquisa em janela anónima com VPN, ou a
+ *                       pesquisa avançada com a localização do cliente.
+ * O consultor escolhe, keyword a keyword, qual das três vai para o relatório.
+ * A tabela do cliente diz sempre de onde veio cada número — metodologias
+ * diferentes não se apresentam como se fossem a mesma medição (v76.58). */
+
+export const KW_TRACKING_SIZE = 15;
+
+export type KwRankSource = "semrush" | "gsc" | "google";
+
+export const KW_RANK_SOURCES: readonly KwRankSource[] = ["semrush", "gsc", "google"];
+
+/** Posição verificada: número (1–100; o GSC aceita uma casa decimal), "out" =
+ *  não aparece (fora do top 100 / sem dados no GSC), null = por preencher. */
+export type KwRankValue = number | "out" | null;
+
+export type TrackedKeyword = {
+  keyword: string;
+  /** Pesquisas/mês da client file, quando existe. */
+  volume: number | null;
+  premium?: boolean;
+  semrush: KwRankValue;
+  gsc: KwRankValue;
+  google: KwRankValue;
+  /** Qual das três vai para o relatório. */
+  show: KwRankSource;
+  /** O que esta keyword tinha no relatório do mês anterior, quando estava
+   *  na seleção — é daqui que sai o Δ mês, sempre pela MESMA fonte. */
+  previous?: {
+    semrush: KwRankValue;
+    gsc: KwRankValue;
+    google: KwRankValue;
+    show: KwRankSource;
+  } | null;
+};
+
+export type KeywordTrackingBlock = {
+  keywords: TrackedKeyword[];
+  /** Quantas a seleção exige: 15, ou todas se a client file tiver menos. */
+  required: number;
+  /** Onde foi feita a pesquisa manual na Google («Lisboa»). Passa de mês
+   *  para mês. */
+  googleLocation?: string;
+  updatedAt: number;
+  /** Nome de quem gravou da última vez. */
+  updatedBy?: string;
+};
+
+/** O valor da fonte escolhida para o relatório. */
+export function shownRank(k: TrackedKeyword): KwRankValue {
+  return k[k.show];
+}
+
+/** Δ mês pela mesma fonte que se mostra agora: positivo = subiu. null quando
+ *  não há comparação possível. "in" = passou a aparecer; "lost" = deixou. */
+export function kwRankChange(
+  k: TrackedKeyword,
+): number | "in" | "lost" | null {
+  const prev = k.previous?.[k.show] ?? null;
+  const cur = shownRank(k);
+  if (prev === null || cur === null) return null;
+  if (prev === "out" && cur === "out") return null;
+  if (prev === "out") return "in";
+  if (cur === "out") return "lost";
+  return Math.round((prev - cur) * 10) / 10;
+}
+
+/** O que ainda falta no tracking, em frases curtas — vazio = completo.
+ *  Usado pelo estado do relatório, pelo «Finalizar» e pelo cartão. */
+export function kwTrackingIssues(block: KeywordTrackingBlock | undefined): string[] {
+  if (!block || block.required === 0) return [];
+  const out: string[] = [];
+  const n = block.keywords.length;
+  if (n !== block.required) {
+    out.push(`Keyword tracking: ${n}/${block.required} keywords escolhidas`);
+  }
+  const missingSemrush = block.keywords.filter((k) => k.semrush === null).length;
+  const missingGsc = block.keywords.filter((k) => k.gsc === null).length;
+  const missingShown = block.keywords.filter(
+    (k) => k.semrush !== null && k.gsc !== null && shownRank(k) === null,
+  ).length;
+  if (missingSemrush > 0) out.push(`Keyword tracking: ${missingSemrush} sem posição Semrush`);
+  if (missingGsc > 0) out.push(`Keyword tracking: ${missingGsc} sem posição Search Console`);
+  if (missingShown > 0)
+    out.push(`Keyword tracking: ${missingShown} a mostrar a pesquisa Google sem valor`);
+  return out;
+}
+
+/** Lê uma posição vinda do browser: número 1–100 (inteiro, ou uma casa
+ *  decimal no GSC), "out", ou null. Qualquer outra coisa = null. */
+export function parseKwRank(raw: unknown, decimals: boolean): KwRankValue {
+  if (raw === "out") return "out";
+  if (raw === null || raw === undefined || raw === "") return null;
+  const n = typeof raw === "number" ? raw : Number(String(raw).replace(",", "."));
+  if (!Number.isFinite(n) || n < 1 || n > 100) return null;
+  return decimals ? Math.round(n * 10) / 10 : Math.round(n);
+}
 
 /** Um print ou ficheiro anexado às Notas & próximos passos (v77.9). Vive em
  *  Vercel Blob (público, URL imprevisível) como as faturas e os logótipos. */
@@ -625,6 +740,7 @@ export const REPORT_SECTION_KEYS = [
   "ai",
   "gscAi",
   "kw",
+  "kwt",
   "geo",
   "notes",
 ] as const;
@@ -760,6 +876,9 @@ export type MonthlyReportSnapshot = {
   /** O que o consultor tirou/pôs na tabela de keywords. Ausente nos
    *  relatórios pré-v77.9 = tabela tal como o Serpstat a devolveu. */
   kwCuration?: KeywordCuration;
+  /** As 15 keywords escolhidas e as posições verificadas à mão (v77.82).
+   *  Ausente nos relatórios gerados antes — esses não exigem nada. */
+  kwTracking?: KeywordTrackingBlock;
   /** Per-source fetch provenance (internal only, stripped from the PDF). */
   fetch: { ga4: FetchStatus; gsc: FetchStatus; gbp: FetchStatus };
   pdfBlobUrl: string | null;
