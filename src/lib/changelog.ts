@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.79",
+    date: "2026-10-08",
+    title: "Pending Review — web designers entram na tabela, e cada linha diz quem a pôs para aprovação",
+    highlights: [
+      "**🎨 Web designers na tabela Pending Review.** Na página do cliente SEO o chip «Pending Review» passa a aparecer também para eles (o resto do SEO continua só de leitura, e o banner diz qual é a exceção). Na tabela veem todas as linhas, adicionam as suas com «Add row manually» (abre na categoria nova **Web Design**) e editam ou apagam só as que adicionaram — as da equipa de SEO ficam com cadeado, mas podem comentar, e os comentários saem com o nome deles. Arquivar continua com o SEO.",
+      "**👤 Quem adicionou cada linha.** A coluna «Added» mostra agora «by Mike» por baixo da data — quem pôs a linha na tabela, seja pelo «Send for Approval» de um resultado, seja à mão. É carimbado no servidor a partir da sessão (nunca do browser) e não muda com edições.",
+      "**↻ Quem a pôs para aprovação.** Quando alguém da equipa devolve uma linha ao cliente depois de um «Changes Requested» (passa-a outra vez a «For Approval»), aparece «re-sent by» com o nome e a data. Passar o rato pela célula mostra tudo com hora. Só utilizadores da app contam — o lado do cliente nunca fica carimbado, e o cliente também não vê estes nomes (saem da página pública e da API sem sessão).",
+      "**🔒 Mais fechado no servidor.** Adicionar e apagar linhas exige sessão da equipa (o cliente nunca teve esses botões); os web designers são travados nas linhas que não são deles também na API; e «Ver como» não escreve na tabela, para nada ficar assinado em nome de outra pessoa.",
+      "**🕰️ Linhas antigas** (antes desta versão) ficam só com a data — não havia registo de quem as pôs, e não se inventa.",
+    ],
+  },
+  {
     version: "77.78",
     date: "2026-10-07",
     title: "Probation — rascunhos para continuar depois, sem assinaturas e texto mais curto",

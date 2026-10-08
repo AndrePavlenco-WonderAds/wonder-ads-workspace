@@ -36,7 +36,7 @@ import { getLogoOverride } from "@/lib/admin-client-logos-store";
 import { proposalPath, KIND_LABEL } from "@/lib/proposals";
 import { getProposalsForClientAll } from "@/lib/proposals/store";
 import { getCurrentEmployee } from "@/lib/auth/server";
-import { editableDepts } from "@/lib/auth/credentials";
+import { editableDepts, reviewTableAccess } from "@/lib/auth/credentials";
 import { SeoReadOnlyProvider, ReadOnlyBanner } from "@/components/seo-readonly";
 
 // RENDER A CADA PEDIDO, SEM PRÉ-GERAR NO BUILD (v77.65).
@@ -123,7 +123,9 @@ export default async function ClientPage({
   return (
     <SeoReadOnlyProvider value={readOnly}>
     <PageShell wide sessionTimer backHref="/seo" backLabel="SEO DPT">
-      {readOnly && <ReadOnlyBanner />}
+      {readOnly && (
+        <ReadOnlyBanner pendingReview={Boolean(reviewTableAccess(employee))} />
+      )}
       <section className="animate-fade-up mt-4 flex flex-wrap items-start justify-between gap-5 sm:mt-8">
         <div className="flex items-center gap-5">
           <div className="shrink-0">
@@ -241,7 +243,10 @@ export default async function ClientPage({
             </h1>
             <CurrentRoadmapStrip slug={slug} />
             <div className="mt-2.5">
-              <PendingReviewChip slug={slug} readOnly={readOnly} />
+              <PendingReviewChip
+                slug={slug}
+                hidden={!reviewTableAccess(employee)}
+              />
             </div>
           </div>
         </div>

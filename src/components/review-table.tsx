@@ -18,6 +18,7 @@ import {
   ArchiveRestore,
   ExternalLink,
   Inbox,
+  Lock,
   MessageSquare,
   MessageSquarePlus,
   RefreshCw,
@@ -28,6 +29,7 @@ import {
   REVIEW_STATUSES,
   STATUS_PILL,
   isArchivable,
+  isReviewItemAddedBy,
   unresolvedCount,
   type ReviewCategory,
   type ReviewItem,
@@ -87,6 +89,14 @@ export function ReviewTable({
    *  effectively invisible — pass `light` there for a brand-tinted
    *  pill that actually pops. */
   tabsTheme = "dark",
+  /** Web designers na consola interna (v77.79): veem todas as linhas mas só
+   *  editam — e só apagam, se `allowDelete` — as que eles próprios
+   *  adicionaram. As outras ficam em texto, com um cadeado. A rota da API
+   *  aplica a mesma regra; isto é só para não oferecer o que vai falhar. */
+  ownRowsOnly = false,
+  /** O username da sessão — é com ele que `ownRowsOnly` reconhece as linhas
+   *  da pessoa. */
+  currentUsername = null,
 }: {
   clientSlug: string;
   initialItems: ReviewItem[];
@@ -99,6 +109,8 @@ export function ReviewTable({
   commentAuthorName?: string | null;
   commentLang?: PublicLang;
   tabsTheme?: "dark" | "light";
+  ownRowsOnly?: boolean;
+  currentUsername?: string | null;
 }) {
   const [items, setItems] = useState<ReviewItem[]>(initialItems);
   const [savingIds, setSavingIds] = useState<Set<string>>(new Set());
@@ -422,7 +434,7 @@ export function ReviewTable({
             >
               <thead className="bg-[#4a5d3a] text-white">
                 <tr>
-                  <Th className={showAddedDate ? "w-[29%]" : "w-[30%]"}>
+                  <Th className={showAddedDate ? "w-[27%]" : "w-[30%]"}>
                     Task
                   </Th>
                   <Th className={showAddedDate ? "w-[12%]" : "w-[13%]"}>Status</Th>
@@ -432,13 +444,13 @@ export function ReviewTable({
                   <Th className={showAddedDate ? "w-[9%]" : "w-[10%]"}>
                     Approval date
                   </Th>
-                  <Th className={showAddedDate ? "w-[17%]" : "w-[20%]"}>
+                  <Th className={showAddedDate ? "w-[16%]" : "w-[20%]"}>
                     Doc link
                   </Th>
                   {showAddedDate && (
                     <Th
-                      className="w-[9%]"
-                      title="Quando o consultor pôs esta linha na tabela. Gravado uma vez, não muda com edições."
+                      className="w-[12%]"
+                      title="Quando e por quem esta linha entrou na tabela — e quem a voltou a pôr para aprovação, se foi outra pessoa ou mais tarde. Gravado no servidor, não muda com edições."
                     >
                       Added
                     </Th>
@@ -458,6 +470,8 @@ export function ReviewTable({
               <tbody>
                 {visibleItems.map((it) => {
                   const archivable = isArchivable(it.status);
+                  const editable =
+                    !ownRowsOnly || isReviewItemAddedBy(it, currentUsername);
                   const isCommentsOpen = openCommentsFor === it.id;
                   const totalComments = it.comments?.length ?? 0;
                   const openCount = unresolvedCount(it);
@@ -477,36 +491,50 @@ export function ReviewTable({
                       } ${isCommentsOpen ? "border-b-0" : ""}`}
                     >
                       <Td>
-                        <input
-                          type="text"
-                          value={it.task}
-                          onChange={(e) =>
-                            updateAndSaveDebounced(
-                              it.id,
-                              "task",
-                              e.target.value,
-                            )
-                          }
-                          placeholder="Task name"
-                          className="w-full rounded-md border border-transparent bg-transparent px-2 py-1 text-sm font-medium text-black/85 outline-none transition focus:border-black/15 focus:bg-white"
-                        />
+                        {editable ? (
+                          <input
+                            type="text"
+                            value={it.task}
+                            onChange={(e) =>
+                              updateAndSaveDebounced(
+                                it.id,
+                                "task",
+                                e.target.value,
+                              )
+                            }
+                            placeholder="Task name"
+                            className="w-full rounded-md border border-transparent bg-transparent px-2 py-1 text-sm font-medium text-black/85 outline-none transition focus:border-black/15 focus:bg-white"
+                          />
+                        ) : (
+                          <span
+                            className="flex items-start gap-1.5 px-2 py-1 text-sm font-medium text-black/85"
+                            title="Linha da equipa de SEO — podes ver e comentar, mas só alteras as linhas que tu adicionaste."
+                          >
+                            <Lock className="mt-1 h-3 w-3 shrink-0 text-black/30" />
+                            <span className="min-w-0 break-words">
+                              {it.task || "—"}
+                            </span>
+                          </span>
+                        )}
                       </Td>
                       <Td>
                         <StatusPicker
                           value={it.status}
+                          disabled={!editable}
                           onChange={(s) => updateAndSave(it.id, { status: s })}
                         />
                       </Td>
                       <Td>
                         <CategoryPicker
                           value={it.category}
+                          disabled={!editable}
                           onChange={(c) =>
                             updateAndSave(it.id, { category: c })
                           }
                         />
                       </Td>
                       <Td>
-                        {readonlyApprovalDate ? (
+                        {readonlyApprovalDate || !editable ? (
                           <span className="text-xs text-black/65">
                             {it.approvalDate
                               ? formatApprovalDate(it.approvalDate)
@@ -530,6 +558,7 @@ export function ReviewTable({
                       <Td>
                         <DocLinkCell
                           value={it.docLink}
+                          readOnly={!editable}
                           onChange={(v) =>
                             updateAndSaveDebounced(it.id, "docLink", v)
                           }
@@ -588,14 +617,16 @@ export function ReviewTable({
                       )}
                       {allowDelete && (
                         <Td className="text-right">
-                          <button
-                            type="button"
-                            onClick={() => deleteItem(it.id)}
-                            title="Delete row"
-                            className="rounded-md p-1.5 text-black/35 transition hover:bg-rose-50 hover:text-rose-600"
-                          >
-                            ×
-                          </button>
+                          {editable && (
+                            <button
+                              type="button"
+                              onClick={() => deleteItem(it.id)}
+                              title="Delete row"
+                              className="rounded-md p-1.5 text-black/35 transition hover:bg-rose-50 hover:text-rose-600"
+                            >
+                              ×
+                            </button>
+                          )}
                         </Td>
                       )}
                     </tr>
@@ -741,8 +772,6 @@ function TabButton({
   );
 }
 
-/** Format an ISO date (YYYY-MM-DD) as DD/MM/YYYY for the readonly
- *  approval-date cell on the public side. */
 /** A coluna «Added» — texto, nunca um input.
  *
  *  A diferença de material é intencional: todas as outras datas da linha são
@@ -751,21 +780,60 @@ function TabButton({
  *
  *  A segunda linha só aparece no caso raro em que o documento chegou depois
  *  da linha (criada vazia, doc colado dias mais tarde) — nesse caso dizer só
- *  a data da linha escondia a que interessa. */
+ *  a data da linha escondia a que interessa.
+ *
+ *  v77.79 — e QUEM. «by X» é quem adicionou a linha, que é também quem a pôs
+ *  para aprovação nesse momento (uma linha nova nasce em «For Approval»). A
+ *  linha «re-sent by Y» só aparece quando a aprovação foi pedida outra vez
+ *  depois — por outra pessoa, ou pela mesma noutro momento (o cliente pediu
+ *  alterações e alguém da equipa devolveu-lha). As linhas anteriores à
+ *  v77.79 não têm autor: ficam só com a data. */
 function AddedCell({ item }: { item: ReviewItem }) {
   const added = item.createdAt;
   const docAt = item.docFirstAddedAt ?? null;
   const docLater =
     docAt !== null && formatDate(docAt) !== formatDate(added) ? docAt : null;
+  const by = item.createdBy ?? null;
+  const approvalBy = item.approvalRequestedBy ?? null;
+  const approvalAt = item.approvalRequestedAt ?? null;
+  const resent =
+    approvalBy && approvalAt
+      ? approvalBy.username !== by?.username || approvalAt - added > 60_000
+      : false;
 
   if (!added) {
     return <span className="text-[11px] text-black/25">—</span>;
   }
+  const tooltip = [
+    by
+      ? `Adicionada por ${by.name} em ${formatDateTime(added)}`
+      : `Adicionada em ${formatDateTime(added)} · sem registo de quem (linha anterior à v77.79)`,
+    approvalBy && approvalAt
+      ? `Posta para aprovação por ${approvalBy.name} em ${formatDateTime(approvalAt)}`
+      : null,
+    docLater ? `Documento anexado ${formatDateTime(docLater)}` : null,
+  ]
+    .filter(Boolean)
+    .join("\n");
   return (
-    <span className="block leading-tight" title={`Linha adicionada ${formatDateTime(added)}${docLater ? ` · documento anexado ${formatDateTime(docLater)}` : ""}`}>
+    <span className="block leading-tight" title={tooltip}>
       <span className="tabular block text-xs font-medium text-black/60">
         {formatDate(added)}
       </span>
+      {by && (
+        <span className="mt-0.5 block truncate text-[11px] text-black/45">
+          by <span className="font-medium text-black/70">{by.name}</span>
+        </span>
+      )}
+      {resent && approvalBy && approvalAt && (
+        <span className="mt-1 block text-[10px] leading-snug text-violet-700/80">
+          re-sent by{" "}
+          <span className="font-semibold">{approvalBy.name}</span>
+          <span className="tabular block text-violet-700/60">
+            {formatDate(approvalAt)}
+          </span>
+        </span>
+      )}
       {docLater && (
         <span className="tabular mt-0.5 block text-[10px] text-black/35">
           doc {formatDate(docLater)}
@@ -775,6 +843,8 @@ function AddedCell({ item }: { item: ReviewItem }) {
   );
 }
 
+/** Format an ISO date (YYYY-MM-DD) as DD/MM/YYYY for the readonly
+ *  approval-date cell on the public side. */
 function formatApprovalDate(iso: string): string {
   const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (!m) return iso;
@@ -824,17 +894,20 @@ function Td({
 function StatusPicker({
   value,
   onChange,
+  disabled = false,
 }: {
   value: ReviewStatus;
   onChange: (s: ReviewStatus) => void;
+  disabled?: boolean;
 }) {
   const meta = STATUS_PILL[value];
   return (
     <div className="relative">
       <select
         value={value}
+        disabled={disabled}
         onChange={(e) => onChange(e.target.value as ReviewStatus)}
-        className="appearance-none rounded-full border px-3 py-1 pr-7 text-xs font-medium outline-none focus:ring-2 focus:ring-black/15"
+        className={`appearance-none rounded-full border px-3 py-1 text-xs font-medium outline-none focus:ring-2 focus:ring-black/15 disabled:cursor-default disabled:opacity-100 ${disabled ? "pr-3" : "pr-7"}`}
         style={{
           backgroundColor: meta.bg,
           color: meta.text,
@@ -847,13 +920,15 @@ function StatusPicker({
           </option>
         ))}
       </select>
-      <span
-        aria-hidden
-        className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs"
-        style={{ color: meta.text }}
-      >
-        ▾
-      </span>
+      {!disabled && (
+        <span
+          aria-hidden
+          className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs"
+          style={{ color: meta.text }}
+        >
+          ▾
+        </span>
+      )}
     </div>
   );
 }
@@ -861,17 +936,20 @@ function StatusPicker({
 function CategoryPicker({
   value,
   onChange,
+  disabled = false,
 }: {
   value: ReviewCategory;
   onChange: (c: ReviewCategory) => void;
+  disabled?: boolean;
 }) {
   const meta = CATEGORY_PILL[value];
   return (
     <div className="relative">
       <select
         value={value}
+        disabled={disabled}
         onChange={(e) => onChange(e.target.value as ReviewCategory)}
-        className="appearance-none rounded-full border px-3 py-1 pr-7 text-xs font-medium outline-none focus:ring-2 focus:ring-black/15"
+        className={`appearance-none rounded-full border px-3 py-1 text-xs font-medium outline-none focus:ring-2 focus:ring-black/15 disabled:cursor-default disabled:opacity-100 ${disabled ? "pr-3" : "pr-7"}`}
         style={{
           backgroundColor: meta.bg,
           color: meta.text,
@@ -884,13 +962,15 @@ function CategoryPicker({
           </option>
         ))}
       </select>
-      <span
-        aria-hidden
-        className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs"
-        style={{ color: meta.text }}
-      >
-        ▾
-      </span>
+      {!disabled && (
+        <span
+          aria-hidden
+          className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs"
+          style={{ color: meta.text }}
+        >
+          ▾
+        </span>
+      )}
     </div>
   );
 }
@@ -950,23 +1030,26 @@ function CommentsToggle({
 function DocLinkCell({
   value,
   onChange,
+  readOnly = false,
 }: {
   value: string | null;
   onChange: (v: string) => void;
+  readOnly?: boolean;
 }) {
   const [draft, setDraft] = useState(value ?? "");
   useEffect(() => setDraft(value ?? ""), [value]);
   return (
     <div className="flex items-center gap-1.5">
       <input
+        readOnly={readOnly}
         type="url"
         value={draft}
         onChange={(e) => {
           setDraft(e.target.value);
           onChange(e.target.value);
         }}
-        placeholder="https://…"
-        className="w-full rounded-md border border-black/10 bg-white px-2 py-1 text-xs text-black/75 outline-none focus:border-black/30"
+        placeholder={readOnly ? "—" : "https://…"}
+        className="w-full rounded-md border border-black/10 bg-white px-2 py-1 text-xs text-black/75 outline-none read-only:border-transparent read-only:bg-transparent focus:border-black/30 read-only:focus:border-transparent"
       />
       {value && /^https?:\/\//i.test(value) && (
         <a

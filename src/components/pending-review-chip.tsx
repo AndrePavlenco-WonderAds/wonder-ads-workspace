@@ -8,14 +8,15 @@ import { listReviewItems } from "@/lib/review-store";
 
 export async function PendingReviewChip({
   slug,
-  readOnly = false,
+  hidden = false,
 }: {
   slug: string;
-  /** Read-only viewers (Web designers) can't open the review console, so
-   *  the chip — which links straight to it — is hidden for them. */
-  readOnly?: boolean;
+  /** Quem não pode abrir a consola (viewers, ADS…) não vê o chip, que liga
+   *  direto para ela. Os web designers veem-no desde a v77.79 — ver
+   *  `reviewTableAccess`. */
+  hidden?: boolean;
 }) {
-  if (readOnly) return null;
+  if (hidden) return null;
   const items = await listReviewItems(slug);
   const pending = items.filter((i) => i.status === "For Approval").length;
   return (

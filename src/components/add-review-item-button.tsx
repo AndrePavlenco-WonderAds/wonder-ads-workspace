@@ -10,11 +10,18 @@ import {
 
 /** Modal-less inline add — pops a small form, POSTs the new item,
  *  reloads the page so the table refreshes via SSR. */
-export function AddReviewItemButton({ clientSlug }: { clientSlug: string }) {
+export function AddReviewItemButton({
+  clientSlug,
+  defaultCategory = "Other",
+}: {
+  clientSlug: string;
+  /** Categoria pré-escolhida — os web designers abrem em «Web Design». */
+  defaultCategory?: ReviewCategory;
+}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [task, setTask] = useState("");
-  const [category, setCategory] = useState<ReviewCategory>("Other");
+  const [category, setCategory] = useState<ReviewCategory>(defaultCategory);
   const [docLink, setDocLink] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -34,7 +41,7 @@ export function AddReviewItemButton({ clientSlug }: { clientSlug: string }) {
       if (res.ok) {
         setTask("");
         setDocLink("");
-        setCategory("Other");
+        setCategory(defaultCategory);
         setOpen(false);
         router.refresh();
       }

@@ -40,7 +40,13 @@ export function useSeoReadOnly(): boolean {
 
 /** Sticky banner shown at the top of a read-only SEO project page so the
  *  viewer understands why the edit controls are gone. */
-export function ReadOnlyBanner() {
+export function ReadOnlyBanner({
+  pendingReview = false,
+}: {
+  /** v77.79: os web designers podem adicionar linhas à tabela Pending Review
+   *  deste cliente — a única exceção ao «só leitura», e o banner di-lo. */
+  pendingReview?: boolean;
+} = {}) {
   return (
     <div className="animate-fade-up mt-6 flex items-center gap-3 rounded-xl border border-amber-400/25 bg-amber-400/[0.07] px-4 py-3 text-sm text-amber-100/90">
       <Eye className="h-4 w-4 shrink-0 text-amber-300" />
@@ -48,6 +54,14 @@ export function ReadOnlyBanner() {
         <strong className="font-semibold">Read-only.</strong> You can view this
         SEO project but not make changes — editing, AI actions and approvals are
         reserved for the SEO team.
+        {pendingReview && (
+          <>
+            {" "}
+            The exception is the{" "}
+            <strong className="font-semibold">Pending Review</strong> table,
+            where you can add work for the client to approve.
+          </>
+        )}
       </span>
     </div>
   );

@@ -384,6 +384,32 @@ export function canEditDept(
   return editableDepts(row).includes(dept);
 }
 
+/** O que a pessoa pode fazer na tabela PENDING REVIEW de um cliente SEO
+ *  (`/seo/[slug]/review`) — v77.79.
+ *
+ *  - `"full"`        → quem edita o SEO (consultores + SuperAdmins): tudo,
+ *                      incluindo arquivar e apagar qualquer linha.
+ *  - `"contributor"` → os web designers. O SEO continua só de leitura para
+ *                      eles, MAS a tabela de aprovações é partilhada: veem as
+ *                      linhas todas, adicionam as suas (o que precisa do OK do
+ *                      cliente do lado do Web) e só editam ou apagam as que
+ *                      eles próprios adicionaram. Não arquivam.
+ *  - `null`          → mais ninguém abre a consola (viewers, ADS…).
+ *
+ *  As rotas `/api/reviews` aplicam o mesmo corte no servidor; a página só
+ *  arruma a UI. */
+export type ReviewTableAccess = "full" | "contributor";
+
+export function reviewTableAccess(
+  row: AccessRow | null | undefined,
+): ReviewTableAccess | null {
+  if (!row) return null;
+  const editable = editableDepts(row);
+  if (editable.includes("seo")) return "full";
+  if (editable.includes("web")) return "contributor";
+  return null;
+}
+
 /** Quem pode mexer na DATA DE ENTREGA PREVISTA de um projeto Web.
  *
  *  A data é um compromisso do departamento que constrói, não um campo de

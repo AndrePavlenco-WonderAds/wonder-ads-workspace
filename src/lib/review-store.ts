@@ -43,6 +43,7 @@ export const REVIEW_CATEGORIES = [
   "Roadmap",
   "Monthly Report",
   "Brief",
+  "Web Design",
   "Other",
 ] as const;
 export type ReviewCategory = (typeof REVIEW_CATEGORIES)[number];
@@ -69,6 +70,14 @@ export type ReviewComment = {
    *  a "Resolved" pill — same affordance Google Docs uses. */
   resolvedAt?: number | null;
   resolvedBy?: "client" | "consultant" | null;
+};
+
+/** Um utilizador DA APP (nunca o cliente) carimbado numa linha. Fica com o
+ *  nome de então: se a pessoa mudar de nome ou sair, a linha continua a dizer
+ *  quem foi na altura. */
+export type ReviewActor = {
+  username: string;
+  name: string;
 };
 
 export type ReviewItem = {
@@ -120,6 +129,20 @@ export type ReviewItem = {
    *  `null` nas linhas gravadas antes da v76.80 que ainda não tinham link,
    *  e `undefined` nas anteriores a este campo existir. */
   docFirstAddedAt?: number | null;
+  /** QUEM pôs a linha na tabela (v77.79) — o utilizador da sessão que fez o
+   *  POST, seja pelo «Send for Approval» de uma página de resultado ou pelo
+   *  «Add row manually». Carimbado no servidor a partir do cookie, nunca do
+   *  corpo do pedido, e imutável como o `createdAt`.
+   *
+   *  `undefined` nas linhas anteriores à v77.79 — a UI diz «sem registo». */
+  createdBy?: ReviewActor | null;
+  /** Quem pôs a linha em «For Approval» da última vez, e quando. À nascença
+   *  é o `createdBy` (uma linha nova entra em «For Approval»); muda quando
+   *  alguém da equipa a devolve ao cliente depois de um «Changes Requested»
+   *  ou «Rejected». Só utilizadores da app contam: se for o CLIENTE a pôr o
+   *  estado em «For Approval», o carimbo anterior fica como estava. */
+  approvalRequestedBy?: ReviewActor | null;
+  approvalRequestedAt?: number | null;
   /** Where the item came from. Helps the internal view show "this was
    *  auto-sent from GMB Posts result 2026-05-20-1437-h5". */
   sourceType?: string;
@@ -152,11 +175,27 @@ export async function saveAllReviewItems(
   await kv.set(key(slug), items.slice(0, MAX_ITEMS));
 }
 
+/** Os campos que só o servidor escreve — nunca vêm do browser. */
+type ServerStampedFields =
+  | "id"
+  | "createdAt"
+  | "updatedAt"
+  | "docFirstAddedAt"
+  | "createdBy"
+  | "approvalRequestedBy"
+  | "approvalRequestedAt";
+
+/** O que um PATCH pode trazer. */
+export type ReviewItemPatch = Partial<Omit<ReviewItem, ServerStampedFields>>;
+
 export async function appendReviewItem(
   slug: string,
-  partial: Omit<ReviewItem, "id" | "createdAt" | "updatedAt">,
+  partial: Omit<ReviewItem, ServerStampedFields>,
+  /** Quem está a adicionar — o utilizador da sessão, resolvido na rota. */
+  actor: ReviewActor | null,
 ): Promise<ReviewItem> {
   const now = Date.now();
+  const forApproval = partial.status === "For Approval" && actor !== null;
   const item: ReviewItem = {
     ...partial,
     id: newReviewItemId(),
@@ -165,6 +204,9 @@ export async function appendReviewItem(
     // Uma linha que nasce com o documento tem as duas datas iguais — é o
     // caso do «Send to Review» e do «Add row manually» com link.
     docFirstAddedAt: partial.docLink ? now : null,
+    createdBy: actor,
+    approvalRequestedBy: forApproval ? actor : null,
+    approvalRequestedAt: forApproval ? now : null,
   };
   if (!reviewStorageConfigured) return item;
   const current = await listReviewItems(slug);
@@ -179,7 +221,10 @@ export async function appendReviewItem(
 export async function updateReviewItem(
   slug: string,
   id: string,
-  patch: Partial<Omit<ReviewItem, "id" | "createdAt" | "docFirstAddedAt">>,
+  patch: ReviewItemPatch,
+  /** O utilizador da app que fez a alteração, ou null quando é o cliente
+   *  (pedido sem sessão, vindo da página pública). */
+  actor: ReviewActor | null,
 ): Promise<ReviewItem | null> {
   if (!reviewStorageConfigured) return null;
   const current = await listReviewItems(slug);
@@ -194,11 +239,21 @@ export async function updateReviewItem(
   // futuro se poder esquecer dele.
   const stampDoc =
     !previous.docFirstAddedAt && !previous.docLink && Boolean(patch.docLink);
+  // Alguém da equipa devolveu a linha ao cliente para aprovação. Só conta a
+  // TRANSIÇÃO para «For Approval» — escolher o mesmo estado outra vez não
+  // rouba o carimbo a quem o pôs.
+  const stampApproval =
+    actor !== null &&
+    patch.status === "For Approval" &&
+    previous.status !== "For Approval";
   const updated: ReviewItem = {
     ...previous,
     ...patch,
     updatedAt: now,
     ...(stampDoc ? { docFirstAddedAt: now } : {}),
+    ...(stampApproval
+      ? { approvalRequestedBy: actor, approvalRequestedAt: now }
+      : {}),
   };
   current[idx] = updated;
   await kv.set(key(slug), current);
@@ -392,17 +447,15 @@ export function unresolvedCount(item: ReviewItem): number {
 /** Sanitise a payload coming in from the public PUT endpoint. The
  *  public page is unauthenticated, so we never trust the body — we
  *  whitelist editable fields and clamp lengths. */
-/** A lista branca do que um PATCH pode mexer. `createdAt` e
- *  `docFirstAddedAt` estão FORA dela de propósito: são o registo de quando
- *  a linha e o documento entraram na tabela, e um pedido vindo do browser —
+/** A lista branca do que um PATCH pode mexer. `createdAt`,
+ *  `docFirstAddedAt` e os carimbos de autoria (`createdBy`,
+ *  `approvalRequestedBy/At`) estão FORA dela de propósito: são o registo de
+ *  quando e por quem a linha entrou na tabela, e um pedido vindo do browser —
  *  do consultor ou do cliente — não os pode reescrever. */
-export function sanitiseReviewItemPatch(
-  raw: unknown,
-): Partial<Omit<ReviewItem, "id" | "createdAt" | "docFirstAddedAt">> {
+export function sanitiseReviewItemPatch(raw: unknown): ReviewItemPatch {
   if (!raw || typeof raw !== "object") return {};
   const o = raw as Record<string, unknown>;
-  const out: Partial<Omit<ReviewItem, "id" | "createdAt" | "docFirstAddedAt">> =
-    {};
+  const out: ReviewItemPatch = {};
   if (typeof o.task === "string") out.task = o.task.slice(0, 240);
   if (
     typeof o.status === "string" &&
@@ -437,6 +490,26 @@ export function sanitiseReviewItemPatch(
     out.archivedAt = o.archived ? Date.now() : null;
   }
   return out;
+}
+
+/** A linha como o CLIENTE a pode ver: sem os carimbos de autoria. Quem da
+ *  equipa adicionou ou pôs a linha para aprovação é informação interna — a
+ *  página pública e o GET sem sessão passam sempre por aqui. */
+export function toPublicReviewItem(item: ReviewItem): ReviewItem {
+  const out = { ...item };
+  delete out.createdBy;
+  delete out.approvalRequestedBy;
+  delete out.approvalRequestedAt;
+  return out;
+}
+
+/** True quando a linha foi adicionada por `username`. As linhas anteriores à
+ *  v77.79 não têm autor e nunca contam como de ninguém. */
+export function isReviewItemAddedBy(
+  item: ReviewItem,
+  username: string | null | undefined,
+): boolean {
+  return Boolean(username) && item.createdBy?.username === username;
 }
 
 /** Items the public client view shows — never archived ones. */
@@ -511,5 +584,6 @@ export const CATEGORY_PILL: Record<
   Roadmap: { bg: "#e0e7ff", text: "#3730a3", border: "#c7d2fe" },
   "Monthly Report": { bg: "#f3e8ff", text: "#6b21a8", border: "#e9d5ff" },
   Brief: { bg: "#ccfbf1", text: "#115e59", border: "#99f6e4" },
+  "Web Design": { bg: "#fae8ff", text: "#86198f", border: "#f5d0fe" },
   Other: { bg: "#e5e7eb", text: "#374151", border: "#d1d5db" },
 };

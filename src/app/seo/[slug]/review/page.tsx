@@ -1,14 +1,17 @@
 // Internal Pending Review view — same table as the public page but
 // inside PageShell, with the public-link share buttons (copy URL +
 // open in new tab) and the per-row delete control enabled.
+//
+// v77.79 — os web designers também entram (acesso "contributor"): veem
+// a tabela toda, adicionam linhas para aprovação e só mexem nas suas.
 
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, ExternalLink } from "lucide-react";
+import { ArrowLeft, ExternalLink, PenLine } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { AccessDenied } from "@/components/access-denied";
 import { getCurrentEmployee } from "@/lib/auth/server";
-import { editableDepts } from "@/lib/auth/credentials";
+import { reviewTableAccess } from "@/lib/auth/credentials";
 import { LogoChip } from "@/components/logo-chip";
 import { ReviewTable } from "@/components/review-table";
 import { CopyPublicLinkButton } from "@/components/copy-public-link-button";
@@ -46,17 +49,17 @@ export default async function InternalReviewPage({
 }) {
   const { slug } = await params;
 
-  // Internal approval console — it mutates through the public /api/reviews
-  // endpoint (shared with the client-facing page), which the middleware
-  // write-gate deliberately leaves open. So this page is restricted to SEO
-  // editors; read-only viewers (Web designers) don't get it.
+  // Internal approval console — SEO editors get everything; Web designers
+  // ("contributor") see every row, add their own and only change those.
+  // The /api/reviews routes enforce the same split server-side.
   const employee = await getCurrentEmployee();
-  if (!employee || !editableDepts(employee).includes("seo")) {
+  const access = reviewTableAccess(employee);
+  if (!employee || !access) {
     return (
       <PageShell backHref={`/seo/${slug}`} backLabel="SEO DPT">
         <AccessDenied
           title="No SEO access"
-          description="The internal review console is open to the SEO team and SuperAdmins."
+          description="The internal review console is open to the SEO team, the Web designers and SuperAdmins."
           backHref={`/seo/${slug}`}
           backLabel="Back to client"
           username={employee?.username}
@@ -81,6 +84,7 @@ export default async function InternalReviewPage({
   const logoSizing = getLogoSizing(slug);
   const gradient = paletteToGradient(getClientPalette(slug));
   const publicPath = `/${slug}/pendingreview`;
+  const contributor = access === "contributor";
 
   return (
     <PageShell wide backHref={`/seo/${slug}`} backLabel={client.title}>
@@ -115,8 +119,9 @@ export default async function InternalReviewPage({
             <p className="mt-1 text-xs text-white/55">
               Same table the client sees — every change saves to both views
               instantly. The <strong className="font-semibold text-white/75">Added</strong>{" "}
-              column is internal only: it records when the row entered the
-              table and never changes.
+              column is internal only: it records when and by whom the row
+              entered the table — and who sent it back for approval — and
+              never changes.
             </p>
           </div>
         </div>
@@ -134,8 +139,23 @@ export default async function InternalReviewPage({
         </div>
       </header>
 
+      {contributor && (
+        <div className="animate-fade-up mt-6 flex items-start gap-3 rounded-xl border border-fuchsia-400/25 bg-fuchsia-400/[0.07] px-4 py-3 text-sm text-fuchsia-50/90">
+          <PenLine className="mt-0.5 h-4 w-4 shrink-0 text-fuchsia-300" />
+          <span>
+            <strong className="font-semibold">Web team access.</strong> You can
+            see every row, add the work that needs the client&apos;s approval,
+            and edit or delete the rows you added. The SEO team&apos;s rows are
+            locked — open their comments if you need to say something.
+          </span>
+        </div>
+      )}
+
       <div className="mt-6 flex justify-end">
-        <AddReviewItemButton clientSlug={slug} />
+        <AddReviewItemButton
+          clientSlug={slug}
+          defaultCategory={contributor ? "Web Design" : "Other"}
+        />
       </div>
 
       <section className="mt-3">
@@ -147,12 +167,19 @@ export default async function InternalReviewPage({
             showAddedDate={true}
             allowDelete={true}
             allowArchive={true}
-            allowArchiveActions={true}
+            allowArchiveActions={!contributor}
+            ownRowsOnly={contributor}
+            currentUsername={employee.username}
             commentAuthorRole="consultant"
             commentAuthorName={
-              consultantName && consultantName !== "Unassigned"
-                ? consultantName
-                : null
+              // Um web designer comenta em nome próprio — assinar com o nome
+              // do consultor de SEO do cliente seria pôr palavras na boca de
+              // outra pessoa.
+              contributor
+                ? employee.name
+                : consultantName && consultantName !== "Unassigned"
+                  ? consultantName
+                  : null
             }
           />
         </div>

@@ -1,7 +1,11 @@
 // Public read + append endpoint for the Pending Review table.
-// No auth — the URL is the access control. This is intentional;
+// READ: no auth — the URL is the access control. This is intentional;
 // the slug IS the share secret as far as the client side is
-// concerned, mirroring how share-link Drive files work.
+// concerned, mirroring how share-link Drive files work. Os carimbos de
+// autoria (quem adicionou / quem pôs para aprovação) só saem para quem tem
+// sessão com acesso à consola interna.
+// APPEND (v77.79): só utilizadores da app — o cliente nunca adiciona
+// linhas, e cada linha nova fica assinada por quem a pôs.
 
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
@@ -11,10 +15,14 @@ import {
   listReviewItems,
   REVIEW_CATEGORIES,
   REVIEW_STATUSES,
+  toPublicReviewItem,
   type ReviewCategory,
-  type ReviewItem,
   type ReviewStatus,
 } from "@/lib/review-store";
+import {
+  IMPERSONATION_WRITE_ERROR,
+  getReviewRequester,
+} from "@/lib/review-requester";
 
 export const runtime = "nodejs";
 
@@ -29,8 +37,14 @@ export async function GET(
   // omits the param and gets a filtered list — clients never see
   // archived work.
   const includeArchived = url.searchParams.get("includeArchived") === "1";
-  const raw = await listReviewItems(slug);
-  const items = includeArchived ? raw : filterPublicItems(raw);
+  const [raw, requester] = await Promise.all([
+    listReviewItems(slug),
+    getReviewRequester(),
+  ]);
+  const visible = includeArchived ? raw : filterPublicItems(raw);
+  const items = requester.access
+    ? visible
+    : visible.map(toPublicReviewItem);
   return NextResponse.json({ items });
 }
 
@@ -43,6 +57,16 @@ export async function POST(
   ctx: { params: Promise<{ slug: string }> },
 ) {
   const { slug } = await ctx.params;
+  const requester = await getReviewRequester();
+  if (!requester.actor || !requester.access) {
+    return NextResponse.json(
+      { error: "Só a equipa pode adicionar linhas a esta tabela." },
+      { status: requester.actor ? 403 : 401 },
+    );
+  }
+  if (requester.impersonating) {
+    return NextResponse.json({ error: IMPERSONATION_WRITE_ERROR }, { status: 403 });
+  }
   let body: Record<string, unknown>;
   try {
     body = (await req.json()) as Record<string, unknown>;
@@ -63,7 +87,7 @@ export async function POST(
     (REVIEW_CATEGORIES as readonly string[]).includes(body.category)
       ? (body.category as ReviewCategory)
       : "Other";
-  const partial: Omit<ReviewItem, "id" | "createdAt" | "updatedAt"> = {
+  const partial: Parameters<typeof appendReviewItem>[1] = {
     task: task.slice(0, 240),
     status,
     category,
@@ -85,7 +109,7 @@ export async function POST(
     sourceType: typeof body.sourceType === "string" ? body.sourceType : undefined,
     sourceUrl: typeof body.sourceUrl === "string" ? body.sourceUrl : undefined,
   };
-  const created = await appendReviewItem(slug, partial);
+  const created = await appendReviewItem(slug, partial, requester.actor);
   // Bust both the public + internal page caches so the new item shows
   // up immediately.
   revalidatePath(`/${slug}/pendingreview`);

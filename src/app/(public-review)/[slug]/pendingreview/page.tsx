@@ -14,7 +14,7 @@ import {
   getConsultantEmailForSlug,
   getConsultantForSlug,
 } from "@/lib/consultant-assignments";
-import { listReviewItems } from "@/lib/review-store";
+import { listReviewItems, toPublicReviewItem } from "@/lib/review-store";
 import { ReviewTable } from "@/components/review-table";
 import { pickLang, t } from "@/lib/public-i18n";
 
@@ -51,7 +51,9 @@ export default async function PublicReviewPage({
   // client can scroll past decisions in the Archive tab. The
   // tab-switch UX is rendered by ReviewTable; the Pending tab still
   // hides archived rows for display.
-  const items = await listReviewItems(slug);
+  // v77.79: sem os carimbos de quem da equipa adicionou cada linha — isso é
+  // só para a vista interna.
+  const items = (await listReviewItems(slug)).map(toPublicReviewItem);
   const logo = getClientLogo(slug);
   const lang = pickLang(slug);
   const consultantEmail = await getConsultantEmailForSlug(slug);
