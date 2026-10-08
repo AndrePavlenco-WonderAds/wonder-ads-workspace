@@ -15,6 +15,7 @@ import {
   listReviewItems,
   REVIEW_CATEGORIES,
   REVIEW_STATUSES,
+  sanitiseDocFileName,
   toPublicReviewItem,
   type ReviewCategory,
   type ReviewStatus,
@@ -49,7 +50,7 @@ export async function GET(
 }
 
 /** Append a single new item. Body schema:
- *    { task: string, status?, category?, docLink?, sourceType?, sourceUrl?, approvalDate?, publishingDate?, notes? }
+ *    { task: string, status?, category?, docLink?, docFileName?, sourceType?, sourceUrl?, approvalDate?, publishingDate?, notes? }
  *  Called from internal "Send to Review" buttons on action result
  *  pages. The public table writes to /items/[id], not here. */
 export async function POST(
@@ -104,6 +105,11 @@ export async function POST(
     docLink:
       typeof body.docLink === "string" && /^https?:\/\//i.test(body.docLink)
         ? body.docLink.slice(0, 1000)
+        : null,
+    // Só faz sentido com um doc — um nome sem link é descartado.
+    docFileName:
+      typeof body.docLink === "string" && /^https?:\/\//i.test(body.docLink)
+        ? sanitiseDocFileName(body.docFileName)
         : null,
     notes: typeof body.notes === "string" ? body.notes.slice(0, 4000) : null,
     sourceType: typeof body.sourceType === "string" ? body.sourceType : undefined,

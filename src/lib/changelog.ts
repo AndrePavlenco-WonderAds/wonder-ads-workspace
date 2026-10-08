@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.80",
+    date: "2026-10-08",
+    title: "Pending Review — upload de documentos (PDF, Word, imagens) para o cliente rever",
+    highlights: [
+      "**📎 «Upload file» no «Add row manually».** Além de colar um link, carregas o ficheiro (PDF, Word, Excel, PowerPoint, imagem, vídeo…) e ele passa a ser o documento da linha — o cliente abre-o no «Open» da tabela. Se a Task estiver vazia, fica com o nome do ficheiro. Vale para a equipa de SEO e para os web designers.",
+      "**🔁 Trocar por uma versão nova.** Nas linhas que podes editar há um ícone de upload ao lado do doc link: carrega a v2 depois de um «Changes Requested» (ou anexa um ficheiro a uma linha que só tinha link). O × tira o ficheiro.",
+      "**🏷️ Nome do ficheiro em vez do URL.** Um documento carregado aparece na tabela — também do lado do cliente — com o nome do ficheiro, não com o link comprido do armazenamento.",
+      "**🧹 Avisos mais curtos.** Sai o aviso «Web team access» por cima da tabela, e o banner «Read-only» das páginas de SEO passa a português e a uma linha: «Só leitura. Vês este projeto de SEO, mas não o alteras — exceto a tabela Pending Review…».",
+      "**⚡ A linha nova aparece logo.** Depois de «Add», a tabela vai buscar a lista na hora em vez de esperar pelo próximo sync (até 12 s).",
+    ],
+  },
+  {
     version: "77.79",
     date: "2026-10-08",
     title: "Pending Review — web designers entram na tabela, e cada linha diz quem a pôs para aprovação",

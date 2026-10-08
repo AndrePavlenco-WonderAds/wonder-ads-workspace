@@ -7,7 +7,7 @@
 
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, ExternalLink, PenLine } from "lucide-react";
+import { ArrowLeft, ExternalLink } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { AccessDenied } from "@/components/access-denied";
 import { getCurrentEmployee } from "@/lib/auth/server";
@@ -139,18 +139,6 @@ export default async function InternalReviewPage({
         </div>
       </header>
 
-      {contributor && (
-        <div className="animate-fade-up mt-6 flex items-start gap-3 rounded-xl border border-fuchsia-400/25 bg-fuchsia-400/[0.07] px-4 py-3 text-sm text-fuchsia-50/90">
-          <PenLine className="mt-0.5 h-4 w-4 shrink-0 text-fuchsia-300" />
-          <span>
-            <strong className="font-semibold">Web team access.</strong> You can
-            see every row, add the work that needs the client&apos;s approval,
-            and edit or delete the rows you added. The SEO team&apos;s rows are
-            locked — open their comments if you need to say something.
-          </span>
-        </div>
-      )}
-
       <div className="mt-6 flex justify-end">
         <AddReviewItemButton
           clientSlug={slug}
@@ -169,6 +157,7 @@ export default async function InternalReviewPage({
             allowArchive={true}
             allowArchiveActions={!contributor}
             ownRowsOnly={contributor}
+            allowUpload={true}
             currentUsername={employee.username}
             commentAuthorRole="consultant"
             commentAuthorName={

@@ -17,11 +17,15 @@ import {
   Archive,
   ArchiveRestore,
   ExternalLink,
+  FileText,
   Inbox,
+  Loader2,
   Lock,
   MessageSquare,
   MessageSquarePlus,
   RefreshCw,
+  Upload,
+  X,
 } from "lucide-react";
 import {
   CATEGORY_PILL,
@@ -36,6 +40,7 @@ import {
   type ReviewStatus,
 } from "@/lib/review-store";
 import { CommentsThread } from "@/components/comments-thread";
+import { REVIEW_UPLOAD_ACCEPT, uploadReviewDoc } from "@/lib/review-upload";
 import { formatDate, formatDateTime } from "@/lib/dates";
 import type { PublicLang } from "@/lib/public-i18n";
 
@@ -97,6 +102,10 @@ export function ReviewTable({
   /** O username da sessão — é com ele que `ownRowsOnly` reconhece as linhas
    *  da pessoa. */
   currentUsername = null,
+  /** Consola interna (v77.80): botão para carregar um ficheiro (PDF, Word,
+   *  imagem…) como documento da linha, ou trocá-lo por uma versão nova. Só
+   *  nas linhas que a pessoa pode editar. Desligado do lado do cliente. */
+  allowUpload = false,
 }: {
   clientSlug: string;
   initialItems: ReviewItem[];
@@ -111,6 +120,7 @@ export function ReviewTable({
   tabsTheme?: "dark" | "light";
   ownRowsOnly?: boolean;
   currentUsername?: string | null;
+  allowUpload?: boolean;
 }) {
   const [items, setItems] = useState<ReviewItem[]>(initialItems);
   const [savingIds, setSavingIds] = useState<Set<string>>(new Set());
@@ -253,6 +263,19 @@ export function ReviewTable({
       setRefreshing(false);
     }
   }, [clientSlug, allowArchive]);
+
+  // Depois de um router.refresh() (ex.: «Add row manually») o servidor manda
+  // um `initialItems` novo, mas o useState ignora-o — a linha nova só
+  // aparecia no próximo poll, até 12 s depois. Puxa logo a lista, com o
+  // mesmo merge que protege o que se está a escrever.
+  const mountedRef = useRef(false);
+  useEffect(() => {
+    if (!mountedRef.current) {
+      mountedRef.current = true;
+      return;
+    }
+    void refresh();
+  }, [initialItems, refresh]);
 
   // Auto-poll while the tab is visible. Pauses on hidden tabs so we
   // don't burn KV requests for backgrounded windows. Re-fires
@@ -558,9 +581,36 @@ export function ReviewTable({
                       <Td>
                         <DocLinkCell
                           value={it.docLink}
+                          fileName={it.docFileName ?? null}
                           readOnly={!editable}
-                          onChange={(v) =>
-                            updateAndSaveDebounced(it.id, "docLink", v)
+                          onChange={(v) => {
+                            // Um link escrito à mão já não é o ficheiro
+                            // carregado — o servidor limpa o nome também.
+                            if (it.docFileName) {
+                              updateLocal(it.id, { docFileName: null });
+                            }
+                            updateAndSaveDebounced(it.id, "docLink", v);
+                          }}
+                          onUpload={
+                            allowUpload && editable
+                              ? async (file) => {
+                                  const { url, fileName } =
+                                    await uploadReviewDoc(clientSlug, file);
+                                  updateAndSave(it.id, {
+                                    docLink: url,
+                                    docFileName: fileName,
+                                  });
+                                }
+                              : undefined
+                          }
+                          onClearFile={
+                            editable && allowUpload
+                              ? () =>
+                                  updateAndSave(it.id, {
+                                    docLink: null,
+                                    docFileName: null,
+                                  })
+                              : undefined
                           }
                         />
                       </Td>
@@ -1027,45 +1077,135 @@ function CommentsToggle({
   );
 }
 
+/** A célula do documento. Três formas:
+ *  - ficheiro carregado (`fileName`) → o nome do ficheiro, não o URL do Blob;
+ *  - link colado → o input de sempre;
+ *  - em ambos, «Open» abre o documento e, quando `onUpload` existe, o ícone
+ *    de upload carrega um ficheiro novo (ou troca o que lá está). */
 function DocLinkCell({
   value,
+  fileName,
   onChange,
+  onUpload,
+  onClearFile,
   readOnly = false,
 }: {
   value: string | null;
+  fileName: string | null;
   onChange: (v: string) => void;
+  onUpload?: (file: File) => Promise<void>;
+  onClearFile?: () => void;
   readOnly?: boolean;
 }) {
   const [draft, setDraft] = useState(value ?? "");
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const fileInput = useRef<HTMLInputElement>(null);
   useEffect(() => setDraft(value ?? ""), [value]);
+  const isFile = Boolean(fileName && value);
+
+  async function pick(file: File | undefined) {
+    if (!file || !onUpload) return;
+    setUploading(true);
+    setUploadError(null);
+    try {
+      await onUpload(file);
+    } catch (err) {
+      setUploadError(
+        err instanceof Error ? err.message : `Upload failed: ${file.name}`,
+      );
+    } finally {
+      setUploading(false);
+      if (fileInput.current) fileInput.current.value = "";
+    }
+  }
+
   return (
-    <div className="flex items-center gap-1.5">
-      <input
-        readOnly={readOnly}
-        type="url"
-        value={draft}
-        onChange={(e) => {
-          setDraft(e.target.value);
-          onChange(e.target.value);
-        }}
-        placeholder={readOnly ? "—" : "https://…"}
-        className="w-full rounded-md border border-black/10 bg-white px-2 py-1 text-xs text-black/75 outline-none read-only:border-transparent read-only:bg-transparent focus:border-black/30 read-only:focus:border-transparent"
-      />
-      {value && /^https?:\/\//i.test(value) && (
-        <a
-          href={value}
-          target="_blank"
-          rel="noopener noreferrer"
-          title="Open document in new tab"
-          className="inline-flex shrink-0 items-center gap-1 rounded-md px-2 py-1 text-[11px] font-semibold text-white shadow-sm transition hover:brightness-110"
-          style={{
-            background:
-              "linear-gradient(135deg, #343ED7 0%, #783DF5 53.65%, #C535C9 100%)",
-          }}
-        >
-          <ExternalLink className="h-3.5 w-3.5" />
-          Open
-        </a>
+    <div>
+      <div className="flex items-center gap-1.5">
+        {isFile ? (
+          // `w-0 flex-1`: o nome do ficheiro não conta para a largura da
+          // coluna (a tabela é auto-layout — um nome comprido espremia a
+          // Task); ocupa o que a coluna já tem, com um mínimo legível.
+          <span
+            className="flex w-0 min-w-[8rem] flex-1 items-center gap-1.5 rounded-md border border-black/10 bg-black/[0.03] px-2 py-1 text-xs text-black/75"
+            title={fileName ?? undefined}
+          >
+            <FileText className="h-3.5 w-3.5 shrink-0 text-violet-600" />
+            <span className="min-w-0 flex-1 truncate">{fileName}</span>
+            {onClearFile && !readOnly && (
+              <button
+                type="button"
+                onClick={onClearFile}
+                title="Remove file"
+                className="shrink-0 rounded p-0.5 text-black/35 transition hover:bg-rose-50 hover:text-rose-600"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            )}
+          </span>
+        ) : (
+          <input
+            readOnly={readOnly}
+            type="url"
+            value={draft}
+            onChange={(e) => {
+              setDraft(e.target.value);
+              onChange(e.target.value);
+            }}
+            placeholder={readOnly ? "—" : "https://…"}
+            className="w-full min-w-0 rounded-md border border-black/10 bg-white px-2 py-1 text-xs text-black/75 outline-none read-only:border-transparent read-only:bg-transparent focus:border-black/30 read-only:focus:border-transparent"
+          />
+        )}
+        {onUpload && !readOnly && (
+          <>
+            <input
+              ref={fileInput}
+              type="file"
+              accept={REVIEW_UPLOAD_ACCEPT}
+              className="hidden"
+              onChange={(e) => void pick(e.target.files?.[0])}
+            />
+            <button
+              type="button"
+              onClick={() => fileInput.current?.click()}
+              disabled={uploading}
+              title={
+                isFile
+                  ? "Upload a new version of this file"
+                  : "Upload a file (PDF, Word, image…)"
+              }
+              className="inline-flex shrink-0 items-center rounded-md border border-black/10 bg-white p-1.5 text-black/50 transition hover:border-black/25 hover:text-black/80 disabled:cursor-wait"
+            >
+              {uploading ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Upload className="h-3.5 w-3.5" />
+              )}
+            </button>
+          </>
+        )}
+        {value && /^https?:\/\//i.test(value) && (
+          <a
+            href={value}
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Open document in new tab"
+            className="inline-flex shrink-0 items-center gap-1 rounded-md px-2 py-1 text-[11px] font-semibold text-white shadow-sm transition hover:brightness-110"
+            style={{
+              background:
+                "linear-gradient(135deg, #343ED7 0%, #783DF5 53.65%, #C535C9 100%)",
+            }}
+          >
+            <ExternalLink className="h-3.5 w-3.5" />
+            Open
+          </a>
+        )}
+      </div>
+      {uploadError && (
+        <p role="alert" className="mt-1 text-[10px] text-rose-600">
+          {uploadError}
+        </p>
       )}
     </div>
   );

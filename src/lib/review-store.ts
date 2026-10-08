@@ -96,6 +96,11 @@ export type ReviewItem = {
   publishingDate: string | null; // YYYY-MM-DD
   /** Link to the asset — Google Doc, PDF, internal result page, etc. Editable. */
   docLink: string | null;
+  /** Nome original do ficheiro quando o documento foi CARREGADO (upload para
+   *  o Blob) em vez de colado como link — v77.80. A tabela mostra este nome
+   *  em vez do URL comprido do Blob. Qualquer `docLink` novo sem nome (um link
+   *  colado à mão) limpa-o — ver `sanitiseReviewItemPatch`. */
+  docFileName?: string | null;
   /** Free-form notes a consultant or client might leave. Editable. */
   notes: string | null;
   /** Comment thread for this row — both sides post here and the table
@@ -482,6 +487,13 @@ export function sanitiseReviewItemPatch(raw: unknown): ReviewItemPatch {
       out.docLink = o.docLink.slice(0, 1000);
     }
   }
+  if ("docFileName" in o) {
+    out.docFileName = sanitiseDocFileName(o.docFileName);
+  } else if ("docLink" in out) {
+    // Um link novo sem nome de ficheiro é um link colado à mão — o nome do
+    // ficheiro que lá estava deixou de ser verdade.
+    out.docFileName = null;
+  }
   if (typeof o.notes === "string" || o.notes === null) {
     out.notes = typeof o.notes === "string" ? o.notes.slice(0, 4000) : null;
   }
@@ -510,6 +522,13 @@ export function isReviewItemAddedBy(
   username: string | null | undefined,
 ): boolean {
   return Boolean(username) && item.createdBy?.username === username;
+}
+
+/** Nome de ficheiro vindo do browser: texto simples, sem caminho, curto. */
+export function sanitiseDocFileName(raw: unknown): string | null {
+  if (typeof raw !== "string") return null;
+  const name = raw.split(/[\\/]/).pop()?.trim() ?? "";
+  return name ? name.slice(0, 200) : null;
 }
 
 /** Items the public client view shows — never archived ones. */
