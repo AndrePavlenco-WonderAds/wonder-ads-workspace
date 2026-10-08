@@ -8,6 +8,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import type { ProbationMenuView } from "@/lib/probation/menu";
 import {
   ArrowLeft,
   CalendarOff,
@@ -140,6 +141,7 @@ export function UserChipMenu({
   realName,
   viewingAs = null,
   dailyNumber = null,
+  probation = null,
   people = [],
 }: {
   name: string;
@@ -168,6 +170,9 @@ export function UserChipMenu({
   viewingAs?: string | null;
   /** «Número do dia» — só consultores SEO em dias úteis; null esconde. */
   dailyNumber?: DailyNumberView | null;
+  /** «O meu probation» — só enquanto o probation está a correr (ver
+   *  `probationMenuView`); null esconde o item. */
+  probation?: ProbationMenuView | null;
   people?: ImpersonationTarget[];
 }) {
   const router = useRouter();
@@ -437,9 +442,23 @@ export function UserChipMenu({
 
             {!isViewer && (
               <MenuSection label="Pessoal">
+                {/* O meu probation (v77.81) — temporário: o servidor só o
+                    manda enquanto o probation da pessoa está a correr. O
+                    texto é o andamento; o contador, o que está por ler. */}
+                {probation && (
+                  <MenuLink
+                    href="/probation"
+                    icon={ClipboardCheck}
+                    label="O meu probation"
+                    hint={probation.hint}
+                    badge={probation.unread > 0 ? `${probation.unread} por ler` : undefined}
+                    index={4}
+                    onPick={close}
+                  />
+                )}
                 {/* Pedir Ausência — a folha de RH e o histórico dos próprios
                     pedidos vivem em /ausencias. */}
-                <MenuLink href="/ausencias" icon={CalendarOff} label="Pedir Ausência" hint="Férias, consultas e outras ausências" index={4} onPick={close} />
+                <MenuLink href="/ausencias" icon={CalendarOff} label="Pedir Ausência" hint="Férias, consultas e outras ausências" index={5} onPick={close} />
               </MenuSection>
             )}
 
@@ -558,6 +577,7 @@ function MenuLink({
   label,
   hint,
   tone = "default",
+  badge,
   index,
   onPick,
 }: {
@@ -566,6 +586,8 @@ function MenuLink({
   label: string;
   hint: string;
   tone?: "default" | "amber";
+  /** Pastilha ao lado do título — «2 por ler» no probation. */
+  badge?: string;
   index: number;
   onPick: () => void;
 }) {
@@ -583,8 +605,13 @@ function MenuLink({
     >
       <IconTile icon={icon} tone={tone} />
       <span className="min-w-0 flex-1">
-        <span className={`block text-[12.5px] font-medium ${tone === "amber" ? "text-amber-100/90" : "text-white/85 group-hover:text-white"}`}>
+        <span className={`flex items-center gap-1.5 text-[12.5px] font-medium ${tone === "amber" ? "text-amber-100/90" : "text-white/85 group-hover:text-white"}`}>
           {label}
+          {badge && (
+            <span className="rounded-full bg-rose-500/90 px-1.5 py-px text-[9.5px] font-semibold leading-tight text-white">
+              {badge}
+            </span>
+          )}
         </span>
         <span className="block truncate text-[10.5px] text-white/40">{hint}</span>
       </span>

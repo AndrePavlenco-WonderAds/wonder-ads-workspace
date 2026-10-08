@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.81",
+    date: "2026-10-08",
+    title: "«O meu probation» no menu do nome, enquanto o probation durar",
+    highlights: [
+      "**🧭 Item novo no menu do nome, em «Pessoal».** Um consultor em probation passa a ter «O meu probation» logo acima de «Pedir Ausência», com o andamento por baixo — «Dia 12 de 30 · avaliação a 22/10/2026» — e uma pastilha «2 por ler» quando há plano, check-ins ou avaliações por confirmar. Abre a página /probation.",
+      "**⏳ Temporário.** Aparece com o primeiro envio do plano ao consultor (um rascunho da direção não conta) e desaparece sozinho quando ele confirma que leu a avaliação que fecha o probation (recuperação ou saída). Uma extensão mantém-no. Por segurança, sai 30 dias depois do fim do último período, se ninguém tiver decidido.",
+      "**👁️ «Ver como» incluído:** a ver como o consultor, o menu mostra o item dele, tal como ele o vê.",
+    ],
+  },
+  {
     version: "77.80",
     date: "2026-10-08",
     title: "Pending Review — upload de documentos (PDF, Word, imagens) para o cliente rever",

@@ -30,6 +30,9 @@ import {
   describeDay,
   lisbonISODate,
 } from "@/lib/seo-daily-number";
+import { listPublishedForUser } from "@/lib/probation/store";
+import { probationMenuView } from "@/lib/probation/menu";
+import { todayLisbonISO } from "@/lib/probation/progress";
 import { UserChipMenu, type DailyNumberView } from "./user-chip-menu";
 
 export async function UserChip() {
@@ -75,6 +78,19 @@ export async function UserChip() {
       }
     : null;
 
+  // «O meu probation» (v77.81) — item temporário enquanto o probation da
+  // pessoa VISTA está a correr. SuperAdmins não passam por probation, e um
+  // viewer não abre o /probation (o middleware só lhe deixa o departamento),
+  // por isso nenhum dos dois gasta a leitura. Para os restantes é um LRANGE
+  // ao índice do próprio — vazio para quem não tem plano.
+  const probation =
+    viewingUsername && !display.isAdmin && !display.viewerOf
+      ? probationMenuView(
+          await listPublishedForUser(viewingUsername),
+          todayLisbonISO(),
+        )
+      : null;
+
   return (
     <UserChipMenu
       name={display.name}
@@ -94,6 +110,7 @@ export async function UserChip() {
       realName={realDisplay?.name ?? session.u}
       viewingAs={session.as ?? null}
       dailyNumber={dailyNumber}
+      probation={probation}
       people={
         realIsAdmin
           ? listImpersonationTargets().map((p) => ({
