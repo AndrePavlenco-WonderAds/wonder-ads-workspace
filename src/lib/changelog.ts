@@ -13,6 +13,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.83",
+    date: "2026-10-09",
+    title: "Relatório mensal — «Finalizar» já não rebenta com «Application error»",
+    highlights: [
+      "**🩹 O erro ao finalizar.** Cada gravação no relatório (dados do mês, keyword tracking, secções, Finalizar, Regenerar) obrigava a página a ir buscar outra vez a lista inteira de clientes à Notion — umas 50 chamadas de cada vez. Com o relatório todo preenchido de seguida, a Notion começava a responder «rate limited» e o refresh depois do «Finalizar» mostrava «Application error». O relatório ficava gravado; só a página é que caía. Agora as gravações já não mexem nessa lista.",
+      "**🛟 Rede de segurança para a Notion.** A app guarda a última lista de clientes que a Notion devolveu inteira; se a Notion falhar (limite de pedidos ou timeout), as páginas usam essa em vez de cair.",
+    ],
+  },
+  {
     version: "77.82",
     date: "2026-10-08",
     title: "Relatório mensal — keyword tracking manual das 15 keywords e um relatório do cliente redesenhado",

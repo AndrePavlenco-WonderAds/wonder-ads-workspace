@@ -4,7 +4,6 @@
 // summary, GBP mirror, status) are recomputed so the report is always coherent.
 
 import { NextResponse } from "next/server";
-import { revalidatePath } from "next/cache";
 import { getCurrentEmployee } from "@/lib/auth/server";
 import { editableDepts } from "@/lib/auth/credentials";
 import { getReport, saveReport } from "@/lib/report/report-store";
@@ -445,10 +444,10 @@ export async function PUT(
   if (wanted === "sent") next = { ...next, status: "sent" };
   else if (wanted === "draft") next = { ...next, status: "draft" };
 
+  // Sem revalidatePath (v77.83) — ver a rota finalize: só servia para obrigar
+  // a página a ir buscar outra vez a lista de clientes à Notion.
   try {
     await saveReport(next);
-    revalidatePath(`/seo/${slug}/report/${period}`);
-    revalidatePath(`/${slug}/preview/report/${period}`);
     return NextResponse.json({ ok: true, status: next.status });
   } catch (err) {
     console.error("report patch failed:", err);

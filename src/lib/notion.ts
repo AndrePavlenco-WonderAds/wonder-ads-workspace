@@ -1,4 +1,5 @@
 import { Client } from "@notionhq/client";
+import { kv } from "@vercel/kv";
 import { cache } from "react";
 import { unstable_cache } from "next/cache";
 import { getClientPalette, type ClientPalette } from "./client-colors";
@@ -109,6 +110,28 @@ const EXTRA_SEO_CLIENTS: Array<{
   { title: "ATN Medical", slug: "atn-medical", icon: "🏥" },
 ];
 
+// v5 cache key — bumped for André Pereira joining as a new consultant
+// and the addition of Sentir Saúde + Clínica Fernando Almeida to the
+// synthetic roster (v74.31). Bump whenever the shape of NotionClient or
+// any of its derived fields changes meaningfully. v7: added CuidaMais
+// (v74.38). v9: offboarded Senior Resort (excluded slug).
+// v11: merge promoted onboarding-flow clients into the roster.
+// v12: uma consultora saiu e a carteira foi redistribuída; João B. joins with
+// Cidália Cabeleireiros + MyMedic (synthetic, still in onboarding) (v75.4).
+// v13: Maratona Clube de Portugal entra na carteira do João B. (v76.39).
+// v14: PhysioHub (Manuel Silva) + Real Hotels Group (João B.) entram na
+// carteira (v77.44).
+// v15: Real Hotels Group renomeado — slug «real-hotels-group» (v77.45).
+// v16: Maria Assena entra com a ATN Medical (v77.47).
+const SEO_CLIENTS_CACHE_KEY = "seo-clients-v16";
+
+/** Última lista que a Notion devolveu inteira (v77.83). Quando o
+ *  unstable_cache falha (cache miss — p.ex. depois de um revalidatePath da
+ *  rota — e a Notion responde 429 ou dá timeout), servimos esta em vez de
+ *  rebentar a página com «Application error». Leva a versão da chave do
+ *  cache, para um bump nunca servir uma lista com a forma antiga. */
+const SEO_CLIENTS_LAST_GOOD_KEY = `seo:clients-last-good:${SEO_CLIENTS_CACHE_KEY}`;
+
 const _fetchSeoClients = unstable_cache(
   async (): Promise<NotionClient[]> => {
     const columns = await listChildren(SEO_PROJECTS_COLUMN_LIST_ID);
@@ -185,28 +208,35 @@ const _fetchSeoClients = unstable_cache(
       console.error("Onboarding client merge failed:", err);
     }
 
+    // Só se chega aqui com a Notion a responder a tudo — guardar como rede.
+    // Uma falha a gravar nunca estraga a lista que já temos.
+    await kv
+      .set(SEO_CLIENTS_LAST_GOOD_KEY, clients)
+      .catch((err) => console.error("seo clients last-good save failed:", err));
+
     return clients;
   },
-  // v5 cache key — bumped for André Pereira joining as a new consultant
-  // and the addition of Sentir Saúde + Clínica Fernando Almeida to the
-  // synthetic roster (v74.31). Bump whenever the shape of NotionClient or
-  // any of its derived fields changes meaningfully. v7: added CuidaMais
-  // (v74.38). v9: offboarded Senior Resort (excluded slug).
-  // v11: merge promoted onboarding-flow clients into the roster.
-  // v12: uma consultora saiu e a carteira foi redistribuída; João B. joins with
-  // Cidália Cabeleireiros + MyMedic (synthetic, still in onboarding) (v75.4).
-  // v13: Maratona Clube de Portugal entra na carteira do João B. (v76.39).
-  // v14: PhysioHub (Manuel Silva) + Real Hotels Group (João B.) entram na
-  // carteira (v77.44).
-  // v15: Real Hotels Group renomeado — slug «real-hotels-group» (v77.45).
-  // v16: Maria Assena entra com a ATN Medical (v77.47).
-  ["seo-clients-v16"],
+  [SEO_CLIENTS_CACHE_KEY],
   { revalidate: 3600, tags: ["seo-clients"] },
 );
 
-export const getSeoClients = cache(
-  (): Promise<NotionClient[]> => _fetchSeoClients(),
-);
+export const getSeoClients = cache(async (): Promise<NotionClient[]> => {
+  try {
+    return await _fetchSeoClients();
+  } catch (err) {
+    const lastGood = await kv
+      .get<NotionClient[]>(SEO_CLIENTS_LAST_GOOD_KEY)
+      .catch(() => null);
+    if (lastGood?.length) {
+      console.warn(
+        "Notion indisponível — a servir a última lista de clientes guardada:",
+        err,
+      );
+      return lastGood;
+    }
+    throw err;
+  }
+});
 
 export const getClientBySlug = cache(
   async (slug: string): Promise<NotionClient | null> => {

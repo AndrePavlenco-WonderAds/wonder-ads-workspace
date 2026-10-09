@@ -4,7 +4,6 @@
 // manual-input step (PUT ../[period]) before the report is client-ready.
 
 import { NextResponse } from "next/server";
-import { revalidatePath } from "next/cache";
 import { getCurrentEmployee } from "@/lib/auth/server";
 import { editableDepts } from "@/lib/auth/credentials";
 import { getClientBySlug } from "@/lib/notion";
@@ -143,9 +142,9 @@ export async function POST(
             : {}),
         }
       : fresh;
+    // Sem revalidatePath (v77.83): /seo/<slug> e o relatório são force-dynamic;
+    // só invalidava a lista de clientes da Notion para essas rotas.
     await saveReport(snapshot);
-    revalidatePath(`/seo/${slug}`);
-    revalidatePath(`/seo/${slug}/report/${period}`);
     return NextResponse.json({
       ok: true,
       period,

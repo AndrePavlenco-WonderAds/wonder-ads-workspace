@@ -5,7 +5,6 @@
 // re-runnable — every finalise re-announces (Andre: "em todas as gerações").
 
 import { NextResponse } from "next/server";
-import { revalidatePath } from "next/cache";
 import { getCurrentEmployee } from "@/lib/auth/server";
 import { editableDepts } from "@/lib/auth/credentials";
 import { getReport, saveReport } from "@/lib/report/report-store";
@@ -67,10 +66,13 @@ export async function POST(
 
   const finalized = { ...recomputed, finalizedAt: Date.now() };
 
+  // Sem revalidatePath (v77.83): as páginas do relatório são force-dynamic e
+  // leem o KV direto, e o botão já faz router.refresh(). O revalidatePath só
+  // invalidava a lista de clientes da Notion (unstable_cache) para esta rota,
+  // e o refresh a seguir ia buscá-la toda outra vez — com várias gravações
+  // seguidas a Notion respondia 429 e a página rebentava.
   try {
     await saveReport(finalized);
-    revalidatePath(`/seo/${slug}/report/${period}`);
-    revalidatePath(`/${slug}/preview/report/${period}`);
   } catch (err) {
     console.error("report finalize save failed:", err);
     return NextResponse.json({ error: "save_failed" }, { status: 500 });
