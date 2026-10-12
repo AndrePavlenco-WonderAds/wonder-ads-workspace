@@ -9,8 +9,9 @@ import { ClipboardCheck } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { ConsultantPlan } from "@/components/probation/consultant-plan";
 import { getCurrentEmployee } from "@/lib/auth/server";
-import { listPublishedForUser } from "@/lib/probation/store";
+import { getPlan, listPublishedForUser, listSubmissions } from "@/lib/probation/store";
 import { todayLisbonISO } from "@/lib/probation/progress";
+import { groupSubmissions, type SubmissionGroup } from "@/lib/probation/submissions";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -25,6 +26,15 @@ export default async function MyProbationPage() {
   if (!me) redirect("/login?next=/probation");
   const plans = await listPublishedForUser(me.username);
   const today = todayLisbonISO();
+  // As submissões arrumam-se pelas datas dos check-ins, que vivem no plano de
+  // trabalho: lê-se aqui, no servidor, e ao browser só chegam as semanas.
+  const groups = new Map<string, SubmissionGroup[]>();
+  await Promise.all(
+    plans.map(async (pub) => {
+      const [plan, subs] = await Promise.all([getPlan(pub.id), listSubmissions(pub.id)]);
+      if (plan && plan.consultantUsername === me.username) groups.set(pub.id, groupSubmissions(plan, subs));
+    }),
+  );
 
   return (
     <PageShell backHref="/" backLabel="Início">
@@ -37,7 +47,7 @@ export default async function MyProbationPage() {
       ) : (
         <div className="space-y-16">
           {plans.map((pub) => (
-            <ConsultantPlan key={pub.id} pub={pub} today={today} />
+            <ConsultantPlan key={pub.id} pub={pub} today={today} submissions={groups.get(pub.id)} />
           ))}
         </div>
       )}

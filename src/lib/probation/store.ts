@@ -16,9 +16,15 @@
 //   `probation:user:<username>` → os ids dos planos que lhe foram enviados.
 //                                 É a única leitura que o sino e a página
 //                                 /probation fazem para quem não tem plano.
+//
+// E UMA ESCRITA PELO CONSULTOR (v77.84):
+//   `probation:subs:<id>` → hash id → submissão (o que ele submete para
+//                            revisão). Um campo por submissão: sem limite e
+//                            sem ler-e-regravar uma lista inteira.
 
 import "server-only";
 import { kv } from "@vercel/kv";
+import { del as delBlob } from "@vercel/blob";
 import {
   nextPeriodFrom,
   sanitizePlan,
@@ -38,11 +44,19 @@ import {
   type PublishedPlan,
   type SendItem,
 } from "./published";
+import {
+  sanitizeSubmission,
+  submissionLocked,
+  type ProbationSubmission,
+  type SubmissionInput,
+} from "./submissions";
+import { todayLisbonISO } from "./progress";
 
 const RECORD_PREFIX = "probation:";
 const IDS_KEY = "probation:ids";
 const PUB_PREFIX = "probation:pub:";
 const USER_PREFIX = "probation:user:";
+const SUBS_PREFIX = "probation:subs:";
 /** Teto de segurança para o mget — uma equipa deste tamanho nunca lá chega. */
 const MAX_READ = 300;
 
@@ -187,6 +201,7 @@ export async function deletePlan(id: string): Promise<boolean> {
   const pub = await getPublished(id);
   const existed = await kv.del(recordKey(id));
   await kv.lrem(IDS_KEY, 0, id);
+  await kv.del(subsKey(id));
   // O consultor deixa de o ver no mesmo instante.
   if (pub) {
     await kv.del(pubKey(id));
@@ -354,4 +369,88 @@ export async function acknowledge(
   if (!next) return { ok: false, reason: "not-found" };
   await kv.set(pubKey(id), next);
   return { ok: true, pub: next };
+}
+
+/* ------------------------- submissões do consultor ------------------------- */
+
+function subsKey(id: string): string {
+  return `${SUBS_PREFIX}${id}`;
+}
+
+/** Todas as submissões de um plano, mais recentes primeiro. Um HGETALL. */
+export async function listSubmissions(id: string): Promise<ProbationSubmission[]> {
+  if (!probationConfigured || !id) return [];
+  try {
+    const hash = await kv.hgetall<Record<string, unknown>>(subsKey(id));
+    const out: ProbationSubmission[] = [];
+    for (const raw of Object.values(hash ?? {})) {
+      const s = sanitizeSubmission(raw);
+      if (s) out.push(s);
+    }
+    return out.sort((a, b) => b.at - a.at);
+  } catch (err) {
+    logError("leitura das submissões falhou", err);
+    return [];
+  }
+}
+
+export type SubmitResult =
+  | { ok: true; plan: ProbationPlan; subs: ProbationSubmission[] }
+  | { ok: false; reason: "not-found" };
+
+/** O plano de um consultor, só se lhe foi enviado — a mesma dupla tranca da
+ *  página /probation: o publicado tem de ser dele. */
+async function planForConsultant(username: string, id: string): Promise<ProbationPlan | null> {
+  const pub = await getPublished(id);
+  if (!pub || pub.consultantUsername !== username) return null;
+  const plan = await getPlan(id);
+  if (!plan || plan.consultantUsername !== username) return null;
+  return plan;
+}
+
+/** O consultor submete uma coisa para revisão. Cai no período em curso; a
+ *  data é a de hoje em Lisboa. `username` vem SEMPRE da sessão. */
+export async function addSubmission(
+  username: string,
+  id: string,
+  input: SubmissionInput,
+): Promise<SubmitResult> {
+  assertConfigured();
+  const plan = await planForConsultant(username, id);
+  if (!plan) return { ok: false, reason: "not-found" };
+  const now = Date.now();
+  const sub: ProbationSubmission = {
+    id: newId(),
+    periodIndex: plan.history.length,
+    at: now,
+    date: todayLisbonISO(new Date(now)),
+    ...input,
+  };
+  await kv.hset(subsKey(id), { [sub.id]: sub });
+  return { ok: true, plan, subs: await listSubmissions(id) };
+}
+
+export type RemoveSubmissionResult =
+  | { ok: true; plan: ProbationPlan; subs: ProbationSubmission[] }
+  | { ok: false; reason: "not-found" | "locked" };
+
+/** O consultor tira uma submissão — só enquanto o check-in da semana dela
+ *  não estiver feito. O ficheiro sai do Blob com ela. */
+export async function removeSubmission(
+  username: string,
+  id: string,
+  subId: string,
+): Promise<RemoveSubmissionResult> {
+  assertConfigured();
+  const plan = await planForConsultant(username, id);
+  if (!plan) return { ok: false, reason: "not-found" };
+  const sub = sanitizeSubmission(await kv.hget<unknown>(subsKey(id), subId));
+  if (!sub) return { ok: false, reason: "not-found" };
+  if (submissionLocked(plan, sub)) return { ok: false, reason: "locked" };
+  await kv.hdel(subsKey(id), subId);
+  if (sub.file) {
+    // Melhor esforço: um ficheiro que fica para trás no Blob não estraga nada.
+    await delBlob(sub.file.url).catch((err) => logError("apagar o ficheiro falhou", err));
+  }
+  return { ok: true, plan, subs: await listSubmissions(id) };
 }

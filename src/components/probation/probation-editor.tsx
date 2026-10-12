@@ -35,6 +35,7 @@ import {
   History,
   Loader2,
   LogOut,
+  Paperclip,
   PencilLine,
   Plus,
   RefreshCw,
@@ -55,6 +56,12 @@ import { Cockpit, SEND_ITEMS } from "./cockpit";
 import { PreviewModal } from "./preview-modal";
 import { EvalCardView, PulseDot, WeekCardView, dayLabel } from "./views";
 import { buildDocModel } from "@/lib/probation/document";
+import {
+  submissionsForWeek,
+  weekOfDate,
+  weekRangeLabel,
+  type ProbationSubmission,
+} from "@/lib/probation/submissions";
 import { formatDateTime } from "@/lib/dates";
 import {
   DECISIONS,
@@ -66,6 +73,7 @@ import {
   emptyPeriod,
   eval30Open,
   extensionDate,
+  firstName,
   formatISODate,
   isISODate,
   kpiFilled,
@@ -183,10 +191,13 @@ export function ProbationEditor({
   today,
   initialTab = "plano",
   initialWeek,
+  initialSubmissions = [],
 }: {
   /** null → plano novo. */
   initial: ProbationPlan | null;
   initialPub?: PublishedPlan | null;
+  /** O que o consultor submeteu para revisão (v77.84). */
+  initialSubmissions?: ProbationSubmission[];
   /** Direção por defeito: o superadmin com sessão. */
   defaults: { manager: string; direction: string };
   people: RosterPerson[];
@@ -215,6 +226,8 @@ export function ProbationEditor({
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
   const [flash, setFlash] = useState<string | null>(null);
+  const [subs, setSubs] = useState<ProbationSubmission[]>(initialSubmissions);
+  const [subsLoading, setSubsLoading] = useState(false);
 
   const id = server?.id ?? null;
   const latest = useRef(draft);
@@ -350,6 +363,20 @@ export function ProbationEditor({
   const toActivate = activationProblem(draft);
   const lead = leadName(draft);
   const canSend = Boolean(draft.consultantUsername);
+
+  /** Vai buscar o que o consultor submeteu entretanto (o check-in pode estar
+   *  aberto há horas). */
+  const refreshSubs = useCallback(async () => {
+    if (!id) return;
+    setSubsLoading(true);
+    try {
+      const res = await fetch(`/api/admin/probation/${id}/submissoes`, { cache: "no-store" });
+      const data = (await res.json().catch(() => ({}))) as { submissions?: ProbationSubmission[] };
+      if (res.ok && data.submissions) setSubs(data.submissions);
+    } finally {
+      setSubsLoading(false);
+    }
+  }, [id]);
 
   const stateOf = (item: SendItem) => {
     const snap = snapshotFor(draft, period, periodIndex, item);
@@ -579,6 +606,15 @@ export function ProbationEditor({
   const title = draft.consultantName.trim() || "Novo plano";
   const week = period.weeks.find((w) => w.n === weekN) ?? period.weeks[0];
   const weekDates = defaultWeekDates(period.startDate, draft.checkinDay);
+  // Quantas submissões caíram em cada semana do período em curso — pelas
+  // datas do rascunho, para acompanharem uma reunião que mudou de dia.
+  const subsPerWeek = (() => {
+    const counts = [0, 0, 0, 0];
+    for (const s of subs) {
+      if (s.periodIndex === periodIndex) counts[weekOfDate(period, draft.checkinDay, s.date) - 1]++;
+    }
+    return counts;
+  })();
 
   const TABS: { id: EditorTab; label: string; icon: React.ReactNode; badge?: number }[] = [
     { id: "plano", label: "Plano", icon: <FileText className="h-3.5 w-3.5" /> },
@@ -1066,9 +1102,18 @@ export function ProbationEditor({
                   <p className={`text-[11px] ${w.done ? "text-emerald-300/80" : late ? "text-rose-300/90" : "text-white/40"}`}>
                     {w.done ? "Feito" : late ? "Por fazer · atrasado" : "Por fazer"}
                   </p>
-                  {w.done && (
-                    <div className="mt-2">
-                      <SendBadge compact state={st} />
+                  {(w.done || subsPerWeek[w.n - 1] > 0) && (
+                    <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                      {w.done && <SendBadge compact state={st} />}
+                      {subsPerWeek[w.n - 1] > 0 && (
+                        <span
+                          className="inline-flex items-center gap-1 rounded-full bg-[#783DF5]/20 px-2 py-0.5 text-[10.5px] font-semibold text-[#d6caff]"
+                          title="Submissões do consultor nesta semana"
+                        >
+                          <Paperclip className="h-3 w-3" />
+                          {subsPerWeek[w.n - 1]}
+                        </span>
+                      )}
                     </div>
                   )}
                 </button>
@@ -1088,6 +1133,11 @@ export function ProbationEditor({
                 onWeek={(patch) => setWeek(week.n, patch)}
                 onPrevActions={(actions) => setPrevActions(week.n, actions)}
                 onPreview={() => void openPreview(`week:${week.n}` as SendItem)}
+                consultant={firstName(draft.consultantName) || "O consultor"}
+                submissions={submissionsForWeek(subs, period, periodIndex, draft.checkinDay, week.n)}
+                submissionsRange={weekRangeLabel(period, draft.checkinDay, week.n)}
+                onRefreshSubmissions={() => void refreshSubs()}
+                refreshingSubmissions={subsLoading}
               />
             </Sheet>
             <aside className="min-w-0 xl:sticky xl:top-24 xl:self-start">

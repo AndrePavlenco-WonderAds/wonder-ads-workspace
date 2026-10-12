@@ -7,8 +7,11 @@
 //
 // Em `mode="preview"` nada é clicável para confirmar: é a montra do que o
 // consultor vai receber, com o item a enviar destacado.
+//
+// v77.84 — «Submeter para revisão»: o sítio fixo onde o consultor vai
+// submetendo o que faz (só na página dele, nunca na pré-visualização).
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   CalendarCheck2,
   Check,
@@ -18,10 +21,12 @@ import {
   Loader2,
   MessageSquare,
   Scale,
+  Upload,
 } from "lucide-react";
 import { ProbationDocument } from "./probation-document";
 import { FitToWidth } from "./fit-to-width";
 import { EvalCardView, ProbationTimeline, WeekCardView, dayLabel } from "./views";
+import { SubmissionsPanel, type SubmissionsPanelHandle } from "./submissions-panel";
 import { firstName, formatISODate, periodDates } from "@/lib/probation/shared";
 import { timelineFromPub, todayLisbonISO } from "@/lib/probation/progress";
 import {
@@ -32,8 +37,9 @@ import {
   type PublishedPlan,
   type SendItem,
 } from "@/lib/probation/published";
+import type { SubmissionGroup } from "@/lib/probation/submissions";
 
-type Tab = "documento" | "checkins" | "avaliacoes";
+type Tab = "documento" | "submeter" | "checkins" | "avaliacoes";
 
 function tabOf(item: SendItem): Tab {
   if (item === "plan") return "documento";
@@ -45,21 +51,45 @@ export function ConsultantPlan({
   today,
   mode = "live",
   focus,
+  submissions,
 }: {
   pub: PublishedPlan;
   today: string;
   mode?: "live" | "preview";
   /** O item a destacar (pré-visualização de um envio). */
   focus?: { periodIndex: number; item: SendItem };
+  /** O que o consultor já submeteu, por semana. Sem isto (pré-visualização)
+   *  não há separador «Submeter para revisão». */
+  submissions?: SubmissionGroup[];
 }) {
   const [pub, setPub] = useState(initialPub);
   const periods = pub.periods;
   const latest = periods.at(-1)?.index ?? 0;
   const [periodIndex, setPeriodIndex] = useState(focus?.periodIndex ?? latest);
   const period = periods.find((p) => p.index === periodIndex) ?? periods.at(-1) ?? null;
-  const [tab, setTab] = useState<Tab>(focus ? tabOf(focus.item) : "documento");
+  const canSubmit = mode === "live" && Boolean(submissions);
+  // Depois de ler o plano, o dia a dia é submeter — a página abre aí.
+  const [tab, setTab] = useState<Tab>(() => {
+    if (focus) return tabOf(focus.item);
+    const latestDoc = periods.at(-1)?.doc;
+    return canSubmit && latestDoc?.ack ? "submeter" : "documento";
+  });
   const pending = useMemo(() => pendingAcks(pub), [pub]);
   const preview = mode === "preview";
+  const submitRef = useRef<SubmissionsPanelHandle>(null);
+  // Os KPIs por que se pode submeter: os do último documento enviado, sem
+  // repetidos (o mesmo KPI costuma ter meta aos 15 e aos 30 dias).
+  const kpiNames = useMemo(() => {
+    const doc = [...periods].reverse().find((p) => p.doc)?.doc?.model;
+    const names = [...(doc?.kpis15 ?? []), ...(doc?.kpis30 ?? [])].map((k) => k.kpi.trim()).filter(Boolean);
+    const seen = new Set<string>();
+    return names.filter((n) => {
+      const key = n.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [periods]);
 
   if (!period) return null;
   const { d30 } = periodDates({ startDate: period.startDate });
@@ -78,9 +108,16 @@ export function ConsultantPlan({
 
   const tabs: { id: Tab; label: string; icon: React.ReactNode; count?: number }[] = [
     { id: "documento", label: "O plano", icon: <FileText className="h-3.5 w-3.5" /> },
+    ...(canSubmit
+      ? [{ id: "submeter" as const, label: "Submeter para revisão", icon: <Upload className="h-3.5 w-3.5" /> }]
+      : []),
     { id: "checkins", label: "Check-ins semanais", icon: <CalendarCheck2 className="h-3.5 w-3.5" />, count: weeks.length },
     { id: "avaliacoes", label: "Avaliações", icon: <Scale className="h-3.5 w-3.5" />, count: evals.length },
   ];
+  const openSubmit = () => {
+    setTab("submeter");
+    requestAnimationFrame(() => submitRef.current?.focus());
+  };
 
   return (
     <div className="animate-fade-up">
@@ -110,16 +147,29 @@ export function ConsultantPlan({
               .
             </p>
           </div>
-          {dayNum !== null && (
-            <div className="rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-right">
-              <p className="readout text-white/40">Hoje</p>
-              <p className="text-2xl font-bold tabular-nums text-white">
-                {dayNum < 0 ? "—" : dayNum > 30 ? "30" : dayNum}
-                <span className="text-sm font-medium text-white/40"> / 30 dias</span>
-              </p>
-              <p className="text-[11px] text-white/40">Avaliação final {dayLabel(d30)}</p>
-            </div>
-          )}
+          <div className="flex flex-col items-end gap-3">
+            {dayNum !== null && (
+              <div className="rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-right">
+                <p className="readout text-white/40">Hoje</p>
+                <p className="text-2xl font-bold tabular-nums text-white">
+                  {dayNum < 0 ? "—" : dayNum > 30 ? "30" : dayNum}
+                  <span className="text-sm font-medium text-white/40"> / 30 dias</span>
+                </p>
+                <p className="text-[11px] text-white/40">Avaliação final {dayLabel(d30)}</p>
+              </div>
+            )}
+            {canSubmit && (
+              <button
+                type="button"
+                onClick={openSubmit}
+                className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-[12.5px] font-semibold text-white shadow-[0_8px_22px_-8px_rgba(120,61,245,0.7)] transition hover:-translate-y-px"
+                style={{ background: "var(--brand-gradient)" }}
+              >
+                <Upload className="h-3.5 w-3.5" />
+                Submeter para revisão
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="relative mt-2">
@@ -194,6 +244,20 @@ export function ConsultantPlan({
       </nav>
 
       <div className="mt-5">
+        {/* Sempre montado (só escondido): mudar de separador não pode perder o
+            que se estava a escrever nem o que acabou de ser submetido. */}
+        {canSubmit && (
+          <div hidden={tab !== "submeter"}>
+            <SubmissionsPanel
+              ref={submitRef}
+              planId={pub.id}
+              kpis={kpiNames}
+              lead={pub.lead}
+              initial={submissions ?? []}
+            />
+          </div>
+        )}
+
         {tab === "documento" &&
           (period.doc ? (
             <div id={`pb-${period.index}-plan`} className={isFocus("plan") ? "rounded-3xl ring-2 ring-[#783DF5]/70 ring-offset-4 ring-offset-[#07080d]" : ""}>

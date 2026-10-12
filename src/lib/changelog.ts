@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.84",
+    date: "2026-10-12",
+    title: "Probation — o consultor submete o que faz para revisão, e o check-in mostra-o antes do semáforo",
+    highlights: [
+      "**📤 «Submeter para revisão» no plano do consultor.** Um separador fixo em «O meu probation» (e um botão no topo da página) onde o consultor vai submetendo o que faz, sem limite: o que é, um link e/ou um ficheiro (PDF, Word, imagens…) e, se quiser, o KPI a que se refere. Por baixo vê tudo o que já submeteu, arrumado pela semana do check-in em que vai ser revisto. Pode tirar uma submissão enquanto o check-in dessa semana não estiver feito; depois disso fica — já foi revista. Depois de ler o plano, a página passa a abrir neste separador.",
+      "**🗂️ No check-in semanal, primeiro o que o consultor submeteu.** Antes de «Como está a semana» aparece «O que <nome> submeteu · semana N», com a data e a hora de cada coisa, o KPI, o link e o ficheiro, pela ordem em que foram chegando, e um «Atualizar» para ver o que entrou com o check-in aberto. Em cada KPI, um selo «2 submissões» abre só as desse KPI, ao lado do verde/amarelo/vermelho. Os cartões das quatro semanas mostram quantas submissões cada uma teve.",
+      "**📅 A semana sai das datas dos check-ins.** Semana 1 = até ao dia do 1.º check-in; cada semana seguinte vai do dia a seguir ao check-in anterior até ao dela; o que vier depois do 3.º check-in conta para a semana 4. Se uma reunião mudar de dia, as submissões acompanham.",
+      "**🔔 O lembrete do check-in no sino diz quantas coisas há para rever** («<nome> submeteu 4 coisas esta semana — revê antes de dar o semáforo»).",
+    ],
+  },
+  {
     version: "77.83",
     date: "2026-10-09",
     title: "Relatório mensal — «Finalizar» já não rebenta com «Application error»",

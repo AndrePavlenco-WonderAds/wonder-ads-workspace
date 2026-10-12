@@ -4,8 +4,26 @@
 // chefia intermédia) na própria reunião: semáforo, ponto de situação de cada
 // KPI, o que foi combinado na semana anterior, o que correu bem, o que
 // travou, o apoio dado, os próximos passos e uma nota interna que nunca sai.
+//
+// v77.84 — antes do semáforo, o que o consultor submeteu nesta semana para
+// revisão; e em cada KPI, as submissões que ele ligou a esse KPI.
 
-import { CalendarDays, Check, Eye, Lock, Plus, RotateCcw, X } from "lucide-react";
+import { useState } from "react";
+import {
+  CalendarDays,
+  Check,
+  ChevronDown,
+  ExternalLink,
+  Eye,
+  Inbox,
+  Loader2,
+  Lock,
+  Paperclip,
+  Plus,
+  RefreshCw,
+  RotateCcw,
+  X,
+} from "lucide-react";
 import { Field, PulsePicker, SendBadge } from "./sheet-bits";
 import { dayLabel } from "./views";
 import {
@@ -20,6 +38,12 @@ import {
   type ProbationWeekKpi,
 } from "@/lib/probation/shared";
 import type { SendState } from "@/lib/probation/published";
+import {
+  linkHost,
+  sameKpi,
+  submissionStamp,
+  type ProbationSubmission,
+} from "@/lib/probation/submissions";
 
 const newId = () =>
   typeof crypto !== "undefined" && "randomUUID" in crypto
@@ -36,6 +60,11 @@ export function WeekEditor({
   onWeek,
   onPrevActions,
   onPreview,
+  consultant,
+  submissions,
+  submissionsRange,
+  onRefreshSubmissions,
+  refreshingSubmissions,
 }: {
   period: ProbationPeriod;
   week: ProbationWeek;
@@ -47,7 +76,16 @@ export function WeekEditor({
   onWeek: (patch: Partial<ProbationWeek>) => void;
   onPrevActions: (actions: ProbationAction[]) => void;
   onPreview: () => void;
+  /** Primeiro nome do consultor. */
+  consultant: string;
+  /** O que o consultor submeteu nesta semana, da mais antiga à mais recente. */
+  submissions: ProbationSubmission[];
+  /** «de 14/10 a 20/10». */
+  submissionsRange: string;
+  onRefreshSubmissions: () => void;
+  refreshingSubmissions: boolean;
 }) {
+  const [openKpis, setOpenKpis] = useState<Set<string>>(() => new Set());
   const computed = defaultWeekDates(period.startDate, checkinDay)[week.n - 1] ?? "";
   const date = week.date || computed;
   const track = weekTrack(period, week, checkinDay);
@@ -128,6 +166,15 @@ export function WeekEditor({
         </Field>
       </div>
 
+      <SubmittedThisWeek
+        consultant={consultant}
+        weekN={week.n}
+        range={submissionsRange}
+        items={submissions}
+        onRefresh={onRefreshSubmissions}
+        refreshing={refreshingSubmissions}
+      />
+
       <div>
         <span className="sheet-label mb-2">Como está a semana</span>
         <PulsePicker value={week.pulse} onChange={(pulse) => onWeek({ pulse })} label={`Semáforo da semana ${week.n}`} />
@@ -145,13 +192,34 @@ export function WeekEditor({
           <div className="flex flex-col gap-2">
             {kpis.map((k, i) => {
               const row = kpiRow(k.id);
+              const mine = submissions.filter((s) => sameKpi(s.kpi, k.kpi));
+              const open = openKpis.has(k.id);
               return (
                 <div key={k.id} className="grid grid-cols-1 items-center gap-2 rounded-lg border border-black/[0.08] bg-white/60 p-3 sm:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_auto]">
-                  <p className="text-[12.5px] font-semibold leading-snug">
+                  <div className="text-[12.5px] font-semibold leading-snug">
                     <span className="mr-1.5 text-[#783df5]">{i + 1}</span>
                     {k.kpi}
                     {k.target && <span className="block text-[11.5px] font-normal text-black/45">meta {k.target}</span>}
-                  </p>
+                    {mine.length > 0 && (
+                      <button
+                        type="button"
+                        aria-expanded={open}
+                        onClick={() =>
+                          setOpenKpis((prev) => {
+                            const next = new Set(prev);
+                            if (next.has(k.id)) next.delete(k.id);
+                            else next.add(k.id);
+                            return next;
+                          })
+                        }
+                        className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-[#783df5]/10 px-2 py-0.5 text-[11px] font-semibold text-[#5b2bc4] transition hover:bg-[#783df5]/15"
+                      >
+                        <Paperclip className="h-3 w-3" />
+                        {mine.length} {mine.length === 1 ? "submissão" : "submissões"}
+                        <ChevronDown className={`h-3 w-3 transition ${open ? "rotate-180" : ""}`} />
+                      </button>
+                    )}
+                  </div>
                   <input
                     className="sheet-input !py-1.5"
                     aria-label={`Ponto de situação do KPI ${i + 1}`}
@@ -160,6 +228,13 @@ export function WeekEditor({
                     placeholder="Onde está agora"
                   />
                   <PulsePicker compact value={row.pulse} onChange={(pulse) => setKpi(k.id, { pulse })} label={`Semáforo do KPI ${i + 1}`} />
+                  {open && mine.length > 0 && (
+                    <ul className="flex flex-col gap-1.5 sm:col-span-3">
+                      {mine.map((s) => (
+                        <SubmissionItem key={s.id} sub={s} showKpi={false} />
+                      ))}
+                    </ul>
+                  )}
                 </div>
               );
             })}
@@ -276,5 +351,119 @@ export function WeekEditor({
         )}
       </div>
     </div>
+  );
+}
+
+/* --------------------- o que o consultor submeteu --------------------- */
+
+/** Acima disto, a lista recolhe-se — o semáforo não pode ficar a um ecrã de
+ *  distância. */
+const SHOW_FIRST = 5;
+
+function SubmittedThisWeek({
+  consultant,
+  weekN,
+  range,
+  items,
+  onRefresh,
+  refreshing,
+}: {
+  consultant: string;
+  weekN: number;
+  range: string;
+  items: ProbationSubmission[];
+  onRefresh: () => void;
+  refreshing: boolean;
+}) {
+  const [all, setAll] = useState(false);
+  const shown = all ? items : items.slice(0, SHOW_FIRST);
+  return (
+    <div className="rounded-xl border border-[#783df5]/20 bg-[#f6f4fd] p-3.5">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-[#5b2bc4]">
+            <Inbox className="h-3.5 w-3.5" />
+            O que {consultant} submeteu · semana {weekN}
+          </p>
+          <p className="mt-0.5 text-[11.5px] text-black/45">
+            {range ? `${range} · ` : ""}
+            {items.length === 0
+              ? "nada ainda"
+              : `${items.length} ${items.length === 1 ? "submissão" : "submissões"}, por ordem de chegada`}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onRefresh}
+          disabled={refreshing}
+          className="inline-flex items-center gap-1.5 rounded-full border border-black/10 bg-white px-2.5 py-1 text-[11.5px] font-semibold text-black/60 transition hover:border-black/25 disabled:opacity-60"
+        >
+          {refreshing ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
+          Atualizar
+        </button>
+      </div>
+      {items.length === 0 ? (
+        <p className="mt-2.5 text-[12px] leading-snug text-black/45">
+          {consultant} submete em «O meu probation» → «Submeter para revisão». O que entrar até ao dia deste
+          check-in aparece aqui.
+        </p>
+      ) : (
+        <>
+          <ul className="mt-2.5 flex flex-col gap-1.5">
+            {shown.map((s) => (
+              <SubmissionItem key={s.id} sub={s} showKpi />
+            ))}
+          </ul>
+          {items.length > SHOW_FIRST && (
+            <button
+              type="button"
+              onClick={() => setAll((v) => !v)}
+              className="mt-2 inline-flex items-center gap-1 text-[11.5px] font-semibold text-[#783df5] hover:underline"
+            >
+              <ChevronDown className={`h-3 w-3 transition ${all ? "rotate-180" : ""}`} />
+              {all ? "Mostrar menos" : `Ver todas (${items.length})`}
+            </button>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+function SubmissionItem({ sub, showKpi }: { sub: ProbationSubmission; showKpi: boolean }) {
+  const chip =
+    "inline-flex max-w-full items-center gap-1 rounded-full border border-black/10 bg-white px-2 py-0.5 text-[11px] font-medium text-black/65 transition hover:border-[#783df5]/40 hover:text-[#5b2bc4]";
+  return (
+    <li className="rounded-lg border border-black/[0.07] bg-white px-3 py-2">
+      <div className="flex flex-wrap items-center gap-1.5 text-[10.5px] text-black/40">
+        <span className="tabular-nums">{submissionStamp(sub.at)}</span>
+        {showKpi && (
+          <span
+            className={`max-w-full truncate rounded-full px-1.5 py-px font-semibold ${
+              sub.kpi ? "bg-[#783df5]/10 text-[#5b2bc4]" : "bg-black/[0.05] text-black/45"
+            }`}
+          >
+            {sub.kpi || "Geral"}
+          </span>
+        )}
+      </div>
+      <p className="mt-0.5 whitespace-pre-wrap break-words text-[12.5px] font-normal leading-snug text-black/80">{sub.text}</p>
+      {(sub.link || sub.file) && (
+        <div className="mt-1.5 flex flex-wrap gap-1.5">
+          {sub.link && (
+            <a href={sub.link} target="_blank" rel="noopener noreferrer" className={chip}>
+              <ExternalLink className="h-3 w-3 shrink-0" />
+              <span className="truncate">{linkHost(sub.link)}</span>
+            </a>
+          )}
+          {sub.file && (
+            <a href={sub.file.url} target="_blank" rel="noopener noreferrer" className={chip}>
+              <Paperclip className="h-3 w-3 shrink-0" />
+              <span className="truncate">{sub.file.name}</span>
+            </a>
+          )}
+        </div>
+      )}
+    </li>
   );
 }

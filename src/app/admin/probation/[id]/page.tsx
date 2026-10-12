@@ -6,7 +6,7 @@ import { notFound } from "next/navigation";
 import { PageShell } from "@/components/page-shell";
 import { ProbationEditor } from "@/components/probation/probation-editor";
 import { getCurrentEmployee } from "@/lib/auth/server";
-import { getPlan, getPublished } from "@/lib/probation/store";
+import { getPlan, getPublished, listSubmissions } from "@/lib/probation/store";
 import { probationRoster } from "@/lib/probation/roster";
 import { todayLisbonISO } from "@/lib/probation/progress";
 
@@ -34,7 +34,7 @@ export default async function ProbationPlanPage({
   if (!employee?.isAdmin) return null;
   const { id } = await params;
   const sp = await searchParams;
-  const [plan, pub] = await Promise.all([getPlan(id), getPublished(id)]);
+  const [plan, pub, submissions] = await Promise.all([getPlan(id), getPublished(id), listSubmissions(id)]);
   if (!plan) notFound();
   // ?tab=semanas&semana=2 — os links do sino abrem no sítio certo.
   const tab = TABS.find((t) => t === sp.tab) ?? "plano";
@@ -44,6 +44,7 @@ export default async function ProbationPlanPage({
       <ProbationEditor
         initial={plan}
         initialPub={pub}
+        initialSubmissions={submissions}
         defaults={{ manager: employee.name, direction: employee.name }}
         people={probationRoster()}
         today={todayLisbonISO()}

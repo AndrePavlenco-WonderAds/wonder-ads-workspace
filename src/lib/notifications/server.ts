@@ -47,7 +47,9 @@ import {
   getPublishedMany,
   listPlans,
   listPublishedForUser,
+  listSubmissions,
 } from "@/lib/probation/store";
+import { submissionsForWeek } from "@/lib/probation/submissions";
 import {
   finalDecision,
   firstName,
@@ -1077,11 +1079,17 @@ async function probationNotifications(
         const date = w ? weekDate(w, period.startDate, plan.checkinDay) : "";
         if (w && date && date <= today) {
           const id = `probation-checkin:${plan.id}:${idx}:${w.n}`;
+          // Só se lê o que o consultor submeteu quando há check-in para fazer —
+          // uma leitura por lembrete, não por plano.
+          const subs = submissionsForWeek(await listSubmissions(plan.id), period, idx, plan.checkinDay, w.n);
+          const review = subs.length
+            ? ` ${who} submeteu ${subs.length} ${subs.length === 1 ? "coisa" : "coisas"} esta semana — revê antes de dar o semáforo.`
+            : "";
           out.push({
             id,
             ruleId: "probation-checkin",
             title: `🗓️ Check-in da semana ${w.n} com ${who}`,
-            body: `Previsto para ${probationDay(date)}${date < today ? " — está atrasado" : " — é hoje"}. Regista o ponto de situação dos KPIs, o que correu bem e o que travou, e envia-o ao consultor.`,
+            body: `Previsto para ${probationDay(date)}${date < today ? " — está atrasado" : " — é hoje"}.${review} Regista o ponto de situação dos KPIs, o que correu bem e o que travou, e envia-o ao consultor.`,
             periodLabel: `Plano de probation · ${who}`,
             dueAt: Date.parse(`${date}T09:00:00Z`) || now.getTime(),
             client: null,
