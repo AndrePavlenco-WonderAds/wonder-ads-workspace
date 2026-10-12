@@ -40,20 +40,30 @@ export const onboardingClientsStorageConfigured = Boolean(
   process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN,
 );
 
-export async function getOnboardingClients(): Promise<OnboardingClient[]> {
+/** Lê o registo e DEIXA o erro do KV subir (v77.86). Quem escreve a seguir
+ *  ou guarda o resultado em cache tem de usar esta: com o KV em baixo
+ *  (12/10/2026, limite do plano Upstash) a versão que devolve [] fez a lista
+ *  de clientes ficar 1 h em cache sem a Medway & cia., e um upsert depois de
+ *  uma leitura falhada gravaria [rec] por cima do registo inteiro. */
+async function readOnboardingClients(): Promise<OnboardingClient[]> {
   if (!onboardingClientsStorageConfigured) return [];
+  const stored = await kv.get<OnboardingClient[]>(KEY);
+  if (!Array.isArray(stored)) return [];
+  return stored
+    .filter(
+      (c) => c && typeof c.slug === "string" && typeof c.title === "string",
+    )
+    .map((c) => ({
+      ...c,
+      services: normalizeServices(c.services),
+      ecommerce: Boolean(c.ecommerce),
+    }));
+}
+
+/** Para mostrar (páginas de onboarding, contagens): uma falha dá lista vazia. */
+export async function getOnboardingClients(): Promise<OnboardingClient[]> {
   try {
-    const stored = await kv.get<OnboardingClient[]>(KEY);
-    if (!Array.isArray(stored)) return [];
-    return stored
-      .filter(
-        (c) => c && typeof c.slug === "string" && typeof c.title === "string",
-      )
-      .map((c) => ({
-        ...c,
-        services: normalizeServices(c.services),
-        ecommerce: Boolean(c.ecommerce),
-      }));
+    return await readOnboardingClients();
   } catch (err) {
     console.error("KV onboarding-clients read failed:", err);
     return [];
@@ -67,11 +77,13 @@ export async function getOnboardingClient(
   return all.find((c) => c.slug === slug) ?? null;
 }
 
-/** Only new clients who submitted the form — merged into the SEO board. */
+/** Only new clients who submitted the form — merged into the SEO board.
+ *  Lança se o KV falhar: o roster nunca pode confundir «não consegui ler»
+ *  com «não há clientes do onboarding». */
 export async function getPromotedOnboardingClients(): Promise<
   OnboardingClient[]
 > {
-  const all = await getOnboardingClients();
+  const all = await readOnboardingClients();
   return all.filter((c) => c.isNew && c.promotedAt);
 }
 
@@ -82,7 +94,7 @@ export async function upsertOnboardingClient(
   if (!onboardingClientsStorageConfigured) {
     throw new Error("KV storage not configured on this deployment.");
   }
-  const all = await getOnboardingClients();
+  const all = await readOnboardingClients();
   const next = [rec, ...all.filter((c) => c.slug !== rec.slug)].slice(0, MAX);
   await kv.set(KEY, next);
   return rec;
@@ -96,7 +108,7 @@ export async function patchOnboardingClient(
   if (!onboardingClientsStorageConfigured) {
     throw new Error("KV storage not configured on this deployment.");
   }
-  const all = await getOnboardingClients();
+  const all = await readOnboardingClients();
   const found = all.find((c) => c.slug === slug);
   if (!found) return null;
   const updated = { ...found, ...patch, slug: found.slug };
@@ -109,7 +121,7 @@ export async function patchOnboardingClient(
 
 export async function removeOnboardingClient(slug: string): Promise<void> {
   if (!onboardingClientsStorageConfigured) return;
-  const all = await getOnboardingClients();
+  const all = await readOnboardingClients();
   await kv.set(
     KEY,
     all.filter((c) => c.slug !== slug),

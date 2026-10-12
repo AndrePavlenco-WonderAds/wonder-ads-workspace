@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.86",
+    date: "2026-10-12",
+    title: "Board SEO — os clientes do onboarding já não desaparecem quando a base de dados falha",
+    highlights: [
+      "**🩹 A Medway, o António Gaspar e a Brancoptica voltaram ao board.** Hoje a base de dados chegou ao limite do plano e esteve parada cerca de 1 h 30. Durante esse tempo, a lista de clientes ficou guardada em cache sem os clientes que entraram pelo onboarding e continuou assim depois de a base voltar. Os dados deles nunca se perderam: briefs, roadmaps, ficheiros, relatórios e histórico de ações estão todos lá.",
+      "**🛡️ Não volta a acontecer.** Os clientes do onboarding são lidos a cada pedido, fora da cache de 1 h. Se a base de dados falhar, só esse pedido fica incompleto e nada fica guardado. As gravações do registo de onboarding também passam a parar se a leitura falhar, em vez de gravarem uma lista incompleta por cima.",
+      "**🔔 As notificações foram renovadas.** As contas em cache do sino (datas de início, roadmaps, reviews pendentes, NPS) são recalculadas já, sem esperar que expirem.",
+    ],
+  },
+  {
     version: "77.85",
     date: "2026-10-12",
     title: "Cargos da direção — COO, CEO e CMO/CFO",

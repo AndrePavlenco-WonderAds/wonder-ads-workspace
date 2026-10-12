@@ -187,7 +187,7 @@ const getSeoStartDates = unstable_cache(
     }
     return out;
   },
-  ["notifications-seo-start-dates-v1"],
+  ["notifications-seo-start-dates-v2"],
   { revalidate: 1800 },
 );
 
@@ -389,7 +389,7 @@ const getRoadmapHorizons = unstable_cache(
     );
     return out;
   },
-  ["notifications-roadmap-horizons-v1"],
+  ["notifications-roadmap-horizons-v2"],
   { revalidate: 1800 },
 );
 
@@ -524,7 +524,7 @@ const getStaleReviewRows = unstable_cache(
     );
     return out;
   },
-  ["notifications-stale-reviews-v1"],
+  ["notifications-stale-reviews-v2"],
   { revalidate: 900 },
 );
 
@@ -675,7 +675,7 @@ const getSituationPointCandidates = unstable_cache(
     );
     return out.sort((a, b) => b.week - a.week);
   },
-  ["notifications-situation-point-v2-calendar-months"],
+  ["notifications-situation-point-v3"],
   { revalidate: 1800 },
 );
 
@@ -783,7 +783,7 @@ const getRecentNpsSubmissions = unstable_cache(
     );
     return out.sort((a, b) => b.submittedAt - a.submittedAt);
   },
-  ["notifications-recent-nps-v1"],
+  ["notifications-recent-nps-v2"],
   { revalidate: 900 },
 );
 

@@ -123,14 +123,18 @@ const EXTRA_SEO_CLIENTS: Array<{
 // carteira (v77.44).
 // v15: Real Hotels Group renomeado — slug «real-hotels-group» (v77.45).
 // v16: Maria Assena entra com a ATN Medical (v77.47).
-const SEO_CLIENTS_CACHE_KEY = "seo-clients-v16";
+// v17: os clientes do onboarding saem da cache e passam a ser juntados a cada
+// pedido (v77.86) — o bump deita fora a lista que ficou em cache sem eles
+// durante a falha do KV de 12/10/2026.
+const SEO_CLIENTS_CACHE_KEY = "seo-clients-v17";
 
 /** Última lista que a Notion devolveu inteira (v77.83). Quando o
  *  unstable_cache falha (cache miss — p.ex. depois de um revalidatePath da
  *  rota — e a Notion responde 429 ou dá timeout), servimos esta em vez de
- *  rebentar a página com «Application error». Leva a versão da chave do
- *  cache, para um bump nunca servir uma lista com a forma antiga. */
-const SEO_CLIENTS_LAST_GOOD_KEY = `seo:clients-last-good:${SEO_CLIENTS_CACHE_KEY}`;
+ *  rebentar a página com «Application error». Fica de propósito na chave
+ *  v16: é a rede de segurança e tem de existir já no primeiro pedido depois
+ *  de um bump (a forma do NotionClient não mudou). */
+const SEO_CLIENTS_LAST_GOOD_KEY = "seo:clients-last-good:seo-clients-v16";
 
 const _fetchSeoClients = unstable_cache(
   async (): Promise<NotionClient[]> => {
@@ -187,26 +191,9 @@ const _fetchSeoClients = unstable_cache(
       seenSlugs.add(slug);
     }
 
-    // Clients who came in through the onboarding flow and have submitted the
-    // form are promoted into the roster here ("auto-create the SEO project on
-    // submit"). Existing clients are skipped by the seenSlugs guard.
-    try {
-      for (const oc of await getPromotedOnboardingClients()) {
-        if (seenSlugs.has(oc.slug) || EXCLUDED_SLUGS.has(oc.slug)) continue;
-        clients.push({
-          id: `onboarding:${oc.slug}`,
-          title: oc.title,
-          slug: oc.slug,
-          icon: oc.icon,
-          consultant: oc.consultant ?? defaultConsultantForSlug(oc.slug),
-          palette: getClientPalette(oc.slug),
-          tier: getClientTier(oc.slug),
-        });
-        seenSlugs.add(oc.slug);
-      }
-    } catch (err) {
-      console.error("Onboarding client merge failed:", err);
-    }
+    // Os clientes do onboarding NÃO entram aqui (v77.86): vêm do KV e são
+    // juntados a cada pedido em getSeoClients. Dentro desta cache, uma leitura
+    // falhada ficava guardada 1 h e os clientes desapareciam do board.
 
     // Só se chega aqui com a Notion a responder a tudo — guardar como rede.
     // Uma falha a gravar nunca estraga a lista que já temos.
@@ -220,7 +207,7 @@ const _fetchSeoClients = unstable_cache(
   { revalidate: 3600, tags: ["seo-clients"] },
 );
 
-export const getSeoClients = cache(async (): Promise<NotionClient[]> => {
+async function notionSeoClients(): Promise<NotionClient[]> {
   try {
     return await _fetchSeoClients();
   } catch (err) {
@@ -236,7 +223,44 @@ export const getSeoClients = cache(async (): Promise<NotionClient[]> => {
     }
     throw err;
   }
-});
+}
+
+/** Clients who came in through the onboarding flow and have submitted the
+ *  form are promoted into the roster here ("auto-create the SEO project on
+ *  submit"). Lido a cada pedido (uma leitura KV), fora do unstable_cache:
+ *  se o KV falhar, só ESTE pedido fica sem eles — nada fica guardado. */
+async function withOnboardingClients(
+  base: NotionClient[],
+): Promise<NotionClient[]> {
+  let promoted: Awaited<ReturnType<typeof getPromotedOnboardingClients>>;
+  try {
+    promoted = await getPromotedOnboardingClients();
+  } catch (err) {
+    console.error("Onboarding client merge failed:", err);
+    return base;
+  }
+  const seenSlugs = new Set(base.map((c) => c.slug));
+  const clients = [...base];
+  for (const oc of promoted) {
+    if (seenSlugs.has(oc.slug) || EXCLUDED_SLUGS.has(oc.slug)) continue;
+    clients.push({
+      id: `onboarding:${oc.slug}`,
+      title: oc.title,
+      slug: oc.slug,
+      icon: oc.icon,
+      consultant: oc.consultant ?? defaultConsultantForSlug(oc.slug),
+      palette: getClientPalette(oc.slug),
+      tier: getClientTier(oc.slug),
+    });
+    seenSlugs.add(oc.slug);
+  }
+  return clients;
+}
+
+export const getSeoClients = cache(
+  async (): Promise<NotionClient[]> =>
+    withOnboardingClients(await notionSeoClients()),
+);
 
 export const getClientBySlug = cache(
   async (slug: string): Promise<NotionClient | null> => {
