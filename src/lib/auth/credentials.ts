@@ -76,6 +76,9 @@ export type EmployeeCredential = {
    *  chip do topo e no menu («Treinador», com gradiente animado). Não dão nem tiram acesso nenhum:
    *  nada na app decide permissões por aqui. */
   tags?: string[];
+  /** O cargo por extenso (v77.85), para onde há espaço — o cabeçalho do menu
+   *  do nome. O chip e as listas apertadas ficam com o `role` curto («COO»). */
+  roleFull?: string;
 };
 
 /** Department slugs used across the workspace router. */
@@ -105,7 +108,8 @@ export const EMPLOYEE_CREDENTIALS: EmployeeCredential[] = [
     username: "andre",
     name: "André Pavlenco",
     fullName: "André Pavlenco",
-    role: "Founder",
+    role: "COO",
+    roleFull: "Chief Operating Officer",
     dept: "All",
     startedAt: "2026-05-12",
     isAdmin: true,
@@ -116,7 +120,8 @@ export const EMPLOYEE_CREDENTIALS: EmployeeCredential[] = [
     username: "alex",
     name: "Alex",
     fullName: "Alex",
-    role: "SuperAdmin",
+    role: "CEO",
+    roleFull: "Chief Executive Officer",
     dept: "All",
     startedAt: "2026-05-12",
     isAdmin: true,
@@ -126,7 +131,10 @@ export const EMPLOYEE_CREDENTIALS: EmployeeCredential[] = [
   {
     username: "alice",
     name: "Alice",
-    role: "SuperAdmin",
+    role: "CMO/CFO",
+    // Espaço inseparável antes da «/»: se partir, a barra fica no fim da
+    // primeira linha e não no início da segunda.
+    roleFull: "Chief Marketing Officer\u00a0/ Chief Financial Officer",
     dept: "All",
     startedAt: "2026-05-12",
     isAdmin: true,
@@ -540,6 +548,7 @@ export function findEmployeeByUsername(
 export function getEmployeeDisplay(username: string): {
   name: string;
   role: string;
+  roleFull: string | null;
   dept: string;
   isAdmin: boolean;
   viewerOf: DeptSlug | null;
@@ -551,6 +560,7 @@ export function getEmployeeDisplay(username: string): {
     ? {
         name: row.name,
         role: row.role,
+        roleFull: row.roleFull ?? null,
         dept: row.dept,
         isAdmin: Boolean(row.isAdmin),
         viewerOf: row.viewerOf ?? null,

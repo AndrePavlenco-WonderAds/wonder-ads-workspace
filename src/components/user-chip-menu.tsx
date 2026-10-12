@@ -117,9 +117,13 @@ function TagText({ label, className = "" }: { label: string; className?: string 
 
 /** O cargo + departamento só quando o cargo ainda não o diz — nada de
  *  «Consultor de SEO · SEO». */
+function deptLabel(dept: string): string {
+  return dept === "All" ? "Todos os departamentos" : dept;
+}
+
 function roleWithDept(role: string, dept: string): string {
   if (!dept || role.toLowerCase().includes(dept.toLowerCase())) return role;
-  return `${role} · ${dept === "All" ? "Todos os departamentos" : dept}`;
+  return `${role} · ${deptLabel(dept)}`;
 }
 
 function Dot() {
@@ -130,6 +134,7 @@ export function UserChipMenu({
   name,
   avatar = null,
   role,
+  roleFull = null,
   tags = [],
   dept,
   isAdmin = false,
@@ -148,6 +153,9 @@ export function UserChipMenu({
   /** Retrato da pessoa VISTA (segue a lente, como o nome). */
   avatar?: string | null;
   role: string;
+  /** O cargo por extenso («Chief Operating Officer») — só no cabeçalho do
+   *  menu, onde há espaço; o chip fica com o `role` curto. */
+  roleFull?: string | null;
   /** Etiquetas só de apresentação, ao lado do cargo («Treinador»). */
   tags?: string[];
   dept: string;
@@ -358,8 +366,13 @@ export function UserChipMenu({
               </span>
               <div className="min-w-0">
                 <p className="truncate text-[15px] font-semibold tracking-tight text-white">{name}</p>
+                {/* Cargo por extenso numa linha própria (equilibrada, se partir
+                    em duas); o departamento passa para a linha de baixo. */}
+                {roleFull && (
+                  <p className="mt-0.5 text-balance text-[12px] font-medium leading-snug text-white/75">{roleFull}</p>
+                )}
                 <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[11.5px] text-white/55">
-                  <span>{roleWithDept(role, dept)}</span>
+                  <span>{roleFull ? deptLabel(dept) : roleWithDept(role, dept)}</span>
                   {tags.map((t) => (
                     <span key={t} className="flex items-center gap-1.5">
                       <Dot />

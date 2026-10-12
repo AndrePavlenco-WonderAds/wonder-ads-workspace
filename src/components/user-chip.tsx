@@ -96,6 +96,7 @@ export async function UserChip() {
       name={display.name}
       avatar={getTeamAvatar(viewingUsername)}
       role={display.role}
+      roleFull={display.roleFull}
       tags={display.tags}
       dept={display.dept}
       isAdmin={display.isAdmin}

@@ -13,6 +13,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.85",
+    date: "2026-10-12",
+    title: "Cargos da direção — COO, CEO e CMO/CFO",
+    highlights: [
+      "**🏷️ Novos cargos no chip do nome.** André Pavlenco passa a **COO**, Alex a **CEO** e Alice a **CMO/CFO** — no chip do topo, na lista do «Ver como», na Formação e no Team Roster.",
+      "**📛 Por extenso onde há espaço.** No cabeçalho do menu do nome aparece o cargo completo numa linha própria — «Chief Operating Officer», «Chief Executive Officer», «Chief Marketing Officer / Chief Financial Officer» — com «Todos os departamentos» por baixo.",
+    ],
+  },
+  {
     version: "77.84",
     date: "2026-10-12",
     title: "Probation — o consultor submete o que faz para revisão, e o check-in mostra-o antes do semáforo",
