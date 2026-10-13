@@ -1,10 +1,10 @@
 "use client";
 
-// A folha RH-03 — o relatório semanal de ineficácias que o consultor
-// assina. Papel claro sobre a app escura, como as folhas de RH das
-// ausências, porque isto é um DOCUMENTO: zero ou mais erros, cada um com os
-// seus campos obrigatórios, e no fim a declaração + o nome completo tal como
-// está na conta + «Assinar e submeter».
+// A folha RH-03 — o relatório de ineficácias que o consultor assina quando
+// quiser, a qualquer hora (v77.90). Papel claro sobre a app escura, como as
+// folhas de RH das ausências, porque isto é um DOCUMENTO: um ou mais erros,
+// cada um com os seus campos obrigatórios, e no fim a declaração + o nome
+// completo tal como está na conta + «Assinar e submeter».
 //
 // A assinatura reutiliza a escrita à mão das ausências (SignatureLine): o
 // nome escreve-se letra a letra enquanto o POST segue, e o carimbo de
@@ -13,28 +13,18 @@
 
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  AlertCircle,
-  CalendarDays,
-  Check,
-  Eye,
-  Loader2,
-  PenLine,
-  Plus,
-  ShieldCheck,
-  Sparkles,
-  Trash2,
-} from "lucide-react";
+import { AlertCircle, Check, Eye, Loader2, PenLine, Plus, RotateCcw, ShieldCheck, Trash2 } from "lucide-react";
 import { SheetField, SheetSection, SignatureLine, formatDatePT } from "@/components/absences/sheet";
 import {
   DECLARATION_TEXT,
   LIMITS,
   NOTICED_OPTIONS,
   REASONS,
+  REPORT_LOOKBACK_DAYS,
+  formatISODate,
   nameMatches,
+  reportDateRange,
   validateReport,
-  weekLabel,
-  weekRange,
   type IneficaciaItemDraft,
   type IneficaciaReport,
   type ReportDraft,
@@ -59,25 +49,22 @@ function blankItem(): LocalItem {
 
 type Phase = "fill" | "signing" | "done";
 
-export type WeekOption = { key: string; label: string; start: string; end: string };
-
-export function WeeklyReportForm({
+export function IneficaciaReportForm({
   employee,
-  weeks,
   today,
   readOnly = false,
 }: {
   employee: { username: string; name: string; fullName: string; role: string; dept: string };
-  /** As semanas que ainda pode reportar (a anterior primeiro). */
-  weeks: WeekOption[];
   today: string;
   /** «Ver como» ativo — a folha mostra-se, mas não assina. */
   readOnly?: boolean;
 }) {
   const router = useRouter();
-  const [weekKey, setWeekKey] = useState(weeks[0]?.key ?? "");
-  const [noErrors, setNoErrors] = useState(false);
-  const [items, setItems] = useState<LocalItem[]>([]);
+  // Um erro já aberto: quem abre a folha vem reportar alguma coisa.
+  const [items, setItems] = useState<LocalItem[]>(() => [blankItem()]);
+  // Um identificador por folha — o servidor recusa o mesmo envio duas vezes
+  // (duplo clique, reenvio da rede), mas aceita quantos relatórios houver.
+  const [nonce, setNonce] = useState(() => crypto.randomUUID());
   const [declaration, setDeclaration] = useState(false);
   const [signatureName, setSignatureName] = useState("");
   const [phase, setPhase] = useState<Phase>("fill");
@@ -87,21 +74,19 @@ export function WeeklyReportForm({
   const signatureZoneRef = useRef<HTMLDivElement | null>(null);
   const animationDoneRef = useRef<() => void>(() => {});
 
-  const week = useMemo(() => weekRange(weekKey), [weekKey]);
-  const dateMax = week ? (week.end < today ? week.end : today) : today;
+  const range = useMemo(() => reportDateRange(today), [today]);
 
   const draft: ReportDraft = useMemo(
-    () => ({ weekKey, noErrors, items, declaration, signatureName }),
-    [weekKey, noErrors, items, declaration, signatureName],
+    () => ({ items, declaration, signatureName }),
+    [items, declaration, signatureName],
   );
   const readyProblem = useMemo(
-    () => validateReport(draft, { todayISO: today, expectedName: employee.fullName, allowedWeeks: weeks.map((w) => w.key) }),
-    [draft, today, employee.fullName, weeks],
+    () => validateReport(draft, { todayISO: today, expectedName: employee.fullName }),
+    [draft, today, employee.fullName],
   );
 
   const sectionOk = {
-    week: Boolean(week),
-    items: noErrors ? items.length === 0 : items.length > 0 && !readyProblem?.startsWith("Erro "),
+    items: items.length > 0 && !readyProblem?.startsWith("Erro ") && !readyProblem?.startsWith("Descreve"),
     signature: declaration && nameMatches(signatureName, employee.fullName),
   };
   const nameOk = signatureName.trim().length > 0 && nameMatches(signatureName, employee.fullName);
@@ -110,7 +95,6 @@ export function WeeklyReportForm({
     setItems((prev) => prev.map((it) => (it.key === key ? { ...it, ...patch } : it)));
   }
   function addItem() {
-    setNoErrors(false);
     setItems((prev) => [...prev, blankItem()]);
   }
   function removeItem(key: string) {
@@ -123,8 +107,7 @@ export function WeeklyReportForm({
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          weekKey,
-          noErrors,
+          nonce,
           items: items.map((it) => ({
             what: it.what,
             client: it.client,
@@ -146,7 +129,7 @@ export function WeeklyReportForm({
     } catch {
       return { ok: false, message: "Falha de rede — o relatório não foi submetido." };
     }
-  }, [weekKey, noErrors, items, declaration, signatureName]);
+  }, [nonce, items, declaration, signatureName]);
 
   const handleSign = useCallback(async () => {
     if (phase !== "fill" || readOnly) return;
@@ -174,27 +157,26 @@ export function WeeklyReportForm({
     }, 1100);
   }, [phase, readOnly, readyProblem, submit, router]);
 
+  /** Folha nova, em branco — para assinar outro relatório. */
+  function resetForm() {
+    setItems([blankItem()]);
+    setNonce(crypto.randomUUID());
+    setDeclaration(false);
+    setSignatureName("");
+    setSubmitted(null);
+    setShowStamp(false);
+    setError(null);
+    setPhase("fill");
+  }
+
   const signing = phase !== "fill";
 
   if (phase === "done" && submitted) {
-    return <SuccessPanel report={submitted} />;
-  }
-
-  if (weeks.length === 0) {
-    return (
-      <div className="animate-fade-up rounded-3xl border border-dashed border-white/12 px-6 py-10 text-center">
-        <ShieldCheck className="mx-auto h-7 w-7 text-emerald-300/70" />
-        <p className="mt-3 text-[14px] font-medium text-white/80">Tudo em dia.</p>
-        <p className="mt-1 text-[12.5px] text-white/45">
-          Não há nenhum relatório por assinar. O da semana corrente abre na sexta-feira e fica disponível até à
-          segunda-feira seguinte.
-        </p>
-      </div>
-    );
+    return <SuccessPanel report={submitted} onNew={resetForm} />;
   }
 
   return (
-    <section aria-label="Relatório semanal de ineficácias" className="relative mx-auto w-full max-w-[900px]">
+    <section aria-label="Relatório de ineficácias" className="relative mx-auto w-full max-w-[900px]">
       <div className="relative overflow-hidden rounded-[6px] bg-gradient-to-b from-[#fbfaf7] to-[#f0eee8] text-[#20202a] shadow-[0_40px_120px_-30px_rgba(0,0,0,0.8),0_0_0_1px_rgba(255,255,255,0.06)]">
         <div aria-hidden className="h-1.5 w-full" style={{ background: "var(--brand-gradient)" }} />
         <span
@@ -218,7 +200,7 @@ export function WeeklyReportForm({
           </div>
           <div className="rounded border border-black/15 bg-white/70 px-3.5 py-2 text-right">
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-black/50">Formulário RH-03</p>
-            <p className="text-[13px] font-extrabold uppercase tracking-[0.08em]">Relatório semanal de ineficácias</p>
+            <p className="text-[13px] font-extrabold uppercase tracking-[0.08em]">Relatório de ineficácias</p>
             <p className="mt-0.5 font-mono text-[10.5px] text-black/45">Ref.ª atribuída na submissão · {formatDatePT(today)}</p>
           </div>
         </header>
@@ -231,53 +213,22 @@ export function WeeklyReportForm({
         )}
 
         <div className="relative px-6 py-6 sm:px-10 sm:py-8">
-          {/* 1 — Identificação + semana */}
-          <SheetSection n={1} title="Identificação e semana" done={sectionOk.week}>
+          {/* 1 — Identificação */}
+          <SheetSection n={1} title="Identificação" done>
             <div className="grid grid-cols-1 gap-x-8 gap-y-4 sm:grid-cols-2">
               <SheetField label="Nome completo" value={employee.fullName} />
               <SheetField label="Função" value={employee.role || "—"} />
               <SheetField label="Departamento" value={employee.dept || "—"} />
-              <div>
-                <span className="sheet-label">Semana do relatório</span>
-                <div className="mt-1.5 flex flex-wrap gap-2">
-                  {weeks.map((w) => {
-                    const on = w.key === weekKey;
-                    return (
-                      <button
-                        key={w.key}
-                        type="button"
-                        disabled={signing}
-                        onClick={() => {
-                          setWeekKey(w.key);
-                          // As datas dos erros são da semana — mudar de semana limpa-as.
-                          setItems((prev) => prev.map((it) => ({ ...it, occurredOn: "" })));
-                        }}
-                        className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[12px] font-semibold transition ${
-                          on
-                            ? "border-[#783DF5] bg-[#783DF5]/10 text-[#4c2bb0]"
-                            : "border-black/15 bg-white/70 text-black/60 hover:border-black/30"
-                        }`}
-                      >
-                        <CalendarDays className="h-3.5 w-3.5" />
-                        {w.label}
-                      </button>
-                    );
-                  })}
-                </div>
-                {week && week.end >= today && (
-                  <p className="mt-1.5 text-[10.5px] text-black/40">
-                    A semana ainda está a decorrer — só podes registar erros até hoje ({formatDatePT(today)}).
-                  </p>
-                )}
-              </div>
+              <SheetField label="Data do relatório" value={formatDatePT(today)} />
             </div>
           </SheetSection>
 
           {/* 2 — Ocorrências */}
-          <SheetSection n={2} title="Erros cometidos esta semana" done={sectionOk.items}>
+          <SheetSection n={2} title="Erros a reportar" done={sectionOk.items}>
             <p className="text-[11.5px] leading-relaxed text-black/55">
-              Cada relatório tem zero ou mais erros. Por cada erro, descreve o que aconteceu e em que cliente, o
-              motivo, como achas que deverias ter feito, se foi a primeira vez, a data e se te apercebeste do erro.
+              Podes assinar um relatório sempre que quiseres, com um ou mais erros dos últimos {REPORT_LOOKBACK_DAYS} dias.
+              Por cada erro, descreve o que aconteceu e em que cliente, o motivo, como achas que deverias ter feito, se
+              foi a primeira vez, a data e se te apercebeste do erro.
               <strong className="font-bold text-black/70"> Reportar é o que protege: erro de aprendizagem não é erro de recorrência.</strong>
             </p>
 
@@ -288,8 +239,8 @@ export function WeeklyReportForm({
                   n={i + 1}
                   item={it}
                   disabled={signing}
-                  dateMin={week?.start ?? ""}
-                  dateMax={dateMax}
+                  dateMin={range.min}
+                  dateMax={range.max}
                   onChange={(patch) => updateItem(it.key, patch)}
                   onRemove={() => removeItem(it.key)}
                 />
@@ -306,19 +257,6 @@ export function WeeklyReportForm({
                 <Plus className="h-4 w-4" />
                 {items.length === 0 ? "Registar um erro" : "Registar outro erro"}
               </button>
-              {items.length === 0 && (
-                <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-black/12 bg-white/70 px-3.5 py-2 text-[12.5px] font-semibold text-black/70">
-                  <input
-                    type="checkbox"
-                    checked={noErrors}
-                    disabled={signing}
-                    onChange={(e) => setNoErrors(e.target.checked)}
-                    className="h-4 w-4 accent-[#783DF5]"
-                  />
-                  <Sparkles className="h-3.5 w-3.5 text-emerald-600" />
-                  Não cometi nenhum erro de que tenha conhecimento esta semana
-                </label>
-              )}
             </div>
           </SheetSection>
 
@@ -484,7 +422,7 @@ function ItemCard({
 
       <div className="mt-4 grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2">
         <label className="block">
-          <span className="sheet-label">Data em que ocorreu (dentro da semana)</span>
+          <span className="sheet-label">Data em que ocorreu (últimos {REPORT_LOOKBACK_DAYS} dias)</span>
           <input
             type="date"
             value={item.occurredOn}
@@ -640,7 +578,7 @@ function ItemCard({
   );
 }
 
-function SuccessPanel({ report }: { report: IneficaciaReport }) {
+function SuccessPanel({ report, onNew }: { report: IneficaciaReport; onNew: () => void }) {
   const n = report.items.length;
   return (
     <section className="animate-fade-up mx-auto w-full max-w-[900px] rounded-3xl border border-emerald-400/25 bg-emerald-400/[0.05] p-6 sm:p-8">
@@ -651,16 +589,23 @@ function SuccessPanel({ report }: { report: IneficaciaReport }) {
         <div className="min-w-0">
           <p className="readout text-emerald-200/70">Submetido</p>
           <h2 className="mt-1 text-[20px] font-semibold tracking-tight text-white">
-            Relatório <span className="font-mono text-emerald-200">{report.ref}</span> assinado — {weekLabel(report.weekKey)}
+            Relatório <span className="font-mono text-emerald-200">{report.ref}</span> assinado a {formatISODate(report.submittedOn)}
           </h2>
           <p className="mt-2 text-[13px] leading-relaxed text-white/65">
-            {report.noErrors
-              ? "Declaraste que não houve erros esta semana. A direção vai confirmar a receção."
-              : `${n} ${n === 1 ? "ocorrência" : "ocorrências"} ${n === 1 ? "segue" : "seguem"} para a direção. Cada uma recebe uma pontuação de 0 a 10 e só depois entra no teu PA e NO — recebes um aviso no sino quando estiver pontuado.`}
+            {n} {n === 1 ? "ocorrência segue" : "ocorrências seguem"} para a direção. Cada uma recebe uma pontuação de 0 a 10
+            e só depois entra no teu PA e NO — recebes um aviso no sino quando estiver pontuado.
           </p>
           <p className="mt-3 text-[11.5px] text-white/40">
             O relatório fica em «Os meus relatórios», mais abaixo, com a assinatura e a impressão digital do conteúdo.
           </p>
+          <button
+            type="button"
+            onClick={onNew}
+            className="mt-4 inline-flex items-center gap-2 rounded-lg border border-white/15 bg-white/[0.06] px-4 py-2 text-[12.5px] font-semibold text-white/85 transition hover:bg-white/[0.1]"
+          >
+            <RotateCcw className="h-3.5 w-3.5" />
+            Assinar outro relatório
+          </button>
         </div>
       </div>
     </section>

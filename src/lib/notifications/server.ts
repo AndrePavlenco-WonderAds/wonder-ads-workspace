@@ -64,14 +64,12 @@ import {
   type PublishedPlan,
 } from "@/lib/probation/published";
 import { todayLisbonISO } from "@/lib/probation/progress";
-import { INEFICACIAS_OPEN_TO_TEAM, INEFICACIAS_SINCE } from "@/lib/ineficacias/access";
+import { INEFICACIAS_OPEN_TO_TEAM } from "@/lib/ineficacias/access";
 import { loadConsultant, loadTeam } from "@/lib/ineficacias/store";
 import {
   LEVELS as INEFICACIA_LEVELS,
   formatISODate as ineficaciaDate,
-  reportableWeeks,
-  weekKeyOf,
-  weekLabel,
+  bandOf as ineficaciaBand,
 } from "@/lib/ineficacias/shared";
 import { getProposal, proposalPath } from "@/lib/proposals";
 import { getNotificationRules } from "@/lib/notifications/rules-store";
@@ -1177,10 +1175,11 @@ const INEFICACIAS_RECENT_MS = 14 * 24 * 60 * 60 * 1000;
 
 /** Ineficácias (v77.88) → sino. Derivado do registo em cada leitura, como as
  *  ausências e o probation — nada é «enviado» que possa falhar:
- *   • ao CONSULTOR (só quando o módulo está aberto à equipa): o relatório
- *     semanal em falta (a semana anterior sempre; a corrente a partir de
- *     sexta-feira), os relatórios pontuados nos últimos 14 dias, o nível
- *     atingido com medida por aplicar e o 1:1 registado nos últimos 14 dias.
+ *   • ao CONSULTOR (só quando o módulo está aberto à equipa): os relatórios
+ *     pontuados e as ineficácias registadas pela direção nos últimos 14
+ *     dias, o nível atingido com medida por aplicar e o 1:1 registado nos
+ *     últimos 14 dias. O relatório assina-se quando quiser (v77.90) — não há
+ *     lembrete de relatório em falta.
  *   • à DIREÇÃO: cada relatório por rever (com as ocorrências por pontuar) e
  *     cada nível atingido com medida por aplicar. Sai sozinho quando a
  *     revisão fecha / a medida é registada. */
@@ -1196,23 +1195,21 @@ async function ineficaciasNotifications(
   if (!admin && !isViewerProfile(viewer.username) && INEFICACIAS_OPEN_TO_TEAM) {
     try {
       const b = await loadConsultant(viewer.username, today);
-      const reported = new Set(b.reports.map((r) => r.weekKey));
-      // As mesmas semanas que a folha oferece (a anterior sempre; a corrente
-      // a partir de sexta; nada antes da abertura do módulo) — a primeira
-      // por assinar é o lembrete.
-      const dueKey = reportableWeeks(today, INEFICACIAS_SINCE).find((k) => !reported.has(k)) ?? null;
-      if (dueKey) {
-        const id = `ineficacias-weekly:${dueKey}`;
-        const late = dueKey !== weekKeyOf(today);
+      for (const d of b.ledger.direct) {
+        if (now.getTime() - d.createdAt > INEFICACIAS_RECENT_MS) continue;
+        const id = `ineficacias-direct:${d.id}`;
+        const band = ineficaciaBand(d.score.points);
         out.push({
           id,
-          ruleId: "ineficacias-weekly",
-          title: late ? "📝 O relatório de ineficácias da semana passada está em falta" : "📝 Relatório semanal de ineficácias",
-          body: `${weekLabel(dueKey)}. Zero ou mais erros, cada um com o motivo, como devias ter feito e a data — e a tua assinatura no fim. Reportar é o que protege.`,
-          periodLabel: weekLabel(dueKey),
-          dueAt: now.getTime(),
+          ruleId: "ineficacias-direct",
+          title: "⚠️ A direção registou uma ineficácia tua",
+          body: `${d.client || "Interno"} · ${ineficaciaDate(d.occurredOn)} · ${d.score.points} ${d.score.points === 1 ? "ponto" : "pontos"} (${band.label.toLowerCase()}). ${
+            d.score.points > 0 ? "Já conta no teu PA e NO." : "Não entra nas contas (0 pontos)."
+          }`,
+          periodLabel: "Registada pela direção",
+          dueAt: d.createdAt,
           client: null,
-          actionLabel: "Assinar o relatório",
+          actionLabel: "Ver o registo",
           actionHref: "/ineficacias",
           resolved: Boolean(state[id]),
           resolvedAt: state[id]?.resolvedAt ?? null,
@@ -1226,17 +1223,15 @@ async function ineficaciasNotifications(
         out.push({
           id,
           ruleId: "ineficacias-reviewed",
-          title: r.noErrors ? `✅ A direção confirmou o teu relatório ${r.ref}` : `🎯 A direção pontuou o teu relatório ${r.ref}`,
-          body: r.noErrors
-            ? `${weekLabel(r.weekKey)} — sem erros declarados.`
-            : `${weekLabel(r.weekKey)} — ${r.items.length} ${r.items.length === 1 ? "ocorrência" : "ocorrências"}, ${pts} ${pts === 1 ? "ponto" : "pontos"} no total. ${
+          title: `🎯 A direção pontuou o teu relatório ${r.ref}`,
+          body: `Relatório de ${ineficaciaDate(r.submittedOn)} — ${r.items.length} ${r.items.length === 1 ? "ocorrência" : "ocorrências"}, ${pts} ${pts === 1 ? "ponto" : "pontos"} no total. ${
                 counted === 0
                   ? "Nenhuma entrou nas contas (0 pontos = não conta)."
                   : counted === r.items.length
                     ? "Já contam no teu PA e NO."
                     : `${counted} ${counted === 1 ? "entrou" : "entraram"} no teu PA e NO; as de 0 pontos não contam.`
               }`,
-          periodLabel: weekLabel(r.weekKey),
+          periodLabel: `Relatório ${r.ref}`,
           dueAt: r.review.at,
           client: null,
           actionLabel: "Ver a pontuação",
@@ -1301,12 +1296,12 @@ async function ineficaciasNotifications(
         out.push({
           id,
           ruleId: "ineficacias-review",
-          title: r.noErrors ? `📝 ${who} assinou o relatório ${r.ref} — sem erros` : `📝 ${who} assinou o relatório ${r.ref} — ${unscored} ${unscored === 1 ? "ocorrência" : "ocorrências"} por pontuar`,
-          body: `${weekLabel(r.weekKey)}. ${r.noErrors ? "Confirma a receção." : "Dá a pontuação de 0 a 10 a cada ocorrência — só depois entram no PA e no NO."}`,
+          title: `📝 ${who} assinou o relatório ${r.ref} — ${unscored} ${unscored === 1 ? "ocorrência" : "ocorrências"} por pontuar`,
+          body: `Assinado a ${ineficaciaDate(r.submittedOn)}. Dá a pontuação de 0 a 10 a cada ocorrência — só depois entram no PA e no NO.`,
           periodLabel: `Ineficácias · ${who}`,
           dueAt: r.createdAt,
           client: null,
-          actionLabel: r.noErrors ? "Confirmar receção" : "Pontuar",
+          actionLabel: "Pontuar",
           actionHref: `${href}?relatorio=${r.id}`,
           resolved: Boolean(state[id]),
           resolvedAt: state[id]?.resolvedAt ?? null,

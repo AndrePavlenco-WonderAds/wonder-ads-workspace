@@ -26,7 +26,7 @@ export function UnderConstruction({ name }: { name: string }) {
             Ineficácias — <span className="brand-gradient-text">a chegar em breve</span>
           </h1>
           <p className="mt-3 max-w-sm text-[13px] leading-relaxed text-white/60">
-            {name.split(" ")[0]}, estamos a montar o sistema de relatório semanal de ineficácias — com o PA, o NO e a
+            {name.split(" ")[0]}, estamos a montar o sistema de relatório de ineficácias — com o PA, o NO e a
             escala de níveis que viste na apresentação. Quando abrir, aparece aqui e no sino.
           </p>
           <div className="mt-6 flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[10.5px] uppercase tracking-[0.18em] text-white/45">

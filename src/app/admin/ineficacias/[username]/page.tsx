@@ -5,26 +5,22 @@
 
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, CalendarX2, ClipboardCheck, History, ShieldAlert, Wand2 } from "lucide-react";
+import { ArrowLeft, ClipboardCheck, History, PlusCircle, ShieldAlert, Wand2 } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { LevelChip, LevelGauge } from "@/components/ineficacias/level-gauge";
-import { ScaleExplainer } from "@/components/ineficacias/scale-explainer";
 import { ReportView, ScoreBadge } from "@/components/ineficacias/report-view";
-import { ItemScoreControl, MarkReviewedButton } from "@/components/ineficacias/admin-scoring";
-import { DirectOccurrenceForm, MeasureForm, SetLevelForm } from "@/components/ineficacias/admin-ledger-actions";
+import { ItemScoreControl } from "@/components/ineficacias/admin-scoring";
+import { MeasureForm, SetLevelForm } from "@/components/ineficacias/admin-ledger-actions";
 import { getCurrentEmployee } from "@/lib/auth/server";
 import { findEmployeeByUsername } from "@/lib/auth/credentials";
 import { getTeamAvatar } from "@/lib/team-avatars";
-import { INEFICACIAS_OPEN_TO_TEAM, INEFICACIAS_SINCE } from "@/lib/ineficacias/access";
 import { loadConsultant, verifyIntegrity } from "@/lib/ineficacias/store";
 import {
   firstName,
   formatISODate,
   formatLisbonDateTime,
-  missingWeeks,
   noticedLabel,
   reasonLabel,
-  weekLabel,
   type LedgerEvent,
 } from "@/lib/ineficacias/shared";
 import { todayLisbonISO } from "@/lib/probation/progress";
@@ -60,8 +56,6 @@ export default async function IneficaciasConsultantPage({
   const bundle = await loadConsultant(username, today);
   const { state, reports, ledger } = bundle;
   const openId = (await searchParams).relatorio ?? reports.find((r) => !r.review)?.id ?? reports[0]?.id ?? null;
-  // Enquanto o módulo está fechado à equipa ninguém deve relatório nenhum.
-  const missing = INEFICACIAS_OPEN_TO_TEAM ? missingWeeks(new Set(reports.map((r) => r.weekKey)), today, INEFICACIAS_SINCE) : [];
   const events = ledger.events.slice().sort((a, b) => b.at.localeCompare(a.at) || b.createdAt - a.createdAt);
   const direct = ledger.direct.slice().sort((a, b) => b.occurredOn.localeCompare(a.occurredOn));
   const avatar = getTeamAvatar(username);
@@ -91,7 +85,7 @@ export default async function IneficaciasConsultantPage({
           </h1>
           <p className="mt-1 text-[12.5px] text-white/45">
             {row.role} · {row.dept} · {reports.length} {reports.length === 1 ? "relatório" : "relatórios"}
-            {missing.length ? ` · ${missing.length} ${missing.length === 1 ? "semana em falta" : "semanas em falta"}` : " · semanas em dia"}
+            {state.clearsOn ? ` · contadores a zero a ${formatISODate(state.clearsOn)}` : " · contadores a zero"}
           </p>
         </div>
       </header>
@@ -144,13 +138,9 @@ export default async function IneficaciasConsultantPage({
                     )}
                     footer={
                       !r.review ? (
-                        r.noErrors ? (
-                          <MarkReviewedButton reportId={r.id} label="Confirmar receção (sem erros)" />
-                        ) : (
-                          <p className="text-[11.5px] text-white/40">
-                            A revisão fecha-se sozinha quando todas as ocorrências estiverem pontuadas — e {who} recebe o aviso no sino.
-                          </p>
-                        )
+                        <p className="text-[11.5px] text-white/40">
+                          A revisão fecha-se sozinha quando todas as ocorrências estiverem pontuadas — e {who} recebe o aviso no sino.
+                        </p>
                       ) : (
                         <p className="text-[11.5px] text-white/40">
                           Revisto por {r.review.byName || r.review.by} a {formatLisbonDateTime(r.review.at)}.
@@ -175,7 +165,11 @@ export default async function IneficaciasConsultantPage({
                     <header className="flex flex-wrap items-center justify-between gap-2">
                       <p className="text-[12.5px] text-white/80">
                         <span className="font-semibold">{d.client}</span>
-                        <span className="text-white/40"> · {formatISODate(d.occurredOn)} · {reasonLabel(d.reason, d.reasonOther)} · {noticedLabel(d.noticed)}</span>
+                        <span className="text-white/40">
+                          {" "}
+                          · {formatISODate(d.occurredOn)} · {reasonLabel(d.reason, d.reasonOther)} · {noticedLabel(d.noticed)}
+                          {d.firstTime === true ? " · primeira vez" : d.firstTime === false ? ` · repetido (última vez: ${d.lastTime || "—"})` : ""}
+                        </span>
                       </p>
                       <ScoreBadge score={d.score} size="sm" />
                     </header>
@@ -193,12 +187,23 @@ export default async function IneficaciasConsultantPage({
 
         {/* coluna lateral — ações + histórico */}
         <aside className="animate-fade-up space-y-4">
+          <Link
+            href={`/admin/ineficacias/registar?consultor=${encodeURIComponent(username)}`}
+            className="group flex items-center gap-3 rounded-2xl border border-[#783DF5]/35 bg-[linear-gradient(135deg,rgba(52,62,215,0.14),rgba(120,61,245,0.14)_54%,rgba(197,53,201,0.14))] px-4 py-3.5 transition hover:border-[#783DF5]/60 hover:shadow-[0_10px_30px_-14px_rgba(120,61,245,0.9)]"
+          >
+            <span className="brand-gradient-bg flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-white">
+              <PlusCircle className="h-4 w-4" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-[13px] font-semibold text-white">Registar ineficácia de {who}</span>
+              <span className="block text-[11px] text-white/50">Erro cometido, primeira vez, gravidade e pontuação</span>
+            </span>
+          </Link>
           <div id="medida" className="scroll-mt-24 space-y-3">
             {state.pendingMeasure && (
               <MeasureForm username={username} pending={state.pendingMeasure} today={today} defaultConductedBy={employee.name} />
             )}
             <SetLevelForm username={username} currentLevel={state.level} today={today} />
-            <DirectOccurrenceForm username={username} today={today} />
           </div>
 
           <section className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4">
@@ -232,38 +237,12 @@ export default async function IneficaciasConsultantPage({
             )}
           </section>
 
-          <section className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4">
-            <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-white/35">
-              <CalendarX2 className="h-3.5 w-3.5" />
-              Semanas em falta
-            </p>
-            {missing.length === 0 ? (
-              <p className="mt-2 text-[12px] text-emerald-200/80">
-                {INEFICACIAS_OPEN_TO_TEAM
-                  ? `Em dia — todas as semanas desde ${formatISODate(INEFICACIAS_SINCE)} têm relatório.`
-                  : "O módulo ainda está fechado à equipa — ninguém deve relatório nenhum por enquanto."}
-              </p>
-            ) : (
-              <ul className="mt-2 space-y-1 text-[12px] text-white/65">
-                {missing.map((k) => (
-                  <li key={k} className="flex items-center gap-2">
-                    <span className="h-1 w-1 rounded-full bg-rose-400" />
-                    {weekLabel(k)}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
 
           <p className="flex items-start gap-2 rounded-2xl border border-white/[0.06] bg-black/20 px-4 py-3 text-[11px] leading-relaxed text-white/40">
             <Wand2 className="mt-0.5 h-3.5 w-3.5 shrink-0" />
             Pontuar a 0 significa «não conta» — a ocorrência fica registada, mas não entra no PA nem no NO.
           </p>
         </aside>
-      </div>
-
-      <div className="animate-fade-up mt-10">
-        <ScaleExplainer />
       </div>
     </PageShell>
   );

@@ -1,13 +1,14 @@
 "use client";
 
 // Os controlos da direção sobre um relatório: a pontuação de 0 a 10 de cada
-// ocorrência (com nota) e o «marcar como visto» dos relatórios sem erros.
+// ocorrência (com nota). A revisão fecha-se sozinha quando todas estiverem
+// pontuadas.
 // Cada gravação pede ao servidor e faz router.refresh() — a página volta a
 // derivar o estado (PA, NO, nível) com os dados frescos.
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Eye, Loader2, Save } from "lucide-react";
+import { Check, Loader2, Save } from "lucide-react";
 import { bandOf, MAX_POINTS, SCORE_BANDS, type IneficaciaScore } from "@/lib/ineficacias/shared";
 
 const BAND_BTN: Record<string, { on: string; off: string }> = {
@@ -127,54 +128,6 @@ export function ItemScoreControl({ target, initial }: { target: Target; initial:
           <span className="text-[11px] text-white/40">Já pontuada — podes corrigir.</span>
         )}
       </div>
-    </div>
-  );
-}
-
-export function MarkReviewedButton({ reportId, label = "Marcar como visto" }: { reportId: string; label?: string }) {
-  const router = useRouter();
-  const [note, setNote] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [pending, startTransition] = useTransition();
-  const [busy, setBusy] = useState(false);
-
-  async function go() {
-    setBusy(true);
-    setError(null);
-    const res = await fetch("/api/admin/ineficacias/review", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ reportId, note }),
-    });
-    const data = (await res.json().catch(() => ({}))) as { error?: string };
-    setBusy(false);
-    if (!res.ok) {
-      setError(data.error ?? "Não foi possível gravar.");
-      return;
-    }
-    startTransition(() => router.refresh());
-  }
-
-  return (
-    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-      <input
-        type="text"
-        value={note}
-        onChange={(e) => setNote(e.target.value)}
-        maxLength={1000}
-        placeholder="Nota para o consultor (opcional)"
-        className="modal-input flex-1 text-[12.5px]"
-      />
-      <button
-        type="button"
-        disabled={busy || pending}
-        onClick={() => void go()}
-        className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-emerald-400/30 bg-emerald-400/10 px-3.5 py-2 text-[12px] font-semibold text-emerald-100 transition hover:bg-emerald-400/20 disabled:opacity-50"
-      >
-        {busy || pending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Eye className="h-3.5 w-3.5" />}
-        {label}
-      </button>
-      {error && <p className="text-[11.5px] font-semibold text-rose-300">{error}</p>}
     </div>
   );
 }

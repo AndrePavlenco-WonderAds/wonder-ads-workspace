@@ -5,7 +5,7 @@
 // controlos de pontuação da direção entram por `itemExtras`.
 
 import type { ReactNode } from "react";
-import { BadgeCheck, CheckCheck, Fingerprint, Hourglass, ShieldCheck, ShieldX, Sparkles } from "lucide-react";
+import { BadgeCheck, CheckCheck, Fingerprint, Hourglass, ShieldCheck, ShieldX } from "lucide-react";
 import {
   bandOf,
   DECLARATION_TEXT,
@@ -13,7 +13,6 @@ import {
   formatLisbonDateTime,
   noticedLabel,
   reasonLabel,
-  weekLabel,
   type IneficaciaItem,
   type IneficaciaReport,
   type IneficaciaScore,
@@ -48,14 +47,6 @@ export function ScoreBadge({ score, size = "md" }: { score: IneficaciaScore | nu
 }
 
 export function ReportStatusChip({ report }: { report: IneficaciaReport }) {
-  if (report.noErrors) {
-    return (
-      <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2.5 py-1 text-[11px] font-semibold text-emerald-200">
-        <Sparkles className="h-3 w-3" />
-        Sem erros{report.review ? " · visto" : ""}
-      </span>
-    );
-  }
   if (report.review) {
     return (
       <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2.5 py-1 text-[11px] font-semibold text-emerald-200">
@@ -157,7 +148,7 @@ export function SignatureBlock({
               Assinado por {s.fullName || report.name} em {formatLisbonDateTime(s.signedAt)}
             </p>
             <p className="mt-0.5 text-[11.5px] text-white/50">
-              Ref.ª {report.ref} · {weekLabel(report.weekKey)} · declaração aceite
+              Ref.ª {report.ref} · {report.items.length} {report.items.length === 1 ? "ocorrência" : "ocorrências"} · declaração aceite
             </p>
           </div>
         </div>
@@ -236,11 +227,11 @@ export function ReportView({
         <span className="min-w-0 flex-1">
           <span className="flex flex-wrap items-center gap-2">
             <span className="font-mono text-[11px] font-bold tracking-[0.08em] text-white/45">{report.ref}</span>
-            <span className="text-[13.5px] font-semibold text-white/90">{weekLabel(report.weekKey)}</span>
+            <span className="text-[13.5px] font-semibold text-white/90">Relatório de {formatISODate(report.submittedOn)}</span>
           </span>
           <span className="mt-0.5 block text-[11.5px] text-white/45">
             {audience === "direcao" ? `${report.name} · ` : ""}
-            {report.noErrors ? "sem erros declarados" : `${n} ${n === 1 ? "ocorrência" : "ocorrências"}`} · assinado{" "}
+            {`${n} ${n === 1 ? "ocorrência" : "ocorrências"}`} · assinado{" "}
             {formatLisbonDateTime(report.signature.signedAt)}
           </span>
         </span>
@@ -248,18 +239,11 @@ export function ReportView({
       </summary>
 
       <div className="border-t border-white/[0.06] px-5 pb-5 pt-4">
-        {report.noErrors ? (
-          <p className="flex items-center gap-2 rounded-2xl border border-emerald-400/20 bg-emerald-400/[0.06] px-4 py-3 text-[13px] text-emerald-100/90">
-            <Sparkles className="h-4 w-4 text-emerald-300" />
-            {audience === "consultor" ? "Declaraste" : `${report.name} declarou`} que não cometeu nenhum erro de que tenha conhecimento nesta semana.
-          </p>
-        ) : (
-          <div className="space-y-3">
-            {report.items.map((it, i) => (
-              <ItemView key={it.id} item={it} n={i + 1} extra={itemExtras?.[it.id]} audience={audience} />
-            ))}
-          </div>
-        )}
+        <div className="space-y-3">
+          {report.items.map((it, i) => (
+            <ItemView key={it.id} item={it} n={i + 1} extra={itemExtras?.[it.id]} audience={audience} />
+          ))}
+        </div>
         {report.review?.note && (
           <p className="mt-4 rounded-2xl border border-white/[0.08] bg-white/[0.03] px-4 py-3 text-[12.5px] text-white/70">
             <span className="font-semibold text-white/85">Nota da direção ({report.review.byName || "direção"}):</span>{" "}

@@ -4,24 +4,14 @@
 //   • registar a medida do nível atingido (o 1:1 com as ações, ou o arranque
 //     do probation) — reinicia os contadores a partir do dia seguinte;
 //   • definir o nível à mão, com justificação (falha grave → probation
-//     direto; reintegração → volta a 0);
-//   • registar uma ocorrência diretamente, já pontuada.
+//     direto; reintegração → volta a 0).
+// Registar uma ocorrência vive na folha RH-04 (/admin/ineficacias/registar).
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowUpRight, ChevronDown, ClipboardCheck, Loader2, PlusCircle, Scale, Wand2 } from "lucide-react";
-import {
-  formatISODate,
-  LEVELS,
-  NOTICED_OPTIONS,
-  REASONS,
-  type IneficaciaLevel,
-  type IneficaciaNoticed,
-  type IneficaciaReason,
-  type PendingMeasure,
-} from "@/lib/ineficacias/shared";
-import { ScorePicker } from "./admin-scoring";
+import { ArrowUpRight, ChevronDown, ClipboardCheck, Loader2, Scale, Wand2 } from "lucide-react";
+import { formatISODate, LEVELS, type IneficaciaLevel, type PendingMeasure } from "@/lib/ineficacias/shared";
 
 async function post(path: string, body: unknown): Promise<string | null> {
   try {
@@ -245,118 +235,6 @@ export function SetLevelForm({ username, currentLevel, today }: { username: stri
       >
         {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Wand2 className="h-3.5 w-3.5" />}
         Definir nível {level}
-      </button>
-    </Panel>
-  );
-}
-
-export function DirectOccurrenceForm({ username, today }: { username: string; today: string }) {
-  const router = useRouter();
-  const [occurredOn, setOccurredOn] = useState(today);
-  const [client, setClient] = useState("");
-  const [what, setWhat] = useState("");
-  const [reason, setReason] = useState<IneficaciaReason>("atencao");
-  const [reasonOther, setReasonOther] = useState("");
-  const [shouldHave, setShouldHave] = useState("");
-  const [noticed, setNoticed] = useState<IneficaciaNoticed>("equipa");
-  const [points, setPoints] = useState<number | null>(null);
-  const [note, setNote] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [, startTransition] = useTransition();
-
-  async function save() {
-    if (points === null) {
-      setError("Escolhe a pontuação (0 a 10).");
-      return;
-    }
-    setBusy(true);
-    setError(null);
-    const err = await post("/api/admin/ineficacias/occurrence", {
-      username,
-      occurredOn,
-      client,
-      what,
-      reason,
-      reasonOther,
-      shouldHave,
-      noticed,
-      points,
-      note,
-    });
-    setBusy(false);
-    if (err) {
-      setError(err);
-      return;
-    }
-    setWhat("");
-    setShouldHave("");
-    setClient("");
-    setPoints(null);
-    setNote("");
-    startTransition(() => router.refresh());
-  }
-
-  return (
-    <Panel icon={PlusCircle} title="Registar uma ocorrência pela direção" hint="Algo que não foi reportado, ou que a direção viu primeiro. Nasce já pontuada e o consultor vê-a no histórico dele.">
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <label>
-          <span className={LABEL}>Data em que ocorreu</span>
-          <input type="date" value={occurredOn} max={today} onChange={(e) => setOccurredOn(e.target.value)} className="modal-input mt-1 w-full text-[12.5px]" />
-        </label>
-        <label>
-          <span className={LABEL}>Cliente ou projeto</span>
-          <input type="text" value={client} maxLength={120} onChange={(e) => setClient(e.target.value)} placeholder="ou «Interno»" className="modal-input mt-1 w-full text-[12.5px]" />
-        </label>
-        <label className="sm:col-span-2">
-          <span className={LABEL}>O que aconteceu</span>
-          <textarea value={what} rows={2} maxLength={2000} onChange={(e) => setWhat(e.target.value)} className="modal-input mt-1 w-full resize-y text-[12.5px]" />
-        </label>
-        <label>
-          <span className={LABEL}>Motivo</span>
-          <select value={reason} onChange={(e) => setReason(e.target.value as IneficaciaReason)} className="modal-input mt-1 w-full text-[12.5px]">
-            {REASONS.map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.letter}) {r.label}
-              </option>
-            ))}
-          </select>
-          {reason === "outro" && (
-            <input type="text" value={reasonOther} maxLength={200} onChange={(e) => setReasonOther(e.target.value)} placeholder="Especifica" className="modal-input mt-1.5 w-full text-[12.5px]" />
-          )}
-        </label>
-        <label>
-          <span className={LABEL}>Quem deu pelo erro</span>
-          <select value={noticed} onChange={(e) => setNoticed(e.target.value as IneficaciaNoticed)} className="modal-input mt-1 w-full text-[12.5px]">
-            {NOTICED_OPTIONS.map((n) => (
-              <option key={n.id} value={n.id}>
-                {n.read}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="sm:col-span-2">
-          <span className={LABEL}>Como deveria ter sido feito (opcional)</span>
-          <textarea value={shouldHave} rows={2} maxLength={2000} onChange={(e) => setShouldHave(e.target.value)} className="modal-input mt-1 w-full resize-y text-[12.5px]" />
-        </label>
-      </div>
-      <div className="mt-3">
-        <span className={LABEL}>Pontuação</span>
-        <div className="mt-1.5">
-          <ScorePicker value={points} onChange={setPoints} />
-        </div>
-      </div>
-      <input type="text" value={note} maxLength={1000} onChange={(e) => setNote(e.target.value)} placeholder="Nota (opcional) — o consultor vê-a" className="modal-input mt-3 w-full text-[12.5px]" />
-      {error && <p className="mt-2 text-[11.5px] font-semibold text-rose-300">{error}</p>}
-      <button
-        type="button"
-        disabled={busy || what.trim().length < 10 || points === null}
-        onClick={() => void save()}
-        className="mt-3 inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-[12.5px] font-semibold text-white transition hover:brightness-110 disabled:opacity-50"
-        style={{ background: "var(--brand-gradient)" }}
-      >
-        {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <PlusCircle className="h-3.5 w-3.5" />}
-        Registar ocorrência
       </button>
     </Panel>
   );

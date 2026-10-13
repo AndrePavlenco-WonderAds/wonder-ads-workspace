@@ -2,7 +2,7 @@
 // chegam aqui, e nada do conteúdo vai para os logs.
 //
 // CHAVES:
-//   `ineficacias:report:<id>`           → um relatório semanal assinado. O
+//   `ineficacias:report:<id>`           → um relatório assinado. O
 //                                         conteúdo do consultor nunca muda
 //                                         depois da assinatura; a direção só
 //                                         acrescenta pontuações e a revisão.
@@ -10,10 +10,11 @@
 //                                         mais recente à cabeça).
 //   `ineficacias:ids`                   → ids de todos os relatórios (o índice
 //                                         da direção).
-//   `ineficacias:week:<username>:<W>`   → o id do relatório dessa semana. É
-//                                         escrito com NX ANTES do relatório —
-//                                         dois cliques em «Assinar» não dão
-//                                         dois relatórios da mesma semana.
+//   `ineficacias:nonce:<username>:<n>`  → a folha que já foi assinada (TTL 1
+//                                         dia). O consultor assina quantos
+//                                         relatórios quiser, quando quiser; isto
+//                                         só impede que um duplo clique (ou um
+//                                         reenvio da rede) dê dois relatórios.
 //   `ineficacias:counter`               → INCR atómico da referência humana
 //                                         (INE-2026-007).
 //   `ineficacias:ledger:<username>`     → os eventos da direção (medidas e
@@ -30,9 +31,8 @@ import {
   canonicalContent,
   deriveLedger,
   isISODate,
-  isWeekKey,
+  lisbonDateOf,
   occurrencesOf,
-  weekRange,
   NOTICED_OPTIONS,
   REASONS,
   MAX_POINTS,
@@ -55,7 +55,7 @@ import {
 const REPORT_PREFIX = "ineficacias:report:";
 const USER_PREFIX = "ineficacias:user:";
 const IDS_KEY = "ineficacias:ids";
-const WEEK_PREFIX = "ineficacias:week:";
+const NONCE_PREFIX = "ineficacias:nonce:";
 const COUNTER_KEY = "ineficacias:counter";
 const LEDGER_PREFIX = "ineficacias:ledger:";
 /** Teto de segurança para os mget. */
@@ -69,7 +69,7 @@ const newId = () => crypto.randomUUID();
 
 const reportKey = (id: string) => `${REPORT_PREFIX}${id}`;
 const userKey = (u: string) => `${USER_PREFIX}${u}`;
-const weekKey = (u: string, w: string) => `${WEEK_PREFIX}${u}:${w}`;
+const nonceKey = (u: string, n: string) => `${NONCE_PREFIX}${u}:${n}`;
 const ledgerKey = (u: string) => `${LEDGER_PREFIX}${u}`;
 
 function logError(what: string, err: unknown) {
@@ -139,7 +139,6 @@ export function sanitizeReport(raw: unknown): IneficaciaReport | null {
   const r = raw as Record<string, unknown>;
   if (typeof r.id !== "string" || !r.id) return null;
   if (typeof r.username !== "string" || !r.username) return null;
-  if (!isWeekKey(r.weekKey)) return null;
   const sig = (r.signature && typeof r.signature === "object" ? r.signature : {}) as Record<string, unknown>;
   const signature: IneficaciaSignature = {
     fullName: str(sig.fullName, 160),
@@ -149,7 +148,12 @@ export function sanitizeReport(raw: unknown): IneficaciaReport | null {
     userAgent: str(sig.userAgent, 400),
     hash: str(sig.hash, 64),
   };
-  const range = weekRange(r.weekKey)!;
+  const createdAt = num(r.createdAt);
+  const submittedOn = isISODate(r.submittedOn)
+    ? r.submittedOn
+    : signature.signedAt
+      ? lisbonDateOf(signature.signedAt)
+      : lisbonDateOf(createdAt || Date.now());
   const items = Array.isArray(r.items)
     ? r.items.map(sanitizeItem).filter((x): x is IneficaciaItem => x !== null)
     : [];
@@ -161,13 +165,10 @@ export function sanitizeReport(raw: unknown): IneficaciaReport | null {
     name: str(r.name, 120),
     role: str(r.role, 120),
     dept: str(r.dept, 60),
-    weekKey: r.weekKey,
-    weekStart: isISODate(r.weekStart) ? r.weekStart : range.start,
-    weekEnd: isISODate(r.weekEnd) ? r.weekEnd : range.end,
+    submittedOn,
     items,
-    noErrors: r.noErrors === true,
     signature,
-    createdAt: num(r.createdAt),
+    createdAt,
     review: sanitizeReview(r.review),
   };
 }
@@ -208,6 +209,9 @@ function sanitizeDirect(raw: unknown): DirectOccurrence | null {
     reason: REASON_IDS.has(str(d.reason)) ? (d.reason as IneficaciaReason) : "outro",
     reasonOther: str(d.reasonOther, 300),
     shouldHave: str(d.shouldHave),
+    // Registos anteriores à v77.90 não têm a «primeira vez» → não indicado.
+    firstTime: typeof d.firstTime === "boolean" ? d.firstTime : null,
+    lastTime: str(d.lastTime, 300),
     occurredOn: d.occurredOn,
     noticed: NOTICED_IDS.has(str(d.noticed)) ? (d.noticed as IneficaciaNoticed) : "equipa",
     score,
@@ -236,8 +240,8 @@ export type SubmitInput = {
   name: string;
   role: string;
   dept: string;
-  weekKey: string;
-  noErrors: boolean;
+  /** Identificador da folha no browser — um por folha preenchida. */
+  nonce: string;
   items: IneficaciaItem[];
   signature: Omit<IneficaciaSignature, "hash">;
 };
@@ -247,33 +251,28 @@ export type SubmitResult =
   | { ok: false; reason: "duplicate" };
 
 /** Grava um relatório assinado. O hash é calculado AQUI, sobre o conteúdo
- *  canónico, e fica dentro da assinatura. */
+ *  canónico, e fica dentro da assinatura. O consultor assina quantos
+ *  relatórios quiser; o `nonce` da folha só trava o MESMO envio duas vezes
+ *  (duplo clique, reenvio da rede). */
 export async function submitReport(input: SubmitInput): Promise<SubmitResult> {
   assertConfigured();
-  const range = weekRange(input.weekKey);
-  if (!range) throw new Error("Semana inválida.");
   const id = newId();
-  const wk = weekKey(input.username, input.weekKey);
-  // Uma semana, um relatório: o lock entra primeiro e só uma escrita ganha.
-  // Nasce com TTL e só fica permanente depois de o relatório e os índices
-  // existirem — se alguma escrita falhar pelo meio (ou a função morrer), o
-  // lock solta-se ou expira sozinho, em vez de deixar a semana «já
-  // submetida» para sempre sem relatório nenhum.
-  const locked = await kv.set(wk, id, { nx: true, ex: 120 });
-  if (locked !== "OK") return { ok: false, reason: "duplicate" };
+  const nk = nonceKey(input.username, input.nonce);
+  const fresh = await kv.set(nk, id, { nx: true, ex: 86_400 });
+  if (fresh !== "OK") return { ok: false, reason: "duplicate" };
 
   try {
+    const submittedOn = lisbonDateOf(input.signature.signedAt);
     const hash = sha256(
       canonicalContent({
         username: input.username,
-        weekKey: input.weekKey,
-        noErrors: input.noErrors,
+        submittedOn,
         items: input.items,
         fullName: input.signature.fullName,
       }),
     );
     const n = await kv.incr(COUNTER_KEY);
-    const year = input.signature.signedAt.slice(0, 4) || String(new Date().getUTCFullYear());
+    const year = submittedOn.slice(0, 4);
     const report: IneficaciaReport = {
       id,
       ref: `INE-${year}-${String(n).padStart(3, "0")}`,
@@ -282,11 +281,8 @@ export async function submitReport(input: SubmitInput): Promise<SubmitResult> {
       name: input.name,
       role: input.role,
       dept: input.dept,
-      weekKey: input.weekKey,
-      weekStart: range.start,
-      weekEnd: range.end,
+      submittedOn,
       items: input.items,
-      noErrors: input.noErrors,
       signature: { ...input.signature, hash },
       createdAt: Date.now(),
       review: null,
@@ -294,10 +290,11 @@ export async function submitReport(input: SubmitInput): Promise<SubmitResult> {
     await kv.set(reportKey(id), report);
     await kv.lpush(userKey(input.username), id);
     await kv.lpush(IDS_KEY, id);
-    await kv.persist(wk);
     return { ok: true, report };
   } catch (err) {
-    await kv.del(wk, reportKey(id)).catch(() => {});
+    // Falhou a meio: solta-se a folha (para poder tentar outra vez) e o
+    // registo meio-gravado.
+    await kv.del(nk, reportKey(id)).catch(() => {});
     throw err;
   }
 }
@@ -351,7 +348,7 @@ async function readMany(ids: string[]): Promise<IneficaciaReport[]> {
     if (r) out.push(r);
   }
   // Mais recentes primeiro — pela semana, e dentro da mesma pela assinatura.
-  out.sort((a, b) => b.weekKey.localeCompare(a.weekKey) || b.createdAt - a.createdAt);
+  out.sort((a, b) => b.createdAt - a.createdAt);
   return out;
 }
 
@@ -385,7 +382,7 @@ export async function listAllReports(): Promise<IneficaciaReport[]> {
 
 export type ScoreResult =
   | { ok: true; report: IneficaciaReport }
-  | { ok: false; reason: "not-found" | "no-item" | "unscored" };
+  | { ok: false; reason: "not-found" | "no-item" };
 
 /** A direção pontua uma ocorrência de um relatório. Quando todas ficam
  *  pontuadas, a revisão fecha-se sozinha. */
@@ -406,27 +403,6 @@ export async function scoreItem(
     if (!report.review && report.items.every((it) => it.score)) {
       report.review = { by: score.by, byName: score.byName, at, note: "" };
     }
-    await kv.set(reportKey(report.id), report);
-    return { ok: true, report } as const;
-  });
-}
-
-/** Marca um relatório como visto/revisto (para os «sem erros», ou para
- *  fechar com uma nota). */
-export async function markReviewed(
-  reportId: string,
-  by: { username: string; name: string },
-  note: string,
-): Promise<ScoreResult> {
-  assertConfigured();
-  return withLock(reportKey(reportId), async () => {
-    const report = await getReport(reportId);
-    if (!report) return { ok: false, reason: "not-found" } as const;
-    // Fechar a revisão com ocorrências por pontuar tirava-as da fila sem
-    // nunca entrarem no PA/NO — primeiro pontuam-se todas.
-    if (report.items.some((it) => !it.score)) return { ok: false, reason: "unscored" } as const;
-    report.review = { by: by.username, byName: by.name, at: Date.now(), note: note.slice(0, LIMITS.note.max) };
-    report.rev += 1;
     await kv.set(reportKey(report.id), report);
     return { ok: true, report } as const;
   });
@@ -533,8 +509,7 @@ export function verifyIntegrity(report: IneficaciaReport): boolean {
   const expected = sha256(
     canonicalContent({
       username: report.username,
-      weekKey: report.weekKey,
-      noErrors: report.noErrors,
+      submittedOn: report.submittedOn,
       items: report.items,
       fullName: report.signature.fullName,
     }),

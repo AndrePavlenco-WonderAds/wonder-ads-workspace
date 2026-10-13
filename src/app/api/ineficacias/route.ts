@@ -1,22 +1,22 @@
-// O relatório semanal de ineficácias do PRÓPRIO consultor.
+// O relatório de ineficácias do PRÓPRIO consultor — a qualquer hora.
 //   GET  → os relatórios dele + o estado (PA, NO, nível) — para a página se
 //          atualizar sem recarregar.
-//   POST { weekKey, noErrors, items[], declaration, signatureName }
+//   POST { nonce, items[], declaration, signatureName }
 //        → valida, assina (hash SHA-256 + IP + user-agent + hora UTC) e grava.
 //
 // A identidade vem SEMPRE da sessão, nunca do body. Um relatório é da pessoa
 // que o assina — com o «Ver como» ativo a rota recusa, e o nome escrito tem
-// de ser exatamente o nome completo registado na conta.
+// de ser exatamente o nome completo registado na conta. Não há limite de
+// relatórios: o `nonce` da folha só trava o mesmo envio duas vezes.
 
 import { NextResponse } from "next/server";
 import { getCurrentEmployee, isRealUserAdmin } from "@/lib/auth/server";
-import { INEFICACIAS_SINCE, ineficaciasAvailable } from "@/lib/ineficacias/access";
+import { ineficaciasAvailable } from "@/lib/ineficacias/access";
 import { fail, guardConsultantWrite, NO_STORE, requestFingerprint } from "@/lib/ineficacias/api-guard";
 import { loadConsultant, submitReport } from "@/lib/ineficacias/store";
 import {
   cleanItems,
   normalizeName,
-  reportableWeeks,
   validateReport,
   type IneficaciaItemDraft,
   type IneficaciaNoticed,
@@ -74,20 +74,16 @@ export async function POST(req: Request) {
   } catch {
     return fail("Pedido inválido.", 400);
   }
+  const nonce = text(body.nonce, 64).replace(/[^a-zA-Z0-9-]/g, "");
+  if (nonce.length < 8) return fail("Pedido inválido — recarrega a página.", 400);
   const draft: ReportDraft = {
-    weekKey: text(body.weekKey, 8),
-    noErrors: body.noErrors === true,
     items: Array.isArray(body.items) ? body.items.slice(0, 50).map(parseItem) : [],
     declaration: body.declaration === true,
     signatureName: text(body.signatureName, 200),
   };
 
   const today = todayLisbonISO();
-  // As semanas que ainda pode reportar: a corrente e a anterior, menos as
-  // que já assinou. O servidor é a fonte de verdade — o browser só espelha.
-  const already = new Set((await loadConsultant(actor.username, today)).reports.map((r) => r.weekKey));
-  const allowedWeeks = reportableWeeks(today, INEFICACIAS_SINCE).filter((w) => !already.has(w));
-  const problem = validateReport(draft, { todayISO: today, expectedName: fullName, allowedWeeks });
+  const problem = validateReport(draft, { todayISO: today, expectedName: fullName });
   if (problem) return fail(problem, 400);
 
   const { ip, userAgent } = await requestFingerprint();
@@ -97,8 +93,7 @@ export async function POST(req: Request) {
       name: actor.name,
       role: actor.role,
       dept: actor.dept,
-      weekKey: draft.weekKey,
-      noErrors: draft.noErrors,
+      nonce,
       items: cleanItems(draft.items, () => crypto.randomUUID()),
       signature: {
         fullName: normalizeName(draft.signatureName),
@@ -108,7 +103,7 @@ export async function POST(req: Request) {
         userAgent,
       },
     });
-    if (!result.ok) return fail("O relatório dessa semana já foi submetido.", 409);
+    if (!result.ok) return fail("Este relatório já foi submetido.", 409);
     // O aviso à direção: o sino deriva do registo (nada a enviar); o Slack é
     // um extra que nunca falha o pedido.
     void announceReportSubmitted(result.report).catch(() => {});

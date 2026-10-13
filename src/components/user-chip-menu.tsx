@@ -17,6 +17,7 @@ import {
   ChevronRight,
   ClipboardCheck,
   Eye,
+  FilePlus2,
   Gamepad2,
   Gauge,
   GraduationCap,
@@ -195,7 +196,7 @@ export function UserChipMenu({
   /** «O meu probation» — só enquanto o probation está a correr (ver
    *  `probationMenuView`); null esconde o item. */
   probation?: ProbationMenuView | null;
-  /** «Ineficácias» (v77.88) — o relatório semanal do próprio. `construction`
+  /** «Ineficácias» (v77.88) — o relatório do próprio. `construction`
    *  põe a pastilha «em construção» enquanto o módulo está fechado à equipa;
    *  null esconde o item (direção e viewers). */
   ineficacias?: IneficaciasMenuView | null;
@@ -487,7 +488,7 @@ export function UserChipMenu({
                     onPick={close}
                   />
                 )}
-                {/* Ineficácias (v77.88) — o relatório semanal do próprio, o
+                {/* Ineficácias (v77.88) — o relatório do próprio, o
                     PA/NO e a escala. Enquanto o módulo está fechado à equipa
                     leva a pastilha «em construção» e a página mostra o painel
                     de obras; a direção abre-o na mesma pelo «Ver como». */}
@@ -496,7 +497,7 @@ export function UserChipMenu({
                     href="/ineficacias"
                     icon={ListChecks}
                     label="Ineficácias"
-                    hint="Team Inefficiency · relatório semanal, PA e NO"
+                    hint="Team Inefficiency · reportar erros, PA e NO"
                     badge={ineficacias.construction ? "em construção" : undefined}
                     badgeTone="amber"
                     index={4}
@@ -550,6 +551,26 @@ export function UserChipMenu({
                     )}
                   </>
                 )}
+                {/* Ineficácias (v77.90) — a ação mais usada da direção fica
+                    logo a seguir ao «Ver como», em destaque: abre a folha
+                    RH-04 para registar uma ineficácia de um consultor. O
+                    painel da equipa vem logo por baixo. A página verifica
+                    isAdmin e cada API de /api/admin/ineficacias também. */}
+                {isAdmin && (
+                  <MenuLink
+                    href="/admin/ineficacias/registar"
+                    icon={FilePlus2}
+                    label="Registar ineficácia"
+                    hint="Erro de um consultor · gravidade e pontuação"
+                    tone="amber"
+                    highlight
+                    index={7}
+                    onPick={close}
+                  />
+                )}
+                {isAdmin && (
+                  <MenuLink href="/admin/ineficacias" icon={Gauge} label="Ineficácias — Direção" hint="Relatórios, pontuação e escala da equipa" tone="amber" index={8} onPick={close} />
+                )}
                 {/* Registar Falta — só o C-Level. O gate verdadeiro é o
                     layout de /admin (isAdmin) e a API volta a verificar. */}
                 {isAdmin && (
@@ -565,11 +586,6 @@ export function UserChipMenu({
                 )}
                 {isAdmin && (
                   <MenuLink href="/minigames" icon={Gamepad2} label="Mini-games" hint="Jogos de equipa ao vivo" tone="amber" index={10} onPick={close} />
-                )}
-                {/* Ineficácias da equipa (v77.88) — dados de RH: a página
-                    verifica isAdmin e cada API de /api/admin/ineficacias. */}
-                {isAdmin && (
-                  <MenuLink href="/admin/ineficacias" icon={Gauge} label="Ineficácias — Direção" hint="Relatórios semanais, pontuação e escala (RH)" tone="amber" index={11} onPick={close} />
                 )}
               </MenuSection>
             )}
@@ -648,6 +664,7 @@ function MenuLink({
   tone = "default",
   badge,
   badgeTone = "rose",
+  highlight = false,
   index,
   onPick,
 }: {
@@ -660,6 +677,8 @@ function MenuLink({
   badge?: string;
   /** Vermelho = há coisas por fazer; âmbar = informação («em construção»). */
   badgeTone?: "rose" | "amber";
+  /** Ação principal da secção — bloco com contorno, para se ver primeiro. */
+  highlight?: boolean;
   index: number;
   onPick: () => void;
 }) {
@@ -673,7 +692,7 @@ function MenuLink({
         tone === "amber"
           ? "hover:bg-amber-500/[0.08] focus-visible:bg-amber-500/[0.1]"
           : "hover:bg-white/[0.05] focus-visible:bg-white/[0.07]"
-      }`}
+      } ${highlight ? "my-0.5 border border-amber-400/30 bg-amber-400/[0.07] shadow-[0_8px_24px_-16px_rgba(251,191,36,0.8)] hover:border-amber-400/50" : ""}`}
     >
       <IconTile icon={icon} tone={tone} />
       <span className="min-w-0 flex-1">

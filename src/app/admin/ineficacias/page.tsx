@@ -1,21 +1,20 @@
 // Direção → Ineficácias: o painel da equipa. Os números do momento, a fila
 // de relatórios por rever (cada um com as ocorrências por pontuar), e a
-// tabela de consultores com o nível, o PA/NO contra o limiar e as semanas em
-// falta. Só SuperAdmin: a página verifica isAdmin ANTES de ler o KV (o
+// tabela de consultores com o nível, o PA/NO contra o limiar e o relógio dos
+// 30 dias. Só SuperAdmin: a página verifica isAdmin ANTES de ler o KV (o
 // layout de /admin sozinho não chega — ver feedback-layout-gate).
 
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, CheckCheck, ClipboardList, Gauge, Hourglass, Scale, Users } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCheck, ClipboardList, Gauge, Hourglass, Plus, Scale, Users } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { LevelChip } from "@/components/ineficacias/level-gauge";
-import { ScaleExplainer } from "@/components/ineficacias/scale-explainer";
 import { ReportStatusChip } from "@/components/ineficacias/report-view";
 import { getCurrentEmployee } from "@/lib/auth/server";
 import { listImpersonationTargets, viewerDeptOf } from "@/lib/auth/credentials";
 import { getTeamAvatar } from "@/lib/team-avatars";
-import { INEFICACIAS_OPEN_TO_TEAM, INEFICACIAS_SINCE } from "@/lib/ineficacias/access";
+import { INEFICACIAS_OPEN_TO_TEAM } from "@/lib/ineficacias/access";
 import { ineficaciasConfigured, loadTeam, type ConsultantBundle } from "@/lib/ineficacias/store";
-import { formatLisbonDateTime, missingWeeks, weekLabel, weekShort } from "@/lib/ineficacias/shared";
+import { formatISODayMonth, formatLisbonDateTime, inDaysLabel } from "@/lib/ineficacias/shared";
 import { todayLisbonISO } from "@/lib/probation/progress";
 
 export const dynamic = "force-dynamic";
@@ -68,14 +67,6 @@ export default async function IneficaciasAdminPage() {
   const unscored = allReports.reduce((s, x) => s + x.r.items.filter((it) => !it.score).length, 0);
   const pendingMeasures = bundles.filter((b) => b.bundle.state.pendingMeasure);
   const escalated = bundles.filter((b) => b.bundle.state.reached >= 1).length;
-  // Enquanto o módulo está fechado à equipa ninguém deve relatório nenhum —
-  // não se marcam semanas em falta.
-  const missingByUser = new Map(
-    bundles.map((b) => [
-      b.person.username,
-      INEFICACIAS_OPEN_TO_TEAM ? missingWeeks(new Set(b.bundle.reports.map((r) => r.weekKey)), today, INEFICACIAS_SINCE) : [],
-    ]),
-  );
 
   return (
     <PageShell>
@@ -91,17 +82,26 @@ export default async function IneficaciasAdminPage() {
             <span className="brand-gradient-text">Ineficácias da equipa</span>
           </h1>
           <p className="mt-1.5 max-w-[680px] text-[12.5px] leading-relaxed text-white/45">
-            Cada consultor assina um relatório por semana. Tu pontuas cada ocorrência de 0 a 10 — só depois entra no PA e
-            no NO dele — e registas as medidas quando a escala sobe de nível. Os contadores reiniciam a cada 1:1; o
-            nível é cumulativo.
+            Os consultores reportam os erros quando querem, num relatório assinado. Tu pontuas cada ocorrência de 0 a
+            10 — só depois entra no PA e no NO — e registas as medidas quando a escala sobe de nível.
           </p>
         </div>
-        {!INEFICACIAS_OPEN_TO_TEAM && (
+        <div className="flex flex-col items-end gap-2">
+          {!INEFICACIAS_OPEN_TO_TEAM && (
           <span className="inline-flex items-center gap-2 rounded-full border border-amber-400/30 bg-amber-400/10 px-3 py-1.5 text-[11px] font-semibold text-amber-200">
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-amber-300" />
             Em construção para os consultores — só a direção vê o módulo
           </span>
         )}
+          <Link
+            href="/admin/ineficacias/registar"
+            className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-[12.5px] font-semibold text-white shadow-[0_8px_22px_-8px_rgba(120,61,245,0.7)] transition hover:-translate-y-px"
+            style={{ background: "var(--brand-gradient)" }}
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Registar ineficácia
+          </Link>
+        </div>
       </header>
 
       {!ineficaciasConfigured && (
@@ -139,7 +139,6 @@ export default async function IneficaciasAdminPage() {
             {bundles.map(({ person, bundle }, i) => {
               const s = bundle.state;
               const last = bundle.reports[0];
-              const missing = missingByUser.get(person.username) ?? [];
               const pendingItems = bundle.reports.reduce((n, r) => n + r.items.filter((it) => !it.score).length, 0);
               return (
                 <Link
@@ -183,11 +182,11 @@ export default async function IneficaciasAdminPage() {
                   </span>
                   <span className="text-[11px] leading-snug text-white/45">
                     <span className="block">
-                      {last ? `Último: ${weekShort(last.weekKey)}` : "Sem relatórios"}
+                      {last ? `Último relatório: ${formatISODayMonth(last.submittedOn)}` : "Sem relatórios"}
                       {pendingItems ? <span className="text-amber-200"> · {pendingItems} por pontuar</span> : null}
                     </span>
-                    <span className={`block ${missing.length ? "text-rose-300/80" : "text-emerald-300/70"}`}>
-                      {missing.length ? `${missing.length} ${missing.length === 1 ? "semana em falta" : "semanas em falta"}` : "Semanas em dia"}
+                    <span className={`block ${s.clearsOn ? "text-[#c3aaff]/80" : "text-emerald-300/70"}`}>
+                      {s.clearsOn ? `Zera a ${formatISODayMonth(s.clearsOn)} · ${inDaysLabel(s.daysToClear)}` : "Contadores a zero"}
                     </span>
                   </span>
                   <span className="hidden items-center gap-2 sm:flex">
@@ -220,7 +219,7 @@ export default async function IneficaciasAdminPage() {
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-[12.5px] font-semibold text-white/85">{person.name}</span>
                       <span className="block truncate text-[11px] text-white/45">
-                        {r.ref} · {weekLabel(r.weekKey)} · {formatLisbonDateTime(r.signature.signedAt)}
+                        {r.ref} · {r.items.length} {r.items.length === 1 ? "ocorrência" : "ocorrências"} · {formatLisbonDateTime(r.signature.signedAt)}
                       </span>
                     </span>
                     <ReportStatusChip report={r} />
@@ -256,10 +255,6 @@ export default async function IneficaciasAdminPage() {
             </div>
           )}
         </aside>
-      </div>
-
-      <div className="animate-fade-up mt-10">
-        <ScaleExplainer />
       </div>
     </PageShell>
   );

@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.90",
+    date: "2026-10-13",
+    title: "Ineficácias — relatório a qualquer hora, relógio dos 30 dias e registo pela direção",
+    highlights: [
+      "**🕐 O consultor assina um relatório quando quiser.** Já não há semanas: a folha RH-03 está sempre aberta, com um erro já pronto a preencher, e no fim dá para «Assinar outro relatório». Cada erro pode ser dos últimos 30 dias; a declaração passa a «…reportei todos os erros de que tenho conhecimento».",
+      "**⏱️ Relógio dos 30 dias no medidor.** Um anel com os dias que faltam para o PA e o NO voltarem a zero sem novas ocorrências, a data exata, quanto vale a próxima a sair e uma linha com a saída de cada ocorrência. Explica também que um 1:1 de nível põe os contadores a zero e o nível se mantém.",
+      "**📝 «Registar ineficácia» no menu SuperAdmin, em destaque.** Abre a folha RH-04: escolher o consultor, o erro cometido, o motivo, se foi a primeira vez (e quando foi a última), quem deu pelo erro, a gravidade (baixo, médio, alto, crítico) e a pontuação exata — com o impacto na escala do consultor ao vivo antes de registar. Também há botão no painel da equipa e na ficha de cada consultor.",
+      "**🔔 O consultor é avisado no sino quando a direção lhe regista uma ineficácia** (quando o módulo abrir à equipa).",
+      "**🧹 Menos texto.** Saiu o bloco «Como funciona» das três páginas e a descrição do topo da página do consultor. Saíram as semanas em falta e os relatórios «sem erros».",
+    ],
+  },
+  {
     version: "77.89",
     date: "2026-10-13",
     title: "Menu do nome — secção «Apoio» com a Formação e o «Acionar o Botão»",

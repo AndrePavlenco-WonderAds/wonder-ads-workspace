@@ -1,15 +1,17 @@
 // Ineficácias — o que é partilhado entre o browser e o servidor: os tipos,
-// os catálogos (motivos, quem deu pelo erro, a escala 0–10), as semanas ISO,
-// a validação do relatório e a DERIVAÇÃO do estado de cada consultor (PA,
-// NO, nível, medida por aplicar). Puro: sem KV, sem relógio — o «hoje» entra
-// sempre por parâmetro, como no probation.
+// os catálogos (motivos, quem deu pelo erro, a escala 0–10), a validação do
+// relatório e a DERIVAÇÃO do estado de cada consultor (PA, NO, nível, medida
+// por aplicar, relógio dos 30 dias). Puro: sem KV, sem relógio — o «hoje»
+// entra sempre por parâmetro, como no probation.
 //
 // AS REGRAS (slides «As ineficácias — o que conta e quanto vale» + a resposta
 // da Beatriz no Slack, 2026-09-30):
 //   • Cada ocorrência vale de 0 a 10 pontos, dados pela DIREÇÃO depois de o
-//     consultor a reportar. Só uma ocorrência pontuada (> 0) entra nas contas.
+//     consultor a reportar (ou registados por ela). Só uma ocorrência
+//     pontuada (> 0) entra nas contas.
 //   • PA = soma dos pontos · NO = número de ocorrências, numa JANELA DE 30
-//     DIAS.
+//     DIAS: cada ocorrência conta durante 30 dias a partir do dia em que
+//     aconteceu. 30 dias sem novas ocorrências → contadores a zero.
 //   • Nível 1: PA ≥ 6 ou NO ≥ 3 → 1:1 com o líder direto, plano de 1 a 3 ações.
 //     Nível 2 (depois do 1): PA ≥ 6 ou NO ≥ 2 → 1:1 com o nível acima.
 //     Nível 3 (depois do 2): PA ≥ 6 ou NO ≥ 2 → probation.
@@ -19,6 +21,10 @@
 //     ineficácias» — o histórico fica.
 //   • Uma falha grave sozinha pode levar a probation direto — a direção pode
 //     definir o nível à mão, com justificação.
+//
+// O RELATÓRIO (v77.90): o consultor assina um relatório quando quiser, a
+// qualquer hora, com um ou mais erros — já não há semanas nem relatórios
+// «sem erros».
 
 /* ------------------------------------------------------------------ */
 /*  Catálogos                                                          */
@@ -86,15 +92,6 @@ export function bandOf(points: number): ScoreBand {
 
 export const MAX_POINTS = 10;
 
-/** Exemplos de ineficácias — dos slides, para o explicador. */
-export const EXAMPLES = [
-  "prazo não cumprido sem aviso",
-  "trabalho devolvido para refazer mais do que 1x",
-  "erro visível para o cliente",
-  "processo não seguido",
-  "report não enviado",
-];
-
 export type IneficaciaLevel = 0 | 1 | 2 | 3;
 
 export const LEVELS: { level: IneficaciaLevel; title: string; rule: string; measure: string }[] = [
@@ -106,13 +103,18 @@ export const LEVELS: { level: IneficaciaLevel; title: string; rule: string; meas
 
 export const WINDOW_DAYS = 30;
 
+/** Até quantos dias atrás o consultor pode reportar um erro — a janela das
+ *  contas. A direção pode registar até um ano atrás. */
+export const REPORT_LOOKBACK_DAYS = 30;
+export const DIRECT_LOOKBACK_DAYS = 365;
+
 /** O limiar para ATINGIR um nível (a partir do anterior). */
 export function thresholdToReach(level: 1 | 2 | 3): { pa: number; no: number } {
   return { pa: 6, no: level === 1 ? 3 : 2 };
 }
 
 export const DECLARATION_TEXT =
-  "Declaro que este relatório é completo e verdadeiro e que reportei todos os erros de que tenho conhecimento nesta semana.";
+  "Declaro que este relatório é completo e verdadeiro e que reportei todos os erros de que tenho conhecimento.";
 
 /* ------------------------------------------------------------------ */
 /*  Tipos dos registos                                                 */
@@ -132,7 +134,7 @@ export type IneficaciaItemDraft = {
   firstTime: boolean | null;
   /** Quando foi a última vez (obrigatório quando não é a primeira). */
   lastTime: string;
-  /** Data em que ocorreu — dentro da semana do relatório (YYYY-MM-DD). */
+  /** Data em que ocorreu — nos últimos 30 dias (YYYY-MM-DD). */
   occurredOn: string;
   /** Se percebeu o erro que cometeu. */
   noticed: IneficaciaNoticed | null;
@@ -190,17 +192,13 @@ export type IneficaciaReport = {
   name: string;
   role: string;
   dept: string;
-  /** «2026-W42». */
-  weekKey: string;
-  weekStart: string;
-  weekEnd: string;
+  /** O dia da assinatura em Lisboa (YYYY-MM-DD). */
+  submittedOn: string;
   items: IneficaciaItem[];
-  /** O consultor declarou que não houve erros nesta semana. */
-  noErrors: boolean;
   signature: IneficaciaSignature;
   createdAt: number;
   /** A revisão da direção — fica preenchida quando todas as ocorrências têm
-   *  pontuação (ou quando um relatório sem erros é marcado como visto). */
+   *  pontuação. */
   review: IneficaciaReview | null;
 };
 
@@ -213,6 +211,10 @@ export type DirectOccurrence = {
   reason: IneficaciaReason;
   reasonOther: string;
   shouldHave: string;
+  /** Primeira vez que o consultor cometeu este erro? null = não indicado
+   *  (registos anteriores à v77.90). */
+  firstTime: boolean | null;
+  lastTime: string;
   occurredOn: string;
   noticed: IneficaciaNoticed;
   score: IneficaciaScore;
@@ -261,7 +263,6 @@ export type Occurrence = {
   source: "report" | "direcao";
   reportId: string | null;
   reportRef: string | null;
-  weekKey: string;
   occurredOn: string;
   what: string;
   client: string;
@@ -275,7 +276,7 @@ export type Occurrence = {
 };
 
 /* ------------------------------------------------------------------ */
-/*  Datas e semanas ISO                                                */
+/*  Datas                                                               */
 /* ------------------------------------------------------------------ */
 
 const DAY_MS = 86_400_000;
@@ -312,86 +313,42 @@ export function formatISODate(iso: string): string {
   return `${d}/${m}/${y}`;
 }
 
-/** DD/MM — para intervalos curtos. */
+/** DD/MM — para datas próximas. */
 export function formatISODayMonth(iso: string): string {
   if (!isISODate(iso)) return "—";
   const [, m, d] = iso.split("-");
   return `${d}/${m}`;
 }
 
-/** A segunda-feira da semana de `iso`. */
-export function mondayOf(iso: string): string {
-  const ms = utcMs(iso);
-  const dow = (new Date(ms).getUTCDay() + 6) % 7; // 0 = segunda
-  return fromMs(ms - dow * DAY_MS);
+/** O dia (YYYY-MM-DD) em Lisboa de um instante. */
+export function lisbonDateOf(v: number | string | Date): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Lisbon" }).format(new Date(v));
 }
 
-/** Semana ISO-8601 (a quinta-feira decide o ano). */
-export function isoWeekOf(iso: string): { year: number; week: number } {
-  const monday = utcMs(mondayOf(iso));
-  const thursday = new Date(monday + 3 * DAY_MS);
-  const year = thursday.getUTCFullYear();
-  const week1Monday = utcMs(mondayOf(fromMs(Date.UTC(year, 0, 4))));
-  const week = Math.round((monday - week1Monday) / (7 * DAY_MS)) + 1;
-  return { year, week };
+/** «13/10/2026 11:19» — data e hora em Lisboa, igual no servidor (UTC) e no
+ *  browser. A assinatura guarda-se em UTC e mostra-se em hora local. */
+export function formatLisbonDateTime(v: string | number | null | undefined): string {
+  if (v === null || v === undefined || v === "") return "—";
+  const d = new Date(v);
+  if (Number.isNaN(d.getTime())) return "—";
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/Lisbon",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(d);
+  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "";
+  return `${get("day")}/${get("month")}/${get("year")} ${get("hour")}:${get("minute")}`;
 }
 
-/** «2026-W42». */
-export function weekKeyOf(iso: string): string {
-  const { year, week } = isoWeekOf(iso);
-  return `${year}-W${String(week).padStart(2, "0")}`;
-}
-
-export function isWeekKey(v: unknown): v is string {
-  return typeof v === "string" && /^\d{4}-W\d{2}$/.test(v) && weekRange(v) !== null;
-}
-
-/** Segunda e domingo de uma semana ISO, ou null se a chave não existe. */
-export function weekRange(weekKey: string): { start: string; end: string } | null {
-  const m = /^(\d{4})-W(\d{2})$/.exec(weekKey ?? "");
-  if (!m) return null;
-  const year = Number(m[1]);
-  const week = Number(m[2]);
-  if (week < 1 || week > 53) return null;
-  const week1Monday = utcMs(mondayOf(fromMs(Date.UTC(year, 0, 4))));
-  const start = fromMs(week1Monday + (week - 1) * 7 * DAY_MS);
-  // A semana 53 só existe nos anos em que a quinta-feira ainda cai nesse ano.
-  if (isoWeekOf(start).year !== year) return null;
-  return { start, end: addDaysISO(start, 6) };
-}
-
-/** «Semana 42 · 06/10 – 12/10/2026». */
-export function weekLabel(weekKey: string): string {
-  const r = weekRange(weekKey);
-  if (!r) return weekKey;
-  const n = Number(weekKey.slice(-2));
-  return `Semana ${n} · ${formatISODayMonth(r.start)} – ${formatISODate(r.end)}`;
-}
-
-/** «Semana 42» — a forma curta. */
-export function weekShort(weekKey: string): string {
-  const r = weekRange(weekKey);
-  if (!r) return weekKey;
-  return `Semana ${Number(weekKey.slice(-2))}`;
-}
-
-/** A semana anterior. */
-export function previousWeekKey(weekKey: string): string {
-  const r = weekRange(weekKey);
-  return r ? weekKeyOf(addDaysISO(r.start, -7)) : weekKey;
-}
-
-/** As semanas que um consultor pode reportar hoje: a anterior (para quem
- *  fecha a semana à segunda de manhã) e a corrente — mas esta só a partir de
- *  sexta-feira, porque um relatório assinado à segunda trancava a semana
- *  antes de ela acontecer. Mais atrás não — um relatório com quinze dias de
- *  atraso já não é «desta semana». `sinceISO` corta as semanas anteriores à
- *  abertura do módulo: ninguém devia relatório nenhum antes disso. */
-export function reportableWeeks(todayISO: string, sinceISO: string | null = null): string[] {
-  const current = weekKeyOf(todayISO);
-  const dow = (new Date(utcMs(todayISO)).getUTCDay() + 6) % 7; // 0 = segunda
-  const keys = dow >= 4 ? [previousWeekKey(current), current] : [previousWeekKey(current)];
-  return keys.filter((k) => !sinceISO || (weekRange(k)?.end ?? "") >= sinceISO);
+/** «daqui a 12 dias» · «amanhã» · «hoje». */
+export function inDaysLabel(days: number): string {
+  if (days <= 0) return "hoje";
+  if (days === 1) return "amanhã";
+  return `daqui a ${days} dias`;
 }
 
 /* ------------------------------------------------------------------ */
@@ -420,12 +377,16 @@ export function nameMatches(typed: string, expected: string): boolean {
   return normalizeName(typed) === normalizeName(expected) && normalizeName(expected).length > 0;
 }
 
+/** O intervalo de datas que o consultor pode indicar hoje. */
+export function reportDateRange(todayISO: string): { min: string; max: string } {
+  return { min: addDaysISO(todayISO, -REPORT_LOOKBACK_DAYS), max: todayISO };
+}
+
 /** O problema de uma ocorrência, ou null se está completa. `n` é o número
  *  humano (1-based) para a mensagem. */
 export function validateItem(
   item: IneficaciaItemDraft,
-  week: { start: string; end: string },
-  todayISO: string,
+  range: { min: string; max: string },
   n: number,
 ): string | null {
   const tag = `Erro ${n}:`;
@@ -442,36 +403,29 @@ export function validateItem(
   if (item.firstTime === false && item.lastTime.trim().length < LIMITS.lastTime.min) return `${tag} indica quando foi a última vez.`;
   if (item.lastTime.length > LIMITS.lastTime.max) return `${tag} o «quando foi a última vez» é demasiado longo.`;
   if (!isISODate(item.occurredOn)) return `${tag} indica a data em que ocorreu.`;
-  if (item.occurredOn < week.start || item.occurredOn > week.end) return `${tag} a data tem de estar dentro da semana (${formatISODate(week.start)} a ${formatISODate(week.end)}).`;
-  if (item.occurredOn > todayISO) return `${tag} a data não pode ser no futuro.`;
+  if (item.occurredOn > range.max) return `${tag} a data não pode ser no futuro.`;
+  if (item.occurredOn < range.min) return `${tag} só podes reportar erros dos últimos ${REPORT_LOOKBACK_DAYS} dias (desde ${formatISODate(range.min)}).`;
   if (!item.noticed) return `${tag} diz se percebeste o erro que cometeste.`;
   return null;
 }
 
 export type ReportDraft = {
-  weekKey: string;
-  noErrors: boolean;
   items: IneficaciaItemDraft[];
   declaration: boolean;
   signatureName: string;
 };
 
 /** O problema do relatório inteiro, ou null. `expectedName` é o nome
- *  completo registado na conta; `allowedWeeks` as semanas ainda por
- *  reportar. */
+ *  completo registado na conta. */
 export function validateReport(
   draft: ReportDraft,
-  ctx: { todayISO: string; expectedName: string; allowedWeeks: string[] },
+  ctx: { todayISO: string; expectedName: string },
 ): string | null {
-  if (!isWeekKey(draft.weekKey)) return "Escolhe a semana do relatório.";
-  if (!ctx.allowedWeeks.includes(draft.weekKey)) return "Essa semana já não pode ser reportada (ou já foi).";
-  const week = weekRange(draft.weekKey)!;
-  if (week.start > ctx.todayISO) return "Essa semana ainda não começou.";
-  if (draft.noErrors && draft.items.length > 0) return "Marcaste «sem erros» mas há erros descritos — tira a marca ou apaga-os.";
-  if (!draft.noErrors && draft.items.length === 0) return "Descreve pelo menos um erro, ou marca «Não cometi nenhum erro de que tenha conhecimento esta semana».";
+  if (draft.items.length === 0) return "Descreve pelo menos um erro.";
   if (draft.items.length > LIMITS.maxItems) return `No máximo ${LIMITS.maxItems} erros por relatório.`;
+  const range = reportDateRange(ctx.todayISO);
   for (let i = 0; i < draft.items.length; i += 1) {
-    const p = validateItem(draft.items[i], week, ctx.todayISO, i + 1);
+    const p = validateItem(draft.items[i], range, i + 1);
     if (p) return p;
   }
   if (!draft.declaration) return "Confirma a declaração antes de assinar.";
@@ -508,8 +462,7 @@ export function cleanItems(items: IneficaciaItemDraft[], newId: () => string): I
  *  tem de ser reproduzível para verificar a integridade mais tarde. */
 export function canonicalContent(r: {
   username: string;
-  weekKey: string;
-  noErrors: boolean;
+  submittedOn: string;
   items: Pick<
     IneficaciaItem,
     "what" | "client" | "reason" | "reasonOther" | "shouldHave" | "firstTime" | "lastTime" | "occurredOn" | "noticed"
@@ -517,10 +470,9 @@ export function canonicalContent(r: {
   fullName: string;
 }): string {
   return JSON.stringify({
-    v: 1,
+    v: 2,
     username: r.username,
-    weekKey: r.weekKey,
-    noErrors: r.noErrors,
+    submittedOn: r.submittedOn,
     declaration: DECLARATION_TEXT,
     fullName: normalizeName(r.fullName),
     items: r.items.map((it) => ({
@@ -550,7 +502,6 @@ export function occurrencesOf(reports: IneficaciaReport[], ledger: IneficaciaLed
         source: "report",
         reportId: r.id,
         reportRef: r.ref,
-        weekKey: r.weekKey,
         occurredOn: it.occurredOn,
         what: it.what,
         client: it.client,
@@ -570,15 +521,14 @@ export function occurrencesOf(reports: IneficaciaReport[], ledger: IneficaciaLed
       source: "direcao",
       reportId: null,
       reportRef: null,
-      weekKey: weekKeyOf(d.occurredOn),
       occurredOn: d.occurredOn,
       what: d.what,
       client: d.client,
       reason: d.reason,
       reasonOther: d.reasonOther,
       shouldHave: d.shouldHave,
-      firstTime: null,
-      lastTime: "",
+      firstTime: d.firstTime,
+      lastTime: d.lastTime,
       noticed: d.noticed,
       score: d.score,
     });
@@ -623,14 +573,18 @@ export type LedgerState = {
   next: { level: 1 | 2 | 3; pa: number; no: number } | null;
   /** As ocorrências que contam na janela corrente. */
   counted: Occurrence[];
+  /** O RELÓGIO DOS 30 DIAS — quando cada ocorrência que conta deixa de
+   *  contar (o 31.º dia depois de acontecer), agrupado por dia. */
+  expiries: { on: string; points: number; count: number }[];
+  /** O dia em que, sem novas ocorrências, o PA e o NO voltam a zero. null
+   *  quando já estão a zero. */
+  clearsOn: string | null;
+  /** Dias até `clearsOn` (0 quando já estão a zero). */
+  daysToClear: number;
 };
 
 function eventOrder(a: LedgerEvent, b: LedgerEvent): number {
   return a.at.localeCompare(b.at) || a.createdAt - b.createdAt;
-}
-
-function levelAfter(e: LedgerEvent): IneficaciaLevel {
-  return e.level;
 }
 
 /** PA/NO das ocorrências com `occurredOn` em (from, to]. */
@@ -645,7 +599,7 @@ function tally(occ: Occurrence[], fromExclusive: string | null, toInclusive: str
 export function deriveLedger(occurrences: Occurrence[], events: LedgerEvent[], todayISO: string): LedgerState {
   const sorted = events.slice().sort(eventOrder).filter((e) => e.at <= todayISO);
   const phaseEvent = sorted.at(-1) ?? null;
-  const level: IneficaciaLevel = phaseEvent ? levelAfter(phaseEvent) : 0;
+  const level: IneficaciaLevel = phaseEvent ? phaseEvent.level : 0;
   // As ocorrências DO DIA da reunião ficam na fase anterior: a fase nova
   // começa no dia seguinte.
   const phaseStart = phaseEvent ? addDaysISO(phaseEvent.at, 1) : null;
@@ -678,6 +632,20 @@ export function deriveLedger(occurrences: Occurrence[], events: LedgerEvent[], t
     }
   }
 
+  // O relógio: cada ocorrência que conta sai no 31.º dia.
+  const byDay = new Map<string, { points: number; count: number }>();
+  for (const o of current.list) {
+    const on = addDaysISO(o.occurredOn, WINDOW_DAYS);
+    const cur = byDay.get(on) ?? { points: 0, count: 0 };
+    cur.points += o.score?.points ?? 0;
+    cur.count += 1;
+    byDay.set(on, cur);
+  }
+  const expiries = [...byDay.entries()]
+    .map(([on, v]) => ({ on, ...v }))
+    .sort((a, b) => a.on.localeCompare(b.on));
+  const clearsOn = expiries.at(-1)?.on ?? null;
+
   return {
     level,
     reached: pendingMeasure ? pendingMeasure.level : level,
@@ -690,58 +658,13 @@ export function deriveLedger(occurrences: Occurrence[], events: LedgerEvent[], t
     unscored,
     next,
     counted: current.list.slice().sort((a, b) => b.occurredOn.localeCompare(a.occurredOn)),
+    expiries,
+    clearsOn,
+    daysToClear: clearsOn ? Math.max(0, daysBetweenISO(todayISO, clearsOn)) : 0,
   };
-}
-
-/** As semanas em falta de um consultor, da mais recente para a mais antiga,
- *  olhando `lookback` semanas para trás (a corrente conta só a partir de
- *  sexta-feira — antes disso ainda está a decorrer). */
-export function missingWeeks(
-  reportedWeekKeys: Set<string>,
-  todayISO: string,
-  sinceISO: string | null,
-  lookback = 8,
-): string[] {
-  const out: string[] = [];
-  const currentKey = weekKeyOf(todayISO);
-  const dow = (new Date(utcMs(todayISO)).getUTCDay() + 6) % 7; // 0 = segunda
-  let key = dow >= 4 ? currentKey : previousWeekKey(currentKey);
-  for (let i = 0; i < lookback; i += 1) {
-    const r = weekRange(key);
-    if (!r) break;
-    if (sinceISO && r.end < sinceISO) break;
-    if (!reportedWeekKeys.has(key)) out.push(key);
-    key = previousWeekKey(key);
-  }
-  return out;
-}
-
-/** A primeira semana que o consultor ainda pode reportar (anterior antes da
- *  corrente), ou null quando está tudo em dia. */
-export function nextReportableWeek(reportedWeekKeys: Set<string>, todayISO: string): string | null {
-  return reportableWeeks(todayISO).find((k) => !reportedWeekKeys.has(k)) ?? null;
 }
 
 /** Nome próprio. */
 export function firstName(full: string): string {
   return (full ?? "").trim().split(/\s+/)[0] ?? "";
-}
-
-/** «13/10/2026 11:19» — data e hora em Lisboa, igual no servidor (UTC) e no
- *  browser. A assinatura guarda-se em UTC e mostra-se em hora local. */
-export function formatLisbonDateTime(v: string | number | null | undefined): string {
-  if (v === null || v === undefined || v === "") return "—";
-  const d = new Date(v);
-  if (Number.isNaN(d.getTime())) return "—";
-  const parts = new Intl.DateTimeFormat("en-GB", {
-    timeZone: "Europe/Lisbon",
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).formatToParts(d);
-  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "";
-  return `${get("day")}/${get("month")}/${get("year")} ${get("hour")}:${get("minute")}`;
 }

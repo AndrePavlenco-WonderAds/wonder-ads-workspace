@@ -1,6 +1,6 @@
 // Ineficácias — a página do PRÓPRIO consultor: o seu lugar na escala (nível,
-// PA, NO), o relatório semanal para assinar, e o histórico dos seus
-// relatórios com a pontuação da direção. Nunca vê os dos colegas: a única
+// PA, NO, relógio dos 30 dias), o relatório para assinar a qualquer hora, e
+// o histórico dos seus relatórios com a pontuação da direção. Nunca vê os dos colegas: a única
 // leitura é o índice do próprio username.
 //
 // Enquanto o módulo está «em construção» (lib/ineficacias/access.ts), quem
@@ -13,12 +13,11 @@ import { AlertTriangle, History, ShieldAlert } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { UnderConstruction } from "@/components/ineficacias/under-construction";
 import { LevelGauge } from "@/components/ineficacias/level-gauge";
-import { ScaleExplainer } from "@/components/ineficacias/scale-explainer";
 import { ReportView, ScoreBadge } from "@/components/ineficacias/report-view";
-import { WeeklyReportForm, type WeekOption } from "@/components/ineficacias/weekly-report-form";
+import { IneficaciaReportForm } from "@/components/ineficacias/report-form";
 import { getCurrentEmployee, getImpersonation, isRealUserAdmin } from "@/lib/auth/server";
 import { findEmployeeByUsername } from "@/lib/auth/credentials";
-import { INEFICACIAS_SINCE, ineficaciasAvailable } from "@/lib/ineficacias/access";
+import { ineficaciasAvailable } from "@/lib/ineficacias/access";
 import { loadConsultant } from "@/lib/ineficacias/store";
 import {
   formatISODate,
@@ -26,9 +25,6 @@ import {
   LEVELS,
   noticedLabel,
   reasonLabel,
-  reportableWeeks,
-  weekLabel,
-  weekRange,
 } from "@/lib/ineficacias/shared";
 import { todayLisbonISO } from "@/lib/probation/progress";
 
@@ -62,10 +58,6 @@ export default async function IneficaciasPage() {
   const { state, reports, ledger } = bundle;
   const row = findEmployeeByUsername(me.username);
   const fullName = row?.fullName ?? me.name;
-  const reported = new Set(reports.map((r) => r.weekKey));
-  const weeks: WeekOption[] = reportableWeeks(today, INEFICACIAS_SINCE)
-    .filter((k) => !reported.has(k))
-    .map((k) => ({ key: k, label: weekLabel(k), ...weekRange(k)! }));
   const direct = ledger.direct.slice().sort((a, b) => b.occurredOn.localeCompare(a.occurredOn));
 
   return (
@@ -76,10 +68,6 @@ export default async function IneficaciasPage() {
           <h1 className="mt-1 text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">
             <span className="brand-gradient-text">Ineficácias</span>
           </h1>
-          <p className="mt-1.5 max-w-[640px] text-[12.5px] leading-relaxed text-white/45">
-            O teu relatório semanal, o PA e o NO, e onde estás na escala de incumprimento. Cada ocorrência que reportas é
-            pontuada pela direção antes de entrar nas contas. Só tu e a direção veem esta página.
-          </p>
         </div>
       </header>
 
@@ -117,17 +105,12 @@ export default async function IneficaciasPage() {
       )}
 
       <section className="animate-fade-up mt-10">
-        <WeeklyReportForm
+        <IneficaciaReportForm
           employee={{ username: me.username, name: me.name, fullName, role: me.role, dept: me.dept }}
-          weeks={weeks}
           today={today}
           readOnly={Boolean(impersonation)}
         />
       </section>
-
-      <div className="animate-fade-up mt-10">
-        <ScaleExplainer />
-      </div>
 
       {direct.length > 0 && (
         <section className="animate-fade-up mt-10" aria-label="Ocorrências registadas pela direção">
@@ -144,7 +127,9 @@ export default async function IneficaciasPage() {
                 <header className="flex flex-wrap items-center justify-between gap-2">
                   <p className="text-[12.5px] text-white/80">
                     <span className="font-semibold">{d.client}</span>
-                    <span className="text-white/40"> · {formatISODate(d.occurredOn)} · {reasonLabel(d.reason, d.reasonOther)} · {noticedLabel(d.noticed)}</span>
+                    <span className="text-white/40"> · {formatISODate(d.occurredOn)} · {reasonLabel(d.reason, d.reasonOther)} · {noticedLabel(d.noticed)}
+                      {d.firstTime === true ? " · primeira vez" : d.firstTime === false ? ` · repetido (última vez: ${d.lastTime || "—"})` : ""}
+                    </span>
                   </p>
                   <ScoreBadge score={d.score} size="sm" />
                 </header>
