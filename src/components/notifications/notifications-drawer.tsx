@@ -894,6 +894,9 @@ function ConfirmClearButton({
 const RESOLVE_LABELS: Record<string, string> = {
   "absence-decision": "Entendido",
   "falta-record": "Entendido",
+  "ineficacias-reviewed": "Entendido",
+  "ineficacias-level": "Entendido",
+  "ineficacias-measure-done": "Entendido",
   "seo-review-followup": "Já fiz o follow-up",
   "seo-review-call": "Confirmo que telefonei ao cliente",
 };

@@ -64,7 +64,9 @@ const INTERNAL_PREFIXES = [
   "/medalhas",
   "/minigames",
   "/probation",
+  "/ineficacias",
   "/api/absences",
+  "/api/ineficacias",
   "/api/tools",
   "/api/medalhas",
   "/api/minigames",
@@ -303,6 +305,11 @@ export const config = {
     // confirmar com «Ver como».
     "/probation/:path*",
     "/api/probation/:path*",
+    // Ineficácias (v77.88) — o relatório semanal do próprio e o seu PA/NO.
+    // Sessão para tudo; a página e a API decidem o «Em construção» e o
+    // «Ver como» (só leitura); o painel da direção vive em /admin.
+    "/ineficacias/:path*",
+    "/api/ineficacias/:path*",
     // Comercial — templates, upload e decisões das propostas. Sessão para
     // tudo; a escrita exige poder editar o departamento (gate abaixo).
     "/api/commercial/:path*",

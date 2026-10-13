@@ -20,6 +20,7 @@ import {
   CalendarOff,
   ArrowRight,
   UserMinus,
+  Gauge,
 } from "lucide-react";
 
 type ChoiceBlock = {
@@ -42,6 +43,7 @@ export function AdminLanding({
   notificationsCount,
   absencesPendingCount,
   faltasCount,
+  ineficaciasPendingCount,
 }: {
   projectsCount: number;
   employeesCount: number;
@@ -54,6 +56,8 @@ export function AdminLanding({
   absencesPendingCount: number;
   /** Faltas lançadas pelo C-Level, no total. */
   faltasCount: number;
+  /** Relatórios de ineficácias por rever (v77.88). */
+  ineficaciasPendingCount: number;
 }) {
 
   const blocks: ChoiceBlock[] = [
@@ -101,6 +105,15 @@ export function AdminLanding({
       count: faltasCount,
       badge: faltasCount === 1 ? "falta" : "faltas",
       Icon: UserMinus,
+    },
+    {
+      href: "/admin/ineficacias",
+      title: "Ineficácias",
+      blurb:
+        "Team Inefficiency — o relatório semanal que cada consultor assina (RH-03), a pontuação de 0 a 10 de cada ocorrência, o PA e o NO na janela de 30 dias e a escala de níveis até ao probation. Os contadores reiniciam a cada 1:1; o nível é cumulativo.",
+      count: ineficaciasPendingCount,
+      badge: ineficaciasPendingCount === 1 ? "por rever" : "por rever",
+      Icon: Gauge,
     },
     {
       href: "/admin/roadmaps",

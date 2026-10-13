@@ -29,6 +29,8 @@ import {
   EMPLOYEE_CREDENTIALS,
   findEmployeeByUsername,
   isAdminUsername,
+  listImpersonationTargets,
+  viewerDeptOf,
 } from "@/lib/auth/credentials";
 import {
   getStartDates,
@@ -62,6 +64,15 @@ import {
   type PublishedPlan,
 } from "@/lib/probation/published";
 import { todayLisbonISO } from "@/lib/probation/progress";
+import { INEFICACIAS_OPEN_TO_TEAM, INEFICACIAS_SINCE } from "@/lib/ineficacias/access";
+import { loadConsultant, loadTeam } from "@/lib/ineficacias/store";
+import {
+  LEVELS as INEFICACIA_LEVELS,
+  formatISODate as ineficaciaDate,
+  reportableWeeks,
+  weekKeyOf,
+  weekLabel,
+} from "@/lib/ineficacias/shared";
 import { getProposal, proposalPath } from "@/lib/proposals";
 import { getNotificationRules } from "@/lib/notifications/rules-store";
 import {
@@ -1162,6 +1173,173 @@ async function probationNotifications(
   });
 }
 
+const INEFICACIAS_RECENT_MS = 14 * 24 * 60 * 60 * 1000;
+
+/** Ineficácias (v77.88) → sino. Derivado do registo em cada leitura, como as
+ *  ausências e o probation — nada é «enviado» que possa falhar:
+ *   • ao CONSULTOR (só quando o módulo está aberto à equipa): o relatório
+ *     semanal em falta (a semana anterior sempre; a corrente a partir de
+ *     sexta-feira), os relatórios pontuados nos últimos 14 dias, o nível
+ *     atingido com medida por aplicar e o 1:1 registado nos últimos 14 dias.
+ *   • à DIREÇÃO: cada relatório por rever (com as ocorrências por pontuar) e
+ *     cada nível atingido com medida por aplicar. Sai sozinho quando a
+ *     revisão fecha / a medida é registada. */
+async function ineficaciasNotifications(
+  viewer: Viewer,
+  state: NotificationState,
+  now: Date,
+): Promise<UserNotification[]> {
+  const out: UserNotification[] = [];
+  const today = todayLisbonISO(now);
+  const admin = isAdminUsername(viewer.username);
+
+  if (!admin && !isViewerProfile(viewer.username) && INEFICACIAS_OPEN_TO_TEAM) {
+    try {
+      const b = await loadConsultant(viewer.username, today);
+      const reported = new Set(b.reports.map((r) => r.weekKey));
+      // As mesmas semanas que a folha oferece (a anterior sempre; a corrente
+      // a partir de sexta; nada antes da abertura do módulo) — a primeira
+      // por assinar é o lembrete.
+      const dueKey = reportableWeeks(today, INEFICACIAS_SINCE).find((k) => !reported.has(k)) ?? null;
+      if (dueKey) {
+        const id = `ineficacias-weekly:${dueKey}`;
+        const late = dueKey !== weekKeyOf(today);
+        out.push({
+          id,
+          ruleId: "ineficacias-weekly",
+          title: late ? "📝 O relatório de ineficácias da semana passada está em falta" : "📝 Relatório semanal de ineficácias",
+          body: `${weekLabel(dueKey)}. Zero ou mais erros, cada um com o motivo, como devias ter feito e a data — e a tua assinatura no fim. Reportar é o que protege.`,
+          periodLabel: weekLabel(dueKey),
+          dueAt: now.getTime(),
+          client: null,
+          actionLabel: "Assinar o relatório",
+          actionHref: "/ineficacias",
+          resolved: Boolean(state[id]),
+          resolvedAt: state[id]?.resolvedAt ?? null,
+        });
+      }
+      for (const r of b.reports) {
+        if (!r.review || now.getTime() - r.review.at > INEFICACIAS_RECENT_MS) continue;
+        const id = `ineficacias-reviewed:${r.id}:${r.review.at}`;
+        const pts = r.items.reduce((s, it) => s + (it.score?.points ?? 0), 0);
+        const counted = r.items.filter((it) => (it.score?.points ?? 0) > 0).length;
+        out.push({
+          id,
+          ruleId: "ineficacias-reviewed",
+          title: r.noErrors ? `✅ A direção confirmou o teu relatório ${r.ref}` : `🎯 A direção pontuou o teu relatório ${r.ref}`,
+          body: r.noErrors
+            ? `${weekLabel(r.weekKey)} — sem erros declarados.`
+            : `${weekLabel(r.weekKey)} — ${r.items.length} ${r.items.length === 1 ? "ocorrência" : "ocorrências"}, ${pts} ${pts === 1 ? "ponto" : "pontos"} no total. ${
+                counted === 0
+                  ? "Nenhuma entrou nas contas (0 pontos = não conta)."
+                  : counted === r.items.length
+                    ? "Já contam no teu PA e NO."
+                    : `${counted} ${counted === 1 ? "entrou" : "entraram"} no teu PA e NO; as de 0 pontos não contam.`
+              }`,
+          periodLabel: weekLabel(r.weekKey),
+          dueAt: r.review.at,
+          client: null,
+          actionLabel: "Ver a pontuação",
+          actionHref: "/ineficacias",
+          resolved: Boolean(state[id]),
+          resolvedAt: state[id]?.resolvedAt ?? null,
+        });
+      }
+      const pm = b.state.pendingMeasure;
+      if (pm) {
+        const id = `ineficacias-level:${pm.level}:${pm.since}`;
+        out.push({
+          id,
+          ruleId: "ineficacias-level",
+          title: `⚖️ Atingiste o nível ${pm.level} da escala de incumprimento`,
+          body: `A ${ineficaciaDate(pm.since)}, com PA ${pm.pa} · NO ${pm.no}. ${INEFICACIA_LEVELS[pm.level].measure} A direção vai marcar contigo.`,
+          periodLabel: `Nível ${pm.level}`,
+          dueAt: Date.parse(`${pm.since}T09:00:00Z`) || now.getTime(),
+          client: null,
+          actionLabel: "Ver a minha escala",
+          actionHref: "/ineficacias",
+          resolved: Boolean(state[id]),
+          resolvedAt: state[id]?.resolvedAt ?? null,
+        });
+      }
+      for (const e of b.ledger.events) {
+        if (e.kind !== "measure" || now.getTime() - e.createdAt > INEFICACIAS_RECENT_MS) continue;
+        const id = `ineficacias-measure-done:${e.id}`;
+        out.push({
+          id,
+          ruleId: "ineficacias-measure-done",
+          title: e.level === 3 ? "📋 O teu probation foi iniciado" : `🤝 O 1:1 do nível ${e.level} ficou registado`,
+          body: `${ineficaciaDate(e.at)}${e.conductedBy ? ` · com ${e.conductedBy}` : ""}${e.actions.length ? ` · ${e.actions.length} ${e.actions.length === 1 ? "ação combinada" : "ações combinadas"}` : ""}. Os contadores recomeçaram no dia seguinte.`,
+          periodLabel: `Nível ${e.level}`,
+          dueAt: e.createdAt,
+          client: null,
+          actionLabel: "Ver a minha escala",
+          actionHref: "/ineficacias",
+          resolved: Boolean(state[id]),
+          resolvedAt: state[id]?.resolvedAt ?? null,
+        });
+      }
+    } catch (err) {
+      console.error("Notificações: ineficácias (consultor) falhou:", err instanceof Error ? err.message : "erro");
+    }
+  }
+
+  if (!admin) return out;
+
+  try {
+    const people = listImpersonationTargets().filter((p) => !p.isAdmin && !viewerDeptOf(p.username));
+    const team = await loadTeam(people.map((p) => p.username), today);
+    for (const p of people) {
+      const b = team.get(p.username);
+      if (!b) continue;
+      const who = firstName(p.name) || p.name;
+      const href = `/admin/ineficacias/${encodeURIComponent(p.username)}`;
+      for (const r of b.reports) {
+        if (r.review) continue;
+        const id = `ineficacias-review:${r.id}`;
+        const unscored = r.items.filter((it) => !it.score).length;
+        out.push({
+          id,
+          ruleId: "ineficacias-review",
+          title: r.noErrors ? `📝 ${who} assinou o relatório ${r.ref} — sem erros` : `📝 ${who} assinou o relatório ${r.ref} — ${unscored} ${unscored === 1 ? "ocorrência" : "ocorrências"} por pontuar`,
+          body: `${weekLabel(r.weekKey)}. ${r.noErrors ? "Confirma a receção." : "Dá a pontuação de 0 a 10 a cada ocorrência — só depois entram no PA e no NO."}`,
+          periodLabel: `Ineficácias · ${who}`,
+          dueAt: r.createdAt,
+          client: null,
+          actionLabel: r.noErrors ? "Confirmar receção" : "Pontuar",
+          actionHref: `${href}?relatorio=${r.id}`,
+          resolved: Boolean(state[id]),
+          resolvedAt: state[id]?.resolvedAt ?? null,
+        });
+      }
+      const pm = b.state.pendingMeasure;
+      if (pm) {
+        const id = `ineficacias-measure:${p.username}:${pm.level}:${pm.since}`;
+        out.push({
+          id,
+          ruleId: "ineficacias-measure",
+          title: `⚖️ ${who} atingiu o nível ${pm.level} — medida por aplicar`,
+          body: `A ${ineficaciaDate(pm.since)}, com PA ${pm.pa} · NO ${pm.no}. ${INEFICACIA_LEVELS[pm.level].measure} Regista a reunião para os contadores reiniciarem.`,
+          periodLabel: `Ineficácias · ${who}`,
+          dueAt: Date.parse(`${pm.since}T09:00:00Z`) || now.getTime(),
+          client: null,
+          actionLabel: "Registar a medida",
+          actionHref: `${href}#medida`,
+          resolved: Boolean(state[id]),
+          resolvedAt: state[id]?.resolvedAt ?? null,
+        });
+      }
+    }
+  } catch (err) {
+    console.error("Notificações: ineficácias (direção) falhou:", err instanceof Error ? err.message : "erro");
+  }
+
+  return out.sort((a, b) => {
+    if (a.resolved !== b.resolved) return a.resolved ? 1 : -1;
+    return b.dueAt - a.dueAt;
+  });
+}
+
 /** Um cliente clicou em «Confirmar a renovação» numa proposta pública. Vai
  *  ao sino do SuperAdmin (o André) à cabeça de tudo: é dinheiro à espera de
  *  resposta, não um lembrete de calendário. */
@@ -1243,7 +1421,7 @@ export async function getUserNotifications(
       ? ((await seoBooksByConsultant(needsStartDates)).get(viewer.name) ?? [])
       : [];
 
-  const [ending, situationPoints, nps, absences, reviews, proposals, probation] =
+  const [ending, situationPoints, nps, absences, reviews, proposals, probation, ineficacias] =
     await Promise.all([
       roadmapEndingNotifications(viewer, book, state, now),
       situationPointNotifications(viewer, state, now),
@@ -1252,6 +1430,7 @@ export async function getUserNotifications(
       pendingReviewNotifications(book, state, now),
       proposalConfirmationNotifications(viewer, state),
       probationNotifications(viewer, state, now),
+      ineficaciasNotifications(viewer, state, now),
     ]);
 
   // Ausências à cabeça: um pedido por decidir (ou uma resposta por ler) é
@@ -1262,6 +1441,7 @@ export async function getUserNotifications(
     return [
       ...proposals,
       ...probation,
+      ...ineficacias,
       ...absences,
       ...reviews,
       ...nps,
@@ -1274,6 +1454,7 @@ export async function getUserNotifications(
   return [
     ...proposals,
     ...probation,
+    ...ineficacias,
     ...absences,
     ...reviews,
     ...nps,

@@ -13,6 +13,19 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.88",
+    date: "2026-10-13",
+    title: "Ineficácias (Team Inefficiency) — relatório semanal, PA/NO e escala de níveis",
+    highlights: [
+      "**📝 Novo bloco «Ineficácias» no menu do nome (secção Pessoal).** Cada consultor assina um relatório semanal (formulário RH-03): zero ou mais erros, cada um com o que aconteceu e em que cliente, o motivo (A falta de atenção · B falta de protocolo · C falta de tempo · D outro), como deveria ter feito, se foi a primeira vez (e quando foi a última), a data dentro da semana e se se apercebeu do erro. No fim, a declaração obrigatória e o nome completo exatamente como está na conta — «Assinar e submeter» guarda a hora (UTC), o utilizador, o IP, o browser e uma impressão digital SHA-256 do conteúdo, e a vista de leitura mostra «Assinado por X em dd/mm/aaaa HH:mm».",
+      "**🎯 Os pontos são dados pela direção antes de entrarem na calculadora.** O André (COO) pontua cada ocorrência de 0 a 10 (0 = não conta; 1–3 baixo, 4–6 médio, 7–8 alto, 9–10 crítico). Só depois disso a ocorrência entra no PA (soma dos pontos) e no NO (número de ocorrências) do consultor, numa janela de 30 dias.",
+      "**📈 A escala de incumprimento, derivada e não gravada.** Nível 1 com PA ≥ 6 ou NO ≥ 3; nível 2 e 3 com PA ≥ 6 ou NO ≥ 2 depois do anterior. Quando a direção regista o 1:1 (com as 1 a 3 ações) os contadores reiniciam no dia seguinte e o nível fica — linear e cumulativo, as ineficácias não se apagam. A direção pode ainda definir o nível à mão com justificação (falha grave → probation direto) e registar ocorrências que o consultor não reportou.",
+      "**🔔 Sino e Slack.** A direção recebe no sino cada relatório submetido (com as ocorrências por pontuar) e cada nível atingido com medida por aplicar; o consultor recebe o lembrete do relatório em falta (a partir de sexta), o aviso de que foi pontuado e o do nível atingido. Com `SLACK_INEFICACIAS_WEBHOOK_URL` na Vercel, cada submissão avisa também num canal privado.",
+      "**🏗️ Em construção para os consultores.** Enquanto o André afina o sistema, o item do menu leva a pastilha «em construção» e a página mostra o painel de obras; só a direção vê o módulo (e a vista do consultor pelo «Ver como»). O interruptor é `INEFICACIAS_OPEN_TO_TEAM` em `lib/ineficacias/access.ts`.",
+      "**🛡️ Privacidade.** O consultor só lê o seu próprio índice — nunca vê os relatórios dos colegas. As páginas e as APIs da direção verificam `isAdmin` elas próprias (não dependem do layout) e o «Ver como» continua só de leitura.",
+    ],
+  },
+  {
     version: "77.87",
     date: "2026-10-13",
     title: "«Pedir apoio ao Team Leader» no menu do nome",

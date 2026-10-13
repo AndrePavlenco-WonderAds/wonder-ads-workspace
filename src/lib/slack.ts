@@ -104,6 +104,25 @@ export async function postTeamWinToSlack(payload: {
   return postToWebhook(teamWinsWebhookUrl(), payload);
 }
 
+/** Webhook do canal privado das ineficácias (v77.88) — o aviso à direção
+ *  quando um consultor assina o relatório semanal. Sem fallback para outros
+ *  canais (são dados de RH); sem SLACK_INEFICACIAS_WEBHOOK_URL no Vercel,
+ *  cada post é um no-op silencioso e o sino continua a avisar. */
+function ineficaciasWebhookUrl(): string | undefined {
+  return process.env.SLACK_INEFICACIAS_WEBHOOK_URL || undefined;
+}
+
+export function ineficaciasSlackConfigured(): boolean {
+  return Boolean(ineficaciasWebhookUrl());
+}
+
+export async function postIneficaciasToSlack(payload: {
+  text: string;
+  blocks?: unknown[];
+}): Promise<boolean> {
+  return postToWebhook(ineficaciasWebhookUrl(), payload);
+}
+
 async function postToWebhook(
   url: string | undefined,
   payload: { text: string; blocks?: unknown[] },

@@ -18,10 +18,12 @@ import {
   ClipboardCheck,
   Eye,
   Gamepad2,
+  Gauge,
   GraduationCap,
   KeyRound,
   LayoutDashboard,
   LifeBuoy,
+  ListChecks,
   Loader2,
   LogOut,
   Medal,
@@ -46,6 +48,12 @@ export type ImpersonationTarget = {
   tags?: string[];
   /** Retrato de public/team/avatar, ou null → inicial. */
   avatar?: string | null;
+};
+
+/** O item «Ineficácias» do menu (v77.88). */
+export type IneficaciasMenuView = {
+  /** O módulo ainda está fechado à equipa — pastilha «em construção». */
+  construction: boolean;
 };
 
 /** «Número do dia» do consultor SEO visto — já resolvido no servidor, para
@@ -153,6 +161,7 @@ export function UserChipMenu({
   viewingAs = null,
   dailyNumber = null,
   probation = null,
+  ineficacias = null,
   people = [],
 }: {
   name: string;
@@ -187,6 +196,10 @@ export function UserChipMenu({
   /** «O meu probation» — só enquanto o probation está a correr (ver
    *  `probationMenuView`); null esconde o item. */
   probation?: ProbationMenuView | null;
+  /** «Ineficácias» (v77.88) — o relatório semanal do próprio. `construction`
+   *  põe a pastilha «em construção» enquanto o módulo está fechado à equipa;
+   *  null esconde o item (direção e viewers). */
+  ineficacias?: IneficaciasMenuView | null;
   people?: ImpersonationTarget[];
 }) {
   const router = useRouter();
@@ -475,6 +488,22 @@ export function UserChipMenu({
                     onPick={close}
                   />
                 )}
+                {/* Ineficácias (v77.88) — o relatório semanal do próprio, o
+                    PA/NO e a escala. Enquanto o módulo está fechado à equipa
+                    leva a pastilha «em construção» e a página mostra o painel
+                    de obras; a direção abre-o na mesma pelo «Ver como». */}
+                {ineficacias && (
+                  <MenuLink
+                    href="/ineficacias"
+                    icon={ListChecks}
+                    label="Ineficácias"
+                    hint="Team Inefficiency · relatório semanal, PA e NO"
+                    badge={ineficacias.construction ? "em construção" : undefined}
+                    badgeTone="amber"
+                    index={4}
+                    onPick={close}
+                  />
+                )}
                 {/* Pedir Ausência — a folha de RH e o histórico dos próprios
                     pedidos vivem em /ausencias. */}
                 <MenuLink href="/ausencias" icon={CalendarOff} label="Pedir Ausência" hint="Férias, consultas e outras ausências" index={5} onPick={close} />
@@ -535,6 +564,11 @@ export function UserChipMenu({
                 )}
                 {isAdmin && (
                   <MenuLink href="/minigames" icon={Gamepad2} label="Mini-games" hint="Jogos de equipa ao vivo" tone="amber" index={10} onPick={close} />
+                )}
+                {/* Ineficácias da equipa (v77.88) — dados de RH: a página
+                    verifica isAdmin e cada API de /api/admin/ineficacias. */}
+                {isAdmin && (
+                  <MenuLink href="/admin/ineficacias" icon={Gauge} label="Ineficácias — Direção" hint="Relatórios semanais, pontuação e escala (RH)" tone="amber" index={11} onPick={close} />
                 )}
               </MenuSection>
             )}
@@ -606,6 +640,7 @@ function MenuLink({
   hint,
   tone = "default",
   badge,
+  badgeTone = "rose",
   index,
   onPick,
 }: {
@@ -616,6 +651,8 @@ function MenuLink({
   tone?: "default" | "amber";
   /** Pastilha ao lado do título — «2 por ler» no probation. */
   badge?: string;
+  /** Vermelho = há coisas por fazer; âmbar = informação («em construção»). */
+  badgeTone?: "rose" | "amber";
   index: number;
   onPick: () => void;
 }) {
@@ -636,7 +673,11 @@ function MenuLink({
         <span className={`flex items-center gap-1.5 text-[12.5px] font-medium ${tone === "amber" ? "text-amber-100/90" : "text-white/85 group-hover:text-white"}`}>
           {label}
           {badge && (
-            <span className="rounded-full bg-rose-500/90 px-1.5 py-px text-[9.5px] font-semibold leading-tight text-white">
+            <span
+              className={`rounded-full px-1.5 py-px text-[9.5px] font-semibold leading-tight ${
+                badgeTone === "amber" ? "border border-amber-400/40 bg-amber-400/15 text-amber-200" : "bg-rose-500/90 text-white"
+              }`}
+            >
               {badge}
             </span>
           )}

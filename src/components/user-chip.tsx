@@ -33,6 +33,7 @@ import {
 import { listPublishedForUser } from "@/lib/probation/store";
 import { probationMenuView } from "@/lib/probation/menu";
 import { todayLisbonISO } from "@/lib/probation/progress";
+import { INEFICACIAS_OPEN_TO_TEAM } from "@/lib/ineficacias/access";
 import { UserChipMenu, type DailyNumberView } from "./user-chip-menu";
 
 export async function UserChip() {
@@ -112,6 +113,12 @@ export async function UserChip() {
       viewingAs={session.as ?? null}
       dailyNumber={dailyNumber}
       probation={probation}
+      // Ineficácias (v77.88) — item para os consultores; a direção tem o seu
+      // na secção SuperAdmin e os viewers não o veem. Sem leitura nenhuma:
+      // o estado (PA/NO) vive na página e no sino, não no menu.
+      ineficacias={
+        !display.isAdmin && !display.viewerOf ? { construction: !INEFICACIAS_OPEN_TO_TEAM } : null
+      }
       people={
         realIsAdmin
           ? listImpersonationTargets().map((p) => ({

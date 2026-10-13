@@ -11,6 +11,7 @@ import { buildAdminClientViews } from "@/lib/admin-roster";
 import { getOnboardingClients } from "@/lib/onboarding-clients-store";
 import { getNotificationRules } from "@/lib/notifications/rules-store";
 import { listFaltas, listPendingAbsences } from "@/lib/absences-store";
+import { listAllReports } from "@/lib/ineficacias/store";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -93,6 +94,14 @@ export default async function AdminPage() {
     /* KV unavailable — show 0 */
   }
 
+  // Ineficácias (v77.88) — relatórios semanais ainda por rever pela direção.
+  let ineficaciasPendingCount = 0;
+  try {
+    ineficaciasPendingCount = (await listAllReports()).filter((r) => !r.review).length;
+  } catch {
+    /* KV unavailable — show 0 */
+  }
+
   return (
     <PageShell>
       <Link
@@ -111,6 +120,7 @@ export default async function AdminPage() {
         notificationsCount={notificationsCount}
         absencesPendingCount={absencesPendingCount}
         faltasCount={faltasCount}
+        ineficaciasPendingCount={ineficaciasPendingCount}
       />
     </PageShell>
   );
