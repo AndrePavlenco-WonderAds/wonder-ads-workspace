@@ -13,6 +13,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.87",
+    date: "2026-10-13",
+    title: "«Pedir apoio ao Team Leader» no menu do nome",
+    highlights: [
+      "**🛟 Bloco novo «Apoio» no menu do nome.** Os consultores têm um botão «Pedir apoio ao Team Leader», logo a seguir a «Pessoal», que abre numa aba nova a página de marcações do André Pavlenco no Google Calendar — escolhem a hora e a conversa fica marcada.",
+      "**👤 Só para os consultores.** Os SuperAdmins não o veem (são eles que dão o apoio) e os perfis só de leitura também não. Com o «Ver como» ativo, o menu mostra-o como o vê a pessoa escolhida.",
+    ],
+  },
+  {
     version: "77.86",
     date: "2026-10-12",
     title: "Board SEO — os clientes do onboarding já não desaparecem quando a base de dados falha",

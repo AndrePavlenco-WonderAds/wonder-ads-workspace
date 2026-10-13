@@ -11,6 +11,7 @@ import { useRouter } from "next/navigation";
 import type { ProbationMenuView } from "@/lib/probation/menu";
 import {
   ArrowLeft,
+  ArrowUpRight,
   CalendarOff,
   ChevronDown,
   ChevronRight,
@@ -20,6 +21,7 @@ import {
   GraduationCap,
   KeyRound,
   LayoutDashboard,
+  LifeBuoy,
   Loader2,
   LogOut,
   Medal,
@@ -29,6 +31,10 @@ import {
   Users,
   type LucideIcon,
 } from "lucide-react";
+
+/** «Pedir apoio» (v77.87) — página de marcações do Google Calendar do
+ *  André Pavlenco, o team leader dos consultores. */
+const SUPPORT_BOOKING_URL = "https://calendar.app.google/v7aHJquTD3KkWeKBA";
 
 export type ImpersonationTarget = {
   username: string;
@@ -475,6 +481,15 @@ export function UserChipMenu({
               </MenuSection>
             )}
 
+            {/* Pedir apoio (v77.87) — os consultores marcam uma conversa com
+                o team leader. Os SuperAdmins não o veem: são eles que dão o
+                apoio. Segue a pessoa VISTA, como o resto do menu. */}
+            {!isViewer && !isAdmin && (
+              <MenuSection label="Apoio">
+                <SupportLink index={6} onPick={close} />
+              </MenuSection>
+            )}
+
             {(canImpersonate || isAdmin) && (
               <MenuSection label="SuperAdmin" tone="amber">
                 {/* Ver como — só para quem fez login como SuperAdmin. */}
@@ -508,18 +523,18 @@ export function UserChipMenu({
                 {/* Registar Falta — só o C-Level. O gate verdadeiro é o
                     layout de /admin (isAdmin) e a API volta a verificar. */}
                 {isAdmin && (
-                  <MenuLink href="/admin/faltas" icon={UserMinus} label="Registar Falta" hint="Faltas da equipa (RH)" tone="amber" index={6} onPick={close} />
+                  <MenuLink href="/admin/faltas" icon={UserMinus} label="Registar Falta" hint="Faltas da equipa (RH)" tone="amber" index={7} onPick={close} />
                 )}
                 {/* Plano de Probation — dados de RH: o gate verdadeiro é o
                     layout de /admin e cada API de /api/admin/probation. */}
                 {isAdmin && (
-                  <MenuLink href="/admin/probation" icon={ClipboardCheck} label="Plano de Probation" hint="Planos de 30 dias e avaliações (RH)" tone="amber" index={7} onPick={close} />
+                  <MenuLink href="/admin/probation" icon={ClipboardCheck} label="Plano de Probation" hint="Planos de 30 dias e avaliações (RH)" tone="amber" index={8} onPick={close} />
                 )}
                 {isAdmin && (
-                  <MenuLink href="/formacao/admin" icon={LayoutDashboard} label="Formação — Superadmin" hint="Inscrições, conteúdos e resultados" tone="amber" index={8} onPick={close} />
+                  <MenuLink href="/formacao/admin" icon={LayoutDashboard} label="Formação — Superadmin" hint="Inscrições, conteúdos e resultados" tone="amber" index={9} onPick={close} />
                 )}
                 {isAdmin && (
-                  <MenuLink href="/minigames" icon={Gamepad2} label="Mini-games" hint="Jogos de equipa ao vivo" tone="amber" index={9} onPick={close} />
+                  <MenuLink href="/minigames" icon={Gamepad2} label="Mini-games" hint="Jogos de equipa ao vivo" tone="amber" index={10} onPick={close} />
                 )}
               </MenuSection>
             )}
@@ -630,6 +645,32 @@ function MenuLink({
       </span>
       <ChevronRight className="h-3.5 w-3.5 -translate-x-1 text-white/30 opacity-0 transition duration-300 group-hover:translate-x-0 group-hover:opacity-100 group-focus-visible:translate-x-0 group-focus-visible:opacity-100" />
     </Link>
+  );
+}
+
+/** «Pedir apoio ao Team Leader» — um bloco com o gradiente da marca, para
+ *  se distinguir dos atalhos: não é uma página da app, abre a marcação no
+ *  Google Calendar numa aba nova. */
+function SupportLink({ index, onPick }: { index: number; onPick: () => void }) {
+  return (
+    <a
+      href={SUPPORT_BOOKING_URL}
+      target="_blank"
+      rel="noopener noreferrer"
+      role="menuitem"
+      onClick={onPick}
+      style={{ animationDelay: `${40 + index * 25}ms` }}
+      className="chip-item-in group flex items-center gap-3 rounded-xl border border-[#783DF5]/30 bg-[linear-gradient(135deg,rgba(52,62,215,0.14),rgba(120,61,245,0.14)_54%,rgba(197,53,201,0.14))] px-2.5 py-2.5 transition hover:border-[#783DF5]/60 hover:shadow-[0_10px_30px_-14px_rgba(120,61,245,0.9)] focus-visible:border-[#783DF5]/60 focus-visible:outline-none"
+    >
+      <span className="brand-gradient-bg flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.25)] transition duration-300 group-hover:scale-105">
+        <LifeBuoy className="h-4 w-4" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-[12.5px] font-semibold text-white">Pedir apoio ao Team Leader</span>
+        <span className="block truncate text-[10.5px] text-white/55">Marca uma conversa com o André</span>
+      </span>
+      <ArrowUpRight className="h-3.5 w-3.5 shrink-0 text-white/45 transition duration-300 group-hover:-translate-y-px group-hover:translate-x-px group-hover:text-white" />
+    </a>
   );
 }
 
