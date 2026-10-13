@@ -13,6 +13,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.89",
+    date: "2026-10-13",
+    title: "Menu do nome — secção «Apoio» com a Formação e o «Acionar o Botão»",
+    highlights: [
+      "**🎓 A Formação mudou-se para «Apoio».** Sai dos Atalhos e fica na secção Apoio, por cima do botão de pedir apoio — para toda a gente com sessão (a direção inclusive).",
+      "**🔘 «Acionar o Botão».** O pedido de apoio ao team leader passa a chamar-se só isso, com um ícone de botão de pressão e o mesmo azulejo e cores dos restantes itens — sem o bloco em gradiente. Continua a abrir a marcação no Google Calendar numa aba nova, só para os consultores.",
+    ],
+  },
+  {
     version: "77.88",
     date: "2026-10-13",
     title: "Ineficácias (Team Inefficiency) — relatório semanal, PA/NO e escala de níveis",

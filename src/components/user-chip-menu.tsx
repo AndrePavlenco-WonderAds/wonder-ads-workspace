@@ -22,7 +22,6 @@ import {
   GraduationCap,
   KeyRound,
   LayoutDashboard,
-  LifeBuoy,
   ListChecks,
   Loader2,
   LogOut,
@@ -461,7 +460,7 @@ export function UserChipMenu({
                     que se abre mais vezes. Para toda a gente com sessão: a
                     página é de leitura e só o SuperAdmin edita. */}
                 <MenuLink href="/tools" icon={KeyRound} label="Tools" hint="Acessos às ferramentas da agência" index={0} onPick={close} />
-                <MenuLink href="/formacao" icon={GraduationCap} label="Formação" hint="Aulas, testes e exames" index={1} onPick={close} />
+                {/* A Formação mudou-se para a secção «Apoio» (v77.89). */}
                 <MenuLink href="/medalhas" icon={Medal} label="Medalhas" hint="A tua galeria e as três do topo" index={2} onPick={close} />
                 {/* Weekly Reports — trabalho semanal sobre a carteira toda,
                     não uma ação de um cliente. Só para quem edita SEO; a
@@ -510,12 +509,14 @@ export function UserChipMenu({
               </MenuSection>
             )}
 
-            {/* Pedir apoio (v77.87) — os consultores marcam uma conversa com
-                o team leader. Os SuperAdmins não o veem: são eles que dão o
+            {/* Apoio — a Formação (aulas, testes e exames) e, para os
+                consultores, o botão de pedir apoio ao team leader (v77.87,
+                v77.89). Os SuperAdmins não veem o botão: são eles que dão o
                 apoio. Segue a pessoa VISTA, como o resto do menu. */}
-            {!isViewer && !isAdmin && (
+            {!isViewer && (
               <MenuSection label="Apoio">
-                <SupportLink index={6} onPick={close} />
+                <MenuLink href="/formacao" icon={GraduationCap} label="Formação" hint="Aulas, testes e exames" index={6} onPick={close} />
+                {!isAdmin && <SupportLink index={7} onPick={close} />}
               </MenuSection>
             )}
 
@@ -619,7 +620,13 @@ function MenuSection({
   );
 }
 
-function IconTile({ icon: Icon, tone = "default" }: { icon: LucideIcon; tone?: "default" | "amber" }) {
+function IconTile({
+  icon: Icon,
+  tone = "default",
+}: {
+  icon: LucideIcon | React.ComponentType<{ className?: string }>;
+  tone?: "default" | "amber";
+}) {
   return (
     <span
       className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border transition duration-300 group-hover:scale-105 ${
@@ -689,9 +696,38 @@ function MenuLink({
   );
 }
 
-/** «Pedir apoio ao Team Leader» — um bloco com o gradiente da marca, para
- *  se distinguir dos atalhos: não é uma página da app, abre a marcação no
- *  Google Calendar numa aba nova. */
+/** O ícone do «botão» — um botão de pressão visto de cima: a base, o anel e
+ *  o tampo. Desenhado à mão porque o lucide não tem um botão físico; segue
+ *  o traço de 2 px dos restantes ícones para encaixar no mesmo azulejo. */
+function PushButtonIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+      className={className}
+    >
+      {/* base */}
+      <path d="M5 17.5h14" />
+      <path d="M7 17.5v1.5a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-1.5" />
+      {/* anel */}
+      <ellipse cx="12" cy="13.5" rx="6.5" ry="3.5" />
+      {/* tampo */}
+      <ellipse cx="12" cy="9.5" rx="4" ry="2" fill="currentColor" fillOpacity={0.25} />
+      <path d="M8 9.5v3.2" />
+      <path d="M16 9.5v3.2" />
+    </svg>
+  );
+}
+
+/** «Acionar o Botão» (v77.89) — o pedido de apoio ao team leader. Não é uma
+ *  página da app: abre a marcação no Google Calendar numa aba nova. Com o
+ *  mesmo material dos outros itens (azulejo e linha iguais); só a seta de
+ *  «sai da app» o distingue. */
 function SupportLink({ index, onPick }: { index: number; onPick: () => void }) {
   return (
     <a
@@ -701,16 +737,14 @@ function SupportLink({ index, onPick }: { index: number; onPick: () => void }) {
       role="menuitem"
       onClick={onPick}
       style={{ animationDelay: `${40 + index * 25}ms` }}
-      className="chip-item-in group flex items-center gap-3 rounded-xl border border-[#783DF5]/30 bg-[linear-gradient(135deg,rgba(52,62,215,0.14),rgba(120,61,245,0.14)_54%,rgba(197,53,201,0.14))] px-2.5 py-2.5 transition hover:border-[#783DF5]/60 hover:shadow-[0_10px_30px_-14px_rgba(120,61,245,0.9)] focus-visible:border-[#783DF5]/60 focus-visible:outline-none"
+      className="chip-item-in group flex items-center gap-3 rounded-xl px-2.5 py-2 transition hover:bg-white/[0.05] focus-visible:bg-white/[0.07] focus-visible:outline-none"
     >
-      <span className="brand-gradient-bg flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.25)] transition duration-300 group-hover:scale-105">
-        <LifeBuoy className="h-4 w-4" />
-      </span>
+      <IconTile icon={PushButtonIcon} />
       <span className="min-w-0 flex-1">
-        <span className="block text-[12.5px] font-semibold text-white">Pedir apoio ao Team Leader</span>
-        <span className="block truncate text-[10.5px] text-white/55">Marca uma conversa com o André</span>
+        <span className="block text-[12.5px] font-medium text-white/85 group-hover:text-white">Acionar o Botão</span>
+        <span className="block truncate text-[10.5px] text-white/40">Marca uma conversa com o André</span>
       </span>
-      <ArrowUpRight className="h-3.5 w-3.5 shrink-0 text-white/45 transition duration-300 group-hover:-translate-y-px group-hover:translate-x-px group-hover:text-white" />
+      <ArrowUpRight className="h-3.5 w-3.5 shrink-0 text-white/30 transition duration-300 group-hover:-translate-y-px group-hover:translate-x-px group-hover:text-white/70" />
     </a>
   );
 }
