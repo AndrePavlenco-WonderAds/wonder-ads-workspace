@@ -116,6 +116,13 @@ export function thresholdToReach(level: 1 | 2 | 3): { pa: number; no: number } {
 export const DECLARATION_TEXT =
   "Declaro que este relatório é completo e verdadeiro e que reportei todos os erros de que tenho conhecimento.";
 
+/** O valor do campo «Cliente ou projeto» quando o erro não foi num cliente. */
+export const INTERNAL_CLIENT = "Interno";
+
+/** Um cliente no dropdown da folha RH-03 (v77.91). */
+export type ClientChoice = { slug: string; title: string; icon: string | null; depts: string[] };
+export type ClientChoices = { mine: ClientChoice[]; others: ClientChoice[] };
+
 /* ------------------------------------------------------------------ */
 /*  Tipos dos registos                                                 */
 /* ------------------------------------------------------------------ */

@@ -1,7 +1,8 @@
-// Ineficácias — a página do PRÓPRIO consultor: o seu lugar na escala (nível,
-// PA, NO, relógio dos 30 dias), o relatório para assinar a qualquer hora, e
-// o histórico dos seus relatórios com a pontuação da direção. Nunca vê os dos colegas: a única
-// leitura é o índice do próprio username.
+// Ineficácias — a página do PRÓPRIO consultor: o relatório para assinar a
+// qualquer hora (primeiro, v77.91), o botão «O meu painel» (a escala, o PA,
+// o NO e o relógio dos 30 dias vivem em /ineficacias/painel) e o histórico
+// dos seus relatórios com a pontuação da direção. Nunca vê os dos colegas: a
+// única leitura é o índice do próprio username.
 //
 // Enquanto o módulo está «em construção» (lib/ineficacias/access.ts), quem
 // não é SuperAdmin vê o painel de obras. A decisão usa QUEM FEZ LOGIN, para
@@ -9,23 +10,18 @@
 
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { AlertTriangle, History, ShieldAlert } from "lucide-react";
+import { History, ShieldAlert } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { UnderConstruction } from "@/components/ineficacias/under-construction";
-import { LevelGauge } from "@/components/ineficacias/level-gauge";
+import { OverviewButton } from "@/components/ineficacias/overview-button";
 import { ReportView, ScoreBadge } from "@/components/ineficacias/report-view";
 import { IneficaciaReportForm } from "@/components/ineficacias/report-form";
 import { getCurrentEmployee, getImpersonation, isRealUserAdmin } from "@/lib/auth/server";
 import { findEmployeeByUsername } from "@/lib/auth/credentials";
 import { ineficaciasAvailable } from "@/lib/ineficacias/access";
 import { loadConsultant } from "@/lib/ineficacias/store";
-import {
-  formatISODate,
-  formatLisbonDateTime,
-  LEVELS,
-  noticedLabel,
-  reasonLabel,
-} from "@/lib/ineficacias/shared";
+import { clientChoicesFor } from "@/lib/ineficacias/clients";
+import { formatISODate, formatLisbonDateTime, noticedLabel, reasonLabel } from "@/lib/ineficacias/shared";
 import { todayLisbonISO } from "@/lib/probation/progress";
 
 export const dynamic = "force-dynamic";
@@ -54,7 +50,7 @@ export default async function IneficaciasPage() {
   }
 
   const today = todayLisbonISO();
-  const bundle = await loadConsultant(me.username, today);
+  const [bundle, clients] = await Promise.all([loadConsultant(me.username, today), clientChoicesFor(me.name)]);
   const { state, reports, ledger } = bundle;
   const row = findEmployeeByUsername(me.username);
   const fullName = row?.fullName ?? me.name;
@@ -69,45 +65,14 @@ export default async function IneficaciasPage() {
             <span className="brand-gradient-text">Ineficácias</span>
           </h1>
         </div>
+        <OverviewButton state={state} href="/ineficacias/painel" />
       </header>
 
-      {state.pendingMeasure && (
-        <p className="animate-fade-up mt-6 flex items-start gap-2.5 rounded-2xl border border-amber-400/30 bg-amber-400/[0.08] px-4 py-3 text-[12.5px] leading-relaxed text-amber-100">
-          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" />
-          <span>
-            <strong className="font-semibold">Atingiste o nível {state.pendingMeasure.level}</strong> a{" "}
-            {formatISODate(state.pendingMeasure.since)} (PA {state.pendingMeasure.pa} · NO {state.pendingMeasure.no}).{" "}
-            {LEVELS[state.pendingMeasure.level].measure} A direção vai marcar contigo — depois dessa reunião os contadores
-            recomeçam.
-          </span>
-        </p>
-      )}
-
-      <div className="animate-fade-up mt-6">
-        <LevelGauge state={state} who="tu" />
-      </div>
-
-      {state.counted.length > 0 && (
-        <section className="animate-fade-up mt-4 rounded-2xl border border-white/[0.08] bg-white/[0.02] px-4 py-3.5">
-          <p className="readout text-white/35">Na janela corrente · {state.counted.length} {state.counted.length === 1 ? "ocorrência" : "ocorrências"}</p>
-          <ul className="mt-2 divide-y divide-white/[0.05]">
-            {state.counted.map((o) => (
-              <li key={o.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2 text-[12.5px]">
-                <span className="tabular w-20 shrink-0 text-white/45">{formatISODate(o.occurredOn)}</span>
-                <span className="min-w-0 flex-1 truncate text-white/80">
-                  <span className="font-semibold">{o.client}</span> · {o.what}
-                </span>
-                <ScoreBadge score={o.score} size="sm" />
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      <section className="animate-fade-up mt-10">
+      <section id="relatorio" className="animate-fade-up mt-8 scroll-mt-24">
         <IneficaciaReportForm
           employee={{ username: me.username, name: me.name, fullName, role: me.role, dept: me.dept }}
           today={today}
+          clients={clients}
           readOnly={Boolean(impersonation)}
         />
       </section>

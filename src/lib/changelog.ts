@@ -13,6 +13,20 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.91",
+    date: "2026-10-13",
+    title: "Ineficácias — o relatório primeiro, uma folha que guia e «O meu painel»",
+    highlights: [
+      "**📝 O relatório abre a página.** Na página Ineficácias do consultor, a folha RH-03 é a primeira coisa, logo abaixo do título.",
+      "**📊 «O meu painel» numa página à parte.** A escala, o PA, o NO e o relógio dos 30 dias saíram do topo e vivem agora em /ineficacias/painel. No topo fica um botão com o essencial num relance: o nível num anel, o PA e o NO contra o limiar e quando voltam a zero.",
+      "**🧭 Uma folha que guia.** A barra do topo enche com o que está feito, cada erro mostra os seus 7 campos e fecha-se num resumo quando está completo, e uma doca no fundo do ecrã diz o que falta e leva lá com um clique.",
+      "**🏢 Cliente ou projeto é um dropdown.** A tua carteira primeiro, depois os outros clientes da agência, «Interno» para o trabalho sem cliente e «Outro projeto» para escrever à mão. Com pesquisa e teclado.",
+      "**📅 A data vem com hoje.** Atalhos «Hoje» e «Ontem», e o calendário para os outros dias.",
+      "**✍️ Sem a caixa da declaração.** Assinar é declarar: o texto passa a uma linha junto ao botão, e continua dentro da impressão digital do relatório.",
+      "**🎨 Motivo, primeira vez e quem deu pelo erro** em cartões com ícones. Na repetição, atalhos para o «quando foi a última vez».",
+    ],
+  },
+  {
     version: "77.90",
     date: "2026-10-13",
     title: "Ineficácias — relatório a qualquer hora, relógio dos 30 dias e registo pela direção",
