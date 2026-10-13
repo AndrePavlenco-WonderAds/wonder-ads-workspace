@@ -253,50 +253,83 @@ export async function submitReport(input: SubmitInput): Promise<SubmitResult> {
   const range = weekRange(input.weekKey);
   if (!range) throw new Error("Semana inválida.");
   const id = newId();
+  const wk = weekKey(input.username, input.weekKey);
   // Uma semana, um relatório: o lock entra primeiro e só uma escrita ganha.
-  const locked = await kv.set(weekKey(input.username, input.weekKey), id, { nx: true });
+  // Nasce com TTL e só fica permanente depois de o relatório e os índices
+  // existirem — se alguma escrita falhar pelo meio (ou a função morrer), o
+  // lock solta-se ou expira sozinho, em vez de deixar a semana «já
+  // submetida» para sempre sem relatório nenhum.
+  const locked = await kv.set(wk, id, { nx: true, ex: 120 });
   if (locked !== "OK") return { ok: false, reason: "duplicate" };
 
-  const hash = sha256(
-    canonicalContent({
-      username: input.username,
-      weekKey: input.weekKey,
-      noErrors: input.noErrors,
-      items: input.items,
-      fullName: input.signature.fullName,
-    }),
-  );
-  const n = await kv.incr(COUNTER_KEY);
-  const year = input.signature.signedAt.slice(0, 4) || String(new Date().getUTCFullYear());
-  const report: IneficaciaReport = {
-    id,
-    ref: `INE-${year}-${String(n).padStart(3, "0")}`,
-    rev: 1,
-    username: input.username,
-    name: input.name,
-    role: input.role,
-    dept: input.dept,
-    weekKey: input.weekKey,
-    weekStart: range.start,
-    weekEnd: range.end,
-    items: input.items,
-    noErrors: input.noErrors,
-    signature: { ...input.signature, hash },
-    createdAt: Date.now(),
-    review: null,
-  };
   try {
+    const hash = sha256(
+      canonicalContent({
+        username: input.username,
+        weekKey: input.weekKey,
+        noErrors: input.noErrors,
+        items: input.items,
+        fullName: input.signature.fullName,
+      }),
+    );
+    const n = await kv.incr(COUNTER_KEY);
+    const year = input.signature.signedAt.slice(0, 4) || String(new Date().getUTCFullYear());
+    const report: IneficaciaReport = {
+      id,
+      ref: `INE-${year}-${String(n).padStart(3, "0")}`,
+      rev: 1,
+      username: input.username,
+      name: input.name,
+      role: input.role,
+      dept: input.dept,
+      weekKey: input.weekKey,
+      weekStart: range.start,
+      weekEnd: range.end,
+      items: input.items,
+      noErrors: input.noErrors,
+      signature: { ...input.signature, hash },
+      createdAt: Date.now(),
+      review: null,
+    };
     await kv.set(reportKey(id), report);
     await kv.lpush(userKey(input.username), id);
     await kv.lpush(IDS_KEY, id);
+    await kv.persist(wk);
+    return { ok: true, report };
   } catch (err) {
-    // O lock entrou antes da escrita: se a escrita falhou, solta-se o lock
-    // (e o registo meio-gravado) para a pessoa poder tentar outra vez — senão
-    // a semana ficava «já submetida» para sempre.
-    await kv.del(weekKey(input.username, input.weekKey), reportKey(id)).catch(() => {});
+    await kv.del(wk, reportKey(id)).catch(() => {});
     throw err;
   }
-  return { ok: true, report };
+}
+
+/* ------------------------------------------------------------------ */
+/*  Trinco curto por chave — as escritas da direção                    */
+/* ------------------------------------------------------------------ */
+
+const LOCK_PREFIX = "ineficacias:lock:";
+
+/** Serializa um get→mutate→set numa chave: dois SuperAdmins a pontuar o
+ *  mesmo relatório ao mesmo tempo deixavam de perder uma das pontuações.
+ *  SET NX com TTL curto, algumas tentativas, e só se apaga o próprio token. */
+async function withLock<T>(key: string, fn: () => Promise<T>): Promise<T> {
+  const lockKey = `${LOCK_PREFIX}${key}`;
+  const token = newId();
+  for (let attempt = 0; attempt < 12; attempt += 1) {
+    const got = await kv.set(lockKey, token, { nx: true, px: 5000 });
+    if (got === "OK") {
+      try {
+        return await fn();
+      } finally {
+        try {
+          if ((await kv.get<string>(lockKey)) === token) await kv.del(lockKey);
+        } catch {
+          /* o TTL trata do resto */
+        }
+      }
+    }
+    await new Promise((r) => setTimeout(r, 120 + attempt * 60));
+  }
+  throw new Error("Registo ocupado — tenta outra vez.");
 }
 
 export async function getReport(id: string): Promise<IneficaciaReport | null> {
@@ -362,18 +395,20 @@ export async function scoreItem(
   score: Omit<IneficaciaScore, "at">,
 ): Promise<ScoreResult> {
   assertConfigured();
-  const report = await getReport(reportId);
-  if (!report) return { ok: false, reason: "not-found" };
-  const item = report.items.find((it) => it.id === itemId);
-  if (!item) return { ok: false, reason: "no-item" };
-  const at = Date.now();
-  item.score = { ...score, at };
-  report.rev += 1;
-  if (!report.review && report.items.every((it) => it.score)) {
-    report.review = { by: score.by, byName: score.byName, at, note: "" };
-  }
-  await kv.set(reportKey(report.id), report);
-  return { ok: true, report };
+  return withLock(reportKey(reportId), async () => {
+    const report = await getReport(reportId);
+    if (!report) return { ok: false, reason: "not-found" } as const;
+    const item = report.items.find((it) => it.id === itemId);
+    if (!item) return { ok: false, reason: "no-item" } as const;
+    const at = Date.now();
+    item.score = { ...score, at };
+    report.rev += 1;
+    if (!report.review && report.items.every((it) => it.score)) {
+      report.review = { by: score.by, byName: score.byName, at, note: "" };
+    }
+    await kv.set(reportKey(report.id), report);
+    return { ok: true, report } as const;
+  });
 }
 
 /** Marca um relatório como visto/revisto (para os «sem erros», ou para
@@ -384,15 +419,17 @@ export async function markReviewed(
   note: string,
 ): Promise<ScoreResult> {
   assertConfigured();
-  const report = await getReport(reportId);
-  if (!report) return { ok: false, reason: "not-found" };
-  // Fechar a revisão com ocorrências por pontuar tirava-as da fila sem nunca
-  // entrarem no PA/NO — primeiro pontuam-se todas.
-  if (report.items.some((it) => !it.score)) return { ok: false, reason: "unscored" };
-  report.review = { by: by.username, byName: by.name, at: Date.now(), note: note.slice(0, LIMITS.note.max) };
-  report.rev += 1;
-  await kv.set(reportKey(report.id), report);
-  return { ok: true, report };
+  return withLock(reportKey(reportId), async () => {
+    const report = await getReport(reportId);
+    if (!report) return { ok: false, reason: "not-found" } as const;
+    // Fechar a revisão com ocorrências por pontuar tirava-as da fila sem
+    // nunca entrarem no PA/NO — primeiro pontuam-se todas.
+    if (report.items.some((it) => !it.score)) return { ok: false, reason: "unscored" } as const;
+    report.review = { by: by.username, byName: by.name, at: Date.now(), note: note.slice(0, LIMITS.note.max) };
+    report.rev += 1;
+    await kv.set(reportKey(report.id), report);
+    return { ok: true, report } as const;
+  });
 }
 
 /* ------------------------------------------------------------------ */
@@ -420,11 +457,13 @@ export async function addLedgerEvent(
   event: Omit<Extract<LedgerEvent, { kind: "measure" }>, "id" | "createdAt"> | Omit<Extract<LedgerEvent, { kind: "set-level" }>, "id" | "createdAt">,
 ): Promise<IneficaciaLedger> {
   assertConfigured();
-  const ledger = await getLedger(username);
-  const full = { ...event, id: newId(), createdAt: Date.now() } as LedgerEvent;
-  ledger.events.push(full);
-  await saveLedger(ledger);
-  return ledger;
+  return withLock(ledgerKey(username), async () => {
+    const ledger = await getLedger(username);
+    const full = { ...event, id: newId(), createdAt: Date.now() } as LedgerEvent;
+    ledger.events.push(full);
+    await saveLedger(ledger);
+    return ledger;
+  });
 }
 
 export async function addDirectOccurrence(
@@ -432,10 +471,12 @@ export async function addDirectOccurrence(
   occ: Omit<DirectOccurrence, "id" | "createdAt">,
 ): Promise<IneficaciaLedger> {
   assertConfigured();
-  const ledger = await getLedger(username);
-  ledger.direct.push({ ...occ, id: newId(), createdAt: Date.now() });
-  await saveLedger(ledger);
-  return ledger;
+  return withLock(ledgerKey(username), async () => {
+    const ledger = await getLedger(username);
+    ledger.direct.push({ ...occ, id: newId(), createdAt: Date.now() });
+    await saveLedger(ledger);
+    return ledger;
+  });
 }
 
 /** Repontua uma ocorrência registada pela direção. */
@@ -445,12 +486,14 @@ export async function rescoreDirect(
   score: Omit<IneficaciaScore, "at">,
 ): Promise<IneficaciaLedger | null> {
   assertConfigured();
-  const ledger = await getLedger(username);
-  const d = ledger.direct.find((x) => x.id === occurrenceId);
-  if (!d) return null;
-  d.score = { ...score, at: Date.now() };
-  await saveLedger(ledger);
-  return ledger;
+  return withLock(ledgerKey(username), async () => {
+    const ledger = await getLedger(username);
+    const d = ledger.direct.find((x) => x.id === occurrenceId);
+    if (!d) return null;
+    d.score = { ...score, at: Date.now() };
+    await saveLedger(ledger);
+    return ledger;
+  });
 }
 
 /* ------------------------------------------------------------------ */
