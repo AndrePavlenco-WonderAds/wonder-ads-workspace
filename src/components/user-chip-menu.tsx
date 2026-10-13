@@ -551,11 +551,14 @@ export function UserChipMenu({
                     )}
                   </>
                 )}
-                {/* Ineficácias (v77.90) — a ação mais usada da direção fica
-                    logo a seguir ao «Ver como», em destaque: abre a folha
-                    RH-04 para registar uma ineficácia de um consultor. O
-                    painel da equipa vem logo por baixo. A página verifica
-                    isAdmin e cada API de /api/admin/ineficacias também. */}
+                {/* Ordem pedida pelo André (v77.92): Ver como, Registar
+                    Falta, Registar ineficácia, Ineficácias — Direção, Plano de
+                    Probation, Formação — Superadmin, Mini-games. Todos com o
+                    mesmo peso — nenhum em destaque. O gate verdadeiro de cada
+                    página é o isAdmin dela própria + as APIs. */}
+                {isAdmin && (
+                  <MenuLink href="/admin/faltas" icon={UserMinus} label="Registar Falta" hint="Faltas da equipa (RH)" tone="amber" index={7} onPick={close} />
+                )}
                 {isAdmin && (
                   <MenuLink
                     href="/admin/ineficacias/registar"
@@ -563,29 +566,21 @@ export function UserChipMenu({
                     label="Registar ineficácia"
                     hint="Erro de um consultor · gravidade e pontuação"
                     tone="amber"
-                    highlight
-                    index={7}
+                    index={8}
                     onPick={close}
                   />
                 )}
                 {isAdmin && (
-                  <MenuLink href="/admin/ineficacias" icon={Gauge} label="Ineficácias — Direção" hint="Relatórios, pontuação e escala da equipa" tone="amber" index={8} onPick={close} />
-                )}
-                {/* Registar Falta — só o C-Level. O gate verdadeiro é o
-                    layout de /admin (isAdmin) e a API volta a verificar. */}
-                {isAdmin && (
-                  <MenuLink href="/admin/faltas" icon={UserMinus} label="Registar Falta" hint="Faltas da equipa (RH)" tone="amber" index={7} onPick={close} />
-                )}
-                {/* Plano de Probation — dados de RH: o gate verdadeiro é o
-                    layout de /admin e cada API de /api/admin/probation. */}
-                {isAdmin && (
-                  <MenuLink href="/admin/probation" icon={ClipboardCheck} label="Plano de Probation" hint="Planos de 30 dias e avaliações (RH)" tone="amber" index={8} onPick={close} />
+                  <MenuLink href="/admin/ineficacias" icon={Gauge} label="Ineficácias — Direção" hint="Relatórios, pontuação e escala da equipa" tone="amber" index={9} onPick={close} />
                 )}
                 {isAdmin && (
-                  <MenuLink href="/formacao/admin" icon={LayoutDashboard} label="Formação — Superadmin" hint="Inscrições, conteúdos e resultados" tone="amber" index={9} onPick={close} />
+                  <MenuLink href="/admin/probation" icon={ClipboardCheck} label="Plano de Probation" hint="Planos de 30 dias e avaliações (RH)" tone="amber" index={10} onPick={close} />
                 )}
                 {isAdmin && (
-                  <MenuLink href="/minigames" icon={Gamepad2} label="Mini-games" hint="Jogos de equipa ao vivo" tone="amber" index={10} onPick={close} />
+                  <MenuLink href="/formacao/admin" icon={LayoutDashboard} label="Formação — Superadmin" hint="Inscrições, conteúdos e resultados" tone="amber" index={11} onPick={close} />
+                )}
+                {isAdmin && (
+                  <MenuLink href="/minigames" icon={Gamepad2} label="Mini-games" hint="Jogos de equipa ao vivo" tone="amber" index={12} onPick={close} />
                 )}
               </MenuSection>
             )}
@@ -664,7 +659,6 @@ function MenuLink({
   tone = "default",
   badge,
   badgeTone = "rose",
-  highlight = false,
   index,
   onPick,
 }: {
@@ -677,8 +671,6 @@ function MenuLink({
   badge?: string;
   /** Vermelho = há coisas por fazer; âmbar = informação («em construção»). */
   badgeTone?: "rose" | "amber";
-  /** Ação principal da secção — bloco com contorno, para se ver primeiro. */
-  highlight?: boolean;
   index: number;
   onPick: () => void;
 }) {
@@ -692,7 +684,7 @@ function MenuLink({
         tone === "amber"
           ? "hover:bg-amber-500/[0.08] focus-visible:bg-amber-500/[0.1]"
           : "hover:bg-white/[0.05] focus-visible:bg-white/[0.07]"
-      } ${highlight ? "my-0.5 border border-amber-400/30 bg-amber-400/[0.07] shadow-[0_8px_24px_-16px_rgba(251,191,36,0.8)] hover:border-amber-400/50" : ""}`}
+      }`}
     >
       <IconTile icon={icon} tone={tone} />
       <span className="min-w-0 flex-1">

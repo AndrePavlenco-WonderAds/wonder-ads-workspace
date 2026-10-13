@@ -1252,7 +1252,7 @@ async function ineficaciasNotifications(
           dueAt: Date.parse(`${pm.since}T09:00:00Z`) || now.getTime(),
           client: null,
           actionLabel: "Ver a minha escala",
-          actionHref: "/ineficacias",
+          actionHref: "/ineficacias/painel",
           resolved: Boolean(state[id]),
           resolvedAt: state[id]?.resolvedAt ?? null,
         });
@@ -1269,7 +1269,7 @@ async function ineficaciasNotifications(
           dueAt: e.createdAt,
           client: null,
           actionLabel: "Ver a minha escala",
-          actionHref: "/ineficacias",
+          actionHref: "/ineficacias/painel",
           resolved: Boolean(state[id]),
           resolvedAt: state[id]?.resolvedAt ?? null,
         });

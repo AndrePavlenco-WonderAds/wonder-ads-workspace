@@ -13,6 +13,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.92",
+    date: "2026-10-13",
+    title: "Ineficácias abertas à equipa + menu SuperAdmin reordenado",
+    highlights: [
+      "**🚀 As Ineficácias abriram a toda a equipa.** Saiu o «em construção»: cada consultor tem o item «Ineficácias» no menu do nome, assina relatórios a qualquer hora, vê o seu painel (nível, PA, NO e relógio dos 30 dias) e recebe no sino a pontuação da direção e as ineficácias que lhe forem registadas.",
+      "**🗂️ Menu SuperAdmin por esta ordem:** Ver como, Registar Falta, Registar ineficácia, Ineficácias — Direção, Plano de Probation, Formação — Superadmin, Mini-games. Todos com o mesmo peso — o «Registar ineficácia» deixou de estar em destaque.",
+    ],
+  },
+  {
     version: "77.91",
     date: "2026-10-13",
     title: "Ineficácias — o relatório primeiro, uma folha que guia e «O meu painel»",
