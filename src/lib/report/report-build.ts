@@ -33,6 +33,8 @@ import {
 } from "./report-dates";
 import type { ReportConfig } from "./report-config-store";
 import {
+  hasKwCsv,
+  kwCsvChange,
   kwRankChange,
   kwTrackingIssues,
   shownRank,
@@ -391,9 +393,30 @@ function buildExecSummary(
       ));
   }
 
-  // Keyword tracking (v77.82) — só com as posições todas verificadas.
+  // Posições por CSV (v77.95) — a melhor das três ferramentas por keyword.
   const kwt = snap.kwTracking;
-  if (kwt && kwt.keywords.length > 0 && kwTrackingIssues(kwt).length === 0) {
+  if (kwt && hasKwCsv(kwt)) {
+    const rows = kwt.rows ?? [];
+    const ranked = rows.filter((r) => r.best !== null);
+    const top10 = ranked.filter((r) => (r.best ?? 999) <= 10).length;
+    const top3 = ranked.filter((r) => (r.best ?? 999) <= 3).length;
+    if (top10 > 0)
+      add(74, t(
+        `**${top10}** das ${rows.length} keywords acompanhadas estão na primeira página da Google${top3 > 0 ? ` — **${top3}** no top 3` : ""}.`,
+        `**${top10}** of the ${rows.length} tracked keywords are on Google's first page${top3 > 0 ? ` — **${top3}** in the top 3` : ""}.`,
+      ));
+    if (!partial) {
+      const changes = rows.map(kwCsvChange);
+      const up = changes.filter((c) => c === "in" || (typeof c === "number" && c > 0)).length;
+      const entered = changes.filter((c) => c === "in").length;
+      if (up > 0)
+        add(63, t(
+          `**${up}** ${up === 1 ? "keyword acompanhada subiu" : "keywords acompanhadas subiram"} de posição face ao mês anterior${entered > 0 ? ` — **${entered}** ${entered === 1 ? "entrou" : "entraram"} agora no top 100` : ""}.`,
+          `**${up}** tracked ${up === 1 ? "keyword" : "keywords"} moved up vs. last month${entered > 0 ? ` — **${entered}** entered the top 100` : ""}.`,
+        ));
+    }
+  } else if (kwt && kwt.keywords.length > 0 && kwTrackingIssues(kwt).length === 0) {
+    // Keyword tracking v77.82 — só com as posições todas verificadas.
     const positions = kwt.keywords
       .map(shownRank)
       .filter((v): v is number => typeof v === "number");
@@ -1348,9 +1371,9 @@ export async function buildMonthlyReport(
           },
         }
       : {}),
-    // Keyword tracking (v77.82): nasce com a seleção do mês anterior e as
-    // posições em branco — o consultor verifica-as à mão neste mês.
-    kwTracking: initKwTracking(targetKeywordRows, prevSnap),
+    // Keyword tracking (v77.95): nasce à espera do CSV das posições —
+    // Semrush + Search Console + Serpstat, preenchido pelo consultor.
+    kwTracking: initKwTracking(targetKeywordRows),
     ...(dfs.geo ? { geo: dfs.geo } : {}),
     ...(dfs.geoIntel ? { geoIntel: dfs.geoIntel } : {}),
     ...(trend ? { trend } : {}),

@@ -17,7 +17,7 @@ import { getCurrentEmployee } from "@/lib/auth/server";
 import { editableDepts } from "@/lib/auth/credentials";
 import { getClientBySlug } from "@/lib/notion";
 import { getReport } from "@/lib/report/report-store";
-import { isValidPeriodKey, periodFromKey } from "@/lib/report/report-dates";
+import { isValidPeriodKey, periodFromKey, trailingMonths } from "@/lib/report/report-dates";
 import { formatDate } from "@/lib/dates";
 import { ReportDocument } from "@/components/report/report-document";
 import { ReportPrintView } from "@/components/report/report-print-view";
@@ -53,10 +53,12 @@ import {
   ECOM_METRIC_KEYS,
   isEcomCellUnresolved,
   isUnresolved,
+  hasKwCsv,
   kwTrackingIssues,
-  shownRank,
   type FetchStatus,
+  type LiveRank,
 } from "@/lib/report/report-types";
+import { foldKw } from "@/lib/report/kw-csv";
 
 export const dynamic = "force-dynamic";
 
@@ -125,7 +127,7 @@ function SourceChip({ name, s }: { name: string; s: FetchStatus }) {
   );
 }
 
-/** Base do Semrush e país/língua da Google por código de localização. */
+/** Base do Semrush por código de localização. */
 const SEMRUSH_DB: Record<number, string> = {
   2620: "pt",
   2840: "us",
@@ -139,22 +141,9 @@ const SEMRUSH_DB: Record<number, string> = {
   2036: "au",
   2076: "br",
 };
-const GOOGLE_GL: Record<number, string> = {
-  2620: "pt",
-  2840: "us",
-  2826: "gb",
-  2724: "es",
-  2250: "fr",
-  2276: "de",
-  2380: "it",
-  2056: "be",
-  2124: "ca",
-  2036: "au",
-  2076: "br",
-};
 
-/** Os atalhos do Passo 1: o domínio no Semrush (base do país), a
- *  propriedade no Search Console e a pesquisa Google sem personalização. */
+/** Os atalhos do Passo 1: o domínio no Semrush (base do país) e a
+ *  propriedade no Search Console. */
 function trackingLinks(
   slug: string,
   domainHint: string | undefined,
@@ -170,7 +159,6 @@ function trackingLinks(
       domain = "";
     }
   }
-  const gl = GOOGLE_GL[geo.locationCode] ?? "pt";
   return {
     semrush: domain
       ? `https://www.semrush.com/analytics/organic/positions/?db=${SEMRUSH_DB[geo.locationCode] ?? "pt"}&q=${encodeURIComponent(domain)}&searchType=domain`
@@ -178,8 +166,20 @@ function trackingLinks(
     gsc: gscSiteUrl
       ? `https://search.google.com/search-console/performance/search-analytics?resource_id=${encodeURIComponent(gscSiteUrl)}`
       : null,
-    gl,
-    hl: `${geo.languageCode}-${gl.toUpperCase()}`,
+  };
+}
+
+/** Uma linha do Serpstat para o cartão da tabela (com o que o export leva). */
+function curationRow(r: LiveRank, inPlan: boolean): CurationRow {
+  return {
+    keyword: r.keyword,
+    position: r.position,
+    inPlan,
+    change: r.change,
+    volume: r.volume ?? null,
+    difficulty: r.difficulty ?? null,
+    traffic: r.traffic ?? null,
+    url: r.url,
   };
 }
 
@@ -307,20 +307,38 @@ export default async function ReportPage({
     : 0;
   const pendingTotal = pendingChannels + pendingEcom;
 
-  // Passo 1 — keyword tracking (v77.82). As target keywords da client file
-  // alimentam a escolha; o bloco do snapshot diz o que já está escolhido.
+  // Passo 1 — posições das keywords por CSV (v77.95). As target keywords da
+  // client file alimentam o export; o relatório anterior diz quais foram
+  // acompanhadas no mês passado; o Serpstat deste relatório pode
+  // pré-preencher a sua coluna.
   const kwt = snapshot?.kwTracking;
-  const targetRows = kwt ? await listTargetKeywords(slug).catch(() => []) : [];
+  const [targetRows, prevReport] = kwt
+    ? await Promise.all([
+        listTargetKeywords(slug).catch(() => []),
+        getReport(slug, trailingMonths(period, 2)[0].key).catch(() => null),
+      ])
+    : [[], null];
   const trackingTargets = targetRows.map((t) => ({
     keyword: t.keyword,
     volume: t.searchVolume ?? null,
     premium: Boolean(t.premium),
   }));
+  const prevKwt = prevReport?.kwTracking;
+  const prevKeywords =
+    prevKwt?.format === "csv"
+      ? (prevKwt.rows ?? []).map((r) => r.keyword)
+      : (prevKwt?.keywords ?? []).map((k) => k.keyword);
+  const serpLive =
+    snapshot?.liveRanks?.source === "serpstat" ? snapshot.liveRanks : undefined;
+  const serpstatPrefill: Record<string, number | null> = Object.fromEntries(
+    [...(serpLive?.ranks ?? []), ...(serpLive?.others ?? [])].map((r) => [
+      foldKw(r.keyword),
+      r.position,
+    ]),
+  );
   const kwIssues = kwTrackingIssues(kwt);
-  const kwRequired = Math.min(15, targetRows.length);
-  const kwVerified = (kwt?.keywords ?? []).filter(
-    (k) => k.semrush !== null && k.gsc !== null && shownRank(k) !== null,
-  ).length;
+  const csvRows = kwt && hasKwCsv(kwt) ? (kwt.rows ?? []) : [];
+  const kwPage1 = csvRows.filter((r) => r.best !== null && r.best <= 10).length;
 
   // As linhas da secção 7, tal como o Serpstat as devolveu (a rankear
   // primeiro), para o cartão de curadoria — a lista escondida vem do snapshot.
@@ -328,8 +346,8 @@ export default async function ReportPage({
     snapshot?.liveRanks?.source === "serpstat" ? snapshot.liveRanks : undefined;
   const kwRows: CurationRow[] = liveKw
     ? [
-        ...liveKw.ranks.map((r) => ({ keyword: r.keyword, position: r.position, inPlan: true })),
-        ...(liveKw.others ?? []).map((r) => ({ keyword: r.keyword, position: r.position, inPlan: false })),
+        ...liveKw.ranks.map((r) => curationRow(r, true)),
+        ...(liveKw.others ?? []).map((r) => curationRow(r, false)),
       ].sort(
         (a, b) =>
           (a.position ?? 999) - (b.position ?? 999) || a.keyword.localeCompare(b.keyword),
@@ -438,16 +456,16 @@ export default async function ReportPage({
             steps={[
               {
                 n: 1,
-                title: "Keyword tracking",
+                title: "Posições das keywords",
                 detail: !kwt
                   ? "relatório anterior à v77.82"
-                  : kwRequired === 0
-                    ? "sem target keywords na client file"
+                  : csvRows.length > 0
+                    ? `${csvRows.length} keywords · ${kwPage1} na 1.ª página`
                     : kwIssues.length === 0
-                      ? `${kwVerified} keywords verificadas`
-                      : kwt.keywords.length < kwRequired
-                        ? `${kwt.keywords.length}/${kwRequired} escolhidas`
-                        : `${kwVerified}/${kwRequired} verificadas`,
+                      ? kwt.keywords.length > 0
+                        ? `${kwt.keywords.length} verificadas à mão`
+                        : "sem target keywords na client file"
+                      : "exportar → preencher → carregar o CSV",
                 done: kwIssues.length === 0,
                 href: "#passo-1",
               },
@@ -473,13 +491,17 @@ export default async function ReportPage({
             ]}
           />
 
-          {/* Passo 1 — a toda a largura: a grelha das 15 precisa de espaço. */}
+          {/* Passo 1 — a toda a largura: a tabela das três fontes precisa de espaço. */}
           {kwt && (
             <ReportKeywordTracking
               slug={slug}
               period={period}
+              clientTitle={client.title}
               block={kwt}
               targets={trackingTargets}
+              prevKeywords={prevKeywords}
+              serpstatPrefill={serpstatPrefill}
+              serpstatCheckedOn={serpLive?.checkedOn ?? null}
               links={trackingLinks(
                 slug,
                 snapshot.liveRanks?.domain,
@@ -616,6 +638,7 @@ export default async function ReportPage({
                 <ReportKeywordsCuration
                   slug={slug}
                   period={period}
+                  clientTitle={client.title}
                   rows={kwRows}
                   curation={snapshot.kwCuration}
                 />

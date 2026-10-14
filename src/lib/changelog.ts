@@ -13,6 +13,19 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.95",
+    date: "2026-10-14",
+    title: "Relatório mensal — posições das keywords por CSV (Semrush + Search Console + Serpstat)",
+    highlights: [
+      "**📤 Passo 1 novo: exportar → preencher → carregar.** Exportas as keywords do cliente num CSV (todas, ou só as selecionadas — sem limite de seleção), preenches no Google Sheets a posição no Semrush, no Search Console e no Serpstat, e carregas o ficheiro de volta. Aceita vírgula, ponto e vírgula, tab ou colar diretamente da folha, «6,8» e «6.8», linhas repetidas e células inválidas (com aviso).",
+      "**🏆 A melhor das três.** O relatório fica com a posição mais alta das três ferramentas por keyword e compara-a com a melhor do mês anterior (▲ subiu, ▼ desceu, «entrou», «saiu»). Cada linha diz de que ferramenta veio o número.",
+      "**🔎 Tabela de revisão no Passo 1.** As três posições lado a lado com a vencedora destacada, o «era X» do mês passado, filtros (1.ª página, a subir, a descer, sem posição), ordenação, pesquisa e quantas vezes cada ferramenta ganhou. Antes de gravar há uma pré-visualização do ficheiro.",
+      "**📊 Secção «Keywords acompanhadas» refeita para o cliente.** «X das Y pesquisas que estamos a trabalhar já aparecem na Google», cartões (1.ª página, top 3, a subir, novas no top 100, posição média), a distribuição por escalões, as maiores subidas do mês e a tabela completa com fonte, Δ mês e pesquisas/mês — as primeiras 20 à vista e «Ver todas» para o resto.",
+      "**⬇️ Exportar CSV também na tabela do Serpstat** («Onde o site aparece») — selecionadas ou todas, com posição, Δ, volume, KD, tráfego e URL, para analisar no Semrush. Na vista interna do relatório, as duas tabelas têm o botão de exportar.",
+      "**🧹 Acentos e caracteres invisíveis já não partem a correspondência** entre o CSV, a client file e o mês anterior («dentista biológico» = «dentista biologico»). O Regenerar mantém o CSV carregado e volta a calcular o Δ.",
+    ],
+  },
+  {
     version: "77.94",
     date: "2026-10-14",
     title: "Ineficácias — a calculadora também na pontuação dos relatórios",

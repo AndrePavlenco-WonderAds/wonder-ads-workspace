@@ -9,6 +9,7 @@ import { editableDepts } from "@/lib/auth/credentials";
 import { getReport, saveReport } from "@/lib/report/report-store";
 import { recomputeDerived, MAX_SHOWN_MOVERS } from "@/lib/report/report-build";
 import { sanitizeKwTracking } from "@/lib/report/kw-tracking";
+import { deriveKwCsvRows, parseKwPositionsCsv } from "@/lib/report/kw-csv";
 import { listTargetKeywords } from "@/lib/target-keywords-store";
 import { trailingMonths } from "@/lib/report/report-dates";
 import {
@@ -176,6 +177,10 @@ export async function PUT(
     /** Keyword tracking (v77.82): as 15 keywords + as posições verificadas
      *  à mão + qual se mostra. Substitui o bloco por inteiro. */
     kwTracking?: unknown;
+    /** Posições por CSV (v77.95): o texto do ficheiro preenchido — o
+     *  servidor volta a lê-lo com as regras de kw-csv.ts. null = tirar o
+     *  ficheiro carregado (volta a «por carregar»). */
+    kwCsv?: { csv?: unknown; fileName?: unknown } | null;
   };
 
   let next: MonthlyReportSnapshot = { ...snap };
@@ -399,6 +404,60 @@ export async function PUT(
       Date.now(),
     );
     if (block) next = { ...next, kwTracking: block };
+  }
+
+  // Posições por CSV (v77.95). O browser manda o texto tal como está no
+  // ficheiro; a leitura, a melhor das três e o Δ mês fazem-se aqui, com a
+  // client file e o relatório anterior do servidor.
+  if (body.kwCsv === null) {
+    next = {
+      ...next,
+      kwTracking: {
+        keywords: [],
+        required: next.kwTracking?.required ?? 0,
+        format: "csv",
+        rows: [],
+        upload: null,
+        updatedAt: Date.now(),
+        updatedBy: employee.name,
+      },
+    };
+  } else if (body.kwCsv && typeof body.kwCsv === "object") {
+    const text = typeof body.kwCsv.csv === "string" ? body.kwCsv.csv : "";
+    const parsed = parseKwPositionsCsv(text);
+    if (!parsed.ok) {
+      return NextResponse.json({ error: parsed.error }, { status: 400 });
+    }
+    const [targets, prevSnap] = await Promise.all([
+      listTargetKeywords(slug).catch(() => []),
+      getReport(slug, trailingMonths(period, 2)[0].key).catch(() => null),
+    ]);
+    const fileName =
+      typeof body.kwCsv.fileName === "string" && body.kwCsv.fileName.trim()
+        ? body.kwCsv.fileName.trim().slice(0, 160)
+        : "posicoes.csv";
+    const now = Date.now();
+    next = {
+      ...next,
+      kwTracking: {
+        keywords: [],
+        required: targets.length,
+        format: "csv",
+        rows: deriveKwCsvRows(parsed.rows, {
+          targets,
+          prev: prevSnap,
+          live: next.liveRanks?.source === "serpstat" ? next.liveRanks : undefined,
+        }),
+        upload: {
+          fileName,
+          uploadedAt: now,
+          uploadedBy: employee.name,
+          ...(parsed.warnings.length ? { warnings: parsed.warnings } : {}),
+        },
+        updatedAt: now,
+        updatedBy: employee.name,
+      },
+    };
   }
 
   // Anexos das notas (v77.9) — substitui a lista por inteiro (é o browser

@@ -418,8 +418,11 @@ export type TrackedKeyword = {
 };
 
 export type KeywordTrackingBlock = {
+  /** O formato da v77.82 (15 verificadas à mão). Vazio nos blocos "csv". */
   keywords: TrackedKeyword[];
-  /** Quantas a seleção exige: 15, ou todas se a client file tiver menos. */
+  /** v77.82: quantas a seleção exige (15, ou todas se a client file tiver
+   *  menos). Blocos "csv": o tamanho da client file — > 0 = o CSV é
+   *  obrigatório para finalizar. */
   required: number;
   /** Onde foi feita a pesquisa manual na Google («Lisboa»). Passa de mês
    *  para mês. */
@@ -427,7 +430,78 @@ export type KeywordTrackingBlock = {
   updatedAt: number;
   /** Nome de quem gravou da última vez. */
   updatedBy?: string;
+  /** v77.95: as posições chegam num CSV (Semrush + Search Console +
+   *  Serpstat) em vez de se escreverem à mão. Ausente = formato v77.82. */
+  format?: "csv";
+  /** As linhas do CSV carregado, já com a melhor posição e o Δ mês. */
+  rows?: KwCsvRow[];
+  /** O ficheiro que as trouxe. null/ausente = ainda por carregar. */
+  upload?: KwCsvUpload | null;
 };
+
+/* —— POSIÇÕES POR CSV (v77.95) ——————————————————————————————————————————
+ *
+ * O consultor exporta as keywords do cliente num CSV, preenche-o com a
+ * posição de cada uma no Semrush, no Search Console e no Serpstat, e
+ * carrega-o de volta. A posição do relatório é a MELHOR das três (o número
+ * mais baixo), e o Δ mês compara-a com a melhor do mês anterior. Cada linha
+ * diz de que ferramenta veio o número. */
+
+export type KwCsvSource = "semrush" | "gsc" | "serpstat";
+
+/** Ordem das colunas do CSV — e a dos empates: Semrush e Serpstat dão um
+ *  lugar exato na SERP, o Search Console uma média, por isso ganham. */
+export const KW_CSV_SOURCES: readonly KwCsvSource[] = ["semrush", "serpstat", "gsc"];
+
+export type KwCsvRow = {
+  keyword: string;
+  /** Posição em cada ferramenta (1–100, uma casa decimal); null = não
+   *  aparece / sem dados nessa ferramenta. */
+  semrush: number | null;
+  gsc: number | null;
+  serpstat: number | null;
+  /** A melhor das três; null = não aparece em nenhuma. */
+  best: number | null;
+  bestSource: KwCsvSource | null;
+  /** Pesquisas/mês: client file, ou o Serpstat deste relatório. */
+  volume: number | null;
+  premium?: boolean;
+  /** Está na client file (as do plano). Uma linha a mais no CSV entra na
+   *  mesma, marcada. */
+  inPlan: boolean;
+  /** Dificuldade (0–100) do Serpstat deste relatório, quando a conhece. */
+  difficulty?: number | null;
+  /** AI Overview nesta pesquisa (Serpstat): "cited" = cita este site. */
+  aio?: "cited" | "shown";
+  /** A melhor posição do mês anterior. null = não foi acompanhada. */
+  previous: { best: number | null; source: KwCsvSource | KwRankSource | null } | null;
+};
+
+export type KwCsvUpload = {
+  fileName: string;
+  uploadedAt: number;
+  uploadedBy?: string;
+  /** Avisos da leitura (células ilegíveis, linhas repetidas). */
+  warnings?: string[];
+};
+
+export const MAX_KW_CSV_ROWS = 1000;
+
+/** Δ mês de uma linha do CSV: positivo = subiu. "in" = passou a aparecer,
+ *  "lost" = deixou de aparecer, null = sem comparação. */
+export function kwCsvChange(r: KwCsvRow): number | "in" | "lost" | null {
+  const p = r.previous;
+  if (!p) return null;
+  if (p.best === null && r.best === null) return null;
+  if (p.best === null) return "in";
+  if (r.best === null) return "lost";
+  return Math.round((p.best - r.best) * 10) / 10;
+}
+
+/** True quando o bloco já está no formato CSV com um ficheiro carregado. */
+export function hasKwCsv(block: KeywordTrackingBlock | undefined): boolean {
+  return Boolean(block?.format === "csv" && block.upload && (block.rows?.length ?? 0) > 0);
+}
 
 /** O valor da fonte escolhida para o relatório. */
 export function shownRank(k: TrackedKeyword): KwRankValue {
@@ -451,7 +525,20 @@ export function kwRankChange(
 /** O que ainda falta no tracking, em frases curtas — vazio = completo.
  *  Usado pelo estado do relatório, pelo «Finalizar» e pelo cartão. */
 export function kwTrackingIssues(block: KeywordTrackingBlock | undefined): string[] {
-  if (!block || block.required === 0) return [];
+  if (!block) return [];
+  // v77.95: só falta uma coisa — o CSV. Os blocos v77.82 já completos
+  // continuam válidos; os incompletos passam a pedir o CSV, que é o único
+  // caminho que a página oferece agora.
+  const pendingCsv = "Keyword tracking: falta carregar o CSV das posições";
+  if (block.format === "csv") {
+    return hasKwCsv(block) || block.required === 0 ? [] : [pendingCsv];
+  }
+  if (block.required === 0) return [];
+  return legacyKwTrackingIssues(block).length > 0 ? [pendingCsv] : [];
+}
+
+/** As regras da v77.82 (15 escolhidas, Semrush + GSC verificados). */
+function legacyKwTrackingIssues(block: KeywordTrackingBlock): string[] {
   const out: string[] = [];
   const n = block.keywords.length;
   if (n !== block.required) {

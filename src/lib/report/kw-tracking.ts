@@ -3,10 +3,9 @@
 // O consultor escolhe 15 keywords da client file e verifica a posição de
 // cada uma à mão (Semrush e Search Console obrigatórios, Google opcional).
 // Aqui vive o que o servidor faz com isso:
-//   • `initKwTracking`     — o bloco com que um relatório NOVO nasce: a
-//                            seleção do mês anterior (as que ainda estão na
-//                            client file), com as posições em branco;
-//   • `sanitizeKwTracking` — o que o PUT aceita do browser;
+//   • `initKwTracking`     — o bloco com que um relatório NOVO nasce — desde
+//                            a v77.95 no formato CSV (ver kw-csv.ts);
+//   • `sanitizeKwTracking` — o que o PUT aceitava do browser no formato v77.82;
 //   • `previousFrom`       — o que a keyword tinha no relatório anterior, de
 //                            onde sai o Δ mês.
 //
@@ -59,26 +58,16 @@ function fromTarget(
   };
 }
 
-/** O bloco com que um relatório novo nasce. A seleção herda a do mês
- *  anterior — é o que dá sentido ao Δ mês — sem as keywords que entretanto
- *  saíram da client file. As posições começam em branco: são deste mês. */
-export function initKwTracking(
-  targets: TargetKeyword[],
-  prev: MonthlyReportSnapshot | null | undefined,
-): KeywordTrackingBlock {
-  const byKw = new Map(targets.map((t) => [norm(t.keyword), t] as const));
-  const required = requiredKwCount(targets);
-  const keywords: TrackedKeyword[] = [];
-  for (const k of prev?.kwTracking?.keywords ?? []) {
-    const t = byKw.get(norm(k.keyword));
-    if (!t || keywords.length >= required) continue;
-    keywords.push(fromTarget(t, prev, k.show));
-  }
-  const googleLocation = prev?.kwTracking?.googleLocation;
+/** O bloco com que um relatório novo nasce (v77.95): formato CSV, à espera
+ *  do ficheiro das posições. `required` = o tamanho da client file — com
+ *  keywords no plano, o CSV é obrigatório para finalizar. */
+export function initKwTracking(targets: TargetKeyword[]): KeywordTrackingBlock {
   return {
-    keywords,
-    required,
-    ...(googleLocation ? { googleLocation } : {}),
+    keywords: [],
+    required: targets.length,
+    format: "csv",
+    rows: [],
+    upload: null,
     updatedAt: 0,
   };
 }

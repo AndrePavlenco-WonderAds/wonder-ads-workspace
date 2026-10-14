@@ -7,7 +7,10 @@ import { NextResponse } from "next/server";
 import { getCurrentEmployee } from "@/lib/auth/server";
 import { editableDepts } from "@/lib/auth/credentials";
 import { getClientBySlug } from "@/lib/notion";
-import { buildMonthlyReport } from "@/lib/report/report-build";
+import { buildMonthlyReport, recomputeDerived } from "@/lib/report/report-build";
+import { refreshKwCsvBlock } from "@/lib/report/kw-csv";
+import { listTargetKeywords } from "@/lib/target-keywords-store";
+import { hasKwCsv, kwTrackingIssues } from "@/lib/report/report-types";
 import { getReport, saveReport } from "@/lib/report/report-store";
 import {
   getReportConfig,
@@ -17,6 +20,7 @@ import {
   isValidPeriodKey,
   isPeriodReportable,
   previousCompleteMonth,
+  trailingMonths,
 } from "@/lib/report/report-dates";
 
 export const runtime = "nodejs";
@@ -129,27 +133,42 @@ export async function POST(
           ...(previous.kwCuration?.added.length && fresh.kwCuration
             ? { kwCuration: { ...fresh.kwCuration, added: previous.kwCuration.added } }
             : {}),
-          // As 15 keywords e as posições verificadas à mão (v77.82) são
-          // trabalho do consultor, não da API — regenerar não as apaga. O
-          // `required` vem fresco (a client file pode ter mudado).
-          ...(previous.kwTracking?.keywords.length && fresh.kwTracking
+          // O CSV das posições (v77.95) é trabalho do consultor, não da API
+          // — regenerar não o apaga. Volta a calcular-se contra a client
+          // file, o relatório anterior e o Serpstat frescos (Δ mês, volume).
+          ...(previous.kwTracking && hasKwCsv(previous.kwTracking)
             ? {
-                kwTracking: {
-                  ...previous.kwTracking,
-                  required: fresh.kwTracking.required,
-                },
+                kwTracking: refreshKwCsvBlock(previous.kwTracking, {
+                  targets: await listTargetKeywords(slug).catch(() => []),
+                  prev: await getReport(slug, trailingMonths(period, 2)[0].key).catch(
+                    () => null,
+                  ),
+                  live:
+                    fresh.liveRanks?.source === "serpstat" ? fresh.liveRanks : undefined,
+                }),
               }
-            : {}),
+            : // As 15 verificadas à mão (v77.82), quando ficaram completas.
+              previous.kwTracking?.keywords.length &&
+                kwTrackingIssues(previous.kwTracking).length === 0
+              ? {
+                  kwTracking: {
+                    ...previous.kwTracking,
+                    required: fresh.kwTracking?.required ?? previous.kwTracking.required,
+                  },
+                }
+              : {}),
         }
       : fresh;
     // Sem revalidatePath (v77.83): /seo/<slug> e o relatório são force-dynamic;
     // só invalidava a lista de clientes da Notion para essas rotas.
-    await saveReport(snapshot);
+    // O que veio do relatório anterior conta para o estado e o resumo.
+    const saved = previous ? recomputeDerived(snapshot) : snapshot;
+    await saveReport(saved);
     return NextResponse.json({
       ok: true,
       period,
-      status: snapshot.status,
-      fetch: snapshot.fetch,
+      status: saved.status,
+      fetch: saved.fetch,
     });
   } catch (err) {
     console.error("monthly report generate failed:", err);

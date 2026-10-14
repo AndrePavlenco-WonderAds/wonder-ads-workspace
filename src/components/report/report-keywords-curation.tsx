@@ -21,6 +21,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Check,
+  Download,
   Eye,
   EyeOff,
   ListFilter,
@@ -31,11 +32,19 @@ import {
 } from "lucide-react";
 import type { KeywordCuration, SerpstatTableMode } from "@/lib/report/report-types";
 import { MAX_KEYWORD_CURATION } from "@/lib/report/report-types";
+import { kwCsvFileName, serpstatCsv } from "@/lib/report/kw-csv";
+import { downloadCsv } from "./csv-download";
 
 export type CurationRow = {
   keyword: string;
   position: number | null;
   inPlan: boolean;
+  /** Para o export (v77.95) — o que o Serpstat devolveu com a posição. */
+  change?: number | null;
+  volume?: number | null;
+  difficulty?: number | null;
+  traffic?: number | null;
+  url?: string | null;
 };
 
 const norm = (s: string) => s.trim().toLowerCase().replace(/\s+/g, " ");
@@ -43,11 +52,13 @@ const norm = (s: string) => s.trim().toLowerCase().replace(/\s+/g, " ");
 export function ReportKeywordsCuration({
   slug,
   period,
+  clientTitle,
   rows,
   curation,
 }: {
   slug: string;
   period: string;
+  clientTitle: string;
   /** Tudo o que o Serpstat devolveu: a rankear primeiro, depois o plano
    *  fora do top 100. */
   rows: CurationRow[];
@@ -119,6 +130,23 @@ export function ReportKeywordsCuration({
 
   const rankedRows = rows.filter((r) => r.position !== null);
   const pickedCount = rankedRows.filter((r) => picked.has(norm(r.keyword))).length;
+
+  // As «selecionadas» do export = as que entram no relatório com o que está
+  // marcado agora (mesmo antes de guardar): no modo «todas», as que não
+  // estão escondidas; no «só algumas», as escolhidas.
+  const selectedRows: CurationRow[] =
+    mode === "some"
+      ? rankedRows.filter((r) => picked.has(norm(r.keyword)))
+      : mode === "all"
+        ? [
+            ...rows.filter((r) => !isHidden(r)),
+            ...added
+              .filter((a) => !hidden.has(norm(a.keyword)))
+              .map((a) => ({ keyword: a.keyword, position: a.position, inPlan: true })),
+          ]
+        : [];
+  const exportRows = (list: CurationRow[], kind: string) =>
+    downloadCsv(serpstatCsv(list), kwCsvFileName(kind, clientTitle, period));
 
   async function save() {
     setBusy(true);
@@ -423,6 +451,33 @@ export function ReportKeywordsCuration({
           </div>
         </>
       )}
+
+      {/* Export — para analisar no Semrush ou no Sheets (v77.95). */}
+      <div className="mt-3 flex flex-wrap items-center gap-1.5 rounded-lg border border-white/8 bg-black/15 px-2.5 py-2 text-[11.5px] text-white/45">
+        <Download className="h-3.5 w-3.5 shrink-0 text-white/40" />
+        Exportar CSV:
+        <button
+          type="button"
+          onClick={() => exportRows(selectedRows, "Serpstat-selecionadas")}
+          disabled={selectedRows.length === 0}
+          title={
+            mode === "off"
+              ? "A tabela está fora do relatório — não há selecionadas"
+              : "As que entram no relatório com o que está marcado agora"
+          }
+          className="rounded-md border border-[#783DF5]/40 bg-[#783DF5]/10 px-2 py-0.5 font-medium text-white/85 transition hover:bg-[#783DF5]/20 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          Selecionadas ({selectedRows.length})
+        </button>
+        <button
+          type="button"
+          onClick={() => exportRows(rows, "Serpstat-todas")}
+          disabled={rows.length === 0}
+          className="rounded-md border border-white/12 px-2 py-0.5 font-medium text-white/75 transition hover:border-white/30 hover:text-white disabled:opacity-40"
+        >
+          Todas ({rows.length})
+        </button>
+      </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-3">
         <button

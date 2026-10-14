@@ -27,12 +27,17 @@ import {
   type ReportMetric,
   gbpLeadTotal,
   isGbpChannelKey,
+  hasKwCsv,
+  kwCsvChange,
   kwRankChange,
   shownRank,
   websiteLeadTotal,
+  type KwCsvSource,
   type KwRankSource,
   type KwRankValue,
 } from "@/lib/report/report-types";
+import { kwCsvFileName, kwResultsCsv, serpstatCsv } from "@/lib/report/kw-csv";
+import { ReportCsvButton } from "./report-csv-button";
 
 const GRAD = "linear-gradient(135deg,#343ED7 0%,#783DF5 53%,#C535C9 100%)";
 
@@ -160,10 +165,11 @@ function PlaceCell({ change }: { change: number | null }) {
 
 /* —— Keyword tracking (v77.82) ——————————————————————————————————————— */
 
-const KWT_SOURCE: Record<KwRankSource, { pt: string; en: string }> = {
+const KWT_SOURCE: Record<KwRankSource | KwCsvSource, { pt: string; en: string }> = {
   semrush: { pt: "Semrush", en: "Semrush" },
   gsc: { pt: "Search Console", en: "Search Console" },
   google: { pt: "Pesquisa Google", en: "Google search" },
+  serpstat: { pt: "Serpstat", en: "Serpstat" },
 };
 
 /** «7», «6,8» (GSC), «100+» (não aparece) ou «—» (por preencher). */
@@ -557,6 +563,75 @@ export function ReportDocument({
     : null;
   const kwtSources = Array.from(new Set(kwtRows.map((r) => r.k.show)));
 
+  // —— POSIÇÕES POR CSV (v77.95) ————————————————————————————————————————
+  // Todas as keywords que o consultor carregou, cada uma com a MELHOR das
+  // três medições (Semrush, Search Console, Serpstat) e o Δ face à melhor
+  // do mês anterior. O cliente vê as que aparecem na Google; o consultor vê
+  // todas, as que não aparecem em nenhuma no fim.
+  const kwtCsvMode = kwt?.format === "csv";
+  const kwtCsvLoaded = hasKwCsv(kwt);
+  const csvAll = kwtCsvLoaded ? (kwt?.rows ?? []) : [];
+  const csvRows = csvAll
+    .map((r) => ({ r, change: kwCsvChange(r) }))
+    .filter((x) => variant === "internal" || x.r.best !== null)
+    .sort(
+      (a, b) =>
+        (a.r.best ?? 1000) - (b.r.best ?? 1000) ||
+        (b.r.volume ?? -1) - (a.r.volume ?? -1) ||
+        a.r.keyword.localeCompare(b.r.keyword),
+    );
+  const csvRanked = csvAll.filter((r) => r.best !== null);
+  const csvNums = csvRanked.map((r) => r.best as number);
+  const csvTop3 = csvNums.filter((v) => v <= 3).length;
+  const csvTop10 = csvNums.filter((v) => v <= 10).length;
+  const csvChanges = csvAll.map(kwCsvChange);
+  const csvUp = csvChanges.filter(
+    (c) => c === "in" || (typeof c === "number" && c > 0),
+  ).length;
+  const csvEntered = csvChanges.filter((c) => c === "in").length;
+  const csvAvg = csvNums.length
+    ? csvNums.reduce((a, b) => a + b, 0) / csvNums.length
+    : null;
+  const csvCompared = csvAll.some((r) => r.previous !== null);
+  // Onde estão as que aparecem: top 3 · 4–10 · 11–20 · 21–100.
+  const csvDist = [
+    { key: "p1", label: t("Top 3", "Top 3"), n: csvTop3 },
+    { key: "p2", label: "4–10", n: csvTop10 - csvTop3 },
+    { key: "p3", label: "11–20", n: csvNums.filter((v) => v > 10 && v <= 20).length },
+    { key: "p4", label: "21–100", n: csvNums.filter((v) => v > 20).length },
+  ];
+  // As maiores subidas — o que o cliente procura primeiro. Quem chegou à
+  // 1.ª página vem antes de quem subiu muito mas ainda está longe (um
+  // «fora → 55» não é a manchete do mês); dentro de cada escalão, o salto.
+  const tier = (v: number | null) => (v === null ? 3 : v <= 10 ? 0 : v <= 20 ? 1 : 2);
+  const csvMovers = csvAll
+    .map((r) => ({ r, c: kwCsvChange(r) }))
+    .filter(
+      (x): x is { r: (typeof csvAll)[number]; c: number | "in" } =>
+        x.c === "in" || (typeof x.c === "number" && x.c >= 1),
+    )
+    .map((x) => ({
+      ...x,
+      gain: x.c === "in" ? 101 - (x.r.best ?? 100) : x.c,
+    }))
+    .sort(
+      (a, b) =>
+        tier(a.r.best) - tier(b.r.best) ||
+        b.gain - a.gain ||
+        (b.r.volume ?? 0) - (a.r.volume ?? 0),
+    )
+    .slice(0, 5);
+  const csvSources = Array.from(
+    new Set(csvRows.map((x) => x.r.bestSource).filter((v): v is KwCsvSource => v !== null)),
+  );
+  // As ferramentas de lugar exato que aparecem na tabela, para a legenda.
+  const csvExact = (["semrush", "serpstat"] as const)
+    .filter((x) => csvSources.includes(x))
+    .map((x) => KWT_SOURCE[x].pt);
+  const csvPendingInternal =
+    variant === "internal" && kwtCsvMode && !kwtCsvLoaded && (kwt?.required ?? 0) > 0;
+  const KWT_FOLD = 20;
+
   const ai = snapshot.ai;
   const gbp = snapshot.gbp;
   // Per-listing breakdown — only on multi-unit clients (and absent on every
@@ -654,7 +729,9 @@ export function ReportDocument({
     !hidden.has("kw") &&
     serpMode !== "off" &&
     (kwVisible.length > 0 || variant === "internal");
-  const showKwt = !hidden.has("kwt") && kwtRows.length > 0;
+  const showKwt =
+    !hidden.has("kwt") &&
+    (kwtCsvMode ? csvRows.length > 0 || csvPendingInternal : kwtRows.length > 0);
 
   // Google IA — impressões nas AI Overviews / AI Mode (GSC · Generative AI).
   // O cliente só vê a secção com um número validado; a interna mostra-a
@@ -1372,7 +1449,224 @@ export function ReportDocument({
           verificou à mão este mês. Vem antes da lista do Serpstat porque é
           a resposta à pergunta que o cliente faz («e as keywords que
           estamos a trabalhar?»). */}
-      {showKwt && kwt && (
+      {/* POSIÇÕES POR CSV (v77.95) — a melhor das três ferramentas por
+          keyword, comparada com a melhor do mês anterior. */}
+      {showKwt && kwtCsvMode && (
+        <section className="wa-sec wa-kwt">
+          <SecLabel n={secN("kwt")} id="wa-sec-kwt">
+            {t("Keywords acompanhadas", "Tracked keywords")}
+          </SecLabel>
+          {csvPendingInternal ? (
+            <p className="wa-pending-lg">
+              Posições por carregar — no Passo 1, exporta as keywords, preenche o Semrush, o
+              Search Console e o Serpstat, e carrega o CSV.
+            </p>
+          ) : (
+            <>
+              <h2 className="wa-h2">
+                {t(
+                  `${csvRanked.length} das ${csvAll.length} pesquisas que estamos a trabalhar já aparecem na Google`,
+                  `${csvRanked.length} of the ${csvAll.length} searches we're working on already show up on Google`,
+                )}
+              </h2>
+              <p className="wa-method">
+                {t(
+                  "Para cada pesquisa, a melhor posição deste mês entre três medições — Semrush, Google Search Console e Serpstat — comparada com a melhor do mês anterior. Ao lado de cada posição está a ferramenta que a mediu.",
+                  "For each search, this month's best position across three measurements — Semrush, Google Search Console and Serpstat — compared with last month's best. Each position shows the tool that measured it.",
+                )}
+              </p>
+              <div className="wa-kwt-stats">
+                <div className="wa-kwt-stat hero">
+                  <span className="wa-kwt-sv">
+                    {csvTop10}
+                    <small>/{csvAll.length}</small>
+                  </span>
+                  <span className="wa-kwt-sl">{t("na 1.ª página", "on page one")}</span>
+                </div>
+                <div className="wa-kwt-stat">
+                  <span className="wa-kwt-sv">{csvTop3}</span>
+                  <span className="wa-kwt-sl">{t("no top 3", "in the top 3")}</span>
+                </div>
+                {showDeltas && csvCompared && (
+                  <div className="wa-kwt-stat">
+                    <span className={`wa-kwt-sv${csvUp > 0 ? " up" : ""}`}>{csvUp}</span>
+                    <span className="wa-kwt-sl">{t("a subir este mês", "moving up")}</span>
+                  </div>
+                )}
+                {showDeltas && csvEntered > 0 && (
+                  <div className="wa-kwt-stat">
+                    <span className="wa-kwt-sv up">+{csvEntered}</span>
+                    <span className="wa-kwt-sl">{t("novas no top 100", "new in the top 100")}</span>
+                  </div>
+                )}
+                {csvAvg !== null && (
+                  <div className="wa-kwt-stat">
+                    <span className="wa-kwt-sv">
+                      {csvAvg.toLocaleString(pt ? "pt-PT" : "en-GB", {
+                        maximumFractionDigits: 1,
+                      })}
+                    </span>
+                    <span className="wa-kwt-sl">{t("posição média", "avg. position")}</span>
+                  </div>
+                )}
+              </div>
+
+              {csvRanked.length > 0 && (
+                <div className="wa-kwt-dist">
+                  <div className="wa-kwt-dist-bar" aria-hidden>
+                    {csvDist
+                      .filter((d) => d.n > 0)
+                      .map((d) => (
+                        <span
+                          key={d.key}
+                          className={`wa-kwt-dist-seg ${d.key}`}
+                          style={{ flexGrow: d.n }}
+                        />
+                      ))}
+                  </div>
+                  <div className="wa-kwt-dist-legend">
+                    {csvDist.map((d) => (
+                      <span key={d.key} className={d.n === 0 ? "zero" : undefined}>
+                        <i className={`wa-kwt-dist-dot ${d.key}`} />
+                        {d.label} <b>{d.n}</b>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {showDeltas && csvMovers.length > 0 && (
+                <div className="wa-kwt-movers">
+                  <div className="wa-kwt-movers-h">{t("Maiores subidas do mês", "Biggest gains this month")}</div>
+                  <ol>
+                    {csvMovers.map(({ r, c }) => (
+                      <li key={r.keyword}>
+                        <span className="wa-kwt-movers-kw">{r.keyword}</span>
+                        <span className="wa-kwt-movers-path">
+                          {c === "in" ? t("fora", "out") : rankText(r.previous?.best ?? null, lang)}
+                          {" → "}
+                          <b>{rankText(r.best, lang)}</b>
+                        </span>
+                        <MoveChip change={c} lang={lang} />
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              )}
+
+              <input type="checkbox" id="wa-kwt-more" className="wa-more-cb" />
+              <div className="wa-tblwrap" style={{ marginTop: ".6rem" }}>
+                <table className="wa-qtable wa-kwt-table">
+                  <thead>
+                    <tr>
+                      <th>Keyword</th>
+                      <th className="n">{t("Posição", "Position")}</th>
+                      <th>{t("Fonte", "Source")}</th>
+                      {showDeltas && <th className="n">{t("Δ mês", "MoM Δ")}</th>}
+                      <th className="n">{t("Pesq./mês", "Searches/mo")}</th>
+                      {variant === "internal" && <th className="n">S · GSC · Sp</th>}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {csvRows.map(({ r, change }, i) => (
+                      <tr key={r.keyword} className={i >= KWT_FOLD ? "wa-fold" : undefined}>
+                        <td>
+                          {r.keyword}
+                          {r.premium && (
+                            <span className="wa-kwt-star">★ {t("prioritária", "priority")}</span>
+                          )}
+                          {r.aio === "cited" ? (
+                            <span className="wa-kw-aio cited">{t("citado na IA", "cited by AI")}</span>
+                          ) : r.aio === "shown" ? (
+                            <span className="wa-kw-aio">AI Overview</span>
+                          ) : null}
+                          {variant === "internal" && !r.inPlan && (
+                            <span className="wa-kw-plan">{t("fora do plano", "off plan")}</span>
+                          )}
+                        </td>
+                        <td className="n">
+                          {r.best === null ? (
+                            <span className="wa-pending">{t("fora do top 100", "outside top 100")}</span>
+                          ) : (
+                            <span className={`wa-pos ${rankBand(r.best)}`}>{rankText(r.best, lang)}</span>
+                          )}
+                        </td>
+                        <td>
+                          {r.bestSource && (
+                            <span className={`wa-kwt-src ${r.bestSource}`}>
+                              {pt ? KWT_SOURCE[r.bestSource].pt : KWT_SOURCE[r.bestSource].en}
+                            </span>
+                          )}
+                        </td>
+                        {showDeltas && (
+                          <td className="n">
+                            <MoveChip change={change} lang={lang} />
+                          </td>
+                        )}
+                        <td className="n wa-kwt-vol">
+                          {r.volume !== null && r.volume > 0
+                            ? r.volume.toLocaleString(pt ? "pt-PT" : "en-GB")
+                            : "—"}
+                        </td>
+                        {variant === "internal" && (
+                          <td className="n wa-kwt-int">
+                            {rankText(r.semrush, lang)} · {rankText(r.gsc, lang)} ·{" "}
+                            {rankText(r.serpstat, lang)}
+                          </td>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {csvRows.length > KWT_FOLD && (
+                <label htmlFor="wa-kwt-more" className="wa-more-btn">
+                  <span className="wa-more-open">
+                    {t(`Ver todas as ${csvRows.length} pesquisas`, `Show all ${csvRows.length} searches`)}
+                  </span>
+                  <span className="wa-more-close">{t("Mostrar menos", "Show less")}</span>
+                </label>
+              )}
+              <p className="wa-method wa-kwt-legend">
+                {csvExact.length > 0 &&
+                  t(
+                    `${csvExact.join(" e ")} — o lugar que ${csvExact.length > 1 ? "cada ferramenta regista" : "a ferramenta regista"} na Google. `,
+                    `${csvExact.join(" and ")} — the place ${csvExact.length > 1 ? "each tool records" : "the tool records"} on Google. `,
+                  )}
+                {csvSources.includes("gsc") &&
+                  t(
+                    "Search Console — a posição média na Google ao longo do mês, medida pela própria Google. ",
+                    "Search Console — the average Google position over the month, measured by Google itself. ",
+                  )}
+                {showDeltas &&
+                  csvCompared &&
+                  t(
+                    "«Δ mês» compara com a melhor posição do mês anterior.",
+                    "“MoM Δ” compares with last month's best position.",
+                  )}
+              </p>
+              {variant === "internal" && (
+                <div className="wa-int-tools">
+                  <ReportCsvButton
+                    csv={kwResultsCsv(csvAll)}
+                    fileName={kwCsvFileName("Posicoes-tabela", snapshot.clientTitle, snapshot.period)}
+                    label={`Exportar CSV (${csvAll.length})`}
+                  />
+                  <span>
+                    {`${kwt?.upload?.fileName ?? "CSV"} · ${formatDate(kwt?.upload?.uploadedAt)}${
+                      csvAll.length > csvRanked.length
+                        ? ` · as últimas ${csvAll.length - csvRanked.length} não aparecem em nenhuma das três (o cliente não as vê)`
+                        : ""
+                    }`}
+                  </span>
+                </div>
+              )}
+            </>
+          )}
+        </section>
+      )}
+
+      {showKwt && kwt && !kwtCsvMode && (
         <section className="wa-sec wa-kwt">
           <SecLabel n={secN("kwt")} id="wa-sec-kwt">
             {t("Keywords acompanhadas", "Tracked keywords")}
@@ -1592,6 +1886,15 @@ export function ReportDocument({
               <span className="wa-more-close">{t("Mostrar menos", "Show less")}</span>
             </label>
           )}
+          {variant === "internal" && (
+            <div className="wa-int-tools">
+              <ReportCsvButton
+                csv={serpstatCsv(kwVisible)}
+                fileName={kwCsvFileName("Serpstat", snapshot.clientTitle, snapshot.period)}
+                label={`Exportar CSV (${kwVisible.length})`}
+              />
+            </div>
+          )}
           {variant === "internal" && live && (
             <p className="wa-method" style={{ marginTop: ".6rem" }}>
               {`Serpstat · base ${live.se ?? "g_pt"} · domínio + subdomínios · ${live.domain}${
@@ -1736,7 +2039,7 @@ const PRINT_CSS = `
   .wa-qtable tr{break-inside:avoid;}
   .wa-qtable thead{display:table-header-group;}
   .wa-foot{break-inside:avoid;}
-  .wa-nav,.wa-more-btn,.wa-more-cb{display:none!important;}
+  .wa-nav,.wa-more-btn,.wa-more-cb,.wa-int-tools{display:none!important;}
   .wa-qtable tr.wa-fold{display:table-row!important;}
   .wa-kwt-row,.wa-kwt-stat,.wa-exec li{break-inside:avoid;}
   .wa-sec{box-shadow:none!important;margin:0 0 .7rem!important;}
@@ -2058,6 +2361,35 @@ const CSS = GEO_CSS + PRINT_CSS + `
 .wa-move.down{color:var(--down);background:rgba(209,67,90,.1);}
 .wa-move.flat{color:#a5a2b8;}
 .wa-kwt-legend{margin-top:.8rem;margin-bottom:0;}
+.wa-kwt-src.serpstat{background:rgba(120,61,245,.1);color:#6b34c9;}
+/* Posições por CSV (v77.95) */
+.wa-kwt-dist{margin:.1rem 0 1rem;}
+.wa-kwt-dist-bar{display:flex;gap:3px;height:12px;border-radius:7px;overflow:hidden;}
+.wa-kwt-dist-seg{display:block;flex-basis:0;min-width:10px;}
+.wa-kwt-dist-seg.p1,.wa-kwt-dist-dot.p1{background:#0f8f62;}
+.wa-kwt-dist-seg.p2,.wa-kwt-dist-dot.p2{background:#343ed7;}
+.wa-kwt-dist-seg.p3,.wa-kwt-dist-dot.p3{background:#d99a1e;}
+.wa-kwt-dist-seg.p4,.wa-kwt-dist-dot.p4{background:#b7b4c8;}
+.wa-kwt-dist-legend{display:flex;flex-wrap:wrap;gap:.3rem 1rem;margin-top:.45rem;font-size:.7rem;color:var(--muted);}
+.wa-kwt-dist-legend b{color:var(--ink);font-variant-numeric:tabular-nums;}
+.wa-kwt-dist-legend .zero{opacity:.5;}
+.wa-kwt-dist-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:.32rem;vertical-align:.02rem;}
+.wa-kwt-movers{border:1px solid rgba(15,143,98,.2);background:linear-gradient(90deg,rgba(15,143,98,.06),#fff 70%);border-radius:12px;padding:.65rem .85rem;margin:0 0 .9rem;break-inside:avoid;}
+.wa-kwt-movers-h{font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;font-weight:800;color:#0b6f4c;margin-bottom:.35rem;}
+.wa-kwt-movers ol{list-style:none;margin:0;padding:0;display:grid;gap:.25rem;}
+.wa-kwt-movers li{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:.7rem;align-items:center;font-size:.78rem;}
+.wa-kwt-movers-kw{font-weight:650;color:var(--ink);overflow-wrap:anywhere;}
+.wa-kwt-movers-path{font-variant-numeric:tabular-nums;color:var(--muted);white-space:nowrap;}
+.wa-kwt-movers-path b{color:var(--ink);}
+.wa-kwt-table td .wa-kwt-star{margin-left:.4rem;}
+.wa-kwt-table .wa-kwt-src{white-space:nowrap;}
+.wa-kwt-table .wa-move{display:inline-block;}
+.wa-kwt-vol{font-weight:500!important;color:var(--muted)!important;}
+.wa-kwt-table td.wa-kwt-int{font-weight:500;font-size:.68rem;white-space:nowrap;}
+.wa-int-tools{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem .8rem;margin-top:.7rem;font-size:.7rem;color:var(--muted);}
+.wa-csv-btn{display:inline-flex;align-items:center;gap:.35rem;padding:.38rem .8rem;border-radius:999px;cursor:pointer;
+  font:inherit;font-size:.74rem;font-weight:700;color:#6b34c9;background:rgba(120,61,245,.08);border:1px solid rgba(120,61,245,.25);}
+.wa-csv-btn:hover{background:rgba(120,61,245,.15);}
 
 /* «Ver todas» sem JS (v77.82) */
 .wa-more-cb{position:absolute;opacity:0;pointer-events:none;width:0;height:0;}

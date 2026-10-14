@@ -61,7 +61,7 @@ export type ShopifyCsvParse =
 
 /** Divide o texto respeitando aspas (RFC 4180) — um nome de produto com
  *  vírgula ou uma morada com quebra de linha não podem partir a tabela. */
-function parseDelimited(text: string, delimiter: string): string[][] {
+export function parseDelimited(text: string, delimiter: string): string[][] {
   const rows: string[][] = [];
   let row: string[] = [];
   let field = "";
@@ -109,7 +109,7 @@ function parseDelimited(text: string, delimiter: string): string[][] {
 
 /** O Excel português grava CSV com `;` e uma colagem de folha de cálculo vem
  *  com tabs — testa os três e fica com o que der mais colunas no cabeçalho. */
-function detectDelimiter(text: string): string {
+export function detectDelimiter(text: string): string {
   const head = text.slice(0, 20_000);
   let best = ",";
   let bestCols = 0;
@@ -127,7 +127,7 @@ function detectDelimiter(text: string): string {
 /** "Lineitem name" / "Vendas líquidas" → "lineitemname" / "vendasliquidas".
  *  Sem acentos, sem espaços, sem pontuação: um cabeçalho só tem de bater no
  *  sentido, não na escrita. */
-function squash(s: string): string {
+export function squash(s: string): string {
   return s
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
