@@ -65,7 +65,7 @@ import {
 } from "@/lib/probation/published";
 import { todayLisbonISO } from "@/lib/probation/progress";
 import { INEFICACIAS_OPEN_TO_TEAM } from "@/lib/ineficacias/access";
-import { loadConsultant, loadTeam } from "@/lib/ineficacias/store";
+import { loadConsultantForSelf, loadTeam } from "@/lib/ineficacias/store";
 import {
   LEVELS as INEFICACIA_LEVELS,
   formatISODate as ineficaciaDate,
@@ -1194,7 +1194,7 @@ async function ineficaciasNotifications(
 
   if (!admin && !isViewerProfile(viewer.username) && INEFICACIAS_OPEN_TO_TEAM) {
     try {
-      const b = await loadConsultant(viewer.username, today);
+      const b = await loadConsultantForSelf(viewer.username, today);
       for (const d of b.ledger.direct) {
         if (now.getTime() - d.createdAt > INEFICACIAS_RECENT_MS) continue;
         const id = `ineficacias-direct:${d.id}`;

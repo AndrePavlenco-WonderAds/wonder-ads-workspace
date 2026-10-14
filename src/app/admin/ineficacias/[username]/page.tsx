@@ -20,7 +20,6 @@ import {
   formatISODate,
   formatLisbonDateTime,
   errorTypeLabel,
-  IMPACTS,
   noticedLabel,
   reasonLabel,
   type LedgerEvent,
@@ -136,7 +135,15 @@ export default async function IneficaciasConsultantPage({
                     integrity={verifyIntegrity(r)}
                     defaultOpen={r.id === openId}
                     itemExtras={Object.fromEntries(
-                      r.items.map((it) => [it.id, <ItemScoreControl key={it.id} target={{ reportId: r.id, itemId: it.id }} initial={it.score} />]),
+                      r.items.map((it) => [
+                        it.id,
+                        <ItemScoreControl
+                          key={it.id}
+                          target={{ reportId: r.id, itemId: it.id }}
+                          initial={it.score}
+                          calc={{ reason: it.reason, firstTime: it.firstTime, noticed: it.noticed, errorType: it.errorType, impacts: it.impacts }}
+                        />,
+                      ]),
                     )}
                     footer={
                       !r.review ? (
@@ -178,18 +185,12 @@ export default async function IneficaciasConsultantPage({
                     </header>
                     <p className="mt-2 whitespace-pre-wrap text-[13px] leading-relaxed text-white/80">{d.what}</p>
                     {d.shouldHave && <p className="mt-2 text-[12px] text-white/55">Como deveria ter sido: {d.shouldHave}</p>}
-                    {d.suggestedPoints !== null && (
-                      <p className="mt-2 text-[11.5px] text-white/45">
-                        Calculadora: sugeriu {d.suggestedPoints} pts
-                        {d.impacts.length > 0
-                          ? ` · ${IMPACTS.filter((i) => d.impacts.includes(i.id))
-                              .map((i) => i.label.toLowerCase())
-                              .join(", ")}`
-                          : " · sem impacto assinalado"}
-                      </p>
-                    )}
                     <div className="mt-3">
-                      <ItemScoreControl target={{ username, occurrenceId: d.id }} initial={d.score} />
+                      <ItemScoreControl
+                        target={{ username, occurrenceId: d.id }}
+                        initial={d.score}
+                        calc={{ reason: d.reason, firstTime: d.firstTime, noticed: d.noticed, errorType: d.errorType, impacts: d.impacts }}
+                      />
                     </div>
                   </article>
                 ))}

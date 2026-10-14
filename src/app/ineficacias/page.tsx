@@ -20,9 +20,9 @@ import { getCurrentEmployee, getImpersonation, isRealUserAdmin } from "@/lib/aut
 import { findEmployeeByUsername } from "@/lib/auth/credentials";
 import { getTeamAvatar } from "@/lib/team-avatars";
 import { ineficaciasAvailable } from "@/lib/ineficacias/access";
-import { loadConsultant } from "@/lib/ineficacias/store";
+import { loadConsultantForSelf } from "@/lib/ineficacias/store";
 import { clientChoicesFor } from "@/lib/ineficacias/clients";
-import { errorTypeLabel, formatISODate, formatLisbonDateTime, noticedLabel, reasonLabel } from "@/lib/ineficacias/shared";
+import { formatISODate, formatLisbonDateTime, noticedLabel, reasonLabel } from "@/lib/ineficacias/shared";
 import { todayLisbonISO } from "@/lib/probation/progress";
 
 export const dynamic = "force-dynamic";
@@ -51,7 +51,7 @@ export default async function IneficaciasPage() {
   }
 
   const today = todayLisbonISO();
-  const [bundle, clients] = await Promise.all([loadConsultant(me.username, today), clientChoicesFor(me.name)]);
+  const [bundle, clients] = await Promise.all([loadConsultantForSelf(me.username, today), clientChoicesFor(me.name)]);
   const { state, reports, ledger } = bundle;
   const row = findEmployeeByUsername(me.username);
   const fullName = row?.fullName ?? me.name;
@@ -95,7 +95,6 @@ export default async function IneficaciasPage() {
                     <span className="font-semibold">{d.client}</span>
                     <span className="text-white/40"> · {formatISODate(d.occurredOn)} · {reasonLabel(d.reason, d.reasonOther)} · {noticedLabel(d.noticed)}
                       {d.firstTime === true ? " · primeira vez" : d.firstTime === false ? ` · repetido (última vez: ${d.lastTime || "—"})` : ""}
-                      {d.errorType ? ` · ${errorTypeLabel(d.errorType).toLowerCase()}` : ""}
                     </span>
                   </p>
                   <ScoreBadge score={d.score} size="sm" />

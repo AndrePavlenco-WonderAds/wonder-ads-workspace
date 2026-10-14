@@ -13,7 +13,7 @@ import { NextResponse } from "next/server";
 import { getCurrentEmployee, isRealUserAdmin } from "@/lib/auth/server";
 import { ineficaciasAvailable } from "@/lib/ineficacias/access";
 import { fail, guardConsultantWrite, NO_STORE, requestFingerprint } from "@/lib/ineficacias/api-guard";
-import { loadConsultant, submitReport } from "@/lib/ineficacias/store";
+import { loadConsultantForSelf, submitReport } from "@/lib/ineficacias/store";
 import {
   cleanItems,
   normalizeName,
@@ -34,7 +34,7 @@ export async function GET() {
   if (!me) return fail("Sessão inválida.", 401);
   if (me.viewerOf) return fail("Este perfil não tem acesso a esta área.", 403);
   if (!ineficaciasAvailable(await isRealUserAdmin())) return fail("Em construção.", 403);
-  const bundle = await loadConsultant(me.username, todayLisbonISO());
+  const bundle = await loadConsultantForSelf(me.username, todayLisbonISO());
   return NextResponse.json(
     { reports: bundle.reports, state: bundle.state, occurrences: bundle.occurrences },
     { headers: NO_STORE },

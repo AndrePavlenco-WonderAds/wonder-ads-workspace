@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.94",
+    date: "2026-10-14",
+    title: "Ineficácias — a calculadora também na pontuação dos relatórios",
+    highlights: [
+      "**🧮 A calculadora de gravidade chega à pontuação dos relatórios dos consultores.** Em cada ocorrência por pontuar, o motivo, a primeira vez e quem deu pelo erro vêm do que o consultor escreveu; escolhes aprendizagem ou recorrência e o que o erro causou, e a sugestão aparece com as contas à vista. «Usar» aplica-a.",
+      "**✏️ Também ao corrigir uma pontuação** — nas ocorrências já pontuadas e nas registadas pela direção, a calculadora abre com o que foi escolhido da última vez.",
+      "**🔵 O seletor 0–10 marca a sugestão** com um ponto, para veres logo se a tua pontuação se afasta dela.",
+      "**🔒 Só a direção vê a calculadora.** O tipo de erro, os impactos e a sugestão ficam fora de tudo o que chega ao consultor — página, painel, API e sino passam por um único carregador que os retira.",
+    ],
+  },
+  {
     version: "77.93",
     date: "2026-10-14",
     title: "Ineficácias — calculadora de gravidade, aprendizagem vs. recorrência e «Team Inefficiency»",

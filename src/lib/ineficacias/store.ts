@@ -33,6 +33,8 @@ import {
   isISODate,
   lisbonDateOf,
   occurrencesOf,
+  redactForConsultant,
+  suggestScore,
   ERROR_TYPES,
   IMPACTS,
   NOTICED_OPTIONS,
@@ -130,6 +132,20 @@ function sanitizeItem(raw: unknown): IneficaciaItem | null {
     occurredOn: isISODate(it.occurredOn) ? it.occurredOn : "",
     noticed,
     score: sanitizeScore(it.score),
+    ...sanitizeAssessment(it),
+  };
+}
+
+/** A calculadora da direção (v77.93 nas diretas, v77.94 nos relatórios) —
+ *  os registos antigos não a têm. */
+function sanitizeAssessment(r: Record<string, unknown>): Pick<DirectOccurrence, "errorType" | "impacts" | "suggestedPoints"> {
+  return {
+    errorType: ERROR_TYPE_IDS.has(str(r.errorType)) ? (r.errorType as IneficaciaErrorType) : null,
+    impacts: Array.isArray(r.impacts) ? [...new Set(r.impacts.filter((i): i is IneficaciaImpact => IMPACT_IDS.has(str(i))))] : [],
+    suggestedPoints:
+      typeof r.suggestedPoints === "number" && Number.isInteger(r.suggestedPoints) && r.suggestedPoints >= 0 && r.suggestedPoints <= MAX_POINTS
+        ? r.suggestedPoints
+        : null,
   };
 }
 
@@ -220,10 +236,7 @@ function sanitizeDirect(raw: unknown): DirectOccurrence | null {
     lastTime: str(d.lastTime, 300),
     occurredOn: d.occurredOn,
     noticed: NOTICED_IDS.has(str(d.noticed)) ? (d.noticed as IneficaciaNoticed) : "equipa",
-    // Registos anteriores à v77.93 não têm tipo, impactos nem sugestão.
-    errorType: ERROR_TYPE_IDS.has(str(d.errorType)) ? (d.errorType as IneficaciaErrorType) : null,
-    impacts: Array.isArray(d.impacts) ? d.impacts.filter((i): i is IneficaciaImpact => IMPACT_IDS.has(str(i))) : [],
-    suggestedPoints: typeof d.suggestedPoints === "number" && Number.isInteger(d.suggestedPoints) ? d.suggestedPoints : null,
+    ...sanitizeAssessment(d),
     score,
     createdAt: num(d.createdAt),
   };
@@ -396,10 +409,31 @@ export type ScoreResult =
 
 /** A direção pontua uma ocorrência de um relatório. Quando todas ficam
  *  pontuadas, a revisão fecha-se sozinha. */
+/** A avaliação que a direção fez na calculadora ao pontuar. A sugestão é
+ *  recalculada aqui com os dados gravados da ocorrência — nunca vem do
+ *  browser. */
+export type AssessmentInput = { errorType: IneficaciaErrorType; impacts: IneficaciaImpact[] };
+
+function applyAssessment(
+  target: Pick<DirectOccurrence, "reason" | "firstTime" | "noticed" | "errorType" | "impacts" | "suggestedPoints">,
+  a: AssessmentInput,
+) {
+  target.errorType = a.errorType;
+  target.impacts = a.impacts;
+  target.suggestedPoints = suggestScore({
+    impacts: a.impacts,
+    reason: target.reason,
+    firstTime: target.firstTime,
+    errorType: a.errorType,
+    noticed: target.noticed,
+  }).points;
+}
+
 export async function scoreItem(
   reportId: string,
   itemId: string,
   score: Omit<IneficaciaScore, "at">,
+  assessment: AssessmentInput | null = null,
 ): Promise<ScoreResult> {
   assertConfigured();
   return withLock(reportKey(reportId), async () => {
@@ -409,6 +443,7 @@ export async function scoreItem(
     if (!item) return { ok: false, reason: "no-item" } as const;
     const at = Date.now();
     item.score = { ...score, at };
+    if (assessment) applyAssessment(item, assessment);
     report.rev += 1;
     if (!report.review && report.items.every((it) => it.score)) {
       report.review = { by: score.by, byName: score.byName, at, note: "" };
@@ -470,6 +505,7 @@ export async function rescoreDirect(
   username: string,
   occurrenceId: string,
   score: Omit<IneficaciaScore, "at">,
+  assessment: AssessmentInput | null = null,
 ): Promise<IneficaciaLedger | null> {
   assertConfigured();
   return withLock(ledgerKey(username), async () => {
@@ -477,6 +513,7 @@ export async function rescoreDirect(
     const d = ledger.direct.find((x) => x.id === occurrenceId);
     if (!d) return null;
     d.score = { ...score, at: Date.now() };
+    if (assessment) applyAssessment(d, assessment);
     await saveLedger(ledger);
     return ledger;
   });
@@ -498,6 +535,16 @@ export type ConsultantBundle = {
  *  direção sobre ele): relatórios + ledger → ocorrências → estado. */
 export async function loadConsultant(username: string, todayISO: string): Promise<ConsultantBundle> {
   const [reports, ledger] = await Promise.all([listReportsForUser(username), getLedger(username)]);
+  const occurrences = occurrencesOf(reports, ledger);
+  return { username, reports, ledger, occurrences, state: deriveLedger(occurrences, ledger.events, todayISO) };
+}
+
+/** O que o PRÓPRIO consultor pode ver — o mesmo bundle sem a avaliação da
+ *  direção (tipo de erro, impactos, sugestão da calculadora). É o único
+ *  carregador das páginas, da API e do sino do consultor. */
+export async function loadConsultantForSelf(username: string, todayISO: string): Promise<ConsultantBundle> {
+  const [rawReports, rawLedger] = await Promise.all([listReportsForUser(username), getLedger(username)]);
+  const { reports, ledger } = redactForConsultant(rawReports, rawLedger);
   const occurrences = occurrencesOf(reports, ledger);
   return { username, reports, ledger, occurrences, state: deriveLedger(occurrences, ledger.events, todayISO) };
 }

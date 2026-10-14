@@ -270,6 +270,12 @@ export type IneficaciaItem = {
   noticed: IneficaciaNoticed;
   /** A pontuação da direção — null enquanto está por pontuar. */
   score: IneficaciaScore | null;
+  /** A calculadora da direção ao pontuar (v77.94) — null/[] até a direção
+   *  a usar. Fora do conteúdo assinado e NUNCA mostrada ao consultor (ver
+   *  redactForConsultant). */
+  errorType: IneficaciaErrorType | null;
+  impacts: IneficaciaImpact[];
+  suggestedPoints: number | null;
 };
 
 export type IneficaciaSignature = {
@@ -386,7 +392,8 @@ export type Occurrence = {
   firstTime: boolean | null;
   lastTime: string;
   noticed: IneficaciaNoticed;
-  /** Só nas ocorrências da direção (v77.93) — null nos relatórios. */
+  /** A classificação da direção (aprendizagem/recorrência) — null quando
+   *  não foi dada e SEMPRE null nas vistas do consultor. */
   errorType: IneficaciaErrorType | null;
   score: IneficaciaScore | null;
 };
@@ -565,6 +572,9 @@ export function cleanItems(items: IneficaciaItemDraft[], newId: () => string): I
     occurredOn: it.occurredOn,
     noticed: it.noticed ?? "proprio",
     score: null,
+    errorType: null,
+    impacts: [],
+    suggestedPoints: null,
   }));
 }
 
@@ -627,7 +637,7 @@ export function occurrencesOf(reports: IneficaciaReport[], ledger: IneficaciaLed
         firstTime: it.firstTime,
         lastTime: it.lastTime,
         noticed: it.noticed,
-        errorType: null,
+        errorType: it.errorType,
         score: it.score,
       });
     }
@@ -652,6 +662,20 @@ export function occurrencesOf(reports: IneficaciaReport[], ledger: IneficaciaLed
     });
   }
   return out.sort((a, b) => b.occurredOn.localeCompare(a.occurredOn));
+}
+
+/** A avaliação da direção — o tipo de erro, os impactos e a sugestão da
+ *  calculadora — é só da direção: o consultor vê o erro e a pontuação, nunca
+ *  a calculadora. Tudo o que chega ao consultor passa por aqui. */
+export function redactForConsultant(reports: IneficaciaReport[], ledger: IneficaciaLedger): {
+  reports: IneficaciaReport[];
+  ledger: IneficaciaLedger;
+} {
+  const clean = { errorType: null, impacts: [], suggestedPoints: null };
+  return {
+    reports: reports.map((r) => ({ ...r, items: r.items.map((it) => ({ ...it, ...clean })) })),
+    ledger: { ...ledger, direct: ledger.direct.map((d) => ({ ...d, ...clean })) },
+  };
 }
 
 /** Uma ocorrência conta quando a direção lhe deu peso (> 0). */

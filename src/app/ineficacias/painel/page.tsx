@@ -17,7 +17,7 @@ import { LevelGauge } from "@/components/ineficacias/level-gauge";
 import { ScoreBadge } from "@/components/ineficacias/report-view";
 import { getCurrentEmployee, getImpersonation, isRealUserAdmin } from "@/lib/auth/server";
 import { ineficaciasAvailable } from "@/lib/ineficacias/access";
-import { loadConsultant } from "@/lib/ineficacias/store";
+import { loadConsultantForSelf } from "@/lib/ineficacias/store";
 import { formatISODate, LEVELS } from "@/lib/ineficacias/shared";
 import { todayLisbonISO } from "@/lib/probation/progress";
 
@@ -45,7 +45,7 @@ export default async function IneficaciasPainelPage() {
   }
 
   const today = todayLisbonISO();
-  const { state } = await loadConsultant(me.username, today);
+  const { state } = await loadConsultantForSelf(me.username, today);
 
   return (
     <PageShell backHref="/ineficacias" backLabel="Team Inefficiency">
