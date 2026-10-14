@@ -9,17 +9,38 @@
 // O impacto é calculado no browser com a mesma `deriveLedger` do servidor:
 // recebe as ocorrências pontuadas de cada consultor (sem texto nenhum) e os
 // eventos da escala, e junta a ocorrência que está a ser escrita.
+//
+// A CALCULADORA (v77.93): o que o erro causou (caixas), o motivo, a primeira
+// vez, aprendizagem/recorrência e quem deu pelo erro dão uma pontuação
+// sugerida (`suggestScore`, a mesma que o servidor grava). A direção aplica-a
+// com um clique ou escolhe outra — a decisão continua a ser dela.
 
 import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AlertCircle, AlertTriangle, ArrowRight, Check, CheckCircle2, Loader2, PenLine, RotateCcw, TrendingUp } from "lucide-react";
+import {
+  AlertCircle,
+  AlertTriangle,
+  ArrowRight,
+  Calculator,
+  Check,
+  CheckCircle2,
+  GraduationCap,
+  Loader2,
+  PenLine,
+  Repeat,
+  RotateCcw,
+  TrendingUp,
+  Wand2,
+} from "lucide-react";
 import { SheetSection, SignatureLine, formatDatePT } from "@/components/absences/sheet";
 import {
   addDaysISO,
   deriveLedger,
   DIRECT_LOOKBACK_DAYS,
+  ERROR_TYPES,
   firstName,
+  IMPACTS,
   LEVELS,
   LIMITS,
   NOTICED_OPTIONS,
@@ -28,12 +49,16 @@ import {
   WINDOW_DAYS,
   bandOf,
   isISODate,
+  suggestScore,
+  type IneficaciaErrorType,
+  type IneficaciaImpact,
   type IneficaciaNoticed,
   type IneficaciaReason,
   type LedgerEvent,
   type LedgerState,
   type Occurrence,
   type ScoreBand,
+  type ScoreSuggestion,
 } from "@/lib/ineficacias/shared";
 
 export type RegisterPerson = {
@@ -90,6 +115,8 @@ export function RegisterIneficaciaSheet({
   const [firstTime, setFirstTime] = useState<boolean | null>(null);
   const [lastTime, setLastTime] = useState("");
   const [noticed, setNoticed] = useState<IneficaciaNoticed | null>(null);
+  const [errorType, setErrorType] = useState<IneficaciaErrorType | null>(null);
+  const [impacts, setImpacts] = useState<IneficaciaImpact[]>([]);
   const [shouldHave, setShouldHave] = useState("");
   const [points, setPoints] = useState<number | null>(null);
   const [note, setNote] = useState("");
@@ -103,6 +130,10 @@ export function RegisterIneficaciaSheet({
   const person = people.find((p) => p.username === username) ?? null;
   const dateMin = addDaysISO(today, -DIRECT_LOOKBACK_DAYS);
   const band = points === null ? null : bandOf(points);
+  const suggestion = useMemo(
+    () => suggestScore({ impacts, reason, firstTime, errorType, noticed }),
+    [impacts, reason, firstTime, errorType, noticed],
+  );
 
   const impact = useMemo(() => {
     if (!person || points === null || !isISODate(occurredOn)) return null;
@@ -121,11 +152,12 @@ export function RegisterIneficaciaSheet({
       firstTime,
       lastTime: "",
       noticed: "equipa",
+      errorType,
       score: { points, by: "", byName: "", at: 0, note: "" },
     };
     const after = deriveLedger([...person.occurrences, draft], person.events, today);
     return { before, after };
-  }, [person, points, occurredOn, firstTime, today]);
+  }, [person, points, occurredOn, firstTime, errorType, today]);
 
   const problem = (() => {
     if (!person) return "Escolhe o consultor (secção 1).";
@@ -137,6 +169,7 @@ export function RegisterIneficaciaSheet({
     if (reason === "outro" && reasonOther.trim().length < LIMITS.reasonOther.min) return "Especifica o motivo «Outro».";
     if (firstTime === null) return "Indica se foi a primeira vez.";
     if (firstTime === false && lastTime.trim().length < LIMITS.lastTime.min) return "Indica quando foi a última vez.";
+    if (!errorType) return "Indica se foi um erro de aprendizagem ou de recorrência.";
     if (!noticed) return "Indica quem deu pelo erro.";
     if (points === null) return "Escolhe a gravidade e a pontuação (secção 3).";
     return null;
@@ -151,6 +184,7 @@ export function RegisterIneficaciaSheet({
       (reason !== "outro" || reasonOther.trim().length >= LIMITS.reasonOther.min) &&
       firstTime !== null &&
       (firstTime || lastTime.trim().length >= LIMITS.lastTime.min) &&
+      Boolean(errorType) &&
       Boolean(noticed),
     score: points !== null,
   };
@@ -170,6 +204,8 @@ export function RegisterIneficaciaSheet({
           firstTime,
           lastTime,
           noticed,
+          errorType,
+          impacts,
           shouldHave,
           points,
           note,
@@ -218,6 +254,8 @@ export function RegisterIneficaciaSheet({
     setFirstTime(null);
     setLastTime("");
     setNoticed(null);
+    setErrorType(null);
+    setImpacts([]);
     setShouldHave("");
     setPoints(null);
     setNote("");
@@ -432,6 +470,40 @@ export function RegisterIneficaciaSheet({
                 )}
               </div>
 
+              <div className="sm:col-span-2">
+                <span className="sheet-label">Tipo de erro</span>
+                <div className="mt-1.5 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  {ERROR_TYPES.map((t) => {
+                    const on = errorType === t.id;
+                    const Icon = t.id === "aprendizagem" ? GraduationCap : Repeat;
+                    return (
+                      <button
+                        key={t.id}
+                        type="button"
+                        disabled={signing}
+                        onClick={() => setErrorType(t.id)}
+                        aria-pressed={on}
+                        className={`flex items-start gap-2.5 rounded-lg border px-3 py-2.5 text-left transition ${
+                          on ? "border-[#783DF5] bg-[#783DF5]/[0.08]" : "border-black/12 bg-white/70 hover:border-black/30"
+                        }`}
+                      >
+                        <span
+                          className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md ${
+                            on ? "bg-[#783DF5] text-white" : "bg-black/[0.06] text-black/60"
+                          }`}
+                        >
+                          <Icon className="h-3.5 w-3.5" />
+                        </span>
+                        <span>
+                          <span className="block text-[12.5px] font-semibold text-black/80">{t.label}</span>
+                          <span className="block text-[10.5px] text-black/45">{t.hint}</span>
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
               <div>
                 <span className="sheet-label">Foi a primeira vez que cometeu este erro?</span>
                 <div className="mt-1.5 inline-flex overflow-hidden rounded-lg border border-black/15 bg-white/70">
@@ -504,6 +576,52 @@ export function RegisterIneficaciaSheet({
 
           {/* 3 — Gravidade e pontuação */}
           <SheetSection n={3} title="Gravidade e pontuação" done={sectionOk.score}>
+            <span className="sheet-label">O que o erro causou — assinala tudo o que se aplica</span>
+            <div className="mt-1.5 grid grid-cols-1 gap-2 sm:grid-cols-2">
+              {IMPACTS.map((i) => {
+                const implied = i.id === "cliente" && noticed === "cliente";
+                const on = implied || impacts.includes(i.id);
+                return (
+                  <button
+                    key={i.id}
+                    type="button"
+                    role="checkbox"
+                    aria-checked={on}
+                    disabled={signing || implied}
+                    onClick={() => setImpacts((cur) => (cur.includes(i.id) ? cur.filter((x) => x !== i.id) : [...cur, i.id]))}
+                    className={`flex items-start gap-2.5 rounded-lg border px-3 py-2.5 text-left transition ${
+                      on ? "border-[#783DF5] bg-[#783DF5]/[0.08]" : "border-black/12 bg-white/70 hover:border-black/30"
+                    } ${implied ? "cursor-default" : ""}`}
+                  >
+                    <span
+                      className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border-2 ${
+                        on ? "border-[#783DF5] bg-[#783DF5] text-white" : "border-black/30 bg-white"
+                      }`}
+                    >
+                      {on && <Check className="h-3 w-3" strokeWidth={3} />}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[12.5px] font-semibold text-black/80">{i.label}</span>
+                      <span className="block text-[10.5px] text-black/45">
+                        {implied ? "Assinalado: foi o cliente que deu pelo erro." : i.hint}
+                      </span>
+                    </span>
+                    <span className="tabular shrink-0 rounded-md bg-black/[0.05] px-1.5 py-0.5 text-[10px] font-bold text-black/45">
+                      base {i.base}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <ScoreCalculator
+              suggestion={suggestion}
+              points={points}
+              disabled={signing}
+              onApply={() => setPoints(suggestion.points)}
+            />
+
+            <p className="sheet-label mb-1.5 mt-5">A tua decisão — gravidade</p>
             <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
               {GRAVITY_BANDS.map((b) => {
                 const on = band?.id === b.id;
@@ -524,6 +642,12 @@ export function RegisterIneficaciaSheet({
                       </span>
                     </span>
                     <span className="mt-1 block text-[10.5px] leading-snug text-black/50">{b.hint}</span>
+                    {suggestion.band.id === b.id && (
+                      <span className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-[#783DF5]/[0.1] px-1.5 py-0.5 text-[9.5px] font-bold uppercase tracking-[0.12em] text-[#5b2bd0]">
+                        <Calculator className="h-2.5 w-2.5" />
+                        Sugestão
+                      </span>
+                    )}
                   </button>
                 );
               })}
@@ -539,11 +663,15 @@ export function RegisterIneficaciaSheet({
                     disabled={signing}
                     onClick={() => setPoints(p)}
                     aria-pressed={points === p}
-                    className={`tabular h-9 w-9 rounded-lg border-2 text-[14px] font-extrabold transition ${
+                    title={p === suggestion.points ? "A sugestão da calculadora" : undefined}
+                    className={`tabular relative h-9 w-9 rounded-lg border-2 text-[14px] font-extrabold transition ${
                       points === p ? `${PAPER_BAND[band.id].on} ${PAPER_BAND[band.id].text}` : "border-black/12 bg-white/70 text-black/55 hover:border-black/30"
                     }`}
                   >
                     {p}
+                    {p === suggestion.points && (
+                      <span aria-hidden className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full border-2 border-[#fbfaf7] bg-[#783DF5]" />
+                    )}
                   </button>
                 ))}
                 <span className="text-[11px] text-black/45">
@@ -625,6 +753,101 @@ export function RegisterIneficaciaSheet({
 }
 
 /* ------------------------------------------------------------------ */
+
+function signed(v: number): string {
+  if (v > 0) return `+${v}`;
+  if (v < 0) return `−${Math.abs(v)}`;
+  return "±0";
+}
+
+function ScoreCalculator({
+  suggestion,
+  points,
+  disabled,
+  onApply,
+}: {
+  suggestion: ScoreSuggestion;
+  points: number | null;
+  disabled: boolean;
+  onApply: () => void;
+}) {
+  const t = PAPER_BAND[suggestion.band.id];
+  const applied = points === suggestion.points;
+  const provisional = suggestion.missing.length > 0;
+  return (
+    <div className="mt-4 overflow-hidden rounded-xl border border-[#783DF5]/30 bg-white/80 shadow-[0_12px_32px_-22px_rgba(120,61,245,0.9)]">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-black/[0.07] bg-[#783DF5]/[0.05] px-4 py-3">
+        <p className="flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-[0.18em] text-[#5b2bd0]">
+          <Calculator className="h-4 w-4" />
+          Calculadora de gravidade
+        </p>
+        <p className="flex items-baseline gap-2">
+          <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-black/40">{provisional ? "Provisória" : "Sugestão"}</span>
+          <span className={`tabular text-[30px] font-extrabold leading-none ${t.text}`}>{suggestion.points}</span>
+          <span className="text-[12px] font-semibold text-black/35">/ 10</span>
+          <span className={`rounded-full border px-2 py-0.5 text-[10.5px] font-bold ${t.on} ${t.text}`}>{suggestion.band.label}</span>
+        </p>
+      </div>
+
+      <ul className="divide-y divide-black/[0.05] px-4 py-1">
+        {suggestion.lines.map((l, i) => (
+          <li key={i} className="flex items-baseline justify-between gap-3 py-1.5 text-[12px]">
+            <span className={l.base ? "font-semibold text-black/80" : "text-black/60"}>{l.label}</span>
+            <span
+              className={`tabular shrink-0 font-bold ${
+                l.base ? "text-black/80" : l.value > 0 ? "text-rose-600" : l.value < 0 ? "text-emerald-700" : "text-black/35"
+              }`}
+            >
+              {l.base ? `base ${l.value}` : signed(l.value)}
+            </span>
+          </li>
+        ))}
+        {suggestion.raw !== suggestion.points && (
+          <li className="py-1.5 text-[11px] text-black/45">
+            A soma dá {suggestion.raw} — a escala vai de 1 a 10, fica {suggestion.points}.
+          </li>
+        )}
+      </ul>
+
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-black/[0.07] px-4 py-3">
+        <p className="text-[11px] text-black/50">
+          {provisional ? (
+            <span className="font-semibold text-amber-700">Falta: {suggestion.missing.join(", ")} — conta 0 até responderes.</span>
+          ) : points !== null && !applied ? (
+            <>
+              Escolheste {points} — a calculadora sugere {suggestion.points}.
+            </>
+          ) : (
+            "Uma sugestão: a pontuação final é tua."
+          )}
+        </p>
+        <button
+          type="button"
+          onClick={onApply}
+          disabled={disabled || applied}
+          className={`inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-[12px] font-bold transition ${
+            applied
+              ? "border border-emerald-600/30 bg-emerald-600/[0.08] text-emerald-700"
+              : "text-white shadow-[0_10px_24px_-12px_rgba(120,61,245,0.9)] hover:brightness-110"
+          } disabled:cursor-default`}
+          style={applied ? undefined : { background: "var(--brand-gradient)" }}
+        >
+          {applied ? (
+            <>
+              <Check className="h-3.5 w-3.5" />
+              Sugestão aplicada
+            </>
+          ) : (
+            <>
+              <Wand2 className="h-3.5 w-3.5" />
+              Usar a sugestão · {suggestion.points} {suggestion.points === 1 ? "ponto" : "pontos"}
+            </>
+          )}
+        </button>
+      </div>
+    </div>
+  );
+}
 
 function Delta({ label, before, after, limit }: { label: string; before: number; after: number; limit: number | null }) {
   const hot = limit !== null && after >= limit;

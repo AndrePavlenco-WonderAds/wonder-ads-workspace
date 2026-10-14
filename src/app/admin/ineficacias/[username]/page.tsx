@@ -19,6 +19,8 @@ import {
   firstName,
   formatISODate,
   formatLisbonDateTime,
+  errorTypeLabel,
+  IMPACTS,
   noticedLabel,
   reasonLabel,
   type LedgerEvent,
@@ -169,12 +171,23 @@ export default async function IneficaciasConsultantPage({
                           {" "}
                           · {formatISODate(d.occurredOn)} · {reasonLabel(d.reason, d.reasonOther)} · {noticedLabel(d.noticed)}
                           {d.firstTime === true ? " · primeira vez" : d.firstTime === false ? ` · repetido (última vez: ${d.lastTime || "—"})` : ""}
+                          {d.errorType ? ` · ${errorTypeLabel(d.errorType).toLowerCase()}` : ""}
                         </span>
                       </p>
                       <ScoreBadge score={d.score} size="sm" />
                     </header>
                     <p className="mt-2 whitespace-pre-wrap text-[13px] leading-relaxed text-white/80">{d.what}</p>
                     {d.shouldHave && <p className="mt-2 text-[12px] text-white/55">Como deveria ter sido: {d.shouldHave}</p>}
+                    {d.suggestedPoints !== null && (
+                      <p className="mt-2 text-[11.5px] text-white/45">
+                        Calculadora: sugeriu {d.suggestedPoints} pts
+                        {d.impacts.length > 0
+                          ? ` · ${IMPACTS.filter((i) => d.impacts.includes(i.id))
+                              .map((i) => i.label.toLowerCase())
+                              .join(", ")}`
+                          : " · sem impacto assinalado"}
+                      </p>
+                    )}
                     <div className="mt-3">
                       <ItemScoreControl target={{ username, occurrenceId: d.id }} initial={d.score} />
                     </div>

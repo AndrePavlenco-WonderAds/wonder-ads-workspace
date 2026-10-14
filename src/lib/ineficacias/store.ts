@@ -33,11 +33,15 @@ import {
   isISODate,
   lisbonDateOf,
   occurrencesOf,
+  ERROR_TYPES,
+  IMPACTS,
   NOTICED_OPTIONS,
   REASONS,
   MAX_POINTS,
   LIMITS,
   type DirectOccurrence,
+  type IneficaciaErrorType,
+  type IneficaciaImpact,
   type IneficaciaItem,
   type IneficaciaLedger,
   type IneficaciaLevel,
@@ -90,6 +94,8 @@ export function sha256(text: string): string {
 
 const REASON_IDS = new Set<string>(REASONS.map((r) => r.id));
 const NOTICED_IDS = new Set<string>(NOTICED_OPTIONS.map((n) => n.id));
+const ERROR_TYPE_IDS = new Set<string>(ERROR_TYPES.map((t) => t.id));
+const IMPACT_IDS = new Set<string>(IMPACTS.map((i) => i.id));
 
 function str(v: unknown, max = 4000): string {
   return typeof v === "string" ? v.slice(0, max) : "";
@@ -214,6 +220,10 @@ function sanitizeDirect(raw: unknown): DirectOccurrence | null {
     lastTime: str(d.lastTime, 300),
     occurredOn: d.occurredOn,
     noticed: NOTICED_IDS.has(str(d.noticed)) ? (d.noticed as IneficaciaNoticed) : "equipa",
+    // Registos anteriores à v77.93 não têm tipo, impactos nem sugestão.
+    errorType: ERROR_TYPE_IDS.has(str(d.errorType)) ? (d.errorType as IneficaciaErrorType) : null,
+    impacts: Array.isArray(d.impacts) ? d.impacts.filter((i): i is IneficaciaImpact => IMPACT_IDS.has(str(i))) : [],
+    suggestedPoints: typeof d.suggestedPoints === "number" && Number.isInteger(d.suggestedPoints) ? d.suggestedPoints : null,
     score,
     createdAt: num(d.createdAt),
   };

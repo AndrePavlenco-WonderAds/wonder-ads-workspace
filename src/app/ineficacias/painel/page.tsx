@@ -48,7 +48,7 @@ export default async function IneficaciasPainelPage() {
   const { state } = await loadConsultant(me.username, today);
 
   return (
-    <PageShell backHref="/ineficacias" backLabel="Ineficácias">
+    <PageShell backHref="/ineficacias" backLabel="Team Inefficiency">
       <header className="animate-fade-up mt-2 flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="readout text-white/35">Ineficácias · Team Inefficiency</p>

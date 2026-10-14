@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.93",
+    date: "2026-10-14",
+    title: "Ineficácias — calculadora de gravidade, aprendizagem vs. recorrência e «Team Inefficiency»",
+    highlights: [
+      "**🧮 Calculadora de gravidade no «Registar ineficácia».** Na secção 3 assinalas o que o erro causou (refazer trabalho, atrasar um prazo, chegar ao cliente, risco para o negócio) e a calculadora junta o motivo, a primeira vez, o tipo de erro e quem deu por ele numa pontuação sugerida de 1 a 10 — com cada parcela à vista. Um clique em «Usar a sugestão» aplica-a; a decisão final continua a ser tua.",
+      "**🎓 Erro de aprendizagem ou de recorrência.** Novo campo obrigatório na zona do erro da folha RH-04: aprendizagem tira 1 ponto à sugestão, recorrência soma 1. Aparece na ficha do consultor e no histórico dele.",
+      "**🗂️ A sugestão fica gravada** ao lado da pontuação dada — na ficha do consultor vês «Calculadora: sugeriu X pts» e os impactos assinalados.",
+      "**🏷️ «Team Inefficiency» para os consultores.** O item do menu do nome e o título da página passam a dizer Team Inefficiency.",
+      "**🖼️ A tua foto no relatório.** No bloco «Identificação» da folha RH-03 aparece o retrato do consultor em vez das iniciais.",
+    ],
+  },
+  {
     version: "77.92",
     date: "2026-10-13",
     title: "Ineficácias abertas à equipa + menu SuperAdmin reordenado",

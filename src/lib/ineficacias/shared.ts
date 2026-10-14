@@ -92,6 +92,107 @@ export function bandOf(points: number): ScoreBand {
 
 export const MAX_POINTS = 10;
 
+/** Erro de aprendizagem ou de recorrência (v77.93) — a direção indica-o na
+ *  folha RH-04 e pesa na calculadora. */
+export type IneficaciaErrorType = "aprendizagem" | "recorrencia";
+
+export const ERROR_TYPES: { id: IneficaciaErrorType; label: string; hint: string }[] = [
+  { id: "aprendizagem", label: "Erro de aprendizagem", hint: "Tarefa ou processo ainda novo — faz parte de aprender." },
+  { id: "recorrencia", label: "Erro de recorrência", hint: "Já sabia fazer ou já tinha acontecido — não devia repetir-se." },
+];
+
+export function errorTypeLabel(id: IneficaciaErrorType): string {
+  return ERROR_TYPES.find((t) => t.id === id)?.label ?? id;
+}
+
+/** O que o erro causou — as caixas da calculadora. A `base` de cada uma
+ *  cai na banda da escala com a mesma descrição. */
+export type IneficaciaImpact = "refazer" | "prazo" | "cliente" | "negocio";
+
+export const IMPACTS: { id: IneficaciaImpact; label: string; hint: string; base: number }[] = [
+  { id: "refazer", label: "Obrigou a refazer trabalho", hint: "O próprio ou um colega teve de voltar atrás.", base: 4 },
+  { id: "prazo", label: "Atrasou um prazo ou entrega", hint: "Algo saiu tarde ou ficou por entregar.", base: 5 },
+  { id: "cliente", label: "Chegou ao cliente", hint: "O cliente viu ou sentiu o erro.", base: 7 },
+  { id: "negocio", label: "Risco para o negócio", hint: "Dinheiro, dados, contrato ou reputação em jogo.", base: 9 },
+];
+
+/** Os pesos da calculadora (v77.93). A base é o impacto mais pesado
+ *  assinalado; o resto soma ou subtrai, e o total fica entre 1 e 10. */
+export const SCORE_RULES = {
+  /** Sem nenhuma caixa de impacto — recuperável no próprio dia. */
+  noImpactBase: 2,
+  /** Cada impacto a mais além do principal, até `extraImpactCap`. */
+  extraImpact: 1,
+  extraImpactCap: 2,
+  reason: { atencao: 1, protocolo: -1, tempo: 0, outro: 0 } as Record<IneficaciaReason, number>,
+  repeated: 2,
+  errorType: { aprendizagem: -1, recorrencia: 1 } as Record<IneficaciaErrorType, number>,
+  noticed: { proprio: -1, equipa: 0, cliente: 0 } as Record<IneficaciaNoticed, number>,
+};
+
+export type ScoreSuggestionInput = {
+  impacts: IneficaciaImpact[];
+  reason: IneficaciaReason | null;
+  firstTime: boolean | null;
+  errorType: IneficaciaErrorType | null;
+  noticed: IneficaciaNoticed | null;
+};
+
+export type ScoreSuggestion = {
+  /** 1–10 — o que a calculadora sugere. */
+  points: number;
+  /** A soma antes de limitar a 1–10. */
+  raw: number;
+  band: ScoreBand;
+  /** As parcelas, pela ordem em que se somam. `base` = o ponto de partida. */
+  lines: { label: string; value: number; base?: boolean }[];
+  /** O que falta responder — conta 0 até ser respondido. */
+  missing: string[];
+};
+
+/** A pontuação sugerida pela calculadora da folha RH-04. Pura — corre no
+ *  browser (ao vivo) e no servidor (a sugestão que fica gravada). */
+export function suggestScore(input: ScoreSuggestionInput): ScoreSuggestion {
+  const lines: ScoreSuggestion["lines"] = [];
+  const missing: string[] = [];
+
+  // Foi o cliente a dar pelo erro → o erro chegou ao cliente.
+  const ids = new Set(input.impacts);
+  const viaNoticed = input.noticed === "cliente" && !ids.has("cliente");
+  if (viaNoticed) ids.add("cliente");
+  const impacts = IMPACTS.filter((i) => ids.has(i.id)).sort((a, b) => b.base - a.base);
+
+  if (impacts.length === 0) {
+    lines.push({ label: "Sem impacto assinalado — recuperável no próprio dia", value: SCORE_RULES.noImpactBase, base: true });
+  } else {
+    const [main, ...rest] = impacts;
+    const why = main.id === "cliente" && viaNoticed ? " (foi o cliente que deu pelo erro)" : "";
+    lines.push({ label: `${main.label}${why}`, value: main.base, base: true });
+    rest.slice(0, SCORE_RULES.extraImpactCap).forEach((i) => {
+      lines.push({ label: `Também: ${i.label.toLowerCase()}`, value: SCORE_RULES.extraImpact });
+    });
+  }
+
+  if (input.reason) {
+    const r = REASONS.find((x) => x.id === input.reason);
+    lines.push({ label: `Motivo ${r?.letter ?? ""} — ${(r?.label ?? "").toLowerCase()}`, value: SCORE_RULES.reason[input.reason] });
+  } else missing.push("motivo");
+
+  if (input.firstTime === null) missing.push("primeira vez");
+  else lines.push({ label: input.firstTime ? "Primeira vez" : "Repetido", value: input.firstTime ? 0 : SCORE_RULES.repeated });
+
+  if (input.errorType) lines.push({ label: errorTypeLabel(input.errorType), value: SCORE_RULES.errorType[input.errorType] });
+  else missing.push("aprendizagem ou recorrência");
+
+  if (input.noticed) {
+    lines.push({ label: noticedLabel(input.noticed), value: SCORE_RULES.noticed[input.noticed] });
+  } else missing.push("quem deu pelo erro");
+
+  const raw = lines.reduce((s, l) => s + l.value, 0);
+  const points = Math.min(MAX_POINTS, Math.max(1, raw));
+  return { points, raw, band: bandOf(points), lines, missing };
+}
+
 export type IneficaciaLevel = 0 | 1 | 2 | 3;
 
 export const LEVELS: { level: IneficaciaLevel; title: string; rule: string; measure: string }[] = [
@@ -224,6 +325,12 @@ export type DirectOccurrence = {
   lastTime: string;
   occurredOn: string;
   noticed: IneficaciaNoticed;
+  /** Aprendizagem ou recorrência — null nos registos anteriores à v77.93. */
+  errorType: IneficaciaErrorType | null;
+  /** As caixas de impacto da calculadora ([] nos registos antigos). */
+  impacts: IneficaciaImpact[];
+  /** A pontuação que a calculadora sugeriu (null nos registos antigos). */
+  suggestedPoints: number | null;
   score: IneficaciaScore;
   createdAt: number;
 };
@@ -279,6 +386,8 @@ export type Occurrence = {
   firstTime: boolean | null;
   lastTime: string;
   noticed: IneficaciaNoticed;
+  /** Só nas ocorrências da direção (v77.93) — null nos relatórios. */
+  errorType: IneficaciaErrorType | null;
   score: IneficaciaScore | null;
 };
 
@@ -518,6 +627,7 @@ export function occurrencesOf(reports: IneficaciaReport[], ledger: IneficaciaLed
         firstTime: it.firstTime,
         lastTime: it.lastTime,
         noticed: it.noticed,
+        errorType: null,
         score: it.score,
       });
     }
@@ -537,6 +647,7 @@ export function occurrencesOf(reports: IneficaciaReport[], ledger: IneficaciaLed
       firstTime: d.firstTime,
       lastTime: d.lastTime,
       noticed: d.noticed,
+      errorType: d.errorType,
       score: d.score,
     });
   }

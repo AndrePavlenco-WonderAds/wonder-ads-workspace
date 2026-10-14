@@ -150,7 +150,7 @@ export function IneficaciaReportForm({
   clients,
   readOnly = false,
 }: {
-  employee: { username: string; name: string; fullName: string; role: string; dept: string };
+  employee: { username: string; name: string; fullName: string; role: string; dept: string; avatar?: string | null };
   today: string;
   /** A carteira do consultor + os outros clientes, para o dropdown. */
   clients: ClientChoices;
@@ -579,7 +579,7 @@ function IdentityStrip({
   employee,
   today,
 }: {
-  employee: { fullName: string; role: string; dept: string };
+  employee: { fullName: string; role: string; dept: string; avatar?: string | null };
   today: string;
 }) {
   const initials = employee.fullName
@@ -593,10 +593,16 @@ function IdentityStrip({
     <div className="flex flex-wrap items-center gap-x-8 gap-y-4 rounded-xl border border-black/10 bg-white/55 px-4 py-4 sm:px-5">
       <div className="flex min-w-0 flex-1 items-center gap-3.5">
         <span
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[14px] font-extrabold text-white shadow-[0_8px_24px_-10px_rgba(120,61,245,0.8)]"
+          className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full text-[14px] font-extrabold text-white shadow-[0_8px_24px_-10px_rgba(120,61,245,0.8)]"
           style={{ background: "var(--brand-gradient)" }}
         >
-          {initials}
+          {employee.avatar ? (
+            // Retrato 3:4 com a cabeça no topo → object-top, como no header.
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={employee.avatar} alt="" className="h-full w-full object-cover object-top" />
+          ) : (
+            initials
+          )}
         </span>
         <div className="min-w-0">
           <p className="truncate text-[15px] font-bold tracking-tight">{employee.fullName}</p>

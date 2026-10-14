@@ -18,17 +18,18 @@ import { ReportView, ScoreBadge } from "@/components/ineficacias/report-view";
 import { IneficaciaReportForm } from "@/components/ineficacias/report-form";
 import { getCurrentEmployee, getImpersonation, isRealUserAdmin } from "@/lib/auth/server";
 import { findEmployeeByUsername } from "@/lib/auth/credentials";
+import { getTeamAvatar } from "@/lib/team-avatars";
 import { ineficaciasAvailable } from "@/lib/ineficacias/access";
 import { loadConsultant } from "@/lib/ineficacias/store";
 import { clientChoicesFor } from "@/lib/ineficacias/clients";
-import { formatISODate, formatLisbonDateTime, noticedLabel, reasonLabel } from "@/lib/ineficacias/shared";
+import { errorTypeLabel, formatISODate, formatLisbonDateTime, noticedLabel, reasonLabel } from "@/lib/ineficacias/shared";
 import { todayLisbonISO } from "@/lib/probation/progress";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export const metadata: Metadata = {
-  title: "Ineficácias · Wonder Ads",
+  title: "Team Inefficiency · Wonder Ads",
   robots: { index: false, follow: false },
 };
 
@@ -60,9 +61,9 @@ export default async function IneficaciasPage() {
     <PageShell backHref="/" backLabel="Início">
       <header className="animate-fade-up mt-2 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="readout text-white/35">Operações · Team Inefficiency</p>
+          <p className="readout text-white/35">Operações · Ineficácias</p>
           <h1 className="mt-1 text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">
-            <span className="brand-gradient-text">Ineficácias</span>
+            <span className="brand-gradient-text">Team Inefficiency</span>
           </h1>
         </div>
         <OverviewButton state={state} href="/ineficacias/painel" />
@@ -70,7 +71,7 @@ export default async function IneficaciasPage() {
 
       <section id="relatorio" className="animate-fade-up mt-8 scroll-mt-24">
         <IneficaciaReportForm
-          employee={{ username: me.username, name: me.name, fullName, role: me.role, dept: me.dept }}
+          employee={{ username: me.username, name: me.name, fullName, role: me.role, dept: me.dept, avatar: getTeamAvatar(me.username) }}
           today={today}
           clients={clients}
           readOnly={Boolean(impersonation)}
@@ -94,6 +95,7 @@ export default async function IneficaciasPage() {
                     <span className="font-semibold">{d.client}</span>
                     <span className="text-white/40"> · {formatISODate(d.occurredOn)} · {reasonLabel(d.reason, d.reasonOther)} · {noticedLabel(d.noticed)}
                       {d.firstTime === true ? " · primeira vez" : d.firstTime === false ? ` · repetido (última vez: ${d.lastTime || "—"})` : ""}
+                      {d.errorType ? ` · ${errorTypeLabel(d.errorType).toLowerCase()}` : ""}
                     </span>
                   </p>
                   <ScoreBadge score={d.score} size="sm" />

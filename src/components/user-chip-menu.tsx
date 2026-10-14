@@ -496,8 +496,8 @@ export function UserChipMenu({
                   <MenuLink
                     href="/ineficacias"
                     icon={ListChecks}
-                    label="Ineficácias"
-                    hint="Team Inefficiency · reportar erros, PA e NO"
+                    label="Team Inefficiency"
+                    hint="Ineficácias · reportar erros, PA e NO"
                     badge={ineficacias.construction ? "em construção" : undefined}
                     badgeTone="amber"
                     index={4}
