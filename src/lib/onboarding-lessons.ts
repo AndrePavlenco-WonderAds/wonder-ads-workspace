@@ -206,52 +206,6 @@ export const DEFAULT_ONBOARDING_CATEGORIES: OnboardingCategory[] = [
     ],
   },
   {
-    // O ALOJAMENTO PRIMEIRO. Sem o acesso ao host não validamos o domínio
-    // no Search Console por DNS, não mexemos em redirecionamentos, SSL nem
-    // velocidade — é o acesso que mais vezes atrasava o arranque. Por isso
-    // tem bloco próprio, logo a seguir aos formulários, e é um formulário
-    // (não um vídeo): o cliente escreve os dados e eles caem no cofre
-    // «Accesses» da ficha do cliente, sem passar por email nem WhatsApp.
-    key: "alojamento",
-    title: "Alojamento do Website · Consultoria SEO/GEO",
-    lessons: [
-      {
-        id: "alojamento",
-        platform: "host",
-        track: "seo",
-        category: "alojamento",
-        title: "Acesso ao Alojamento (Host)",
-        kind: "access",
-        essential: true,
-        emoji: "🔐",
-        videoUrl: null,
-        estMinutes: 3,
-        accessLabel: "Alojamento",
-        providers: HOST_PROVIDERS,
-        summary: "Os dados de acesso ao painel onde o vosso site está alojado (ex.: dominios.pt).",
-        about: [
-          {
-            type: "p",
-            text: "O alojamento (host) é onde vivem o vosso website e o vosso domínio — muitos clientes têm-no no dominios.pt, mas pode ser qualquer outro fornecedor. É por lá que validamos o domínio no Google e tratamos de DNS, redirecionamentos, certificados e velocidade, por isso é o acesso mais importante para arrancarmos com o SEO e a GEO.",
-          },
-          {
-            type: "bullets",
-            intro: "O que precisamos:",
-            items: [
-              "O fornecedor do alojamento (ex.: dominios.pt).",
-              "O link da página de login da vossa área de cliente.",
-              "O utilizador (ou email) e a password.",
-            ],
-          },
-          {
-            type: "p",
-            text: "Se o vosso alojamento o permitir, criem um utilizador só para a Wonder Ads em vez de partilharem a password principal. Se for outra empresa a gerir o site, indiquem-nos o contacto e nós tratamos do resto.",
-          },
-        ],
-      },
-    ],
-  },
-  {
     key: "acessos",
     title: "Acessos Consultoria SEO",
     lessons: [
@@ -340,6 +294,47 @@ export const DEFAULT_ONBOARDING_CATEGORIES: OnboardingCategory[] = [
             type: "emails",
             intro: "No WordPress, crie um utilizador de administrador com um destes emails (ou envie as credenciais em segurança):",
             emails: SEO_ADMIN_EMAILS,
+          },
+        ],
+      },
+      {
+        // O ALOJAMENTO. Sem o acesso ao host não validamos o domínio no
+        // Search Console por DNS nem mexemos em redirecionamentos, SSL ou
+        // velocidade — é o acesso que mais vezes atrasava o arranque. Vem
+        // logo a seguir ao acesso ao website (é o passo irmão: o site num,
+        // o servidor e o domínio no outro) e é um formulário, não um vídeo:
+        // o cliente escreve os dados e eles caem no cofre «Accesses» da
+        // ficha do cliente, sem passar por email nem WhatsApp.
+        id: "alojamento",
+        platform: "host",
+        track: "seo",
+        category: "acessos",
+        title: "Acesso ao Alojamento (Host)",
+        kind: "access",
+        essential: true,
+        emoji: "🔐",
+        videoUrl: null,
+        estMinutes: 3,
+        accessLabel: "Alojamento",
+        providers: HOST_PROVIDERS,
+        summary: "Os dados de acesso ao painel onde o vosso site está alojado (ex.: dominios.pt).",
+        about: [
+          {
+            type: "p",
+            text: "O alojamento (host) é onde vivem o vosso website e o vosso domínio — muitos clientes têm-no no dominios.pt, mas pode ser qualquer outro fornecedor. É por lá que validamos o domínio no Google e tratamos de DNS, redirecionamentos, certificados e velocidade, por isso é o acesso mais importante para arrancarmos com o SEO e a GEO.",
+          },
+          {
+            type: "bullets",
+            intro: "O que precisamos:",
+            items: [
+              "O fornecedor do alojamento (ex.: dominios.pt).",
+              "O link da página de login da vossa área de cliente.",
+              "O utilizador (ou email) e a password.",
+            ],
+          },
+          {
+            type: "p",
+            text: "Se o vosso alojamento o permitir, criem um utilizador só para a Wonder Ads em vez de partilharem a password principal. Se for outra empresa a gerir o site, indiquem-nos o contacto e nós tratamos do resto.",
           },
         ],
       },
@@ -544,8 +539,8 @@ export function nextLesson(
  *  código por inteiro — um passo novo acrescentado aqui nunca aparecia a
  *  ninguém até alguém o voltar a gravar no editor. Os passos `essential`
  *  furam essa regra: se faltarem ao override, entram na posição que têm no
- *  curso por omissão (a sua categoria, ou uma categoria nova antes da
- *  primeira categoria seguinte que exista). Apagá-los no editor não pega —
+ *  curso por omissão (na sua categoria, a seguir ao passo que os antecede,
+ *  ou numa categoria nova antes da primeira categoria seguinte que exista). Apagá-los no editor não pega —
  *  são essenciais de propósito. */
 export function withEssentialLessons(
   categories: OnboardingCategory[],
@@ -561,7 +556,13 @@ export function withEssentialLessons(
         if (i !== existing) return c;
         const lessons = [...c.lessons];
         for (const l of missing) {
-          const at = Math.min(def.lessons.indexOf(l), lessons.length);
+          // Logo a seguir ao passo que o antecede no curso por omissão (o
+          // alojamento a seguir ao website), mesmo que o override tenha
+          // reordenado a categoria; sem esse passo, a posição por omissão.
+          const di = def.lessons.indexOf(l);
+          const prevId = di > 0 ? def.lessons[di - 1].id : null;
+          const pi = prevId ? lessons.findIndex((x) => x.id === prevId) : -1;
+          const at = pi >= 0 ? pi + 1 : Math.min(di, lessons.length);
           lessons.splice(at, 0, l);
         }
         return { ...c, lessons };

@@ -13,6 +13,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.97",
+    date: "2026-10-15",
+    title: "Onboarding — o alojamento passa a ser o 5.º passo dos «Acessos Consultoria SEO»",
+    highlights: [
+      "**🔐 «Acesso ao Alojamento (Host)» deixa de ter bloco próprio.** Passa a ser o 5.º passo de «Acessos Consultoria SEO», logo a seguir a «Acesso ao Website — Clientes WordPress». Continua Essencial, continua sem vídeo e continua a enviar os dados diretamente para «Accesses» na client file.",
+      "**📍 Mesmo com o curso personalizado no editor, entra a seguir ao acesso ao website,** mesmo que a categoria tenha sido reordenada. O progresso e os acessos que os clientes já enviaram mantêm-se: o passo continua a ser o mesmo.",
+    ],
+  },
+  {
     version: "77.96",
     date: "2026-10-15",
     title: "Onboarding — o acesso ao alojamento (host) num passo essencial, direto para o cofre de acessos",
