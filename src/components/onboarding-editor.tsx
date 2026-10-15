@@ -301,6 +301,7 @@ function LessonEditor({
             <option value="video">Vídeo</option>
             <option value="form">Formulário</option>
             <option value="info">Info / Final</option>
+            <option value="access">Acessos (formulário → cofre do cliente)</option>
           </select>
         </Labeled>
         <Labeled label="Track (serviço)">
@@ -342,7 +343,14 @@ function LessonEditor({
         </Labeled>
       </div>
 
-      {lesson.kind !== "form" && (
+      {lesson.essential && (
+        <p className="mt-3 rounded-md border border-amber-400/20 bg-amber-400/[0.06] px-3 py-2 text-[11.5px] text-amber-200/80">
+          Passo essencial — se o remover, volta a entrar no curso sozinho. Pode
+          mudar o texto e a posição à vontade.
+        </p>
+      )}
+
+      {lesson.kind !== "form" && lesson.kind !== "access" && (
         <div className="mt-3">
           <Labeled label="Link do vídeo (embed URL)">
             <input

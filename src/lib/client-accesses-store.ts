@@ -38,6 +38,17 @@ export type ClientAccess = {
   notes: string | null;
   addedAt: number;
   updatedAt: number;
+  /** De onde veio a entrada. Ausente (registos antigos e tudo o que a equipa
+   *  acrescenta à mão) = adicionada pela equipa. «onboarding» = o próprio
+   *  cliente preencheu-a num passo de acesso do onboarding — reenviar esse
+   *  passo substitui só as entradas dessa lição. */
+  origin?: ClientAccessOrigin | null;
+};
+
+export type ClientAccessOrigin = {
+  kind: "onboarding";
+  lessonId: string;
+  submittedAt: number;
 };
 
 function key(slug: string): string {
@@ -112,6 +123,51 @@ export async function deleteClientAccess(
   if (next.length === current.length) return false;
   await kv.set(key(slug), next);
   return true;
+}
+
+/** O cliente (re)enviou um passo de acesso do onboarding: as entradas que
+ *  esse passo tinha deixado saem e entram as novas, à cabeça da lista. O que
+ *  a equipa acrescentou à mão — e o que veio de outros passos — fica
+ *  intocado. Uma leitura + uma escrita. */
+export async function replaceOnboardingAccesses(
+  slug: string,
+  lessonId: string,
+  partials: Omit<ClientAccess, "id" | "addedAt" | "updatedAt" | "origin">[],
+): Promise<ClientAccess[]> {
+  if (!accessesStorageConfigured) {
+    throw new Error("KV storage not configured on this deployment.");
+  }
+  const now = Date.now();
+  const fresh: ClientAccess[] = partials.map((p) => ({
+    ...p,
+    id: newClientAccessId(),
+    addedAt: now,
+    updatedAt: now,
+    origin: { kind: "onboarding", lessonId, submittedAt: now },
+  }));
+  const current = await listClientAccesses(slug);
+  const kept = current.filter(
+    (a) => !(a.origin?.kind === "onboarding" && a.origin.lessonId === lessonId),
+  );
+  await kv.set(key(slug), [...fresh, ...kept].slice(0, MAX_ENTRIES));
+  return fresh;
+}
+
+/** Recibo PÚBLICO do que o cliente já enviou num passo de acesso — só o
+ *  nome de cada entrada e a data, nunca utilizador, link nem password. É o
+ *  que a página pública do onboarding pode mostrar. */
+export async function onboardingAccessReceipt(
+  slug: string,
+  lessonId: string,
+): Promise<{ labels: string[]; submittedAt: number } | null> {
+  const mine = (await listClientAccesses(slug)).filter(
+    (a) => a.origin?.kind === "onboarding" && a.origin.lessonId === lessonId,
+  );
+  if (mine.length === 0) return null;
+  return {
+    labels: mine.map((a) => a.label),
+    submittedAt: Math.max(...mine.map((a) => a.origin?.submittedAt ?? a.addedAt)),
+  };
 }
 
 export function newClientAccessId(): string {

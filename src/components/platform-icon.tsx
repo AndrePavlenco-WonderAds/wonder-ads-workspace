@@ -104,6 +104,17 @@ export function PlatformIcon({
           <path d="M19.6 17l-1.5 4.4s-1.3-.7-2.9-.7c-2.3 0-2.4 1.4-2.4 1.8 0 2 5.2 2.7 5.2 7.3 0 3.6-2.3 6-5.4 6-3.7 0-5.6-2.3-5.6-2.3l1-3.3s2 1.7 3.6 1.7c1.1 0 1.5-.8 1.5-1.4 0-2.5-4.3-2.6-4.3-6.9 0-3.5 2.5-6.9 7.7-6.9 2 0 3.6.6 3.6.6z" fill="#fff" />
         </svg>
       );
+    case "host":
+      return (
+        <svg {...common}>
+          <rect x="7" y="7" width="34" height="14" rx="4" fill="#783DF5" />
+          <rect x="7" y="27" width="34" height="14" rx="4" fill="#343ED7" />
+          <circle cx="14" cy="14" r="2.5" fill="#fff" />
+          <circle cx="14" cy="34" r="2.5" fill="#fff" />
+          <rect x="21" y="12.5" width="14" height="3" rx="1.5" fill="#fff" opacity="0.7" />
+          <rect x="21" y="32.5" width="14" height="3" rx="1.5" fill="#fff" opacity="0.7" />
+        </svg>
+      );
     case "website":
       return (
         <svg {...common}>

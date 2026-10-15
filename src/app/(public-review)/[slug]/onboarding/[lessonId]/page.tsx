@@ -5,7 +5,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ChevronRight, Check, PlayCircle, ArrowRight } from "lucide-react";
+import { ChevronRight, Check, PlayCircle, ArrowRight, ShieldCheck } from "lucide-react";
 import { resolveOnboardingClient } from "@/lib/onboarding-resolve";
 import { getOnboardingProgress } from "@/lib/onboarding-progress-store";
 import {
@@ -20,6 +20,8 @@ import {
 import { stepsForForm } from "@/lib/onboarding-questions";
 import { getCourse, getFormSteps } from "@/lib/onboarding-content-store";
 import { OnboardingMarkComplete } from "@/components/onboarding-mark-complete";
+import { OnboardingAccessForm } from "@/components/onboarding-access-form";
+import { onboardingAccessReceipt } from "@/lib/client-accesses-store";
 import { OnboardingIntakeForm } from "@/components/onboarding-intake-form";
 import { PlatformIcon } from "@/components/platform-icon";
 import { OnboardingInstructors } from "@/components/onboarding-instructors";
@@ -106,6 +108,15 @@ export default async function OnboardingLessonPage({
   const next = nextLesson(categories, lesson.id);
   const nextStartsNewCategory = Boolean(next && next.category !== lesson.category);
 
+  // Passo de acesso: o recibo do que o cliente já enviou — só o nome de cada
+  // entrada (sem o prefixo «Alojamento — ») e a data. Os dados em si nunca
+  // saem do cofre para esta página pública.
+  const isAccess = lesson.kind === "access";
+  const accessReceipt = isAccess
+    ? await onboardingAccessReceipt(slug, lesson.id).catch(() => null)
+    : null;
+  const accessPrefix = `${lesson.accessLabel?.trim() || lesson.title} — `;
+
   // Form lessons render the stepped quiz for their track.
   if (lesson.kind === "form") {
     const track = lessonTrack(lesson);
@@ -183,7 +194,9 @@ export default async function OnboardingLessonPage({
       <div className="grid gap-8 lg:grid-cols-[1fr_320px]">
         {/* Main */}
         <div>
-          {/* Video player */}
+          {/* Video player — os passos de acesso não têm vídeo: o formulário
+              é o passo. */}
+          {!isAccess && (
           <div className="overflow-hidden rounded-2xl border border-black/8 bg-black shadow-sm">
             <div className="relative aspect-video w-full">
               {lesson.videoUrl ? (
@@ -214,8 +227,14 @@ export default async function OnboardingLessonPage({
               )}
             </div>
           </div>
+          )}
 
-          <div className="mt-6 flex flex-wrap items-center gap-2.5">
+          <div className={`${isAccess ? "" : "mt-6 "}flex flex-wrap items-center gap-2.5`}>
+            {isAccess && lesson.platform && (
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-black/8 bg-white shadow-sm">
+                <PlatformIcon platform={lesson.platform} className="h-6 w-6" />
+              </span>
+            )}
             <h1 className="text-2xl font-semibold tracking-tight text-black/85 sm:text-3xl">
               {lesson.title}
             </h1>
@@ -232,6 +251,12 @@ export default async function OnboardingLessonPage({
                 }}
               >
                 {lessonTrack(lesson) === "seo" ? "SEO" : "Ads"}
+              </span>
+            )}
+            {lesson.essential && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-[#A9834F]/12 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.1em] text-[#A9834F]">
+                <ShieldCheck className="h-3 w-3" />
+                Essencial
               </span>
             )}
           </div>
@@ -290,14 +315,39 @@ export default async function OnboardingLessonPage({
               })}
             </div>
 
-            <div className="mt-6 border-t border-black/8 pt-5">
-              <OnboardingMarkComplete
+            {!isAccess && (
+              <div className="mt-6 border-t border-black/8 pt-5">
+                <OnboardingMarkComplete
+                  slug={slug}
+                  lessonId={lesson.id}
+                  initialDone={isDone}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* O passo de acesso conclui-se ao ENVIAR — não há «Marcar como
+              Concluído» sem os dados. */}
+          {isAccess && (
+            <div className="mt-4">
+              <OnboardingAccessForm
                 slug={slug}
                 lessonId={lesson.id}
-                initialDone={isDone}
+                providers={lesson.providers ?? []}
+                receipt={
+                  accessReceipt
+                    ? {
+                        submittedAt: accessReceipt.submittedAt,
+                        labels: accessReceipt.labels.map((l) =>
+                          l.startsWith(accessPrefix) ? l.slice(accessPrefix.length) : l,
+                        ),
+                      }
+                    : null
+                }
+                next={next ? { href: lessonHref(slug, next), title: next.title } : null}
               />
             </div>
-          </div>
+          )}
         </div>
 
         {/* Sidebar */}
@@ -308,7 +358,8 @@ export default async function OnboardingLessonPage({
                 {category.title}
               </h3>
               <span className="text-[11px] text-black/40">
-                {category.lessons.length} lições
+                {category.lessons.length}{" "}
+                {category.lessons.length === 1 ? "lição" : "lições"}
               </span>
             </div>
             <ol className="flex flex-col gap-1.5">

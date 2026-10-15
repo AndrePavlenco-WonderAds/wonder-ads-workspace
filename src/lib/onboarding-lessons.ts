@@ -31,7 +31,10 @@ export type LessonBlock =
   | { type: "emails"; intro: string; emails: string[] }
   | { type: "bullets"; intro?: string; items: string[] };
 
-export type LessonKind = "video" | "form" | "info";
+// "access" — um passo sem vídeo em que o cliente preenche os dados de acesso
+// (fornecedor, link, utilizador, password) e eles vão direitos para o cofre
+// «Accesses» da ficha do cliente (accesses:<slug>), nunca para o browser.
+export type LessonKind = "video" | "form" | "info" | "access";
 
 export type Lesson = {
   id: string;
@@ -59,7 +62,29 @@ export type Lesson = {
   /** Optional override for the "~N min" estimate. When absent we fall back
    *  to the per-kind default (form 8 / video 3 / info 2). */
   estMinutes?: number;
+  /** Passo ESSENCIAL — o hub marca-o como tal e o curso garante-o sempre,
+   *  mesmo com um override do editor gravado no KV que ainda não o conheça
+   *  (ver withEssentialLessons). */
+  essential?: boolean;
+  /** kind "access": fornecedores sugeridos como atalhos no formulário. */
+  providers?: string[];
+  /** kind "access": prefixo do nome da entrada no cofre («Alojamento —
+   *  dominios.pt»). Sem ele usa-se o título da lição. */
+  accessLabel?: string;
 };
+
+/** Alojamentos mais comuns entre os nossos clientes — atalhos no passo do
+ *  host; o cliente pode sempre escrever outro. */
+export const HOST_PROVIDERS = [
+  "dominios.pt",
+  "PTisp",
+  "Amen",
+  "Hostinger",
+  "GoDaddy",
+  "SiteGround",
+  "OVHcloud",
+  "IONOS",
+];
 
 /** Known platform icon ids (see PlatformIcon component). */
 export const PLATFORM_IDS = [
@@ -73,6 +98,7 @@ export const PLATFORM_IDS = [
   "website",
   "wordpress",
   "shopify",
+  "host",
 ] as const;
 
 export type OnboardingCategory = {
@@ -174,6 +200,52 @@ export const DEFAULT_ONBOARDING_CATEGORIES: OnboardingCategory[] = [
           {
             type: "p",
             text: "Responda com o máximo de detalhe possível; respostas em tópicos são perfeitas. Se alguma pergunta não se aplicar ou tiver dúvidas, escreva isso mesmo e falamos na nossa chamada.",
+          },
+        ],
+      },
+    ],
+  },
+  {
+    // O ALOJAMENTO PRIMEIRO. Sem o acesso ao host não validamos o domínio
+    // no Search Console por DNS, não mexemos em redirecionamentos, SSL nem
+    // velocidade — é o acesso que mais vezes atrasava o arranque. Por isso
+    // tem bloco próprio, logo a seguir aos formulários, e é um formulário
+    // (não um vídeo): o cliente escreve os dados e eles caem no cofre
+    // «Accesses» da ficha do cliente, sem passar por email nem WhatsApp.
+    key: "alojamento",
+    title: "Alojamento do Website · Consultoria SEO/GEO",
+    lessons: [
+      {
+        id: "alojamento",
+        platform: "host",
+        track: "seo",
+        category: "alojamento",
+        title: "Acesso ao Alojamento (Host)",
+        kind: "access",
+        essential: true,
+        emoji: "🔐",
+        videoUrl: null,
+        estMinutes: 3,
+        accessLabel: "Alojamento",
+        providers: HOST_PROVIDERS,
+        summary: "Os dados de acesso ao painel onde o vosso site está alojado (ex.: dominios.pt).",
+        about: [
+          {
+            type: "p",
+            text: "O alojamento (host) é onde vivem o vosso website e o vosso domínio — muitos clientes têm-no no dominios.pt, mas pode ser qualquer outro fornecedor. É por lá que validamos o domínio no Google e tratamos de DNS, redirecionamentos, certificados e velocidade, por isso é o acesso mais importante para arrancarmos com o SEO e a GEO.",
+          },
+          {
+            type: "bullets",
+            intro: "O que precisamos:",
+            items: [
+              "O fornecedor do alojamento (ex.: dominios.pt).",
+              "O link da página de login da vossa área de cliente.",
+              "O utilizador (ou email) e a password.",
+            ],
+          },
+          {
+            type: "p",
+            text: "Se o vosso alojamento o permitir, criem um utilizador só para a Wonder Ads em vez de partilharem a password principal. Se for outra empresa a gerir o site, indiquem-nos o contacto e nós tratamos do resto.",
           },
         ],
       },
@@ -466,6 +538,46 @@ export function nextLesson(
   return all[i + 1];
 }
 
+/** O curso vivo com os passos ESSENCIAIS garantidos.
+ *
+ *  O curso do editor vive num override no KV (onboarding-course) que tapa o
+ *  código por inteiro — um passo novo acrescentado aqui nunca aparecia a
+ *  ninguém até alguém o voltar a gravar no editor. Os passos `essential`
+ *  furam essa regra: se faltarem ao override, entram na posição que têm no
+ *  curso por omissão (a sua categoria, ou uma categoria nova antes da
+ *  primeira categoria seguinte que exista). Apagá-los no editor não pega —
+ *  são essenciais de propósito. */
+export function withEssentialLessons(
+  categories: OnboardingCategory[],
+): OnboardingCategory[] {
+  const present = new Set(flattenLessons(categories).map((l) => l.id));
+  let out = categories;
+  DEFAULT_ONBOARDING_CATEGORIES.forEach((def, defIdx) => {
+    const missing = def.lessons.filter((l) => l.essential && !present.has(l.id));
+    if (missing.length === 0) return;
+    const existing = out.findIndex((c) => c.key === def.key);
+    if (existing >= 0) {
+      out = out.map((c, i) => {
+        if (i !== existing) return c;
+        const lessons = [...c.lessons];
+        for (const l of missing) {
+          const at = Math.min(def.lessons.indexOf(l), lessons.length);
+          lessons.splice(at, 0, l);
+        }
+        return { ...c, lessons };
+      });
+      return;
+    }
+    const laterKeys = new Set(
+      DEFAULT_ONBOARDING_CATEGORIES.slice(defIdx + 1).map((c) => c.key),
+    );
+    const at = out.findIndex((c) => laterKeys.has(c.key));
+    const cat = { ...def, lessons: missing };
+    out = at < 0 ? [...out, cat] : [...out.slice(0, at), cat, ...out.slice(at)];
+  });
+  return out;
+}
+
 /** The category that comes after the one containing `lessonId`. */
 export function nextCategory(
   categories: OnboardingCategory[],
@@ -480,7 +592,7 @@ export function nextCategory(
 
 // ---- Normalisation (for the KV override → guard against malformed data) ----
 
-const LESSON_KINDS: LessonKind[] = ["video", "form", "info"];
+const LESSON_KINDS: LessonKind[] = ["video", "form", "info", "access"];
 const TRACKS: OnbTrack[] = ["seo", "ads", "common"];
 
 function normalizeBlocks(raw: unknown): LessonBlock[] {
@@ -562,6 +674,14 @@ export function normalizeCourse(raw: unknown): OnboardingCategory[] | null {
           typeof estRaw === "number" && Number.isFinite(estRaw) && estRaw > 0
             ? estRaw
             : undefined;
+        const essential = Boolean((l as { essential?: unknown }).essential) || undefined;
+        const provRaw = (l as { providers?: unknown }).providers;
+        const providers = Array.isArray(provRaw)
+          ? provRaw.filter((x): x is string => typeof x === "string" && x.trim() !== "")
+          : undefined;
+        const labelRaw = (l as { accessLabel?: unknown }).accessLabel;
+        const accessLabel =
+          typeof labelRaw === "string" && labelRaw.trim() ? labelRaw : undefined;
         outLessons.push({
           id,
           category: key,
@@ -572,6 +692,9 @@ export function normalizeCourse(raw: unknown): OnboardingCategory[] | null {
           ecommerce,
           requiresService,
           estMinutes,
+          essential,
+          providers: providers?.length ? providers : undefined,
+          accessLabel,
           emoji:
             typeof (l as { emoji?: unknown }).emoji === "string"
               ? (l as { emoji: string }).emoji

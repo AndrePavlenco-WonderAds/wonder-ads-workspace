@@ -15,9 +15,11 @@ import {
   Loader2,
   Pencil,
   Plus,
+  Sparkles,
   Trash2,
 } from "lucide-react";
 import type { ClientAccess } from "@/lib/client-accesses-store";
+import { formatDate } from "@/lib/dates";
 import { useSeoReadOnly } from "./seo-readonly";
 
 type EditDraft = Omit<ClientAccess, "id" | "addedAt" | "updatedAt"> & {
@@ -236,9 +238,22 @@ function AccessCard({
   return (
     <li className="brand-gradient-border group relative overflow-hidden rounded-xl bg-white/[0.025] p-4 backdrop-blur-md">
       <header className="mb-3 flex items-start justify-between gap-2">
-        <h3 className="text-sm font-semibold tracking-tight text-white">
-          {entry.label}
-        </h3>
+        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+          <h3 className="text-sm font-semibold tracking-tight text-white">
+            {entry.label}
+          </h3>
+          {/* Preenchida pelo próprio cliente no onboarding — se ele reenviar
+              o passo, esta entrada é substituída pela nova. */}
+          {entry.origin?.kind === "onboarding" && (
+            <span
+              title="Submitted by the client in the onboarding — re-submitting that step replaces this entry"
+              className="inline-flex items-center gap-1 rounded-full border border-[#783DF5]/30 bg-[#783DF5]/[0.12] px-2 py-0.5 text-[10px] font-medium text-[#c4b5fd]"
+            >
+              <Sparkles className="h-2.5 w-2.5" />
+              Via onboarding · {formatDate(entry.origin.submittedAt)}
+            </span>
+          )}
+        </div>
         {!readOnly && (
           <div className="flex items-center gap-1">
             <button

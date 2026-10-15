@@ -15,6 +15,8 @@ import {
   Sparkles,
   PartyPopper,
   Clock,
+  KeyRound,
+  ShieldCheck,
 } from "lucide-react";
 import { resolveOnboardingClient } from "@/lib/onboarding-resolve";
 import { getOnboardingProgress } from "@/lib/onboarding-progress-store";
@@ -42,7 +44,8 @@ function lessonMinutes(lesson: Lesson): number {
   }
   if (lesson.kind === "form") return 8;
   if (lesson.kind === "video") return 3;
-  return 2; // info / access-grant steps
+  if (lesson.kind === "access") return 3;
+  return 2; // info steps
 }
 
 const RESERVED = new Set([
@@ -397,6 +400,15 @@ export default async function OnboardingHubPage({
                               {(track === "seo" || track === "ads") && (
                                 <TrackBadge track={track} />
                               )}
+                              {lesson.essential && (
+                                <span
+                                  title="Passo essencial para começarmos"
+                                  className="inline-flex items-center gap-1 rounded-full bg-[#A9834F]/12 px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-[0.1em] text-[#A9834F]"
+                                >
+                                  <ShieldCheck className="h-3 w-3" />
+                                  Essencial
+                                </span>
+                              )}
                               {isCurrent && (
                                 <span className="inline-flex items-center gap-1 rounded-full bg-[#A9834F]/12 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#A9834F]">
                                   <Sparkles className="h-3 w-3" />
@@ -425,6 +437,8 @@ export default async function OnboardingHubPage({
                             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-black/10 text-black/30 transition group-hover:border-[#783DF5]/40 group-hover:text-[#783DF5]">
                               {lesson.kind === "info" ? (
                                 <Flag className="h-3.5 w-3.5" />
+                              ) : lesson.kind === "access" ? (
+                                <KeyRound className="h-3.5 w-3.5" />
                               ) : lesson.kind === "form" ? (
                                 <ArrowRight className="h-4 w-4" />
                               ) : (

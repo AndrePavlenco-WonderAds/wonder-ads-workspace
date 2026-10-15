@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.96",
+    date: "2026-10-15",
+    title: "Onboarding — o acesso ao alojamento (host) num passo essencial, direto para o cofre de acessos",
+    highlights: [
+      "**🔐 Bloco novo no onboarding dos clientes de SEO: «Alojamento do Website · Consultoria SEO/GEO».** Fica logo a seguir aos formulários, antes dos «Acessos Consultoria SEO», e traz um passo marcado como **Essencial**: «Acesso ao Alojamento (Host)». Não tem vídeo — é um formulário.",
+      "**📝 O cliente escreve os dados de acesso.** Fornecedor (com atalhos para dominios.pt, PTisp, Amen, Hostinger, GoDaddy, SiteGround, OVHcloud e IONOS, e espaço para escrever qualquer outro), link da área de cliente, utilizador e password. Pode juntar até 3 acessos, por exemplo quando o domínio está num fornecedor e o site noutro. Se o site for gerido por outra empresa, indica só o contacto.",
+      "**🗝️ Vai direto para «Accesses» na client file** (/seo/<cliente>, fundo da página), com o selo «Via onboarding · data». Se o cliente reenviar o passo, só as entradas dele são substituídas; o que a equipa acrescentou à mão fica intocado.",
+      "**🛡️ A página pública não recebe nada do cofre.** Depois do envio, o cliente vê apenas o recibo (fornecedor e data). Para corrigir alguma coisa, «Atualizar os dados» abre o formulário vazio. O passo fica concluído quando os dados são enviados; não há «Marcar como Concluído» sem eles.",
+      "**🧩 Um passo essencial aparece sempre, mesmo com o curso personalizado no editor.** O override gravado no KV escondia qualquer passo novo do código. Os essenciais passam a entrar sozinhos na sua posição e, se forem removidos no editor, voltam. O editor ganhou o tipo de passo «Acessos».",
+    ],
+  },
+  {
     version: "77.95",
     date: "2026-10-14",
     title: "Relatório mensal — posições das keywords por CSV (Semrush + Search Console + Serpstat)",

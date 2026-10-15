@@ -8,6 +8,7 @@ import { kv } from "@vercel/kv";
 import {
   DEFAULT_ONBOARDING_CATEGORIES,
   normalizeCourse,
+  withEssentialLessons,
   type OnboardingCategory,
 } from "@/lib/onboarding-lessons";
 import {
@@ -23,13 +24,15 @@ export const onboardingContentStorageConfigured = Boolean(
   process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN,
 );
 
-/** Live course — KV override if valid, else the static default. */
+/** Live course — KV override if valid, else the static default. The
+ *  override never hides an `essential` lesson (see withEssentialLessons). */
 export async function getCourse(): Promise<OnboardingCategory[]> {
   if (!onboardingContentStorageConfigured) return DEFAULT_ONBOARDING_CATEGORIES;
   try {
     const stored = await kv.get<unknown>(COURSE_KEY);
     if (stored == null) return DEFAULT_ONBOARDING_CATEGORIES;
-    return normalizeCourse(stored) ?? DEFAULT_ONBOARDING_CATEGORIES;
+    const course = normalizeCourse(stored);
+    return course ? withEssentialLessons(course) : DEFAULT_ONBOARDING_CATEGORIES;
   } catch (err) {
     console.error("KV onboarding-course read failed:", err);
     return DEFAULT_ONBOARDING_CATEGORIES;
