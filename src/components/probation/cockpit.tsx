@@ -15,6 +15,7 @@ import {
   type NextStep,
 } from "@/lib/probation/progress";
 import {
+  PULSE_TEXT,
   pubEntry,
   sendItemLabel,
   sendState,
@@ -150,7 +151,11 @@ export function Cockpit({
                             p === undefined ? (
                               <span key={j} className="h-2.5 w-2.5 rounded-full border border-dashed border-white/15" />
                             ) : (
-                              <PulseDot key={j} pulse={p} />
+                              <PulseDot
+                                key={j}
+                                pulse={p}
+                                title={`Semana ${j + 1} · ${p ? PULSE_TEXT[p] : "Sem registo"}${r.notes[j] ? ` — ${r.notes[j]}` : ""}`}
+                              />
                             ),
                           )}
                         </span>

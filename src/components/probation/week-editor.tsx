@@ -7,6 +7,9 @@
 //
 // v77.84 — antes do semáforo, o que o consultor submeteu nesta semana para
 // revisão; e em cada KPI, as submissões que ele ligou a esse KPI.
+//
+// v77.99 — por baixo de cada KPI, o motivo do semáforo (opcional). Ao
+// contrário da nota interna, segue para o consultor com o check-in.
 
 import { useState } from "react";
 import {
@@ -18,6 +21,7 @@ import {
   Inbox,
   Loader2,
   Lock,
+  MessageSquareText,
   Paperclip,
   Plus,
   RefreshCw,
@@ -28,6 +32,8 @@ import { Field, PulsePicker, SendBadge } from "./sheet-bits";
 import { dayLabel } from "./views";
 import {
   MAX_ACTIONS,
+  PULSE_LABEL,
+  WEEK_KPI_NOTE_MAX,
   defaultWeekDates,
   previousActions,
   weekKpiSet,
@@ -37,7 +43,7 @@ import {
   type ProbationWeek,
   type ProbationWeekKpi,
 } from "@/lib/probation/shared";
-import type { SendState } from "@/lib/probation/published";
+import { PULSE_TONE, type SendState } from "@/lib/probation/published";
 import {
   linkHost,
   sameKpi,
@@ -94,7 +100,7 @@ export function WeekEditor({
   const prevAll = period.weeks.find((w) => w.n === week.n - 1)?.actions ?? [];
 
   const kpiRow = (id: string): ProbationWeekKpi =>
-    week.kpis.find((k) => k.kpiId === id) ?? { kpiId: id, value: "", pulse: null };
+    week.kpis.find((k) => k.kpiId === id) ?? { kpiId: id, value: "", pulse: null, note: "" };
   const setKpi = (id: string, patch: Partial<ProbationWeekKpi>) => {
     const exists = week.kpis.some((k) => k.kpiId === id);
     onWeek({
@@ -228,6 +234,23 @@ export function WeekEditor({
                     placeholder="Onde está agora"
                   />
                   <PulsePicker compact value={row.pulse} onChange={(pulse) => setKpi(k.id, { pulse })} label={`Semáforo do KPI ${i + 1}`} />
+                  <div className="relative sm:col-span-3">
+                    <MessageSquareText
+                      aria-hidden
+                      className="pointer-events-none absolute left-2.5 top-[9px] h-3.5 w-3.5"
+                      style={{ color: row.pulse ? PULSE_TONE[row.pulse].dot : "rgba(0,0,0,0.28)" }}
+                    />
+                    <textarea
+                      rows={1}
+                      maxLength={WEEK_KPI_NOTE_MAX}
+                      className="sheet-input min-h-[34px] resize-none !py-1.5 !pl-8 !text-[12.5px] [field-sizing:content]"
+                      style={row.pulse ? { borderLeft: `3px solid ${PULSE_TONE[row.pulse].dot}` } : undefined}
+                      aria-label={`Motivo do semáforo do KPI ${i + 1}`}
+                      value={row.note}
+                      onChange={(e) => setKpi(k.id, { note: e.target.value })}
+                      placeholder={`${row.pulse ? `Porquê «${PULSE_LABEL[row.pulse]}»?` : "Motivo do semáforo"} (opcional · o consultor vê)`}
+                    />
+                  </div>
                   {open && mine.length > 0 && (
                     <ul className="flex flex-col gap-1.5 sm:col-span-3">
                       {mine.map((s) => (

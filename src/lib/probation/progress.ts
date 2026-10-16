@@ -275,6 +275,8 @@ export type KpiHealthRow = {
   target: string;
   /** Um ponto por check-in (1–4) — null quando a semana não o acompanhou. */
   pulses: (WeekPulse | null | undefined)[];
+  /** O motivo do semáforo de cada check-in ("" = sem nota), alinhado com `pulses`. */
+  notes: string[];
   latest: string;
 };
 
@@ -286,13 +288,14 @@ export function kpiHealth(period: ProbationPeriod): { which: 15 | 30; rows: KpiH
       which,
       rows: kpis.map((k) => {
         let latest = "";
-        const pulses = period.weeks.map((w) => {
-          const row = w.kpis.find((x) => x.kpiId === k.id);
+        const rows = period.weeks.map((w) => w.kpis.find((x) => x.kpiId === k.id));
+        const pulses = rows.map((row) => {
           if (!row) return undefined;
           if (row.value.trim()) latest = row.value.trim();
           return row.pulse;
         });
-        return { name: k.kpi.trim(), target: k.target.trim(), pulses, latest };
+        const notes = rows.map((row) => row?.note.trim() ?? "");
+        return { name: k.kpi.trim(), target: k.target.trim(), pulses, notes, latest };
       }),
     };
   };

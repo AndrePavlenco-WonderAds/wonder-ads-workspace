@@ -123,7 +123,19 @@ export function WeekCardView({ view }: { view: WeekView }) {
               <tbody>
                 {view.kpis.map((k, i) => (
                   <tr key={i} className="border-t border-white/[0.05]">
-                    <td className="px-3 py-2 text-white/85">{k.name || "—"}</td>
+                    <td className="px-3 py-2 text-white/85">
+                      {k.name || "—"}
+                      {k.note && (
+                        <span className="mt-1 flex items-start gap-1.5 whitespace-pre-line text-[11.5px] leading-snug text-white/55">
+                          <span
+                            aria-hidden
+                            className="mt-[3px] w-0.5 shrink-0 self-stretch rounded-full"
+                            style={{ background: k.pulse ? PULSE_TONE[k.pulse].dot : "rgba(255,255,255,0.2)" }}
+                          />
+                          {k.note}
+                        </span>
+                      )}
+                    </td>
                     <td className="px-3 py-2 tabular-nums text-white/50">{k.target || "—"}</td>
                     <td className="px-3 py-2 font-semibold tabular-nums text-white">{k.value || <span className="font-normal text-white/30">—</span>}</td>
                     <td className="px-3 py-2">

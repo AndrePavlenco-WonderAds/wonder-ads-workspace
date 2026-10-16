@@ -54,6 +54,9 @@ export type ProbationWeekKpi = {
   /** Onde está o número nesta semana («6 de 10», «2 reuniões»…). */
   value: string;
   pulse: WeekPulse | null;
+  /** Porquê este semáforo — opcional, uma ou duas frases. Vai para o
+   *  consultor com o check-in (ao contrário da nota interna). */
+  note: string;
 };
 
 /** Próximo passo combinado no check-in; a semana seguinte confirma se foi
@@ -169,6 +172,8 @@ export type ProbationSummary = {
 export const MAX_KPIS = 15;
 export const WEEKS_PER_PERIOD = 4;
 export const MAX_ACTIONS = 12;
+/** O motivo do semáforo de um KPI no check-in é uma nota breve. */
+export const WEEK_KPI_NOTE_MAX = 500;
 
 export const PULSE_OPTIONS: { id: WeekPulse; label: string; short: string }[] = [
   { id: "no-caminho", label: "No caminho", short: "No caminho" },
@@ -519,7 +524,7 @@ export function firstName(full: string): string {
 // aqui, com defaults e limites, antes de ser lido ou gravado (a lição dos
 // WebTickets — um campo novo não pode rebentar planos antigos).
 
-const LIM = { name: 120, line: 200, kpi: 300, text: 3000, id: 64 };
+const LIM = { name: 120, line: 200, kpi: 300, note: WEEK_KPI_NOTE_MAX, text: 3000, id: 64 };
 
 function str(v: unknown, max: number): string {
   return typeof v === "string" ? v.slice(0, max) : "";
@@ -562,7 +567,12 @@ function sanitizeWeekKpis(raw: unknown): ProbationWeekKpi[] {
     const kpiId = str(r.kpiId, LIM.id);
     if (!kpiId || seen.has(kpiId)) continue;
     seen.add(kpiId);
-    out.push({ kpiId, value: str(r.value, LIM.line), pulse: oneOf(r.pulse, PULSE_IDS) });
+    out.push({
+      kpiId,
+      value: str(r.value, LIM.line),
+      pulse: oneOf(r.pulse, PULSE_IDS),
+      note: str(r.note, LIM.note),
+    });
   }
   return out;
 }

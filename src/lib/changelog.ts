@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.99",
+    date: "2026-10-16",
+    title: "Probation — o motivo do semáforo de cada KPI no check-in semanal",
+    highlights: [
+      "**💬 Por baixo de cada KPI do check-in há agora um campo «Porquê este semáforo?».** É opcional: uma nota breve sobre o motivo do verde, laranja ou vermelho daquela semana. O campo ganha a cor do semáforo escolhido.",
+      "**👀 O consultor recebe-a com o check-in.** Aparece por baixo do nome do KPI, na tabela da semana, e já se vê na pré-visualização «ao vivo». A «Nota interna» continua a ser o único campo que nunca sai.",
+      "**🧭 No cockpit, passar o rato sobre o ponto de uma semana mostra o motivo.** Os check-ins já enviados sem nota não ficam marcados como «Alterado desde o envio».",
+    ],
+  },
+  {
     version: "77.98",
     date: "2026-10-16",
     title: "Formação — exames de fase com 35 perguntas sorteadas de todos os capítulos, únicas por consultor",

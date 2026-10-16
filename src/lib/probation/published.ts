@@ -47,7 +47,9 @@ export type WeekView = {
   track: 15 | 30;
   conductedBy: string;
   pulse: WeekPulse | null;
-  kpis: { name: string; target: string; value: string; pulse: WeekPulse | null }[];
+  /** `note` = porquê aquele semáforo. Só existe quando foi escrita — assim a
+   *  `sig` dos check-ins enviados antes da nota (v77.99) não muda. */
+  kpis: { name: string; target: string; value: string; pulse: WeekPulse | null; note?: string }[];
   /** As ações combinadas na semana anterior e se ficaram feitas. */
   prevActions: { text: string; done: boolean }[];
   wins: string;
@@ -132,11 +134,13 @@ export function weekView(plan: PlanLike, period: ProbationPeriod, n: number): We
   if (!week) return null;
   const kpis = weekKpiSet(period, week, plan.checkinDay).map((k) => {
     const row = week.kpis.find((x) => x.kpiId === k.id);
+    const note = row?.note.trim() ?? "";
     return {
       name: k.kpi.trim(),
       target: k.target.trim(),
       value: row?.value.trim() ?? "",
       pulse: row?.pulse ?? null,
+      ...(note ? { note } : {}),
     };
   });
   return {
