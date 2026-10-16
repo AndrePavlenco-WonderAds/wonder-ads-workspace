@@ -52,6 +52,10 @@ export type ExamSession = {
   /** Quantas vezes a pessoa saiu do separador durante o exame. Não bloqueia
    *  nada — fica no registo, que é o que um invigilador faria. */
   focusLossCount: number;
+  /** A folha sorteada no «Começar» (`exam-draw.ts`). Ausentes nas sessões
+   *  abertas antes do sorteio, que continuam com a folha fixa. */
+  seed?: string;
+  questionIds?: string[];
 };
 
 export type ExamSessionMap = Record<string, ExamSession>;
@@ -104,6 +108,14 @@ function normalizeSession(raw: unknown): ExamSession | null {
       typeof o.focusLossCount === "number" && Number.isFinite(o.focusLossCount)
         ? Math.max(0, Math.floor(o.focusLossCount))
         : 0,
+    ...(typeof o.seed === "string" && Array.isArray(o.questionIds)
+      ? {
+          seed: o.seed,
+          questionIds: o.questionIds.filter(
+            (x): x is string => typeof x === "string",
+          ),
+        }
+      : {}),
   };
 }
 
@@ -183,12 +195,15 @@ export type StartExamOutcome =
   | { kind: "already_submitted"; session: ExamSession };
 
 /** Abre (ou retoma) a sessão de exame. NUNCA reinicia o relógio de uma sessão
- *  que já existe — é essa a diferença entre um exame e um quiz. */
+ *  que já existe — é essa a diferença entre um exame e um quiz. `draw` só é
+ *  usado quando nasce uma sessão nova: quem retoma fica com a folha que já
+ *  tinha. */
 export async function startExamSession(
   username: string,
   examId: string,
   attemptNumber: number,
   nowMs: number,
+  draw: { seed: string; questionIds: string[] },
 ): Promise<StartExamOutcome> {
   if (!examSessionsStorageConfigured) {
     throw new Error("KV storage not configured on this deployment.");
@@ -227,6 +242,8 @@ export async function startExamSession(
     finishedAt: null,
     answers: [],
     focusLossCount: 0,
+    seed: draw.seed,
+    questionIds: draw.questionIds,
   };
   await writeSessions(username, { ...all, [examId]: session }, nowMs);
   return { kind: "started", session };

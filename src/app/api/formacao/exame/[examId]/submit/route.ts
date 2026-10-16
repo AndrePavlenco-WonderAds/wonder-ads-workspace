@@ -25,6 +25,9 @@ import {
   getStartDates,
   resolveStartDate,
 } from "@/lib/training/start-dates-store";
+import { getTrainingCatalog } from "@/lib/training/content-store";
+import { examPaperFor } from "@/lib/training/exam-draw";
+import { EXAM_QUESTIONS } from "@/lib/training/exam-questions";
 import { computeExamJourney, examQuiz, findExam } from "@/lib/training/exams";
 import { reconcileExpiredExams } from "@/lib/training/exam-proctor";
 import {
@@ -56,8 +59,7 @@ export async function POST(
   if (!exam) {
     return NextResponse.json({ error: "Exame desconhecido." }, { status: 404 });
   }
-  const quiz = examQuiz(exam);
-  if (quiz.questions.length === 0) {
+  if ((EXAM_QUESTIONS[exam.id] ?? []).length === 0) {
     return NextResponse.json(
       { error: "Este exame ainda não tem perguntas." },
       { status: 409 },
@@ -93,10 +95,11 @@ export async function POST(
 
   // A sessão manda. Antes de olhar para o gate, fecha-se o que já rebentou o
   // prazo — incluindo, se for o caso, esta mesma tentativa.
-  const [recordedAttempts, startDates, session] = await Promise.all([
+  const [recordedAttempts, startDates, session, tracks] = await Promise.all([
     getQuizAttempts(employee.username),
     getStartDates(),
     getExamSession(employee.username, examId),
+    getTrainingCatalog(),
   ]);
 
   if (!session || session.examId !== examId) {
@@ -201,6 +204,13 @@ export async function POST(
       break;
   }
 
+  // Corrige-se a folha sorteada para esta sessão — a que a pessoa viu, pela
+  // ordem e com as opções pela ordem em que as viu. Respostas a perguntas que
+  // não estão na folha não contam para nada.
+  const quiz = examQuiz(
+    exam,
+    examPaperFor(exam, tracks, session, employee.username).questions,
+  );
   const result = gradeQuiz(quiz, answers);
   const attempt: QuizAttempt = {
     id: `${examId}-${now}`,

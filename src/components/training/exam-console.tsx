@@ -21,8 +21,12 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import {
   AlertTriangle,
+  Gauge,
+  Layers,
+  ListOrdered,
   Loader2,
   Lock,
+  Shuffle,
   ShieldAlert,
   Timer,
   X,
@@ -35,6 +39,8 @@ export type RunningSession = {
   deadlineAt: number;
   attemptNumber: number;
   answers: SubmittedAnswer[];
+  /** A folha sorteada para esta tentativa — só existe depois do «Começar». */
+  questions: PublicQuestion[];
   /** `Date.now()` no servidor no instante em que a página foi desenhada. */
   serverNow: number;
 };
@@ -46,7 +52,9 @@ export function ExamConsole({
   examTitle,
   examLabel,
   gateLine,
-  questions,
+  questionCount,
+  chapterCount,
+  coreCount,
   passingScore,
   attemptNumber,
   attemptsLeft,
@@ -58,7 +66,12 @@ export function ExamConsole({
   examTitle: string;
   examLabel: string;
   gateLine: string;
-  questions: PublicQuestion[];
+  /** Tamanho da folha que vai ser sorteada (35, salvo banco pequeno). */
+  questionCount: number;
+  /** De quantos capítulos sai a folha. */
+  chapterCount: number;
+  /** Quantas perguntas vêm do núcleo da fase. */
+  coreCount: number;
   passingScore: number;
   attemptNumber: number;
   attemptsLeft: number | null;
@@ -116,9 +129,15 @@ export function ExamConsole({
         deadlineAt?: number;
         attemptNumber?: number;
         answers?: SubmittedAnswer[];
+        questions?: PublicQuestion[];
         serverNow?: number;
       };
-      if (!res.ok || !data.deadlineAt || !data.serverNow) {
+      if (
+        !res.ok ||
+        !data.deadlineAt ||
+        !data.serverNow ||
+        !data.questions?.length
+      ) {
         setError(data.error ?? "Não foi possível abrir o exame.");
         setPhase("briefing");
         router.refresh();
@@ -130,6 +149,7 @@ export function ExamConsole({
         deadlineAt: data.deadlineAt,
         attemptNumber: data.attemptNumber ?? attemptNumber,
         answers: data.answers ?? [],
+        questions: data.questions,
         serverNow: data.serverNow,
       });
       setPhase("running");
@@ -179,7 +199,7 @@ export function ExamConsole({
             variant="exam"
             quizId={examId}
             submitUrl={`/api/formacao/exame/${examId}/submit`}
-            questions={questions}
+            questions={session.questions}
             passingScore={passingScore}
             attemptNumber={session.attemptNumber}
             attemptsLeft={attemptsLeft}
@@ -191,6 +211,7 @@ export function ExamConsole({
             onFinished={() => setPhase("finished")}
             proctor={{
               deadlineAt: session.deadlineAt,
+              durationMs: durationMinutes * 60_000,
               clockOffsetMs,
               progressUrl: `/api/formacao/exame/${examId}/progress`,
               initialAnswers: session.answers,
@@ -240,9 +261,16 @@ export function ExamConsole({
               ? ` — ficas com ${Math.max(0, attemptsLeft - 1)}`
               : ""}
           </strong>
-          . Nota mínima {passingScore}%, {questions.length} perguntas.
+          . Nota mínima {passingScore}%, {questionCount} perguntas.
         </Rule>
       </ol>
+
+      <PaperBrief
+        questionCount={questionCount}
+        chapterCount={chapterCount}
+        coreCount={coreCount}
+        durationMinutes={durationMinutes}
+      />
 
       <p className="mt-5 flex items-start gap-2 border-l-2 border-[#C535C9]/45 pl-3 text-[12.5px] leading-relaxed text-white/60">
         <ShieldAlert className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#f0a8ee]" />
@@ -287,6 +315,83 @@ export function ExamConsole({
           onConfirm={() => void start()}
         />
       )}
+    </div>
+  );
+}
+
+/** «A tua folha» — de onde vêm as perguntas e a que ritmo se responde, antes
+ *  de a pessoa se comprometer. O que NÃO diz é quais: a folha ainda nem
+ *  existe, é sorteada no instante do «Começar». */
+function PaperBrief({
+  questionCount,
+  chapterCount,
+  coreCount,
+  durationMinutes,
+}: {
+  questionCount: number;
+  chapterCount: number;
+  coreCount: number;
+  durationMinutes: number;
+}) {
+  const pace = (durationMinutes / Math.max(1, questionCount))
+    .toFixed(1)
+    .replace(".", ",");
+  const fromChapters = Math.max(0, questionCount - coreCount);
+  const lo = Math.floor(fromChapters / Math.max(1, chapterCount));
+  const hi = Math.ceil(fromChapters / Math.max(1, chapterCount));
+  const perChapter = lo === hi ? `${lo}` : `${lo} a ${hi}`;
+  return (
+    <div className="mt-6 rounded-xl border border-white/[0.08] bg-white/[0.02] p-4 sm:p-5">
+      <p className="readout text-white/40">A tua folha</p>
+      <div className="mt-3 grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+        <BriefStat
+          icon={<ListOrdered className="h-3.5 w-3.5" />}
+          value={`${questionCount} perguntas`}
+          hint={`${coreCount} do núcleo da fase · ${fromChapters} dos capítulos`}
+        />
+        <BriefStat
+          icon={<Layers className="h-3.5 w-3.5" />}
+          value={`${chapterCount} capítulos`}
+          hint={`todos entram — ${perChapter} perguntas de cada`}
+        />
+        <BriefStat
+          icon={<Gauge className="h-3.5 w-3.5" />}
+          value={`~${pace} min`}
+          hint="por pergunta — o ritmo aparece durante o exame"
+        />
+      </div>
+      <p className="mt-4 flex items-start gap-2 text-[12.5px] leading-relaxed text-white/55">
+        <Shuffle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#f0a8ee]" />
+        <span>
+          A folha é sorteada no instante em que começas:{" "}
+          <strong className="text-white/85">
+            ninguém tem um exame igual ao teu
+          </strong>{" "}
+          — nem tu na tentativa seguinte. As perguntas saltam de capítulo em
+          capítulo e as opções também vêm baralhadas, por isso lê cada
+          enunciado do zero.
+        </span>
+      </p>
+    </div>
+  );
+}
+
+function BriefStat({
+  icon,
+  value,
+  hint,
+}: {
+  icon: React.ReactNode;
+  value: string;
+  hint: string;
+}) {
+  return (
+    <div className="rounded-lg border border-white/[0.07] bg-white/[0.025] px-3.5 py-3">
+      <p className="flex items-center gap-1.5 text-[14px] font-semibold text-white">
+        <span className="text-[#f0a8ee]">{icon}</span>
+        <span className="tabular">{value}</span>
+      </p>
+      <p className="mt-1 text-[11.5px] leading-snug text-white/45">{hint}</p>
     </div>
   );
 }

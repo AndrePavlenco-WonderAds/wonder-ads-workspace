@@ -3,7 +3,9 @@
 // Quiz de um capítulo — e, no modo `exam`, também os exames de fase: lista
 // completa de perguntas (mais simples e mais consistente com a app do que um
 // wizard), barra de progresso de resposta, submissão e correção pergunta a
-// pergunta.
+// pergunta. O exame invigilado é a exceção à lista: 35 perguntas sorteadas de
+// capítulos diferentes pedem uma de cada vez — essa folha desenha-se em
+// `ExamSheet`, mas a mecânica (respostas, gravação, relógio, entrega) é esta.
 //
 // UM COMPONENTE PARA OS DOIS. O que muda entre um quiz e um exame não é a
 // forma de responder — é o que está em jogo. Por isso o que o modo `exam`
@@ -39,12 +41,23 @@ import {
   TimerOff,
   XCircle,
 } from "lucide-react";
-import type { PublicQuestion, SubmittedAnswer } from "@/lib/training/grading";
+import {
+  ExamSheet,
+  TopicBreakdown,
+  TopicChip,
+} from "@/components/training/exam-sheet";
+import type {
+  PublicQuestion,
+  QuestionTopic,
+  SubmittedAnswer,
+} from "@/lib/training/grading";
 
 /** Tudo o que o modo invigilado precisa de saber. Ausente = quiz normal. */
 export type ProctorConfig = {
   /** Instante (ms, relógio do SERVIDOR) em que a folha é recolhida. */
   deadlineAt: number;
+  /** Duração total — é o que permite dizer se a pessoa vai no ritmo. */
+  durationMs?: number;
   /** `serverNow - clientNow` no momento do arranque. Somado ao relógio local
    *  dá a hora do servidor sem pedir nada a mais. */
   clockOffsetMs: number;
@@ -56,13 +69,6 @@ export type ProctorConfig = {
 
 /** De quanto em quanto tempo a folha é gravada no servidor. */
 const AUTOSAVE_MS = 10_000;
-
-function formatClock(ms: number): string {
-  const total = Math.max(0, Math.ceil(ms / 1000));
-  const m = Math.floor(total / 60);
-  const s = total % 60;
-  return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-}
 
 type CorrectionRow = {
   questionId: string;
@@ -394,6 +400,26 @@ export function QuizRunner({
     const wrong = result.correction.filter(
       (c) => !c.isCorrect && !c.manualReview,
     );
+    // Nos exames, cada pergunta sabe de que capítulo veio — a correção junta
+    // isso à nota para dizer onde voltar.
+    const topicOf = new Map(
+      questions.map((q) => [q.id, q.topic ?? null] as const),
+    );
+    const byTopic = new Map<
+      string,
+      { topic: QuestionTopic; right: number; total: number }
+    >();
+    for (const c of result.correction) {
+      const topic = topicOf.get(c.questionId);
+      if (!topic || c.manualReview) continue;
+      const row = byTopic.get(topic.key) ?? { topic, right: 0, total: 0 };
+      row.total += 1;
+      if (c.isCorrect) row.right += 1;
+      byTopic.set(topic.key, row);
+    }
+    const topicRows = [...byTopic.values()].sort(
+      (a, b) => (a.topic.no ?? 0) - (b.topic.no ?? 0),
+    );
     const blocked = result.outcome === "blocked" || result.attemptsLeft === 0;
     const effective = result.outcome === "effective";
     // O que a nota decide, dito em uma linha. Nos quizzes não há decisão
@@ -525,6 +551,10 @@ export function QuizRunner({
           </div>
         </div>
 
+        {isExam && (
+          <TopicBreakdown rows={topicRows} passingScore={passingScore} />
+        )}
+
         <div className="space-y-3">
           <h2 className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#A9834F]">
             Correção
@@ -551,6 +581,11 @@ export function QuizRunner({
                   )}
                 </span>
                 <div className="min-w-0 flex-1">
+                  {topicOf.get(c.questionId) && (
+                    <div className="mb-1.5">
+                      <TopicChip topic={topicOf.get(c.questionId)!} />
+                    </div>
+                  )}
                   <p className="text-[14px] font-medium text-white/90">
                     {i + 1}. {c.prompt}
                   </p>
@@ -597,42 +632,37 @@ export function QuizRunner({
   }
 
   // ---- Por responder ----
-  // Num exame invigilado a entrega nunca está desativada: entregar com
+  // Exame invigilado: uma pergunta de cada vez, com mapa da folha, ritmo e
+  // revisão antes de entregar. A entrega nunca está desativada — entregar com
   // perguntas por responder é uma escolha legítima (e às vezes a única, com o
-  // relógio a andar). O que a barra faz é dizer o preço dessa escolha.
-  const canSubmit = proctor ? !submitting : allAnswered && !submitting;
-  const urgent = msLeft !== null && msLeft <= 5 * 60_000;
-  const critical = msLeft !== null && msLeft <= 60_000;
+  // relógio a andar); o ecrã de revisão diz o preço dessa escolha.
+  if (proctor) {
+    return (
+      <ExamSheet
+        storageKey={`exam-flags:${quizId}:${attemptNumber}:${proctor.deadlineAt}`}
+        questions={questions}
+        answers={answers}
+        onToggle={toggle}
+        msLeft={msLeft}
+        durationMs={proctor.durationMs ?? null}
+        passingScore={passingScore}
+        attemptNumber={attemptNumber}
+        attemptsLeft={attemptsLeft}
+        awayCount={awayCount}
+        locked={locked}
+        submitting={submitting}
+        error={error}
+        onSubmit={() => void submit()}
+      />
+    );
+  }
+
+  const canSubmit = allAnswered && !submitting;
 
   return (
     <div className="space-y-5">
-      <div
-        className={`sticky z-20 rounded-xl border px-4 py-3 backdrop-blur-md ${
-          proctor ? "top-2" : "top-16"
-        } ${
-          critical
-            ? "border-rose-400/50 bg-rose-950/70"
-            : urgent
-              ? "border-amber-400/40 bg-amber-950/50"
-              : "border-white/10 bg-[color:var(--background)]/90"
-        }`}
-      >
+      <div className="sticky top-16 z-20 rounded-xl border border-white/10 bg-[color:var(--background)]/90 px-4 py-3 backdrop-blur-md">
         <div className="flex flex-wrap items-center gap-3">
-          {msLeft !== null && (
-            <span
-              className={`tabular inline-flex shrink-0 items-center gap-2 rounded-lg px-3 py-1.5 text-[19px] font-bold leading-none tracking-tight ${
-                critical
-                  ? "animate-pulse bg-rose-500/20 text-rose-100"
-                  : urgent
-                    ? "bg-amber-500/15 text-amber-100"
-                    : "bg-white/[0.06] text-white"
-              }`}
-              aria-live="off"
-              title="Tempo que falta — carimbado pelo servidor"
-            >
-              {formatClock(msLeft)}
-            </span>
-          )}
           <div className="h-1.5 min-w-[120px] flex-1 overflow-hidden rounded-full bg-white/10">
             <div
               className="brand-gradient-bg h-1.5 rounded-full transition-all duration-300"
@@ -649,30 +679,14 @@ export function QuizRunner({
           </span>
           <button
             type="button"
-            onClick={() => {
-              if (proctor && !allAnswered) {
-                const missing = questions.length - answeredCount;
-                const ok = window.confirm(
-                  `Faltam ${missing} pergunta(s) por responder. Entregar assim conta como erradas. Entregar mesmo?`,
-                );
-                if (!ok) return;
-              }
-              void submit();
-            }}
+            onClick={() => void submit()}
             disabled={!canSubmit}
             className="brand-gradient-bg inline-flex shrink-0 items-center gap-2 rounded-lg px-4 py-2 text-[12.5px] font-semibold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
           >
             {submitting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-            {proctor ? "Entregar" : "Submeter"}
+            Submeter
           </button>
         </div>
-        {proctor && awayCount > 0 && (
-          <p className="mt-2 text-[11px] font-medium text-amber-200/80">
-            Saíste do exame {awayCount}{" "}
-            {awayCount === 1 ? "vez" : "vezes"} — fica registado, e o
-            cronómetro nunca parou.
-          </p>
-        )}
       </div>
 
       {error && (
@@ -757,21 +771,12 @@ export function QuizRunner({
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[0.02] px-5 py-4">
         <p className="text-[12.5px] text-white/50">
           {allAnswered
-            ? `Tudo respondido. Podes ${proctor ? "entregar" : "submeter"}.`
+            ? "Tudo respondido. Podes submeter."
             : `Faltam ${questions.length - answeredCount} pergunta(s).`}
         </p>
         <button
           type="button"
-          onClick={() => {
-            if (proctor && !allAnswered) {
-              const missing = questions.length - answeredCount;
-              const ok = window.confirm(
-                `Faltam ${missing} pergunta(s) por responder. Entregar assim conta como erradas. Entregar mesmo?`,
-              );
-              if (!ok) return;
-            }
-            void submit();
-          }}
+          onClick={() => void submit()}
           disabled={!canSubmit}
           className="brand-gradient-bg inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-[13px] font-semibold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
         >
@@ -780,7 +785,7 @@ export function QuizRunner({
           ) : (
             <CheckCircle2 className="h-4 w-4" />
           )}
-          {proctor ? `Entregar ${noun}` : `Submeter ${noun}`}
+          Submeter {noun}
         </button>
       </div>
     </div>

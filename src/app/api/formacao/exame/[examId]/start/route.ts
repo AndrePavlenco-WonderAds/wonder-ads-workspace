@@ -11,15 +11,32 @@
 // Chamar isto duas vezes é seguro e é suposto: a segunda chamada RETOMA a
 // mesma sessão com o mesmo prazo (é o que acontece a quem recarrega a página a
 // meio). O que nunca acontece é o relógio voltar atrás.
+//
+// É também AQUI que a folha é sorteada (`exam-draw.ts`) — e só aqui. As
+// perguntas não existem no browser antes do «Começar», por isso ninguém as lê
+// com calma antes de o cronómetro arrancar.
 
+import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { getCurrentEmployee } from "@/lib/auth/server";
 import { getQuizAttempts } from "@/lib/training/attempts-store";
+import { getTrainingCatalog } from "@/lib/training/content-store";
+import {
+  getEnrollments,
+  resolveTrackSlugs,
+} from "@/lib/training/enrollments-store";
 import {
   getStartDates,
   resolveStartDate,
 } from "@/lib/training/start-dates-store";
-import { computeExamJourney, examQuiz, findExam } from "@/lib/training/exams";
+import {
+  drawExamQuestionIds,
+  examPaperFor,
+  examPool,
+  publicExamPaper,
+} from "@/lib/training/exam-draw";
+import { EXAM_QUESTIONS } from "@/lib/training/exam-questions";
+import { computeExamJourney, findExam } from "@/lib/training/exams";
 import { reconcileExpiredExams } from "@/lib/training/exam-proctor";
 import {
   EXAM_DURATION_MINUTES,
@@ -42,7 +59,7 @@ export async function POST(
   if (!exam) {
     return NextResponse.json({ error: "Exame desconhecido." }, { status: 404 });
   }
-  if (examQuiz(exam).questions.length === 0) {
+  if ((EXAM_QUESTIONS[exam.id] ?? []).length === 0) {
     return NextResponse.json(
       { error: "Este exame ainda não tem perguntas." },
       { status: 409 },
@@ -106,11 +123,25 @@ export async function POST(
   }
 
   try {
+    const [tracks, enrollments] = await Promise.all([
+      getTrainingCatalog(),
+      getEnrollments(),
+    ]);
+    const pool = examPool(
+      exam,
+      tracks,
+      resolveTrackSlugs(employee.username, employee.dept, enrollments),
+    );
+    // Semente nova a cada «Começar»: dois consultores — ou a mesma pessoa na
+    // segunda tentativa — nunca recebem a mesma folha. Numa retoma isto não é
+    // usado; a sessão já tem a sua.
+    const seed = randomUUID();
     const outcome = await startExamSession(
       employee.username,
       examId,
       state.attemptsUsed + 1,
       now,
+      { seed, questionIds: drawExamQuestionIds(pool, seed) },
     );
 
     if (outcome.kind === "already_submitted") {
@@ -131,8 +162,10 @@ export async function POST(
     }
 
     const { session } = outcome;
+    const paper = examPaperFor(exam, tracks, session, employee.username);
     return NextResponse.json({
       ok: true,
+      questions: publicExamPaper(paper),
       resumed: outcome.kind === "resumed",
       attemptNumber: session.attemptNumber,
       startedAt: session.startedAt,

@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "77.98",
+    date: "2026-10-16",
+    title: "Formação — exames de fase com 35 perguntas sorteadas de todos os capítulos, únicas por consultor",
+    highlights: [
+      "**🎯 Cada exame passa a ter 35 perguntas em 60 minutos (~1,7 min por pergunta).** 8 vêm do núcleo da fase (os casos escritos para aquele exame) e 27 dos capítulos da especialização — no SEO/GEO entram **os 11 capítulos**, 2 a 3 perguntas de cada, para que o exame cubra a formação inteira e não só o tema da semana.",
+      "**🔀 Nenhum exame é igual a outro.** A folha é sorteada no servidor no instante do «Começar» — dois consultores partilham em média só ~8 das 35 perguntas, e mesmo essas vêm noutra ordem e com as opções baralhadas. A segunda tentativa é uma folha nova. As perguntas já não chegam ao browser antes de o cronómetro arrancar.",
+      "**🧩 A ordem salta de capítulo em capítulo** — nunca duas perguntas seguidas do mesmo capítulo. Cada pergunta mostra de onde vem (ex.: «Cap. 4 · Auditoria Técnica e Keyword Research»).",
+      "**✨ Folha nova, uma pergunta de cada vez:** mapa da folha 1–35 (respondidas, marcadas para rever, cor por capítulo), indicador de ritmo («no ritmo» / «3 atrás do ritmo»), atalhos de teclado (A–F escolhe, ←/→ navega, M marca) e um ecrã «Rever antes de entregar» com o que falta e o que ficou marcado.",
+      "**📊 No resultado, a nota por capítulo** — mostra onde voltar antes da tentativa seguinte. Ficam fora do sorteio as perguntas «a confirmar» do CMS: uma chave de resposta por confirmar não chumba ninguém num exame que decide a fase.",
+    ],
+  },
+  {
     version: "77.97",
     date: "2026-10-15",
     title: "Onboarding — o alojamento passa a ser o 5.º passo dos «Acessos Consultoria SEO»",

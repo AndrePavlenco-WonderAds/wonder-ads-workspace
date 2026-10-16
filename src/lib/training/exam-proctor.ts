@@ -25,6 +25,9 @@ import {
   isPastDeadline,
   type ExamSession,
 } from "@/lib/training/exam-sessions-store";
+import type { TrainingTrack } from "@/lib/training/catalog";
+import { getTrainingCatalog } from "@/lib/training/content-store";
+import { examPaperFor } from "@/lib/training/exam-draw";
 import { examQuiz, findExam } from "@/lib/training/exams";
 import { gradeQuiz } from "@/lib/training/grading";
 
@@ -46,6 +49,7 @@ async function burnExpiredSession(
   username: string,
   session: ExamSession,
   attempts: QuizAttempt[],
+  tracks: TrainingTrack[],
   nowMs: number,
 ): Promise<QuizAttempt | null> {
   const exam = findExam(session.examId);
@@ -55,7 +59,11 @@ async function burnExpiredSession(
     return null;
   }
 
-  const quiz = examQuiz(exam);
+  // A folha que a pessoa tinha à frente — a sorteada no «Começar».
+  const quiz = examQuiz(
+    exam,
+    examPaperFor(exam, tracks, session, username).questions,
+  );
   if (quiz.questions.length === 0) {
     // Exame sem perguntas nunca devia ter aberto; fecha-se a sessão sem
     // inventar uma nota.
@@ -106,6 +114,9 @@ export async function reconcileExpiredExams(
   );
   if (stale.length === 0) return [];
 
+  // O catálogo só se lê quando há folhas para recolher — o caso comum continua
+  // a ser uma leitura KV e mais nada.
+  const tracks = await getTrainingCatalog();
   const created: QuizAttempt[] = [];
   // Sequencial de propósito: `appendQuizAttempt` faz read-modify-write na mesma
   // chave, por isso duas em paralelo perdiam uma das tentativas.
@@ -115,6 +126,7 @@ export async function reconcileExpiredExams(
         username,
         session,
         [...attempts, ...created],
+        tracks,
         nowMs,
       );
       if (attempt) created.push(attempt);

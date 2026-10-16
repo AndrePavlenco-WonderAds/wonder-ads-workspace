@@ -23,8 +23,9 @@
 // Uma chave KV a menos, e o drill-down do admin já sabe ler o formato.
 
 import type { QuizAttempt } from "@/lib/training/attempts-store";
-import type { TrainingQuiz } from "@/lib/training/catalog";
+import type { TrainingQuestion, TrainingQuiz } from "@/lib/training/catalog";
 import { EXAM_QUESTIONS } from "@/lib/training/exam-questions";
+import { EXAM_QUESTION_COUNT } from "@/lib/training/exam-draw";
 
 /** Prefixo dos ids de exame. É o que separa uma tentativa de exame de uma
  *  tentativa de quiz dentro da mesma lista guardada em KV. */
@@ -144,15 +145,19 @@ export function findExam(examId: string): ExamPhase | null {
 }
 
 /** O exame na forma de `TrainingQuiz`, para reaproveitar o motor de correção
- *  dos quizzes sem lhe tocar. As perguntas vivem em `exam-questions.ts`. */
-export function examQuiz(exam: ExamPhase): TrainingQuiz {
+ *  dos quizzes sem lhe tocar. `questions` é a folha sorteada da tentativa
+ *  (`exam-draw.ts`); sem ela, o núcleo fixo de `exam-questions.ts`. */
+export function examQuiz(
+  exam: ExamPhase,
+  questions: TrainingQuestion[] = EXAM_QUESTIONS[exam.id] ?? [],
+): TrainingQuiz {
   return {
     id: exam.id,
     title: exam.title,
     passingScore: exam.passingScore,
     maxAttempts: exam.maxAttempts,
-    shuffleQuestions: true,
-    questions: EXAM_QUESTIONS[exam.id] ?? [],
+    shuffleQuestions: false,
+    questions,
   };
 }
 
@@ -246,7 +251,11 @@ export function computeExamJourney(
         ? null
         : Math.max(0, exam.maxAttempts - attemptsUsed);
     const bestScore = mine.length ? Math.max(...mine.map((a) => a.score)) : null;
-    const questionCount = (EXAM_QUESTIONS[exam.id] ?? []).length;
+    // Sem núcleo escrito o exame não abre; com ele, a folha é sorteada com
+    // 35 perguntas (o número exato só se sabe no sorteio — ver `exam-draw.ts`).
+    const questionCount = (EXAM_QUESTIONS[exam.id] ?? []).length
+      ? EXAM_QUESTION_COUNT
+      : 0;
 
     const unlockAt = examUnlockAt(startISO, exam);
     const daysUntil = unlockAt === null ? null : daysBetween(unlockAt, now);

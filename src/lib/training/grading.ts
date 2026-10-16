@@ -113,6 +113,15 @@ export function gradeQuiz(
   };
 }
 
+/** De onde vem uma pergunta de exame — o capítulo, ou o núcleo da fase. */
+export type QuestionTopic = {
+  /** Id do módulo, ou "core". */
+  key: string;
+  /** N.º do capítulo na track. null no núcleo da fase. */
+  no: number | null;
+  title: string;
+};
+
 /** Versão do teste segura para enviar ao cliente: sem `isCorrect` e sem as
  *  explicações (que muitas vezes denunciam a resposta). */
 export type PublicQuestion = {
@@ -121,6 +130,8 @@ export type PublicQuestion = {
   type: TrainingQuestion["type"];
   points: number;
   options: { id: string; text: string }[];
+  /** Só nos exames: o capítulo de onde a pergunta foi sorteada. */
+  topic?: QuestionTopic | null;
 };
 
 export function toPublicQuestions(

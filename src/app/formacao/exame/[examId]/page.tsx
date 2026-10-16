@@ -21,13 +21,19 @@ import {
 import { PageShell } from "@/components/page-shell";
 import { ExamConsole } from "@/components/training/exam-console";
 import { getTrainingContext } from "@/lib/training/server";
-import { examQuiz, findExam } from "@/lib/training/exams";
+import { findExam } from "@/lib/training/exams";
+import {
+  EXAM_CORE_COUNT,
+  examPaperFor,
+  examPaperSize,
+  examPool,
+  publicExamPaper,
+} from "@/lib/training/exam-draw";
 import {
   EXAM_DURATION_MINUTES,
   getExamSession,
   isPastDeadline,
 } from "@/lib/training/exam-sessions-store";
-import { seededShuffle, toPublicQuestions } from "@/lib/training/grading";
 import { formatDate, formatDateTime } from "@/lib/dates";
 
 export const dynamic = "force-dynamic";
@@ -62,8 +68,6 @@ export default async function ExamPage({
   const state = ctx.exams.exams.find((e) => e.exam.id === examId);
   if (!state) notFound();
 
-  const quiz = examQuiz(exam);
-
   // `getTrainingContext` já correu o invigilador, por isso uma sessão que
   // tenha rebentado o prazo enquanto a pessoa estava fora já está fechada e a
   // tentativa gravada. O que sobra aqui é ou nada, ou um exame mesmo a decorrer.
@@ -78,12 +82,15 @@ export default async function ExamPage({
   // carimbou; fora dela, a próxima.
   const attemptNumber = live?.attemptNumber ?? state.attemptsUsed + 1;
 
-  // Ordem baralhada mas estável dentro da mesma tentativa — um F5 a meio de
-  // um exame não pode reordenar as perguntas.
-  const ordered = seededShuffle(
-    quiz.questions,
-    `${ctx.employee.username}:${exam.id}:${attemptNumber}`,
-  );
+  // A folha só existe depois do «Começar» — é sorteada no servidor nesse
+  // instante. Antes disso a página mostra quantas perguntas e de onde vêm,
+  // nunca quais. Numa sessão a decorrer (F5 a meio) volta a mesma folha, pela
+  // mesma ordem.
+  const pool = examPool(exam, ctx.tracks, ctx.specializationSlugs);
+  const paper = live
+    ? examPaperFor(exam, ctx.tracks, live, ctx.employee.username)
+    : null;
+  const questionCount = paper ? paper.questions.length : examPaperSize(pool);
 
   const blocker =
     state.status === "no_start"
@@ -194,7 +201,7 @@ export default async function ExamPage({
                   : `${state.attemptsUsed}/${exam.maxAttempts}`
               }
             />
-            <Condition label="Perguntas" value={state.questionCount} />
+            <Condition label="Perguntas" value={questionCount} />
             <Condition
               label="Abre a"
               value={state.unlockAt ? formatDate(state.unlockAt) : "—"}
@@ -260,19 +267,22 @@ export default async function ExamPage({
               examTitle={exam.title}
               examLabel={exam.label}
               gateLine={exam.gate}
-              questions={toPublicQuestions(ordered)}
+              questionCount={questionCount}
+              chapterCount={pool.chapters.length}
+              coreCount={Math.min(EXAM_CORE_COUNT, pool.core.questions.length)}
               passingScore={exam.passingScore}
               attemptNumber={attemptNumber}
               attemptsLeft={state.attemptsLeft}
               maxAttempts={exam.maxAttempts}
               durationMinutes={EXAM_DURATION_MINUTES}
               initialSession={
-                live
+                live && paper
                   ? {
                       startedAt: live.startedAt,
                       deadlineAt: live.deadlineAt,
                       attemptNumber: live.attemptNumber,
                       answers: live.answers,
+                      questions: publicExamPaper(paper),
                       serverNow: now,
                     }
                   : null
