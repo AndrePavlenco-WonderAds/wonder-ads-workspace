@@ -74,7 +74,7 @@ export async function POST(
     return NextResponse.json(
       {
         error:
-          "No prep data found for this resultId. Phase 1 may have been killed by Vercel's 60s timeout before it could save (rare) — run a fresh generation.",
+          "Não há dados da Fase 1 para este resultId — a preparação não chegou a gravar ou o slot expirou. Corre uma geração nova.",
       },
       { status: 404 },
     );

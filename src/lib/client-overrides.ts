@@ -82,7 +82,11 @@ const JOAO_B = new Set([
 // (atnmedical.pt), que já existia no registo do fluxo de onboarding com o
 // slug «atn-medical» (formulário por preencher). Fixado aqui para a coluna
 // do board e o email das entregas a reconhecerem sem depender do registo.
-const MARIA_A = new Set(["atn-medical"]);
+// v78.0: + Clínica Médica Dentária Colégio Militar (entrou pelo onboarding).
+const MARIA_A = new Set([
+  "atn-medical",
+  "clinica-medica-dentaria-colegio-militar",
+]);
 
 /** Os consultores de SEO que podem ter carteira — nome de exibição (tem de
  *  bater com as colunas da board e com `name` nas credenciais) + email de

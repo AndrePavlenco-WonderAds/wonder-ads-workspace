@@ -25,11 +25,33 @@ import { isDataforSeoConfigured } from "@/lib/seo-tools/dataforseo";
 import { extractFromUrl } from "@/lib/pdf-extract";
 import { getKwBacktest } from "@/lib/kw-backtest-store";
 import { formatBacktestForPrompt } from "@/lib/seo-tools/kw-backtest";
+import { getOnboardingIntake } from "@/lib/onboarding-intake-store";
 
 // Vercel Pro — 300s. DataforSEO Labs + 5 competitor footprint pulls
 // can chain past 60s when the onboarding form names many competitors.
 export const maxDuration = 300;
 export const runtime = "nodejs";
+
+// Hosts que aparecem no campo «website» de um formulário mas não são o site
+// do cliente (ex.: o link da caixa do Gmail colado por engano).
+const NOT_A_CLIENT_SITE =
+  /(^|\.)(google\.[a-z.]+|gmail\.com|forms\.gle|goo\.gl|facebook\.com|fb\.com|instagram\.com|linkedin\.com|youtube\.com|tiktok\.com|wa\.me|whatsapp\.com|linktr\.ee)$/i;
+
+/** O hostname (sem www.) de um website, ou undefined quando não é um site
+ *  utilizável como alvo do DataforSEO. */
+function siteHostname(raw: string | null | undefined): string | undefined {
+  const value = (raw ?? "").trim();
+  if (!value) return undefined;
+  try {
+    const host = new URL(/^https?:\/\//i.test(value) ? value : `https://${value}`)
+      .hostname.replace(/^www\./, "")
+      .toLowerCase();
+    if (!host.includes(".") || NOT_A_CLIENT_SITE.test(host)) return undefined;
+    return host;
+  } catch {
+    return undefined;
+  }
+}
 
 export async function POST(
   req: Request,
@@ -118,12 +140,18 @@ export async function POST(
           );
         }
 
-        const website = getClientWebsite(clientSlug);
-        const target = website
-          ? new URL(
-              /^https?:\/\//i.test(website) ? website : `https://${website}`,
-            ).hostname.replace(/^www\./, "")
-          : undefined;
+        let target = siteHostname(getClientWebsite(clientSlug));
+        if (!target) {
+          // v78.0: clientes que entram pelo onboarding só têm o website no
+          // formulário até alguém o pôr em client-meta.ts.
+          const intake = await getOnboardingIntake(clientSlug).catch(() => null);
+          target = siteHostname(intake?.texts?.empresa_website);
+          if (target) {
+            send(
+              `> ℹ️ Sem website em ficha — a usar o do formulário de onboarding: \`${target}\`\n`,
+            );
+          }
+        }
 
         const locationOverride = findLocationTarget(inputs.geo) ?? null;
         if (locationOverride) {
@@ -134,7 +162,7 @@ export async function POST(
 
         if (!seedTopic && !target) {
           send(
-            `> ❌ Nothing to anchor on — need either a seed topic OR a client website on file. Add either and retry.\n`,
+            `> ❌ Sem onde ancorar — falta uma seed topic e o cliente não tem website válido em ficha (nem no formulário de onboarding). Escreve uma seed topic ou adiciona o website e volta a correr.\n`,
           );
           controller.close();
           return;

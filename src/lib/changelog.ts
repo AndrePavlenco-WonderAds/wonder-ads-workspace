@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.0",
+    date: "2026-10-20",
+    title: "Keyword Research — sem o falso «timeout de 60s» + Clínica Médica Dentária Colégio Militar completa",
+    highlights: [
+      "**🐛 O Keyword Research da Clínica Médica Dentária Colégio Militar dava «No prep data found… Vercel's 60s timeout».** Não era timeout (as fases correm até 300s no plano Pro). No formulário de onboarding, o campo do website trazia um link da caixa do Gmail, por isso a Fase 1 não tinha domínio nem seed onde ancorar. Parava sem gravar nada e o browser avançava na mesma para a Fase 2.",
+      "**🛑 Quando a Fase 1 pára, a geração pára aí e mostra o motivo real** (o ❌ que a Fase 1 escreveu), em vez de saltar para a Fase 2 e mostrar a mensagem enganadora dos 60s. As mensagens de «sem dados da Fase 1» do Keyword Research e da SEO Audit deixaram de culpar o timeout.",
+      "**🌐 Sem website em ficha, o Keyword Research usa o do formulário de onboarding.** Ignora links que não são o site do cliente (Gmail, Google, redes sociais).",
+      "**📄 Formulários de onboarding submetidos passam a ter o texto extraído logo no envio.** Antes, os clientes novos ficavam sem `extractedText`, e os prompts de IA não viam o formulário. O desta clínica foi preenchido agora.",
+      "**🦷 A ficha da clínica ficou completa:** logótipo do site (o emblema «e» com lupa do «Dental Estética»), website clinicacolegiomilitar.com, Onboarded a 21/10/2026, dia 0 do roadmap a 21/10/2026 e carteira da Maria Assena também em código (email das entregas).",
+    ],
+  },
+  {
     version: "77.99",
     date: "2026-10-16",
     title: "Probation — o motivo do semáforo de cada KPI no check-in semanal",

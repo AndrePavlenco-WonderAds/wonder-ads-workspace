@@ -29,6 +29,7 @@ import {
   type OnboardingIntakeFile,
 } from "@/lib/onboarding-intake-store";
 import { saveOnboardingForSlug } from "@/lib/onboarding-store";
+import { extractFromUrl } from "@/lib/pdf-extract";
 import { buildOnboardingPdf } from "@/lib/onboarding-pdf";
 import { resolveOnboardingClient } from "@/lib/onboarding-resolve";
 import {
@@ -181,12 +182,25 @@ export async function POST(
     );
     intake.pdfUrl = blob.url;
     await saveOnboardingIntake(slug, intake);
+    // v78.0: extrair já o texto do PDF — sem `extractedText` os prompts de IA
+    // (Keyword Research, auditoria…) não viam o formulário e a seed não era
+    // sugerida. Uma falha aqui não impede gravar o formulário.
+    let extracted: Awaited<ReturnType<typeof extractFromUrl>> | null = null;
+    try {
+      extracted = await extractFromUrl(blob.url, "application/pdf");
+    } catch (err) {
+      console.error("onboarding PDF text extraction failed:", err);
+    }
     await saveOnboardingForSlug(slug, {
       url: blob.url,
       name: `Formulário de Onboarding — ${client.title}.pdf`,
       contentType: "application/pdf",
       sizeBytes: pdfBytes.byteLength,
       uploadedAt: now,
+      extractedText: extracted?.text || null,
+      competitors: extracted?.competitors ?? [],
+      suggestedSeed: extracted?.suggestedSeed ?? null,
+      extractedAt: extracted?.text ? Date.now() : null,
     });
   } catch (err) {
     // Non-fatal: the answers are stored; the PDF can be regenerated later.

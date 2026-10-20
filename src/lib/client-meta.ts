@@ -50,6 +50,12 @@ export const CLIENT_LOGOS: Record<string, string> = {
   // transparente. O ícone quadrado azul do site (v77.47) ficava um borrão
   // no chip.
   "atn-medical": "/logos/atn-medical.png",
+  // Clínica Médica Dentária Colégio Militar (v78.0) — o emblema «e» com lupa
+  // do logótipo «Dental Estética» de clinicacolegiomilitar.com (o ícone
+  // 384×384 do site, branco → transparente, recortado ao desenho). O wordmark
+  // completo tem ≈5:1 e no chip ficava com 7px de altura.
+  "clinica-medica-dentaria-colegio-militar":
+    "/logos/clinica-medica-dentaria-colegio-militar.png",
 };
 
 export function getClientLogo(slug: string): string | null {
@@ -136,6 +142,9 @@ export const CLIENT_WEBSITES: Record<string, string> = {
   "physio-hub": "https://www.physiohub.pt/",
   "real-hotels-group": "https://realhotelsgroup.com/",
   "atn-medical": "https://atnmedical.pt/",
+  // v78.0: o formulário de onboarding trouxe um link do Gmail no campo do
+  // website — sem isto o Keyword Research não tinha domínio onde ancorar.
+  "clinica-medica-dentaria-colegio-militar": "https://clinicacolegiomilitar.com/",
   // ADS-only — not known yet
   "clinica-empatia": "",
 };

@@ -232,6 +232,21 @@ export function ResultRunner({
           // Pro at 300s it's now retained for the per-phase progress UX.
           const afterPrepKw = await callPhase("/prep-kw-research", "");
           if (controller.signal.aborted) throw new DOMException("Aborted", "AbortError");
+          // v78.0: a Fase 1 pode parar sem gravar o pack (sem domínio nem
+          // seed, DataforSEO em falta, crash) e fecha a stream com um 200 —
+          // não avançar para a Fase 2, que só diria «No prep data found».
+          // Mostra o ❌ que a própria Fase 1 escreveu.
+          if (!/Phase 1 complete/.test(afterPrepKw)) {
+            const reason = afterPrepKw
+              .split("\n")
+              .reverse()
+              .find((l) => l.includes("❌"));
+            throw new Error(
+              reason
+                ? `A Fase 1 (DataforSEO) parou sem gravar dados: ${reason.replace(/^[>\s]*❌\s*/, "")}`
+                : "A Fase 1 (DataforSEO) terminou sem gravar dados — corre uma geração nova.",
+            );
+          }
           let runAcc = await callPhase("/run-kw-research", afterPrepKw);
 
           // Auto-continuation: if Claude finished without the mandatory

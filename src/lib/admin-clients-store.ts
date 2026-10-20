@@ -94,6 +94,9 @@ export const DEFAULT_STARTING_DATES: Record<string, string> = {
   "real-hotels-group": "2026-09-24",
   // v77.47.1: ATN Medical (Maria Assena) — onboarding a 01/10/2026.
   "atn-medical": "2026-10-01",
+  // v78.0: Clínica Médica Dentária Colégio Militar (Maria Assena) —
+  // onboarding e dia 0 do roadmap a 21/10/2026.
+  "clinica-medica-dentaria-colegio-militar": "2026-10-21",
 };
 
 /** Full agency consultant roster — drives the multi-select dropdown on
