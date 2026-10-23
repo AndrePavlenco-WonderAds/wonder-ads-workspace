@@ -46,6 +46,7 @@ import {
   CheckCheck,
   Copy,
   Loader2,
+  PauseCircle,
   Pencil,
   RefreshCw,
   Sparkles,
@@ -131,11 +132,14 @@ function clientsIn(text: string, portfolio: PortfolioEntry[]): Set<string> {
 export function WeeklyReportStudio({
   days,
   portfolio,
+  inactive = [],
 }: {
   days: { label: string; date: string }[];
   /** A carteira do consultor autenticado — o contrato: um cartão de mensagem
    *  por cliente daqui, sempre. Vazia para quem não tem carteira (admins). */
   portfolio: PortfolioEntry[];
+  /** Clientes dele pausados/terminados (v78.1): sem cartão, só nomeados. */
+  inactive?: PortfolioEntry[];
 }) {
   const [texts, setTexts] = useState<string[]>(() => days.map(() => ""));
   const [instructions, setInstructions] = useState("");
@@ -333,6 +337,18 @@ export function WeeklyReportStudio({
               );
             })}
           </div>
+        )}
+
+        {/* Pausados/terminados: fora dos weekly. Nomeados em pequeno para o
+            consultor não ficar à procura do cartão que desapareceu. */}
+        {inactive.length > 0 && (
+          <p className="mt-2 text-[11px] leading-relaxed text-white/30">
+            <PauseCircle className="mr-1 inline h-3 w-3 -translate-y-px text-amber-300/40" />
+            Sem weekly por estarem pausados ou terminados:{" "}
+            <span className="text-white/45">
+              {inactive.map((p) => p.title).join(" · ")}
+            </span>
+          </p>
         )}
 
         <div className="mt-4 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-5">

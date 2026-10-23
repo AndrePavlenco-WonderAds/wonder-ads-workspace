@@ -23,6 +23,7 @@ import { getCurrentEmployee } from "@/lib/auth/server";
 import { editableDepts } from "@/lib/auth/credentials";
 import { getSeoClients } from "@/lib/notion";
 import { getConsultantResolver } from "@/lib/consultant-assignments";
+import { getInactiveSeoSlugSet } from "@/lib/seo-inactive-clients";
 import { weekdayBlocks } from "@/lib/seo-tools/daily-updates";
 
 export const dynamic = "force-dynamic";
@@ -40,10 +41,17 @@ export default async function WeeklyReportsPage() {
   // A carteira do consultor é o contrato da página: um cartão de mensagem por
   // cliente dela, sempre. Resolve-se por resolveConsultant e não pelo campo em
   // cache — uma passagem de carteira em código ganha à cache de 1 hora.
+  //
+  // Clientes pausados/terminados saem da carteira (v78.1): um contrato
+  // suspenso não tem grupo à espera de ponto de situação. Ficam listados à
+  // parte, em pequeno, para o consultor saber porque não têm cartão.
   const consultants = await getConsultantResolver();
-  const portfolio = (await getSeoClients().catch(() => []))
+  const book = (await getSeoClients().catch(() => []))
     .filter((c) => consultants.resolve(c.slug, c.consultant) === employee.name)
     .map((c) => ({ slug: c.slug, title: c.title }));
+  const inactive = await getInactiveSeoSlugSet(book.map((c) => c.slug));
+  const portfolio = book.filter((c) => !inactive.has(c.slug));
+  const inactiveBook = book.filter((c) => inactive.has(c.slug));
 
   const days = weekdayBlocks(new Date());
   const first = days[0];
@@ -90,7 +98,11 @@ export default async function WeeklyReportsPage() {
         </p>
       </header>
 
-      <WeeklyReportStudio days={days} portfolio={portfolio} />
+      <WeeklyReportStudio
+        days={days}
+        portfolio={portfolio}
+        inactive={inactiveBook}
+      />
     </PageShell>
   );
 }

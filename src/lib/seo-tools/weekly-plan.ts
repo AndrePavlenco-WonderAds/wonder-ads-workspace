@@ -153,13 +153,17 @@ function warningsFor(
  *  carteira — um admin a espreitar — o plano volta a ser guiado só pelo
  *  texto, como antes.
  *
+ *  Clientes em `skip` (pausados/terminados, v78.1) não dão cartão nenhum,
+ *  nem que apareçam no texto: continuam no `roster` só para o nome deles ser
+ *  reconhecido como cabeçalho e o trabalho por baixo não se colar a outro.
+ *
  *  Os roadmaps são lidos em paralelo e um que falhe não derruba os outros. */
 export async function buildWeeklyPlan(
   blocks: DailyBlock[],
   roster: { slug: string; title: string; consultant?: string }[],
   portfolio: { slug: string; title: string }[],
   viewerName: string | null = null,
-  now: number = Date.now(),
+  { skip = new Set<string>(), now = Date.now() }: { skip?: ReadonlySet<string>; now?: number } = {},
 ): Promise<WeeklyPlanClient[]> {
   const parsed = parseDailyUpdates(blocks, roster);
   const bySlug = new Map(
@@ -175,6 +179,7 @@ export async function buildWeeklyPlan(
 
   // 1 · A carteira do consultor, pela ordem dela — com ou sem trabalho.
   for (const c of portfolio) {
+    if (skip.has(c.slug)) continue;
     const group = bySlug.get(c.slug);
     seeds.push({
       rawName: group?.rawName ?? c.title,
@@ -191,7 +196,7 @@ export async function buildWeeklyPlan(
   // 2 · Extras que apareceram no texto: clientes fora da carteira e nomes
   //     que não resolveram. Sem carteira (admin), isto é o plano inteiro.
   for (const c of parsed) {
-    if (c.slug && portfolioSlugs.has(c.slug)) continue;
+    if (c.slug && (portfolioSlugs.has(c.slug) || skip.has(c.slug))) continue;
     seeds.push({
       ...c,
       inPortfolio: !hasPortfolio,

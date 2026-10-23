@@ -24,6 +24,7 @@ import { editableDepts } from "@/lib/auth/credentials";
 import { getSeoClients } from "@/lib/notion";
 import { getConsultantResolver } from "@/lib/consultant-assignments";
 import { buildWeeklyPlan } from "@/lib/seo-tools/weekly-plan";
+import { getInactiveSeoSlugSet } from "@/lib/seo-inactive-clients";
 import type { DailyBlock } from "@/lib/seo-tools/daily-updates";
 
 export const runtime = "nodejs";
@@ -78,8 +79,17 @@ export async function POST(req: Request) {
     title: c.title,
     consultant: consultants.resolve(c.slug, c.consultant),
   }));
-  const portfolio = roster.filter((c) => c.consultant === employee.name);
-  const all = await buildWeeklyPlan(blocks, roster, portfolio, employee.name);
+  // Pausados/terminados: fora da carteira E fora dos extras (v78.1). Ficam
+  // no roster de propósito — é o roster que reconhece «A. Domingos:» como
+  // cabeçalho de cliente; sem ele o nome virava um cartão «não corresponde
+  // a nenhum cliente», com aviso amarelo, que é pior do que o de antes.
+  const inactive = await getInactiveSeoSlugSet(roster.map((c) => c.slug));
+  const portfolio = roster.filter(
+    (c) => c.consultant === employee.name && !inactive.has(c.slug),
+  );
+  const all = await buildWeeklyPlan(blocks, roster, portfolio, employee.name, {
+    skip: inactive,
+  });
 
   if (all.length === 0) {
     // Só possível sem carteira própria (admin) e sem nenhum nome no texto.

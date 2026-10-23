@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.1",
+    date: "2026-10-23",
+    title: "Weekly Reports — clientes pausados e terminados deixam de pedir mensagem",
+    highlights: [
+      "**⏸️ O Weekly Reports (menu do consultor, canto superior direito) ignorava os clientes pausados.** A A. Domingos e os restantes clientes da secção «Pausados / Suspensos» do SEO DPT continuavam a ter cartão todas as semanas, com os avisos «não encontrei trabalho» e «o roadmap não tem nada programado». Saem agora da carteira, da régua de clientes e da lista de mensagens a enviar.",
+      "**🧹 Conta como fora dos weekly:** estar em «Pausados / Suspensos» no SEO DPT, ter sido removido do roster financeiro, ou ter a ficha de SEO em «Paused» ou «Offboarded». Reativar o cliente devolve-lhe o cartão na hora.",
+      "**🔕 Se o nome de um cliente pausado aparecer nos daily updates, também não gera cartão.** O nome continua a ser reconhecido como cabeçalho, para o trabalho escrito por baixo não se colar ao cliente seguinte nem virar um cartão «não corresponde a nenhum cliente».",
+      "**👀 Os pausados de cada consultor ficam nomeados numa linha discreta** por baixo da carteira, para ninguém ficar à procura do cartão que desapareceu.",
+    ],
+  },
+  {
     version: "78.0",
     date: "2026-10-20",
     title: "Keyword Research — sem o falso «timeout de 60s» + Clínica Médica Dentária Colégio Militar completa",
