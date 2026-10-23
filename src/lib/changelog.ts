@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.2",
+    date: "2026-10-23",
+    title: "SEO DPT — tags Lite, Core e Growth redesenhadas e atualizadas",
+    highlights: [
+      "**🏷️ Tags novas nos cartões de cliente, com um degrau por nível.** Todas levam um medidor de nível (1, 2 ou 3 barras). A **Lite** é a mais simples, em vidro neutro. A **Core** usa o roxo da marca com brilho suave. A **Growth** é a mais top: gradiente completo, ✨, brilho forte e um reflexo de luz que passa de tempos a tempos.",
+      "**📋 Tiers atualizados pela tabela do André.** Lite: Aeger Prima, Clínica Mimus, IHN, Corrida do Tempo, B-Life, Kings Gyms e Clínica Médica Dentária Colégio Militar. Core: Maratona Clube de Portugal, Monte Mar, Spine Center, White Clinic, MyMedic e Sentir Saúde. Growth: Brancoptica, Prof. Fernando Almeida, ATN Medical, Cidália Cabeleireiros, Medway, PhysioHub e António Gaspar.",
+      "**🚫 A WonderAds fica sem tag** e é o único cliente sem tag.",
+    ],
+  },
+  {
     version: "78.1",
     date: "2026-10-23",
     title: "Weekly Reports — clientes pausados e terminados deixam de pedir mensagem",

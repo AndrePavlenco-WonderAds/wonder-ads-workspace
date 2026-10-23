@@ -23,7 +23,7 @@ export type NotionClient = {
   icon: string | null;
   consultant: string;
   palette: ClientPalette;
-  tier: ClientTier;
+  tier: ClientTier | null;
 };
 
 export function slugify(s: string): string {

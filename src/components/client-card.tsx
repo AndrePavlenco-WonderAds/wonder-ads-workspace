@@ -21,7 +21,7 @@ export type ClientCardProps = {
   href: string;
   consultant: string;
   palette: ClientPalette;
-  tier: ClientTier;
+  tier: ClientTier | null;
   channels?: AdChannel[];
   /** Índice de satisfação global (0–10) do último inquérito NPS que o
    *  cliente preencheu. `null`/omitido = ainda não respondeu a nenhum. */

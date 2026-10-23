@@ -45,7 +45,7 @@ export type SeoBoardCard = {
   logoBgMode: LogoBgMode;
   logoSizing: LogoSizing;
   palette: ClientPalette;
-  tier: ClientTier;
+  tier: ClientTier | null;
   npsOverall: number | null;
   npsAt: number | null;
   keywordGuarantee: boolean;

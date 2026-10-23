@@ -154,6 +154,29 @@ body {
   100% { background-position: -220% center; }
 }
 
+/* Tier Growth — reflexo de luz que atravessa a pastilha de tempos a tempos */
+.tier-growth-sheen::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    110deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.55) 50%,
+    transparent 70%
+  );
+  transform: translateX(-120%);
+  animation: tier-sheen 3.6s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes tier-sheen {
+  0%, 55% { transform: translateX(-120%); }
+  100% { transform: translateX(120%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tier-growth-sheen::after { animation: none; display: none; }
+}
+
 /* Gradient border via mask trick — renders a 1px gradient ring */
 .brand-gradient-border {
   position: relative;

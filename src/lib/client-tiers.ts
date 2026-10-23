@@ -3,18 +3,28 @@
 
 export type ClientTier = "lite" | "core" | "growth";
 
+// v78.2: tabela de tiers atualizada pelo André (Cliente · Valor · Tag).
+// Os clientes que não estavam na tabela (pausados) mantêm o tier anterior.
 const TIERS: Record<string, ClientTier> = {
   // 1. Lite — entry-tier
+  "aeger-prima": "lite",
+  "clinica-mimus": "lite",
+  ihn: "lite",
+  cdt: "lite", // Corrida do Tempo
+  "b-life": "lite",
+  "kings-gyms": "lite",
+  "clinica-medica-dentaria-colegio-militar": "lite",
   "insync-design": "lite",
-  wonderads: "lite",
-  cdt: "lite",
   "safe-away": "lite",
   "clinica-em-casa": "lite",
 
   // 2. Core
-  ihn: "core",
-  "aeger-prima": "core",  "clinica-mimus": "core",
+  "maratona-clube-de-portugal": "core",
   "monte-mar": "core",
+  "spine-center": "core",
+  "white-clinic": "core",
+  mymedic: "core",
+  "sentir-saude": "core",
   "sea-yourself": "core",
   "hds-learning": "core",
   "fisio-restelo": "core",
@@ -22,15 +32,21 @@ const TIERS: Record<string, ClientTier> = {
   "real-hotels-group": "core",
 
   // 3. Growth — premium tier
+  brancoptica: "growth",
+  "clinica-fernando-almeida": "growth", // Prof. Fernando Almeida
+  "atn-medical": "growth",
+  "cidalia-cabeleireiros": "growth",
+  medway: "growth",
+  "physio-hub": "growth",
+  "antonio-gaspar": "growth",
   "a-domingos": "growth",
-  "b-life": "growth",
-  "white-clinic": "growth",
-  "sentir-saude": "growth",
-  "clinica-fernando-almeida": "core",
 
   // ADS-only clients
   "clinica-empatia": "core",
 };
+
+/** Clientes sem tag nenhuma — a própria agência. */
+const NO_TIER = new Set(["wonderads"]);
 
 /** Sort rank used to order cards inside a consultant column (top→bottom). */
 export const TIER_RANK: Record<ClientTier, number> = {
@@ -39,8 +55,14 @@ export const TIER_RANK: Record<ClientTier, number> = {
   lite: 2,
 };
 
-export function getClientTier(slug: string): ClientTier {
+export function getClientTier(slug: string): ClientTier | null {
+  if (NO_TIER.has(slug)) return null;
   return TIERS[slug] ?? "core";
+}
+
+/** Rank para ordenar; sem tier vai para o fim da coluna. */
+export function tierRank(tier: ClientTier | null): number {
+  return tier ? TIER_RANK[tier] : 3;
 }
 
 export const TIER_LABEL: Record<ClientTier, string> = {

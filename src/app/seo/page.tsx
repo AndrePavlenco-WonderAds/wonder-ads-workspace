@@ -21,7 +21,7 @@ import {
   getConsultantResolver,
   type ConsultantResolver,
 } from "@/lib/consultant-assignments";
-import { TIER_RANK } from "@/lib/client-tiers";
+import { getClientTier, tierRank } from "@/lib/client-tiers";
 import {
   displayDomain,
   getClientLogo,
@@ -238,10 +238,16 @@ function buildConsultantColumns(
   const grouped: Record<string, NotionClient[]> = {};
   for (const c of clients) {
     const consultant = consultants.resolve(c.slug, c.consultant);
-    (grouped[consultant] ??= []).push({ ...c, consultant });
+    // O tier também se re-resolve pelo slug: o da cache de 1h ficava com as
+    // tags antigas até expirar (v78.2).
+    (grouped[consultant] ??= []).push({
+      ...c,
+      consultant,
+      tier: getClientTier(c.slug),
+    });
   }
   for (const list of Object.values(grouped)) {
-    list.sort((a, b) => TIER_RANK[a.tier] - TIER_RANK[b.tier]);
+    list.sort((a, b) => tierRank(a.tier) - tierRank(b.tier));
   }
   const columns: ConsultantColumn[] = CONSULTANT_ORDER.map((name) => ({
     name: name as string,
@@ -265,7 +271,7 @@ function buildConsultantColumns(
   if (orphans.length > 0) {
     columns.push({
       name: "Por atribuir",
-      clients: orphans.sort((a, b) => TIER_RANK[a.tier] - TIER_RANK[b.tier]),
+      clients: orphans.sort((a, b) => tierRank(a.tier) - tierRank(b.tier)),
     });
   }
   return columns;
