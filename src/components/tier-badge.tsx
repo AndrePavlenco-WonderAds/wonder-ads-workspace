@@ -1,4 +1,3 @@
-import { Sparkles } from "lucide-react";
 import type { ClientTier } from "@/lib/client-tiers";
 import { TIER_LABEL } from "@/lib/client-tiers";
 
@@ -19,8 +18,10 @@ const STYLES: Record<ClientTier, { chip: string; on: string; off: string }> = {
     off: "bg-[#C9B2FF]/25",
   },
   // Top: gradiente completo, anel claro, brilho forte e um reflexo a passar.
+  // `border-box` no fundo: com o padding-box por defeito o gradiente repetia-
+  // -se por baixo da borda semitransparente e deixava um fio rosa à esquerda.
   growth: {
-    chip: "tier-growth-sheen border border-white/25 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_6px_24px_-4px_rgba(197,53,201,0.75)] [background:var(--brand-gradient)]",
+    chip: "tier-growth-sheen border border-white/25 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_6px_24px_-4px_rgba(197,53,201,0.75)] [background:var(--brand-gradient)_border-box]",
     on: "bg-white",
     off: "bg-white/35",
   },
@@ -45,9 +46,6 @@ export function TierBadge({ tier }: { tier: ClientTier | null }) {
           />
         ))}
       </span>
-      {tier === "growth" && (
-        <Sparkles className="-mx-0.5 h-2.5 w-2.5" aria-hidden />
-      )}
       {TIER_LABEL[tier]}
     </span>
   );

@@ -13,11 +13,20 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.3",
+    date: "2026-10-23",
+    title: "SEO DPT — tag Growth sem a estrela e sem o fio rosa na ponta",
+    highlights: [
+      "**✨ A tag Growth ficou só com o medidor de 3 barras** (sem o ícone da estrela).",
+      "**🩹 Desapareceu o fio cor-de-rosa na ponta esquerda da tag Growth.** O gradiente repetia-se por baixo da borda semitransparente; agora cobre a pastilha toda, borda incluída.",
+    ],
+  },
+  {
     version: "78.2",
     date: "2026-10-23",
     title: "SEO DPT — tags Lite, Core e Growth redesenhadas e atualizadas",
     highlights: [
-      "**🏷️ Tags novas nos cartões de cliente, com um degrau por nível.** Todas levam um medidor de nível (1, 2 ou 3 barras). A **Lite** é a mais simples, em vidro neutro. A **Core** usa o roxo da marca com brilho suave. A **Growth** é a mais top: gradiente completo, ✨, brilho forte e um reflexo de luz que passa de tempos a tempos.",
+      "**🏷️ Tags novas nos cartões de cliente, com um degrau por nível.** Todas levam um medidor de nível (1, 2 ou 3 barras). A **Lite** é a mais simples, em vidro neutro. A **Core** usa o roxo da marca com brilho suave. A **Growth** é a mais top: gradiente completo, brilho forte e um reflexo de luz que passa de tempos a tempos.",
       "**📋 Tiers atualizados pela tabela do André.** Lite: Aeger Prima, Clínica Mimus, IHN, Corrida do Tempo, B-Life, Kings Gyms e Clínica Médica Dentária Colégio Militar. Core: Maratona Clube de Portugal, Monte Mar, Spine Center, White Clinic, MyMedic e Sentir Saúde. Growth: Brancoptica, Prof. Fernando Almeida, ATN Medical, Cidália Cabeleireiros, Medway, PhysioHub e António Gaspar.",
       "**🚫 A WonderAds fica sem tag** e é o único cliente sem tag.",
     ],
