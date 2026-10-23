@@ -24,8 +24,17 @@
 // compete com a carteira ativa.
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { ArrowUpRight, Star } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  ArrowUpRight,
+  GripVertical,
+  Loader2,
+  Star,
+} from "lucide-react";
 import type { ClientPalette } from "@/lib/client-colors";
 import { paletteToGradient } from "@/lib/client-colors";
 import type { ClientTier } from "@/lib/client-tiers";
@@ -89,10 +98,14 @@ function averageNps(clients: SeoBoardCard[]): {
 export function SeoBoard({
   columns,
   isAdmin,
+  canReorder = false,
   paused = false,
 }: {
   columns: SeoBoardColumn[];
   isAdmin: boolean;
+  /** Quem está a ver pode reordenar a própria lane (v78.4) — só consultores
+   *  de SEO na sua sessão; a ordem fica só para eles. */
+  canReorder?: boolean;
   /** Secção de pausados: versão compacta (lanes estreitas, linhas em vez
    *  de cartões, tudo mais apagado). */
   paused?: boolean;
@@ -188,6 +201,7 @@ export function SeoBoard({
             id={laneId(col.name, compact)}
             column={col}
             isAdmin={isAdmin}
+            canReorder={canReorder}
             compact={compact}
           />
         ))}
@@ -231,20 +245,85 @@ function ConsultantAvatar({
   );
 }
 
+/** Os cartões pela ordem de uma lista de slugs; o que não estiver nela fica
+ *  no fim, pela ordem em que vinha. */
+function orderBy(clients: SeoBoardCard[], slugs: string[]): SeoBoardCard[] {
+  const pos = new Map(slugs.map((s, i) => [s, i]));
+  return clients
+    .map((c, i) => ({ c, i }))
+    .sort(
+      (a, b) =>
+        (pos.get(a.c.slug) ?? slugs.length + a.i) -
+        (pos.get(b.c.slug) ?? slugs.length + b.i),
+    )
+    .map(({ c }) => c);
+}
+
 function Lane({
   id,
   column,
   isAdmin,
+  canReorder,
   compact,
 }: {
   id: string;
   column: SeoBoardColumn;
   isAdmin: boolean;
+  canReorder: boolean;
   compact: boolean;
 }) {
+  const router = useRouter();
   const { avg, rated } = averageNps(column.clients);
   const orphan = column.name === "Por atribuir";
   const mine = Boolean(column.isMine) && !orphan;
+
+  // Reordenar a própria lane (v78.4). `saved` segura a ordem acabada de
+  // gravar até o router.refresh() trazer a board já ordenada do servidor.
+  const reorderable = canReorder && mine && !compact && column.clients.length > 1;
+  const [saved, setSaved] = useState<string[] | null>(null);
+  const [draft, setDraft] = useState<SeoBoardCard[] | null>(null);
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [orderError, setOrderError] = useState<string | null>(null);
+  const clients = saved ? orderBy(column.clients, saved) : column.clients;
+
+  function startReorder() {
+    setOrderError(null);
+    setDraft(clients);
+  }
+
+  function move(from: number, to: number) {
+    setDraft((d) => {
+      if (!d || to < 0 || to >= d.length || from === to) return d;
+      const next = [...d];
+      const [item] = next.splice(from, 1);
+      next.splice(to, 0, item);
+      return next;
+    });
+  }
+
+  async function persist(method: "PUT" | "DELETE") {
+    if (!draft) return;
+    setBusy(true);
+    setOrderError(null);
+    try {
+      const slugs = draft.map((c) => c.slug);
+      const res = await fetch("/api/seo/board-order", {
+        method,
+        headers: { "content-type": "application/json" },
+        body: method === "PUT" ? JSON.stringify({ slugs }) : undefined,
+      });
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) throw new Error(data.error ?? "Não foi possível gravar a ordem.");
+      setSaved(method === "PUT" ? slugs : null);
+      setDraft(null);
+      router.refresh();
+    } catch (err) {
+      setOrderError(err instanceof Error ? err.message : "Não foi possível gravar a ordem.");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   const laneTone = orphan
     ? "border-amber-400/30 bg-amber-500/[0.05]"
@@ -317,15 +396,33 @@ function Lane({
             ring={ringTone}
           />
           <div className="min-w-0">
-            <h3
-              className={`truncate tracking-tight text-white ${
-                compact
-                  ? "text-[13px] font-semibold"
-                  : "text-[18px] font-bold leading-tight"
-              }`}
-            >
-              {nameNode}
-            </h3>
+            <div className="flex min-w-0 items-center gap-1">
+              <h3
+                className={`truncate tracking-tight text-white ${
+                  compact
+                    ? "text-[13px] font-semibold"
+                    : "text-[18px] font-bold leading-tight"
+                }`}
+              >
+                {nameNode}
+              </h3>
+              {reorderable && (
+                <button
+                  type="button"
+                  onClick={() => (draft ? setDraft(null) : startReorder())}
+                  aria-pressed={Boolean(draft)}
+                  title="Reordenar a tua carteira — só tu vês esta ordem"
+                  aria-label="Reordenar a tua carteira"
+                  className={`inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full transition ${
+                    draft
+                      ? "bg-[#783DF5]/25 text-white"
+                      : "text-white/30 hover:bg-white/[0.07] hover:text-white/80"
+                  }`}
+                >
+                  <ArrowUpDown className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
             {!compact && (
               <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                 {avg !== null ? (
@@ -421,9 +518,112 @@ function Lane({
             </div>
           ))}
         </div>
+      ) : draft ? (
+        <div>
+          <ol className="space-y-1.5" aria-label="Arrasta para reordenar">
+            {draft.map((c, i) => (
+              <li
+                key={c.slug}
+                draggable={!busy}
+                onDragStart={(e) => {
+                  setDragIndex(i);
+                  e.dataTransfer.effectAllowed = "move";
+                }}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  if (dragIndex !== null && dragIndex !== i) {
+                    move(dragIndex, i);
+                    setDragIndex(i);
+                  }
+                }}
+                onDragEnd={() => setDragIndex(null)}
+                className={`flex cursor-grab items-center gap-2 rounded-xl border py-1.5 pl-1.5 pr-1 transition active:cursor-grabbing ${
+                  dragIndex === i
+                    ? "border-[#783DF5]/60 bg-[#783DF5]/[0.14]"
+                    : "border-white/[0.08] bg-white/[0.03] hover:border-white/15"
+                }`}
+              >
+                <GripVertical className="h-3.5 w-3.5 shrink-0 text-white/30" aria-hidden />
+                <span className="tabular w-4 shrink-0 text-center text-[10.5px] font-semibold text-white/35">
+                  {i + 1}
+                </span>
+                <LogoChip
+                  logo={c.logo}
+                  emoji={c.icon}
+                  alt={`${c.title} logo`}
+                  gradient={paletteToGradient(c.palette)}
+                  size="sm"
+                  bgMode={c.logoBgMode}
+                  sizing={c.logoSizing}
+                />
+                <span className="min-w-0 flex-1 truncate text-[12.5px] font-medium text-white/85">
+                  {c.title}
+                </span>
+                <span className="flex shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => move(i, i - 1)}
+                    disabled={i === 0 || busy}
+                    aria-label={`Subir ${c.title}`}
+                    className="inline-flex h-6 w-6 items-center justify-center rounded-md text-white/45 transition hover:bg-white/[0.08] hover:text-white disabled:opacity-25 disabled:hover:bg-transparent"
+                  >
+                    <ArrowUp className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => move(i, i + 1)}
+                    disabled={i === draft.length - 1 || busy}
+                    aria-label={`Descer ${c.title}`}
+                    className="inline-flex h-6 w-6 items-center justify-center rounded-md text-white/45 transition hover:bg-white/[0.08] hover:text-white disabled:opacity-25 disabled:hover:bg-transparent"
+                  >
+                    <ArrowDown className="h-3.5 w-3.5" />
+                  </button>
+                </span>
+              </li>
+            ))}
+          </ol>
+
+          {orderError && (
+            <p className="mt-2.5 text-[11.5px] text-rose-300">{orderError}</p>
+          )}
+
+          <div className="mt-3 flex items-center justify-between gap-2">
+            <button
+              type="button"
+              onClick={() => persist("DELETE")}
+              disabled={busy}
+              className="text-[11px] text-white/35 underline-offset-2 transition hover:text-white/70 hover:underline disabled:opacity-40"
+              title="Volta à ordem por tier (Growth → Core → Lite)"
+            >
+              Repor por tier
+            </button>
+            <span className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setDraft(null)}
+                disabled={busy}
+                className="rounded-full border border-white/12 px-3 py-1 text-[11.5px] font-medium text-white/65 transition hover:border-white/25 hover:text-white disabled:opacity-40"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => persist("PUT")}
+                disabled={busy}
+                className="brand-gradient-bg inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11.5px] font-semibold text-white transition hover:brightness-110 disabled:opacity-60"
+              >
+                {busy && <Loader2 className="h-3 w-3 animate-spin" />}
+                Guardar
+              </button>
+            </span>
+          </div>
+          <p className="mt-2 text-[10.5px] text-white/30">
+            Só tu vês esta ordem — os colegas continuam a ver a de sempre.
+          </p>
+        </div>
       ) : (
         <div className="space-y-3.5">
-          {column.clients.map((c, i) => (
+          {clients.map((c, i) => (
             <div key={c.slug} className="relative">
               <ClientCard
                 title={c.title}

@@ -22,6 +22,7 @@ import {
   type ConsultantResolver,
 } from "@/lib/consultant-assignments";
 import { getClientTier, tierRank } from "@/lib/client-tiers";
+import { applyBoardOrder, getBoardOrder } from "@/lib/seo-board-order-store";
 import {
   displayDomain,
   getClientLogo,
@@ -91,6 +92,17 @@ export default async function SeoPage() {
   // Carteiras com as migrações do SuperAdmin aplicadas (uma leitura KV).
   const consultants = await getConsultantResolver();
   const consultantColumns = buildConsultantColumns(activeClients, consultants);
+
+  // Ordem pessoal da carteira (v78.4): só na lane de quem está a ver, e só
+  // para ele — os outros continuam a ver a ordem por tier. Em «Ver como» o
+  // SuperAdmin vê a ordem e o botão do consultor, mas a API recusa gravar.
+  const canReorder = !employee.isAdmin && !readOnly;
+  if (canReorder) {
+    const order = await getBoardOrder(employee.username);
+    for (const col of consultantColumns) {
+      if (col.name === employee.name) col.clients = applyBoardOrder(col.clients, order);
+    }
+  }
   const pausedColumns = buildConsultantColumns(pausedClients, consultants);
 
   // Department-wide organic visitors (GA4, Organic Search, last 30 days),
@@ -164,6 +176,7 @@ export default async function SeoPage() {
                 employee.name,
               )}
               isAdmin={employee.isAdmin}
+              canReorder={canReorder}
             />
           )}
         </section>

@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.4",
+    date: "2026-10-23",
+    title: "SEO DPT — cada consultor reordena a sua carteira (só para si)",
+    highlights: [
+      "**↕️ Botão discreto ao lado do nome, na lane do próprio consultor.** Abre o modo de reordenar: os cartões passam a linhas que se arrastam, com setas ↑/↓ para o telemóvel e o teclado. Depois é «Guardar», «Cancelar» ou «Repor por tier».",
+      "**🔒 A ordem é pessoal.** Fica guardada na conta do consultor e só se aplica à lane dele quando é ele a ver. Os colegas e a direção continuam a ver a ordem por tier (Growth → Core → Lite).",
+      "**🛡️ Só o próprio grava.** A API aceita apenas consultores de SEO na sua sessão e só clientes da sua carteira. Em «Ver como», o SuperAdmin vê a ordem e o botão, mas não grava.",
+      "**➕ Clientes novos entram no fim da ordem pessoal**, pela ordem por tier, até o consultor os arrumar.",
+    ],
+  },
+  {
     version: "78.3",
     date: "2026-10-23",
     title: "SEO DPT — tag Growth sem a estrela e sem o fio rosa na ponta",
