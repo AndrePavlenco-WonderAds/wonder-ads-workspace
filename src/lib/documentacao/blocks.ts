@@ -44,7 +44,7 @@ export const DOCS_BLOCKS: DocsBlock[] = [
         id: "comissoes",
         href: "/documentacao/comissoes",
         label: "Comissões",
-        image: "/documentacao/comissoes.jpg",
+        image: "/documentacao/comissoes-percent.jpg",
         tag: "Empreender dentro da WonderAds",
       },
     ],

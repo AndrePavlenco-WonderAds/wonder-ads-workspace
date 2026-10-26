@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.13",
+    date: "2026-10-26",
+    title: "Documentação — capa nova das Comissões",
+    highlights: [
+      "**🖼️ Capa nova no cartão das Comissões**, gerada com o Gemini: um «%» de vidro no gradiente da marca, com moedas de ouro a cair por ele. É a tua percentagem de cada negócio fechado.",
+    ],
+  },
+  {
     version: "78.12",
     date: "2026-10-26",
     title: "Documentação — «Ler documentação» e a pastilha «Empreender dentro da WonderAds»",
