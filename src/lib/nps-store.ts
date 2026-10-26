@@ -1,8 +1,15 @@
 // Per-client SEO satisfaction survey store ("NPS quiz").
 //
 // One KV blob per client (slug-keyed) holding the full submission history
-// plus the send/cadence metadata (when the last link was sent, when the
-// next survey is due, and the reminder cadence in months).
+// plus the send metadata (when the last link was sent, when the next survey
+// is due).
+//
+// NPS MENSAL (v78.7): cada cliente responde UMA VEZ POR MÊS DE CALENDÁRIO
+// (fuso de Lisboa). Acabou a cadência de 30/60/90 dias: o bónus NPS dos
+// consultores mede mês a mês, e um cliente perguntado de 60 em 60 dias
+// nunca deixava ninguém passar dos 50% de preenchimento. Os registos antigos
+// ainda trazem `cadenceDays` — é ignorado na leitura e desaparece na escrita
+// seguinte.
 //
 // The public quiz form writes submissions via /api/nps/[slug]/submit (no
 // auth — the slug is the share secret, same trust model as the Pending
@@ -10,6 +17,7 @@
 // "send" via /api/nps/[slug]/send.
 
 import { kv } from "@vercel/kv";
+import { lisbonMonthKey, monthStartMs, shiftMonthKey } from "@/lib/dates";
 import {
   computeNpsScores,
   type NpsCategory,
@@ -27,10 +35,6 @@ const IDENT_MAX = 160;
  *  inspired survey. Submissions from earlier schemas are filtered out on
  *  read (clean slate) without touching KV. */
 export const NPS_SCHEMA_VERSION = 2;
-
-/** Default reminder cadence — SEO satisfaction is surveyed every 60 days. */
-export const DEFAULT_CADENCE_DAYS = 60;
-export const CADENCE_OPTIONS = [30, 60, 90] as const;
 
 export const npsStorageConfigured = Boolean(
   process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN,
@@ -67,10 +71,10 @@ export type NpsSend = {
 
 export type NpsMeta = {
   lastSentAt: number | null;
-  /** Epoch ms the next survey should go out. Derived on read from the last
-   *  activity + cadence, so it always reflects the current cadence. */
+  /** Epoch ms a partir do qual o próximo NPS é devido: o dia 1 do mês
+   *  seguinte quando o cliente já respondeu este mês; senão o dia 1 deste
+   *  mês (está em dívida). Derivado na leitura — nunca confiar no gravado. */
   nextDueAt: number | null;
-  cadenceDays: number;
   sends: NpsSend[];
 };
 
@@ -87,7 +91,6 @@ function emptyMeta(): NpsMeta {
   return {
     lastSentAt: null,
     nextDueAt: null,
-    cadenceDays: DEFAULT_CADENCE_DAYS,
     sends: [],
   };
 }
@@ -100,33 +103,52 @@ function normalizeRecord(raw: Partial<NpsRecord> | null): NpsRecord {
     Array.isArray(raw?.submissions) ? raw!.submissions : []
   ).filter((s) => s?.schemaVersion === NPS_SCHEMA_VERSION);
   const meta = (raw?.meta ?? emptyMeta()) as Partial<NpsMeta>;
-  const cadenceDays =
-    typeof meta.cadenceDays === "number" ? meta.cadenceDays : DEFAULT_CADENCE_DAYS;
+  // Sem `cadenceDays` de propósito: os registos antigos perdem-no aqui.
   const normMeta: NpsMeta = {
     lastSentAt: meta.lastSentAt ?? null,
-    nextDueAt: meta.nextDueAt ?? null,
-    cadenceDays,
+    nextDueAt: null,
     sends: Array.isArray(meta.sends) ? meta.sends : [],
   };
-  // The next-due date is always derived from the latest activity so it
-  // reflects the current cadence (and heals legacy month-based records).
-  normMeta.nextDueAt = deriveNextDue(normMeta, submissions);
+  normMeta.nextDueAt = deriveNextDue(submissions, Date.now());
   return { submissions, meta: normMeta };
 }
 
-/** Add N days to an epoch ms timestamp. */
-export function addDays(fromMs: number, days: number): number {
-  return fromMs + days * 86_400_000;
+/** Já respondeu este mês → dia 1 do mês seguinte. Senão → dia 1 deste mês
+ *  (em dívida desde aí). */
+function deriveNextDue(submissions: NpsSubmission[], nowMs: number): number {
+  const month = lisbonMonthKey(nowMs);
+  const answered = submissions.some((s) => lisbonMonthKey(s.submittedAt) === month);
+  return monthStartMs(answered ? shiftMonthKey(month, 1) : month);
 }
 
-/** Next survey due = last send (or last submission) + cadence. Null when
- *  the client has never been sent a survey and never answered one. */
-function deriveNextDue(
-  meta: Pick<NpsMeta, "lastSentAt" | "cadenceDays">,
-  submissions: NpsSubmission[],
-): number | null {
-  const anchor = meta.lastSentAt ?? submissions[0]?.submittedAt ?? null;
-  return anchor === null ? null : addDays(anchor, meta.cadenceDays);
+/** Onde está o NPS deste mês para um cliente. */
+export type NpsMonthState = "respondido" | "enviado" | "por-enviar";
+
+export type NpsMonthStatus = {
+  /** "2026-10" — o mês corrente, em Lisboa. */
+  month: string;
+  state: NpsMonthState;
+  /** A última resposta deste mês (é a que conta), ou null. */
+  answer: NpsSubmission | null;
+  /** O último envio deste mês, ou null. */
+  sentAt: number | null;
+  /** Dia 1 do mês seguinte — quando abre o próximo ciclo. */
+  nextMonthStart: number;
+};
+
+export function npsMonthStatus(record: NpsRecord, nowMs: number): NpsMonthStatus {
+  const month = lisbonMonthKey(nowMs);
+  // Guardados do mais recente para o mais antigo — o primeiro do mês é o
+  // último desse mês.
+  const answer = record.submissions.find((s) => lisbonMonthKey(s.submittedAt) === month) ?? null;
+  const sent = record.meta.sends.find((s) => lisbonMonthKey(s.at) === month) ?? null;
+  return {
+    month,
+    state: answer ? "respondido" : sent ? "enviado" : "por-enviar",
+    answer,
+    sentAt: sent?.at ?? null,
+    nextMonthStart: monthStartMs(shiftMonthKey(month, 1)),
+  };
 }
 
 export async function getNpsRecord(slug: string): Promise<NpsRecord> {
@@ -148,17 +170,11 @@ export async function getLatestNps(
   return rec.submissions[0] ?? null;
 }
 
-const DUE_WINDOW_MS = 3 * 86_400_000;
-
-/** True when the consultant should act now: the survey was never sent (and
- *  never answered), or the next send is due within 3 days (or overdue).
- *  Drives the pulsing red NPS button on the client page. */
+/** True quando o consultor tem de agir JÁ: o cliente ainda não respondeu
+ *  este mês e o formulário ainda não lhe foi enviado este mês. É o que põe
+ *  a pastilha de NPS a pulsar a vermelho na ficha do cliente. */
 export function npsSendDue(record: NpsRecord, nowMs: number): boolean {
-  const { meta, submissions } = record;
-  const everEngaged = meta.lastSentAt !== null || submissions.length > 0;
-  if (!everEngaged) return true;
-  if (meta.nextDueAt === null) return true;
-  return meta.nextDueAt - nowMs <= DUE_WINDOW_MS;
+  return npsMonthStatus(record, nowMs).state === "por-enviar";
 }
 
 export type NewSubmission = {
@@ -171,7 +187,8 @@ export type NewSubmission = {
 };
 
 /** Append a client submission. Recomputes scores server-side (never trust
- *  the client's math) and resets the cadence clock from the submit date. */
+ *  the client's math). Fecha o mês: o próximo NPS é devido no dia 1 do mês
+ *  seguinte. */
 export async function addNpsSubmission(
   slug: string,
   input: NewSubmission,
@@ -199,8 +216,7 @@ export async function addNpsSubmission(
   const submissions = [submission, ...rec.submissions].slice(0, MAX_SUBMISSIONS);
   const meta: NpsMeta = {
     ...rec.meta,
-    // A completed survey resets the "next due" clock.
-    nextDueAt: addDays(nowMs, rec.meta.cadenceDays),
+    nextDueAt: deriveNextDue(submissions, nowMs),
   };
   if (npsStorageConfigured) {
     await kv.set(key(slug), { submissions, meta });
@@ -224,8 +240,8 @@ export async function removeLatestNps(
   return removed;
 }
 
-/** Log that the consultant sent the survey link, and schedule the next due
- *  date from now. */
+/** Log that the consultant sent the survey link. O mês só fecha com a
+ *  resposta — um envio não muda o próximo prazo. */
 export async function recordNpsSend(
   slug: string,
   by: string | null,
@@ -236,29 +252,8 @@ export async function recordNpsSend(
   const meta: NpsMeta = {
     ...rec.meta,
     lastSentAt: nowMs,
-    nextDueAt: addDays(nowMs, rec.meta.cadenceDays),
+    nextDueAt: deriveNextDue(rec.submissions, nowMs),
     sends,
-  };
-  if (npsStorageConfigured) {
-    await kv.set(key(slug), { submissions: rec.submissions, meta });
-  }
-  return meta;
-}
-
-/** Change the reminder cadence and re-anchor the next-due date off the last
- *  send/submission (or now, if neither exists). */
-export async function setNpsCadence(
-  slug: string,
-  cadenceDays: number,
-  nowMs: number,
-): Promise<NpsMeta> {
-  const rec = await getNpsRecord(slug);
-  const anchor =
-    rec.meta.lastSentAt ?? rec.submissions[0]?.submittedAt ?? nowMs;
-  const meta: NpsMeta = {
-    ...rec.meta,
-    cadenceDays,
-    nextDueAt: addDays(anchor, cadenceDays),
   };
   if (npsStorageConfigured) {
     await kv.set(key(slug), { submissions: rec.submissions, meta });
@@ -278,7 +273,7 @@ export type NpsSummary = {
 };
 
 /** O histórico inteiro de muitos clientes numa SÓ operação KV (mget) — para
- *  o bónus NPS do Playbook, que precisa das respostas de cada mês e não só
+ *  o bónus NPS da Documentação, que precisa das respostas de cada mês e não só
  *  da última. Clientes sem registo vêm vazios. Nunca lança. */
 export async function getNpsRecordsFor(
   slugs: string[],

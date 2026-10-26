@@ -11,7 +11,7 @@
 //     resposta desse mês. Se o cliente respondeu duas vezes, conta a última.
 //   • Projetos sem resposta no mês não entram na média.
 //   • Taxa de preenchimento = projetos com resposta ÷ projetos da carteira.
-//   • Individual: mais de 4 projetos E taxa ≥ 50%.
+//   • Individual: 4 ou mais projetos E taxa ≥ 50%.
 //   • Equipa: taxa ≥ 50%, seja qual for o n.º de projetos.
 //   • A média conta com 2 casas, sem arredondar para cima: 8,49 não é 8,5.
 
@@ -32,8 +32,8 @@ export const TEAM_TIERS: BonusTier[] = [
   { min: 8.5, eur: 25 },
 ];
 
-/** «Mais de 4 projetos» → 5 ou mais. */
-export const INDIVIDUAL_MIN_PROJECTS = 5;
+/** 4 ou mais projetos (confirmado pelo André, 2026-10-26). */
+export const INDIVIDUAL_MIN_PROJECTS = 4;
 export const MIN_FILL_RATE = 0.5;
 
 /** O primeiro mês medido — apurado em outubro de 2026. */
@@ -62,6 +62,7 @@ export type ProjectInput = {
 export type ConsultantInput = {
   username: string;
   name: string;
+  avatar?: string | null;
   projects: ProjectInput[];
 };
 
@@ -75,6 +76,7 @@ export type BonusLine = {
 export type ConsultantMonth = {
   username: string;
   name: string;
+  avatar: string | null;
   projects: ProjectInput[];
   filled: number;
   /** 0–1; null sem projetos. */
@@ -113,7 +115,11 @@ export function computeNpsBonusMonth(month: string, consultants: ConsultantInput
 
     let individual: BonusLine;
     if (total < INDIVIDUAL_MIN_PROJECTS) {
-      individual = { eligible: false, reason: `${total} projeto${total === 1 ? "" : "s"} — precisa de 5+`, eur: 0 };
+      individual = {
+        eligible: false,
+        reason: `${total} projeto${total === 1 ? "" : "s"} — precisa de ${INDIVIDUAL_MIN_PROJECTS}+`,
+        eur: 0,
+      };
     } else if (!fillOk) {
       individual = { eligible: false, reason: "Preenchimento abaixo de 50%", eur: 0 };
     } else {
@@ -134,7 +140,17 @@ export function computeNpsBonusMonth(month: string, consultants: ConsultantInput
         : { eligible: true, reason: "Média da equipa abaixo de 8,5", eur: 0 };
     }
 
-    return { username: c.username, name: c.name, projects: c.projects, filled, fillRate, average, individual, team };
+    return {
+      username: c.username,
+      name: c.name,
+      avatar: c.avatar ?? null,
+      projects: c.projects,
+      filled,
+      fillRate,
+      average,
+      individual,
+      team,
+    };
   });
 
   rows.sort(
@@ -162,20 +178,7 @@ const MONTH_NAMES = [
   "julho", "agosto", "setembro", "outubro", "novembro", "dezembro",
 ];
 
-/** "2026-09" do instante dado, no fuso de Lisboa. */
-export function lisbonMonthKey(ms: number): string {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Europe/Lisbon",
-    year: "numeric",
-    month: "2-digit",
-  }).format(ms);
-}
-
-export function shiftMonth(key: string, delta: number): string {
-  const [y, m] = key.split("-").map(Number);
-  const d = new Date(Date.UTC(y, m - 1 + delta, 1));
-  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
-}
+export { lisbonMonthKey, shiftMonthKey as shiftMonth } from "@/lib/dates";
 
 export function isMonthKey(v: unknown): v is string {
   return typeof v === "string" && /^\d{4}-(0[1-9]|1[0-2])$/.test(v);

@@ -21,7 +21,7 @@ import {
   getLogoSizing,
 } from "@/lib/client-meta";
 import { getClientPalette, paletteToGradient } from "@/lib/client-colors";
-import { getNpsRecord, type NpsSubmission } from "@/lib/nps-store";
+import { getNpsRecord, npsMonthStatus, type NpsSubmission } from "@/lib/nps-store";
 import { getCurrentRoadmap } from "@/lib/roadmap-store";
 import { DEFAULT_STARTING_DATES } from "@/lib/admin-clients-store";
 import {
@@ -42,7 +42,7 @@ import { pickLang } from "@/lib/public-i18n";
 import { getNpsSurveyContext } from "@/lib/nps-context";
 import { getCurrentEmployee } from "@/lib/auth/server";
 import { editableDepts } from "@/lib/auth/credentials";
-import { formatDate, formatDateTime, daysUntilISO, toISODate } from "@/lib/dates";
+import { formatDate, formatDateTime } from "@/lib/dates";
 
 export const dynamic = "force-dynamic";
 
@@ -137,11 +137,11 @@ export default async function NpsPage({
     context.report || (context.work && context.work.total > 0),
   );
 
-  const nextDueIso = record.meta.nextDueAt
-    ? toISODate(new Date(record.meta.nextDueAt))
-    : null;
-  const daysUntilDue = nextDueIso ? daysUntilISO(nextDueIso) : null;
-  const overdue = daysUntilDue !== null && daysUntilDue < 0;
+  // NPS mensal (v78.7): o estado é o do mês de calendário corrente.
+  const monthStatus = npsMonthStatus(record, Date.now());
+  const monthName = new Intl.DateTimeFormat("pt-PT", { month: "long", timeZone: "UTC" }).format(
+    new Date(`${monthStatus.month}-01T00:00:00Z`),
+  );
 
   return (
     <PageShell wide backHref={`/seo/${slug}`} backLabel={client.title}>
@@ -168,8 +168,8 @@ export default async function NpsPage({
               <span className="brand-gradient-text">{client.title}</span>
             </h1>
             <p className="mt-1.5 text-sm text-white/45">
-              Avaliação de satisfação do cliente — resultado mais recente,
-              histórico e próximo envio.
+              Avaliação de satisfação do cliente — mensal. Resultado mais
+              recente, histórico e o estado deste mês.
             </p>
             {onboardedIso && (
               <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -201,24 +201,40 @@ export default async function NpsPage({
         </div>
       </section>
 
-      {/* Actions + cadence */}
+      {/* Estado do mês + ações */}
       <section className="animate-fade-up mt-8 rounded-2xl border border-white/10 bg-white/[0.03] p-5 backdrop-blur-md">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <p className="text-[11px] uppercase tracking-[0.16em] text-white/45">
-              Próximo envio
+              NPS de {monthName} · mensal
             </p>
-            <p className="mt-1 flex items-center gap-2 text-lg font-semibold text-white/90">
-              {nextDueIso ? formatDate(nextDueIso) : "Por agendar"}
-              {overdue && (
-                <span className="rounded-full border border-rose-400/40 bg-rose-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-rose-200">
-                  Em atraso {Math.abs(daysUntilDue!)}d
-                </span>
+            <p className="mt-1 flex flex-wrap items-center gap-2 text-lg font-semibold text-white/90">
+              {monthStatus.state === "respondido" && (
+                <>
+                  <span className="rounded-full border border-emerald-400/40 bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-200">
+                    Respondido
+                  </span>
+                  {formatDate(monthStatus.answer!.submittedAt)}
+                  <span className="text-[11px] font-normal text-white/40">
+                    próximo a partir de {formatDate(monthStatus.nextMonthStart)}
+                  </span>
+                </>
               )}
-              {!overdue && daysUntilDue !== null && (
-                <span className="text-[11px] font-normal text-white/40">
-                  em {daysUntilDue} dias
-                </span>
+              {monthStatus.state === "enviado" && (
+                <>
+                  <span className="rounded-full border border-amber-400/40 bg-amber-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-200">
+                    À espera de resposta
+                  </span>
+                  Enviado {formatDate(monthStatus.sentAt)}
+                </>
+              )}
+              {monthStatus.state === "por-enviar" && (
+                <>
+                  <span className="rounded-full border border-rose-400/40 bg-rose-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-rose-200">
+                    Por enviar
+                  </span>
+                  <span className="text-[13px] font-normal text-white/55">O cliente tem de responder todos os meses.</span>
+                </>
               )}
             </p>
             {record.meta.lastSentAt && (
@@ -234,7 +250,6 @@ export default async function NpsPage({
             slug={slug}
             surveyPath={`/${slug}/survey`}
             clientName={client.title}
-            cadenceDays={record.meta.cadenceDays}
             lang={lang}
             readOnly={readOnly}
             contextAvailable={contextAvailable}

@@ -13,6 +13,20 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.7",
+    date: "2026-10-26",
+    title: "NPS passa a mensal + «Documentação da empresa» redesenhada",
+    highlights: [
+      "**📅 O NPS é mensal, para todos os clientes.** Acabou a cadência de 30/60/90 dias, que por defeito estava a 60. Cada cliente responde uma vez por mês de calendário e, se responder duas vezes, conta a última. Na página de NPS do cliente, o «Próximo envio» deu lugar ao estado do mês: Por enviar, À espera de resposta ou Respondido. O seletor «A cada» desapareceu.",
+      "**❤️ A pastilha NPS da ficha do cliente pulsa a vermelho** enquanto o formulário ainda não foi enviado nesse mês. Depois do envio acalma; com a resposta, o mês fica fechado até ao dia 1 do mês seguinte.",
+      "**🔔 As respostas de NPS ficam 31 dias no sino**, em vez de 60: com o ciclo mensal, a resposta seguinte substitui a anterior. O email de envio passou a dizer «Como todos os meses».",
+      "**⭐ Bónus NPS individual a partir de 4 projetos** (antes eram 5 ou mais), sempre com pelo menos 50% de respostas no mês.",
+      "**📚 O «Playbook» chama-se agora Documentação da empresa** (menu do nome → Apoio → Documentação). Cada página é uma porta com os números das regras e o teu estado do mês à vista.",
+      "**💶 Comissões redesenhadas.** No topo, a escada dos 4 patamares com o sítio onde estás (a direção vê a equipa toda). Segue-se um simulador: escreves o fee ou o valor e vês a comissão e quando a recebes, com as três modalidades de renovação lado a lado. Depois vêm as regras pela ordem em que se usam: o que propor, quanto ganhas, quando recebes, patamares, o que vender (cada serviço com os seus casos de referência) e upsells. Uma barra de secções fica fixa no topo.",
+      "**⭐ Bónus NPS redesenhado.** Réguas de notas com o € de cada faixa e a tua média marcada, o mês em destaque e as condições à vista.",
+    ],
+  },
+  {
     version: "78.6",
     date: "2026-10-26",
     title: "Playbook — título do bloco numa só linha",

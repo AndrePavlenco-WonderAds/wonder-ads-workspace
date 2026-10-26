@@ -730,8 +730,9 @@ async function situationPointNotifications(
 
 /** Janela em que uma resposta de NPS continua a aparecer no sino. Depois
  *  disto vive só na página de NPS do cliente — o sino é para o que está por
- *  tratar, não é arquivo. */
-const NPS_NOTIFICATION_WINDOW_MS = 60 * 24 * 60 * 60 * 1000; // 60 dias
+ *  tratar, não é arquivo. Um mês (v78.7): o NPS é mensal, por isso a
+ *  resposta seguinte do mesmo cliente substitui esta. */
+const NPS_NOTIFICATION_WINDOW_MS = 31 * 24 * 60 * 60 * 1000; // 31 dias
 
 /** Respostas de NPS recentes de toda a carteira SEO.
  *

@@ -1,5 +1,5 @@
-// Internal endpoint: log that the consultant sent the survey link, or
-// change the reminder cadence. Auth-gated in-route because the /api/nps
+// Internal endpoint: log that the consultant sent the survey link. (A
+// cadência de 30/60/90 dias acabou em v78.7 — o NPS é mensal.) Auth-gated in-route because the /api/nps
 // prefix is NOT matched by middleware (the sibling /submit route must stay
 // public for clients).
 
@@ -7,11 +7,7 @@ import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { getCurrentEmployee } from "@/lib/auth/server";
 import { editableDepts } from "@/lib/auth/credentials";
-import {
-  recordNpsSend,
-  setNpsCadence,
-  CADENCE_OPTIONS,
-} from "@/lib/nps-store";
+import { recordNpsSend } from "@/lib/nps-store";
 
 export const runtime = "nodejs";
 
@@ -34,19 +30,11 @@ export async function POST(
 
   const now = Date.now();
 
-  // Cadence-only update (from the cadence selector).
   if (body.action === "cadence") {
-    const days = Number(body.cadenceDays);
-    if (!(CADENCE_OPTIONS as readonly number[]).includes(days)) {
-      return NextResponse.json(
-        { error: "Invalid cadence" },
-        { status: 400 },
-      );
-    }
-    const meta = await setNpsCadence(slug, days, now);
-    revalidatePath(`/seo/${slug}/nps`);
-    revalidatePath(`/seo/${slug}`);
-    return NextResponse.json({ ok: true, meta });
+    return NextResponse.json(
+      { error: "O NPS é mensal — já não há cadência para escolher." },
+      { status: 400 },
+    );
   }
 
   const meta = await recordNpsSend(slug, employee.name ?? null, now);

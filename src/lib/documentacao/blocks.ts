@@ -1,16 +1,19 @@
-// Os blocos do Playbook. Um bloco = um tema, com uma ou mais páginas.
+// Os blocos da Documentação da empresa. Um bloco = um tema, com uma ou mais
+// páginas.
 // Cada um declara o seu público; o hub e as páginas leem daqui.
 
-import { readerSees, type BlockAudience, type PlaybookReader } from "./access";
+import { readerSees, type BlockAudience, type DocsReader } from "./access";
 
-export type PlaybookPage = {
+export type DocsPage = {
+  /** Chave da página — o hub usa-a para mostrar o resumo vivo dela. */
+  id: string;
   href: string;
   label: string;
   /** Uma linha: o que lá está. */
   hint: string;
 };
 
-export type PlaybookBlock = {
+export type DocsBlock = {
   id: string;
   title: string;
   /** Uma frase, sem floreados. */
@@ -19,10 +22,10 @@ export type PlaybookBlock = {
   /** Rótulo do público, para o cartão. */
   audienceLabel: string;
   updatedAt: string;
-  pages: PlaybookPage[];
+  pages: DocsPage[];
 };
 
-export const PLAYBOOK_BLOCKS: PlaybookBlock[] = [
+export const DOCS_BLOCKS: DocsBlock[] = [
   {
     id: "remuneracao-variavel",
     title: "Bónus & Comissões",
@@ -32,12 +35,14 @@ export const PLAYBOOK_BLOCKS: PlaybookBlock[] = [
     updatedAt: "2026-10-26",
     pages: [
       {
-        href: "/playbook/bonus-nps",
+        id: "bonus-nps",
+        href: "/documentacao/bonus-nps",
         label: "Bónus NPS",
-        hint: "Individual e de equipa · mensal",
+        hint: "Individual e de equipa, todos os meses",
       },
       {
-        href: "/playbook/comissoes",
+        id: "comissoes",
+        href: "/documentacao/comissoes",
         label: "Comissões",
         hint: "Renovações, cross-sells e upsells",
       },
@@ -45,10 +50,10 @@ export const PLAYBOOK_BLOCKS: PlaybookBlock[] = [
   },
 ];
 
-export function blocksFor(reader: PlaybookReader): PlaybookBlock[] {
-  return PLAYBOOK_BLOCKS.filter((b) => readerSees(reader, b.audience));
+export function blocksFor(reader: DocsReader): DocsBlock[] {
+  return DOCS_BLOCKS.filter((b) => readerSees(reader, b.audience));
 }
 
-export function getBlock(id: string): PlaybookBlock | null {
-  return PLAYBOOK_BLOCKS.find((b) => b.id === id) ?? null;
+export function getBlock(id: string): DocsBlock | null {
+  return DOCS_BLOCKS.find((b) => b.id === id) ?? null;
 }

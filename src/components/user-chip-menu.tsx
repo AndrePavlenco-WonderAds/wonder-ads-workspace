@@ -57,8 +57,8 @@ export type IneficaciasMenuView = {
   construction: boolean;
 };
 
-/** O item «Playbook» do menu (v78.5). */
-export type PlaybookMenuView = {
+/** O item «Documentação» do menu (v78.5). */
+export type DocsMenuView = {
   /** Ainda só para o André — pastilha «em construção». */
   construction: boolean;
 };
@@ -169,7 +169,7 @@ export function UserChipMenu({
   dailyNumber = null,
   probation = null,
   ineficacias = null,
-  playbook = null,
+  docs = null,
   people = [],
 }: {
   name: string;
@@ -208,9 +208,9 @@ export function UserChipMenu({
    *  põe a pastilha «em construção» enquanto o módulo está fechado à equipa;
    *  null esconde o item (direção e viewers). */
   ineficacias?: IneficaciasMenuView | null;
-  /** «Playbook» (v78.5) — o hub de documentação. Decidido com quem FEZ
-   *  LOGIN (em construção: só o André); null esconde o item. */
-  playbook?: PlaybookMenuView | null;
+  /** «Documentação» (v78.5) — o hub de documentação da empresa. Decidido
+   *  com quem FEZ LOGIN (em construção: só o André); null esconde o item. */
+  docs?: DocsMenuView | null;
   people?: ImpersonationTarget[];
 }) {
   const router = useRouter();
@@ -527,16 +527,16 @@ export function UserChipMenu({
                 apoio. Segue a pessoa VISTA, como o resto do menu. */}
             {!isViewer && (
               <MenuSection label="Apoio">
-                {/* Playbook (v78.5) — documentação e SOPs. Os blocos que a
-                    pessoa vê dependem do departamento dela; o portão vive
-                    nas páginas (lib/playbook/server.ts). */}
-                {playbook && (
+                {/* Documentação da empresa (v78.5) — documentação e SOPs. Os
+                    blocos que a pessoa vê dependem do departamento dela; o
+                    portão vive nas páginas (lib/documentacao/server.ts). */}
+                {docs && (
                   <MenuLink
-                    href="/playbook"
+                    href="/documentacao"
                     icon={BookOpen}
-                    label="Playbook"
-                    hint="Documentação, SOPs e regras da casa"
-                    badge={playbook.construction ? "em construção" : undefined}
+                    label="Documentação"
+                    hint="SOPs, bónus, comissões e regras"
+                    badge={docs.construction ? "em construção" : undefined}
                     badgeTone="amber"
                     index={6}
                     onPick={close}

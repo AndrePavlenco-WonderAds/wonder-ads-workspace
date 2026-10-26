@@ -111,8 +111,9 @@ export default async function ClientPage({
   const latestProposal = (await getProposalsForClientAll(slug).catch(() => []))[0] ?? null;
   const latestNps = npsRecord.submissions[0] ?? null;
   const npsScore = latestNps?.scores.overall ?? null;
-  // When a send is due (never sent, or within 3 days / overdue), the pill
-  // turns red and pulses like a heartbeat to nudge the consultant.
+  // NPS mensal (v78.7): quando o cliente ainda não respondeu este mês e o
+  // formulário ainda não foi enviado este mês, a pastilha fica vermelha e
+  // pulsa como um coração para empurrar o consultor.
   const npsDue = npsSendDue(npsRecord, Date.now());
   // 0–5 → colour bucket for the pill. Neutral when no survey yet.
   const npsColor =

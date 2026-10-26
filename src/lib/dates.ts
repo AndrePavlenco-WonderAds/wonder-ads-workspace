@@ -63,3 +63,26 @@ export function daysUntilISO(iso: string, now: Date = new Date()): number {
   const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   return Math.round((target.getTime() - start.getTime()) / 86_400_000);
 }
+
+/** "2026-10" — o mês do instante dado, no fuso de Lisboa. É a chave dos
+ *  ciclos mensais (NPS, bónus). */
+export function lisbonMonthKey(ms: number): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Lisbon",
+    year: "numeric",
+    month: "2-digit",
+  }).format(ms);
+}
+
+/** "2026-10" ± N meses. */
+export function shiftMonthKey(key: string, delta: number): string {
+  const [y, m] = key.split("-").map(Number);
+  const d = new Date(Date.UTC(y, m - 1 + delta, 1));
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
+/** Epoch ms do dia 1 do mês (00:00 UTC — o formatDate devolve 01/MM/AAAA). */
+export function monthStartMs(key: string): number {
+  const [y, m] = key.split("-").map(Number);
+  return Date.UTC(y, m - 1, 1);
+}

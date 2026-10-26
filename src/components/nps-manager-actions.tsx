@@ -1,8 +1,8 @@
 "use client";
 
 // Consultant-side controls on the NPS management page: copy the public
-// survey link, log + compose a send to the client, and set the reminder
-// cadence. All actions hit /api/nps/[slug]/send (auth-gated); copy is
+// survey link and log + compose a send to the client. Sem cadência desde
+// v78.7: o NPS é mensal, para todos os clientes. All actions hit /api/nps/[slug]/send (auth-gated); copy is
 // purely client-side.
 
 import { useState } from "react";
@@ -13,7 +13,7 @@ const MAIL = {
   pt: {
     subject: (c: string) => `Avaliação do serviço de SEO — ${c}`,
     body: (link: string, withContext: boolean) =>
-      `Olá,\n\nGostaríamos de saber a sua opinião sobre o nosso serviço de SEO. É um formulário curto (cerca de 5 minutos) e o seu retorno ajuda-nos muito.${
+      `Olá,\n\nComo todos os meses, gostaríamos de saber a sua opinião sobre o nosso serviço de SEO. É um formulário curto (cerca de 5 minutos) e o seu retorno ajuda-nos muito.${
         withContext
           ? "\n\nNo próprio formulário pode consultar o último relatório mensal e a lista do trabalho concluído nos últimos 3 meses — para avaliar com tudo à mão."
           : ""
@@ -22,7 +22,7 @@ const MAIL = {
   en: {
     subject: (c: string) => `SEO service evaluation — ${c}`,
     body: (link: string, withContext: boolean) =>
-      `Hi,\n\nWe'd love to hear your thoughts on our SEO service. It's a short form (about 5 minutes) and your feedback means a lot.${
+      `Hi,\n\nAs every month, we'd love to hear your thoughts on our SEO service. It's a short form (about 5 minutes) and your feedback means a lot.${
         withContext
           ? "\n\nInside the form you can also check the latest monthly report and the list of work completed over the last 3 months — so you can rate with everything at hand."
           : ""
@@ -34,7 +34,6 @@ export function NpsManagerActions({
   slug,
   surveyPath,
   clientName,
-  cadenceDays,
   lang,
   readOnly,
   contextAvailable = false,
@@ -42,7 +41,6 @@ export function NpsManagerActions({
   slug: string;
   surveyPath: string;
   clientName: string;
-  cadenceDays: number;
   lang: PublicLang;
   readOnly: boolean;
   /** True quando o formulário traz o relatório e/ou o trabalho concluído
@@ -53,8 +51,6 @@ export function NpsManagerActions({
   const [sendState, setSendState] = useState<"idle" | "sending" | "sent">(
     "idle",
   );
-  const [cadence, setCadence] = useState(cadenceDays);
-  const [savingCadence, setSavingCadence] = useState(false);
 
   function fullLink() {
     return typeof window !== "undefined"
@@ -93,20 +89,6 @@ export function NpsManagerActions({
       m.subject(clientName),
     )}&body=${encodeURIComponent(m.body(link, contextAvailable))}`;
     if (typeof window !== "undefined") window.location.href = href;
-  }
-
-  async function changeCadence(days: number) {
-    setCadence(days);
-    setSavingCadence(true);
-    try {
-      await fetch(`/api/nps/${slug}/send`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ action: "cadence", cadenceDays: days }),
-      });
-    } finally {
-      setSavingCadence(false);
-    }
   }
 
   return (
@@ -160,21 +142,6 @@ export function NpsManagerActions({
         </button>
       )}
 
-      {!readOnly && (
-        <label className="inline-flex items-center gap-1.5 rounded-md border border-white/12 bg-white/[0.03] px-2.5 py-1.5 text-[11px] text-white/55">
-          A cada
-          <select
-            value={cadence}
-            onChange={(e) => changeCadence(Number(e.target.value))}
-            disabled={savingCadence}
-            className="rounded bg-transparent text-[11px] font-medium text-white/85 outline-none [&>option]:bg-[#1B2430]"
-          >
-            <option value={30}>30 dias</option>
-            <option value={60}>60 dias</option>
-            <option value={90}>90 dias</option>
-          </select>
-        </label>
-      )}
     </div>
   );
 }

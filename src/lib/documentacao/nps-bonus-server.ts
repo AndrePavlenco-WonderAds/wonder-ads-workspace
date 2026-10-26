@@ -9,26 +9,18 @@
 // do mês conta para quem o tem agora.
 
 import "server-only";
-import { EMPLOYEE_CREDENTIALS } from "@/lib/auth/credentials";
 import { getConsultantResolver } from "@/lib/consultant-assignments";
 import { getSeoClients } from "@/lib/notion";
 import { getNpsRecordsFor } from "@/lib/nps-store";
 import { findEmployeeByName } from "@/lib/proposals/consultant";
 import { getInactiveSeoSlugSet } from "@/lib/seo-inactive-clients";
+import { seoConsultants } from "./people";
 import {
   computeNpsBonusMonth,
   lisbonMonthKey,
   type ConsultantInput,
   type NpsBonusMonth,
 } from "./nps-bonus";
-
-/** Os consultores SEO que entram no bónus — quem edita SEO e não é da
- *  direção nem viewer. */
-function seoConsultants() {
-  return EMPLOYEE_CREDENTIALS.filter(
-    (c) => c.dept === "SEO" && !c.isAdmin && !c.viewerOf && c.assignable !== false,
-  );
-}
 
 export async function buildNpsBonusMonth(month: string): Promise<NpsBonusMonth> {
   const [clients, resolver] = await Promise.all([
@@ -40,7 +32,7 @@ export async function buildNpsBonusMonth(month: string): Promise<NpsBonusMonth> 
   const records = await getNpsRecordsFor(active.map((c) => c.slug));
 
   const byUser = new Map<string, ConsultantInput>(
-    seoConsultants().map((c) => [c.username, { username: c.username, name: c.name, projects: [] }]),
+    seoConsultants().map((c) => [c.username, { ...c, projects: [] }]),
   );
 
   for (const client of active) {
