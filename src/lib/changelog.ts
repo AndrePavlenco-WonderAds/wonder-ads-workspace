@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.8",
+    date: "2026-10-26",
+    title: "Comissões — degraus mais marcados e secções arrumadas",
+    highlights: [
+      "**📶 A escada dos patamares sobe a sério.** Cada degrau é mais alto e mais roxo do que o anterior.",
+      "**🧹 «Quanto ganhas» numa só lista**, com a renovação em primeiro lugar, sem o título repetido.",
+      "**🧩 Google Ads, Meta Ads e CRM lado a lado** em ecrãs largos. Os websites ficam por baixo, a toda a largura.",
+    ],
+  },
+  {
     version: "78.7",
     date: "2026-10-26",
     title: "NPS passa a mensal + «Documentação da empresa» redesenhada",

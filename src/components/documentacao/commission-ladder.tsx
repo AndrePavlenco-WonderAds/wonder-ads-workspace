@@ -9,7 +9,6 @@ import { Avatar } from "./avatar";
 
 const STEP = COMMISSION_TIERS[1].from; // 25.000 €
 const SCALE = STEP * COMMISSION_TIERS.length; // 100.000 € — o fim da régua
-const MAX_RATE = COMMISSION_TIERS[COMMISSION_TIERS.length - 1].rate;
 
 export type LadderPin = { key: string; name: string; avatar: string | null; accumulated: number };
 
@@ -36,11 +35,12 @@ export function CommissionLadder({ pins, current }: { pins: LadderPin[]; current
               <div
                 key={t.n}
                 className={`relative flex flex-col justify-between rounded-t-2xl px-3 pb-3 pt-3 sm:px-4 ${
-                  on ? "text-white shadow-[0_20px_60px_-24px_rgba(120,61,245,0.9)]" : "border border-b-0 border-white/[0.08] bg-white/[0.035] text-white/70"
+                  on ? "text-white shadow-[0_20px_60px_-24px_rgba(120,61,245,0.9)]" : "border border-b-0 border-[#783DF5]/25 text-white/70"
                 }`}
                 style={{
-                  height: `${40 + (t.rate / MAX_RATE) * 60}%`,
-                  background: on ? "var(--brand-gradient)" : undefined,
+                  // Degraus a sério: 55% → 70% → 85% → 100%.
+                  height: `${40 + (t.n / COMMISSION_TIERS.length) * 60}%`,
+                  background: on ? "var(--brand-gradient)" : `rgba(120, 61, 245, ${0.05 + t.n * 0.05})`,
                 }}
               >
                 <span className={`text-[2rem] font-semibold leading-none tracking-[-0.04em] tabular-nums sm:text-[2.6rem] ${on ? "" : "text-white/85"}`}>

@@ -138,14 +138,9 @@ export default async function ComissoesPage() {
           title="Quanto ganhas"
           lead={`A comissão é individual, sobre o que fechas, calculada sem IVA. Renovação é receita que já existia: ${RENEWAL} fixos. Cross-sells e upsells são receita nova: ${RANGE}, conforme o patamar.`}
         >
-          <div className="space-y-3">
-            <SubHeading aside="receita que já existia">Renovação</SubHeading>
-            <Rows rows={[{ term: "Renovação", detail: "Valor faturado sem IVA, já com o desconto PIF.", value: `${RENEWAL} fixos` }]} />
-          </div>
-          <div className="space-y-3">
-            <SubHeading aside="receita nova · a % do teu patamar">Cross-sells e upsells</SubHeading>
-            <Rows
-              rows={[
+          <Rows
+            rows={[
+              { term: "Renovação", tone: "accent", detail: "Valor faturado sem IVA, já com o desconto PIF.", value: `${RENEWAL} fixos` },
                 { term: "Google Ads", detail: "Fee de agência faturada. O ad spend não conta.", value: RANGE },
                 { term: "Meta Ads", detail: "Fee de agência faturada. O ad spend não conta. Com criativos externos, desconta-se o custo da produção.", value: RANGE },
                 { term: "CRM", detail: "Margem: valor faturado menos o custo de execução.", value: RANGE },
@@ -153,9 +148,8 @@ export default async function ComissoesPage() {
                 { term: "Apps / plataformas", detail: "Margem: valor faturado menos o custo do parceiro.", value: RANGE },
                 { term: "PR / Imprensa, Wikipedia", detail: "Margem: valor faturado menos o custo do parceiro.", value: RANGE },
                 { term: "Expansão do programa", detail: "Valor faturado. Mais keywords, localizações ou content pillars.", value: RANGE },
-              ]}
-            />
-          </div>
+            ]}
+          />
         </DocSection>
 
         <DocSection
@@ -241,9 +235,12 @@ export default async function ComissoesPage() {
             </p>
           </div>
 
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {CROSS_SELLS.map((s) => (
-              <article key={s.id} className={`rounded-2xl border border-white/10 bg-white/[0.02] p-5 ${s.id === "websites" ? "lg:col-span-2" : ""}`}>
+              <article
+                key={s.id}
+                className={`rounded-2xl border border-white/10 bg-white/[0.02] p-5 ${s.id === "websites" ? "md:col-span-2 xl:col-span-3" : ""}`}
+              >
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <h3 className="text-[18px] font-semibold text-white">{s.name}</h3>
                   {s.freeAudit && (
