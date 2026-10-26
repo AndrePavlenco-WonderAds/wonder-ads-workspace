@@ -1209,3 +1209,27 @@ body {
 .probation-doc .pd-decision .pd-opt { display: flex; margin: 3px 0; font-size: 13px; }
 
 .probation-doc .pd-foot { margin-top: 40px; padding-top: 14px; border-top: 1px solid var(--pd-line); color: var(--pd-muted); font-size: 11.5px; display: flex; justify-content: space-between; gap: 16px; }
+
+/* Documentação (v78.9) — a caixa dos meios de PR mostra que abre: os nomes
+   dos canais correm lá dentro e a seta do botão acena. Parado para quem
+   pede menos movimento. */
+@keyframes docs-marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+.docs-marquee {
+  animation: docs-marquee 45s linear infinite;
+}
+@keyframes docs-nudge {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(3px); }
+}
+.docs-nudge {
+  animation: docs-nudge 1.6s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .docs-marquee,
+  .docs-nudge {
+    animation: none;
+  }
+}

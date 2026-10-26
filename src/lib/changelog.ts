@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.9",
+    date: "2026-10-26",
+    title: "Documentação — cartões com capa e secção Cross-sells",
+    highlights: [
+      "**🖼️ O hub da Documentação passou a uma grelha de cartões.** Cada cartão tem uma capa, o título e o botão «Ver documentação». As capas do Bónus NPS e das Comissões foram geradas com o Gemini, na paleta da marca. Saíram os cabeçalhos de bloco: vai haver vários tipos de documentação e cada cartão explica-se sozinho.",
+      "**🔀 Nas Comissões, «O que vender» passou a chamar-se «Cross-sells»**, no título e na barra de secções.",
+      "**📺 A lista de meios de PR mostra que abre.** Os nomes dos 16 canais de TV correm dentro da caixa e o botão «Ver os 16 canais» tem uma seta a acenar. Para quem tem «reduzir movimento» ativo, fica tudo parado.",
+    ],
+  },
+  {
     version: "78.8",
     date: "2026-10-26",
     title: "Comissões — degraus mais marcados e secções arrumadas",

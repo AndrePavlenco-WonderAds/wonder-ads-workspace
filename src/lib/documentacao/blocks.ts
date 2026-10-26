@@ -9,15 +9,13 @@ export type DocsPage = {
   id: string;
   href: string;
   label: string;
-  /** Uma linha: o que lá está. */
-  hint: string;
+  /** Capa do cartão no hub, em public/ (gerada com o Gemini, 4:3). */
+  image: string;
 };
 
 export type DocsBlock = {
   id: string;
   title: string;
-  /** Uma frase, sem floreados. */
-  summary: string;
   audience: BlockAudience;
   /** Rótulo do público, para o cartão. */
   audienceLabel: string;
@@ -29,7 +27,6 @@ export const DOCS_BLOCKS: DocsBlock[] = [
   {
     id: "remuneracao-variavel",
     title: "Bónus & Comissões",
-    summary: "O que ganhas além do salário: as regras, as contas e onde estás este mês.",
     audience: { depts: ["SEO"] },
     audienceLabel: "SEO DPT",
     updatedAt: "2026-10-26",
@@ -38,13 +35,13 @@ export const DOCS_BLOCKS: DocsBlock[] = [
         id: "bonus-nps",
         href: "/documentacao/bonus-nps",
         label: "Bónus NPS",
-        hint: "Individual e de equipa, todos os meses",
+        image: "/documentacao/bonus-nps.jpg",
       },
       {
         id: "comissoes",
         href: "/documentacao/comissoes",
         label: "Comissões",
-        hint: "Renovações, cross-sells e upsells",
+        image: "/documentacao/comissoes.jpg",
       },
     ],
   },

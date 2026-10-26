@@ -7,7 +7,7 @@
 // ganha, quando se recebe, como se sobe, o que vender. O tracking lê as
 // propostas aceites do COMMERCIAL DPT (lib/documentacao/commissions-server.ts).
 
-import { ArrowUpRight, Lock, Mail, Search } from "lucide-react";
+import { ArrowUpRight, ChevronDown, Lock, Mail, Search, Tv } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { Bullets, DocHero, DocSection, DocsClosed, Note, Rows, Strong, SubHeading } from "@/components/documentacao/doc-ui";
 import { SectionNav } from "@/components/documentacao/section-nav";
@@ -36,7 +36,7 @@ const NAV = [
   { id: "quanto-ganhas", label: "Quanto ganhas" },
   { id: "quando-recebes", label: "Quando recebes" },
   { id: "patamares", label: "Patamares" },
-  { id: "o-que-vender", label: "O que vender" },
+  { id: "cross-sells", label: "Cross-sells" },
   { id: "upsells", label: "Upsells" },
 ];
 
@@ -219,8 +219,8 @@ export default async function ComissoesPage() {
         </DocSection>
 
         <DocSection
-          id="o-que-vender"
-          title="O que vender"
+          id="cross-sells"
+          title="Cross-sells"
           lead="Em cada renovação, vê se o cliente tem potencial para um destes. Todos contam para a comissão e para o patamar. Usa os casos de referência, sobretudo os do mesmo setor do cliente."
         >
           <div className="flex gap-4 rounded-2xl border border-[#783DF5]/30 bg-[#783DF5]/[0.08] p-5">
@@ -328,10 +328,33 @@ export default async function ComissoesPage() {
                   para o outro e não esperam pelo fim do dia.
                 </Note>
               </div>
-              <details className="group mt-5 rounded-xl border border-white/10">
-                <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-[14px] font-medium text-white marker:hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#783DF5]">
-                  Onde conseguimos pôr os especialistas
-                  <span className="text-[12.5px] font-normal text-white/45 group-open:hidden">{TV.length} canais de TV e mais</span>
+              <details className="group mt-5 overflow-hidden rounded-xl border border-white/10 transition hover:border-white/25 open:border-white/15">
+                <summary className="block cursor-pointer list-none px-4 py-3.5 marker:hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#783DF5] [&::-webkit-details-marker]:hidden">
+                  <span className="flex items-center justify-between gap-3">
+                    <span className="flex items-center gap-2.5 text-[14px] font-medium text-white">
+                      <Tv className="h-4 w-4 text-[#c4a6ff]" />
+                      Onde conseguimos pôr os especialistas
+                    </span>
+                    <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-white/[0.08] px-3 py-1 text-[12.5px] font-medium text-white/85 transition group-hover:bg-white group-hover:text-[#07080d]">
+                      <span className="group-open:hidden">Ver os {TV.length} canais</span>
+                      <span className="hidden group-open:inline">Fechar</span>
+                      <ChevronDown className="docs-nudge h-3.5 w-3.5 transition group-open:rotate-180 group-open:[animation:none]" />
+                    </span>
+                  </span>
+                  {/* Os canais a correr, só com a caixa fechada — mostra que há
+                      lista lá dentro antes de se clicar. */}
+                  <span
+                    aria-hidden
+                    className="mt-3 block overflow-hidden group-open:hidden [mask-image:linear-gradient(90deg,transparent,#000_8%,#000_92%,transparent)]"
+                  >
+                    <span className="docs-marquee flex w-max gap-2">
+                      {[...TV, ...TV].map((t, i) => (
+                        <span key={i} className="whitespace-nowrap rounded-full border border-white/10 px-2.5 py-1 text-[12px] text-white/60">
+                          {t.channel}
+                        </span>
+                      ))}
+                    </span>
+                  </span>
                 </summary>
                 <div className="space-y-6 border-t border-white/10 px-4 pb-5 pt-4">
                   <p className="text-[13px] text-white/55">Alguns programas aceitam participação online ou a partir de estúdios no Porto.</p>
