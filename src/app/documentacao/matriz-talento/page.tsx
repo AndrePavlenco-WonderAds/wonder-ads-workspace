@@ -108,9 +108,11 @@ export default async function MatrizTalentoPage() {
 
       <div className="mt-12 space-y-14 pb-10">
         <DocSection id="o-que-fazer" title="O que fazer com cada um" lead="A mesma matriz, arrumada pela ação.">
-          <div className="grid gap-4 md:grid-cols-2">
+          {/* Colunas e não grelha: cada cartão fica com a sua altura, sem os
+              grupos de um só player esticados ao lado dos grandes. */}
+          <div className="gap-4 md:columns-2">
             {GROUPS.map((g) => (
-              <div key={g.label} className="rounded-2xl border border-white/10 bg-white/[0.02] p-5">
+              <div key={g.label} className="mb-4 break-inside-avoid rounded-2xl border border-white/10 bg-white/[0.02] p-5">
                 <p className={`flex items-center gap-2 text-[15px] font-semibold ${g.text}`}>
                   <span aria-hidden className={`h-2 w-2 rounded-full ${g.dot}`} />
                   {g.label}

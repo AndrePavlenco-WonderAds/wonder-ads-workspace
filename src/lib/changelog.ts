@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.16",
+    date: "2026-10-26",
+    title: "Matriz de Talento — cartões das ações sem espaço vazio",
+    highlights: [
+      "**🧱 Em «O que fazer com cada um», cada cartão tem a altura do seu conteúdo.** Promover e Manter deixam de esticar até à altura de Desenvolver e Despedir.",
+    ],
+  },
+  {
     version: "78.15",
     date: "2026-10-26",
     title: "Documentação — «Empreender dentro da WonderAds» nas cores da marca",
