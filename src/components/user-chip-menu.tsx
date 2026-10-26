@@ -12,6 +12,7 @@ import type { ProbationMenuView } from "@/lib/probation/menu";
 import {
   ArrowLeft,
   ArrowUpRight,
+  BookOpen,
   CalendarOff,
   ChevronDown,
   ChevronRight,
@@ -53,6 +54,12 @@ export type ImpersonationTarget = {
 /** O item «Ineficácias» do menu (v77.88). */
 export type IneficaciasMenuView = {
   /** O módulo ainda está fechado à equipa — pastilha «em construção». */
+  construction: boolean;
+};
+
+/** O item «Playbook» do menu (v78.5). */
+export type PlaybookMenuView = {
+  /** Ainda só para o André — pastilha «em construção». */
   construction: boolean;
 };
 
@@ -162,6 +169,7 @@ export function UserChipMenu({
   dailyNumber = null,
   probation = null,
   ineficacias = null,
+  playbook = null,
   people = [],
 }: {
   name: string;
@@ -200,6 +208,9 @@ export function UserChipMenu({
    *  põe a pastilha «em construção» enquanto o módulo está fechado à equipa;
    *  null esconde o item (direção e viewers). */
   ineficacias?: IneficaciasMenuView | null;
+  /** «Playbook» (v78.5) — o hub de documentação. Decidido com quem FEZ
+   *  LOGIN (em construção: só o André); null esconde o item. */
+  playbook?: PlaybookMenuView | null;
   people?: ImpersonationTarget[];
 }) {
   const router = useRouter();
@@ -516,6 +527,21 @@ export function UserChipMenu({
                 apoio. Segue a pessoa VISTA, como o resto do menu. */}
             {!isViewer && (
               <MenuSection label="Apoio">
+                {/* Playbook (v78.5) — documentação e SOPs. Os blocos que a
+                    pessoa vê dependem do departamento dela; o portão vive
+                    nas páginas (lib/playbook/server.ts). */}
+                {playbook && (
+                  <MenuLink
+                    href="/playbook"
+                    icon={BookOpen}
+                    label="Playbook"
+                    hint="Documentação, SOPs e regras da casa"
+                    badge={playbook.construction ? "em construção" : undefined}
+                    badgeTone="amber"
+                    index={6}
+                    onPick={close}
+                  />
+                )}
                 <MenuLink href="/formacao" icon={GraduationCap} label="Formação" hint="Aulas, testes e exames" index={6} onPick={close} />
                 {!isAdmin && <SupportLink index={7} onPick={close} />}
               </MenuSection>

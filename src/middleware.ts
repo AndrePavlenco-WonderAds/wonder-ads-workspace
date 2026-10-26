@@ -65,6 +65,7 @@ const INTERNAL_PREFIXES = [
   "/minigames",
   "/probation",
   "/ineficacias",
+  "/playbook",
   "/api/absences",
   "/api/ineficacias",
   "/api/tools",
@@ -310,6 +311,9 @@ export const config = {
     // «Ver como» (só leitura); o painel da direção vive em /admin.
     "/ineficacias/:path*",
     "/api/ineficacias/:path*",
+    // Playbook (v78.5) — documentação e SOPs. Sessão para tudo; cada página
+    // decide quem entra (em construção: só o André) e que blocos mostra.
+    "/playbook/:path*",
     // Comercial — templates, upload e decisões das propostas. Sessão para
     // tudo; a escrita exige poder editar o departamento (gate abaixo).
     "/api/commercial/:path*",

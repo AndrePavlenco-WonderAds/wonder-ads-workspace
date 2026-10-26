@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.5",
+    date: "2026-10-26",
+    title: "Playbook — hub de documentação, com o 1.º bloco: Bónus & Comissões",
+    highlights: [
+      "**📚 Playbook novo, no menu do nome (secção Apoio).** Junta a documentação, os SOPs e as regras da casa em blocos. Cada pessoa vê os blocos do seu departamento. Está **em construção**: por agora só o André Pavlenco entra, e no «Ver como» vê os blocos que a pessoa vista vai ver.",
+      "**💶 1.º bloco: Bónus & Comissões (SuperAdmin + SEO DPT).** Tem duas páginas: Bónus NPS e Comissões.",
+      "**⭐ Bónus NPS — regras e tracking do mês.** Em outubro apura-se setembro. Individual: média de 8,00 → 25 €, 8,50 → 50 €, 9,00 → 100 € e 10,00 → 300 €, só com mais de 4 projetos e pelo menos 50% de preenchimento. Equipa: 8,50 → 25 €, 9,00 → 50 €, 9,50 → 75 € e 10,00 → 150 €, para quem tem pelo menos 50% de preenchimento. O tracking lê o NPS de cada cliente ativo. A direção vê a equipa toda; o consultor vê só a sua linha e a média da equipa.",
+      "**📈 Comissões — o guia de renovações completo e o patamar de cada um.** Inclui as regras de renovação, as condições de pagamento, as taxas (3% nas renovações e 5–8% por patamar nos cross-sells e upsells), quando se recebe, os exemplos, os cross-sells, os casos de referência, os upsells e o anexo de meios. O patamar e a comissão prevista saem das propostas aceites no COMMERCIAL DPT desde 01/10/2026.",
+    ],
+  },
+  {
     version: "78.4",
     date: "2026-10-23",
     title: "SEO DPT — cada consultor reordena a sua carteira (só para si)",

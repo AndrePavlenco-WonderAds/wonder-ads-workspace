@@ -277,6 +277,28 @@ export type NpsSummary = {
   submittedAt: number;
 };
 
+/** O histórico inteiro de muitos clientes numa SÓ operação KV (mget) — para
+ *  o bónus NPS do Playbook, que precisa das respostas de cada mês e não só
+ *  da última. Clientes sem registo vêm vazios. Nunca lança. */
+export async function getNpsRecordsFor(
+  slugs: string[],
+): Promise<Record<string, NpsRecord>> {
+  const out: Record<string, NpsRecord> = {};
+  const unique = [...new Set(slugs)];
+  if (!npsStorageConfigured || unique.length === 0) return out;
+  try {
+    const rows = await kv.mget<Array<Partial<NpsRecord> | null>>(
+      ...unique.map(key),
+    );
+    unique.forEach((slug, i) => {
+      out[slug] = normalizeRecord(rows?.[i] ?? null);
+    });
+  } catch (err) {
+    console.error("KV nps records mget failed:", err);
+  }
+  return out;
+}
+
 /** Latest NPS summary for many clients in ONE KV operation (mget).
  *  Slugs without a record — or whose only submissions are from an older
  *  survey schema — are simply absent from the map. Never throws: the

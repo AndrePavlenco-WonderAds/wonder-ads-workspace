@@ -34,6 +34,7 @@ import { listPublishedForUser } from "@/lib/probation/store";
 import { probationMenuView } from "@/lib/probation/menu";
 import { todayLisbonISO } from "@/lib/probation/progress";
 import { INEFICACIAS_OPEN_TO_TEAM } from "@/lib/ineficacias/access";
+import { PLAYBOOK_OPEN_TO_TEAM, playbookAvailable } from "@/lib/playbook/access";
 import { UserChipMenu, type DailyNumberView } from "./user-chip-menu";
 
 export async function UserChip() {
@@ -119,6 +120,9 @@ export async function UserChip() {
       ineficacias={
         !display.isAdmin && !display.viewerOf ? { construction: !INEFICACIAS_OPEN_TO_TEAM } : null
       }
+      // Playbook (v78.5) — decidido com quem FEZ LOGIN: em construção só o
+      // André entra, e continua a vê-lo quando está na pele de outra pessoa.
+      playbook={playbookAvailable(session.u) ? { construction: !PLAYBOOK_OPEN_TO_TEAM } : null}
       people={
         realIsAdmin
           ? listImpersonationTargets().map((p) => ({
