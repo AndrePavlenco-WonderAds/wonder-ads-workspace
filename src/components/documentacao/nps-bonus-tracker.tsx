@@ -102,7 +102,7 @@ export function NpsBonusTracker({
   username: string;
 }) {
   const mine = data.consultants.find((c) => c.username === username) ?? null;
-  const teamLine = `${data.teamResponses} de ${data.teamProjects} projetos responderam`;
+  const teamLine = `${data.teamResponses} de ${data.teamProjects} projetos responderam (${pct(data.teamFillRate)})`;
   const shell = "space-y-8 rounded-[28px] border border-white/10 bg-white/[0.025] p-5 sm:p-8";
 
   if (!viewAll) {
@@ -146,7 +146,10 @@ export function NpsBonusTracker({
             </div>
             <div>
               <dt className="text-[12.5px] text-white/50">Média da equipa</dt>
-              <dd className="mt-0.5 tabular-nums text-white">{formatAvg(data.teamAverage)}</dd>
+              <dd className="mt-0.5 tabular-nums text-white">
+                {formatAvg(data.teamAverage)} ·{" "}
+                <span className={data.teamFillOk ? "" : "text-rose-300"}>{pct(data.teamFillRate)} de respostas</span>
+              </dd>
             </div>
           </dl>
         </div>
@@ -160,6 +163,7 @@ export function NpsBonusTracker({
             <ScoreScale tiers={TEAM_TIERS} marker={data.teamAverage !== null ? { label: "Equipa", value: data.teamAverage } : null} />
           </div>
         </div>
+        <TeamGate data={data} />
         <div className="space-y-2">
           <p className="text-[13.5px] font-semibold text-white">Os teus projetos este mês</p>
           <ProjectList row={mine} />
@@ -189,6 +193,7 @@ export function NpsBonusTracker({
         <p className="text-[13.5px] font-semibold text-white">Bónus de equipa</p>
         <ScoreScale tiers={TEAM_TIERS} marker={data.teamAverage !== null ? { label: "Equipa", value: data.teamAverage } : null} />
       </div>
+      <TeamGate data={data} />
       <div className="divide-y divide-white/[0.07] border-y border-white/[0.07]">
         <div className="hidden grid-cols-[1fr_6rem_5rem_6rem_6rem_5rem_1rem] gap-3 py-2 text-[12px] text-white/40 md:grid">
           <span>Consultor</span>
@@ -231,6 +236,22 @@ export function NpsBonusTracker({
       </div>
       <Footnote />
     </div>
+  );
+}
+
+/** A porta da equipa: sem 50% de respostas na equipa toda, ninguém recebe o
+ *  bónus de equipa — por muito boa que seja a média. */
+function TeamGate({ data }: { data: NpsBonusMonth }) {
+  if (data.teamFillRate === null) return null;
+  return data.teamFillOk ? (
+    <p className="rounded-2xl border border-emerald-300/20 bg-emerald-400/[0.06] px-4 py-3 text-[13.5px] text-emerald-50/80">
+      A equipa chegou aos 50% de respostas ({pct(data.teamFillRate)}). O bónus de equipa conta para quem também lá chegou.
+    </p>
+  ) : (
+    <p className="rounded-2xl border border-rose-300/25 bg-rose-500/[0.08] px-4 py-3 text-[13.5px] text-rose-50/85">
+      <strong className="font-semibold text-rose-100">Sem bónus de equipa neste mês.</strong> A equipa ficou nos{" "}
+      {pct(data.teamFillRate)} de respostas e precisa de 50% ou mais — mesmo com média {formatAvg(data.teamAverage)}.
+    </p>
   );
 }
 

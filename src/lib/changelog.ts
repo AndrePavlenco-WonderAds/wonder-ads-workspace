@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.11",
+    date: "2026-10-26",
+    title: "Bónus NPS de equipa — a equipa também tem de chegar aos 50%",
+    highlights: [
+      "**👥 Sem 50% de respostas na equipa toda, ninguém recebe o bónus de equipa**, mesmo com boa média. Continua a valer a condição de cada consultor: também precisa de 50% ou mais nos seus projetos.",
+      "**🚦 O mês mostra se a equipa chegou lá**, com uma faixa verde ou vermelha e a taxa da equipa ao lado da média. Em setembro a equipa ficou nos 33% (7 de 21), por isso o total a pagar desce para 100 €: só o individual do João B.",
+      "**📖 A secção «Bónus de equipa» e os exemplos explicam as duas condições**: a da equipa e a tua.",
+    ],
+  },
+  {
     version: "78.10",
     date: "2026-10-26",
     title: "Comissões — simulador com o patamar só em %",

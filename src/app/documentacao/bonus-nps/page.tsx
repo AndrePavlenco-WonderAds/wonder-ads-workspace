@@ -146,19 +146,40 @@ export default async function BonusNpsPage({
           lead="A média de todas as respostas da equipa SEO no mês. Sobe e desce para todos."
         >
           <ScoreScale tiers={TEAM_TIERS} />
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Condition title={`${FILL} ou mais de respostas`} detail="A única condição. Quem tem menos de 4 projetos também entra." />
-            <Condition title="Com 2 projetos, basta 1 resposta" detail="Metade da tua carteira chega para ganhar o de equipa." />
+          <div>
+            <p className="mb-3 text-[14px] text-white/60">
+              Só ganhas se <Strong>a equipa e tu</Strong> chegarem aos {FILL}. Se a equipa não chegar, ninguém recebe o de
+              equipa, por muito boa que seja a média.
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Condition
+                title={`A equipa: ${FILL} ou mais de respostas`}
+                detail="Dos projetos ativos de toda a equipa SEO, no mês."
+              />
+              <Condition
+                title={`Tu: ${FILL} ou mais de respostas`}
+                detail="Dos teus projetos. Quem tem menos de 4 também entra: com 2 projetos, basta 1 resposta."
+              />
+            </div>
           </div>
         </DocSection>
 
-        <DocSection id="exemplos" title="Exemplos" lead="Num mês em que a média da equipa foi 9,03 — 50 € de bónus de equipa para quem tem 50% ou mais.">
+        <DocSection
+          id="exemplos"
+          title="Exemplos"
+          lead="Num mês em que a equipa teve 62% de respostas e média 9,03: 50 € de bónus de equipa para quem também chegou aos 50%."
+        >
           <Rows
             rows={[
               { term: "8 projetos, 5 respostas", detail: "63% de respostas, média 9,12. Individual 100 € + equipa 50 €.", value: "150 €" },
               { term: "4 projetos, 4 respostas", detail: "100% de respostas, média 10,00. Individual 300 € + equipa 50 €.", value: "350 €" },
               { term: "3 projetos, 3 respostas", detail: "Média 9,80, mas menos de 4 projetos: sem individual. Equipa 50 €.", value: "50 €" },
               { term: "7 projetos, 3 respostas", detail: "43% de respostas: abaixo de 50%, não ganha nenhum dos dois.", value: "0 €" },
+              {
+                term: "Equipa com 33% de respostas",
+                detail: "Mesmo com média 9,50, ninguém recebe o de equipa. O individual de cada um mantém-se.",
+                value: "0 € de equipa",
+              },
             ]}
           />
         </DocSection>

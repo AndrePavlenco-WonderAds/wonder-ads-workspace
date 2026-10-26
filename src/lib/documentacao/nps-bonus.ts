@@ -12,7 +12,9 @@
 //   • Projetos sem resposta no mês não entram na média.
 //   • Taxa de preenchimento = projetos com resposta ÷ projetos da carteira.
 //   • Individual: 4 ou mais projetos E taxa ≥ 50%.
-//   • Equipa: taxa ≥ 50%, seja qual for o n.º de projetos.
+//   • Equipa: duas portas. A EQUIPA tem de ter ≥ 50% dos projetos com
+//     resposta no mês (senão ninguém recebe — André, 2026-10-26) e o
+//     consultor também, seja qual for o n.º de projetos dele.
 //   • A média conta com 2 casas, sem arredondar para cima: 8,49 não é 8,5.
 
 export type BonusTier = { min: number; eur: number };
@@ -92,6 +94,12 @@ export type NpsBonusMonth = {
   teamAverage: number | null;
   teamResponses: number;
   teamProjects: number;
+  /** Respostas ÷ projetos da equipa toda (0–1); null sem projetos. */
+  teamFillRate: number | null;
+  /** A equipa chegou aos 50%? Abaixo disso não há bónus de equipa. */
+  teamFillOk: boolean;
+  /** O patamar de equipa que se paga — null quando a média não chega ou a
+   *  equipa ficou abaixo dos 50% de respostas. */
   teamTier: BonusTier | null;
   consultants: ConsultantMonth[];
   /** Soma do que a casa paga neste mês. */
@@ -103,7 +111,10 @@ export function computeNpsBonusMonth(month: string, consultants: ConsultantInput
     c.projects.map((p) => p.score).filter((s): s is number => s !== null),
   );
   const teamAverage = bonusAverage(allScores);
-  const teamTier = tierFor(teamAverage, TEAM_TIERS);
+  const teamProjects = consultants.reduce((n, c) => n + c.projects.length, 0);
+  const teamFillRate = teamProjects ? allScores.length / teamProjects : null;
+  const teamFillOk = teamFillRate !== null && teamFillRate >= MIN_FILL_RATE;
+  const teamTier = teamFillOk ? tierFor(teamAverage, TEAM_TIERS) : null;
 
   const rows: ConsultantMonth[] = consultants.map((c) => {
     const scores = c.projects.map((p) => p.score).filter((s): s is number => s !== null);
@@ -134,6 +145,8 @@ export function computeNpsBonusMonth(month: string, consultants: ConsultantInput
       team = { eligible: false, reason: "Sem projetos", eur: 0 };
     } else if (!fillOk) {
       team = { eligible: false, reason: "Preenchimento abaixo de 50%", eur: 0 };
+    } else if (!teamFillOk) {
+      team = { eligible: false, reason: "Equipa abaixo de 50% de respostas", eur: 0 };
     } else {
       team = teamTier
         ? { eligible: true, reason: null, eur: teamTier.eur }
@@ -164,7 +177,9 @@ export function computeNpsBonusMonth(month: string, consultants: ConsultantInput
     month,
     teamAverage,
     teamResponses: allScores.length,
-    teamProjects: consultants.reduce((n, c) => n + c.projects.length, 0),
+    teamProjects,
+    teamFillRate,
+    teamFillOk,
     teamTier,
     consultants: rows,
     totalEur: rows.reduce((n, r) => n + r.individual.eur + r.team.eur, 0),
