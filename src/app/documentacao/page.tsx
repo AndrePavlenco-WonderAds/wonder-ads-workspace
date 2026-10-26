@@ -73,14 +73,21 @@ export default async function DocumentacaoPage() {
                   className="object-cover transition duration-500 group-hover:scale-[1.03]"
                 />
               </Link>
-              <h2 className="px-2 pb-4 pt-5 text-[1.35rem] font-semibold leading-tight tracking-[-0.02em] text-white">
-                {c.label}
-              </h2>
+              <div className="px-2 pb-5 pt-5">
+                <h2 className="text-[1.35rem] font-semibold leading-tight tracking-[-0.02em] text-white">{c.label}</h2>
+                {c.tag && (
+                  // O mesmo acabamento da tag Growth do SEO DPT: gradiente da
+                  // marca, anel claro, brilho e o reflexo que passa.
+                  <span className="tier-growth-sheen relative mt-2.5 inline-flex items-center overflow-hidden rounded-full border border-white/25 px-3 py-1 text-[12px] font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_6px_24px_-6px_rgba(197,53,201,0.75)] [background:var(--brand-gradient)_border-box]">
+                    {c.tag}
+                  </span>
+                )}
+              </div>
               <Link
                 href={c.href}
                 className="mt-auto flex h-12 items-center justify-center rounded-2xl bg-white text-[14.5px] font-semibold text-[#07080d] transition hover:bg-white/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#783DF5] focus-visible:ring-offset-2 focus-visible:ring-offset-[#07080d]"
               >
-                Ver documentação
+                Ler documentação
               </Link>
             </li>
           ))}

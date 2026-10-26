@@ -11,6 +11,8 @@ export type DocsPage = {
   label: string;
   /** Capa do cartão no hub, em public/ (gerada com o Gemini, 4:3). */
   image: string;
+  /** Pastilha por baixo do título no hub (estilo da tag Growth). */
+  tag?: string;
 };
 
 export type DocsBlock = {
@@ -36,12 +38,14 @@ export const DOCS_BLOCKS: DocsBlock[] = [
         href: "/documentacao/bonus-nps",
         label: "Bónus NPS",
         image: "/documentacao/bonus-nps.jpg",
+        tag: "Empreender dentro da WonderAds",
       },
       {
         id: "comissoes",
         href: "/documentacao/comissoes",
         label: "Comissões",
         image: "/documentacao/comissoes.jpg",
+        tag: "Empreender dentro da WonderAds",
       },
     ],
   },

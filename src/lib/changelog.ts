@@ -13,6 +13,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.12",
+    date: "2026-10-26",
+    title: "Documentação — «Ler documentação» e a pastilha «Empreender dentro da WonderAds»",
+    highlights: [
+      "**📖 O botão dos cartões diz agora «Ler documentação».**",
+      "**✨ Bónus NPS e Comissões levam a pastilha «Empreender dentro da WonderAds»** por baixo do título, com o acabamento da tag Growth do SEO DPT: gradiente da marca, brilho e o reflexo que passa de tempos a tempos.",
+    ],
+  },
+  {
     version: "78.11",
     date: "2026-10-26",
     title: "Bónus NPS de equipa — a equipa também tem de chegar aos 50%",
