@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.10",
+    date: "2026-10-26",
+    title: "Comissões — simulador com o patamar só em %",
+    highlights: [
+      "**🧮 No simulador, o patamar escolhe-se só pela %** (5%, 6%, 7% ou 8%), sem o número do patamar à frente.",
+    ],
+  },
+  {
     version: "78.9",
     date: "2026-10-26",
     title: "Documentação — cartões com capa e secção Cross-sells",

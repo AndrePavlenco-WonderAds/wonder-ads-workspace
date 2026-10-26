@@ -227,7 +227,7 @@ export function CommissionSimulator({ defaultTier = 1 }: { defaultTier?: number 
                   label="Patamar"
                   value={tierN}
                   onChange={setTierN}
-                  options={COMMISSION_TIERS.map((t) => ({ id: String(t.n), label: `${t.n} · ${formatRate(t.rate)}` }))}
+                  options={COMMISSION_TIERS.map((t) => ({ id: String(t.n), label: formatRate(t.rate) }))}
                 />
               </div>
             </div>
