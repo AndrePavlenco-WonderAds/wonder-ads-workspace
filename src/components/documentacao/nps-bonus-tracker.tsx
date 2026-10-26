@@ -103,6 +103,10 @@ export function NpsBonusTracker({
 }) {
   const mine = data.consultants.find((c) => c.username === username) ?? null;
   const teamLine = `${data.teamResponses} de ${data.teamProjects} projetos responderam (${pct(data.teamFillRate)})`;
+  const individualSum = data.consultants.reduce((n, c) => n + c.individual.eur, 0);
+  const teamSum = data.consultants.reduce((n, c) => n + c.team.eur, 0);
+  const individualCount = data.consultants.filter((c) => c.individual.eur > 0).length;
+  const teamCount = data.consultants.filter((c) => c.team.eur > 0).length;
   const shell = "space-y-8 rounded-[28px] border border-white/10 bg-white/[0.025] p-5 sm:p-8";
 
   if (!viewAll) {
@@ -176,21 +180,42 @@ export function NpsBonusTracker({
   return (
     <div className={shell}>
       <MonthNav month={data.month} prev={prev} next={next} inProgress={inProgress} />
-      <div className="flex flex-wrap items-end gap-x-12 gap-y-6">
+      {/* Total = individuais + equipa — três números separados para o total
+          nunca se ler como «o bónus de equipa». */}
+      <div className="flex flex-wrap items-end gap-x-6 gap-y-6">
         <div>
-          <p className="text-[12.5px] text-white/50">{inProgress ? "A pagar se o mês fechasse hoje" : "A pagar à equipa"}</p>
+          <p className="text-[12.5px] text-white/50">{inProgress ? "Total, se o mês fechasse hoje" : "Total a pagar neste mês"}</p>
           <p className="mt-1 text-[2.9rem] font-semibold leading-none tracking-[-0.03em] tabular-nums text-emerald-300 sm:text-[3.4rem]">
             {formatEur(data.totalEur)}
           </p>
+          <p className="mt-1.5 text-[12.5px] text-white/45">Soma de todos os bónus</p>
         </div>
-        <div>
-          <p className="text-[12.5px] text-white/50">Média da equipa</p>
-          <p className="mt-1 text-[1.6rem] font-semibold leading-none tabular-nums text-white">{formatAvg(data.teamAverage)}</p>
-          <p className="mt-1.5 text-[12.5px] text-white/45">{teamLine}</p>
-        </div>
+        <span aria-hidden className="pb-7 text-[1.6rem] font-light text-white/25">=</span>
+        <SumPart
+          label="Bónus individuais"
+          eur={individualSum}
+          sub={individualCount ? `${individualCount} consultor${individualCount === 1 ? "" : "es"}` : "Ninguém chegou lá"}
+        />
+        <span aria-hidden className="pb-7 text-[1.6rem] font-light text-white/25">+</span>
+        <SumPart
+          label="Bónus de equipa"
+          eur={teamSum}
+          sub={
+            !data.teamFillOk
+              ? "Equipa abaixo de 50%"
+              : teamCount
+                ? `${teamCount} × ${formatEur(data.teamTier?.eur ?? 0)}`
+                : "Ninguém chegou lá"
+          }
+        />
       </div>
-      <div>
-        <p className="text-[13.5px] font-semibold text-white">Bónus de equipa</p>
+      <div className="border-t border-white/[0.07] pt-6">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
+          <p className="text-[13.5px] font-semibold text-white">Bónus de equipa</p>
+          <p className="text-[12.5px] text-white/50">
+            Média da equipa <span className="font-semibold tabular-nums text-white">{formatAvg(data.teamAverage)}</span> · {teamLine}
+          </p>
+        </div>
         <ScoreScale tiers={TEAM_TIERS} marker={data.teamAverage !== null ? { label: "Equipa", value: data.teamAverage } : null} />
       </div>
       <TeamGate data={data} />
@@ -235,6 +260,16 @@ export function NpsBonusTracker({
         ))}
       </div>
       <Footnote />
+    </div>
+  );
+}
+
+function SumPart({ label, eur, sub }: { label: string; eur: number; sub: string }) {
+  return (
+    <div>
+      <p className="text-[12.5px] text-white/50">{label}</p>
+      <p className="mt-1 text-[1.9rem] font-semibold leading-none tracking-[-0.02em] tabular-nums text-white">{formatEur(eur)}</p>
+      <p className="mt-1.5 text-[12.5px] text-white/45">{sub}</p>
     </div>
   );
 }

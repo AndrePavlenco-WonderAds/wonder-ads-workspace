@@ -4,6 +4,7 @@
 
 import "server-only";
 import { getCurrentEmployee, getCurrentSession } from "@/lib/auth/server";
+import { getEmployeeDisplay } from "@/lib/auth/credentials";
 import { docsAvailable, readerSees, type DocsReader } from "./access";
 import { getBlock, type DocsBlock } from "./blocks";
 
@@ -24,6 +25,7 @@ export async function getDocsContext(blockId?: string): Promise<DocsContext> {
     dept: employee.dept,
     isAdmin: employee.isAdmin,
     viewerOf: employee.viewerOf,
+    tags: getEmployeeDisplay(employee.username)?.tags ?? [],
   };
   if (!blockId) return { state: "ok", reader, block: null };
   const block = getBlock(blockId);

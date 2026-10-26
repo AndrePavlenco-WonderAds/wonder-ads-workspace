@@ -76,11 +76,8 @@ export default async function DocumentacaoPage() {
               <div className="px-2 pb-5 pt-5">
                 <h2 className="text-[1.35rem] font-semibold leading-tight tracking-[-0.02em] text-white">{c.label}</h2>
                 {c.tag && (
-                  // O mesmo acabamento da tag Growth do SEO DPT: gradiente da
-                  // marca, anel claro, brilho e o reflexo que passa.
-                  <span className="tier-growth-sheen relative mt-2.5 inline-flex items-center overflow-hidden rounded-full border border-white/25 px-3 py-1 text-[12px] font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_6px_24px_-6px_rgba(197,53,201,0.75)] [background:var(--brand-gradient)_border-box]">
-                    {c.tag}
-                  </span>
+                  // Sem fundo: só as letras, em platina, com um reflexo a passar.
+                  <p className="docs-platinum-text mt-1.5 text-[13.5px] font-semibold tracking-[0.01em]">{c.tag}</p>
                 )}
               </div>
               <Link

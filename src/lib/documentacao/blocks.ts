@@ -49,6 +49,22 @@ export const DOCS_BLOCKS: DocsBlock[] = [
       },
     ],
   },
+  {
+    id: "matriz-talento",
+    title: "Matriz de Talento Wonder",
+    // Só direção e treinadores: é a grelha com que se avalia a equipa.
+    audience: { depts: [], tags: ["Treinador"] },
+    audienceLabel: "Treinadores",
+    updatedAt: "2026-10-26",
+    pages: [
+      {
+        id: "matriz-talento",
+        href: "/documentacao/matriz-talento",
+        label: "Matriz de Talento Wonder",
+        image: "/documentacao/matriz-talento-capa.jpg",
+      },
+    ],
+  },
 ];
 
 export function blocksFor(reader: DocsReader): DocsBlock[] {

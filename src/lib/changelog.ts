@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.14",
+    date: "2026-10-26",
+    title: "Documentação — Matriz de Talento Wonder, pastilha platina e totais do Bónus NPS separados",
+    highlights: [
+      "**♟️ Cartão novo: Matriz de Talento Wonder**, só para SuperAdmins e Treinadores (André Pereira e João B.). A página abre com a imagem da matriz (clicável em tamanho real). Por baixo, o mesmo conteúdo arrumado pela ação: Promover, Desenvolver, Manter e Despedir, com as duas regras (porquê o C antes do D; «em formação» é um prazo, não um estatuto). Capa gerada com o Gemini: uma grelha 3×3 de vidro com um rei dourado na célula do A Player.",
+      "**🪙 «Empreender dentro da WonderAds» sem fundo**: só as letras, em platina, com um reflexo que as atravessa de tempos a tempos.",
+      "**➕ No mês do Bónus NPS, o total já não parece o bónus de equipa.** O topo mostra Total = Bónus individuais + Bónus de equipa, cada um com o seu valor (ex.: 100 € = 100 € + 0 €, equipa abaixo de 50%). A média e a taxa da equipa passaram para junto da régua do bónus de equipa.",
+    ],
+  },
+  {
     version: "78.13",
     date: "2026-10-26",
     title: "Documentação — capa nova das Comissões",

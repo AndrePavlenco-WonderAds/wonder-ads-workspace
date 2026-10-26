@@ -27,16 +27,21 @@ export type DocsReader = {
   dept: string;
   isAdmin: boolean;
   viewerOf: DeptSlug | null;
+  /** Etiquetas da credencial («Treinador») — alguns blocos abrem por aqui. */
+  tags: string[];
 };
 
-/** Público de um bloco: SuperAdmins + os departamentos listados. Os perfis
- *  viewer (só leitura) ficam sempre de fora — não são da equipa do bloco. */
+/** Público de um bloco: SuperAdmins + os departamentos listados + quem tem
+ *  uma das etiquetas listadas. Os perfis viewer (só leitura) ficam sempre de
+ *  fora — não são da equipa do bloco. */
 export type BlockAudience = {
   depts: Array<"SEO" | "ADS" | "Web" | "Commercial">;
+  tags?: string[];
 };
 
 export function readerSees(reader: DocsReader, audience: BlockAudience): boolean {
   if (reader.isAdmin) return true;
   if (reader.viewerOf) return false;
-  return (audience.depts as string[]).includes(reader.dept);
+  if ((audience.depts as string[]).includes(reader.dept)) return true;
+  return (audience.tags ?? []).some((t) => reader.tags.includes(t));
 }
