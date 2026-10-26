@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.6",
+    date: "2026-10-26",
+    title: "Playbook — título do bloco numa só linha",
+    highlights: [
+      "**🧹 No cartão do bloco, a pastilha «SuperAdmin + SEO DPT» passou para cima do título.** «Bónus & Comissões» deixa de partir em duas linhas.",
+    ],
+  },
+  {
     version: "78.5",
     date: "2026-10-26",
     title: "Playbook — hub de documentação, com o 1.º bloco: Bónus & Comissões",

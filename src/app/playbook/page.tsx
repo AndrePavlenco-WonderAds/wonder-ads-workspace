@@ -59,18 +59,16 @@ export default async function PlaybookPage() {
         <ul className="animate-fade-up mt-10 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {blocks.map((b) => (
             <li key={b.id} className="brand-gradient-border group relative flex flex-col rounded-3xl bg-white/[0.035] p-6">
-              <div className="flex items-start justify-between gap-3">
-                <h2 className="text-xl font-semibold tracking-tight text-white">{b.title}</h2>
-                {reader.isAdmin && (
-                  <span
-                    title="Quem vê este bloco"
-                    className="inline-flex shrink-0 items-center gap-1 rounded-full border border-white/10 bg-white/[0.04] px-2 py-0.5 text-[10px] font-medium text-white/50"
-                  >
-                    <Users className="h-3 w-3" />
-                    SuperAdmin + {b.audienceLabel}
-                  </span>
-                )}
-              </div>
+              {reader.isAdmin && (
+                <span
+                  title="Quem vê este bloco"
+                  className="mb-3 inline-flex w-fit items-center gap-1 rounded-full border border-white/10 bg-white/[0.04] px-2 py-0.5 text-[10px] font-medium text-white/50"
+                >
+                  <Users className="h-3 w-3" />
+                  SuperAdmin + {b.audienceLabel}
+                </span>
+              )}
+              <h2 className="text-xl font-semibold tracking-tight text-white">{b.title}</h2>
               <p className="mt-2 text-[13.5px] leading-relaxed text-white/60">{b.summary}</p>
               <div className="mt-5 flex flex-1 flex-col justify-end gap-2">
                 {b.pages.map((p) => (
