@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.15",
+    date: "2026-10-26",
+    title: "Documentação — «Empreender dentro da WonderAds» nas cores da marca",
+    highlights: [
+      "**🌈 A pastilha dos cartões passou do platina para o gradiente da WonderAds**: azul, roxo e magenta, em tons claros para se ler no escuro. De tempos a tempos, as cores deslizam pelas letras, sem cinzento nem branco.",
+    ],
+  },
+  {
     version: "78.14",
     date: "2026-10-26",
     title: "Documentação — Matriz de Talento Wonder, pastilha platina e totais do Bónus NPS separados",

@@ -76,8 +76,9 @@ export default async function DocumentacaoPage() {
               <div className="px-2 pb-5 pt-5">
                 <h2 className="text-[1.35rem] font-semibold leading-tight tracking-[-0.02em] text-white">{c.label}</h2>
                 {c.tag && (
-                  // Sem fundo: só as letras, em platina, com um reflexo a passar.
-                  <p className="docs-platinum-text mt-1.5 text-[13.5px] font-semibold tracking-[0.01em]">{c.tag}</p>
+                  // Sem fundo: só as letras, no gradiente da marca, que desliza
+                  // por elas de tempos a tempos.
+                  <p className="docs-brand-flow-text mt-1.5 text-[13.5px] font-semibold tracking-[0.01em]">{c.tag}</p>
                 )}
               </div>
               <Link
