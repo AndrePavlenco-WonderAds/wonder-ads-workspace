@@ -74,6 +74,17 @@ export function lisbonMonthKey(ms: number): string {
   }).format(ms);
 }
 
+/** "12/09/2026" — o dia no fuso de Lisboa, mesmo quando o servidor corre
+ *  em UTC (uma resposta às 00:30 de Lisboa não passa para o dia anterior). */
+export function formatLisbonDate(ms: number): string {
+  return new Intl.DateTimeFormat(LOCALE, {
+    timeZone: "Europe/Lisbon",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(ms);
+}
+
 /** "2026-10" ± N meses. */
 export function shiftMonthKey(key: string, delta: number): string {
   const [y, m] = key.split("-").map(Number);

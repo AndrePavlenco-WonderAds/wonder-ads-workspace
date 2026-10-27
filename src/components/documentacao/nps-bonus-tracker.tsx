@@ -12,6 +12,7 @@ import {
   type ConsultantMonth,
   type NpsBonusMonth,
 } from "@/lib/documentacao/nps-bonus";
+import { formatLisbonDate } from "@/lib/dates";
 import { formatEur } from "@/lib/proposals/value";
 import { Avatar } from "./avatar";
 import { ScoreScale } from "./score-scale";
@@ -68,7 +69,17 @@ function ProjectList({ row }: { row: ConsultantMonth }) {
           {p.score === null ? (
             <span className="shrink-0 text-[12.5px] text-rose-300">sem resposta</span>
           ) : (
-            <span className="shrink-0 font-semibold tabular-nums text-white">{p.score.toFixed(1).replace(".", ",")}</span>
+            <span className="flex shrink-0 items-center gap-2.5">
+              {p.answeredAt !== null && (
+                <span
+                  title={`Preenchido a ${formatLisbonDate(p.answeredAt)}`}
+                  className="rounded-full bg-white/[0.06] px-2 py-0.5 text-[11.5px] tabular-nums text-white/50"
+                >
+                  {formatLisbonDate(p.answeredAt)}
+                </span>
+              )}
+              <span className="font-semibold tabular-nums text-white">{p.score.toFixed(1).replace(".", ",")}</span>
+            </span>
           )}
         </li>
       ))}

@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.18",
+    date: "2026-10-27",
+    title: "Bónus NPS — a data de cada resposta na lista de projetos",
+    highlights: [
+      "**📅 Ao lado da nota de cada projeto aparece o dia em que o cliente respondeu** (DD/MM/AAAA, hora de Lisboa). Projetos sem resposta continuam a dizer «sem resposta».",
+    ],
+  },
+  {
     version: "78.17",
     date: "2026-10-27",
     title: "Bónus NPS individual — novo patamar dos 9,50 (150 €)",

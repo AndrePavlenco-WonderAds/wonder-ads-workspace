@@ -61,6 +61,8 @@ export type ProjectInput = {
   name: string;
   /** Índice de satisfação da resposta do mês, ou null sem resposta. */
   score: number | null;
+  /** Quando essa resposta entrou (epoch ms), ou null sem resposta. */
+  answeredAt: number | null;
 };
 
 export type ConsultantInput = {

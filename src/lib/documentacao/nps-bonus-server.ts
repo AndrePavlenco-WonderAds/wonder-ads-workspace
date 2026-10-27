@@ -48,6 +48,7 @@ export async function buildNpsBonusMonth(month: string): Promise<NpsBonusMonth> 
       slug: client.slug,
       name: client.title,
       score: answer ? answer.scores.overall : null,
+      answeredAt: answer ? answer.submittedAt : null,
     });
   }
 
