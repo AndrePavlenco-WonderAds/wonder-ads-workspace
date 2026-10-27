@@ -1,7 +1,7 @@
 // Direção → Ineficácias: o painel da equipa. Os números do momento, a fila
 // de relatórios por rever (cada um com as ocorrências por pontuar), e a
-// tabela de consultores com o nível, o PA/NO contra o limiar e o relógio dos
-// 30 dias. Só SuperAdmin: a página verifica isAdmin ANTES de ler o KV (o
+// tabela de consultores com o nível, o PA/NO contra o limiar e desde quando
+// contam (o último 1:1). Só SuperAdmin: a página verifica isAdmin ANTES de ler o KV (o
 // layout de /admin sozinho não chega — ver feedback-layout-gate).
 
 import Link from "next/link";
@@ -14,7 +14,7 @@ import { listImpersonationTargets, viewerDeptOf } from "@/lib/auth/credentials";
 import { getTeamAvatar } from "@/lib/team-avatars";
 import { INEFICACIAS_OPEN_TO_TEAM } from "@/lib/ineficacias/access";
 import { ineficaciasConfigured, loadTeam, type ConsultantBundle } from "@/lib/ineficacias/store";
-import { formatISODayMonth, formatLisbonDateTime, inDaysLabel } from "@/lib/ineficacias/shared";
+import { formatISODayMonth, formatLisbonDateTime } from "@/lib/ineficacias/shared";
 import { todayLisbonISO } from "@/lib/probation/progress";
 
 export const dynamic = "force-dynamic";
@@ -185,8 +185,9 @@ export default async function IneficaciasAdminPage() {
                       {last ? `Último relatório: ${formatISODayMonth(last.submittedOn)}` : "Sem relatórios"}
                       {pendingItems ? <span className="text-amber-200"> · {pendingItems} por pontuar</span> : null}
                     </span>
-                    <span className={`block ${s.clearsOn ? "text-[#c3aaff]/80" : "text-emerald-300/70"}`}>
-                      {s.clearsOn ? `Zera a ${formatISODayMonth(s.clearsOn)} · ${inDaysLabel(s.daysToClear)}` : "Contadores a zero"}
+                    <span className={`block ${s.no > 0 ? "text-[#c3aaff]/80" : "text-emerald-300/70"}`}>
+                      {s.phaseEvent ? `Desde o 1:1 de ${formatISODayMonth(s.phaseEvent.at)}` : "Desde o início"}
+                      {s.no === 0 && " · contadores a zero"}
                     </span>
                   </span>
                   <span className="hidden items-center gap-2 sm:flex">

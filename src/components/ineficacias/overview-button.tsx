@@ -1,12 +1,11 @@
-// O botão «O meu painel» do topo da página do consultor (v77.91). A escala,
-// o PA/NO e o relógio dos 30 dias saíram do topo da página — vivem agora em
-// /ineficacias/painel — e aqui fica só o essencial num relance: o nível, os
-// contadores contra o limiar seguinte e quando voltam a zero. Puro (sem
-// hooks).
+// O botão «O meu painel» do topo da página do consultor (v77.91). A escala
+// e o PA/NO saíram do topo da página — vivem agora em /ineficacias/painel —
+// e aqui fica só o essencial num relance: o nível, os contadores contra o
+// limiar seguinte e desde quando contam. Puro (sem hooks).
 
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
-import { formatISODayMonth, inDaysLabel, type LedgerState } from "@/lib/ineficacias/shared";
+import { formatISODayMonth, type LedgerState } from "@/lib/ineficacias/shared";
 import { LEVEL_TONES } from "@/components/ineficacias/level-gauge";
 
 const LEVEL_STROKES = ["#34d399", "#fbbf24", "#fb923c", "#fb7185"] as const;
@@ -63,9 +62,9 @@ export function OverviewButton({ state, href }: { state: LedgerState; href: stri
         <span className={`mt-0.5 block truncate text-[11px] ${pending ? "text-amber-200/90" : "text-white/50"}`}>
           {pending
             ? `Nível ${state.pendingMeasure!.level} atingido · medida por aplicar`
-            : state.clearsOn
-              ? `Contadores a zero a ${formatISODayMonth(state.clearsOn)} · ${inDaysLabel(state.daysToClear)}`
-              : "Contadores a zero · escala, relógio e histórico"}
+            : state.phaseStart
+              ? `Desde o 1:1 de ${formatISODayMonth(state.phaseEvent?.at ?? state.phaseStart)} · escala e histórico`
+              : "Escala e histórico"}
         </span>
       </span>
 

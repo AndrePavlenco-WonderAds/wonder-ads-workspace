@@ -46,7 +46,6 @@ import {
   NOTICED_OPTIONS,
   REASONS,
   SCORE_BANDS,
-  WINDOW_DAYS,
   bandOf,
   isISODate,
   suggestScore,
@@ -696,7 +695,7 @@ export function RegisterIneficaciaSheet({
 
           {/* 4 — Impacto + assinatura */}
           <SheetSection n={4} title="Impacto na escala e assinatura" done={showStamp} last>
-            <ImpactPanel person={person} impact={impact} occurredOn={occurredOn} today={today} />
+            <ImpactPanel person={person} impact={impact} occurredOn={occurredOn} />
 
             <div ref={signatureZoneRef} className="mt-5 grid grid-cols-1 items-end gap-6 sm:grid-cols-[1fr_auto]">
               <SignatureLine
@@ -868,12 +867,10 @@ function ImpactPanel({
   person,
   impact,
   occurredOn,
-  today,
 }: {
   person: RegisterPerson | null;
   impact: { before: LedgerState; after: LedgerState } | null;
   occurredOn: string;
-  today: string;
 }) {
   if (!person || !impact) {
     return (
@@ -885,7 +882,8 @@ function ImpactPanel({
   }
   const { before, after } = impact;
   const who = firstName(person.fullName);
-  const outOfWindow = occurredOn < addDaysISO(today, -(WINDOW_DAYS - 1));
+  // Antes do último 1:1: fica no histórico, mas a fase dele já fechou.
+  const beforePhase = Boolean(before.phaseEvent && occurredOn <= before.phaseEvent.at);
   const levelUp = after.reached > before.reached;
   return (
     <div>
@@ -908,10 +906,10 @@ function ImpactPanel({
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
           Com esta ocorrência, {who} atinge o nível {after.reached} — {LEVELS[after.reached].measure.toLowerCase()}
         </p>
-      ) : outOfWindow ? (
+      ) : beforePhase ? (
         <p className="mt-3 flex items-start gap-2 rounded-xl border border-black/12 bg-white/60 px-3.5 py-2.5 text-[12px] text-black/60">
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-          A data já está fora da janela de {WINDOW_DAYS} dias — fica no histórico de {who}, mas não entra no PA nem no NO de hoje.
+          A data é anterior ao último 1:1 de {who} — fica no histórico, mas não entra no PA nem no NO da fase atual.
         </p>
       ) : after.pendingMeasure ? (
         <p className="mt-3 flex items-start gap-2 rounded-xl border border-amber-600/30 bg-amber-500/[0.08] px-3.5 py-2.5 text-[12px] font-semibold text-amber-800">

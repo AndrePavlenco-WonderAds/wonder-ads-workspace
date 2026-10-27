@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.21",
+    date: "2026-10-27",
+    title: "Ineficácias — PA e NO só voltam a zero no 1:1",
+    highlights: [
+      "**🔁 Regra nova (da Beatriz): sempre que há um 1:1 de nível, PA e NO recomeçam do zero para a fase seguinte.** Os erros já não saem sozinhos ao fim de 30 dias; acumulam até ao 1:1. O nível não desce e os erros ficam sempre no histórico.",
+      "**📟 O painel, a lista da equipa e a folha RH-04 contam assim:** sai o relógio dos 30 dias e entra «desde o último 1:1».",
+      "**📖 A página das Ineficácias na Documentação foi reescrita:** mais curta e legível, com um desenho do reinício no 1:1 e o objetivo semestral (menos de X ineficácias por mês, X por definir).",
+      "**🖼️ O cartão das Ineficácias tem capa:** as engrenagens com o aviso.",
+    ],
+  },
+  {
     version: "78.20",
     date: "2026-10-27",
     title: "Ineficácias e Probation — acertos nos gráficos",

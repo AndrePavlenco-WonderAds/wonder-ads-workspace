@@ -74,8 +74,9 @@ export const DOCS_BLOCKS: DocsBlock[] = [
     audienceLabel: "toda a equipa",
     updatedAt: "2026-10-27",
     pages: [
-      // Capas por gerar: o Gemini ficou sem créditos (2026-10-27).
-      { id: "ineficacias", href: "/documentacao/ineficacias", label: "Ineficácias" },
+      // Capa das Ineficácias dada pelo André (2026-10-27). A do Probation
+      // fica por gerar: o Gemini está sem créditos.
+      { id: "ineficacias", href: "/documentacao/ineficacias", label: "Ineficácias", image: "/documentacao/ineficacias-capa.jpg" },
       { id: "probation", href: "/documentacao/probation", label: "Probation" },
     ],
   },

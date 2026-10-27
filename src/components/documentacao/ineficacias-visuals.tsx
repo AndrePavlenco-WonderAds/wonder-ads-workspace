@@ -1,16 +1,10 @@
-// Os desenhos da página das Ineficácias (v78.19): a escala de 0 a 10, a
-// janela dos 30 dias, a escada dos níveis e os cenários. Servidor, sem
+// Os desenhos da página das Ineficácias (v78.19; v78.21 sem a janela dos 30
+// dias): a escala de 0 a 10, o reinício no 1:1, a escada dos níveis e os
+// cenários. Servidor, sem
 // estado. Os números saem de lib/ineficacias/shared.ts — o desenho e as
 // contas da app usam as mesmas constantes.
 
-import {
-  LEVELS,
-  MAX_POINTS,
-  SCORE_BANDS,
-  WINDOW_DAYS,
-  bandOf,
-  type ScoreBand,
-} from "@/lib/ineficacias/shared";
+import { LEVELS, MAX_POINTS, SCORE_BANDS, bandOf, type ScoreBand } from "@/lib/ineficacias/shared";
 
 /** A cor de cada banda: a marca a aquecer até ao vermelho do crítico. */
 export const BAND_COLOR: Record<ScoreBand["id"], string> = {
@@ -64,7 +58,7 @@ export function PointsScale() {
             style={{ gridColumn: `${b.min + 1} / ${b.max + 2}`, borderColor: BAND_COLOR[b.id] }}
           >
             <p className="text-[13px] font-semibold text-white">{b.label}</p>
-            <p className="mt-0.5 text-[12px] leading-snug text-white/50">{b.hint}</p>
+            <p className="mt-0.5 text-[12.5px] leading-snug text-white/60">{b.hint}</p>
           </div>
         ))}
       </div>
@@ -87,116 +81,76 @@ export function PointsScale() {
 }
 
 /* ------------------------------------------------------------------ */
-/*  A janela dos 30 dias                                                */
+/*  O reinício no 1:1                                                   */
 /* ------------------------------------------------------------------ */
 
-// O exemplo: três erros pontuados, hoje = dia 0. O primeiro já saiu da
-// janela; os outros dois contam e têm data de saída.
-const SPAN = { from: -42, to: 28 };
-const EXAMPLE = [
-  { day: -38, points: 3 },
-  { day: -21, points: 4 },
-  { day: -6, points: 2 },
-];
-
-function pos(day: number): string {
-  return `${((day - SPAN.from) / (SPAN.to - SPAN.from)) * 100}%`;
-}
-
-function ago(day: number): string {
-  return day === 0 ? "hoje" : `há ${-day} dias`;
-}
-
-export function WindowTimeline() {
-  const windowStart = -(WINDOW_DAYS - 1);
-  const inside = EXAMPLE.filter((o) => o.day >= windowStart);
-  const pa = inside.reduce((s, o) => s + o.points, 0);
-  const no = inside.length;
-
+function Chip({ points, dim = false }: { points: number; dim?: boolean }) {
   return (
-    <figure aria-label="Exemplo da janela dos 30 dias" className="rounded-3xl border border-white/10 bg-white/[0.02] p-5 sm:p-7">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <p className="max-w-md text-[13.5px] leading-relaxed text-white/55">
-          Três erros pontuados. O de há 38 dias já saiu; os outros dois ainda contam.
-        </p>
-        <div className="flex gap-6">
-          <Counter label="PA hoje" value={pa} />
-          <Counter label="NO hoje" value={no} />
-        </div>
-      </div>
-
-      <div className="-mx-5 mt-6 overflow-x-auto px-5 pb-1 sm:mx-0 sm:px-0">
-        <div className="relative h-44 min-w-[560px]">
-          {/* A janela que conta */}
-          <div
-            className="absolute bottom-8 top-10 rounded-2xl border border-[#783DF5]/40 bg-[#783DF5]/[0.10]"
-            style={{ left: pos(windowStart), width: `calc(${pos(0)} - ${pos(windowStart)})` }}
-          />
-          <p
-            className="absolute bottom-0 text-[12px] font-medium text-[#c4a6ff]"
-            style={{ left: pos(windowStart) }}
-          >
-            Os últimos {WINDOW_DAYS} dias — contam
-          </p>
-
-          {/* A linha do tempo */}
-          <div className="absolute inset-x-0 top-[6.25rem] h-px bg-white/15" />
-
-          {/* Hoje */}
-          <div className="absolute bottom-8 top-6 w-px bg-white" style={{ left: pos(0) }} />
-          <span
-            className="absolute top-0 -translate-x-1/2 rounded-full bg-white px-2 py-0.5 text-[11.5px] font-semibold text-[#07080d]"
-            style={{ left: pos(0) }}
-          >
-            Hoje
-          </span>
-
-          {/* Os erros */}
-          {EXAMPLE.map((o) => {
-            const counts = o.day >= windowStart;
-            const size = 14 + o.points * 4;
-            return (
-              <div key={o.day} className="absolute top-[6.25rem] -translate-x-1/2 -translate-y-1/2" style={{ left: pos(o.day) }}>
-                <span
-                  className={`block rounded-full ${counts ? "" : "opacity-30"}`}
-                  style={{ width: size, height: size, background: BAND_COLOR[bandOf(o.points).id] }}
-                />
-                <span
-                  className={`absolute bottom-full left-1/2 mb-1.5 -translate-x-1/2 whitespace-nowrap text-[12px] font-semibold tabular-nums ${counts ? "text-white" : "text-white/35 line-through"}`}
-                >
-                  {o.points} pts
-                </span>
-                <span className="absolute left-1/2 top-full mt-1.5 -translate-x-1/2 whitespace-nowrap text-[11px] text-white/40">
-                  {ago(o.day)}
-                </span>
-              </div>
-            );
-          })}
-
-          {/* Quando cada um sai */}
-          {inside.map((o) => {
-            const out = o.day + WINDOW_DAYS;
-            return (
-              <div key={`out${o.day}`} className="absolute top-[6.25rem] -translate-x-1/2 -translate-y-1/2" style={{ left: pos(out) }}>
-                <span className="block h-3 w-3 rounded-full border-2 border-dashed border-white/40" />
-                <span className="absolute left-1/2 top-full mt-1.5 -translate-x-1/2 whitespace-nowrap text-[11px] text-white/45">
-                  sai em {out} dias
-                </span>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    </figure>
+    <span
+      className={`rounded-full px-3 py-1 text-[13px] font-semibold tabular-nums text-white ${dim ? "opacity-45" : ""}`}
+      style={{ background: `${BAND_COLOR[bandOf(points).id]}cc` }}
+    >
+      {points} {points === 1 ? "ponto" : "pontos"}
+    </span>
   );
 }
 
-function Counter({ label, value }: { label: string; value: number }) {
+function Phase({ title, points, foot }: { title: string; points: number[]; foot: string }) {
+  const pa = points.reduce((s, p) => s + p, 0);
   return (
-    <div>
-      <p className="text-[12px] text-white/45">{label}</p>
-      <p className="text-[2rem] font-semibold leading-none tabular-nums text-white">{value}</p>
+    <div className="flex flex-col rounded-2xl border border-white/10 bg-[#0b0c12] p-5">
+      <p className="text-[14px] font-semibold text-white">{title}</p>
+      <div className="mt-3 flex flex-wrap gap-2">
+        {points.map((p, i) => (
+          <Chip key={i} points={p} />
+        ))}
+      </div>
+      <div className="mt-5 flex gap-8">
+        <p>
+          <span className="block text-[12.5px] text-white/50">PA</span>
+          <span className="text-[2rem] font-semibold leading-none tabular-nums text-white">{pa}</span>
+        </p>
+        <p>
+          <span className="block text-[12.5px] text-white/50">NO</span>
+          <span className="text-[2rem] font-semibold leading-none tabular-nums text-white">{points.length}</span>
+        </p>
+      </div>
+      <p className="mt-auto pt-4 text-[13.5px] text-white/65">{foot}</p>
     </div>
+  );
+}
+
+/** A regra da Beatriz num desenho: o 1:1 fecha a fase, os contadores
+ *  recomeçam do zero, o nível fica e os erros passam ao histórico. */
+export function PhaseReset() {
+  return (
+    <figure aria-label="O que acontece no 1:1 de nível" className="rounded-3xl border border-white/10 bg-white/[0.02] p-4 sm:p-6">
+      <div className="grid gap-3 md:grid-cols-[1fr_auto_1fr] md:items-stretch">
+        <Phase title="Antes do 1:1" points={[4, 2]} foot="PA 6 passa o limiar: nível 1." />
+
+        <div className="flex items-center justify-center md:flex-col md:px-1">
+          <span
+            className="rounded-2xl px-4 py-3 text-center text-white shadow-[0_18px_50px_-22px_rgba(197,53,201,0.9)]"
+            style={{ background: "var(--brand-gradient)" }}
+          >
+            <span className="block text-[14px] font-semibold">1:1 do nível 1</span>
+            <span className="block text-[12.5px] text-white/85">PA e NO a zero</span>
+          </span>
+        </div>
+
+        <Phase title="Depois do 1:1" points={[1]} foot="Recomeça do zero. O nível 1 fica." />
+      </div>
+
+      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-2xl border border-dashed border-white/15 px-5 py-3.5">
+        <span className="text-[14px] font-semibold text-white">Histórico</span>
+        <span className="flex flex-wrap gap-2">
+          {[4, 2, 1].map((p, i) => (
+            <Chip key={i} points={p} dim />
+          ))}
+        </span>
+        <span className="text-[13.5px] text-white/60">Nada se apaga.</span>
+      </div>
+    </figure>
   );
 }
 
@@ -229,7 +183,7 @@ export function LevelStairs() {
                 {top && " · Probation"}
               </p>
               <p className="mt-1 text-[16px] font-semibold leading-snug text-white lg:text-[17px]">{l.rule}</p>
-              <p className={`mt-auto pt-3 text-[13px] leading-snug ${top ? "text-white/90" : "text-white/60"}`}>{l.measure}</p>
+              <p className={`mt-auto pt-3 text-[13.5px] leading-snug ${top ? "text-white/90" : "text-white/70"}`}>{l.measure}</p>
             </div>
           );
         })}
@@ -288,17 +242,11 @@ export function ScenarioCard({
   return (
     <article className="flex flex-col rounded-3xl border border-white/10 bg-white/[0.02] p-5 sm:p-6">
       <h3 className="text-[17px] font-semibold text-white">{title}</h3>
-      <p className="mt-1 text-[13.5px] leading-relaxed text-white/55">{context}</p>
+      <p className="mt-1 text-[14px] leading-relaxed text-white/65">{context}</p>
 
       <div className="mt-5 flex flex-wrap gap-2" aria-label="Os erros">
         {points.map((p, i) => (
-          <span
-            key={i}
-            className="rounded-full px-3 py-1 text-[13px] font-semibold tabular-nums text-white"
-            style={{ background: `${BAND_COLOR[bandOf(p).id]}cc` }}
-          >
-            {p} {p === 1 ? "ponto" : "pontos"}
-          </span>
+          <Chip key={i} points={p} />
         ))}
       </div>
 

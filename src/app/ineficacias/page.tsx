@@ -1,6 +1,6 @@
 // Ineficácias — a página do PRÓPRIO consultor: o relatório para assinar a
 // qualquer hora (primeiro, v77.91), o botão «O meu painel» (a escala, o PA,
-// o NO e o relógio dos 30 dias vivem em /ineficacias/painel) e o histórico
+// o NO e a escala vivem em /ineficacias/painel) e o histórico
 // dos seus relatórios com a pontuação da direção. Nunca vê os dos colegas: a
 // única leitura é o índice do próprio username.
 //

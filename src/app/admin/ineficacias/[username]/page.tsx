@@ -86,7 +86,7 @@ export default async function IneficaciasConsultantPage({
           </h1>
           <p className="mt-1 text-[12.5px] text-white/45">
             {row.role} · {row.dept} · {reports.length} {reports.length === 1 ? "relatório" : "relatórios"}
-            {state.clearsOn ? ` · contadores a zero a ${formatISODate(state.clearsOn)}` : " · contadores a zero"}
+            {state.phaseEvent ? ` · contadores desde o 1:1 de ${formatISODate(state.phaseEvent.at)}` : ""}
           </p>
         </div>
       </header>
@@ -100,7 +100,7 @@ export default async function IneficaciasConsultantPage({
         <div className="min-w-0 space-y-10">
           {state.counted.length > 0 && (
             <section className="animate-fade-up rounded-2xl border border-white/[0.08] bg-white/[0.02] px-4 py-3.5">
-              <p className="readout text-white/35">Na janela corrente · {state.counted.length} {state.counted.length === 1 ? "ocorrência" : "ocorrências"} · PA {state.pa} · NO {state.no}</p>
+              <p className="readout text-white/35">Desde o último 1:1 · {state.counted.length} {state.counted.length === 1 ? "ocorrência" : "ocorrências"} · PA {state.pa} · NO {state.no}</p>
               <ul className="mt-2 divide-y divide-white/[0.05]">
                 {state.counted.map((o) => (
                   <li key={o.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2 text-[12.5px]">

@@ -85,7 +85,7 @@ export default async function ProbationDocPage() {
               <p className="text-[13px] font-medium text-white/45">Normalmente</p>
               <p className="mt-1 text-[1.25rem] font-semibold text-white">No fim da escala</p>
               <p className="mt-2 text-[14.5px] leading-relaxed text-white/60">
-                O nível 3 das ineficácias: depois do 1:1 do nível 2, PA ≥ {L3.pa} ou NO ≥ {L3.no} em 30 dias.
+                O nível 3 das ineficácias: depois do 1:1 do nível 2, PA ≥ {L3.pa} ou NO ≥ {L3.no}.
               </p>
               <Link href="/documentacao/ineficacias#escala" className="mt-4 inline-block text-[13.5px] font-medium text-[#c4a6ff] hover:text-white">
                 Ver a escala das ineficácias

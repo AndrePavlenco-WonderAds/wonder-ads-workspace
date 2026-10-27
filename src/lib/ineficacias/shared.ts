@@ -1,17 +1,19 @@
 // Ineficácias — o que é partilhado entre o browser e o servidor: os tipos,
 // os catálogos (motivos, quem deu pelo erro, a escala 0–10), a validação do
 // relatório e a DERIVAÇÃO do estado de cada consultor (PA, NO, nível, medida
-// por aplicar, relógio dos 30 dias). Puro: sem KV, sem relógio — o «hoje»
-// entra sempre por parâmetro, como no probation.
+// por aplicar). Puro: sem KV, sem relógio — o «hoje» entra sempre por
+// parâmetro, como no probation.
 //
 // AS REGRAS (slides «As ineficácias — o que conta e quanto vale» + a resposta
 // da Beatriz no Slack, 2026-09-30):
 //   • Cada ocorrência vale de 0 a 10 pontos, dados pela DIREÇÃO depois de o
 //     consultor a reportar (ou registados por ela). Só uma ocorrência
 //     pontuada (> 0) entra nas contas.
-//   • PA = soma dos pontos · NO = número de ocorrências, numa JANELA DE 30
-//     DIAS: cada ocorrência conta durante 30 dias a partir do dia em que
-//     aconteceu. 30 dias sem novas ocorrências → contadores a zero.
+//   • PA = soma dos pontos · NO = número de ocorrências, acumulados na FASE:
+//     desde o último 1:1 de nível (ou desde sempre). Os erros não saem ao fim
+//     de 30 dias — só o 1:1 põe os contadores a zero (v78.21, regra da
+//     Beatriz confirmada pelo André a 2026-10-27; até aí havia uma janela
+//     de 30 dias).
 //   • Nível 1: PA ≥ 6 ou NO ≥ 3 → 1:1 com o líder direto, plano de 1 a 3 ações.
 //     Nível 2 (depois do 1): PA ≥ 6 ou NO ≥ 2 → 1:1 com o nível acima.
 //     Nível 3 (depois do 2): PA ≥ 6 ou NO ≥ 2 → probation.
@@ -201,8 +203,6 @@ export const LEVELS: { level: IneficaciaLevel; title: string; rule: string; meas
   { level: 2, title: "Nível 2", rule: "depois do 1: PA ≥ 6 ou NO ≥ 2", measure: "1:1 com o nível acima e medidas extra." },
   { level: 3, title: "Nível 3", rule: "depois do 2: PA ≥ 6 ou NO ≥ 2", measure: "Probation: plano escrito, KPIs e cadência." },
 ];
-
-export const WINDOW_DAYS = 30;
 
 /** Até quantos dias atrás o consultor pode reportar um erro — a janela das
  *  contas. A direção pode registar até um ano atrás. */
@@ -702,27 +702,18 @@ export type LedgerState = {
   pendingMeasure: PendingMeasure | null;
   /** O evento que abriu a fase corrente (null = desde sempre). */
   phaseEvent: LedgerEvent | null;
-  /** A partir de que dia as ocorrências contam na fase corrente. */
+  /** A partir de que dia as ocorrências contam na fase corrente (null =
+   *  desde sempre: ainda não houve nenhum 1:1). */
   phaseStart: string | null;
-  /** A janela corrente: [windowStart, today]. */
-  windowStart: string;
-  /** PA e NO na janela corrente (só ocorrências pontuadas > 0). */
+  /** PA e NO da fase corrente (só ocorrências pontuadas > 0). */
   pa: number;
   no: number;
   /** Ocorrências da fase por pontuar — ainda fora das contas. */
   unscored: number;
   /** O limiar do próximo nível (null quando já está no 3). */
   next: { level: 1 | 2 | 3; pa: number; no: number } | null;
-  /** As ocorrências que contam na janela corrente. */
+  /** As ocorrências que contam na fase corrente. */
   counted: Occurrence[];
-  /** O RELÓGIO DOS 30 DIAS — quando cada ocorrência que conta deixa de
-   *  contar (o 31.º dia depois de acontecer), agrupado por dia. */
-  expiries: { on: string; points: number; count: number }[];
-  /** O dia em que, sem novas ocorrências, o PA e o NO voltam a zero. null
-   *  quando já estão a zero. */
-  clearsOn: string | null;
-  /** Dias até `clearsOn` (0 quando já estão a zero). */
-  daysToClear: number;
 };
 
 function eventOrder(a: LedgerEvent, b: LedgerEvent): number {
@@ -746,47 +737,30 @@ export function deriveLedger(occurrences: Occurrence[], events: LedgerEvent[], t
   // começa no dia seguinte.
   const phaseStart = phaseEvent ? addDaysISO(phaseEvent.at, 1) : null;
   const phaseFrom = phaseEvent ? phaseEvent.at : null; // exclusivo
-  const windowFloor = addDaysISO(todayISO, -(WINDOW_DAYS - 1));
-  const windowStart = phaseStart && phaseStart > windowFloor ? phaseStart : windowFloor;
 
   const inPhase = occurrences
     .filter((o) => (phaseFrom === null || o.occurredOn > phaseFrom) && o.occurredOn <= todayISO)
     .sort((a, b) => a.occurredOn.localeCompare(b.occurredOn));
 
-  const current = tally(inPhase, addDaysISO(windowStart, -1), todayISO);
+  const current = tally(inPhase, phaseFrom, todayISO);
   const unscored = inPhase.filter((o) => !o.score).length;
 
   const nextLevel = level < 3 ? ((level + 1) as 1 | 2 | 3) : null;
   const next = nextLevel ? { level: nextLevel, ...thresholdToReach(nextLevel) } : null;
 
-  // O limiar é «pegajoso»: passou numa janela de 30 dias em qualquer momento
-  // da fase → a medida fica por aplicar até ser registada, mesmo que as
-  // ocorrências entretanto saiam da janela corrente.
+  // A medida fica por aplicar a partir do dia em que a soma da fase passou o
+  // limiar, até a direção registar o 1:1.
   let pendingMeasure: PendingMeasure | null = null;
   if (next) {
     for (const o of inPhase) {
       if (!counts(o)) continue;
-      const w = tally(inPhase, addDaysISO(o.occurredOn, -WINDOW_DAYS), o.occurredOn);
-      if (w.pa >= next.pa || w.no >= next.no) {
-        pendingMeasure = { level: next.level, since: o.occurredOn, pa: w.pa, no: w.no };
+      const upTo = tally(inPhase, phaseFrom, o.occurredOn);
+      if (upTo.pa >= next.pa || upTo.no >= next.no) {
+        pendingMeasure = { level: next.level, since: o.occurredOn, pa: upTo.pa, no: upTo.no };
         break;
       }
     }
   }
-
-  // O relógio: cada ocorrência que conta sai no 31.º dia.
-  const byDay = new Map<string, { points: number; count: number }>();
-  for (const o of current.list) {
-    const on = addDaysISO(o.occurredOn, WINDOW_DAYS);
-    const cur = byDay.get(on) ?? { points: 0, count: 0 };
-    cur.points += o.score?.points ?? 0;
-    cur.count += 1;
-    byDay.set(on, cur);
-  }
-  const expiries = [...byDay.entries()]
-    .map(([on, v]) => ({ on, ...v }))
-    .sort((a, b) => a.on.localeCompare(b.on));
-  const clearsOn = expiries.at(-1)?.on ?? null;
 
   return {
     level,
@@ -794,15 +768,11 @@ export function deriveLedger(occurrences: Occurrence[], events: LedgerEvent[], t
     pendingMeasure,
     phaseEvent,
     phaseStart,
-    windowStart,
     pa: current.pa,
     no: current.no,
     unscored,
     next,
     counted: current.list.slice().sort((a, b) => b.occurredOn.localeCompare(a.occurredOn)),
-    expiries,
-    clearsOn,
-    daysToClear: clearsOn ? Math.max(0, daysBetweenISO(todayISO, clearsOn)) : 0,
   };
 }
 

@@ -1,5 +1,5 @@
 // «O meu painel» das Ineficácias (v77.91) — o lugar do consultor na escala:
-// o nível, o PA e o NO, o relógio dos 30 dias e as ocorrências que contam
+// o nível, o PA e o NO desde o último 1:1 e as ocorrências que contam
 // agora. Saiu do topo da página do relatório (o André pediu o formulário
 // primeiro) e abre-se pelo botão «O meu painel».
 //
@@ -84,7 +84,7 @@ export default async function IneficaciasPainelPage() {
 
       <section className="animate-fade-up mt-4 rounded-2xl border border-white/[0.08] bg-white/[0.02] px-4 py-3.5">
         <p className="readout text-white/35">
-          Na janela corrente · {state.counted.length} {state.counted.length === 1 ? "ocorrência" : "ocorrências"}
+          Desde o último 1:1 · {state.counted.length} {state.counted.length === 1 ? "ocorrência" : "ocorrências"}
         </p>
         {state.counted.length === 0 ? (
           <p className="mt-2 text-[12.5px] text-white/45">Nenhuma ocorrência pontuada a contar neste momento.</p>
