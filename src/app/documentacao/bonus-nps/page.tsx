@@ -172,6 +172,7 @@ export default async function BonusNpsPage({
           <Rows
             rows={[
               { term: "8 projetos, 5 respostas", detail: "63% de respostas, média 9,12. Individual 100 € + equipa 50 €.", value: "150 €" },
+              { term: "6 projetos, 4 respostas", detail: "67% de respostas, média 9,61. Individual 150 € + equipa 50 €.", value: "200 €" },
               { term: "4 projetos, 4 respostas", detail: "100% de respostas, média 10,00. Individual 300 € + equipa 50 €.", value: "350 €" },
               { term: "3 projetos, 3 respostas", detail: "Média 9,80, mas menos de 4 projetos: sem individual. Equipa 50 €.", value: "50 €" },
               { term: "7 projetos, 3 respostas", detail: "43% de respostas: abaixo de 50%, não ganha nenhum dos dois.", value: "0 €" },

@@ -22,6 +22,8 @@ export type BonusTier = { min: number; eur: number };
 /** Do patamar mais alto para o mais baixo — o primeiro que passa ganha. */
 export const INDIVIDUAL_TIERS: BonusTier[] = [
   { min: 10, eur: 300 },
+  // Patamar intermédio dos 9,50 (André, 2026-10-27).
+  { min: 9.5, eur: 150 },
   { min: 9, eur: 100 },
   { min: 8.5, eur: 50 },
   { min: 8, eur: 25 },

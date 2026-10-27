@@ -13,6 +13,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.17",
+    date: "2026-10-27",
+    title: "Bónus NPS individual — novo patamar dos 9,50 (150 €)",
+    highlights: [
+      "**🪜 O bónus individual passa a ter cinco patamares:** 8,00 → 25 €, 8,50 → 50 €, 9,00 → 100 €, **9,50 → 150 €** e 10,00 → 300 €. A régua da página, o painel do mês e as contas usam todos os novos valores.",
+      "**🧮 Exemplo novo:** 6 projetos, 4 respostas, média 9,61 → individual 150 € + equipa 50 €.",
+    ],
+  },
+  {
     version: "78.16",
     date: "2026-10-26",
     title: "Matriz de Talento — cartões das ações sem espaço vazio",
