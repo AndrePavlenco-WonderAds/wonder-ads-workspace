@@ -246,6 +246,8 @@ export type IneficaciaItemDraft = {
   occurredOn: string;
   /** Se percebeu o erro que cometeu. */
   noticed: IneficaciaNoticed | null;
+  /** A gravidade na autoavaliação do consultor, 0–10 (v78.23). */
+  selfScore: number | null;
 };
 
 export type IneficaciaScore = {
@@ -268,6 +270,9 @@ export type IneficaciaItem = {
   lastTime: string;
   occurredOn: string;
   noticed: IneficaciaNoticed;
+  /** A gravidade na autoavaliação do consultor, 0–10 — null nos relatórios
+   *  anteriores à v78.23. Faz parte do conteúdo assinado. */
+  selfScore: number | null;
   /** A pontuação da direção — null enquanto está por pontuar. */
   score: IneficaciaScore | null;
   /** A calculadora da direção ao pontuar (v77.94) — null/[] até a direção
@@ -500,6 +505,11 @@ export function nameMatches(typed: string, expected: string): boolean {
   return normalizeName(typed) === normalizeName(expected) && normalizeName(expected).length > 0;
 }
 
+/** Uma autoavaliação válida: inteiro de 0 a 10. */
+export function isSelfScore(v: unknown): v is number {
+  return typeof v === "number" && Number.isInteger(v) && v >= 0 && v <= MAX_POINTS;
+}
+
 /** O intervalo de datas que o consultor pode indicar hoje. */
 export function reportDateRange(todayISO: string): { min: string; max: string } {
   return { min: addDaysISO(todayISO, -REPORT_LOOKBACK_DAYS), max: todayISO };
@@ -529,6 +539,7 @@ export function validateItem(
   if (item.occurredOn > range.max) return `${tag} a data não pode ser no futuro.`;
   if (item.occurredOn < range.min) return `${tag} só podes reportar erros dos últimos ${REPORT_LOOKBACK_DAYS} dias (desde ${formatISODate(range.min)}).`;
   if (!item.noticed) return `${tag} diz se percebeste o erro que cometeste.`;
+  if (!isSelfScore(item.selfScore)) return `${tag} indica a gravidade, de 0 a ${MAX_POINTS}, na tua avaliação.`;
   return null;
 }
 
@@ -571,6 +582,7 @@ export function cleanItems(items: IneficaciaItemDraft[], newId: () => string): I
     lastTime: it.firstTime === false ? it.lastTime.trim() : "",
     occurredOn: it.occurredOn,
     noticed: it.noticed ?? "proprio",
+    selfScore: isSelfScore(it.selfScore) ? it.selfScore : null,
     score: null,
     errorType: null,
     impacts: [],
@@ -585,18 +597,23 @@ export function cleanItems(items: IneficaciaItemDraft[], newId: () => string): I
 /** O conteúdo do relatório tal como o consultor o assinou — SEM as
  *  pontuações nem a revisão da direção, que chegam depois e não podem
  *  invalidar a assinatura. A ordem dos campos é fixa de propósito: o hash
- *  tem de ser reproduzível para verificar a integridade mais tarde. */
+ *  tem de ser reproduzível para verificar a integridade mais tarde.
+ *
+ *  v3 (v78.23) junta a autoavaliação de cada erro. Um relatório sem ela
+ *  (os anteriores) continua a dar exatamente o JSON da v2 — o hash que foi
+ *  assinado nessa altura continua a bater. */
 export function canonicalContent(r: {
   username: string;
   submittedOn: string;
-  items: Pick<
+  items: (Pick<
     IneficaciaItem,
     "what" | "client" | "reason" | "reasonOther" | "shouldHave" | "firstTime" | "lastTime" | "occurredOn" | "noticed"
-  >[];
+  > & { selfScore?: number | null })[];
   fullName: string;
 }): string {
+  const withSelf = r.items.some((it) => isSelfScore(it.selfScore));
   return JSON.stringify({
-    v: 2,
+    v: withSelf ? 3 : 2,
     username: r.username,
     submittedOn: r.submittedOn,
     declaration: DECLARATION_TEXT,
@@ -611,6 +628,7 @@ export function canonicalContent(r: {
       lastTime: it.lastTime,
       occurredOn: it.occurredOn,
       noticed: it.noticed,
+      ...(withSelf ? { selfScore: isSelfScore(it.selfScore) ? it.selfScore : null } : {}),
     })),
   });
 }

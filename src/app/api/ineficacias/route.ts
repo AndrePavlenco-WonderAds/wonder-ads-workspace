@@ -60,6 +60,7 @@ function parseItem(raw: unknown): IneficaciaItemDraft {
     lastTime: text(it.lastTime, 400),
     occurredOn: text(it.occurredOn, 10),
     noticed: NOTICED.has(String(it.noticed)) ? (it.noticed as IneficaciaNoticed) : null,
+    selfScore: typeof it.selfScore === "number" ? it.selfScore : null,
   };
 }
 

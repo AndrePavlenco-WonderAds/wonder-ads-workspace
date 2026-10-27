@@ -31,6 +31,7 @@ import {
   canonicalContent,
   deriveLedger,
   isISODate,
+  isSelfScore,
   lisbonDateOf,
   occurrencesOf,
   redactForConsultant,
@@ -131,6 +132,8 @@ function sanitizeItem(raw: unknown): IneficaciaItem | null {
     lastTime: str(it.lastTime, 300),
     occurredOn: isISODate(it.occurredOn) ? it.occurredOn : "",
     noticed,
+    // Relatórios anteriores à v78.23 não têm autoavaliação.
+    selfScore: isSelfScore(it.selfScore) ? it.selfScore : null,
     score: sanitizeScore(it.score),
     ...sanitizeAssessment(it),
   };

@@ -13,6 +13,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.23",
+    date: "2026-10-27",
+    title: "Ineficácias — a gravidade na autoavaliação do consultor",
+    highlights: [
+      "**🎚️ No relatório RH-03, cada erro tem uma pergunta nova:** «Na tua autoavaliação, qual é a gravidade deste erro, de 0 a 10?», com «10 é o mais grave. Considera tudo acima para seres transparente com a tua equipa.» Escolhe-se de 0 a 10 e aparece a banda da escala (baixo, médio, alto, crítico).",
+      "**🔏 A autoavaliação faz parte do que se assina** e a direção vê-a ao lado de cada erro, antes de dar a pontuação. Os relatórios antigos continuam íntegros.",
+    ],
+  },
+  {
     version: "78.22",
     date: "2026-10-27",
     title: "Documentação — capa do Probation",

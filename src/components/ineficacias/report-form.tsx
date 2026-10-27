@@ -50,12 +50,15 @@ import { SignatureLine, formatDatePT } from "@/components/absences/sheet";
 import { ClientPicker } from "@/components/ineficacias/client-picker";
 import {
   LIMITS,
+  MAX_POINTS,
   NOTICED_OPTIONS,
   REASONS,
   REPORT_LOOKBACK_DAYS,
   addDaysISO,
+  bandOf,
   formatISODate,
   isISODate,
+  isSelfScore,
   nameMatches,
   reasonLabel,
   reportDateRange,
@@ -84,14 +87,15 @@ function blankItem(today: string, key: string = crypto.randomUUID()): LocalItem 
     // Quem abre a folha costuma vir reportar o que aconteceu hoje.
     occurredOn: today,
     noticed: null,
+    selfScore: null,
   };
 }
 
-/* ---------------------- os 7 campos de um erro ---------------------- */
+/* ---------------------- os 8 campos de um erro ---------------------- */
 
-type FieldKey = "occurredOn" | "client" | "what" | "reason" | "shouldHave" | "firstTime" | "noticed";
+type FieldKey = "occurredOn" | "client" | "what" | "reason" | "shouldHave" | "firstTime" | "noticed" | "selfScore";
 
-const FIELD_ORDER: FieldKey[] = ["occurredOn", "client", "what", "reason", "shouldHave", "firstTime", "noticed"];
+const FIELD_ORDER: FieldKey[] = ["occurredOn", "client", "what", "reason", "shouldHave", "firstTime", "noticed", "selfScore"];
 
 const FIELD_MISSING: Record<FieldKey, string> = {
   occurredOn: "a data",
@@ -101,6 +105,7 @@ const FIELD_MISSING: Record<FieldKey, string> = {
   shouldHave: "como deverias ter feito",
   firstTime: "se foi a primeira vez",
   noticed: "se percebeste o erro",
+  selfScore: "a gravidade (0 a 10)",
 };
 
 function fieldOk(item: IneficaciaItemDraft, field: FieldKey, range: { min: string; max: string }): boolean {
@@ -119,6 +124,8 @@ function fieldOk(item: IneficaciaItemDraft, field: FieldKey, range: { min: strin
       return item.firstTime === true || (item.firstTime === false && item.lastTime.trim().length >= LIMITS.lastTime.min);
     case "noticed":
       return item.noticed !== null;
+    case "selfScore":
+      return isSelfScore(item.selfScore);
   }
 }
 
@@ -266,6 +273,7 @@ export function IneficaciaReportForm({
             lastTime: it.lastTime,
             occurredOn: it.occurredOn,
             noticed: it.noticed,
+            selfScore: it.selfScore,
           })),
           // Assinar é declarar — o texto da declaração entra no hash.
           declaration: true,
@@ -389,7 +397,7 @@ export function IneficaciaReportForm({
               <p className="text-[11.5px] leading-relaxed text-black/60">
                 Podes assinar um relatório sempre que quiseres, com um ou mais erros dos últimos {REPORT_LOOKBACK_DAYS} dias.
                 Por cada erro, descreve o que aconteceu e em que cliente, o motivo, como achas que deverias ter feito, se
-                foi a primeira vez, a data e se te apercebeste do erro.
+                foi a primeira vez, a data, se te apercebeste do erro e a gravidade, de 0 a 10.
                 <strong className="font-bold text-black/75"> Reportar é o que protege: erro de aprendizagem não é erro de recorrência.</strong>
               </p>
             </div>
@@ -995,9 +1003,81 @@ function ItemCard({
               })}
             </div>
           </Step>
+
+          <Step
+            id={fieldId(item.key, "selfScore")}
+            label={`Na tua autoavaliação, qual é a gravidade deste erro, de 0 a ${MAX_POINTS}?`}
+            ok={ok("selfScore")}
+          >
+            <p className="-mt-0.5 mb-2.5 text-[11.5px] leading-relaxed text-black/55">
+              {MAX_POINTS} é o mais grave. Considera tudo acima para seres transparente com a tua equipa.
+            </p>
+            <SelfScorePicker value={item.selfScore} disabled={disabled} onChange={(v) => onChange({ selfScore: v })} />
+          </Step>
         </div>
       )}
     </article>
+  );
+}
+
+/** As cores das bandas da escala, no papel da folha. */
+const SELF_BAND: Record<ReturnType<typeof bandOf>["id"], string> = {
+  zero: "#6b7280",
+  baixo: "#343ED7",
+  medio: "#783DF5",
+  alto: "#C535C9",
+  critico: "#E11D48",
+};
+
+/** A autoavaliação: os 11 valores lado a lado, com a banda da escala do
+ *  valor escolhido por baixo. */
+function SelfScorePicker({
+  value,
+  disabled,
+  onChange,
+}: {
+  value: number | null;
+  disabled: boolean;
+  onChange: (v: number) => void;
+}) {
+  const band = value !== null ? bandOf(value) : null;
+  return (
+    <div>
+      <div role="radiogroup" aria-label="Gravidade de 0 a 10" className="grid grid-cols-11 gap-1 sm:gap-1.5">
+        {Array.from({ length: MAX_POINTS + 1 }, (_, n) => {
+          const on = value === n;
+          const color = SELF_BAND[bandOf(n).id];
+          return (
+            <button
+              key={n}
+              type="button"
+              role="radio"
+              aria-checked={on}
+              disabled={disabled}
+              onClick={() => onChange(n)}
+              className={`h-10 rounded-lg border text-[13px] font-bold tabular-nums transition sm:h-11 sm:text-[14px] ${
+                on ? "text-white shadow-[0_8px_20px_-10px_rgba(0,0,0,0.6)]" : "border-black/12 bg-white/80 text-black/65 hover:border-black/35"
+              }`}
+              style={on ? { background: color, borderColor: color } : undefined}
+            >
+              {n}
+            </button>
+          );
+        })}
+      </div>
+      <div className="mt-1.5 flex justify-between text-[10.5px] text-black/40">
+        <span>Sem gravidade</span>
+        <span>Mais grave</span>
+      </div>
+      {band && value !== null && (
+        <p className="mt-2 text-[12px] text-black/65">
+          <span className="font-bold" style={{ color: SELF_BAND[band.id] }}>
+            {band.label}
+          </span>{" "}
+          — {band.hint}
+        </p>
+      )}
+    </div>
   );
 }
 

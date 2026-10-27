@@ -11,6 +11,7 @@ import {
   DECLARATION_TEXT,
   formatISODate,
   formatLisbonDateTime,
+  MAX_POINTS,
   noticedLabel,
   reasonLabel,
   type IneficaciaItem,
@@ -114,6 +115,12 @@ export function ItemView({
         <Row label="Primeira vez?">
           {item.firstTime ? "Sim — é a primeira vez." : <>Não — última vez: <span className="text-white/90">{item.lastTime || "—"}</span></>}
         </Row>
+        {item.selfScore !== null && (
+          <Row label={me ? "Gravidade, na tua avaliação" : "Gravidade, na avaliação do consultor"}>
+            <span className="font-semibold tabular-nums text-white">{item.selfScore}</span>
+            <span className="text-white/45"> / {MAX_POINTS} · {bandOf(item.selfScore).label}</span>
+          </Row>
+        )}
         {item.score && (
           <Row label={`Pontuação · ${item.score.byName || "direção"} · ${formatLisbonDateTime(item.score.at)}`}>
             {item.score.note ? <p className="whitespace-pre-wrap">{item.score.note}</p> : <span className="text-white/40">Sem nota.</span>}

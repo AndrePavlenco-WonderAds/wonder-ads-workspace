@@ -60,7 +60,16 @@ const EXAMPLE = suggestScore({
   noticed: "cliente",
 });
 
-const FIELDS = ["O que aconteceu", "Cliente ou projeto", "Motivo", "Como devias ter feito", "Primeira vez?", "Data", "Quem deu pelo erro"];
+const FIELDS = [
+  "O que aconteceu",
+  "Cliente ou projeto",
+  "Motivo",
+  "Como devias ter feito",
+  "Primeira vez?",
+  "Data",
+  "Quem deu pelo erro",
+  "Gravidade de 0 a 10, na tua avaliação",
+];
 
 const EXAMPLES = ["Prazo falhado sem aviso", "Trabalho refeito mais de uma vez", "Erro visível para o cliente", "Processo não seguido", "Report não enviado"];
 
