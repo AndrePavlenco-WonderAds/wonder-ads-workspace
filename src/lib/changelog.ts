@@ -13,6 +13,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.20",
+    date: "2026-10-27",
+    title: "Ineficácias e Probation — acertos nos gráficos",
+    highlights: [
+      "**📐 A linha dos 30 dias do Probation já mostra o «2.ª avaliação» inteiro**, e na janela das Ineficácias as datas ficam dentro da caixa.",
+      "**🧭 As etapas numeradas têm a linha na vertical também no telemóvel**, e a linha termina no último passo.",
+    ],
+  },
+  {
     version: "78.19",
     date: "2026-10-27",
     title: "Documentação — Ineficácias e Probation",

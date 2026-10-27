@@ -37,7 +37,10 @@ export function ProbationTimeline() {
             { day: 30, title: "Dia 30", sub: "2.ª avaliação" },
           ].map((m) => (
             <div key={m.day}>
-              <div className="absolute top-0 -translate-x-1/2 text-center" style={{ left: pos(m.day) }}>
+              <div
+                className={`absolute top-0 ${m.day === 0 ? "-translate-x-2 text-left" : m.day === 30 ? "-translate-x-[calc(100%-0.5rem)] text-right" : "-translate-x-1/2 text-center"}`}
+                style={{ left: pos(m.day) }}
+              >
                 <p className="whitespace-nowrap text-[14px] font-semibold text-white">{m.title}</p>
                 <p className="whitespace-nowrap text-[12px] text-white/50">{m.sub}</p>
               </div>

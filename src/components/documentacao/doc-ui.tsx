@@ -186,8 +186,7 @@ export function StageFlow({
     <ol className="relative grid gap-6 md:grid-cols-3 md:gap-5">
       <span
         aria-hidden
-        className="absolute bottom-6 left-5 top-6 w-px md:bottom-auto md:left-6 md:right-0 md:top-5 md:h-px md:w-auto"
-        style={{ background: "linear-gradient(90deg, #343ED7, #783DF5 55%, #C535C9)" }}
+        className="absolute bottom-6 left-5 top-6 w-px bg-[linear-gradient(180deg,#343ED7,#783DF5_50%,#C535C9)] md:bottom-auto md:left-6 md:right-0 md:top-5 md:h-px md:w-auto md:bg-[linear-gradient(90deg,#343ED7,#783DF5_40%,#C535C9_72%,transparent)]"
       />
       {stages.map((s, i) => (
         <li key={i} className="relative pl-14 md:pl-0 md:pt-16">

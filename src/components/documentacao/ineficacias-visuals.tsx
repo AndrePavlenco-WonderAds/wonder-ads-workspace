@@ -129,11 +129,11 @@ export function WindowTimeline() {
         <div className="relative h-44 min-w-[560px]">
           {/* A janela que conta */}
           <div
-            className="absolute bottom-12 top-10 rounded-2xl border border-[#783DF5]/40 bg-[#783DF5]/[0.10]"
+            className="absolute bottom-8 top-10 rounded-2xl border border-[#783DF5]/40 bg-[#783DF5]/[0.10]"
             style={{ left: pos(windowStart), width: `calc(${pos(0)} - ${pos(windowStart)})` }}
           />
           <p
-            className="absolute bottom-3 text-[12px] font-medium text-[#c4a6ff]"
+            className="absolute bottom-0 text-[12px] font-medium text-[#c4a6ff]"
             style={{ left: pos(windowStart) }}
           >
             Os últimos {WINDOW_DAYS} dias — contam
@@ -143,7 +143,7 @@ export function WindowTimeline() {
           <div className="absolute inset-x-0 top-[6.25rem] h-px bg-white/15" />
 
           {/* Hoje */}
-          <div className="absolute bottom-10 top-6 w-px bg-white" style={{ left: pos(0) }} />
+          <div className="absolute bottom-8 top-6 w-px bg-white" style={{ left: pos(0) }} />
           <span
             className="absolute top-0 -translate-x-1/2 rounded-full bg-white px-2 py-0.5 text-[11.5px] font-semibold text-[#07080d]"
             style={{ left: pos(0) }}

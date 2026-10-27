@@ -378,7 +378,7 @@ export default async function IneficaciasDocPage() {
                 { term: "Repetido", detail: `${signed(SCORE_RULES.repeated)} (primeira vez: 0).` },
                 {
                   term: "Tipo de erro",
-                  detail: ERROR_TYPES.map((t) => `${t.label.replace("Erro de ", "")} ${signed(SCORE_RULES.errorType[t.id])}`).join(" · "),
+                  detail: ERROR_TYPES.map((t) => `${t.label.replace("Erro de a", "A").replace("Erro de r", "R")} ${signed(SCORE_RULES.errorType[t.id])}`).join(" · "),
                 },
                 {
                   term: "Quem deu pelo erro",
