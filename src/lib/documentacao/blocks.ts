@@ -9,8 +9,9 @@ export type DocsPage = {
   id: string;
   href: string;
   label: string;
-  /** Capa do cartão no hub, em public/ (gerada com o Gemini, 4:3). */
-  image: string;
+  /** Capa do cartão no hub, em public/ (gerada com o Gemini, 4:3). Sem
+   *  capa, o hub mostra um painel provisório até ela ser gerada. */
+  image?: string;
   /** Pastilha por baixo do título no hub (estilo da tag Growth). */
   tag?: string;
 };
@@ -63,6 +64,19 @@ export const DOCS_BLOCKS: DocsBlock[] = [
         label: "Matriz de Talento Wonder",
         image: "/documentacao/matriz-talento-capa.jpg",
       },
+    ],
+  },
+  {
+    id: "ineficacias",
+    title: "Ineficácias & Probation",
+    // Toda a equipa: as ineficácias e o probation aplicam-se a todos.
+    audience: { depts: ["SEO", "ADS", "Web", "Commercial"] },
+    audienceLabel: "toda a equipa",
+    updatedAt: "2026-10-27",
+    pages: [
+      // Capas por gerar: o Gemini ficou sem créditos (2026-10-27).
+      { id: "ineficacias", href: "/documentacao/ineficacias", label: "Ineficácias" },
+      { id: "probation", href: "/documentacao/probation", label: "Probation" },
     ],
   },
 ];

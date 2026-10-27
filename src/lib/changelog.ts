@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.19",
+    date: "2026-10-27",
+    title: "Documentação — Ineficácias e Probation",
+    highlights: [
+      "**📕 Bloco novo «Ineficácias & Probation», para toda a equipa**, com duas páginas.",
+      "**⚖️ Ineficácias:** aprendizagem vs recorrência, como se reporta (RH-03), a escala de 0 a 10 em barras, PA e NO na janela dos 30 dias, a escada dos níveis e três cenários com os contadores. A calculadora da direção só aparece a SuperAdmins.",
+      "**⏳ Probation:** quando se ativa, como se monta, a linha dos 30 dias com as decisões aos 15 e aos 30, os três desfechos, um check-in de exemplo, o apoio e como tudo chega pela app.",
+      "**🖼️ Capas por gerar:** o Gemini ficou sem créditos; os cartões têm um painel provisório.",
+    ],
+  },
+  {
     version: "78.18",
     date: "2026-10-27",
     title: "Bónus NPS — a data de cada resposta na lista de projetos",

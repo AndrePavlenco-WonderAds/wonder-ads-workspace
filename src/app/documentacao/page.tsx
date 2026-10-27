@@ -8,6 +8,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { BookOpen } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { DocsClosed } from "@/components/documentacao/doc-ui";
 import { DOCS_OPEN_TO_TEAM } from "@/lib/documentacao/access";
@@ -64,14 +65,24 @@ export default async function DocumentacaoPage() {
                 aria-hidden
                 className="relative block aspect-[4/3] overflow-hidden rounded-[20px] bg-white/[0.04]"
               >
-                <Image
-                  src={c.image}
-                  alt=""
-                  fill
-                  sizes="(min-width: 1024px) 400px, (min-width: 640px) 50vw, 100vw"
-                  priority={i < 3}
-                  className="object-cover transition duration-500 group-hover:scale-[1.03]"
-                />
+                {c.image ? (
+                  <Image
+                    src={c.image}
+                    alt=""
+                    fill
+                    sizes="(min-width: 1024px) 400px, (min-width: 640px) 50vw, 100vw"
+                    priority={i < 3}
+                    className="object-cover transition duration-500 group-hover:scale-[1.03]"
+                  />
+                ) : (
+                  // Provisório, até a capa do Gemini estar gerada.
+                  <span
+                    className="absolute inset-0 flex items-center justify-center"
+                    style={{ background: "radial-gradient(70% 60% at 50% 55%, rgba(120,61,245,0.35), transparent 70%)" }}
+                  >
+                    <BookOpen className="h-10 w-10 text-white/35" />
+                  </span>
+                )}
               </Link>
               <div className="px-2 pb-5 pt-5">
                 <h2 className="text-[1.35rem] font-semibold leading-tight tracking-[-0.02em] text-white">{c.label}</h2>

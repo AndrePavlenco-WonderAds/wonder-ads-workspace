@@ -174,6 +174,38 @@ export function Bullets({ items }: { items: ReactNode[] }) {
   );
 }
 
+/** Uma sequência de etapas ligadas por uma linha no gradiente da marca — na
+ *  horizontal a partir de md, na vertical no telemóvel. Só para conteúdo que
+ *  é mesmo uma sequência: os números dizem a ordem. */
+export function StageFlow({
+  stages,
+}: {
+  stages: Array<{ title: ReactNode; body: ReactNode; foot?: ReactNode }>;
+}) {
+  return (
+    <ol className="relative grid gap-6 md:grid-cols-3 md:gap-5">
+      <span
+        aria-hidden
+        className="absolute bottom-6 left-5 top-6 w-px md:bottom-auto md:left-6 md:right-0 md:top-5 md:h-px md:w-auto"
+        style={{ background: "linear-gradient(90deg, #343ED7, #783DF5 55%, #C535C9)" }}
+      />
+      {stages.map((s, i) => (
+        <li key={i} className="relative pl-14 md:pl-0 md:pt-16">
+          <span
+            className="absolute left-0 top-0 flex h-10 w-10 items-center justify-center rounded-full text-[15px] font-semibold text-white ring-4 ring-[#07080d]"
+            style={{ background: ["#343ED7", "#783DF5", "#C535C9"][i % 3] }}
+          >
+            {i + 1}
+          </span>
+          <p className="text-[16px] font-semibold text-white">{s.title}</p>
+          <div className="mt-1.5 text-[14px] leading-relaxed text-white/60">{s.body}</div>
+          {s.foot && <div className="mt-3">{s.foot}</div>}
+        </li>
+      ))}
+    </ol>
+  );
+}
+
 export function Strong({ children }: { children: ReactNode }) {
   return <strong className="font-semibold text-white">{children}</strong>;
 }
