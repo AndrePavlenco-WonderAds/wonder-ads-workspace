@@ -13,6 +13,12 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.22",
+    date: "2026-10-27",
+    title: "Documentação — capa do Probation",
+    highlights: ["**🖼️ O cartão do Probation tem capa:** o cronómetro com o colega a ajudar a subir a escada."],
+  },
+  {
     version: "78.21",
     date: "2026-10-27",
     title: "Ineficácias — PA e NO só voltam a zero no 1:1",
