@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.41",
+    date: "2026-10-28",
+    title: "Documentação: capa da Folga de custos",
+    highlights: [
+      "**🖼️ O cartão «Folga de custos» na Documentação tem capa** e o subtítulo passa a «Como atribuir extras».",
+    ],
+  },
+  {
     version: "78.40",
     date: "2026-10-28",
     title: "Folga de custos: aviso à direção, extras ligados a tarefas e tickets, página na Documentação",

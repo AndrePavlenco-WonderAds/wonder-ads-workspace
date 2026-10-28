@@ -84,7 +84,9 @@ export const DOCS_BLOCKS: DocsBlock[] = [
         id: "folga-custos",
         href: "/documentacao/folga-custos",
         label: "Folga de custos",
-        tag: "Extras com critério",
+        // Capa dada pelo André (2026-10-28).
+        image: "/documentacao/folga-custos-capa.jpg",
+        tag: "Como atribuir extras",
       },
     ],
   },
