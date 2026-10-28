@@ -191,19 +191,44 @@ export function RoadmapBoard({
   // Debounced auto-save: any roadmap mutation triggers a PUT after 600ms.
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const skipNextSave = useRef(true);
+  // The roadmap still waiting for its debounced PUT — null once sent.
+  const pendingSave = useRef<Roadmap | null>(null);
   useEffect(() => {
     if (skipNextSave.current) {
       skipNextSave.current = false;
       return;
     }
+    pendingSave.current = roadmap;
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
+      pendingSave.current = null;
       void persistRoadmap(roadmap, setSaving);
     }, 600);
     return () => {
       if (saveTimer.current) clearTimeout(saveTimer.current);
     };
   }, [roadmap]);
+
+  // v78.26: leaving the page must never drop work. Clicking any link (the
+  // «← client» above the title, the header back pill, the browser back
+  // button) within 600ms of the last edit used to cancel the pending PUT —
+  // now it is sent straight away. Closing or reloading the tab sends it
+  // with keepalive so it survives the unload.
+  useEffect(() => {
+    const flush = (unloading: boolean) => {
+      const pending = pendingSave.current;
+      if (!pending) return;
+      pendingSave.current = null;
+      if (saveTimer.current) clearTimeout(saveTimer.current);
+      void persistRoadmap(pending, () => {}, unloading);
+    };
+    const onPageHide = () => flush(true);
+    window.addEventListener("pagehide", onPageHide);
+    return () => {
+      window.removeEventListener("pagehide", onPageHide);
+      flush(false);
+    };
+  }, []);
 
   const week = useMemo(() => currentWeekIndex(roadmap), [roadmap]);
   const totalWeeks = useMemo(() => roadmapWeeks(roadmap), [roadmap]);
@@ -1818,13 +1843,18 @@ function tryParseJson<T>(raw: string): T | null {
 async function persistRoadmap(
   roadmap: Roadmap,
   setSaving: (v: boolean) => void,
+  unloading = false,
 ) {
   setSaving(true);
+  const body = JSON.stringify(roadmap);
   try {
     const res = await fetch(`/api/roadmaps/${roadmap.clientSlug}`, {
       method: "PUT",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify(roadmap),
+      body,
+      // keepalive lets the PUT outlive a closing tab, but browsers refuse
+      // keepalive bodies over 64KB — a big roadmap goes as a normal request.
+      keepalive: unloading && body.length < 60_000,
     });
     if (!res.ok) {
       const data = (await res.json().catch(() => null)) as {

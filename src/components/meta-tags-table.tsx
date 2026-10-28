@@ -36,14 +36,26 @@ export function MetaTagsTable({
 }: Props) {
   const [rows, setRows] = useState<MetaTagsRow[]>(initialRows);
   const [savingIds, setSavingIds] = useState<Set<string>>(new Set());
-  const saveTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(
-    new Map(),
-  );
+  // Debounced saves still waiting, with the save itself so they can be
+  // sent early.
+  const saveTimers = useRef<
+    Map<string, { timer: ReturnType<typeof setTimeout>; run: () => void }>
+  >(new Map());
 
+  // v78.26: leaving the page sends what was still waiting for the debounce
+  // instead of dropping it.
   useEffect(() => {
     const timers = saveTimers.current;
+    const flush = () => {
+      for (const p of [...timers.values()]) {
+        clearTimeout(p.timer);
+        p.run();
+      }
+    };
+    window.addEventListener("pagehide", flush);
     return () => {
-      for (const t of timers.values()) clearTimeout(t);
+      window.removeEventListener("pagehide", flush);
+      flush();
     };
   }, []);
 
@@ -67,6 +79,8 @@ export function MetaTagsTable({
             method: "POST",
             headers: { "content-type": "application/json" },
             body: JSON.stringify({ resultId, rowId, patch }),
+            // Small body: survives a closing tab.
+            keepalive: true,
           },
         );
       } catch (err) {
@@ -97,15 +111,15 @@ export function MetaTagsTable({
       } as Partial<MetaTagsRow>);
       const key = `${rowId}:${field}`;
       const existing = saveTimers.current.get(key);
-      if (existing) clearTimeout(existing);
-      const t = setTimeout(() => {
+      if (existing) clearTimeout(existing.timer);
+      const run = () => {
+        saveTimers.current.delete(key);
         void persist(rowId, {
           [field]: value,
           [lengthField]: value.length,
         } as Partial<MetaTagsRow>);
-        saveTimers.current.delete(key);
-      }, 700);
-      saveTimers.current.set(key, t);
+      };
+      saveTimers.current.set(key, { timer: setTimeout(run, 700), run });
     },
     [editLocal, persist],
   );

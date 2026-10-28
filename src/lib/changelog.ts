@@ -13,6 +13,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.26",
+    date: "2026-10-28",
+    title: "SEO — sair da página já não perde o trabalho do roadmap",
+    highlights: [
+      "**💾 Roadmap: o que mudas grava-se mesmo que saias logo a seguir.** A gravação automática esperava 600 ms depois da última alteração e era cancelada se saísses antes — pela seta «← cliente» junto ao título, pela do topo ou pelo «voltar» do browser. Agora, ao sair, grava na hora; ao fechar ou recarregar o separador também.",
+      "**🛡️ O mesmo nas tabelas de meta tags e de revisão do SEO**, que tinham o mesmo problema com o texto escrito nos últimos instantes.",
+    ],
+  },
+  {
     version: "78.25",
     date: "2026-10-28",
     title: "Documentação — resumo executivo em cada página; Bónus NPS com 3 projetos",

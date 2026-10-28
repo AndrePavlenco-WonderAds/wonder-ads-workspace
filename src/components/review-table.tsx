@@ -137,7 +137,9 @@ export function ReviewTable({
   const [archiveError, setArchiveError] = useState<string | null>(null);
   // Per-item per-field debounce timers for text edits. Picker / date /
   // pill changes save immediately (no debounce).
-  const textTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const textTimers = useRef<
+    Map<string, { timer: ReturnType<typeof setTimeout>; run: () => void }>
+  >(new Map());
   // Track items the user is actively editing so the auto-poll doesn't
   // clobber their in-flight typing. Cleared on debounced-save flush.
   const dirtyIds = useRef<Set<string>>(new Set());
@@ -161,6 +163,8 @@ export function ReviewTable({
             method: "PATCH",
             headers: { "content-type": "application/json" },
             body: JSON.stringify(patch),
+            // Small body: survives a closing tab.
+            keepalive: true,
           },
         );
         if (!res.ok) {
@@ -200,23 +204,33 @@ export function ReviewTable({
       dirtyIds.current.add(id);
       const key = `${id}:${field}`;
       const existing = textTimers.current.get(key);
-      if (existing) clearTimeout(existing);
-      const t = setTimeout(() => {
+      if (existing) clearTimeout(existing.timer);
+      const run = () => {
+        textTimers.current.delete(key);
         void persist(id, { [field]: value } as Partial<ReviewItem>).then(() => {
           dirtyIds.current.delete(id);
         });
-        textTimers.current.delete(key);
-      }, TEXT_DEBOUNCE_MS);
-      textTimers.current.set(key, t);
+      };
+      textTimers.current.set(key, { timer: setTimeout(run, TEXT_DEBOUNCE_MS), run });
     },
     [updateLocal, persist],
   );
 
-  // Flush any pending debounced saves when unmounting (e.g. tab close)
+  // Flush any pending debounced saves when leaving the page (a link, the
+  // browser back button, closing the tab). Until v78.26 this only cleared
+  // the timers, which threw the last edit away.
   useEffect(() => {
     const timers = textTimers.current;
+    const flush = () => {
+      for (const p of [...timers.values()]) {
+        clearTimeout(p.timer);
+        p.run();
+      }
+    };
+    window.addEventListener("pagehide", flush);
     return () => {
-      for (const t of timers.values()) clearTimeout(t);
+      window.removeEventListener("pagehide", flush);
+      flush();
     };
   }, []);
 
