@@ -287,7 +287,6 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
         ["Apresentar ao cliente um novo roadmap", false],
         ["Dizer ao cliente que se calhar a receção tem que ser despedida", false],
         ["Sugerir na call ao cliente a nossa consultoria de vendas, orçamentar depois com a equipa interna e dar retorno ao cliente o mais rápido possível", true],
-        ["Dizer ao cliente que a melhor estratégia é uma formação comercial com a receção (primeiro gate do cliente) e para isso vamos ver internamente o melhor preço/roadmap para o cliente dando um desconto de cliente. Escalar depois ao André/Alex.", false],
         ["Todas as anteriores estão corretas", false],
       ],
     },

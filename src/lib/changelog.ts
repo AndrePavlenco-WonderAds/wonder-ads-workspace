@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.24",
+    date: "2026-10-28",
+    title: "Formação — Reporting e comunicação, pergunta 7 sem a opção quase igual à certa",
+    highlights: [
+      "**✂️ Especialização SEO, quiz «Reporting e comunicação», pergunta 7:** saiu a opção da formação comercial com desconto e escalar ao André/Alex, que era quase igual à certa. Ficam 4 opções e uma só certa: sugerir na call a nossa consultoria de vendas, orçamentar com a equipa interna e dar retorno o mais rápido possível.",
+    ],
+  },
+  {
     version: "78.23",
     date: "2026-10-27",
     title: "Ineficácias — a gravidade na autoavaliação do consultor",
