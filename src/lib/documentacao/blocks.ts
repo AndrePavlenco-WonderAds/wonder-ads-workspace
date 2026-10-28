@@ -14,6 +14,8 @@ export type DocsPage = {
   image?: string;
   /** Pastilha por baixo do título no hub (estilo da tag Growth). */
   tag?: string;
+  /** Aviso de acesso restrito por baixo do título, com cadeado (v78.30). */
+  restricted?: string;
 };
 
 export type DocsBlock = {
@@ -51,6 +53,24 @@ export const DOCS_BLOCKS: DocsBlock[] = [
     ],
   },
   {
+    id: "bonus-semestral",
+    title: "Bónus semestral",
+    // Toda a equipa: o bónus sai das ineficácias, que se aplicam a todos.
+    audience: { depts: ["SEO", "ADS", "Web", "Commercial"] },
+    audienceLabel: "toda a equipa",
+    updatedAt: "2026-10-28",
+    pages: [
+      {
+        id: "bonus-semestral",
+        href: "/documentacao/bonus-semestral",
+        label: "Bónus semestral",
+        // Capa dada pelo André (2026-10-28).
+        image: "/documentacao/bonus-semestral-capa.jpg",
+        tag: "Empreender dentro da WonderAds",
+      },
+    ],
+  },
+  {
     id: "matriz-talento",
     title: "Matriz de Talento Wonder",
     // Só direção e treinadores: é a grelha com que se avalia a equipa.
@@ -63,6 +83,7 @@ export const DOCS_BLOCKS: DocsBlock[] = [
         href: "/documentacao/matriz-talento",
         label: "Matriz de Talento Wonder",
         image: "/documentacao/matriz-talento-capa.jpg",
+        restricted: "Só para SuperAdmins e Treinadores",
       },
     ],
   },

@@ -208,9 +208,10 @@ export function StageFlow({
 
 /** O fecho de cada página (v78.25): o protocolo contado por extenso, em 3 a
  *  5 parágrafos — o que é, porquê e como se faz — para quem quer ler a regra
- *  de seguida em vez de a montar a partir das secções. Em ecrãs largos o
- *  texto corre em duas colunas, para não deixar meio cartão vazio (v78.28),
- *  e fecha com a assinatura e a data da última atualização. */
+ *  de seguida em vez de a montar a partir das secções. Uma só coluna, a
+ *  toda a largura do cartão, que se prolonga para baixo (pedido do André,
+ *  v78.30 — as duas colunas da v78.28 saíram), e fecha com a assinatura e a
+ *  data da última atualização. */
 export function ExecutiveSummary({
   title,
   paragraphs,
@@ -227,13 +228,9 @@ export function ExecutiveSummary({
         <span aria-hidden className="absolute inset-x-0 top-0 h-1" style={{ background: "var(--brand-gradient)" }} />
         <p className="text-[13px] font-medium text-[#c4a6ff]">Resumo executivo do protocolo</p>
         <h2 className="mt-1 text-[1.6rem] font-semibold leading-tight tracking-[-0.02em] text-white sm:text-[1.85rem]">{title}</h2>
-        <div className="mt-6 max-w-[70ch] text-[15.5px] leading-[1.8] text-white/75 sm:text-[16px] lg:max-w-none lg:columns-2 lg:gap-14">
+        <div className="mt-6 space-y-5 text-[15.5px] leading-[1.85] text-white/75 sm:text-[16.5px]">
           {paragraphs.map((p, i) => (
-            // Sem break-inside-avoid: um parágrafo pode continuar na coluna
-            // seguinte, e as duas ficam da mesma altura.
-            <p key={i} className="mb-5 last:mb-0">
-              {p}
-            </p>
+            <p key={i}>{p}</p>
           ))}
         </div>
         <footer className="mt-8 border-t border-white/10 pt-5">

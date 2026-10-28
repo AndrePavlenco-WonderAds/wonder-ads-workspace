@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.30",
+    date: "2026-10-28",
+    title: "Documentação — Bónus semestral",
+    highlights: [
+      "**🗓️ Bloco novo «Bónus semestral», logo a seguir aos bónus, para toda a equipa:** até 600 € duas vezes por ano (janeiro–junho e julho–dezembro), conforme as ineficácias do semestre. 0–2 NO e 0–9 PA → 600 €; 3–4 NO ou 10–15 PA → 400 €; 5–6 NO ou 16–20 PA → 200 €; 7+ NO ou 21+ PA → 0 €. Conta o pior dos dois, e o 1:1 de nível não põe estes contadores a zero.",
+      "**📊 O painel do semestre:** cada pessoa vê o seu NO, o seu PA e o bónus se o semestre acabasse hoje; a direção vê a equipa toda.",
+      "**🔗 Nas Ineficácias, o «Objetivo semestral» (com o X por definir) passa a ser a tabela do bónus semestral, com o link para a página.**",
+      "**📜 Os resumos executivos voltam a uma só coluna**, a toda a largura, que se prolonga para baixo.",
+      "**🔒 O cartão da Matriz de Talento diz que é só para SuperAdmins e Treinadores.**",
+    ],
+  },
+  {
     version: "78.29",
     date: "2026-10-28",
     title: "Documentação — colunas do resumo com a mesma altura",

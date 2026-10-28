@@ -8,7 +8,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { BookOpen } from "lucide-react";
+import { BookOpen, Lock } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { DocsClosed } from "@/components/documentacao/doc-ui";
 import { DOCS_OPEN_TO_TEAM } from "@/lib/documentacao/access";
@@ -90,6 +90,12 @@ export default async function DocumentacaoPage() {
                   // Sem fundo: só as letras, no gradiente da marca, que desliza
                   // por elas de tempos a tempos.
                   <p className="docs-brand-flow-text mt-1.5 text-[13.5px] font-semibold tracking-[0.01em]">{c.tag}</p>
+                )}
+                {c.restricted && (
+                  <p className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-white/12 bg-white/[0.04] px-2.5 py-1 text-[12px] font-medium text-white/70">
+                    <Lock className="h-3 w-3" />
+                    {c.restricted}
+                  </p>
                 )}
               </div>
               <Link

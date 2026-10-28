@@ -13,6 +13,8 @@ import { DocHero, DocSection, DocsClosed, ExecutiveSummary, Note, Rows, StageFlo
 import { SectionNav } from "@/components/documentacao/section-nav";
 import { LevelStairs, PhaseReset, PointsScale, ScenarioCard } from "@/components/documentacao/ineficacias-visuals";
 import { formatDate } from "@/lib/dates";
+import { SEMESTER_TIERS, tierRange } from "@/lib/documentacao/semestral-bonus";
+import { formatEur } from "@/lib/proposals/value";
 import { getDocsContext } from "@/lib/documentacao/server";
 import {
   ERROR_TYPES,
@@ -42,7 +44,7 @@ const NAV = [
   { id: "pa-e-no", label: "PA e NO" },
   { id: "niveis", label: "Níveis" },
   { id: "cenarios", label: "Cenários" },
-  { id: "objetivo", label: "Objetivo semestral" },
+  { id: "bonus-semestral", label: "Bónus semestral" },
 ];
 const NAV_ALL = [...NAV, { id: "resumo", label: "Resumo" }];
 const NAV_ADMIN = [...NAV, { id: "calculadora", label: "Calculadora" }, { id: "resumo", label: "Resumo" }];
@@ -239,23 +241,31 @@ export default async function IneficaciasDocPage() {
           </div>
         </DocSection>
 
-        <DocSection id="objetivo" title="Objetivo semestral">
-          <div className="flex flex-col gap-5 rounded-3xl border border-white/10 bg-white/[0.02] p-6 sm:flex-row sm:items-center sm:p-7">
-            <div className="shrink-0">
-              <p className="text-[13px] text-white/55">Por mês, menos de</p>
-              <p className="text-[3.2rem] font-semibold leading-none tracking-[-0.02em] text-white">
-                X <span className="text-[1.2rem] font-medium text-white/70">ineficácias</span>
-              </p>
+        <DocSection
+          id="bonus-semestral"
+          title="Bónus semestral"
+          lead={`As ineficácias de cada semestre decidem um bónus de até ${formatEur(SEMESTER_TIERS[0].eur)}, duas vezes por ano.`}
+        >
+          <Link
+            href="/documentacao/bonus-semestral"
+            className="group flex flex-col gap-5 rounded-3xl border border-white/10 bg-white/[0.02] p-6 transition hover:border-white/25 sm:flex-row sm:items-center sm:p-7"
+          >
+            <div className="grid flex-1 grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-4">
+              {SEMESTER_TIERS.map((t, k) => (
+                <div key={t.eur}>
+                  <p className={`text-[1.7rem] font-semibold leading-none tabular-nums ${t.eur === 0 ? "text-white/45" : "text-white"}`}>
+                    {formatEur(t.eur)}
+                  </p>
+                  <p className="mt-1.5 text-[13px] text-white/60">
+                    NO {tierRange(k, "no")} · PA {tierRange(k, "pa")}
+                  </p>
+                </div>
+              ))}
             </div>
-            <div className="sm:border-l sm:border-white/10 sm:pl-6">
-              <p className="text-[15.5px] leading-relaxed text-white/80">
-                Além da escala, é um dos objetivos do semestre. Se não for cumprido, tem impacto no bónus semestral.
-              </p>
-              <span className="mt-3 inline-block rounded-full border border-amber-400/40 bg-amber-400/15 px-2.5 py-1 text-[12.5px] font-medium text-amber-200">
-                X por definir pela direção
-              </span>
-            </div>
-          </div>
+            <span className="inline-flex h-11 shrink-0 items-center justify-center rounded-2xl bg-white px-5 text-[14px] font-semibold text-[#07080d] transition group-hover:bg-white/90">
+              Ver o bónus semestral
+            </span>
+          </Link>
         </DocSection>
 
         {admin && (
@@ -352,10 +362,11 @@ export default async function IneficaciasDocPage() {
               pode levar diretamente ao probation, por decisão fundamentada da direção.
             </>,
             <>
-              Além da escala há um objetivo semestral: ficar abaixo de um número de ineficácias por mês, ainda a definir pela
-              direção, que, se não for cumprido, tem impacto no bónus semestral. O que protege cada pessoa é reportar cedo e com
-              transparência: um erro que o próprio reporta pesa menos do que um apontado por outros, e um padrão identificado a
-              tempo resolve-se num 1:1 antes de chegar ao fim da escala.
+              Além da escala, as ineficácias de cada semestre decidem o bónus semestral, de até{" "}
+              {formatEur(SEMESTER_TIERS[0].eur).replace(" ", "\u00a0")}: conta o número e os pontos das ineficácias de janeiro a
+              junho e de julho a dezembro, sem reinício no 1:1. O que protege cada pessoa é reportar cedo e com transparência: um
+              erro que o próprio reporta pesa menos do que um apontado por outros, e um padrão identificado a tempo resolve-se num
+              1:1 antes de chegar ao fim da escala.
             </>,
           ]}
         />
