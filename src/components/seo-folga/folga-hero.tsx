@@ -86,7 +86,20 @@ export function FolgaHero({ s, daysLeft }: { s: FolgaSummary; daysLeft: number }
 }
 
 function Meter({ s }: { s: FolgaSummary }) {
-  if (s.state === "lite" || s.state === "unset") {
+  if (s.state === "lite") {
+    // Lite: a barra já nasce preenchida — não há folga para gastar.
+    return (
+      <div className="mt-8">
+        <div className="relative flex h-7 items-center justify-center overflow-hidden rounded-full bg-gradient-to-r from-amber-500/80 via-amber-400/80 to-[#C535C9]/70 ring-1 ring-inset ring-amber-300/30">
+          <span className="text-[12px] font-bold uppercase tracking-[0.14em] text-[#1a1206]">Preenchida · topped up</span>
+        </div>
+        <p className="mt-2 text-[12.5px] text-white/45">
+          Lança os extras como «cobrado ao cliente» para ficarem no registo do projeto.
+        </p>
+      </div>
+    );
+  }
+  if (s.state === "unset") {
     return (
       <div className="mt-8">
         <div
@@ -97,9 +110,7 @@ function Meter({ s }: { s: FolgaSummary }) {
           }}
         />
         <p className="mt-2 text-[12.5px] text-white/45">
-          {s.state === "lite"
-            ? "A barra está sempre cheia: lança os extras como «cobrado ao cliente» para ficarem no registo."
-            : "Sem folga definida, os extras lançados como «sai da folga» deixam o saldo negativo."}
+          Sem folga definida, os extras lançados como «sai da folga» deixam o saldo negativo.
         </p>
       </div>
     );
@@ -221,7 +232,9 @@ function MonthSteps({ s }: { s: FolgaSummary }) {
                 ? s.state === "lite" || s.state === "unset"
                   ? "—"
                   : eurCents(st.value)
-                : `+${eurCents(st.value)} a dia 1`}
+                : s.state === "lite" && st.value === 0
+                  ? "sem folga"
+                  : `+${eurCents(st.value)} a dia 1`}
           </span>
         </li>
       ))}

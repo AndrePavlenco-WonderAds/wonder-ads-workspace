@@ -13,11 +13,12 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
-    version: "78.38",
+    version: "78.39",
     date: "2026-10-28",
     title: "Folga de custos: a barra esvazia à medida que se gasta",
     highlights: [
       "**📉 A barra da folga mostra o que fica:** começa cheia e esvazia a cada extra lançado, até 0 €; a bolha diz a percentagem livre, e acima da folga a barra fica vermelha com o valor a mais.",
+      "**🟧 Clientes Lite:** a barra já aparece preenchida («topped up») e o mês seguinte diz «sem folga».",
       "**🧭 Página mais arrumada:** o registo do projeto à esquerda, com «Para onde vai a folga» e «Como funciona» por baixo; o «Lançar um extra» à direita, sempre à mão ao fazer scroll.",
     ],
   },
