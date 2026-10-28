@@ -13,6 +13,12 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.27",
+    date: "2026-10-28",
+    title: "Bónus NPS — a nota do painel diz que a WonderAds não conta",
+    highlights: ["**📝 A nota por baixo do painel do mês passa a dizer que a WonderAds não conta na carteira**, como as regras."],
+  },
+  {
     version: "78.26",
     date: "2026-10-28",
     title: "SEO — sair da página já não perde o trabalho do roadmap",

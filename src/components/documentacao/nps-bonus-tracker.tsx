@@ -304,7 +304,7 @@ function TeamGate({ data }: { data: NpsBonusMonth }) {
 function Footnote() {
   return (
     <p className="text-[12px] leading-relaxed text-white/40">
-      Carteira = clientes SEO ativos atribuídos hoje; pausados e terminados não contam. A nota de cada projeto é o Índice de
+      Carteira = clientes SEO ativos atribuídos hoje; pausados, terminados e a WonderAds não contam. A nota de cada projeto é o Índice de
       satisfação da última resposta NPS do mês.
     </p>
   );
