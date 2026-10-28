@@ -13,6 +13,12 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.29",
+    date: "2026-10-28",
+    title: "Documentação — colunas do resumo com a mesma altura",
+    highlights: ["**⚖️ As duas colunas do resumo executivo ficam equilibradas:** um parágrafo pode continuar na coluna seguinte, sem deixar vazio em baixo."],
+  },
+  {
     version: "78.28",
     date: "2026-10-28",
     title: "Documentação — resumos executivos sem espaço vazio e assinados",

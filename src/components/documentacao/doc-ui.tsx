@@ -229,7 +229,9 @@ export function ExecutiveSummary({
         <h2 className="mt-1 text-[1.6rem] font-semibold leading-tight tracking-[-0.02em] text-white sm:text-[1.85rem]">{title}</h2>
         <div className="mt-6 max-w-[70ch] text-[15.5px] leading-[1.8] text-white/75 sm:text-[16px] lg:max-w-none lg:columns-2 lg:gap-14">
           {paragraphs.map((p, i) => (
-            <p key={i} className="mb-5 break-inside-avoid last:mb-0">
+            // Sem break-inside-avoid: um parágrafo pode continuar na coluna
+            // seguinte, e as duas ficam da mesma altura.
+            <p key={i} className="mb-5 last:mb-0">
               {p}
             </p>
           ))}
