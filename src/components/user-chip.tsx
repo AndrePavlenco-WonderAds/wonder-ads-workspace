@@ -121,8 +121,8 @@ export async function UserChip() {
         !display.isAdmin && !display.viewerOf ? { construction: !INEFICACIAS_OPEN_TO_TEAM } : null
       }
       // Documentação da empresa (v78.5) — decidido com quem FEZ LOGIN: em
-      // construção só o André entra, e continua a vê-la quando está na pele
-      // de outra pessoa.
+      // construção só o André e o Alex entram, e continuam a vê-la quando
+      // estão na pele de outra pessoa.
       docs={docsAvailable(session.u) ? { construction: !DOCS_OPEN_TO_TEAM } : null}
       people={
         realIsAdmin

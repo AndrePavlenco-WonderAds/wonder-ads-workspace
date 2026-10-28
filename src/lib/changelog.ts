@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.36",
+    date: "2026-10-28",
+    title: "O Alex passa a ver a Documentação da empresa",
+    highlights: [
+      "**📚 O Alex Pavlenco entra na Documentação da empresa:** o hub e todas as páginas (Bónus NPS, Comissões, Bónus semestral, Ineficácias, Probation, Matriz de Talento) — como SuperAdmin, vê todos os blocos. Continua fechada ao resto da equipa; a etiqueta diz agora «Em construção — ainda fechada à equipa».",
+    ],
+  },
+  {
     version: "78.35",
     date: "2026-10-28",
     title: "Formação: a resposta certa deixa de se adivinhar pelo tamanho",

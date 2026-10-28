@@ -3,7 +3,7 @@
 // Uma grelha de cartões, um por página de documentação: capa, título e o
 // botão para abrir. Sem cabeçalhos de bloco — vai haver muitos tipos de
 // documentação e o cartão tem de se explicar sozinho. Filtrado pelo
-// departamento da pessoa VISTA. Em construção: só o André entra
+// departamento da pessoa VISTA. Em construção: só o André e o Alex entram
 // (lib/documentacao/access.ts).
 
 import Image from "next/image";
@@ -43,7 +43,7 @@ export default async function DocumentacaoPage() {
         </h1>
         {!DOCS_OPEN_TO_TEAM && (
           <span className="rounded-full border border-amber-400/40 bg-amber-400/15 px-2.5 py-1 text-[12px] font-medium text-amber-200">
-            Em construção — só tu vês
+            Em construção — ainda fechada à equipa
           </span>
         )}
       </header>
