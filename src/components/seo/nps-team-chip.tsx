@@ -5,6 +5,8 @@
 // média do mês em curso e quantos projetos já responderam; ao passar o rato
 // (ou focar, ou tocar) abre por baixo o mês anterior e o atual — média e
 // taxa de preenchimento — e os projetos que já responderam e os que faltam.
+// Os que faltam vão numa grelha compacta, todos à vista e sem o consultor
+// (v78.33); sem título nem rodapé, que o painel lê-se sozinho.
 //
 // O painel vai por portal para o <body>: o cabeçalho do departamento anima
 // com transform, e um z-index lá dentro nunca passaria por cima da board.
@@ -200,7 +202,7 @@ function NpsTeamPanel({
   onLeave: () => void;
 }) {
   const done = projects.filter((p) => p.score !== null).sort((a, b) => (b.answeredAt ?? 0) - (a.answeredAt ?? 0));
-  const missing = projects.filter((p) => p.score === null).sort((a, b) => a.consultant.localeCompare(b.consultant, "pt") || a.name.localeCompare(b.name, "pt"));
+  const missing = projects.filter((p) => p.score === null).sort((a, b) => a.name.localeCompare(b.name, "pt"));
 
   return (
     <div
@@ -214,9 +216,7 @@ function NpsTeamPanel({
     >
       <div aria-hidden className="pointer-events-none absolute -right-32 -top-44 h-[22rem] w-[22rem] rounded-full opacity-25 blur-3xl" style={{ background: "var(--brand-gradient)" }} />
       <div className="relative p-5 sm:p-7">
-        <p className="text-[12px] font-semibold uppercase tracking-[0.2em] text-[#d9c8ff]/80">NPS da equipa SEO · índice de satisfação</p>
-
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-3 sm:grid-cols-2">
           <MonthCard m={previous} live={false} />
           <MonthCard m={current} live previous={previous} />
         </div>
@@ -258,23 +258,18 @@ function NpsTeamPanel({
             {missing.length === 0 ? (
               <p className="mt-2 text-[13px] text-emerald-300">Todos responderam este mês.</p>
             ) : (
-              <ul className="mt-2 max-h-64 divide-y divide-white/[0.06] overflow-y-auto pr-1">
+              <ul className="mt-2 grid grid-cols-2 gap-x-4">
                 {missing.map((p) => (
-                  <li key={p.slug} className="flex items-center justify-between gap-3 py-2 text-[13px]">
-                    <Link href={`/seo/${p.slug}/nps`} className="min-w-0 truncate text-white/85 hover:text-white hover:underline">
+                  <li key={p.slug} className="min-w-0 border-b border-white/[0.06] py-1.5 text-[12.5px] leading-snug">
+                    <Link href={`/seo/${p.slug}/nps`} title={p.name} className="block truncate text-white/80 hover:text-white hover:underline">
                       {p.name}
                     </Link>
-                    <span className="shrink-0 text-[11.5px] text-white/45">{first(p.consultant)}</span>
                   </li>
                 ))}
               </ul>
             )}
           </div>
         </div>
-
-        <p className="mt-5 text-[11.5px] text-white/35">
-          Projetos SEO ativos (sem pausados nem a WonderAds). Conta a última resposta de cada cliente no mês.
-        </p>
       </div>
     </div>
   );

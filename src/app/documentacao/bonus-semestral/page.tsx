@@ -1,4 +1,4 @@
-// /documentacao/bonus-semestral — o Bónus semestral (v78.30): até 600 € duas
+// /documentacao/bonus-semestral — o Bónus semestral (v78.30): até 500 € duas
 // vezes por ano, conforme as ineficácias do semestre. O semestre de cada um
 // primeiro, depois a tabela e as regras. Os números saem de
 // lib/documentacao/semestral-bonus.ts — os mesmos com que o painel conta.
@@ -35,16 +35,19 @@ const NAV = [
 const TOP = formatEur(SEMESTER_TIERS[0].eur);
 const eur = (n: number) => formatEur(n).replace(" ", " ");
 
+/** O valor do escalão `i`, por extenso — os textos seguem a tabela. */
+const tierEur = (i: number) => eur(SEMESTER_TIERS[i].eur);
+
 /** Os exemplos são calculados com a mesma função do painel. */
 const EXAMPLES: Array<{ no: number; pa: number; why: string }> = [
   { no: 1, pa: 3, why: "Dentro dos dois limites do primeiro escalão." },
-  { no: 2, pa: 12, why: "O NO dava 600 €, mas o PA de 12 já é do escalão de baixo." },
-  { no: 3, pa: 8, why: "O PA dava 600 €, mas a 3.ª ineficácia já desce o escalão." },
-  { no: 5, pa: 14, why: "5 ineficácias põem-no nos 200 €, mesmo com o PA dos 400 €." },
+  { no: 2, pa: 12, why: `O NO dava ${tierEur(0)}, mas o PA de 12 já é do escalão de baixo.` },
+  { no: 3, pa: 8, why: `O PA dava ${tierEur(0)}, mas a 3.ª ineficácia já desce o escalão.` },
+  { no: 5, pa: 14, why: `5 ineficácias põem-no nos ${tierEur(2)}, mesmo com o PA dos ${tierEur(1)}.` },
   { no: 4, pa: 22, why: "Com 21 pontos ou mais não há bónus, seja qual for o NO." },
 ];
 
-/** «até 2 ineficácias e até 9 pontos dá 600 €; …» — a tabela por extenso. */
+/** «com 0 a 2 ineficácias e 0 a 9 pontos o bónus é de 500 €; …» — a tabela por extenso. */
 function tableInWords(): string {
   return SEMESTER_TIERS.map((t, i) => {
     const no = tierRange(i, "no");
@@ -157,7 +160,7 @@ export default async function BonusSemestralPage() {
             </>,
             <>
               A tabela é simples: {tableInWords()}. Conta sempre o pior dos dois. Para ficar num escalão é preciso cumprir os dois
-              limites, e basta um deles passar para descer: com 2 ineficácias mas 12 pontos, o bónus é de {eur(400)}.
+              limites, e basta um deles passar para descer: com 2 ineficácias mas 12 pontos, o bónus é de {tierEur(1)}.
             </>,
             <>
               O que mais protege o bónus é o mesmo que protege na escala: reportar cedo e com transparência, porque um erro

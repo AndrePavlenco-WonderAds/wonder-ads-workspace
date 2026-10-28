@@ -40,7 +40,7 @@ import { paletteToGradient } from "@/lib/client-colors";
 import type { ClientTier } from "@/lib/client-tiers";
 import type { LogoBgMode, LogoSizing } from "@/lib/client-meta";
 import { npsScoreColor } from "@/lib/nps-questions";
-import { ClientCard } from "./client-card";
+import { ClientCard, type NpsMonthScore } from "./client-card";
 import { LogoChip } from "./logo-chip";
 import { TierBadge } from "./tier-badge";
 import { SeoPauseToggle } from "./seo-pause-toggle";
@@ -57,6 +57,9 @@ export type SeoBoardCard = {
   tier: ClientTier | null;
   npsOverall: number | null;
   npsAt: number | null;
+  /** [mês anterior, mês em curso] — o que o cartão mostra (v78.33). A média
+   *  da lane continua a ser a do último NPS de cada cliente. */
+  npsMonths: NpsMonthScore[];
   keywordGuarantee: boolean;
   domain: string | null;
 };
@@ -637,6 +640,7 @@ function Lane({
                 tier={c.tier}
                 npsOverall={c.npsOverall}
                 npsAt={c.npsAt}
+                npsMonths={c.npsMonths}
                 keywordGuarantee={c.keywordGuarantee}
                 domain={c.domain}
                 index={i}

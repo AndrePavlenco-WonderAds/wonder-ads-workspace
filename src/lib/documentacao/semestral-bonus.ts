@@ -7,8 +7,9 @@
 //     dezembro (avaliado em dezembro).
 //   • NO = ineficácias pontuadas (> 0) com data no semestre; PA = a soma dos
 //     pontos. Ao contrário da escala, o 1:1 de nível NÃO põe isto a zero.
-//   • 0–2 NO e 0–9 PA → 600 € · 3–4 NO ou 10–15 PA → 400 € · 5–6 NO ou
-//     16–20 PA → 200 € · 7+ NO ou 21+ PA → 0 €.
+//   • 0–2 NO e 0–9 PA → 500 € · 3–4 NO ou 10–15 PA → 300 € · 5–6 NO ou
+//     16–20 PA → 150 € · 7+ NO ou 21+ PA → 0 € (valores revistos na v78.33;
+//     eram 600/400/200).
 //   • Conta o pior dos dois: para ficar num escalão é preciso cumprir os
 //     dois limites (o mesmo «ou» da escala de ineficácias, onde basta um
 //     contador passar para subir).
@@ -24,9 +25,9 @@ export type SemesterTier = {
 
 /** Do melhor para o pior — o primeiro em que cabem os dois fica. */
 export const SEMESTER_TIERS: SemesterTier[] = [
-  { eur: 600, maxNo: 2, maxPa: 9 },
-  { eur: 400, maxNo: 4, maxPa: 15 },
-  { eur: 200, maxNo: 6, maxPa: 20 },
+  { eur: 500, maxNo: 2, maxPa: 9 },
+  { eur: 300, maxNo: 4, maxPa: 15 },
+  { eur: 150, maxNo: 6, maxPa: 20 },
   { eur: 0, maxNo: null, maxPa: null },
 ];
 

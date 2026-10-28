@@ -71,23 +71,6 @@ export const DOCS_BLOCKS: DocsBlock[] = [
     ],
   },
   {
-    id: "matriz-talento",
-    title: "Matriz de Talento Wonder",
-    // Só direção e treinadores: é a grelha com que se avalia a equipa.
-    audience: { depts: [], tags: ["Treinador"] },
-    audienceLabel: "Treinadores",
-    updatedAt: "2026-10-28",
-    pages: [
-      {
-        id: "matriz-talento",
-        href: "/documentacao/matriz-talento",
-        label: "Matriz de Talento Wonder",
-        image: "/documentacao/matriz-talento-capa.jpg",
-        restricted: "Só para SuperAdmins e Treinadores",
-      },
-    ],
-  },
-  {
     id: "ineficacias",
     title: "Ineficácias & Probation",
     // Toda a equipa: as ineficácias e o probation aplicam-se a todos.
@@ -98,6 +81,24 @@ export const DOCS_BLOCKS: DocsBlock[] = [
       // As duas capas foram dadas pelo André (2026-10-27).
       { id: "ineficacias", href: "/documentacao/ineficacias", label: "Ineficácias", image: "/documentacao/ineficacias-capa.jpg" },
       { id: "probation", href: "/documentacao/probation", label: "Probation", image: "/documentacao/probation-capa.jpg" },
+    ],
+  },
+  {
+    id: "matriz-talento",
+    title: "Matriz de Talento Wonder",
+    // Só direção e treinadores (os buddies): é a grelha com que se avalia a
+    // equipa. Fica em último, depois das ineficácias e do probation (v78.33).
+    audience: { depts: [], tags: ["Treinador"] },
+    audienceLabel: "Treinadores/Buddies",
+    updatedAt: "2026-10-28",
+    pages: [
+      {
+        id: "matriz-talento",
+        href: "/documentacao/matriz-talento",
+        label: "Matriz de Talento Wonder",
+        image: "/documentacao/matriz-talento-capa.jpg",
+        restricted: "Só para SuperAdmins e Treinadores/Buddies",
+      },
     ],
   },
 ];

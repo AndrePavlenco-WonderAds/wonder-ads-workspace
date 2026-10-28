@@ -12,6 +12,16 @@ import { TierBadge } from "./tier-badge";
 import { LogoChip } from "./logo-chip";
 import { SiGoogle, SiMeta } from "./brand-icons";
 
+/** A última resposta NPS de um mês — o cartão do SEO DPT mostra duas. */
+export type NpsMonthScore = {
+  /** «SET». */
+  label: string;
+  /** «setembro», para o tooltip. */
+  name: string;
+  score: number | null;
+  at: number | null;
+};
+
 export type ClientCardProps = {
   title: string;
   icon: string | null;
@@ -28,6 +38,9 @@ export type ClientCardProps = {
   npsOverall?: number | null;
   /** Data (epoch ms) desse último inquérito, para o tooltip. */
   npsAt?: number | null;
+  /** O NPS por mês (v78.33): [mês anterior, mês em curso]. Quando vem,
+   *  substitui o último NPS no cartão sem consultor (o do SEO DPT). */
+  npsMonths?: NpsMonthScore[] | null;
   /** Cliente com contrato de garantia de posicionamento nas Premium
    *  Keywords. Mostra a pastilha dourada ao lado do tier. */
   keywordGuarantee?: boolean;
@@ -57,6 +70,7 @@ export function ClientCard({
   channels,
   npsOverall = null,
   npsAt = null,
+  npsMonths = null,
   keywordGuarantee = false,
   index = 0,
   showArrow = true,
@@ -150,7 +164,9 @@ export function ClientCard({
         ) : (
           <div className="mt-2.5 flex items-center justify-between gap-2">
             <div className="flex min-w-0 items-center gap-1.5">
-              {npsOverall !== null ? (
+              {npsMonths && npsMonths.length > 0 ? (
+                <NpsByMonth months={npsMonths} />
+              ) : npsOverall !== null ? (
                 <NpsChip overall={npsOverall} at={npsAt} />
               ) : (
                 <span className="text-[10px] uppercase tracking-[0.14em] text-white/25">
@@ -218,6 +234,51 @@ function NpsChip({ overall, at }: { overall: number; at: number | null }) {
       {overall.toFixed(1)}
     </span>
   );
+}
+
+/** O NPS do cartão do SEO DPT (v78.33): em cima o mês anterior, já fechado
+ *  — o que conta para o bónus —, e por baixo, pequeno, o mês em curso. Sem
+ *  resposta nesse mês, um traço. */
+function NpsByMonth({ months }: { months: NpsMonthScore[] }) {
+  const [closed, live] = months;
+  const color = closed.score !== null ? npsScoreColor(closed.score) : null;
+  return (
+    <div className="flex flex-col items-start gap-1">
+      <span
+        className={`inline-flex shrink-0 items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] font-semibold leading-none tabular-nums ${
+          color ? "" : "border-white/10 bg-white/[0.04] text-white/35"
+        }`}
+        style={color ? { color, borderColor: `${color}59`, background: `${color}1f` } : undefined}
+        title={npsMonthTitle(closed)}
+      >
+        <span className="font-medium tracking-[0.08em] opacity-75">{closed.label}</span>
+        <Star className="h-2.5 w-2.5" fill="currentColor" strokeWidth={0} />
+        {closed.score !== null ? closed.score.toFixed(1) : "—"}
+      </span>
+      {live && (
+        <span
+          className="inline-flex items-center gap-1 px-1.5 text-[9.5px] font-semibold leading-none tabular-nums text-white/35"
+          title={npsMonthTitle(live)}
+        >
+          <span className="font-medium tracking-[0.08em]">{live.label}</span>
+          <Star
+            className="h-2 w-2"
+            fill="currentColor"
+            strokeWidth={0}
+            style={live.score !== null ? { color: npsScoreColor(live.score) } : undefined}
+          />
+          <span style={live.score !== null ? { color: npsScoreColor(live.score) } : undefined}>
+            {live.score !== null ? live.score.toFixed(1) : "—"}
+          </span>
+        </span>
+      )}
+    </div>
+  );
+}
+
+function npsMonthTitle(m: NpsMonthScore): string {
+  if (m.score === null) return `Satisfação do cliente (NPS) em ${m.name}: ainda sem resposta`;
+  return `Satisfação do cliente (NPS) em ${m.name}: ${m.score.toFixed(1)}/10${m.at ? ` — inquérito de ${formatDate(m.at)}` : ""}`;
 }
 
 function ChannelTag({ channel }: { channel: AdChannel }) {

@@ -1,9 +1,10 @@
 "use client";
 
-// Etiqueta «organic · 30d» do SEO DPT + painel em hover (v77.17).
+// Etiqueta «organic» do SEO DPT + painel em hover (v77.17; sem o «· 30d»
+// desde a v78.33 — o painel já diz que são os últimos 30 dias).
 //
 // A pílula fica na linha dos «clients», do tamanho de sempre: número a
-// contar, «organic · 30d», variação face aos 30 dias anteriores e uma
+// contar, «organic», variação face aos 30 dias anteriores e uma
 // mini-curva. Ao passar o rato (ou focar, ou tocar) abre por baixo o
 // «Pulso orgânico» inteiro da v77.14 — o total em grande, a diferença em
 // visitantes, a curva diária, e os três indicadores de equipa — que era
@@ -152,7 +153,7 @@ export function OrganicPulse(props: OrganicPulseProps) {
           {hasData ? fmt(shown) : "—"}
         </span>
         <span className="text-base font-medium uppercase leading-none tracking-[0.16em] text-emerald-200/80">
-          organic · 30d
+          organic
         </span>
         {pct !== null && (
           <>

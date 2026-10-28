@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.33",
+    date: "2026-10-28",
+    title: "Bónus semestral 500/300/150; NPS por mês nos cartões do SEO DPT",
+    highlights: [
+      "**💶 Bónus semestral revisto:** 0–2 NO e 0–9 PA → 500 €; 3–4 NO ou 10–15 PA → 300 €; 5–6 NO ou 16–20 PA → 150 €; 7+ NO ou 21+ PA → 0 €. A tabela, os exemplos, o resumo e o painel do semestre seguem os valores novos.",
+      "**🔒 Matriz de Talento:** a etiqueta diz agora «Só para SuperAdmins e Treinadores/Buddies» e o bloco passou para o fim da Documentação, depois das Ineficácias e do Probation.",
+      "**⭐ Cada cartão do SEO DPT mostra o NPS por mês:** em cima o mês anterior (ex. «SET ★ 7.8»), por baixo e mais pequeno o mês em curso (ex. «OUT ★ 8.0»). Sem resposta nesse mês, um traço.",
+      "**😊 Painel do NPS da equipa mais limpo:** os projetos que faltam responder aparecem todos de uma vez, numa grelha compacta e sem o nome do consultor; saíram o título e a nota de rodapé.",
+      "**🌱 A pastilha do tráfego orgânico diz só «organic»** (sem o «· 30d»), e a frase do SEO DPT passou a duas linhas.",
+    ],
+  },
+  {
     version: "78.32",
     date: "2026-10-28",
     title: "SEO DPT — pastilha do NPS da equipa; formulário NPS mensal",

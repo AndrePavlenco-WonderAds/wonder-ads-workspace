@@ -38,7 +38,8 @@ import { getLogoOverrides } from "@/lib/admin-client-logos-store";
 import { getTeamAvatar } from "@/lib/team-avatars";
 import { findEmployeeByName } from "@/lib/proposals/consultant";
 import { getPausedSlugSet } from "@/lib/admin-paused-clients-store";
-import { getLatestNpsSummaries, type NpsSummary } from "@/lib/nps-store";
+import { getNpsRecordsFor, type NpsRecord } from "@/lib/nps-store";
+import type { NpsMonthScore } from "@/components/client-card";
 
 export const metadata = {
   title: "SEO DPT — Wonder Ads Workspace",
@@ -131,9 +132,11 @@ export default async function SeoPage() {
     () => ({}) as Record<string, string>,
   );
 
-  // Último NPS de cada cliente (índice de satisfação global), lido numa
-  // única operação KV (mget) para toda a board — nunca um get por cartão.
-  const npsSummaries = await getLatestNpsSummaries(clients.map((c) => c.slug));
+  // O NPS de cada cliente (índice de satisfação global), lido numa única
+  // operação KV (mget) para toda a board — nunca um get por cartão. O cartão
+  // mostra o mês anterior e o atual (v78.33); a lane, a média do último.
+  const npsRecords = await getNpsRecordsFor(clients.map((c) => c.slug));
+  const npsCardMonths = [shiftMonthKey(npsMonthNow, -1), npsMonthNow];
   const npsTeam = toNpsTeamChip(await npsMonths);
 
   return (
@@ -145,7 +148,13 @@ export default async function SeoPage() {
       <div className="mx-auto w-full max-w-[1880px]">
       <DepartmentHeader
         title="SEO DPT"
-        tagline="Crescimento orgânico no Google e nas IAs. Agência #1 de SEO & GEO em Portugal."
+        tagline={
+          <>
+            Crescimento orgânico no Google e nas IAs.
+            <br />
+            Agência #1 de SEO &amp; GEO em Portugal.
+          </>
+        }
         count={activeClients.length || undefined}
         countLabel="clients"
         countSuffix={
@@ -187,7 +196,8 @@ export default async function SeoPage() {
               columns={toBoardColumns(
                 consultantColumns,
                 logoOverrides,
-                npsSummaries,
+                npsRecords,
+                npsCardMonths,
                 employee.isAdmin,
                 employee.name,
               )}
@@ -218,7 +228,8 @@ export default async function SeoPage() {
               columns={toBoardColumns(
                 pausedColumns,
                 logoOverrides,
-                npsSummaries,
+                npsRecords,
+                npsCardMonths,
                 employee.isAdmin,
                 employee.name,
               )}
@@ -312,7 +323,8 @@ function buildConsultantColumns(
 function toBoardColumns(
   columns: ConsultantColumn[],
   logoOverrides: Record<string, string>,
-  npsSummaries: Record<string, NpsSummary>,
+  npsRecords: Record<string, NpsRecord>,
+  npsMonths: string[],
   isAdmin: boolean,
   employeeName: string,
 ): SeoBoardColumn[] {
@@ -338,8 +350,9 @@ function toBoardColumns(
         logoSizing: getLogoSizing(c.slug),
         palette: c.palette,
         tier: c.tier,
-        npsOverall: npsSummaries[c.slug]?.overall ?? null,
-        npsAt: npsSummaries[c.slug]?.submittedAt ?? null,
+        npsOverall: npsRecords[c.slug]?.submissions[0]?.scores.overall ?? null,
+        npsAt: npsRecords[c.slug]?.submissions[0]?.submittedAt ?? null,
+        npsMonths: npsByMonth(npsRecords[c.slug], npsMonths),
         keywordGuarantee: hasKeywordGuarantee(c.slug),
         domain: website ? displayDomain(website) : null,
       };
@@ -389,6 +402,23 @@ function buildOrganicTeamStats(
     }
   }
   return { growing, comparable: comparable.length, topClimber };
+}
+
+/** A última resposta de cada mês — a mesma regra do bónus NPS: as
+ *  submissões vêm da mais recente para a mais antiga, a primeira do mês é a
+ *  que conta. */
+function npsByMonth(record: NpsRecord | undefined, months: string[]): NpsMonthScore[] {
+  const subs = record?.submissions ?? [];
+  return months.map((key) => {
+    const answer = subs.find((s) => lisbonMonthKey(s.submittedAt) === key);
+    const name = monthLabel(key).split(" ")[0];
+    return {
+      label: name.slice(0, 3).toUpperCase(),
+      name,
+      score: answer ? answer.scores.overall : null,
+      at: answer ? answer.submittedAt : null,
+    };
+  });
 }
 
 /** Os dois meses do NPS da equipa → a pílula do cabeçalho. */

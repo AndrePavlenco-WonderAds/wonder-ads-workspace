@@ -14,8 +14,9 @@ export function DepartmentHeader({
   large = false,
 }: {
   title: string;
-  /** Opcional desde v77.12 — o Comercial vive sem frase de apresentação. */
-  tagline?: string;
+  /** Opcional desde v77.12 — o Comercial vive sem frase de apresentação.
+   *  Aceita nós desde a v78.33, para a do SEO quebrar a linha no ponto. */
+  tagline?: ReactNode;
   Icon?: LucideIcon;
   count?: number;
   countLabel?: string;
