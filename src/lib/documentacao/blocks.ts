@@ -72,6 +72,23 @@ export const DOCS_BLOCKS: DocsBlock[] = [
     ],
   },
   {
+    id: "folga-custos",
+    title: "Folga de custos",
+    // O protocolo dos extras oferecidos por projeto (v78.40): é do SEO, que é
+    // quem tem a folga por projeto.
+    audience: { depts: ["SEO"] },
+    audienceLabel: "SEO DPT",
+    updatedAt: "2026-10-28",
+    pages: [
+      {
+        id: "folga-custos",
+        href: "/documentacao/folga-custos",
+        label: "Folga de custos",
+        tag: "Extras com critério",
+      },
+    ],
+  },
+  {
     id: "ineficacias",
     title: "Ineficácias & Probation",
     // Toda a equipa: as ineficácias e o probation aplicam-se a todos.

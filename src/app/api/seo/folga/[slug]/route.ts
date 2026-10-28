@@ -1,6 +1,8 @@
 // /api/seo/folga/[slug] — a Folga de custos de um projeto SEO (v78.37).
 //
-//   POST  → lança um extra (sai da folga ou é cobrado ao cliente)
+//   POST  → lança um extra (sai da folga ou é cobrado ao cliente), ligado ou
+//           não a uma tarefa do roadmap ou a um ticket; se deixar o saldo
+//           negativo, fica um aviso no sino da direção (v78.40)
 //   PATCH → anula um extra, com motivo (só quem o lançou ou um SuperAdmin)
 //   PUT   → muda a folga mensal a partir de um mês (só SuperAdmin)
 //
@@ -13,6 +15,9 @@ import { getCurrentEmployee, getImpersonation } from "@/lib/auth/server";
 import { canEditDept } from "@/lib/auth/credentials";
 import { getClientTier } from "@/lib/client-tiers";
 import { lisbonMonthKey } from "@/lib/dates";
+import { getClientBySlug } from "@/lib/notion";
+import { getCurrentRoadmap } from "@/lib/roadmap-store";
+import { getTicket } from "@/lib/web-tickets-store";
 import {
   FOLGA_CATEGORIES,
   FOLGA_KINDS,
@@ -21,10 +26,19 @@ import {
   baseAllowance,
   monthOf,
   shiftFolgaMonth,
+  summarizeFolga,
   type FolgaCategory,
   type FolgaKind,
+  type FolgaLink,
 } from "@/lib/seo-folga";
-import { addFolgaEntry, getFolga, setFolgaAllowance, voidFolgaEntry } from "@/lib/seo-folga-store";
+import {
+  addFolgaEntry,
+  getFolga,
+  markFolgaAlertVoided,
+  pushFolgaAlert,
+  setFolgaAllowance,
+  voidFolgaEntry,
+} from "@/lib/seo-folga-store";
 
 export const runtime = "nodejs";
 
@@ -60,6 +74,26 @@ function validSlug(slug: string) {
   return /^[a-z0-9-]{2,80}$/.test(slug);
 }
 
+/** A ligação vem só como {kind, id}; o rótulo é o servidor que o escreve, a
+ *  partir da tarefa ou do ticket — e só se forem mesmo deste cliente. */
+async function resolveLink(slug: string, raw: unknown): Promise<FolgaLink | null | "invalid"> {
+  if (raw === null || raw === undefined) return null;
+  if (typeof raw !== "object") return "invalid";
+  const o = raw as Record<string, unknown>;
+  const id = typeof o.id === "string" ? o.id : "";
+  if (!id) return "invalid";
+  if (o.kind === "task") {
+    const roadmap = await getCurrentRoadmap(slug).catch(() => null);
+    const task = roadmap?.tasks.find((t) => t.id === id);
+    return task ? { kind: "task", id, label: `Semana ${task.week} · ${task.title}` } : "invalid";
+  }
+  if (o.kind === "ticket") {
+    const ticket = await getTicket(id).catch(() => null);
+    return ticket && ticket.clientSlug === slug ? { kind: "ticket", id, label: `#${ticket.seq} ${ticket.title}` } : "invalid";
+  }
+  return "invalid";
+}
+
 export async function POST(req: Request, ctx: Ctx) {
   const { slug } = await ctx.params;
   if (!validSlug(slug)) return bad("Projeto inválido.");
@@ -89,16 +123,44 @@ export async function POST(req: Request, ctx: Ctx) {
   if (b.kind === "folga" && tier === "lite" && !allowance) {
     return bad("Cliente Lite: não tem folga — este extra tem de ser cobrado.");
   }
+  if (b.kind === "folga" && allowance === null) {
+    return bad("A folga deste projeto ainda está por definir — até lá, os extras são cobrados.");
+  }
+  const link = await resolveLink(slug, b.link);
+  if (link === "invalid") return bad("Essa tarefa ou ticket não é deste cliente.");
 
-  await addFolgaEntry(slug, {
+  const nowKey = lisbonMonthKey(Date.now());
+  const base = baseAllowance(slug, tier);
+  const before = summarizeFolga(record, base, tier, nowKey).remaining;
+  const { record: next, entry } = await addFolgaEntry(slug, {
     date,
     eur,
     title,
     category: b.category as FolgaCategory,
     kind: b.kind as FolgaKind,
     note: note || null,
+    link,
     by: w.by,
   });
+
+  // Saldo negativo depois deste extra → aviso no sino da direção. Um aviso
+  // por extra: o primeiro diz que passou a folga, os seguintes que continua.
+  const after = summarizeFolga(next, base, tier, nowKey).remaining;
+  if (entry.kind === "folga" && after < 0) {
+    const client = (await getClientBySlug(slug).catch(() => null))?.title ?? slug;
+    await pushFolgaAlert({
+      entryId: entry.id,
+      slug,
+      client,
+      title: entry.title,
+      eur: entry.eur,
+      remaining: after,
+      crossed: before >= 0,
+      by: w.by,
+      at: entry.at,
+      voided: false,
+    }).catch((err) => console.error("folga: aviso à direção falhou:", err));
+  }
   return NextResponse.json({ ok: true });
 }
 
@@ -121,6 +183,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
   );
   if (result === "missing") return bad("Esse extra já não existe ou já foi anulado.", 404);
   if (result === "forbidden") return bad("Só quem lançou o extra ou a direção o pode anular.", 403);
+  await markFolgaAlertVoided(b.id).catch(() => {});
   return NextResponse.json({ ok: true });
 }
 

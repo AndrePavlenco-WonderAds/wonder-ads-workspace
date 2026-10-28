@@ -42,7 +42,8 @@ export const FOLGA_DEFAULTS: Record<string, number> = {
 export const FOLGA_CATEGORIES = [
   { id: "conteudo", label: "Conteúdo extra" },
   { id: "design", label: "Design e imagens" },
-  { id: "backlinks", label: "Backlinks e PR" },
+  { id: "backlinks", label: "Backlinks, PR e Imprensa" },
+  { id: "wikipedia", label: "Wikipedia Page" },
   { id: "ferramentas", label: "Ferramentas" },
   { id: "horas", label: "Horas extra" },
   { id: "outro", label: "Outro" },
@@ -55,6 +56,15 @@ export type FolgaKind = (typeof FOLGA_KINDS)[number];
 
 export type FolgaPerson = { username: string; name: string };
 
+/** A que trabalho o extra corresponde (v78.40): uma tarefa do roadmap do
+ *  cliente ou um ticket do Web. O rótulo é guardado como estava no dia —
+ *  se a tarefa mudar de nome, o registo continua a dizer o que se lançou. */
+export type FolgaLink = { kind: "task" | "ticket"; id: string; label: string };
+
+export function folgaLinkHref(slug: string, link: FolgaLink): string {
+  return link.kind === "ticket" ? `/web/tickets/${link.id}` : `/seo/${slug}/roadmap`;
+}
+
 export type FolgaEntry = {
   id: string;
   /** ISO yyyy-mm-dd — o dia do extra; o mês dele decide de que folga sai. */
@@ -65,6 +75,7 @@ export type FolgaEntry = {
   category: FolgaCategory;
   kind: FolgaKind;
   note: string | null;
+  link: FolgaLink | null;
   by: FolgaPerson;
   at: number;
   voided: (FolgaPerson & { at: number; reason: string }) | null;

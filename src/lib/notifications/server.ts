@@ -72,6 +72,8 @@ import {
   bandOf as ineficaciaBand,
 } from "@/lib/ineficacias/shared";
 import { getProposal, proposalPath } from "@/lib/proposals";
+import { getFolgaAlerts } from "@/lib/seo-folga-store";
+import { eurCents, toCents } from "@/lib/seo-folga";
 import { getNotificationRules } from "@/lib/notifications/rules-store";
 import {
   getNotificationState,
@@ -1336,6 +1338,43 @@ async function ineficaciasNotifications(
   });
 }
 
+/** Folga de custos (v78.40): um extra deixou o saldo de um projeto SEO
+ *  negativo. Só para a direção; um aviso por extra, até 60 dias. Um extra
+ *  anulado deixa de aparecer. */
+const FOLGA_RECENT_MS = 60 * 24 * 60 * 60 * 1000;
+
+async function folgaNotifications(
+  viewer: Viewer,
+  state: NotificationState,
+  now: Date,
+): Promise<UserNotification[]> {
+  if (!isAdminUsername(viewer.username)) return [];
+  try {
+    const alerts = await getFolgaAlerts();
+    return alerts
+      .filter((a) => !a.voided && now.getTime() - a.at <= FOLGA_RECENT_MS)
+      .map((a) => {
+        const id = `folga-over:${a.entryId}`;
+        return {
+          id,
+          ruleId: "folga-over",
+          title: a.crossed ? `💶 ${a.client} passou a folga de custos` : `💶 ${a.client} continua acima da folga`,
+          body: `${firstName(a.by.name) || a.by.name} lançou «${a.title}» (${eurCents(toCents(a.eur))}). Saldo do mês: ${eurCents(a.remaining)}. Os próximos extras devem ser cobrados ou aprovados pela direção.`,
+          periodLabel: "Folga de custos",
+          dueAt: a.at,
+          client: { slug: a.slug, title: a.client, icon: null },
+          actionLabel: "Ver a folga",
+          actionHref: `/seo/${a.slug}/folga`,
+          resolved: Boolean(state[id]),
+          resolvedAt: state[id]?.resolvedAt ?? null,
+        };
+      });
+  } catch (err) {
+    console.error("Notificações: folga falhou:", err instanceof Error ? err.message : "erro");
+    return [];
+  }
+}
+
 /** Um cliente clicou em «Confirmar a renovação» numa proposta pública. Vai
  *  ao sino do SuperAdmin (o André) à cabeça de tudo: é dinheiro à espera de
  *  resposta, não um lembrete de calendário. */
@@ -1417,7 +1456,7 @@ export async function getUserNotifications(
       ? ((await seoBooksByConsultant(needsStartDates)).get(viewer.name) ?? [])
       : [];
 
-  const [ending, situationPoints, nps, absences, reviews, proposals, probation, ineficacias] =
+  const [ending, situationPoints, nps, absences, reviews, proposals, probation, ineficacias, folga] =
     await Promise.all([
       roadmapEndingNotifications(viewer, book, state, now),
       situationPointNotifications(viewer, state, now),
@@ -1427,6 +1466,7 @@ export async function getUserNotifications(
       proposalConfirmationNotifications(viewer, state),
       probationNotifications(viewer, state, now),
       ineficaciasNotifications(viewer, state, now),
+      folgaNotifications(viewer, state, now),
     ]);
 
   // Ausências à cabeça: um pedido por decidir (ou uma resposta por ler) é
@@ -1436,6 +1476,7 @@ export async function getUserNotifications(
   if (applicable.length === 0) {
     return [
       ...proposals,
+      ...folga,
       ...probation,
       ...ineficacias,
       ...absences,
@@ -1449,6 +1490,7 @@ export async function getUserNotifications(
 
   return [
     ...proposals,
+    ...folga,
     ...probation,
     ...ineficacias,
     ...absences,

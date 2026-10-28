@@ -110,7 +110,7 @@ function Meter({ s }: { s: FolgaSummary }) {
           }}
         />
         <p className="mt-2 text-[12.5px] text-white/45">
-          Sem folga definida, os extras lançados como «sai da folga» deixam o saldo negativo.
+          Até a direção definir a folga, os extras deste projeto são cobrados ao cliente.
         </p>
       </div>
     );

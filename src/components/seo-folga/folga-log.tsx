@@ -5,16 +5,20 @@
 // Nada sai do registo — um extra anulado fica riscado, com o motivo.
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   CircleDollarSign,
   Clock,
   FileText,
+  Globe,
   Link2,
+  ListTodo,
   Loader2,
   Palette,
   Settings2,
   Sparkles,
+  Ticket,
   Wrench,
   type LucideIcon,
 } from "lucide-react";
@@ -22,6 +26,7 @@ import { formatDate } from "@/lib/dates";
 import {
   categoryLabel,
   eurCents,
+  folgaLinkHref,
   folgaMonthName,
   monthOf,
   toCents,
@@ -35,6 +40,7 @@ const ICON: Record<FolgaCategory, LucideIcon> = {
   conteudo: FileText,
   design: Palette,
   backlinks: Link2,
+  wikipedia: Globe,
   ferramentas: Wrench,
   horas: Clock,
   outro: Sparkles,
@@ -211,6 +217,15 @@ function EntryRow({ slug, entry: e, canVoid }: { slug: string; entry: FolgaEntry
           {categoryLabel(e.category)} · {e.by.name} · {formatDate(`${e.date}T12:00:00`)}
           {e.kind === "cobrado" && !e.voided && <span className="ml-1.5 rounded-full bg-sky-500/15 px-1.5 py-px text-[10.5px] font-medium text-sky-200">cobrado ao cliente</span>}
         </p>
+        {e.link && (
+          <Link
+            href={folgaLinkHref(slug, e.link)}
+            className="mt-1.5 inline-flex max-w-full items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-2 py-0.5 text-[11.5px] text-white/65 transition hover:border-white/25 hover:text-white"
+          >
+            {e.link.kind === "ticket" ? <Ticket className="h-3 w-3 shrink-0" /> : <ListTodo className="h-3 w-3 shrink-0" />}
+            <span className="truncate">{e.link.label}</span>
+          </Link>
+        )}
         {e.note && <p className="mt-1 text-[12.5px] leading-snug text-white/55">{e.note}</p>}
         {e.voided && (
           <p className="mt-1 text-[12px] text-rose-200/70">

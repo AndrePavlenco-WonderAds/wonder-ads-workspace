@@ -2,7 +2,9 @@
 
 // Lançar um extra na Folga de custos (v78.37). Antes de gravar, mostra como
 // fica o saldo — e avisa quando o extra passa a folga, porque a partir daí
-// o extra devia ser cobrado ou aprovado pela direção.
+// o extra devia ser cobrado ou aprovado pela direção (e a direção recebe um
+// aviso no sino). Desde a v78.40 o extra pode ficar ligado a uma tarefa do
+// roadmap ou a um ticket do cliente.
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -15,8 +17,12 @@ import {
   type FolgaKind,
 } from "@/lib/seo-folga";
 
+export type FolgaLinkOption = { id: string; label: string; group: string };
+
 type Props = {
   slug: string;
+  tasks: FolgaLinkOption[];
+  tickets: FolgaLinkOption[];
   remaining: number;
   available: number;
   /** Lite sem folga: só se lança «cobrado ao cliente». */
@@ -27,7 +33,7 @@ type Props = {
 const inputCls =
   "w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2.5 text-[14px] text-white placeholder:text-white/30 focus:border-[#a78bfa]/60 focus:outline-none focus:ring-2 focus:ring-[#a78bfa]/20";
 
-export function FolgaAdd({ slug, remaining, available, chargeOnly, today }: Props) {
+export function FolgaAdd({ slug, tasks, tickets, remaining, available, chargeOnly, today }: Props) {
   const router = useRouter();
   const [title, setTitle] = useState("");
   const [amount, setAmount] = useState("");
@@ -35,6 +41,8 @@ export function FolgaAdd({ slug, remaining, available, chargeOnly, today }: Prop
   const [kind, setKind] = useState<FolgaKind>(chargeOnly ? "cobrado" : "folga");
   const [date, setDate] = useState(today);
   const [note, setNote] = useState("");
+  const [linkKind, setLinkKind] = useState<"none" | "task" | "ticket">("none");
+  const [linkId, setLinkId] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
@@ -52,7 +60,15 @@ export function FolgaAdd({ slug, remaining, available, chargeOnly, today }: Prop
       const res = await fetch(`/api/seo/folga/${slug}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, eur: cents / 100, category, kind, date, note }),
+        body: JSON.stringify({
+          title,
+          eur: cents / 100,
+          category,
+          kind,
+          date,
+          note,
+          link: linkKind !== "none" && linkId ? { kind: linkKind, id: linkId } : null,
+        }),
       });
       const data = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) throw new Error(data.error ?? "Não foi possível lançar o extra.");
@@ -60,6 +76,8 @@ export function FolgaAdd({ slug, remaining, available, chargeOnly, today }: Prop
       setAmount("");
       setNote("");
       setDate(today);
+      setLinkKind("none");
+      setLinkId("");
       setDone(true);
       window.setTimeout(() => setDone(false), 2500);
       router.refresh();
@@ -75,7 +93,7 @@ export function FolgaAdd({ slug, remaining, available, chargeOnly, today }: Prop
       <h2 className="text-[17px] font-semibold text-white">Lançar um extra</h2>
       <p className="mt-1 text-[13px] text-white/50">
         {chargeOnly
-          ? "Cliente Lite: o extra fica no registo como cobrado ao cliente."
+          ? "Sem folga neste projeto: o extra fica no registo como cobrado ao cliente."
           : "O que oferecemos ao cliente além do contratado."}
       </p>
 
@@ -167,6 +185,60 @@ export function FolgaAdd({ slug, remaining, available, chargeOnly, today }: Prop
           </div>
         </fieldset>
 
+        <fieldset>
+          <legend className="mb-1.5 text-[12.5px] font-medium text-white/60">Ligado a (opcional)</legend>
+          <div className="grid grid-cols-3 gap-1 rounded-xl border border-white/10 bg-white/[0.03] p-1">
+            {(
+              [
+                ["none", "Nada", true],
+                ["task", "Tarefa", tasks.length > 0],
+                ["ticket", "Ticket", tickets.length > 0],
+              ] as const
+            ).map(([k, label, enabled]) => (
+              <button
+                key={k}
+                type="button"
+                disabled={!enabled}
+                title={!enabled ? (k === "task" ? "Este cliente não tem roadmap" : "Este cliente não tem tickets no Web") : undefined}
+                onClick={() => {
+                  setLinkKind(k);
+                  setLinkId("");
+                }}
+                aria-pressed={linkKind === k}
+                className={`rounded-lg px-3 py-2 text-[13px] font-medium transition disabled:cursor-not-allowed disabled:opacity-35 ${
+                  linkKind === k ? "bg-white/[0.12] text-white" : "text-white/55 hover:text-white"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          {linkKind !== "none" && (
+            <select
+              value={linkId}
+              onChange={(e) => setLinkId(e.target.value)}
+              aria-label={linkKind === "task" ? "Tarefa do roadmap" : "Ticket"}
+              className={`${inputCls} mt-2 bg-[#15121f]`}
+            >
+              <option value="">{linkKind === "task" ? "Escolhe a tarefa do roadmap…" : "Escolhe o ticket…"}</option>
+              {Object.entries(
+                (linkKind === "task" ? tasks : tickets).reduce<Record<string, FolgaLinkOption[]>>((acc, o) => {
+                  (acc[o.group] ??= []).push(o);
+                  return acc;
+                }, {}),
+              ).map(([group, opts]) => (
+                <optgroup key={group} label={group}>
+                  {opts.map((o) => (
+                    <option key={o.id} value={o.id}>
+                      {o.label}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
+          )}
+        </fieldset>
+
         <label className="block">
           <span className="mb-1.5 block text-[12.5px] font-medium text-white/60">Nota (opcional)</span>
           <textarea
@@ -205,7 +277,7 @@ export function FolgaAdd({ slug, remaining, available, chargeOnly, today }: Prop
 
       <button
         type="submit"
-        disabled={saving || cents === 0 || title.trim().length < 2}
+        disabled={saving || cents === 0 || title.trim().length < 2 || (linkKind !== "none" && !linkId)}
         className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-[14px] font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-40"
         style={{ background: "var(--brand-gradient)" }}
       >

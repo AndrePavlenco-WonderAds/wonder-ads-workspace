@@ -10,7 +10,7 @@
 import { notFound } from "next/navigation";
 import { PageShell } from "@/components/page-shell";
 import { FolgaHero } from "@/components/seo-folga/folga-hero";
-import { FolgaAdd } from "@/components/seo-folga/folga-add";
+import { FolgaAdd, type FolgaLinkOption } from "@/components/seo-folga/folga-add";
 import { FolgaLog } from "@/components/seo-folga/folga-log";
 import { FolgaAllowanceEditor } from "@/components/seo-folga/folga-allowance";
 import { getClientBySlug } from "@/lib/notion";
@@ -28,6 +28,27 @@ import {
   type FolgaSummary,
 } from "@/lib/seo-folga";
 import { getFolga } from "@/lib/seo-folga-store";
+import { getCurrentRoadmap } from "@/lib/roadmap-store";
+import { getAllTickets } from "@/lib/web-tickets-store";
+
+/** As tarefas do roadmap em curso, por mês, para ligar um extra (v78.40). */
+async function taskOptions(slug: string): Promise<FolgaLinkOption[]> {
+  const roadmap = await getCurrentRoadmap(slug).catch(() => null);
+  if (!roadmap) return [];
+  return [...roadmap.tasks]
+    .sort((a, b) => a.week - b.week || a.order - b.order)
+    .map((t) => ({ id: t.id, label: `Semana ${t.week} · ${t.title}`, group: `Mês ${Math.ceil(t.week / 4)}` }));
+}
+
+/** Os tickets do Web deste cliente, os abertos primeiro. */
+async function ticketOptions(slug: string): Promise<FolgaLinkOption[]> {
+  const all = await getAllTickets().catch(() => []);
+  const open = (s: string) => s !== "done" && s !== "closed";
+  return all
+    .filter((t) => t.clientSlug === slug)
+    .sort((a, b) => Number(open(b.status)) - Number(open(a.status)) || b.createdAt - a.createdAt)
+    .map((t) => ({ id: t.id, label: `#${t.seq} ${t.title}`, group: open(t.status) ? "Em aberto" : "Fechados" }));
+}
 
 export const dynamic = "force-dynamic";
 
@@ -41,6 +62,7 @@ const CATEGORY_COLOR: Record<FolgaCategory, string> = {
   conteudo: "#783DF5",
   design: "#C535C9",
   backlinks: "#343ED7",
+  wikipedia: "#e2e8f0",
   ferramentas: "#38bdf8",
   horas: "#f59e0b",
   outro: "#94a3b8",
@@ -64,7 +86,11 @@ export default async function FolgaPage({ params }: { params: Promise<{ slug: st
   const readOnly = Boolean(impersonation);
 
   const tier = getClientTier(slug);
-  const record = await getFolga(slug);
+  const [record, tasks, tickets] = await Promise.all([
+    getFolga(slug),
+    readOnly ? Promise.resolve([]) : taskOptions(slug),
+    readOnly ? Promise.resolve([]) : ticketOptions(slug),
+  ]);
   const nowKey = lisbonMonthKey(Date.now());
   const s = summarizeFolga(record, baseAllowance(slug, tier), tier, nowKey);
   const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Lisbon" }).format(Date.now());
@@ -139,9 +165,11 @@ export default async function FolgaPage({ params }: { params: Promise<{ slug: st
           ) : (
             <FolgaAdd
               slug={slug}
+              tasks={tasks}
+              tickets={tickets}
               remaining={s.remaining}
               available={s.available}
-              chargeOnly={s.state === "lite"}
+              chargeOnly={s.state === "lite" || s.allowanceNow === null}
               today={today}
             />
           )}

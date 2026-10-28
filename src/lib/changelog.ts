@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.40",
+    date: "2026-10-28",
+    title: "Folga de custos: aviso à direção, extras ligados a tarefas e tickets, página na Documentação",
+    highlights: [
+      "**🔔 A direção é avisada quando um projeto passa a folga:** cada extra que deixa o saldo negativo põe um aviso no sino da direção (projeto, extra, quem o lançou e o saldo do mês), com o atalho para a folga. Se o extra for anulado, o aviso desaparece.",
+      "**🔗 Cada extra pode ficar ligado a uma tarefa do roadmap ou a um ticket do Web** do cliente; no registo aparece a ligação, que abre o roadmap ou o ticket.",
+      "**📚 Novo protocolo na Documentação: «Folga de custos»** (SEO DPT) — como funciona, as regras, como lançar um extra, o que acontece quando se passa a folga, um exemplo calculado e o resumo executivo.",
+      "**💯 Na ficha do cliente o chip mostra só a percentagem da folga livre;** o valor em euros fica dentro da página. Nos clientes Lite o chip fica só «Folga», em cinzento.",
+      "**🏷️ Categorias:** «Backlinks, PR e Imprensa» e a nova «Wikipedia Page». Projetos com a folga por definir só aceitam extras cobrados ao cliente, até a direção a definir.",
+    ],
+  },
+  {
     version: "78.39",
     date: "2026-10-28",
     title: "Folga de custos: clientes Lite com a barra preenchida",
