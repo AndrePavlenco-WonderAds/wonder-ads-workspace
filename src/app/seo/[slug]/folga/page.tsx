@@ -106,8 +106,8 @@ export default async function FolgaPage({ params }: { params: Promise<{ slug: st
         <Stat label={`Cobrado ao cliente em ${month}`} value={eurCents(s.current.charged)} />
       </section>
 
-      <div className="mt-8 grid gap-6 pb-12 lg:grid-cols-[minmax(0,1fr)_380px]">
-        <div className="order-2 min-w-0 lg:order-1">
+      <div className="mt-8 grid items-start gap-6 pb-12 lg:grid-cols-[minmax(0,1fr)_380px]">
+        <div className="order-2 min-w-0 space-y-6 lg:order-1">
           <FolgaLog
             slug={slug}
             months={s.months}
@@ -117,8 +117,21 @@ export default async function FolgaPage({ params }: { params: Promise<{ slug: st
             isAdmin={employee.isAdmin}
             readOnly={readOnly}
           />
+          <div className="grid gap-6 md:grid-cols-2">
+            <Breakdown s={s} />
+            <section className="rounded-[26px] border border-white/10 p-5 text-[13px] leading-relaxed text-white/55 sm:p-6">
+              <h2 className="text-[15px] font-semibold text-white">Como funciona</h2>
+              <ul className="mt-2 list-disc space-y-1.5 pl-4">
+                <li>A folga do mês entra a dia 1.</li>
+                <li>O que sobra passa para o mês seguinte, e o que se gasta a mais também.</li>
+                <li>«Cobrado ao cliente» fica no registo, mas não gasta folga.</li>
+                <li>Clientes Lite não têm folga: os extras são todos cobrados.</li>
+                <li>Um extra lançado por engano anula-se com o motivo. Nada se apaga.</li>
+              </ul>
+            </section>
+          </div>
         </div>
-        <aside className="order-1 space-y-6 lg:order-2">
+        <aside className="order-1 space-y-6 lg:sticky lg:top-24 lg:order-2">
           {readOnly ? (
             <p className="rounded-[26px] border border-amber-400/25 bg-amber-500/[0.06] p-5 text-[13.5px] text-amber-100/85">
               Estás a ver a app como outra pessoa: aqui não se lançam nem se anulam extras.
@@ -132,20 +145,9 @@ export default async function FolgaPage({ params }: { params: Promise<{ slug: st
               today={today}
             />
           )}
-          <Breakdown s={s} />
           {employee.isAdmin && !readOnly && (
             <FolgaAllowanceEditor slug={slug} nowKey={nowKey} current={s.allowanceNow} />
           )}
-          <section className="rounded-[26px] border border-white/10 p-5 text-[13px] leading-relaxed text-white/55 sm:p-6">
-            <h2 className="text-[15px] font-semibold text-white">Como funciona</h2>
-            <ul className="mt-2 list-disc space-y-1.5 pl-4">
-              <li>A folga do mês entra a dia 1.</li>
-              <li>O que sobra passa para o mês seguinte, e o que se gasta a mais também.</li>
-              <li>«Cobrado ao cliente» fica no registo, mas não gasta folga.</li>
-              <li>Clientes Lite não têm folga: os extras são todos cobrados.</li>
-              <li>Um extra lançado por engano anula-se com o motivo. Nada se apaga.</li>
-            </ul>
-          </section>
         </aside>
       </div>
     </PageShell>

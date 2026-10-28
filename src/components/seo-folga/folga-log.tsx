@@ -112,7 +112,8 @@ export function FolgaLog({ slug, months, entries, allowances, me, isAdmin, readO
                   {live && <span className="ml-2 text-[12px] font-medium normal-case text-[#c4a6ff]">em curso</span>}
                 </p>
                 <p className="text-[12.5px] tabular-nums text-white/45">
-                  abriu {eurCents(m.opening)} · +{eurCents(m.credit)} · −{eurCents(m.spent)} ·{" "}
+                  abriu {eurCents(m.opening)} · +{eurCents(m.credit)}
+                  {m.spent > 0 && ` · −${eurCents(m.spent)}`} ·{" "}
                   <span className={m.closing < 0 ? "text-rose-200" : "text-white/75"}>
                     {live ? "fica" : "fechou"} {eurCents(m.closing)}
                   </span>

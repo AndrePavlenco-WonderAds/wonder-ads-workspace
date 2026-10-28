@@ -13,6 +13,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.38",
+    date: "2026-10-28",
+    title: "Folga de custos: a barra esvazia à medida que se gasta",
+    highlights: [
+      "**📉 A barra da folga mostra o que fica:** começa cheia e esvazia a cada extra lançado, até 0 €; a bolha diz a percentagem livre, e acima da folga a barra fica vermelha com o valor a mais.",
+      "**🧭 Página mais arrumada:** o registo do projeto à esquerda, com «Para onde vai a folga» e «Como funciona» por baixo; o «Lançar um extra» à direita, sempre à mão ao fazer scroll.",
+    ],
+  },
+  {
     version: "78.37",
     date: "2026-10-28",
     title: "SEO DPT: Folga de custos por projeto",
