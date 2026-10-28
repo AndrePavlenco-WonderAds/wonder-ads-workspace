@@ -60,8 +60,8 @@ function tierIndex(row: SemesterRow): number {
 function SemesterHead({ semester }: { semester: Semester }) {
   return (
     <div className="flex flex-wrap items-baseline justify-between gap-2">
-      <p className="text-[17px] font-semibold capitalize text-white">
-        {semester.label} <span className="font-normal normal-case text-white/50">· {semester.months}</span>
+      <p className="text-[17px] font-semibold text-white">
+        {semester.label} <span className="font-normal text-white/50">· {semester.months}</span>
       </p>
       <span className="rounded-full bg-amber-400/15 px-2.5 py-1 text-[12px] font-medium text-amber-200">
         A decorrer — avaliado em {semester.evaluatedIn}

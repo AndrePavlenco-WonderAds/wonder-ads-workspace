@@ -13,6 +13,12 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.31",
+    date: "2026-10-28",
+    title: "Bónus semestral — «2.º semestre de 2026» sem maiúsculas a mais",
+    highlights: ["**🔤 O título do painel do semestre já não põe maiúscula em cada palavra.**"],
+  },
+  {
     version: "78.30",
     date: "2026-10-28",
     title: "Documentação — Bónus semestral",
