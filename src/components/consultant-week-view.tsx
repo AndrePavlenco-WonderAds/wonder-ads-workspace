@@ -536,12 +536,16 @@ function FolgaCell({ slug, f }: { slug: string; f: PortfolioRow["folga"] }) {
       </Link>
     );
   }
-  const width = Math.max(0, Math.min(100, f.pctFree));
+  const over = f.remaining < 0;
+  // Acima da folga a barra fica toda a vermelho, em vez de vazia.
+  const width = over ? 100 : Math.max(0, Math.min(100, f.pctFree));
   return (
     <Link href={`/seo/${slug}/folga`} className="group block">
       <span className="flex items-baseline justify-between gap-2 text-[12.5px]">
         <span className={`font-semibold tabular-nums ${tone.text}`}>{eurCents(f.remaining)}</span>
-        <span className="text-[11.5px] tabular-nums text-white/40">{`${f.pctFree}%`.replace("-", "−")} livre</span>
+        <span className={`text-[11.5px] tabular-nums ${over ? "text-rose-200/80" : "text-white/40"}`}>
+          {over ? "acima da folga" : `${f.pctFree}% livre`}
+        </span>
       </span>
       <span className="mt-1.5 block h-1.5 overflow-hidden rounded-full bg-white/[0.07]">
         <span className={`block h-full rounded-full ${tone.bar}`} style={{ width: `${width}%` }} />
