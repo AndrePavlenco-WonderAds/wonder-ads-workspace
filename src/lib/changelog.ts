@@ -13,6 +13,19 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.42",
+    date: "2026-10-28",
+    title: "SEO DPT: a página de cada consultor, redesenhada",
+    highlights: [
+      "**👤 A página do consultor (SEO DPT › nome do consultor) foi refeita:** cabeçalho com a fotografia, a carteira e as tarefas da semana numa frase.",
+      "**📊 Os números da carteira:** projetos, tarefas por fazer esta semana, atrasos, aprovações à espera do cliente, a média do NPS do mês anterior (e quantos responderam) e a folga livre de todos os projetos.",
+      "**1️⃣ «Fazer primeiro»:** as tarefas desta semana de todos os projetos numa só lista, por ordem — primeiro os projetos em pior estado e, dentro deles, o que já está em curso.",
+      "**⚠️ «Precisa de atenção»:** NPS por enviar este mês, projetos que passaram ou esgotaram a folga, roadmaps em atraso e projetos sem roadmap — cada um com o atalho para resolver.",
+      "**🗂️ «A carteira»:** uma linha por projeto com o logo, o tier, a semana do roadmap e o estado, as tarefas da semana, o NPS do mês anterior e do mês em curso (ou «enviar») e a folga de custos de hoje, com atalhos para o roadmap, a folga e a ficha.",
+      "**🗓️ «Esta semana, projeto a projeto»:** os cartões de sempre, mais limpos, com o logo, o NPS e a folga no rodapé.",
+    ],
+  },
+  {
     version: "78.41",
     date: "2026-10-28",
     title: "Documentação: capa da Folga de custos",
