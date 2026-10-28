@@ -141,7 +141,7 @@ export function ConsultantWeekView({ view, portfolio }: Props) {
       ) : (
         <>
           {/* 2 · O que fazer agora */}
-          <div className="grid gap-5 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
+          <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
             <FirstThings clients={view.clients} />
             <Attention rows={rows} />
           </div>
@@ -656,6 +656,8 @@ function ClientWeekCard({ client, p }: { client: ConsultantWeekClient; p: Portfo
         </p>
       )}
 
+      {/* O rodapé fica sempre colado ao fundo do cartão. */}
+      <div className="mt-auto">
       {p && (
         <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-white/[0.06] pt-3">
           {!p.nps.excluded && (
@@ -682,6 +684,7 @@ function ClientWeekCard({ client, p }: { client: ConsultantWeekClient; p: Portfo
           Abrir roadmap
           <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
         </Link>
+      </div>
       </div>
     </article>
   );
