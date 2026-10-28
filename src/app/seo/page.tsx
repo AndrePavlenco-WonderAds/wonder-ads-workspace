@@ -16,6 +16,10 @@ import {
   type SeoOrganicRollup,
 } from "@/lib/seo-organic-rollup";
 import { OrganicPulse } from "@/components/seo/organic-pulse";
+import { NpsTeamChip, type NpsTeamChipProps } from "@/components/seo/nps-team-chip";
+import { buildNpsBonusMonths } from "@/lib/documentacao/nps-bonus-server";
+import { monthLabel, type NpsBonusMonth } from "@/lib/documentacao/nps-bonus";
+import { lisbonMonthKey, shiftMonthKey } from "@/lib/dates";
 import { CONSULTANT_ORDER } from "@/lib/client-overrides";
 import {
   getConsultantResolver,
@@ -67,6 +71,14 @@ export default async function SeoPage() {
   // and can open project pages, but the department-level tools (KPIs,
   // Directories, per-consultant roadmap boards) are for the SEO team.
   const readOnly = !editableDepts(employee).includes("seo");
+
+  // NPS da equipa (v78.32): o mês em curso e o anterior, numa só leitura,
+  // começado já para correr ao lado do resto da página.
+  const npsMonthNow = lisbonMonthKey(Date.now());
+  const npsMonths = buildNpsBonusMonths([shiftMonthKey(npsMonthNow, -1), npsMonthNow]).catch((err) => {
+    console.error("SEO DPT: NPS da equipa falhou:", err instanceof Error ? err.message : err);
+    return null;
+  });
 
   let clients: NotionClient[] = [];
   let notionError: string | null = null;
@@ -122,6 +134,7 @@ export default async function SeoPage() {
   // Último NPS de cada cliente (índice de satisfação global), lido numa
   // única operação KV (mget) para toda a board — nunca um get por cartão.
   const npsSummaries = await getLatestNpsSummaries(clients.map((c) => c.slug));
+  const npsTeam = toNpsTeamChip(await npsMonths);
 
   return (
     // `wide`: a página ocupa a largura toda (v77.48), para os consultores
@@ -136,7 +149,8 @@ export default async function SeoPage() {
         count={activeClients.length || undefined}
         countLabel="clients"
         countSuffix={
-          organic.configured ? (
+          <>
+          {organic.configured ? (
             <OrganicPulse
               total={organic.total}
               prevTotal={organic.prevTotal}
@@ -148,7 +162,9 @@ export default async function SeoPage() {
               comparable={organicTeam.comparable}
               topClimber={organicTeam.topClimber}
             />
-          ) : undefined
+          ) : null}
+          {npsTeam && <NpsTeamChip {...npsTeam} />}
+          </>
         }
         rightSlot={<WorldMap />}
         extra={
@@ -373,4 +389,24 @@ function buildOrganicTeamStats(
     }
   }
   return { growing, comparable: comparable.length, topClimber };
+}
+
+/** Os dois meses do NPS da equipa → a pílula do cabeçalho. */
+function toNpsTeamChip(months: NpsBonusMonth[] | null): NpsTeamChipProps | null {
+  if (!months || months.length < 2) return null;
+  const [prev, now] = months;
+  const month = (m: NpsBonusMonth) => ({
+    key: m.month,
+    name: monthLabel(m.month).split(" ")[0],
+    average: m.teamAverage,
+    filled: m.teamResponses,
+    total: m.teamProjects,
+  });
+  return {
+    previous: month(prev),
+    current: month(now),
+    projects: now.consultants.flatMap((c) =>
+      c.projects.map((p) => ({ slug: p.slug, name: p.name, consultant: c.name, score: p.score, answeredAt: p.answeredAt })),
+    ),
+  };
 }

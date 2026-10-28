@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.32",
+    date: "2026-10-28",
+    title: "SEO DPT — pastilha do NPS da equipa; formulário NPS mensal",
+    highlights: [
+      "**😊 Nova pastilha «NPS · mês» no cabeçalho do SEO DPT**, ao lado do tráfego orgânico: a média da equipa no mês em curso e quantos projetos já responderam. Ao passar o rato abre o mês anterior e o atual (média, variação e taxa de preenchimento contra a meta dos 50%) e a lista dos projetos que já responderam — com nota e data — e dos que faltam, por consultor.",
+      "**🗓️ O formulário NPS deixou de falar em 60 dias:** «Seleciona quem te acompanhou neste último mês», «satisfação geral… neste último mês» e «o que correu bem neste último mês» (também em inglês).",
+      "**💚 O aviso «só o 9 e o 10 contam» tem agora um brilho verde lento** à volta, para não passar despercebido.",
+    ],
+  },
+  {
     version: "78.31",
     date: "2026-10-28",
     title: "Bónus semestral — «2.º semestre de 2026» sem maiúsculas a mais",

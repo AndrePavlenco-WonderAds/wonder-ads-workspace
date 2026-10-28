@@ -341,6 +341,16 @@ body {
   0%, 100% { box-shadow: 0 0 0 0 rgba(244, 63, 94, 0.55); }
   55% { box-shadow: 0 0 0 6px rgba(244, 63, 94, 0); }
 }
+/* O aviso «só 9 e 10 contam» do formulário NPS (v78.32): um anel verde que
+   cresce e se desvanece devagar — chama a atenção sem saltar. */
+@keyframes nps-note-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(5, 150, 105, 0); border-color: rgba(5, 150, 105, 0.2); }
+  50% { box-shadow: 0 0 0 5px rgba(5, 150, 105, 0.12); border-color: rgba(5, 150, 105, 0.45); }
+}
+.nps-note-pulse {
+  animation: nps-note-pulse 2.6s ease-in-out infinite;
+}
+
 .nps-heartbeat {
   transform-origin: center;
   animation:
@@ -611,6 +621,7 @@ body {
   .animate-caret-blink,
   .animate-heartbeat,
   .nps-heartbeat,
+  .nps-note-pulse,
   .nps-slide-right,
   .nps-slide-left,
   .nps-q-in,

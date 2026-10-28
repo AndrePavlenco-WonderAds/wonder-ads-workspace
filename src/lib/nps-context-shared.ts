@@ -1,7 +1,8 @@
 // O CONTEXTO QUE ACOMPANHA O INQUÉRITO DE SATISFAÇÃO (v77.38).
 //
-// Quando o cliente do SEO DPT abre o formulário NPS, avalia um trabalho de
-// 60 dias de que se lembra mal — e a nota sai da memória, não dos factos.
+// Quando o cliente do SEO DPT abre o formulário NPS, avalia o trabalho do
+// último mês (o NPS é mensal desde v78.7) de que se lembra mal — e a nota
+// sai da memória, não dos factos.
 // O formulário passa a trazer ao lado, sem sair da página, as duas coisas
 // que sustentam uma avaliação informada:
 //

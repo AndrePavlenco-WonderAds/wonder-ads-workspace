@@ -23,7 +23,15 @@ import {
   type NpsBonusMonth,
 } from "./nps-bonus";
 
-export async function buildNpsBonusMonth(month: string): Promise<NpsBonusMonth> {
+type Portfolio = {
+  /** Clientes SEO ativos já com o dono resolvido (sem pausados nem a WonderAds). */
+  owned: Array<{ slug: string; title: string; owner: string }>;
+  records: Awaited<ReturnType<typeof getNpsRecordsFor>>;
+  consultants: ReturnType<typeof seoConsultants>;
+};
+
+/** Uma leitura para tudo: a carteira de hoje e o NPS de todos os clientes. */
+async function loadPortfolio(): Promise<Portfolio> {
   const [clients, resolver] = await Promise.all([
     getSeoClients().catch(() => []),
     getConsultantResolver(),
@@ -32,31 +40,41 @@ export async function buildNpsBonusMonth(month: string): Promise<NpsBonusMonth> 
   // A WonderAds é a própria agência, não um cliente: não conta.
   const active = clients.filter((c) => !inactive.has(c.slug) && !NPS_BONUS_EXCLUDED_SLUGS.has(c.slug));
   const records = await getNpsRecordsFor(active.map((c) => c.slug));
-
-  const byUser = new Map<string, ConsultantInput>(
-    seoConsultants().map((c) => [c.username, { ...c, projects: [] }]),
-  );
-
+  const consultants = seoConsultants();
+  const known = new Set(consultants.map((c) => c.username));
+  const owned: Portfolio["owned"] = [];
   for (const client of active) {
     const owner = findEmployeeByName(resolver.resolve(client.slug, client.consultant));
-    const row = owner ? byUser.get(owner.username) : undefined;
-    if (!row) continue;
+    if (owner && known.has(owner.username)) owned.push({ slug: client.slug, title: client.title, owner: owner.username });
+  }
+  return { owned, records, consultants };
+}
+
+function monthFrom(p: Portfolio, month: string): NpsBonusMonth {
+  const byUser = new Map<string, ConsultantInput>(p.consultants.map((c) => [c.username, { ...c, projects: [] }]));
+  for (const client of p.owned) {
     // Submissões guardadas da mais recente para a mais antiga: a primeira
     // do mês é a última resposta desse mês.
-    const answer = (records[client.slug]?.submissions ?? []).find(
-      (s) => lisbonMonthKey(s.submittedAt) === month,
-    );
-    row.projects.push({
+    const answer = (p.records[client.slug]?.submissions ?? []).find((s) => lisbonMonthKey(s.submittedAt) === month);
+    byUser.get(client.owner)?.projects.push({
       slug: client.slug,
       name: client.title,
       score: answer ? answer.scores.overall : null,
       answeredAt: answer ? answer.submittedAt : null,
     });
   }
-
   for (const row of byUser.values()) {
     row.projects.sort((a, b) => a.name.localeCompare(b.name, "pt"));
   }
-
   return computeNpsBonusMonth(month, Array.from(byUser.values()));
+}
+
+export async function buildNpsBonusMonth(month: string): Promise<NpsBonusMonth> {
+  return monthFrom(await loadPortfolio(), month);
+}
+
+/** Vários meses com uma só leitura (o chip do SEO DPT lê dois). */
+export async function buildNpsBonusMonths(months: string[]): Promise<NpsBonusMonth[]> {
+  const p = await loadPortfolio();
+  return months.map((m) => monthFrom(p, m));
 }

@@ -333,8 +333,8 @@ export const NPS_SECTIONS: NpsSectionDef[] = [
         required: true,
         lettered: true,
         q: {
-          pt: "Seleciona quem te acompanhou neste último período de 60 dias:",
-          en: "Select who accompanied you over this last 60-day period:",
+          pt: "Seleciona quem te acompanhou neste último mês:",
+          en: "Select who accompanied you over the last month:",
         },
         hint: {
           pt: "Podes escolher todas as pessoas que quiseres.",
@@ -397,8 +397,8 @@ export const NPS_SECTIONS: NpsSectionDef[] = [
         name: "p1_satisfacao",
         words: "satisfaction",
         q: {
-          pt: "Numa escala de 0 a 10, qual é o teu nível de satisfação geral com a Wonder Ads neste último período desde o último formulário que preencheste?",
-          en: "On a scale of 0 to 10, how satisfied are you overall with Wonder Ads over this last period since the last form you filled in?",
+          pt: "Numa escala de 0 a 10, qual é o teu nível de satisfação geral com a Wonder Ads neste último mês?",
+          en: "On a scale of 0 to 10, how satisfied are you overall with Wonder Ads over the last month?",
         },
         capLow: { pt: "Nada satisfeito", en: "Not at all satisfied" },
         capHigh: { pt: "Totalmente satisfeito", en: "Completely satisfied" },
@@ -407,8 +407,8 @@ export const NPS_SECTIONS: NpsSectionDef[] = [
         kind: "multi",
         name: "p2_correu_bem",
         q: {
-          pt: "O que correu particularmente bem neste período?",
-          en: "What went particularly well this period?",
+          pt: "O que correu particularmente bem neste último mês?",
+          en: "What went particularly well over the last month?",
         },
         hint: {
           pt: "Seleciona todas as opções aplicáveis.",

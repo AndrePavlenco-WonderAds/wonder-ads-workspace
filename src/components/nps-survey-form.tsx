@@ -249,7 +249,9 @@ const SCALE_NOTE: Record<PublicLang, React.ReactNode> = {
 
 function ScaleNote({ lang }: { lang: PublicLang }) {
   return (
-    <div className="mb-3.5 flex items-start gap-2.5 rounded-xl border border-[#059669]/20 bg-[#059669]/[0.055] px-3.5 py-2.5">
+    // nps-note-pulse (v78.32): um brilho verde lento à volta, para o aviso
+    // não passar despercebido entre as perguntas.
+    <div className="nps-note-pulse mb-3.5 flex items-start gap-2.5 rounded-xl border border-[#059669]/20 bg-[#059669]/[0.055] px-3.5 py-2.5">
       <Info
         className="mt-[2px] h-3.5 w-3.5 shrink-0 text-[#059669]"
         strokeWidth={2.4}
