@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.37",
+    date: "2026-10-28",
+    title: "SEO DPT: Folga de custos por projeto",
+    highlights: [
+      "**💶 Cada projeto SEO tem agora uma Folga de custos:** o que pode gastar por mês em extras oferecidos ao cliente. Na ficha do cliente, ao lado do Pending Review, o chip «Folga» mostra quanto ainda há este mês, com uma mini barra, e abre a página da folga.",
+      "**📈 A página da folga:** o valor disponível em grande, uma barra que enche com o que já saiu (e fica vermelha quando se passa a folga), a linha dos meses (o que fechou em cada um e o que entra no próximo), o que transitou, o oferecido e o cobrado do mês, e para onde vai a folga por categoria.",
+      "**➕ Lançar um extra:** o que foi, valor, data, categoria e quem paga (sai da folga ou é cobrado ao cliente). Antes de gravar mostra como fica o saldo e avisa quando o extra passa a folga.",
+      "**🔁 Acumulável:** o que não se gasta passa para o mês seguinte, e o que se gasta a mais também. Os clientes Lite não têm folga: o bloco aparece esgotado e os extras são todos cobrados.",
+      "**🧾 Registo do projeto:** mês a mês, a folga que entrou, cada extra, as mudanças da folga mensal e as anulações. Um extra lançado por engano anula-se com motivo (quem o lançou ou a direção) e fica riscado no registo. A direção pode mudar a folga mensal a partir do mês em curso ou dos dois seguintes.",
+    ],
+  },
+  {
     version: "78.36",
     date: "2026-10-28",
     title: "O Alex passa a ver a Documentação da empresa",

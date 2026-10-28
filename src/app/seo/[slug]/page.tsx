@@ -9,6 +9,7 @@ import { OnboardingForm } from "@/components/onboarding-form";
 import { TargetKeywordsPanel } from "@/components/target-keywords-panel";
 import { CurrentRoadmapStrip } from "@/components/current-roadmap-strip";
 import { PendingReviewChip } from "@/components/pending-review-chip";
+import { FolgaChip } from "@/components/seo-folga/folga-chip";
 import { SeoProjectContainers } from "@/components/seo-project-containers";
 import { SeoActions } from "@/components/seo-actions";
 import { ProjectSectionNav } from "@/components/project-section-nav";
@@ -36,7 +37,7 @@ import { getLogoOverride } from "@/lib/admin-client-logos-store";
 import { proposalPath, KIND_LABEL } from "@/lib/proposals";
 import { getProposalsForClientAll } from "@/lib/proposals/store";
 import { getCurrentEmployee } from "@/lib/auth/server";
-import { editableDepts, reviewTableAccess } from "@/lib/auth/credentials";
+import { canEditDept, editableDepts, reviewTableAccess } from "@/lib/auth/credentials";
 import { SeoReadOnlyProvider, ReadOnlyBanner } from "@/components/seo-readonly";
 
 // RENDER A CADA PEDIDO, SEM PRÉ-GERAR NO BUILD (v77.65).
@@ -243,11 +244,13 @@ export default async function ClientPage({
               <span className="brand-gradient-text">{client.title}</span>
             </h1>
             <CurrentRoadmapStrip slug={slug} />
-            <div className="mt-2.5">
+            <div className="mt-2.5 flex flex-wrap items-center gap-2">
               <PendingReviewChip
                 slug={slug}
                 hidden={!reviewTableAccess(employee)}
               />
+              {/* Folga de custos (v78.37) — só para quem pode lançar extras. */}
+              <FolgaChip slug={slug} hidden={!canEditDept(employee?.username, "seo")} />
             </div>
           </div>
         </div>
