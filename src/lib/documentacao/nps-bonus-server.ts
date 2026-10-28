@@ -16,6 +16,7 @@ import { findEmployeeByName } from "@/lib/proposals/consultant";
 import { getInactiveSeoSlugSet } from "@/lib/seo-inactive-clients";
 import { seoConsultants } from "./people";
 import {
+  NPS_BONUS_EXCLUDED_SLUGS,
   computeNpsBonusMonth,
   lisbonMonthKey,
   type ConsultantInput,
@@ -28,7 +29,8 @@ export async function buildNpsBonusMonth(month: string): Promise<NpsBonusMonth> 
     getConsultantResolver(),
   ]);
   const inactive = await getInactiveSeoSlugSet(clients.map((c) => c.slug));
-  const active = clients.filter((c) => !inactive.has(c.slug));
+  // A WonderAds é a própria agência, não um cliente: não conta.
+  const active = clients.filter((c) => !inactive.has(c.slug) && !NPS_BONUS_EXCLUDED_SLUGS.has(c.slug));
   const records = await getNpsRecordsFor(active.map((c) => c.slug));
 
   const byUser = new Map<string, ConsultantInput>(

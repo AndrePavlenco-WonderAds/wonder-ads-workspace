@@ -8,7 +8,7 @@
 
 import Link from "next/link";
 import { PageShell } from "@/components/page-shell";
-import { Bullets, DocHero, DocSection, DocsClosed, Note, Rows, StageFlow, Strong, SubHeading } from "@/components/documentacao/doc-ui";
+import { Bullets, DocHero, DocSection, DocsClosed, ExecutiveSummary, Note, Rows, StageFlow, Strong, SubHeading } from "@/components/documentacao/doc-ui";
 import { SectionNav } from "@/components/documentacao/section-nav";
 import { CheckinExample, OutcomeCards, ProbationTimeline } from "@/components/documentacao/probation-visuals";
 import { formatDate } from "@/lib/dates";
@@ -35,7 +35,8 @@ const NAV = [
   { id: "apoio", label: "Apoio" },
   { id: "na-app", label: "Na app" },
 ];
-const NAV_ADMIN = [...NAV, { id: "direcao", label: "Para a direção" }];
+const NAV_ALL = [...NAV, { id: "resumo", label: "Resumo" }];
+const NAV_ADMIN = [...NAV, { id: "direcao", label: "Para a direção" }, { id: "resumo", label: "Resumo" }];
 
 const L3 = thresholdToReach(3);
 
@@ -76,7 +77,7 @@ export default async function ProbationDocPage() {
         tabs={{ pages: block.pages, current: "/documentacao/probation" }}
       />
 
-      <SectionNav items={admin ? NAV_ADMIN : NAV} />
+      <SectionNav items={admin ? NAV_ADMIN : NAV_ALL} />
 
       <div className="mt-8 space-y-14 pb-10">
         <DocSection id="quando" title="Quando se ativa">
@@ -301,6 +302,46 @@ export default async function ProbationDocPage() {
             </Link>
           </DocSection>
         )}
+
+        <ExecutiveSummary
+          title="O probation, por extenso"
+          paragraphs={[
+            <>
+              O probation é a última oportunidade estruturada que a WonderAds dá a alguém cujo desempenho ficou abaixo do
+              esperado. Normalmente chega no fim da escala das ineficácias, no nível 3, mas uma falha grave sozinha pode levar
+              a ele diretamente. Não é uma formalidade nem um aviso disfarçado: é um acordo escrito sobre o que tem de mudar,
+              até quando e com que apoio, feito porque a empresa quer que a pessoa fique e chegue ao nível de que é capaz.
+            </>,
+            <>
+              Monta-se num kickoff: reúnem-se os factos dos últimos 30 dias, escolhem-se 2 a 3 competências a desenvolver,
+              definem-se os KPIs de cada avaliação — com meta e forma de medir — e fixam-se as rotinas obrigatórias. Tudo fica
+              num plano escrito com sete secções, enviado pela app e exportável em PDF: os dados do plano, o porquê, os KPIs
+              dos 15 dias, os KPIs dos 30 dias, os três desfechos possíveis, o acompanhamento e apoio, e o registo das
+              avaliações.
+            </>,
+            <>
+              Um período dura 30 dias. Todas as semanas há um check-in de 30 minutos com o responsável direto — ou com a
+              direção, quando não há chefia intermédia — em que se revê cada KPI com um semáforo (no caminho, em risco ou fora
+              do caminho), se registam o que correu bem, os bloqueios e o apoio dado, e se combinam os próximos passos, que a
+              semana seguinte confirma. Pelo meio, o consultor vai submetendo na app o que fez, ligado aos KPIs, para ser visto
+              no check-in dessa semana.
+            </>,
+            <>
+              Há duas avaliações, aos 15 e aos 30 dias, e cada uma termina obrigatoriamente numa de três decisões: extensão,
+              recuperação para a equipa ou saída. Aos 15 dias, a extensão quer dizer seguir para a avaliação dos 30; aos 30,
+              abre um novo período de 30 dias, com novas datas e novos KPIs. A recuperação fecha o probation e devolve a pessoa
+              ao funcionamento normal da equipa, sem reservas; a saída fecha-o com a saída da equipa, nos termos do contrato. A
+              decisão é do responsável direto e da direção, dita cara a cara na reunião e confirmada por escrito logo a seguir.
+            </>,
+            <>
+              Um plano destes só é justo se vier com apoio a sério. A WonderAds compromete-se com o check-in semanal, com
+              feedback na própria semana, com recursos e formação escritos no plano e com uma pessoa de apoio para o dia a dia.
+              Do lado do consultor, pede-se que registe o trabalho na ferramenta combinada, que peça ajuda cedo e que diga com
+              franqueza o que estiver a afetar o seu desempenho. Tudo chega pela app — plano, check-ins e avaliações — e cada
+              envio é confirmado como lido, para nunca haver dúvidas sobre o que foi combinado.
+            </>,
+          ]}
+        />
       </div>
     </PageShell>
   );

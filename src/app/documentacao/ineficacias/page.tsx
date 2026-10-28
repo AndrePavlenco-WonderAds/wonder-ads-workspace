@@ -9,7 +9,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { PageShell } from "@/components/page-shell";
-import { DocHero, DocSection, DocsClosed, Note, Rows, StageFlow, SubHeading } from "@/components/documentacao/doc-ui";
+import { DocHero, DocSection, DocsClosed, ExecutiveSummary, Note, Rows, StageFlow, SubHeading } from "@/components/documentacao/doc-ui";
 import { SectionNav } from "@/components/documentacao/section-nav";
 import { LevelStairs, PhaseReset, PointsScale, ScenarioCard } from "@/components/documentacao/ineficacias-visuals";
 import { formatDate } from "@/lib/dates";
@@ -44,7 +44,8 @@ const NAV = [
   { id: "cenarios", label: "Cenários" },
   { id: "objetivo", label: "Objetivo semestral" },
 ];
-const NAV_ADMIN = [...NAV, { id: "calculadora", label: "Calculadora" }];
+const NAV_ALL = [...NAV, { id: "resumo", label: "Resumo" }];
+const NAV_ADMIN = [...NAV, { id: "calculadora", label: "Calculadora" }, { id: "resumo", label: "Resumo" }];
 
 const L1 = thresholdToReach(1);
 const L2 = thresholdToReach(2);
@@ -117,7 +118,7 @@ export default async function IneficaciasDocPage() {
         )}
       </div>
 
-      <SectionNav items={admin ? NAV_ADMIN : NAV} />
+      <SectionNav items={admin ? NAV_ADMIN : NAV_ALL} />
 
       <div className="mt-8 space-y-14 pb-10">
         <DocSection id="o-sistema" title="Aprendizagem ou recorrência">
@@ -317,6 +318,46 @@ export default async function IneficaciasDocPage() {
             </Note>
           </DocSection>
         )}
+
+        <ExecutiveSummary
+          title="As ineficácias, por extenso"
+          paragraphs={[
+            <>
+              As ineficácias são o registo, erro a erro, das falhas de execução de cada pessoa da equipa: um prazo falhado sem
+              aviso, um trabalho que teve de ser refeito, um erro que chegou ao cliente, um processo que não foi seguido. O
+              objetivo não é castigar o erro, que faz parte de aprender, mas separar o erro de aprendizagem — natural numa
+              tarefa nova — do erro de recorrência, que acontece com algo que já se sabia fazer ou que já tinha acontecido. É a
+              recorrência que o sistema existe para tornar visível e corrigir cedo.
+            </>,
+            <>
+              O registo começa no próprio consultor. Quando quiser, e sobre erros dos últimos {REPORT_LOOKBACK_DAYS} dias, assina
+              um relatório (RH-03) em que descreve, por cada erro, o que aconteceu, em que cliente, o motivo, como devia ter
+              feito, se foi a primeira vez, a data, quem deu pelo erro e a gravidade na sua própria avaliação, de 0 a{" "}
+              {MAX_POINTS}. O relatório fica assinado com o nome completo e não se altera depois; só o próprio e a direção o
+              veem. A direção também pode registar um erro diretamente, e esse registo conta como os outros.
+            </>,
+            <>
+              Cada erro recebe da direção uma pontuação de 0 a {MAX_POINTS}: de 1 a 3 é baixo e recuperável no próprio dia, de 4
+              a 6 é médio e obriga alguém a refazer trabalho, 7 ou 8 é alto e tem impacto direto no cliente ou na equipa, e 9
+              ou 10 é crítico, com risco real para o negócio; 0 quer dizer que não conta. Os erros pontuados alimentam dois
+              contadores, o PA, que é a soma dos pontos, e o NO, que é o número de erros. Acumulam até ao próximo 1:1 de nível
+              e só aí voltam a zero; os erros nunca se apagam e ficam no histórico.
+            </>,
+            <>
+              Quando os contadores passam o limiar, sobe-se um nível, e cada nível tem a sua medida. O nível 1 chega com PA ≥{" "}
+              {L1.pa} ou NO ≥ {L1.no} e traz um 1:1 com o líder direto e um plano de 1 a 3 ações. O nível 2, depois do 1, chega
+              com PA ≥ {L2.pa} ou NO ≥ {L2.no} e traz um 1:1 com o nível acima e medidas extra. O nível 3, depois do 2, com o
+              mesmo limiar, é o probation. A progressão é linear e cumulativa — o nível nunca desce — e uma falha grave sozinha
+              pode levar diretamente ao probation, por decisão fundamentada da direção.
+            </>,
+            <>
+              Além da escala há um objetivo semestral: ficar abaixo de um número de ineficácias por mês, ainda a definir pela
+              direção, que, se não for cumprido, tem impacto no bónus semestral. O que protege cada pessoa é reportar cedo e com
+              transparência: um erro que o próprio reporta pesa menos do que um apontado por outros, e um padrão identificado a
+              tempo resolve-se num 1:1 antes de chegar ao fim da escala.
+            </>,
+          ]}
+        />
       </div>
     </PageShell>
   );

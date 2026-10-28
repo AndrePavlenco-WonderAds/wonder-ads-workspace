@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.25",
+    date: "2026-10-28",
+    title: "Documentação — resumo executivo em cada página; Bónus NPS com 3 projetos",
+    highlights: [
+      "**📜 Todas as páginas da Documentação acabam num «Resumo executivo do protocolo»:** 4 a 5 parágrafos que contam a regra de seguida — o que é, porquê e como se faz. Bónus NPS, Comissões, Matriz de Talento, Ineficácias e Probation.",
+      "**🎯 Bónus NPS individual: chega ter 3 projetos ativos (eram 4)**, com resposta em pelo menos 50% deles. Com 3 clientes, bastam 2 respostas (67%).",
+      "**🏢 A WonderAds deixa de contar no Bónus NPS:** é a própria agência, não um cliente. Sai da carteira, das respostas e das médias, também da equipa.",
+    ],
+  },
+  {
     version: "78.24",
     date: "2026-10-28",
     title: "Formação — Reporting e comunicação, pergunta 7 sem a opção quase igual à certa",

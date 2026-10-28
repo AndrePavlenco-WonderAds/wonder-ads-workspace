@@ -11,7 +11,9 @@
 //     resposta desse mês. Se o cliente respondeu duas vezes, conta a última.
 //   • Projetos sem resposta no mês não entram na média.
 //   • Taxa de preenchimento = projetos com resposta ÷ projetos da carteira.
-//   • Individual: 4 ou mais projetos E taxa ≥ 50%.
+//   • Individual: 3 ou mais projetos E taxa ≥ 50% (era 4 até 2026-10-28).
+//   • A WonderAds (o projeto da própria agência) não é cliente: fica fora
+//     da carteira, das respostas e das médias (André, 2026-10-28).
 //   • Equipa: duas portas. A EQUIPA tem de ter ≥ 50% dos projetos com
 //     resposta no mês (senão ninguém recebe — André, 2026-10-26) e o
 //     consultor também, seja qual for o n.º de projetos dele.
@@ -36,8 +38,11 @@ export const TEAM_TIERS: BonusTier[] = [
   { min: 8.5, eur: 25 },
 ];
 
-/** 4 ou mais projetos (confirmado pelo André, 2026-10-26). */
-export const INDIVIDUAL_MIN_PROJECTS = 4;
+/** 3 ou mais projetos ativos (André, 2026-10-28; era 4). */
+export const INDIVIDUAL_MIN_PROJECTS = 3;
+
+/** Projetos SEO que não contam para o bónus: a própria agência. */
+export const NPS_BONUS_EXCLUDED_SLUGS = new Set(["wonderads"]);
 export const MIN_FILL_RATE = 0.5;
 
 /** O primeiro mês medido — apurado em outubro de 2026. */

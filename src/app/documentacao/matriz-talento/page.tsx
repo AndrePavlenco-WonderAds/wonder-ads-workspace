@@ -7,7 +7,7 @@
 import Image from "next/image";
 import { Maximize2 } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
-import { DocHero, DocSection, DocsClosed, Note } from "@/components/documentacao/doc-ui";
+import { DocHero, DocSection, DocsClosed, ExecutiveSummary, Note } from "@/components/documentacao/doc-ui";
 import { formatDate } from "@/lib/dates";
 import { getDocsContext } from "@/lib/documentacao/server";
 
@@ -143,6 +143,37 @@ export default async function MatrizTalentoPage() {
             menos. A técnica treina-se, o fit não. Por isso o B da direita exige vigilância: se descer, torna-se C.
           </Note>
         </DocSection>
+
+        <ExecutiveSummary
+          title="A Matriz de Talento, por extenso"
+          paragraphs={[
+            <>
+              A Matriz de Talento Wonder é a grelha com que a direção e os treinadores avaliam cada pessoa da equipa. Cruza dois
+              eixos que se medem separadamente: a capacidade técnica — o que a pessoa sabe fazer e a qualidade com que o faz — e
+              o cultural fit — o quanto vive os valores da WonderAds no dia a dia, com clientes e com colegas. Cada eixo tem três
+              níveis, baixo, médio e alto, e o cruzamento dá nove posições, cada uma com um tipo de player e uma ação.
+            </>,
+            <>
+              No topo está o A Player, com técnica e fit altos: é quem se promove e se reconhece em público. Logo abaixo ficam os
+              perfis a desenvolver. O B+ tem fit alto e técnica média, e com a técnica a crescer chega a A. O B de técnica alta e
+              fit médio precisa de foco no cultural fit. Os B- em formação têm técnica baixa e desenvolvem-se com mentoria dos A
+              Players — com mais tempo quando o fit é alto e com prazo curto quando é médio. O B de técnica e fit médios segue o
+              seu growth path normal, sem intervenção.
+            </>,
+            <>
+              Na base estão as posições de saída. O C Player tem fit baixo e técnica média ou alta: entrega, mas não vive os
+              valores, e isso corrói os A Players à sua volta — com técnica alta a urgência é maior, porque o impacto é maior e
+              mais difícil de ver. O D Player, com técnica e fit baixos, é um erro de contratação. A ordem é deliberada: o C sai
+              antes do D, porque é o C que faz a cultura morrer.
+            </>,
+            <>
+              A matriz é uma ferramenta de decisão, não um rótulo. Cada avaliação parte de factos — entregas, feedback de
+              clientes, ineficácias, comportamento na equipa — e acaba numa ação concreta da coluna certa. «Em formação» é um
+              prazo e não um estatuto: um B- ou evolui pelo menos para B ou sai, e um B de fit médio pede vigilância, porque se o
+              fit descer passa a C. A técnica treina-se; o fit, não.
+            </>,
+          ]}
+        />
       </div>
     </PageShell>
   );

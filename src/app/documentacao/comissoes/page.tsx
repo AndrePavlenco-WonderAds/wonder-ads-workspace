@@ -9,7 +9,7 @@
 
 import { ArrowUpRight, ChevronDown, Lock, Mail, Search, Tv } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
-import { Bullets, DocHero, DocSection, DocsClosed, Note, Rows, Strong, SubHeading } from "@/components/documentacao/doc-ui";
+import { Bullets, DocHero, DocSection, DocsClosed, ExecutiveSummary, Note, Rows, Strong, SubHeading } from "@/components/documentacao/doc-ui";
 import { SectionNav } from "@/components/documentacao/section-nav";
 import { CommissionsTracker } from "@/components/documentacao/commissions-tracker";
 import { CommissionSimulator } from "@/components/documentacao/commission-simulator";
@@ -17,7 +17,7 @@ import { formatDate } from "@/lib/dates";
 import { getDocsContext } from "@/lib/documentacao/server";
 import { buildCommissionsBoard } from "@/lib/documentacao/commissions-server";
 import { seoConsultants } from "@/lib/documentacao/people";
-import { COMMISSION_TIERS, RENEWAL_RATE, formatRate } from "@/lib/documentacao/commissions";
+import { COMMISSIONS_START, COMMISSION_TIERS, RENEWAL_RATE, formatRate } from "@/lib/documentacao/commissions";
 import { ADS_DIRECTOR, CROSS_SELLS, MEDIA, PROOF_LINKS, TV, WEBSITES } from "@/lib/documentacao/sales-catalog";
 
 export const dynamic = "force-dynamic";
@@ -38,6 +38,7 @@ const NAV = [
   { id: "patamares", label: "Patamares" },
   { id: "cross-sells", label: "Cross-sells" },
   { id: "upsells", label: "Upsells" },
+  { id: "resumo", label: "Resumo" },
 ];
 
 const LOW = formatRate(COMMISSION_TIERS[0].rate);
@@ -407,6 +408,48 @@ export default async function ComissoesPage() {
             </div>
           </div>
         </DocSection>
+
+        <ExecutiveSummary
+          title="As comissões, por extenso"
+          paragraphs={[
+            <>
+              As comissões são a parte da remuneração que liga o consultor ao crescimento das contas que acompanha. A regra de
+              fundo é que se ganha sobre o que se fecha: quando um cliente renova, quando passa a comprar um serviço novo
+              (cross-sell) ou quando aumenta o que já tem (upsell), quem fechou o negócio recebe uma percentagem do valor,
+              sempre calculada sem IVA. A comissão é individual e conta os negócios fechados desde {formatDate(COMMISSIONS_START)},
+              pelo valor do cartão aceite no departamento comercial.
+            </>,
+            <>
+              Uma renovação é receita que já existia e por isso paga {RENEWAL} fixos sobre o valor faturado, já com o desconto
+              de pagamento antecipado. A duração standard é de 6 meses e as opções apresentam-se por uma ordem pensada para o
+              dinheiro entrar à cabeça e o cliente ficar comprometido mais tempo: primeiro o PIF de 12 meses (−10%), depois o
+              PIF de 6 meses (−5%) e só no fim o mensal de 6 meses, a preço de tabela. Um downsell para 3 meses é uma exceção e
+              só se propõe com aprovação prévia do Diretor de Delivery.
+            </>,
+            <>
+              Cross-sells e upsells são receita nova e pagam de {LOW} a {HIGH}, conforme o patamar. O patamar é dado pela tua
+              faturação acumulada, sem IVA —{" "}
+              {COMMISSION_TIERS.map((t) =>
+                t.to === null ? `${formatRate(t.rate)} acima de ${eurK(t.from)}` : `${formatRate(t.rate)} até ${eurK(t.to)}`,
+              ).join(", ")}{" "}
+              — e todos os negócios contam para subir, renovações incluídas. Cada negócio paga a percentagem do patamar em que
+              estás no momento em que o fechas; quando sobes, a nova percentagem vale só para os negócios seguintes, nunca para
+              trás. A base de cálculo depende do serviço: nos anúncios conta a fee de agência e não o investimento em media; no
+              CRM, nas apps e na imprensa conta a margem; nos websites e na expansão do programa conta o valor faturado.
+            </>,
+            <>
+              O pagamento segue o dinheiro. Há sempre 30 dias de período de reembolso antes da primeira comissão. Depois disso,
+              se o cliente pagou tudo à cabeça, a comissão é paga de uma vez; se paga ao mês, recebes a parte de cada
+              mensalidade que o cliente pagar. Se o cliente deixar de pagar, a comissão desses meses não é paga.
+            </>,
+            <>
+              Na prática, cada renovação é também uma oportunidade de crescimento: olha para o cliente, vê se tem potencial
+              para um dos cross-sells ou upsells desta página e usa os casos de referência do mesmo setor como prova. O painel
+              no topo mostra o teu acumulado, o teu patamar e as tuas comissões, ligado às propostas aceites do departamento
+              comercial, e o simulador mostra quanto e quando recebes antes de fechares.
+            </>,
+          ]}
+        />
 
         <p className="border-t border-white/[0.07] pt-6 text-[13px] text-white/40">
           Estes termos podem ser alterados e personalizados caso a caso. Dúvidas: Diretor de Operações.

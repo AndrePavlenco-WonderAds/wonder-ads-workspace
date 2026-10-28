@@ -32,7 +32,7 @@ export const DOCS_BLOCKS: DocsBlock[] = [
     title: "Bónus & Comissões",
     audience: { depts: ["SEO"] },
     audienceLabel: "SEO DPT",
-    updatedAt: "2026-10-26",
+    updatedAt: "2026-10-28",
     pages: [
       {
         id: "bonus-nps",
@@ -56,7 +56,7 @@ export const DOCS_BLOCKS: DocsBlock[] = [
     // Só direção e treinadores: é a grelha com que se avalia a equipa.
     audience: { depts: [], tags: ["Treinador"] },
     audienceLabel: "Treinadores",
-    updatedAt: "2026-10-26",
+    updatedAt: "2026-10-28",
     pages: [
       {
         id: "matriz-talento",
@@ -72,7 +72,7 @@ export const DOCS_BLOCKS: DocsBlock[] = [
     // Toda a equipa: as ineficácias e o probation aplicam-se a todos.
     audience: { depts: ["SEO", "ADS", "Web", "Commercial"] },
     audienceLabel: "toda a equipa",
-    updatedAt: "2026-10-27",
+    updatedAt: "2026-10-28",
     pages: [
       // As duas capas foram dadas pelo André (2026-10-27).
       { id: "ineficacias", href: "/documentacao/ineficacias", label: "Ineficácias", image: "/documentacao/ineficacias-capa.jpg" },

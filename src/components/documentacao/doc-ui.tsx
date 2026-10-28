@@ -205,6 +205,26 @@ export function StageFlow({
   );
 }
 
+/** O fecho de cada página (v78.25): o protocolo contado por extenso, em 3 a
+ *  5 parágrafos — o que é, porquê e como se faz — para quem quer ler a regra
+ *  de seguida em vez de a montar a partir das secções. */
+export function ExecutiveSummary({ title, paragraphs }: { title: string; paragraphs: ReactNode[] }) {
+  return (
+    <section id="resumo" data-doc-section className="scroll-mt-40 border-t border-white/[0.07] pt-10 sm:pt-12">
+      <div className="relative overflow-hidden rounded-[28px] border border-white/10 bg-white/[0.025] px-6 pb-8 pt-9 sm:px-10 sm:pb-10 sm:pt-11">
+        <span aria-hidden className="absolute inset-x-0 top-0 h-1" style={{ background: "var(--brand-gradient)" }} />
+        <p className="text-[13px] font-medium text-[#c4a6ff]">Resumo executivo do protocolo</p>
+        <h2 className="mt-1 text-[1.6rem] font-semibold leading-tight tracking-[-0.02em] text-white sm:text-[1.85rem]">{title}</h2>
+        <div className="mt-6 max-w-[70ch] space-y-5 text-[15.5px] leading-[1.8] text-white/75 sm:text-[16px]">
+          {paragraphs.map((p, i) => (
+            <p key={i}>{p}</p>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export function Strong({ children }: { children: ReactNode }) {
   return <strong className="font-semibold text-white">{children}</strong>;
 }
