@@ -304,6 +304,7 @@ export default async function ProbationDocPage() {
         )}
 
         <ExecutiveSummary
+          updatedAt={block.updatedAt}
           title="O probation, por extenso"
           paragraphs={[
             <>

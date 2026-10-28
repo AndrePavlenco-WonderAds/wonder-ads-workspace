@@ -44,7 +44,8 @@ const FILL = `${Math.round(MIN_FILL_RATE * 100)}%`;
 
 /** «8,00 dá 25 €, 8,50 dá 50 €… e 10,00 dá 300 €» — os patamares por extenso. */
 function tiersInWords(tiers: typeof INDIVIDUAL_TIERS): string {
-  const up = [...tiers].reverse().map((t) => `${t.min.toFixed(2).replace(".", ",")} dá ${formatEur(t.eur)}`);
+  // Espaço inquebrável: «100 €» nunca parte entre o número e o €.
+  const up = [...tiers].reverse().map((t) => `${t.min.toFixed(2).replace(".", ",")} dá ${formatEur(t.eur).replace(" ", "\u00a0")}`);
   return `${up.slice(0, -1).join(", ")} e ${up.at(-1)}`;
 }
 const TOP_INDIVIDUAL = INDIVIDUAL_TIERS[0].eur;
@@ -200,6 +201,7 @@ export default async function BonusNpsPage({
         </DocSection>
 
         <ExecutiveSummary
+          updatedAt={block.updatedAt}
           title="O Bónus NPS, por extenso"
           paragraphs={[
             <>
@@ -220,7 +222,7 @@ export default async function BonusNpsPage({
               O bónus individual depende da média dos teus projetos: {tiersInWords(INDIVIDUAL_TIERS)}. Para lhe teres direito
               tens de cumprir duas condições ao mesmo tempo: ter pelo menos {INDIVIDUAL_MIN_PROJECTS} projetos ativos na
               carteira e ter resposta em pelo menos {FILL} deles. Quem tem 3 clientes precisa, por isso, de 2 respostas no mês
-              (67%); com uma só resposta fica nos 33% e o individual desse mês é 0 €, por melhor que seja a nota.
+              (67%); com uma só resposta fica nos 33% e o individual desse mês é {"0\u00a0€"}, por melhor que seja a nota.
             </>,
             <>
               O bónus de equipa olha para a média de todas as respostas da equipa SEO no mês — {tiersInWords(TEAM_TIERS)} — e

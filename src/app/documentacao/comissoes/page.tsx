@@ -410,6 +410,7 @@ export default async function ComissoesPage() {
         </DocSection>
 
         <ExecutiveSummary
+          updatedAt={block.updatedAt}
           title="As comissões, por extenso"
           paragraphs={[
             <>
@@ -430,7 +431,8 @@ export default async function ComissoesPage() {
               Cross-sells e upsells são receita nova e pagam de {LOW} a {HIGH}, conforme o patamar. O patamar é dado pela tua
               faturação acumulada, sem IVA —{" "}
               {COMMISSION_TIERS.map((t) =>
-                t.to === null ? `${formatRate(t.rate)} acima de ${eurK(t.from)}` : `${formatRate(t.rate)} até ${eurK(t.to)}`,
+                // Espaço inquebrável: o valor nunca parte antes do €.
+                (t.to === null ? `${formatRate(t.rate)} acima de ${eurK(t.from)}` : `${formatRate(t.rate)} até ${eurK(t.to)}`).replace(/ €/g, "\u00a0€"),
               ).join(", ")}{" "}
               — e todos os negócios contam para subir, renovações incluídas. Cada negócio paga a percentagem do patamar em que
               estás no momento em que o fechas; quando sobes, a nova percentagem vale só para os negócios seguintes, nunca para

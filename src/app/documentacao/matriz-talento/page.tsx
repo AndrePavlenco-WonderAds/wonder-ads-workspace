@@ -145,6 +145,7 @@ export default async function MatrizTalentoPage() {
         </DocSection>
 
         <ExecutiveSummary
+          updatedAt={block.updatedAt}
           title="A Matriz de Talento, por extenso"
           paragraphs={[
             <>

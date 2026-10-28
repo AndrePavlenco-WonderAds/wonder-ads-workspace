@@ -320,6 +320,7 @@ export default async function IneficaciasDocPage() {
         )}
 
         <ExecutiveSummary
+          updatedAt={block.updatedAt}
           title="As ineficácias, por extenso"
           paragraphs={[
             <>

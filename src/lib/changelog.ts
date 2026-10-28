@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.28",
+    date: "2026-10-28",
+    title: "Documentação — resumos executivos sem espaço vazio e assinados",
+    highlights: [
+      "**📰 Em ecrãs largos, o resumo executivo corre em duas colunas** e já não deixa meio cartão vazio à direita.",
+      "**✍️ Cada resumo fecha com a assinatura «Direção WonderAds» e a data da última atualização.**",
+      "**€ sem quebras:** os valores já não ficam com o «€» sozinho na linha seguinte.",
+    ],
+  },
+  {
     version: "78.27",
     date: "2026-10-28",
     title: "Bónus NPS — a nota do painel diz que a WonderAds não conta",
