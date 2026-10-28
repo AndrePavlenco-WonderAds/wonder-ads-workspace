@@ -34,7 +34,7 @@ export function SeoConsultantMigrate({
         }}
         title={`Migrar “${title}” para outro consultor`}
         aria-label={`Migrar ${title} para outro consultor`}
-        className="absolute right-11 top-2.5 z-20 inline-flex h-7 w-7 items-center justify-center rounded-full border border-white/15 bg-black/30 text-white/55 opacity-70 backdrop-blur-md transition hover:border-[#783DF5]/70 hover:bg-[#783DF5]/20 hover:text-white hover:opacity-100"
+        className="absolute right-11 top-2.5 z-20 inline-flex h-7 w-7 items-center justify-center rounded-full border border-white/15 bg-black/30 text-white/55 opacity-70 transition hover:border-[#783DF5]/70 hover:bg-[#783DF5]/20 hover:text-white hover:opacity-100"
       >
         <ArrowRightLeft className="h-3.5 w-3.5" />
       </button>

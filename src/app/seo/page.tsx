@@ -18,7 +18,7 @@ import {
 import { OrganicPulse } from "@/components/seo/organic-pulse";
 import { NpsTeamChip, type NpsTeamChipProps } from "@/components/seo/nps-team-chip";
 import { buildNpsBonusMonths } from "@/lib/documentacao/nps-bonus-server";
-import { monthLabel, type NpsBonusMonth } from "@/lib/documentacao/nps-bonus";
+import { NPS_BONUS_EXCLUDED_SLUGS, monthLabel, type NpsBonusMonth } from "@/lib/documentacao/nps-bonus";
 import { lisbonMonthKey, shiftMonthKey } from "@/lib/dates";
 import { CONSULTANT_ORDER } from "@/lib/client-overrides";
 import {
@@ -81,6 +81,17 @@ export default async function SeoPage() {
     return null;
   });
 
+  // As leituras que não dependem umas das outras correm em paralelo
+  // (v78.34) — eram oito idas ao KV/Notion uma atrás da outra. A do
+  // resolver fica com um .catch vazio só para a rejeição não ser dada como
+  // «não tratada» enquanto se espera pelo Notion; o await abaixo relança-a.
+  const canReorder = !employee.isAdmin && !readOnly;
+  const resolverP = getConsultantResolver();
+  resolverP.catch(() => {});
+  const pausedP = getPausedSlugSet().catch(() => new Set<string>());
+  const logosP = getLogoOverrides().catch(() => ({}) as Record<string, string>);
+  const orderP = canReorder ? getBoardOrder(employee.username) : Promise.resolve<string[]>([]);
+
   let clients: NotionClient[] = [];
   let notionError: string | null = null;
 
@@ -98,45 +109,40 @@ export default async function SeoPage() {
   // Paused / suspended clients live in a KV set (SuperAdmin-managed).
   // Split them out of the main grid — they render in a separate section
   // below, using the same consultant-column structure.
-  const pausedSet = await getPausedSlugSet().catch(() => new Set<string>());
+  const pausedSet = await pausedP;
   const activeClients = clients.filter((c) => !pausedSet.has(c.slug));
   const pausedClients = clients.filter((c) => pausedSet.has(c.slug));
 
+  // Department-wide organic visitors (GA4, Organic Search, last 30 days),
+  // served from the KV snapshot and refreshed after the response — one KV
+  // read on the render path, never ~20 live GA4 calls (v77.14). Paused
+  // clients are excluded from the headline organic total.
+  // O NPS de cada cliente (índice de satisfação global), lido numa única
+  // operação KV (mget) para toda a board — nunca um get por cartão. O cartão
+  // mostra o mês anterior e o atual (v78.33); a lane, a média do último.
+  const [organic, npsRecords, consultants, order, logoOverrides] = await Promise.all([
+    getSeoOrganicVisitors30d(activeClients.map((c) => c.slug)),
+    getNpsRecordsFor(clients.map((c) => c.slug)),
+    resolverP,
+    orderP,
+    logosP,
+  ]);
+  const organicTeam = buildOrganicTeamStats(organic, activeClients);
+  const npsCardMonths = [shiftMonthKey(npsMonthNow, -1), npsMonthNow];
+
   // Carteiras com as migrações do SuperAdmin aplicadas (uma leitura KV).
-  const consultants = await getConsultantResolver();
   const consultantColumns = buildConsultantColumns(activeClients, consultants);
 
   // Ordem pessoal da carteira (v78.4): só na lane de quem está a ver, e só
   // para ele — os outros continuam a ver a ordem por tier. Em «Ver como» o
   // SuperAdmin vê a ordem e o botão do consultor, mas a API recusa gravar.
-  const canReorder = !employee.isAdmin && !readOnly;
   if (canReorder) {
-    const order = await getBoardOrder(employee.username);
     for (const col of consultantColumns) {
       if (col.name === employee.name) col.clients = applyBoardOrder(col.clients, order);
     }
   }
   const pausedColumns = buildConsultantColumns(pausedClients, consultants);
 
-  // Department-wide organic visitors (GA4, Organic Search, last 30 days),
-  // served from the KV snapshot and refreshed after the response — one KV
-  // read on the render path, never ~20 live GA4 calls (v77.14). Paused
-  // clients are excluded from the headline organic total.
-  const organic = await getSeoOrganicVisitors30d(
-    activeClients.map((c) => c.slug),
-  );
-  const organicTeam = buildOrganicTeamStats(organic, activeClients);
-
-  // Custom uploaded logos override the static CLIENT_LOGOS map.
-  const logoOverrides = await getLogoOverrides().catch(
-    () => ({}) as Record<string, string>,
-  );
-
-  // O NPS de cada cliente (índice de satisfação global), lido numa única
-  // operação KV (mget) para toda a board — nunca um get por cartão. O cartão
-  // mostra o mês anterior e o atual (v78.33); a lane, a média do último.
-  const npsRecords = await getNpsRecordsFor(clients.map((c) => c.slug));
-  const npsCardMonths = [shiftMonthKey(npsMonthNow, -1), npsMonthNow];
   const npsTeam = toNpsTeamChip(await npsMonths);
 
   return (
@@ -341,6 +347,7 @@ function toBoardColumns(
     avatar: getTeamAvatar(findEmployeeByName(col.name)?.username),
     clients: col.clients.map((c) => {
       const website = getClientWebsite(c.slug);
+      const noNps = NPS_BONUS_EXCLUDED_SLUGS.has(c.slug);
       return {
         slug: c.slug,
         title: c.title,
@@ -350,9 +357,11 @@ function toBoardColumns(
         logoSizing: getLogoSizing(c.slug),
         palette: c.palette,
         tier: c.tier,
-        npsOverall: npsRecords[c.slug]?.submissions[0]?.scores.overall ?? null,
-        npsAt: npsRecords[c.slug]?.submissions[0]?.submittedAt ?? null,
-        npsMonths: npsByMonth(npsRecords[c.slug], npsMonths),
+        // A WonderAds é a própria agência: não faz NPS, nem conta para a média
+        // da lane — o cartão fica sem pastilha (v78.34).
+        npsOverall: noNps ? null : (npsRecords[c.slug]?.submissions[0]?.scores.overall ?? null),
+        npsAt: noNps ? null : (npsRecords[c.slug]?.submissions[0]?.submittedAt ?? null),
+        npsMonths: noNps ? [] : npsByMonth(npsRecords[c.slug], npsMonths),
         keywordGuarantee: hasKeywordGuarantee(c.slug),
         domain: website ? displayDomain(website) : null,
       };

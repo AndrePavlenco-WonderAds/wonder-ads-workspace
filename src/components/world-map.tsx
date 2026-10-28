@@ -11,16 +11,26 @@ type CountryFeature = FeatureCollection<Geometry, { name: string }>;
 // matches ("036" / "36").
 const DEFAULT_HIGHLIGHTED = ["124", "620", "724", "784", "036", "36"];
 
-export function WorldMap({
-  width = 520,
-  height = 300,
-  highlightedCountryIds = DEFAULT_HIGHLIGHTED,
-}: {
-  width?: number;
-  height?: number;
-  highlightedCountryIds?: string[];
-}) {
-  const HIGHLIGHTED = new Set(highlightedCountryIds);
+type Ping = { id: string; name: string; cx: number; cy: number };
+type MapShapes = {
+  /** Os países sem destaque, todos num só path (o mesmo traço e
+   *  preenchimento — eram ~170 elementos <path>). */
+  rest: string;
+  highlighted: Array<{ key: string; name: string; d: string }>;
+  pings: Ping[];
+};
+
+// O mapa é igual em todos os pedidos: calcula-se uma vez por instância do
+// servidor (v78.34), com 1 casa decimal nas coordenadas — a 520px de largura
+// é um décimo de píxel, e o HTML do SEO DPT encolhe ~80 KB.
+const SHAPES = new Map<string, MapShapes>();
+
+function shapesFor(width: number, height: number, ids: string[]): MapShapes {
+  const cacheKey = `${width}x${height}:${ids.join(",")}`;
+  const cached = SHAPES.get(cacheKey);
+  if (cached) return cached;
+
+  const HIGHLIGHTED = new Set(ids);
   const topology = worldData as unknown as Topology<{
     countries: GeometryCollection<{ name: string }>;
   }>;
@@ -30,19 +40,40 @@ export function WorldMap({
   ) as CountryFeature;
 
   const projection = geoEqualEarth().fitSize([width, height], countries);
-  const pathGen = geoPath(projection);
+  const pathGen = geoPath(projection).digits(1);
 
-  type Ping = { id: string; name: string; cx: number; cy: number };
+  const rest: string[] = [];
+  const highlighted: MapShapes["highlighted"] = [];
   const pings: Ping[] = [];
-  for (const f of countries.features) {
+  countries.features.forEach((f, i) => {
     const fid = String((f as { id?: string | number }).id ?? "");
-    if (HIGHLIGHTED.has(fid)) {
-      const c = pathGen.centroid(f);
-      if (!Number.isNaN(c[0])) {
-        pings.push({ id: fid, name: f.properties.name, cx: c[0], cy: c[1] });
-      }
+    const d = pathGen(f);
+    if (!HIGHLIGHTED.has(fid)) {
+      if (d) rest.push(d);
+      return;
     }
-  }
+    if (d) highlighted.push({ key: `${fid}-${i}`, name: f.properties.name, d });
+    const c = pathGen.centroid(f);
+    if (!Number.isNaN(c[0])) {
+      pings.push({ id: fid, name: f.properties.name, cx: c[0], cy: c[1] });
+    }
+  });
+
+  const shapes = { rest: rest.join(""), highlighted, pings };
+  SHAPES.set(cacheKey, shapes);
+  return shapes;
+}
+
+export function WorldMap({
+  width = 520,
+  height = 300,
+  highlightedCountryIds = DEFAULT_HIGHLIGHTED,
+}: {
+  width?: number;
+  height?: number;
+  highlightedCountryIds?: string[];
+}) {
+  const { rest, highlighted, pings } = shapesFor(width, height, highlightedCountryIds);
 
   // Crop Antarctica + lower void by rendering only the top ~80% of the
   // projection. All highlighted countries (incl. Australia at ~70%) stay
@@ -83,28 +114,19 @@ export function WorldMap({
         </filter>
       </defs>
 
-      {countries.features.map((f, i) => {
-        const fid = String((f as { id?: string | number }).id ?? "");
-        const isHighlighted = HIGHLIGHTED.has(fid);
-        const d = pathGen(f);
-        if (!d) return null;
-        return (
-          <path
-            key={`${fid}-${i}`}
-            d={d}
-            fill={isHighlighted ? "url(#map-highlight)" : "rgba(255,255,255,0.05)"}
-            stroke={
-              isHighlighted
-                ? "rgba(255,255,255,0.45)"
-                : "rgba(255,255,255,0.08)"
-            }
-            strokeWidth={isHighlighted ? 0.5 : 0.3}
-            filter={isHighlighted ? "url(#country-glow)" : undefined}
-          >
-            {isHighlighted && <title>{f.properties.name}</title>}
-          </path>
-        );
-      })}
+      <path d={rest} fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.08)" strokeWidth={0.3} />
+      {highlighted.map((c) => (
+        <path
+          key={c.key}
+          d={c.d}
+          fill="url(#map-highlight)"
+          stroke="rgba(255,255,255,0.45)"
+          strokeWidth={0.5}
+          filter="url(#country-glow)"
+        >
+          <title>{c.name}</title>
+        </path>
+      ))}
 
       {pings.map((p) => (
         <g key={`ping-${p.id}`} transform={`translate(${p.cx} ${p.cy})`}>

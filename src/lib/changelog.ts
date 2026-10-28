@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.34",
+    date: "2026-10-28",
+    title: "SEO DPT mais leve; Bónus semestral só do SEO; pergunta do exame 3 corrigida",
+    highlights: [
+      "**⚡ O SEO DPT carrega e rola mais leve, sem mudar nada do que se vê:** as leituras do servidor correm em paralelo (eram oito seguidas); os cartões e os botões de pausa/migrar deixaram de usar desfoque de fundo (eram ~80 camadas a redesenhar a cada frame); o mapa-múndi é calculado uma vez e pesa menos ~80 KB no HTML.",
+      "**🔒 O Bónus semestral passa a ser só para SuperAdmins e SEO DPT:** o cartão no hub, o painel (só consultores SEO) e o atalho na página das Ineficácias, que os outros departamentos deixam de ver.",
+      "**🏢 A WonderAds deixa de mostrar NPS no cartão do SEO DPT** — é a própria agência, não preenche — e não entra na média da lane.",
+      "**🎓 Exame 3, «Um artigo gerado com apoio de ferramenta…»:** «Confirmação de que atinge o número de palavras previsto» passa a certa; a opção errada é agora publicar já e rever depois.",
+    ],
+  },
+  {
     version: "78.33",
     date: "2026-10-28",
     title: "Bónus semestral 500/300/150; NPS por mês nos cartões do SEO DPT",

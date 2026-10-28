@@ -39,7 +39,8 @@ export type ClientCardProps = {
   /** Data (epoch ms) desse último inquérito, para o tooltip. */
   npsAt?: number | null;
   /** O NPS por mês (v78.33): [mês anterior, mês em curso]. Quando vem,
-   *  substitui o último NPS no cartão sem consultor (o do SEO DPT). */
+   *  substitui o último NPS no cartão sem consultor (o do SEO DPT). Vazio
+   *  = cliente que não faz NPS (a WonderAds): o cartão fica sem pastilha. */
   npsMonths?: NpsMonthScore[] | null;
   /** Cliente com contrato de garantia de posicionamento nas Premium
    *  Keywords. Mostra a pastilha dourada ao lado do tier. */
@@ -87,7 +88,7 @@ export function ClientCard({
           "--client-grad": gradient,
         } as React.CSSProperties
       }
-      className="brand-gradient-border animate-fade-up group relative flex flex-col gap-4 overflow-hidden rounded-2xl bg-white/[0.035] p-5 backdrop-blur-md transition-all duration-500 hover:-translate-y-1 hover:bg-white/[0.06]"
+      className="brand-gradient-border animate-fade-up group relative flex flex-col gap-4 overflow-hidden rounded-2xl bg-white/[0.035] p-5 transition-all duration-500 hover:-translate-y-1 hover:bg-white/[0.06]"
     >
       {/* A cor do cliente no cartão (v77.49): um véu do degradê da marca a
           entrar pelo canto superior esquerdo e a esbater-se, mais a mancha
@@ -164,8 +165,8 @@ export function ClientCard({
         ) : (
           <div className="mt-2.5 flex items-center justify-between gap-2">
             <div className="flex min-w-0 items-center gap-1.5">
-              {npsMonths && npsMonths.length > 0 ? (
-                <NpsByMonth months={npsMonths} />
+              {npsMonths ? (
+                npsMonths.length > 0 && <NpsByMonth months={npsMonths} />
               ) : npsOverall !== null ? (
                 <NpsChip overall={npsOverall} at={npsAt} />
               ) : (

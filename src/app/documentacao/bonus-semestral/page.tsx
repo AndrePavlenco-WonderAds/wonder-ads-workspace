@@ -149,7 +149,7 @@ export default async function BonusSemestralPage() {
             <>
               O bónus semestral premeia, duas vezes por ano, quem trabalha com poucas ineficácias. É a outra face do sistema de
               ineficácias: a escala trata o que se repete, com 1:1 e medidas; o bónus semestral recompensa quem, ao longo de seis
-              meses, quase não erra, ou erra pouco e com pouco peso. Vale até {TOP} por semestre e aplica-se a toda a equipa.
+              meses, quase não erra, ou erra pouco e com pouco peso. Vale até {TOP} por semestre e aplica-se ao SEO DPT.
             </>,
             <>
               O ano divide-se em dois semestres: de janeiro a junho, avaliado em junho, e de julho a dezembro, avaliado em

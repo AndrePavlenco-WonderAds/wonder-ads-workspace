@@ -388,9 +388,12 @@ const EXAME_S3 = build("exame-s3", [
       ["Revisão da intenção de pesquisa a que o artigo responde", true],
       ["Verificação dos factos afirmados no texto", true],
       ["Revisão do tom face ao cliente e ao público dele", true],
-      ["Confirmação de que atinge o número de palavras previsto", false],
+      // Passou a certa na v78.34 (o André: «a respondida está mais completa»);
+      // a errada passou a ser a desculpa de sempre, a nova opção 5.
+      ["Confirmação de que atinge o número de palavras previsto", true],
+      ["Publicação imediata para cumprir o calendário, com a revisão feita já com o artigo online", false],
     ],
-    "Artigo gerado não é artigo entregue. Intenção, factos e tom são o que a ferramenta não garante; a contagem de palavras é a métrica que não protege ninguém de publicar uma asneira bem dimensionada.",
+    "Artigo gerado não é artigo entregue. Intenção, factos, tom e o tamanho combinado são o que a ferramenta não garante — e rever depois de publicar é deixar o cliente ver a asneira primeiro.",
   ),
   mc(
     "Um roadmap de cliente faz-se a partir de quê?",

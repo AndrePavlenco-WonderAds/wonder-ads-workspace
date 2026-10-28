@@ -50,7 +50,7 @@ export function SeoPauseToggle({
       disabled={busy}
       title={paused ? `Reativar “${title}”` : `Pausar / suspender “${title}”`}
       aria-label={paused ? `Reativar ${title}` : `Pausar ${title}`}
-      className={`absolute right-2.5 top-2.5 z-20 inline-flex h-7 w-7 items-center justify-center rounded-full border backdrop-blur-md transition disabled:opacity-50 ${
+      className={`absolute right-2.5 top-2.5 z-20 inline-flex h-7 w-7 items-center justify-center rounded-full border transition disabled:opacity-50 ${
         paused
           ? "border-emerald-400/40 bg-emerald-500/15 text-emerald-200 hover:border-emerald-400/70 hover:bg-emerald-500/25"
           : "border-white/15 bg-black/30 text-white/55 opacity-70 hover:border-amber-400/60 hover:bg-amber-500/20 hover:text-amber-200 hover:opacity-100"

@@ -16,6 +16,8 @@ import { formatDate } from "@/lib/dates";
 import { SEMESTER_TIERS, tierRange } from "@/lib/documentacao/semestral-bonus";
 import { formatEur } from "@/lib/proposals/value";
 import { getDocsContext } from "@/lib/documentacao/server";
+import { readerSees } from "@/lib/documentacao/access";
+import { getBlock } from "@/lib/documentacao/blocks";
 import {
   ERROR_TYPES,
   IMPACTS,
@@ -44,10 +46,8 @@ const NAV = [
   { id: "pa-e-no", label: "PA e NO" },
   { id: "niveis", label: "Níveis" },
   { id: "cenarios", label: "Cenários" },
-  { id: "bonus-semestral", label: "Bónus semestral" },
 ];
-const NAV_ALL = [...NAV, { id: "resumo", label: "Resumo" }];
-const NAV_ADMIN = [...NAV, { id: "calculadora", label: "Calculadora" }, { id: "resumo", label: "Resumo" }];
+const NAV_BONUS = { id: "bonus-semestral", label: "Bónus semestral" };
 
 const L1 = thresholdToReach(1);
 const L2 = thresholdToReach(2);
@@ -91,6 +91,15 @@ export default async function IneficaciasDocPage() {
   }
   const { reader, block } = ctx;
   const admin = reader.isAdmin;
+  // O bónus semestral é só do SEO DPT (v78.34): os restantes não veem o atalho.
+  const semestral = getBlock("bonus-semestral");
+  const showBonus = Boolean(semestral && readerSees(reader, semestral.audience));
+  const nav = [
+    ...NAV,
+    ...(showBonus ? [NAV_BONUS] : []),
+    ...(admin ? [{ id: "calculadora", label: "Calculadora" }] : []),
+    { id: "resumo", label: "Resumo" },
+  ];
 
   return (
     <PageShell backHref="/documentacao" backLabel="Documentação">
@@ -120,7 +129,7 @@ export default async function IneficaciasDocPage() {
         )}
       </div>
 
-      <SectionNav items={admin ? NAV_ADMIN : NAV_ALL} />
+      <SectionNav items={nav} />
 
       <div className="mt-8 space-y-14 pb-10">
         <DocSection id="o-sistema" title="Aprendizagem ou recorrência">
@@ -241,6 +250,7 @@ export default async function IneficaciasDocPage() {
           </div>
         </DocSection>
 
+        {showBonus && (
         <DocSection
           id="bonus-semestral"
           title="Bónus semestral"
@@ -267,6 +277,7 @@ export default async function IneficaciasDocPage() {
             </span>
           </Link>
         </DocSection>
+        )}
 
         {admin && (
           <DocSection
@@ -362,11 +373,15 @@ export default async function IneficaciasDocPage() {
               pode levar diretamente ao probation, por decisão fundamentada da direção.
             </>,
             <>
-              Além da escala, as ineficácias de cada semestre decidem o bónus semestral, de até{" "}
-              {formatEur(SEMESTER_TIERS[0].eur).replace(" ", "\u00a0")}: conta o número e os pontos das ineficácias de janeiro a
-              junho e de julho a dezembro, sem reinício no 1:1. O que protege cada pessoa é reportar cedo e com transparência: um
-              erro que o próprio reporta pesa menos do que um apontado por outros, e um padrão identificado a tempo resolve-se num
-              1:1 antes de chegar ao fim da escala.
+              {showBonus && (
+                <>
+                  Além da escala, no SEO DPT as ineficácias de cada semestre decidem o bónus semestral, de até{" "}
+                  {formatEur(SEMESTER_TIERS[0].eur).replace(" ", "\u00a0")}: conta o número e os pontos das ineficácias de
+                  janeiro a junho e de julho a dezembro, sem reinício no 1:1.{" "}
+                </>
+              )}
+              O que protege cada pessoa é reportar cedo e com transparência: um erro que o próprio reporta pesa menos do que um
+              apontado por outros, e um padrão identificado a tempo resolve-se num 1:1 antes de chegar ao fim da escala.
             </>,
           ]}
         />

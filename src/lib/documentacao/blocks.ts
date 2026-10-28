@@ -55,9 +55,10 @@ export const DOCS_BLOCKS: DocsBlock[] = [
   {
     id: "bonus-semestral",
     title: "Bónus semestral",
-    // Toda a equipa: o bónus sai das ineficácias, que se aplicam a todos.
-    audience: { depts: ["SEO", "ADS", "Web", "Commercial"] },
-    audienceLabel: "toda a equipa",
+    // Só SuperAdmins e SEO DPT (v78.34): o bónus é do SEO, embora saia das
+    // ineficácias, que se aplicam a todos.
+    audience: { depts: ["SEO"] },
+    audienceLabel: "SEO DPT",
     updatedAt: "2026-10-28",
     pages: [
       {

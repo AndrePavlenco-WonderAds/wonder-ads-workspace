@@ -1,6 +1,7 @@
 // O lado servidor do bónus semestral: lê as ineficácias de quem a página
-// pode mostrar — a equipa toda para a direção, só o próprio para os
-// restantes — e devolve números, nunca o texto das ocorrências.
+// pode mostrar — o SEO DPT inteiro para a direção (o bónus é só do SEO desde
+// a v78.34), só o próprio para os restantes — e devolve números, nunca o
+// texto das ocorrências.
 
 import "server-only";
 import { findEmployeeByUsername, listImpersonationTargets, viewerDeptOf } from "@/lib/auth/credentials";
@@ -15,7 +16,7 @@ export type SemesterBoard = { semester: Semester; rows: SemesterRow[] };
 export async function buildSemesterBoard(opts: { username: string; all: boolean; todayISO: string }): Promise<SemesterBoard> {
   const semester = semesterOf(opts.todayISO);
   const people = opts.all
-    ? listImpersonationTargets().filter((p) => !p.isAdmin && !viewerDeptOf(p.username))
+    ? listImpersonationTargets().filter((p) => p.dept === "SEO" && !p.isAdmin && !viewerDeptOf(p.username))
     : [findEmployeeByUsername(opts.username)].filter((p): p is NonNullable<typeof p> => Boolean(p));
   const team = await loadTeam(
     people.map((p) => p.username),
