@@ -10,6 +10,7 @@ import { PageShell } from "@/components/page-shell";
 import { QuizRunner } from "@/components/training/quiz-runner";
 import { getTrainingContext, trackStateFor } from "@/lib/training/server";
 import { attemptsForQuiz } from "@/lib/training/attempts-store";
+import { shuffleOptions } from "@/lib/training/exam-draw";
 import { seededShuffle, toPublicQuestions } from "@/lib/training/grading";
 import { formatDateTime } from "@/lib/dates";
 
@@ -64,12 +65,15 @@ export default async function QuizPage({
 
   // Ordem baralhada mas estável: o mesmo utilizador, na mesma tentativa, vê
   // sempre a mesma sequência — um refresh não reordena o quiz a meio.
-  const ordered = quiz.shuffleQuestions
-    ? seededShuffle(
-        quiz.questions,
-        `${ctx.employee.username}:${quiz.id}:${attemptNumber}`,
-      )
-    : [...quiz.questions].sort((a, b) => a.order - b.order);
+  // As opções também se baralham (v78.35), com a mesma semente: a certa
+  // estava em 1.º ou 2.º lugar em 7 de cada 10 perguntas e quase nunca em
+  // último, e isso ensinava-se de colega para colega.
+  const seed = `${ctx.employee.username}:${quiz.id}:${attemptNumber}`;
+  const ordered = (
+    quiz.shuffleQuestions
+      ? seededShuffle(quiz.questions, seed)
+      : [...quiz.questions].sort((a, b) => a.order - b.order)
+  ).map((q) => shuffleOptions(q, seed));
 
   // Onde continuar depois de passar: o capítulo seguinte, se existir.
   const idx = state.modules.findIndex((m) => m.module.id === moduleId);

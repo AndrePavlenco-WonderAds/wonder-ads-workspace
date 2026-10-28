@@ -12,6 +12,8 @@
 //     aula pertencem as perguntas seguintes.
 //   • `⚠️ CONFIRMAR (nota)` → needsReview + reviewNote (badge no CMS, não
 //     bloqueia a publicação).
+//   • `Explicação: …` logo a seguir às opções → a explicação que se lê na
+//     correção (v78.35).
 //
 // Os ids são estáveis: `<módulo>-q<n>` pela numeração do documento. Se o
 // documento for reordenado, os ids mudam — e com eles as respostas já dadas.
@@ -177,6 +179,7 @@ for (const raw of lines) {
       options: [],
       answer: null,
       note,
+      explanation: null,
     };
     if (kind === "vf") {
       const vf = body.match(/^(.*?)\s*→\s*([VF])\s*$/u);
@@ -191,6 +194,13 @@ for (const raw of lines) {
   const opt = line.match(/^- \[( |x)\] (.*)$/);
   if (opt && current) {
     current.options.push([stripLetter(opt[2]), opt[1] === "x"]);
+    continue;
+  }
+
+  // Antes do teste da aula: uma explicação pode citar «(aula 4.3)».
+  const expl = line.match(/^Explicação: (.*)$/u);
+  if (expl && current) {
+    current.explanation = expl[1].trim();
     continue;
   }
 
@@ -272,6 +282,8 @@ out.push(`  /** N.º da pergunta no documento, quando não é a posição (houve
 out.push(`  n?: number;`);
 out.push(`  /** Nota de revisão — presente quando a resposta está por confirmar. */`);
 out.push(`  r?: string;`);
+out.push(`  /** Explicação lida na correção. */`);
+out.push(`  e?: string;`);
 out.push(`};`);
 out.push(``);
 out.push(`function bank(moduleId: string, seeds: Seed[]): TrainingQuestion[] {`);
@@ -300,7 +312,7 @@ out.push(`            : "multiple_choice",`);
 out.push(`      order: i + 1,`);
 out.push(`      points: 1,`);
 out.push(`      options,`);
-out.push(`      explanation: null,`);
+out.push(`      explanation: s.e ?? null,`);
 out.push(`      lessonId: s.l,`);
 out.push(`      ...(s.r ? { needsReview: true, reviewNote: s.r } : {}),`);
 out.push(`    };`);
@@ -330,6 +342,7 @@ for (const [num, { questions }] of [...modules].sort((a, b) => a[0] - b[0])) {
     }
     if (q.n !== i + 1) out.push(`      n: ${q.n},`);
     if (q.note) out.push(`      r: ${esc(q.note)},`);
+    if (q.explanation) out.push(`      e: ${esc(q.explanation)},`);
     out.push(`    },`);
   }
   out.push(`  ]),`);

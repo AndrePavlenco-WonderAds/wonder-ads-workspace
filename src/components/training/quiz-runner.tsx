@@ -405,6 +405,11 @@ export function QuizRunner({
     const topicOf = new Map(
       questions.map((q) => [q.id, q.topic ?? null] as const),
     );
+    // As opções chegam baralhadas (v78.35): a correção mostra-as pela ordem
+    // em que a pessoa as viu, não pela do catálogo.
+    const seenAt = new Map(
+      questions.flatMap((q) => q.options.map((o, k) => [o.id, k] as const)),
+    );
     const byTopic = new Map<
       string,
       { topic: QuestionTopic; right: number; total: number }
@@ -590,7 +595,9 @@ export function QuizRunner({
                     {i + 1}. {c.prompt}
                   </p>
                   <ul className="mt-3 space-y-1.5">
-                    {c.options.map((o) => {
+                    {[...c.options]
+                      .sort((a, b) => (seenAt.get(a.id) ?? 0) - (seenAt.get(b.id) ?? 0))
+                      .map((o) => {
                       const chosen = c.chosenOptionIds.includes(o.id);
                       const correct = c.correctOptionIds.includes(o.id);
                       return (

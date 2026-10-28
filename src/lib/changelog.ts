@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.35",
+    date: "2026-10-28",
+    title: "Formação: a resposta certa deixa de se adivinhar pelo tamanho",
+    highlights: [
+      "**🎯 A resposta certa deixa de ser a mais comprida:** em 74% das perguntas de escolha única a certa era a opção mais comprida (muitas vezes 2 a 10× maior), e a equipa escolhia-a sem ler. 212 perguntas reescritas (os quizzes de todas as formações e o núcleo dos seis exames): a certa ficou com o essencial e as erradas ganharam a desculpa que alguém daria mesmo. Agora a certa é a mais comprida em 24% e nunca por mais de 10%; o detalhe que saiu foi para a explicação da correção.",
+      "**🔎 Enunciados que davam a resposta:** «histórico de posições orgânicas» já não aponta para «Organic Rankings > Positions» (passou a um caso: «para que pesquisas aparecia em março do ano passado?»), e as perguntas vizinhas deixaram de nomear o caminho. O mesmo em mais uma dúzia de casos em que só a certa repetia palavras do enunciado.",
+      "**🔀 As opções dos quizzes passam a vir baralhadas,** como já vinham nos exames: a certa estava em 1.º ou 2.º lugar em 7 de cada 10 perguntas. A correção mostra-as pela ordem em que se viram.",
+      "**⚠️ O CMS avisa «a certa salta à vista»** quando, ao escrever uma pergunta, a certa fica visivelmente mais comprida do que as erradas.",
+      "**🐞 GMB Post sem imagens (SEO, módulo 9):** era de escolha única com duas respostas certas, impossível de acertar. Passou a «seleciona duas».",
+    ],
+  },
+  {
     version: "78.34",
     date: "2026-10-28",
     title: "SEO DPT mais leve; Bónus semestral só do SEO; pergunta do exame 3 corrigida",

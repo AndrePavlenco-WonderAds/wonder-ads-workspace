@@ -41,6 +41,7 @@ import {
   type TrainingTrack,
   type VideoProvider,
 } from "@/lib/training/catalog";
+import { lengthGiveaway } from "@/lib/training/option-balance";
 
 // ---- helpers imutáveis ----
 function move<T>(arr: T[], i: number, dir: -1 | 1): T[] {
@@ -1091,6 +1092,7 @@ function QuestionEditor({
 }) {
   const [open, setOpen] = useState(false);
   const correct = question.options.filter((o) => o.isCorrect).length;
+  const giveaway = lengthGiveaway(question);
   return (
     <div className="rounded-lg border border-white/8 bg-white/[0.015]">
       <div className="flex flex-wrap items-center gap-2 p-2.5">
@@ -1113,6 +1115,14 @@ function QuestionEditor({
                   className="inline-flex shrink-0 items-center gap-1 rounded-full border border-rose-400/35 bg-rose-500/12 px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-wide text-rose-200"
                 >
                   <AlertTriangle className="h-2.5 w-2.5" />a confirmar
+                </span>
+              )}
+              {giveaway && (
+                <span
+                  title={giveaway}
+                  className="inline-flex shrink-0 items-center gap-1 rounded-full border border-amber-400/35 bg-amber-500/12 px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-wide text-amber-200"
+                >
+                  <AlertTriangle className="h-2.5 w-2.5" />a certa salta à vista
                 </span>
               )}
             </span>
@@ -1253,6 +1263,13 @@ function QuestionEditor({
                   </div>
                 ))}
               </div>
+              {/* v78.35 — a certa não se pode denunciar pelo tamanho. */}
+              {giveaway && (
+                <p className="mt-2 flex items-start gap-1.5 text-[11.5px] leading-relaxed text-amber-200/85">
+                  <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />
+                  {giveaway}
+                </p>
+              )}
               <div className="mt-2">
                 <AddBtn
                   label="Adicionar opção"

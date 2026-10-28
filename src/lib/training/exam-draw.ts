@@ -257,10 +257,11 @@ function interleave(
 
 /** Opções que apontam para as de cima («Ambas as anteriores», «Todas as
  *  opções anteriores») deixam de fazer sentido se a ordem mudar — nessas
- *  perguntas as opções ficam como foram escritas. */
+ *  perguntas as opções ficam como foram escritas. Também usado pelos quizzes
+ *  dos capítulos (v78.35). */
 const REFERS_TO_OTHERS = /\banteriores?\b|\bnenhuma d[ao]s\b/i;
 
-function shuffleOptions(q: TrainingQuestion, seed: string): TrainingQuestion {
+export function shuffleOptions(q: TrainingQuestion, seed: string): TrainingQuestion {
   if (q.type === "true_false") return q;
   if (q.options.some((o) => REFERS_TO_OTHERS.test(o.text))) return q;
   return { ...q, options: shuffle(q.options, rng(`${seed}:${q.id}`)) };
