@@ -13,6 +13,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.43",
+    date: "2026-10-28",
+    title: "Atalhos «Como funciona» para a Documentação",
+    highlights: [
+      "**📖 Novo chip «Como funciona» no topo das páginas com protocolo**, que abre logo a página certa da Documentação: a folga de custos de cada projeto («Como atribuir extras»), o NPS de cada projeto («Como funciona o NPS e o bónus»), as Ineficácias, o meu Probation e o Commercial DPT («Como funcionam as comissões»).",
+      "**🔒 Só aparece a quem pode abrir essa página da Documentação** — enquanto a Documentação está em construção, só a direção o vê; quando abrir à equipa, cada um vê os do seu departamento.",
+    ],
+  },
+  {
     version: "78.42",
     date: "2026-10-28",
     title: "SEO DPT: a página de cada consultor, redesenhada",

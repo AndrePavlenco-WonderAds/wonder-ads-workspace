@@ -12,6 +12,7 @@
 // civil por defeito; ?periodo=tudo mostra desde sempre.
 
 import { PageShell } from "@/components/page-shell";
+import { DocsGuideChip } from "@/components/documentacao/docs-guide-chip";
 import { DepartmentHeader } from "@/components/department-header";
 import { TemplateChips } from "@/components/commercial/template-chips";
 import { ProposalUploadButton } from "@/components/commercial/proposal-upload-button";
@@ -101,6 +102,8 @@ export default async function CommercialPage({
         title="COMMERCIAL DPT"
         rightSlot={
           <div className="flex flex-col items-start gap-3 lg:items-end">
+            {/* As comissões nascem dos fechos deste departamento (v78.43). */}
+            <DocsGuideChip blockId="remuneracao-variavel" href="/documentacao/comissoes" label="Como funcionam as comissões" />
             <TemplateChips />
             {canEdit && (
               <ProposalUploadButton

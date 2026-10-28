@@ -10,6 +10,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
+import { DocsGuideChip } from "@/components/documentacao/docs-guide-chip";
 import { LogoChip } from "@/components/logo-chip";
 import { NpsManagerActions } from "@/components/nps-manager-actions";
 import { NpsDeleteLatestButton } from "@/components/nps-delete-latest-button";
@@ -171,6 +172,9 @@ export default async function NpsPage({
               Avaliação de satisfação do cliente — mensal. Resultado mais
               recente, histórico e o estado deste mês.
             </p>
+            <div className="mt-3">
+              <DocsGuideChip blockId="remuneracao-variavel" href="/documentacao/bonus-nps" label="Como funciona o NPS e o bónus" />
+            </div>
             {onboardedIso && (
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <span

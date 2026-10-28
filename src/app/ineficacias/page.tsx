@@ -12,6 +12,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { History, ShieldAlert } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
+import { DocsGuideChip } from "@/components/documentacao/docs-guide-chip";
 import { UnderConstruction } from "@/components/ineficacias/under-construction";
 import { OverviewButton } from "@/components/ineficacias/overview-button";
 import { ReportView, ScoreBadge } from "@/components/ineficacias/report-view";
@@ -65,6 +66,9 @@ export default async function IneficaciasPage() {
           <h1 className="mt-1 text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">
             <span className="brand-gradient-text">Team Inefficiency</span>
           </h1>
+          <div className="mt-3">
+            <DocsGuideChip blockId="ineficacias" href="/documentacao/ineficacias" label="Como funcionam as ineficácias" />
+          </div>
         </div>
         <OverviewButton state={state} href="/ineficacias/painel" />
       </header>

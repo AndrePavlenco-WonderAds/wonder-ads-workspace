@@ -7,6 +7,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { ClipboardCheck } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
+import { DocsGuideChip } from "@/components/documentacao/docs-guide-chip";
 import { ConsultantPlan } from "@/components/probation/consultant-plan";
 import { getCurrentEmployee } from "@/lib/auth/server";
 import { getPlan, listPublishedForUser, listSubmissions } from "@/lib/probation/store";
@@ -38,6 +39,9 @@ export default async function MyProbationPage() {
 
   return (
     <PageShell backHref="/" backLabel="Início">
+      <div className="animate-fade-up mt-4">
+        <DocsGuideChip blockId="ineficacias" href="/documentacao/probation" label="Como funciona o probation" />
+      </div>
       {plans.length === 0 ? (
         <div className="animate-fade-up mx-auto mt-16 max-w-md rounded-2xl border border-dashed border-white/12 px-6 py-12 text-center">
           <ClipboardCheck className="mx-auto h-7 w-7 text-white/25" />

@@ -9,6 +9,7 @@
 
 import { notFound } from "next/navigation";
 import { PageShell } from "@/components/page-shell";
+import { DocsGuideChip } from "@/components/documentacao/docs-guide-chip";
 import { FolgaHero } from "@/components/seo-folga/folga-hero";
 import { FolgaAdd, type FolgaLinkOption } from "@/components/seo-folga/folga-add";
 import { FolgaLog } from "@/components/seo-folga/folga-log";
@@ -110,6 +111,9 @@ export default async function FolgaPage({ params }: { params: Promise<{ slug: st
           O que o projeto tem, por mês, para extras que oferecemos ao cliente. O que não se gasta passa para o mês
           seguinte.
         </p>
+        <div className="mt-4">
+          <DocsGuideChip blockId="folga-custos" href="/documentacao/folga-custos" label="Como atribuir extras" />
+        </div>
       </header>
 
       <div className="animate-fade-up mt-8">
