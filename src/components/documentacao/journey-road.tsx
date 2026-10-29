@@ -1,48 +1,51 @@
 "use client";
 
-// A Jornada de Cliente como uma estrada (v78.46). Uma estrada em SVG desce a
-// página e passa por uma paragem em cada mês e em cada semana; os cartões
-// ficam encostados à estrada, alternando de lado. À medida que se lê, a
-// estrada acende-se até ao meio do ecrã e um marcador segue por ela — é o
-// único movimento da página e responde ao scroll de quem lê.
+// A Jornada de Cliente como uma estrada (v78.46; tarefas só com o título e
+// painel lateral em v78.48). Uma estrada em SVG desce a página e passa por uma
+// paragem em cada mês e em cada semana; os cartões ficam encostados à
+// estrada, alternando de lado. À medida que se lê, a estrada acende-se até ao
+// meio do ecrã e um marcador segue por ela — é o único movimento da página e
+// responde ao scroll de quem lê.
+//
+// Em cada semana vê-se só o título de cada tarefa; carregar nele abre o painel
+// lateral com a explicação (journey-task-drawer.tsx).
 //
 // A estrada é desenhada a partir das paragens reais (medidas no DOM), por isso
-// acompanha qualquer altura de cartão: blocos novos, formulários abertos,
-// ecrãs estreitos. No telemóvel desce a direito pela esquerda.
+// acompanha qualquer altura de cartão. No telemóvel desce a direito pela
+// esquerda.
 //
-// A direção (SuperAdmin, sem «Ver como») edita aqui mesmo: blocos em cada
-// semana e nos marcos de cada mês, o título e o objetivo de cada mês, e meses
-// novos no fim. Cada mudança grava logo (ver use-doc-save).
+// A direção (SuperAdmin, sem «Ver como») edita aqui mesmo: as tarefas no
+// painel de cada uma; com «Editar o caminho», acrescenta e remove tarefas,
+// marcos do mês e meses, e muda o título e o objetivo de cada mês. Cada
+// mudança grava logo (ver use-doc-save).
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
-import { ArrowUpRight, BookOpenCheck, Check, Flag, Pencil, Plus, Star, Trash2, X } from "lucide-react";
+import { BookOpenCheck, Check, ChevronRight, Flag, Pencil, Plus, Star, Trash2, X } from "lucide-react";
 import { formatDate } from "@/lib/dates";
 import {
-  JOURNEY_GUIDES,
-  JOURNEY_KINDS,
   MAX_BLOCKS_PER_SLOT,
   MAX_JOURNEY_MONTHS,
+  PLACEHOLDER_TITLE,
   WEEKS_PER_JOURNEY_MONTH,
-  journeyKind,
   newJourneyId,
   type Journey,
   type JourneyBlock,
-  type JourneyKind,
   type JourneyMonth,
 } from "@/lib/documentacao/jornada";
-import { JourneyGuideDrawer } from "./journey-guide-drawer";
+import { JourneyTaskDrawer, type TaskPanel } from "./journey-task-drawer";
 import { SectionNav } from "./section-nav";
 import { useDocSave } from "./use-doc-save";
 
-/** Onde vive um bloco: nos marcos do mês (week null) ou numa semana. */
+/** Onde vive uma tarefa: nos marcos do mês (week null) ou numa semana. */
 type Slot = { month: number; week: number | null };
 type Point = { x: number; y: number };
 type Geom = { w: number; h: number; pts: Point[]; wide: boolean };
-type Lane = "l" | "c" | "r";
+type Lane = "l" | "r";
+type OpenPanel = TaskPanel & { slot: Slot; blockId: string | null };
 
 const GRADIENT = "linear-gradient(135deg,#343ED7,#783DF5 55%,#C535C9)";
 
-const slotBlocks = (ms: JourneyMonth[], s: Slot) => (s.week === null ? ms[s.month].blocks : ms[s.month].weeks[s.week].blocks);
+const slotBlocks = (ms: JourneyMonth[], s: Slot) => (s.week === null ? ms[s.month]?.blocks : ms[s.month]?.weeks[s.week]?.blocks) ?? [];
 function withSlot(ms: JourneyMonth[], s: Slot, blocks: JourneyBlock[]): JourneyMonth[] {
   if (s.week === null) ms[s.month].blocks = blocks;
   else ms[s.month].weeks[s.week].blocks = blocks;
@@ -69,27 +72,34 @@ export function JourneyRoad({ initial, canEdit }: { initial: Journey; canEdit: b
   const { data, save, saving, error, clearError } = useDocSave("jornada-cliente", initial);
   const months = data.months;
   const [editing, setEditing] = useState(false);
-  const [form, setForm] = useState<{ slot: Slot; blockId: string | null } | null>(null);
   const [monthForm, setMonthForm] = useState<number | null>(null);
-  const [guide, setGuide] = useState<{ id: string; where: string } | null>(null);
-  const closeGuide = useCallback(() => setGuide(null), []);
+  const [panel, setPanel] = useState<OpenPanel | null>(null);
+  const closePanel = useCallback(() => setPanel(null), []);
 
   // ---- Edição ------------------------------------------------------------
   const mutate = useCallback(
     (fn: (ms: JourneyMonth[]) => JourneyMonth[]) => save({ months: fn(structuredClone(months)) }),
     [months, save],
   );
-  const saveBlock = async (slot: Slot, blockId: string | null, v: Pick<JourneyBlock, "title" | "detail" | "kind">) => {
-    const ok = await mutate((ms) => {
+  /** Grava a tarefa do painel: muda a que existe (e deixa de ser espaço por
+   *  preencher) ou acrescenta uma nova no fim da semana. */
+  const saveTask = (v: { title: string; detail: string }) => {
+    if (!panel) return Promise.resolve(false);
+    const { slot, blockId } = panel;
+    return mutate((ms) => {
       const list = slotBlocks(ms, slot);
       const next = blockId
-        ? list.map((b) => (b.id === blockId ? { ...b, ...v } : b))
-        : [...list, { id: newJourneyId("bloco"), ...v }];
+        ? list.map((b) => {
+            if (b.id !== blockId) return b;
+            const updated: JourneyBlock = { ...b, ...v };
+            delete updated.placeholder;
+            return updated;
+          })
+        : [...list, { id: newJourneyId("tarefa"), ...v }];
       return withSlot(ms, slot, next);
     });
-    if (ok) setForm(null);
   };
-  const removeBlock = (slot: Slot, blockId: string) =>
+  const removeTask = (slot: Slot, blockId: string) =>
     mutate((ms) => withSlot(ms, slot, slotBlocks(ms, slot).filter((b) => b.id !== blockId)));
   const saveMonth = async (mi: number, v: { title: string; goal: string }) => {
     const ok = await mutate((ms) => {
@@ -100,19 +110,23 @@ export function JourneyRoad({ initial, canEdit }: { initial: Journey; canEdit: b
   };
   const removeMonth = (mi: number) => mutate((ms) => ms.filter((_, i) => i !== mi));
   const addMonth = async () => {
-    const n = months.length + 1;
     const ok = await mutate((ms) => [
       ...ms,
       {
         id: newJourneyId("m"),
-        title: `Mês ${n}`,
+        title: "",
         goal: "",
         blocks: [],
-        weeks: Array.from({ length: WEEKS_PER_JOURNEY_MONTH }, () => ({ id: newJourneyId("s"), blocks: [] })),
+        weeks: Array.from({ length: WEEKS_PER_JOURNEY_MONTH }, () => ({
+          id: newJourneyId("s"),
+          blocks: [{ id: newJourneyId("tarefa"), title: "", detail: "", placeholder: true as const }],
+        })),
       },
     ]);
     if (ok) setMonthForm(months.length);
   };
+  const openTask = (slot: Slot, where: string, block: JourneyBlock | null) =>
+    setPanel({ slot, where, blockId: block?.id ?? null, editing: !block || Boolean(block.placeholder) });
 
   // ---- A estrada ---------------------------------------------------------
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -157,8 +171,8 @@ export function JourneyRoad({ initial, canEdit }: { initial: Journey; canEdit: b
     ro.observe(wrap);
     return () => ro.disconnect();
   }, [measure]);
-  // Blocos e formulários mudam as paragens de sítio sem mudar sempre a altura.
-  useEffect(() => measure(), [data, editing, form, monthForm, measure]);
+  // Tarefas e formulários mudam as paragens de sítio sem mudar sempre a altura.
+  useEffect(() => measure(), [data, editing, monthForm, measure]);
 
   const d = useMemo(() => (geom ? roadPath(geom.pts) : ""), [geom]);
 
@@ -222,65 +236,46 @@ export function JourneyRoad({ initial, canEdit }: { initial: Journey; canEdit: b
   const navItems = useMemo(() => months.map((_, i) => ({ id: `mes-${i + 1}`, label: `Mês ${i + 1}` })), [months]);
   const W = geom?.wide ? 30 : 16;
   const endIndex = 1 + months.length * (WEEKS_PER_JOURNEY_MONTH + 1);
-  const busy = saving;
+  const panelBlock = panel?.blockId ? (slotBlocks(months, panel.slot).find((b) => b.id === panel.blockId) ?? null) : null;
 
-  const blockProps = (slot: Slot, where: string) => ({
+  const listProps = (slot: Slot, where: string) => ({
     editing,
-    busy,
-    form: form && form.slot.month === slot.month && form.slot.week === slot.week ? form.blockId : undefined,
-    onAdd: () => setForm({ slot, blockId: null }),
-    onEdit: (id: string) => setForm({ slot, blockId: id }),
-    onCancel: () => setForm(null),
-    onSave: (id: string | null, v: Pick<JourneyBlock, "title" | "detail" | "kind">) => saveBlock(slot, id, v),
-    onRemove: (id: string) => removeBlock(slot, id),
-    onGuide: (id: string) => setGuide({ id, where }),
+    canEdit,
+    onOpen: (b: JourneyBlock | null) => openTask(slot, where, b),
+    onRemove: (id: string) => removeTask(slot, id),
   });
 
   return (
     <>
       <SectionNav items={navItems} />
 
-      <div className="mt-6 flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
-        <ul className="flex flex-wrap gap-x-4 gap-y-1.5" aria-label="Legenda">
-          {JOURNEY_KINDS.map((k) => (
-            <li key={k.id} className="flex items-center gap-1.5 text-[12.5px] text-white/55">
-              <span className="h-2 w-2 rounded-full" style={{ background: k.color }} />
-              {k.label}
-            </li>
-          ))}
-        </ul>
-        {canEdit && (
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="text-[12px] text-white/40" aria-live="polite">
-              {saving
-                ? "A guardar…"
-                : data.updatedBy
-                  ? `Editado por ${data.updatedBy} a ${formatDate(data.updatedAt)}`
-                  : "Versão de partida"}
-            </span>
-            <button
-              type="button"
-              onClick={() => {
-                setEditing((e) => !e);
-                setForm(null);
-                setMonthForm(null);
-              }}
-              aria-pressed={editing}
-              className={`inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-[13px] font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#783DF5] ${
-                editing ? "bg-white text-[#07080d] hover:bg-white/90" : "border border-white/15 bg-white/[0.04] text-white/80 hover:border-white/30 hover:text-white"
-              }`}
-            >
-              {editing ? <Check className="h-3.5 w-3.5" /> : <Pencil className="h-3.5 w-3.5" />}
-              {editing ? "Terminar edição" : "Editar o caminho"}
-            </button>
-          </div>
-        )}
-      </div>
+      {canEdit && (
+        <div className="mt-6 flex flex-wrap items-center justify-end gap-3">
+          <span className="text-[12px] text-white/40" aria-live="polite">
+            {saving ? "A guardar…" : data.updatedBy ? `Editado por ${data.updatedBy} a ${formatDate(data.updatedAt)}` : "Versão de partida"}
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              setEditing((e) => !e);
+              setMonthForm(null);
+            }}
+            aria-pressed={editing}
+            className={`inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-[13px] font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#783DF5] ${
+              editing ? "bg-white text-[#07080d] hover:bg-white/90" : "border border-white/15 bg-white/[0.04] text-white/80 hover:border-white/30 hover:text-white"
+            }`}
+          >
+            {editing ? <Check className="h-3.5 w-3.5" /> : <Pencil className="h-3.5 w-3.5" />}
+            {editing ? "Terminar edição" : "Editar o caminho"}
+          </button>
+        </div>
+      )}
 
       {editing && (
         <p className="mt-4 rounded-2xl border border-[#783DF5]/30 bg-[#783DF5]/[0.08] px-4 py-3 text-[13.5px] text-white/70">
-          Estás a editar a jornada: acrescenta, muda ou remove blocos em cada semana e nos marcos de cada mês. Cada mudança
-          grava logo e fica visível para todo o SEO DPT.
+          Estás a editar a jornada: acrescenta ou remove tarefas em cada semana e nos marcos de cada mês, e dá nome a cada mês.
+          Para escrever a explicação de uma tarefa, carrega no título dela. Cada mudança grava logo e fica visível para todo o
+          SEO DPT.
         </p>
       )}
       {error && (
@@ -336,9 +331,7 @@ export function JourneyRoad({ initial, canEdit }: { initial: Journey; canEdit: b
             </div>
             <div className="col-start-2 row-start-1 pt-2.5 lg:col-start-3 lg:pl-10">
               <p className="text-[16px] font-semibold text-white">Partida</p>
-              <p className="mt-0.5 max-w-sm text-[13.5px] leading-relaxed text-white/55">
-                Contrato assinado. O cliente preenche o onboarding form e o projeto entra na semana 1.
-              </p>
+              <p className="mt-0.5 max-w-sm text-[13.5px] leading-relaxed text-white/55">Contrato assinado: o projeto entra na semana 1.</p>
             </div>
           </li>
 
@@ -346,6 +339,8 @@ export function JourneyRoad({ initial, canEdit }: { initial: Journey; canEdit: b
             const n = mi + 1;
             const mStop = 1 + mi * (WEEKS_PER_JOURNEY_MONTH + 1);
             const mLit = passed > mStop;
+            const weeksLabel = `Semanas ${mi * WEEKS_PER_JOURNEY_MONTH + 1} a ${n * WEEKS_PER_JOURNEY_MONTH}`;
+            const showMarcos = m.blocks.length > 0 || editing;
             return (
               <li key={m.id} id={`mes-${n}`} className="scroll-mt-40">
                 <div className={`${ROW} pt-10`}>
@@ -363,25 +358,24 @@ export function JourneyRoad({ initial, canEdit }: { initial: Journey; canEdit: b
                   </div>
 
                   {/* Título e objetivo — à esquerda da estrada no desktop. */}
-                  <div className="col-start-2 row-start-1 lg:col-start-1 lg:pr-10 lg:text-right">
+                  <div className="col-start-2 row-start-1 self-center lg:col-start-1 lg:pr-10 lg:text-right">
                     {monthForm === mi ? (
-                      <MonthForm
-                        initial={m}
-                        busy={busy}
-                        onCancel={() => setMonthForm(null)}
-                        onSave={(v) => saveMonth(mi, v)}
-                      />
+                      <MonthForm initial={m} busy={saving} onCancel={() => setMonthForm(null)} onSave={(v) => saveMonth(mi, v)} />
                     ) : (
                       <div className="lg:ml-auto lg:max-w-[460px]">
-                        <p className="text-[13px] font-medium text-[#c4a6ff]">
-                          Semanas {mi * WEEKS_PER_JOURNEY_MONTH + 1} a {n * WEEKS_PER_JOURNEY_MONTH}
-                        </p>
-                        <h2 className="mt-1 text-[1.6rem] font-semibold leading-tight tracking-[-0.02em] text-white sm:text-[1.95rem]">{m.title}</h2>
+                        {m.title ? (
+                          <>
+                            <p className="text-[13px] font-medium text-[#c4a6ff]">{weeksLabel}</p>
+                            <h2 className="mt-1 text-[1.6rem] font-semibold leading-tight tracking-[-0.02em] text-white sm:text-[1.95rem]">{m.title}</h2>
+                          </>
+                        ) : (
+                          <h2 className="text-[1.35rem] font-semibold leading-tight tracking-[-0.02em] text-white/85 sm:text-[1.55rem]">{weeksLabel}</h2>
+                        )}
                         {m.goal && <p className="mt-2 text-[15px] leading-relaxed text-white/60">{m.goal}</p>}
                         {editing && (
                           <div className="mt-3 flex flex-wrap gap-2 lg:justify-end">
                             <SmallButton onClick={() => setMonthForm(mi)} icon={Pencil}>
-                              Editar o mês
+                              {m.title ? "Editar o mês" : "Dar nome ao mês"}
                             </SmallButton>
                             {months.length > 1 && <RemoveButton label={`Remover o mês ${n}`} confirm={`Remover o mês ${n}`} onConfirm={() => removeMonth(mi)} />}
                           </div>
@@ -390,24 +384,20 @@ export function JourneyRoad({ initial, canEdit }: { initial: Journey; canEdit: b
                     )}
                   </div>
 
-                  {/* Marcos do mês — à direita da estrada. */}
-                  <div className="col-start-2 row-start-2 mt-5 lg:col-start-3 lg:row-start-1 lg:mt-0 lg:pl-10">
-                    <BlockList
-                      title="Marcos do mês"
-                      empty="Sem marcos neste mês."
-                      blocks={m.blocks}
-                      lit={mLit}
-                      {...blockProps({ month: mi, week: null }, `Mês ${n}`)}
-                    />
-                  </div>
+                  {/* Marcos do mês — à direita da estrada; só aparecem quando há. */}
+                  {showMarcos && (
+                    <div className="col-start-2 row-start-2 mt-5 lg:col-start-3 lg:row-start-1 lg:mt-0 lg:self-center lg:pl-10">
+                      <h3 className="text-[13px] font-medium text-white/45">Marcos do mês</h3>
+                      <TaskList blocks={m.blocks} {...listProps({ month: mi, week: null }, `Mês ${n}`)} />
+                    </div>
+                  )}
                 </div>
 
                 <ol>
                   {m.weeks.map((w, wi) => {
                     const lane: Lane = wi % 2 === 0 ? "l" : "r";
                     const global = mi * WEEKS_PER_JOURNEY_MONTH + wi + 1;
-                    const sIdx = mStop + 1 + wi;
-                    const lit = passed > sIdx;
+                    const lit = passed > mStop + 1 + wi;
                     return (
                       <li key={w.id} className={`${ROW} pt-6`}>
                         <div className={`${STOP_COL} ${lane === "l" ? "lg:justify-start lg:pl-12" : "lg:justify-end lg:pr-12"}`}>
@@ -422,7 +412,7 @@ export function JourneyRoad({ initial, canEdit }: { initial: Journey; canEdit: b
                             {global}
                           </span>
                         </div>
-                        <div className={`col-start-2 row-start-1 ${lane === "l" ? "lg:col-start-1 lg:justify-self-end" : "lg:col-start-3 lg:justify-self-start"} w-full lg:max-w-[460px]`}>
+                        <div className={`col-start-2 row-start-1 ${lane === "l" ? "lg:col-start-1 lg:justify-self-end" : "lg:col-start-3 lg:justify-self-start"} w-full lg:max-w-[440px]`}>
                           <section
                             aria-label={`Semana ${global}`}
                             className={`rounded-[22px] border p-4 transition duration-500 sm:p-5 ${
@@ -431,14 +421,8 @@ export function JourneyRoad({ initial, canEdit }: { initial: Journey; canEdit: b
                                 : "border-white/10 bg-white/[0.025]"
                             }`}
                           >
-                            <BlockList
-                              title={`Semana ${global}`}
-                              heading
-                              empty="Semana livre para o que o roadmap do cliente pedir."
-                              blocks={w.blocks}
-                              lit={lit}
-                              {...blockProps({ month: mi, week: wi }, `Mês ${n} · Semana ${global}`)}
-                            />
+                            <h3 className={`text-[15px] font-semibold transition ${lit ? "text-white" : "text-white/80"}`}>Semana {global}</h3>
+                            <TaskList blocks={w.blocks} {...listProps({ month: mi, week: wi }, `Mês ${n} · Semana ${global}`)} />
                           </section>
                         </div>
                       </li>
@@ -455,7 +439,7 @@ export function JourneyRoad({ initial, canEdit }: { initial: Journey; canEdit: b
                 <button
                   type="button"
                   onClick={addMonth}
-                  disabled={busy}
+                  disabled={saving}
                   className="inline-flex items-center gap-2 rounded-full border border-dashed border-white/25 bg-[#07080d] px-4 py-2 text-[13px] font-medium text-white/75 transition hover:border-white/45 hover:text-white disabled:opacity-50"
                 >
                   <Plus className="h-4 w-4" />
@@ -471,9 +455,7 @@ export function JourneyRoad({ initial, canEdit }: { initial: Journey; canEdit: b
               <span
                 data-stop
                 className={`relative z-10 flex h-14 w-14 items-center justify-center rounded-full ring-2 transition duration-500 lg:h-20 lg:w-20 ${
-                  passed > endIndex
-                    ? "text-white ring-white/70 shadow-[0_0_50px_rgba(197,53,201,0.7)]"
-                    : "bg-[#0d0e1c] text-white/60 ring-white/15"
+                  passed > endIndex ? "text-white ring-white/70 shadow-[0_0_50px_rgba(197,53,201,0.7)]" : "bg-[#0d0e1c] text-white/60 ring-white/15"
                 }`}
                 style={passed > endIndex ? { background: GRADIENT } : undefined}
               >
@@ -482,15 +464,13 @@ export function JourneyRoad({ initial, canEdit }: { initial: Journey; canEdit: b
             </div>
             <div className="col-start-2 row-start-1 pt-3 lg:col-start-3 lg:pl-10 lg:pt-5">
               <p className="text-[16px] font-semibold text-white">Próximo ciclo</p>
-              <p className="mt-0.5 max-w-sm text-[13.5px] leading-relaxed text-white/55">
-                A renovação leva o que resultou para o roadmap seguinte, que volta a começar no mês 1.
-              </p>
+              <p className="mt-0.5 max-w-sm text-[13.5px] leading-relaxed text-white/55">A renovação: o roadmap seguinte volta a começar no mês 1.</p>
             </div>
           </li>
         </ol>
       </div>
 
-      <JourneyGuideDrawer guide={guide ? JOURNEY_GUIDES[guide.id] ?? null : null} where={guide?.where ?? ""} onClose={closeGuide} />
+      <JourneyTaskDrawer panel={panel} block={panelBlock} canEdit={canEdit} busy={saving} onSave={saveTask} onClose={closePanel} />
     </>
   );
 }
@@ -508,184 +488,73 @@ function stopRing(lit: boolean, size: string) {
   }`;
 }
 
-type BlockListProps = {
-  title: string;
-  /** O título é o cabeçalho do cartão da semana (maior). */
-  heading?: boolean;
-  /** O que se lê quando não há blocos. */
-  empty: string;
+/** As tarefas de uma semana (ou os marcos de um mês): só o título, que abre o
+ *  painel. Um espaço por preencher só abre para a direção. */
+function TaskList({
+  blocks,
+  editing,
+  canEdit,
+  onOpen,
+  onRemove,
+}: {
   blocks: JourneyBlock[];
-  lit: boolean;
   editing: boolean;
-  busy: boolean;
-  /** undefined = sem formulário aberto aqui; null = a acrescentar; id = a editar. */
-  form: string | null | undefined;
-  onAdd: () => void;
-  onEdit: (id: string) => void;
-  onCancel: () => void;
-  onSave: (id: string | null, v: Pick<JourneyBlock, "title" | "detail" | "kind">) => void;
+  canEdit: boolean;
+  onOpen: (b: JourneyBlock | null) => void;
   onRemove: (id: string) => void;
-  onGuide: (id: string) => void;
-};
-
-function BlockList({ title, heading, empty, blocks, lit, editing, busy, form, onAdd, onEdit, onCancel, onSave, onRemove, onGuide }: BlockListProps) {
+}) {
   return (
-    <div>
-      {heading ? (
-        <h3 className={`text-[15px] font-semibold transition ${lit ? "text-white" : "text-white/80"}`}>{title}</h3>
-      ) : (
-        <h3 className="text-[13px] font-medium text-white/45">{title}</h3>
+    <div className="mt-3">
+      {blocks.length > 0 && (
+        <ul className="space-y-2">
+          {blocks.map((b) => {
+            const empty = Boolean(b.placeholder);
+            const label = empty ? PLACEHOLDER_TITLE : b.title;
+            const clickable = !empty || canEdit;
+            return (
+              <li key={b.id} className="flex items-center gap-1.5">
+                {clickable ? (
+                  <button
+                    type="button"
+                    onClick={() => onOpen(b)}
+                    className={`group flex min-w-0 flex-1 items-center gap-2.5 rounded-xl border px-3.5 py-2.5 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#a78bfa] ${
+                      empty
+                        ? "border-dashed border-white/15 text-white/40 hover:border-white/30 hover:text-white/70"
+                        : b.guide
+                          ? "border-[#783DF5]/40 bg-[#783DF5]/[0.1] text-white hover:border-[#a78bfa]/70 hover:bg-[#783DF5]/[0.18]"
+                          : "border-white/[0.08] bg-white/[0.03] text-white hover:border-white/20 hover:bg-white/[0.06]"
+                    }`}
+                  >
+                    {b.guide && <BookOpenCheck className="h-4 w-4 shrink-0 text-[#c4a6ff]" />}
+                    <span className={`min-w-0 flex-1 text-[14.5px] leading-snug ${empty ? "" : "font-semibold"}`}>{label}</span>
+                    <ChevronRight className="h-4 w-4 shrink-0 text-white/30 transition group-hover:translate-x-0.5 group-hover:text-white/70" />
+                  </button>
+                ) : (
+                  <span className="flex-1 rounded-xl border border-dashed border-white/12 px-3.5 py-2.5 text-[14.5px] text-white/35">{label}</span>
+                )}
+                {editing && <RemoveButton label="Remover a tarefa" confirm="Remover" onConfirm={() => onRemove(b.id)} />}
+              </li>
+            );
+          })}
+        </ul>
       )}
-      {blocks.length === 0 && form !== null && (
-        <p className="mt-2 text-[13px] text-white/35">{empty}</p>
-      )}
-      <ul className="mt-3 space-y-2.5">
-        {blocks.map((bl) =>
-          form === bl.id ? (
-            <li key={bl.id}>
-              <BlockForm initial={bl} busy={busy} onCancel={onCancel} onSave={(v) => onSave(bl.id, v)} />
-            </li>
-          ) : (
-            <BlockItem key={bl.id} block={bl} editing={editing} onEdit={() => onEdit(bl.id)} onRemove={() => onRemove(bl.id)} onGuide={onGuide} />
-          ),
-        )}
-        {form === null && (
-          <li>
-            <BlockForm busy={busy} onCancel={onCancel} onSave={(v) => onSave(null, v)} />
-          </li>
-        )}
-      </ul>
-      {editing && form === undefined && blocks.length < MAX_BLOCKS_PER_SLOT && (
+      {blocks.length === 0 && !editing && <p className="text-[13px] text-white/35">Sem tarefas nesta semana.</p>}
+      {editing && blocks.length < MAX_BLOCKS_PER_SLOT && (
         <button
           type="button"
-          onClick={onAdd}
-          className="mt-2.5 flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-white/20 py-2 text-[12.5px] font-medium text-white/55 transition hover:border-white/40 hover:text-white"
+          onClick={() => onOpen(null)}
+          className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-white/20 py-2 text-[12.5px] font-medium text-white/55 transition hover:border-white/40 hover:text-white"
         >
           <Plus className="h-3.5 w-3.5" />
-          Acrescentar bloco
+          Acrescentar tarefa
         </button>
       )}
     </div>
   );
 }
 
-function BlockItem({
-  block,
-  editing,
-  onEdit,
-  onRemove,
-  onGuide,
-}: {
-  block: JourneyBlock;
-  editing: boolean;
-  onEdit: () => void;
-  onRemove: () => void;
-  onGuide: (id: string) => void;
-}) {
-  const k = journeyKind(block.kind);
-  const guide = block.guide ? JOURNEY_GUIDES[block.guide] : undefined;
-  return (
-    <li
-      className={`relative rounded-2xl border px-4 py-3 text-left ${
-        guide ? "border-[#783DF5]/40 bg-[#783DF5]/[0.08]" : "border-white/[0.07] bg-white/[0.03]"
-      }`}
-    >
-      <div className={`flex items-center gap-1.5 text-[11.5px] font-medium ${editing ? "pr-16" : ""}`} style={{ color: k.color }}>
-        <span className="h-1.5 w-1.5 rounded-full" style={{ background: k.color }} />
-        {k.label}
-      </div>
-      <p className="mt-1 text-[14.5px] font-semibold leading-snug text-white">{block.title}</p>
-      {block.detail && <p className="mt-1 text-[13.5px] leading-relaxed text-white/60">{block.detail}</p>}
-      {guide && (
-        <button
-          type="button"
-          onClick={() => onGuide(guide.id)}
-          className="group mt-3 inline-flex items-center gap-2 rounded-full border border-[#783DF5]/45 bg-[#783DF5]/[0.16] py-1 pl-1 pr-3 text-[12.5px] font-medium text-[#e4d9ff] transition hover:border-[#a78bfa]/70 hover:bg-[#783DF5]/[0.26] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#a78bfa]"
-        >
-          <span className="flex h-6 w-6 items-center justify-center rounded-full" style={{ background: GRADIENT }}>
-            <BookOpenCheck className="h-3.5 w-3.5 text-white" />
-          </span>
-          Abrir o processo
-          <ArrowUpRight className="h-3.5 w-3.5 text-white/50 transition group-hover:-translate-y-px group-hover:translate-x-px group-hover:text-white" />
-        </button>
-      )}
-      {editing && (
-        <div className="absolute right-2 top-2 flex items-center gap-1">
-          <IconButton label="Editar o bloco" onClick={onEdit} icon={Pencil} />
-          <RemoveButton label="Remover o bloco" confirm="Remover" onConfirm={onRemove} />
-        </div>
-      )}
-    </li>
-  );
-}
-
 const INPUT =
   "w-full rounded-xl border border-white/12 bg-[#0b0c18] px-3 py-2 text-[13.5px] text-white placeholder:text-white/30 focus:border-[#a78bfa]/70 focus:outline-none";
-
-function BlockForm({
-  initial,
-  busy,
-  onCancel,
-  onSave,
-}: {
-  initial?: JourneyBlock;
-  busy: boolean;
-  onCancel: () => void;
-  onSave: (v: Pick<JourneyBlock, "title" | "detail" | "kind">) => void;
-}) {
-  const [title, setTitle] = useState(initial?.title ?? "");
-  const [detail, setDetail] = useState(initial?.detail ?? "");
-  const [kind, setKind] = useState<JourneyKind>(initial?.kind ?? "cliente");
-  return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        if (title.trim()) onSave({ title: title.trim(), detail: detail.trim(), kind });
-      }}
-      className="space-y-2.5 rounded-2xl border border-[#783DF5]/45 bg-[#783DF5]/[0.07] p-3 text-left"
-    >
-      <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="O que se faz" maxLength={90} autoFocus className={INPUT} aria-label="Título do bloco" />
-      <textarea
-        value={detail}
-        onChange={(e) => setDetail(e.target.value)}
-        placeholder="Como se faz, com quem, o que fica feito"
-        maxLength={400}
-        rows={3}
-        className={`${INPUT} resize-y`}
-        aria-label="Descrição do bloco"
-      />
-      <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Tipo">
-        {JOURNEY_KINDS.map((k) => (
-          <button
-            key={k.id}
-            type="button"
-            role="radio"
-            aria-checked={kind === k.id}
-            onClick={() => setKind(k.id)}
-            className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[12px] transition ${
-              kind === k.id ? "border-white/50 bg-white/[0.1] text-white" : "border-white/10 text-white/55 hover:text-white"
-            }`}
-          >
-            <span className="h-1.5 w-1.5 rounded-full" style={{ background: k.color }} />
-            {k.label}
-          </button>
-        ))}
-      </div>
-      <div className="flex justify-end gap-2">
-        <button type="button" onClick={onCancel} className="rounded-lg px-3 py-1.5 text-[12.5px] text-white/60 hover:text-white">
-          Cancelar
-        </button>
-        <button
-          type="submit"
-          disabled={!title.trim() || busy}
-          className="rounded-lg bg-white px-3.5 py-1.5 text-[12.5px] font-semibold text-[#07080d] transition hover:bg-white/90 disabled:opacity-40"
-        >
-          {busy ? "A guardar…" : initial ? "Guardar" : "Acrescentar"}
-        </button>
-      </div>
-    </form>
-  );
-}
 
 function MonthForm({
   initial,
@@ -704,39 +573,25 @@ function MonthForm({
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        if (title.trim()) onSave({ title: title.trim(), goal: goal.trim() });
+        onSave({ title: title.trim(), goal: goal.trim() });
       }}
       className="space-y-2.5 rounded-2xl border border-[#783DF5]/45 bg-[#783DF5]/[0.07] p-3 text-left lg:ml-auto lg:max-w-[460px]"
     >
-      <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Título do mês" maxLength={80} autoFocus className={INPUT} aria-label="Título do mês" />
-      <textarea value={goal} onChange={(e) => setGoal(e.target.value)} placeholder="O objetivo do mês" maxLength={240} rows={2} className={`${INPUT} resize-y`} aria-label="Objetivo do mês" />
+      <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Nome do mês (ex.: Onboarding)" maxLength={80} autoFocus className={INPUT} aria-label="Nome do mês" />
+      <textarea value={goal} onChange={(e) => setGoal(e.target.value)} placeholder="O objetivo do mês (opcional)" maxLength={240} rows={2} className={`${INPUT} resize-y`} aria-label="Objetivo do mês" />
       <div className="flex justify-end gap-2">
         <button type="button" onClick={onCancel} className="rounded-lg px-3 py-1.5 text-[12.5px] text-white/60 hover:text-white">
           Cancelar
         </button>
         <button
           type="submit"
-          disabled={!title.trim() || busy}
+          disabled={busy}
           className="rounded-lg bg-white px-3.5 py-1.5 text-[12.5px] font-semibold text-[#07080d] transition hover:bg-white/90 disabled:opacity-40"
         >
           {busy ? "A guardar…" : "Guardar"}
         </button>
       </div>
     </form>
-  );
-}
-
-function IconButton({ label, onClick, icon: Icon }: { label: string; onClick: () => void; icon: typeof Pencil }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-label={label}
-      title={label}
-      className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#0b0c18]/80 text-white/55 transition hover:bg-white/[0.1] hover:text-white"
-    >
-      <Icon className="h-3.5 w-3.5" />
-    </button>
   );
 }
 
@@ -768,7 +623,7 @@ function RemoveButton({ label, confirm, onConfirm }: { label: string; confirm: s
         setArmed(false);
         onConfirm();
       }}
-      className="inline-flex h-7 items-center gap-1 rounded-lg bg-rose-500/90 px-2.5 text-[12px] font-semibold text-white transition hover:bg-rose-500"
+      className="inline-flex h-8 shrink-0 items-center gap-1 rounded-lg bg-rose-500/90 px-2.5 text-[12px] font-semibold text-white transition hover:bg-rose-500"
     >
       <Trash2 className="h-3.5 w-3.5" />
       {confirm}
@@ -779,7 +634,7 @@ function RemoveButton({ label, confirm, onConfirm }: { label: string; confirm: s
       onClick={() => setArmed(true)}
       aria-label={label}
       title={label}
-      className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#0b0c18]/80 text-white/55 transition hover:bg-rose-500/20 hover:text-rose-200"
+      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-white/45 transition hover:bg-rose-500/20 hover:text-rose-200"
     >
       <Trash2 className="h-3.5 w-3.5" />
     </button>

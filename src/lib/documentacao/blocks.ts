@@ -130,7 +130,7 @@ export const DOCS_BLOCKS: DocsBlock[] = [
         label: "Jornada de Cliente",
         // Capa dada pelo André (2026-10-29).
         image: "/documentacao/jornada-cliente-capa.jpg",
-        tag: "O caminho de cada projeto",
+        tag: "A parte comum a todos os projetos",
       },
     ],
   },
@@ -146,16 +146,17 @@ export const DOCS_BLOCKS: DocsBlock[] = [
         id: "protocolos-obrigatorios",
         href: "/documentacao/protocolos-obrigatorios",
         label: "Protocolos Obrigatórios",
-        // Capas dadas pelo André (2026-10-29) — a mesma imagem nas duas.
+        // Capas dadas pelo André (2026-10-29).
         image: "/documentacao/protocolos-obrigatorios-capa.jpg",
-        tag: "O mínimo em cada projeto",
+        tag: "Protocolos a nunca falhar",
       },
       {
         id: "protocolos-recomendados",
         href: "/documentacao/protocolos-recomendados",
         label: "Protocolos Recomendados",
-        image: "/documentacao/protocolos-recomendados-capa.jpg",
-        tag: "Ir além do mínimo",
+        // Nome novo ao trocar a capa: o next/image guarda a antiga em cache.
+        image: "/documentacao/protocolos-recomendados-capa-v2.jpg",
+        tag: "Recomendações da equipa Sénior",
       },
     ],
   },

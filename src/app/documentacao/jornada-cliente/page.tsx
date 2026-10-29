@@ -45,8 +45,8 @@ export default async function JornadaClientePage() {
         title="Jornada de Cliente"
         lead={
           <>
-            O caminho de um projeto SEO, do contrato à renovação: <Strong>o que se faz em cada mês e em cada semana</Strong>, e
-            o que fecha cada mês. As semanas contam-se como no roadmap do cliente.
+            O roadmap de cada cliente é personalizado e vê-se na ficha do cliente. Aqui detalhamos{" "}
+            <Strong>o que é obrigatório e comum a todos os projetos</Strong>, semana a semana.
           </>
         }
         meta={`Atualizado a ${formatDate(updated)}.${reader.isAdmin ? ` Visível para SuperAdmin e ${block.audienceLabel}.` : ""}`}
@@ -60,21 +60,19 @@ export default async function JornadaClientePage() {
           title="A jornada de cliente, por extenso"
           paragraphs={[
             <>
-              A jornada de cliente é o mapa comum de todos os projetos SEO da WonderAds: o que se faz em cada mês e em cada
-              semana, do contrato à renovação. Não substitui o roadmap de cada cliente — dá-lhe a ordem e o ritmo, para que
-              todos os projetos passem pelos mesmos pontos, seja qual for o consultor.
+              O roadmap de cada cliente é personalizado e vê-se na ficha do cliente. A jornada de cliente é a parte comum a
+              todos os projetos SEO da WonderAds: as tarefas obrigatórias de cada semana, do contrato à renovação, seja qual
+              for o cliente e seja qual for o consultor.
             </>,
             <>
-              Cada mês tem um objetivo e os marcos que o fecham; cada semana tem o trabalho dessa semana. As semanas contam-se
-              como nos roadmaps da app: a semana 8 da jornada é a semana 8 do roadmap do cliente.
+              As semanas contam-se como nos roadmaps da app: a semana 8 da jornada é a semana 8 do roadmap do cliente. Em cada
+              semana vê-se o título de cada tarefa; carregar nele abre ao lado a explicação do que se faz e de como se faz.
             </>,
             <>
-              Alguns blocos têm um processo com o passo a passo, que abre ao lado da página — como o registo de leads da
-              semana 8, sem o qual não se conseguem medir os resultados do projeto.
+              Algumas tarefas têm um processo com o passo a passo — como o registo de leads da semana 8, sem o qual não se
+              conseguem medir os resultados do projeto.
             </>,
-            <>
-              A jornada é mantida pela direção, que acrescenta, muda e retira blocos à medida que o método evolui.
-            </>,
+            <>A jornada é mantida pela direção, que acrescenta, muda e retira tarefas à medida que o método evolui.</>,
           ]}
         />
         <p className="border-t border-white/[0.07] pt-6 text-[13px] text-white/40">

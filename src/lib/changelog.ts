@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.48",
+    date: "2026-10-29",
+    title: "Jornada de Cliente: tarefas com painel lateral, por preencher pela direção",
+    highlights: [
+      "**🛣️ Em cada semana da Jornada de Cliente vê-se só o título da tarefa**; carregar nele abre um painel à direita, como o das notificações, com a explicação. A direção escreve e edita a explicação no próprio painel.",
+      "**🧹 A jornada começa limpa**: um espaço «Tarefa por definir» em cada semana para a direção preencher, e o registo de leads na semana 8. Saíram a legenda dos tipos e as tarefas de exemplo.",
+      "**📝 Novo texto no topo da Jornada**: o roadmap de cada cliente é personalizado e vê-se na ficha do cliente; aqui detalha-se o que é obrigatório e comum a todos os projetos.",
+      "**🏷️ Cartões da Documentação**: Jornada de Cliente «A parte comum a todos os projetos», Protocolos Obrigatórios «Protocolos a nunca falhar», Protocolos Recomendados «Recomendações da equipa Sénior» e capa nova nos Recomendados.",
+    ],
+  },
+  {
     version: "78.47",
     date: "2026-10-29",
     title: "Exemplo do registo de leads em tamanho real",
