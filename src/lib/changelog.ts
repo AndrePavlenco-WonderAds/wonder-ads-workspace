@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.45",
+    date: "2026-10-29",
+    title: "Atalho «Ver todos os consultores» no tamanho certo",
+    highlights: [
+      "**🔧 O atalho «Ver todos os consultores» na página de cada consultor** deixou de esticar a largura toda: volta a ser um botão pequeno por baixo do nome.",
+    ],
+  },
+  {
     version: "78.44",
     date: "2026-10-29",
     title: "Mês do roadmap na vista do consultor + todos os consultores numa página",

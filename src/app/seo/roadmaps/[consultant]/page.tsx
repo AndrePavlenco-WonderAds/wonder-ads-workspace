@@ -91,9 +91,10 @@ export default async function ConsultantWeekPage({
       </div>
       {/* A direção vê todos os consultores seguidos numa página (v78.44). */}
       {employee.isAdmin && (
+        <div className="mt-4">
         <Link
           href={`/seo/roadmaps#${consultant}`}
-          className="group mt-4 inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.03] py-1 pl-1 pr-3 text-[12.5px] text-white/65 transition hover:border-white/25 hover:text-white"
+          className="group inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.03] py-1 pl-1 pr-3 text-[12.5px] text-white/65 transition hover:border-white/25 hover:text-white"
         >
           <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/[0.08]">
             <Users className="h-3.5 w-3.5" />
@@ -101,6 +102,7 @@ export default async function ConsultantWeekPage({
           Ver todos os consultores
           <ArrowRight className="h-3.5 w-3.5 text-white/40 transition group-hover:translate-x-0.5 group-hover:text-white" />
         </Link>
+        </div>
       )}
 
       <ConsultantWeekView view={view} portfolio={portfolio} />
