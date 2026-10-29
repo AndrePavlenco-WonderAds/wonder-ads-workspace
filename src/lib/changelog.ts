@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.46",
+    date: "2026-10-29",
+    title: "Documentação: Jornada de Cliente e Protocolos",
+    highlights: [
+      "**🛣️ Nova página «Jornada de Cliente» (SEO DPT)**: o caminho de um projeto SEO, do contrato à renovação, desenhado como uma estrada que desce a página e se acende à medida que se lê. Uma paragem por mês (objetivo e marcos do mês) e por semana (o trabalho dessa semana), contadas como no roadmap do cliente.",
+      "**📋 Processo «Registo de leads e origem dos clientes» na semana 8**: abre num painel lateral com as perguntas a fazer ao cliente, o passo a passo, um exemplo real e um modelo de Excel para descarregar (um separador por mês, com as contas feitas).",
+      "**✅ Novas páginas «Protocolos Obrigatórios» e «Protocolos Recomendados» (SEO DPT)**, em formato de documento, a começar pela lista: a call mensal com cada cliente no calendário, o Weekly Report à sexta e o Monthly Report até dia 2; e, nos recomendados, a call de 2 em 2 semanas, uma boa notícia por mês e uma ideia proativa por mês.",
+      "**✏️ A direção edita as três páginas na própria página**: blocos em cada semana e mês da jornada (acrescentar, mudar, remover), meses novos, e protocolos (acrescentar, mudar, reordenar, remover). Cada mudança grava logo; com «Ver como» é só leitura.",
+      "**🏷️ Ineficácias e Probation** ganham a frase «Elevar a excelência no mercado» no cartão da Documentação.",
+    ],
+  },
+  {
     version: "78.45",
     date: "2026-10-29",
     title: "Atalho «Ver todos os consultores» no tamanho certo",

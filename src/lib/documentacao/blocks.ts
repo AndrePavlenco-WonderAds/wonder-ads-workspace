@@ -99,8 +99,64 @@ export const DOCS_BLOCKS: DocsBlock[] = [
     updatedAt: "2026-10-28",
     pages: [
       // As duas capas foram dadas pelo André (2026-10-27).
-      { id: "ineficacias", href: "/documentacao/ineficacias", label: "Ineficácias", image: "/documentacao/ineficacias-capa.jpg" },
-      { id: "probation", href: "/documentacao/probation", label: "Probation", image: "/documentacao/probation-capa.jpg" },
+      {
+        id: "ineficacias",
+        href: "/documentacao/ineficacias",
+        label: "Ineficácias",
+        image: "/documentacao/ineficacias-capa.jpg",
+        tag: "Elevar a excelência no mercado",
+      },
+      {
+        id: "probation",
+        href: "/documentacao/probation",
+        label: "Probation",
+        image: "/documentacao/probation-capa.jpg",
+        tag: "Elevar a excelência no mercado",
+      },
+    ],
+  },
+  {
+    id: "jornada-cliente",
+    title: "Jornada de Cliente",
+    // O caminho de um projeto SEO, mês a mês e semana a semana (v78.46). A
+    // direção edita-o na própria página.
+    audience: { depts: ["SEO"] },
+    audienceLabel: "SEO DPT",
+    updatedAt: "2026-10-29",
+    pages: [
+      {
+        id: "jornada-cliente",
+        href: "/documentacao/jornada-cliente",
+        label: "Jornada de Cliente",
+        // Capa dada pelo André (2026-10-29).
+        image: "/documentacao/jornada-cliente-capa.jpg",
+        tag: "O caminho de cada projeto",
+      },
+    ],
+  },
+  {
+    id: "protocolos",
+    title: "Protocolos",
+    // As duas listas do SEO DPT (v78.46), editadas pela direção na página.
+    audience: { depts: ["SEO"] },
+    audienceLabel: "SEO DPT",
+    updatedAt: "2026-10-29",
+    pages: [
+      {
+        id: "protocolos-obrigatorios",
+        href: "/documentacao/protocolos-obrigatorios",
+        label: "Protocolos Obrigatórios",
+        // Capas dadas pelo André (2026-10-29) — a mesma imagem nas duas.
+        image: "/documentacao/protocolos-obrigatorios-capa.jpg",
+        tag: "O mínimo em cada projeto",
+      },
+      {
+        id: "protocolos-recomendados",
+        href: "/documentacao/protocolos-recomendados",
+        label: "Protocolos Recomendados",
+        image: "/documentacao/protocolos-recomendados-capa.jpg",
+        tag: "Ir além do mínimo",
+      },
     ],
   },
   {

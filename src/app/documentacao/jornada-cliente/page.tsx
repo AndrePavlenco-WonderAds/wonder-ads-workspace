@@ -1,0 +1,86 @@
+// /documentacao/jornada-cliente — a Jornada de Cliente do SEO DPT (v78.46): o
+// caminho de um projeto, mês a mês e semana a semana, desenhado como uma
+// estrada que se acende à medida que se lê. A direção edita-a na própria
+// página (components/documentacao/journey-road.tsx); o conteúdo de partida e
+// os processos estão em lib/documentacao/jornada.ts.
+
+import { PageShell } from "@/components/page-shell";
+import { DocHero, DocsClosed, ExecutiveSummary, Strong } from "@/components/documentacao/doc-ui";
+import { JourneyRoad } from "@/components/documentacao/journey-road";
+import { getImpersonation } from "@/lib/auth/server";
+import { formatDate } from "@/lib/dates";
+import { getJourney } from "@/lib/documentacao/editable-store";
+import { getDocsContext } from "@/lib/documentacao/server";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
+export const metadata = {
+  title: "Jornada de Cliente — Documentação",
+};
+
+const BLOCK_ID = "jornada-cliente";
+
+export default async function JornadaClientePage() {
+  const ctx = await getDocsContext(BLOCK_ID);
+  if (ctx.state === "no-session") return null;
+  if (ctx.state !== "ok" || !ctx.block) {
+    return (
+      <PageShell backHref="/documentacao" backLabel="Documentação">
+        <DocsClosed
+          kind={ctx.state === "closed" ? "closed" : "forbidden"}
+          name={ctx.state === "closed" ? ctx.name : ctx.state === "forbidden" ? ctx.reader.name : ""}
+        />
+      </PageShell>
+    );
+  }
+  const { reader, block } = ctx;
+  const [journey, impersonating] = await Promise.all([getJourney(), getImpersonation()]);
+  const updated = journey.updatedAt ? new Date(journey.updatedAt).toISOString().slice(0, 10) : block.updatedAt;
+
+  return (
+    <PageShell backHref="/documentacao" backLabel="Documentação">
+      <DocHero
+        block={block.title}
+        title="Jornada de Cliente"
+        lead={
+          <>
+            O caminho de um projeto SEO, do contrato à renovação: <Strong>o que se faz em cada mês e em cada semana</Strong>, e
+            o que fecha cada mês. As semanas contam-se como no roadmap do cliente.
+          </>
+        }
+        meta={`Atualizado a ${formatDate(updated)}.${reader.isAdmin ? ` Visível para SuperAdmin e ${block.audienceLabel}.` : ""}`}
+      />
+
+      <JourneyRoad initial={journey} canEdit={reader.isAdmin && !impersonating} />
+
+      <div className="mt-16 space-y-10 pb-10">
+        <ExecutiveSummary
+          updatedAt={updated}
+          title="A jornada de cliente, por extenso"
+          paragraphs={[
+            <>
+              A jornada de cliente é o mapa comum de todos os projetos SEO da WonderAds: o que se faz em cada mês e em cada
+              semana, do contrato à renovação. Não substitui o roadmap de cada cliente — dá-lhe a ordem e o ritmo, para que
+              todos os projetos passem pelos mesmos pontos, seja qual for o consultor.
+            </>,
+            <>
+              Cada mês tem um objetivo e os marcos que o fecham; cada semana tem o trabalho dessa semana. As semanas contam-se
+              como nos roadmaps da app: a semana 8 da jornada é a semana 8 do roadmap do cliente.
+            </>,
+            <>
+              Alguns blocos têm um processo com o passo a passo, que abre ao lado da página — como o registo de leads da
+              semana 8, sem o qual não se conseguem medir os resultados do projeto.
+            </>,
+            <>
+              A jornada é mantida pela direção, que acrescenta, muda e retira blocos à medida que o método evolui.
+            </>,
+          ]}
+        />
+        <p className="border-t border-white/[0.07] pt-6 text-[13px] text-white/40">
+          A jornada pode ser revista pela direção. Dúvidas: Diretor de Operações.
+        </p>
+      </div>
+    </PageShell>
+  );
+}
