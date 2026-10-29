@@ -13,8 +13,10 @@
 import {
   currentWeekIndex,
   getCurrentRoadmap,
+  roadmapMonthCount,
   roadmapWeeks,
   taskCoversWeek,
+  WEEKS_PER_MONTH,
   taskEndWeek,
   FALLBACK_TOTAL_WEEKS,
   type Roadmap,
@@ -385,6 +387,12 @@ export type ConsultantWeekClient = {
   /** The roadmap's full span in weeks (derived from its calendar months).
    *  A display fallback when no roadmap. */
   totalWeeks: number;
+  /** O mês do roadmap em que o projeto está (1 = o primeiro), SEM teto: um
+   *  plano de 4 meses que já vai no quinto dá 5. 0 antes de começar ou sem
+   *  roadmap (v78.44). */
+  currentMonth: number;
+  /** A duração do plano em meses de calendário; 0 sem roadmap. */
+  totalMonths: number;
   totalTasks: number;
   doneTasks: number;
   health: ConsultantClientRow["health"];
@@ -447,6 +455,8 @@ export async function getConsultantWeekView(
         hasRoadmap: false,
         currentWeek: 0,
         totalWeeks: FALLBACK_TOTAL_WEEKS,
+        currentMonth: 0,
+        totalMonths: 0,
         totalTasks: 0,
         doneTasks: 0,
         health: "no-roadmap",
@@ -470,6 +480,8 @@ export async function getConsultantWeekView(
       hasRoadmap: true,
       currentWeek: cw,
       totalWeeks: roadmapWeeks(roadmap),
+      currentMonth: cw >= 1 ? Math.floor((cw - 1) / WEEKS_PER_MONTH) + 1 : 0,
+      totalMonths: roadmapMonthCount(roadmap),
       totalTasks: s.totalTasks,
       doneTasks: s.doneTasks,
       health: classifyHealth(true, cw, s.overduePastWeeks),

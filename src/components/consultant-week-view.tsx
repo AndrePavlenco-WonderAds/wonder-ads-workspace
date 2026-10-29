@@ -5,8 +5,8 @@
 //   2. «Fazer primeiro» — as tarefas desta semana de TODOS os projetos, já
 //      ordenadas — e «Precisa de atenção» — NPS por enviar, folga passada,
 //      roadmaps em atraso ou por gerar.
-//   3. A carteira — uma linha por projeto com o roadmap, a semana, o NPS do
-//      mês anterior e do atual e a folga de custos de hoje.
+//   3. A carteira — uma linha por projeto com o mês e a semana do roadmap, o
+//      NPS do mês anterior e do atual e a folga de custos de hoje.
 //   4. Esta semana, projeto a projeto — o que havia antes, com as tarefas.
 //
 // Server component: só links, sem estado. Os cartões repetidos não usam
@@ -16,6 +16,7 @@ import Link from "next/link";
 import {
   AlertTriangle,
   ArrowRight,
+  CalendarClock,
   CalendarRange,
   CheckCircle2,
   Clock,
@@ -72,18 +73,39 @@ const FOLGA_TONE: Record<PortfolioRow["folga"]["state"], { text: string; bar: st
 const score = (n: number) => n.toFixed(1).replace(".", ",");
 const remainingOf = (c: ConsultantWeekClient) => c.thisWeekTasks.filter((t) => t.status !== "implemented").length;
 
-type Props = { view: ConsultantWeekView; portfolio: Record<string, PortfolioRow> };
+type Props = {
+  view: ConsultantWeekView;
+  portfolio: Record<string, PortfolioRow>;
+  /** A âncora de «Esta semana, projeto a projeto» — única por consultor
+   *  quando há vários na mesma página (/seo/roadmaps). */
+  anchorId?: string;
+};
 
-export function ConsultantWeekView({ view, portfolio }: Props) {
+/** O último mês do plano, ou um plano que já acabou (v78.44). */
+export const planEnding = (c: ConsultantWeekClient) =>
+  c.hasRoadmap && c.totalMonths > 0 && c.currentMonth >= c.totalMonths;
+
+/** Os números de uma carteira — os mesmos no topo da página de um consultor
+ *  e na tabela da equipa em /seo/roadmaps. */
+export function summarizePortfolio(view: ConsultantWeekView, portfolio: Record<string, PortfolioRow>) {
   const rows = view.clients.map((c) => ({ c, p: portfolio[c.slug] }));
-
   // NPS do mês anterior: média e quantos responderam (a WonderAds não conta).
   const npsRows = rows.filter((r) => r.p && !r.p.nps.excluded);
   const prevScores = npsRows.map((r) => r.p.nps.previous.score).filter((s): s is number => s !== null);
-  const prevAvg = prevScores.length ? prevScores.reduce((s, x) => s + x, 0) / prevScores.length : null;
-  const prevShort = npsRows[0]?.p.nps.previous.short ?? "";
-  const folgaFree = rows.reduce((s, r) => s + (r.p && r.p.folga.remaining > 0 && r.p.folga.pctFree !== null ? r.p.folga.remaining : 0), 0);
-  const folgaOver = rows.filter((r) => r.p?.folga.state === "over").length;
+  return {
+    rows,
+    prevAvg: prevScores.length ? prevScores.reduce((s, x) => s + x, 0) / prevScores.length : null,
+    prevShort: npsRows[0]?.p.nps.previous.short ?? "",
+    prevAnswered: prevScores.length,
+    npsProjects: npsRows.length,
+    folgaFree: rows.reduce((s, r) => s + (r.p && r.p.folga.remaining > 0 && r.p.folga.pctFree !== null ? r.p.folga.remaining : 0), 0),
+    folgaOver: rows.filter((r) => r.p?.folga.state === "over").length,
+    ending: view.clients.filter(planEnding).length,
+  };
+}
+
+export function ConsultantWeekView({ view, portfolio, anchorId = "semana" }: Props) {
+  const { rows, prevAvg, prevShort, prevAnswered, npsProjects, folgaFree, folgaOver } = summarizePortfolio(view, portfolio);
   const t = view.totals;
 
   return (
@@ -116,7 +138,7 @@ export function ConsultantWeekView({ view, portfolio }: Props) {
           icon={Gauge}
           label={`NPS de ${prevShort.toLowerCase()}`}
           value={prevAvg === null ? "—" : score(prevAvg)}
-          sub={`${prevScores.length} de ${npsRows.length} responderam`}
+          sub={`${prevAnswered} de ${npsProjects} responderam`}
           color={prevAvg === null ? undefined : npsScoreColor(prevAvg)}
         />
         <Stat
@@ -142,7 +164,7 @@ export function ConsultantWeekView({ view, portfolio }: Props) {
         <>
           {/* 2 · O que fazer agora */}
           <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
-            <FirstThings clients={view.clients} />
+            <FirstThings clients={view.clients} anchorId={anchorId} />
             <Attention rows={rows} />
           </div>
 
@@ -150,7 +172,7 @@ export function ConsultantWeekView({ view, portfolio }: Props) {
           <Portfolio rows={rows} />
 
           {/* 4 · Projeto a projeto */}
-          <section id="semana" className="scroll-mt-24">
+          <section id={anchorId} className="scroll-mt-24">
             <SectionTitle title="Esta semana, projeto a projeto" hint="O roadmap de cada projeto na semana em curso." />
             <div className="mt-4 grid grid-cols-1 gap-5 lg:grid-cols-2 xl:grid-cols-3">
               {view.clients.map((c) => (
@@ -218,7 +240,7 @@ function Stat({
 
 /** As tarefas desta semana de todos os projetos, por ordem: primeiro os
  *  projetos em pior estado, e dentro deles o que já está em curso. */
-function FirstThings({ clients }: { clients: ConsultantWeekClient[] }) {
+function FirstThings({ clients, anchorId }: { clients: ConsultantWeekClient[]; anchorId: string }) {
   const queue: Array<{ task: WeekTask; client: ConsultantWeekClient }> = [];
   for (const c of clients) {
     for (const task of c.thisWeekTasks) if (task.status !== "implemented") queue.push({ task, client: c });
@@ -237,7 +259,7 @@ function FirstThings({ clients }: { clients: ConsultantWeekClient[] }) {
         title="Fazer primeiro"
         hint="As tarefas desta semana de todos os projetos, por ordem."
         aside={queue.length > shown.length ? (
-          <a href="#semana" className="text-[12.5px] text-white/50 hover:text-white">
+          <a href={`#${anchorId}`} className="text-[12.5px] text-white/50 hover:text-white">
             +{queue.length - shown.length} mais
           </a>
         ) : undefined}
@@ -336,6 +358,24 @@ function Attention({ rows }: { rows: Row[] }) {
         ),
       });
     }
+    if (planEnding(c)) {
+      const ended = c.currentMonth > c.totalMonths;
+      items.push({
+        key: `fim-${c.slug}`,
+        href: `/seo/${c.slug}/roadmap`,
+        icon: CalendarClock,
+        tone: ended ? "text-rose-300" : "text-amber-300",
+        text: ended ? (
+          <>
+            O roadmap de {c.totalMonths} meses de <b className="font-medium text-white">{c.title}</b> já acabou: falta o plano seguinte
+          </>
+        ) : (
+          <>
+            <b className="font-medium text-white">{c.title}</b> está no último mês do roadmap ({c.currentMonth} de {c.totalMonths})
+          </>
+        ),
+      });
+    }
     if (!c.hasRoadmap) {
       items.push({
         key: `rm-${c.slug}`,
@@ -382,7 +422,7 @@ function Portfolio({ rows }: { rows: Row[] }) {
   const sample = rows.find((r) => r.p)?.p;
   return (
     <section>
-      <SectionTitle title="A carteira" hint="Projeto a projeto: o roadmap, a semana, o NPS e a folga de custos de hoje." />
+      <SectionTitle title="A carteira" hint="Projeto a projeto: o mês e a semana do roadmap, o NPS e a folga de custos de hoje." />
       <div className="mt-4 overflow-hidden rounded-[24px] border border-white/10 bg-white/[0.02]">
         <div className="hidden grid-cols-[minmax(0,1.7fr)_minmax(0,1.4fr)_minmax(0,0.9fr)_minmax(0,1.25fr)_minmax(0,1.15fr)_auto] gap-4 border-b border-white/[0.07] px-5 py-3 text-[12px] text-white/40 lg:grid">
           <span>Projeto</span>
@@ -416,7 +456,10 @@ function PortfolioLine({ c, p }: Row) {
         )}
         <span className="min-w-0">
           <span className="block truncate text-[14px] font-medium text-white hover:underline">{c.title}</span>
-          {p?.tier && <span className="text-[11.5px] text-white/40">{TIER_LABEL[p.tier]}</span>}
+          <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1">
+            {p?.tier && <span className="text-[11.5px] text-white/40">{TIER_LABEL[p.tier]}</span>}
+            <MonthTag c={c} />
+          </span>
         </span>
       </Link>
 
@@ -554,6 +597,30 @@ function FolgaCell({ slug, f }: { slug: string; f: PortfolioRow["folga"] }) {
   );
 }
 
+/** Em que mês do roadmap está o projeto (v78.44). O último mês fica a âmbar e
+ *  um plano que já acabou a vermelho: é altura de preparar o seguinte. */
+function MonthTag({ c }: { c: ConsultantWeekClient }) {
+  if (!c.hasRoadmap || c.currentMonth < 1 || c.totalMonths < 1) return null;
+  const ended = c.currentMonth > c.totalMonths;
+  const last = c.currentMonth === c.totalMonths;
+  const tone = ended
+    ? "border-rose-400/45 bg-rose-500/[0.14] text-rose-100"
+    : last
+      ? "border-amber-400/45 bg-amber-500/[0.14] text-amber-100"
+      : "border-[#783DF5]/45 bg-[#783DF5]/[0.16] text-[#e4d9ff]";
+  return (
+    <span
+      title={ended ? `O plano era de ${c.totalMonths} meses e já acabou` : `Mês ${c.currentMonth} de um plano de ${c.totalMonths} meses`}
+      className={`inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full border px-2 py-px text-[11px] font-semibold tabular-nums ${tone}`}
+    >
+      Mês {c.currentMonth}
+      <span className="font-normal opacity-70">
+        {ended ? `· plano de ${c.totalMonths} acabou` : last ? `de ${c.totalMonths} · último` : `de ${c.totalMonths}`}
+      </span>
+    </span>
+  );
+}
+
 function IconLink({ href, label, icon: Icon }: { href: string; label: string; icon: LucideIcon }) {
   return (
     <Link
@@ -589,9 +656,12 @@ function ClientWeekCard({ client, p }: { client: ConsultantWeekClient; p: Portfo
 
       {client.hasRoadmap ? (
         <>
-          <div className="mt-4 flex items-baseline justify-between text-[12px] text-white/55">
-            <span>
-              Semana <span className="font-semibold text-white/85">{client.currentWeek}</span> de {client.totalWeeks}
+          <div className="mt-4 flex items-center justify-between gap-2 text-[12px] text-white/55">
+            <span className="flex flex-wrap items-center gap-2">
+              <MonthTag c={client} />
+              <span>
+                Semana <span className="font-semibold text-white/85">{client.currentWeek}</span> de {client.totalWeeks}
+              </span>
             </span>
             <span>
               {client.doneTasks}/{client.totalTasks} concluídas

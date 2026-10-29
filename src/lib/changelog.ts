@@ -13,6 +13,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.44",
+    date: "2026-10-29",
+    title: "Mês do roadmap na vista do consultor + todos os consultores numa página",
+    highlights: [
+      "**🗓️ Cada projeto mostra em que mês do roadmap está** («Mês 2 de 3») na vista de cada consultor — na carteira e no cartão da semana. O último mês fica a âmbar e um plano que já acabou a vermelho, e ambos entram em «Precisa de atenção».",
+      "**👥 Nova página «Todos os consultores» (`/seo/roadmaps`), só para SuperAdmins**: em cima, a equipa numa tabela (projetos, tarefas da semana, atrasos, aprovações, NPS do mês anterior, folga livre e fins de plano); depois, cada consultor seguido, com a mesma vista da página dele. Abre-se no SEO DPT («Todos os consultores», por cima da board) ou na página de qualquer consultor.",
+    ],
+  },
+  {
     version: "78.43",
     date: "2026-10-28",
     title: "Atalhos «Como funciona» para a Documentação",
