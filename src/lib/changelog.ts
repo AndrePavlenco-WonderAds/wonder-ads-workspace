@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.47",
+    date: "2026-10-29",
+    title: "Exemplo do registo de leads em tamanho real",
+    highlights: [
+      "**🔍 No processo do registo de leads (Jornada de Cliente, semana 8)**, a imagem do exemplo abre em tamanho real num separador novo.",
+    ],
+  },
+  {
     version: "78.46",
     date: "2026-10-29",
     title: "Documentação: Jornada de Cliente e Protocolos",

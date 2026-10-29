@@ -116,7 +116,13 @@ export function JourneyGuideDrawer({
               <h3 className="text-[15px] font-semibold text-white">Um exemplo</h3>
               {/* Fundo branco: a tabela é uma folha de Excel. Rola na
                   horizontal num ecrã estreito em vez de ficar ilegível. */}
-              <div className="mt-3 overflow-x-auto rounded-xl border border-white/10 bg-white p-2">
+              <a
+                href={guide.image.src}
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Abrir em tamanho real"
+                className="mt-3 block overflow-x-auto rounded-xl border border-white/10 bg-white p-2 transition hover:border-white/40"
+              >
                 <Image
                   src={guide.image.src}
                   alt={guide.image.alt}
@@ -125,8 +131,10 @@ export function JourneyGuideDrawer({
                   sizes="900px"
                   className="h-auto w-[900px] max-w-none sm:w-full sm:max-w-full"
                 />
-              </div>
-              <figcaption className="mt-2 text-[12.5px] leading-relaxed text-white/45">{guide.image.caption}</figcaption>
+              </a>
+              <figcaption className="mt-2 text-[12.5px] leading-relaxed text-white/45">
+                {guide.image.caption} Carrega na imagem para a ver em tamanho real.
+              </figcaption>
             </figure>
           )}
 
