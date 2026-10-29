@@ -116,25 +116,6 @@ export const DOCS_BLOCKS: DocsBlock[] = [
     ],
   },
   {
-    id: "jornada-cliente",
-    title: "Jornada de Cliente",
-    // O caminho de um projeto SEO, mês a mês e semana a semana (v78.46). A
-    // direção edita-o na própria página.
-    audience: { depts: ["SEO"] },
-    audienceLabel: "SEO DPT",
-    updatedAt: "2026-10-29",
-    pages: [
-      {
-        id: "jornada-cliente",
-        href: "/documentacao/jornada-cliente",
-        label: "Jornada de Cliente",
-        // Capa dada pelo André (2026-10-29).
-        image: "/documentacao/jornada-cliente-capa.jpg",
-        tag: "A parte comum a todos os projetos",
-      },
-    ],
-  },
-  {
     id: "protocolos",
     title: "Protocolos",
     // As duas listas do SEO DPT (v78.46), editadas pela direção na página.
@@ -176,6 +157,26 @@ export const DOCS_BLOCKS: DocsBlock[] = [
         // Capa dada pelo André (2026-10-29).
         image: "/documentacao/protocolos-proibidos-capa.jpg",
         tag: "O que nunca se faz na WonderAds",
+      },
+    ],
+  },
+  {
+    id: "jornada-cliente",
+    title: "Jornada de Cliente",
+    // O caminho de um projeto SEO, mês a mês e semana a semana (v78.46). A
+    // direção edita-o na própria página. Fica depois dos protocolos, que
+    // ocupam uma linha do hub os três (pedido do André, v78.52).
+    audience: { depts: ["SEO"] },
+    audienceLabel: "SEO DPT",
+    updatedAt: "2026-10-29",
+    pages: [
+      {
+        id: "jornada-cliente",
+        href: "/documentacao/jornada-cliente",
+        label: "Jornada de Cliente",
+        // Capa dada pelo André (2026-10-29).
+        image: "/documentacao/jornada-cliente-capa.jpg",
+        tag: "A parte comum a todos os projetos",
       },
     ],
   },

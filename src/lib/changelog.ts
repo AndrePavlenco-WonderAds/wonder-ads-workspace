@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.52",
+    date: "2026-10-29",
+    title: "Documentação: os três protocolos na mesma linha",
+    highlights: [
+      "**🧭 Nova ordem no hub da Documentação**: Protocolos Obrigatórios, Recomendados e Proibidos lado a lado, e a Jornada de Cliente logo a seguir.",
+    ],
+  },
+  {
     version: "78.51",
     date: "2026-10-29",
     title: "Documentação: Protocolos Proibidos e sugestões à direção",
