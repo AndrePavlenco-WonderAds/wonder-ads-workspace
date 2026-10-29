@@ -118,7 +118,7 @@ export default async function BonusSemestralPage() {
               },
               {
                 term: "Sem reinício",
-                detail: "Ao contrário da escala, o 1:1 de nível não põe estes contadores a zero: conta o semestre inteiro.",
+                detail: "Ao contrário da escala, subir de nível não põe estes contadores a zero: conta o semestre inteiro.",
               },
               { term: "Por pontuar", detail: "Só entra quando a direção a pontuar. Com 0 pontos, não conta." },
             ]}
@@ -154,7 +154,7 @@ export default async function BonusSemestralPage() {
             <>
               O ano divide-se em dois semestres: de janeiro a junho, avaliado em junho, e de julho a dezembro, avaliado em
               dezembro. Em cada um contam as ineficácias pontuadas pela direção cuja data cai dentro do semestre: o NO é o número
-              delas e o PA é a soma dos pontos. Ao contrário da escala, estes contadores não voltam a zero no 1:1 de nível, porque
+              delas e o PA é a soma dos pontos. Ao contrário da escala, estes contadores não voltam a zero quando se sobe de nível, porque
               conta o semestre inteiro. Uma ineficácia por pontuar só entra quando a direção a pontuar, e uma com 0 pontos não
               conta.
             </>,

@@ -57,7 +57,15 @@ export default async function IneficaciasConsultantPage({
   const bundle = await loadConsultant(username, today);
   const { state, reports, ledger } = bundle;
   const openId = (await searchParams).relatorio ?? reports.find((r) => !r.review)?.id ?? reports[0]?.id ?? null;
-  const events = ledger.events.slice().sort((a, b) => b.at.localeCompare(a.at) || b.createdAt - a.createdAt);
+  // O histórico junta os registos da direção às mudanças automáticas (v78.53):
+  // as subidas de nível (PA e NO a zero) e as descidas de fim de semestre. No
+  // mesmo dia: a subida vem primeiro, depois a direção, e a descida fecha o dia.
+  const history = [
+    ...ledger.events.map((e) => ({ key: e.id, at: e.at, rank: 1, tie: e.createdAt, event: e, step: null })),
+    ...state.steps
+      .filter((st) => st.reason !== "direcao")
+      .map((st, i) => ({ key: `step-${i}`, at: st.at, rank: st.reason === "subida" ? 0 : 2, tie: i, event: null, step: st })),
+  ].sort((a, b) => b.at.localeCompare(a.at) || b.rank - a.rank || b.tie - a.tie);
   const direct = ledger.direct.slice().sort((a, b) => b.occurredOn.localeCompare(a.occurredOn));
   const avatar = getTeamAvatar(username);
   const who = firstName(row.fullName ?? row.name) || row.name;
@@ -86,7 +94,7 @@ export default async function IneficaciasConsultantPage({
           </h1>
           <p className="mt-1 text-[12.5px] text-white/45">
             {row.role} · {row.dept} · {reports.length} {reports.length === 1 ? "relatório" : "relatórios"}
-            {state.phaseEvent ? ` · contadores desde o 1:1 de ${formatISODate(state.phaseEvent.at)}` : ""}
+            {state.phaseOpen ? ` · contadores desde a subida ao nível ${state.phaseOpen.level} a ${formatISODate(state.phaseOpen.at)}` : ""}
           </p>
         </div>
       </header>
@@ -100,7 +108,7 @@ export default async function IneficaciasConsultantPage({
         <div className="min-w-0 space-y-10">
           {state.counted.length > 0 && (
             <section className="animate-fade-up rounded-2xl border border-white/[0.08] bg-white/[0.02] px-4 py-3.5">
-              <p className="readout text-white/35">Desde o último 1:1 · {state.counted.length} {state.counted.length === 1 ? "ocorrência" : "ocorrências"} · PA {state.pa} · NO {state.no}</p>
+              <p className="readout text-white/35">Desde a última subida de nível · {state.counted.length} {state.counted.length === 1 ? "ocorrência" : "ocorrências"} · PA {state.pa} · NO {state.no}</p>
               <ul className="mt-2 divide-y divide-white/[0.05]">
                 {state.counted.map((o) => (
                   <li key={o.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2 text-[12.5px]">
@@ -225,12 +233,25 @@ export default async function IneficaciasConsultantPage({
               <History className="h-3.5 w-3.5" />
               Histórico da escala
             </p>
-            {events.length === 0 ? (
-              <p className="mt-2 text-[12px] text-white/40">Sem medidas registadas — {who} está no nível 0 desde o início.</p>
+            {history.length === 0 ? (
+              <p className="mt-2 text-[12px] text-white/40">Sem mudanças de nível — {who} está no nível 0 desde o início.</p>
             ) : (
               <ol className="mt-3 space-y-3">
-                {events.map((e) => (
-                  <li key={e.id} className="relative pl-5 text-[12px]">
+                {history.map(({ key, event: e, step: st }) =>
+                  st ? (
+                    <li key={key} className="relative pl-5 text-[12px]">
+                      <span
+                        className={`absolute left-0 top-1.5 h-2.5 w-2.5 rounded-full ${st.reason === "semestre" ? "bg-emerald-300" : "bg-rose-300"}`}
+                      />
+                      <p className="font-semibold text-white/85">
+                        {st.reason === "semestre"
+                          ? `Fim do semestre: do nível ${st.from} para o ${st.to}`
+                          : `Subiu ao nível ${st.to} — PA e NO a zero`}
+                      </p>
+                      <p className="text-white/45">{formatISODate(st.at)} · automático</p>
+                    </li>
+                  ) : e ? (
+                  <li key={key} className="relative pl-5 text-[12px]">
                     <span className={`absolute left-0 top-1.5 h-2.5 w-2.5 rounded-full ${e.kind === "measure" ? "bg-[#a78bfa]" : "bg-amber-300"}`} />
                     <p className="font-semibold text-white/85">{eventTitle(e)}</p>
                     <p className="text-white/45">
@@ -246,7 +267,8 @@ export default async function IneficaciasConsultantPage({
                     )}
                     {e.note && <p className="mt-1 text-white/55">{e.note}</p>}
                   </li>
-                ))}
+                  ) : null,
+                )}
               </ol>
             )}
           </section>

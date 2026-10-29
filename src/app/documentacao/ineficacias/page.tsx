@@ -1,5 +1,6 @@
 // /documentacao/ineficacias — o sistema de Ineficácias explicado (v78.19;
-// reescrita mais curta em v78.21, com a regra do reinício no 1:1).
+// reescrita mais curta em v78.21; v78.53: subir de nível põe PA e NO a zero, e
+// no fim de cada semestre todos descem um nível).
 //
 // Tudo o que é número sai de lib/ineficacias/shared.ts — as mesmas
 // constantes com que a app conta. A calculadora da folha RH-04 é só da
@@ -211,13 +212,19 @@ export default async function IneficaciasDocPage() {
         <DocSection
           id="pa-e-no"
           title="PA e NO"
-          lead="PA é a soma dos pontos. NO é o número de erros. Acumulam até ao próximo 1:1 de nível."
+          lead="PA é a soma dos pontos. NO é o número de erros. Acumulam até subires de nível."
         >
           <PhaseReset />
           <div className="grid gap-3 md:grid-cols-3">
             {[
-              { t: "Só o 1:1 põe a zero", d: "Sempre que há um 1:1 de nível, PA e NO recomeçam do zero para a fase seguinte." },
-              { t: "O nível não desce", d: "A progressão é linear e cumulativa." },
+              {
+                t: "Subir de nível põe a zero",
+                d: "No dia em que o PA ou o NO passam o limiar, sobes de nível e os dois recomeçam do zero no dia seguinte. O 1:1 do nível vem depois e já não mexe nos contadores.",
+              },
+              {
+                t: "O semestre faz descer",
+                d: "A 30/06 e a 31/12, ao fechar o dia, toda a equipa desce um nível — só um. O PA e o NO ficam como estão.",
+              },
               { t: "Nada se apaga", d: "Os contadores recomeçam; os erros ficam no histórico." },
             ].map((x) => (
               <div key={x.t} className="rounded-2xl border border-white/10 bg-white/[0.02] p-5">
@@ -230,6 +237,10 @@ export default async function IneficaciasDocPage() {
 
         <DocSection id="niveis" title="Os níveis" lead="Passa o limiar e sobe-se um nível. Cada nível tem a sua medida.">
           <LevelStairs />
+          <Note title="Fim do semestre">
+            No último dia de junho e de dezembro, toda a equipa desce um nível: quem está no 3 passa ao 2, no 2 ao 1, no 1
+            ao 0. Desce só um degrau, e quem está no 0 fica no 0.
+          </Note>
           <Note tone="warn" title="Falha grave">
             Uma falha grave sozinha pode levar a probation direto. Decide a direção, com justificação.
           </Note>
@@ -241,7 +252,7 @@ export default async function IneficaciasDocPage() {
             <ScenarioCard title="A recorrência basta" context="Três erros leves, de 1 ponto." points={[1, 1, 1]} limit={L1} result="NO 3: nível 1." />
             <ScenarioCard
               title="A progressão acumula"
-              context="Depois do 1:1 do nível 2, do zero: dois erros leves."
+              context="Depois de subir ao nível 2, do zero: dois erros leves."
               points={[1, 1]}
               limit={L2}
               result="NO 2: probation."
@@ -335,7 +346,8 @@ export default async function IneficaciasDocPage() {
               </div>
             </div>
             <Note title="Registar o 1:1">
-              Em «Ineficácias da equipa», com a data, quem o conduziu e as 1 a 3 ações. É esse registo que põe PA e NO a zero.
+              Em «Ineficácias da equipa», com a data, quem o conduziu e as 1 a 3 ações. Fica registado que a medida foi
+              aplicada; o PA e o NO já tinham voltado a zero quando a pessoa subiu de nível.
             </Note>
           </DocSection>
         )}
@@ -362,22 +374,23 @@ export default async function IneficaciasDocPage() {
               Cada erro recebe da direção uma pontuação de 0 a {MAX_POINTS}: de 1 a 3 é baixo e recuperável no próprio dia, de 4
               a 6 é médio e obriga alguém a refazer trabalho, 7 ou 8 é alto e tem impacto direto no cliente ou na equipa, e 9
               ou 10 é crítico, com risco real para o negócio; 0 quer dizer que não conta. Os erros pontuados alimentam dois
-              contadores, o PA, que é a soma dos pontos, e o NO, que é o número de erros. Acumulam até ao próximo 1:1 de nível
-              e só aí voltam a zero; os erros nunca se apagam e ficam no histórico.
+              contadores, o PA, que é a soma dos pontos, e o NO, que é o número de erros. Acumulam até a pessoa subir de nível
+              e aí voltam a zero; os erros nunca se apagam e ficam no histórico.
             </>,
             <>
               Quando os contadores passam o limiar, sobe-se um nível, e cada nível tem a sua medida. O nível 1 chega com PA ≥{" "}
               {L1.pa} ou NO ≥ {L1.no} e traz um 1:1 com o líder direto e um plano de 1 a 3 ações. O nível 2, depois do 1, chega
               com PA ≥ {L2.pa} ou NO ≥ {L2.no} e traz um 1:1 com o nível acima e medidas extra. O nível 3, depois do 2, com o
-              mesmo limiar, é o probation. A progressão é linear e cumulativa — o nível nunca desce — e uma falha grave sozinha
-              pode levar diretamente ao probation, por decisão fundamentada da direção.
+              mesmo limiar, é o probation. O nível sobe no próprio dia em que o limiar é passado, e a medida — o 1:1 ou o
+              probation — regista-se depois. No fim de cada semestre, a 30 de junho e a 31 de dezembro, toda a equipa desce um
+              nível, só um. Uma falha grave sozinha pode levar diretamente ao probation, por decisão fundamentada da direção.
             </>,
             <>
               {showBonus && (
                 <>
                   Além da escala, no SEO DPT as ineficácias de cada semestre decidem o bónus semestral, de até{" "}
                   {formatEur(SEMESTER_TIERS[0].eur).replace(" ", "\u00a0")}: conta o número e os pontos das ineficácias de
-                  janeiro a junho e de julho a dezembro, sem reinício no 1:1.{" "}
+                  janeiro a junho e de julho a dezembro, sem os reinícios da escala.{" "}
                 </>
               )}
               O que protege cada pessoa é reportar cedo e com transparência: um erro que o próprio reporta pesa menos do que um

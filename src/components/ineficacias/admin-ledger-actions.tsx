@@ -2,7 +2,8 @@
 
 // As ações da direção sobre a ESCALA de um consultor:
 //   • registar a medida do nível atingido (o 1:1 com as ações, ou o arranque
-//     do probation) — reinicia os contadores a partir do dia seguinte;
+//     do probation). Desde a v78.53 os contadores já foram a zero na subida:
+//     registar a medida só a dá por aplicada;
 //   • definir o nível à mão, com justificação (falha grave → probation
 //     direto; reintegração → volta a 0).
 // Registar uma ocorrência vive na folha RH-04 (/admin/ineficacias/registar).
@@ -168,11 +169,11 @@ export function MeasureForm({
         style={{ background: "var(--brand-gradient)" }}
       >
         {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ClipboardCheck className="h-3.5 w-3.5" />}
-        Registar medida e reiniciar contadores
+        Registar a medida
       </button>
       <p className="mt-2 text-[10.5px] text-white/40">
-        O consultor fica no nível {level}; as ocorrências a partir do dia seguinte contam para o nível seguinte. As
-        ineficácias anteriores não se apagam.
+        O PA e o NO já voltaram a zero quando o nível {level} foi atingido; isto regista a medida aplicada. As ineficácias
+        anteriores não se apagam.
       </p>
     </Panel>
   );

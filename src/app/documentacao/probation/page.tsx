@@ -86,7 +86,8 @@ export default async function ProbationDocPage() {
               <p className="text-[13px] font-medium text-white/45">Normalmente</p>
               <p className="mt-1 text-[1.25rem] font-semibold text-white">No fim da escala</p>
               <p className="mt-2 text-[14.5px] leading-relaxed text-white/60">
-                O nível 3 das ineficácias: depois do 1:1 do nível 2, PA ≥ {L3.pa} ou NO ≥ {L3.no}.
+                O nível 3 das ineficácias: depois de subir ao nível 2, PA ≥ {L3.pa} ou NO ≥ {L3.no}, contados do zero desde
+                essa subida. No fim de cada semestre (30/06 e 31/12) toda a equipa desce um nível, e o 3 passa a 2.
               </p>
               <Link href="/documentacao/ineficacias#escala" className="mt-4 inline-block text-[13.5px] font-medium text-[#c4a6ff] hover:text-white">
                 Ver a escala das ineficácias
@@ -309,8 +310,8 @@ export default async function ProbationDocPage() {
           paragraphs={[
             <>
               O probation é a última oportunidade estruturada que a WonderAds dá a alguém cujo desempenho ficou abaixo do
-              esperado. Normalmente chega no fim da escala das ineficácias, no nível 3, mas uma falha grave sozinha pode levar
-              a ele diretamente. Não é uma formalidade nem um aviso disfarçado: é um acordo escrito sobre o que tem de mudar,
+              esperado. Normalmente chega no fim da escala das ineficácias, no nível 3 — a que se sobe quando, depois do nível
+              2, os contadores voltam a passar o limiar —, mas uma falha grave sozinha pode levar a ele diretamente. Não é uma formalidade nem um aviso disfarçado: é um acordo escrito sobre o que tem de mudar,
               até quando e com que apoio, feito porque a empresa quer que a pessoa fique e chegue ao nível de que é capaz.
             </>,
             <>

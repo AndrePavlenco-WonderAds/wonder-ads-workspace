@@ -1,6 +1,7 @@
 // A direção regista a MEDIDA de um nível atingido: o 1:1 (nível 1 ou 2) ou
-// o arranque do probation (nível 3). A partir do dia seguinte os contadores
-// (PA e NO) recomeçam — a regra da Beatriz — e o nível fica, cumulativo.
+// o arranque do probation (nível 3). Desde a v78.53 o nível sobe sozinho ao
+// passar o limiar, e é aí que PA e NO voltam a zero: registar a medida já não
+// mexe nos contadores, só a dá por aplicada.
 //   POST { username, level, at, conductedBy, actions[], note }
 
 import { NextResponse } from "next/server";
@@ -48,13 +49,12 @@ export async function POST(req: Request) {
     return fail(
       pending
         ? `A medida por aplicar é a do nível ${pending.level}, não a do ${level}.`
-        : "Não há nenhuma medida por aplicar — o limiar não foi atingido nesta fase.",
+        : "Não há nenhuma medida por aplicar — não houve uma subida de nível à espera dela.",
       409,
     );
   }
-  // A reunião não pode ser anterior à ocorrência que fez passar o limiar:
-  // datada antes, essas ocorrências voltavam a contar na fase nova e
-  // escalavam logo o nível seguinte.
+  // A reunião não pode ser anterior à ocorrência que fez passar o limiar: a
+  // medida é a resposta a essa subida.
   if (at < pending.since) {
     return fail(
       `A reunião não pode ser anterior a ${pending.since.split("-").reverse().join("/")}, a data em que o nível ${level} foi atingido.`,

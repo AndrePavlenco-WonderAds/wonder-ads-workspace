@@ -1252,9 +1252,29 @@ async function ineficaciasNotifications(
           id,
           ruleId: "ineficacias-level",
           title: `⚖️ Atingiste o nível ${pm.level} da escala de incumprimento`,
-          body: `A ${ineficaciaDate(pm.since)}, com PA ${pm.pa} · NO ${pm.no}. ${INEFICACIA_LEVELS[pm.level].measure} A direção vai marcar contigo.`,
+          body: `A ${ineficaciaDate(pm.since)}, com PA ${pm.pa} · NO ${pm.no}. ${INEFICACIA_LEVELS[pm.level].measure} A direção vai marcar contigo. O teu PA e NO recomeçaram do zero.`,
           periodLabel: `Nível ${pm.level}`,
           dueAt: Date.parse(`${pm.since}T09:00:00Z`) || now.getTime(),
+          client: null,
+          actionLabel: "Ver a minha escala",
+          actionHref: "/ineficacias/painel",
+          resolved: Boolean(state[id]),
+          resolvedAt: state[id]?.resolvedAt ?? null,
+        });
+      }
+      // Fim do semestre (v78.53): o nível desce um degrau a 30/06 e a 31/12.
+      for (const st of b.state.steps) {
+        if (st.reason !== "semestre") continue;
+        const dueAt = Date.parse(`${st.at}T23:59:00Z`) || now.getTime();
+        if (now.getTime() - dueAt > INEFICACIAS_RECENT_MS) continue;
+        const id = `ineficacias-semester:${st.at}:${st.to}`;
+        out.push({
+          id,
+          ruleId: "ineficacias-semester",
+          title: `🌱 Fim do semestre: desceste para o nível ${st.to}`,
+          body: `A ${ineficaciaDate(st.at)} fechou o semestre e toda a equipa desceu um nível. Estavas no nível ${st.from}; agora estás no ${st.to}.`,
+          periodLabel: `Nível ${st.to}`,
+          dueAt,
           client: null,
           actionLabel: "Ver a minha escala",
           actionHref: "/ineficacias/painel",
@@ -1269,7 +1289,7 @@ async function ineficaciasNotifications(
           id,
           ruleId: "ineficacias-measure-done",
           title: e.level === 3 ? "📋 O teu probation foi iniciado" : `🤝 O 1:1 do nível ${e.level} ficou registado`,
-          body: `${ineficaciaDate(e.at)}${e.conductedBy ? ` · com ${e.conductedBy}` : ""}${e.actions.length ? ` · ${e.actions.length} ${e.actions.length === 1 ? "ação combinada" : "ações combinadas"}` : ""}. Os contadores recomeçaram no dia seguinte.`,
+          body: `${ineficaciaDate(e.at)}${e.conductedBy ? ` · com ${e.conductedBy}` : ""}${e.actions.length ? ` · ${e.actions.length} ${e.actions.length === 1 ? "ação combinada" : "ações combinadas"}` : ""}.`,
           periodLabel: `Nível ${e.level}`,
           dueAt: e.createdAt,
           client: null,
@@ -1319,7 +1339,7 @@ async function ineficaciasNotifications(
           id,
           ruleId: "ineficacias-measure",
           title: `⚖️ ${who} atingiu o nível ${pm.level} — medida por aplicar`,
-          body: `A ${ineficaciaDate(pm.since)}, com PA ${pm.pa} · NO ${pm.no}. ${INEFICACIA_LEVELS[pm.level].measure} Regista a reunião para os contadores reiniciarem.`,
+          body: `A ${ineficaciaDate(pm.since)}, com PA ${pm.pa} · NO ${pm.no}. ${INEFICACIA_LEVELS[pm.level].measure} O PA e o NO já voltaram a zero; regista a reunião quando a fizeres.`,
           periodLabel: `Ineficácias · ${who}`,
           dueAt: Date.parse(`${pm.since}T09:00:00Z`) || now.getTime(),
           client: null,

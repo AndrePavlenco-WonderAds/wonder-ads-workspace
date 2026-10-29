@@ -882,8 +882,9 @@ function ImpactPanel({
   }
   const { before, after } = impact;
   const who = firstName(person.fullName);
-  // Antes do último 1:1: fica no histórico, mas a fase dele já fechou.
-  const beforePhase = Boolean(before.phaseEvent && occurredOn <= before.phaseEvent.at);
+  // Antes da última subida de nível: entra na fase anterior, não no PA e NO
+  // de agora (v78.53: subir de nível põe os contadores a zero).
+  const beforePhase = Boolean(before.phaseOpen && occurredOn <= before.phaseOpen.at);
   const levelUp = after.reached > before.reached;
   return (
     <div>
@@ -904,12 +905,13 @@ function ImpactPanel({
       {levelUp ? (
         <p className="mt-3 flex items-start gap-2 rounded-xl border border-rose-500/35 bg-rose-500/[0.07] px-3.5 py-2.5 text-[12.5px] font-semibold text-rose-800">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-          Com esta ocorrência, {who} atinge o nível {after.reached} — {LEVELS[after.reached].measure.toLowerCase()}
+          Com esta ocorrência, {who} sobe ao nível {after.reached} e o PA e o NO voltam a zero —{" "}
+          {LEVELS[after.reached].measure.toLowerCase()}
         </p>
       ) : beforePhase ? (
         <p className="mt-3 flex items-start gap-2 rounded-xl border border-black/12 bg-white/60 px-3.5 py-2.5 text-[12px] text-black/60">
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-          A data é anterior ao último 1:1 de {who} — fica no histórico, mas não entra no PA nem no NO da fase atual.
+          A data é anterior à última subida de nível de {who} — conta na fase anterior, não no PA nem no NO de agora.
         </p>
       ) : after.pendingMeasure ? (
         <p className="mt-3 flex items-start gap-2 rounded-xl border border-amber-600/30 bg-amber-500/[0.08] px-3.5 py-2.5 text-[12px] font-semibold text-amber-800">

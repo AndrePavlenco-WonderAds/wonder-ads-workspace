@@ -1,5 +1,5 @@
 // «O meu painel» das Ineficácias (v77.91) — o lugar do consultor na escala:
-// o nível, o PA e o NO desde o último 1:1 e as ocorrências que contam
+// o nível, o PA e o NO desde a última subida de nível e as ocorrências que contam
 // agora. Saiu do topo da página do relatório (o André pediu o formulário
 // primeiro) e abre-se pelo botão «O meu painel».
 //
@@ -72,8 +72,8 @@ export default async function IneficaciasPainelPage() {
           <span>
             <strong className="font-semibold">Atingiste o nível {state.pendingMeasure.level}</strong> a{" "}
             {formatISODate(state.pendingMeasure.since)} (PA {state.pendingMeasure.pa} · NO {state.pendingMeasure.no}).{" "}
-            {LEVELS[state.pendingMeasure.level].measure} A direção vai marcar contigo — depois dessa reunião os contadores
-            recomeçam.
+            {LEVELS[state.pendingMeasure.level].measure} A direção vai marcar contigo. Os teus contadores já recomeçaram do
+            zero no dia seguinte.
           </span>
         </p>
       )}
@@ -84,7 +84,7 @@ export default async function IneficaciasPainelPage() {
 
       <section className="animate-fade-up mt-4 rounded-2xl border border-white/[0.08] bg-white/[0.02] px-4 py-3.5">
         <p className="readout text-white/35">
-          Desde o último 1:1 · {state.counted.length} {state.counted.length === 1 ? "ocorrência" : "ocorrências"}
+          Desde a última subida de nível · {state.counted.length} {state.counted.length === 1 ? "ocorrência" : "ocorrências"}
         </p>
         {state.counted.length === 0 ? (
           <p className="mt-2 text-[12.5px] text-white/45">Nenhuma ocorrência pontuada a contar neste momento.</p>

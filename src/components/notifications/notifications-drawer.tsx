@@ -898,6 +898,7 @@ const RESOLVE_LABELS: Record<string, string> = {
   "ineficacias-level": "Entendido",
   "ineficacias-measure-done": "Entendido",
   "ineficacias-direct": "Entendido",
+  "ineficacias-semester": "Entendido",
   "seo-review-followup": "Já fiz o follow-up",
   "seo-review-call": "Confirmo que telefonei ao cliente",
   "protocol-suggestion": "Lida",

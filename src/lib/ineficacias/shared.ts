@@ -10,17 +10,20 @@
 //     consultor a reportar (ou registados por ela). Só uma ocorrência
 //     pontuada (> 0) entra nas contas.
 //   • PA = soma dos pontos · NO = número de ocorrências, acumulados na FASE:
-//     desde o último 1:1 de nível (ou desde sempre). Os erros não saem ao fim
-//     de 30 dias — só o 1:1 põe os contadores a zero (v78.21, regra da
-//     Beatriz confirmada pelo André a 2026-10-27; até aí havia uma janela
-//     de 30 dias).
+//     desde a última subida de nível (ou desde sempre). Os erros não saem ao
+//     fim de 30 dias (v78.21).
 //   • Nível 1: PA ≥ 6 ou NO ≥ 3 → 1:1 com o líder direto, plano de 1 a 3 ações.
 //     Nível 2 (depois do 1): PA ≥ 6 ou NO ≥ 2 → 1:1 com o nível acima.
 //     Nível 3 (depois do 2): PA ≥ 6 ou NO ≥ 2 → probation.
-//   • «Sempre que uma reunião de Nível (1:1) é realizada, os contadores (PA e
-//     NO) reiniciam a zero para a fase seguinte. Contudo, a progressão de
-//     níveis é linear e cumulativa.» E «reinicia mas não se apagam as
-//     ineficácias» — o histórico fica.
+//   • v78.53 (André, 2026-10-29): SUBIR DE NÍVEL põe PA e NO a zero. O nível
+//     sobe sozinho no dia em que a fase passa o limiar, e a fase nova começa
+//     no dia seguinte. A medida do nível (1:1, probation) fica por aplicar até
+//     a direção a registar — registá-la já não mexe nos contadores. Até à
+//     v78.52 era o registo do 1:1 que subia o nível e os punha a zero.
+//   • v78.53: no FIM DE CADA SEMESTRE (30/06 e 31/12, ao fechar o dia) todos
+//     descem um nível (−1, nunca abaixo de 0). Os contadores da fase não
+//     mudam; uma medida por aplicar continua por aplicar.
+//   • Nada se apaga: os contadores recomeçam, os erros ficam no histórico.
 //   • Uma falha grave sozinha pode levar a probation direto — a direção pode
 //     definir o nível à mão, com justificação.
 //
@@ -711,17 +714,36 @@ export type PendingMeasure = {
   no: number;
 };
 
-export type LedgerState = {
-  /** O nível em que a pessoa ESTÁ (o último evento da direção, ou 0). */
+/** O que abriu a fase corrente — a última vez que o nível subiu. */
+export type PhaseOpen = {
+  /** subida = passou o limiar · direcao = a direção pôs o nível acima à mão
+   *  (ou registou a medida de um nível acima do atual). */
+  reason: "subida" | "direcao";
   level: IneficaciaLevel;
-  /** O nível ATINGIDO: igual a `level`, ou `level + 1` quando o limiar foi
-   *  passado nesta fase e a medida ainda não foi registada. */
+  /** O dia da subida; a fase nova começa no dia seguinte. */
+  at: string;
+};
+
+/** Uma mudança de nível, para o histórico. */
+export type LevelStep = {
+  reason: "subida" | "direcao" | "semestre";
+  from: IneficaciaLevel;
+  to: IneficaciaLevel;
+  at: string;
+};
+
+export type LedgerState = {
+  /** O nível em que a pessoa ESTÁ hoje. */
+  level: IneficaciaLevel;
+  /** Igual a `level` desde a v78.53 (o nível sobe sozinho ao passar o
+   *  limiar). Fica pelas vistas que já o liam. */
   reached: IneficaciaLevel;
+  /** A medida da última subida, enquanto a direção não a registar. */
   pendingMeasure: PendingMeasure | null;
-  /** O evento que abriu a fase corrente (null = desde sempre). */
-  phaseEvent: LedgerEvent | null;
+  /** A última subida de nível (null = nunca subiu: conta desde sempre). */
+  phaseOpen: PhaseOpen | null;
   /** A partir de que dia as ocorrências contam na fase corrente (null =
-   *  desde sempre: ainda não houve nenhum 1:1). */
+   *  desde sempre). */
   phaseStart: string | null;
   /** PA e NO da fase corrente (só ocorrências pontuadas > 0). */
   pa: number;
@@ -732,10 +754,20 @@ export type LedgerState = {
   next: { level: 1 | 2 | 3; pa: number; no: number } | null;
   /** As ocorrências que contam na fase corrente. */
   counted: Occurrence[];
+  /** As mudanças de nível, da mais antiga à mais recente. */
+  steps: LevelStep[];
+  /** A próxima descida de semestre (null no nível 0). */
+  nextDrop: { at: string; to: IneficaciaLevel } | null;
 };
 
 function eventOrder(a: LedgerEvent, b: LedgerEvent): number {
   return a.at.localeCompare(b.at) || a.createdAt - b.createdAt;
+}
+
+/** O último dia do semestre de `iso`: 30/06 ou 31/12. */
+export function semesterEndOf(iso: string): string {
+  const y = iso.slice(0, 4);
+  return Number(iso.slice(5, 7)) <= 6 ? `${y}-06-30` : `${y}-12-31`;
 }
 
 /** PA/NO das ocorrências com `occurredOn` em (from, to]. */
@@ -746,51 +778,94 @@ function tally(occ: Occurrence[], fromExclusive: string | null, toInclusive: str
   return { pa: list.reduce((s, o) => s + (o.score?.points ?? 0), 0), no: list.length, list };
 }
 
-/** O estado de um consultor hoje. */
+/** O estado de um consultor hoje. Percorre os dias por ordem: em cada dia
+ *  entram primeiro as ocorrências (e, se a fase passar o limiar, o nível
+ *  sobe e os contadores vão a zero), depois os registos da direção, e no
+ *  último dia do semestre, ao fechar o dia, a descida de um nível. */
 export function deriveLedger(occurrences: Occurrence[], events: LedgerEvent[], todayISO: string): LedgerState {
-  const sorted = events.slice().sort(eventOrder).filter((e) => e.at <= todayISO);
-  const phaseEvent = sorted.at(-1) ?? null;
-  const level: IneficaciaLevel = phaseEvent ? phaseEvent.level : 0;
-  // As ocorrências DO DIA da reunião ficam na fase anterior: a fase nova
-  // começa no dia seguinte.
-  const phaseStart = phaseEvent ? addDaysISO(phaseEvent.at, 1) : null;
-  const phaseFrom = phaseEvent ? phaseEvent.at : null; // exclusivo
+  const evs = events.slice().sort(eventOrder).filter((e) => e.at <= todayISO);
+  const scored = occurrences.filter((o) => counts(o) && o.occurredOn <= todayISO);
 
-  const inPhase = occurrences
-    .filter((o) => (phaseFrom === null || o.occurredOn > phaseFrom) && o.occurredOn <= todayISO)
-    .sort((a, b) => a.occurredOn.localeCompare(b.occurredOn));
+  const days = new Set<string>([...scored.map((o) => o.occurredOn), ...evs.map((e) => e.at)]);
+  const first = [...days].sort()[0];
+  if (first) {
+    // As descidas de semestre só se aplicam depois de o dia fechar.
+    for (let d = semesterEndOf(first); d < todayISO; d = semesterEndOf(addDaysISO(d, 1))) days.add(d);
+  }
 
-  const current = tally(inPhase, phaseFrom, todayISO);
-  const unscored = inPhase.filter((o) => !o.score).length;
-
-  const nextLevel = level < 3 ? ((level + 1) as 1 | 2 | 3) : null;
-  const next = nextLevel ? { level: nextLevel, ...thresholdToReach(nextLevel) } : null;
-
-  // A medida fica por aplicar a partir do dia em que a soma da fase passou o
-  // limiar, até a direção registar o 1:1.
+  let level: IneficaciaLevel = 0;
+  let phaseFrom: string | null = null; // exclusivo
+  let phaseOpen: PhaseOpen | null = null;
   let pendingMeasure: PendingMeasure | null = null;
-  if (next) {
-    for (const o of inPhase) {
-      if (!counts(o)) continue;
-      const upTo = tally(inPhase, phaseFrom, o.occurredOn);
-      if (upTo.pa >= next.pa || upTo.no >= next.no) {
-        pendingMeasure = { level: next.level, since: o.occurredOn, pa: upTo.pa, no: upTo.no };
-        break;
+  const steps: LevelStep[] = [];
+  let pa = 0;
+  let no = 0;
+  const up = (to: IneficaciaLevel, at: string, reason: "subida" | "direcao") => {
+    steps.push({ reason, from: level, to, at });
+    level = to;
+    phaseFrom = at;
+    phaseOpen = { reason, level: to, at };
+    pa = 0;
+    no = 0;
+  };
+
+  for (const d of [...days].sort()) {
+    // 1. Os erros do dia. Passar o limiar sobe o nível e põe tudo a zero.
+    const today = scored.filter((o) => o.occurredOn === d);
+    for (const o of today) {
+      pa += o.score?.points ?? 0;
+      no += 1;
+    }
+    if (today.length > 0 && level < 3) {
+      const t = thresholdToReach((level + 1) as 1 | 2 | 3);
+      if (pa >= t.pa || no >= t.no) {
+        const to = (level + 1) as 1 | 2 | 3;
+        pendingMeasure = { level: to, since: d, pa, no };
+        up(to, d, "subida");
       }
+    }
+    // 2. Os registos da direção.
+    for (const e of evs.filter((x) => x.at === d)) {
+      if (e.kind === "measure") {
+        if (pendingMeasure && pendingMeasure.level <= e.level) pendingMeasure = null;
+        if (e.level > level) up(e.level, d, "direcao");
+      } else {
+        // O nível à mão: decide a direção, e substitui a medida pendente.
+        pendingMeasure = null;
+        if (e.level > level) up(e.level, d, "direcao");
+        else if (e.level < level) {
+          steps.push({ reason: "direcao", from: level, to: e.level, at: d });
+          level = e.level;
+        }
+      }
+    }
+    // 3. Fim do semestre: todos descem um nível, ao fechar o dia.
+    if (d === semesterEndOf(d) && d < todayISO && level > 0) {
+      const to = (level - 1) as IneficaciaLevel;
+      steps.push({ reason: "semestre", from: level, to, at: d });
+      level = to;
     }
   }
 
+  const current = tally(occurrences, phaseFrom, todayISO);
+  const unscored = occurrences.filter(
+    (o) => !o.score && (phaseFrom === null || o.occurredOn > phaseFrom) && o.occurredOn <= todayISO,
+  ).length;
+  const nextLevel = level < 3 ? ((level + 1) as 1 | 2 | 3) : null;
+
   return {
     level,
-    reached: pendingMeasure ? pendingMeasure.level : level,
+    reached: level,
     pendingMeasure,
-    phaseEvent,
-    phaseStart,
+    phaseOpen,
+    phaseStart: phaseFrom ? addDaysISO(phaseFrom, 1) : null,
     pa: current.pa,
     no: current.no,
     unscored,
-    next,
+    next: nextLevel ? { level: nextLevel, ...thresholdToReach(nextLevel) } : null,
     counted: current.list.slice().sort((a, b) => b.occurredOn.localeCompare(a.occurredOn)),
+    steps,
+    nextDrop: level > 0 ? { at: semesterEndOf(todayISO), to: (level - 1) as IneficaciaLevel } : null,
   };
 }
 

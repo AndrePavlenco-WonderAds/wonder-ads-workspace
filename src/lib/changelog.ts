@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.53",
+    date: "2026-10-29",
+    title: "Ineficácias: subir de nível põe PA e NO a zero, e o nível desce no fim do semestre",
+    highlights: [
+      "**⬆️ Subir de nível põe o PA e o NO a zero**: o nível sobe sozinho no dia em que a fase passa o limiar, e os contadores recomeçam no dia seguinte. O 1:1 (ou o probation) regista-se depois como a medida do nível e já não mexe nos contadores.",
+      "**🌱 Fim do semestre: toda a equipa desce um nível** a 30/06 e a 31/12, ao fechar o dia — só um degrau, nunca abaixo de 0. O consultor recebe um aviso no sino, e o painel mostra a próxima descida.",
+      "**📚 Regras novas na Documentação** (Ineficácias, Probation e Bónus semestral), no painel do consultor, na ficha da direção (o histórico mostra as subidas e as descidas automáticas) e na folha RH-04.",
+    ],
+  },
+  {
     version: "78.52",
     date: "2026-10-29",
     title: "Documentação: os três protocolos na mesma linha",

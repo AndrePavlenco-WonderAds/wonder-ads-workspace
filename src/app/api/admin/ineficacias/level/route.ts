@@ -1,7 +1,7 @@
 // A direção define o nível à mão, com justificação: uma falha grave que leva
-// a probation direto, ou a reposição a 0 depois de uma reintegração. Como
-// qualquer medida, abre uma fase nova — os contadores recomeçam no dia
-// seguinte.
+// a probation direto, ou a reposição a 0 depois de uma reintegração. Subir o
+// nível abre uma fase nova — os contadores recomeçam no dia seguinte (v78.53:
+// subir de nível põe-nos a zero); descê-lo não mexe neles.
 //   POST { username, level, at?, note }
 
 import { NextResponse } from "next/server";

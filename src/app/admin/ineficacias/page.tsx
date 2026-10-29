@@ -1,7 +1,7 @@
 // Direção → Ineficácias: o painel da equipa. Os números do momento, a fila
 // de relatórios por rever (cada um com as ocorrências por pontuar), e a
 // tabela de consultores com o nível, o PA/NO contra o limiar e desde quando
-// contam (o último 1:1). Só SuperAdmin: a página verifica isAdmin ANTES de ler o KV (o
+// contam (desde a última subida de nível). Só SuperAdmin: a página verifica isAdmin ANTES de ler o KV (o
 // layout de /admin sozinho não chega — ver feedback-layout-gate).
 
 import Link from "next/link";
@@ -186,7 +186,7 @@ export default async function IneficaciasAdminPage() {
                       {pendingItems ? <span className="text-amber-200"> · {pendingItems} por pontuar</span> : null}
                     </span>
                     <span className={`block ${s.no > 0 ? "text-[#c3aaff]/80" : "text-emerald-300/70"}`}>
-                      {s.phaseEvent ? `Desde o 1:1 de ${formatISODayMonth(s.phaseEvent.at)}` : "Desde o início"}
+                      {s.phaseOpen ? `Desde a subida ao nível ${s.phaseOpen.level} (${formatISODayMonth(s.phaseOpen.at)})` : "Desde o início"}
                       {s.no === 0 && " · contadores a zero"}
                     </span>
                   </span>

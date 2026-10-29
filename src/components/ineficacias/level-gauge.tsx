@@ -1,11 +1,12 @@
 // O medidor de um consultor — o nível na escala e o PA e o NO da fase
-// corrente (desde o último 1:1) contra os limiares do próximo nível. Puro
+// corrente (desde a última subida de nível) contra os limiares do próximo. Puro
 // (sem hooks): serve tanto a página do consultor como a da direção.
 //
-// v78.21: saiu o «relógio dos 30 dias» — os erros já não saem sozinhos; só
-// o 1:1 de nível põe os contadores a zero.
+// v78.21: saiu o «relógio dos 30 dias» — os erros já não saem sozinhos.
+// v78.53: subir de nível põe os contadores a zero (já não é o 1:1), e no fim
+// de cada semestre o nível desce um degrau.
 
-import { AlertTriangle, Gauge, Hourglass, RotateCcw, Sigma } from "lucide-react";
+import { AlertTriangle, Gauge, Hourglass, RotateCcw, Sigma, TrendingDown } from "lucide-react";
 import { formatISODate, LEVELS, type IneficaciaLevel, type LedgerState } from "@/lib/ineficacias/shared";
 
 export const LEVEL_TONES: Record<
@@ -37,22 +38,21 @@ export function LevelChip({ state, size = "md" }: { state: Pick<LedgerState, "le
 }
 
 function resetLine(state: LedgerState): string | null {
-  const e = state.phaseEvent;
-  if (!e) return null;
-  const when = formatISODate(e.at);
-  if (e.kind === "measure") {
-    return e.level === 3
-      ? `Último reinício: arranque do probation a ${when}.`
-      : `Último reinício: 1:1 do nível ${e.level} a ${when}.`;
-  }
-  return `Último reinício: a direção definiu o nível ${e.level} a ${when}.`;
+  const o = state.phaseOpen;
+  if (!o) return null;
+  const when = formatISODate(o.at);
+  return o.reason === "subida"
+    ? `Último reinício: subida ao nível ${o.level} a ${when}.`
+    : `Último reinício: a direção pôs o nível ${o.level} a ${when}.`;
 }
 
-/** A fase corrente — desde quando os contadores contam e o que os põe a
- *  zero: só o próximo 1:1 de nível. */
+/** A fase corrente — desde quando os contadores contam, o que os põe a zero
+ *  (subir de nível, v78.53) e a próxima descida de semestre. */
 function PhaseNote({ state, who }: { state: LedgerState; who: "tu" | string }) {
   const mine = who === "tu";
   const reset = resetLine(state);
+  const lastStep = state.steps.at(-1);
+  const semesterDrop = lastStep?.reason === "semestre" ? lastStep : null;
   return (
     <div className="relative mt-5 rounded-2xl border border-white/[0.08] bg-black/25 p-4 sm:p-5">
       <p className="flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-[0.18em] text-white/40">
@@ -60,12 +60,24 @@ function PhaseNote({ state, who }: { state: LedgerState; who: "tu" | string }) {
         {state.phaseStart ? `Desde ${formatISODate(state.phaseStart)}` : "Desde o início"}
       </p>
       <p className="mt-1.5 text-[13.5px] leading-relaxed text-white/80">
-        {mine ? "Os teus contadores" : `Os contadores de ${who}`} acumulam até ao próximo 1:1 de nível — só aí voltam a zero. O
-        nível não volta atrás, e os erros ficam sempre no histórico.
+        {mine ? "Os teus contadores" : `Os contadores de ${who}`} acumulam até {mine ? "subires" : "subir"} de nível — aí voltam a
+        zero. No fim de cada semestre, a 30/06 e a 31/12, toda a equipa desce um nível. Os erros ficam sempre no histórico.
       </p>
-      {(reset || state.unscored > 0 || (state.pendingMeasure && state.pa === 0)) && (
+      {(reset || state.nextDrop || semesterDrop || state.unscored > 0 || (state.pendingMeasure && state.pa === 0)) && (
         <p className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-white/40">
           {reset && <span>{reset}</span>}
+          {semesterDrop && (
+            <span className="inline-flex items-center gap-1 text-emerald-300/80">
+              <TrendingDown className="h-3 w-3" />
+              Fim do semestre a {formatISODate(semesterDrop.at)}: do nível {semesterDrop.from} para o {semesterDrop.to}.
+            </span>
+          )}
+          {state.nextDrop && (
+            <span className="inline-flex items-center gap-1 text-emerald-300/70">
+              <TrendingDown className="h-3 w-3" />
+              Próxima descida: {formatISODate(state.nextDrop.at)}, para o nível {state.nextDrop.to}.
+            </span>
+          )}
           {state.unscored > 0 && (
             <span className="inline-flex items-center gap-1 text-[#c3aaff]/80">
               <Hourglass className="h-3 w-3" />
@@ -145,13 +157,13 @@ export function LevelGauge({ state, who }: { state: LedgerState; who: "tu" | str
 
       {/* Os quatro degraus */}
       <div className="relative">
-        <p className="readout text-white/35">Escala de incumprimento · desde o último 1:1</p>
+        <p className="readout text-white/35">Escala de incumprimento</p>
         <ol className="mt-3 grid grid-cols-4 gap-2">
           {LEVELS.map((l) => {
             const t = LEVEL_TONES[l.level];
             const active = l.level === state.reached;
             const passed = l.level < state.reached;
-            const pending = active && Boolean(state.pendingMeasure);
+            const pending = state.pendingMeasure?.level === l.level;
             return (
               <li
                 key={l.level}
@@ -184,10 +196,15 @@ export function LevelGauge({ state, who }: { state: LedgerState; who: "tu" | str
       <div className="relative mt-5 flex flex-wrap items-center gap-x-3 gap-y-1.5">
         <LevelChip state={state} />
         <p className="text-[12.5px] text-white/60">
-          {state.pendingMeasure ? (
+          {state.pendingMeasure && state.pendingMeasure.level === state.level ? (
             <>
-              {subject} no <span className={`font-semibold ${tone.text}`}>nível {state.reached}</span> desde{" "}
-              {formatISODate(state.pendingMeasure.since)} — {LEVELS[state.reached].measure.toLowerCase().replace(/\.$/, "")}.
+              {subject} no <span className={`font-semibold ${tone.text}`}>nível {state.level}</span> desde{" "}
+              {formatISODate(state.pendingMeasure.since)} — {LEVELS[state.level].measure.toLowerCase().replace(/\.$/, "")}.
+            </>
+          ) : state.pendingMeasure ? (
+            <>
+              {subject} no <span className={`font-semibold ${tone.text}`}>nível {state.level}</span>. A medida do nível{" "}
+              {state.pendingMeasure.level}, atingido a {formatISODate(state.pendingMeasure.since)}, continua por aplicar.
             </>
           ) : (
             <>
@@ -202,7 +219,7 @@ export function LevelGauge({ state, who }: { state: LedgerState; who: "tu" | str
       <div className="relative mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
         <Meter
           label="PA · pontos"
-          hint="Soma dos pontos das ocorrências pontuadas desde o último 1:1."
+          hint="Soma dos pontos das ocorrências pontuadas desde a última subida de nível."
           value={state.pa}
           limit={state.next?.pa ?? null}
           icon={Sigma}
@@ -210,7 +227,7 @@ export function LevelGauge({ state, who }: { state: LedgerState; who: "tu" | str
         />
         <Meter
           label="NO · ocorrências"
-          hint="Número de ocorrências pontuadas (> 0) desde o último 1:1."
+          hint="Número de ocorrências pontuadas (> 0) desde a última subida de nível."
           value={state.no}
           limit={state.next?.no ?? null}
           icon={Gauge}

@@ -6,7 +6,7 @@
 //   • Dois semestres por ano: janeiro a junho (avaliado em junho) e julho a
 //     dezembro (avaliado em dezembro).
 //   • NO = ineficácias pontuadas (> 0) com data no semestre; PA = a soma dos
-//     pontos. Ao contrário da escala, o 1:1 de nível NÃO põe isto a zero.
+//     pontos. Ao contrário da escala, subir de nível NÃO põe isto a zero.
 //   • 0–2 NO e 0–9 PA → 500 € · 3–4 NO ou 10–15 PA → 300 € · 5–6 NO ou
 //     16–20 PA → 150 € · 7+ NO ou 21+ PA → 0 € (valores revistos na v78.33;
 //     eram 600/400/200).

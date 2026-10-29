@@ -1,5 +1,5 @@
 // Os desenhos da página das Ineficácias (v78.19; v78.21 sem a janela dos 30
-// dias): a escala de 0 a 10, o reinício no 1:1, a escada dos níveis e os
+// dias): a escala de 0 a 10, o reinício ao subir de nível, a escada dos níveis e os
 // cenários. Servidor, sem
 // estado. Os números saem de lib/ineficacias/shared.ts — o desenho e as
 // contas da app usam as mesmas constantes.
@@ -81,7 +81,7 @@ export function PointsScale() {
 }
 
 /* ------------------------------------------------------------------ */
-/*  O reinício no 1:1                                                   */
+/*  O reinício ao subir de nível (v78.53; até aí era no 1:1)            */
 /* ------------------------------------------------------------------ */
 
 function Chip({ points, dim = false }: { points: number; dim?: boolean }) {
@@ -120,25 +120,25 @@ function Phase({ title, points, foot }: { title: string; points: number[]; foot:
   );
 }
 
-/** A regra da Beatriz num desenho: o 1:1 fecha a fase, os contadores
- *  recomeçam do zero, o nível fica e os erros passam ao histórico. */
+/** A regra num desenho: subir de nível fecha a fase, os contadores
+ *  recomeçam do zero e os erros passam ao histórico. */
 export function PhaseReset() {
   return (
-    <figure aria-label="O que acontece no 1:1 de nível" className="rounded-3xl border border-white/10 bg-white/[0.02] p-4 sm:p-6">
+    <figure aria-label="O que acontece ao subir de nível" className="rounded-3xl border border-white/10 bg-white/[0.02] p-4 sm:p-6">
       <div className="grid gap-3 md:grid-cols-[1fr_auto_1fr] md:items-stretch">
-        <Phase title="Antes do 1:1" points={[4, 2]} foot="PA 6 passa o limiar: nível 1." />
+        <Phase title="Antes de subir" points={[4, 2]} foot="PA 6 passa o limiar: nível 1." />
 
         <div className="flex items-center justify-center md:flex-col md:px-1">
           <span
             className="rounded-2xl px-4 py-3 text-center text-white shadow-[0_18px_50px_-22px_rgba(197,53,201,0.9)]"
             style={{ background: "var(--brand-gradient)" }}
           >
-            <span className="block text-[14px] font-semibold">1:1 do nível 1</span>
+            <span className="block text-[14px] font-semibold">Sobe ao nível 1</span>
             <span className="block text-[12.5px] text-white/85">PA e NO a zero</span>
           </span>
         </div>
 
-        <Phase title="Depois do 1:1" points={[1]} foot="Recomeça do zero. O nível 1 fica." />
+        <Phase title="Depois de subir" points={[1]} foot="Recomeça do zero, a caminho do nível 2." />
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-2xl border border-dashed border-white/15 px-5 py-3.5">
