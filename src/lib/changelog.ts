@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.51",
+    date: "2026-10-29",
+    title: "Documentação: Protocolos Proibidos e sugestões à direção",
+    highlights: [
+      "**⛔ Novo bloco «Protocolos Proibidos»** na Documentação, para toda a equipa: o que nunca se faz na WonderAds. O primeiro: enviar áudios de trabalho — tudo se comunica por escrito. A direção acrescenta os outros na própria página.",
+      "**💡 «Sugerir à direção» no fim dos Protocolos Obrigatórios, Recomendados e Proibidos**: quem lê escreve uma sugestão sobre a lista e ela chega logo ao sino da direção, com o texto inteiro.",
+      "**📥 A direção vê as sugestões recebidas** de cada lista no fim da própria página.",
+    ],
+  },
+  {
     version: "78.50",
     date: "2026-10-29",
     title: "Folga de custos: preços de referência por categoria",

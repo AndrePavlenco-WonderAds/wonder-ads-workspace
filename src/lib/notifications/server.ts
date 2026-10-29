@@ -73,6 +73,8 @@ import {
 } from "@/lib/ineficacias/shared";
 import { getProposal, proposalPath } from "@/lib/proposals";
 import { getFolgaAlerts } from "@/lib/seo-folga-store";
+import { listProtocolSuggestions } from "@/lib/documentacao/protocol-suggestions";
+import { PROTOCOL_META } from "@/lib/documentacao/protocolos";
 import { eurCents, toCents } from "@/lib/seo-folga";
 import { getNotificationRules } from "@/lib/notifications/rules-store";
 import {
@@ -1375,6 +1377,45 @@ async function folgaNotifications(
   }
 }
 
+/** Sugestões à direção sobre as listas de Protocolos da Documentação
+ *  (v78.51): uma por sugestão, até 60 dias, com o texto inteiro no corpo —
+ *  quem abre o sino fica logo a saber o que a pessoa propôs. As próprias não
+ *  aparecem a quem as escreveu. */
+const PROTOCOL_SUGGESTION_RECENT_MS = 60 * 24 * 60 * 60 * 1000;
+
+async function protocolSuggestionNotifications(
+  viewer: Viewer,
+  state: NotificationState,
+  now: Date,
+): Promise<UserNotification[]> {
+  if (!isAdminUsername(viewer.username)) return [];
+  try {
+    const all = await listProtocolSuggestions();
+    return all
+      .filter((s) => s.username !== viewer.username && now.getTime() - s.at <= PROTOCOL_SUGGESTION_RECENT_MS)
+      .map((s) => {
+        const id = `protocol-suggestion:${s.id}`;
+        const title = PROTOCOL_META[s.list].title;
+        return {
+          id,
+          ruleId: "protocol-suggestion",
+          title: `💡 ${firstName(s.name) || s.name} sugeriu uma mudança nos ${title}`,
+          body: s.text.length > 600 ? `${s.text.slice(0, 600)}…` : s.text,
+          periodLabel: "Documentação",
+          dueAt: s.at,
+          client: null,
+          actionLabel: "Abrir os protocolos",
+          actionHref: `/documentacao/protocolos-${s.list}#sugerir`,
+          resolved: Boolean(state[id]),
+          resolvedAt: state[id]?.resolvedAt ?? null,
+        };
+      });
+  } catch (err) {
+    console.error("Notificações: sugestões dos protocolos falharam:", err instanceof Error ? err.message : "erro");
+    return [];
+  }
+}
+
 /** Um cliente clicou em «Confirmar a renovação» numa proposta pública. Vai
  *  ao sino do SuperAdmin (o André) à cabeça de tudo: é dinheiro à espera de
  *  resposta, não um lembrete de calendário. */
@@ -1456,7 +1497,7 @@ export async function getUserNotifications(
       ? ((await seoBooksByConsultant(needsStartDates)).get(viewer.name) ?? [])
       : [];
 
-  const [ending, situationPoints, nps, absences, reviews, proposals, probation, ineficacias, folga] =
+  const [ending, situationPoints, nps, absences, reviews, proposals, probation, ineficacias, folga, suggestions] =
     await Promise.all([
       roadmapEndingNotifications(viewer, book, state, now),
       situationPointNotifications(viewer, state, now),
@@ -1467,6 +1508,7 @@ export async function getUserNotifications(
       probationNotifications(viewer, state, now),
       ineficaciasNotifications(viewer, state, now),
       folgaNotifications(viewer, state, now),
+      protocolSuggestionNotifications(viewer, state, now),
     ]);
 
   // Ausências à cabeça: um pedido por decidir (ou uma resposta por ler) é
@@ -1477,6 +1519,7 @@ export async function getUserNotifications(
     return [
       ...proposals,
       ...folga,
+      ...suggestions,
       ...probation,
       ...ineficacias,
       ...absences,
@@ -1491,6 +1534,7 @@ export async function getUserNotifications(
   return [
     ...proposals,
     ...folga,
+    ...suggestions,
     ...probation,
     ...ineficacias,
     ...absences,

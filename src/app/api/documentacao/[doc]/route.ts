@@ -1,5 +1,6 @@
 // /api/documentacao/[doc] — grava uma página editável da Documentação (v78.46):
-// a Jornada de Cliente e as listas de Protocolos Obrigatórios e Recomendados.
+// a Jornada de Cliente e as listas de Protocolos Obrigatórios, Recomendados e
+// Proibidos.
 //
 //   PUT { data, base } → substitui o documento inteiro. `base` é o
 //   `updatedAt` que a página tinha quando o abriu: se entretanto outra pessoa
@@ -13,7 +14,7 @@ import { NextResponse } from "next/server";
 import { getCurrentEmployee, getCurrentSession, getImpersonation } from "@/lib/auth/server";
 import { docsAvailable } from "@/lib/documentacao/access";
 import { normalizeJourney } from "@/lib/documentacao/jornada";
-import { normalizeProtocols, type ProtocolList } from "@/lib/documentacao/protocolos";
+import { normalizeProtocols, protocolListOfDoc } from "@/lib/documentacao/protocolos";
 import { getJourney, getProtocols, saveJourney, saveProtocols } from "@/lib/documentacao/editable-store";
 
 export const runtime = "nodejs";
@@ -22,14 +23,10 @@ type Ctx = { params: Promise<{ doc: string }> };
 
 const bad = (error: string, status = 400) => NextResponse.json({ error }, { status });
 
-const PROTOCOL_DOCS: Record<string, ProtocolList> = {
-  "protocolos-obrigatorios": "obrigatorios",
-  "protocolos-recomendados": "recomendados",
-};
-
 export async function PUT(req: Request, { params }: Ctx) {
   const { doc } = await params;
-  if (doc !== "jornada-cliente" && !PROTOCOL_DOCS[doc]) return bad("Página desconhecida.", 404);
+  const list = protocolListOfDoc(doc);
+  if (doc !== "jornada-cliente" && !list) return bad("Página desconhecida.", 404);
 
   const [session, employee] = await Promise.all([getCurrentSession(), getCurrentEmployee()]);
   if (!session || !employee) return bad("Sessão inválida.", 401);
@@ -54,7 +51,7 @@ export async function PUT(req: Request, { params }: Ctx) {
     return NextResponse.json({ data: await saveJourney(clean, employee.name) });
   }
 
-  const list = PROTOCOL_DOCS[doc];
+  if (!list) return bad("Página desconhecida.", 404);
   const clean = normalizeProtocols(body.data);
   if (!clean) return bad("Cada protocolo precisa de um título.");
   const current = await getProtocols(list);

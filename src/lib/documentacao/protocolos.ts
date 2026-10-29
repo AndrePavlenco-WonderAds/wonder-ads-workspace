@@ -1,10 +1,28 @@
-// Protocolos Obrigatórios e Recomendados (v78.46) — as listas do SEO DPT.
+// Protocolos Obrigatórios e Recomendados (v78.46) — as listas do SEO DPT —
+// e Protocolos Proibidos (v78.51), de toda a equipa.
 // Puro: tipos, as listas de partida e a validação. Em KV
 // (`docs:protocolos:<lista>`) fica a versão que a direção edita na própria
 // página; sem nada guardado, vale a lista daqui.
 
-export const PROTOCOL_LISTS = ["obrigatorios", "recomendados"] as const;
+export const PROTOCOL_LISTS = ["obrigatorios", "recomendados", "proibidos"] as const;
 export type ProtocolList = (typeof PROTOCOL_LISTS)[number];
+
+/** O nome de cada lista e o bloco da Documentação onde vive. */
+export const PROTOCOL_META: Record<ProtocolList, { title: string; blockId: string }> = {
+  obrigatorios: { title: "Protocolos Obrigatórios", blockId: "protocolos" },
+  recomendados: { title: "Protocolos Recomendados", blockId: "protocolos" },
+  proibidos: { title: "Protocolos Proibidos", blockId: "protocolos-proibidos" },
+};
+
+/** «protocolos-obrigatorios» → «obrigatorios»: o nome da página (e do
+ *  documento na API) de cada lista. */
+export function protocolListOfDoc(doc: string): ProtocolList | null {
+  const list = doc.replace(/^protocolos-/, "");
+  return (PROTOCOL_LISTS as readonly string[]).includes(list) && doc.startsWith("protocolos-") ? (list as ProtocolList) : null;
+}
+
+/** Uma sugestão à direção sobre uma lista de protocolos (v78.51). */
+export const MAX_SUGGESTION_CHARS = 1000;
 
 export const MAX_PROTOCOLS = 40;
 
@@ -14,7 +32,7 @@ export const PROTOCOL_CADENCES = ["Semanal", "De 2 em 2 semanas", "Mensal", "Tri
 export type Protocol = {
   id: string;
   title: string;
-  /** «Mensal», «De 2 em 2 semanas»… */
+  /** «Mensal», «De 2 em 2 semanas»… Vazio nos proibidos. */
   cadence: string;
   detail: string;
 };
@@ -81,6 +99,21 @@ export const DEFAULT_PROTOCOLS: Record<ProtocolList, ProtocolDoc> = {
         cadence: "Mensal",
         detail:
           "Propor ao cliente uma ideia que não estava no roadmap: uma página nova, uma parceria, um conteúdo de época. Mostra que pensamos no negócio dele, não só nas tarefas.",
+      },
+    ],
+  },
+  // Só o primeiro, dado pelo André (2026-10-29); os outros acrescenta-os a
+  // direção na página.
+  proibidos: {
+    updatedAt: 0,
+    updatedBy: null,
+    items: [
+      {
+        id: "audios",
+        title: "Enviar áudios de trabalho",
+        cadence: "",
+        detail:
+          "Tudo o que é de trabalho comunica-se por escrito: mensagens, emails, comentários nas tarefas. Um texto lê-se em segundos, pesquisa-se mais tarde e fica registado; um áudio não.",
       },
     ],
   },

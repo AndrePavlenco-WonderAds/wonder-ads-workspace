@@ -1,5 +1,5 @@
 // As páginas da Documentação que a direção edita na própria página (v78.46):
-// a Jornada de Cliente e as duas listas de Protocolos. Uma chave KV por
+// a Jornada de Cliente e as listas de Protocolos. Uma chave KV por
 // documento; sem nada guardado, vale a versão de partida do código.
 
 import "server-only";

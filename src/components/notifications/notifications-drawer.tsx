@@ -900,6 +900,7 @@ const RESOLVE_LABELS: Record<string, string> = {
   "ineficacias-direct": "Entendido",
   "seo-review-followup": "Já fiz o follow-up",
   "seo-review-call": "Confirmo que telefonei ao cliente",
+  "protocol-suggestion": "Lida",
 };
 
 function NotificationRow({

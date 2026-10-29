@@ -161,6 +161,25 @@ export const DOCS_BLOCKS: DocsBlock[] = [
     ],
   },
   {
+    id: "protocolos-proibidos",
+    title: "Protocolos Proibidos",
+    // O que nunca se faz na empresa (v78.51) — vale para toda a equipa, por
+    // isso é um bloco à parte dos protocolos do SEO DPT.
+    audience: { depts: ["SEO", "ADS", "Web", "Commercial"] },
+    audienceLabel: "toda a equipa",
+    updatedAt: "2026-10-29",
+    pages: [
+      {
+        id: "protocolos-proibidos",
+        href: "/documentacao/protocolos-proibidos",
+        label: "Protocolos Proibidos",
+        // Capa dada pelo André (2026-10-29).
+        image: "/documentacao/protocolos-proibidos-capa.jpg",
+        tag: "O que nunca se faz na WonderAds",
+      },
+    ],
+  },
+  {
     id: "matriz-talento",
     title: "Matriz de Talento Wonder",
     // Só direção e treinadores (os buddies): é a grelha com que se avalia a

@@ -1,8 +1,8 @@
 "use client";
 
-// A lista de uma página de Protocolos (v78.46) — Obrigatórios ou Recomendados.
-// Lê-se como um documento: número, protocolo, frequência e o que é, separados
-// por linhas finas. A direção (SuperAdmin, sem «Ver como») edita aqui mesmo:
+// A lista de uma página de Protocolos (v78.46) — Obrigatórios, Recomendados
+// ou Proibidos (v78.51, sem frequência). Lê-se como um documento: número,
+// protocolo, frequência e o que é, separados por linhas finas. A direção (SuperAdmin, sem «Ver como») edita aqui mesmo:
 // acrescenta, muda, reordena e remove. Cada mudança grava logo.
 
 import { useEffect, useState } from "react";
@@ -12,6 +12,9 @@ import { MAX_PROTOCOLS, PROTOCOL_CADENCES, newProtocolId, type Protocol, type Pr
 import { useDocSave } from "./use-doc-save";
 
 const GRADIENT = "linear-gradient(135deg,#343ED7,#783DF5 55%,#C535C9)";
+const FORBIDDEN_GRADIENT = "linear-gradient(135deg,#C535C9,#f43f5e)";
+
+type Tone = "obrigatorio" | "recomendado" | "proibido";
 
 export function ProtocolListEditor({
   doc,
@@ -19,11 +22,11 @@ export function ProtocolListEditor({
   canEdit,
   tone,
 }: {
-  /** «protocolos-obrigatorios» | «protocolos-recomendados» */
+  /** «protocolos-obrigatorios» | «protocolos-recomendados» | «protocolos-proibidos» */
   doc: string;
   initial: ProtocolDoc;
   canEdit: boolean;
-  tone: "obrigatorio" | "recomendado";
+  tone: Tone;
 }) {
   const { data, save, saving, error, clearError } = useDocSave(doc, initial);
   const [editing, setEditing] = useState(false);
@@ -82,16 +85,16 @@ export function ProtocolListEditor({
         {items.map((p, i) =>
           form === p.id ? (
             <li key={p.id} className="py-5">
-              <ProtocolForm initial={p} busy={saving} onCancel={() => setForm(undefined)} onSave={(v) => saveItem(p.id, v)} />
+              <ProtocolForm initial={p} tone={tone} busy={saving} onCancel={() => setForm(undefined)} onSave={(v) => saveItem(p.id, v)} />
             </li>
           ) : (
             <li key={p.id} className="grid grid-cols-[3rem_minmax(0,1fr)] gap-x-4 py-6 sm:grid-cols-[4.5rem_minmax(0,1fr)_auto] sm:gap-x-6">
               <span
                 aria-hidden
                 className={`pt-0.5 text-[2rem] font-semibold leading-none tabular-nums tracking-[-0.04em] sm:text-[2.6rem] ${
-                  tone === "obrigatorio" ? "bg-clip-text text-transparent" : "text-[#a78bfa]/55"
+                  tone === "recomendado" ? "text-[#a78bfa]/55" : "bg-clip-text text-transparent"
                 }`}
-                style={tone === "obrigatorio" ? { backgroundImage: GRADIENT } : undefined}
+                style={tone === "recomendado" ? undefined : { backgroundImage: tone === "proibido" ? FORBIDDEN_GRADIENT : GRADIENT }}
               >
                 {String(i + 1).padStart(2, "0")}
               </span>
@@ -128,7 +131,7 @@ export function ProtocolListEditor({
         )}
         {form === null && (
           <li className="py-5">
-            <ProtocolForm busy={saving} onCancel={() => setForm(undefined)} onSave={(v) => saveItem(null, v)} />
+            <ProtocolForm tone={tone} busy={saving} onCancel={() => setForm(undefined)} onSave={(v) => saveItem(null, v)} />
           </li>
         )}
       </ol>
@@ -152,11 +155,13 @@ const INPUT =
 
 function ProtocolForm({
   initial,
+  tone,
   busy,
   onCancel,
   onSave,
 }: {
   initial?: Protocol;
+  tone: Tone;
   busy: boolean;
   onCancel: () => void;
   onSave: (v: Omit<Protocol, "id">) => void;
@@ -172,7 +177,17 @@ function ProtocolForm({
       }}
       className="space-y-2.5 rounded-2xl border border-[#783DF5]/45 bg-[#783DF5]/[0.07] p-4"
     >
-      <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="O protocolo — o que se faz" maxLength={120} autoFocus className={INPUT} aria-label="Protocolo" />
+      <input
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        placeholder={tone === "proibido" ? "O que não se faz" : "O protocolo — o que se faz"}
+        maxLength={120}
+        autoFocus
+        className={INPUT}
+        aria-label="Protocolo"
+      />
+      {/* Um proibido não tem frequência: nunca se faz. */}
+      {tone !== "proibido" && (
       <div>
         <input value={cadence} onChange={(e) => setCadence(e.target.value)} placeholder="Frequência" maxLength={40} className={INPUT} aria-label="Frequência" />
         <div className="mt-1.5 flex flex-wrap gap-1.5">
@@ -190,10 +205,11 @@ function ProtocolForm({
           ))}
         </div>
       </div>
+      )}
       <textarea
         value={detail}
         onChange={(e) => setDetail(e.target.value)}
-        placeholder="Como se cumpre e porquê"
+        placeholder={tone === "proibido" ? "O que se faz em vez disso, e porquê" : "Como se cumpre e porquê"}
         maxLength={600}
         rows={3}
         className={`${INPUT} resize-y`}

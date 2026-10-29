@@ -1,29 +1,31 @@
-// As duas páginas de Protocolos (v78.46) — Obrigatórios e Recomendados. A
-// mesma forma de documento: a lista primeiro (editável pela direção), depois
-// como se aplica e o resumo. Só o texto muda entre as duas.
+// As páginas de Protocolos — Obrigatórios e Recomendados (v78.46, bloco do SEO
+// DPT) e Proibidos (v78.51, bloco de toda a equipa). A mesma forma de
+// documento: a lista primeiro (editável pela direção), depois como se aplica,
+// o resumo e, no fim, «Sugerir à direção» (v78.51). Só o texto e o bloco mudam
+// entre elas.
 
 import { PageShell } from "@/components/page-shell";
 import { DocHero, DocSection, DocsClosed, ExecutiveSummary, Rows, Strong } from "@/components/documentacao/doc-ui";
 import { ProtocolListEditor } from "@/components/documentacao/protocol-list";
+import { ProtocolSuggest } from "@/components/documentacao/protocol-suggest";
 import { SectionNav } from "@/components/documentacao/section-nav";
 import { getImpersonation } from "@/lib/auth/server";
 import { formatDate } from "@/lib/dates";
 import { getProtocols } from "@/lib/documentacao/editable-store";
-import type { ProtocolList } from "@/lib/documentacao/protocolos";
+import { PROTOCOL_META, type ProtocolList } from "@/lib/documentacao/protocolos";
+import { listProtocolSuggestions } from "@/lib/documentacao/protocol-suggestions";
 import { getDocsContext } from "@/lib/documentacao/server";
-
-const BLOCK_ID = "protocolos";
 
 const NAV = [
   { id: "lista", label: "A lista" },
   { id: "aplicar", label: "Como se aplicam" },
   { id: "resumo", label: "Resumo" },
+  { id: "sugerir", label: "Sugerir" },
 ];
 
 const COPY: Record<
   ProtocolList,
   {
-    title: string;
     lead: React.ReactNode;
     listLead: string;
     rows: Array<{ term: string; detail: string; tone?: "accent" | "amber" }>;
@@ -32,7 +34,6 @@ const COPY: Record<
   }
 > = {
   obrigatorios: {
-    title: "Protocolos Obrigatórios",
     lead: (
       <>
         O mínimo que se cumpre <Strong>em todos os projetos do SEO DPT</Strong>, sem exceção. É o que o cliente pode sempre
@@ -44,7 +45,7 @@ const COPY: Record<
       { term: "Em todos os projetos", tone: "accent", detail: "Aplicam-se a todos os clientes ativos da carteira, do primeiro mês ao último." },
       { term: "Na agenda", detail: "O que tem data marca-se com antecedência no calendário, com o cliente convidado — não fica à memória." },
       { term: "A direção verifica", detail: "São o mínimo que a direção espera ver cumprido em cada projeto." },
-      { term: "Mudar a lista", detail: "Só a direção acrescenta, muda ou retira protocolos. Sugestões: Diretor de Operações." },
+      { term: "Mudar a lista", detail: "Só a direção acrescenta, muda ou retira protocolos. Sugestões: em «Sugerir à direção», no fim desta página." },
     ],
     summaryTitle: "Os protocolos obrigatórios, por extenso",
     summary: [
@@ -64,7 +65,6 @@ const COPY: Record<
     ],
   },
   recomendados: {
-    title: "Protocolos Recomendados",
     lead: (
       <>
         O que <Strong>eleva o serviço</Strong> acima do mínimo: hábitos que tornam a relação com o cliente mais próxima e os
@@ -76,7 +76,7 @@ const COPY: Record<
       { term: "Por cima dos obrigatórios", tone: "accent", detail: "Não substituem nenhum protocolo obrigatório: juntam-se a eles." },
       { term: "Com critério", detail: "Nem todos encaixam em todos os clientes: escolhe os que fazem diferença em cada projeto." },
       { term: "Podem passar a obrigatórios", detail: "Quando um recomendado se prova em todos os projetos, a direção pode passá-lo para a lista dos obrigatórios." },
-      { term: "Mudar a lista", detail: "Só a direção acrescenta, muda ou retira protocolos. Sugestões: Diretor de Operações." },
+      { term: "Mudar a lista", detail: "Só a direção acrescenta, muda ou retira protocolos. Sugestões: em «Sugerir à direção», no fim desta página." },
     ],
     summaryTitle: "Os protocolos recomendados, por extenso",
     summary: [
@@ -95,10 +95,37 @@ const COPY: Record<
       </>,
     ],
   },
+  proibidos: {
+    lead: (
+      <>
+        O que <Strong>nunca se faz na WonderAds</Strong>, seja qual for o departamento ou o projeto.
+      </>
+    ),
+    listLead: "O que não se faz, sem exceção.",
+    rows: [
+      { term: "Toda a equipa", tone: "accent", detail: "Aplicam-se a todos, em todos os departamentos: SEO, ADS, Web e Comercial." },
+      { term: "Sem exceção", tone: "amber", detail: "Não dependem do cliente, do projeto nem da pressa: o que está nesta lista não se faz." },
+      { term: "Na dúvida, pergunta", detail: "Se não tens a certeza se algo cabe aqui, pergunta à direção antes de o fazer." },
+      { term: "Mudar a lista", detail: "Só a direção acrescenta, muda ou retira protocolos. Sugestões: em «Sugerir à direção», no fim desta página." },
+    ],
+    summaryTitle: "Os protocolos proibidos, por extenso",
+    summary: [
+      <>
+        Os protocolos proibidos são o que nunca se faz na WonderAds. Ao contrário dos obrigatórios e dos recomendados, que são
+        do SEO DPT, aplicam-se a toda a equipa, em todos os departamentos.
+      </>,
+      <>
+        A lista é mantida pela direção, que acrescenta ou retira protocolos. Na dúvida sobre se algo cabe aqui, pergunta antes
+        de o fazer.
+      </>,
+    ],
+  },
 };
 
 export async function ProtocolPage({ list }: { list: ProtocolList }) {
-  const ctx = await getDocsContext(BLOCK_ID);
+  const copy = COPY[list];
+  const meta = PROTOCOL_META[list];
+  const ctx = await getDocsContext(meta.blockId);
   if (ctx.state === "no-session") return null;
   if (ctx.state !== "ok" || !ctx.block) {
     return (
@@ -111,8 +138,16 @@ export async function ProtocolPage({ list }: { list: ProtocolList }) {
     );
   }
   const { reader, block } = ctx;
-  const [doc, impersonating] = await Promise.all([getProtocols(list), getImpersonation()]);
-  const copy = COPY[list];
+  const [doc, impersonating, suggestions] = await Promise.all([
+    getProtocols(list),
+    getImpersonation(),
+    reader.isAdmin
+      ? listProtocolSuggestions().catch((err) => {
+          console.error("docs protocol suggestions read failed:", err);
+          return [];
+        })
+      : Promise.resolve([]),
+  ]);
   const href = `/documentacao/protocolos-${list}`;
   const updated = doc.updatedAt ? new Date(doc.updatedAt).toISOString().slice(0, 10) : block.updatedAt;
 
@@ -120,10 +155,14 @@ export async function ProtocolPage({ list }: { list: ProtocolList }) {
     <PageShell backHref="/documentacao" backLabel="Documentação">
       <DocHero
         block={block.title}
-        title={copy.title}
+        title={meta.title}
         lead={copy.lead}
         meta={`Atualizado a ${formatDate(updated)}.${reader.isAdmin ? ` Visível para SuperAdmin e ${block.audienceLabel}.` : ""}`}
-        tabs={{ pages: block.pages.map((p) => ({ href: p.href, label: p.label.replace("Protocolos ", "") })), current: href }}
+        tabs={
+          block.pages.length > 1
+            ? { pages: block.pages.map((p) => ({ href: p.href, label: p.label.replace("Protocolos ", "") })), current: href }
+            : undefined
+        }
       />
 
       <SectionNav items={NAV} />
@@ -134,7 +173,7 @@ export async function ProtocolPage({ list }: { list: ProtocolList }) {
             doc={`protocolos-${list}`}
             initial={doc}
             canEdit={reader.isAdmin && !impersonating}
-            tone={list === "obrigatorios" ? "obrigatorio" : "recomendado"}
+            tone={list === "obrigatorios" ? "obrigatorio" : list === "proibidos" ? "proibido" : "recomendado"}
           />
         </DocSection>
 
@@ -143,6 +182,21 @@ export async function ProtocolPage({ list }: { list: ProtocolList }) {
         </DocSection>
 
         <ExecutiveSummary updatedAt={updated} title={copy.summaryTitle} paragraphs={copy.summary} />
+
+        <DocSection id="sugerir" title="Sugerir à direção">
+          <ProtocolSuggest
+            doc={`protocolos-${list}`}
+            canSend={!impersonating}
+            received={
+              reader.isAdmin
+                ? suggestions
+                    .filter((x) => x.list === list)
+                    .slice(0, 20)
+                    .map(({ id, name, text, at }) => ({ id, name, text, at }))
+                : null
+            }
+          />
+        </DocSection>
 
         <p className="border-t border-white/[0.07] pt-6 text-[13px] text-white/40">
           Estes protocolos podem ser revistos pela direção. Dúvidas: Diretor de Operações.
