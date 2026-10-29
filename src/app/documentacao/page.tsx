@@ -1,7 +1,7 @@
 // /documentacao — o hub da Documentação da empresa (v78.5; cartões v78.9).
 //
-// Uma grelha de cartões, um por página de documentação, 4 por linha (v78.55):
-// capa, título e o botão para abrir. Sem cabeçalhos de bloco — vai haver muitos tipos de
+// Uma grelha de cartões, um por página de documentação: capa, título e o
+// botão para abrir. Sem cabeçalhos de bloco — vai haver muitos tipos de
 // documentação e o cartão tem de se explicar sozinho. Filtrado pelo
 // departamento da pessoa VISTA. Em construção: só o André e o Alex entram
 // (lib/documentacao/access.ts).
@@ -53,59 +53,56 @@ export default async function DocumentacaoPage() {
           Ainda não há documentação para o teu departamento.
         </p>
       ) : (
-        // 4 por linha a partir do lg (v78.55); 2 no tablet, 1 no telemóvel.
-        // O cartão inteiro é um link só: um alvo grande e uma paragem de
-        // teclado por documento.
-        <ul className="mt-8 grid grid-cols-1 gap-4 pb-10 sm:mt-10 sm:grid-cols-2 lg:grid-cols-4 lg:gap-5">
+        <ul className="mt-10 grid gap-5 pb-10 sm:grid-cols-2 lg:grid-cols-3">
           {cards.map((c, i) => (
-            <li key={c.id} className="flex">
+            <li
+              key={c.id}
+              className="group flex flex-col rounded-[28px] border border-white/10 bg-white/[0.035] p-3 transition duration-300 hover:border-white/20 hover:bg-white/[0.05]"
+            >
               <Link
                 href={c.href}
-                className="group flex w-full flex-col rounded-[24px] border border-white/10 bg-white/[0.035] p-2.5 transition duration-300 hover:border-white/20 hover:bg-white/[0.055] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#783DF5] focus-visible:ring-offset-2 focus-visible:ring-offset-[#07080d]"
+                tabIndex={-1}
+                aria-hidden
+                className="relative block aspect-[4/3] overflow-hidden rounded-[20px] bg-white/[0.04]"
               >
-                <div className="relative aspect-[4/3] overflow-hidden rounded-[17px] bg-white/[0.04]">
-                  {c.image ? (
-                    // As capas são 4:3 (1200 de largura): object-cover nunca as
-                    // estica, no máximo apara um fio de lado.
-                    <Image
-                      src={c.image}
-                      alt=""
-                      fill
-                      sizes="(min-width: 1280px) 290px, (min-width: 1024px) 23vw, (min-width: 640px) 46vw, 100vw"
-                      priority={i < 4}
-                      className="object-cover transition duration-500 group-hover:scale-[1.03]"
-                    />
-                  ) : (
-                    // Provisório, até a capa do Gemini estar gerada.
-                    <span
-                      className="absolute inset-0 flex items-center justify-center"
-                      style={{ background: "radial-gradient(70% 60% at 50% 55%, rgba(120,61,245,0.35), transparent 70%)" }}
-                    >
-                      <BookOpen className="h-9 w-9 text-white/35" />
-                    </span>
-                  )}
-                </div>
-                <div className="px-1.5 pb-4 pt-4">
-                  <h2 className="text-[1.25rem] font-semibold leading-snug tracking-[-0.015em] text-white lg:text-[1.1rem]">
-                    {c.label}
-                  </h2>
-                  {c.tag && (
-                    // Sem fundo: só as letras, no gradiente da marca, que desliza
-                    // por elas de tempos a tempos.
-                    <p className="docs-brand-flow-text mt-1 text-[13px] font-semibold tracking-[0.01em] lg:text-[12.5px]">
-                      {c.tag}
-                    </p>
-                  )}
-                  {c.restricted && (
-                    <p className="mt-2 inline-flex items-start gap-1.5 rounded-xl border border-white/12 bg-white/[0.04] px-2.5 py-1 text-[11.5px] font-medium leading-snug text-white/70">
-                      <Lock className="mt-[2px] h-3 w-3 shrink-0" />
-                      {c.restricted}
-                    </p>
-                  )}
-                </div>
-                <div className="mt-auto flex h-11 items-center justify-center rounded-[15px] bg-white text-[14px] font-semibold text-[#07080d] transition group-hover:bg-white/90 lg:h-10 lg:text-[13.5px]">
-                  Ler documentação
-                </div>
+                {c.image ? (
+                  <Image
+                    src={c.image}
+                    alt=""
+                    fill
+                    sizes="(min-width: 1024px) 400px, (min-width: 640px) 50vw, 100vw"
+                    priority={i < 3}
+                    className="object-cover transition duration-500 group-hover:scale-[1.03]"
+                  />
+                ) : (
+                  // Provisório, até a capa do Gemini estar gerada.
+                  <span
+                    className="absolute inset-0 flex items-center justify-center"
+                    style={{ background: "radial-gradient(70% 60% at 50% 55%, rgba(120,61,245,0.35), transparent 70%)" }}
+                  >
+                    <BookOpen className="h-10 w-10 text-white/35" />
+                  </span>
+                )}
+              </Link>
+              <div className="px-2 pb-5 pt-5">
+                <h2 className="text-[1.35rem] font-semibold leading-tight tracking-[-0.02em] text-white">{c.label}</h2>
+                {c.tag && (
+                  // Sem fundo: só as letras, no gradiente da marca, que desliza
+                  // por elas de tempos a tempos.
+                  <p className="docs-brand-flow-text mt-1.5 text-[13.5px] font-semibold tracking-[0.01em]">{c.tag}</p>
+                )}
+                {c.restricted && (
+                  <p className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-white/12 bg-white/[0.04] px-2.5 py-1 text-[12px] font-medium text-white/70">
+                    <Lock className="h-3 w-3" />
+                    {c.restricted}
+                  </p>
+                )}
+              </div>
+              <Link
+                href={c.href}
+                className="mt-auto flex h-12 items-center justify-center rounded-2xl bg-white text-[14.5px] font-semibold text-[#07080d] transition hover:bg-white/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#783DF5] focus-visible:ring-offset-2 focus-visible:ring-offset-[#07080d]"
+              >
+                Ler documentação
               </Link>
             </li>
           ))}

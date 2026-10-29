@@ -1,10 +1,6 @@
 // Os blocos da Documentação da empresa. Um bloco = um tema, com uma ou mais
 // páginas.
 // Cada um declara o seu público; o hub e as páginas leem daqui.
-//
-// A ordem é a do hub, que tem 4 cartões por linha (v78.55): o dinheiro
-// (bónus, comissões, folga), depois os três protocolos com a Jornada de
-// Cliente, e por fim as ineficácias, o probation e a Matriz de Talento.
 
 import { readerSees, type BlockAudience, type DocsReader } from "./access";
 
@@ -95,6 +91,31 @@ export const DOCS_BLOCKS: DocsBlock[] = [
     ],
   },
   {
+    id: "ineficacias",
+    title: "Ineficácias & Probation",
+    // Toda a equipa: as ineficácias e o probation aplicam-se a todos.
+    audience: { depts: ["SEO", "ADS", "Web", "Commercial"] },
+    audienceLabel: "toda a equipa",
+    updatedAt: "2026-10-28",
+    pages: [
+      // As duas capas foram dadas pelo André (2026-10-27).
+      {
+        id: "ineficacias",
+        href: "/documentacao/ineficacias",
+        label: "Ineficácias",
+        image: "/documentacao/ineficacias-capa.jpg",
+        tag: "Elevar a excelência no mercado",
+      },
+      {
+        id: "probation",
+        href: "/documentacao/probation",
+        label: "Probation",
+        image: "/documentacao/probation-capa.jpg",
+        tag: "Elevar a excelência no mercado",
+      },
+    ],
+  },
+  {
     id: "protocolos",
     title: "Protocolos",
     // As duas listas do SEO DPT (v78.46), editadas pela direção na página.
@@ -143,8 +164,8 @@ export const DOCS_BLOCKS: DocsBlock[] = [
     id: "jornada-cliente",
     title: "Jornada de Cliente",
     // O caminho de um projeto SEO, mês a mês e semana a semana (v78.46). A
-    // direção edita-o na própria página. Fica logo depois dos protocolos
-    // (pedido do André, v78.52) e fecha a linha deles no hub.
+    // direção edita-o na própria página. Fica depois dos protocolos, que
+    // ocupam uma linha do hub os três (pedido do André, v78.52).
     audience: { depts: ["SEO"] },
     audienceLabel: "SEO DPT",
     updatedAt: "2026-10-29",
@@ -156,31 +177,6 @@ export const DOCS_BLOCKS: DocsBlock[] = [
         // Capa dada pelo André (2026-10-29).
         image: "/documentacao/jornada-cliente-capa.jpg",
         tag: "A parte comum a todos os projetos",
-      },
-    ],
-  },
-  {
-    id: "ineficacias",
-    title: "Ineficácias & Probation",
-    // Toda a equipa: as ineficácias e o probation aplicam-se a todos.
-    audience: { depts: ["SEO", "ADS", "Web", "Commercial"] },
-    audienceLabel: "toda a equipa",
-    updatedAt: "2026-10-28",
-    pages: [
-      // As duas capas foram dadas pelo André (2026-10-27).
-      {
-        id: "ineficacias",
-        href: "/documentacao/ineficacias",
-        label: "Ineficácias",
-        image: "/documentacao/ineficacias-capa.jpg",
-        tag: "Elevar a excelência no mercado",
-      },
-      {
-        id: "probation",
-        href: "/documentacao/probation",
-        label: "Probation",
-        image: "/documentacao/probation-capa.jpg",
-        tag: "Elevar a excelência no mercado",
       },
     ],
   },

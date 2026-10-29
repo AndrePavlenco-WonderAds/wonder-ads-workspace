@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.56",
+    date: "2026-10-29",
+    title: "Documentação: o hub volta aos 3 cartões por linha",
+    highlights: [
+      "**↩️ O hub da Documentação voltou ao formato anterior**: 3 cartões por linha, com a mesma ordem e os mesmos cartões de antes da v78.55 (pedido do André).",
+    ],
+  },
+  {
     version: "78.55",
     date: "2026-10-29",
     title: "Documentação: 4 cartões por linha no hub",
