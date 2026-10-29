@@ -46,6 +46,8 @@ export const FOLGA_CATEGORIES = [
   { id: "wikipedia", label: "Wikipedia Page" },
   { id: "ferramentas", label: "Ferramentas" },
   { id: "horas", label: "Horas extra" },
+  // v78.49: uma deslocação ao cliente (reunião, sessão, visita à clínica).
+  { id: "visita", label: "Visita presencial" },
   { id: "outro", label: "Outro" },
 ] as const;
 export type FolgaCategory = (typeof FOLGA_CATEGORIES)[number]["id"];

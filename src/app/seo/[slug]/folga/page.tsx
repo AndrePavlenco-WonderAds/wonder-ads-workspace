@@ -66,6 +66,7 @@ const CATEGORY_COLOR: Record<FolgaCategory, string> = {
   wikipedia: "#e2e8f0",
   ferramentas: "#38bdf8",
   horas: "#f59e0b",
+  visita: "#34d399",
   outro: "#94a3b8",
 };
 

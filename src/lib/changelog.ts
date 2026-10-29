@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.49",
+    date: "2026-10-29",
+    title: "Folga de custos: categoria «Visita presencial»",
+    highlights: [
+      "**📍 Nova categoria «Visita presencial»** na folga de custos de todos os projetos, para registar uma deslocação ao cliente — no formulário, no registo e na repartição por categoria.",
+    ],
+  },
+  {
     version: "78.48",
     date: "2026-10-29",
     title: "Jornada de Cliente: tarefas com painel lateral, por preencher pela direção",

@@ -15,6 +15,7 @@ import {
   Link2,
   ListTodo,
   Loader2,
+  MapPin,
   Palette,
   Settings2,
   Sparkles,
@@ -43,6 +44,7 @@ const ICON: Record<FolgaCategory, LucideIcon> = {
   wikipedia: Globe,
   ferramentas: Wrench,
   horas: Clock,
+  visita: MapPin,
   outro: Sparkles,
 };
 
