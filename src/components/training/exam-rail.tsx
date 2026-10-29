@@ -1,4 +1,5 @@
-// A fita dos seis exames de fase — server component, sem estado.
+// A fita dos seis exames de fase — server component, sem estado. Desde a
+// v78.54 vive na página da especialização dona dos exames, não no hub.
 //
 // DESENHO — MOSTRAR O CAMINHO TODO DESDE O DIA 1. Os seis cartões aparecem
 // sempre, todos, mesmo os que só abrem daqui a três meses. Um exame escondido
@@ -20,7 +21,7 @@ import {
   ShieldCheck,
   Target,
 } from "lucide-react";
-import type { ExamJourney, ExamState } from "@/lib/training/exams";
+import { examHref, type ExamJourney, type ExamState } from "@/lib/training/exams";
 import { formatDate } from "@/lib/dates";
 
 export function ExamRail({
@@ -29,7 +30,7 @@ export function ExamRail({
 }: {
   journey: ExamJourney;
   /** False no drill-down do admin: os cartões deixam de ser links, porque
-   *  `/formacao/exame/<id>` abre SEMPRE o exame de quem está com a sessão
+   *  a página do exame abre SEMPRE o exame de quem está com a sessão
    *  aberta — clicar na fita de outra pessoa levaria o C-Level ao exame
    *  dele próprio. */
   interactive?: boolean;
@@ -209,7 +210,7 @@ function ExamCard({
   if (interactive && (open || passed)) {
     return (
       <Link
-        href={`/formacao/exame/${exam.id}`}
+        href={examHref(exam)}
         className={`${shared} hover:-translate-y-0.5 ${
           passed
             ? "hover:border-emerald-400/50"

@@ -34,6 +34,7 @@ import {
 import { getRosterRow } from "@/lib/training/admin";
 import { getTrainingCatalog } from "@/lib/training/content-store";
 import { EXAM_QUESTIONS } from "@/lib/training/exam-questions";
+import { RETIRED_EXAM_QUESTIONS } from "@/lib/training/exam-questions-retired";
 import { formatDate, formatDateTime } from "@/lib/dates";
 import type { TrackState } from "@/lib/training/progress";
 import type { QuizAttempt } from "@/lib/training/attempts-store";
@@ -68,6 +69,8 @@ function questionIndex(tracks: TrainingTrack[]): Map<string, TrainingQuestion> {
       for (const q of m.quiz.questions) map.set(q.id, q);
   for (const list of Object.values(EXAM_QUESTIONS))
     for (const q of list) map.set(q.id, q);
+  // As retiradas na v78.54 continuam a ter enunciado nas tentativas antigas.
+  for (const q of RETIRED_EXAM_QUESTIONS) if (!map.has(q.id)) map.set(q.id, q);
   return map;
 }
 
@@ -241,7 +244,7 @@ export default async function ConsultantDrillDownPage({
         />
         {/* Quando é o próximo exame desta pessoa — e o selo verde de EFETIVO
             assim que ela passa o dos 90 dias. */}
-        <NextExamCard journey={row.exams} subject="Tem" />
+        {row.exams.exams.length > 0 && <NextExamCard journey={row.exams} subject="Tem" />}
       </section>
 
       <section className="animate-fade-up mt-3">
@@ -254,10 +257,13 @@ export default async function ConsultantDrillDownPage({
         />
       </section>
 
-      {/* ===== Exames de fase ===== */}
-      <div className="animate-fade-up mt-6">
-        <ExamRail journey={row.exams} interactive={false} />
-      </div>
+      {/* ===== Exames de fase ===== — só de quem tem uma especialização com
+          exames (v78.54: a SEO/GEO). */}
+      {row.exams.exams.length > 0 && (
+        <div className="animate-fade-up mt-6">
+          <ExamRail journey={row.exams} interactive={false} />
+        </div>
+      )}
 
       <div className="mt-8 grid gap-8 xl:grid-cols-[1.15fr_1fr]">
         {/* Módulos, aula a aula */}

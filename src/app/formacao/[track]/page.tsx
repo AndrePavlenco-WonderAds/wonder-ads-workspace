@@ -28,11 +28,15 @@ import {
   Lock,
   PartyPopper,
   Play,
+  Target,
   UserRound,
 } from "lucide-react";
+import { ExamRail } from "@/components/training/exam-rail";
+import { examHref } from "@/lib/training/exams";
 import { PageShell } from "@/components/page-shell";
 import { TrainingStickyBar } from "@/components/training/training-sticky-bar";
 import {
+  BrightPill,
   LessonThumb,
   LessonTypeBadge,
   ModuleStatusChip,
@@ -49,6 +53,7 @@ import {
   trackStateFor,
 } from "@/lib/training/server";
 import type { ModuleState, TrackState } from "@/lib/training/progress";
+import type { ExamJourney } from "@/lib/training/exams";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -290,6 +295,14 @@ export default async function TrackPage({
           <Lock className="h-4 w-4 shrink-0" />
           {state.lockedReason}
         </div>
+      )}
+
+      {/* ===================== Exames de fase =====================
+          v78.54: os exames vivem dentro da especialização dona deles (só a
+          SEO/GEO tem, por agora) e só têm perguntas dela. Um exame aberto vem
+          primeiro: tem prazo e consequência de carreira. */}
+      {ctx.exams.trackSlug === slug && ctx.exams.exams.length > 0 && (
+        <ExamsBlock journey={ctx.exams} />
       )}
 
       {/* Pesquisa do módulo — por cima da sequência, porque é uma ferramenta
@@ -643,5 +656,36 @@ function TrackCompleted({ state }: { state: TrackState }) {
         </Link>
       </div>
     </section>
+  );
+}
+
+function ExamsBlock({ journey }: { journey: ExamJourney }) {
+  const open = journey.exams.find((e) => e.status === "available") ?? null;
+  return (
+    <div className="mt-6">
+      {open && (
+        <Link
+          href={examHref(open.exam)}
+          className="animate-fade-up group flex flex-wrap items-center gap-4 rounded-2xl border border-[#C535C9]/45 bg-[#C535C9]/[0.09] p-5 transition hover:border-[#C535C9]/70 hover:bg-[#C535C9]/[0.14]"
+        >
+          <span className="animate-node-halo flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-[#C535C9]/40 bg-[#C535C9]/12 text-[#f0a8ee]">
+            <Target className="h-5 w-5" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <BrightPill tone="rose">Exame aberto</BrightPill>
+            <p className="mt-1.5 text-[15px] font-semibold text-white">{open.exam.title}</p>
+            <p className="mt-0.5 text-[11.5px] text-white/55">
+              60 minutos, sem pausas · mínimo {open.exam.passingScore}% · {open.attemptsLeft} tentativa
+              {open.attemptsLeft === 1 ? "" : "s"} · {open.exam.gate}
+            </p>
+          </div>
+          <span className="brand-gradient-bg inline-flex shrink-0 items-center gap-2 rounded-xl px-4 py-2.5 text-[13px] font-semibold text-white transition group-hover:brightness-110">
+            Ver o exame
+            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+          </span>
+        </Link>
+      )}
+      <ExamRail journey={journey} />
+    </div>
   );
 }

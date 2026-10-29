@@ -1323,7 +1323,7 @@ const ADS_TRACK: TrainingTrack = {
   slug: "ads",
   name: "Especialização ADS",
   description:
-    "Protocolos Ads, ferramentas, comunicação, gestão de tempo, registo de horas e reuniões-tipo, mais o currículo completo de Service Delivery — dos fundamentos às estratégias avançadas.",
+    "Protocolos Ads, ferramentas, comunicação, gestão de tempo e reuniões-tipo, mais o currículo completo de Service Delivery — dos fundamentos às estratégias avançadas.",
   order: 3,
   isCommon: false,
   modules: [
@@ -1339,7 +1339,7 @@ const ADS_TRACK: TrainingTrack = {
           id: "ads-m1-a1",
           title: "Ads Department Overview",
           description:
-            "Visão geral do departamento de Ads — protocolos, ferramentas, comunicação, gestão de tempo, registo de horas e reuniões-tipo.",
+            "Visão geral do departamento de Ads — protocolos, ferramentas, comunicação, gestão de tempo e reuniões-tipo.",
           presenter: "Alice",
         },
       ]),
@@ -1568,7 +1568,7 @@ const WEB_TRACK: TrainingTrack = {
   slug: "web",
   name: "Especialização WEB",
   description:
-    "Protocolos Web, ferramentas, comunicação, gestão de tempo, registo de horas e reuniões-tipo — do trabalho interno à entrega e aprovação do site com o cliente.",
+    "Protocolos Web, ferramentas, comunicação, gestão de tempo e reuniões-tipo — do trabalho interno à entrega e aprovação do site com o cliente.",
   order: 4,
   isCommon: false,
   modules: [
@@ -1576,7 +1576,7 @@ const WEB_TRACK: TrainingTrack = {
       id: "web-m1",
       title: "Como trabalhamos internamente no WEB",
       description:
-        "Protocolos do departamento Web, ferramentas, gestão de tempo e registo de horas.",
+        "Protocolos do departamento Web, ferramentas e gestão de tempo.",
       order: 1,
       section: null,
       lessons: lessons([
@@ -1584,7 +1584,7 @@ const WEB_TRACK: TrainingTrack = {
           id: "web-m1-a1",
           title: "Como trabalhamos internamente no WEB",
           description:
-            "Os protocolos internos do departamento Web: fluxo de trabalho, ferramentas, gestão de tempo, registo de horas e reuniões-tipo.",
+            "Os protocolos internos do departamento Web: fluxo de trabalho, ferramentas, gestão de tempo e reuniões-tipo.",
           presenter: "André",
         },
       ]),
@@ -1644,7 +1644,7 @@ const COMMERCIAL_TRACK: TrainingTrack = {
   slug: "comercial",
   name: "Especialização Comercial",
   description:
-    "Protocolos comerciais, ferramentas, comunicação, gestão de tempo, registo de horas e reuniões-tipo — da prospeção à assinatura e ao follow-up.",
+    "Protocolos comerciais, ferramentas, comunicação, gestão de tempo e reuniões-tipo — da prospeção à assinatura e ao follow-up.",
   order: 5,
   isCommon: false,
   modules: [
@@ -1660,7 +1660,7 @@ const COMMERCIAL_TRACK: TrainingTrack = {
           id: "com-m1-a1",
           title: "Sales Department Overview",
           description:
-            "Visão geral do departamento comercial — protocolos, ferramentas, comunicação, gestão de tempo, registo de horas e reuniões-tipo.",
+            "Visão geral do departamento comercial — protocolos, ferramentas, comunicação, gestão de tempo e reuniões-tipo.",
           presenter: "Alex",
         },
       ]),

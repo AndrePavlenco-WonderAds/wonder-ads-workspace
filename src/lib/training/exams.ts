@@ -18,6 +18,14 @@
 //      chumbasse a semana 1 saltava para o dos 90 dias e a régua não valia
 //      nada.
 //
+// DE QUE ESPECIALIZAÇÃO (v78.54): cada exame pertence a UMA especialização e
+// só tem perguntas dela — as especializações são coisas diferentes e não se
+// misturam. Vive dentro da página da especialização (/formacao/<track>/exame/
+// <id>), não no hub geral. Por agora só a SEO/GEO tem exames (EXAM_TRACKS):
+// Ads, Web e Comercial ganham os seus quando houver perguntas validadas pela
+// direção — e os ids deles levam o slug (`exame-ads-s1`), porque os ids
+// `exame-s1…d90` já são do SEO e estão nas tentativas guardadas.
+//
 // As tentativas são guardadas no MESMO sítio que as dos quizzes
 // (`training-attempts:<username>`), distinguidas pelo prefixo do `quizId`.
 // Uma chave KV a menos, e o drill-down do admin já sabe ler o formato.
@@ -38,6 +46,8 @@ export function isExamQuizId(quizId: string): boolean {
 export type ExamPhase = {
   /** `exame-s1` … `exame-d90`. Entra no id da tentativa — nunca mudar. */
   id: string;
+  /** A especialização dona do exame — só tem perguntas dela. */
+  trackSlug: string;
   order: number;
   /** Etiqueta curta do cartão: "Semana 1". */
   label: string;
@@ -61,6 +71,7 @@ export type ExamPhase = {
 export const EXAM_PHASES: ExamPhase[] = [
   {
     id: "exame-s1",
+    trackSlug: "seo-geo",
     order: 1,
     label: "Semana 1",
     milestone: "7 dias",
@@ -74,6 +85,7 @@ export const EXAM_PHASES: ExamPhase[] = [
   },
   {
     id: "exame-s2",
+    trackSlug: "seo-geo",
     order: 2,
     label: "Semana 2",
     milestone: "14 dias",
@@ -87,19 +99,21 @@ export const EXAM_PHASES: ExamPhase[] = [
   },
   {
     id: "exame-s3",
+    trackSlug: "seo-geo",
     order: 3,
     label: "Semana 3",
     milestone: "21 dias",
     unlockDays: 21,
     title: "Exame 3 — Execução e protocolos",
     description:
-      "Os protocolos do departamento, o registo de horas, o roadmap e as ferramentas — o que se faz, por que ordem e onde fica registado.",
+      "Os protocolos do SEO DPT, o roadmap e as ferramentas — o que se faz, por que ordem e onde fica registado.",
     passingScore: 88,
     maxAttempts: 2,
     gate: "Passa para a fase de conta própria.",
   },
   {
     id: "exame-s4",
+    trackSlug: "seo-geo",
     order: 4,
     label: "Semana 4",
     milestone: "28 dias",
@@ -113,6 +127,7 @@ export const EXAM_PHASES: ExamPhase[] = [
   },
   {
     id: "exame-d60",
+    trackSlug: "seo-geo",
     order: 5,
     label: "60 dias",
     milestone: "60 dias",
@@ -126,6 +141,7 @@ export const EXAM_PHASES: ExamPhase[] = [
   },
   {
     id: "exame-d90",
+    trackSlug: "seo-geo",
     order: 6,
     label: "90 dias",
     milestone: "90 dias",
@@ -142,6 +158,24 @@ export const EXAM_PHASES: ExamPhase[] = [
 
 export function findExam(examId: string): ExamPhase | null {
   return EXAM_PHASES.find((e) => e.id === examId) ?? null;
+}
+
+/** As especializações que têm exames de fase, pela ordem em que contam. */
+export const EXAM_TRACKS: readonly string[] = ["seo-geo"];
+
+export function trackHasExams(trackSlug: string): boolean {
+  return EXAM_TRACKS.includes(trackSlug);
+}
+
+/** A especialização cujos exames esta pessoa faz — a primeira das dela que
+ *  tem exames, ou null (C-Level sem especialização, Ads, Web, Comercial). */
+export function examTrackOf(specializationSlugs: readonly string[]): string | null {
+  return EXAM_TRACKS.find((t) => specializationSlugs.includes(t)) ?? null;
+}
+
+/** O caminho da página de um exame — dentro da especialização. */
+export function examHref(exam: ExamPhase): string {
+  return `/formacao/${exam.trackSlug}/exame/${exam.id}`;
 }
 
 /** O exame na forma de `TrainingQuiz`, para reaproveitar o motor de correção
@@ -198,6 +232,8 @@ export type ExamState = {
 };
 
 export type ExamJourney = {
+  /** A especialização dos exames (null = esta pessoa não tem exames). */
+  trackSlug: string | null;
   /** Data de entrada em vigor (ISO), já resolvida. */
   startedAt: string | null;
   exams: ExamState[];
@@ -232,6 +268,7 @@ function daysBetween(at: number, now: Date): number {
 }
 
 export function computeExamJourney(
+  trackSlug: string | null,
   startISO: string | null,
   attempts: QuizAttempt[],
   now: Date = new Date(),
@@ -239,7 +276,7 @@ export function computeExamJourney(
   const exams: ExamState[] = [];
   let previousPassed = true;
 
-  for (const exam of EXAM_PHASES) {
+  for (const exam of EXAM_PHASES.filter((e) => e.trackSlug === trackSlug)) {
     const mine = attempts
       .filter((a) => a.quizId === exam.id)
       .sort((a, b) => b.submittedAt - a.submittedAt);
@@ -296,6 +333,7 @@ export function computeExamJourney(
 
   const finalState = exams.find((e) => e.exam.final) ?? null;
   return {
+    trackSlug,
     startedAt: startISO,
     exams,
     passedCount: exams.filter((e) => e.passed).length,
@@ -309,6 +347,7 @@ export function computeExamJourney(
 /** Uma linha para o cartão "próximo exame" — a mesma frase no hub do
  *  consultor e no drill-down do admin, para não divergirem. */
 export function nextExamLine(journey: ExamJourney): string {
+  if (journey.exams.length === 0) return "Sem exames — a especialização ainda não os tem.";
   if (journey.effective) return "Efetivo — passou os seis exames.";
   const next = journey.next;
   if (!next) return "Sem exames por fazer.";

@@ -71,12 +71,18 @@ function tf(
   };
 }
 
+/** Lugar de uma pergunta retirada. O id é posicional e as tentativas guardadas
+ *  referem as perguntas pelo id: apagar a linha deslocava todas as seguintes.
+ *  Um RETIRED guarda o número (e a ordem) da pergunta que saiu, e esse número
+ *  nunca volta a ser usado. */
+const RETIRED = null;
+
 /** Constrói a lista já numerada a partir de fábricas de perguntas. */
 function build(
   prefix: string,
-  items: ((id: string, order: number) => TrainingQuestion)[],
+  items: (((id: string, order: number) => TrainingQuestion) | typeof RETIRED)[],
 ): TrainingQuestion[] {
-  return items.map((make, i) => make(`${prefix}-q${i + 1}`, i + 1));
+  return items.flatMap((make, i) => (make ? [make(`${prefix}-q${i + 1}`, i + 1)] : []));
 }
 
 const mc =
@@ -100,7 +106,7 @@ const COMUM_M1 = build("comum-m1", [
       ["Ser o melhor consultor que aquele cliente alguma vez teve", true],
       ["Entregar exatamente o que está no contrato, nem mais nem menos", false],
       ["Responder mais depressa do que a agência anterior do cliente", false],
-      ["Cumprir as horas previstas para a conta, sem derrapagens", false],
+      ["Estar ao nível do que as outras agências do mercado entregam", false],
     ],
     "O contrato é o mínimo, não o objetivo. A régua é a experiência que o cliente tem connosco comparada com tudo o que já viveu antes.",
   ),
@@ -125,16 +131,16 @@ const COMUM_M1 = build("comum-m1", [
       ["Antecipar o problema antes de o cliente o notar", true],
       ["Levantar a mão cedo quando algo está a correr mal", true],
       ["Procurar o padrão mais alto mesmo em contas pequenas", true],
-      ["Aceitar um resultado fraco desde que as horas tenham sido cumpridas", false],
+      ["Aceitar um resultado fraco desde que a tarefa tenha sido entregue", false],
     ],
-    "Antecipar, comunicar cedo e não negociar o padrão consoante o tamanho da conta.",
+    "Antecipar, comunicar cedo e não negociar o padrão consoante o tamanho da conta. Tarefa entregue com resultado fraco não é trabalho cumprido.",
   ),
   mc(
     "Os valores da empresa servem sobretudo para:",
     [
       ["Decidir como agir quando ninguém está a ver", true],
       ["Comunicar a marca no site e nas propostas", false],
-      ["Servir de critério de avaliação anual", false],
+      ["Justificar as decisões que a direção já tomou", false],
       ["Dar contexto histórico sobre a fundação", false],
     ],
     "Valores que não mudam decisões concretas são decoração. O teste é o que fazes quando ninguém confirma.",
@@ -193,11 +199,11 @@ const COMUM_M1 = build("comum-m1", [
     "O que distingue um profissional de um mero executor de tarefas?",
     [
       ["Responde pelo resultado, e não apenas pela tarefa executada", true],
-      ["Trabalha mais horas e fecha mais tarefas por semana do que o executor", false],
-      ["Domina mais ferramentas, por isso executa tarefas com menos instruções", false],
-      ["Tem mais anos de experiência, por isso precisa de menos supervisão", false],
+      ["Faz exatamente o que lhe pedem, sem perder tempo a questionar", false],
+      ["Tem sempre uma boa justificação quando o resultado não aparece", false],
+      ["Despacha mais tarefas, mesmo que algumas fiquem por rever", false],
     ],
-    "Ferramentas e horas aprendem-se. Responder pelo resultado é uma decisão diária.",
+    "Fazer só o que foi pedido, justificar o que falhou ou despachar volume é o que faz o executor. O profissional responde pelo resultado — e isso é uma decisão diária.",
   ),
 ]);
 
@@ -233,7 +239,7 @@ const COMUM_M2 = build("comum-m2", [
       ["Deixam o trabalho registado e visível a quem o continuar", true],
       ["São uma exigência dos contratos assinados com os clientes", false],
       ["Saem mais baratas à empresa do que as alternativas do mercado", false],
-      ["Só assim as horas trabalhadas contam para efeitos de pagamento", false],
+      ["Foram escolhidas pela direção, e isso basta como razão", false],
     ],
     "Trabalho que só existe na cabeça de uma pessoa desaparece nas férias, na doença e na saída. O registo é o que torna a equipa substituível sem o cliente sofrer.",
   ),
@@ -282,7 +288,7 @@ const COMUM_M2 = build("comum-m2", [
     [
       ["Nas ferramentas da casa, acessível a quem trabalha a conta", true],
       ["Nas tuas notas pessoais, para consultares quando precisares", false],
-      ["No email, que já serve de histórico", false],
+      ["Só no email, que já serve de histórico", false],
       ["Só na tua memória, se a chamada foi curta", false],
     ],
     "O que foi combinado é informação da conta, não tua. Se amanhã outra pessoa entrar na conta, tem de conseguir seguir sem te ligar.",
@@ -381,14 +387,14 @@ const COMUM_M3 = build("comum-m3", [
     "Avisar cedo, mesmo sem data final fechada, dá ao cliente margem para se organizar. Avisar no dia do prazo já é dano.",
   ),
   mc(
-    "O que deve estar sempre presente numa comunicação de rotina com o cliente? (escolhe todas)",
+    "O que deve estar sempre no weekly update (Weekly Report), a atualização de rotina que o cliente recebe todas as semanas? (escolhe todas)",
     [
-      ["O que foi feito desde a última vez", true],
-      ["O que vem a seguir e quando", true],
+      ["O que foi feito ao longo desta semana", true],
+      ["O que está planeado para a próxima semana", true],
       ["O que precisas dele para avançar", true],
-      ["A lista de horas gastas por tarefa", false],
+      ["O detalhe técnico das tarefas, para se ver o esforço", false],
     ],
-    "Feito · a seguir · o que preciso de ti. Três linhas que evitam metade das perguntas do cliente.",
+    "Feito · a seguir · o que preciso de ti: três linhas que evitam metade das perguntas do cliente. Escreve-se como benefício para o cliente, não como lista técnica para mostrar esforço.",
   ),
   vf(
     "Se o cliente não se queixa, é sinal de que está satisfeito.",
@@ -408,9 +414,9 @@ const ADS_M1 = build("ads-m1", [
       ["Prestar contas pelo retorno da verba que o cliente investe", true],
       ["Manter as campanhas ativas, sem erros nem anúncios reprovados", false],
       ["Garantir que o orçamento definido é gasto na íntegra dentro do mês", false],
-      ["Produzir criativos novos com regularidade para evitar a fadiga", false],
+      ["Mostrar muita atividade na conta, para o cliente ver trabalho", false],
     ],
-    "Estamos a gerir dinheiro de outra pessoa: respondemos pelo resultado dessa verba e pela leitura que o cliente faz dele. Campanhas no ar sem leitura de retorno não é gestão — é manutenção.",
+    "Estamos a gerir dinheiro de outra pessoa: respondemos pelo resultado dessa verba e pela leitura que o cliente faz dele. Campanhas no ar sem leitura de retorno não é gestão — é manutenção; e muita atividade na conta não é retorno.",
   ),
   vf(
     "Enquanto as campanhas estiverem a entregar, não é necessário comunicar com o cliente entre reuniões.",
@@ -437,20 +443,16 @@ const ADS_M1 = build("ads-m1", [
     ],
     "A recomendação técnica é nossa; a decisão final é dele. Explicas o efeito do corte na aprendizagem e propões decidir com base na janela correta — executar sem explicar o custo é omitir o que sabemos.",
   ),
-  vf(
-    "O registo de horas e a cadência de reuniões são menos relevantes em Ads porque a plataforma mostra tudo.",
-    false,
-    "A plataforma mostra números, não decisões. O que se decidiu, porquê e quando, isso só existe se for registado.",
-  ),
+  RETIRED, // ads-m1-q5 (registo de horas): a WonderAds não controla horas.
   mc(
     "Quando é que uma conta de Ads está bem cuidada?",
     [
       ["Quando o cliente sabe quanto investe, o que recebe e o que vem a seguir", true],
       ["Quando o custo por lead está abaixo da média do mercado para o setor", false],
-      ["Quando não há erros, reprovações nem avisos de política na conta", false],
+      ["Quando as campanhas estão a entregar e o cliente não se queixa", false],
       ["Quando o orçamento mensal é gasto na íntegra, sem cortes", false],
     ],
-    "Clareza sobre investimento, retorno e próximo passo. O resto são consequências disso.",
+    "Clareza sobre investimento, retorno e próximo passo. O resto são consequências disso — e um cliente calado não é sinal de conta bem cuidada.",
   ),
 ]);
 
@@ -459,9 +461,9 @@ const ADS_M2 = build("ads-m2", [
     "Qual é o objetivo da call de kick-off/onboarding em Ads?",
     [
       ["Perceber a oferta, a margem e a meta de negócio do cliente", true],
-      ["Recolher os acessos às plataformas para começar a montar a conta", false],
-      ["Apresentar e validar com o cliente a estrutura de campanhas proposta", false],
-      ["Fechar o orçamento mensal e a distribuição por plataforma", false],
+      ["Recolher os acessos e arrancar já; o resto percebe-se com os dados", false],
+      ["Apresentar a estrutura de campanhas que costuma resultar no setor", false],
+      ["Prometer um custo por lead, para fixar logo as expectativas", false],
     ],
     "Antes de montar seja o que for, é preciso perceber a oferta, a margem e o objetivo de negócio. Sem isso, qualquer estrutura de campanha é um palpite caro.",
   ),
@@ -557,7 +559,7 @@ const ADS_M3 = build("ads-m3", [
     "Ao testar audiências, o erro mais comum é:",
     [
       ["Tirar conclusões antes de haver dados suficientes", true],
-      ["Testar demasiadas audiências ao mesmo tempo", false],
+      ["Testar poucas audiências de cada vez, o que atrasa as conclusões", false],
       ["Usar o mesmo orçamento em todos os testes, sem dar mais a quem rende", false],
       ["Manter os mesmos criativos em todas as audiências testadas", false],
     ],
@@ -607,7 +609,7 @@ const ADS_M4 = build("ads-m4", [
       ["A velocidade e a qualidade do seguimento das leads pelo cliente", true],
       ["O volume de leads gerado pela campanha em cada mês", false],
       ["O custo por lead, comparado com o de outros anunciantes locais", false],
-      ["O número de criativos em rotação para evitar a fadiga", false],
+      ["Ter mais verba do que os concorrentes que anunciam na zona", false],
     ],
     "Leads mal seguidas transformam bom trabalho em queixa. Parte do nosso papel é garantir que o cliente está preparado para as receber.",
   ),
@@ -632,9 +634,9 @@ const ADS_M4 = build("ads-m4", [
       ["Quem responde às leads e em quanto tempo", true],
       ["Onde as leads aterram e como são registadas", true],
       ["O que conta como lead qualificada", true],
-      ["O criativo que vai ser usado em cada anúncio", false],
+      ["O número de leads que garantimos por mês", false],
     ],
-    "Responsável, destino e definição de qualificação. Sem isto, a discussão do terceiro mês é sobre a qualidade das leads e ninguém tem dados.",
+    "Responsável, destino e definição de qualificação. Sem isto, a discussão do terceiro mês é sobre a qualidade das leads e ninguém tem dados. Garantir um número de leads é prometer o que não controlamos.",
   ),
   vf(
     "Automatizar o fluxo de leads do cliente está fora do âmbito de um consultor de Ads.",
@@ -708,7 +710,7 @@ const ADS_M5 = build("ads-m5", [
     "Ao escalar, o risco mais comum é:",
     [
       ["Subir a verba depressa demais e desestabilizar a entrega", true],
-      ["Não ter criativos suficientes preparados", false],
+      ["Ser penalizado pela plataforma por investir mais", false],
       ["Exceder o orçamento contratado antes de o mês terminar", false],
       ["Perder o histórico acumulado da conta de anúncios", false],
     ],
@@ -727,15 +729,11 @@ const WEB_M1 = build("web-m1", [
       ["Entregar um site que funciona, converte e outros conseguem manter", true],
       ["Cumprir à risca o design aprovado pelo cliente em todas as páginas", false],
       ["Entregar dentro do prazo previsto, mesmo que fique algo por testar", false],
-      ["Usar as tecnologias e os temas definidos internamente", false],
+      ["Pôr o site no ar; a manutenção passa a ser do cliente", false],
     ],
     "Funciona, converte e é mantível. Um site bonito que ninguém consegue manter é dívida entregue ao cliente.",
   ),
-  vf(
-    "O registo de horas em projetos Web serve apenas para faturação interna.",
-    false,
-    "Serve para saber quanto custa mesmo um projeto e para orçamentar o próximo com verdade. Sem registo honesto, orçamenta-se sempre a perder.",
-  ),
+  RETIRED, // web-m1-q2 (registo de horas): a WonderAds não controla horas.
   mc(
     "Um pedido chega diretamente ao designer, fora do fluxo de tickets. O que se faz?",
     [
@@ -793,7 +791,7 @@ const WEB_M2 = build("web-m2", [
     "Entregar um site inclui também:",
     [
       ["Deixar o cliente, ou quem o mantém, capaz de o gerir", true],
-      ["Entregar ao cliente os ficheiros de design editáveis", false],
+      ["Ficar com os acessos de administração, por segurança", false],
       ["Fazer sem custo os ajustes pedidos no primeiro mês", false],
       ["Enviar as credenciais por email, que serve de registo da entrega", false],
     ],
@@ -805,7 +803,7 @@ const WEB_M2 = build("web-m2", [
       ["Avaliar o âmbito, registar e tratar como novo pedido", true],
       ["Fazer logo, porque é rápido e o cliente fica satisfeito", false],
       ["Recusar o pedido, porque o projeto já está fechado e faturado", false],
-      ["Fazer, e só registar como novo pedido se passar de uma hora", false],
+      ["Incluir no projeto original, que acabou de ser entregue", false],
     ],
     "Pequenas alterações fora de âmbito, somadas, são um projeto inteiro por faturar — e ninguém dá por isso.",
   ),
@@ -820,7 +818,7 @@ const WEB_M2 = build("web-m2", [
       ["Deixando registo do que foi feito e de como se mantém", true],
       ["Bloqueando as alterações feitas pelo cliente", false],
       ["Entregando o ficheiro de design final", false],
-      ["Fazendo um backup completo do site no dia da entrega", false],
+      ["Contando com o cliente para avisar quando algo falhar", false],
     ],
     "Documentação simples do que existe e de como se mexe evita metade dos pedidos de emergência futuros.",
   ),
@@ -833,7 +831,7 @@ const WEB_M3 = build("web-m3", [
       ["O que se está a pedir para aprovar, exatamente", true],
       ["Até quando é necessária a resposta e o que atrasa se não vier", true],
       ["Como enviar feedback (onde e em que formato)", true],
-      ["Quantas horas foram gastas no design, para o cliente lhe dar valor", false],
+      ["Todas as versões feitas até aqui, para se ver o esforço", false],
     ],
     "O quê, até quando e como responder. Um pedido de aprovação vago produz feedback vago.",
   ),
@@ -889,8 +887,8 @@ const COM_M1 = build("com-m1", [
     [
       ["Trazer clientes que a empresa consegue servir bem e manter", true],
       ["Fechar o maior volume de contratos possível em cada mês", false],
-      ["Manter o pipeline sempre cheio de oportunidades", false],
-      ["Atingir o objetivo mensal de faturação da equipa", false],
+      ["Fechar o contrato; a entrega já é com a operação", false],
+      ["Bater o objetivo do mês, mesmo com clientes fora de perfil", false],
     ],
     "Um cliente mal vendido é um problema entregue à operação — e uma saída anunciada. Vender bem é vender o que se consegue entregar.",
   ),
@@ -930,7 +928,7 @@ const COM_M1 = build("com-m1", [
       ["Dizes com franqueza e não avanças", true],
       ["Avanças — o cliente decide se quer", false],
       ["Avanças com um preço mais alto para compensar o risco", false],
-      ["Passas ao C-Level para decidirem", false],
+      ["Avanças, e a operação adapta-se depois", false],
     ],
     "Contratos que não deviam ter sido assinados custam mais do que rendem, e ocupam a equipa que devia estar noutro lado.",
   ),
@@ -943,7 +941,7 @@ const COM_M2 = build("com-m2", [
       ["Relevância para o problema concreto de quem recebe", true],
       ["Volume de contactos enviados por dia e por canal", false],
       ["Frequência e insistência do seguimento", false],
-      ["Qualidade do texto da mensagem e da linha de assunto", false],
+      ["Um texto único que sirva para qualquer empresa da lista", false],
     ],
     "Volume sem relevância queima listas e reputação. A relevância é o que faz alguém responder.",
   ),
@@ -966,7 +964,7 @@ const COM_M2 = build("com-m2", [
     "Porque é que as leads têm de estar registadas e organizadas?",
     [
       ["Porque o pipeline tem de ser legível por outra pessoa que não tu", true],
-      ["Para que as comissões de cada comercial sejam bem calculadas", false],
+      ["Por hábito da equipa; a tua memória chega para o dia a dia", false],
       ["Para cumprir os requisitos legais de RGPD", false],
       ["Para gerar os relatórios de atividade semanais pedidos pela direção", false],
     ],

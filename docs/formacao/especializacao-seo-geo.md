@@ -71,10 +71,9 @@ Aula 1.3 — Assinatura Gmail
 Q1 [vf] É opcional eu ter a assinatura de email em inglês e em português. → F
 
 Q2 [single] Basta ter a assinatura de Gmail da empresa em: ⚠️ CONFIRMAR (sem resposta marcada; pela Q1 e Q5, a correta é "Ambas")
-- [ ] Inglês, que serve para todos os clientes
-- [ ] Português, já que os clientes são portugueses
-- [x] Português e inglês, as duas versões
-Explicação: A assinatura de Gmail da empresa tem de existir em português e em inglês desde o início; uma só versão não chega.
+- [ ] Inglês
+- [ ] Português
+- [x] Ambas as anteriores
 
 Q3 [multi] A minha assinatura de Gmail da empresa apenas precisa de ter:
 - [x] Email
@@ -101,27 +100,27 @@ Q7 [single] O Fathom é utilizado para:
 - [ ] Todas as anteriores
 
 Q8 [single] O Fathom é obrigatório ser usado por:
-- [ ] Só os consultores, que falam com clientes
-- [ ] Só a administração, para controlo interno
-- [ ] Só os Web Designers, nos briefings
-- [x] Toda a equipa, sem exceção
+- [ ] Consultores
+- [ ] Administração
+- [ ] Web Designers
+- [x] Todos os anteriores
 
 Q9 [vf] O Fathom serve para nos protegermos em caso de conflito mas também para formação de colegas. → V
 
 Q10 [vf] O Fathom em reuniões de 15 minutos com clientes não é obrigatório ser autorizado na reunião. → F
 
 Q11 [single] A administração da WonderAds tem como protocolo pedir as gravações de reuniões de colegas:
-- [ ] 1 vez por semana, à sexta-feira
-- [ ] 1 vez por mês, no fecho do mês
-- [ ] 2 vezes por mês, de 15 em 15 dias
-- [x] Aleatoriamente, a qualquer momento
+- [ ] 1 vez por semana
+- [ ] 1 vez por mês
+- [ ] 2 vezes por mês
+- [x] Esporadicamente e aleatoriamente a qualquer momento
 
 Aula 1.5 — Agendar reunião com a equipa/André/Administração
 
 Q12 [single] Devo sempre verificar qual plataforma antes de agendar uma reunião com um colega:
 - [ ] Google Meet
 - [x] Google Calendar
-- [ ] Caixa de entrada do Gmail
+- [ ] Gmail
 - [ ] Outlook Calendar
 - [ ] Todas as anteriores
 
@@ -130,11 +129,11 @@ Q13 [vf] Para verificar a agenda/calendário de um colega devo sempre ir ao Goog
 Q14 [vf] Quando quero agendar uma reunião de urgência com a administração da WonderAds, neste caso, é opcional verificar os agendamentos no Google Calendar. → F
 
 Q15 [multi] Cenário: Quero agendar uma reunião de acompanhamento extra com o André, devo:
-- [ ] Verificar no Google Meet e no Gmail se o André está livre
+- [ ] Verificar o Google Meet e Gmail
 - [x] Verificar o Google Calendar e disponibilidades do André
 - [x] Tentar evitar a hora de almoço
-- [ ] Agendar sempre para as 18:00-20:00, fora do horário de clientes
-- [ ] Enviar logo o convite e deixar o André remarcar se não puder
+- [ ] Agendar sempre para as 18:00-20:00
+- [ ] Todas as anteriores
 
 Aula 1.6 — Pedido de ausência
 
@@ -192,20 +191,18 @@ Q3 [vf] Caso o cliente prefira ter o relatório com vídeo de overview do relat�
 Q4 [vf] Caso o consultor prefira ter um vídeo de overview do relatório, o consultor deve fazer uma apresentação PowerPoint para apresentar o report mensal. → F
 
 Q5 [single] O consultor deve sempre deixar claro que: ⚠️ CONFIRMAR (sem resposta marcada; a mais completa é a 3.ª opção)
-- [ ] Temos que saber a faturação mensal do cliente para gerir as expectativas dele
-- [ ] O cliente deve contar as leads, mas não precisa de perguntar a origem: o GA4 já a mostra
-- [x] O cliente deve contar as leads de cada mês e perguntar-lhes onde descobriram o negócio
+- [ ] Temos que saber a faturação mensal do cliente para gerir expectativas
+- [ ] O cliente deve fazer a contagem de leads
+- [x] O cliente deve fazer a contagem de leads por mês e perguntar de onde estas descobriram o negócio (Google, AIs, Instagram, etc.)
 - [ ] Nós fazemos a contagem de leads fechadas pelo cliente e ele não tem que se preocupar
-Explicação: O cliente conta as leads de cada mês e pergunta a cada uma onde descobriu o negócio (Google, AIs, Instagram, etc.). Só assim se ligam os resultados ao trabalho de SEO/GEO: o GA4 não sabe de onde vêm as leads que ligam ou aparecem ao balcão.
 
 Q6 [vf] O consultor deve sempre saber se o cliente está a ter uma boa taxa de conversão. → V
 
 Q7 [single] Cenário: O cliente tem bastantes leads a chegar e a taxa de conversão/fecho na receção/primeira barreira do cliente está muito baixa. Devo:
-- [ ] Apresentar ao cliente um novo roadmap, com mais conteúdos para trazer ainda mais leads
-- [ ] Dizer ao cliente que se calhar a receção tem que ser despedida, porque é aí que as leads se perdem
-- [x] Sugerir na call a nossa consultoria de vendas, orçamentá-la com a equipa interna e dar retorno rápido
-- [ ] Não tocar no assunto, porque a conversão na receção já não é trabalho do SEO
-Explicação: Uma taxa de fecho baixa na receção não se resolve com mais leads. Sugere-se na call a nossa consultoria de vendas, orçamenta-se depois com a equipa interna e dá-se retorno ao cliente o mais rápido possível.
+- [ ] Apresentar ao cliente um novo roadmap
+- [ ] Dizer ao cliente que se calhar a receção tem que ser despedida
+- [x] Sugerir na call ao cliente a nossa consultoria de vendas, orçamentar depois com a equipa interna e dar retorno ao cliente o mais rápido possível
+- [ ] Todas as anteriores estão corretas
 
 Q8 [vf] O vídeo de overview do relatório e/ou a reunião de apresentação do roadmap devem mencionar detalhes técnicos e ir fundo. → F
 
@@ -213,8 +210,8 @@ Aula 2.6 — Surprise News
 
 Q9 [single] Quais dos seguintes pode ser uma surprise news?
 - [ ] GSC 180 clicks orgânicos nos últimos 28 dias
-- [ ] Salto de 20 posições numa keyword importante
-- [ ] Mais 25% de impressões no Google Analytics
+- [ ] Salto de 20 posições para uma keyword importante para o cliente
+- [ ] Tivemos um salto de 25% nas impressões no Google Analytics
 - [x] Todas as anteriores
 
 Q10 [vf] Na mensagem de envio de surprise news para enviar no grupo com o cliente temos sempre que identificar sem falta o chefe máximo da empresa. → V
@@ -253,9 +250,9 @@ Objetivo: reagir bem quando o cliente não aprova, tem dúvidas administrativas,
 Aula 3.1 — Pedir aprovações aos clientes
 
 Q1 [single] É minha total responsabilidade como consultor de SEO:
-- [ ] (A) Avisar o cliente logo que adiciono documentos ao pending review
-- [ ] (B) Dar um reminder por mensagem 3 dias depois, se ainda não aprovou
-- [ ] (C) Ligar ao cliente se, 5 dias depois, ainda não reviu nada
+- [ ] (A) Mencionar aos meus clientes logo que adiciono novos documentos à tabela de pending review para ele aprovar
+- [ ] (B) Dar um reminder aos clientes por mensagem 3 dias depois de adicionar o documento (caso não esteja aprovado ainda)
+- [ ] (C) Ligar ao cliente para ele aprovar os documentos passados 5 dias de o cliente ainda não os ter revisto
 - [x] (D) Todas as opções anteriores
 
 Q2 [vf] É obrigatório ligar ao cliente para aprovar os documentos caso ele não esteja a responder por mensagens ou emails aos follow-ups da equipa. → V
@@ -269,10 +266,10 @@ Q3 [single] Só é obrigatório ligar ao cliente para aprovar os documentos pass
 Q4 [vf] Eu não tenho a responsabilidade de mencionar ao cliente que adicionei novos documentos para aprovação na tabela de pending review. → F
 
 Q5 [single] Numa chamada de follow-up para o cliente aprovar documentos em atraso eu devo explicar ao cliente que:
-- [ ] O atraso de documentos atrasa o roadmap, mas não mexe nos resultados de SEO
+- [ ] O atraso de documentos implica o atraso do roadmap
 - [ ] O atraso de aprovação implica o atraso das analytics do GA4 e do GSC
 - [x] O atraso de aprovações implica o atraso do roadmap e frutos de SEO/faturação
-- [ ] O atraso de aprovações suspende as próximas actions e deixa a parceria a meio gás
+- [ ] O atraso de aprovações significa que as actions que temos programadas para fazer a seguir estão suspensas e o cliente está a ter a parceria a meio gás
 
 Q6 [single] O primeiro follow-up por mensagem sobre documentação por aprovação deve ser enviado obrigatoriamente ao cliente passados quantos dias:
 - [ ] 2 dias
@@ -291,17 +288,16 @@ Q7 [single] É importante dizer ao cliente que iremos dar resposta à pergunta/p
 Q8 [single] Se não souber responder a uma questão administrativa do cliente devo sempre perguntar primeiro a quem: ⚠️ CONFIRMAR (sem resposta marcada; pela Q10 o primeiro passo é a equipa/colegas)
 - [ ] André Pavlenco
 - [ ] Alex Pavlenco
-- [x] Colega do DPT
+- [x] Colega de equipa
 - [ ] Alice Santos
 
 Q9 [vf] Um problema administrativo tem sempre resposta. → V
 
 Q10 [single] Se o meu cliente vier com uma pergunta que não sei responder, é minha total responsabilidade:
-- [x] (A) Manter a calma, dizer ao cliente que voltamos com resposta, pôr a questão à equipa do DPT no grupo e, se ninguém souber, recorrer ao André
+- [x] (A) Manter a calma, informar o cliente de que iremos retornar com uma resposta, colocar a questão à equipa do DPT no grupo e, caso nenhum colega saiba responder ou ajudar, recorrer à ajuda do André
 - [ ] (B) Manter a calma, dizer ao cliente que iremos retornar com uma resposta e encaminhar de imediato a questão ao André
 - [ ] (C) Manter a calma e responder com aquilo que me parece mais provável, confirmando depois internamente caso o cliente volte a questionar
-- [ ] (D) Explicar ao cliente que essa questão não é da minha competência e encaminhá-lo para outro departamento, sem acompanhamento posterior
-Explicação: Primeiro mantém-se a calma e diz-se ao cliente que vamos voltar com uma resposta. Depois põe-se a questão à equipa do DPT no grupo; só se nenhum colega souber responder ou ajudar é que se recorre ao André.
+- [ ] (D) Explicar ao cliente que essa questão não é da minha competência e encaminhá-lo para outro departamento, sem qualquer acompanhamento posterior
 
 Aula 3.3 — Acalmar e resolver um problema técnico
 
@@ -324,11 +320,10 @@ Q14 [single] Um cliente reporta que o formulário do site não está a enviar le
 Q15 [vf] Num problema Web, o ticket deve ser sempre criado com urgência máxima porque afeta a operação do cliente. → F
 
 Q16 [single] O cliente reporta que o Google Search Console deixou de mostrar dados corretamente e o problema é claramente da plataforma (Não Web). Devo:
-- [ ] (A) Abrir um ticket com urgência máxima, porque é um bug e trava o reporting
-- [ ] (B) Publicar no Slack Channel geral da empresa, para ver se alguém já passou pelo mesmo
-- [x] (C) Pesquisar com Claude + Net e, em paralelo, ver se o GSC tem suporte por email ou chamada
-- [ ] (D) Recorrer de imediato à equipa e pedir reunião com um colega, para não perder tempo
-Explicação: Um problema da própria plataforma (Não Web) não leva ticket nem Slack: procura-se a solução com Claude + Net e, em paralelo, verifica-se se o GSC tem plataforma de suporte por email ou chamada.
+- [ ] (A) Abrir um ticket com urgência máxima porque é um bug
+- [ ] (B) Publicar no Slack Channel geral da empresa
+- [x] (C) Procurar solução com Claude + Net e, em paralelo, verificar se o GSC tem plataforma de suporte por email ou chamada
+- [ ] (D) Recorrer imediatamente à equipa para pedir reunião com um colega
 
 Q17 [single] Ao contactar o suporte de uma plataforma externa (ex.: GSC, Meta, CRM do cliente) para resolver um problema Não Web:
 - [ ] (A) Devo tratar internamente e só avisar o cliente quando tiver resposta final do suporte
@@ -346,10 +341,9 @@ Q19 [multi] Quando recorro à equipa para me ajudar a resolver um problema técn
 
 Q20 [single] Cenário: Um cliente envia por WhatsApp "o site está em baixo, não consigo aceder a nada". Estou em reunião com outro cliente e só vejo a mensagem 15 min depois. A ação mais correta é:
 - [ ] (A) Responder logo com "Olá cliente, a solução é reiniciar o servidor, estamos a resolver enquanto falamos!" para dar resposta rápida
-- [x] (B) Estancar o cliente, perceber o problema e, como é Web + bug, abrir ticket com urgência máxima e publicar no Slack Channel
-- [ ] (C) Pedir logo reunião com um colega da equipa técnica antes de responder ao cliente, para lhe dar já a solução certa
-- [ ] (D) Ir ao Claude + ChatGPT + Net procurar a solução antes de responder, para não dar uma resposta vaga
-Explicação: Primeiro estanca-se o cliente com uma mensagem do tipo «estamos a trabalhar em resolver…» e percebe-se o problema. Site em baixo é Web + bug: abre-se ticket com urgência máxima e publica-se no Slack Channel.
+- [x] (B) Estancar com a mensagem de "estamos a trabalhar em resolver…", perceber o problema, e como é Web + bug, abrir ticket com urgência máxima e publicar no Slack Channel
+- [ ] (C) Pedir logo reunião com um colega da equipa técnica antes de responder ao cliente
+- [ ] (D) Ir ao Claude + ChatGPT + Net procurar a solução antes de responder ao cliente
 
 Aula 3.4 — Criação de tickets de web design
 
@@ -385,67 +379,60 @@ Aula 4.1 — Website SEO Audit (Parte 1)
 Q1 [vf] Antes de gerar um SEO Audit, é fundamental que o cliente já tenha o formulário de onboarding preenchido, porque a ferramenta baseia-se nas respostas do próprio cliente para trazer resultados mais alinhados com o projeto. → V
 
 Q2 [single] Antes de gerar o audit, o consultor deve verificar se as Live Tools estão a funcionar. O que acontece se alguma estiver a falhar?
-- [ ] Normalmente o audit é gerado na mesma sem alerta, e só se nota depois nos dados
-- [x] Aparece um aviso, normalmente focado na Data for SEO, de onde vem a maioria dos dados
-- [ ] A app bloqueia todo o departamento SEO até a ferramenta em falha estar restabelecida
-- [ ] O consultor tem de reiniciar a app, porque as ferramentas só ligam no arranque
-Explicação: Se alguma Live Tool estiver a falhar, aparece normalmente um aviso com foco na Data for SEO, que é a ferramenta de onde a app vai buscar a maioria dos dados.
+- [ ] O audit é gerado na mesma sem qualquer alerta
+- [x] Aparece normalmente um aviso com foco na Data for SEO, que é a ferramenta onde a app vai buscar a maioria dos dados
+- [ ] A app bloqueia todo o departamento SEO até tudo estar restabelecido
+- [ ] O consultor tem de reiniciar a app para as ferramentas voltarem a ligar
 
 Q3 [single] Cenário: Vou correr o primeiro SEO Audit de um cliente novo. Qual é a configuração mais correta?
-- [ ] Profundidade "All" + Focus "Technical Only", porque no arranque só o técnico importa
-- [x] Profundidade "All" + Focus "Everything" — visão geral primeiro, focos específicos mais tarde
-- [ ] Profundidade "Deep" com limite máximo de 10 páginas + Focus "Content Only", para ir fundo nas principais
+- [ ] Profundidade "All" + Focus "Technical Only", para ser mais rápido
+- [x] Profundidade "All" + Focus "Everything" — para pegar tudo com segurança e ter uma visão geral, deixando focos específicos para momentos posteriores do projeto
+- [ ] Profundidade "Deep" com limite máximo de 10 páginas + Focus "Content Only"
 - [ ] Profundidade "Quick" + Focus "Everything", porque a app extrapola sozinha as restantes páginas
-Explicação: No primeiro audit usa-se Profundidade "All" + Focus "Everything" para pegar tudo com segurança e ter uma visão geral; os focos específicos ficam para momentos posteriores do projeto.
 
 Q4 [multi] O campo de comentários no formulário do SEO Audit é opcional e serve para:
-- [x] Sinalizar especificidades do cliente, como uma troca recente de site ou problemas de indexação
-- [ ] Escrever a proposta comercial que vai ser enviada ao cliente junto com o audit
-- [x] Registar contexto que não está no onboarding form mas que o audit deve considerar
-- [ ] Publicar diretamente uma nota pública na homepage do cliente a avisar da auditoria
-- [ ] Definir o preço da mensalidade de SEO do cliente com base nos problemas encontrados
-Explicação: O campo de comentários dá à app contexto que o onboarding form não tem (ex.: troca recente de site, problemas de indexação conhecidos), para o audit trazer pontos mais relevantes.
+- [x] Sinalizar especificidades do cliente que ajudam a app a trazer pontos mais relevantes (ex.: troca recente de site, problemas de indexação conhecidos)
+- [ ] Escrever a proposta comercial que vai ser enviada ao cliente
+- [x] Registar contextos que não estão no onboarding form mas que valem a pena o audit considerar
+- [ ] Publicar diretamente uma nota pública na homepage do cliente
+- [ ] Definir o preço da mensalidade de SEO do cliente
 
 Q5 [vf] Uma vez gerado o audit, este devolve, entre outros, um Authority Score, dados de velocidade do site, dados de visibilidade e as keywords que o cliente já tem a rankear e que mais trazem acessos. → V
 
 Q6 [single] O overview detalhado no final do report vem por defeito em inglês. Como é que o consultor pode adaptá-lo para enviar ao cliente português?
-- [ ] Copiar o texto para o Google Translate e colar a tradução num documento à parte
-- [x] Usar o campo "Adjust Result" no fim do SEO Audit e pedir a reescrita em português de Portugal
-- [ ] Pedir ao departamento de design que traduza o PDF e o volte a paginar antes de seguir para o cliente
-- [ ] Enviar em inglês mesmo, porque os termos técnicos de SEO são todos em inglês
-Explicação: O campo "Adjust Result", no final do SEO Audit, já traz bons exemplos de pedidos, incluindo a tradução para português de Portugal, e a app reescreve tudo já traduzido.
+- [ ] Copiar o texto para o Google Translate manualmente
+- [x] Usar o campo "Adjust Result" no final do SEO Audit (que traz bons exemplos, incluindo tradução para português de Portugal) e a app reescreve tudo já traduzido
+- [ ] Pedir ao departamento de design para traduzir o PDF antes de enviar
+- [ ] Enviar em inglês mesmo, porque o cliente aceita sempre
 
 Aula 4.4 — Keyword Research (Parte 1)
 
 Q7 [vf] A Keyword Research na app da WonderAds encontra-se em Overall SEO > Keyword Research, e lê automaticamente o onboarding form do cliente para trazer informação inicial antes de o consultor preencher os campos adicionais. → V
 
 Q8 [single] Ao preencher a Keyword Research na app, o campo "Comments or Additions" serve para:
-- [ ] Adicionar só informação técnica sobre o site (velocidade, indexação, plugins), que o onboarding não cobre
-- [x] Acrescentar o que o cliente disse em conversas e não pôs no onboarding form, para reduzir alterações depois
-- [ ] Escrever o roadmap dos próximos 6 meses, para a keyword research já sair alinhada com ele
-- [ ] Deixar em branco, porque o Claude já lê tudo do onboarding form e mais texto só confunde
-Explicação: O "Comments or Additions" serve para juntar o que o cliente não pôs no onboarding form mas disse em conversas ou reuniões posteriores, para o output ficar mais próximo do que ele quer e haver menos alterações depois.
+- [ ] Adicionar apenas informação técnica sobre o site (velocidade, indexação, plugins)
+- [x] Adicionar detalhes que o cliente não colocou no onboarding form mas que surgiram em conversas/reuniões posteriores, para o output ficar mais próximo do que o cliente quer e reduzir alterações depois
+- [ ] Escrever o roadmap dos próximos 6 meses
+- [ ] Deixar em branco, porque o Claude já sabe tudo pelo onboarding form
 
 Q9 [single] Qual é o número ideal de keywords que devemos ter definidas por projeto para investir bem os recursos e alcançar resultados rápidos?
 - [ ] 10 keywords
 - [x] 25 keywords
 - [ ] 50 keywords
 - [ ] 100 keywords
-- [ ] Quantas mais, melhor
+- [ ] Não há número ideal — quantas mais, melhor
 
 Q10 [single] Nos projetos com garantias (top 3 para pelo menos 3 keywords), o que devemos fazer na hora de selecionar as keywords?
-- [ ] Escolher apenas keywords de altíssimo volume, mesmo que difíceis, porque são as que o cliente mais valoriza
-- [x] Incluir 5-6 quick wins — keywords em que o cliente já ronda o top 8-15 e que sobem com poucos ajustes
+- [ ] Escolher apenas keywords de altíssimo volume, mesmo que sejam difíceis de ranquear
+- [x] Adicionar 5-6 quick wins — keywords em que o cliente já está a rondar o top 8-15, que com alguns blog posts e alterações ao site conseguem subir posições rapidamente
 - [ ] Escolher só keywords que já estão no top 3, para garantir o cumprimento da garantia sem trabalho adicional
-- [ ] Ignorar a garantia na seleção, porque não há forma de a assegurar sem uma dose de sorte
-Explicação: Quick wins são keywords em que o cliente já anda pelo top 8-15: com alguns blog posts e alterações ao site sobem posições rapidamente, o que ajuda a cumprir a garantia de top 3 para pelo menos 3 keywords.
+- [ ] Ignorar a garantia porque não há forma de a assegurar sem sorte
 
 Q11 [single] Cenário: Estou a fazer keyword research para um cabeleireiro com salões em várias localizações. Aparece a keyword "balayage" com 8.100 pesquisas e dificuldade fácil, mas o volume está a vir maioritariamente dos Estados Unidos. Devo:
-- [ ] Adicionar "balayage" à lista mesmo assim, porque 8.100 pesquisas com dificuldade fácil é uma oportunidade rara
-- [x] Corrigir a localização no Semrush e adicionar variantes locais (ex.: "balayage Viseu") das zonas dos salões
-- [ ] Excluir a keyword sem procurar variantes, porque volume vindo dos EUA não interessa a um negócio local
-- [ ] Adicionar as duas — a original e as variantes locais — para "cobrir" ambos os públicos e somar volume
-Explicação: O volume vinha dos Estados Unidos porque a seleção de localização no Semrush estava mal. Corrige-se a localização e analisam-se variantes locais alinhadas com as localizações reais dos salões (ex.: "balayage Sesimbra", "balayage Viseu"), e são essas que entram na lista.
+- [ ] Adicionar "balayage" à lista mesmo assim, porque 8.100 pesquisas é um volume forte
+- [x] Verificar a seleção de localização no Semrush (que estava mal), analisar variantes locais como "balayage Sesimbra" ou "balayage Viseu" alinhadas com as localizações reais dos salões, e adicionar essas
+- [ ] Excluir a keyword sem procurar variantes, porque volume vindo dos EUA não interessa
+- [ ] Adicionar as duas — a original e as variantes locais — para "cobrir" ambos os públicos
 
 Q12 [multi] Sobre o fluxo correto para validar as sugestões de keywords devolvidas pelo Claude:
 - [x] Passar cada keyword sugerida pelo Semrush para ver volume real e dificuldade
@@ -453,15 +440,14 @@ Q12 [multi] Sobre o fluxo correto para validar as sugestões de keywords devolvi
 - [x] Analisar variantes de keywords no Semrush para encontrar opções semelhantes ao que o cliente quer mas mais alcançáveis
 - [x] Selecionar 30 a 40 keywords antes da revisão final (porque o cliente vai pedir para retirar/adicionar algumas até chegar às 25)
 - [ ] Confiar 100% no output do Claude e aprovar tudo em bloco sem passar pelo Semrush
-- [x] Guardar sempre o documento da keyword research, porque se volta lá para tirar ou pôr keywords a pedido do cliente
+- [x] Guardar sempre o documento da keyword research, porque o consultor vai precisar de voltar lá para adicionar/retirar keywords a pedido do cliente
 - [ ] Ignorar a localização das pesquisas do Semrush, uma vez que o volume total é o único indicador importante
 
 Q13 [single] Depois de adicionar as keywords selecionadas ao sistema (com a possibilidade de guardar variantes junto de cada uma), o próximo passo é:
-- [ ] Publicar diretamente no site do cliente as páginas otimizadas para essas keywords, para ganhar tempo
-- [x] Clicar em Aprovar, que as envia para a tabela Pending Review, onde o cliente comenta ou pede alterações
-- [ ] Enviar por email ao cliente um PDF com a lista, para ele imprimir, assinar e devolver
-- [ ] Guardar internamente sem partilhar até à próxima reunião mensal, para apresentar tudo de uma vez
-Explicação: Ao clicar em Aprovar, as keywords seguem automaticamente para a tabela Pending Review, onde o cliente pode deixar comentários ou pedir alterações.
+- [ ] Publicar diretamente no site do cliente as páginas otimizadas para essas keywords
+- [x] Clicar em Aprovar, o que envia automaticamente para a tabela Pending Review para o cliente poder deixar comentários ou pedir alterações
+- [ ] Enviar por email ao cliente um PDF com a lista, esperando que ele imprima e assine
+- [ ] Guardar internamente sem partilhar até à próxima reunião mensal
 
 Aula 4.5 — Keyword Research (Parte 2)
 
@@ -473,78 +459,71 @@ Q14 [single] O número de keywords a selecionar para o foco do projeto depende d
 
 Q15 [single] Porque é que o número de keywords não deve exceder as médias definidas por tipo de projeto (Light/Core/Growth)?
 - [ ] Porque o Google penaliza sites que tentam ranquear para muitas keywords ao mesmo tempo
-- [x] Porque reflete as horas de trabalho que cada projeto tem disponíveis
+- [x] Porque o número está alinhado com as horas de trabalho disponíveis para cada projeto, garantindo foco e entrega real
 - [ ] Porque o Semrush não deixa monitorizar mais do que 25 keywords em simultâneo
-- [ ] Porque o cliente paga por keyword monitorizada e acima disso a fatura sobe
-Explicação: O número de keywords por tipo de projeto (Light/Core/Growth) está alinhado com as horas de trabalho disponíveis para cada projeto, o que garante foco e entrega real.
+- [ ] Porque o cliente paga por keyword monitorizada
 
 Q16 [single] Cenário: Estou a fazer a Keyword Research de um cliente novo em Vila Nova de Gaia. O onboarding form já foi lido automaticamente pela app, mas o cliente reforçou 3 keywords prioritárias por WhatsApp e, em conversa, disse que quer priorizar um serviço específico como venda interna. Devo:
-- [ ] Ignorar a informação do WhatsApp, porque não está no onboarding form oficial que a app já leu
-- [x] Reforçar as 3 keywords no Additional Focus, com Geotarget em Porto, todas as intenções ativas e comentários sobre a venda interna
+- [ ] Ignorar a informação do WhatsApp porque não está no onboarding form oficial
+- [x] Reforçar as keywords prioritárias no campo Additional Focus, definir o Geotarget para Porto, deixar todas as intenções de pesquisa ativas e adicionar comentários alinhados com o foco de venda interna do cliente antes de gerar
 - [ ] Definir Geotarget para Portugal inteiro para "cobrir mais chão", e ignorar o serviço que o cliente quer priorizar internamente
 - [ ] Gerar primeiro sem preencher nada e só depois ajustar os campos, para comparar os dois outputs
-Explicação: Tudo o que o cliente reforçou fora do onboarding form entra antes de gerar: as keywords prioritárias no campo Additional Focus, o Geotarget em Porto, todas as intenções de pesquisa ativas e comentários alinhados com o foco de venda interna do cliente.
 
 Q17 [single] Uma vez selecionadas as keywords no report e enviadas para aprovação (Pending Review), o passo seguinte, depois da validação do cliente, é:
-- [ ] Publicar automaticamente as páginas otimizadas para essas keywords, já que o cliente as validou
-- [x] Selecionar as keywords aprovadas e clicar em "Send it to Track" para passarem a ser monitorizadas
-- [ ] Enviar as keywords ao cliente por email para ele as monitorizar à mão no Google
+- [ ] Publicar automaticamente as páginas otimizadas para essas keywords
+- [x] Selecionar as keywords aprovadas e clicar em "Send it to Track", para começarem a ser monitorizadas como as palavras-chave de foco do projeto de SEO
+- [ ] Enviar as keywords ao cliente por email para ele monitorizar manualmente
 - [ ] Guardar as keywords localmente e revisitar apenas na renovação daí a 6 meses
-Explicação: Depois da validação do cliente, selecionam-se as keywords aprovadas e clica-se em "Send it to Track": passam a ser monitorizadas como as palavras-chave de foco do projeto de SEO.
 
 Q18 [vf] A seleção de keywords feita agora é definitiva até ao fim do contrato e não pode ser revisitada, para manter a consistência da estratégia. → F
 
 Aula 4.6 — Keyword Research (Parte 3 — Semrush)
 
 Q19 [single] Cenário: Estou a analisar um cliente novo (Medway) no Semrush pela primeira vez. Depois de meter o domínio, qual é o primeiro cuidado que devo ter antes de olhar para os dados?
-- [ ] Escolher a base de dados global, para ter a maior amostra possível de keywords e concorrentes
-- [x] Definir o país do cliente (ex.: Portugal) antes do search, para dados representativos
+- [ ] Escolher a base de dados global, para ter a maior amostra possível de keywords
+- [x] Definir a localização do país do cliente (ex.: Portugal) antes de fazer o search, para os dados serem representativos
 - [ ] Ignorar a localização, porque o Semrush deteta automaticamente pela extensão .pt do domínio
-- [ ] Meter a localização do concorrente principal, para comparar os dois diretamente
-Explicação: Antes de fazer o search define-se a localização do país do cliente (ex.: Portugal); sem isso, os dados não representam o mercado onde o cliente trabalha.
+- [ ] Meter a localização do concorrente principal, para comparar diretamente
 
-Q20 [single] Um cliente quer saber para que pesquisas aparecia no Google em março do ano passado e como isso evoluiu até hoje. No Semrush, onde vais buscar essa informação?
+Q20 [single] Dentro do Domain Overview do Semrush, para ver o histórico de posições orgânicas do cliente ao longo do tempo, o consultor deve ir a:
 - [ ] Backlinks > Referring Domains
 - [x] Organic Rankings > Positions
 - [ ] Traffic Analytics > Sources
-- [ ] Keyword Magic Tool > Phrase Match
-Explicação: Em Organic Rankings > Positions, o gráfico de barras mostra o histórico dos últimos meses (6 meses, 1 ou 2 anos) e, ao clicar num mês, aparecem as keywords em que o cliente estava a rankear nesse mês. O Keyword Magic Tool explora ideias à volta de uma keyword; não mostra o histórico de um domínio.
+- [ ] Site Audit > Issues
 
-Q21 [vf] No Semrush, o gráfico de barras do histórico do domínio permite recuar vários meses (ex.: até 6 meses, 1 ou 2 anos) e, ao clicar num mês específico, mostra as keywords que estavam a rankear nesse mês. → V
+Q21 [vf] O gráfico de barras em Organic Rankings > Positions permite navegar pelo histórico dos últimos meses (ex.: até 6 meses, 1 ou 2 anos) e ao clicar num mês específico mostra as keywords que estavam a rankear nesse mês. → V
 
-Q22 [single] No Semrush, na lista de keywords em que o domínio do cliente rankeia, algumas aparecem sem posição atribuída, com um símbolo de estrela de quatro pontas. O que representam essas keywords?
-- [ ] Keywords que o Semrush ainda não processou e que ficam sem posição até à próxima atualização
-- [ ] Keywords bloqueadas pelo Google por serem sensíveis (saúde, apostas, finanças)
-- [x] Respostas em IA — keywords em que o cliente pode estar a aparecer em respostas geradas por AI
-- [ ] Keywords que o cliente comprou em Google Ads e que por isso não têm posição orgânica
-- [ ] Keywords em que o cliente aparece em 1.º no Google Maps (GMB), fora do ranking orgânico
+Q22 [single] Na aba Organic Rankings > Positions, algumas keywords aparecem sem posição atribuída, com um símbolo específico de uma estrela de quatro pontas. O que representam essas keywords?
+- [ ] Keywords que o Semrush ainda não conseguiu processar
+- [ ] Keywords bloqueadas pelo Google por serem sensíveis
+- [x] Respostas em IA — keywords para as quais o cliente pode estar a aparecer em respostas geradas por AI
+- [ ] Keywords que o cliente comprou em Google Ads
+- [ ] Keywords em que o cliente aparece em 1.º no Google Maps (GMB)
 
 Q23 [single] Cenário: Estou a analisar o Organic Rankings do Medway. Quero encontrar oportunidades rápidas para o cliente (quick wins). Uma tática eficaz é:
-- [ ] Filtrar por posições 1 a 3 para ver onde já estamos bem e reforçar antes que um concorrente nos passe
-- [x] Filtrar por posições 11 a 20 — 2.ª página do Google, de onde se passa à 1.ª com pouco trabalho
-- [ ] Filtrar por posições 50+, porque é aí que ainda há mais espaço de crescimento
-- [ ] Filtrar apenas as keywords com volume acima de 10.000, porque é aí que está o tráfego
-Explicação: As posições 11 a 20 são a 2.ª página do Google: com pouco trabalho, essas keywords conseguem passar para a 1.ª página.
+- [ ] Filtrar por posições 1 a 3 para ver onde já estamos bem e reforçar
+- [x] Filtrar por posições 11 a 20 — keywords que estão na 2.ª página do Google e que com pouco trabalho conseguem passar para a 1.ª página
+- [ ] Filtrar por posições 50+ para atacar o que ainda tem espaço de crescimento
+- [ ] Filtrar apenas as keywords com volume acima de 10.000
 
-Q24 [single] O consultor está a enriquecer a lista do cliente e quer partir de um termo (ex.: "Invisalign") para descobrir variações e ideias novas. Qual ferramenta do Semrush deve usar?
+Q24 [single] O consultor está a validar/enriquecer a lista de keywords do cliente e quer explorar variações e ideias novas em torno de uma keyword específica (ex.: "Invisalign"). Qual ferramenta do Semrush deve usar?
 - [ ] Backlink Analytics
 - [ ] Site Audit
 - [x] Keyword Magic Tool
 - [ ] Position Tracking
 
 Q25 [single] O que devolve o filtro Phrase Match dentro do Keyword Magic Tool, e porque é útil?
-- [ ] Devolve apenas a frase exata pesquisada, sem variações — útil para medir o volume real
-- [x] Devolve keywords que contêm a frase, muitas vezes long tail: menos volume, mas intenção mais clara
-- [ ] Devolve apenas keywords em inglês, mesmo com o país definido como Portugal, para comparar mercados
-- [ ] Devolve as keywords onde o cliente aparece em 1.º lugar no Google, para saber o que proteger
-Explicação: O Phrase Match devolve keywords que contêm a frase pesquisada, muitas vezes long tail e mais fundo de funil: menos volume, mas de pessoas que já pesquisam com intenção mais clara. Pode ser usado, por exemplo, para blogs.
+- [ ] Devolve apenas a keyword exata pesquisada, sem variações — útil para medir volume real
+- [x] Devolve keywords que contêm a frase pesquisada, muitas vezes long tail e mais fundo de funil, com menos volume mas de pessoas que já estão a pesquisar com intenção mais clara (pode ser usado para blogs por exemplo)
+- [ ] Devolve apenas keywords em inglês, mesmo que o país esteja definido como Portugal
+- [ ] Devolve as keywords onde o cliente aparece em 1.º lugar no Google
 
 Q26 [multi] Quais são as 3 ferramentas do Semrush recomendadas para trabalhar a keyword research de um cliente?
 - [x] Keyword Magic Tool
 - [x] Domain Overview
 - [x] Organic Rankings (Positions)
 - [ ] Backlink Gap Analysis
-- [ ] Site Audit (Issues)
+- [ ] Site Audit
 - [ ] Social Media Poster
 
 Aula 4.3 — Website Audit via Screaming Frog
@@ -552,26 +531,23 @@ Aula 4.3 — Website Audit via Screaming Frog
 Q27 [vf] Correr o Screaming Frog nos projetos — a olhar para os erros, os links internos e os links externos — fica ao critério de cada consultor, conforme o tempo que tiver. → F
 
 Q28 [single] Cenário: No separador External do Screaming Frog, encontro no site de uma clínica cliente um link para um site de apostas que ninguém se lembra de ter colocado. Qual é a abordagem mais correta?
-- [ ] Remover o link e seguir em frente; se já não está no site, não vale a pena alarmar ninguém
-- [ ] Avisar a gestão de imediato, antes de verificar mais nada, porque quanto mais cedo souberem melhor
-- [x] Descobrir a origem e procurar outros links estranhos; só depois avisar a gestão, com tudo na mão
-- [ ] Esperar pelo rastreio do mês seguinte para confirmar se o link continua lá antes de agir
-Explicação: Primeiro descobre-se a origem: histórico de revisões no WordPress, perguntar à equipa, ver se vem de um plugin ou do tema. Se não houver explicação, vê-se Segurança e ações manuais no Search Console e volta-se a correr o rastreio à procura de outros links estranhos. Só então se avisa a gestão, com tudo na mão. Apagar e esquecer pode esconder um site comprometido, e avisar sem verificar nada leva à gestão um alarme sem informação.
+- [ ] Remover o link e seguir em frente — não vale a pena falar disso a ninguém
+- [ ] Avisar a gestão de imediato, antes de verificar mais nada
+- [x] Descobrir a origem (histórico de revisões no WordPress, perguntar à equipa, ver se vem de um plugin ou do tema); se não houver explicação, ver Segurança e ações manuais no Search Console e voltar a correr o rastreio à procura de outros links estranhos — e só então avisar a gestão, com tudo na mão
+- [ ] Esperar pelo rastreio do mês seguinte para confirmar se o link continua lá
 
 Q29 [single] Encontrei um erro 404 em Response Codes > Client Error (4xx). Como descubro em que página tenho de ir corrigir?
-- [ ] Pesquisar o URL no Google para ver que páginas do site o mencionam
-- [x] Clicar na linha desse URL e abrir, no painel de baixo, o separador Inlinks
-- [ ] Ver o resumo do lado direito, que lista a página de origem de cada erro encontrado
-- [ ] Não dá para ver no Screaming Frog; é preciso ir ao Semrush ver os links internos
-Explicação: No painel de baixo, o separador dos links (Inlinks) mostra de que páginas saem os links para o URL com erro; é nessas páginas que se corrige o link.
+- [ ] Pesquisando o URL no Google
+- [x] Clicando na linha desse URL e abrindo, no painel de baixo, o separador dos links (Inlinks), que mostra de que páginas saem os links para esse endereço
+- [ ] No resumo do lado direito, que lista a página de origem de cada erro
+- [ ] Não dá para ver no Screaming Frog; é preciso o Semrush
 
 Q30 [multi] Em Page Titles e Meta Description, que filtros se verificam?
-- [x] Missing (título ou descrição em falta)
-- [x] Duplicate (iguais noutras páginas)
-- [x] Over 60 characters nos títulos e over 155 nas descrições
-- [ ] Under 10 words (títulos com poucas palavras)
-- [ ] Contains emoji (emojis no título ou na descrição)
-Explicação: Os filtros a verificar são Missing, Duplicate e Over 60 characters (títulos) / Over 155 characters (descrições): acima disso, o Google corta o texto nos resultados.
+- [x] Missing (em falta)
+- [x] Duplicate (duplicados)
+- [x] Over 60 characters nos títulos e over 155 characters nas descrições (cortados pelo Google)
+- [ ] Under 10 words
+- [ ] Contains emoji
 
 Q31 [vf] Um ícone ou uma imagem decorativa não precisa de texto alternativo descritivo, mas deve ter o atributo alt vazio no código — senão aparece como «Missing Alt Text» no Screaming Frog. → V
 
@@ -581,17 +557,15 @@ Q33 [vf] Na versão gratuita do Screaming Frog o rastreio fica guardado, por iss
 
 Q34 [single] Cenário: O rastreio parou nos 500 endereços (o limite da versão gratuita) e a maior parte são imagens, CSS e JavaScript, não páginas. O que se faz? ⚠️ CONFIRMAR (no vídeo ouve-se «site audit web tools» — assumido Site Audit do Ahrefs Webmaster Tools)
 - [ ] Assume-se que o resto do site está bem, porque os erros graves aparecem sempre primeiro
-- [x] Rastreia-se por pastas (ex.: /pt/) e, se não chegar, usa-se o Site Audit do Ahrefs Webmaster Tools
-- [ ] Usa-se o modo List com os primeiros 500 URLs e dá-se o site por auditado, porque o resto é igual
-- [ ] Reduz-se a auditoria à homepage e às páginas de serviço, que são as que contam para o SEO
-Explicação: Rastreia-se por partes (o endereço com a pasta, ex.: /pt/); se mesmo assim não chegar, usa-se o Site Audit do Ahrefs Webmaster Tools, gratuito e sem esse limite. O que não foi rastreado não foi verificado.
+- [x] Rastreia-se por partes (o endereço com a pasta, ex.: /pt/) e, se mesmo assim não chegar, usa-se o Site Audit do Ahrefs Webmaster Tools, gratuito e sem esse limite — o que não foi rastreado não foi verificado
+- [ ] Usa-se o modo List com os primeiros 500 URLs e dá-se o site por auditado
+- [ ] Reduz-se a auditoria à homepage e às páginas de serviço
 
 Q35 [single] Com que frequência se faz o rastreio completo de cada projeto?
-- [ ] Uma vez por ano, na renovação do contrato, para preparar a proposta seguinte
-- [ ] Só quando o cliente se queixa de alguma coisa, para não gastar horas do projeto
-- [x] Uma vez por mês (no máximo, de 2 em 2 meses) e sempre após uma mudança grande no site
-- [ ] Todas as semanas, com o Weekly Report, para apanhar os erros a tempo
-Explicação: O rastreio completo faz-se uma vez por mês (no máximo de dois em dois meses) e sempre depois de uma mudança grande no site: migração, tema novo, plugin novo, uma queda resolvida.
+- [ ] Uma vez por ano, na renovação do contrato
+- [ ] Só quando o cliente se queixa de alguma coisa
+- [x] Uma vez por mês (no máximo de dois em dois meses) e sempre depois de uma mudança grande no site — migração, tema novo, plugin novo, uma queda resolvida
+- [ ] Todas as semanas, com o Weekly Report
 
 Sem perguntas: aula 4.2.
 
@@ -657,11 +631,10 @@ Q11 [multi] Antes ou durante a construção do roadmap de um cliente novo, é mi
 Q12 [vf] O roadmap de GEO (Generative Engine Optimization) é opcional e só deve ser feito se o cliente pedir especificamente para aparecer em ChatGPT, Perplexity ou outras AIs. → F
 
 Q13 [single] Cenário: Vou fazer o roadmap de um cliente novo de uma clínica dentária no Porto. Devo:
-- [ ] (A) Definir logo 50 target keywords, para cobrir todos os tratamentos da clínica desde o início
-- [x] (B) Começar pelo onboarding form, keyword research (SEO e AIs) e concorrentes locais, e só depois as ações mensais
+- [ ] (A) Definir logo 50 target keywords
+- [x] (B) Analisar onboarding form, fazer keyword research (SEO + prompts em AIs via Searchable), estudar concorrentes locais, definir target keywords com o cliente, e só depois estruturar ações mensais com priorização
 - [ ] (C) Focar apenas em backlinks nos primeiros 3 meses porque é o que dá resultado mais rápido em grandes cidades
 - [ ] (D) Copiar o roadmap de outra clínica dentária no Porto que já tenho na carteira e ajustar o nome
-Explicação: Primeiro analisa-se o onboarding form, faz-se a keyword research (SEO + prompts em AIs via Searchable), estudam-se os concorrentes locais e definem-se as target keywords com o cliente; só depois se estruturam as ações mensais, com priorização.
 
 Q14 [vf] No roadmap devo sempre priorizar as ações que trazem quick wins nos primeiros meses (ex.: otimização de páginas já existentes, GMB, correções técnicas) antes de partir para ações de longo prazo como blog em massa e link building agressivo. → V
 
@@ -689,7 +662,7 @@ Q20 [vf] A keyword research pode ser deixada para ser feita ao vivo com o client
 Q21 [single] Qual destes acessos NÃO faz parte da lista obrigatória que devemos pedir e registar na app caso o cliente ainda não tenha fornecido?
 - [ ] Acesso ao Site Cliente
 - [ ] Acesso ao GMB Cliente
-- [x] Acesso à CRM Cliente
+- [x] Acesso à CRM do Cliente
 - [ ] Acesso ao GA4 Cliente
 - [ ] Acesso ao GSC Cliente
 
@@ -699,9 +672,9 @@ Q22 [multi] Quais são os acessos e materiais que devemos pedir e registar na ap
 - [x] Acesso GA4 Cliente
 - [x] Acesso GSC Cliente
 - [x] Fotos/Materiais
-- [ ] Acesso Instagram/Facebook Cliente
-- [ ] Acesso Conta Bancária Cliente
-- [ ] Acesso Registrar Domínio Cliente
+- [ ] Acesso ao Instagram e Facebook do cliente
+- [ ] Acesso à conta bancária do cliente para faturação
+- [ ] Palavra-passe do domínio no registrar
 
 Q23 [vf] As Fotos/Materiais do cliente são opcionais de pedir no arranque do projeto, uma vez que podemos sempre gerar imagens via IA e recorrer a bancos de imagens da internet (Envato Elements). → F
 
@@ -736,19 +709,17 @@ Q29 [vf] Os Do's, Dont's e Notes só precisam de estar preenchidos depois da onb
 
 Q30 [single] Cenário: Tenho reunião de onboarding com um cliente novo daqui a 3 dias. O cliente ainda não me enviou os acessos ao GMB nem ao GA4, e eu ainda não fiz keyword research. Devo:
 - [ ] Ir para a reunião assim mesmo e pedir os acessos + falar sobre keywords ao vivo com o cliente, para poupar tempo
-- [ ] Adiar a reunião de onboarding até o cliente enviar todos os acessos em falta, para não ir com trabalho a meio
-- [x] Pedir já os acessos em falta (e registá-los na app) e fazer a keyword research antes da reunião, com o resto pronto
+- [ ] Adiar a reunião de onboarding até o cliente enviar todos os acessos em falta
+- [x] Pedir imediatamente os acessos em falta e registá-los na app assim que chegarem; fazer a keyword research antes da reunião; ter Do's/Dont's/Notes, Site Audit e Roadmap Client prontos para rever na reunião
 - [ ] Fazer uma keyword research superficial só com base nas keywords óbvias do site e apresentar o resto no primeiro weekly report
-Explicação: Os acessos em falta pedem-se já e registam-se na app assim que chegarem; a keyword research faz-se antes da reunião, e Do's/Dont's/Notes, Site Audit e Roadmap Client têm de estar prontos para rever na reunião.
 
 Q31 [vf] Na onboarding call podemos deixar claro que o cliente pode responder às nossas aprovações quando lhe for conveniente, desde que garanta pelo menos uma resposta por mês. → F
 
 Q32 [single] Cenário: Estou a preparar a onboarding call de um cliente novo de uma clínica dentária. Já tenho o Site Audit e o Roadmap Client prontos, mas ainda não preenchi os Do's/Dont's/Notes nem fiz keyword research. Devo:
 - [ ] Ir para a reunião com o que tenho, uma vez que Site Audit e Roadmap são os dois documentos que estruturam a call
-- [x] Preencher os Do's/Dont's/Notes com base no onboarding form e fazer a keyword research antes da reunião
+- [x] Preencher os Do's/Dont's/Notes com base no onboarding form do cliente + fazer keyword research alinhada com o nicho antes da reunião — os 4 documentos (Do's/Dont's/Notes, Site Audit, Keyword Research, Roadmap Client) têm que estar prontos para rever
 - [ ] Fazer apenas a keyword research; os Do's/Dont's/Notes podem ser preenchidos ao longo do primeiro mês de parceria
 - [ ] Pedir ao cliente para ele próprio começar a reunião a preencher os Do's/Dont's/Notes connosco em direto
-Explicação: Os 4 documentos (Do's/Dont's/Notes, Site Audit, Keyword Research, Roadmap Client) têm de estar prontos para rever na reunião; os Do's/Dont's/Notes preenchem-se com base no onboarding form do cliente.
 
 Aula 5.4 — Setup de cliente novo no Searchable (Parte 1)
 
@@ -758,19 +729,19 @@ Q33 [multi] Quais destes campos são obrigatórios no setup do Searchable?
 - [x] Onboarding Form Uploaded
 - [x] Competidores
 - [x] Zona Regional do Business
-- [ ] Cor preferida do logotipo
-- [ ] Animal de estimação do CEO
-- [ ] Fuso horário do gestor
-- [ ] Palavra-passe do Instagram
+- [ ] Cor preferida do logotipo do cliente
+- [ ] Nome do animal de estimação do CEO
+- [ ] Fuso horário do gestor de conta
+- [ ] Palavra-passe do Instagram do cliente
 
 Q34 [multi] Quais destes passos fazem parte do fluxo correto de setup?
 - [x] Fazer upload do onboarding form antes de configurar campos
 - [x] Preencher Tom de Voz com base no material do cliente
 - [x] Validar competidores com o cliente antes de guardar
 - [x] Definir Zona Regional do Business
-- [ ] Ativar o Searchable sem preencher memória, que ele aprende sozinho com o uso
-- [ ] Copiar o setup de outro cliente do mesmo nicho sem adaptar, para poupar tempo
-- [x] Confirmar os campos obrigatórios antes de dar o setup por concluído
+- [ ] Ativar o Searchable sem preencher memória
+- [ ] Copiar o setup de outro cliente sem adaptar
+- [x] Confirmar que todos os campos obrigatórios estão preenchidos antes de dar o setup como concluído
 
 Q35 [vf] O Searchable tem que ser sempre preenchido e é obrigatório ter setup e ativo para todos os meus projetos. → V
 
@@ -780,8 +751,8 @@ Q37 [multi] O que acontece se o Searchable for usado num projeto sem estar corre
 - [x] O output pode não refletir o tom do cliente
 - [x] Podem aparecer referências a competidores errados ou inexistentes
 - [x] A comunicação pode falhar culturalmente para a região do cliente
-- [ ] O Searchable corrige-se sozinho com o tempo, à medida que gera mais conteúdo
-- [ ] O cliente não nota diferença nenhuma, porque revê e aprova tudo antes de publicar
+- [ ] O Searchable corrige-se automaticamente sozinho
+- [ ] O cliente não nota diferença nenhuma
 - [x] Perde-se consistência entre entregas do mesmo projeto
 
 Sem perguntas: aula 5.5 (GA4).
@@ -813,7 +784,7 @@ Q3 [single] Qual é o intervalo de caracteres recomendado para o H1 (título da 
 - [ ] 50 a 60 caracteres
 - [x] 60 a 70 caracteres
 - [ ] 70 a 90 caracteres
-- [ ] Sem limite, se tiver as target keywords
+- [ ] Não há limite, desde que contenha as target keywords
 
 Q4 [multi] Sobre as keywords e estrutura dos headers, seleciona todas as afirmações corretas:
 - [x] O H1 deve conter keywords para chamar a atenção
@@ -824,11 +795,10 @@ Q4 [multi] Sobre as keywords e estrutura dos headers, seleciona todas as afirma�
 - [ ] Os H1 devem ser sempre mais curtos que os H3 para não distrair o leitor
 
 Q5 [single] Cenário: Estou a montar uma página nova para um cliente e a estrutura atual é: 1x H1 → 3x H2 → dentro do 2.º H2 salto para 2x H4 (sem H3) → depois um H2 final. A extensão Detailed SEO confirma esta contagem. Devo:
-- [ ] Manter assim, porque o que conta é haver um só H1; a ordem dos H2 a H6 é apenas visual
-- [x] Corrigir a hierarquia: os H4 passam a H3 (ou ganham um H3 antes), porque não se saltam níveis
-- [ ] Transformar os H4 em H2 para "elevar" esses subtemas e dar-lhes mais peso aos olhos do Google
-- [ ] Adicionar um segundo H1 antes dos H4, para o salto de nível ficar justificado por uma nova secção
-Explicação: Os headers seguem uma hierarquia sem saltos: dentro de um H2, o nível seguinte é sempre H3. Os H4 do 2.º H2 têm de passar a H3 (ou ser precedidos por um H3), e a página mantém um único H1.
+- [ ] Manter assim, porque o importante é que haja apenas um H1 e que os subtítulos existam
+- [x] Corrigir a hierarquia: os H4 dentro do 2.º H2 têm que passar a H3 (ou ser precedidos por um H3), porque não se pode saltar níveis na hierarquia de headers
+- [ ] Transformar os H4 em H2 para "elevar" a importância desses subtemas
+- [ ] Adicionar um segundo H1 antes dos H4 para justificar o salto de nível
 
 Q6 [vf] Para gerar a estrutura de headers de uma página nova, o consultor deve usar a action própria da APP da WonderAds em vez de escrever os headers manualmente à mão a partir do zero. → V
 
@@ -841,14 +811,14 @@ Q8 [single] Qual é o limite de caracteres recomendado para o meta title?
 - [x] Até 60 caracteres
 - [ ] Entre 90 a 110 caracteres
 - [ ] Entre 150 a 160 caracteres
-- [ ] Sem limite, se tiver a keyword principal
+- [ ] Não há limite, desde que contenha a keyword principal
 
 Q9 [single] Qual é o intervalo de caracteres recomendado para a meta description?
 - [ ] 30 a 60 caracteres
 - [ ] 60 a 90 caracteres
 - [ ] 100 a 130 caracteres
 - [x] 150 a 160 caracteres
-- [ ] Mais de 200 caracteres, para dar contexto
+- [ ] Acima de 200 caracteres, para dar mais contexto ao Google
 
 Q10 [multi] Sobre boas práticas de meta titles e descriptions, seleciona todas as afirmações corretas:
 - [x] A keyword principal deve estar no começo do meta title
@@ -859,11 +829,10 @@ Q10 [multi] Sobre boas práticas de meta titles e descriptions, seleciona todas 
 - [ ] A meta description tem que estar visível dentro do corpo da página, no início do primeiro parágrafo
 
 Q11 [single] Cenário: Vou criar/otimizar os meta titles e descriptions de um cliente novo, uma clínica dentária cujo foco principal é implantologia. Devo:
-- [ ] Escrever os metas à mão, página a página, porque numa clínica o texto gerado pela app sai demasiado genérico
-- [x] Gerar na action "MetaTitles e MetaDescriptions" da app, com o URL, 10/25/50 páginas e o focus word "implantologia"
-- [ ] Pedir ao cliente que escreva ele próprio os metas, porque conhece os tratamentos e assim aprova à primeira
-- [ ] Copiar os metas do concorrente que está em 1.º lugar para "implantologia" e trocar apenas o nome da clínica
-Explicação: Os metas geram-se na app: departamento SEO → cliente → click actions → tab "MetaTitles e MetaDescriptions", inserir o URL, escolher a quantidade de páginas a otimizar (10/25/50) e o focus word do cliente (aqui, "implantologia") para gerar.
+- [ ] Escrever os metas manualmente à mão para cada página, para garantir qualidade
+- [x] Ir ao departamento SEO na app → cliente → click actions → tab "MetaTitles e MetaDescriptions", inserir o URL, escolher a quantidade de páginas a otimizar (10/25/50) e o focus word "implantologia" para gerar
+- [ ] Pedir ao cliente que ele próprio escreva os meta titles e descriptions
+- [ ] Copiar os meta titles e descriptions do concorrente principal do cliente e adaptar o nome
 
 Q12 [vf] O meta title e a meta description são conteúdos que ficam dentro do `<head>` da página, não visíveis no corpo da página, mas que o Google e o utilizador leem antes de clicarem no resultado da pesquisa. → V
 
@@ -882,29 +851,26 @@ Q14 [multi] Para que serve o alt text?
 Q15 [vf] O alt text deve conter apenas a keyword primária da página, sem descrição, para não diluir o ranqueamento. → F
 
 Q16 [single] Cenário: Estou a otimizar as imagens de uma página de serviço "Cirurgia à Ciática" de uma clínica de coluna. Uma das imagens mostra o Dr. em consulta com um paciente a apontar para uma zona lombar num modelo anatómico. O alt text mais correto é:
-- [ ] "imagem1.jpg" (manter o nome do ficheiro, que o Google já associa à página)
-- [ ] "ciatica ciatica cirurgia ciatica coluna ciatica" (repetir a keyword para reforçar)
+- [ ] "imagem1.jpg"
+- [ ] "ciatica ciatica cirurgia ciatica coluna ciatica" (packed com a keyword)
 - [x] "Médico especialista a explicar cirurgia à ciática a paciente em consulta na clínica"
-- [ ] "Foto profissional tirada no consultório" (descrição neutra, sem keyword, para não parecer spam)
-Explicação: O alt text deve descrever o que a imagem mostra e incluir a keyword da página quando faz sentido, sem a repetir. Nomes de ficheiro e listas de keywords não servem a acessibilidade nem ajudam o Google a perceber a imagem.
+- [ ] "Foto profissional tirada no consultório" (descrição sem keyword)
 
 Q17 [single] Qual é a melhor forma de verificar rapidamente o alt text de uma imagem específica numa página?
-- [ ] Ir ao GA4, abrir o relatório da página e filtrar os eventos por imagens
-- [x] Clicar com o botão direito na imagem → Inspecionar e ler o atributo alt no HTML
-- [ ] Fazer download da imagem e ver o campo de descrição nas propriedades do ficheiro
-- [ ] Perguntar ao cliente que alt text definiu quando carregou a imagem no site
-Explicação: O alt text é um atributo do HTML da página (alt="…"), por isso a forma mais rápida de o confirmar é inspecionar a imagem no browser. Não fica nos metadados do ficheiro nem no GA4.
+- [ ] Ir ao GA4 e filtrar por imagens
+- [x] Clicar com o botão direito na imagem → Inspecionar, e ler o atributo alt no código HTML
+- [ ] Fazer download da imagem e ver as propriedades no computador
+- [ ] Perguntar ao cliente qual foi o alt text que ele definiu no upload
 
 Q18 [vf] Numa imagem meramente decorativa/genérica (ex.: um selo ou ícone que não tem relação direta com um serviço específico), é boa prática forçar sempre uma keyword da página no alt text, mesmo que fique fora de contexto. → F
 
 Aula 6.4 — Internal Linking
 
 Q19 [single] O que é um link interno?
-- [ ] Um link de outro site que aponta para o site do cliente, como uma menção num diretório
-- [x] Um link entre páginas do mesmo site (de tópico para tópico ou para a homepage)
+- [ ] Um link de outro site externo que aponta para o site do cliente
+- [x] Um link entre páginas do mesmo site (categoria para categoria, tópico para tópico, ou para a homepage)
 - [ ] Um link partilhado nas redes sociais do cliente que direciona para o site
-- [ ] Um link no rodapé do site do cliente que aponta para o site da agência que o desenvolveu
-Explicação: Link interno é qualquer link entre páginas do mesmo site: categoria para categoria, tópico para tópico ou para a homepage. Links que vêm de outros sites são backlinks; links que saem para outros sites são externos.
+- [ ] Um link no rodapé que aponta para o site do web designer
 
 Q20 [multi] Para que servem os links internos?
 - [x] Distribuir a autoridade do site pelas várias páginas
@@ -917,11 +883,10 @@ Q20 [multi] Para que servem os links internos?
 Q21 [vf] Os links internos devem ser feitos exclusivamente da homepage para as páginas internas, nunca entre páginas de serviços do mesmo nível. → F
 
 Q22 [single] Cenário: Estou a otimizar a página do serviço "Implantologia" de uma clínica dentária. No final da página quero adicionar internal linking. A abordagem mais correta é:
-- [ ] Adicionar links para todas as páginas do site, incluindo "Política de Privacidade", para o Google rastrear tudo a partir dali
-- [x] Linkar tratamentos relacionados (ex.: "Cirurgia Oral", "Estética Dentária") e a página "Agendar Consulta", em botão ou no texto
+- [ ] Adicionar links para todas as páginas do site, incluindo "Política de Privacidade" e "Termos e Condições"
+- [x] Adicionar links para outros tratamentos relacionados (ex.: "Cirurgia Oral", "Estética Dentária") e para a página "Agendar Consulta", em formato de botão ou dentro do texto
 - [ ] Não adicionar internal links no final da página, uma vez que podem fazer o utilizador sair antes de chegar ao CTA
 - [ ] Adicionar links apenas para páginas de blogs, nunca para outras páginas de serviço, para evitar canibalização
-Explicação: O internal linking no fim da página deve levar a conteúdos relacionados (outros tratamentos) e ao passo de conversão ("Agendar Consulta"), em formato de botão ou dentro do texto. Páginas legais não acrescentam nada, e linkar entre serviços relacionados é boa prática.
 
 Q23 [vf] Os links internos só podem ser inseridos em formato de botão no final da página; não é boa prática colocá-los diretamente dentro do texto/parágrafo. → F
 
@@ -930,56 +895,49 @@ Aula 6.5 — Schema Markup
 Q24 [vf] O Schema Markup é um bloco de código, no formato JSON-LD recomendado pelo Google, que descreve o conteúdo da página aos motores de busca e sistemas de IA, sendo uma camada invisível para o utilizador. → V
 
 Q25 [multi] Quais são as três razões principais para implementar Schema Markup numa página?
-- [x] Resultados enriquecidos no Google (estrelinhas, breadcrumbs, preços)
-- [x] Definir a entidade: o Google perceber que o site, a ficha do Google Business e outros perfis são o mesmo negócio
-- [x] Ser mais bem lido por sistemas de IA, que leem melhor dados estruturados do que texto solto
-- [ ] Melhorar a velocidade de carregamento, porque o Google lê o JSON-LD antes do resto do HTML e renderiza mais depressa
-- [ ] Substituir o meta title e a meta description, já que o Google passa a ir buscar o título e o resumo ao esquema
-Explicação: As três razões são: resultados enriquecidos (estrelinhas, breadcrumbs, preço de receita/produto), definir a entidade (o site, a ficha do Google Business e o perfil noutro site são o mesmo negócio, e que tipo de negócio é) e ser mais bem lido por sistemas de IA como o ChatGPT. O esquema não acelera a página nem substitui os metas.
+- [x] Resultados enriquecidos no Google (estrelinhas, breadcrumbs, preço de receita/produto, etc.)
+- [x] Definir a entidade — ajudar o Google a perceber que o site do cliente, a ficha do Google Business e o perfil noutro site são o mesmo negócio (e que tipo de negócio é)
+- [x] Ser mais bem lido por sistemas de IA (ChatGPT e semelhantes leem melhor informação estruturada do que texto solto)
+- [ ] Melhorar a velocidade de carregamento da página
+- [ ] Substituir a necessidade de meta title e meta description
 
 Q26 [single] Qual é a regra mais importante do Schema Markup, que se aplica a todos os campos e nunca deve ser violada?
-- [ ] O esquema tem de estar sempre no topo do HTML, dentro do `<head>`, senão o Google não o lê no primeiro rastreio
-- [x] O esquema só pode descrever informação que está visível na página, senão viola as diretrizes do Google
-- [ ] O esquema tem de ser escrito à mão em JSON-LD, porque o código gerado por ferramentas é detetado como automático
-- [ ] O esquema tem de ser atualizado todos os dias, para o Google ver que a informação está viva e não desconfiar
-Explicação: Tudo o que vai no esquema tem de constar da página visível; colocar dados que não estão na página viola as diretrizes do Google e pode dar penalização. O bloco pode ir em qualquer parte do HTML e pode ser gerado com ferramentas, como a app.
+- [ ] O esquema tem de estar sempre no topo do HTML da página, dentro do `<head>`
+- [x] O esquema só pode descrever informação que está visível na página; colocar dados que não constam da página viola as diretrizes do Google e pode dar penalização
+- [ ] O esquema tem obrigatoriamente de ser gerado à mão em JSON-LD, sem uso de ferramentas
+- [ ] O esquema tem de ser atualizado todos os dias para o Google não desconfiar
 
 Q27 [single] Ao gerar Schema Markup na app da WonderAds (SEO Actions > Schema Markup), qual é a opção que vem marcada por defeito no campo Schema Type e porquê?
-- [ ] Article — porque a maioria das páginas onde se aplica esquema são artigos de blog e o Google reconhece-o melhor
-- [ ] MedicalClinic — porque a maioria dos clientes da agência é da área da saúde e é o tipo mais específico para eles
-- [x] auto @graph — porque uma página junta várias coisas (negócio, página, breadcrumb, FAQ) e este modo liga-as num só bloco
-- [ ] LocalBusiness — porque é o tipo mais compatível com o Google Maps e reforça logo a ficha do Google Business
-Explicação: Uma página raramente é uma coisa só (um negócio + página web + breadcrumb + FAQ). O auto @graph identifica tudo, junta num único bloco e amarra as partes umas às outras como uma entidade só.
+- [ ] Article — porque a maioria das páginas são artigos de blog
+- [ ] MedicalClinic — porque a maioria dos clientes é da área de saúde
+- [x] auto @graph — porque uma página normalmente não é uma coisa só (um negócio + página web + breadcrumb + FAQ) e este modo identifica tudo, junta num único bloco e amarra as partes umas às outras como uma entidade só
+- [ ] LocalBusiness — porque é o mais compatível com Google Maps
 
 Q28 [single] Cenário: Estou a gerar o Schema Markup na app para a página de serviço de um cliente. Nos campos Market e Language vejo a opção "Autodetected". Devo:
-- [ ] Substituir o Autodetected por "Portugal" e "Português", porque a grande maioria dos clientes da agência é PT
-- [x] Deixar em Autodetected (a app lê morada, telefone, domínio e idioma da página) e confirmar sempre à mão
-- [ ] Apagar o Autodetected e deixar em branco, para o Google descobrir o mercado e o idioma sozinho no crawl
-- [ ] Meter o país onde estou fisicamente, porque o Autodetected usa a localização de quem faz o crawl
-Explicação: O Autodetected deteta o endereço, o telefone, o domínio e o idioma da própria página (não usa a geolocalização de quem faz o crawl), por isso funciona bem para clientes em várias geografias. Ainda assim, confirma-se sempre manualmente.
+- [ ] Substituir sempre por "Portugal" e "Português", porque a maioria dos clientes é PT
+- [x] Deixar em Autodetected — a app deteta o endereço, telefone, domínio e idioma da própria página (não usa geolocalização de quem faz o crawl), o que funciona bem para clientes em várias geografias (verificar manualmente sempre)
+- [ ] Deixar em branco, para o Google descobrir sozinho no crawl
+- [ ] Meter o país onde eu estou fisicamente, para o Google validar a origem do crawl
 
 Q29 [single] Cenário: Publiquei o Schema Markup na página. Como devo validar o resultado?
-- [ ] Basta usar o Rich Results Test, que é a ferramenta oficial do Google — se passar aí, o código está correto
-- [ ] Basta usar o Schema Markup Validator, que é o mais exigente — se passar aí, os resultados enriquecidos vão aparecer
-- [x] Usar sempre as duas, Rich Results Test e Schema Markup Validator, porque uma pode passar e a outra falhar
-- [ ] Não é preciso validar depois de publicar, porque a app já valida o código antes de o gerar e garante o output
-Explicação: O Rich Results Test diz se o esquema gerou algum tipo de resultado enriquecido; o Schema Markup Validator diz se o código está correto. Medem coisas diferentes, por isso usam-se sempre as duas.
+- [ ] Basta usar o Rich Results Test do Google — se passar aí, o código está correto
+- [ ] Basta usar o Schema Markup Validator — se passar aí, os resultados enriquecidos vão aparecer
+- [x] Usar sempre as duas ferramentas em conjunto — Rich Results Test (diz se gerou algum tipo de resultado enriquecido) e Schema Markup Validator (diz se o código está correto), porque uma pode passar e a outra pode falhar
+- [ ] Não é necessário validar depois de publicar; a app garante a correção do output
 
 Q30 [multi] Quanto ao local onde colar o bloco de Schema Markup na página, seleciona todas as afirmações corretas:
-- [x] O Google aceita o bloco em qualquer parte do HTML da página; não tem de estar no topo
-- [x] Na própria página, o esquema fica junto do conteúdo que descreve e quem mexer depois vê que ele existe
-- [x] Deve ir no widget HTML, nunca no editor de texto, que apaga o script ao gravar
-- [ ] Deve ser colado no editor de texto da página, porque é mais fácil de manter e qualquer pessoa da equipa o edita
-- [ ] O Schema tem obrigatoriamente de ficar dentro da tag `<head>`, no topo do HTML, para o Google o ler primeiro
+- [x] O Google aceita o bloco em qualquer parte do HTML da página; não tem obrigatoriamente de estar no topo
+- [x] Colocar na própria página tem a vantagem de manter o esquema junto do conteúdo que ele descreve, o que ajuda quem depois for mexer na página a perceber que existe um esquema ali
+- [x] Deve ser colado no widget HTML — nunca no editor de texto, porque o editor passa por um filtro que apaga o script ao salvar e o esquema desaparece sem aviso
+- [ ] Deve ser colado no editor de texto porque é mais fácil de manter
+- [ ] O Schema tem obrigatoriamente de ficar dentro da tag `<head>` da página, no topo do HTML
 - [x] Pode ser colado na última secção da página, editando o widget HTML dessa secção
-Explicação: O bloco pode ir em qualquer parte do HTML (por exemplo, no widget HTML da última secção), o que o mantém junto do conteúdo que descreve. Nunca no editor de texto: o editor passa por um filtro que apaga o script ao gravar e o esquema desaparece sem aviso.
 
 Q31 [single] Cenário: Depois de gerar o Schema na app e validar, o Rich Results Test aponta um erro em breadcrumbs, mas o Schema Markup Validator diz que está tudo correto. O elemento em causa não é essencial para esta página. Devo:
-- [ ] Ignorar o erro do Rich Results Test, porque o Validator confirmou que o código está válido e é isso que conta
-- [ ] Reverter o Schema todo e não implementar nada até ao próximo sprint, para não ficar código com erros no site
-- [x] Retirar do esquema a parte dos breadcrumbs, publicar e voltar a correr as duas ferramentas até estar tudo OK
-- [ ] Publicar na mesma e abrir ticket ao Google Support, para perceber porque é que as duas ferramentas discordam
-Explicação: Se o elemento com erro não é essencial, edita-se o esquema para o retirar, publica-se, dá-se refresh e volta-se a correr o Rich Results Test e o Schema Markup Validator até ambos estarem OK.
+- [ ] Ignorar o Rich Results Test porque o Validator confirmou que o código está válido
+- [ ] Reverter o Schema todo e não implementar nada até ao próximo sprint
+- [x] Editar o esquema para retirar essa parte específica (breadcrumbs), publicar, dar refresh e voltar a correr ambas as ferramentas até estar tudo OK
+- [ ] Publicar na mesma e abrir ticket ao Google Support a pedir esclarecimento
 
 ---
 
@@ -1000,12 +958,12 @@ Aula 7.1 — Searchable Parte 2 (tópicos e prompts)
 Q1 [vf] Por vezes usar a opção Seed Keywords no Searchable para encontrar prompts relevantes a dar target traz bons resultados para tópicos a abordar em artigos de blog. → V
 
 Q2 [multi] Posso usar o Searchable para encontrar tópicos/temas relevantes para as target keywords que o cliente tem no projeto, usando esses tópicos e prompts para escrever:
-- [x] Artigos para o blog
-- [x] FAQs das páginas do site
-- [x] Landing pages do site
+- [x] Artigos Blog
+- [x] FAQs
+- [x] Landing Pages
 - [ ] Propostas de Cross Sell
-- [ ] E-books para download
-- [x] Blocos para páginas existentes e novas
+- [ ] E-Books
+- [x] Blocos de Conteúdo para Páginas Existentes e Novas
 - [ ] Documentação de DOs & Dont's
 
 Q3 [vf] É minha total responsabilidade ter o Searchable setup logo nos primeiros dias de um cliente comigo/parceria para o track de resultados começar o quanto antes. → V
@@ -1013,11 +971,10 @@ Q3 [vf] É minha total responsabilidade ter o Searchable setup logo nos primeiro
 Q4 [vf] O Searchable é uma ferramenta adicional de SEO e portanto não é preciso ter em projetos mais pequenos. → F
 
 Q5 [single] O Searchable deixou de funcionar e a plataforma atingiu um limite de pedidos. Devo fazer:
-- [ ] Contactar logo o meu superior, sem perder tempo a perguntar à equipa se também lhes acontece
-- [ ] Mencionar à equipa e esperar que alguém resolva, já que a conta não é da minha responsabilidade
-- [ ] Enviar email ao suporte da Searchable a pedir que aumentem o limite de pedidos da nossa conta
-- [x] Confirmar com a equipa se é geral e, se for preciso, passar a limitação ao André
-Explicação: Primeiro confirma-se com a equipa se o problema é geral e só depois, se for necessário, se passa a limitação ao André. Não se contacta o suporte diretamente nem se fica à espera que alguém resolva.
+- [ ] Contactar o meu superior o mais rapidamente possível
+- [ ] Mencionar à equipa
+- [ ] Enviar email ao suporte da Searchable
+- [x] Perguntar à equipa se é geral e, caso seja necessário, passar a limitação ao André
 
 Q6 [vf] Devo sempre usar os prompts sugeridos pelo Searchable para escrever artigos/blocos com aqueles H1s. → V
 
@@ -1034,32 +991,29 @@ Q10 [vf] Antes de gerar uma Content Gap Analysis na app, o consultor pode ir dir
 Q11 [multi] Ao preencher a Content Gap Analysis na app da WonderAds (Departamento SEO > On-Page SEO > Content Gap Analysis), o consultor deve preencher:
 - [x] Page or cluster topic — tema ou temas relacionados com o nicho do cliente
 - [x] Competitor URLs — links dos concorrentes analisados
-- [x] Target keywords priorizadas no momento (não é preciso pôr todas)
+- [x] Target keywords que estão a ser priorizadas no momento (não é necessário adicionar todas)
 - [x] Do's, Dont's e Notes do projeto preenchidos antes de gerar
-- [ ] Preço médio dos produtos, para a IA ordenar os tópicos por margem
-- [ ] Contactos do CEO, para a app lhe enviar o report diretamente
-- [ ] Palavra-passe do WordPress, para a app publicar os tópicos sozinha
+- [ ] Preço médio dos produtos do cliente
+- [ ] Data de aniversário do CEO do cliente
+- [ ] Palavra-passe do WordPress do cliente
 
 Q12 [single] Cenário: A Content Gap Analysis devolveu 30 tópicos que os concorrentes têm e o cliente não. Devo:
-- [ ] Adicionar os 30 tópicos ao roadmap tal como vieram, porque a IA já os filtrou e ordenou por prioridade
-- [x] Escolher os tópicos que mais chamam a atenção, analisar a página do concorrente em cada um e fazer algo 10x melhor
-- [ ] Copiar exatamente o conteúdo do concorrente para cada tópico, porque o tema já está validado pelo Google
-- [ ] Ignorar o report, porque 30 tópicos é demasiado para um roadmap de 6 meses e o cliente ficava assoberbado
-Explicação: O report é um ponto de partida: escolhem-se os tópicos que mais chamam a atenção e, para cada um, abre-se a página do concorrente e analisa-se se é longa/curta, simples/complexa e bem construída, para depois lançar algo 10x melhor.
+- [ ] Adicionar automaticamente os 30 tópicos ao roadmap do cliente para ganhar tempo
+- [x] Escolher só os tópicos que chamam mais a atenção, abrir a página do concorrente para cada um e analisar se é longo/curto, simples/complexo e bem construído, para depois lançar algo 10x melhor
+- [ ] Copiar exatamente o conteúdo do concorrente e publicar no site do cliente
+- [ ] Ignorar o report porque 30 tópicos é demasiado para tratar num roadmap de 6 meses
 
 Q13 [single] Sobre a intenção de pesquisa a manter no plano de conteúdo sugerido pela Content Gap Analysis, seleciona a afirmação mais correta:
-- [ ] Devemos priorizar apenas conteúdo transacional, porque é o único que traz vendas e o cliente mede-nos por isso
+- [ ] Devemos priorizar apenas conteúdo transacional, porque é o único que traz vendas
 - [ ] Devemos priorizar apenas conteúdo informacional, porque é o único que aparece no ChatGPT e Gemini
-- [x] Devemos manter um equilíbrio entre as intenções transacional, informacional, navegacional e local
+- [x] Devemos manter um balanceamento entre transacional (vendas), informacional (visibilidade em AIs), navegacional (navegação interna do site) e local (trazer pessoas para a loja física ou zona do cliente)
 - [ ] A intenção de pesquisa é irrelevante, o que importa é o volume de pesquisa da keyword
-Explicação: Cada intenção tem um papel: transacional traz vendas, informacional dá visibilidade nas IAs, navegacional ajuda a navegação interna do site e local traz pessoas à loja física ou à zona do cliente. O plano deve equilibrar as quatro.
 
 Q14 [single] Depois de o consultor validar os tópicos, prioridades e intenções sugeridas pela Content Gap Analysis, o passo seguinte é:
-- [ ] Implementar todos os conteúdos internamente sem envolver o cliente, para acelerar o roadmap e mostrar resultados
-- [x] Enviar o report analisado ao cliente, com o que os concorrentes têm e ele não, para aprovar as adições
-- [ ] Adaptar o conteúdo dos concorrentes e publicá-lo no site do cliente, avisando-o só depois de estar online
-- [ ] Guardar o report para o apresentar só na reunião de renovação daí a 6 meses, como argumento para renovar
-Explicação: Depois de validado pelo consultor, o report vai ao cliente para ele ver o que os concorrentes têm e ele não tem, e aprovar as adições antes de se avançar.
+- [ ] Implementar todos os conteúdos internamente sem envolver o cliente, para acelerar o roadmap
+- [x] Enviar o report analisado ao cliente, mostrando o que os concorrentes têm e ele não tem, para obter aprovação e avançar com as adições
+- [ ] Publicar o conteúdo dos concorrentes no site do cliente sem informar
+- [ ] Guardar o report para apresentar apenas na reunião de renovação daí a 6 meses
 
 Aula 7.3 — Content Calendar
 
@@ -1068,25 +1022,22 @@ Q15 [vf] O Content Calendar é uma ferramenta dentro da app da WonderAds que ser
 Q16 [vf] Posso ir direto à dashboard do Content Calendar e clicar em Generate sem preencher primeiro os Do's, Dont's e Notes do projeto, uma vez que a IA da app já conhece o cliente por outros contextos anteriores. → F
 
 Q17 [single] Cenário: Estou a preparar o Content Calendar da Brancóptica, que é um cliente novo cujo site NÃO tem conteúdo nenhum. Devo:
-- [ ] Escolher monthly (1 post por mês), para não sobrecarregar o cliente com aprovações logo no arranque do projeto
+- [ ] Escolher monthly (1 post por mês) para não sobrecarregar o cliente com aprovações no arranque
 - [ ] Escolher pelo menos weekly, porque é sempre a frequência ideal independentemente do estado do cliente
-- [x] Escolher pelo menos bi-weekly (2x por semana), para publicar de forma consistente e agressiva desde o início
-- [ ] Não usar o Content Calendar até o cliente aprovar manualmente o primeiro artigo e estar definido o tom
-Explicação: Um site sem conteúdo nenhum precisa de ganhar tração, por isso convém postar de forma consistente e agressiva: pelo menos bi-weekly (2x por semana). A frequência adapta-se sempre ao estado do cliente.
+- [x] Escolher pelo menos bi-weekly (2x por semana), porque como o site não tem conteúdo convém postar de forma consistente e agressiva para começar a ganhar tração
+- [ ] Não usar o Content Calendar até o cliente aprovar manualmente o primeiro artigo
 
 Q18 [single] Cenário: Um cliente meu já tem 300-400 blog posts publicados e prefere fazer conteúdo super elaborado (qualidade acima de quantidade). Para este cliente devo:
-- [ ] Escolher bi-weekly na mesma, porque mesmo com conteúdo elaborado é a constância que o Google mais valoriza
-- [x] Adaptar a frequência para monthly, porque o ganho de postar todas as semanas não compensa neste perfil
-- [ ] Deixar o Claude decidir sozinho a frequência com base nos 300-400 posts que o site já tem publicados
-- [ ] Copiar a frequência de outro cliente do mesmo nicho com muitos posts publicados, para poupar tempo
-Explicação: Com 300-400 posts já publicados e preferência por conteúdo super elaborado (qualidade acima de quantidade), o benefício de postar weekly não compensa: adapta-se a frequência para monthly.
+- [ ] Escolher bi-weekly na mesma para manter a constância que o Google valoriza
+- [x] Adaptar a frequência para monthly, porque o benefício de postar weekly não compensa quando o cliente prefere fazer conteúdo super elaborado
+- [ ] Deixar o Claude decidir sozinho o time frame com base no histórico do site
+- [ ] Copiar o time frame de outro cliente do mesmo nicho para poupar tempo
 
 Q19 [single] Sobre a escolha dos dias da semana para publicar conteúdo, seleciona a afirmação MAIS correta:
 - [ ] Publicar em dias aleatórios de cada semana, para o Google não perceber que existe um padrão automatizado
-- [x] Manter dias fixos (ex.: 2.ª e 6.ª), porque o Google e a IA dão prioridade a sites ativos e constantes
+- [x] Manter datas constantes (ex.: 2.ª e 6.ª, ou 3.ª e 5.ª), porque o Google dá prioridade a mostrar páginas de sites ativos e constantes, e a IA evita referir posts antigos quando há conteúdo mais recente sobre o mesmo tema noutros sites
 - [ ] Concentrar todos os posts do mês no último dia útil, para o Google indexar tudo de uma vez
-- [ ] Escolher o dia consoante a disponibilidade do consultor em cada semana, desde que o total do mês se cumpra
-Explicação: Datas constantes (ex.: 2.ª e 6.ª, ou 3.ª e 5.ª) mostram um site ativo: o Google dá prioridade a mostrar páginas de sites ativos e constantes, e a IA evita referir posts antigos quando há conteúdo mais recente sobre o mesmo tema noutros sites.
+- [ ] Escolher o dia consoante a disponibilidade do consultor em cada semana, sem regra fixa
 
 Q20 [multi] Quais destes passos fazem parte do fluxo correto de criação e implementação do Content Calendar?
 - [x] Preencher primeiro os Do's, Dont's e Notes do projeto antes de gerar
@@ -1115,7 +1066,7 @@ Objetivo: escrever, publicar e renovar conteúdo com qualidade SEO/GEO usando a 
 
 Aula 8.1 — Escrita de artigos blog via APP
 
-Q1 [single] Na app da WonderAds, o tópico do próximo post do blog já está definido. Para gerar o texto, o consultor deve ir a:
+Q1 [single] Na app da WonderAds, para começar a escrever um artigo blog, o consultor deve ir a:
 - [ ] (A) Definições > Novo Conteúdo > Blog
 - [x] (B) Quick Actions > Write Blog Article
 - [ ] (C) Menu lateral > Criar Task > Artigo
@@ -1130,31 +1081,29 @@ Q3 [single] As keywords secundárias devem ser inseridas no campo:
 - [ ] (D) Dentro de aspas e separadas por hífen
 
 Q4 [multi] Quais destes campos são opcionais na criação do artigo blog via app?
-- [ ] Keyword Primária (o tópico)
+- [ ] Keyword Primária
 - [ ] Keywords Secundárias
-- [x] LSI Keywords (semânticas)
+- [x] LSI Keywords
 - [x] Internal Linking Links
-- [x] Audiência (público-alvo)
-- [x] Referências (fontes)
-- [x] CTA (call to action)
+- [x] Audiência
+- [x] Referências
+- [x] CTA
 
 Q5 [vf] Independentemente do que já está rankeado no Google para aquela keyword, o consultor deve sempre gerar o artigo com 1.200 palavras. → F
 
 Q6 [vf] Na criação do artigo blog via app é responsabilidade do consultor deixar links para linkagem interna sempre que faça sentido. → V
 
 Q7 [single] Cenário: Vou criar um artigo blog para o cliente "Sentir Saúde" com o tópico "Pilates Clínico na Gravidez". Devo:
-- [x] (A) Usar o tópico como keyword primária, tirar secundárias das target keywords e ajustar o word count ao que já rankeia
-- [ ] (B) Colar apenas o tópico e gerar com as definições default, porque a app já escolhe secundárias e word count sozinha
-- [ ] (C) Pedir ao cliente que envie primeiro a estrutura do artigo, já que é ele quem conhece o Pilates Clínico na gravidez
-- [ ] (D) Gerar o artigo primeiro no Claude/ChatGPT, onde há mais controlo sobre o prompt, e depois colar o resultado na app
-Explicação: O fluxo é: colar o tópico como keyword primária, verificar as target keywords do projeto para escolher secundárias relevantes (ex.: "Pilates Clínico Porto"), definir o word count consoante o que está rankeado e adicionar internal links e CTA.
+- [x] (A) Colar o tópico como keyword primária, verificar as target keywords do projeto para escolher secundárias relevantes (ex.: "Pilates Clínico Porto"), definir o word count consoante o que está rankeado, adicionar internal links e CTA
+- [ ] (B) Colar apenas o tópico e gerar o artigo com as definições default para poupar tempo
+- [ ] (C) Pedir ao cliente para ele próprio enviar a estrutura do artigo antes de gerar
+- [ ] (D) Gerar o artigo primeiro em Claude/ChatGPT e depois colar o resultado na app
 
 Q8 [single] Depois de gerar o conteúdo do artigo via app, o próximo passo é:
-- [ ] (A) Publicar logo o conteúdo no site do cliente, porque a app já o gera otimizado para SEO
-- [ ] (B) Enviar diretamente ao cliente por email, tal como saiu da app, para aprovação imediata
-- [x] (C) Passar o conteúdo para HTML e/ou acrescentar-lhe mais pontos de SEO relevantes
-- [ ] (D) Guardar como rascunho e esperar pelo próximo weekly report para o mostrar ao cliente
-Explicação: O texto gerado ainda não está pronto a publicar: primeiro transforma-se em HTML e/ou trazem-se mais pontos de SEO relevantes para dentro do conteúdo.
+- [ ] (A) Publicar automaticamente no site do cliente sem revisão
+- [ ] (B) Enviar diretamente ao cliente por email para aprovação imediata
+- [x] (C) Transformar o conteúdo para HTML e/ou trazer mais pontos de SEO relevantes para dentro do conteúdo
+- [ ] (D) Guardar como rascunho e esperar o próximo weekly report
 
 Q9 [multi] Quais destes passos fazem parte do fluxo correto de criação de um artigo blog via app?
 - [x] Colar o tópico do artigo como keyword primária
@@ -1169,26 +1118,25 @@ Q9 [multi] Quais destes passos fazem parte do fluxo correto de criação de um a
 Aula 8.2 — Publicação de artigos blog e páginas em HTML
 
 Q10 [single] Quem deve assinar os artigos blog? ⚠️ CONFIRMAR (sem resposta marcada; a mais provável é "A maior referência no cliente/clínica")
-- [ ] A pessoa do cliente que aprova o blog
-- [ ] A rececionista, que é quem fala com os pacientes
-- [ ] O CEO/Diretor da clínica, por ser o dono do negócio
+- [ ] A pessoa que aprova o blog
+- [ ] A recepcionista
+- [ ] O CEO/Diretor da clínica
 - [x] A maior referência no cliente/clínica
 
 Q11 [vf] Todos os artigos devem ter um CTA. → V
 
 Q12 [single] Todos os artigos devem ter:
-- [ ] Só CTA e assinatura; o resto depende do tema
-- [ ] CTA e internal linking; FAQs só nos artigos longos
-- [ ] Assinatura e FAQs c/ schema; o CTA fica para as páginas de serviço
-- [ ] Internal linking e FAQs c/ schema; a assinatura é opcional
-- [x] Assinatura, CTA, FAQs c/ schema e internal linking
-Explicação: Todos os artigos levam os quatro elementos: assinatura, CTA, FAQs com schema e internal linking. Nenhum deles é opcional nem depende do tema ou do tamanho do artigo.
+- [ ] Assinatura
+- [ ] CTA
+- [ ] FAQs c/ schema
+- [ ] Internal Linking
+- [x] Todas as anteriores
 
 Q13 [single] As target keywords (palavras-chave do projeto) nos artigos blog e páginas do site devem estar:
 - [x] Em negrito
 - [ ] Em itálico
 - [ ] Sempre sublinhadas
-- [ ] Em maiúsculas
+- [ ] Todas as anteriores
 
 Aula 8.3 — FAQ com Google e IA
 
@@ -1197,10 +1145,10 @@ Q14 [vf] Duas regras resumem a criação de um FAQ bem feito: as perguntas vêm 
 Q15 [vf] É importante a resposta vir sempre no início para o ChatGPT, Claude, etc. lerem e nos mencionarem a possíveis clientes. → V
 
 Q16 [single] Ao pesquisar o termo principal no Google para encontrar perguntas para o FAQ, a secção mais importante a analisar é:
-- [ ] Os anúncios pagos no topo da SERP, porque mostram as dúvidas a que a concorrência já paga para responder
-- [ ] A AI Overview no topo, porque já junta as perguntas que o Google considera mais relevantes
-- [x] A secção "As pessoas também perguntam", abrindo cada caixa para surgirem mais perguntas
-- [ ] Os resultados orgânicos da primeira posição, copiando os títulos dos headers como perguntas
+- [ ] Os anúncios pagos no topo da SERP, porque mostram o que a concorrência já responde
+- [ ] A AI Overview no topo, porque é a única fonte fiável hoje em dia
+- [x] A secção "As pessoas também perguntam", abrindo cada caixa para gerar mais perguntas relacionadas
+- [ ] Os resultados orgânicos da primeira posição, copiando os títulos como perguntas
 
 Q17 [vf] Quando o consultor está a fazer o FAQ fora do país onde o cliente atende (clientes estrangeiros, por ex. Inglaterra), deve usar as ferramentas de pesquisa avançada do Google e definir a região onde o cliente opera, para os resultados serem locais e relevantes. → V
 
@@ -1208,28 +1156,26 @@ Q18 [multi] Quais destas ferramentas fazem parte do fluxo apresentado para recol
 - [x] Google — secção "As pessoas também perguntam"
 - [x] Google Search Console — aba Desempenho, filtrando por queries relevantes
 - [x] People Also Asked (com país, localização e linguagem do cliente)
-- [x] Falar com o atendimento ao cliente do nosso cliente, para captar perguntas reais
+- [x] Conversar com o atendimento ao cliente do nosso cliente, para captar perguntas reais do dia a dia
 - [ ] Copiar diretamente o FAQ do concorrente principal do cliente
-- [ ] Ahrefs Site Audit, filtrando as páginas com problemas de conteúdo
+- [ ] Ahrefs Site Audit
 - [ ] Perguntar diretamente ao Claude quais são as perguntas, sem cruzar dados externos
 
 Q19 [vf] Todas as perguntas que aparecem no Google Search Console para o cliente são relevantes para o FAQ e devem ser incluídas sem filtro. → F
 
 Q20 [single] Cenário: Reuni as perguntas do Google ("As pessoas também perguntam"), o CSV do People Also Asked, o export do GSC e o link da página. Colei tudo no Claude. O prompt mais correto para pedir ao Claude é:
-- [ ] "Usa todas estas perguntas e escreve-me um FAQ completo com 20 perguntas e respostas detalhadas sobre este tema"
-- [x] "Esta é a página e estas as perguntas. Tira as que a página já responde, junta as repetidas e dá-me as 6 melhores"
-- [ ] "Com base nisto, inventa 6 perguntas criativas que ainda ninguém tenha feito, para nos diferenciarmos"
-- [ ] "Ignora as perguntas que juntei, copia o FAQ do concorrente em 1.º lugar e adapta-o ao meu cliente"
-Explicação: O prompt certo dá ao Claude a página e as perguntas recolhidas e pede-lhe que tire as que já estão respondidas no conteúdo original, junte as que são a mesma pergunta escrita de forma diferente e devolva as 6 melhores para o FAQ.
+- [ ] "Escreve-me um FAQ completo com 20 perguntas sobre este tema"
+- [x] "Esta é a página. Estas são as perguntas que juntei. Tira as que já estão respondidas no conteúdo original da página, junta as que são a mesma escrita de forma diferente, e devolve-me as 6 melhores perguntas para criar um FAQ para esta página"
+- [ ] "Inventa 6 perguntas criativas que ainda ninguém tenha feito sobre este serviço"
+- [ ] "Copia o FAQ do concorrente e adapta para o meu cliente"
 
 Q21 [vf] O Claude, por defeito, já conhece o preço que a agência/cliente cobra, os horários, a duração dos tratamentos e outros dados específicos do negócio, por isso as respostas geradas não precisam de ser complementadas com informação adicional. → F
 
 Q22 [single] Cenário: O Claude devolveu 6 perguntas com respostas para o FAQ da página. Uma das respostas é genérica e termina com "entre em contacto para saber mais". Devo:
-- [ ] Aceitar assim, porque encaminhar o utilizador para o contacto é sempre positivo e gera mais leads para o cliente
-- [ ] Publicar como está e deixar o cliente completar depois, já que é ele quem sabe os preços e os prazos
-- [x] Completar a resposta com dados reais e diferenciadores do cliente (preço, duração, garantias) que tirem logo a dúvida
-- [ ] Pedir ao Claude que reescreva a resposta até deixar de mandar contactar, sem lhe dar informação nova
-Explicação: Respostas que já tiram a dúvida ao utilizador, com dados reais e diferenciadores (preço, duração, personalização, processo, garantias), são melhores para SEO/IA e evitam encaminhar leads que não vão fechar. O Claude não tem esses dados: é o consultor que os acrescenta.
+- [ ] Aceitar assim, porque encaminhar o utilizador para contacto é sempre positivo para gerar leads
+- [ ] Publicar como está e deixar o cliente completar depois
+- [x] Rever a resposta e complementá-la com dados reais e diferenciadores que só eu tenho (preço, duração, personalização, processo, garantias) — porque respostas que já tiram a dúvida ao utilizador são melhores para SEO/IA e evitam encaminhar leads que não vão fechar
+- [ ] Pedir ao Claude para reescrever mais 5 vezes até deixar de mandar contactar
 
 Q23 [vf] Na implementação do FAQ na página, as perguntas devem estar em H3 e as respostas em estilo normal (texto). → V
 
@@ -1239,19 +1185,19 @@ Q24 [vf] Fazer refresh a uma página existente do site do cliente é normalmente
 
 Q25 [multi] Quais destas são razões válidas para fazer refresh regular ao conteúdo das páginas de um cliente?
 - [x] O Google e os motores de busca valorizam conteúdo atualizado e vão silenciando/despriorizando páginas paradas há 2-3 anos
-- [x] Uma página com preços antigos ou serviços que já não existem transmite descuido, quebra a confiança e reduz o tempo em página
+- [x] Uma página com preços antigos, serviços que já não existem ou referências desatualizadas transmite descuido ao utilizador, quebra a confiança e reduz o tempo em página
 - [x] Atualizar uma página existente exige muito menos esforço do que construir uma página do zero
 - [ ] É obrigatório mudar 100% do conteúdo da página todos os meses para o Google não penalizar
 - [ ] Só as páginas de topo (homepage e páginas de serviço principais) precisam de refresh; as outras podem ficar como estão
 - [x] Content refresh é um processo contínuo, não uma ação pontual. Devo ter isto periodicamente no Roadmap dos meus clientes
 
 Q26 [multi] Quais destes são pilares a avaliar quando se decide o que precisa de refresh numa página?
-- [x] Internal linkings quebrados (links internos para páginas que já não existem e dão 404)
+- [x] Internal linkings quebrados (links internos que apontam para páginas que já não existem e geram 404)
 - [x] Otimização/refresh das meta tags (meta titles e meta descriptions)
-- [x] Conteúdo parado há muito tempo e nunca otimizado (sem target keywords nos headings e no texto)
-- [x] Páginas de serviços: se os serviços atuais estão todos no site e se os antigos ainda ocupam espaço
-- [ ] Cor e formato do botão de CTA principal, para acompanhar as tendências de design do ano
-- [ ] Número de plugins instalados no WordPress, já que o Google valoriza sites com menos plugins
+- [x] Conteúdo que está parado há bastante tempo e que nunca foi otimizado (páginas escritas uma vez, sem target keywords nos headings, textos, etc.)
+- [x] Páginas de serviços — verificar se todos os serviços que o cliente presta atualmente estão no site, e se serviços que já não faz continuam a ocupar espaço
+- [ ] Cor do botão de CTA principal
+- [ ] Número de plugins instalados no WordPress
 
 Q27 [single] Qual é o n.º de palavras recomendado no mínimo para uma página de serviço bem otimizada?
 - [ ] 300 a 600 palavras
@@ -1260,26 +1206,23 @@ Q27 [single] Qual é o n.º de palavras recomendado no mínimo para uma página 
 - [ ] Acima de 3.000 palavras, sem limite superior
 
 Q28 [single] Cenário: Vou otimizar a página de "Ginecologia" de um cliente. Um colega diz-me para poupar tempo copiando o link da página do concorrente que está em 1.º lugar, colar no Claude e pedir "analisa isto e faz-me uma versão melhor". Devo:
-- [ ] Fazer exatamente isso, porque o Claude lê o link e analisa a página melhor e mais depressa do que qualquer pessoa
-- [x] Analisar primeiro a página à mão (keyword, blocos, imagens, FAQs, headers) e só depois passar esses dados ao Claude
-- [ ] Copiar o conteúdo do concorrente e mudar meia dúzia de palavras, já que é essa a página que o Google premeia
-- [ ] Ignorar a concorrência e escrever só com base no que o cliente pediu, para a página não sair parecida com as outras
-Explicação: Primeiro faz-se a análise manual da página do concorrente: quantas vezes a keyword principal é mencionada, blocos de texto, imagens, FAQs, vídeos, ordem dos headers e meta tags. Só depois se dão esses dados ao Claude para gerar uma página 2x melhor em cada ponto.
+- [ ] Fazer exatamente isso, porque o Claude analisa o link melhor do que qualquer pessoa e é muito mais rápido
+- [x] Fazer análise manual primeiro: abrir a página do concorrente, contar quantas vezes a keyword principal é mencionada, contar blocos de texto, imagens, FAQs, vídeos, ver a ordem dos headers e meta tags — e SÓ DEPOIS dar esses dados ao Claude para gerar uma página 2x melhor em cada ponto
+- [ ] Copiar o conteúdo do concorrente diretamente e mudar meia dúzia de palavras
+- [ ] Ignorar a concorrência e escrever apenas com base no que o cliente pediu
 
 Q29 [multi] Porque é que não devemos limitar-nos a dar o link do concorrente ao Claude e pedir para "analisar e replicar melhor"?
-- [x] O Claude não vê a página como nós e pode falhar coisas óbvias para o olho humano
-- [x] Arrisca-se a focar só nos erros do concorrente e a ignorar o conteúdo bom que devíamos superar
-- [x] A análise manual leva 10-15 minutos e dá ao Claude informação que ele sozinho não capta
-- [ ] Usar o Claude para analisar páginas de concorrentes viola as diretrizes do Google e pode penalizar o site
-- [ ] O Claude devolve sempre o mesmo conteúdo do concorrente, palavra por palavra, sem qualquer melhoria
-Explicação: A análise manual (contar keywords, blocos, imagens, FAQs, vídeos) demora 10-15 minutos e é o passo mais importante: o Claude não vê a página como nós e, sozinho, tende a focar-se nos erros do concorrente em vez de igualar e superar o que ele já faz bem.
+- [x] O Claude não vê a página como nós vemos, e pode falhar em coisas óbvias que ao olho humano chamam a atenção
+- [x] Corre-se o risco de focar apenas nos erros do concorrente e ignorar o conteúdo bom que ele já tem e que devíamos igualar/superar
+- [x] A análise manual (contar keywords, blocos, imagens, FAQs, vídeos) demora 10-15 minutos e é o passo mais importante para dar ao Claude informação que ele sozinho não capta
+- [ ] É proibido pelo Google usar Claude para analisar concorrentes
+- [ ] O Claude devolve sempre exatamente o mesmo conteúdo que o concorrente, sem melhorias
 
 Q30 [single] Cenário: Já fiz a análise manual do concorrente que está em 1.º lugar para "ginecologia" e contei: keyword mencionada 16 vezes, 6 blocos de texto, 5 imagens, 1 FAQ com 11 perguntas. Passei tudo ao Claude, gerei o conteúdo otimizado 2x melhor. O passo seguinte é:
-- [ ] Publicar diretamente no site do cliente, porque já foi gerado com base numa análise feita à mão e validada
-- [x] Passar o conteúdo para um documento live partilhado com o cliente, pô-lo em Pending Review e esperar a aprovação
-- [ ] Enviar o conteúdo em PDF por email ao cliente, para ele não mexer no texto e aprovar só a versão final
+- [ ] Publicar diretamente no site do cliente porque já foi gerado com base na análise
+- [x] Copiar o conteúdo para um documento live (partilhado por link com o cliente como editor), adicioná-lo à tabela de Pending Review e aguardar a aprovação do cliente antes de publicar no site
+- [ ] Enviar o conteúdo em PDF fechado por email ao cliente, sem possibilidade de o cliente editar
 - [ ] Guardar internamente e implementar apenas depois de rever com o cliente na próxima reunião mensal
-Explicação: O conteúdo vai para um documento live (partilhado por link com o cliente como editor), entra na tabela de Pending Review e só é publicado no site depois de o cliente o aprovar.
 
 Q31 [vf] Depois de o conteúdo otimizado estar live no site do cliente, o trabalho está terminado — não é necessário monitorizar a evolução da página. → F
 
@@ -1301,19 +1244,17 @@ Objetivo: auditar, alimentar e gerir a reputação do perfil GMB de um cliente.
 Aula 9.1 — GMB Profile Audit
 
 Q1 [multi] Para gerar o report na GMB Profile Audit da app da WonderAds, o consultor deve preencher:
-- [x] GMB Profile URL (link de partilha do perfil do cliente)
-- [x] Notas sobre o estado atual do perfil (ex.: nunca usado, descuidado ou já em otimização)
-- [ ] Screenshot da homepage do site do cliente, para o report mostrar a marca
-- [ ] Password de acesso ao GMB do cliente, para o report ler os dados internos
-- [ ] Nome do concorrente principal no Google Maps, para o report comparar
-Explicação: O report da GMB Profile Audit só pede o link de partilha do perfil e notas sobre o estado atual (se nunca foi usado, se está descuidado, se começou a ser otimizado). Não se pedem passwords, screenshots nem concorrentes.
+- [x] GMB Profile URL (link de partilha do perfil de Google Business do cliente)
+- [x] Notas com o estado atual do perfil (ex.: se nunca foi usado, se está descuidado, se começou a ser otimizado recentemente)
+- [ ] Screenshot da homepage do site do cliente
+- [ ] Password de acesso ao GMB do cliente
+- [ ] Nome do concorrente principal no Google Maps
 
 Q2 [single] O que significa NAP no contexto de otimização de Google My Business?
-- [ ] New Address Protocol — protocolo com que o Google valida as moradas no Maps
-- [x] Names, Addresses and Phone Numbers — dados que ligam o perfil GMB à página da loja no site
+- [ ] New Address Protocol — protocolo de indexação de endereços do Google
+- [x] Names, Addresses and Phone Numbers — dados que o Google usa para ligar o perfil GMB à página da loja no site do cliente
 - [ ] Nearby Area Points — pontos de referência geográficos usados para ranquear localmente
-- [ ] Non-Approved Places — perfis ainda não verificados que o Google esconde no Maps
-Explicação: NAP = Name, Address, Phone. Tem de coincidir carácter a carácter entre o perfil GMB e a página da loja no site, para o Google ligar os dois com certeza.
+- [ ] Non-Approved Places — perfis não verificados no Google Maps
 
 Q3 [single] Quantas categorias secundárias permite o Google adicionar num perfil de Google My Business e que devemos aproveitar para adicionar keywords do projeto sem falta?
 - [ ] 3
@@ -1323,35 +1264,32 @@ Q3 [single] Quantas categorias secundárias permite o Google adicionar num perfi
 
 Q4 [single] Cenário: A GMB Audit devolveu que o NAP do perfil não coincide com o NAP da página da loja no site do cliente (a morada tem uma abreviatura diferente e o telefone tem espaços a mais no site). O consultor deve:
 - [ ] Ignorar, porque o Google reconhece automaticamente pequenas variações de formatação
-- [ ] Corrigir só o perfil GMB e pedir ao cliente que trate do site, porque o site é responsabilidade dele
-- [x] Garantir que Nome, Morada e Telefone coincidem exatamente no GMB e na página da loja
-- [ ] Criar um segundo perfil GMB com o NAP no formato do site, para o Google escolher o que preferir
-Explicação: O NAP (Nome, Morada, Telefone) tem de ser igual carácter a carácter no GMB e na página da loja — abreviaturas e espaços contam. Só assim o Google liga o perfil à loja com certeza, e a correção dos dois lados é do consultor.
+- [ ] Alterar apenas o perfil GMB, porque o site é responsabilidade do cliente
+- [x] Garantir que Nome, Morada e Número de Telemóvel coincidem exatamente entre o GMB e a página da loja, para o Google conseguir ligar o perfil à loja com certeza
+- [ ] Criar um segundo perfil GMB com o formato do site para o Google escolher o que preferir
 
 Q5 [single] Cenário: Estou a fazer a auditoria ao GMB de um cliente novo (ótica com loja física em Viseu). O report devolveu: (a) faltam 4 categorias secundárias; (b) o NAP do perfil GMB tem a morada como "Rua Direita, 45" e no site aparece "R. Direita nº 45"; (c) o telefone no GMB tem +351 e no site aparece sem indicativo; (d) o horário está desatualizado desde antes da pandemia; (e) não há posts GMB há mais de 8 meses. Qual é a abordagem mais correta?
-- [ ] Corrigir só as categorias secundárias em falta, que pesam mais no ranking, e deixar o resto para outra fase
+- [ ] Corrigir apenas as categorias secundárias em falta e deixar o resto para uma segunda fase do roadmap
 - [ ] Alterar apenas a morada e telefone no site do cliente para coincidir com o GMB, porque é mais rápido
-- [x] Corrigir tudo no GMB e no site (categorias, NAP exato, horário) e planear a retoma dos posts
-- [ ] Enviar o report em bruto ao cliente para ele próprio implementar as correções, já que é o dono do perfil
+- [x] Adicionar as 4 categorias secundárias, uniformizar o NAP nos dois lados garantindo correspondência exata (Nome + Morada + N.º Telemóvel iguais em GMB e página da loja), atualizar o horário, e planear a retoma de GMB Posts com constância — porque o report entrega "a papinha toda feita" mas a execução (site + GMB + calendário) é responsabilidade do consultor
+- [ ] Enviar o report em bruto ao cliente para ele próprio implementar as correções no GMB
 - [ ] Corrigir tudo no GMB, mas deixar o site como está, porque o Google prioriza sempre a informação do próprio perfil GMB
-Explicação: O report da GMB Audit entrega «a papinha toda feita», mas a execução (site + GMB + calendário) é do consultor: adicionar as 4 categorias, uniformizar o NAP nos dois lados (Nome + Morada + Telefone iguais no GMB e na página da loja), atualizar o horário e retomar os GMB Posts com constância.
 
 Aulas 9.2–9.3 — GMB Post
 
 Q6 [multi] Na publicação de um GMB Post, o consultor deve (seleciona duas):
-- [ ] Priorizar imagens feitas em Claude, para não depender do cliente
-- [x] Priorizar imagens de qualidade do próprio cliente
-- [ ] Priorizar textos escritos pelo cliente, que conhece melhor o negócio
-- [x] Adaptar todos os textos com as target keywords do projeto
+- [ ] Priorizar imagens feitas em Claude
+- [x] Priorizar imagens de qualidade do cliente
+- [ ] Priorizar textos escritos pelo cliente
+- [x] Adaptar todos os textos com target keywords
 
 Q7 [vf] Na publicação de um GMB Post, o consultor deve sempre gerar imagens com o ChatGPT. → F
 
-Q8 [multi] Na publicação de um GMB Post de um cliente sem conteúdo (imagens) devemos logo (seleciona duas):
-- [ ] Gerar logo imagens com Claude para publicar o post ASAP e não falhar o calendário
-- [x] Avisar a equipa e o team leader de um possível cross sell de sessão fotográfica
-- [ ] Dizer ao cliente que tem de enviar as imagens até ao fim do mês, senão os posts ficam parados
-- [x] Avisar o cliente de que vamos usar um banco de imagens (Envato Elements)
-Explicação: Sem imagens do cliente não se geram logo imagens com IA nem se bloqueia o calendário: fala-se com a equipa e o team leader sobre um cross sell de sessão fotográfica e avisa-se o cliente de que, entretanto, se usa um banco de imagens (Envato Elements).
+Q8 [single] Na publicação de um GMB Post de um cliente sem conteúdo (imagens) devemos logo: ⚠️ CONFIRMAR (sem resposta marcada; pela Q6/Q7 e pelo módulo de cross-sell, a mais provável é a 2.ª opção)
+- [ ] Ir automaticamente gerar imagens com Claude para publicar o post ASAP
+- [x] Comunicar à equipa e team leader a possibilidade de um cross sell de uma sessão fotográfica
+- [ ] Dizer ao cliente que tem que ter as imagens até ao fim do mês
+- [ ] Comunicar ao cliente que iremos usar banco de imagens da internet (Envato Elements)
 
 Aula 9.4 — GMB Reviews Responder
 
@@ -1361,15 +1299,15 @@ Q10 [single] Qual é o tempo de resposta ideal a uma review negativa no perfil d
 - [x] Em menos de 24 horas
 - [ ] Entre 24 a 48 horas
 - [ ] Entre 48 a 72 horas
-- [ ] Até 1 semana, na revisão semanal
-- [ ] Sem prazo, desde que seja no mesmo mês
+- [ ] Até 1 semana
+- [ ] Não há prazo, desde que se responda ainda no mesmo mês
 
 Q11 [single] Qual é o tempo de resposta aceitável a uma review positiva no perfil do Google Business?
-- [ ] Obrigatoriamente em menos de 1 hora
+- [ ] Em menos de 1 hora
 - [x] Entre 24 a 48 horas
-- [ ] Até 1 semana, na revisão semanal
-- [ ] Até 15 dias, porque não é urgente
-- [ ] Só se a review tiver texto além das estrelas
+- [ ] Até 1 semana
+- [ ] Até 15 dias
+- [ ] Só é obrigatório responder se o utilizador tiver escrito texto para além das estrelas
 
 Q12 [single] Qual é o tamanho recomendado para uma resposta a uma review positiva?
 - [ ] 10 a 20 palavras, apenas um agradecimento
@@ -1394,11 +1332,10 @@ Q14 [multi] Sobre boas práticas na resposta a reviews do GMB, seleciona todas a
 - [ ] As respostas em inglês são desnecessárias — deve responder-se sempre na língua da clínica
 
 Q15 [single] Cenário: A White Clinic recebeu uma review de 1 estrela às 14h com uma reclamação sobre o tempo de espera na consulta. Devo:
-- [ ] Responder logo no próprio dia com um pedido de desculpa público e explicar em detalhe o que causou o atraso, para mostrar transparência
-- [x] Gerar uma resposta curta que peça desculpa e encaminhe para contacto particular; aprovar com o cliente e publicar em menos de 24 horas
-- [ ] Esperar pela revisão semanal e tratar esta review com as restantes, para manter o mesmo tom em todas as respostas
-- [ ] Responder de imediato com a resposta-template já usada noutras negativas; foi aprovada pelo cliente e poupa uma ronda de aprovação
-Explicação: Nas negativas: uma resposta curta que reconhece a experiência, pede desculpa e leva a conversa para um contacto particular da clínica, sem detalhes do caso em público. Cada resposta é única, passa pela aprovação do cliente e é publicada em menos de 24 horas.
+- [ ] Responder logo no próprio dia com um pedido de desculpa público e explicar detalhadamente o que possa ter causado o atraso
+- [x] Gerar uma resposta (até ~100 palavras) que reconheça a experiência, peça desculpa e direcione o utilizador para um contacto particular da clínica; enviar essa resposta ao cliente para aprovação e publicar no GMB em menos de 24 horas
+- [ ] Esperar pela revisão semanal de reviews para tratar esta juntamente com as restantes
+- [ ] Responder de imediato com a mesma resposta-template que já usámos noutras reviews negativas anteriores
 
 ---
 
@@ -1426,9 +1363,9 @@ Q3 [vf] Se um site tem Domain Authority (DA) muito alto, qualquer backlink desse
 
 Q4 [single] O que é um backlink?
 - [ ] Um link interno entre páginas do próprio site do cliente
-- [x] Um link noutro site que aponta para o site do cliente
+- [x] Um link de outro site externo que aponta para o site do cliente
 - [ ] Um link partilhado nas redes sociais do cliente
-- [ ] Um link para o email da empresa, colocado no rodapé do site
+- [ ] Um link para o email da empresa
 
 Q5 [vf] Backlinks provenientes de sites relevantes para o nicho/setor do cliente têm mais valor do que backlinks de sites sem qualquer relação com o nicho. → V
 
@@ -1442,35 +1379,33 @@ Q7 [single] Qual destas opções representa o MELHOR backlink para o cliente?
 
 Q8 [single] Qual destas situações é a MAIS prejudicial para o SEO do cliente?
 - [ ] Ter poucos backlinks, mas todos de qualidade
-- [ ] Não ter backlinks nenhuns, nem sequer de diretórios
+- [ ] Não ter backlinks nenhuns
 - [x] Ter muitos backlinks de sites de spam e má reputação
-- [ ] Ter a maioria dos backlinks com nofollow
+- [ ] Ter backlinks com nofollow
 
 Q9 [vf] Usar sempre exatamente a mesma palavra-chave no anchor text de todos os backlinks do cliente ajuda a posicionar melhor essa palavra-chave no Google. → F
 
 Q10 [single] Qual é a melhor forma de avaliar se um site é bom para colocar o backlink do cliente?
-- [ ] Ver apenas o DA/DR do site, porque já resume a autoridade toda numa métrica
-- [ ] Ver apenas o número de backlinks que o site tem, porque mostra a força dele
-- [x] Cruzar DA/DR com relevância temática, tráfego real e perfil de backlinks do site
-- [ ] Ver se o site tem um design bonito e moderno, sinal de que é bem mantido
-Explicação: Um site só serve para o backlink se cruzar vários sinais: DA/DR, relevância temática para o nicho do cliente, tráfego orgânico real e um perfil de backlinks saudável. Uma métrica sozinha engana.
+- [ ] Ver apenas o DA/DR do site
+- [ ] Ver apenas o número de backlinks que o site tem
+- [x] Analisar DA/DR + relevância temática + tráfego orgânico real + perfil de backlinks do próprio site
+- [ ] Ver se o site tem design bonito e moderno
 
 Aula 10.3 — Roleplay: criação de backlink (Doctoralia)
 
 Q11 [vf] Todos os backlinks são bons para o SEO do cliente. → F
 
 Q12 [single] O que é mais importante na hora de escolher onde colocar um backlink?
-- [ ] Quantidade de sites onde o link aparece
+- [ ] Quantidade de sites
 - [x] Autoridade e relevância do site
-- [ ] Aspeto visual e design do site
-- [ ] Se o site tem ou não anúncios
+- [ ] Cor do design do site
+- [ ] Se o site tem anúncios
 
 Q13 [single] Qual é o aspeto mais importante do perfil do backlink que devemos sempre colocar para criar o propriamente dito "backlink"?
 - [ ] N.º de telefone da empresa
-- [ ] Morada completa da empresa
-- [x] URL do website da empresa
-- [ ] Página de Facebook da empresa
-Explicação: Um perfil num diretório só é backlink quando tem o website do cliente — sem esse link não conta, por mais completos que estejam o telefone e a morada.
+- [ ] Morada da empresa
+- [x] Website da empresa
+- [ ] Todas as anteriores
 
 Q14 [vf] Um perfil backlink sem link do site do cliente na Wonder é considerado um backlink. → F
 
@@ -1481,36 +1416,33 @@ Q15 [vf] O Competitor Backlink Gap é uma pesquisa que serve para encontrar opor
 Q16 [vf] Os competidores indicados pelo cliente no onboarding form são sempre concorrentes de SEO relevantes para o Backlink Gap e têm sempre backlinks que podemos "ir buscar" para os nossos clientes. → F
 
 Q17 [single] Para escolher os concorrentes a colocar na análise de Backlink Gap, como consultor devo:
-- [ ] Usar apenas os competidores indicados no onboarding form, porque o cliente conhece o mercado dele
+- [ ] Usar apenas os competidores indicados no onboarding form do cliente
 - [ ] Usar apenas os competidores sugeridos pelo Semrush no Domain Overview / Competitive Positioning Map
-- [x] Juntar os do onboarding form aos do Semrush e validar, serviço a serviço, se fazem sentido
-- [ ] Usar todos os concorrentes do mapa do Semrush, sem validar, para não deixar nenhum de fora
-Explicação: Os concorrentes do onboarding form nem sempre são concorrentes de SEO, e o Semrush (Domain Overview / Competitive Positioning Map) sugere domínios que podem não ter os mesmos serviços — por isso juntam-se as duas fontes e valida-se serviço a serviço.
+- [x] Combinar competidores do onboarding form com competidores identificados no Semrush (Domain Overview / Competitive Positioning Map), validando serviço a serviço se realmente fazem sentido
+- [ ] Usar todos os concorrentes que aparecem no mapa do Semrush em modo automático, sem validar
 
 Q18 [single] Cenário: Na análise do Backlink Gap para um cliente de fisioterapia, aparece que um dos concorrentes tem 21.000 backlinks vindos de um único site chamado "Vietnam Rice Code", que não tem qualquer ligação temática com fisioterapia nem saúde. Devo:
-- [ ] Contactar o "Vietnam Rice Code" para replicar esses 21.000 backlinks para o cliente, já que resultam para o concorrente
-- [x] Ignorar: o volume anormal vindo de um site fora do tema indica links comprados, sem valor para SEO
+- [ ] Contactar o "Vietnam Rice Code" para tentar replicar esses 21.000 backlinks para o meu cliente
+- [x] Ignorar essa oportunidade, porque a quantidade anormal e a falta de relação temática indicam claramente backlinks comprados e sem qualquer valor para SEO
 - [ ] Adicionar o "Vietnam Rice Code" à shortlist de sites-alvo porque o volume elevado ajuda o Authority Score do cliente
-- [ ] Reportar o concorrente ao Google por ter comprado backlinks, para ele perder posições
-Explicação: Milhares de links de um único site sem relação temática com fisioterapia nem saúde são sinal claro de backlinks comprados: não têm valor para SEO e não se replicam para o cliente.
+- [ ] Reportar o concorrente ao Google por ter comprado backlinks
 
 Q19 [multi] Quando estamos a analisar quais os sites do Backlink Gap que fazem sentido para o cliente, o que devemos ter em conta?
 - [x] Se o site é confiável e de qualidade
-- [x] Authority Score do site no Semrush
+- [x] Authority Score do site
 - [x] Ligação temática/relevância do site com o nicho do cliente
 - [ ] Se o site tem um design bonito e moderno
 - [ ] Se o site aceita qualquer empresa sem verificação
 
-Q20 [single] Depois de identificar os concorrentes relevantes no Semrush, qual é o passo seguinte para chegar às oportunidades de backlinks que eles têm e o cliente não?
-- [ ] Enviar a lista de concorrentes por email ao cliente para ele aprovar site a site antes de avançar
-- [x] Abrir a action Backlink Competitor Gap na app da WonderAds, com os concorrentes e os tópicos foco
-- [ ] Contactar diretamente cada site concorrente para pedir os backlinks, sem fazer mais nenhum estudo
-- [ ] Correr o Backlink Gap no próprio Semrush e exportar o CSV, que já serve de estudo final
-Explicação: O passo seguinte é a action Backlink Competitor Gap na app da WonderAds, com os concorrentes validados e os tópicos foco: é ela que gera o estudo, com as oportunidades organizadas por tipo de fonte.
+Q20 [single] Depois de identificar os concorrentes relevantes no Semrush, o passo seguinte no fluxo de uma análise "Backlinks Competitor Gap" é:
+- [ ] Enviar a lista de concorrentes por email ao cliente para ele aprovar site a site
+- [x] Ir à app da WonderAds, abrir a action Backlink Competitor Gap, adicionar os concorrentes + tópicos foco e gerar o estudo
+- [ ] Contactar diretamente cada site concorrente para pedir os backlinks
+- [ ] Fazer o estudo apenas dentro do Semrush e exportar em CSV
 
 Q21 [multi] O estudo gerado pelo Competitor Backlink Gap na app da WonderAds organiza as oportunidades por tipo de fonte. Que tipos de fonte podem aparecer no output?
-- [x] Imprensa local (jornais da região)
-- [x] Sites e portais de notícias
+- [x] Imprensa local
+- [x] Sites de notícias
 - [x] Revistas e portais de saúde
 - [x] Diretórios clínicos (ex.: Doctoralia)
 - [x] Blogs e fóruns temáticos (ex.: maternidade, bebé)
@@ -1527,17 +1459,16 @@ Q23 [vf] Como o Ahrefs corre na nuvem e envia email quando termina, posso e devo
 Q24 [vf] Quando não encontro uma página equivalente para redirecionar, a solução mais segura é redirecionar todos os URLs quebrados para a homepage. → F
 
 Q25 [single] Cenário: O cliente tem várias páginas 404 antigas que já não têm equivalente no site atual, mas o serviço/tema continua a ser oferecido pelo cliente. Devo:
-- [ ] Redirecionar todas para a homepage, a página com mais autoridade, para eliminar os 404 depressa
-- [ ] Deixar como 404, porque o Google acaba por remover essas páginas do índice sem mais trabalho
-- [x] Recriar a página no mesmo URL, numa tarefa nova, para não perder a autoridade desse endereço
-- [ ] Redirecionar todas para a página de contacto, para quem chega ainda poder pedir o serviço
-Explicação: Se o serviço continua a existir, recria-se a página no mesmo endereço (abre-se tarefa nova, mesmo que dê mais trabalho) para não perder a autoridade e os backlinks desse URL. Nunca se manda tudo para a homepage ou para o contacto.
+- [ ] Redirecionar todas para a homepage para eliminar os 404 rapidamente
+- [ ] Deixar como 404 porque o Google acaba por remover essas páginas do índice
+- [x] Recriar a página no mesmo endereço, mesmo que dê mais trabalho, abrindo tarefa nova para não perder a autoridade daquele URL
+- [ ] Redirecionar todas para a página de contacto genérica do site
 
 Q26 [single] Qual é a diferença entre um redirect 301 e um redirect 302?
-- [ ] O 301 é temporário e o 302 é permanente; ambos passam a mesma autoridade
+- [ ] O 301 é temporário e o 302 é permanente
 - [x] O 301 é permanente e passa autoridade; o 302 é temporário e não passa autoridade
-- [ ] Ambos passam autoridade; a diferença é só visual, no browser do utilizador
-- [ ] O 302 é o mais recomendado, porque é reversível e mais seguro para SEO
+- [ ] Ambos passam autoridade; a diferença é apenas visual no browser
+- [ ] O 302 é o mais recomendado porque é mais seguro para SEO
 
 Q27 [vf] Posso usar um redirect 302 sempre que quiser porque, se ficar ativo mais de 30 dias, acaba por ter o mesmo efeito de um 301. → F
 
@@ -1550,41 +1481,38 @@ Q28 [multi] Ao usar o Claude para trabalhar o relatório de links quebrados expo
 - [ ] Substitui a necessidade de o consultor abrir cada destino sugerido para validar caso a caso
 
 Q29 [single] Cenário: O consultor exportou o relatório do Ahrefs e o CSV tem 380 URLs 4xx. Depois de colar o CSV e o sitemap no Claude, a plataforma agrupa as URLs e sugere destinos. Devo:
-- [ ] Confiar nas sugestões do Claude e criar os 301 em bloco, porque ele já cruzou tudo com o sitemap
-- [x] Abrir e validar cada destino sugerido, ajustar onde for preciso e só depois criar os 301
+- [ ] Confiar 100% nas sugestões do Claude e criar os 301 em bloco
+- [x] Abrir cada destino sugerido pelo Claude, verificar se faz sentido com base no serviço/página, ajustar manualmente onde for preciso e só depois criar os 301 no plugin Redirection
 - [ ] Redirecionar tudo para a homepage porque 380 URLs é demasiado para tratar caso a caso
 - [ ] Ignorar o relatório porque o Google acaba por descobrir e desindexar sozinho os 404 com o tempo
-Explicação: O Claude agrupa e sugere, mas não conhece o projeto o suficiente: o consultor abre cada destino, confirma que faz sentido para o serviço/página, ajusta à mão onde for preciso e só depois cria os 301.
 
 Q30 [vf] Uma cadeia de redirecionamentos (A → B → C) é a forma mais eficiente de organizar redirects antigos porque preserva o histórico da URL. → F
 
 Q31 [single] Depois de aplicar as correções e voltar a correr o crawl no Ahrefs, o consultor deve verificar:
-- [x] Se os 404 desapareceram e se não surgiram cadeias de redirecionamento
-- [ ] Apenas se os 404 desapareceram, porque era esse o objetivo da correção
-- [ ] Apenas se o site está a carregar mais rápido depois de limpar os erros
-- [ ] Se o cliente recebeu o email do Ahrefs com o novo relatório já sem erros
-Explicação: No novo crawl confirmam-se as duas coisas: que os 404 desapareceram e que não surgiram cadeias de redirecionamento (A → B → C).
+- [x] Se os 404 desapareceram e se não apareceram cadeias de redirecionamento (A → B → C)
+- [ ] Apenas se os 404 desapareceram
+- [ ] Apenas se o site está a carregar mais rápido
+- [ ] Se o cliente recebeu email do Ahrefs com o novo relatório
 
 Q32 [vf] O Ahrefs permite agendar um crawl automático semanal que envia email quando aparece um 404 novo, deixando de ser um trabalho reativo e passando a ser corretivo. → V
 
-Q33 [single] No fluxo de correção de links 4xx num site em WordPress, em que plugin se criam os 301?
+Q33 [single] Para criar redirects num site em WordPress, qual é o plugin utilizado no fluxo?
 - [ ] Yoast SEO
-- [ ] Rank Math SEO
+- [ ] Rank Math
 - [x] Redirection
-- [ ] Simple 301 Redirects
-Explicação: No fluxo da aula, os 301 criam-se no plugin Redirection, depois de validados os destinos caso a caso.
+- [ ] WP Rocket
 
 Q34 [vf] O Claude conhece o site do cliente e o histórico do projeto o suficiente para decidir sozinho os destinos finais dos redirects, sem necessidade de validação do consultor. → F
 
 Q35 [multi] Quais destes passos fazem parte do fluxo correto para encontrar e resolver links 4xx e links com defeito?
-- [x] Correr o Site Audit no Ahrefs sobre o site do cliente
+- [x] Correr o Site Audit no Ahrefs
 - [x] Filtrar por "páginas com erro 4xx" ou "página tem link para uma página com erro"
 - [x] Exportar o CSV e colar no Claude juntamente com o sitemap do cliente
-- [ ] Deixar o Claude decidir sozinho e criar os 301 automaticamente, já que cruzou tudo com o sitemap
+- [ ] Deixar o Claude decidir sozinho e criar os 301 automaticamente
 - [x] Validar caso a caso os destinos sugeridos pelo Claude
-- [x] Corrigir o link na origem se estiver mal escrito, ou criar um 301 se a página deixou de existir
-- [ ] Redirecionar sempre tudo para a homepage, para simplificar e fechar os 404 de uma vez
-- [x] Voltar a correr o crawl e confirmar que os 404 desapareceram, sem cadeias de redirecionamento
+- [x] Corrigir o link diretamente na página de origem quando está mal escrito, ou criar redirect 301 quando a página deixou mesmo de existir
+- [ ] Redirecionar sempre tudo para a homepage para simplificar a operação
+- [x] Voltar a correr o crawl no Ahrefs para confirmar que os 404 desapareceram e que não há cadeias de redirecionamento
 - [x] Deixar o crawl agendado semanalmente para receber avisos de novos 404
 
 ---
@@ -1611,31 +1539,27 @@ Q1 [single] A melhor maneira de perceber um cross sell e/ou um upsell é ir fala
 
 Q2 [single] Uma CRM é:
 - [ ] Um sistema de contabilidade usado para calcular impostos e emitir faturas automaticamente
-- [x] Uma ferramenta que centraliza os contactos, interações e oportunidades de venda do cliente
-- [ ] Um tipo de alojamento web otimizado para melhorar a velocidade do site do cliente
+- [x] Uma ferramenta de gestão de relacionamento com clientes que centraliza contactos, interações e oportunidades de venda para o cliente
+- [ ] Um tipo de hospedagem para melhorar a velocidade do site do cliente
 - [ ] Um protocolo de segurança informática que protege bases de dados contra ataques
-Explicação: CRM = Customer Relationship Management: a ferramenta de gestão da relação com os clientes, onde ficam contactos, interações e oportunidades de venda.
 
 Q3 [single] Se o cliente não tiver a gerir os clientes da melhor forma possível e a perder leads é a minha total responsabilidade de:
-- [ ] Perceber como o cliente gere contactos e leads
-- [ ] Testar os formulários e o flow de uma lead
-- [ ] Falar com a equipa e propor cross sell de CRM
+- [ ] Perceber o mais rápido possível como é que o cliente gere os seus contactos e leads atualmente
+- [ ] Testar os formulários do site e ver como é o flow de uma lead do site
+- [ ] Falar com a equipa e com o cliente e propor um cross sell de consultoria de CRM
 - [x] Todas as anteriores
-Explicação: As três fazem parte da responsabilidade do consultor: perceber como o cliente gere hoje contactos e leads, testar os formulários e o flow de uma lead do site, e falar com a equipa e com o cliente para propor um cross sell de consultoria de CRM.
 
 Q4 [single] Queres fazer um cross do cliente para um website redesign novo. Qual é a melhor métrica para ver se o site do cliente está apelativo e os utilizadores estão a gostar?
 - [ ] Número total de páginas indexadas pelo Google
 - [ ] Velocidade de carregamento do servidor medida em milissegundos
-- [x] Tempo médio na página e taxa de rejeição (bounce rate)
-- [ ] Número de utilizadores novos que chegam ao site por mês
-Explicação: Tempo médio na página e bounce rate mostram se quem entra explora o conteúdo ou sai logo sem interagir — é esse o argumento para o redesign. Páginas indexadas, velocidade do servidor ou utilizadores novos não dizem se o site agrada.
+- [x] Tempo médio na página e bounce rate, porque mostram se os utilizadores estão a explorar o conteúdo ou a sair rapidamente sem interagir
+- [ ] Quantidade de plugins instalados no CMS
 
 Q5 [single] É a minha total responsabilidade perceber:
 - [ ] Qual é a satisfação do cliente com o site atual
-- [ ] Que páginas faltam no site para melhorar o SEO
+- [ ] Quantas páginas faltam no site do cliente para melhores resultados SEO (corpo clínico, sobre nós, serviços todos)
 - [ ] O tempo médio de utilizador por página do site
 - [x] Todas as anteriores
-Explicação: As três são responsabilidade do consultor: a satisfação do cliente com o site atual, as páginas em falta para melhores resultados SEO (corpo clínico, sobre nós, todos os serviços) e o tempo médio por página — é daqui que saem cross sells como um redesign.
 
 Q6 [vf] A fase n.º 1 de um processo de cross sell e upsell é perceber se há oportunidades e quais são as oportunidades. → V
 
@@ -1647,10 +1571,9 @@ Q9 [vf] Se tiver a propor um cross sell de redesign de website a um cliente de S
 
 Q10 [single] Em qualquer cross sell e/ou upsell é importante:
 - [ ] Oferecer sempre o produto mais caro como um website novo, independentemente do perfil do cliente
-- [x] Analisar como a concorrência faz esse serviço/produto e onde o cliente se pode diferenciar
-- [ ] Evitar falar de produtos ou serviços adicionais na conversa, para o cliente não sentir pressão de venda
-- [ ] Aplicar exatamente o mesmo desconto a todos os clientes, para ninguém se sentir prejudicado
-Explicação: Antes de propor, analisa-se como a concorrência faz esse serviço/produto: mostra o posicionamento no mercado e as oportunidades de diferenciação, e dá argumentos que falam ao dono da empresa.
+- [x] Fazer uma análise de como o concorrente/competição está a fazer esse tal serviço/produto, para perceber o posicionamento no mercado e identificar oportunidades de diferenciação
+- [ ] Evitar mencionar produtos ou serviços adicionais durante a conversa com o cliente
+- [ ] Aplicar exatamente o mesmo desconto a todos os clientes
 
 Q11 [single] Num cross para o DPT WEB (projeto de website): ⚠️ CONFIRMAR (sem resposta marcada no doc original; a renovação paga 5%, confirmar se o cross-sell web é também 5%)
 - [ ] O consultor de SEO que trouxe o cross sell ganha uma comissão de 2,5% do projeto
@@ -1661,12 +1584,12 @@ Q11 [single] Num cross para o DPT WEB (projeto de website): ⚠️ CONFIRMAR (se
 Q12 [vf] Assumindo a responsabilidade pelos meus clientes, procuro sempre avaliar se existe margem para melhorar a sua faturação mensal e proponho cross sells de outras consultorias (melhorar as vendas da receção, Ads para complementar o serviço, website redesign, etc.). → V
 
 Q13 [multi] A WonderAds (para clientes internos/cross sells) faz a venda de:
-- [x] Consultoria de CRM
-- [x] Web Design (sites novos e redesign)
+- [x] CRM
+- [x] Web Design
 - [x] Email Marketing
 - [ ] Edição de Vídeos em Bulk
-- [x] META Ads (Facebook e Instagram)
-- [ ] Campanhas de TikTok Ads
+- [x] META Ads
+- [ ] TikTok Ads
 
 Q14 [vf] O objetivo essencial para apresentar um cross sell é alavancar os resultados dos serviços já comprados pelo cliente. Por exemplo, oferecemos Google Ads a um cliente de SEO/GEO para alavancar os resultados gerais da conta/cliente. → V
 
@@ -1675,12 +1598,11 @@ Q15 [vf] Para clientes em Portugal a WonderAds não oferece a captação de imag
 Aula 11.4 — Preparar uma renovação de um cliente
 
 Q16 [multi] Para a renovação de um cliente tenho como responsabilidade trazer para a reunião:
-- [x] O documento de overview dos últimos 6 meses
-- [x] A proposta de roadmap para os próximos 6 meses
-- [ ] A tabela de pending review, para fechar aprovações pendentes
-- [ ] As últimas mensagens do grupo de WhatsApp, para recapitular pedidos
-- [x] As plataformas de analytics já abertas em abas
-Explicação: Leva-se o documento de overview dos últimos 6 meses, a proposta de roadmap para os próximos 6 e as plataformas de analytics abertas em abas, prontas a mostrar na reunião.
+- [x] O documento de 7 pontos dos últimos 6 meses de parceria
+- [x] A proposta de roadmap para os próximos 6 meses de parceria
+- [ ] A tabela de pending review
+- [ ] As últimas mensagens no grupo do WhatsApp
+- [x] As aplicações abertas nas abas para ter prontas na reunião
 
 Q17 [vf] Durante a call de renovação o objetivo é falarmos sobre como correram os passados 6 meses e o que propomos serem os próximos 6 meses com o cliente. → V
 
@@ -1704,7 +1626,7 @@ Q21 [multi] O documento de overview dos últimos 6 meses para trazer para a reun
 - [x] GMB Profile Analytics
 - [x] Recomendação de próximos passos
 - [ ] Último Weekly Report enviado ao cliente
-- [x] Secção de Sources
+- [x] Sources
 
 ---
 
@@ -1725,7 +1647,7 @@ No workspace: mostrar como "Em breve", bloqueadas, sem contar para a percentagem
 | 2 | Q11 Dentro de quantos dias ligar (NPS) | Sem opções no doc original | 14 dias (opções criadas a partir do título do vídeo 2.7) |
 | 3 | Q8 A quem perguntar primeiro (admin) | Sem resposta marcada | Colega de equipa |
 | 8 | Q10 Quem assina os artigos blog | Sem resposta marcada | Maior referência no cliente/clínica |
-| 9 | Q8 GMB Post de cliente sem imagens | Resolvida (v78.35): confirmada no CMS com duas certas | Passou a [multi]: cross-sell de sessão fotográfica + banco de imagens |
+| 9 | Q8 GMB Post de cliente sem imagens | Sem resposta marcada | Cross-sell sessão fotográfica |
 | 11 | Q11 Comissão cross-sell DPT WEB | Sem resposta marcada | 5% |
 | 11 | Q18 Doc de overview tem quantas partes | Sem resposta marcada | 7 |
 | 11 | Q19 Roadmap 3 meses (V) | Contradiz Q16 (6 meses) | Corrigir enunciado para 6 meses ou marcar F |

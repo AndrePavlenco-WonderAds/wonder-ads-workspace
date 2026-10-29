@@ -43,7 +43,6 @@ import {
   Target,
 } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
-import { ExamRail, NextExamCard } from "@/components/training/exam-rail";
 import {
   ReviewLibrary,
   type LibraryEntry,
@@ -60,6 +59,7 @@ import {
 import { getTrainingContext, userTracks } from "@/lib/training/server";
 import { overallPercent } from "@/lib/training/progress";
 import type { TrackState } from "@/lib/training/progress";
+import type { ExamJourney } from "@/lib/training/exams";
 import { championQuote } from "@/lib/training/champion";
 import { formatDate } from "@/lib/dates";
 
@@ -120,11 +120,6 @@ export default async function FormacaoPage() {
       ? `/formacao/${active!.track.slug}/teste/${nextQuiz.id}`
       : null;
 
-  // Um exame aberto ganha SEMPRE ao resto. É a única coisa nesta página com
-  // prazo a andar e com consequência de carreira; deixá-lo em quarto lugar,
-  // por baixo de uma aula de 12 minutos, seria pôr o urgente por baixo do
-  // rotineiro.
-  const openExam = exams.exams.find((e) => e.status === "available") ?? null;
 
   // Índice de revisão: todas as aulas do programa, pela ordem do catálogo.
   const library: LibraryEntry[] = tracks.flatMap((t) =>
@@ -232,7 +227,7 @@ export default async function FormacaoPage() {
               “{quote}”
             </p>
 
-            {!exams.startedAt && (
+            {!exams.startedAt && exams.trackSlug && (
               <p className="mt-3 text-[12px] leading-relaxed text-amber-200/70">
                 O relógio dos exames só arranca quando a tua data de entrada
                 estiver registada.{" "}
@@ -259,31 +254,7 @@ export default async function FormacaoPage() {
 
       {/* ===== 2 · Agora ===== */}
       {/* Uma ação, a mais importante, do tamanho da sua importância. */}
-      {openExam ? (
-        <Link
-          href={`/formacao/exame/${openExam.exam.id}`}
-          className="animate-fade-up group mt-5 flex flex-wrap items-center gap-4 rounded-2xl border border-[#C535C9]/45 bg-[#C535C9]/[0.09] p-5 transition hover:border-[#C535C9]/70 hover:bg-[#C535C9]/[0.14]"
-        >
-          <span className="animate-node-halo flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-[#C535C9]/40 bg-[#C535C9]/12 text-[#f0a8ee]">
-            <Target className="h-5 w-5" />
-          </span>
-          <div className="min-w-0 flex-1">
-            <BrightPill tone="rose">Exame aberto</BrightPill>
-            <p className="mt-1.5 text-[15px] font-semibold text-white">
-              {openExam.exam.title}
-            </p>
-            <p className="mt-0.5 text-[11.5px] text-white/55">
-              60 minutos, sem pausas · mínimo {openExam.exam.passingScore}% ·{" "}
-              {openExam.attemptsLeft} tentativa
-              {openExam.attemptsLeft === 1 ? "" : "s"} · {openExam.exam.gate}
-            </p>
-          </div>
-          <span className="brand-gradient-bg inline-flex shrink-0 items-center gap-2 rounded-xl px-4 py-2.5 text-[13px] font-semibold text-white transition group-hover:brightness-110">
-            Ver o exame
-            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-          </span>
-        </Link>
-      ) : nextHref && active ? (
+      {nextHref && active ? (
         <Link
           href={nextHref}
           className="animate-fade-up group mt-5 flex flex-wrap items-center gap-4 rounded-2xl border border-[#783DF5]/35 bg-[#783DF5]/[0.09] p-5 transition hover:border-[#783DF5]/60 hover:bg-[#783DF5]/[0.14]"
@@ -331,8 +302,9 @@ export default async function FormacaoPage() {
               Não tens nada por fazer na matéria.
             </p>
             <p className="mt-0.5 text-[11.5px] text-white/55">
-              O que falta é o relógio dos exames. Até lá, revê o que quiseres
-              mais abaixo.
+              {exams.trackSlug
+                ? "Os exames de fase estão dentro da tua especialização. Até lá, revê o que quiseres mais abaixo."
+                : "Revê o que quiseres mais abaixo."}
             </p>
           </div>
         </div>
@@ -340,7 +312,7 @@ export default async function FormacaoPage() {
 
       {/* ===== 3 · Números ===== */}
       {tracks.length > 0 && (
-        <div className="animate-fade-up mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
+        <div className="animate-fade-up mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
           <StatTile
             label="Aulas vistas"
             value={`${watched}/${totalLessons}`}
@@ -381,14 +353,13 @@ export default async function FormacaoPage() {
               icon={<Clock className="h-3 w-3" />}
             />
           )}
-          {/* Quando é o próximo exame — e, se já passou os 90 dias, o selo
-              de efetivo em verde. */}
-          <NextExamCard journey={exams} />
         </div>
       )}
 
-      {/* ===== 4 · Exames de fase ===== */}
-      <ExamRail journey={exams} />
+      {/* Os exames de fase saíram daqui na v78.54: vivem dentro da
+          especialização dona deles (/formacao/<track>), sem misturar
+          especializações. O cartão dessa especialização avisa quando há um
+          exame aberto. */}
 
       {/* ===== 5 · O percurso ===== */}
       {tracks.length === 0 ? (
@@ -417,7 +388,11 @@ export default async function FormacaoPage() {
           {otherTracks.length > 0 && (
             <section className="animate-fade-up mt-4 grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">
               {otherTracks.map((t) => (
-                <TrackCard key={t.track.slug} state={t} />
+                <TrackCard
+                  key={t.track.slug}
+                  state={t}
+                  exams={exams.trackSlug === t.track.slug ? exams : null}
+                />
               ))}
             </section>
           )}
@@ -484,10 +459,14 @@ function TrackCard({
   /** A Categoria Comum ocupa a linha toda e ganha a fita de aulas em tamanho
    *  grande — é o módulo que mais gente lê e o que mais vezes se consulta. */
   wide = false,
+  exams = null,
 }: {
   state: TrackState;
   wide?: boolean;
+  /** Os exames de fase, quando são desta especialização (v78.54). */
+  exams?: ExamJourney | null;
 }) {
+  const openExam = exams?.exams.find((e) => e.status === "available") ?? null;
   const locked = state.lockedReason !== null;
   const href = `/formacao/${state.track.slug}`;
   const modulesDone = state.modules.filter(
@@ -533,6 +512,15 @@ function TrackCard({
                 Em preparação
               </BrightPill>
             )}
+            {openExam ? (
+              <BrightPill tone="rose" icon={<Target className="h-2.5 w-2.5" />}>
+                Exame aberto
+              </BrightPill>
+            ) : exams && exams.exams.length > 0 ? (
+              <BrightPill tone="purple" icon={<Target className="h-2.5 w-2.5" />}>
+                Exames {exams.passedCount}/{exams.exams.length}
+              </BrightPill>
+            ) : null}
           </div>
           <p
             className={`mt-2 text-[12.5px] leading-relaxed text-white/55 ${

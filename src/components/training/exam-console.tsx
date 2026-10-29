@@ -49,6 +49,7 @@ type Phase = "briefing" | "starting" | "running" | "finished";
 
 export function ExamConsole({
   examId,
+  pageHref,
   examTitle,
   examLabel,
   gateLine,
@@ -63,6 +64,8 @@ export function ExamConsole({
   initialSession,
 }: {
   examId: string;
+  /** A página do exame, dentro da especialização (v78.54). */
+  pageHref: string;
   examTitle: string;
   examLabel: string;
   gateLine: string;
@@ -205,7 +208,7 @@ export function ExamConsole({
             attemptsLeft={attemptsLeft}
             trackHref="/formacao"
             nextHref="/formacao"
-            retryHref={`/formacao/exame/${examId}`}
+            retryHref={pageHref}
             backLabel="Voltar à Formação"
             gateLine={gateLine}
             onFinished={() => setPhase("finished")}

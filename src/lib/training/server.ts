@@ -16,7 +16,7 @@ import {
   resolveStartDate,
 } from "@/lib/training/start-dates-store";
 import { reconcileExpiredExams } from "@/lib/training/exam-proctor";
-import { computeExamJourney, type ExamJourney } from "@/lib/training/exams";
+import { computeExamJourney, examTrackOf, type ExamJourney } from "@/lib/training/exams";
 import {
   computeTrackState,
   computeUserTraining,
@@ -41,7 +41,8 @@ export type TrainingContext = {
   common: TrackState | null;
   /** Pode ser mais do que uma — quem faz SEO e Comercial tem as duas. */
   specializations: TrackState[];
-  /** Os seis exames de fase, já com o relógio da pessoa aplicado. */
+  /** Os exames de fase da especialização da pessoa (v78.54: só a SEO/GEO
+   *  tem), já com o relógio dela aplicado. Sem exames, `exams` vem vazio. */
   exams: ExamJourney;
 };
 
@@ -91,6 +92,7 @@ export async function getTrainingContext(): Promise<TrainingContext | null> {
     common,
     specializations,
     exams: computeExamJourney(
+      examTrackOf(specializationSlugs),
       resolveStartDate(employee.username, startDates),
       attempts,
     ),

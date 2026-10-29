@@ -79,8 +79,18 @@ export async function POST(
   );
   const attempts = burnt.length ? [...initialAttempts, ...burnt] : initialAttempts;
 
-  const startDates = await getStartDates();
+  // O exame é da especialização dona dele (v78.54): só o faz quem lá está
+  // inscrito — as especializações não se misturam.
+  const [startDates, enrollments] = await Promise.all([getStartDates(), getEnrollments()]);
+  const enrolled: readonly string[] = resolveTrackSlugs(employee.username, employee.dept, enrollments);
+  if (!enrolled.includes(exam.trackSlug)) {
+    return NextResponse.json(
+      { error: "Este exame é de uma especialização em que não estás inscrito." },
+      { status: 403 },
+    );
+  }
   const journey = computeExamJourney(
+    exam.trackSlug,
     resolveStartDate(employee.username, startDates),
     attempts,
     new Date(now),
@@ -123,15 +133,8 @@ export async function POST(
   }
 
   try {
-    const [tracks, enrollments] = await Promise.all([
-      getTrainingCatalog(),
-      getEnrollments(),
-    ]);
-    const pool = examPool(
-      exam,
-      tracks,
-      resolveTrackSlugs(employee.username, employee.dept, enrollments),
-    );
+    const tracks = await getTrainingCatalog();
+    const pool = examPool(exam, tracks);
     // Semente nova a cada «Começar»: dois consultores — ou a mesma pessoa na
     // segunda tentativa — nunca recebem a mesma folha. Numa retoma isto não é
     // usado; a sessão já tem a sua.

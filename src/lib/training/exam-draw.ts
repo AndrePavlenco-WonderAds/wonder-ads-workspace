@@ -9,7 +9,8 @@
 // «Começar»:
 //   • 35 perguntas em 60 minutos — ~1,7 min por pergunta.
 //   • 8 do NÚCLEO da fase (os casos escritos para aquele exame, em
-//     `exam-questions.ts`) e 27 dos CAPÍTULOS da especialização da pessoa.
+//     `exam-questions.ts`) e 27 dos CAPÍTULOS da especialização DONA DO EXAME
+//     (v78.54: só dela — nem Comum de reserva, nem outra especialização).
 //     TODOS os capítulos entram — duas voltas completas e uma terceira parcial,
 //     por ordem baralhada a cada volta, por isso 2 ou 3 de cada — para que o
 //     exame cubra a formação inteira e não só o tema da semana.
@@ -46,9 +47,10 @@ type Stratum = { topic: QuestionTopic; questions: TrainingQuestion[] };
 export type ExamPool = {
   /** Os casos escritos para esta fase. */
   core: Stratum;
-  /** Um estrato por capítulo da especialização da pessoa. */
+  /** Um estrato por capítulo da especialização dona do exame. */
   chapters: Stratum[];
-  /** Só entra quando a especialização não chega para encher a folha. */
+  /** Vazio desde a v78.54: as especializações não se misturam, e o Comum já
+   *  não enche folhas de exame. Fica no tipo para o sorteio não mudar. */
   reserve: Stratum[];
 };
 
@@ -82,25 +84,16 @@ function trackStrata(track: TrainingTrack): Stratum[] {
     .filter((s) => s.questions.length > 0);
 }
 
-/** De onde sai a folha desta pessoa: o núcleo da fase + os capítulos das
- *  especializações dela. Sem especialização (C-Level), os capítulos são os do
- *  Comum — que, para os outros, só serve de reserva. */
-export function examPool(
-  exam: ExamPhase,
-  tracks: TrainingTrack[],
-  specializationSlugs: readonly string[],
-): ExamPool {
+/** De onde sai a folha: o núcleo da fase + os capítulos da especialização
+ *  dona do exame — e só dela (v78.54). Até aí entravam os capítulos de todas
+ *  as especializações da pessoa e o Comum de reserva. */
+export function examPool(exam: ExamPhase, tracks: TrainingTrack[]): ExamPool {
   const core: Stratum = {
     topic: coreTopic(exam),
     questions: (EXAM_QUESTIONS[exam.id] ?? []).filter(examEligible),
   };
-  const own = tracks
-    .filter((t) => !t.isCommon && specializationSlugs.includes(t.slug))
-    .flatMap(trackStrata);
-  const common = tracks.filter((t) => t.isCommon).flatMap(trackStrata);
-  return own.length
-    ? { core, chapters: own, reserve: common }
-    : { core, chapters: common, reserve: [] };
+  const chapters = tracks.filter((t) => t.slug === exam.trackSlug).flatMap(trackStrata);
+  return { core, chapters, reserve: [] };
 }
 
 /** Quantas perguntas a folha vai ter — 35, salvo especialização pequena. */

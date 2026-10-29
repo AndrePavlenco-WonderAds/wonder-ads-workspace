@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.54",
+    date: "2026-10-29",
+    title: "Formação: exames dentro da especialização e perguntas revistas",
+    highlights: [
+      "**🎓 Os exames de fase passaram para dentro da Especialização SEO/GEO** (/formacao/seo-geo) e só têm perguntas dela — sem Comum de reserva nem perguntas de outras especializações. O hub da Formação deixa de ter a fita dos exames; o cartão da especialização avisa quando há um exame aberto. Ads, Web e Comercial ficam sem exames até haver perguntas validadas pela direção.",
+      "**↩️ As 122 perguntas de SEO/GEO reescritas a 28/10 voltaram ao texto original do André** (a 8 do capítulo 9 continua de escolha múltipla — tinha duas certas).",
+      "**🧹 Saíram as perguntas sobre registo de horas** (a WonderAds não regista horas), nos exames e nos quizzes de Ads e Web, e o «registo de horas» das descrições das aulas. O núcleo dos exames foi revisto só para SEO/GEO, e as perguntas com opções erradas «meio certas» foram corrigidas.",
+    ],
+  },
+  {
     version: "78.53",
     date: "2026-10-29",
     title: "Ineficácias: subir de nível põe PA e NO a zero, e o nível desce no fim do semestre",

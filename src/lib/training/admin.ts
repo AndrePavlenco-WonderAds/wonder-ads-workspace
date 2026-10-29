@@ -23,6 +23,7 @@ import {
 } from "@/lib/training/start-dates-store";
 import {
   computeExamJourney,
+  examTrackOf,
   isExamQuizId,
   type ExamJourney,
 } from "@/lib/training/exams";
@@ -101,7 +102,7 @@ function buildRow(
     attempts,
   );
   const startedAt = resolveStartDate(user.username, startDates);
-  const exams = computeExamJourney(startedAt, allAttempts);
+  const exams = computeExamJourney(examTrackOf(user.trackSlugs), startedAt, allAttempts);
   const parts = [common, ...specializations].filter(
     (t): t is TrackState => t !== null,
   );

@@ -28,7 +28,7 @@ import {
 import { getTrainingCatalog } from "@/lib/training/content-store";
 import { examPaperFor } from "@/lib/training/exam-draw";
 import { EXAM_QUESTIONS } from "@/lib/training/exam-questions";
-import { computeExamJourney, examQuiz, findExam } from "@/lib/training/exams";
+import { computeExamJourney, examHref, examQuiz, findExam } from "@/lib/training/exams";
 import { reconcileExpiredExams } from "@/lib/training/exam-proctor";
 import {
   finishExamSession,
@@ -144,7 +144,7 @@ export async function POST(
     // comunica o que aconteceu. Chegar depois do apito não entrega nada.
     await reconcileExpiredExams(employee.username, recordedAttempts, now);
     revalidatePath("/formacao");
-    revalidatePath(`/formacao/exame/${examId}`);
+    revalidatePath(examHref(exam));
     return NextResponse.json(
       {
         error:
@@ -157,6 +157,7 @@ export async function POST(
 
   const previousAttempts = recordedAttempts;
   const journey = computeExamJourney(
+    exam.trackSlug,
     resolveStartDate(employee.username, startDates),
     previousAttempts,
     new Date(now),
@@ -239,7 +240,7 @@ export async function POST(
   }
 
   revalidatePath("/formacao");
-  revalidatePath(`/formacao/exame/${examId}`);
+  revalidatePath(examHref(exam));
 
   const attemptsLeft =
     exam.maxAttempts === null
