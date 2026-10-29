@@ -13,6 +13,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.55",
+    date: "2026-10-29",
+    title: "Documentação: 4 cartões por linha no hub",
+    highlights: [
+      "**🗂️ O hub da Documentação mostra 4 cartões por linha** (2 no tablet, 1 no telemóvel), com as capas na proporção original. O cartão inteiro abre o documento, não só o botão.",
+      "**🧭 Ordem por linhas**: bónus, comissões e folga na primeira; os três protocolos com a Jornada de Cliente na segunda; ineficácias, probation e Matriz de Talento na última.",
+    ],
+  },
+  {
     version: "78.54",
     date: "2026-10-29",
     title: "Formação: exames dentro da especialização e perguntas revistas",
