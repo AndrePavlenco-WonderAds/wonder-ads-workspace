@@ -52,6 +52,45 @@ export const FOLGA_CATEGORIES = [
 ] as const;
 export type FolgaCategory = (typeof FOLGA_CATEGORIES)[number]["id"];
 
+// ---------------------------------------------------------------------------
+// Preços de referência (v78.50) — o custo habitual de cada categoria, iguais
+// em todos os projetos. Ao escolher a categoria, o valor do extra preenche-se
+// sozinho; o consultor pode mudá-lo. Só a direção mexe nos preços (KV
+// `seo-folga:prices`); sem nada guardado, valem estes.
+// ---------------------------------------------------------------------------
+
+export type FolgaPrices = Partial<Record<FolgaCategory, number>>;
+
+/** Os preços de partida (André, 29/10/2026); as outras categorias ficam sem. */
+export const FOLGA_PRICE_DEFAULTS: FolgaPrices = {
+  backlinks: 350,
+  wikipedia: 200,
+};
+
+export type FolgaPriceList = { prices: FolgaPrices; updatedAt: number; updatedBy: FolgaPerson | null };
+
+export const MAX_FOLGA_PRICE = 100_000;
+
+/** Só categorias que existem e valores > 0, com 2 casas. */
+export function normalizeFolgaPrices(raw: unknown): FolgaPrices | null {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const o = raw as Record<string, unknown>;
+  const out: FolgaPrices = {};
+  for (const c of FOLGA_CATEGORIES) {
+    const v = o[c.id];
+    if (v === undefined || v === null) continue;
+    if (typeof v !== "number" || !Number.isFinite(v) || v < 0 || v > MAX_FOLGA_PRICE) return null;
+    const eur = Math.round(v * 100) / 100;
+    if (eur > 0) out[c.id] = eur;
+  }
+  return out;
+}
+
+/** «200» ou «211,26» — como se escreve no campo do valor. */
+export function priceInput(eur: number): string {
+  return Number.isInteger(eur) ? String(eur) : eur.toFixed(2).replace(".", ",");
+}
+
 export const FOLGA_KINDS = ["folga", "cobrado"] as const;
 /** folga = oferecido, sai da folga · cobrado = cobrado ao cliente, só registo. */
 export type FolgaKind = (typeof FOLGA_KINDS)[number];

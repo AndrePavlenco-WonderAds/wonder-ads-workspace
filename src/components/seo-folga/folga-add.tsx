@@ -4,7 +4,8 @@
 // fica o saldo — e avisa quando o extra passa a folga, porque a partir daí
 // o extra devia ser cobrado ou aprovado pela direção (e a direção recebe um
 // aviso no sino). Desde a v78.40 o extra pode ficar ligado a uma tarefa do
-// roadmap ou a um ticket do cliente.
+// roadmap ou a um ticket do cliente. Desde a v78.50, escolher uma categoria
+// com preço de referência preenche o valor — que o consultor pode mudar.
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -12,9 +13,13 @@ import { Check, Loader2, Plus } from "lucide-react";
 import {
   FOLGA_CATEGORIES,
   FOLGA_START,
+  categoryLabel,
   eurCents,
+  priceInput,
+  toCents,
   type FolgaCategory,
   type FolgaKind,
+  type FolgaPrices,
 } from "@/lib/seo-folga";
 
 export type FolgaLinkOption = { id: string; label: string; group: string };
@@ -28,15 +33,23 @@ type Props = {
   /** Lite sem folga: só se lança «cobrado ao cliente». */
   chargeOnly: boolean;
   today: string;
+  /** Preços de referência por categoria (iguais em todos os projetos). */
+  prices: FolgaPrices;
 };
 
 const inputCls =
   "w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2.5 text-[14px] text-white placeholder:text-white/30 focus:border-[#a78bfa]/60 focus:outline-none focus:ring-2 focus:ring-[#a78bfa]/20";
 
-export function FolgaAdd({ slug, tasks, tickets, remaining, available, chargeOnly, today }: Props) {
+const priceTitle = (eur: number | undefined) =>
+  eur === undefined ? undefined : `Preço de referência: ${eurCents(toCents(eur))}`;
+
+export function FolgaAdd({ slug, tasks, tickets, remaining, available, chargeOnly, today, prices }: Props) {
   const router = useRouter();
   const [title, setTitle] = useState("");
   const [amount, setAmount] = useState("");
+  // O valor que a categoria escreveu no campo. Enquanto o campo o tiver, é
+  // nosso e muda com a categoria; quando o consultor escreve outro, fica o dele.
+  const [autoAmount, setAutoAmount] = useState<string | null>(null);
   const [category, setCategory] = useState<FolgaCategory>("conteudo");
   const [kind, setKind] = useState<FolgaKind>(chargeOnly ? "cobrado" : "folga");
   const [date, setDate] = useState(today);
@@ -51,6 +64,24 @@ export function FolgaAdd({ slug, tasks, tickets, remaining, available, chargeOnl
   const cents = Number.isFinite(eur) && eur > 0 ? Math.round(eur * 100) : 0;
   const after = kind === "folga" ? remaining - cents : remaining;
   const afterPct = available > 0 ? Math.max(0, Math.min(100, (after / available) * 100)) : 0;
+  const refPrice = prices[category];
+  const usingRef = refPrice !== undefined && cents === toCents(refPrice);
+
+  function pickCategory(id: FolgaCategory) {
+    setCategory(id);
+    const price = prices[id];
+    const ours = amount === "" || amount === autoAmount;
+    if (!ours) return;
+    if (price !== undefined) {
+      const v = priceInput(price);
+      setAmount(v);
+      setAutoAmount(v);
+    } else if (autoAmount !== null) {
+      // O preço era da categoria anterior: não serve para esta.
+      setAmount("");
+      setAutoAmount(null);
+    }
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -74,6 +105,7 @@ export function FolgaAdd({ slug, tasks, tickets, remaining, available, chargeOnl
       if (!res.ok) throw new Error(data.error ?? "Não foi possível lançar o extra.");
       setTitle("");
       setAmount("");
+      setAutoAmount(null);
       setNote("");
       setDate(today);
       setLinkKind("none");
@@ -110,6 +142,27 @@ export function FolgaAdd({ slug, tasks, tickets, remaining, available, chargeOnl
           />
         </label>
 
+        <fieldset>
+          <legend className="mb-1.5 text-[12.5px] font-medium text-white/60">Categoria</legend>
+          <div className="flex flex-wrap gap-1.5">
+            {FOLGA_CATEGORIES.map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => pickCategory(c.id)}
+                aria-pressed={category === c.id}
+                title={priceTitle(prices[c.id])}
+                className={`rounded-full border px-3 py-1.5 text-[12.5px] transition ${
+                  category === c.id
+                    ? "border-[#a78bfa]/60 bg-[#783DF5]/25 text-white"
+                    : "border-white/10 bg-white/[0.03] text-white/60 hover:border-white/25 hover:text-white"
+                }`}
+              >
+                {c.label}
+              </button>
+            ))}
+          </div>
+        </fieldset>
         <div className="grid grid-cols-2 gap-3">
           <label className="block">
             <span className="mb-1.5 block text-[12.5px] font-medium text-white/60">Valor</span>
@@ -138,27 +191,29 @@ export function FolgaAdd({ slug, tasks, tickets, remaining, available, chargeOnl
             />
           </label>
         </div>
+        {refPrice !== undefined && (
+          <p className="-mt-2 text-[12px] leading-snug text-white/45">
+            {usingRef ? (
+              <>Preço de referência de {categoryLabel(category)}. Se este extra custou outro valor, muda-o.</>
+            ) : (
+              <>
+                Preço de referência de {categoryLabel(category)}: {eurCents(toCents(refPrice))}.{" "}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const v = priceInput(refPrice);
+                    setAmount(v);
+                    setAutoAmount(v);
+                  }}
+                  className="font-medium text-[#c4a6ff] underline-offset-2 hover:underline"
+                >
+                  Usar
+                </button>
+              </>
+            )}
+          </p>
+        )}
 
-        <fieldset>
-          <legend className="mb-1.5 text-[12.5px] font-medium text-white/60">Categoria</legend>
-          <div className="flex flex-wrap gap-1.5">
-            {FOLGA_CATEGORIES.map((c) => (
-              <button
-                key={c.id}
-                type="button"
-                onClick={() => setCategory(c.id)}
-                aria-pressed={category === c.id}
-                className={`rounded-full border px-3 py-1.5 text-[12.5px] transition ${
-                  category === c.id
-                    ? "border-[#a78bfa]/60 bg-[#783DF5]/25 text-white"
-                    : "border-white/10 bg-white/[0.03] text-white/60 hover:border-white/25 hover:text-white"
-                }`}
-              >
-                {c.label}
-              </button>
-            ))}
-          </div>
-        </fieldset>
 
         <fieldset>
           <legend className="mb-1.5 text-[12.5px] font-medium text-white/60">Quem paga</legend>

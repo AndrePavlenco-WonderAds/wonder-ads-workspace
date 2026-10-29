@@ -184,7 +184,9 @@ export default async function FolgaCustosDocPage() {
               </>,
               <>
                 Em <Strong>Lançar um extra</Strong>: o que foi, o valor, a data, a categoria (
-                {FOLGA_CATEGORIES.map((c) => c.label).join(", ")}) e quem paga.
+                {FOLGA_CATEGORIES.map((c) => c.label).join(", ")}) e quem paga. Nas categorias com{" "}
+                <Strong>preço de referência</Strong> (como a Wikipedia Page), o valor preenche-se sozinho; se o extra custou outro
+                valor, muda-se.
               </>,
               <>
                 Liga o extra à <Strong>tarefa do roadmap</Strong> ou ao <Strong>ticket</Strong> a que corresponde, para se saber

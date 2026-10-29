@@ -11,12 +11,16 @@ import {
   EMPTY_FOLGA,
   FOLGA_CATEGORIES,
   FOLGA_KINDS,
+  FOLGA_PRICE_DEFAULTS,
+  normalizeFolgaPrices,
   type FolgaAllowance,
   type FolgaCategory,
   type FolgaEntry,
   type FolgaKind,
   type FolgaLink,
   type FolgaPerson,
+  type FolgaPriceList,
+  type FolgaPrices,
   type FolgaRecord,
 } from "@/lib/seo-folga";
 
@@ -189,4 +193,36 @@ export async function markFolgaAlertVoided(entryId: string): Promise<void> {
     ALERTS_KEY,
     list.map((a) => (a.entryId === entryId ? { ...a, voided: true } : a)),
   );
+}
+
+// ---------------------------------------------------------------------------
+// Preços de referência por categoria (v78.50) — uma chave para todos os
+// projetos. Sem nada guardado, valem os de FOLGA_PRICE_DEFAULTS; depois de a
+// direção gravar, vale a lista dela inteira (uma categoria que tirou fica sem).
+// ---------------------------------------------------------------------------
+
+const PRICES_KEY = "seo-folga:prices";
+
+const DEFAULT_PRICE_LIST: FolgaPriceList = { prices: FOLGA_PRICE_DEFAULTS, updatedAt: 0, updatedBy: null };
+
+export async function getFolgaPrices(): Promise<FolgaPriceList> {
+  if (!folgaStorageConfigured) return DEFAULT_PRICE_LIST;
+  try {
+    const raw = await kv.get<unknown>(PRICES_KEY);
+    if (!raw || typeof raw !== "object") return DEFAULT_PRICE_LIST;
+    const o = raw as Record<string, unknown>;
+    const prices = normalizeFolgaPrices(o.prices);
+    if (!prices) return DEFAULT_PRICE_LIST;
+    return { prices, updatedAt: num(o.updatedAt), updatedBy: o.updatedBy ? person(o.updatedBy) : null };
+  } catch (err) {
+    console.error("folga: leitura dos preços falhou:", err);
+    return DEFAULT_PRICE_LIST;
+  }
+}
+
+export async function setFolgaPrices(prices: FolgaPrices, by: FolgaPerson): Promise<FolgaPriceList> {
+  if (!folgaStorageConfigured) throw new Error("KV não configurado.");
+  const list: FolgaPriceList = { prices, updatedAt: Date.now(), updatedBy: by };
+  await kv.set(PRICES_KEY, list);
+  return list;
 }

@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.50",
+    date: "2026-10-29",
+    title: "Folga de custos: preços de referência por categoria",
+    highlights: [
+      "**💶 Cada categoria da folga pode ter um preço de referência** (Wikipedia Page 200 €, Backlinks, PR e Imprensa 350 €): no «Lançar um extra», escolher a categoria preenche o valor, e o consultor pode mudá-lo.",
+      "**🔐 Só a direção muda os preços**, no novo bloco «Preços de referência» da página da folga — valem para todos os projetos.",
+      "**↕️ A categoria passou para cima do valor** no formulário, para o preço aparecer logo no campo.",
+    ],
+  },
+  {
     version: "78.49",
     date: "2026-10-29",
     title: "Folga de custos: categoria «Visita presencial»",

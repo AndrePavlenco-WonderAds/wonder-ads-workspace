@@ -14,6 +14,7 @@ import { FolgaHero } from "@/components/seo-folga/folga-hero";
 import { FolgaAdd, type FolgaLinkOption } from "@/components/seo-folga/folga-add";
 import { FolgaLog } from "@/components/seo-folga/folga-log";
 import { FolgaAllowanceEditor } from "@/components/seo-folga/folga-allowance";
+import { FolgaPricesEditor } from "@/components/seo-folga/folga-prices";
 import { getClientBySlug } from "@/lib/notion";
 import { getCurrentEmployee, getImpersonation } from "@/lib/auth/server";
 import { canEditDept } from "@/lib/auth/credentials";
@@ -28,7 +29,7 @@ import {
   type FolgaCategory,
   type FolgaSummary,
 } from "@/lib/seo-folga";
-import { getFolga } from "@/lib/seo-folga-store";
+import { getFolga, getFolgaPrices } from "@/lib/seo-folga-store";
 import { getCurrentRoadmap } from "@/lib/roadmap-store";
 import { getAllTickets } from "@/lib/web-tickets-store";
 
@@ -88,8 +89,9 @@ export default async function FolgaPage({ params }: { params: Promise<{ slug: st
   const readOnly = Boolean(impersonation);
 
   const tier = getClientTier(slug);
-  const [record, tasks, tickets] = await Promise.all([
+  const [record, priceList, tasks, tickets] = await Promise.all([
     getFolga(slug),
+    getFolgaPrices(),
     readOnly ? Promise.resolve([]) : taskOptions(slug),
     readOnly ? Promise.resolve([]) : ticketOptions(slug),
   ]);
@@ -156,6 +158,7 @@ export default async function FolgaPage({ params }: { params: Promise<{ slug: st
                 <li>A folga do mês entra a dia 1.</li>
                 <li>O que sobra passa para o mês seguinte, e o que se gasta a mais também.</li>
                 <li>«Cobrado ao cliente» fica no registo, mas não gasta folga.</li>
+                <li>Algumas categorias têm um preço de referência: o valor preenche-se ao escolhê-las e pode mudar-se.</li>
                 <li>Clientes Lite não têm folga: os extras são todos cobrados.</li>
                 <li>Um extra lançado por engano anula-se com o motivo. Nada se apaga.</li>
               </ul>
@@ -176,10 +179,14 @@ export default async function FolgaPage({ params }: { params: Promise<{ slug: st
               available={s.available}
               chargeOnly={s.state === "lite" || s.allowanceNow === null}
               today={today}
+              prices={priceList.prices}
             />
           )}
           {employee.isAdmin && !readOnly && (
-            <FolgaAllowanceEditor slug={slug} nowKey={nowKey} current={s.allowanceNow} />
+            <>
+              <FolgaAllowanceEditor slug={slug} nowKey={nowKey} current={s.allowanceNow} />
+              <FolgaPricesEditor list={priceList} />
+            </>
           )}
         </aside>
       </div>
