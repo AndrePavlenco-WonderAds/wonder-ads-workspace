@@ -227,7 +227,7 @@ export function MedalsGallery({
         </div>
         {earnedItems.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-white/15 bg-white/[0.02] p-8 text-center text-sm text-white/50">
-            A primeira cai com a primeira proposta apresentada. Depois é fechar.
+            A primeira chega com 25 blocos do roadmap feitos, um mês com NPS de 9, um mês sem ineficácias ou a primeira proposta apresentada.
           </div>
         ) : (
           <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">

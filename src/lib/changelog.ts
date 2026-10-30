@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.60",
+    date: "2026-10-30",
+    title: "Medalhas: a estante vazia já fala do SEO DPT",
+    highlights: [
+      "**🎖️ A galeria sem medalhas** diz agora como se ganha a primeira (25 blocos do roadmap, um mês com NPS de 9, um mês sem ineficácias ou a primeira proposta), em vez de falar só das propostas.",
+    ],
+  },
+  {
     version: "78.59",
     date: "2026-10-30",
     title: "Producer of the Month e medalhas do SEO DPT",
