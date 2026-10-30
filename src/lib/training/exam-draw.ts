@@ -8,8 +8,9 @@
 // AGORA CADA TENTATIVA É UMA FOLHA ÚNICA, sorteada no servidor no instante do
 // «Começar»:
 //   • 35 perguntas em 60 minutos — ~1,7 min por pergunta.
-//   • 8 do NÚCLEO da fase (os casos escritos para aquele exame, em
-//     `exam-questions.ts`) e 27 dos CAPÍTULOS da especialização DONA DO EXAME
+//   • Até 8 do NÚCLEO da fase — só as que o André aprovou (v78.58:
+//     `APPROVED_CORE_IDS`; sem nenhuma aprovada, 0) — e o resto, até 35, dos
+//     CAPÍTULOS da especialização DONA DO EXAME
 //     (v78.54: só dela — nem Comum de reserva, nem outra especialização).
 //     TODOS os capítulos entram — duas voltas completas e uma terceira parcial,
 //     por ordem baralhada a cada volta, por isso 2 ou 3 de cada — para que o
@@ -28,7 +29,7 @@
 // chave de resposta por confirmar não pode chumbar ninguém.
 
 import type { TrainingQuestion, TrainingTrack } from "@/lib/training/catalog";
-import { EXAM_QUESTIONS } from "@/lib/training/exam-questions";
+import { APPROVED_CORE_IDS, EXAM_QUESTIONS } from "@/lib/training/exam-questions";
 import type { ExamPhase } from "@/lib/training/exams";
 import {
   seededShuffle,
@@ -88,9 +89,11 @@ function trackStrata(track: TrainingTrack): Stratum[] {
  *  dona do exame — e só dela (v78.54). Até aí entravam os capítulos de todas
  *  as especializações da pessoa e o Comum de reserva. */
 export function examPool(exam: ExamPhase, tracks: TrainingTrack[]): ExamPool {
+  // v78.58: o núcleo foi escrito pelo Claude, não pelo André — só entram as
+  // perguntas que ele aprovar.
   const core: Stratum = {
     topic: coreTopic(exam),
-    questions: (EXAM_QUESTIONS[exam.id] ?? []).filter(examEligible),
+    questions: (EXAM_QUESTIONS[exam.id] ?? []).filter((q) => examEligible(q) && APPROVED_CORE_IDS.has(q.id)),
   };
   const chapters = tracks.filter((t) => t.slug === exam.trackSlug).flatMap(trackStrata);
   return { core, chapters, reserve: [] };

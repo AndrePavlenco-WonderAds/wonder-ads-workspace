@@ -350,7 +350,7 @@ function PaperBrief({
         <BriefStat
           icon={<ListOrdered className="h-3.5 w-3.5" />}
           value={`${questionCount} perguntas`}
-          hint={`${coreCount} do núcleo da fase · ${fromChapters} dos capítulos`}
+          hint={coreCount > 0 ? `${coreCount} do núcleo da fase · ${fromChapters} dos capítulos` : "todas dos capítulos da especialização"}
         />
         <BriefStat
           icon={<Layers className="h-3.5 w-3.5" />}

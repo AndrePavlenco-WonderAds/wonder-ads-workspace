@@ -166,6 +166,13 @@ export type SpecializationSlug = (typeof SPECIALIZATION_SLUGS)[number];
 
 export const COMMON_TRACK_SLUG = "comum";
 
+/** v78.58 (André, 30/10/2026): os quizzes do Comum são rascunhos escritos
+ *  pelo Claude a 03/08/2026 e o André ainda não os reviu. Enquanto isto for
+ *  true, o Comum sai da Formação da equipa (e deixa de trancar as
+ *  especializações); a direção continua a vê-lo e a editá-lo no CMS. Nada se
+ *  apaga. */
+export const COMMON_TRACK_HIDDEN = true;
+
 // ---------------------------------------------------------------------------
 // Helpers de construção do seed — mantêm o ficheiro legível sem abdicar dos
 // ids explícitos (cada aula recebe o seu id à mão).

@@ -13,6 +13,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.58",
+    date: "2026-10-30",
+    title: "Formação: o Núcleo sai dos exames e o Comum fica escondido",
+    highlights: [
+      "**🧹 Os exames deixam de ter perguntas do «Núcleo»** — as 65 perguntas que o Claude escreveu a 03/08/2026 sem virem de nenhuma aula. Cada exame passa a ter as 35 perguntas só dos capítulos da Especialização SEO/GEO (as do André). Uma pergunta do Núcleo só volta a entrar se o André a aprovar. Os exames já feitos não mudam, e o que está a decorrer termina com a folha que tem.",
+      "**🙈 O Comum fica escondido da equipa** até o André rever os quizzes (também rascunhos do Claude). As especializações abrem sem ele; nada foi apagado.",
+    ],
+  },
+  {
     version: "78.57",
     date: "2026-10-30",
     title: "Documentação aberta à equipa, reset de semestre nas ineficácias e Jornada por meses",

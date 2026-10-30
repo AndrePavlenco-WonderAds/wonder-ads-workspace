@@ -16,6 +16,7 @@
 //     — e ninguém começava. O que falta aparece sinalizado no admin.
 
 import {
+  COMMON_TRACK_HIDDEN,
   availableLessons,
   lessonMinutes,
   type TrainingLesson,
@@ -259,7 +260,8 @@ export function computeUserTraining(
   progress: UserTrainingProgress,
   attempts: QuizAttempt[],
 ): { common: TrackState | null; specializations: TrackState[] } {
-  const commonTrackDef = tracks.find((t) => t.isCommon) ?? null;
+  // Comum escondido (v78.58): fica de fora, e as especializações abrem sem ele.
+  const commonTrackDef = COMMON_TRACK_HIDDEN ? null : (tracks.find((t) => t.isCommon) ?? null);
   const common = commonTrackDef
     ? computeTrackState(commonTrackDef, progress, attempts)
     : null;

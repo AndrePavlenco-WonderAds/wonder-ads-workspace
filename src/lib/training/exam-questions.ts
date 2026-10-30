@@ -1,5 +1,13 @@
 // Perguntas dos SEIS EXAMES DE FASE — o NÚCLEO dos exames de SEO/GEO.
 //
+// ⚠️ v78.58 (André, 30/10/2026): ESTAS PERGUNTAS NÃO SÃO DO ANDRÉ. Foram
+// escritas pelo Claude a 03/08/2026, sem virem de nenhuma aula, e o André
+// nunca as aprovou. Só entram nos exames as que ele aprovar, uma a uma, em
+// `APPROVED_CORE_IDS` (mais abaixo). Enquanto a lista estiver vazia, os
+// exames são feitos só com as perguntas dos capítulos da Especialização
+// SEO/GEO (as 280 do André). As perguntas ficam aqui para os exames já
+// feitos (e o que está a decorrer) continuarem a mostrar a correção.
+//
 // Só a especialização SEO/GEO tem exames, por isso este núcleo é escrito para
 // consultores de SEO/GEO: clientes (clínicas e negócios locais), relatórios,
 // roadmap, Search Console, GA4, Google Business Profile, conteúdo e
@@ -784,6 +792,10 @@ const EXAME_D90 = build("exame-d90", [
 
 /** Bancos de perguntas por exame. Editáveis aqui — os exames NÃO passam pelo
  *  CMS: uma régua que qualquer pessoa pode baixar deixa de ser régua. */
+/** As perguntas do núcleo que o André aprovou para entrarem nos exames
+ *  (v78.58). Só ele as acrescenta — nunca o Claude por iniciativa própria. */
+export const APPROVED_CORE_IDS: ReadonlySet<string> = new Set<string>([]);
+
 export const EXAM_QUESTIONS: Record<string, TrainingQuestion[]> = {
   "exame-s1": EXAME_S1,
   "exame-s2": EXAME_S2,
