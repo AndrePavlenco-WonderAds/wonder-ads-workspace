@@ -13,6 +13,13 @@
 // numeral dentro da família (I–V). `prestige` ordena: é o que decide quais
 // as três que vão para o header quando a pessoa ainda não escolheu.
 //
+// v78.59 — o resto do SEO DPT entrou nas medalhas (pedido do André): o
+// Producer of the Month (a «Top» eleita pela direção, as vitórias e os
+// pódios), o NPS dos clientes, as comissões, os meses sem ineficácias e os
+// blocos do roadmap. Estes números vêm de `facts.ts` (servidor) e chegam
+// aqui já feitos, em `MedalFacts`; os do Comercial continuam a sair do
+// leaderboard das propostas.
+//
 // Módulo puro: sem servidor, para a galeria no browser o poder importar.
 
 import { closedCount, presentedCount, type Leaderboard, type LeaderboardRow } from "@/lib/proposals/leaderboard";
@@ -25,11 +32,53 @@ export type MedalFamilyId =
   | "crossseller"
   | "sniper"
   | "grande-caca"
-  | "top";
+  | "top"
+  | "producer"
+  | "podio"
+  | "nps"
+  | "nps-perfeito"
+  | "comissoes"
+  | "rigor"
+  | "entregas";
+
+/** Os números do SEO DPT que não saem das propostas (v78.59) — ver
+ *  `facts.ts`. null = pessoa fora do SEO DPT, ou números indisponíveis. */
+export type MedalFacts = {
+  /** Meses fechados com NPS ≥ 9, com as portas do bónus individual. */
+  npsGoodMonths: number;
+  /** Meses fechados com NPS 10, com as mesmas portas. */
+  npsPerfectMonths: number;
+  /** € de comissão ganhos desde o arranque das comissões. */
+  commissionEur: number;
+  /** Meses fechados (desde out/2026) sem nenhuma ineficácia pontuada. */
+  cleanMonths: number;
+  /** Tarefas feitas nos roadmaps dos clientes de hoje. */
+  roadmapBlocks: number;
+  /** Vezes eleito Producer of the Month (1.º lugar). */
+  producerWins: number;
+  /** Vezes no pódio (1.º, 2.º ou 3.º). */
+  podiums: number;
+  /** É o Producer of the Month da eleição mais recente. */
+  producerNow: boolean;
+};
 
 export type MedalTier = 1 | 2 | 3 | 4 | 5;
 
-export type MedalGlyph = "check" | "plane" | "euro" | "cycle" | "sparkle" | "crosshair" | "diamond" | "star";
+export type MedalGlyph =
+  | "check"
+  | "plane"
+  | "euro"
+  | "cycle"
+  | "sparkle"
+  | "crosshair"
+  | "diamond"
+  | "star"
+  | "trophy"
+  | "podium"
+  | "heart"
+  | "coins"
+  | "shield"
+  | "blocks";
 
 export type Medal = {
   id: string;
@@ -60,7 +109,14 @@ export type MedalFamily = {
 };
 
 export const MEDAL_FAMILIES: MedalFamily[] = [
-  { id: "top", name: "Top", description: "Quem lidera agora. Muda de mãos quando a classificação muda.", unit: "count" },
+  { id: "top", name: "Top", description: "Quem lidera agora. Muda de mãos quando a classificação muda — ou, no Producer of the Month, quando a direção elege o seguinte.", unit: "count" },
+  { id: "producer", name: "Producer of the Month", description: "Vezes que a direção te elegeu Producer of the Month do SEO DPT.", unit: "count" },
+  { id: "podio", name: "Pódio", description: "Vezes que ficaste no pódio do Producer of the Month (1.º, 2.º ou 3.º).", unit: "count" },
+  { id: "nps", name: "Cliente Feliz", description: "Meses com NPS de 9 ou mais nos teus projetos, com as regras do Bónus NPS (3+ projetos, 50% de respostas).", unit: "count" },
+  { id: "nps-perfeito", name: "NPS Perfeito", description: "Meses com NPS 10 nos teus projetos, com as mesmas regras.", unit: "count" },
+  { id: "entregas", name: "Entregas", description: "Blocos marcados como feitos nos roadmaps dos teus clientes.", unit: "count" },
+  { id: "rigor", name: "Rigor", description: "Meses fechados sem nenhuma ineficácia pontuada pela direção (desde outubro de 2026).", unit: "count" },
+  { id: "comissoes", name: "Comissões", description: "Comissões ganhas em renovações e cross-sells, desde 01/10/2026.", unit: "eur" },
   { id: "fechador", name: "Fechador", description: "Propostas fechadas — o cliente aceitou.", unit: "count" },
   { id: "faturacao", name: "Faturação", description: "Valor total fechado, sem IVA.", unit: "eur" },
   { id: "grande-caca", name: "Grande Caça", description: "O maior negócio fechado numa só proposta.", unit: "eur" },
@@ -271,7 +327,140 @@ const GRANDE_CACA = withThresholds(
   [3_000, 5_000, 10_000, 20_000, 30_000],
 );
 
+// --- SEO DPT (v78.59) -------------------------------------------------------
+
+const PRODUCER = withThresholds(
+  ladder(
+    "producer",
+    "Producer of the Month",
+    "trophy",
+    [
+      { threshold: 1, tier: 3, requirement: "Eleito 1 vez", blurb: "A direção elegeu-te Producer of the Month. Fica para sempre na tua estante." },
+      { threshold: 3, tier: 4, requirement: "Eleito 3 vezes", blurb: "Três vezes Producer of the Month — já não é um mês bom, é um padrão." },
+      { threshold: 6, tier: 5, requirement: "Eleito 6 vezes", blurb: "Seis vezes Producer of the Month. Meio ano de meses a ser a referência da equipa." },
+    ],
+    60,
+  ),
+  [1, 3, 6],
+);
+
+const PODIO = withThresholds(
+  ladder(
+    "podio",
+    "Pódio",
+    "podium",
+    [1, 3, 6, 12].map((n, i) => ({
+      threshold: n,
+      tier: (i + 1) as MedalTier,
+      requirement: plural(n, "pódio", "pódios"),
+      blurb:
+        n === 1
+          ? "Ficaste no pódio do Producer of the Month, escolhido pela direção."
+          : `${plural(n, "vez", "vezes")} no pódio do Producer of the Month.`,
+    })),
+    35,
+  ),
+  [1, 3, 6, 12],
+);
+
+const NPS = withThresholds(
+  ladder(
+    "nps",
+    "Cliente Feliz",
+    "heart",
+    [1, 3, 6, 9, 12].map((n, i) => ({
+      threshold: n,
+      tier: (i + 1) as MedalTier,
+      requirement: plural(n, "mês com NPS ≥ 9", "meses com NPS ≥ 9"),
+      blurb:
+        n === 1
+          ? "Um mês em que a média NPS dos teus projetos chegou a 9 ou mais, com as regras do Bónus NPS."
+          : `${plural(n, "mês", "meses")} com a média NPS dos teus projetos em 9 ou mais.`,
+    })),
+    42,
+  ),
+  [1, 3, 6, 9, 12],
+);
+
+const NPS_PERFEITO = withThresholds(
+  ladder(
+    "nps-perfeito",
+    "NPS Perfeito",
+    "heart",
+    [
+      { threshold: 1, tier: 3, requirement: "1 mês com NPS 10", blurb: "Um mês com média 10 nos teus projetos: todos os clientes que responderam deram a nota máxima." },
+      { threshold: 3, tier: 4, requirement: "3 meses com NPS 10", blurb: "Três meses com média 10 nos teus projetos." },
+      { threshold: 6, tier: 5, requirement: "6 meses com NPS 10", blurb: "Seis meses com média 10 nos teus projetos. Clientes que não trocavam de consultor por nada." },
+    ],
+    55,
+  ),
+  [1, 3, 6],
+);
+
+const ENTREGAS = withThresholds(
+  ladder(
+    "entregas",
+    "Entregas",
+    "blocks",
+    [25, 100, 250, 500, 1000].map((n, i) => ({
+      threshold: n,
+      tier: (i + 1) as MedalTier,
+      requirement: `${n} blocos feitos`,
+      blurb: `${n} blocos marcados como feitos nos roadmaps dos teus clientes.`,
+    })),
+    28,
+  ),
+  [25, 100, 250, 500, 1000],
+);
+
+const RIGOR = withThresholds(
+  ladder(
+    "rigor",
+    "Rigor",
+    "shield",
+    [1, 3, 6, 9, 12].map((n, i) => ({
+      threshold: n,
+      tier: (i + 1) as MedalTier,
+      requirement: plural(n, "mês sem ineficácias", "meses sem ineficácias"),
+      blurb:
+        n === 1
+          ? "Um mês fechado sem nenhuma ineficácia pontuada pela direção."
+          : `${plural(n, "mês fechado", "meses fechados")} sem nenhuma ineficácia pontuada pela direção.`,
+    })),
+    25,
+  ),
+  [1, 3, 6, 9, 12],
+);
+
+const COMISSOES = withThresholds(
+  ladder(
+    "comissoes",
+    "Comissões",
+    "coins",
+    [50, 250, 500, 1_000, 2_500].map((n, i) => ({
+      threshold: n,
+      tier: (i + 1) as MedalTier,
+      requirement: `${eur(n)} em comissões`,
+      blurb: `${eur(n)} ganhos em comissões de renovações e cross-sells, desde 01/10/2026.`,
+    })),
+    38,
+  ),
+  [50, 250, 500, 1_000, 2_500],
+);
+
 const TOP: Medal[] = [
+  {
+    id: "producer-top",
+    family: "top",
+    tier: 5,
+    level: "★",
+    name: "Producer of the Month",
+    requirement: "Eleito pela direção no último mês",
+    blurb: "A direção escolheu-te como o Producer of the Month mais recente. Passa para quem for eleito a seguir.",
+    boss: true,
+    glyph: "trophy",
+    prestige: 1300,
+  },
   {
     id: "top-fechos",
     family: "top",
@@ -312,6 +501,13 @@ const TOP: Medal[] = [
 
 export const MEDALS: Medal[] = [
   ...TOP,
+  ...PRODUCER,
+  ...PODIO,
+  ...NPS,
+  ...NPS_PERFEITO,
+  ...ENTREGAS,
+  ...RIGOR,
+  ...COMISSOES,
   ...FECHADOR,
   ...FATURACAO,
   ...GRANDE_CACA,
@@ -363,9 +559,48 @@ export function metricFor(family: MedalFamilyId, row: LeaderboardRow): number {
       return row.closeRate ?? 0;
     case "grande-caca":
       return row.biggestClosedValue;
-    case "top":
+    default:
       return 0;
   }
+}
+
+/** O valor da pessoa numa família do SEO DPT (v78.59). */
+export function factMetric(family: MedalFamilyId, facts: MedalFacts | null): number | null {
+  if (!facts) return null;
+  switch (family) {
+    case "producer":
+      return facts.producerWins;
+    case "podio":
+      return facts.podiums;
+    case "nps":
+      return facts.npsGoodMonths;
+    case "nps-perfeito":
+      return facts.npsPerfectMonths;
+    case "entregas":
+      return facts.roadmapBlocks;
+    case "rigor":
+      return facts.cleanMonths;
+    case "comissoes":
+      return facts.commissionEur;
+    default:
+      return null;
+  }
+}
+
+const FACT_FAMILIES: ReadonlySet<MedalFamilyId> = new Set([
+  "producer",
+  "podio",
+  "nps",
+  "nps-perfeito",
+  "entregas",
+  "rigor",
+  "comissoes",
+]);
+
+/** As famílias novas da v78.59 — a sincronização com o Slack usa isto para
+ *  não anunciar de uma vez tudo o que já se tinha ganho antes de existirem. */
+export function isFactFamily(family: MedalFamilyId): boolean {
+  return FACT_FAMILIES.has(family);
 }
 
 function leads(board: Leaderboard, row: LeaderboardRow, metric: (r: LeaderboardRow) => number): boolean {
@@ -375,8 +610,23 @@ function leads(board: Leaderboard, row: LeaderboardRow, metric: (r: LeaderboardR
 }
 
 /** Progresso de uma pessoa numa medalha — para a galeria (barra) e para
- *  decidir se a ganhou. `row` null = pessoa sem propostas. */
-export function progressFor(medal: Medal, row: LeaderboardRow | null, board: Leaderboard): MedalProgress {
+ *  decidir se a ganhou. `row` null = pessoa sem propostas; `facts` null =
+ *  fora do SEO DPT (ou números indisponíveis). */
+export function progressFor(
+  medal: Medal,
+  row: LeaderboardRow | null,
+  board: Leaderboard,
+  facts: MedalFacts | null = null,
+): MedalProgress {
+  if (medal.id === "producer-top") {
+    const earned = Boolean(facts?.producerNow);
+    return { value: earned ? 1 : 0, threshold: 1, earned };
+  }
+  if (isFactFamily(medal.family)) {
+    const threshold = THRESHOLDS[medal.id] ?? 1;
+    const value = factMetric(medal.family, facts) ?? 0;
+    return { value, threshold, earned: value >= threshold };
+  }
   if (!row) return { value: 0, threshold: THRESHOLDS[medal.id] ?? 1, earned: false };
   if (medal.family === "top") {
     const earned =
@@ -398,12 +648,18 @@ export function progressFor(medal: Medal, row: LeaderboardRow | null, board: Lea
 }
 
 /** Quem lidera em cada medalha «Top» agora — nomes, para a galeria dizer
- *  a quem não lidera quem é que lidera. Vazio = ninguém ainda. */
-export function topLeaders(board: Leaderboard): Record<string, string[]> {
+ *  a quem não lidera quem é que lidera. Vazio = ninguém ainda. O Producer
+ *  of the Month não sai do leaderboard: é o nome da última eleição. */
+export function topLeaders(board: Leaderboard, producerName: string | null = null): Record<string, string[]> {
   const out: Record<string, string[]> = {};
   for (const medal of MEDALS) {
     if (medal.family !== "top") continue;
-    out[medal.id] = board.rows.filter((row) => progressFor(medal, row, board).earned).map((row) => row.name);
+    out[medal.id] =
+      medal.id === "producer-top"
+        ? producerName
+          ? [producerName]
+          : []
+        : board.rows.filter((row) => progressFor(medal, row, board).earned).map((row) => row.name);
   }
   return out;
 }
@@ -411,8 +667,12 @@ export function topLeaders(board: Leaderboard): Record<string, string[]> {
 export type EarnedMedal = { medal: Medal; progress: MedalProgress };
 
 /** Todas as medalhas da pessoa, da mais prestigiada para a menos. */
-export function computeEarned(row: LeaderboardRow | null, board: Leaderboard): EarnedMedal[] {
-  return MEDALS.map((medal) => ({ medal, progress: progressFor(medal, row, board) }))
+export function computeEarned(
+  row: LeaderboardRow | null,
+  board: Leaderboard,
+  facts: MedalFacts | null = null,
+): EarnedMedal[] {
+  return MEDALS.map((medal) => ({ medal, progress: progressFor(medal, row, board, facts) }))
     .filter((e) => e.progress.earned)
     .sort((a, b) => b.medal.prestige - a.medal.prestige);
 }

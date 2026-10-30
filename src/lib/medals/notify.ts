@@ -9,22 +9,38 @@
 // avisa ninguém.
 //
 // Corre em `after()` nas rotas — nunca atrasa a resposta, nunca lança.
+//
+// v78.59: entram os números do SEO DPT (`facts.ts`, lidos frescos). Duas
+// proteções contra avisos em catadupa:
+//   • na primeira sincronização de cada pessoa depois da v78.59, as medalhas
+//     das famílias novas que ela JÁ tinha entram caladas (marca SEED no
+//     estado) — só o que ganhar daí para a frente vai para o Slack;
+//   • as medalhas de patamar nunca saem do estado: se uma leitura falhar e
+//     uma desaparecer por um dia, ao voltar não é anunciada outra vez. Só as
+//     «Top» saem (e voltam a avisar), como sempre.
+// Se os números do SEO DPT não se conseguirem ler, não se sincroniza nada.
 
 import { kv } from "@vercel/kv";
 import { APP_URL } from "@/lib/app-url";
 import { resolveProposalConsultant } from "@/lib/proposals/consultant";
 import { buildLeaderboard } from "@/lib/proposals/leaderboard";
+import { seoConsultants } from "@/lib/documentacao/people";
 import { listAllProposals } from "@/lib/proposals/store";
 import { postTeamWinToSlack, teamWinsSlackConfigured } from "@/lib/slack";
 import {
   MEDAL_FAMILIES,
   computeEarned,
+  isFactFamily,
+  medalById,
   tierLabel,
   type EarnedMedal,
   type Medal,
 } from "./catalog";
+import { computeMedalFacts, type MedalFactsBook } from "./facts";
 
 const HELD_PREFIX = "medals:held:";
+/** Marca no estado: a pessoa já passou pela primeira sincronização da v78.59. */
+const SEED = "__seed-v78.59";
 
 const TIER_EMOJI: Record<number, string> = { 1: "🥉", 2: "🥈", 3: "🥇", 4: "💎", 5: "🔮" };
 
@@ -114,25 +130,49 @@ export async function syncMedalsAndNotify(trigger: string): Promise<void> {
       }),
     }));
     const board = buildLeaderboard(items, null);
-    for (const row of board.rows) {
-      if (!row.username) continue;
-      const earned = computeEarned(row, board);
+    let book: MedalFactsBook;
+    try {
+      book = await computeMedalFacts();
+    } catch (err) {
+      console.error(`medalhas: números do SEO DPT falharam — sem sincronização (${trigger}):`, err instanceof Error ? err.message : err);
+      return;
+    }
+    // Quem tem propostas + toda a gente do SEO DPT (que pode não ter nenhuma).
+    const people = new Map<string, string>();
+    for (const row of board.rows) if (row.username) people.set(row.username, row.name);
+    for (const p of seoConsultants()) if (!people.has(p.username)) people.set(p.username, p.name);
+
+    for (const [username, name] of people) {
+      const row = board.rows.find((r) => r.username === username) ?? null;
+      const earned = computeEarned(row, board, book.byUser[username] ?? null);
       const earnedIds = earned.map((e) => e.medal.id);
-      const held = (await getHeld(row.username)) ?? [];
+      const held = (await getHeld(username)) ?? [];
       const heldSet = new Set(held);
-      const fresh = earned.filter((e) => !heldSet.has(e.medal.id));
+      const seeded = heldSet.has(SEED);
+      // As do Producer of the Month (a «Top», as vitórias e os pódios) não
+      // têm anúncio próprio: a eleição já vai para o #team-wins com o pódio.
+      const fresh = earned.filter(
+        (e) =>
+          !heldSet.has(e.medal.id) &&
+          (seeded || !isFactFamily(e.medal.family)) &&
+          e.medal.id !== "producer-top" &&
+          e.medal.family !== "producer" &&
+          e.medal.family !== "podio",
+      );
       if (fresh.length > 0) {
         if (teamWinsSlackConfigured()) {
-          const ok = await postTeamWinToSlack(
-            buildTeamWinMessage({ name: row.name, fresh, totalEarned: earned.length }),
-          );
-          if (!ok) console.error(`medalhas: post no #team-wins falhou (${row.username}, ${trigger})`);
+          const ok = await postTeamWinToSlack(buildTeamWinMessage({ name, fresh, totalEarned: earned.length }));
+          if (!ok) console.error(`medalhas: post no #team-wins falhou (${username}, ${trigger})`);
         } else {
-          console.warn(`medalhas: SLACK_TEAM_WINS_WEBHOOK_URL em falta — ${row.name} ganhou ${fresh.map((e) => e.medal.id).join(", ")}`);
+          console.warn(`medalhas: SLACK_TEAM_WINS_WEBHOOK_URL em falta — ${name} ganhou ${fresh.map((e) => e.medal.id).join(", ")}`);
         }
       }
-      if (!sameSet(held, earnedIds)) {
-        await kv.set(`${HELD_PREFIX}${row.username}`, earnedIds);
+      // As de patamar ficam no estado mesmo que hoje não apareçam; as «Top»
+      // saem quando se perdem, para avisarem outra vez quando voltarem.
+      const kept = held.filter((id) => id !== SEED && !earnedIds.includes(id) && medalById(id) && !medalById(id)!.boss);
+      const next = [...earnedIds, ...kept, SEED];
+      if (!sameSet(held, next)) {
+        await kv.set(`${HELD_PREFIX}${username}`, next);
       }
     }
   } catch (err) {

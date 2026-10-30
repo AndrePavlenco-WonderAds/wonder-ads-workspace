@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.59",
+    date: "2026-10-30",
+    title: "Producer of the Month e medalhas do SEO DPT",
+    highlights: [
+      "**🏆 Producer of the Month** (menu SuperAdmin): o levantamento de cada mês fechado do SEO DPT — NPS, blocos do roadmap feitos, cross-sells/upsells, renovações e, a tirar, as ineficácias — com uma pontuação de referência só para ordenar. A app nunca escolhe: a direção elege o 1.º lugar (e, se quiser, o 2.º e o 3.º). Ao eleger, o #team-wins recebe o anúncio e o pódio aparece no menu de toda a equipa, por baixo da sessão.",
+      "**🎖️ Medalhas novas do SEO DPT**: Producer of the Month (a «Top» do mês e as vitórias), Pódio, Cliente Feliz (meses com NPS ≥ 9), NPS Perfeito (meses com NPS 10), Entregas (blocos do roadmap), Rigor (meses sem ineficácias) e Comissões. Quem já as tinha ganho recebe-as sem anúncio; daqui para a frente as novas vão para o #team-wins.",
+      "**🎓 Formação**: o quadro «Módulos» deixa de dizer «comum +» enquanto o Comum está escondido.",
+    ],
+  },
+  {
     version: "78.58",
     date: "2026-10-30",
     title: "Formação: o Núcleo sai dos exames e o Comum fica escondido",

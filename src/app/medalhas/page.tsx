@@ -27,7 +27,7 @@ export default async function MedalhasPage() {
   const mine = await getMedalsForUser(employee.username);
   const items: GalleryItem[] = MEDALS.map((medal) => ({
     medal,
-    progress: progressFor(medal, mine.row, mine.board),
+    progress: progressFor(medal, mine.row, mine.board, mine.facts),
   }));
   const earned = items.filter((i) => i.progress.earned).length;
   const row = mine.row;
@@ -39,19 +39,26 @@ export default async function MedalhasPage() {
           <div>
             <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.2em] text-white/40">
               <MedalIcon className="h-3.5 w-3.5 text-amber-300" />
-              Comercial · {employee.name}
+              {employee.name}
             </p>
             <h1 className="mt-2 text-4xl font-semibold leading-[1.05] tracking-tight text-white sm:text-5xl">Medalhas</h1>
             <p className="mt-3 max-w-2xl text-base text-white/65 sm:text-lg">
-              <span className="font-semibold text-white">{earned}</span> de {MEDALS.length} conquistadas. As de patamar
-              ficam para sempre; as «Top» são de quem lidera agora e vão sempre para o header. Os lugares que sobram são teus.
+              <span className="font-semibold text-white">{earned}</span> de {MEDALS.length} conquistadas. Contam o trabalho
+              com os clientes (NPS, roadmap, rigor), o Producer of the Month e o Comercial. As de patamar ficam para sempre;
+              as «Top» são de quem lidera agora e vão sempre para o header. Os lugares que sobram são teus.
             </p>
           </div>
           <div className="flex flex-wrap gap-2 text-[11px] font-medium uppercase tracking-[0.14em]">
+            {mine.facts && (
+              <>
+                <Stat n={String(mine.facts.producerWins)} label="Producer of the Month" />
+                <Stat n={String(mine.facts.roadmapBlocks)} label="blocos feitos" />
+                <Stat n={String(mine.facts.npsGoodMonths)} label="meses NPS ≥ 9" />
+              </>
+            )}
             <Stat n={row ? String(closedCount(row)) : "0"} label="fechadas" />
-            <Stat n={row ? String(presentedCount(row)) : "0"} label="apresentadas" />
             <Stat n={formatEur(row?.closedValue ?? 0)} label="fechado" />
-            <Stat n={formatEur(row?.biggestClosedValue ?? 0)} label="maior negócio" />
+            {!mine.facts && <Stat n={row ? String(presentedCount(row)) : "0"} label="apresentadas" />}
           </div>
         </div>
 
@@ -63,7 +70,7 @@ export default async function MedalhasPage() {
           chosen={mine.chosen}
           display={mine.display.map((m) => m.id)}
           canChoose={!impersonation}
-          leaders={topLeaders(mine.board)}
+          leaders={topLeaders(mine.board, mine.producerName)}
           viewerName={mine.row?.name ?? employee.name}
         />
       </section>

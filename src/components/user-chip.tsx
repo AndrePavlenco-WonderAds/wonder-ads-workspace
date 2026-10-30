@@ -35,7 +35,9 @@ import { probationMenuView } from "@/lib/probation/menu";
 import { todayLisbonISO } from "@/lib/probation/progress";
 import { INEFICACIAS_OPEN_TO_TEAM } from "@/lib/ineficacias/access";
 import { DOCS_OPEN_TO_TEAM, docsAvailable } from "@/lib/documentacao/access";
-import { UserChipMenu, type DailyNumberView } from "./user-chip-menu";
+import { producerMonthLabel } from "@/lib/producer/shared";
+import { getElectionSummaries } from "@/lib/producer/store";
+import { UserChipMenu, type DailyNumberView, type ProducerMenuView } from "./user-chip-menu";
 
 export async function UserChip() {
   const cookieStore = await cookies();
@@ -93,6 +95,17 @@ export async function UserChip() {
         )
       : null;
 
+  // Producer of the Month (v78.58) — o pódio da última eleição da direção,
+  // por baixo da sessão. Leitura em cache (invalidada ao eleger); os viewers
+  // não o veem.
+  const latest = display.viewerOf ? null : ((await getElectionSummaries())[0] ?? null);
+  const producer: ProducerMenuView | null = latest
+    ? {
+        month: producerMonthLabel(latest.month).replace(/^./, (c) => c.toUpperCase()),
+        podium: latest.podium.map((p) => ({ name: p.name, avatar: getTeamAvatar(p.username) })),
+      }
+    : null;
+
   return (
     <UserChipMenu
       name={display.name}
@@ -124,6 +137,7 @@ export async function UserChip() {
       // construção só o André e o Alex entram, e continuam a vê-la quando
       // estão na pele de outra pessoa.
       docs={docsAvailable(session.u) ? { construction: !DOCS_OPEN_TO_TEAM } : null}
+      producer={producer}
       people={
         realIsAdmin
           ? listImpersonationTargets().map((p) => ({

@@ -2,14 +2,16 @@
 // + KV), resolve os consultores, constrói o leaderboard de sempre e aplica
 // o catálogo. É o que o header (Suspense) e a página /medalhas chamam.
 //
-// Custo: as duas leituras de KV das propostas + uma da escolha. O header
-// chama isto em todas as páginas, por isso nunca lança — devolve vazio.
+// Custo: as duas leituras de KV das propostas + uma da escolha + os números
+// do SEO DPT em cache (v78.59, `facts.ts`). O header chama isto em todas as
+// páginas, por isso nunca lança — devolve vazio.
 
 import { getCurrentEmployee } from "@/lib/auth/server";
 import { resolveProposalConsultant } from "@/lib/proposals/consultant";
 import { buildLeaderboard, type Leaderboard, type LeaderboardRow } from "@/lib/proposals/leaderboard";
 import { listAllProposals } from "@/lib/proposals/store";
-import { computeEarned, resolveDisplay, type EarnedMedal, type Medal } from "./catalog";
+import { computeEarned, resolveDisplay, type EarnedMedal, type Medal, type MedalFacts } from "./catalog";
+import { getMedalFacts } from "./facts";
 import { getDisplayChoice } from "./store";
 
 export type UserMedals = {
@@ -21,10 +23,14 @@ export type UserMedals = {
   display: Medal[];
   /** A escolha gravada, ou null se nunca escolheu. */
   chosen: string[] | null;
+  /** Os números do SEO DPT da pessoa (null fora do SEO DPT). */
+  facts: MedalFacts | null;
+  /** O Producer of the Month mais recente, para a galeria. */
+  producerName: string | null;
 };
 
 export async function getMedalsForUser(username: string): Promise<UserMedals> {
-  const [proposals, chosen] = await Promise.all([listAllProposals(), getDisplayChoice(username)]);
+  const [proposals, chosen, book] = await Promise.all([listAllProposals(), getDisplayChoice(username), getMedalFacts()]);
   const items = proposals.map((record) => ({
     record,
     consultant: resolveProposalConsultant({
@@ -35,8 +41,18 @@ export async function getMedalsForUser(username: string): Promise<UserMedals> {
   }));
   const board = buildLeaderboard(items, null);
   const row = board.rows.find((r) => r.username === username) ?? null;
-  const earned = computeEarned(row, board);
-  return { username, row, board, earned, display: resolveDisplay(chosen, earned), chosen };
+  const facts = book?.byUser[username] ?? null;
+  const earned = computeEarned(row, board, facts);
+  return {
+    username,
+    row,
+    board,
+    earned,
+    display: resolveDisplay(chosen, earned),
+    chosen,
+    facts,
+    producerName: book?.producerName ?? null,
+  };
 }
 
 /** As medalhas da pessoa com sessão (a vista, com lente ativa). null sem

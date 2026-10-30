@@ -329,7 +329,7 @@ export default async function FormacaoPage() {
             value={tracks.length}
             hint={
               specializations.length > 0
-                ? `comum + ${specializations.length} especializaç${specializations.length === 1 ? "ão" : "ões"}`
+                ? `${tracks.some((t) => t.track.isCommon) ? "comum + " : ""}${specializations.length} especializaç${specializations.length === 1 ? "ão" : "ões"}`
                 : "só o comum"
             }
             icon={<BookOpen className="h-3 w-3" />}

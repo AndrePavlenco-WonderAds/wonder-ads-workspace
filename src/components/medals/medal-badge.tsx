@@ -88,6 +88,58 @@ function Glyph({ glyph, fg, accent }: { glyph: MedalGlyph; fg: string; accent: s
       );
     case "star":
       return <Star cx={60} cy={40} r={9.5} fill={fg} />;
+    // --- SEO DPT (v78.59) ---
+    case "trophy":
+      return (
+        <g>
+          <path d="M53.5 31 H66.5 V36.5 A6.5 6.5 0 0 1 53.5 36.5 Z" fill={fg} />
+          <path d="M53.5 33 H50.8 A3 3 0 0 0 53.8 38.6 M66.5 33 H69.2 A3 3 0 0 1 66.2 38.6" fill="none" stroke={fg} strokeWidth={1.9} strokeLinecap="round" />
+          <rect x="58.6" y="42.6" width="2.8" height="3.6" fill={fg} />
+          <rect x="54.2" y="46" width="11.6" height="3" rx="1" fill={fg} />
+          <circle cx="60" cy="35.6" r="1.6" fill={accent} />
+        </g>
+      );
+    case "podium":
+      return (
+        <g>
+          <rect x="50.5" y="41" width="6" height="8" rx="0.8" fill={fg} />
+          <rect x="57" y="35.5" width="6" height="13.5" rx="0.8" fill={fg} />
+          <rect x="63.5" y="43.5" width="6" height="5.5" rx="0.8" fill={fg} />
+          <circle cx="60" cy="31.6" r="1.9" fill={accent} />
+        </g>
+      );
+    case "heart":
+      return (
+        <path
+          d="M60 48.5 C52.5 43.2 50.2 39.4 50.2 36.2 A4.9 4.9 0 0 1 60 34.2 A4.9 4.9 0 0 1 69.8 36.2 C69.8 39.4 67.5 43.2 60 48.5 Z"
+          fill={fg}
+        />
+      );
+    case "coins":
+      return (
+        <g>
+          <ellipse cx="60" cy="45" rx="8.5" ry="3.1" fill={fg} />
+          <ellipse cx="60" cy="40.4" rx="8.5" ry="3.1" fill={fg} stroke="rgba(0,0,0,0.35)" strokeWidth={1} />
+          <ellipse cx="60" cy="35.8" rx="8.5" ry="3.1" fill={fg} stroke="rgba(0,0,0,0.35)" strokeWidth={1} />
+          <circle cx="60" cy="35.8" r="1.3" fill={accent} />
+        </g>
+      );
+    case "shield":
+      return (
+        <g>
+          <path d="M60 30.5 L68.5 33.6 V39.8 C68.5 44.8 64.6 48 60 49.6 C55.4 48 51.5 44.8 51.5 39.8 V33.6 Z" fill={fg} />
+          <path d="M56 40 L59 43 L64.4 37" fill="none" stroke={accent} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
+        </g>
+      );
+    case "blocks":
+      return (
+        <g>
+          <rect x="51.5" y="31.5" width="7.6" height="7.6" rx="1.4" fill={fg} />
+          <rect x="60.9" y="31.5" width="7.6" height="7.6" rx="1.4" fill={fg} />
+          <rect x="51.5" y="40.9" width="7.6" height="7.6" rx="1.4" fill={fg} />
+          <rect x="60.9" y="40.9" width="7.6" height="7.6" rx="1.4" fill={accent} />
+        </g>
+      );
   }
 }
 

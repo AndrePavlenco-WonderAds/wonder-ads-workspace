@@ -30,6 +30,7 @@ import {
   Medal,
   MessageCircle,
   Search,
+  Trophy,
   UserMinus,
   Users,
   type LucideIcon,
@@ -55,6 +56,15 @@ export type ImpersonationTarget = {
 export type IneficaciasMenuView = {
   /** O módulo ainda está fechado à equipa — pastilha «em construção». */
   construction: boolean;
+};
+
+/** O pódio do Producer of the Month (v78.58) — a última eleição da direção,
+ *  já resolvida no servidor. */
+export type ProducerMenuView = {
+  /** «Outubro 2026». */
+  month: string;
+  /** 1.º, 2.º e 3.º, por esta ordem (o 2.º e o 3.º podem faltar). */
+  podium: Array<{ name: string; avatar: string | null }>;
 };
 
 /** O item «Documentação» do menu (v78.5). */
@@ -170,6 +180,7 @@ export function UserChipMenu({
   probation = null,
   ineficacias = null,
   docs = null,
+  producer = null,
   people = [],
 }: {
   name: string;
@@ -211,6 +222,8 @@ export function UserChipMenu({
   /** «Documentação» (v78.5) — o hub de documentação da empresa. Decidido
    *  com quem FEZ LOGIN (em construção: só o André); null esconde o item. */
   docs?: DocsMenuView | null;
+  /** O pódio do Producer of the Month, por baixo da sessão; null esconde. */
+  producer?: ProducerMenuView | null;
   people?: ImpersonationTarget[];
 }) {
   const router = useRouter();
@@ -437,6 +450,7 @@ export function UserChipMenu({
                 </div>
               </div>
             )}
+            {producer && <ProducerPodium producer={producer} />}
           </div>
 
           {/* Voltar a mim — primeiro, quando há lente ativa: é a coisa que se
@@ -580,7 +594,8 @@ export function UserChipMenu({
                 )}
                 {/* Ordem pedida pelo André (v77.92): Ver como, Registar
                     Falta, Registar ineficácia, Ineficácias — Direção, Plano de
-                    Probation, Formação — Superadmin, Mini-games. Todos com o
+                    Probation, (Producer of the Month, v78.58), Formação —
+                    Superadmin, Mini-games. Todos com o
                     mesmo peso — nenhum em destaque. O gate verdadeiro de cada
                     página é o isAdmin dela própria + as APIs. */}
                 {isAdmin && (
@@ -604,10 +619,13 @@ export function UserChipMenu({
                   <MenuLink href="/admin/probation" icon={ClipboardCheck} label="Plano de Probation" hint="Planos de 30 dias e avaliações (RH)" tone="amber" index={10} onPick={close} />
                 )}
                 {isAdmin && (
-                  <MenuLink href="/formacao/admin" icon={LayoutDashboard} label="Formação — Superadmin" hint="Inscrições, conteúdos e resultados" tone="amber" index={11} onPick={close} />
+                  <MenuLink href="/admin/producer" icon={Trophy} label="Producer of the Month" hint="Levantamento do mês e eleição do pódio" tone="amber" index={11} onPick={close} />
                 )}
                 {isAdmin && (
-                  <MenuLink href="/minigames" icon={Gamepad2} label="Mini-games" hint="Jogos de equipa ao vivo" tone="amber" index={12} onPick={close} />
+                  <MenuLink href="/formacao/admin" icon={LayoutDashboard} label="Formação — Superadmin" hint="Inscrições, conteúdos e resultados" tone="amber" index={12} onPick={close} />
+                )}
+                {isAdmin && (
+                  <MenuLink href="/minigames" icon={Gamepad2} label="Mini-games" hint="Jogos de equipa ao vivo" tone="amber" index={13} onPick={close} />
                 )}
               </MenuSection>
             )}
@@ -857,6 +875,54 @@ function PeoplePicker({
           );
         })}
         {list.length === 0 && <p className="px-3 py-3 text-center text-[11px] text-white/35">Ninguém com esse nome.</p>}
+      </div>
+    </div>
+  );
+}
+
+/** O pódio do Producer of the Month (v78.58): o 2.º à esquerda, o 1.º ao
+ *  centro e mais alto, o 3.º à direita — como um pódio a sério. */
+function ProducerPodium({ producer }: { producer: ProducerMenuView }) {
+  const slots = [
+    { place: 2, who: producer.podium[1], step: "h-3", ring: "ring-slate-200/50", size: "h-7 w-7" },
+    { place: 1, who: producer.podium[0], step: "h-5", ring: "ring-amber-300/80", size: "h-9 w-9" },
+    { place: 3, who: producer.podium[2], step: "h-2", ring: "ring-orange-300/50", size: "h-7 w-7" },
+  ];
+  return (
+    <div className="relative mt-3 rounded-xl border border-amber-300/20 bg-amber-300/[0.04] px-3 pb-2 pt-2">
+      <p className="flex items-center justify-between gap-2 text-[10.5px]">
+        <span className="flex items-center gap-1.5 font-semibold text-amber-200/90">
+          <Trophy className="h-3 w-3" />
+          Producer of the Month
+        </span>
+        <span className="text-white/40">{producer.month}</span>
+      </p>
+      <div className="mt-2 grid grid-cols-3 items-end gap-1.5">
+        {slots.map(({ place, who, step, ring, size }) => (
+          <div key={place} className="flex min-w-0 flex-col items-center">
+            {who && (
+              <>
+                {who.avatar ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={who.avatar} alt="" className={`${size} rounded-full object-cover ring-2 ${ring}`} />
+                ) : (
+                  <span className={`${size} flex items-center justify-center rounded-full bg-white/[0.08] text-[11px] font-bold text-white/70 ring-2 ${ring}`}>
+                    {who.name.charAt(0)}
+                  </span>
+                )}
+                <span className={`mt-1 max-w-full truncate text-[10.5px] ${place === 1 ? "font-semibold text-white" : "text-white/60"}`}>
+                  {who.name.split(" ")[0]}
+                </span>
+              </>
+            )}
+            <span
+              aria-label={who ? `${place}.º lugar: ${who.name}` : undefined}
+              className={`mt-1 w-full rounded-t-md ${step} ${
+                who ? (place === 1 ? "bg-gradient-to-b from-amber-300/70 to-amber-500/30" : "bg-white/[0.12]") : "bg-white/[0.04]"
+              }`}
+            />
+          </div>
+        ))}
       </div>
     </div>
   );
