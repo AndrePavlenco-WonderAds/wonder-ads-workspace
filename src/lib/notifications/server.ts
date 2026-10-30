@@ -1410,8 +1410,10 @@ async function folgaNotifications(
 
 /** Sugestões à direção sobre as listas de Protocolos da Documentação
  *  (v78.51): uma por sugestão, até 60 dias, com o texto inteiro no corpo —
- *  quem abre o sino fica logo a saber o que a pessoa propôs. As próprias não
- *  aparecem a quem as escreveu. */
+ *  quem abre o sino fica logo a saber o que a pessoa propôs. Desde a v78.61
+ *  vão a TODA a direção, incluindo quem a escreveu (o André pediu: cada
+ *  sugestão em qualquer protocolo tem de estar no sino, não só no fim da
+ *  página). */
 const PROTOCOL_SUGGESTION_RECENT_MS = 60 * 24 * 60 * 60 * 1000;
 
 async function protocolSuggestionNotifications(
@@ -1423,14 +1425,15 @@ async function protocolSuggestionNotifications(
   try {
     const all = await listProtocolSuggestions();
     return all
-      .filter((s) => s.username !== viewer.username && now.getTime() - s.at <= PROTOCOL_SUGGESTION_RECENT_MS)
+      .filter((s) => now.getTime() - s.at <= PROTOCOL_SUGGESTION_RECENT_MS)
       .map((s) => {
         const id = `protocol-suggestion:${s.id}`;
         const title = PROTOCOL_META[s.list].title;
+        const who = s.username === viewer.username ? "Sugeriste" : `${firstName(s.name) || s.name} sugeriu`;
         return {
           id,
           ruleId: "protocol-suggestion",
-          title: `💡 ${firstName(s.name) || s.name} sugeriu uma mudança nos ${title}`,
+          title: `💡 ${who} uma mudança nos ${title}`,
           body: s.text.length > 600 ? `${s.text.slice(0, 600)}…` : s.text,
           periodLabel: "Documentação",
           dueAt: s.at,

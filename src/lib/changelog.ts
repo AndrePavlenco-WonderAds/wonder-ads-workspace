@@ -13,6 +13,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.61",
+    date: "2026-10-30",
+    title: "Sugestões dos Protocolos no sino de toda a direção",
+    highlights: [
+      "**💡 Cada sugestão** enviada em qualquer página de Protocolos (Obrigatórios, Recomendados ou Proibidos) aparece no sino de toda a direção, incluindo quem a escreveu, além de ficar nas «Sugestões recebidas» no fim da página.",
+      "**🔔 O sino atualiza logo** ao enviar, sem ser preciso mudar de página.",
+    ],
+  },
+  {
     version: "78.60",
     date: "2026-10-30",
     title: "Medalhas: a estante vazia já fala do SEO DPT",

@@ -5,6 +5,7 @@
 // direção vê aqui, por baixo, as que já chegaram sobre esta lista.
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Check, Lightbulb, Loader2, Send } from "lucide-react";
 import { formatDateTime } from "@/lib/dates";
 import { MAX_SUGGESTION_CHARS } from "@/lib/documentacao/protocolos";
@@ -23,6 +24,7 @@ export function ProtocolSuggest({
   /** Só para a direção: as sugestões que já chegaram sobre esta lista. */
   received: SuggestionView[] | null;
 }) {
+  const router = useRouter();
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -42,6 +44,9 @@ export function ProtocolSuggest({
       if (!res.ok) throw new Error(data.error ?? "Não foi possível enviar a sugestão.");
       setText("");
       setSent(true);
+      // O sino do header e as «Sugestões recebidas» são do servidor: sem
+      // isto, a direção só via a sugestão nova depois de mudar de página.
+      router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
