@@ -107,9 +107,12 @@ function Glyph({ glyph, fg, accent }: { glyph: MedalGlyph; fg: string; accent: s
         </g>
       );
     case "heart":
+      // v78.62: o traçado começa no lóbulo esquerdo, não na ponta — a
+      // começar na ponta, o resvg (PNG do Slack) deixava cair o coração
+      // quando era pintado com degradê.
       return (
         <path
-          d="M60 48.5 C52.5 43.2 50.2 39.4 50.2 36.2 A4.9 4.9 0 0 1 60 34.2 A4.9 4.9 0 0 1 69.8 36.2 C69.8 39.4 67.5 43.2 60 48.5 Z"
+          d="M50.2 36.2 C50.2 33 52.6 31.2 55.2 31.2 C57.4 31.2 59.2 32.5 60 34.2 C60.8 32.5 62.6 31.2 64.8 31.2 C67.4 31.2 69.8 33 69.8 36.2 C69.8 39.4 67.5 43.2 60 48.5 C52.5 43.2 50.2 39.4 50.2 36.2 Z"
           fill={fg}
         />
       );
