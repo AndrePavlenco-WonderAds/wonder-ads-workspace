@@ -82,6 +82,7 @@ export default async function BonusSemestralPage() {
       <DocHero
         block={block.title}
         title="Bónus semestral"
+        pageId="bonus-semestral"
         lead={
           <>
             Duas vezes por ano, até <Strong>{TOP}</Strong> por trabalhares com poucas ineficácias. Conta o semestre inteiro: de

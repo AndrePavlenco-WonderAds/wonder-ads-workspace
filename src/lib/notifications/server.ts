@@ -28,6 +28,7 @@ import {
 import {
   EMPLOYEE_CREDENTIALS,
   findEmployeeByUsername,
+  getEmployeeDisplay,
   isAdminUsername,
   listImpersonationTargets,
   viewerDeptOf,
@@ -75,6 +76,15 @@ import { getProposal, proposalPath } from "@/lib/proposals";
 import { getFolgaAlerts } from "@/lib/seo-folga-store";
 import { listProtocolSuggestions } from "@/lib/documentacao/protocol-suggestions";
 import { PROTOCOL_META } from "@/lib/documentacao/protocolos";
+import { docsAvailable } from "@/lib/documentacao/access";
+import {
+  DOC_UPDATE_KIND_LABEL,
+  DOC_UPDATE_WINDOW_MS,
+  changeLines,
+  docUpdateReaches,
+  docUpdateTarget,
+} from "@/lib/documentacao/updates";
+import { listDocUpdates } from "@/lib/documentacao/updates-store";
 import { eurCents, toCents } from "@/lib/seo-folga";
 import { getNotificationRules } from "@/lib/notifications/rules-store";
 import {
@@ -1450,6 +1460,76 @@ async function protocolSuggestionNotifications(
   }
 }
 
+/** Alterações à Documentação (v78.62): uma página mudou — na app (a direção
+ *  editou-a) ou numa versão nova (código). Vai ao SEO DPT e à direção, só a
+ *  quem consegue abrir a página, até 60 dias. O corpo diz quem mudou e O QUÊ
+ *  — quem abre o sino não precisa de ir comparar versões. Um aviso que
+ *  voltou a mudar depois de lido aparece outra vez por ler. */
+function docUpdateWhen(ms: number): string {
+  return new Date(ms).toLocaleString("en-GB", {
+    timeZone: "Europe/Lisbon",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+}
+
+async function docUpdateNotifications(
+  viewer: Viewer,
+  state: NotificationState,
+  now: Date,
+): Promise<UserNotification[]> {
+  const cred = findEmployeeByUsername(viewer.username);
+  if (!cred || !docsAvailable(viewer.username)) return [];
+  const reader = {
+    username: viewer.username,
+    name: viewer.name,
+    dept: viewer.dept,
+    isAdmin: Boolean(cred.isAdmin),
+    viewerOf: cred.viewerOf ?? null,
+    tags: getEmployeeDisplay(viewer.username)?.tags ?? [],
+  };
+  try {
+    const all = await listDocUpdates();
+    return all
+      .filter((u) => now.getTime() - u.updatedAt <= DOC_UPDATE_WINDOW_MS && docUpdateReaches(u, reader))
+      .map((u) => {
+        const id = `doc-update:${u.id}`;
+        const target = docUpdateTarget(u);
+        const entry = state[id];
+        const resolved = Boolean(entry && entry.resolvedAt >= u.updatedAt);
+        const who =
+          u.source === "codigo"
+            ? "A direção atualizou"
+            : u.byUsername === viewer.username
+              ? "Alteraste"
+              : `${firstName(u.by) || u.by} alterou`;
+        const lines = changeLines(u.changes).map((c) => `• ${c}`);
+        return {
+          id,
+          ruleId: "doc-update",
+          title: `📘 ${DOC_UPDATE_KIND_LABEL[u.kind]} — ${target.label}`,
+          body: [`${who} «${target.label}» na Documentação${u.version ? ` (v${u.version})` : ""}.`, ...lines].join("\n"),
+          // Um grupo por aviso: o rótulo leva a hora, para dois avisos
+          // seguidos não se fundirem num cabeçalho só.
+          periodLabel: `Documentação · ${docUpdateWhen(u.updatedAt)}`,
+          dueAt: u.updatedAt,
+          client: null,
+          actionLabel: target.href === "/documentacao" ? "Abrir a Documentação" : "Ver o que mudou",
+          actionHref: target.href,
+          resolved,
+          resolvedAt: resolved ? (entry?.resolvedAt ?? null) : null,
+        };
+      });
+  } catch (err) {
+    console.error("Notificações: alterações à Documentação falharam:", err instanceof Error ? err.message : "erro");
+    return [];
+  }
+}
+
 /** Um cliente clicou em «Confirmar a renovação» numa proposta pública. Vai
  *  ao sino do SuperAdmin (o André) à cabeça de tudo: é dinheiro à espera de
  *  resposta, não um lembrete de calendário. */
@@ -1531,7 +1611,7 @@ export async function getUserNotifications(
       ? ((await seoBooksByConsultant(needsStartDates)).get(viewer.name) ?? [])
       : [];
 
-  const [ending, situationPoints, nps, absences, reviews, proposals, probation, ineficacias, folga, suggestions] =
+  const [ending, situationPoints, nps, absences, reviews, proposals, probation, ineficacias, folga, suggestions, docUpdates] =
     await Promise.all([
       roadmapEndingNotifications(viewer, book, state, now),
       situationPointNotifications(viewer, state, now),
@@ -1543,6 +1623,7 @@ export async function getUserNotifications(
       ineficaciasNotifications(viewer, state, now),
       folgaNotifications(viewer, state, now),
       protocolSuggestionNotifications(viewer, state, now),
+      docUpdateNotifications(viewer, state, now),
     ]);
 
   // Ausências à cabeça: um pedido por decidir (ou uma resposta por ler) é
@@ -1554,6 +1635,7 @@ export async function getUserNotifications(
       ...proposals,
       ...folga,
       ...suggestions,
+      ...docUpdates,
       ...probation,
       ...ineficacias,
       ...absences,
@@ -1569,6 +1651,7 @@ export async function getUserNotifications(
     ...proposals,
     ...folga,
     ...suggestions,
+    ...docUpdates,
     ...probation,
     ...ineficacias,
     ...absences,

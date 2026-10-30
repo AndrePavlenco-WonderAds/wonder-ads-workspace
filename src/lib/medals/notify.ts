@@ -149,15 +149,14 @@ export async function syncMedalsAndNotify(trigger: string): Promise<void> {
       const held = (await getHeld(username)) ?? [];
       const heldSet = new Set(held);
       const seeded = heldSet.has(SEED);
-      // As do Producer of the Month (a «Top», as vitórias e os pódios) não
+      // As do Producer of the Month (a «Top» e as vitórias) não
       // têm anúncio próprio: a eleição já vai para o #team-wins com o pódio.
       const fresh = earned.filter(
         (e) =>
           !heldSet.has(e.medal.id) &&
           (seeded || !isFactFamily(e.medal.family)) &&
           e.medal.id !== "producer-top" &&
-          e.medal.family !== "producer" &&
-          e.medal.family !== "podio",
+          e.medal.family !== "producer",
       );
       if (fresh.length > 0) {
         if (teamWinsSlackConfigured()) {

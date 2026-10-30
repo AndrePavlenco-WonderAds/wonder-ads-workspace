@@ -101,6 +101,7 @@ export default async function FolgaCustosDocPage() {
       <DocHero
         block={block.title}
         title="Folga de custos"
+        pageId="folga-custos"
         lead={
           <>
             Cada projeto SEO tem um valor por mês para <Strong>extras que oferecemos ao cliente</Strong> sem os cobrar. O que

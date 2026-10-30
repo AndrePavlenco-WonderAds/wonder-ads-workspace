@@ -79,6 +79,7 @@ export default async function MatrizTalentoPage() {
       <DocHero
         block={block.title}
         title="Matriz de Talento Wonder"
+        pageId="matriz-talento"
         lead="Cada pessoa avalia-se em dois eixos: capacidade técnica e cultural fit. O cruzamento diz que player é e o que fazer com ele."
         meta={`Atualizado a ${formatDate(block.updatedAt)}.${reader.isAdmin ? ` Visível para SuperAdmin e ${block.audienceLabel}.` : ""}`}
       />

@@ -75,6 +75,7 @@ export default async function ComissoesPage() {
       <DocHero
         block={block.title}
         title="Comissões"
+        pageId="comissoes"
         lead={
           <>
             Ganhas sobre o que fechas. Renovações: <Strong>{RENEWAL} fixos</Strong>. Cross-sells e upsells:{" "}

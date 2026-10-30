@@ -93,6 +93,7 @@ export type TeamSummary = {
 
 type Group = {
   key: string;
+  ruleId: string;
   title: string;
   body: string;
   periodLabel: string;
@@ -109,6 +110,7 @@ function groupOf(items: DrawerNotification[]): Group[] {
     else
       map.set(key, {
         key,
+        ruleId: n.ruleId,
         title: n.title,
         body: n.body,
         periodLabel: n.periodLabel,
@@ -116,7 +118,15 @@ function groupOf(items: DrawerNotification[]): Group[] {
         items: [n],
       });
   }
-  return Array.from(map.values()).sort((a, b) => a.dueAt - b.dueAt);
+  // Os avisos (alterações à Documentação) vão à cabeça, o mais recente
+  // primeiro — são novidades, não dívidas, e no fundo da lista perdiam-se.
+  // O resto: o mais antigo primeiro.
+  return Array.from(map.values()).sort((a, b) => {
+    const pa = PINNED_RULES.has(a.ruleId);
+    const pb = PINNED_RULES.has(b.ruleId);
+    if (pa !== pb) return pa ? -1 : 1;
+    return pa ? b.dueAt - a.dueAt : a.dueAt - b.dueAt;
+  });
 }
 
 /** O que o Superadmin pediu para limpar no painel de equipa. */
@@ -474,7 +484,7 @@ export function NotificationsDrawer({
                         </span>
                       </div>
                       {g.body && (
-                        <p className="mt-1 text-[11.5px] leading-relaxed text-white/45">
+                        <p className="mt-1 whitespace-pre-line text-[11.5px] leading-relaxed text-white/45">
                           {g.body}
                         </p>
                       )}
@@ -902,7 +912,14 @@ const RESOLVE_LABELS: Record<string, string> = {
   "seo-review-followup": "Já fiz o follow-up",
   "seo-review-call": "Confirmo que telefonei ao cliente",
   "protocol-suggestion": "Lida",
+  "doc-update": "Lida",
 };
+
+/** Avisos que ficam lidos ao abrir o botão — ir ver a página É lê-los. */
+const RESOLVE_ON_OPEN = new Set(["doc-update"]);
+
+/** Avisos que vão sempre à cabeça do painel (ver `groupOf`). */
+const PINNED_RULES = new Set(["doc-update"]);
 
 function NotificationRow({
   n,
@@ -951,7 +968,10 @@ function NotificationRow({
         {n.actionHref ? (
           <Link
             href={n.actionHref}
-            onClick={onNavigate}
+            onClick={() => {
+              if (RESOLVE_ON_OPEN.has(n.ruleId)) onResolve();
+              onNavigate();
+            }}
             className="brand-gradient-bg inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-[12px] font-semibold text-white transition hover:brightness-110"
           >
             {n.actionLabel}

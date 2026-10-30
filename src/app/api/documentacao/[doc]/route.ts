@@ -6,6 +6,9 @@
 //   `updatedAt` que a página tinha quando o abriu: se entretanto outra pessoa
 //   gravou, devolve 409 com a versão atual em vez de a pisar.
 //
+// Cada gravação fica registada como alteração (v78.62, updates-store.ts): o
+// sino do SEO DPT avisa que a página mudou e diz o quê.
+//
 // Fora do matcher do middleware: tudo é verificado aqui. Só um SuperAdmin, na
 // própria sessão (com «Ver como» é só leitura) e com a Documentação aberta
 // para ele.
@@ -16,6 +19,8 @@ import { docsAvailable } from "@/lib/documentacao/access";
 import { normalizeJourney } from "@/lib/documentacao/jornada";
 import { normalizeProtocols, protocolListOfDoc } from "@/lib/documentacao/protocolos";
 import { getJourney, getProtocols, saveJourney, saveProtocols } from "@/lib/documentacao/editable-store";
+import { describeJourneyChange, describeProtocolsChange } from "@/lib/documentacao/updates";
+import { recordDocEdit } from "@/lib/documentacao/updates-store";
 
 export const runtime = "nodejs";
 
@@ -48,7 +53,16 @@ export async function PUT(req: Request, { params }: Ctx) {
     if (current.updatedAt !== base) {
       return NextResponse.json({ error: "Alguém mudou a jornada entretanto. Recarrega a página.", current }, { status: 409 });
     }
-    return NextResponse.json({ data: await saveJourney(clean, employee.name) });
+    const saved = await saveJourney(clean, employee.name);
+    await recordDocEdit({
+      page: doc,
+      before: { months: current.months },
+      after: { months: saved.months },
+      by: employee.name,
+      byUsername: employee.username,
+      describe: describeJourneyChange,
+    });
+    return NextResponse.json({ data: saved });
   }
 
   if (!list) return bad("Página desconhecida.", 404);
@@ -58,5 +72,15 @@ export async function PUT(req: Request, { params }: Ctx) {
   if (current.updatedAt !== base) {
     return NextResponse.json({ error: "Alguém mudou esta lista entretanto. Recarrega a página.", current }, { status: 409 });
   }
-  return NextResponse.json({ data: await saveProtocols(list, clean, employee.name) });
+  const saved = await saveProtocols(list, clean, employee.name);
+  await recordDocEdit({
+    page: doc,
+    before: { items: current.items },
+    after: { items: saved.items },
+    by: employee.name,
+    byUsername: employee.username,
+    describe: describeProtocolsChange,
+    anchor: "lista",
+  });
+  return NextResponse.json({ data: saved });
 }

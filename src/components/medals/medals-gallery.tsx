@@ -4,16 +4,20 @@
 //
 // Recebe tudo já calculado no servidor (catálogo, o que a pessoa tem, o
 // progresso em cada uma, quem lidera nas «Top») e só trata da escolha:
-// até três medalhas ganhas marcadas «No header», gravadas de uma vez. As
-// «Top» ocupam lugar automaticamente e não se tiram; os lugares que sobram
-// são da pessoa. Uma lista vazia é uma escolha («só as automáticas»).
+// até três medalhas ganhas para a montra do header, gravadas de uma vez.
+// Desde a v78.62 a escolha é toda da pessoa: as «Top» já não entram à
+// força, tira-se qualquer uma, e a ordem muda-se nas setas ou a arrastar.
+// Uma lista vazia é uma escolha («nenhuma no header»).
+//
+// As medalhas por ganhar acendem-se ao passar o rato (ou ao tocar) — uma
+// pré-visualização, para se ver o que se está a perseguir.
 //
 // Estrutura: barra fixa com o que vai para o header → estante (as que a
 // pessoa tem, em cartões com descrição) → catálogo por família.
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Crown, Lock, Pin, PinOff, Loader2 } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Crown, Eye, Lock, Pin, PinOff, Loader2, RotateCcw, X } from "lucide-react";
 import {
   MAX_DISPLAYED,
   MEDAL_FAMILIES,
@@ -66,37 +70,40 @@ export function MedalsGallery({
     [items],
   );
   const byId = useMemo(() => new Map(items.map((i) => [i.medal.id, i])), [items]);
-  // As «Top» ganhas vão sempre para o header — ocupam lugar sem se poder tirar.
-  const autoIds = useMemo(
-    () => earnedItems.filter((i) => i.medal.boss).map((i) => i.medal.id).slice(0, MAX_DISPLAYED),
-    [earnedItems],
-  );
-  const freeSlots = MAX_DISPLAYED - autoIds.length;
-  const initialPicked = useMemo(
-    () => display.filter((id) => !autoIds.includes(id)).slice(0, Math.max(0, freeSlots)),
-    [display, autoIds, freeSlots],
-  );
-  const [picked, setPicked] = useState<string[]>(initialPicked);
+  const initialPicked = useMemo(() => display.slice(0, MAX_DISPLAYED), [display]);
+  // A montra do header, pela ordem em que aparece.
+  const [selected, setSelected] = useState<string[]>(initialPicked);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [savedAt, setSavedAt] = useState<number | null>(null);
-  const selected = useMemo(() => [...autoIds, ...picked].slice(0, MAX_DISPLAYED), [autoIds, picked]);
-  const dirty = JSON.stringify(picked) !== JSON.stringify(initialPicked);
+  const [preview, setPreview] = useState<string | null>(null);
+  const dragFrom = useRef<number | null>(null);
+  const [dragOver, setDragOver] = useState<number | null>(null);
+  const dirty = JSON.stringify(selected) !== JSON.stringify(initialPicked);
+  const suggestion = earnedItems.slice(0, MAX_DISPLAYED).map((i) => i.medal.id);
 
   function toggle(id: string) {
     setError(null);
-    if (autoIds.includes(id)) return;
-    setPicked((cur) => {
-      if (cur.includes(id)) return cur.filter((x) => x !== id);
-      if (cur.length >= freeSlots) {
-        setError(
-          autoIds.length
-            ? `Só cabem ${MAX_DISPLAYED} no header e as ${autoIds.length === 1 ? "Top ocupa" : `${autoIds.length} Top ocupam`} lugar automaticamente — tira uma primeiro.`
-            : `Só cabem ${MAX_DISPLAYED} medalhas no header — tira uma primeiro.`,
-        );
-        return cur;
-      }
-      return [...cur, id];
+    if (selected.includes(id)) {
+      setSelected((cur) => cur.filter((x) => x !== id));
+      return;
+    }
+    if (selected.length >= MAX_DISPLAYED) {
+      setError(`Só cabem ${MAX_DISPLAYED} medalhas no header — tira uma primeiro.`);
+      return;
+    }
+    setSelected((cur) => [...cur, id]);
+  }
+
+  /** Leva a medalha da posição `from` para a `to` (setas ou arrastar). */
+  function move(from: number, to: number) {
+    setError(null);
+    setSelected((cur) => {
+      if (from === to || from < 0 || to < 0 || from >= cur.length || to >= cur.length) return cur;
+      const next = [...cur];
+      const [id] = next.splice(from, 1);
+      next.splice(to, 0, id);
+      return next;
     });
   }
 
@@ -122,19 +129,6 @@ export function MedalsGallery({
 
   function PinButton({ id, compact = false }: { id: string; compact?: boolean }) {
     if (!canChoose) return null;
-    if (autoIds.includes(id)) {
-      return (
-        <span
-          className={`inline-flex items-center gap-1.5 rounded-full border border-amber-300/40 bg-amber-400/10 font-semibold text-amber-100 ${
-            compact ? "px-2.5 py-1 text-[10.5px]" : "px-3 py-1 text-[11px]"
-          }`}
-          title="As «Top» vão sempre para o header"
-        >
-          <Crown className="h-3 w-3" />
-          No header · automático
-        </span>
-      );
-    }
     const isSelected = selected.includes(id);
     return (
       <button
@@ -159,41 +153,152 @@ export function MedalsGallery({
       {/* ----- Barra do header: o que está em exibição ----- */}
       <div className="sticky top-[72px] z-20 mb-8 rounded-2xl border border-white/10 bg-[color:var(--background)]/90 p-4 backdrop-blur-md sm:p-5">
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="flex min-h-[48px] items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1">
-              {selected.length === 0 && <span className="px-1 text-[12px] text-white/40">Nenhuma medalha no header.</span>}
-              {selected.map((id) => {
-                const item = byId.get(id);
-                return item ? (
-                  <span key={id} title={item.medal.name} className="inline-flex">
-                    <MedalBadge medal={item.medal} size={40} />
-                  </span>
-                ) : null;
+          <div className="flex flex-wrap items-center gap-4">
+            <ol className="flex items-stretch gap-2" aria-label="Medalhas no header, por ordem">
+              {Array.from({ length: MAX_DISPLAYED }, (_, i) => {
+                const id = selected[i];
+                const item = id ? byId.get(id) : undefined;
+                if (!item) {
+                  return (
+                    <li
+                      key={`slot-${i}`}
+                      onDragOver={(e) => {
+                        if (dragFrom.current === null) return;
+                        e.preventDefault();
+                        setDragOver(i);
+                      }}
+                      onDragLeave={() => setDragOver((cur) => (cur === i ? null : cur))}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        if (dragFrom.current !== null) move(dragFrom.current, selected.length - 1);
+                        dragFrom.current = null;
+                        setDragOver(null);
+                      }}
+                      className={`flex h-[78px] w-[76px] flex-col items-center justify-center rounded-xl border border-dashed text-center text-[10px] leading-tight transition ${
+                        dragOver === i ? "border-[#783DF5]/70 bg-[#783DF5]/10 text-white/60" : "border-white/15 text-white/30"
+                      }`}
+                    >
+                      <span className="text-[15px] leading-none">+</span>
+                      <span className="mt-1 px-1">lugar livre</span>
+                    </li>
+                  );
+                }
+                return (
+                  <li
+                    key={id}
+                    draggable={canChoose}
+                    onDragStart={(e) => {
+                      dragFrom.current = i;
+                      e.dataTransfer.effectAllowed = "move";
+                    }}
+                    onDragOver={(e) => {
+                      if (dragFrom.current === null) return;
+                      e.preventDefault();
+                      setDragOver(i);
+                    }}
+                    onDragLeave={() => setDragOver((cur) => (cur === i ? null : cur))}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      if (dragFrom.current !== null) move(dragFrom.current, i);
+                      dragFrom.current = null;
+                      setDragOver(null);
+                    }}
+                    onDragEnd={() => {
+                      dragFrom.current = null;
+                      setDragOver(null);
+                    }}
+                    title={item.medal.name}
+                    className={`group/slot relative flex h-[78px] w-[76px] flex-col items-center justify-between rounded-xl border bg-white/[0.03] px-1 pb-1 pt-1.5 transition ${
+                      dragOver === i ? "border-[#783DF5]/70 bg-[#783DF5]/15" : "border-white/12"
+                    } ${canChoose ? "cursor-grab active:cursor-grabbing" : ""}`}
+                  >
+                    <span className="absolute left-1.5 top-1 text-[9px] font-bold tabular-nums text-white/35">{i + 1}</span>
+                    {canChoose && (
+                      <button
+                        type="button"
+                        onClick={() => toggle(id)}
+                        className="absolute right-1 top-1 inline-flex h-4 w-4 items-center justify-center rounded-full bg-white/10 text-white/70 transition hover:bg-rose-500/80 hover:text-white"
+                        aria-label={`Tirar ${item.medal.name} do header`}
+                        title="Tirar do header"
+                      >
+                        <X className="h-2.5 w-2.5" />
+                      </button>
+                    )}
+                    <span className="flex flex-1 items-center">
+                      <MedalBadge medal={item.medal} size={38} />
+                    </span>
+                    {canChoose ? (
+                      <span className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => move(i, i - 1)}
+                          disabled={i === 0}
+                          className="inline-flex h-4 w-5 items-center justify-center rounded bg-white/[0.06] text-white/60 transition hover:bg-white/15 hover:text-white disabled:opacity-25"
+                          aria-label={`Mover ${item.medal.name} para a esquerda`}
+                        >
+                          <ChevronLeft className="h-3 w-3" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => move(i, i + 1)}
+                          disabled={i >= selected.length - 1}
+                          className="inline-flex h-4 w-5 items-center justify-center rounded bg-white/[0.06] text-white/60 transition hover:bg-white/15 hover:text-white disabled:opacity-25"
+                          aria-label={`Mover ${item.medal.name} para a direita`}
+                        >
+                          <ChevronRight className="h-3 w-3" />
+                        </button>
+                      </span>
+                    ) : (
+                      <span className="h-4" />
+                    )}
+                  </li>
+                );
               })}
-              {Array.from({ length: Math.max(0, MAX_DISPLAYED - selected.length) }, (_, i) => (
-                <span
-                  key={`slot-${i}`}
-                  aria-hidden
-                  className="inline-flex h-[34px] w-[30px] items-center justify-center rounded-md border border-dashed border-white/15 text-[9px] text-white/25"
-                >
-                  +
-                </span>
-              ))}
-            </div>
+            </ol>
             <div className="leading-tight">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/45">No header</p>
-              <p className="text-[12px] text-white/55">
-                {selected.length} de {MAX_DISPLAYED}
-                {autoIds.length ? ` · ${autoIds.length} Top automática${autoIds.length === 1 ? "" : "s"}` : ""} · escolhe entre as{" "}
-                {earnedItems.length} que já tens
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/45">Montra do header</p>
+              <p className="mt-0.5 text-[12px] text-white/55">
+                {selected.length} de {MAX_DISPLAYED} · escolhe entre as {earnedItems.length} que já tens
               </p>
+              {canChoose && (
+                <p className="mt-0.5 text-[11px] text-white/35">Tira, troca e arrasta para mudar a ordem — as «Top» também.</p>
+              )}
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {savedAt && !dirty && (
               <span className="inline-flex items-center gap-1 text-[12px] text-emerald-200">
                 <Check className="h-3.5 w-3.5" /> Guardado
               </span>
+            )}
+            {canChoose && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setError(null);
+                    setSelected(suggestion);
+                  }}
+                  disabled={JSON.stringify(selected) === JSON.stringify(suggestion)}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-white/12 bg-white/[0.03] px-3 py-2 text-[11.5px] font-semibold text-white/70 transition hover:border-white/25 hover:text-white disabled:opacity-35"
+                  title="As três de maior prestígio"
+                >
+                  <RotateCcw className="h-3 w-3" />
+                  Sugestão
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setError(null);
+                    setSelected([]);
+                  }}
+                  disabled={selected.length === 0}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-white/12 bg-white/[0.03] px-3 py-2 text-[11.5px] font-semibold text-white/70 transition hover:border-white/25 hover:text-white disabled:opacity-35"
+                >
+                  <X className="h-3 w-3" />
+                  Esvaziar
+                </button>
+              </>
             )}
             {canChoose ? (
               <button
@@ -227,7 +332,7 @@ export function MedalsGallery({
         </div>
         {earnedItems.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-white/15 bg-white/[0.02] p-8 text-center text-sm text-white/50">
-            A primeira chega com 25 blocos do roadmap feitos, um mês com NPS de 9, um mês sem ineficácias ou a primeira proposta apresentada.
+            A primeira chega com 50 blocos do roadmap feitos, um mês com NPS de 9, um mês sem ineficácias ou a primeira proposta apresentada.
           </div>
         ) : (
           <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -241,7 +346,7 @@ export function MedalsGallery({
                   style={{
                     borderColor: `${accent}55`,
                     background: `radial-gradient(120% 90% at 50% -10%, ${accent}2E 0%, rgba(255,255,255,0.03) 55%, rgba(255,255,255,0.02) 100%)`,
-                    boxShadow: medal.boss || medal.tier >= 4 ? `0 24px 60px -30px ${accent}` : undefined,
+                    boxShadow: medal.boss || medal.fx || medal.tier >= 4 ? `0 24px 60px -30px ${accent}` : undefined,
                   }}
                 >
                   {isSelected && (
@@ -283,6 +388,7 @@ export function MedalsGallery({
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/40">Catálogo</p>
           <h3 className="mt-1 text-xl font-semibold tracking-tight text-white">Tudo o que há para ganhar</h3>
+          <p className="mt-1 text-[12.5px] text-white/45">Passa o rato (ou toca) numa medalha por ganhar para a veres acesa.</p>
         </div>
         {MEDAL_FAMILIES.map((fam) => {
           const list = items.filter((i) => i.medal.family === fam.id);
@@ -307,9 +413,18 @@ export function MedalsGallery({
                   const pct = progress.earned ? 100 : Math.min(100, Math.round((progress.value / progress.threshold) * 100));
                   const who = leaders[medal.id] ?? [];
                   const others = who.filter((n) => n !== viewerName);
+                  const previewing = !progress.earned && preview === medal.id;
+                  const glow = progress.earned && (isTop || medal.fx);
                   return (
                     <li
                       key={medal.id}
+                      {...(progress.earned
+                        ? {}
+                        : {
+                            onMouseEnter: () => setPreview(medal.id),
+                            onMouseLeave: () => setPreview((cur) => (cur === medal.id ? null : cur)),
+                            onClick: () => setPreview((cur) => (cur === medal.id ? null : medal.id)),
+                          })}
                       className={`relative flex flex-col items-center rounded-2xl border p-4 text-center transition ${
                         progress.earned
                           ? isSelected
@@ -318,18 +433,29 @@ export function MedalsGallery({
                           : "border-white/8 bg-white/[0.015]"
                       } ${isTop ? "p-6" : ""}`}
                       style={
-                        progress.earned && isTop
-                          ? { background: `radial-gradient(120% 90% at 50% -10%, ${accent}33 0%, rgba(255,255,255,0.03) 60%)`, borderColor: `${accent}66` }
+                        glow || previewing
+                          ? {
+                              background: `radial-gradient(120% 90% at 50% -10%, ${accent}${previewing ? "1F" : "33"} 0%, rgba(255,255,255,0.03) 60%)`,
+                              borderColor: `${accent}${previewing ? "40" : "66"}`,
+                            }
                           : undefined
                       }
                     >
-                      {!progress.earned && (
-                        <span className="absolute right-3 top-3 text-white/30" title="Por ganhar">
-                          <Lock className="h-3.5 w-3.5" />
-                        </span>
-                      )}
+                      {!progress.earned &&
+                        (previewing ? (
+                          <span
+                            className="absolute right-2.5 top-2.5 z-10 inline-flex items-center gap-1 rounded-full bg-black/70 px-2 py-0.5 text-[9.5px] font-semibold uppercase tracking-[0.14em] text-white/70"
+                            title="Pré-visualização — ainda por ganhar"
+                          >
+                            <Eye className="h-3 w-3" /> pré-visualização
+                          </span>
+                        ) : (
+                          <span className="absolute right-3 top-3 text-white/30" title="Por ganhar">
+                            <Lock className="h-3.5 w-3.5" />
+                          </span>
+                        ))}
                       <div className={`flex items-center ${isTop ? "h-[112px]" : "h-[76px]"}`}>
-                        <MedalBadge medal={medal} size={isTop ? 100 : 66} earned={progress.earned} />
+                        <MedalBadge medal={medal} size={isTop ? 100 : 66} earned={progress.earned || previewing} />
                       </div>
                       <p className={`mt-3 text-[13.5px] font-semibold ${progress.earned ? "text-white" : "text-white/55"}`}>{medal.name}</p>
                       <p className="mt-0.5 text-[11.5px] text-white/45">{medal.requirement}</p>

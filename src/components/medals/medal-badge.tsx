@@ -8,6 +8,10 @@
 // emblema, ao estilo das cartas lendárias — animação SMIL dentro do SVG.
 // Nada de gradientes a andar: as cores são fixas (v77.26).
 //
+// v78.62 — as peles especiais (`medal.fx`, ver medal-fx.tsx): o NPS
+// Perfeito («estelar») e o Rigor («lendaria») trocam a cor do tier por uma
+// paleta própria e ganham camadas de efeitos à frente e atrás do escudo.
+//
 // Sem hooks de cliente além do useId (funciona em servidor e cliente): o
 // header (servidor) e a galeria (cliente) usam o mesmo componente. O
 // desenho em si vive em <MedalArt>, sem hooks e com modo estático (sem
@@ -16,6 +20,7 @@
 
 import { useId } from "react";
 import type { Medal, MedalGlyph, MedalTier } from "@/lib/medals/catalog";
+import { FX_PALETTES, LegendaryBack, LegendaryFront, SHIELD_PATH, StellarBack, StellarFront } from "./medal-fx";
 
 type Palette = {
   /** Cor principal; «gradient» usa o degradê fixo definido em <defs>. */
@@ -24,6 +29,8 @@ type Palette = {
   stroke: string;
   glow: string | null;
   accent: string;
+  /** Fundo do medalhão do glifo (por defeito, um branco quase transparente). */
+  inner?: string;
 };
 
 const TIERS: Record<MedalTier, Palette> = {
@@ -97,15 +104,6 @@ function Glyph({ glyph, fg, accent }: { glyph: MedalGlyph; fg: string; accent: s
           <rect x="58.6" y="42.6" width="2.8" height="3.6" fill={fg} />
           <rect x="54.2" y="46" width="11.6" height="3" rx="1" fill={fg} />
           <circle cx="60" cy="35.6" r="1.6" fill={accent} />
-        </g>
-      );
-    case "podium":
-      return (
-        <g>
-          <rect x="50.5" y="41" width="6" height="8" rx="0.8" fill={fg} />
-          <rect x="57" y="35.5" width="6" height="13.5" rx="0.8" fill={fg} />
-          <rect x="63.5" y="43.5" width="6" height="5.5" rx="0.8" fill={fg} />
-          <circle cx="60" cy="31.6" r="1.9" fill={accent} />
         </g>
       );
     case "heart":
@@ -236,7 +234,13 @@ export function MedalArt({
   animated?: boolean;
   className?: string;
 }) {
-  const P = medal.boss ? BOSS : TIERS[medal.tier];
+  const fx = medal.boss ? undefined : medal.fx;
+  const skin = fx ? FX_PALETTES[fx] : null;
+  const P: Palette = skin
+    ? { fg: "gradient", bg: skin.bg, stroke: skin.stroke, glow: skin.glow, accent: skin.accent, inner: skin.inner }
+    : medal.boss
+      ? BOSS
+      : TIERS[medal.tier];
   const gradId = `mg${uid}`;
   const shineId = `ms${uid}`;
   const fg = P.fg === "gradient" ? `url(#${gradId})` : P.fg;
@@ -248,11 +252,20 @@ export function MedalArt({
   const crown = t >= 5;
   const bolts = t >= 5;
   const laurel = t === 3;
-  const orbit = animated && earned && t >= 3;
+  const orbit = animated && earned && t >= 3 && !fx;
   const wide = wings;
   const width = size * (wide ? 1.5 : 0.8);
-  const filter = animated && earned && P.glow ? `drop-shadow(0 0 ${Math.max(3, size / 7)}px ${P.glow})` : undefined;
-  const pulse = !animated || !earned ? "" : boss ? "animate-medal-pulse-strong" : t >= 3 ? "animate-medal-pulse" : "";
+  // As peles especiais acendem-se mesmo por ganhar? Não: por ganhar ficam
+  // apagadas como as outras (a galeria acende-as em pré-visualização).
+  const lit = earned || !animated;
+  const fxProps = { uid, tier: t, wide, animated: animated && earned };
+  const filter =
+    animated && earned && P.glow
+      ? skin
+        ? `drop-shadow(0 0 ${Math.max(3, size / 9)}px ${skin.glow}) drop-shadow(0 0 ${Math.max(6, size / 4)}px ${skin.glow2})`
+        : `drop-shadow(0 0 ${Math.max(3, size / 7)}px ${P.glow})`
+      : undefined;
+  const pulse = !animated || !earned ? "" : fx ? "animate-medal-legend" : boss ? "animate-medal-pulse-strong" : t >= 3 ? "animate-medal-pulse" : "";
   const cls = `${earned ? pulse : animated ? "opacity-35 grayscale" : ""} ${className}`.trim();
   const sparkleFill = boss ? P.accent : t === 5 ? "#FFD166" : P.accent;
 
@@ -274,17 +287,19 @@ export function MedalArt({
       <defs>
         <linearGradient id={gradId} x1="0" y1="0" x2="1" y2="1">
           {/* Stops diretos (sem <g>): dentro de um gradiente só valem stops. */}
-          {(boss
-            ? [
-                ["0", "#FFE08A"],
-                ["0.55", "#FFB347"],
-                ["1", "#FF5C7A"],
-              ]
-            : [
-                ["0", "#9F6BFF"],
-                ["0.55", "#E86BE0"],
-                ["1", "#FFD166"],
-              ]
+          {(skin
+            ? skin.stops
+            : boss
+              ? [
+                  ["0", "#FFE08A"],
+                  ["0.55", "#FFB347"],
+                  ["1", "#FF5C7A"],
+                ]
+              : [
+                  ["0", "#9F6BFF"],
+                  ["0.55", "#E86BE0"],
+                  ["1", "#FFD166"],
+                ]
           ).map(([offset, color]) => (
             <stop key={offset} offset={offset} stopColor={color} />
           ))}
@@ -304,13 +319,17 @@ export function MedalArt({
         </g>
       )}
 
+      {/* Pele especial — camada de trás (halo, raios, anéis, céu) */}
+      {fx === "lendaria" && lit && <LegendaryBack {...fxProps} />}
+      {fx === "estelar" && lit && <StellarBack {...fxProps} />}
+
       {laurel && <Laurel fg={fg} />}
       {wings && <Wings fg={fg} big={t >= 5} />}
       {bolts && <Bolts fill={boss ? P.accent : fg} />}
 
       {/* Escudo com bisel interior e brilho no topo */}
-      <path d="M36 14 H84 V45 C84 58 73 66.5 60 71 C47 66.5 36 58 36 45 Z" fill={P.bg} stroke={fg} strokeWidth={3} strokeLinejoin="round" />
-      <path d="M36 14 H84 V45 C84 58 73 66.5 60 71 C47 66.5 36 58 36 45 Z" fill={`url(#${shineId})`} />
+      <path d={SHIELD_PATH} fill={P.bg} stroke={fg} strokeWidth={3} strokeLinejoin="round" />
+      <path d={SHIELD_PATH} fill={`url(#${shineId})`} />
       <path d="M41 19 H79 V44 C79 54.5 70 61 60 65 C50 61 41 54.5 41 44 Z" fill="none" stroke={fg} strokeWidth={1.2} opacity={0.55} />
 
       {/* Coroa (V e chefes) */}
@@ -330,7 +349,7 @@ export function MedalArt({
         ))}
 
       {/* Medalhão com o glifo */}
-      <circle cx="60" cy="40" r="13.5" fill="rgba(255,255,255,0.055)" stroke={fg} strokeWidth={1.8} />
+      <circle cx="60" cy="40" r="13.5" fill={P.inner ?? "rgba(255,255,255,0.055)"} stroke={fg} strokeWidth={1.8} />
       {boss && <circle cx="60" cy="40" r="16.5" fill="none" stroke={P.accent} strokeWidth={1.6} opacity={0.9} />}
       <Glyph glyph={medal.glyph} fg={fg} accent={P.accent} />
 
@@ -378,6 +397,10 @@ export function MedalArt({
           })}
         </g>
       )}
+
+      {/* Pele especial — camada da frente (estrelas, faíscas, cometas, brilho) */}
+      {fx === "lendaria" && lit && <LegendaryFront {...fxProps} />}
+      {fx === "estelar" && lit && <StellarFront {...fxProps} />}
     </svg>
   );
 }

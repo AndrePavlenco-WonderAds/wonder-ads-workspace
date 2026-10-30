@@ -94,6 +94,7 @@ export default async function BonusNpsPage({
       <DocHero
         block={block.title}
         title="Bónus NPS"
+        pageId="bonus-nps"
         lead={
           <>
             Todos os meses, dois bónus sobre o NPS dos teus clientes: até <Strong>{formatEur(TOP_INDIVIDUAL)} teus</Strong> e até{" "}

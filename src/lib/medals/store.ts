@@ -2,7 +2,8 @@
 //
 // Uma chave por username (`medals:display:<username>`), uma lista de ids.
 // null = nunca escolheu → o header mostra as três de maior prestígio. Uma
-// lista vazia é uma escolha válida («não mostrar nenhuma»).
+// lista vazia é uma escolha válida («não mostrar nenhuma»); a ordem da
+// lista é a ordem no header (v78.62).
 
 import { kv } from "@vercel/kv";
 import { MAX_DISPLAYED, isMedalId } from "./catalog";

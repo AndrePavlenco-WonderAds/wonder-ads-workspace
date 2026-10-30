@@ -108,6 +108,7 @@ export default async function IneficaciasDocPage() {
       <DocHero
         block={block.title}
         title="Ineficácias"
+        pageId="ineficacias"
         lead="Cada erro fica registado, com data e peso. Os que se acumulam fazem subir na escala."
         meta={`Atualizado a ${formatDate(block.updatedAt)}.${admin ? ` Visível para SuperAdmin e ${block.audienceLabel}.` : ""}`}
         tabs={{ pages: block.pages, current: "/documentacao/ineficacias" }}

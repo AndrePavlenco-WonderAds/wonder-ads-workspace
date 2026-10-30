@@ -20,6 +20,10 @@
 // aqui já feitos, em `MedalFacts`; os do Comercial continuam a sair do
 // leaderboard das propostas.
 //
+// v78.62 — o Pódio saiu; o Producer of the Month vai até ao V; as Entregas
+// pedem o dobro dos blocos; o NPS Perfeito e o Rigor, por serem difíceis,
+// ganharam uma pele própria (`fx`): cor e efeitos que nenhuma outra tem.
+//
 // Módulo puro: sem servidor, para a galeria no browser o poder importar.
 
 import { closedCount, presentedCount, type Leaderboard, type LeaderboardRow } from "@/lib/proposals/leaderboard";
@@ -34,7 +38,6 @@ export type MedalFamilyId =
   | "grande-caca"
   | "top"
   | "producer"
-  | "podio"
   | "nps"
   | "nps-perfeito"
   | "comissoes"
@@ -56,8 +59,6 @@ export type MedalFacts = {
   roadmapBlocks: number;
   /** Vezes eleito Producer of the Month (1.º lugar). */
   producerWins: number;
-  /** Vezes no pódio (1.º, 2.º ou 3.º). */
-  podiums: number;
   /** É o Producer of the Month da eleição mais recente. */
   producerNow: boolean;
 };
@@ -74,11 +75,16 @@ export type MedalGlyph =
   | "diamond"
   | "star"
   | "trophy"
-  | "podium"
   | "heart"
   | "coins"
   | "shield"
   | "blocks";
+
+/** Pele especial (v78.62) das famílias difíceis: «estelar» (NPS Perfeito —
+ *  cor holográfica e estrelas a voar à volta) e «lendaria» (Rigor — ouro e
+ *  esmeralda, raios, runas, faíscas e cometas). Sobrepõe-se à cor do tier;
+ *  o desenho (chevrons, asas, coroa) continua a subir com o tier. */
+export type MedalFx = "estelar" | "lendaria";
 
 export type Medal = {
   id: string;
@@ -98,6 +104,8 @@ export type Medal = {
   glyph: MedalGlyph;
   /** Ordena a galeria e escolhe as três do header por defeito. */
   prestige: number;
+  /** Pele especial — ver `MedalFx`. */
+  fx?: MedalFx;
 };
 
 export type MedalFamily = {
@@ -111,7 +119,6 @@ export type MedalFamily = {
 export const MEDAL_FAMILIES: MedalFamily[] = [
   { id: "top", name: "Top", description: "Quem lidera agora. Muda de mãos quando a classificação muda — ou, no Producer of the Month, quando a direção elege o seguinte.", unit: "count" },
   { id: "producer", name: "Producer of the Month", description: "Vezes que a direção te elegeu Producer of the Month do SEO DPT.", unit: "count" },
-  { id: "podio", name: "Pódio", description: "Vezes que ficaste no pódio do Producer of the Month (1.º, 2.º ou 3.º).", unit: "count" },
   { id: "nps", name: "Cliente Feliz", description: "Meses com NPS de 9 ou mais nos teus projetos, com as regras do Bónus NPS (3+ projetos, 50% de respostas).", unit: "count" },
   { id: "nps-perfeito", name: "NPS Perfeito", description: "Meses com NPS 10 nos teus projetos, com as mesmas regras.", unit: "count" },
   { id: "entregas", name: "Entregas", description: "Blocos marcados como feitos nos roadmaps dos teus clientes.", unit: "count" },
@@ -127,6 +134,17 @@ export const MEDAL_FAMILIES: MedalFamily[] = [
 ];
 
 const ROMAN = ["I", "II", "III", "IV", "V"];
+
+/** Nome e cor das peles especiais — a pílula da galeria e o PNG do Slack. */
+export const FX_NAMES: Record<MedalFx, string> = {
+  estelar: "Estelar",
+  lendaria: "Lendária",
+};
+
+export const FX_ACCENT: Record<MedalFx, string> = {
+  estelar: "#FF7AD9",
+  lendaria: "#FFD23F",
+};
 
 /** Nome de cada tier — o «material» do emblema. */
 export const TIER_NAMES: Record<MedalTier, string> = {
@@ -149,11 +167,13 @@ export const TIER_ACCENT: Record<MedalTier, string> = {
 export const BOSS_ACCENT = "#FF4D6D";
 
 export function tierLabel(medal: Medal): string {
-  return medal.boss ? "Leader" : TIER_NAMES[medal.tier];
+  if (medal.boss) return "Leader";
+  return medal.fx ? FX_NAMES[medal.fx] : TIER_NAMES[medal.tier];
 }
 
 export function tierAccent(medal: Medal): string {
-  return medal.boss ? BOSS_ACCENT : TIER_ACCENT[medal.tier];
+  if (medal.boss) return BOSS_ACCENT;
+  return medal.fx ? FX_ACCENT[medal.fx] : TIER_ACCENT[medal.tier];
 }
 
 function ladder(
@@ -162,6 +182,7 @@ function ladder(
   glyph: MedalGlyph,
   steps: Array<{ threshold: number; tier: MedalTier; requirement: string; blurb: string }>,
   base: number,
+  fx?: MedalFx,
 ): Medal[] {
   return steps.map((s, i) => ({
     id: `${family}-${i + 1}`,
@@ -174,6 +195,7 @@ function ladder(
     boss: false,
     glyph,
     prestige: base + s.tier * 100 + i,
+    ...(fx ? { fx } : {}),
   }));
 }
 
@@ -335,32 +357,15 @@ const PRODUCER = withThresholds(
     "Producer of the Month",
     "trophy",
     [
-      { threshold: 1, tier: 3, requirement: "Eleito 1 vez", blurb: "A direção elegeu-te Producer of the Month. Fica para sempre na tua estante." },
-      { threshold: 3, tier: 4, requirement: "Eleito 3 vezes", blurb: "Três vezes Producer of the Month — já não é um mês bom, é um padrão." },
-      { threshold: 6, tier: 5, requirement: "Eleito 6 vezes", blurb: "Seis vezes Producer of the Month. Meio ano de meses a ser a referência da equipa." },
+      { threshold: 1, tier: 1, requirement: "Eleito 1 vez", blurb: "A direção elegeu-te Producer of the Month. Fica para sempre na tua estante." },
+      { threshold: 3, tier: 2, requirement: "Eleito 3 vezes", blurb: "Três vezes Producer of the Month — já não é um mês bom, é um padrão." },
+      { threshold: 6, tier: 3, requirement: "Eleito 6 vezes", blurb: "Seis vezes Producer of the Month. Meio ano de meses a ser a referência da equipa." },
+      { threshold: 9, tier: 4, requirement: "Eleito 9 vezes", blurb: "Nove vezes Producer of the Month. Três trimestres de meses a ser a referência da equipa." },
+      { threshold: 12, tier: 5, requirement: "Eleito 12 vezes", blurb: "Doze vezes Producer of the Month — um ano inteiro de meses a ser a referência do SEO DPT." },
     ],
     60,
   ),
-  [1, 3, 6],
-);
-
-const PODIO = withThresholds(
-  ladder(
-    "podio",
-    "Pódio",
-    "podium",
-    [1, 3, 6, 12].map((n, i) => ({
-      threshold: n,
-      tier: (i + 1) as MedalTier,
-      requirement: plural(n, "pódio", "pódios"),
-      blurb:
-        n === 1
-          ? "Ficaste no pódio do Producer of the Month, escolhido pela direção."
-          : `${plural(n, "vez", "vezes")} no pódio do Producer of the Month.`,
-    })),
-    35,
-  ),
-  [1, 3, 6, 12],
+  [1, 3, 6, 9, 12],
 );
 
 const NPS = withThresholds(
@@ -393,6 +398,7 @@ const NPS_PERFEITO = withThresholds(
       { threshold: 6, tier: 5, requirement: "6 meses com NPS 10", blurb: "Seis meses com média 10 nos teus projetos. Clientes que não trocavam de consultor por nada." },
     ],
     55,
+    "estelar",
   ),
   [1, 3, 6],
 );
@@ -402,7 +408,7 @@ const ENTREGAS = withThresholds(
     "entregas",
     "Entregas",
     "blocks",
-    [25, 100, 250, 500, 1000].map((n, i) => ({
+    [50, 200, 500, 1000, 2000].map((n, i) => ({
       threshold: n,
       tier: (i + 1) as MedalTier,
       requirement: `${n} blocos feitos`,
@@ -410,7 +416,7 @@ const ENTREGAS = withThresholds(
     })),
     28,
   ),
-  [25, 100, 250, 500, 1000],
+  [50, 200, 500, 1000, 2000],
 );
 
 const RIGOR = withThresholds(
@@ -428,6 +434,7 @@ const RIGOR = withThresholds(
           : `${plural(n, "mês fechado", "meses fechados")} sem nenhuma ineficácia pontuada pela direção.`,
     })),
     25,
+    "lendaria",
   ),
   [1, 3, 6, 9, 12],
 );
@@ -502,7 +509,6 @@ const TOP: Medal[] = [
 export const MEDALS: Medal[] = [
   ...TOP,
   ...PRODUCER,
-  ...PODIO,
   ...NPS,
   ...NPS_PERFEITO,
   ...ENTREGAS,
@@ -570,8 +576,6 @@ export function factMetric(family: MedalFamilyId, facts: MedalFacts | null): num
   switch (family) {
     case "producer":
       return facts.producerWins;
-    case "podio":
-      return facts.podiums;
     case "nps":
       return facts.npsGoodMonths;
     case "nps-perfeito":
@@ -589,7 +593,6 @@ export function factMetric(family: MedalFamilyId, facts: MedalFacts | null): num
 
 const FACT_FAMILIES: ReadonlySet<MedalFamilyId> = new Set([
   "producer",
-  "podio",
   "nps",
   "nps-perfeito",
   "entregas",
@@ -677,19 +680,19 @@ export function computeEarned(
     .sort((a, b) => b.medal.prestige - a.medal.prestige);
 }
 
-/** As medalhas que vão para o header (v77.28):
- *  1. as «Top» que a pessoa tem entram SEMPRE, automaticamente;
- *  2. depois a escolha da pessoa (só as que continua a ter);
- *  3. sem escolha, as restantes por ordem de dificuldade — Lendária, Ouro,
- *     Prata, Bronze (é a ordem de `earned`, por prestígio). */
+/** As medalhas que vão para o header. Desde a v78.62 a escolha é toda da
+ *  pessoa — nem as «Top» entram à força:
+ *  1. com escolha gravada, exatamente essa, pela ordem dela (só as que
+ *     continua a ter; uma lista vazia = nenhuma no header);
+ *  2. sem escolha, as três de maior prestígio (as «Top» primeiro, depois
+ *     Lendária, Diamante, Ouro… — é a ordem de `earned`). */
 export function resolveDisplay(chosen: string[] | null, earned: EarnedMedal[]): Medal[] {
-  const tops = earned.filter((e) => e.medal.boss).map((e) => e.medal);
-  const rest = earned.filter((e) => !e.medal.boss).map((e) => e.medal);
-  const have = new Map(rest.map((m) => [m.id, m]));
-  const manual = chosen ? chosen.map((id) => have.get(id)).filter((m): m is Medal => Boolean(m)) : rest;
+  if (!chosen) return earned.slice(0, MAX_DISPLAYED).map((e) => e.medal);
+  const have = new Map(earned.map((e) => [e.medal.id, e.medal]));
   const out: Medal[] = [];
-  for (const m of [...tops, ...manual]) {
-    if (!out.some((x) => x.id === m.id)) out.push(m);
+  for (const id of chosen) {
+    const m = have.get(id);
+    if (m && !out.some((x) => x.id === m.id)) out.push(m);
     if (out.length === MAX_DISPLAYED) break;
   }
   return out;

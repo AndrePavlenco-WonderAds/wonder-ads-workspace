@@ -45,7 +45,8 @@ export default async function MedalhasPage() {
             <p className="mt-3 max-w-2xl text-base text-white/65 sm:text-lg">
               <span className="font-semibold text-white">{earned}</span> de {MEDALS.length} conquistadas. Contam o trabalho
               com os clientes (NPS, roadmap, rigor), o Producer of the Month e o Comercial. As de patamar ficam para sempre;
-              as «Top» são de quem lidera agora e vão sempre para o header. Os lugares que sobram são teus.
+              as «Top» são de quem lidera agora. A montra do header é toda tua: escolhe até três, pela ordem que quiseres —
+              ou nenhuma.
             </p>
           </div>
           <div className="flex flex-wrap gap-2 text-[11px] font-medium uppercase tracking-[0.14em]">

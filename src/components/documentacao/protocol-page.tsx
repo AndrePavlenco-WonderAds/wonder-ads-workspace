@@ -156,6 +156,7 @@ export async function ProtocolPage({ list }: { list: ProtocolList }) {
       <DocHero
         block={block.title}
         title={meta.title}
+        pageId={`protocolos-${list}`}
         lead={copy.lead}
         meta={`Atualizado a ${formatDate(updated)}.${reader.isAdmin ? ` Visível para SuperAdmin e ${block.audienceLabel}.` : ""}`}
         tabs={

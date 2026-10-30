@@ -963,9 +963,20 @@ body {
   animation: medal-pulse-strong 2.2s ease-in-out infinite;
   transform-origin: center;
 }
+/* Peles especiais (v78.62): a medalha flutua — só transform, para não
+   pisar o drop-shadow do brilho (um filter na animação substituía-o). As
+   camadas de efeitos (.medal-fx) são SMIL dentro do SVG. */
+@keyframes medal-legend {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-4%) scale(1.045); }
+}
+.animate-medal-legend {
+  animation: medal-legend 3.2s ease-in-out infinite;
+  transform-origin: center;
+}
 @media (prefers-reduced-motion: reduce) {
-  .animate-medal-pulse, .animate-medal-pulse-strong { animation: none; }
-  .medal-orbit { display: none; }
+  .animate-medal-pulse, .animate-medal-pulse-strong, .animate-medal-legend { animation: none; }
+  .medal-orbit, .medal-fx { display: none; }
 }
 
 /* ------------------------------------------------------------------ */

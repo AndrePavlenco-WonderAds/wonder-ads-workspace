@@ -72,6 +72,7 @@ export default async function ProbationDocPage() {
       <DocHero
         block={block.title}
         title="Probation"
+        pageId="probation"
         lead="Não é o princípio do fim. É a última oportunidade estruturada: 30 dias, KPIs por escrito, um check-in todas as semanas e uma decisão com base nos resultados."
         meta={`Atualizado a ${formatDate(block.updatedAt)}.${admin ? ` Visível para SuperAdmin e ${block.audienceLabel}.` : ""}`}
         tabs={{ pages: block.pages, current: "/documentacao/probation" }}

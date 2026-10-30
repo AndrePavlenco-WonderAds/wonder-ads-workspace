@@ -16,6 +16,8 @@ const CAMEL_TO_KEBAB: Record<string, string> = {
   strokeLinecap: "stroke-linecap",
   strokeLinejoin: "stroke-linejoin",
   strokeDasharray: "stroke-dasharray",
+  strokeOpacity: "stroke-opacity",
+  clipPath: "clip-path",
   fillOpacity: "fill-opacity",
   fontFamily: "font-family",
   fontSize: "font-size",

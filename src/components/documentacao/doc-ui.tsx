@@ -10,6 +10,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { ArrowLeft, ChevronRight, Construction, Lock } from "lucide-react";
 import { formatDate } from "@/lib/dates";
+import { DocUpdatesNote } from "./doc-updates-note";
 
 export function DocHero({
   block,
@@ -17,6 +18,7 @@ export function DocHero({
   lead,
   meta,
   tabs,
+  pageId,
 }: {
   /** Nome do bloco — vai para o trilho «Documentação › bloco». */
   block: string;
@@ -24,6 +26,8 @@ export function DocHero({
   lead: ReactNode;
   meta?: ReactNode;
   tabs?: { pages: Array<{ href: string; label: string }>; current: string };
+  /** A página (`DocsPage.id`) — mostra a «Alteração recente» (v78.62). */
+  pageId?: string;
 }) {
   return (
     <header className="mt-4 sm:mt-6">
@@ -41,6 +45,7 @@ export function DocHero({
           </h1>
           <p className="mt-3 text-[15.5px] leading-relaxed text-white/65 sm:text-[17px]">{lead}</p>
           {meta && <p className="mt-3 text-[12px] text-white/35">{meta}</p>}
+          {pageId && <DocUpdatesNote pageId={pageId} />}
         </div>
         {tabs && <BlockTabs pages={tabs.pages} current={tabs.current} />}
       </div>

@@ -5,15 +5,20 @@
 // documentação e o cartão tem de se explicar sozinho. Filtrado pelo
 // departamento da pessoa VISTA. Aberto à equipa desde a v78.57
 // (lib/documentacao/access.ts).
+//
+// v78.62 — um cartão cuja página mudou nos últimos 14 dias leva a pastilha
+// «Atualizado» na capa (as alterações vêm de updates-store.ts).
 
 import Image from "next/image";
 import Link from "next/link";
-import { BookOpen, Lock } from "lucide-react";
+import { BookOpen, Lock, Sparkles } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { DocsClosed } from "@/components/documentacao/doc-ui";
 import { DOCS_OPEN_TO_TEAM } from "@/lib/documentacao/access";
 import { blocksFor } from "@/lib/documentacao/blocks";
 import { getDocsContext } from "@/lib/documentacao/server";
+import { listDocUpdates } from "@/lib/documentacao/updates-store";
+import type { DocUpdate } from "@/lib/documentacao/updates";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -21,6 +26,13 @@ export const revalidate = 0;
 export const metadata = {
   title: "Documentação — Wonder Ads Workspace",
 };
+
+/** Quanto tempo um cartão mostra «Atualizado» depois de uma alteração. */
+const UPDATED_PILL_MS = 14 * 24 * 60 * 60 * 1000;
+
+function shortDate(ms: number): string {
+  return new Date(ms).toLocaleDateString("en-GB", { timeZone: "Europe/Lisbon", day: "2-digit", month: "2-digit" });
+}
 
 export default async function DocumentacaoPage() {
   const ctx = await getDocsContext();
@@ -34,6 +46,16 @@ export default async function DocumentacaoPage() {
   }
 
   const cards = blocksFor(ctx.reader).flatMap((b) => b.pages);
+  const updates = await listDocUpdates().catch((err): DocUpdate[] => {
+    console.error("docs hub updates read failed:", err instanceof Error ? err.message : err);
+    return [];
+  });
+  const now = Date.now();
+  const freshByPage = new Map<string, DocUpdate>();
+  for (const u of updates) {
+    if (now - u.updatedAt > UPDATED_PILL_MS || freshByPage.has(u.page)) continue;
+    freshByPage.set(u.page, u);
+  }
 
   return (
     <PageShell backHref="/" backLabel="workspace">
@@ -81,6 +103,12 @@ export default async function DocumentacaoPage() {
                     style={{ background: "radial-gradient(70% 60% at 50% 55%, rgba(120,61,245,0.35), transparent 70%)" }}
                   >
                     <BookOpen className="h-10 w-10 text-white/35" />
+                  </span>
+                )}
+                {freshByPage.has(c.id) && (
+                  <span className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-[#07080d]/75 px-2.5 py-1 text-[11.5px] font-semibold text-white shadow-[0_8px_24px_-10px_rgba(120,61,245,0.9)]">
+                    <Sparkles className="h-3 w-3 text-[#cdbdff]" />
+                    {freshByPage.get(c.id)!.kind === "nova" ? "Novo" : "Atualizado"} a {shortDate(freshByPage.get(c.id)!.updatedAt)}
                   </span>
                 )}
               </Link>

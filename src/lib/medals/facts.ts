@@ -74,7 +74,6 @@ export async function computeMedalFacts(): Promise<MedalFactsBook> {
       cleanMonths: rigorMonths.filter((m) => !scored.some((o) => o.occurredOn.startsWith(m))).length,
       roadmapBlocks: done.get(u)?.length ?? 0,
       producerWins: elections.filter((e) => e.podium[0]?.username === u).length,
-      podiums: elections.filter((e) => e.podium.some((p) => p.username === u)).length,
       producerNow: elections[0]?.podium[0]?.username === u,
     };
   }

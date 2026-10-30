@@ -43,6 +43,7 @@ export default async function JornadaClientePage() {
       <DocHero
         block={block.title}
         title="Jornada de Cliente"
+        pageId="jornada-cliente"
         lead={
           <>
             O roadmap de cada cliente é personalizado e vê-se na ficha do cliente. Aqui detalhamos{" "}

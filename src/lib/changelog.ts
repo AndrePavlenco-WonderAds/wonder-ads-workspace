@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.62",
+    date: "2026-10-30",
+    title: "Medalhas: montra livre, Rigor lendário, NPS Perfeito estelar · Documentação avisa no sino",
+    highlights: [
+      "**🎖️ Montra do header toda tua**: escolhe até três medalhas (ou nenhuma), pela ordem que quiseres — tira com o ✕, troca com as setas ou arrasta. As «Top» já não entram à força. «Sugestão» repõe as três de maior prestígio.",
+      "**🛡️ Rigor com pele lendária** (ouro e esmeralda, raios, runas a rodar, faíscas e cometas à volta) e **💖 NPS Perfeito estelar** (cor holográfica com estrelas a voar em órbita e estrelas cadentes). As medalhas por ganhar acendem-se ao passar o rato, para se ver o que se persegue.",
+      "**🏆 Producer of the Month vai até ao V** (1, 3, 6, 9 e 12 eleições), **Entregas pedem o dobro** (50, 200, 500, 1000 e 2000 blocos) e as medalhas de **Pódio saíram**.",
+      "**📘 Documentação avisa no sino**: sempre que uma página muda — regra nova, alteração, remoção, acrescento ou documento novo — o SEO DPT e a direção recebem um aviso com o que mudou e o botão para a página. Edições seguidas juntam-se num só aviso.",
+      "**🔔 Na própria página** aparece a «Alteração recente» (quem, quando e o quê) e o cartão no hub mostra «Atualizado» durante 14 dias.",
+    ],
+  },
+  {
     version: "78.61",
     date: "2026-10-30",
     title: "Sugestões dos Protocolos no sino de toda a direção",
