@@ -68,7 +68,7 @@ export function ProbationTimeline() {
           sub="KPIs dos 15 dias"
           rows={[
             { id: "extensao", text: "Segue para a avaliação dos 30 dias." },
-            { id: "recuperacao", text: "O probation termina aqui. Voltas à equipa." },
+            { id: "recuperacao", text: "O probation termina aqui. Voltas à equipa e ao nível 0 das ineficácias." },
             { id: "saida", text: "Deixas a equipa." },
           ]}
         />
@@ -77,7 +77,7 @@ export function ProbationTimeline() {
           sub="KPIs dos 30 dias"
           rows={[
             { id: "extensao", text: "Abre um novo período de 30 dias, com novas datas e novos KPIs." },
-            { id: "recuperacao", text: "O probation termina. Voltas à equipa, sem reservas." },
+            { id: "recuperacao", text: "O probation termina. Voltas à equipa, sem reservas, e ao nível 0 das ineficácias." },
             { id: "saida", text: "Deixas a equipa." },
           ]}
         />

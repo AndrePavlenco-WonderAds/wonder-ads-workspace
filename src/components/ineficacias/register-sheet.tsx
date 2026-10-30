@@ -70,6 +70,8 @@ export type RegisterPerson = {
   /** As ocorrências da pessoa, SEM texto — só datas e pontuações. */
   occurrences: Occurrence[];
   events: LedgerEvent[];
+  /** Os dias em que um probation da pessoa fechou com recuperação (v78.57). */
+  recoveries: string[];
 };
 
 const PAPER_BAND: Record<ScoreBand["id"], { on: string; off: string; text: string; dot: string }> = {
@@ -136,7 +138,7 @@ export function RegisterIneficaciaSheet({
 
   const impact = useMemo(() => {
     if (!person || points === null || !isISODate(occurredOn)) return null;
-    const before = deriveLedger(person.occurrences, person.events, today);
+    const before = deriveLedger(person.occurrences, person.events, today, person.recoveries);
     const draft: Occurrence = {
       id: "draft",
       source: "direcao",
@@ -154,7 +156,7 @@ export function RegisterIneficaciaSheet({
       errorType,
       score: { points, by: "", byName: "", at: 0, note: "" },
     };
-    const after = deriveLedger([...person.occurrences, draft], person.events, today);
+    const after = deriveLedger([...person.occurrences, draft], person.events, today, person.recoveries);
     return { before, after };
   }, [person, points, occurredOn, firstTime, errorType, today]);
 
@@ -349,7 +351,7 @@ export function RegisterIneficaciaSheet({
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
               {people.map((p) => {
                 const on = p.username === username;
-                const s = deriveLedger(p.occurrences, p.events, today);
+                const s = deriveLedger(p.occurrences, p.events, today, p.recoveries);
                 return (
                   <button
                     key={p.username}
@@ -882,9 +884,16 @@ function ImpactPanel({
   }
   const { before, after } = impact;
   const who = firstName(person.fullName);
-  // Antes da última subida de nível: entra na fase anterior, não no PA e NO
-  // de agora (v78.53: subir de nível põe os contadores a zero).
-  const beforePhase = Boolean(before.phaseOpen && occurredOn <= before.phaseOpen.at);
+  // Antes do último reinício (subida de nível, reset do semestre ou
+  // recuperação do probation): entra na fase anterior, não no PA e NO de agora.
+  const phase = before.phaseOpen;
+  const beforePhase = Boolean(phase && occurredOn <= phase.at);
+  const phaseLabel =
+    phase?.reason === "semestre"
+      ? "ao reset do fim do semestre"
+      : phase?.reason === "recuperado"
+        ? "à recuperação do probation"
+        : "à última subida de nível";
   const levelUp = after.reached > before.reached;
   return (
     <div>
@@ -911,7 +920,7 @@ function ImpactPanel({
       ) : beforePhase ? (
         <p className="mt-3 flex items-start gap-2 rounded-xl border border-black/12 bg-white/60 px-3.5 py-2.5 text-[12px] text-black/60">
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-          A data é anterior à última subida de nível de {who} — conta na fase anterior, não no PA nem no NO de agora.
+          A data é anterior {phaseLabel} de {who} — conta na fase anterior, não no PA nem no NO de agora.
         </p>
       ) : after.pendingMeasure ? (
         <p className="mt-3 flex items-start gap-2 rounded-xl border border-amber-600/30 bg-amber-500/[0.08] px-3.5 py-2.5 text-[12px] font-semibold text-amber-800">

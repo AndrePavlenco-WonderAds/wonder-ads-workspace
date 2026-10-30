@@ -3,7 +3,7 @@
 // Uma grelha de cartões, um por página de documentação: capa, título e o
 // botão para abrir. Sem cabeçalhos de bloco — vai haver muitos tipos de
 // documentação e o cartão tem de se explicar sozinho. Filtrado pelo
-// departamento da pessoa VISTA. Em construção: só o André e o Alex entram
+// departamento da pessoa VISTA. Aberto à equipa desde a v78.57
 // (lib/documentacao/access.ts).
 
 import Image from "next/image";

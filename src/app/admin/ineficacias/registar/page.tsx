@@ -57,6 +57,7 @@ export default async function RegisterIneficaciaPage({
       events: (b?.ledger.events ?? []).map((e) =>
         e.kind === "measure" ? { ...e, note: "", actions: [], conductedBy: "" } : { ...e, note: "" },
       ),
+      recoveries: b?.recoveries ?? [],
     };
   });
   const consultor = (await searchParams).consultor ?? null;

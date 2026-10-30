@@ -43,7 +43,7 @@ export async function PUT(req: Request, { params }: Ctx) {
 
   if (doc === "jornada-cliente") {
     const clean = normalizeJourney(body.data);
-    if (!clean) return bad("Cada mês precisa de um título e cada bloco também.");
+    if (!clean) return bad("Cada tarefa precisa de um título.");
     const current = await getJourney();
     if (current.updatedAt !== base) {
       return NextResponse.json({ error: "Alguém mudou a jornada entretanto. Recarrega a página.", current }, { status: 409 });

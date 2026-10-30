@@ -1,6 +1,7 @@
 // /documentacao/ineficacias — o sistema de Ineficácias explicado (v78.19;
-// reescrita mais curta em v78.21; v78.53: subir de nível põe PA e NO a zero, e
-// no fim de cada semestre todos descem um nível).
+// reescrita mais curta em v78.21; v78.53: subir de nível põe PA e NO a zero;
+// v78.57: no fim de cada semestre os níveis 0 a 2 voltam ao 0, e o 3 só sai do
+// probation pela recuperação).
 //
 // Tudo o que é número sai de lib/ineficacias/shared.ts — as mesmas
 // constantes com que a app conta. A calculadora da folha RH-04 é só da
@@ -222,8 +223,8 @@ export default async function IneficaciasDocPage() {
                 d: "No dia em que o PA ou o NO passam o limiar, sobes de nível e os dois recomeçam do zero no dia seguinte. O 1:1 do nível vem depois e já não mexe nos contadores.",
               },
               {
-                t: "O semestre faz descer",
-                d: "A 30/06 e a 31/12, ao fechar o dia, toda a equipa desce um nível — só um. O PA e o NO ficam como estão.",
+                t: "O semestre faz reset",
+                d: "A 30/06 e a 31/12, ao fechar o dia, quem está nos níveis 0, 1 e 2 volta ao nível 0, com PA e NO a zero. No nível 3, o probation continua.",
               },
               { t: "Nada se apaga", d: "Os contadores recomeçam; os erros ficam no histórico." },
             ].map((x) => (
@@ -238,8 +239,9 @@ export default async function IneficaciasDocPage() {
         <DocSection id="niveis" title="Os níveis" lead="Passa o limiar e sobe-se um nível. Cada nível tem a sua medida.">
           <LevelStairs />
           <Note title="Fim do semestre">
-            No último dia de junho e de dezembro, toda a equipa desce um nível: quem está no 3 passa ao 2, no 2 ao 1, no 1
-            ao 0. Desce só um degrau, e quem está no 0 fica no 0.
+            No último dia de junho e de dezembro há reset completo para os níveis 0, 1 e 2: toda a gente volta ao nível 0, com
+            PA e NO a zero, porque as correções e as medidas desse semestre já foram aplicadas. Quem está no nível 3 fica no
+            probation, e só volta ao nível 0 quando o probation fecha com recuperação para a equipa.
           </Note>
           <Note tone="warn" title="Falha grave">
             Uma falha grave sozinha pode levar a probation direto. Decide a direção, com justificação.
@@ -382,8 +384,10 @@ export default async function IneficaciasDocPage() {
               {L1.pa} ou NO ≥ {L1.no} e traz um 1:1 com o líder direto e um plano de 1 a 3 ações. O nível 2, depois do 1, chega
               com PA ≥ {L2.pa} ou NO ≥ {L2.no} e traz um 1:1 com o nível acima e medidas extra. O nível 3, depois do 2, com o
               mesmo limiar, é o probation. O nível sobe no próprio dia em que o limiar é passado, e a medida — o 1:1 ou o
-              probation — regista-se depois. No fim de cada semestre, a 30 de junho e a 31 de dezembro, toda a equipa desce um
-              nível, só um. Uma falha grave sozinha pode levar diretamente ao probation, por decisão fundamentada da direção.
+              probation — regista-se depois. No fim de cada semestre, a 30 de junho e a 31 de dezembro, quem está nos níveis 0,
+              1 e 2 faz reset: volta ao nível 0, com PA e NO a zero, porque as correções e as medidas já foram aplicadas. Quem
+              está no nível 3 fica no probation, e só volta ao 0 se o probation fechar com recuperação para a equipa. Uma falha
+              grave sozinha pode levar diretamente ao probation, por decisão fundamentada da direção.
             </>,
             <>
               {showBonus && (

@@ -1,6 +1,6 @@
 // /documentacao/jornada-cliente — a Jornada de Cliente do SEO DPT (v78.46): o
-// caminho de um projeto, mês a mês e semana a semana, desenhado como uma
-// estrada que se acende à medida que se lê. A direção edita-a na própria
+// caminho de um projeto, mês a mês (semana a semana até à v78.56), desenhado
+// como uma estrada que se acende à medida que se lê. A direção edita-a na própria
 // página (components/documentacao/journey-road.tsx); o conteúdo de partida e
 // os processos estão em lib/documentacao/jornada.ts.
 
@@ -46,7 +46,7 @@ export default async function JornadaClientePage() {
         lead={
           <>
             O roadmap de cada cliente é personalizado e vê-se na ficha do cliente. Aqui detalhamos{" "}
-            <Strong>o que é obrigatório e comum a todos os projetos</Strong>, semana a semana.
+            <Strong>o que é obrigatório e comum a todos os projetos</Strong>, mês a mês.
           </>
         }
         meta={`Atualizado a ${formatDate(updated)}.${reader.isAdmin ? ` Visível para SuperAdmin e ${block.audienceLabel}.` : ""}`}
@@ -61,15 +61,16 @@ export default async function JornadaClientePage() {
           paragraphs={[
             <>
               O roadmap de cada cliente é personalizado e vê-se na ficha do cliente. A jornada de cliente é a parte comum a
-              todos os projetos SEO da WonderAds: as tarefas obrigatórias de cada semana, do contrato à renovação, seja qual
+              todos os projetos SEO da WonderAds: as tarefas obrigatórias de cada mês, do contrato à renovação, seja qual
               for o cliente e seja qual for o consultor.
             </>,
             <>
-              As semanas contam-se como nos roadmaps da app: a semana 8 da jornada é a semana 8 do roadmap do cliente. Em cada
-              semana vê-se o título de cada tarefa; carregar nele abre ao lado a explicação do que se faz e de como se faz.
+              Os meses contam-se como nos roadmaps da app: o mês 2 da jornada é o mês 2 do roadmap do cliente (as semanas 5 a
+              8). Em cada mês vê-se o título de cada tarefa; carregar nele abre ao lado a explicação do que se faz e de como se
+              faz.
             </>,
             <>
-              Algumas tarefas têm um processo com o passo a passo — como o registo de leads da semana 8, sem o qual não se
+              Algumas tarefas têm um processo com o passo a passo — como o registo de leads do mês 2, sem o qual não se
               conseguem medir os resultados do projeto.
             </>,
             <>A jornada é mantida pela direção, que acrescenta, muda e retira tarefas à medida que o método evolui.</>,

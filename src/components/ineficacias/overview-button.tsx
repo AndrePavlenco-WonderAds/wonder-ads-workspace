@@ -1,7 +1,7 @@
 // O botão «O meu painel» do topo da página do consultor (v77.91). A escala
 // e o PA/NO saíram do topo da página — vivem agora em /ineficacias/painel —
 // e aqui fica só o essencial num relance: o nível, os contadores contra o
-// limiar seguinte e a próxima descida de semestre (v78.53). Puro (sem hooks).
+// limiar seguinte e o próximo reset de semestre (v78.57). Puro (sem hooks).
 
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
@@ -62,8 +62,8 @@ export function OverviewButton({ state, href }: { state: LedgerState; href: stri
         <span className={`mt-0.5 block truncate text-[11px] ${pending ? "text-amber-200/90" : "text-white/50"}`}>
           {pending
             ? `Nível ${state.pendingMeasure!.level} atingido · medida por aplicar`
-            : state.nextDrop
-              ? `Desce para o nível ${state.nextDrop.to} a ${formatISODayMonth(state.nextDrop.at)} · escala e histórico`
+            : state.nextReset
+              ? `Volta a zero a ${formatISODayMonth(state.nextReset.at)} · escala e histórico`
               : state.phaseStart
                 ? `Contadores desde ${formatISODayMonth(state.phaseStart)} · escala e histórico`
                 : "Escala e histórico"}

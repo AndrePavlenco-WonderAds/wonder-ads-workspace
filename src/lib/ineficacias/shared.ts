@@ -20,9 +20,12 @@
 //     no dia seguinte. A medida do nível (1:1, probation) fica por aplicar até
 //     a direção a registar — registá-la já não mexe nos contadores. Até à
 //     v78.52 era o registo do 1:1 que subia o nível e os punha a zero.
-//   • v78.53: no FIM DE CADA SEMESTRE (30/06 e 31/12, ao fechar o dia) todos
-//     descem um nível (−1, nunca abaixo de 0). Os contadores da fase não
-//     mudam; uma medida por aplicar continua por aplicar.
+//   • v78.57 (André, 2026-10-30): no FIM DE CADA SEMESTRE (30/06 e 31/12, ao
+//     fechar o dia) quem está nos níveis 0, 1 e 2 faz um RESET COMPLETO: volta
+//     ao 0, com PA e NO a zero — as correções e as medidas já foram
+//     aplicadas. Quem está no 3 fica no probation: só sai quando o probation
+//     fecha com «Recuperação para a equipa», e aí volta ao 0, também com PA e
+//     NO a zero. (v78.53 a v78.56: no fim do semestre descia-se um nível.)
 //   • Nada se apaga: os contadores recomeçam, os erros ficam no histórico.
 //   • Uma falha grave sozinha pode levar a probation direto — a direção pode
 //     definir o nível à mão, com justificação.
@@ -714,22 +717,28 @@ export type PendingMeasure = {
   no: number;
 };
 
-/** O que abriu a fase corrente — a última vez que o nível subiu. */
+/** O que abriu a fase corrente: a última subida de nível ou o último reset. */
 export type PhaseOpen = {
   /** subida = passou o limiar · direcao = a direção pôs o nível acima à mão
-   *  (ou registou a medida de um nível acima do atual). */
-  reason: "subida" | "direcao";
+   *  (ou registou a medida de um nível acima do atual) · semestre = o reset
+   *  do fim do semestre · recuperado = o probation fechou com recuperação. */
+  reason: "subida" | "direcao" | "semestre" | "recuperado";
   level: IneficaciaLevel;
-  /** O dia da subida; a fase nova começa no dia seguinte. */
+  /** O dia da mudança; a fase nova começa no dia seguinte. */
   at: string;
 };
 
-/** Uma mudança de nível, para o histórico. */
+/** Uma mudança de nível (ou um reset), para o histórico. Um reset de
+ *  semestre no nível 0 tem `from` e `to` a 0: só os contadores voltam a
+ *  zero. */
 export type LevelStep = {
-  reason: "subida" | "direcao" | "semestre";
+  reason: "subida" | "direcao" | "semestre" | "recuperado";
   from: IneficaciaLevel;
   to: IneficaciaLevel;
   at: string;
+  /** O PA e o NO que o reset pôs a zero (só nos resets). */
+  pa?: number;
+  no?: number;
 };
 
 export type LedgerState = {
@@ -740,7 +749,7 @@ export type LedgerState = {
   reached: IneficaciaLevel;
   /** A medida da última subida, enquanto a direção não a registar. */
   pendingMeasure: PendingMeasure | null;
-  /** A última subida de nível (null = nunca subiu: conta desde sempre). */
+  /** A última subida ou o último reset (null = conta desde sempre). */
   phaseOpen: PhaseOpen | null;
   /** A partir de que dia as ocorrências contam na fase corrente (null =
    *  desde sempre). */
@@ -756,9 +765,39 @@ export type LedgerState = {
   counted: Occurrence[];
   /** As mudanças de nível, da mais antiga à mais recente. */
   steps: LevelStep[];
-  /** A próxima descida de semestre (null no nível 0). */
-  nextDrop: { at: string; to: IneficaciaLevel } | null;
+  /** O próximo reset de fim de semestre: só nos níveis 0 a 2, e no 0 só
+   *  quando há PA ou NO por zerar. No 3 é null — sai-se pela recuperação. */
+  nextReset: { at: string } | null;
 };
+
+/** «a subida ao nível 2», «o reset do fim do semestre»… — de onde contam os
+ *  contadores de agora, para as frases «desde …». */
+export function phaseOpenLabel(p: PhaseOpen): string {
+  switch (p.reason) {
+    case "semestre":
+      return "o reset do fim do semestre";
+    case "recuperado":
+      return "a recuperação do probation";
+    default:
+      return `a subida ao nível ${p.level}`;
+  }
+}
+
+/** O título de uma mudança automática no histórico da escala. */
+export function levelStepTitle(st: LevelStep): string {
+  switch (st.reason) {
+    case "semestre":
+      return st.from > 0
+        ? `Fim do semestre: do nível ${st.from} para o 0 — PA e NO a zero`
+        : "Fim do semestre: PA e NO a zero";
+    case "recuperado":
+      return "Recuperou do probation: do nível 3 para o 0 — PA e NO a zero";
+    case "subida":
+      return `Subiu ao nível ${st.to} — PA e NO a zero`;
+    case "direcao":
+      return `A direção pôs o nível ${st.to}`;
+  }
+}
 
 function eventOrder(a: LedgerEvent, b: LedgerEvent): number {
   return a.at.localeCompare(b.at) || a.createdAt - b.createdAt;
@@ -780,13 +819,23 @@ function tally(occ: Occurrence[], fromExclusive: string | null, toInclusive: str
 
 /** O estado de um consultor hoje. Percorre os dias por ordem: em cada dia
  *  entram primeiro as ocorrências (e, se a fase passar o limiar, o nível
- *  sobe e os contadores vão a zero), depois os registos da direção, e no
- *  último dia do semestre, ao fechar o dia, a descida de um nível. */
-export function deriveLedger(occurrences: Occurrence[], events: LedgerEvent[], todayISO: string): LedgerState {
+ *  sobe e os contadores vão a zero), depois os registos da direção, depois a
+ *  recuperação do probation, e no último dia do semestre, ao fechar o dia, o
+ *  reset dos níveis 0 a 2.
+ *
+ *  `recoveries` = os dias em que um probation da pessoa fechou com
+ *  «Recuperação para a equipa» (vêm do módulo do probation). */
+export function deriveLedger(
+  occurrences: Occurrence[],
+  events: LedgerEvent[],
+  todayISO: string,
+  recoveries: readonly string[] = [],
+): LedgerState {
   const evs = events.slice().sort(eventOrder).filter((e) => e.at <= todayISO);
   const scored = occurrences.filter((o) => counts(o) && o.occurredOn <= todayISO);
+  const recovered = new Set(recoveries.filter((d) => d <= todayISO));
 
-  const days = new Set<string>([...scored.map((o) => o.occurredOn), ...evs.map((e) => e.at)]);
+  const days = new Set<string>([...scored.map((o) => o.occurredOn), ...evs.map((e) => e.at), ...recovered]);
   const first = [...days].sort()[0];
   if (first) {
     // As descidas de semestre só se aplicam depois de o dia fechar.
@@ -805,6 +854,16 @@ export function deriveLedger(occurrences: Occurrence[], events: LedgerEvent[], t
     level = to;
     phaseFrom = at;
     phaseOpen = { reason, level: to, at };
+    pa = 0;
+    no = 0;
+  };
+  /** Reset completo: nível 0, PA e NO a zero, nenhuma medida por aplicar. */
+  const reset = (at: string, reason: "semestre" | "recuperado") => {
+    steps.push({ reason, from: level, to: 0, at, pa, no });
+    level = 0;
+    pendingMeasure = null;
+    phaseFrom = at;
+    phaseOpen = { reason, level: 0, at };
     pa = 0;
     no = 0;
   };
@@ -839,11 +898,12 @@ export function deriveLedger(occurrences: Occurrence[], events: LedgerEvent[], t
         }
       }
     }
-    // 3. Fim do semestre: todos descem um nível, ao fechar o dia.
-    if (d === semesterEndOf(d) && d < todayISO && level > 0) {
-      const to = (level - 1) as IneficaciaLevel;
-      steps.push({ reason: "semestre", from: level, to, at: d });
-      level = to;
+    // 3. O probation fechou com recuperação: do 3 volta ao 0.
+    if (recovered.has(d) && level === 3) reset(d, "recuperado");
+    // 4. Fim do semestre, ao fechar o dia: os níveis 0 a 2 voltam ao 0 com
+    //    PA e NO a zero. O 3 fica — só sai pela recuperação.
+    if (d === semesterEndOf(d) && d < todayISO && level < 3 && (level > 0 || pa > 0 || no > 0 || pendingMeasure)) {
+      reset(d, "semestre");
     }
   }
 
@@ -865,7 +925,7 @@ export function deriveLedger(occurrences: Occurrence[], events: LedgerEvent[], t
     next: nextLevel ? { level: nextLevel, ...thresholdToReach(nextLevel) } : null,
     counted: current.list.slice().sort((a, b) => b.occurredOn.localeCompare(a.occurredOn)),
     steps,
-    nextDrop: level > 0 ? { at: semesterEndOf(todayISO), to: (level - 1) as IneficaciaLevel } : null,
+    nextReset: level < 3 && (level > 0 || current.pa > 0 || current.no > 0) ? { at: semesterEndOf(todayISO) } : null,
   };
 }
 

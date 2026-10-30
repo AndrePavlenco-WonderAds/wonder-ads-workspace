@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.57",
+    date: "2026-10-30",
+    title: "Documentação aberta à equipa, reset de semestre nas ineficácias e Jornada por meses",
+    highlights: [
+      "**📚 A Documentação da empresa abriu à equipa**: cada pessoa vê os blocos do seu departamento, e sai a pastilha «em construção».",
+      "**🌱 Fim do semestre = reset completo para os níveis 0, 1 e 2**: a 30/06 e a 31/12 voltam ao nível 0, com PA e NO a zero. Quem está no nível 3 fica no probation e só volta ao 0 quando o probation fecha com «Recuperação para a equipa» — a app lê essa decisão do Plano de Probation. Atualizado nas páginas de Ineficácias e de Probation, no painel do consultor, na ficha da direção e no sino.",
+      "**🗺️ A Jornada de Cliente passou a ir mês a mês**: uma paragem por mês na estrada, com várias tarefas dentro de cada mês. O registo de leads fica no mês 2.",
+      "**✍️ No menu dos consultores, «Team Inefficiency» passou a «Registar Ineficácia».**",
+    ],
+  },
+  {
     version: "78.56",
     date: "2026-10-29",
     title: "Documentação: o hub volta aos 3 cartões por linha",

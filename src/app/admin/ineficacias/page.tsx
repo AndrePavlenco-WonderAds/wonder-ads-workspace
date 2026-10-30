@@ -14,7 +14,7 @@ import { listImpersonationTargets, viewerDeptOf } from "@/lib/auth/credentials";
 import { getTeamAvatar } from "@/lib/team-avatars";
 import { INEFICACIAS_OPEN_TO_TEAM } from "@/lib/ineficacias/access";
 import { ineficaciasConfigured, loadTeam, type ConsultantBundle } from "@/lib/ineficacias/store";
-import { formatISODayMonth, formatLisbonDateTime } from "@/lib/ineficacias/shared";
+import { formatISODayMonth, formatLisbonDateTime, phaseOpenLabel } from "@/lib/ineficacias/shared";
 import { todayLisbonISO } from "@/lib/probation/progress";
 
 export const dynamic = "force-dynamic";
@@ -186,7 +186,7 @@ export default async function IneficaciasAdminPage() {
                       {pendingItems ? <span className="text-amber-200"> · {pendingItems} por pontuar</span> : null}
                     </span>
                     <span className={`block ${s.no > 0 ? "text-[#c3aaff]/80" : "text-emerald-300/70"}`}>
-                      {s.phaseOpen ? `Desde a subida ao nível ${s.phaseOpen.level} (${formatISODayMonth(s.phaseOpen.at)})` : "Desde o início"}
+                      {s.phaseOpen ? `Desde ${phaseOpenLabel(s.phaseOpen)} (${formatISODayMonth(s.phaseOpen.at)})` : "Desde o início"}
                       {s.no === 0 && " · contadores a zero"}
                     </span>
                   </span>

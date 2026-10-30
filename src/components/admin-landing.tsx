@@ -110,7 +110,7 @@ export function AdminLanding({
       href: "/admin/ineficacias",
       title: "Ineficácias",
       blurb:
-        "Team Inefficiency — os relatórios que cada consultor assina quando quiser (RH-03) e as ineficácias registadas pela direção (RH-04), a pontuação de 0 a 10, o PA e o NO na janela de 30 dias e a escala de níveis até ao probation. Os contadores reiniciam a cada 1:1; o nível é cumulativo.",
+        "Team Inefficiency — os relatórios que cada consultor assina quando quiser (RH-03) e as ineficácias registadas pela direção (RH-04), a pontuação de 0 a 10, o PA e o NO e a escala de níveis até ao probation. Subir de nível põe os contadores a zero; no fim do semestre os níveis 0 a 2 voltam ao 0, e o 3 só sai pela recuperação do probation.",
       count: ineficaciasPendingCount,
       badge: ineficaciasPendingCount === 1 ? "por rever" : "por rever",
       Icon: Gauge,

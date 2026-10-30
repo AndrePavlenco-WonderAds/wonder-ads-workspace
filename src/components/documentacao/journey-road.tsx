@@ -1,13 +1,14 @@
 "use client";
 
 // A Jornada de Cliente como uma estrada (v78.46; tarefas só com o título e
-// painel lateral em v78.48). Uma estrada em SVG desce a página e passa por uma
-// paragem em cada mês e em cada semana; os cartões ficam encostados à
-// estrada, alternando de lado. À medida que se lê, a estrada acende-se até ao
-// meio do ecrã e um marcador segue por ela — é o único movimento da página e
-// responde ao scroll de quem lê.
+// painel lateral em v78.48; mês a mês desde a v78.57). Uma estrada em SVG
+// desce a página e passa por uma paragem em cada mês; o cartão com as tarefas
+// do mês fica encostado à estrada, alternando de lado, e o nome do mês do
+// outro lado. À medida que se lê, a estrada acende-se até ao meio do ecrã e um
+// marcador segue por ela — é o único movimento da página e responde ao scroll
+// de quem lê.
 //
-// Em cada semana vê-se só o título de cada tarefa; carregar nele abre o painel
+// Em cada mês vê-se só o título de cada tarefa; carregar nele abre o painel
 // lateral com a explicação (journey-task-drawer.tsx).
 //
 // A estrada é desenhada a partir das paragens reais (medidas no DOM), por isso
@@ -15,18 +16,18 @@
 // esquerda.
 //
 // A direção (SuperAdmin, sem «Ver como») edita aqui mesmo: as tarefas no
-// painel de cada uma; com «Editar o caminho», acrescenta e remove tarefas,
-// marcos do mês e meses, e muda o título e o objetivo de cada mês. Cada
-// mudança grava logo (ver use-doc-save).
+// painel de cada uma; com «Editar o caminho», acrescenta, remove e muda de
+// ordem as tarefas (as setas passam-nas também para o mês ao lado), acrescenta
+// e remove meses, e muda o título e o objetivo de cada mês. Cada mudança grava
+// logo (ver use-doc-save).
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
-import { BookOpenCheck, Check, ChevronRight, Flag, Pencil, Plus, Star, Trash2, X } from "lucide-react";
+import { ArrowDown, ArrowUp, BookOpenCheck, Check, ChevronRight, Flag, Pencil, Plus, Star, Trash2, X } from "lucide-react";
 import { formatDate } from "@/lib/dates";
 import {
-  MAX_BLOCKS_PER_SLOT,
+  MAX_BLOCKS_PER_MONTH,
   MAX_JOURNEY_MONTHS,
   PLACEHOLDER_TITLE,
-  WEEKS_PER_JOURNEY_MONTH,
   newJourneyId,
   type Journey,
   type JourneyBlock,
@@ -36,20 +37,24 @@ import { JourneyTaskDrawer, type TaskPanel } from "./journey-task-drawer";
 import { SectionNav } from "./section-nav";
 import { useDocSave } from "./use-doc-save";
 
-/** Onde vive uma tarefa: nos marcos do mês (week null) ou numa semana. */
-type Slot = { month: number; week: number | null };
 type Point = { x: number; y: number };
 type Geom = { w: number; h: number; pts: Point[]; wide: boolean };
 type Lane = "l" | "r";
-type OpenPanel = TaskPanel & { slot: Slot; blockId: string | null };
+/** `month` = o índice do mês onde a tarefa vive. */
+type OpenPanel = TaskPanel & { month: number; blockId: string | null };
 
 const GRADIENT = "linear-gradient(135deg,#343ED7,#783DF5 55%,#C535C9)";
 
-const slotBlocks = (ms: JourneyMonth[], s: Slot) => (s.week === null ? ms[s.month]?.blocks : ms[s.month]?.weeks[s.week]?.blocks) ?? [];
-function withSlot(ms: JourneyMonth[], s: Slot, blocks: JourneyBlock[]): JourneyMonth[] {
-  if (s.week === null) ms[s.month].blocks = blocks;
-  else ms[s.month].weeks[s.week].blocks = blocks;
-  return ms;
+const monthBlocks = (ms: JourneyMonth[], mi: number) => ms[mi]?.blocks ?? [];
+
+/** Uma tarefa sobe ou desce uma posição; na ponta do mês passa para o fim do
+ *  mês anterior ou para o início do seguinte. null = não há para onde ir. */
+function moveTarget(ms: JourneyMonth[], mi: number, index: number, dir: -1 | 1): { month: number; index: number } | null {
+  const to = index + dir;
+  if (to >= 0 && to < ms[mi].blocks.length) return { month: mi, index: to };
+  const other = mi + dir;
+  if (other < 0 || other >= ms.length || ms[other].blocks.length >= MAX_BLOCKS_PER_MONTH) return null;
+  return { month: other, index: dir === -1 ? ms[other].blocks.length : 0 };
 }
 
 /** A estrada: curvas em S verticais entre paragens consecutivas — a tangente
@@ -82,13 +87,13 @@ export function JourneyRoad({ initial, canEdit }: { initial: Journey; canEdit: b
     [months, save],
   );
   /** Grava a tarefa do painel: muda a que existe (e deixa de ser espaço por
-   *  preencher) ou acrescenta uma nova no fim da semana. */
+   *  preencher) ou acrescenta uma nova no fim do mês. */
   const saveTask = (v: { title: string; detail: string }) => {
     if (!panel) return Promise.resolve(false);
-    const { slot, blockId } = panel;
+    const { month, blockId } = panel;
     return mutate((ms) => {
-      const list = slotBlocks(ms, slot);
-      const next = blockId
+      const list = monthBlocks(ms, month);
+      ms[month].blocks = blockId
         ? list.map((b) => {
             if (b.id !== blockId) return b;
             const updated: JourneyBlock = { ...b, ...v };
@@ -96,11 +101,23 @@ export function JourneyRoad({ initial, canEdit }: { initial: Journey; canEdit: b
             return updated;
           })
         : [...list, { id: newJourneyId("tarefa"), ...v }];
-      return withSlot(ms, slot, next);
+      return ms;
     });
   };
-  const removeTask = (slot: Slot, blockId: string) =>
-    mutate((ms) => withSlot(ms, slot, slotBlocks(ms, slot).filter((b) => b.id !== blockId)));
+  const removeTask = (mi: number, blockId: string) =>
+    mutate((ms) => {
+      ms[mi].blocks = ms[mi].blocks.filter((b) => b.id !== blockId);
+      return ms;
+    });
+  const moveTask = (mi: number, blockId: string, dir: -1 | 1) =>
+    mutate((ms) => {
+      const from = ms[mi].blocks.findIndex((b) => b.id === blockId);
+      const target = from < 0 ? null : moveTarget(ms, mi, from, dir);
+      if (!target) return ms;
+      const [b] = ms[mi].blocks.splice(from, 1);
+      ms[target.month].blocks.splice(target.index, 0, b);
+      return ms;
+    });
   const saveMonth = async (mi: number, v: { title: string; goal: string }) => {
     const ok = await mutate((ms) => {
       ms[mi] = { ...ms[mi], ...v };
@@ -116,17 +133,13 @@ export function JourneyRoad({ initial, canEdit }: { initial: Journey; canEdit: b
         id: newJourneyId("m"),
         title: "",
         goal: "",
-        blocks: [],
-        weeks: Array.from({ length: WEEKS_PER_JOURNEY_MONTH }, () => ({
-          id: newJourneyId("s"),
-          blocks: [{ id: newJourneyId("tarefa"), title: "", detail: "", placeholder: true as const }],
-        })),
+        blocks: [{ id: newJourneyId("tarefa"), title: "", detail: "", placeholder: true as const }],
       },
     ]);
     if (ok) setMonthForm(months.length);
   };
-  const openTask = (slot: Slot, where: string, block: JourneyBlock | null) =>
-    setPanel({ slot, where, blockId: block?.id ?? null, editing: !block || Boolean(block.placeholder) });
+  const openTask = (month: number, where: string, block: JourneyBlock | null) =>
+    setPanel({ month, where, blockId: block?.id ?? null, editing: !block || Boolean(block.placeholder) });
 
   // ---- A estrada ---------------------------------------------------------
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -235,15 +248,8 @@ export function JourneyRoad({ initial, canEdit }: { initial: Journey; canEdit: b
 
   const navItems = useMemo(() => months.map((_, i) => ({ id: `mes-${i + 1}`, label: `Mês ${i + 1}` })), [months]);
   const W = geom?.wide ? 30 : 16;
-  const endIndex = 1 + months.length * (WEEKS_PER_JOURNEY_MONTH + 1);
-  const panelBlock = panel?.blockId ? (slotBlocks(months, panel.slot).find((b) => b.id === panel.blockId) ?? null) : null;
-
-  const listProps = (slot: Slot, where: string) => ({
-    editing,
-    canEdit,
-    onOpen: (b: JourneyBlock | null) => openTask(slot, where, b),
-    onRemove: (id: string) => removeTask(slot, id),
-  });
+  const endIndex = 1 + months.length;
+  const panelBlock = panel?.blockId ? (monthBlocks(months, panel.month).find((b) => b.id === panel.blockId) ?? null) : null;
 
   return (
     <>
@@ -273,9 +279,9 @@ export function JourneyRoad({ initial, canEdit }: { initial: Journey; canEdit: b
 
       {editing && (
         <p className="mt-4 rounded-2xl border border-[#783DF5]/30 bg-[#783DF5]/[0.08] px-4 py-3 text-[13.5px] text-white/70">
-          Estás a editar a jornada: acrescenta ou remove tarefas em cada semana e nos marcos de cada mês, e dá nome a cada mês.
-          Para escrever a explicação de uma tarefa, carrega no título dela. Cada mudança grava logo e fica visível para todo o
-          SEO DPT.
+          Estás a editar a jornada: acrescenta, remove e muda de ordem as tarefas de cada mês (as setas também as passam para
+          o mês anterior ou seguinte), e dá nome a cada mês. Para escrever a explicação de uma tarefa, carrega no título dela.
+          Cada mudança grava logo e fica visível para todo o SEO DPT.
         </p>
       )}
       {error && (
@@ -331,104 +337,94 @@ export function JourneyRoad({ initial, canEdit }: { initial: Journey; canEdit: b
             </div>
             <div className="col-start-2 row-start-1 pt-2.5 lg:col-start-3 lg:pl-10">
               <p className="text-[16px] font-semibold text-white">Partida</p>
-              <p className="mt-0.5 max-w-sm text-[13.5px] leading-relaxed text-white/55">Contrato assinado: o projeto entra na semana 1.</p>
+              <p className="mt-0.5 max-w-sm text-[13.5px] leading-relaxed text-white/55">Contrato assinado: o projeto entra no mês 1.</p>
             </div>
           </li>
 
           {months.map((m, mi) => {
             const n = mi + 1;
-            const mStop = 1 + mi * (WEEKS_PER_JOURNEY_MONTH + 1);
-            const mLit = passed > mStop;
-            const weeksLabel = `Semanas ${mi * WEEKS_PER_JOURNEY_MONTH + 1} a ${n * WEEKS_PER_JOURNEY_MONTH}`;
-            const showMarcos = m.blocks.length > 0 || editing;
+            const lane: Lane = mi % 2 === 0 ? "l" : "r";
+            const lit = passed > 1 + mi;
+            const where = m.title ? `Mês ${n} · ${m.title}` : `Mês ${n}`;
             return (
-              <li key={m.id} id={`mes-${n}`} className="scroll-mt-40">
-                <div className={`${ROW} pt-10`}>
-                  <div className={`${STOP_COL} lg:justify-center`}>
-                    <span
-                      data-stop
-                      className={`relative z-10 flex h-14 w-14 flex-col items-center justify-center rounded-full ring-2 transition duration-500 lg:h-[76px] lg:w-[76px] ${
-                        mLit ? "text-white ring-white/70 shadow-[0_0_40px_rgba(167,139,250,0.55)]" : "bg-[#0d0e1c] text-white/60 ring-white/15"
-                      }`}
-                      style={mLit ? { background: GRADIENT } : undefined}
-                    >
-                      <span className="text-[10px] font-medium leading-none opacity-80 lg:text-[11px]">Mês</span>
-                      <span className="text-[1.25rem] font-semibold leading-none tabular-nums lg:text-[1.7rem]">{n}</span>
-                    </span>
-                  </div>
+              <li key={m.id} id={`mes-${n}`} className={`${ROW} scroll-mt-40 pt-10 lg:pt-12`}>
+                <div className={`${STOP_COL} ${lane === "l" ? "lg:justify-start lg:pl-10" : "lg:justify-end lg:pr-10"}`}>
+                  {/* O fio da paragem até ao cartão das tarefas. */}
+                  <span
+                    aria-hidden
+                    className={`absolute top-[38px] hidden h-px w-10 transition duration-500 lg:block ${lane === "l" ? "left-0" : "right-0"} ${
+                      lit ? "bg-[#a78bfa]/70" : "bg-white/12"
+                    }`}
+                  />
+                  <span
+                    data-stop
+                    className={`relative z-10 flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-full ring-2 transition duration-500 lg:h-[76px] lg:w-[76px] ${
+                      lit ? "text-white ring-white/70 shadow-[0_0_40px_rgba(167,139,250,0.55)]" : "bg-[#0d0e1c] text-white/60 ring-white/15"
+                    }`}
+                    style={lit ? { background: GRADIENT } : undefined}
+                  >
+                    <span className="text-[10px] font-medium leading-none opacity-80 lg:text-[11px]">Mês</span>
+                    <span className="text-[1.25rem] font-semibold leading-none tabular-nums lg:text-[1.7rem]">{n}</span>
+                  </span>
+                </div>
 
-                  {/* Título e objetivo — à esquerda da estrada no desktop. */}
-                  <div className="col-start-2 row-start-1 self-center lg:col-start-1 lg:pr-10 lg:text-right">
-                    {monthForm === mi ? (
+                {/* Nome e objetivo do mês — do lado oposto ao cartão no desktop. */}
+                <div
+                  className={`col-start-2 row-start-1 self-start pt-1.5 lg:row-start-1 lg:pt-3 ${
+                    lane === "l" ? "lg:col-start-3 lg:pl-10" : "lg:col-start-1 lg:pr-10 lg:text-right"
+                  }`}
+                >
+                  {monthForm === mi ? (
+                    <div className={lane === "r" ? "lg:flex lg:justify-end" : ""}>
                       <MonthForm initial={m} busy={saving} onCancel={() => setMonthForm(null)} onSave={(v) => saveMonth(mi, v)} />
-                    ) : (
-                      <div className="lg:ml-auto lg:max-w-[460px]">
-                        {m.title ? (
-                          <>
-                            <p className="text-[13px] font-medium text-[#c4a6ff]">{weeksLabel}</p>
-                            <h2 className="mt-1 text-[1.6rem] font-semibold leading-tight tracking-[-0.02em] text-white sm:text-[1.95rem]">{m.title}</h2>
-                          </>
-                        ) : (
-                          <h2 className="text-[1.35rem] font-semibold leading-tight tracking-[-0.02em] text-white/85 sm:text-[1.55rem]">{weeksLabel}</h2>
-                        )}
-                        {m.goal && <p className="mt-2 text-[15px] leading-relaxed text-white/60">{m.goal}</p>}
-                        {editing && (
-                          <div className="mt-3 flex flex-wrap gap-2 lg:justify-end">
-                            <SmallButton onClick={() => setMonthForm(mi)} icon={Pencil}>
-                              {m.title ? "Editar o mês" : "Dar nome ao mês"}
-                            </SmallButton>
-                            {months.length > 1 && <RemoveButton label={`Remover o mês ${n}`} confirm={`Remover o mês ${n}`} onConfirm={() => removeMonth(mi)} />}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Marcos do mês — à direita da estrada; só aparecem quando há. */}
-                  {showMarcos && (
-                    <div className="col-start-2 row-start-2 mt-5 lg:col-start-3 lg:row-start-1 lg:mt-0 lg:self-center lg:pl-10">
-                      <h3 className="text-[13px] font-medium text-white/45">Marcos do mês</h3>
-                      <TaskList blocks={m.blocks} {...listProps({ month: mi, week: null }, `Mês ${n}`)} />
+                    </div>
+                  ) : (
+                    <div className={`lg:max-w-[420px] ${lane === "r" ? "lg:ml-auto" : ""}`}>
+                      <h2
+                        className={`font-semibold leading-tight tracking-[-0.02em] ${
+                          m.title ? "text-[1.6rem] text-white sm:text-[1.95rem]" : "text-[1.35rem] text-white/85 sm:text-[1.55rem]"
+                        }`}
+                      >
+                        {m.title || `Mês ${n}`}
+                      </h2>
+                      {m.goal && <p className="mt-2 text-[15px] leading-relaxed text-white/60">{m.goal}</p>}
+                      {editing && (
+                        <div className={`mt-3 flex flex-wrap gap-2 ${lane === "r" ? "lg:justify-end" : ""}`}>
+                          <SmallButton onClick={() => setMonthForm(mi)} icon={Pencil}>
+                            {m.title ? "Editar o mês" : "Dar nome ao mês"}
+                          </SmallButton>
+                          {months.length > 1 && <RemoveButton label={`Remover o mês ${n}`} confirm={`Remover o mês ${n}`} onConfirm={() => removeMonth(mi)} />}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
 
-                <ol>
-                  {m.weeks.map((w, wi) => {
-                    const lane: Lane = wi % 2 === 0 ? "l" : "r";
-                    const global = mi * WEEKS_PER_JOURNEY_MONTH + wi + 1;
-                    const lit = passed > mStop + 1 + wi;
-                    return (
-                      <li key={w.id} className={`${ROW} pt-6`}>
-                        <div className={`${STOP_COL} ${lane === "l" ? "lg:justify-start lg:pl-12" : "lg:justify-end lg:pr-12"}`}>
-                          {/* O fio da paragem até ao cartão. */}
-                          <span
-                            aria-hidden
-                            className={`absolute top-[30px] hidden h-px w-12 transition duration-500 lg:block ${lane === "l" ? "left-0" : "right-0"} ${
-                              lit ? "bg-[#a78bfa]/70" : "bg-white/12"
-                            }`}
-                          />
-                          <span data-stop className={stopRing(lit, "mt-[13px] h-[34px] w-[34px] text-[12.5px]")} style={lit ? { background: GRADIENT } : undefined}>
-                            {global}
-                          </span>
-                        </div>
-                        <div className={`col-start-2 row-start-1 ${lane === "l" ? "lg:col-start-1 lg:justify-self-end" : "lg:col-start-3 lg:justify-self-start"} w-full lg:max-w-[440px]`}>
-                          <section
-                            aria-label={`Semana ${global}`}
-                            className={`rounded-[22px] border p-4 transition duration-500 sm:p-5 ${
-                              lit
-                                ? "border-[#783DF5]/40 bg-[#783DF5]/[0.05] shadow-[0_24px_60px_-36px_rgba(120,61,245,0.7)]"
-                                : "border-white/10 bg-white/[0.025]"
-                            }`}
-                          >
-                            <h3 className={`text-[15px] font-semibold transition ${lit ? "text-white" : "text-white/80"}`}>Semana {global}</h3>
-                            <TaskList blocks={w.blocks} {...listProps({ month: mi, week: wi }, `Mês ${n} · Semana ${global}`)} />
-                          </section>
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ol>
+                {/* As tarefas do mês — encostadas à estrada, do lado da paragem. */}
+                <div
+                  className={`col-start-2 row-start-2 mt-4 w-full lg:row-start-1 lg:mt-0 lg:max-w-[440px] ${
+                    lane === "l" ? "lg:col-start-1 lg:justify-self-end" : "lg:col-start-3 lg:justify-self-start"
+                  }`}
+                >
+                  <section
+                    aria-label={`Tarefas do mês ${n}`}
+                    className={`rounded-[22px] border p-4 transition duration-500 sm:p-5 ${
+                      lit
+                        ? "border-[#783DF5]/40 bg-[#783DF5]/[0.05] shadow-[0_24px_60px_-36px_rgba(120,61,245,0.7)]"
+                        : "border-white/10 bg-white/[0.025]"
+                    }`}
+                  >
+                    <TaskList
+                      blocks={m.blocks}
+                      editing={editing}
+                      canEdit={canEdit}
+                      onOpen={(b) => openTask(mi, where, b)}
+                      onRemove={(id) => removeTask(mi, id)}
+                      canMove={(i, dir) => moveTarget(months, mi, i, dir) !== null}
+                      onMove={(id, dir) => moveTask(mi, id, dir)}
+                    />
+                  </section>
+                </div>
               </li>
             );
           })}
@@ -488,26 +484,31 @@ function stopRing(lit: boolean, size: string) {
   }`;
 }
 
-/** As tarefas de uma semana (ou os marcos de um mês): só o título, que abre o
- *  painel. Um espaço por preencher só abre para a direção. */
+/** As tarefas de um mês: só o título, que abre o painel. Um espaço por
+ *  preencher só abre para a direção. A editar, cada uma tem setas para subir e
+ *  descer (e passar ao mês ao lado) e o botão de remover. */
 function TaskList({
   blocks,
   editing,
   canEdit,
   onOpen,
   onRemove,
+  canMove,
+  onMove,
 }: {
   blocks: JourneyBlock[];
   editing: boolean;
   canEdit: boolean;
   onOpen: (b: JourneyBlock | null) => void;
   onRemove: (id: string) => void;
+  canMove: (index: number, dir: -1 | 1) => boolean;
+  onMove: (id: string, dir: -1 | 1) => void;
 }) {
   return (
-    <div className="mt-3">
+    <div>
       {blocks.length > 0 && (
         <ul className="space-y-2">
-          {blocks.map((b) => {
+          {blocks.map((b, i) => {
             const empty = Boolean(b.placeholder);
             const label = empty ? PLACEHOLDER_TITLE : b.title;
             const clickable = !empty || canEdit;
@@ -532,14 +533,25 @@ function TaskList({
                 ) : (
                   <span className="flex-1 rounded-xl border border-dashed border-white/12 px-3.5 py-2.5 text-[14.5px] text-white/35">{label}</span>
                 )}
-                {editing && <RemoveButton label="Remover a tarefa" confirm="Remover" onConfirm={() => onRemove(b.id)} />}
+                {editing && (
+                  <>
+                    <MoveButton label={i === 0 ? "Passar para o mês anterior" : "Subir"} icon={ArrowUp} disabled={!canMove(i, -1)} onClick={() => onMove(b.id, -1)} />
+                    <MoveButton
+                      label={i === blocks.length - 1 ? "Passar para o mês seguinte" : "Descer"}
+                      icon={ArrowDown}
+                      disabled={!canMove(i, 1)}
+                      onClick={() => onMove(b.id, 1)}
+                    />
+                    <RemoveButton label="Remover a tarefa" confirm="Remover" onConfirm={() => onRemove(b.id)} />
+                  </>
+                )}
               </li>
             );
           })}
         </ul>
       )}
-      {blocks.length === 0 && !editing && <p className="text-[13px] text-white/35">Sem tarefas nesta semana.</p>}
-      {editing && blocks.length < MAX_BLOCKS_PER_SLOT && (
+      {blocks.length === 0 && !editing && <p className="text-[13px] text-white/35">Sem tarefas neste mês.</p>}
+      {editing && blocks.length < MAX_BLOCKS_PER_MONTH && (
         <button
           type="button"
           onClick={() => onOpen(null)}
@@ -575,7 +587,7 @@ function MonthForm({
         e.preventDefault();
         onSave({ title: title.trim(), goal: goal.trim() });
       }}
-      className="space-y-2.5 rounded-2xl border border-[#783DF5]/45 bg-[#783DF5]/[0.07] p-3 text-left lg:ml-auto lg:max-w-[460px]"
+      className="w-full space-y-2.5 rounded-2xl border border-[#783DF5]/45 bg-[#783DF5]/[0.07] p-3 text-left lg:max-w-[420px]"
     >
       <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Nome do mês (ex.: Onboarding)" maxLength={80} autoFocus className={INPUT} aria-label="Nome do mês" />
       <textarea value={goal} onChange={(e) => setGoal(e.target.value)} placeholder="O objetivo do mês (opcional)" maxLength={240} rows={2} className={`${INPUT} resize-y`} aria-label="Objetivo do mês" />
@@ -604,6 +616,21 @@ function SmallButton({ onClick, icon: Icon, children }: { onClick: () => void; i
     >
       <Icon className="h-3.5 w-3.5" />
       {children}
+    </button>
+  );
+}
+
+function MoveButton({ label, icon: Icon, disabled, onClick }: { label: string; icon: typeof ArrowUp; disabled: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={label}
+      title={label}
+      className="flex h-8 w-7 shrink-0 items-center justify-center rounded-lg text-white/45 transition hover:bg-white/10 hover:text-white disabled:pointer-events-none disabled:opacity-25"
+    >
+      <Icon className="h-3.5 w-3.5" />
     </button>
   );
 }

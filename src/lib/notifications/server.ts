@@ -1262,18 +1262,29 @@ async function ineficaciasNotifications(
           resolvedAt: state[id]?.resolvedAt ?? null,
         });
       }
-      // Fim do semestre (v78.53): o nível desce um degrau a 30/06 e a 31/12.
+      // Fim do semestre (v78.57): a 30/06 e a 31/12 os níveis 0 a 2 voltam ao
+      // 0 com PA e NO a zero. E a recuperação do probation tira do 3 para o 0.
       for (const st of b.state.steps) {
-        if (st.reason !== "semestre") continue;
+        if (st.reason !== "semestre" && st.reason !== "recuperado") continue;
         const dueAt = Date.parse(`${st.at}T23:59:00Z`) || now.getTime();
         if (now.getTime() - dueAt > INEFICACIAS_RECENT_MS) continue;
-        const id = `ineficacias-semester:${st.at}:${st.to}`;
+        const id = `ineficacias-semester:${st.at}:${st.reason}`;
         out.push({
           id,
           ruleId: "ineficacias-semester",
-          title: `🌱 Fim do semestre: desceste para o nível ${st.to}`,
-          body: `A ${ineficaciaDate(st.at)} fechou o semestre e toda a equipa desceu um nível. Estavas no nível ${st.from}; agora estás no ${st.to}.`,
-          periodLabel: `Nível ${st.to}`,
+          title:
+            st.reason === "recuperado"
+              ? "🌱 Recuperaste do probation: voltas ao nível 0"
+              : st.from > 0
+                ? "🌱 Fim do semestre: voltas ao nível 0"
+                : "🌱 Fim do semestre: PA e NO a zero",
+          body:
+            st.reason === "recuperado"
+              ? `A ${ineficaciaDate(st.at)} o teu probation fechou com recuperação para a equipa. Estavas no nível 3; agora estás no 0, com PA e NO a zero.`
+              : st.from > 0
+                ? `A ${ineficaciaDate(st.at)} fechou o semestre: as correções e as medidas já foram aplicadas. Estavas no nível ${st.from}; agora estás no 0, com PA e NO a zero.`
+                : `A ${ineficaciaDate(st.at)} fechou o semestre e o teu PA e NO voltaram a zero. Continuas no nível 0.`,
+          periodLabel: "Nível 0",
           dueAt,
           client: null,
           actionLabel: "Ver a minha escala",

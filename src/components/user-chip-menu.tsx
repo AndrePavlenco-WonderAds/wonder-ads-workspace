@@ -499,15 +499,16 @@ export function UserChipMenu({
                     onPick={close}
                   />
                 )}
-                {/* Ineficácias (v77.88) — o relatório do próprio, o
-                    PA/NO e a escala. Enquanto o módulo está fechado à equipa
-                    leva a pastilha «em construção» e a página mostra o painel
-                    de obras; a direção abre-o na mesma pelo «Ver como». */}
+                {/* Ineficácias (v77.88; «Registar Ineficácia» desde a
+                    v78.57) — o relatório do próprio, o PA/NO e a escala.
+                    Enquanto o módulo está fechado à equipa leva a pastilha
+                    «em construção» e a página mostra o painel de obras; a
+                    direção abre-o na mesma pelo «Ver como». */}
                 {ineficacias && (
                   <MenuLink
                     href="/ineficacias"
                     icon={ListChecks}
-                    label="Team Inefficiency"
+                    label="Registar Ineficácia"
                     hint="Ineficácias · reportar erros, PA e NO"
                     badge={ineficacias.construction ? "em construção" : undefined}
                     badgeTone="amber"

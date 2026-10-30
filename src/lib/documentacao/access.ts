@@ -1,16 +1,16 @@
 // Documentação da empresa (v78.5; chamou-se «Playbook» até v78.6) — o hub de
 // documentação e SOPs.
 //
-// EM CONSTRUÇÃO: só o André e o Alex Pavlenco entram (o Alex desde v78.36;
-// os dois são SuperAdmins, por isso veem todos os blocos). A decisão é tomada com QUEM FEZ
-// LOGIN (não com a pessoa vista), como nas Ineficácias: assim o André usa o
-// «Ver como» para ver os blocos que um consultor vai ver, sem esbarrar no
-// portão. Para abrir à equipa, `DOCS_OPEN_TO_TEAM = true` — a partir daí
-// cada pessoa vê os blocos do seu departamento (ver `blocks.ts`).
+// ABERTA À EQUIPA desde a v78.57 (pedido do André, 30/10/2026): cada pessoa
+// vê os blocos do seu departamento (ver `blocks.ts`). Até lá esteve em
+// construção, só para o André e o Alex Pavlenco. A decisão é tomada com QUEM
+// FEZ LOGIN (não com a pessoa vista), como nas Ineficácias: assim o André usa
+// o «Ver como» para ver os blocos que um consultor vê, sem esbarrar no
+// portão. Para a fechar outra vez, `DOCS_OPEN_TO_TEAM = false`.
 
 import type { DeptSlug } from "@/lib/auth/credentials";
 
-export const DOCS_OPEN_TO_TEAM = false;
+export const DOCS_OPEN_TO_TEAM = true;
 
 /** Quem entra enquanto o hub está em construção. */
 const DOCS_BUILDERS = new Set(["andre", "alex"]);

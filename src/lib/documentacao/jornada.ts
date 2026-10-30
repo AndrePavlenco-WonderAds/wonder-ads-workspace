@@ -1,15 +1,18 @@
 // Jornada de Cliente (v78.46) — a parte comum a todos os projetos SEO, mês a
-// mês e semana a semana. Puro: tipos, o caminho de partida e a validação. Em
-// KV (`docs:jornada-cliente`) fica a versão que a direção edita na própria
+// mês. Puro: tipos, o caminho de partida e a validação. Em KV
+// (`docs:jornada-cliente`) fica a versão que a direção edita na própria
 // página; sem nada guardado, vale o caminho daqui.
 //
-// Cada mês tem um título, um objetivo, os marcos do mês (opcionais) e quatro
-// semanas, como os roadmaps da app. Cada semana tem tarefas: na estrada vê-se
-// só o título; a explicação abre num painel lateral (v78.48).
+// Cada mês tem um título, um objetivo e as tarefas do mês: na estrada vê-se
+// só o título de cada uma; a explicação abre num painel lateral (v78.48).
+// Até à v78.56 cada mês tinha quatro semanas e os «marcos do mês»; o que
+// estiver guardado nesse formato junta-se no mês ao ler (normalizeJourney).
 
-export const WEEKS_PER_JOURNEY_MONTH = 4;
 export const MAX_JOURNEY_MONTHS = 12;
-export const MAX_BLOCKS_PER_SLOT = 8;
+/** As tarefas de um mês — o que antes cabia nas quatro semanas e nos marcos. */
+export const MAX_BLOCKS_PER_MONTH = 24;
+/** O limite antigo de cada semana e dos marcos (só para ler o formato antigo). */
+const LEGACY_MAX_PER_SLOT = 8;
 /** A explicação de uma tarefa pode ter vários parágrafos. */
 export const MAX_DETAIL_CHARS = 4000;
 
@@ -26,15 +29,13 @@ export type JourneyBlock = {
    *  definir»; deixa de o ser quando se grava com um título. */
   placeholder?: true;
 };
-export type JourneyWeek = { id: string; blocks: JourneyBlock[] };
 export type JourneyMonth = {
   id: string;
   /** Vazio enquanto a direção não lhe der nome. */
   title: string;
   goal: string;
-  /** Os marcos do mês — o que o fecha ou se repete nele. */
+  /** As tarefas do mês, pela ordem em que se fazem. */
   blocks: JourneyBlock[];
-  weeks: JourneyWeek[];
 };
 export type Journey = {
   months: JourneyMonth[];
@@ -69,7 +70,7 @@ export const JOURNEY_GUIDES: Record<string, JourneyGuide> = {
   "registo-leads": {
     id: "registo-leads",
     title: "Registo de leads e origem dos clientes",
-    lead: "Na semana 8, o consultor pergunta ao cliente se conta quantas pessoas o contactam e vêm à clínica todos os meses, e se pergunta a cada uma de onde vem.",
+    lead: "No 2.º mês (semana 8 do roadmap), o consultor pergunta ao cliente se conta quantas pessoas o contactam e vêm à clínica todos os meses, e se pergunta a cada uma de onde vem.",
     why: "É essencial para medir os resultados do projeto. O GA4 não sabe quem ligou, quem mandou mensagem ou quem apareceu ao balcão: só o cliente sabe, se contar e perguntar.",
     questions: [
       "Estão a contar quantas pessoas pedem informação, marcam e vêm à clínica todos os meses?",
@@ -78,7 +79,7 @@ export const JOURNEY_GUIDES: Record<string, JourneyGuide> = {
       "Têm os números do mesmo mês do ano passado, para compararmos?",
     ],
     steps: [
-      "Na call da semana 8, explicar porquê: sem estes números não se consegue mostrar o que o SEO trouxe ao negócio.",
+      "Na call do 2.º mês (semana 8 do roadmap), explicar porquê: sem estes números não se consegue mostrar o que o SEO trouxe ao negócio.",
       "Se o cliente ainda não regista, enviar o modelo de Excel e combinar quem o preenche — normalmente a receção.",
       "Em cada contacto, a receção pergunta «Como nos conheceu?» e soma 1 na origem e no canal certos.",
       "No fim do mês, o cliente envia o ficheiro; os números entram no Monthly Report, comparados com o mesmo mês do ano anterior.",
@@ -98,39 +99,34 @@ export const JOURNEY_GUIDES: Record<string, JourneyGuide> = {
   },
 };
 
-/** Um id curto para uma tarefa, semana ou mês novo. */
+/** Um id curto para uma tarefa ou um mês novo. */
 export function newJourneyId(prefix: string): string {
   return `${prefix}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
 // ---------------------------------------------------------------------------
 // O caminho de partida — seis meses por preencher pela direção, com um espaço
-// por semana. Só a semana 8 já tem tarefa: o registo de leads (pedido do
-// André, 2026-10-29).
+// por mês. Só o mês 2 já tem tarefa: o registo de leads (era a semana 8,
+// pedido do André, 2026-10-29).
 // ---------------------------------------------------------------------------
 
-const LEADS_WEEK = 8;
+const LEADS_MONTH = 2;
 
 export const DEFAULT_JOURNEY: Journey = {
   updatedAt: 0,
   updatedBy: null,
-  months: Array.from({ length: 6 }, (_, mi) => ({
-    id: `m${mi + 1}`,
-    title: "",
-    goal: "",
-    blocks: [],
-    weeks: Array.from({ length: WEEKS_PER_JOURNEY_MONTH }, (_, wi) => {
-      const week = mi * WEEKS_PER_JOURNEY_MONTH + wi + 1;
-      const id = `s${week}`;
-      return {
-        id,
-        blocks:
-          week === LEADS_WEEK
-            ? [{ id: `${id}-registo-leads`, title: JOURNEY_GUIDES["registo-leads"].title, detail: "", guide: "registo-leads" }]
-            : [{ id: `${id}-1`, title: "", detail: "", placeholder: true as const }],
-      };
-    }),
-  })),
+  months: Array.from({ length: 6 }, (_, mi) => {
+    const id = `m${mi + 1}`;
+    return {
+      id,
+      title: "",
+      goal: "",
+      blocks:
+        mi + 1 === LEADS_MONTH
+          ? [{ id: `${id}-registo-leads`, title: JOURNEY_GUIDES["registo-leads"].title, detail: "", guide: "registo-leads" }]
+          : [{ id: `${id}-1`, title: "", detail: "", placeholder: true as const }],
+    };
+  }),
 };
 
 // ---------------------------------------------------------------------------
@@ -153,10 +149,10 @@ const prose = (v: unknown, max: number) =>
 const idOf = (v: unknown, fallback: string) =>
   typeof v === "string" && /^[a-z0-9-]{1,40}$/i.test(v) ? v : fallback;
 
-function normalizeBlocks(raw: unknown, prefix: string): JourneyBlock[] | null {
+function normalizeBlocks(raw: unknown, prefix: string, max: number): JourneyBlock[] | null {
   if (!Array.isArray(raw)) return [];
   const out: JourneyBlock[] = [];
-  for (const item of raw.slice(0, MAX_BLOCKS_PER_SLOT)) {
+  for (const item of raw.slice(0, max)) {
     const o = (item ?? {}) as Record<string, unknown>;
     const title = line(o.title, 90);
     const placeholder = o.placeholder === true && !title;
@@ -173,9 +169,23 @@ function normalizeBlocks(raw: unknown, prefix: string): JourneyBlock[] | null {
   return out;
 }
 
+/** As tarefas de um mês guardado no formato antigo (até à v78.56): os marcos
+ *  do mês e depois as quatro semanas, por ordem. Os espaços por preencher
+ *  juntam-se: com uma tarefa a sério já não fazem falta; sem nenhuma, fica um. */
+function legacyMonthBlocks(mo: Record<string, unknown>): JourneyBlock[] | null {
+  const all: JourneyBlock[] = [];
+  for (const raw of [mo.blocks, ...(mo.weeks as unknown[]).map((w) => ((w ?? {}) as Record<string, unknown>).blocks)]) {
+    const list = normalizeBlocks(raw, "tarefa", LEGACY_MAX_PER_SLOT);
+    if (!list) return null;
+    all.push(...list);
+  }
+  const real = all.filter((b) => !b.placeholder);
+  return real.length > 0 ? real : all.slice(0, 1);
+}
+
 /** O caminho limpo, ou null se alguma coisa não for válida (uma tarefa sem
  *  título que não seja um espaço por preencher, nenhum mês). Ids repetidos são
- *  refeitos. */
+ *  refeitos. Lê também o formato antigo, com semanas. */
 export function normalizeJourney(raw: unknown): Omit<Journey, "updatedAt" | "updatedBy"> | null {
   const o = (raw ?? {}) as Record<string, unknown>;
   if (!Array.isArray(o.months) || o.months.length === 0) return null;
@@ -189,22 +199,13 @@ export function normalizeJourney(raw: unknown): Omit<Journey, "updatedAt" | "upd
   const months: JourneyMonth[] = [];
   for (const m of o.months.slice(0, MAX_JOURNEY_MONTHS)) {
     const mo = (m ?? {}) as Record<string, unknown>;
-    const blocks = normalizeBlocks(mo.blocks, "marco");
+    const blocks = Array.isArray(mo.weeks) ? legacyMonthBlocks(mo) : normalizeBlocks(mo.blocks, "tarefa", MAX_BLOCKS_PER_MONTH);
     if (!blocks) return null;
-    const rawWeeks = Array.isArray(mo.weeks) ? mo.weeks : [];
-    const weeks: JourneyWeek[] = [];
-    for (let i = 0; i < WEEKS_PER_JOURNEY_MONTH; i++) {
-      const w = (rawWeeks[i] ?? {}) as Record<string, unknown>;
-      const wb = normalizeBlocks(w.blocks, "tarefa");
-      if (!wb) return null;
-      weeks.push({ id: unique(idOf(w.id, newJourneyId("s")), "s"), blocks: wb.map((x) => ({ ...x, id: unique(x.id, "tarefa") })) });
-    }
     months.push({
       id: unique(idOf(mo.id, newJourneyId("m")), "m"),
       title: line(mo.title, 80),
       goal: line(mo.goal, 240),
-      blocks: blocks.map((x) => ({ ...x, id: unique(x.id, "marco") })),
-      weeks,
+      blocks: blocks.slice(0, MAX_BLOCKS_PER_MONTH).map((x) => ({ ...x, id: unique(x.id, "tarefa") })),
     });
   }
   return { months };

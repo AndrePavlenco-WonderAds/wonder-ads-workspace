@@ -1,12 +1,13 @@
 // O medidor de um consultor — o nível na escala e o PA e o NO da fase
-// corrente (desde a última subida de nível) contra os limiares do próximo. Puro
+// corrente (desde a última subida ou o último reset) contra os limiares do próximo. Puro
 // (sem hooks): serve tanto a página do consultor como a da direção.
 //
 // v78.21: saiu o «relógio dos 30 dias» — os erros já não saem sozinhos.
-// v78.53: subir de nível põe os contadores a zero (já não é o 1:1), e no fim
-// de cada semestre o nível desce um degrau.
+// v78.53: subir de nível põe os contadores a zero (já não é o 1:1).
+// v78.57: no fim de cada semestre os níveis 0 a 2 fazem reset (nível 0, PA e
+// NO a zero); o 3 só sai do probation pela recuperação.
 
-import { AlertTriangle, Gauge, Hourglass, RotateCcw, Sigma, TrendingDown } from "lucide-react";
+import { AlertTriangle, Gauge, Hourglass, RotateCcw, Sigma } from "lucide-react";
 import { formatISODate, LEVELS, type IneficaciaLevel, type LedgerState } from "@/lib/ineficacias/shared";
 
 export const LEVEL_TONES: Record<
@@ -41,18 +42,23 @@ function resetLine(state: LedgerState): string | null {
   const o = state.phaseOpen;
   if (!o) return null;
   const when = formatISODate(o.at);
-  return o.reason === "subida"
-    ? `Último reinício: subida ao nível ${o.level} a ${when}.`
-    : `Último reinício: a direção pôs o nível ${o.level} a ${when}.`;
+  switch (o.reason) {
+    case "subida":
+      return `Último reinício: subida ao nível ${o.level} a ${when}.`;
+    case "direcao":
+      return `Último reinício: a direção pôs o nível ${o.level} a ${when}.`;
+    case "semestre":
+      return `Último reinício: reset do fim do semestre a ${when}.`;
+    case "recuperado":
+      return `Último reinício: recuperação do probation a ${when}.`;
+  }
 }
 
 /** A fase corrente — desde quando os contadores contam, o que os põe a zero
- *  (subir de nível, v78.53) e a próxima descida de semestre. */
+ *  (subir de nível, o reset do semestre, a recuperação) e o próximo reset. */
 function PhaseNote({ state, who }: { state: LedgerState; who: "tu" | string }) {
   const mine = who === "tu";
   const reset = resetLine(state);
-  const lastStep = state.steps.at(-1);
-  const semesterDrop = lastStep?.reason === "semestre" ? lastStep : null;
   return (
     <div className="relative mt-5 rounded-2xl border border-white/[0.08] bg-black/25 p-4 sm:p-5">
       <p className="flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-[0.18em] text-white/40">
@@ -61,21 +67,16 @@ function PhaseNote({ state, who }: { state: LedgerState; who: "tu" | string }) {
       </p>
       <p className="mt-1.5 text-[13.5px] leading-relaxed text-white/80">
         {mine ? "Os teus contadores" : `Os contadores de ${who}`} acumulam até {mine ? "subires" : "subir"} de nível — aí voltam a
-        zero. No fim de cada semestre, a 30/06 e a 31/12, toda a equipa desce um nível. Os erros ficam sempre no histórico.
+        zero. No fim de cada semestre, a 30/06 e a 31/12, quem está nos níveis 0, 1 e 2 volta ao nível 0 com PA e NO a
+        zero; no nível 3, o probation só termina com a recuperação. Os erros ficam sempre no histórico.
       </p>
-      {(reset || state.nextDrop || semesterDrop || state.unscored > 0 || (state.pendingMeasure && state.pa === 0)) && (
+      {(reset || state.nextReset || state.unscored > 0 || (state.pendingMeasure && state.pa === 0)) && (
         <p className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-white/40">
           {reset && <span>{reset}</span>}
-          {semesterDrop && (
-            <span className="inline-flex items-center gap-1 text-emerald-300/80">
-              <TrendingDown className="h-3 w-3" />
-              Fim do semestre a {formatISODate(semesterDrop.at)}: do nível {semesterDrop.from} para o {semesterDrop.to}.
-            </span>
-          )}
-          {state.nextDrop && (
+          {state.nextReset && (
             <span className="inline-flex items-center gap-1 text-emerald-300/70">
-              <TrendingDown className="h-3 w-3" />
-              Próxima descida: {formatISODate(state.nextDrop.at)}, para o nível {state.nextDrop.to}.
+              <RotateCcw className="h-3 w-3" />
+              Próximo reset: {formatISODate(state.nextReset.at)} — nível 0, PA e NO a zero.
             </span>
           )}
           {state.unscored > 0 && (

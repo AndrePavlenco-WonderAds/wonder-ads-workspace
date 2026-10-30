@@ -18,6 +18,8 @@ import { loadConsultant, verifyIntegrity } from "@/lib/ineficacias/store";
 import {
   firstName,
   formatISODate,
+  levelStepTitle,
+  phaseOpenLabel,
   formatLisbonDateTime,
   errorTypeLabel,
   noticedLabel,
@@ -57,14 +59,16 @@ export default async function IneficaciasConsultantPage({
   const bundle = await loadConsultant(username, today);
   const { state, reports, ledger } = bundle;
   const openId = (await searchParams).relatorio ?? reports.find((r) => !r.review)?.id ?? reports[0]?.id ?? null;
-  // O histórico junta os registos da direção às mudanças automáticas (v78.53):
-  // as subidas de nível (PA e NO a zero) e as descidas de fim de semestre. No
-  // mesmo dia: a subida vem primeiro, depois a direção, e a descida fecha o dia.
+  // O histórico junta os registos da direção às mudanças automáticas: as
+  // subidas de nível (PA e NO a zero), a recuperação do probation e o reset do
+  // fim do semestre (v78.57). No mesmo dia: a subida vem primeiro, depois a
+  // direção, depois a recuperação, e o reset do semestre fecha o dia.
+  const STEP_RANK = { subida: 0, direcao: 1, recuperado: 2, semestre: 3 } as const;
   const history = [
     ...ledger.events.map((e) => ({ key: e.id, at: e.at, rank: 1, tie: e.createdAt, event: e, step: null })),
     ...state.steps
       .filter((st) => st.reason !== "direcao")
-      .map((st, i) => ({ key: `step-${i}`, at: st.at, rank: st.reason === "subida" ? 0 : 2, tie: i, event: null, step: st })),
+      .map((st, i) => ({ key: `step-${i}`, at: st.at, rank: STEP_RANK[st.reason], tie: i, event: null, step: st })),
   ].sort((a, b) => b.at.localeCompare(a.at) || b.rank - a.rank || b.tie - a.tie);
   const direct = ledger.direct.slice().sort((a, b) => b.occurredOn.localeCompare(a.occurredOn));
   const avatar = getTeamAvatar(username);
@@ -94,7 +98,7 @@ export default async function IneficaciasConsultantPage({
           </h1>
           <p className="mt-1 text-[12.5px] text-white/45">
             {row.role} · {row.dept} · {reports.length} {reports.length === 1 ? "relatório" : "relatórios"}
-            {state.phaseOpen ? ` · contadores desde a subida ao nível ${state.phaseOpen.level} a ${formatISODate(state.phaseOpen.at)}` : ""}
+            {state.phaseOpen ? ` · contadores desde ${phaseOpenLabel(state.phaseOpen)} a ${formatISODate(state.phaseOpen.at)}` : ""}
           </p>
         </div>
       </header>
@@ -241,13 +245,9 @@ export default async function IneficaciasConsultantPage({
                   st ? (
                     <li key={key} className="relative pl-5 text-[12px]">
                       <span
-                        className={`absolute left-0 top-1.5 h-2.5 w-2.5 rounded-full ${st.reason === "semestre" ? "bg-emerald-300" : "bg-rose-300"}`}
+                        className={`absolute left-0 top-1.5 h-2.5 w-2.5 rounded-full ${st.reason === "subida" ? "bg-rose-300" : "bg-emerald-300"}`}
                       />
-                      <p className="font-semibold text-white/85">
-                        {st.reason === "semestre"
-                          ? `Fim do semestre: do nível ${st.from} para o ${st.to}`
-                          : `Subiu ao nível ${st.to} — PA e NO a zero`}
-                      </p>
+                      <p className="font-semibold text-white/85">{levelStepTitle(st)}</p>
                       <p className="text-white/45">{formatISODate(st.at)} · automático</p>
                     </li>
                   ) : e ? (

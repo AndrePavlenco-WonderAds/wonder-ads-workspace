@@ -15,7 +15,7 @@ import { Download, FileSpreadsheet, MessageCircleQuestion, Pencil, X } from "luc
 import { JOURNEY_GUIDES, MAX_DETAIL_CHARS, type JourneyBlock, type JourneyGuide } from "@/lib/documentacao/jornada";
 
 export type TaskPanel = {
-  /** «Mês 2 · Semana 8» */
+  /** «Mês 2» ou «Mês 2 · Onboarding» */
   where: string;
   /** Abre já no formulário (tarefa nova ou espaço por preencher). */
   editing: boolean;

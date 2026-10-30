@@ -22,12 +22,17 @@
 //                                         ocorrências registadas por ela.
 //
 // O estado (PA, NO, nível, medida por aplicar) NUNCA se grava: deriva-se em
-// cada leitura com `deriveLedger` — ver shared.ts.
+// cada leitura com `deriveLedger` — ver shared.ts. Desde a v78.57 entra
+// também o probation: um plano que fecha com «Recuperação para a equipa»
+// tira a pessoa do nível 3 (só se leem as datas dessas decisões).
 
 import "server-only";
 import { createHash } from "node:crypto";
 import { kv } from "@vercel/kv";
+import { finalDecision } from "@/lib/probation/shared";
+import { listPlans } from "@/lib/probation/store";
 import {
+  addDaysISO,
   canonicalContent,
   deriveLedger,
   isISODate,
@@ -531,34 +536,72 @@ export type ConsultantBundle = {
   reports: IneficaciaReport[];
   ledger: IneficaciaLedger;
   occurrences: Occurrence[];
+  /** Os dias em que um probation da pessoa fechou com recuperação. */
+  recoveries: string[];
   state: LedgerState;
 };
 
+/** Os dias em que um probation fechou com «Recuperação para a equipa», por
+ *  username (v78.57) — é o que tira alguém do nível 3. Só contam os planos
+ *  ligados a uma pessoa do roster; o dia é o da decisão, em Lisboa (ou, num
+ *  plano antigo sem a hora da decisão, o dia da avaliação). */
+export async function probationRecoveries(): Promise<Map<string, string[]>> {
+  const out = new Map<string, string[]>();
+  for (const plan of await listPlans()) {
+    if (plan.isDraft || !plan.consultantUsername) continue;
+    const p = plan.period;
+    if (finalDecision(p) !== "recuperacao") continue;
+    const at30 = p.eval15.decision === "extensao";
+    const decidedAt = (at30 ? p.eval30 : p.eval15).decidedAt;
+    const day = decidedAt ? lisbonDateOf(decidedAt) : isISODate(p.startDate) ? addDaysISO(p.startDate, at30 ? 30 : 15) : null;
+    if (!day) continue;
+    out.set(plan.consultantUsername, [...(out.get(plan.consultantUsername) ?? []), day]);
+  }
+  return out;
+}
+
 /** Tudo o que é preciso para a página de um consultor (a dele, ou a da
- *  direção sobre ele): relatórios + ledger → ocorrências → estado. */
-export async function loadConsultant(username: string, todayISO: string): Promise<ConsultantBundle> {
-  const [reports, ledger] = await Promise.all([listReportsForUser(username), getLedger(username)]);
+ *  direção sobre ele): relatórios + ledger → ocorrências → estado.
+ *  `recoveries` vem já lido quando se carrega a equipa toda. */
+export async function loadConsultant(
+  username: string,
+  todayISO: string,
+  recoveries?: Map<string, string[]>,
+): Promise<ConsultantBundle> {
+  const [reports, ledger, rec] = await Promise.all([
+    listReportsForUser(username),
+    getLedger(username),
+    recoveries ?? probationRecoveries(),
+  ]);
   const occurrences = occurrencesOf(reports, ledger);
-  return { username, reports, ledger, occurrences, state: deriveLedger(occurrences, ledger.events, todayISO) };
+  const days = rec.get(username) ?? [];
+  return { username, reports, ledger, occurrences, recoveries: days, state: deriveLedger(occurrences, ledger.events, todayISO, days) };
 }
 
 /** O que o PRÓPRIO consultor pode ver — o mesmo bundle sem a avaliação da
  *  direção (tipo de erro, impactos, sugestão da calculadora). É o único
  *  carregador das páginas, da API e do sino do consultor. */
 export async function loadConsultantForSelf(username: string, todayISO: string): Promise<ConsultantBundle> {
-  const [rawReports, rawLedger] = await Promise.all([listReportsForUser(username), getLedger(username)]);
+  const [rawReports, rawLedger, rec] = await Promise.all([
+    listReportsForUser(username),
+    getLedger(username),
+    probationRecoveries(),
+  ]);
   const { reports, ledger } = redactForConsultant(rawReports, rawLedger);
   const occurrences = occurrencesOf(reports, ledger);
-  return { username, reports, ledger, occurrences, state: deriveLedger(occurrences, ledger.events, todayISO) };
+  const days = rec.get(username) ?? [];
+  return { username, reports, ledger, occurrences, recoveries: days, state: deriveLedger(occurrences, ledger.events, todayISO, days) };
 }
 
 /** O mesmo para a equipa inteira (o painel da direção e o sino dos
  *  SuperAdmins). Lê-se POR PESSOA (o índice dela + o ledger), em paralelo —
  *  e não pelo índice geral, cujo teto de leitura faria o estado da direção
- *  divergir do do consultor ao fim de um ano de relatórios. */
+ *  divergir do do consultor ao fim de um ano de relatórios. Os planos de
+ *  probation leem-se uma vez só, para todos. */
 export async function loadTeam(usernames: string[], todayISO: string): Promise<Map<string, ConsultantBundle>> {
   const out = new Map<string, ConsultantBundle>();
-  const bundles = await Promise.all(usernames.map((u) => loadConsultant(u, todayISO)));
+  const recoveries = await probationRecoveries();
+  const bundles = await Promise.all(usernames.map((u) => loadConsultant(u, todayISO, recoveries)));
   bundles.forEach((b) => out.set(b.username, b));
   return out;
 }

@@ -87,7 +87,7 @@ export default async function ProbationDocPage() {
               <p className="mt-1 text-[1.25rem] font-semibold text-white">No fim da escala</p>
               <p className="mt-2 text-[14.5px] leading-relaxed text-white/60">
                 O nível 3 das ineficácias: depois de subir ao nível 2, PA ≥ {L3.pa} ou NO ≥ {L3.no}, contados do zero desde
-                essa subida. No fim de cada semestre (30/06 e 31/12) toda a equipa desce um nível, e o 3 passa a 2.
+                essa subida. O fim do semestre não tira ninguém do nível 3: só a recuperação devolve o nível 0.
               </p>
               <Link href="/documentacao/ineficacias#escala" className="mt-4 inline-block text-[13.5px] font-medium text-[#c4a6ff] hover:text-white">
                 Ver a escala das ineficácias
@@ -332,7 +332,7 @@ export default async function ProbationDocPage() {
               Há duas avaliações, aos 15 e aos 30 dias, e cada uma termina obrigatoriamente numa de três decisões: extensão,
               recuperação para a equipa ou saída. Aos 15 dias, a extensão quer dizer seguir para a avaliação dos 30; aos 30,
               abre um novo período de 30 dias, com novas datas e novos KPIs. A recuperação fecha o probation e devolve a pessoa
-              ao funcionamento normal da equipa, sem reservas; a saída fecha-o com a saída da equipa, nos termos do contrato. A
+              ao funcionamento normal da equipa, sem reservas, e ao nível 0 das ineficácias, com PA e NO a zero; a saída fecha-o com a saída da equipa, nos termos do contrato. A
               decisão é do responsável direto e da direção, dita cara a cara na reunião e confirmada por escrito logo a seguir.
             </>,
             <>
