@@ -12,8 +12,10 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import {
   AlertTriangle,
+  ArrowRight,
   CalendarClock,
   CheckCircle2,
+  FileCheck2,
   Lock,
   ShieldAlert,
   ShieldCheck,
@@ -35,6 +37,7 @@ import {
   getExamSession,
   isPastDeadline,
 } from "@/lib/training/exam-sessions-store";
+import { studyLinks } from "@/lib/training/study-links";
 import { formatDate, formatDateTime } from "@/lib/dates";
 
 export const dynamic = "force-dynamic";
@@ -138,6 +141,11 @@ export default async function ExamPage({
                       : "Já passaste este exame. Um exame passado não se repete; o que interessa agora é o seguinte.",
                   }
                 : null;
+
+  // A correção de cada tentativa fica numa página própria (v78.63). No aviso
+  // de «passado» / «sem tentativas» aponta-se para a última.
+  const correctionHref = (n: number) => `${examHref(exam)}/correcao/${n}`;
+  const latest = state.attempts[0] ?? null;
 
   const tone =
     state.status === "passed"
@@ -255,12 +263,23 @@ export default async function ExamPage({
             >
               {blocker.text}
             </p>
-            <Link
-              href={`/formacao/${track}`}
-              className="mt-4 inline-flex items-center gap-1.5 rounded-lg border border-white/15 px-3 py-1.5 text-[12px] font-medium text-white/75 transition hover:border-[#783DF5]/40 hover:text-white"
-            >
-              Voltar à {trackName}
-            </Link>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {latest && (state.status === "passed" || state.status === "exhausted") && (
+                <Link
+                  href={correctionHref(latest.attemptNumber)}
+                  className="brand-gradient-bg inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12px] font-semibold text-white transition hover:brightness-110"
+                >
+                  <FileCheck2 className="h-3.5 w-3.5" />
+                  Ver a correção da tentativa {latest.attemptNumber}
+                </Link>
+              )}
+              <Link
+                href={`/formacao/${track}`}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 px-3 py-1.5 text-[12px] font-medium text-white/75 transition hover:border-[#783DF5]/40 hover:text-white"
+              >
+                Voltar à {trackName}
+              </Link>
+            </div>
           </div>
         ) : (
           <div className="animate-fade-up mt-8">
@@ -290,6 +309,7 @@ export default async function ExamPage({
                     }
                   : null
               }
+              studyLinks={studyLinks(ctx.tracks, exam.trackSlug)}
             />
           </div>
         )}
@@ -298,28 +318,41 @@ export default async function ExamPage({
           <section className="animate-fade-up mt-10">
             <h2 className="readout mb-3 text-white/40">As tuas tentativas</h2>
             <ul className="space-y-2">
-              {state.attempts.map((a) => (
-                <li
-                  key={a.id}
-                  className="flex flex-wrap items-center gap-3 rounded-xl border border-white/10 bg-white/[0.02] px-4 py-2.5 text-[12.5px]"
-                >
-                  <span className="font-medium text-white/70">
-                    Tentativa {a.attemptNumber}
-                  </span>
-                  <span
-                    className={`tabular rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-                      a.passed
-                        ? "bg-emerald-500/12 text-emerald-300"
-                        : "bg-rose-500/12 text-rose-300"
-                    }`}
+              {state.attempts.map((a) => {
+                const wrong = a.answers.filter((x) => !x.isCorrect).length;
+                return (
+                  <li
+                    key={a.id}
+                    className="flex flex-wrap items-center gap-3 rounded-xl border border-white/10 bg-white/[0.02] px-4 py-2.5 text-[12.5px]"
                   >
-                    {a.score}% · {a.passed ? "passou" : "chumbou"}
-                  </span>
-                  <span className="tabular ml-auto text-white/40">
-                    {formatDateTime(a.submittedAt)}
-                  </span>
-                </li>
-              ))}
+                    <span className="font-medium text-white/70">
+                      Tentativa {a.attemptNumber}
+                    </span>
+                    <span
+                      className={`tabular rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                        a.passed
+                          ? "bg-emerald-500/12 text-emerald-300"
+                          : "bg-rose-500/12 text-rose-300"
+                      }`}
+                    >
+                      {a.score}% · {a.passed ? "passou" : "chumbou"}
+                    </span>
+                    <span className="tabular text-white/40">
+                      {wrong === 0 ? "todas certas" : `${wrong} errada${wrong === 1 ? "" : "s"}`}
+                    </span>
+                    <span className="tabular ml-auto text-white/40">
+                      {formatDateTime(a.submittedAt)}
+                    </span>
+                    <Link
+                      href={correctionHref(a.attemptNumber)}
+                      className="inline-flex items-center gap-1 font-semibold text-[#cdbdff] transition hover:text-white"
+                    >
+                      Ver correção
+                      <ArrowRight className="h-3.5 w-3.5" />
+                    </Link>
+                  </li>
+                );
+              })}
             </ul>
           </section>
         )}

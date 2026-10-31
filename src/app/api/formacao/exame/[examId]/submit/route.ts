@@ -229,6 +229,7 @@ export async function POST(
     startedAt: session.startedAt,
     submittedAt: now,
     answers: result.answers,
+    ...(session.seed ? { paperSeed: session.seed } : {}),
   };
 
   try {
@@ -272,6 +273,7 @@ export async function POST(
       correctOptionIds: g.correctOptionIds,
       explanation: g.question.explanation ?? null,
       options: g.question.options.map((o) => ({ id: o.id, text: o.text })),
+      lessonId: g.question.lessonId ?? null,
     })),
   });
 }

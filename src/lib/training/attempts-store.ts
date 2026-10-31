@@ -39,6 +39,10 @@ export type QuizAttempt = {
   startedAt: number;
   submittedAt: number;
   answers: QuizAnswer[];
+  /** Só nos exames sorteados (v78.63): a semente da folha, para a correção
+   *  guardada mostrar as opções pela ordem em que a pessoa as viu — a sessão
+   *  que a tinha é substituída na tentativa seguinte. */
+  paperSeed?: string;
 };
 
 export const attemptsStorageConfigured = Boolean(
@@ -85,6 +89,7 @@ function normalizeAttempt(raw: unknown): QuizAttempt | null {
     answers: (Array.isArray(o.answers) ? o.answers : [])
       .map(normalizeAnswer)
       .filter((x): x is QuizAnswer => x !== null),
+    ...(typeof o.paperSeed === "string" ? { paperSeed: o.paperSeed } : {}),
   };
 }
 

@@ -86,6 +86,7 @@ async function burnExpiredSession(
     // como tendo submetido uma semana depois.
     submittedAt: session.deadlineAt,
     answers: result.answers,
+    ...(session.seed ? { paperSeed: session.seed } : {}),
   };
 
   await appendQuizAttempt(username, attempt);

@@ -34,6 +34,7 @@ import {
   AlertTriangle,
   ArrowRight,
   CheckCircle2,
+  FileCheck2,
   Loader2,
   PartyPopper,
   RotateCcw,
@@ -41,16 +42,15 @@ import {
   TimerOff,
   XCircle,
 } from "lucide-react";
-import {
-  ExamSheet,
-  TopicBreakdown,
-  TopicChip,
-} from "@/components/training/exam-sheet";
+import { CorrectionList } from "@/components/training/attempt-correction";
+import { ExamSheet, TopicBreakdown } from "@/components/training/exam-sheet";
+import type { CorrectionRow } from "@/lib/training/exam-correction";
 import type {
   PublicQuestion,
   QuestionTopic,
   SubmittedAnswer,
 } from "@/lib/training/grading";
+import { reviewFor, type StudyLinks } from "@/lib/training/study-links";
 
 /** Tudo o que o modo invigilado precisa de saber. Ausente = quiz normal. */
 export type ProctorConfig = {
@@ -70,15 +70,10 @@ export type ProctorConfig = {
 /** De quanto em quanto tempo a folha é gravada no servidor. */
 const AUTOSAVE_MS = 10_000;
 
-type CorrectionRow = {
-  questionId: string;
-  prompt: string;
-  isCorrect: boolean;
-  manualReview: boolean;
-  chosenOptionIds: string[];
-  correctOptionIds: string[];
-  explanation: string | null;
-  options: { id: string; text: string }[];
+/** Uma linha da correção como a entrega a devolve. O capítulo vem da folha
+ *  e o sítio onde rever de `studyLinks`. */
+type SubmittedCorrection = Omit<CorrectionRow, "topic" | "review" | "missing"> & {
+  lessonId?: string | null;
 };
 
 /** O que o resultado de um exame decide. Ausente nos quizzes de capítulo. */
@@ -91,7 +86,7 @@ type Result = {
   attemptNumber: number;
   attemptsLeft: number | null;
   pendingReview: number;
-  correction: CorrectionRow[];
+  correction: SubmittedCorrection[];
   outcome?: ExamOutcome;
 };
 
@@ -109,6 +104,9 @@ export function QuizRunner({
   /** Frase que o ecrã de resultado usa quando se passa (o que isto abre). */
   gateLine,
   retryHref,
+  onRetry,
+  correctionHref,
+  studyLinks,
   /** Presente = exame com cronómetro. Ver `ProctorConfig`. */
   proctor,
   /** Chamado quando a folha sai da mesa — entregue ou recolhida ao apito.
@@ -135,6 +133,13 @@ export function QuizRunner({
    *  tentativa é uma sessão nova, com cronómetro novo — por isso passa
    *  obrigatoriamente pela página do exame, e não por um `setState` aqui. */
   retryHref?: string;
+  /** Exame invigilado: a consola volta à folha de rosto (com a página
+   *  atualizada) para a tentativa seguinte. Ganha a `retryHref`. */
+  onRetry?: () => void;
+  /** A página onde a correção desta tentativa fica guardada (v78.63). */
+  correctionHref?: string;
+  /** Onde rever cada pergunta errada. */
+  studyLinks?: StudyLinks | null;
 }) {
   const router = useRouter();
   const isExam = variant === "exam";
@@ -244,7 +249,6 @@ export function QuizRunner({
           if (data.expired) {
             setTimeUp(true);
             onFinishedRef.current?.();
-            router.refresh();
             return;
           }
           setError(data.error ?? `Não foi possível submeter o ${noun}.`);
@@ -253,14 +257,18 @@ export function QuizRunner({
         setResult(data as Result);
         onFinishedRef.current?.();
         window.scrollTo({ top: 0, behavior: "smooth" });
-        router.refresh();
+        // Num exame invigilado NÃO se atualiza a página aqui (v78.63). Passado
+        // (ou sem tentativas), o exame deixa de mostrar a consola — e o ecrã
+        // da correção ia com ela ao fim de um segundo, antes de alguém a ler.
+        // A página atualiza-se quando a pessoa sai do ecrã.
+        if (!isProctored) router.refresh();
       } catch {
         setError("Falha de rede — tenta outra vez.");
       } finally {
         setSubmitting(false);
       }
     },
-    [endpoint, noun, router, sheet],
+    [endpoint, isProctored, noun, router, sheet],
   );
 
   // ---- Invigilação ------------------------------------------------------
@@ -385,12 +393,23 @@ export function QuizRunner({
           o que já lá estava respondido — o resto conta como não respondido.
           Esta tentativa está fechada e não se reabre.
         </p>
-        <Link
-          href={trackHref}
-          className="mt-5 inline-flex items-center gap-2 rounded-xl border border-white/15 px-4 py-2.5 text-[13px] font-medium text-white/80 transition hover:border-white/35 hover:text-white"
-        >
-          {backLabel}
-        </Link>
+        <div className="mt-5 flex flex-wrap justify-center gap-2">
+          {correctionHref && (
+            <Link
+              href={correctionHref}
+              className="brand-gradient-bg inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-[13px] font-semibold text-white transition hover:brightness-110"
+            >
+              <FileCheck2 className="h-4 w-4" />
+              Ver a correção
+            </Link>
+          )}
+          <Link
+            href={trackHref}
+            className="inline-flex items-center gap-2 rounded-xl border border-white/15 px-4 py-2.5 text-[13px] font-medium text-white/80 transition hover:border-white/35 hover:text-white"
+          >
+            {backLabel}
+          </Link>
+        </div>
       </div>
     );
   }
@@ -425,6 +444,17 @@ export function QuizRunner({
     const topicRows = [...byTopic.values()].sort(
       (a, b) => (a.topic.no ?? 0) - (b.topic.no ?? 0),
     );
+    const rows: CorrectionRow[] = result.correction.map(({ lessonId, ...c }) => {
+      const topic = topicOf.get(c.questionId) ?? null;
+      return {
+        ...c,
+        options: [...c.options].sort(
+          (a, b) => (seenAt.get(a.id) ?? 0) - (seenAt.get(b.id) ?? 0),
+        ),
+        topic,
+        review: reviewFor(studyLinks, lessonId, topic?.key),
+      };
+    });
     const blocked = result.outcome === "blocked" || result.attemptsLeft === 0;
     const effective = result.outcome === "effective";
     // O que a nota decide, dito em uma linha. Nos quizzes não há decisão
@@ -526,7 +556,17 @@ export function QuizRunner({
                 // Num exame invigilado a tentativa seguinte é uma sessão nova,
                 // com cronómetro novo. Volta-se à folha de rosto do exame e
                 // carrega-se outra vez em "Começar" — de olhos abertos.
-                !blocked && (
+                !blocked &&
+                (onRetry ? (
+                  <button
+                    type="button"
+                    onClick={onRetry}
+                    className="brand-gradient-bg inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-[13px] font-semibold text-white transition hover:brightness-110"
+                  >
+                    <RotateCcw className="h-4 w-4" />
+                    Nova tentativa
+                  </button>
+                ) : (
                   <Link
                     href={retryHref ?? trackHref}
                     className="brand-gradient-bg inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-[13px] font-semibold text-white transition hover:brightness-110"
@@ -534,7 +574,7 @@ export function QuizRunner({
                     <RotateCcw className="h-4 w-4" />
                     Nova tentativa
                   </Link>
-                )
+                ))
               ) : (
                 <button
                   type="button"
@@ -556,84 +596,28 @@ export function QuizRunner({
           </div>
         </div>
 
+        {correctionHref && (
+          <p className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-[#783DF5]/30 bg-[#783DF5]/[0.07] px-4 py-3 text-[12.5px] leading-relaxed text-white/70">
+            <FileCheck2 className="h-4 w-4 shrink-0 text-[#cdbdff]" />
+            <span className="min-w-0 flex-1">
+              Esta correção fica guardada — podes voltar a ela quando quiseres,
+              na página do exame, em «As tuas tentativas».
+            </span>
+            <Link
+              href={correctionHref}
+              className="inline-flex shrink-0 items-center gap-1.5 font-semibold text-[#cdbdff] transition hover:text-white"
+            >
+              Abrir numa página
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+          </p>
+        )}
+
         {isExam && (
           <TopicBreakdown rows={topicRows} passingScore={passingScore} />
         )}
 
-        <div className="space-y-3">
-          <h2 className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#A9834F]">
-            Correção
-          </h2>
-          {result.correction.map((c, i) => (
-            <div
-              key={c.questionId}
-              className={`rounded-2xl border p-5 ${
-                c.manualReview
-                  ? "border-white/10 bg-white/[0.02]"
-                  : c.isCorrect
-                    ? "border-emerald-400/20 bg-emerald-500/[0.04]"
-                    : "border-rose-400/25 bg-rose-500/[0.05]"
-              }`}
-            >
-              <div className="flex items-start gap-3">
-                <span className="mt-0.5 shrink-0">
-                  {c.manualReview ? (
-                    <AlertTriangle className="h-4 w-4 text-white/40" />
-                  ) : c.isCorrect ? (
-                    <CheckCircle2 className="h-4 w-4 text-emerald-300" />
-                  ) : (
-                    <XCircle className="h-4 w-4 text-rose-300" />
-                  )}
-                </span>
-                <div className="min-w-0 flex-1">
-                  {topicOf.get(c.questionId) && (
-                    <div className="mb-1.5">
-                      <TopicChip topic={topicOf.get(c.questionId)!} />
-                    </div>
-                  )}
-                  <p className="text-[14px] font-medium text-white/90">
-                    {i + 1}. {c.prompt}
-                  </p>
-                  <ul className="mt-3 space-y-1.5">
-                    {[...c.options]
-                      .sort((a, b) => (seenAt.get(a.id) ?? 0) - (seenAt.get(b.id) ?? 0))
-                      .map((o) => {
-                      const chosen = c.chosenOptionIds.includes(o.id);
-                      const correct = c.correctOptionIds.includes(o.id);
-                      return (
-                        <li
-                          key={o.id}
-                          className={`flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-[12.5px] ${
-                            correct
-                              ? "bg-emerald-500/10 text-emerald-100/90"
-                              : chosen
-                                ? "bg-rose-500/10 text-rose-100/90"
-                                : "text-white/45"
-                          }`}
-                        >
-                          <span className="w-4 shrink-0 text-center">
-                            {correct ? "✓" : chosen ? "✗" : "·"}
-                          </span>
-                          <span>{o.text}</span>
-                          {chosen && (
-                            <span className="ml-auto shrink-0 text-[10px] uppercase tracking-wide text-white/40">
-                              a tua resposta
-                            </span>
-                          )}
-                        </li>
-                      );
-                    })}
-                  </ul>
-                  {c.explanation && (
-                    <p className="mt-3 border-l-2 border-[#783DF5]/40 pl-3 text-[12.5px] leading-relaxed text-white/60">
-                      {c.explanation}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
+        <CorrectionList rows={rows} initialFilter={isExam ? "wrong" : "all"} />
       </div>
     );
   }

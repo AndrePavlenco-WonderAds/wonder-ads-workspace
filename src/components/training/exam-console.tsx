@@ -33,6 +33,7 @@ import {
 } from "lucide-react";
 import { QuizRunner } from "@/components/training/quiz-runner";
 import type { PublicQuestion, SubmittedAnswer } from "@/lib/training/grading";
+import type { StudyLinks } from "@/lib/training/study-links";
 
 export type RunningSession = {
   startedAt: number;
@@ -62,6 +63,7 @@ export function ExamConsole({
   maxAttempts,
   durationMinutes,
   initialSession,
+  studyLinks,
 }: {
   examId: string;
   /** A página do exame, dentro da especialização (v78.54). */
@@ -82,6 +84,8 @@ export function ExamConsole({
   durationMinutes: number;
   /** Sessão já a decorrer (a pessoa recarregou a página a meio do exame). */
   initialSession: RunningSession | null;
+  /** Onde rever cada pergunta errada, na correção. */
+  studyLinks: StudyLinks;
 }) {
   const router = useRouter();
   const [phase, setPhase] = useState<Phase>(
@@ -162,12 +166,25 @@ export function ExamConsole({
     }
   }, [examId, attemptNumber, router]);
 
+  // Depois de uma tentativa chumbada: volta-se à folha de rosto e só AGORA se
+  // atualiza a página (número da tentativa, tentativas que sobram). Um link
+  // para a mesma página não chegava — a consola não desmonta e o resultado
+  // ficava no ecrã.
+  const backToBriefing = useCallback(() => {
+    setSession(null);
+    setPhase("briefing");
+    router.refresh();
+  }, [router]);
+
   // ---- A correr (e depois, o resultado, no mesmo ecrã) ----
   //
   // O ecrã só se desmonta quando a pessoa sai por um link. É deliberado: se o
   // exame voltasse à página normal no instante da entrega, o React
   // desmontava o `QuizRunner` e a correção — que é a parte que interessa ler —
-  // desaparecia com ele.
+  // desaparecia com ele. Por isso a entrega também não atualiza a página
+  // (v78.63): um exame passado troca a consola pelo aviso «Exame passado», e
+  // era isso que levava a correção ao fim de um segundo. E a correção fica
+  // guardada numa página própria, para ler outra vez quando se quiser.
   if (session && mounted && (phase === "running" || phase === "finished")) {
     const running = phase === "running";
     return createPortal(
@@ -209,6 +226,9 @@ export function ExamConsole({
             trackHref="/formacao"
             nextHref="/formacao"
             retryHref={pageHref}
+            onRetry={backToBriefing}
+            correctionHref={`${pageHref}/correcao/${session.attemptNumber}`}
+            studyLinks={studyLinks}
             backLabel="Voltar à Formação"
             gateLine={gateLine}
             onFinished={() => setPhase("finished")}

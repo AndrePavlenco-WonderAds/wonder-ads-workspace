@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.63",
+    date: "2026-10-31",
+    title: "Exames de fase: a correção já não desaparece e fica guardada",
+    highlights: [
+      "**📝 A correção fica no ecrã**: quem passava o exame via-a um ou dois segundos e ela desaparecia. Agora fica até saíres, e abre nas perguntas que erraste.",
+      "**🗂️ Cada tentativa tem a sua correção guardada**: na página do exame, em «As tuas tentativas», carrega em «Ver correção» — a nota, como correu cada capítulo e, pergunta a pergunta, a tua resposta ao lado da certa. Funciona também para as tentativas já feitas.",
+      "**📚 Onde voltar a estudar**: cada pergunta errada traz o link para a aula onde a matéria se dá.",
+      "**🔁 «Nova tentativa»** depois de chumbar volta mesmo à folha de rosto do exame, com o número da tentativa certo.",
+    ],
+  },
+  {
     version: "78.62",
     date: "2026-10-30",
     title: "Medalhas: montra livre, Rigor lendário, NPS Perfeito estelar · Documentação avisa no sino",

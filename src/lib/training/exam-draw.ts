@@ -265,8 +265,9 @@ export function shuffleOptions(q: TrainingQuestion, seed: string): TrainingQuest
 
 /** Todas as perguntas que uma folha pode conter, com o capítulo de cada uma.
  *  Usa TODAS as tracks, não só as da pessoa: se a inscrição mudar a meio de
- *  um exame, a folha já sorteada não perde perguntas. */
-function questionIndex(
+ *  um exame, a folha já sorteada não perde perguntas. Também lido pela
+ *  correção guardada (`exam-correction.ts`). */
+export function questionIndex(
   exam: ExamPhase,
   tracks: TrainingTrack[],
 ): Map<string, { question: TrainingQuestion; topic: QuestionTopic }> {
