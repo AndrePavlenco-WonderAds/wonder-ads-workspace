@@ -12,9 +12,13 @@
 //     `APPROVED_CORE_IDS`; sem nenhuma aprovada, 0) — e o resto, até 35, dos
 //     CAPÍTULOS da especialização DONA DO EXAME
 //     (v78.54: só dela — nem Comum de reserva, nem outra especialização).
-//     TODOS os capítulos entram — duas voltas completas e uma terceira parcial,
-//     por ordem baralhada a cada volta, por isso 2 ou 3 de cada — para que o
-//     exame cubra a formação inteira e não só o tema da semana.
+//     TODOS os capítulos entram — à proporção das perguntas que cada um tem,
+//     com pelo menos uma de cada — para que o exame cubra a formação inteira e
+//     não só o tema da semana.
+//   • v78.64: NÃO REPETE. Sai primeiro o que a pessoa nunca viu nos exames
+//     anteriores (e nas tentativas anteriores); 279 perguntas chegam para os
+//     seis exames sem repetir nenhuma. Só com muitas tentativas falhadas é
+//     que voltam perguntas — as que saíram menos vezes.
 //   • A ordem salta de capítulo em capítulo: nunca duas seguidas do mesmo,
 //     sempre que as contas o permitem.
 //   • As opções também são baralhadas — «a resposta é a B» deixa de passar de
@@ -147,18 +151,121 @@ function shuffle<T>(items: readonly T[], rand: () => number): T[] {
 // O sorteio
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// O que a pessoa já viu (v78.64)
+//
+// PORQUE: até aqui cada exame era sorteado às cegas, sem saber dos anteriores.
+// O Manuel fez os seis e no exame dos 90 dias 23 das 35 perguntas já lhe
+// tinham saído antes — com 279 perguntas elegíveis, que chegam para os seis
+// exames (210) sem repetir nenhuma. Agora o sorteio recebe o histórico: o que
+// nunca saiu vem primeiro, e uma pergunta só volta quando já não há novas
+// (muitas tentativas falhadas) — e aí volta a que saiu menos vezes.
+// ---------------------------------------------------------------------------
+
+/** Quantas vezes cada pergunta já saiu à pessoa nos exames da especialização. */
+export type ExamHistory = ReadonlyMap<string, number>;
+
+/** Conta as perguntas de todas as folhas que a pessoa já recebeu nos exames
+ *  `examIds` — as entregues ou recolhidas (tentativas: cada uma grava todas as
+ *  perguntas da folha, respondidas ou não) e alguma que ainda esteja a correr
+ *  noutro exame (sessão sem tentativa). */
+export function examHistory(
+  examIds: ReadonlySet<string>,
+  attempts: ReadonlyArray<{
+    quizId: string;
+    attemptNumber: number;
+    answers: ReadonlyArray<{ questionId: string }>;
+  }>,
+  sessions: Readonly<
+    Record<string, { examId: string; attemptNumber: number; questionIds?: string[] }>
+  >,
+): Map<string, number> {
+  const papers: string[][] = [];
+  const recorded = new Set<string>();
+  for (const a of attempts) {
+    if (!examIds.has(a.quizId)) continue;
+    recorded.add(`${a.quizId}#${a.attemptNumber}`);
+    papers.push(a.answers.map((x) => x.questionId));
+  }
+  for (const s of Object.values(sessions)) {
+    if (!examIds.has(s.examId) || !s.questionIds?.length) continue;
+    if (recorded.has(`${s.examId}#${s.attemptNumber}`)) continue;
+    papers.push(s.questionIds);
+  }
+  const seen = new Map<string, number>();
+  for (const ids of papers) {
+    for (const id of new Set(ids)) seen.set(id, (seen.get(id) ?? 0) + 1);
+  }
+  return seen;
+}
+
+/** Reparte `total` lugares pelos capítulos, à proporção das perguntas NOVAS
+ *  que cada um ainda tem — com pelo menos uma de cada. Assim os capítulos
+ *  pequenos (o 2 tem 12 perguntas) não se esgotam nos primeiros exames: todos
+ *  gastam ao mesmo ritmo e todos continuam a entrar até ao exame final.
+ *  Pressupõe `total` < soma das novas (senão entram todas). */
+function quotas(
+  sizes: { key: string; n: number }[],
+  total: number,
+  rand: () => number,
+): Map<string, number> {
+  const open = shuffle(
+    sizes.filter((s) => s.n > 0),
+    rand,
+  );
+  const out = new Map<string, number>();
+  if (total <= 0 || open.length === 0) return out;
+  if (total < open.length) {
+    for (const s of open.slice(0, total)) out.set(s.key, 1);
+    return out;
+  }
+  // Uma de cada; o resto à proporção do que sobra a cada capítulo (maiores
+  // restos primeiro — empates resolvidos pela ordem baralhada).
+  const rest = total - open.length;
+  const spare = open.reduce((n, s) => n + (s.n - 1), 0);
+  const shares = open.map((s) => {
+    const exact = spare > 0 ? (rest * (s.n - 1)) / spare : 0;
+    return { key: s.key, n: s.n, base: Math.floor(exact), frac: exact - Math.floor(exact) };
+  });
+  let given = shares.reduce((n, s) => n + s.base, 0);
+  for (const s of [...shares].sort((a, b) => b.frac - a.frac)) {
+    if (given >= rest) break;
+    if (s.base + 1 <= s.n - 1) {
+      s.base += 1;
+      given += 1;
+    }
+  }
+  for (const s of shares) out.set(s.key, 1 + s.base);
+  return out;
+}
+
 /** Escolhe as perguntas e a ordem. Devolve só ids — a sessão guarda isto e a
- *  folha reconstrói-se a partir daqui sempre que é preciso. */
-export function drawExamQuestionIds(pool: ExamPool, seed: string): string[] {
+ *  folha reconstrói-se a partir daqui sempre que é preciso. `history` é o que
+ *  a pessoa já viu nos exames da especialização (`examHistory`). */
+export function drawExamQuestionIds(
+  pool: ExamPool,
+  seed: string,
+  history: ExamHistory = new Map(),
+): string[] {
   const rand = rng(seed);
-  const decks = new Map<string, TrainingQuestion[]>();
-  for (const s of [pool.core, ...pool.chapters, ...pool.reserve]) {
-    decks.set(s.topic.key, shuffle(s.questions, rand));
+  const timesSeen = (q: TrainingQuestion) => history.get(q.id) ?? 0;
+  const strata = [pool.core, ...pool.chapters, ...pool.reserve];
+  // Por estrato: as novas (baralhadas) e as já vistas, das que saíram menos
+  // vezes para as que saíram mais (baralhadas dentro de cada contagem).
+  const fresh = new Map<string, TrainingQuestion[]>();
+  const stale = new Map<string, TrainingQuestion[]>();
+  for (const s of strata) {
+    const deck = shuffle(s.questions, rand);
+    fresh.set(s.topic.key, deck.filter((q) => timesSeen(q) === 0));
+    stale.set(
+      s.topic.key,
+      deck.filter((q) => timesSeen(q) > 0).sort((a, b) => timesSeen(a) - timesSeen(b)),
+    );
   }
   const picked = new Map<string, string[]>();
   let left = EXAM_QUESTION_COUNT;
 
-  const take = (key: string, n: number) => {
+  const take = (decks: Map<string, TrainingQuestion[]>, key: string, n: number) => {
     const deck = decks.get(key) ?? [];
     const got = deck.splice(0, Math.max(0, Math.min(n, left)));
     left -= got.length;
@@ -167,28 +274,46 @@ export function drawExamQuestionIds(pool: ExamPool, seed: string): string[] {
     }
   };
 
-  // Uma pergunta de cada capítulo por volta, com a ordem dos capítulos
-  // baralhada em cada volta: é o que garante que todos entram e que a
-  // terceira pergunta extra calha a capítulos diferentes de pessoa para pessoa.
-  const roundRobin = (strata: Stratum[]) => {
+  // Perguntas novas dos capítulos: à proporção do que cada um ainda tem por
+  // sair; se já não chegam para encher a folha, entram todas.
+  const freshChapters = (list: Stratum[]) => {
+    const sizes = list.map((s) => ({
+      key: s.topic.key,
+      n: fresh.get(s.topic.key)?.length ?? 0,
+    }));
+    const available = sizes.reduce((n, s) => n + s.n, 0);
+    if (available <= left) {
+      for (const s of sizes) take(fresh, s.key, s.n);
+      return;
+    }
+    for (const [key, n] of quotas(sizes, left, rand)) take(fresh, key, n);
+  };
+
+  // Só quando já não há novas: uma de cada capítulo por volta (ordem
+  // baralhada a cada volta), das que saíram menos vezes primeiro.
+  const roundRobin = (list: Stratum[]) => {
     while (left > 0) {
-      const open = shuffle(
-        strata.filter((s) => (decks.get(s.topic.key) ?? []).length > 0),
+      const open = list.filter((s) => (stale.get(s.topic.key) ?? []).length > 0);
+      if (open.length === 0) return;
+      const lowest = Math.min(...open.map((s) => timesSeen(stale.get(s.topic.key)![0])));
+      const tier = shuffle(
+        open.filter((s) => timesSeen(stale.get(s.topic.key)![0]) === lowest),
         rand,
       );
-      if (open.length === 0) return;
-      for (const s of open) {
+      for (const s of tier) {
         if (left === 0) return;
-        take(s.topic.key, 1);
+        take(stale, s.topic.key, 1);
       }
     }
   };
 
-  take(pool.core.topic.key, EXAM_CORE_COUNT);
-  roundRobin(pool.chapters);
+  take(fresh, pool.core.topic.key, EXAM_CORE_COUNT);
+  freshChapters(pool.chapters);
   // Especialização pequena demais para 35: o resto do núcleo, depois o Comum.
-  take(pool.core.topic.key, left);
-  roundRobin(pool.reserve);
+  take(fresh, pool.core.topic.key, left);
+  freshChapters(pool.reserve);
+  // Já saíram todas as novas — repete o mínimo possível.
+  roundRobin([pool.core, ...pool.chapters, ...pool.reserve]);
 
   return interleave(picked, rand);
 }

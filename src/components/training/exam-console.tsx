@@ -360,9 +360,6 @@ function PaperBrief({
     .toFixed(1)
     .replace(".", ",");
   const fromChapters = Math.max(0, questionCount - coreCount);
-  const lo = Math.floor(fromChapters / Math.max(1, chapterCount));
-  const hi = Math.ceil(fromChapters / Math.max(1, chapterCount));
-  const perChapter = lo === hi ? `${lo}` : `${lo} a ${hi}`;
   return (
     <div className="mt-6 rounded-xl border border-white/[0.08] bg-white/[0.02] p-4 sm:p-5">
       <p className="readout text-white/40">A tua folha</p>
@@ -375,7 +372,7 @@ function PaperBrief({
         <BriefStat
           icon={<Layers className="h-3.5 w-3.5" />}
           value={`${chapterCount} capítulos`}
-          hint={`todos entram — ${perChapter} perguntas de cada`}
+          hint="todos entram — mais perguntas dos capítulos maiores"
         />
         <BriefStat
           icon={<Gauge className="h-3.5 w-3.5" />}
@@ -390,9 +387,12 @@ function PaperBrief({
           <strong className="text-white/85">
             ninguém tem um exame igual ao teu
           </strong>{" "}
-          — nem tu na tentativa seguinte. As perguntas saltam de capítulo em
-          capítulo e as opções também vêm baralhadas, por isso lê cada
-          enunciado do zero.
+          — nem tu na tentativa seguinte.{" "}
+          <strong className="text-white/85">
+            As perguntas que já te saíram noutros exames não voltam
+          </strong>{" "}
+          enquanto houver novas. Saltam de capítulo em capítulo e as opções
+          também vêm baralhadas, por isso lê cada enunciado do zero.
         </span>
       </p>
     </div>

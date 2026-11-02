@@ -31,15 +31,17 @@ import {
 } from "@/lib/training/start-dates-store";
 import {
   drawExamQuestionIds,
+  examHistory,
   examPaperFor,
   examPool,
   publicExamPaper,
 } from "@/lib/training/exam-draw";
 import { EXAM_QUESTIONS } from "@/lib/training/exam-questions";
-import { computeExamJourney, findExam } from "@/lib/training/exams";
+import { computeExamJourney, EXAM_PHASES, findExam } from "@/lib/training/exams";
 import { reconcileExpiredExams } from "@/lib/training/exam-proctor";
 import {
   EXAM_DURATION_MINUTES,
+  getExamSessions,
   startExamSession,
 } from "@/lib/training/exam-sessions-store";
 
@@ -133,8 +135,19 @@ export async function POST(
   }
 
   try {
-    const tracks = await getTrainingCatalog();
+    const [tracks, sessions] = await Promise.all([
+      getTrainingCatalog(),
+      getExamSessions(employee.username),
+    ]);
     const pool = examPool(exam, tracks);
+    // v78.64: o que a pessoa já viu nos exames desta especialização (todas as
+    // tentativas de todos os exames) só volta quando já não houver perguntas
+    // novas — antes cada folha era sorteada às cegas e repetia muito.
+    const history = examHistory(
+      new Set(EXAM_PHASES.filter((e) => e.trackSlug === exam.trackSlug).map((e) => e.id)),
+      attempts,
+      sessions,
+    );
     // Semente nova a cada «Começar»: dois consultores — ou a mesma pessoa na
     // segunda tentativa — nunca recebem a mesma folha. Numa retoma isto não é
     // usado; a sessão já tem a sua.
@@ -144,7 +157,7 @@ export async function POST(
       examId,
       state.attemptsUsed + 1,
       now,
-      { seed, questionIds: drawExamQuestionIds(pool, seed) },
+      { seed, questionIds: drawExamQuestionIds(pool, seed, history) },
     );
 
     if (outcome.kind === "already_submitted") {

@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.64",
+    date: "2026-11-02",
+    title: "Exames de fase: as perguntas deixam de se repetir",
+    highlights: [
+      "**🔁 Nenhuma pergunta volta a sair de exame para exame**: cada folha era sorteada sem saber das anteriores — no exame dos 90 dias, 23 das 35 perguntas já tinham saído antes. Agora o sorteio guarda o que cada pessoa já viu e dá primeiro o que nunca lhe saiu. As 279 perguntas da Especialização SEO/GEO chegam para os seis exames sem repetir nenhuma, e ainda para duas tentativas extra.",
+      "**📚 Todos os capítulos continuam em todas as folhas**: as perguntas repartem-se à proporção do tamanho de cada capítulo, para os mais pequenos não se esgotarem antes do exame final.",
+      "**↩️ Só com muitos chumbos é que voltam perguntas** — e voltam as que saíram menos vezes.",
+    ],
+  },
+  {
     version: "78.63",
     date: "2026-10-31",
     title: "Exames de fase: a correção já não desaparece e fica guardada",
