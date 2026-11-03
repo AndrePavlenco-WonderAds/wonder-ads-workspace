@@ -129,6 +129,8 @@ const VIEWER_READ_APIS: Record<DeptSlug, string[]> = {
     "/api/files",
     // O Reviews Hub (v77.53) — a própria API recusa escritas a viewers.
     "/api/reviews-hub",
+    // A Origem de Pacientes (v78.68) — a própria API recusa escritas a viewers.
+    "/api/origem",
   ],
   ads: ["/api/ads", "/api/files"],
   web: ["/api/web", "/api/files"],

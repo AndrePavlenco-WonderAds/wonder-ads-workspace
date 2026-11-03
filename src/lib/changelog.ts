@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.68",
+    date: "2026-11-03",
+    title: "Origem dos pacientes: piloto na MyMedic",
+    highlights: [
+      "**🧭 Novo add-on na ficha do cliente: «Origem»**. A receção da MyMedic regista como cada paciente novo conheceu a clínica (Google, IA, redes sociais, recomendação, médico ou seguro, porta, outra) e, se quiser, como fez o contacto. Um toque na origem, outro em Registar, e dá para anular nos 20 segundos seguintes.",
+      "**📱 Feito para o tablet da receção**: entra com um PIN de 6 dígitos, o aparelho fica com acesso 6 meses e lembra-se da clínica (Viseu ou Fornos de Algodres). Dois tablets ao mesmo tempo não perdem registos.",
+      "**📊 Relatórios mês a mês** (meses do calendário, hora de Lisboa): total e variação face ao mês anterior, principal origem, **% que chegou pelo Google ou por IAs**, origens com diferença em pp, canais, dia a dia, por clínica e evolução. Copiar resumo e CSV para o Excel.",
+      "**🔖 Chip «Origem» no topo da ficha** (ao lado das Reviews), com os registos do mês. A equipa entra sem PIN.",
+    ],
+  },
+  {
     version: "78.67",
     date: "2026-11-03",
     title: "Jornada de Cliente: medição dos contactos no mês 1 e reunião presencial no mês 3",

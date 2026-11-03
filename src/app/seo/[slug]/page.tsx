@@ -15,6 +15,7 @@ import { SeoActions } from "@/components/seo-actions";
 import { ProjectSectionNav } from "@/components/project-section-nav";
 import { LogoChip } from "@/components/logo-chip";
 import { ReviewsHubChip } from "@/components/reviews-hub-chip";
+import { OrigemChip } from "@/components/origem-chip";
 import {
   getCurrentRoadmap,
   resolveOnboardingDate,
@@ -239,6 +240,7 @@ export default async function ClientPage({
                 )}
               </Link>
               <ReviewsHubChip slug={slug} />
+              <OrigemChip slug={slug} />
             </div>
             <h1 className="mt-2 text-4xl font-semibold leading-[1.05] tracking-tight sm:text-5xl">
               <span className="brand-gradient-text">{client.title}</span>
