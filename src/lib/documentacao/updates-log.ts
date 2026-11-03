@@ -42,7 +42,19 @@ export type CodeDocUpdate = {
   anchor?: string;
 };
 
-export const CODE_DOC_UPDATES: CodeDocUpdate[] = [];
+export const CODE_DOC_UPDATES: CodeDocUpdate[] = [
+  {
+    id: "v78.67-jornada-cliente-meses-1-3",
+    page: "jornada-cliente",
+    kind: "add-on",
+    changes: [
+      "Tarefa nova em Mês 1: «Confirmar que todos os contactos do site são medidos no GTM/GA4» (telefone, WhatsApp, formulário e direções). Sem isto, o registo de leads do mês 2 já começa incompleto.",
+      "Tarefa nova em Mês 3: «Avaliar uma reunião presencial com o cliente», com o team leader e o consultor (só clientes de Portugal continental).",
+    ],
+    at: "2026-11-03T17:50:00+00:00",
+    version: "78.67",
+  },
+];
 
 /** As entradas de código na forma comum. */
 export function codeDocUpdates(): DocUpdate[] {

@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.67",
+    date: "2026-11-03",
+    title: "Jornada de Cliente: medição dos contactos no mês 1 e reunião presencial no mês 3",
+    highlights: [
+      "**📏 Mês 1: confirmar que todos os contactos do site são medidos no GTM/GA4.** Telefone, WhatsApp, formulário e direções. Sem isto, o registo de leads do mês 2 já começa incompleto.",
+      "**🤝 Mês 3: avaliar uma reunião presencial** com o cliente, o team leader e o consultor (só clientes de Portugal continental).",
+      "**🔔 O SEO DPT é avisado no sino** sempre que a Jornada muda, seja na própria página ou numa versão nova da app, com o que mudou e um botão para a página.",
+    ],
+  },
+  {
     version: "78.66",
     date: "2026-11-03",
     title: "Menu: «Ineficácias» · equipa Comercial com leitura do SEO DPT",

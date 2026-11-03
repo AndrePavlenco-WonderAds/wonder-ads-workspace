@@ -106,11 +106,37 @@ export function newJourneyId(prefix: string): string {
 
 // ---------------------------------------------------------------------------
 // O caminho de partida — seis meses por preencher pela direção, com um espaço
-// por mês. Só o mês 2 já tem tarefa: o registo de leads (era a semana 8,
-// pedido do André, 2026-10-29).
+// por mês. Tarefas já dadas pelo André: no mês 1, confirmar a medição dos
+// contactos do site (v78.67); no mês 2, o registo de leads (era a semana 8,
+// 2026-10-29); no mês 3, avaliar a reunião presencial (v78.67).
+//
+// Mudar este caminho em código = entrada em CODE_DOC_UPDATES (updates-log.ts)
+// na mesma versão, para o aviso chegar ao sino do SEO DPT. As edições feitas
+// na própria página registam-se sozinhas (PUT /api/documentacao/[doc]).
 // ---------------------------------------------------------------------------
 
-const LEADS_MONTH = 2;
+export const TRACKING_TASK_TITLE = "Confirmar que todos os contactos do site são medidos no GTM/GA4";
+export const MEETING_TASK_TITLE = "Avaliar uma reunião presencial com o cliente";
+
+const SEEDED_BLOCKS: Record<number, JourneyBlock[]> = {
+  1: [
+    {
+      id: "m1-medicao-contactos",
+      title: TRACKING_TASK_TITLE,
+      detail:
+        "Conferir se todos os contactos do site estão a ser medidos no GTM/GA4: telefone, WhatsApp, formulário e direções.\n\nSem isto, o registo de leads do mês 2 já começa incompleto.",
+    },
+  ],
+  2: [{ id: "m2-registo-leads", title: JOURNEY_GUIDES["registo-leads"].title, detail: "", guide: "registo-leads" }],
+  3: [
+    {
+      id: "m3-reuniao-presencial",
+      title: MEETING_TASK_TITLE,
+      detail:
+        "Conferir se vale a pena reunirmos presencialmente com o cliente, com o team leader e com o consultor do projeto.\n\nSó se aplica a clientes de Portugal continental.",
+    },
+  ],
+};
 
 export const DEFAULT_JOURNEY: Journey = {
   updatedAt: 0,
@@ -121,10 +147,7 @@ export const DEFAULT_JOURNEY: Journey = {
       id,
       title: "",
       goal: "",
-      blocks:
-        mi + 1 === LEADS_MONTH
-          ? [{ id: `${id}-registo-leads`, title: JOURNEY_GUIDES["registo-leads"].title, detail: "", guide: "registo-leads" }]
-          : [{ id: `${id}-1`, title: "", detail: "", placeholder: true as const }],
+      blocks: SEEDED_BLOCKS[mi + 1] ?? [{ id: `${id}-1`, title: "", detail: "", placeholder: true as const }],
     };
   }),
 };

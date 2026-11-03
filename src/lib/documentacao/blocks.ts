@@ -168,7 +168,7 @@ export const DOCS_BLOCKS: DocsBlock[] = [
     // ocupam uma linha do hub os três (pedido do André, v78.52).
     audience: { depts: ["SEO"] },
     audienceLabel: "SEO DPT",
-    updatedAt: "2026-10-29",
+    updatedAt: "2026-11-03",
     pages: [
       {
         id: "jornada-cliente",
