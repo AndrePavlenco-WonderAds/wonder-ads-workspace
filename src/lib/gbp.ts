@@ -6,10 +6,14 @@
 // the `business.manage` scope on the delegation + the three GBP APIs enabled +
 // GBP API access approved by Google (see the report module docs).
 //
-// Location resolution: the per-client `report-config.gbpLocationId` override
-// wins; otherwise we auto-discover by matching the client's website host
-// against each location's websiteUri. Any failure → status (the report falls
-// back to manual GBP input, never a fabricated number).
+// Location resolution: EVERY listing whose websiteUri host is the client's
+// website is the client's (v78.65 — before, only the first match was pulled,
+// so a 7-unit clinic reported one unit). The alphabetically-first one is the
+// main listing unless `report-config.gbpLocationId` pins another; the rest
+// come along as auto-discovered profiles, named after the unit. Listings with
+// another (or no) website are added by hand in `extraGbpProfiles`. Any
+// failure → status (the report falls back to manual GBP input, never a
+// fabricated number).
 
 import { kv } from "@vercel/kv";
 import { getGoogleAccessToken, googleAuthConfigured } from "./google-auth";
@@ -40,25 +44,32 @@ type GbpMetrics = {
   directions: MetricPair;
 };
 
-/** The client's main listing: auto-matched by website host, or pinned. */
+/** The client's main listing: auto-matched by website host, or pinned.
+ *  `label` is the unit's name (brand prefix stripped) and is only set when the
+ *  client has more than one listing — a single listing needs no name. */
 export type GbpMainReport =
   | { status: "not-configured" }
   | { status: "no-location" }
   | { status: "error"; message: string }
-  | ({ status: "ok"; locationName: string } & GbpMetrics);
+  | ({ status: "ok"; locationName: string; label?: string } & GbpMetrics);
 
-/** One of the client's EXTRA listings — a second unit, a second brand. Always
- *  explicitly configured (label + location id), so there is no "no-location"
- *  case: either it answers or it errors. */
+/** One of the client's OTHER listings — another unit, a second brand. Either
+ *  auto-discovered by website (id `L<locationId>`) or configured by hand
+ *  (label + location id). Never "no-location": it answers or it errors. */
 export type GbpExtraProfileReport =
   | { id: string; label: string; status: "error"; message: string }
   | ({ id: string; label: string; status: "ok"; locationName: string } & GbpMetrics);
 
 export type GbpMonthlyReport = {
   main: GbpMainReport;
-  /** Empty for the clients with a single listing (almost all of them). */
+  /** Empty for the clients with a single listing (most of them). */
   profiles: GbpExtraProfileReport[];
 };
+
+/** Runtime guard: each listing costs two Performance API calls per report,
+ *  fetched one listing at a time. 30 keeps a cold run under the generate
+ *  route's budget; the biggest client today has 17. */
+const MAX_AUTO_GBP_LOCATIONS = 30;
 
 /** fetch that retries on Google's rate-limit / transient errors (429/503).
  *  The Business Profile APIs have a low default per-project quota, so the
@@ -187,23 +198,123 @@ async function listAllLocations(
   return out;
 }
 
-async function resolveLocationName(
-  slug: string,
-  token: string,
-  override: string | null,
-): Promise<string | null> {
-  if (override) return toLocationName(override);
-  const host = CLIENT_WEBSITES[slug] ? hostOf(CLIENT_WEBSITES[slug]) : null;
-  if (!host) return null;
-  try {
-    const locations = await listAllLocations(token);
-    const match = locations.find(
-      (l) => l.websiteUri && hostOf(l.websiteUri) === host,
-    );
-    return match?.name ?? null;
-  } catch {
-    return null;
+const bareId = (name: string) => name.replace(/^locations\//, "").trim();
+
+/** Strip the brand prefix the client's listings share — "Physiohub Estoril",
+ *  "Physiohub Expo" → "Estoril", "Expo"; "Cidália Cabeleireiros - Alegro
+ *  Sintra" → "Alegro Sintra". The report lists every unit under a card that
+ *  already says whose listings they are, so repeating the brand 14 times only
+ *  buries the one word that differs. The prefix is cut at a word boundary
+ *  only, and a title that IS the bare prefix ("Cidália Cabeleireiros", the
+ *  flagship) keeps its full name. Exported for the config card. */
+export function gbpUnitLabels(titles: string[]): string[] {
+  const clean = titles.map((t) => t.trim() || "—");
+  if (clean.length < 2) return clean;
+  const SEP = /[\s\-–—·|:,/()]/;
+  let prefix = clean[0];
+  for (const t of clean.slice(1)) {
+    let i = 0;
+    while (i < prefix.length && i < t.length && prefix[i] === t[i]) i++;
+    prefix = prefix.slice(0, i);
+    if (!prefix) break;
   }
+  // "Physiohub E" (Expo + Estoril) is not a prefix anyone would read: unless
+  // every title ends or breaks right after it, back off to the last separator.
+  const onBoundary = clean.every(
+    (t) => t.length === prefix.length || SEP.test(t[prefix.length]),
+  );
+  if (!onBoundary) {
+    let cut = prefix.length;
+    while (cut > 0 && !SEP.test(prefix[cut - 1])) cut--;
+    prefix = prefix.slice(0, cut);
+  }
+  if (prefix.trim().length < 3) return clean;
+  return clean.map((t) => {
+    const rest = t.slice(prefix.length).replace(/^[\s\-–—·|:,/]+/, "").trim();
+    return rest || t;
+  });
+}
+
+/** The listings whose website is the client's, alphabetical by title so the
+ *  main one (first) is stable across cache refreshes — the API returns them
+ *  in no particular order. */
+function matchingLocations(list: GbpLocation[], host: string): GbpLocation[] {
+  return list
+    .filter((l) => l.websiteUri && hostOf(l.websiteUri) === host)
+    .sort(
+      (a, b) =>
+        (a.title ?? "").localeCompare(b.title ?? "", "pt", { sensitivity: "base" }) ||
+        a.name.localeCompare(b.name),
+    );
+}
+
+export type GbpDiscoveredLocation = { id: string; title: string; label: string };
+
+/** Which listings a report covers, from the location list: the main one
+ *  (pinned, else the first by website match) plus every other website match
+ *  that wasn't configured by hand. Pure, so the report build and the config
+ *  card agree on it. */
+function planLocations(
+  list: GbpLocation[],
+  host: string | null,
+  pinned: string | null,
+  manualIds: Set<string>,
+): {
+  main: (GbpDiscoveredLocation & { name: string; matched: boolean }) | null;
+  auto: (GbpDiscoveredLocation & { name: string })[];
+} {
+  const matches = host ? matchingLocations(list, host) : [];
+  const mainName = pinned ? toLocationName(pinned) : (matches[0]?.name ?? null);
+  if (!mainName) return { main: null, auto: [] };
+  const mainLoc = list.find((l) => l.name === mainName);
+  const autoLocs = matches
+    .filter((l) => l.name !== mainName && !manualIds.has(bareId(l.name)))
+    .slice(0, MAX_AUTO_GBP_LOCATIONS);
+  // Unit names are relative to each other: the shared brand prefix only
+  // exists across the whole set, main included.
+  const titled = [...(mainLoc ? [mainLoc] : []), ...autoLocs];
+  const labels = gbpUnitLabels(titled.map((l) => l.title ?? bareId(l.name)));
+  const labelOf = new Map(titled.map((l, i) => [l.name, labels[i]] as const));
+  return {
+    main: {
+      id: bareId(mainName),
+      name: mainName,
+      title: mainLoc?.title ?? bareId(mainName),
+      label: labelOf.get(mainName) ?? mainLoc?.title ?? bareId(mainName),
+      matched: Boolean(mainLoc),
+    },
+    auto: autoLocs.map((l) => ({
+      id: bareId(l.name),
+      name: l.name,
+      title: l.title ?? bareId(l.name),
+      label: labelOf.get(l.name) ?? l.title ?? bareId(l.name),
+    })),
+  };
+}
+
+/** The listings the report will cover for a client, from the CACHED location
+ *  list only — no API call, so the report page can show them on every render.
+ *  null when nothing is cached yet (generating a report fills the cache). */
+export async function discoverGbpLocationsForClient(
+  slug: string,
+  opts: { pinnedLocationId: string | null; manualLocationIds: string[] },
+): Promise<{ main: GbpDiscoveredLocation | null; auto: GbpDiscoveredLocation[] } | null> {
+  const host = CLIENT_WEBSITES[slug] ? hostOf(CLIENT_WEBSITES[slug]) : null;
+  const list =
+    cachedLocations && cachedLocations.expires > Date.now()
+      ? cachedLocations.list
+      : await readKvLocations();
+  if (!list) return null;
+  const plan = planLocations(
+    list,
+    host,
+    opts.pinnedLocationId,
+    new Set(opts.manualLocationIds.map(bareId)),
+  );
+  return {
+    main: plan.main ? { id: plan.main.id, title: plan.main.title, label: plan.main.label } : null,
+    auto: plan.auto.map(({ id, title, label }) => ({ id, title, label })),
+  };
 }
 
 /** Diagnostic: every location the service account can see, with the exact
@@ -335,9 +446,10 @@ async function fetchLocationMetrics(
 }
 
 /** GBP click metrics for a client over a calendar month vs. the prior month —
- *  the main listing plus any extra Business Profiles configured for a
- *  multi-unit client. Returns a status the report can fall back on (manual
- *  input) when GBP isn't set up yet — never a fabricated zero.
+ *  the main listing, every other listing that shares the client's website
+ *  (auto-discovered), plus any extra Business Profiles configured by hand.
+ *  Returns a status the report can fall back on (manual input) when GBP isn't
+ *  set up yet — never a fabricated zero.
  *
  *  Each profile fails on its own: one unit's listing erroring leaves the other
  *  units (and the main one) with real numbers. */
@@ -347,7 +459,9 @@ export async function getGbpMonthlyReport(
     current: { startDate: string; endDate: string };
     previous: { startDate: string; endDate: string };
     locationIdOverride?: string | null;
-    /** Extra listings beyond the main one — see report-config.extraGbpProfiles. */
+    /** Hand-configured listings beyond the main one — see
+     *  report-config.extraGbpProfiles. Listings sharing the client's website
+     *  need no configuring: they are discovered here. */
     extraProfiles?: { id: string; label: string; locationId: string }[];
   },
 ): Promise<GbpMonthlyReport> {
@@ -375,16 +489,39 @@ export async function getGbpMonthlyReport(
     };
   }
 
+  // Which listings are this client's. The location list is cache-first (KV,
+  // 7 days); only a cold cache touches the rate-limited listing APIs. If that
+  // fails, a pinned main still works on its own — nothing is auto-discovered,
+  // and the failure is reported as such rather than as "no listing found".
+  const pinned = opts.locationIdOverride ?? null;
+  const host = CLIENT_WEBSITES[slug] ? hostOf(CLIENT_WEBSITES[slug]) : null;
+  const manualIds = new Set(extras.map((e) => bareId(e.locationId)));
+  let plan: ReturnType<typeof planLocations>;
+  let listError: string | null = null;
+  try {
+    const list = host || pinned ? await listAllLocations(token) : [];
+    plan = planLocations(list, host, pinned, manualIds);
+  } catch (err) {
+    listError = err instanceof Error ? err.message : "GBP request failed";
+    plan = planLocations([], null, pinned, manualIds);
+  }
+  // One listing needs no unit name; with several, every block is named.
+  const multi = plan.auto.length + extras.length > 0;
+
   const main: GbpMainReport = await (async () => {
+    if (!plan.main) {
+      return listError
+        ? { status: "error" as const, message: listError }
+        : { status: "no-location" as const };
+    }
     try {
-      const locationName = await resolveLocationName(
-        slug,
-        token,
-        opts.locationIdOverride ?? null,
-      );
-      if (!locationName) return { status: "no-location" as const };
-      const metrics = await fetchLocationMetrics(token, locationName, opts);
-      return { status: "ok" as const, locationName, ...metrics };
+      const metrics = await fetchLocationMetrics(token, plan.main.name, opts);
+      return {
+        status: "ok" as const,
+        locationName: plan.main.name,
+        ...(multi && plan.main.matched ? { label: plan.main.label } : {}),
+        ...metrics,
+      };
     } catch (err) {
       return {
         status: "error" as const,
@@ -395,13 +532,17 @@ export async function getGbpMonthlyReport(
 
   // Sequential on purpose: the Business Profile APIs have a low per-project
   // quota and 429 under bursts. A handful of listings costs a few hundred ms
-  // more and is far likelier to actually return data.
+  // more and is far likelier to actually return data. Auto-discovered units
+  // first (they are the main listing's siblings), then the hand-configured.
+  const queue: { id: string; label: string; locationName: string }[] = [
+    ...plan.auto.map((l) => ({ id: `L${l.id}`, label: l.label, locationName: l.name })),
+    ...extras.map((p) => ({ id: p.id, label: p.label, locationName: toLocationName(p.locationId) })),
+  ];
   const profiles: GbpExtraProfileReport[] = [];
-  for (const p of extras) {
-    const locationName = toLocationName(p.locationId);
+  for (const p of queue) {
     try {
-      const metrics = await fetchLocationMetrics(token, locationName, opts);
-      profiles.push({ id: p.id, label: p.label, status: "ok", locationName, ...metrics });
+      const metrics = await fetchLocationMetrics(token, p.locationName, opts);
+      profiles.push({ id: p.id, label: p.label, status: "ok", locationName: p.locationName, ...metrics });
     } catch (err) {
       profiles.push({
         id: p.id,

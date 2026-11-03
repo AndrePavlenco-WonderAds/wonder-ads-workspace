@@ -8,17 +8,28 @@
 // rolling them into a single number hides which unit is actually being found,
 // which is exactly the thing the client wants to know.
 //
-// Each listing added here becomes its own block of three rows in the report
-// (and three more rows to fill by hand when the API is down), named after the
-// unit. The consolidated total on the card is the sum of all of them.
+// Since v78.65 every listing that shares the client's website is discovered
+// on its own (shown here read-only, from the cached Google list). The rows
+// below are only for units with another website, or none. Each listing, found
+// or added, is its own block of three rows in the report (and three more rows
+// to fill by hand when the API is down), named after the unit. The
+// consolidated total on the card is the sum of all of them.
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Check, MapPin, AlertCircle, Plus, X, Search } from "lucide-react";
 import { MAX_GBP_PROFILES, type GbpProfile } from "@/lib/report/report-types";
+import type { GbpDiscoveredLocation } from "@/lib/gbp";
 
 /** A listing while being edited. */
 type ProfileDraft = { id: string; label: string; locationId: string };
+
+/** What the server found by website, from the cached Google list. null =
+ *  nothing cached yet (no report generated and nobody searched). */
+export type GbpDiscovered = {
+  main: GbpDiscoveredLocation | null;
+  auto: GbpDiscoveredLocation[];
+} | null;
 
 /** Listings the service account can see, for the id picker. */
 type KnownLocation = {
@@ -40,11 +51,14 @@ export function ReportGbpProfiles({
   slug,
   gbpMainLabel,
   extraGbpProfiles,
+  discovered = null,
   bare = false,
 }: {
   slug: string;
   gbpMainLabel: string | null;
   extraGbpProfiles: GbpProfile[];
+  /** Fichas encontradas pelo website do cliente (v78.65). */
+  discovered?: GbpDiscovered;
   /** Sem cartão nem cabeçalho próprios — para viver dentro de um disclosure
    *  que já traz ambos (v77.1). */
   bare?: boolean;
@@ -166,9 +180,48 @@ export function ReportGbpProfiles({
         </div>
       )}
       <p className="mb-4 text-[12px] leading-relaxed text-white/45">
-        Cliente com várias localizações? Adiciona-as aqui e o relatório mostra
-        os números de cada uma.
+        Todas as fichas Google com o website do cliente entram sozinhas no
+        relatório, cada uma com os seus números. Só precisas de adicionar aqui
+        as que têm outro website — ou nenhum.
       </p>
+
+      {/* O que entra sozinho — da cache da lista Google, sem gastar quota. */}
+      {discovered === null ? (
+        <p className="mb-4 text-[12px] text-white/40">
+          Ainda não conheço as fichas deste cliente: gera o relatório uma vez,
+          ou carrega em «Procurar na Google» abaixo.
+        </p>
+      ) : discovered.main ? (
+        <div className="mb-4 rounded-xl border border-emerald-400/15 bg-emerald-500/[0.05] px-3.5 py-3">
+          <div className="mb-1.5 text-[12px] font-semibold text-emerald-200/85">
+            {discovered.auto.length === 0
+              ? "1 ficha encontrada pelo website"
+              : `${discovered.auto.length + 1} fichas encontradas pelo website`}
+          </div>
+          <ul className="flex flex-col gap-0.5">
+            {[discovered.main, ...discovered.auto].map((l, i) => (
+              <li
+                key={l.id}
+                className="flex flex-wrap items-baseline gap-x-2 text-[12px]"
+              >
+                <span className="text-white/80">{l.title}</span>
+                {i === 0 && discovered.auto.length > 0 && (
+                  <span className="text-[10.5px] uppercase tracking-wide text-emerald-300/70">
+                    principal
+                  </span>
+                )}
+                <code className="font-mono text-[11px] text-white/30">{l.id}</code>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : (
+        <p className="mb-4 inline-flex items-center gap-1.5 text-[12px] text-amber-300/90">
+          <AlertCircle className="h-3.5 w-3.5" />
+          Nenhuma ficha Google tem o website deste cliente — confirma o website
+          na ficha ou fixa o Location ID.
+        </p>
+      )}
 
       {/* Nome da ficha principal — só faz sentido havendo mais do que uma. */}
       <label className="flex flex-wrap items-center gap-2.5">
@@ -179,16 +232,25 @@ export function ReportGbpProfiles({
           type="text"
           value={mainLabel}
           onChange={(e) => setMainLabel(e.target.value)}
-          placeholder="ex.: Clínica Cascais"
+          placeholder={
+            discovered?.main && discovered.auto.length > 0
+              ? `ex.: ${discovered.main.label}`
+              : "ex.: Clínica Cascais"
+          }
           maxLength={60}
           className={nameCls}
         />
       </label>
+      {discovered?.main && discovered.auto.length > 0 && (
+        <p className="mt-1.5 pl-[10.75rem] text-[11.5px] text-white/35">
+          Vazio = «{discovered.main.label}», o nome da unidade na Google.
+        </p>
+      )}
 
       <div className="mt-5 border-t border-white/8 pt-4">
         <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
           <div className="text-[12.5px] font-semibold text-white/70">
-            Localizações adicionais
+            Localizações com outro website (ou sem website)
           </div>
           <button
             type="button"

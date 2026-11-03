@@ -39,6 +39,7 @@ import {
   type CurationRow,
 } from "@/components/report/report-keywords-curation";
 import { getReportConfig } from "@/lib/report/report-config-store";
+import { discoverGbpLocationsForClient } from "@/lib/gbp";
 import {
   ReportKeywordTracking,
   type TrackingLinks,
@@ -382,9 +383,17 @@ export default async function ReportPage({
   ]
     .slice(0, 3)
     .join(", ");
+  // As fichas que partilham o website do cliente entram sozinhas (v78.65);
+  // só da cache de localizações, sem tocar na API da Google.
+  const gbpDiscovered = await discoverGbpLocationsForClient(slug, {
+    pinnedLocationId: reportConfig.gbpLocationId,
+    manualLocationIds: reportConfig.extraGbpProfiles.map((p) => p.locationId),
+  }).catch(() => null);
+  const gbpAutoCount = gbpDiscovered?.auto.length ?? 0;
+  const gbpTotal = 1 + gbpAutoCount + reportConfig.extraGbpProfiles.length;
   const gbpSummary =
-    reportConfig.extraGbpProfiles.length > 0
-      ? `${reportConfig.extraGbpProfiles.length + 1} localizações`
+    gbpTotal > 1
+      ? `${gbpTotal} localizações${gbpAutoCount > 0 ? ` (${gbpAutoCount + 1} pelo site)` : ""}`
       : "1 localização (auto)";
   const csvMonthCount = Object.keys(reportConfig.shopifyCsvMonths ?? {}).length;
   const shopifySummary = reportConfig.shopifyAccessToken
@@ -680,6 +689,7 @@ export default async function ReportPage({
                   slug={slug}
                   gbpMainLabel={reportConfig.gbpMainLabel}
                   extraGbpProfiles={reportConfig.extraGbpProfiles}
+                  discovered={gbpDiscovered}
                   bare
                 />
               </ConfigDisclosure>

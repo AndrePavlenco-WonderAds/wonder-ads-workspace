@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.65",
+    date: "2026-11-03",
+    title: "Relatório mensal: todas as fichas Google do cliente entram sozinhas",
+    highlights: [
+      "**📍 Todas as fichas, não só a primeira**: o relatório encontrava a ficha Google pelo website do cliente e ficava-se pela primeira que aparecia — a Physiohub tem 7 unidades e saía 1; a Cidália tem 14. Agora entram todas as fichas com o website do cliente, cada uma com os seus cliques, direções e chamadas, e o total é a soma de todas. Regenera o relatório para as puxar.",
+      "**🏷️ Cada unidade com o seu nome**: «Almada», «Estoril», «Alegro Sintra» — o nome da ficha na Google sem repetir a marca. A «Localização principal» na configuração continua a mandar, se a preencheres.",
+      "**🧭 A configuração mostra o que entra sozinho**: a lista das fichas encontradas pelo website, com a principal assinalada. As «Localizações adicionais» passam a servir só para fichas com outro website, ou sem website.",
+      "**📊 Gráfico de leads legível**: com mais de 3 fichas, o gráfico mostra os três totais da Ficha Google e a repartição por unidade fica no cartão GBP — em vez de 42 linhas.",
+      "**⚠️ Erro em vez de «ficha por ligar»**: quando a lista de fichas da Google falha (quota), o relatório diz isso, em vez de fingir que o cliente não tem ficha.",
+    ],
+  },
+  {
     version: "78.64",
     date: "2026-11-02",
     title: "Exames de fase: as perguntas deixam de se repetir",

@@ -1131,9 +1131,14 @@ export async function buildMonthlyReport(
   // in Cascais and another in Lisboa) has one listing per unit: each is its own
   // block, named after the unit, so the report says which unit is being found
   // instead of hiding both inside one number.
-  const hasExtraProfiles = config.extraGbpProfiles.length > 0;
+  // Several listings → every block is named, the main one included: the name
+  // the consultant gave it, else the unit's own name from Google (v78.65:
+  // auto-discovered siblings), else "Ficha principal".
+  const hasExtraProfiles =
+    config.extraGbpProfiles.length > 0 || gbpRes.profiles.length > 0;
   const mainLabel = hasExtraProfiles
     ? (config.gbpMainLabel ??
+      (gbpMain.status === "ok" ? gbpMain.label : undefined) ??
       (lang === "pt" ? GBP_MAIN_LABEL_PT : GBP_MAIN_LABEL_EN))
     : null;
   const gbpProfileBlocks: GbpProfileMetrics[] = [];

@@ -370,12 +370,24 @@ export function ReportDocument({
   const hasGbpChannels = snapshot.leads.channels.some((c) =>
     isGbpChannelKey(c.key),
   );
-  const visibleChannels = snapshot.leads.channels.filter(
-    (c) =>
-      variant === "internal" ||
-      (c.metric.value !== null && c.metric.value > 0) ||
-      c.metric.manualNa,
-  );
+  const isVisibleChannel = (c: { metric: ReportMetric }) =>
+    variant === "internal" ||
+    (c.metric.value !== null && c.metric.value > 0) ||
+    c.metric.manualNa;
+  // Um cliente com muitas fichas (a Cidália tem 14) punha 42 linhas de Ficha
+  // Google neste gráfico. A partir de 4 fichas, o gráfico mostra os três
+  // totais da Ficha Google e a repartição por unidade fica no cartão GBP.
+  const manyListings = (snapshot.gbp.profiles?.length ?? 0) > 3;
+  const visibleChannels = (
+    manyListings
+      ? [
+          ...snapshot.leads.channels.filter((c) => !isGbpChannelKey(c.key)),
+          { key: "gbpWebsite" as const, label: t("Ficha Google · cliques p/ website", "Google listing · website clicks"), metric: snapshot.gbp.websiteClicks },
+          { key: "gbpDirections" as const, label: t("Ficha Google · pedidos de direções", "Google listing · direction requests"), metric: snapshot.gbp.directions },
+          { key: "gbpCall" as const, label: t("Ficha Google · cliques p/ ligar", "Google listing · call clicks"), metric: snapshot.gbp.callClicks },
+        ]
+      : snapshot.leads.channels
+  ).filter(isVisibleChannel);
   const maxChannel = Math.max(
     1,
     ...visibleChannels.map((c) => c.metric.value ?? 0),

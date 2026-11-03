@@ -62,10 +62,13 @@ export type CustomLeadEvent = {
  *  letting the GA4 event filter grow unbounded. */
 export const MAX_CUSTOM_LEAD_EVENTS = 8;
 
-/** An additional Google Business Profile beyond the client's main listing.
- *  Multi-unit clients (a clinic with a practice in Cascais and another in
- *  Lisboa) have one listing per unit; each is pulled separately so the report
- *  can show which unit is actually being found.
+/** An additional Google Business Profile beyond the client's main listing,
+ *  CONFIGURED BY HAND. Multi-unit clients (a clinic with a practice in Cascais
+ *  and another in Lisboa) have one listing per unit; each is pulled separately
+ *  so the report can show which unit is actually being found. Since v78.65
+ *  the listings that share the client's website are discovered on their own
+ *  (profile id `L<locationId>`), so this is only for units with another, or
+ *  no, website.
  *
  *  `id` is stable and independent of the label, so renaming a unit never
  *  re-points a manually filled value — the channel keys are
@@ -77,8 +80,9 @@ export type GbpProfile = {
   locationId: string;
 };
 
-/** Cap on extra Business Profiles per client. Each one costs two more
- *  Performance API calls per report, on an API with a low quota. */
+/** Cap on HAND-CONFIGURED extra Business Profiles per client. Each one costs
+ *  two more Performance API calls per report, on an API with a low quota.
+ *  Auto-discovered listings have their own, higher guard in gbp.ts. */
 export const MAX_GBP_PROFILES = 8;
 
 /** The client's main listing — the one auto-matched from the website, or
