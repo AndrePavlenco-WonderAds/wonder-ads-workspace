@@ -183,7 +183,10 @@ export type TrainingUser = {
 /** O roster inteiro com as especializações de cada um resolvidas — a base da
  *  tabela de consultores do Superadmin. */
 export function rosterWithTracks(enrollments: EnrollmentMap): TrainingUser[] {
-  return EMPLOYEE_CREDENTIALS.map((c: EmployeeCredential) => {
+  // Perfis só de leitura (`viewerOf`) não fazem formação: o middleware nem os
+  // deixa abrir /formacao. Listá-los punha seis linhas a 0% na tabela do
+  // Superadmin e a puxar a média para baixo (v78.66).
+  return EMPLOYEE_CREDENTIALS.filter((c) => !c.viewerOf).map((c: EmployeeCredential) => {
     const override = enrollments[c.username];
     const derived = defaultTrackForDept(c.dept);
     return {
