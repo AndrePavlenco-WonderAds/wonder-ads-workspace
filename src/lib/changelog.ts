@@ -15,10 +15,10 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     version: "78.66",
     date: "2026-11-03",
-    title: "Menu: «Ineficácias» · cinco perfis SEO Specialty",
+    title: "Menu: «Ineficácias» · equipa Comercial com leitura do SEO DPT",
     highlights: [
       "**✍️ No menu do nome, «Registar Ineficácia» passou a «Ineficácias»** — a página serve para registar e para consultar o painel.",
-      "**👀 Cinco novos perfis SEO Specialty** (só leitura do SEO DPT: fichas de clientes, relatórios mensais, roadmaps), sem acesso a cofres de credenciais nem a qualquer edição. Os perfis só de leitura deixam de aparecer na tabela de inscrições da Formação.",
+      "**👀 Cinco acessos da equipa Comercial com leitura do SEO DPT** (fichas de clientes, relatórios mensais, roadmaps), sem acesso a cofres de credenciais nem a qualquer edição. Os perfis só de leitura deixam de aparecer na tabela de inscrições da Formação.",
     ],
   },
   {

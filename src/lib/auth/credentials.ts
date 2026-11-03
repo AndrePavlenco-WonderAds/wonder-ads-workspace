@@ -284,16 +284,18 @@ export const EMPLOYEE_CREDENTIALS: EmployeeCredential[] = [
     salt: "3ff0fac950513054fc4d32a0d2bb0d85",
     hash: "b6b56cb6154be0f09e467b680807658f21aa3c48ac94c8762f1194ef8e5433cc417fc4d42e014f95c9f1175b273960ba7ff146bb472848be03ec53fce1390106",
   },
-  // SEO Specialty (v78.66, 2026-11-03) — cinco perfis só de leitura do SEO
-  // DPT: fichas de clientes, relatórios mensais, roadmaps. Passwords geradas
-  // fora do repo e entregues ao André; não são consultores (fora das
-  // atribuições, propostas e formação).
+  // Equipa Comercial com leitura do SEO DPT (v78.66, 2026-11-03) — cinco
+  // pessoas de cargo Comercial que só precisam de CONSULTAR o SEO: fichas de
+  // clientes, relatórios mensais, roadmaps. `viewerOf: "seo"` fecha tudo o
+  // resto (escritas, cofres, outros departamentos); `dept`/`role` são só o
+  // rótulo do chip. Passwords geradas fora do repo e entregues ao André; não
+  // são consultores (fora das atribuições, propostas e formação).
   {
     username: "joao-co",
     name: "João Co",
     fullName: "João Co",
-    role: VIEWER_ROLES.seo,
-    dept: "SEO",
+    role: "Comercial",
+    dept: "Commercial",
     viewerOf: "seo",
     assignable: false,
     startedAt: "2026-11-03",
@@ -304,8 +306,8 @@ export const EMPLOYEE_CREDENTIALS: EmployeeCredential[] = [
     username: "paula",
     name: "Paula",
     fullName: "Paula",
-    role: VIEWER_ROLES.seo,
-    dept: "SEO",
+    role: "Comercial",
+    dept: "Commercial",
     viewerOf: "seo",
     assignable: false,
     startedAt: "2026-11-03",
@@ -316,8 +318,8 @@ export const EMPLOYEE_CREDENTIALS: EmployeeCredential[] = [
     username: "guilherme",
     name: "Guilherme",
     fullName: "Guilherme",
-    role: VIEWER_ROLES.seo,
-    dept: "SEO",
+    role: "Comercial",
+    dept: "Commercial",
     viewerOf: "seo",
     assignable: false,
     startedAt: "2026-11-03",
@@ -328,8 +330,8 @@ export const EMPLOYEE_CREDENTIALS: EmployeeCredential[] = [
     username: "daniel",
     name: "Daniel",
     fullName: "Daniel",
-    role: VIEWER_ROLES.seo,
-    dept: "SEO",
+    role: "Comercial",
+    dept: "Commercial",
     viewerOf: "seo",
     assignable: false,
     startedAt: "2026-11-03",
@@ -340,8 +342,8 @@ export const EMPLOYEE_CREDENTIALS: EmployeeCredential[] = [
     username: "vasco-m",
     name: "Vasco Montez",
     fullName: "Vasco Montez",
-    role: VIEWER_ROLES.seo,
-    dept: "SEO",
+    role: "Comercial",
+    dept: "Commercial",
     viewerOf: "seo",
     assignable: false,
     startedAt: "2026-11-03",
