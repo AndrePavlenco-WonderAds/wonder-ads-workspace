@@ -531,6 +531,20 @@ export function UserChipMenu({
                     onPick={close}
                   />
                 )}
+                {/* Ineficácias — Painel (v78.71) — atalho direto para o
+                    painel: nível, PA, NO e o histórico dos relatórios. */}
+                {ineficacias && (
+                  <MenuLink
+                    href="/ineficacias/painel"
+                    icon={Gauge}
+                    label="Ineficácias — Painel"
+                    hint="O teu nível, PA, NO e histórico"
+                    badge={ineficacias.construction ? "em construção" : undefined}
+                    badgeTone="amber"
+                    index={5}
+                    onPick={close}
+                  />
+                )}
                 {/* Pedir Ausência — a folha de RH e o histórico dos próprios
                     pedidos vivem em /ausencias. */}
                 <MenuLink href="/ausencias" icon={CalendarOff} label="Pedir Ausência" hint="Férias, consultas e outras ausências" index={5} onPick={close} />

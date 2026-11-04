@@ -1,6 +1,7 @@
 // «O meu painel» das Ineficácias (v77.91) — o lugar do consultor na escala:
 // o nível, o PA e o NO desde a última subida de nível e as ocorrências que contam
-// agora. Saiu do topo da página do relatório (o André pediu o formulário
+// agora — e, desde a v78.71, o histórico dos relatórios e das ocorrências da
+// direção (o mesmo de /ineficacias). Saiu do topo da página do relatório (o André pediu o formulário
 // primeiro) e abre-se pelo botão «O meu painel».
 //
 // Os mesmos portões da página do relatório: só o próprio índice, a direção
@@ -15,6 +16,7 @@ import { PageShell } from "@/components/page-shell";
 import { UnderConstruction } from "@/components/ineficacias/under-construction";
 import { LevelGauge } from "@/components/ineficacias/level-gauge";
 import { ScoreBadge } from "@/components/ineficacias/report-view";
+import { IneficaciasHistory } from "@/components/ineficacias/history-sections";
 import { getCurrentEmployee, getImpersonation, isRealUserAdmin } from "@/lib/auth/server";
 import { ineficaciasAvailable } from "@/lib/ineficacias/access";
 import { loadConsultantForSelf } from "@/lib/ineficacias/store";
@@ -45,7 +47,7 @@ export default async function IneficaciasPainelPage() {
   }
 
   const today = todayLisbonISO();
-  const { state } = await loadConsultantForSelf(me.username, today);
+  const { state, reports, ledger } = await loadConsultantForSelf(me.username, today);
 
   return (
     <PageShell backHref="/ineficacias" backLabel="Team Inefficiency">
@@ -102,6 +104,10 @@ export default async function IneficaciasPainelPage() {
           </ul>
         )}
       </section>
+
+      {/* O histórico completo (v78.71) — os relatórios assinados e as
+          ocorrências da direção, os mesmos de /ineficacias. */}
+      <IneficaciasHistory reports={reports} direct={ledger.direct} />
     </PageShell>
   );
 }

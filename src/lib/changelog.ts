@@ -13,6 +13,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.71",
+    date: "2026-11-04",
+    title: "Ineficácias: o histórico também no painel",
+    highlights: [
+      "**📋 «O meu painel» mostra agora o histórico completo**: por baixo do nível, do PA e do NO aparecem «Os meus relatórios» (cada relatório assinado, com a pontuação e a nota da direção) e as ocorrências registadas pela direção. São os mesmos de /ineficacias, que continua a mostrá-los por baixo do formulário.",
+      "**🧭 Novo atalho no menu do nome**: «Ineficácias — Painel», logo abaixo de «Ineficácias», abre o painel diretamente.",
+    ],
+  },
+  {
     version: "78.70",
     date: "2026-11-04",
     title: "Excesso de notificações nos consultores de SEO",
