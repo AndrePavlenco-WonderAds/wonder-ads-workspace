@@ -26,6 +26,7 @@ import {
   LayoutDashboard,
   ListChecks,
   Loader2,
+  LockKeyhole,
   LogOut,
   Medal,
   MessageCircle,
@@ -181,6 +182,7 @@ export function UserChipMenu({
   ineficacias = null,
   docs = null,
   producer = null,
+  accessConsole = false,
   people = [],
 }: {
   name: string;
@@ -224,6 +226,8 @@ export function UserChipMenu({
   docs?: DocsMenuView | null;
   /** O pódio do Producer of the Month, por baixo da sessão; null esconde. */
   producer?: ProducerMenuView | null;
+  /** «Acessos à app» (v78.72) — só o André, sem lente. */
+  accessConsole?: boolean;
   people?: ImpersonationTarget[];
 }) {
   const router = useRouter();
@@ -641,6 +645,12 @@ export function UserChipMenu({
                 )}
                 {isAdmin && (
                   <MenuLink href="/minigames" icon={Gamepad2} label="Mini-games" hint="Jogos de equipa ao vivo" tone="amber" index={13} onPick={close} />
+                )}
+                {/* Acessos à app (v78.72) — só o COO: quem entra na app,
+                    copiar, regenerar e cancelar. A página e a API voltam a
+                    verificar quem fez login. */}
+                {isAdmin && accessConsole && (
+                  <MenuLink href="/admin/acessos" icon={LockKeyhole} label="Acessos à app" hint="Ativos e passados · copiar, regenerar, cancelar" tone="amber" index={14} onPick={close} />
                 )}
               </MenuSection>
             )}

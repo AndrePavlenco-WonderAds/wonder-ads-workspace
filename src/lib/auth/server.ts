@@ -36,10 +36,24 @@ import {
   type DeptSlug,
   type EmployeeCredential,
 } from "./credentials";
+import { readAccessGate } from "@/lib/access/gate";
+import { isSessionBlocked } from "@/lib/access/shared";
+
+/** readSession + o portão dos acessos (v78.72): uma sessão de alguém com o
+ *  acesso cancelado, ou emitida antes de um «terminar sessões», não vale.
+ *  O middleware faz o mesmo à frente das rotas internas; isto cobre as
+ *  páginas e rotas que ele não apanha. */
+export async function readLiveSession(
+  cookieValue: string | undefined | null,
+): Promise<SessionPayload | null> {
+  const session = await readSession(cookieValue);
+  if (!session) return null;
+  return isSessionBlocked(session, await readAccessGate()) ? null : session;
+}
 
 export async function getCurrentSession(): Promise<SessionPayload | null> {
   const store = await cookies();
-  return readSession(store.get(SESSION_COOKIE)?.value);
+  return readLiveSession(store.get(SESSION_COOKIE)?.value);
 }
 
 type EmployeeView = Pick<

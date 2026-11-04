@@ -16,8 +16,9 @@ import {
   SESSION_COOKIE,
   SESSION_MAX_AGE_MS,
   effectiveUsername,
-  readSession,
 } from "@/lib/auth/session";
+import { readLiveSession } from "@/lib/auth/server";
+import { ACCESS_OWNER } from "@/lib/access/shared";
 import {
   canEditDept,
   getEmployeeDisplay,
@@ -42,7 +43,7 @@ import { UserChipMenu, type DailyNumberView, type ProducerMenuView } from "./use
 export async function UserChip() {
   const cookieStore = await cookies();
   const cookieValue = cookieStore.get(SESSION_COOKIE)?.value;
-  const session = await readSession(cookieValue);
+  const session = await readLiveSession(cookieValue);
   if (!session) return null;
   const viewingUsername = effectiveUsername(session);
   const display = viewingUsername ? getEmployeeDisplay(viewingUsername) : null;
@@ -137,6 +138,9 @@ export async function UserChip() {
       // construção só o André e o Alex entram, e continuam a vê-la quando
       // estão na pele de outra pessoa.
       docs={docsAvailable(session.u) ? { construction: !DOCS_OPEN_TO_TEAM } : null}
+      // Acessos à app (v78.72) — só o André (COO), com quem FEZ LOGIN e
+      // sem lente: a ver como outra pessoa o /admin fecha-se na mesma.
+      accessConsole={session.u === ACCESS_OWNER && !session.as}
       producer={producer}
       people={
         realIsAdmin

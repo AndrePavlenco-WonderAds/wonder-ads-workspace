@@ -16,6 +16,16 @@ export function scryptHash(plain: string, saltHex: string): string {
   return scryptSync(plain, saltHex, KEY_LENGTH).toString("hex");
 }
 
+/** Constant-time check of a plain password against a salt + scrypt hash.
+ *  Shared by the code table below and the access vault (v78.72), whose
+ *  regenerated passwords win over the row in credentials.ts. */
+export function matchesHash(plain: string, saltHex: string, hashHex: string): boolean {
+  const expected = Buffer.from(hashHex, "hex");
+  const got = scryptSync(plain, saltHex, KEY_LENGTH);
+  if (expected.length !== got.length) return false;
+  return timingSafeEqual(expected, got);
+}
+
 /** Verify the username + password against the credential table.
  *  Returns the canonical username (post-normalisation) on success,
  *  null on failure. We always run the scrypt computation even on an

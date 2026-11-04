@@ -7,8 +7,9 @@
 // only ever VERIFIES the cookie (HMAC via WebCrypto), it never has to
 // hash a password.
 
-import { NextResponse } from "next/server";
-import { verifyEmployeeLogin } from "@/lib/auth/password";
+import { after, NextResponse } from "next/server";
+import { verifyLoginLive } from "@/lib/access/login";
+import { recordLogin } from "@/lib/access/store";
 import {
   SESSION_COOKIE,
   SESSION_MAX_AGE_SECONDS,
@@ -38,7 +39,16 @@ export async function POST(req: Request) {
       { status: 400 },
     );
   }
-  const verifiedUsername = verifyEmployeeLogin(username, password);
+  // v78.72: a password do cofre (regenerada em /admin/acessos) ganha à do
+  // código, e um acesso cancelado não entra — ver lib/access/login.ts.
+  const check = await verifyLoginLive(username, password);
+  if (!check.ok && check.reason === "revoked") {
+    return NextResponse.json(
+      { error: "Este acesso foi cancelado. Fala com a direção." },
+      { status: 403 },
+    );
+  }
+  const verifiedUsername = check.ok ? check.username : null;
   if (!verifiedUsername) {
     // Same response for unknown user + wrong password so the gate
     // doesn't help an attacker enumerate accounts.
@@ -48,6 +58,8 @@ export async function POST(req: Request) {
     );
   }
   const { cookieValue, payload } = await issueSession(verifiedUsername);
+  // «Último login» na consola de acessos — depois da resposta, nunca a atrasa.
+  after(() => recordLogin(verifiedUsername));
   const res = NextResponse.json({
     ok: true,
     username: verifiedUsername,

@@ -19,6 +19,8 @@ import {
   isImpersonating,
   readSession,
 } from "@/lib/auth/session";
+import { readAccessGate } from "@/lib/access/gate";
+import { isSessionBlocked } from "@/lib/access/shared";
 import {
   canEditDept,
   viewerDeptOf,
@@ -176,7 +178,11 @@ function viewerGate(req: NextRequest, dept: DeptSlug): NextResponse | null {
 
 export async function middleware(req: NextRequest) {
   const cookie = req.cookies.get(SESSION_COOKIE)?.value;
-  const session = await readSession(cookie);
+  let session = await readSession(cookie);
+  // Acessos (v78.72): acesso cancelado, ou sessão de antes de um «terminar
+  // sessões» → como se não houvesse sessão (volta ao login, cookie limpo).
+  // O portão vive em memória 30 s por instância e falha aberto.
+  if (session && isSessionBlocked(session, await readAccessGate())) session = null;
   const internal = isInternalPath(req.nextUrl.pathname);
   if (session) {
     const viewerDept = viewerDeptOf(effectiveUsername(session));

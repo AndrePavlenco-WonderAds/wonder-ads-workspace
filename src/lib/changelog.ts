@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.72",
+    date: "2026-11-04",
+    title: "Acessos à app: a consola do COO",
+    highlights: [
+      "**🔐 Nova página «Acessos à app»** no menu do nome (SuperAdmin, logo abaixo de Mini-games). Só o André a vê e abre: os outros SuperAdmins recebem 404, e com o «Ver como» ativo também fica fechada.",
+      "**👥 Todos os acessos, ativos e passados**: cada pessoa com o cargo, o último login, se a password está no cofre e se o acesso foi cancelado. Tem filtros Ativos / Passados / Todos, pesquisa (atalho «/») e o histórico de cada alteração.",
+      "**📋 Copiar acesso**: um cartão com o endereço, o utilizador e a password (escondida, com o olho para a ver), mais a mensagem pronta a enviar. As passwords antigas só existem como hash e ninguém as consegue ler: o cartão oferece logo gerar uma nova.",
+      "**🔄 Regenerar**: cria uma password nova, que passa a valer em vez da antiga. Fica no cofre, cifrada, para a poderes copiar outra vez quando quiseres. Também pode terminar as sessões abertas da pessoa.",
+      "**⛔ Cancelar / Reativar**: quem tem o acesso cancelado já não entra (no login aparece «Este acesso foi cancelado») e as sessões abertas caem em até 30 segundos. Nada do que a pessoa fez é apagado, e podes reativar o acesso quando quiseres.",
+    ],
+  },
+  {
     version: "78.71",
     date: "2026-11-04",
     title: "Ineficácias: o histórico também no painel",
