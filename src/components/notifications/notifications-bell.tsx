@@ -16,6 +16,8 @@ import {
   getTeamNotificationSummary,
   getUserNotifications,
 } from "@/lib/notifications/server";
+import { overloadAppliesTo, type OverloadState } from "@/lib/notifications/overload";
+import { resolveOverload } from "@/lib/notifications/overload-store";
 import { NotificationsDrawer } from "./notifications-drawer";
 
 export async function NotificationsBell() {
@@ -44,11 +46,26 @@ export async function NotificationsBell() {
   // lista infinita.
   const notifications = own.length > 200 ? own.slice(0, 200) : own;
 
+  // Excesso de notificações (v78.70): aos 7 em aberto avisa, aos 10 o aviso
+  // volta em cada página até a pessoa descer abaixo de 5. Conta o MESMO que
+  // o número do sino dela — o aviso não pode dizer um número que ela não vê.
+  let overload: OverloadState | null = null;
+  if (overloadAppliesTo(employee)) {
+    const pendingCount = own.filter((n) => !n.resolved).length;
+    overload = await resolveOverload(employee.username, pendingCount).catch(
+      (err) => {
+        console.error("Notificações: nível de excesso falhou:", err);
+        return null;
+      },
+    );
+  }
+
   return (
     <NotificationsDrawer
       initial={notifications}
       team={team}
       viewerUsername={employee.username}
+      overload={overload}
     />
   );
 }

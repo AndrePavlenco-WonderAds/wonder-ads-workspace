@@ -104,6 +104,8 @@ import {
   type NotificationOccurrence,
   type NotificationRule,
 } from "@/lib/notifications/rules";
+import { overloadAppliesTo, type OverloadState } from "@/lib/notifications/overload";
+import { getOverloadMany } from "@/lib/notifications/overload-store";
 
 export type UserNotification = {
   id: string;
@@ -1697,6 +1699,10 @@ export type TeamNotificationRow = {
   }[];
   /** Verdadeiro quando há mais do que os que vão em `items`. */
   truncated: number;
+  /** Excesso de notificações (v78.70): o nível em que a pessoa ficou na
+   *  última página que abriu, contado no sino DELA (que junta mais coisas do
+   *  que estas regras). null para quem não está em aviso nem em excesso. */
+  load: (OverloadState & { updatedAt: number }) | null;
 };
 
 export type TeamNotificationSummary = {
@@ -1803,7 +1809,18 @@ export async function getTeamNotificationSummary(
         icon: n.client?.icon ?? null,
       })),
       truncated: Math.max(0, pending.length - TEAM_ITEMS_PER_PERSON),
+      load: null,
     });
+  }
+
+  // O nível de excesso de cada consultor de SEO — UM `mget`, só para quem
+  // aparece no painel.
+  const loads = await getOverloadMany(
+    rows.filter((r) => overloadAppliesTo(r)).map((r) => r.username),
+  );
+  for (const r of rows) {
+    const l = loads[r.username];
+    r.load = l && l.level !== "ok" ? l : null;
   }
 
   // Quem tem mais por resolver à cabeça; entre iguais, o atraso mais antigo.

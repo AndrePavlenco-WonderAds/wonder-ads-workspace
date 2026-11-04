@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.70",
+    date: "2026-11-04",
+    title: "Excesso de notificações nos consultores de SEO",
+    highlights: [
+      "**🔔 Aos 7 notificações por resolver, aviso no meio do ecrã**: diz quantas faltam para o excesso. Aparece uma vez por dia e outra vez sempre que o número sobe.",
+      "**🚨 Aos 10, a app entra em excesso**: o aviso volta em cada página nova que o consultor abre. Não bloqueia, mas o «Continuar» só acorda ao fim de 3 segundos. O excesso só acaba quando ficar com menos de 5.",
+      "**✅ «Resolver agora»** abre logo o sino. Lá dentro, uma faixa diz quantas faltam e muda a cada «Concluído». Quem vai para uma página pelo botão de uma notificação não leva o aviso nessa página.",
+      "**👀 No separador «Equipa» do sino**, cada consultor em aviso ou em excesso tem uma etiqueta ao lado do nome.",
+    ],
+  },
+  {
     version: "78.69",
     date: "2026-11-04",
     title: "Origem dos pacientes: novo design, com a marca da MyMedic",

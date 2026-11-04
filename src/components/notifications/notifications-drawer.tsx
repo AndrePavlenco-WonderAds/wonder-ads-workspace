@@ -51,6 +51,12 @@ import {
   X,
 } from "lucide-react";
 import { formatDate } from "@/lib/dates";
+import type { OverloadState } from "@/lib/notifications/overload";
+import {
+  OverloadBanner,
+  OverloadPrompt,
+  skipOverloadPromptFor,
+} from "./overload-prompt";
 
 export type DrawerNotification = {
   id: string;
@@ -83,6 +89,8 @@ export type TeamRow = {
     icon: string | null;
   }[];
   truncated: number;
+  /** Excesso de notificações (v78.70) — ver `lib/notifications/overload.ts`. */
+  load: (OverloadState & { updatedAt: number }) | null;
 };
 
 export type TeamSummary = {
@@ -185,11 +193,14 @@ export function NotificationsDrawer({
   initial,
   team = null,
   viewerUsername,
+  overload = null,
 }: {
   initial: DrawerNotification[];
   /** Só chega preenchido a quem tem `isAdmin`. */
   team?: TeamSummary | null;
   viewerUsername?: string;
+  /** Só chega aos consultores de SEO (v78.70). */
+  overload?: OverloadState | null;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -454,6 +465,10 @@ export function NotificationsDrawer({
               </div>
             )}
 
+            {overload && tab === "mine" && (
+              <OverloadBanner serverLevel={overload.level} liveCount={count} />
+            )}
+
             {error && (
               <p className="border-b border-rose-400/20 bg-rose-500/[0.08] px-5 py-2.5 text-[12px] text-rose-200">
                 {error}
@@ -563,6 +578,17 @@ export function NotificationsDrawer({
         </div>,
           document.body,
         )}
+
+      {overload && overload.level !== "ok" && viewerUsername && (
+        <OverloadPrompt
+          state={overload}
+          username={viewerUsername}
+          onResolve={() => {
+            setTab("mine");
+            setOpen(true);
+          }}
+        />
+      )}
     </>
   );
 }
@@ -763,6 +789,7 @@ function TeamPersonRow({
             {row.oldestDueAt ? ` · desde ${formatDate(row.oldestDueAt)}` : ""}
           </span>
         </span>
+        {row.load && <LoadChip load={row.load} />}
         <span className="tabular shrink-0 rounded-full bg-sky-500/20 px-2 py-0.5 text-[11px] font-bold text-sky-200">
           {row.pending}
         </span>
@@ -841,6 +868,27 @@ function TeamPersonRow({
         </div>
       </div>
     </details>
+  );
+}
+
+/** Quem está em aviso ou em excesso (v78.70). O número do chip é o do sino
+ *  DELE, que junta mais coisas do que as regras contadas nesta linha — por
+ *  isso pode não bater com o número azul ao lado. */
+function LoadChip({ load }: { load: NonNullable<TeamRow["load"]> }) {
+  const excess = load.level === "excess";
+  return (
+    <span
+      title={`${excess ? "Em excesso" : "Perto do limite"}: ${load.count} por resolver no sino dele${
+        load.since ? `, desde ${formatDate(load.since)}` : ""
+      }. Atualiza quando ele abre uma página.`}
+      className={`shrink-0 rounded-full border px-2 py-0.5 text-[10.5px] font-semibold ${
+        excess
+          ? "border-rose-400/40 bg-rose-500/[0.14] text-rose-200"
+          : "border-amber-300/35 bg-amber-400/[0.1] text-amber-200"
+      }`}
+    >
+      {excess ? "Em excesso" : "Aviso"}
+    </span>
   );
 }
 
@@ -970,6 +1018,8 @@ function NotificationRow({
             href={n.actionHref}
             onClick={() => {
               if (RESOLVE_ON_OPEN.has(n.ruleId)) onResolve();
+              // Vai resolver — a página de destino não leva o aviso de excesso.
+              skipOverloadPromptFor(n.actionHref);
               onNavigate();
             }}
             className="brand-gradient-bg inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-[12px] font-semibold text-white transition hover:brightness-110"
