@@ -12,7 +12,7 @@
 import "server-only";
 import { kv } from "@vercel/kv";
 import type { OrigemClient } from "./config";
-import { lisbonParts, monthStats, monthsBetween, type MonthStats, type OrigemVote } from "./stats";
+import { lisbonParts, monthStats, monthsBetween, type MonthStats, type OrigemVote, type TodayVote } from "./stats";
 
 const kvConfigured = Boolean(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
 const memoryMode = !kvConfigured && process.env.NODE_ENV !== "production";
@@ -137,6 +137,22 @@ export async function listMonthVotes(slug: string, month: string): Promise<Orige
 
 export async function getMonthStats(cfg: OrigemClient, month: string): Promise<MonthStats> {
   return monthStats(cfg, month, await listMonthVotes(cfg.slug, month));
+}
+
+/** Quantos registos de hoje o ecrã recebe (todas as clínicas). */
+const TODAY_LIMIT = 120;
+
+/** O mês em curso numa só leitura: as contagens e os registos de hoje (do
+ *  mais recente para o mais antigo, sem o id do aparelho). */
+export async function getLiveSnapshot(cfg: OrigemClient, now = Date.now()): Promise<{ stats: MonthStats; today: TodayVote[] }> {
+  const { month, day } = lisbonParts(now);
+  const votes = await listMonthVotes(cfg.slug, month);
+  const today = votes
+    .filter((v) => v.day === day)
+    .sort((a, b) => b.at - a.at)
+    .slice(0, TODAY_LIMIT)
+    .map((v) => ({ id: v.id, site: v.site, source: v.source, channel: v.channel, at: v.at }));
+  return { stats: monthStats(cfg, month, votes), today };
 }
 
 /** Os meses que o relatório mostra: do arranque (ou 12 meses para trás) até hoje. */

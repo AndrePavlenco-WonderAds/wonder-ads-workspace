@@ -1,11 +1,15 @@
 "use client";
 
-// Peças comuns da Origem de Pacientes: o logótipo do cliente numa placa
-// branca, o fundo com as duas marcas, os ícones das origens e o número que
-// sobe quando há um registo novo.
+// Peças comuns da Origem de Pacientes (v78.69): os ícones das origens, a
+// marca gráfica do cliente (a cruz da MyMedic, que se monta a cada registo —
+// mais um paciente, «+1»), o «made by WonderAds» e o número que sobe.
+//
+// As cores vêm das variáveis --o-* que a página define a partir do tema do
+// cliente (config.ts), por isso nada aqui é específico da MyMedic a não ser a
+// própria cruz.
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
-import { motion } from "motion/react";
+import { useEffect, useRef, useState } from "react";
+import { motion, useReducedMotion } from "motion/react";
 import {
   ArrowUpRight,
   DoorOpen,
@@ -21,6 +25,7 @@ import {
   Store,
   type LucideIcon,
 } from "lucide-react";
+import type { OrigemTheme } from "@/lib/origem/config";
 
 export const SOURCE_ICONS: Record<string, LucideIcon> = {
   google: Search,
@@ -39,7 +44,9 @@ export const CHANNEL_ICONS: Record<string, LucideIcon> = {
   online: Globe,
 };
 
-export const WA_GRADIENT = "linear-gradient(135deg,#343ed7 0%,#783df5 55%,#c535c9 100%)";
+/** O gradiente da WonderAds — só para o que é trabalho da WonderAds
+ *  (a «Pesquisa e IA») e para a assinatura. */
+export const WA_GRADIENT = "linear-gradient(120deg,#343ed7 0%,#783df5 52%,#c535c9 100%)";
 
 /** Cor com transparência (#RRGGBB → rgba). */
 export function tint(hex: string, alpha: number): string {
@@ -47,33 +54,73 @@ export function tint(hex: string, alpha: number): string {
   return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${alpha})`;
 }
 
-export function LogoPlate({ logo, brand, size = "md" }: { logo: string | null; brand: string; size?: "md" | "lg" }) {
-  const box = size === "lg" ? "h-24 w-56 p-5 rounded-3xl" : "h-10 w-[104px] px-2.5 py-1.5 rounded-xl sm:h-11 sm:w-[120px]";
-  return (
-    <div className={`relative flex shrink-0 items-center justify-center bg-white shadow-[0_10px_40px_-14px_rgba(110,193,214,0.55)] ${box}`}>
-      {logo ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={logo} alt={brand} className="max-h-full max-w-full object-contain" />
-      ) : (
-        <span className="text-sm font-semibold text-slate-800">{brand}</span>
-      )}
-    </div>
-  );
+export function ClientLogo({ logo, brand, className = "" }: { logo: string | null; brand: string; className?: string }) {
+  if (!logo) return <span className={`font-extrabold tracking-tight ${className}`}>{brand}</span>;
+  // eslint-disable-next-line @next/next/no-img-element
+  return <img src={logo} alt={brand} className={`w-auto object-contain ${className}`} />;
 }
 
-/** O fundo: um brilho azul MyMedic à esquerda e o violeta WonderAds à direita. */
-export function BrandBackdrop() {
-  return (
-    <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 overflow-hidden bg-[#07080d]">
-      <div className="absolute -left-40 -top-48 h-[520px] w-[620px] rounded-full bg-[radial-gradient(closest-side,rgba(110,193,214,0.16),transparent)]" />
-      <div className="absolute -right-40 -top-40 h-[520px] w-[640px] rounded-full bg-[radial-gradient(closest-side,rgba(120,61,245,0.18),transparent)]" />
-      <div className="absolute bottom-[-260px] left-1/2 h-[480px] w-[900px] -translate-x-1/2 rounded-full bg-[radial-gradient(closest-side,rgba(201,210,43,0.05),transparent)]" />
-      <svg className="absolute right-0 top-0 h-[420px] w-[min(760px,100%)] opacity-60" viewBox="0 0 760 420" preserveAspectRatio="none" fill="none">
-        <path d="M760 40C640 120 560 240 520 420" stroke="rgba(176,130,240,.10)" />
-        <path d="M760 110C670 180 610 290 590 420" stroke="rgba(176,130,240,.08)" />
-        <path d="M700 0C600 90 470 230 430 420" stroke="rgba(110,193,214,.08)" />
+// As quatro hastes e o centro da cruz do logótipo da MyMedic.
+const CROSS = {
+  top: "#CAD225",
+  left: "#8CC6D2",
+  bottom: "#7DBBC9",
+  right: "#B5C99B",
+  center: "#3E7486",
+};
+
+/**
+ * A marca do cliente. `play` muda de valor a cada registo e a cruz monta-se
+ * outra vez: as quatro hastes entram de fora e o centro acende por último.
+ */
+export function BrandMark({
+  mark,
+  className = "",
+  play,
+  still,
+}: {
+  mark: OrigemTheme["mark"];
+  className?: string;
+  /** Muda → anima. */
+  play?: number | string;
+  /** Sem animação de entrada. */
+  still?: boolean;
+}) {
+  const reduce = useReducedMotion();
+  const animate = !still && !reduce;
+  if (mark !== "mymedic-cross") {
+    return (
+      <svg viewBox="0 0 100 100" className={className} aria-hidden>
+        <circle cx="50" cy="50" r="34" fill="var(--o-primary)" />
       </svg>
-    </div>
+    );
+  }
+  const arm = (from: { x?: number; y?: number }, delay: number) =>
+    animate
+      ? {
+          initial: { opacity: 0, ...from },
+          animate: { opacity: 0.92, x: 0, y: 0 },
+          transition: { type: "spring" as const, stiffness: 260, damping: 20, delay },
+        }
+      : { initial: false as const, animate: { opacity: 0.92 } };
+  return (
+    <svg key={play} viewBox="0 0 100 100" className={className} aria-hidden>
+      <motion.rect {...arm({ y: -22 }, 0)} x="33" y="0" width="34" height="42" rx="7" fill={CROSS.top} />
+      <motion.rect {...arm({ x: -22 }, 0.05)} x="0" y="33" width="42" height="34" rx="7" fill={CROSS.left} />
+      <motion.rect {...arm({ x: 22 }, 0.1)} x="58" y="33" width="42" height="34" rx="7" fill={CROSS.right} />
+      <motion.rect {...arm({ y: 22 }, 0.15)} x="33" y="58" width="34" height="42" rx="7" fill={CROSS.bottom} />
+      <motion.rect
+        x="33"
+        y="33"
+        width="34"
+        height="34"
+        fill={CROSS.center}
+        style={{ transformOrigin: "50px 50px", transformBox: "view-box" }}
+        initial={animate ? { scale: 0, opacity: 0 } : false}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={animate ? { type: "spring", stiffness: 320, damping: 18, delay: 0.28 } : undefined}
+      />
+    </svg>
   );
 }
 
@@ -83,18 +130,18 @@ export function MadeBy({ className = "" }: { className?: string }) {
       href="https://wonder-ads.com"
       target="_blank"
       rel="noopener noreferrer"
-      className={`group inline-flex items-center gap-1 text-xs text-white/30 transition-colors hover:text-white/60 ${className}`}
+      className={`group inline-flex items-center gap-1 text-[13px] text-[var(--o-muted)] transition-colors hover:text-[var(--o-ink)] ${className}`}
     >
       made by
-      <span className="relative font-semibold text-white/55 transition-colors group-hover:text-white">
+      <span className="relative font-bold text-[var(--o-ink)]">
         WonderAds
         <span
-          className="absolute -bottom-0.5 left-0 h-px w-full origin-left scale-x-0 transition-transform duration-300 group-hover:scale-x-100"
+          className="absolute -bottom-0.5 left-0 h-[2px] w-full origin-left scale-x-0 rounded-full transition-transform duration-300 group-hover:scale-x-100"
           style={{ background: WA_GRADIENT }}
           aria-hidden
         />
       </span>
-      <ArrowUpRight className="h-3 w-3 -translate-x-1 opacity-0 transition-all duration-300 group-hover:translate-x-0 group-hover:opacity-100" aria-hidden />
+      <ArrowUpRight className="h-3.5 w-3.5 -translate-x-1 opacity-0 transition-all duration-300 group-hover:translate-x-0 group-hover:opacity-100" aria-hidden />
     </a>
   );
 }
@@ -103,6 +150,7 @@ export function MadeBy({ className = "" }: { className?: string }) {
 export function BumpNumber({ value, className = "" }: { value: number; className?: string }) {
   const prev = useRef(value);
   const [bump, setBump] = useState(0);
+  const reduce = useReducedMotion();
   useEffect(() => {
     if (value !== prev.current) {
       prev.current = value;
@@ -112,24 +160,41 @@ export function BumpNumber({ value, className = "" }: { value: number; className
   return (
     <motion.span
       key={bump}
-      initial={bump ? { scale: 1.35, color: "#C9D22B" } : false}
-      animate={{ scale: 1, color: "currentColor" }}
-      transition={{ type: "spring", stiffness: 320, damping: 14 }}
-      className={`inline-block tabular-nums ${className}`}
+      initial={bump && !reduce ? { scale: 1.18, y: -4 } : false}
+      animate={{ scale: 1, y: 0 }}
+      transition={{ type: "spring", stiffness: 380, damping: 16 }}
+      className={`inline-block origin-bottom-left tabular-nums ${className}`}
     >
       {value.toLocaleString("pt-PT")}
     </motion.span>
   );
 }
 
-export function Panel({ title, aside, children, className = "" }: { title: ReactNode; aside?: ReactNode; children: ReactNode; className?: string }) {
+/** Um bloco branco dos relatórios. */
+export function Sheet({
+  title,
+  aside,
+  children,
+  className = "",
+}: {
+  title?: React.ReactNode;
+  aside?: React.ReactNode;
+  children: React.ReactNode;
+  className?: string;
+}) {
   return (
-    <section className={`rounded-3xl border border-white/[0.07] bg-white/[0.025] p-5 sm:p-6 ${className}`}>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-[15px] font-semibold tracking-tight text-white">{title}</h2>
-        {aside}
-      </div>
+    <section className={`rounded-[28px] border border-[var(--o-line)] bg-white p-5 sm:p-7 ${className}`}>
+      {(title || aside) && (
+        <div className="mb-5 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+          {title && <h2 className="text-[17px] font-bold tracking-tight">{title}</h2>}
+          {aside && <div className="text-[13px] text-[var(--o-muted)]">{aside}</div>}
+        </div>
+      )}
       {children}
     </section>
   );
+}
+
+export function cap(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
 }

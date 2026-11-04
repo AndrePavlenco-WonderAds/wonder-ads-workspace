@@ -1,9 +1,10 @@
 // POST /api/origem/<slug>/votes — regista uma pessoa nova.
-//   { site, source, channel?, device } → { vote, today }
-// `today` = registos de hoje nessa clínica, para o contador do ecrã.
+//   { site, source, channel?, device } → { vote, stats, today }
+// `stats` = o mês em curso; `today` = os registos de hoje (o ecrã da receção
+// mostra-os na coluna «Hoje»).
 
 import { NextResponse } from "next/server";
-import { addVote, getMonthStats } from "@/lib/origem/store";
+import { addVote, getLiveSnapshot } from "@/lib/origem/store";
 import { DEVICE_RE, clientIp, origemGate, overLimit, readJson } from "@/lib/origem/route-helpers";
 
 export const runtime = "nodejs";
@@ -33,7 +34,6 @@ export async function POST(req: Request, { params }: Ctx) {
   }
 
   const vote = await addVote(slug, { site, source, channel, device, by: viewer.username ?? "client" });
-  const stats = await getMonthStats(cfg, vote.month);
-  const today = stats.sites[site]?.days[vote.day - 1] ?? 1;
-  return NextResponse.json({ vote: { id: vote.id, at: vote.at }, today, stats });
+  const { stats, today } = await getLiveSnapshot(cfg, vote.at);
+  return NextResponse.json({ vote: { id: vote.id, at: vote.at }, stats, today });
 }

@@ -20,6 +20,9 @@ export type OrigemSite = {
   name: string;
   /** Nome curto para pastilhas e tabelas («Viseu»). */
   short: string;
+  /** A morada, uma linha por elemento — o ecrã de escolha da clínica mostra-a
+   *  para a receção reconhecer a sua. */
+  address?: string[];
 };
 
 export type OrigemSource = {
@@ -33,7 +36,12 @@ export type OrigemSource = {
   search?: true;
 };
 
-export type OrigemChannel = { id: string; label: string };
+export type OrigemChannel = {
+  id: string;
+  label: string;
+  /** Como se lê numa frase: «Google, por telefone». */
+  phrase: string;
+};
 
 export type OrigemClient = {
   slug: string;
@@ -53,8 +61,27 @@ export type OrigemClient = {
   channels: OrigemChannel[];
   /** Primeiro dia com registos (AAAA-MM-DD) — os meses começam aqui. */
   startDay: string;
-  /** Cores da marca do cliente, para os detalhes da página. */
-  accent: { primary: string; soft: string; light: string; lime: string };
+  /** As cores da marca do cliente — a página inteira veste-as. */
+  theme: OrigemTheme;
+};
+
+export type OrigemTheme = {
+  /** Fundo da página. */
+  paper: string;
+  /** Texto principal e botões escuros. */
+  ink: string;
+  /** Texto secundário. */
+  muted: string;
+  /** Linhas e contornos. */
+  line: string;
+  /** A cor da marca (destaques, seleção). */
+  primary: string;
+  /** A cor da marca em versão escura, legível como texto. */
+  deep: string;
+  /** O acento da marca. */
+  accent: string;
+  /** A marca gráfica do cliente no ecrã (a cruz da MyMedic). */
+  mark: "mymedic-cross" | "dot";
 };
 
 const MYMEDIC: OrigemClient = {
@@ -65,28 +92,45 @@ const MYMEDIC: OrigemClient = {
   // As duas clínicas de mymedic.pt/contactos (03/11/2026). Confirmar com o
   // cliente antes de ligar o tablet.
   sites: [
-    { id: "viseu", name: "Clínica de Viseu", short: "Viseu" },
-    { id: "fornos", name: "Clínica de Fornos de Algodres", short: "Fornos de Algodres" },
+    { id: "viseu", name: "Clínica de Viseu", short: "Viseu", address: ["Rua João Mendes, 143", "3500-142 Viseu"] },
+    {
+      id: "fornos",
+      name: "Clínica de Fornos de Algodres",
+      short: "Fornos de Algodres",
+      address: ["Estrada Nacional 16, n.º 131", "6370-148 Fornos de Algodres"],
+    },
   ],
-  // As cores misturam as duas marcas: azuis, lima e sálvia da MyMedic;
-  // violeta e magenta da WonderAds. A ordem é a do ecrã da receção.
+  // As cores vêm das duas marcas (o teal e o lima da MyMedic, o violeta e o
+  // magenta da WonderAds) e foram validadas para fundo branco: distinguem-se
+  // entre vizinhas, também para quem tem daltonismo. «Outra» é cinzenta de
+  // propósito. A ordem é a do ecrã da receção — e a dos gráficos.
   sources: [
-    { id: "google", label: "Google", hint: "Pesquisa ou Google Maps", color: "#6EC1D6", search: true },
-    { id: "ia", label: "ChatGPT ou outra IA", hint: "Gemini, Copilot, Perplexity…", color: "#8B7CF6", search: true },
-    { id: "redes", label: "Redes sociais", hint: "Facebook, Instagram…", color: "#D45AD6" },
-    { id: "recomendacao", label: "Recomendação", hint: "Família, amigos, outro paciente", color: "#C9D22B" },
-    { id: "medico", label: "Médico ou seguro", hint: "Encaminhado, Médis, ADSE…", color: "#F0A35E" },
-    { id: "porta", label: "Passagem à porta", hint: "Viu a clínica na rua", color: "#9FC08A" },
-    { id: "outro", label: "Outra", hint: "Rádio, jornal, evento…", color: "#8A8FA3" },
+    { id: "google", label: "Google", hint: "Pesquisa ou Google Maps", color: "#2A9DB5", search: true },
+    { id: "ia", label: "ChatGPT ou outra IA", hint: "Gemini, Copilot, Perplexity…", color: "#7B5CF2", search: true },
+    { id: "redes", label: "Redes sociais", hint: "Facebook, Instagram…", color: "#CC4FB4" },
+    { id: "recomendacao", label: "Recomendação", hint: "Família, amigos, outro paciente", color: "#97A21B" },
+    { id: "medico", label: "Médico ou seguro", hint: "Encaminhado, Médis, ADSE…", color: "#3F5FC8" },
+    { id: "porta", label: "Passagem à porta", hint: "Viu a clínica na rua", color: "#E58A3B" },
+    { id: "outro", label: "Outra", hint: "Rádio, jornal, evento…", color: "#9AA5A6" },
   ],
   channels: [
-    { id: "telefone", label: "Telefone" },
-    { id: "whatsapp", label: "WhatsApp" },
-    { id: "balcao", label: "Ao balcão" },
-    { id: "online", label: "Site ou email" },
+    { id: "telefone", label: "Telefone", phrase: "por telefone" },
+    { id: "whatsapp", label: "WhatsApp", phrase: "por WhatsApp" },
+    { id: "balcao", label: "Ao balcão", phrase: "ao balcão" },
+    { id: "online", label: "Site ou email", phrase: "pelo site ou email" },
   ],
   startDay: "2026-11-03",
-  accent: { primary: "#3E7486", soft: "#8CC2D0", light: "#E8F4F7", lime: "#C9D22B" },
+  // As cores de mymedic.pt (teal #5ABDCA, lima #CAD225, texto #173435).
+  theme: {
+    paper: "#F3F9F9",
+    ink: "#173435",
+    muted: "#5E7576",
+    line: "#DCEBEC",
+    primary: "#5ABDCA",
+    deep: "#2E7280",
+    accent: "#CAD225",
+    mark: "mymedic-cross",
+  },
 };
 
 const CLIENTS: Record<string, OrigemClient> = {

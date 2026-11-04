@@ -1,20 +1,25 @@
 "use client";
 
-// Origem de Pacientes — a página da receção (/<slug>/origem).
+// Origem de Pacientes — a página da receção (/<slug>/origem), v78.69.
 //
-// Dois separadores: «Registar» (o ecrã do tablet: escolher a origem, tocar em
-// Registar, e anular nos 20 s seguintes) e «Relatórios» (mês a mês, por
-// clínica). A clínica do aparelho fica guardada no próprio browser; um
-// `?clinica=<id>` no link fixa-a (útil para o favorito do tablet).
+// O registo faz-se em dois toques: a origem (uma tecla grande) e o canal
+// (numa folha que sobe; «sem indicar o canal» também regista). A cruz da
+// marca monta-se a cada registo e o «Anular» fica 20 s no fundo do ecrã. À
+// direita (ou por baixo, no tablet na vertical), os registos de hoje nesta
+// clínica.
+//
+// A clínica do aparelho fica guardada no próprio browser; um `?clinica=<id>`
+// no link fixa-a (útil para o favorito do tablet). Até haver clínica, o ecrã
+// é o da escolha da clínica.
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AnimatePresence, motion } from "motion/react";
-import { BarChart3, Check, ChevronRight, Eye, Loader2, LogOut, MapPin, PenLine, Undo2 } from "lucide-react";
-import type { OrigemClient } from "@/lib/origem/config";
-import { lisbonParts, type MonthStats } from "@/lib/origem/stats";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { ArrowLeft, ArrowRight, BarChart3, Check, ChevronDown, Eye, Loader2, LogOut, MapPin, PenLine, Undo2, X } from "lucide-react";
+import type { OrigemClient, OrigemSite, OrigemSource } from "@/lib/origem/config";
+import { dayLabel, lisbonClock, lisbonGreeting, lisbonParts, type MonthStats, type TodayVote } from "@/lib/origem/stats";
 import { OrigemReports } from "./origem-reports";
-import { BrandBackdrop, BumpNumber, CHANNEL_ICONS, LogoPlate, MadeBy, SOURCE_ICONS, WA_GRADIENT, tint } from "./origem-ui";
+import { BrandMark, BumpNumber, CHANNEL_ICONS, ClientLogo, MadeBy, SOURCE_ICONS, tint } from "./origem-ui";
 
 export type OrigemBootstrap = {
   slug: string;
@@ -22,16 +27,22 @@ export type OrigemBootstrap = {
   logo: string | null;
   viewer: { kind: "client" | "team"; name: string | null; canWrite: boolean };
   history: MonthStats[];
+  today: TodayVote[];
+  serverNow: number;
 };
 
 const UNDO_SECONDS = 20;
 const POLL_MS = 30_000;
+const SUCCESS_MS = 1300;
 
 type Tab = "registar" | "relatorios";
 type Toast =
   | { kind: "ok"; id: string; source: string; channel: string | null; until: number }
   | { kind: "undone" }
   | { kind: "error"; text: string };
+type SheetState =
+  | { step: "channel"; source: string }
+  | { step: "done"; source: string; channel: string | null; n: number };
 
 function useDeviceId(): string {
   const [id, setId] = useState("");
@@ -51,6 +62,13 @@ function useDeviceId(): string {
   return id;
 }
 
+/** «Google, por telefone» / «Google». */
+function phraseOf(cfg: OrigemClient, source: string, channel: string | null): string {
+  const s = cfg.sources.find((x) => x.id === source)?.label ?? "Outra";
+  const c = channel ? cfg.channels.find((x) => x.id === channel)?.phrase : null;
+  return c ? `${s}, ${c}` : s;
+}
+
 export function OrigemApp({ bootstrap }: { bootstrap: OrigemBootstrap }) {
   const { slug, cfg, logo, viewer } = bootstrap;
   const router = useRouter();
@@ -59,18 +77,22 @@ export function OrigemApp({ bootstrap }: { bootstrap: OrigemBootstrap }) {
   const [history, setHistory] = useState<Record<string, MonthStats>>(() =>
     Object.fromEntries(bootstrap.history.map((m) => [m.month, m])),
   );
-  const [site, setSite] = useState<string | null>(cfg.sites.length === 1 ? cfg.sites[0].id : null);
-  const [siteReady, setSiteReady] = useState(cfg.sites.length === 1);
-  const [source, setSource] = useState<string | null>(null);
-  const [channel, setChannel] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
+  const [today, setToday] = useState<TodayVote[]>(bootstrap.today);
+  const single = cfg.sites.length === 1;
+  const [site, setSite] = useState<string | null>(single ? cfg.sites[0].id : null);
+  const [siteReady, setSiteReady] = useState(single);
+  const [picking, setPicking] = useState(false);
+  const [sheet, setSheet] = useState<SheetState | null>(null);
+  const [saving, setSaving] = useState<string | null>(null);
   const [toast, setToast] = useState<Toast | null>(null);
-  const [now, setNow] = useState(() => Date.now());
+  const [now, setNow] = useState(bootstrap.serverNow);
+  const registered = useRef(0);
   const siteKey = `origem:${slug}:site`;
 
   // A clínica deste aparelho: o link manda, depois o que ficou guardado.
   useEffect(() => {
-    if (cfg.sites.length === 1) return;
+    setNow(Date.now());
+    if (single) return;
     const fromUrl = new URLSearchParams(window.location.search).get("clinica");
     let chosen: string | null = null;
     if (fromUrl && cfg.sites.some((s) => s.id === fromUrl)) chosen = fromUrl;
@@ -84,23 +106,26 @@ export function OrigemApp({ bootstrap }: { bootstrap: OrigemBootstrap }) {
     }
     setSite(chosen);
     setSiteReady(true);
-  }, [cfg.sites, siteKey]);
+  }, [cfg.sites, siteKey, single]);
 
-  const chooseSite = (id: string | null) => {
+  const chooseSite = (id: string) => {
     setSite(id);
-    setSource(null);
-    setChannel(null);
+    setPicking(false);
+    setSheet(null);
     setToast(null);
+    setTab("registar");
     try {
-      if (id) localStorage.setItem(siteKey, id);
-      else localStorage.removeItem(siteKey);
+      localStorage.setItem(siteKey, id);
     } catch {
       /* ignora */
     }
+    window.scrollTo({ top: 0 });
   };
 
-  const merge = useCallback((stats: MonthStats | undefined) => {
+  const merge = useCallback((j: { stats?: MonthStats; today?: TodayVote[] }) => {
+    const stats = j.stats;
     if (stats) setHistory((h) => ({ ...h, [stats.month]: stats }));
+    if (Array.isArray(j.today)) setToday(j.today);
   }, []);
 
   // O mês em curso refresca-se sozinho — outro tablet pode estar a registar.
@@ -116,8 +141,7 @@ export function OrigemApp({ bootstrap }: { bootstrap: OrigemBootstrap }) {
           return;
         }
         if (!res.ok || stop) return;
-        const j = (await res.json()) as { stats?: MonthStats };
-        merge(j.stats);
+        merge((await res.json()) as { stats?: MonthStats; today?: TodayVote[] });
       } catch {
         /* sem rede: tenta no próximo ciclo */
       }
@@ -141,14 +165,24 @@ export function OrigemApp({ bootstrap }: { bootstrap: OrigemBootstrap }) {
     return () => clearInterval(t);
   }, [toast]);
 
-  const today = lisbonParts(now);
-  const todayCount = site ? (history[today.month]?.sites[site]?.days[today.day - 1] ?? 0) : 0;
-  const siteObj = cfg.sites.find((s) => s.id === site) ?? null;
-  const readOnly = !viewer.canWrite;
+  // O «Registado» da folha fecha-se sozinho.
+  useEffect(() => {
+    if (sheet?.step !== "done") return;
+    const t = setTimeout(() => setSheet((s) => (s?.step === "done" ? null : s)), SUCCESS_MS);
+    return () => clearTimeout(t);
+  }, [sheet]);
 
-  async function submit() {
-    if (!site || !source || saving || readOnly || !device) return;
-    setSaving(true);
+  const siteObj = cfg.sites.find((s) => s.id === site) ?? null;
+  const siteToday = useMemo(() => (site ? today.filter((v) => v.site === site) : []), [today, site]);
+  const readOnly = !viewer.canWrite;
+  const closeSheet = useCallback(() => {
+    if (!saving) setSheet(null);
+  }, [saving]);
+
+  async function register(channel: string | null) {
+    if (sheet?.step !== "channel" || !site || saving || readOnly || !device) return;
+    const source = sheet.source;
+    setSaving(channel ?? "none");
     setToast(null);
     try {
       const res = await fetch(`/api/origem/${slug}/votes`, {
@@ -156,20 +190,21 @@ export function OrigemApp({ bootstrap }: { bootstrap: OrigemBootstrap }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ site, source, channel, device }),
       });
-      const j = (await res.json().catch(() => ({}))) as { error?: string; vote?: { id: string }; stats?: MonthStats };
       if (res.status === 401) {
         router.refresh();
         return;
       }
+      const j = (await res.json().catch(() => ({}))) as { error?: string; vote?: { id: string }; stats?: MonthStats; today?: TodayVote[] };
       if (!res.ok || !j.vote) throw new Error(j.error ?? "Não foi possível guardar. Verifique a ligação e tente outra vez.");
-      merge(j.stats);
+      merge(j);
+      registered.current += 1;
+      setSheet({ step: "done", source, channel, n: registered.current });
       setToast({ kind: "ok", id: j.vote.id, source, channel, until: Date.now() + UNDO_SECONDS * 1000 });
-      setSource(null);
-      setChannel(null);
     } catch (err) {
+      setSheet(null);
       setToast({ kind: "error", text: err instanceof Error ? err.message : "Não foi possível guardar." });
     } finally {
-      setSaving(false);
+      setSaving(null);
     }
   }
 
@@ -177,15 +212,16 @@ export function OrigemApp({ bootstrap }: { bootstrap: OrigemBootstrap }) {
     if (toast?.kind !== "ok") return;
     const { id } = toast;
     setToast(null);
+    setSheet(null);
     try {
       const res = await fetch(`/api/origem/${slug}/undo`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id, device }),
       });
-      const j = (await res.json().catch(() => ({}))) as { error?: string; stats?: MonthStats };
+      const j = (await res.json().catch(() => ({}))) as { error?: string; stats?: MonthStats; today?: TodayVote[] };
       if (!res.ok) throw new Error(j.error ?? "Não foi possível anular.");
-      merge(j.stats);
+      merge(j);
       setToast({ kind: "undone" });
       setTimeout(() => setToast((t) => (t?.kind === "undone" ? null : t)), 3000);
     } catch (err) {
@@ -198,19 +234,44 @@ export function OrigemApp({ bootstrap }: { bootstrap: OrigemBootstrap }) {
     router.refresh();
   }
 
+  const showPicker = tab === "registar" && siteReady && (!siteObj || picking);
+  const brandShort = cfg.brand.split(" ")[0];
+
   return (
-    <div className="relative min-h-screen text-white">
-      <BrandBackdrop />
+    <div className="relative isolate flex min-h-[100dvh] flex-col">
+      {viewer.kind === "team" && (
+        <div className="flex items-center justify-center gap-2 bg-[var(--o-ink)] px-4 py-2 text-center text-[13px] text-white/85">
+          <Eye className="h-3.5 w-3.5 shrink-0 text-[#B9A6FF]" />
+          {readOnly ? (
+            <span>Está a ver como equipa WonderAds. Este perfil só pode consultar.</span>
+          ) : (
+            <span>
+              Está a ver como equipa WonderAds{viewer.name ? ` (${viewer.name})` : ""}. Os registos feitos aqui contam nos números da {brandShort}.
+            </span>
+          )}
+        </div>
+      )}
 
-      <header className="sticky top-0 z-30 border-b border-white/[0.06] bg-[#07080d]/80 backdrop-blur-md">
-        <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3 sm:px-6">
-          <LogoPlate logo={logo} brand={cfg.brand} />
-          <div className="hidden min-w-0 border-l border-white/10 pl-3 md:block">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/40">{cfg.brand}</p>
-            <p className="truncate text-sm font-semibold">Origem dos {cfg.person.many}</p>
-          </div>
+      <header className="sticky top-0 z-30 border-b border-[var(--o-line)] bg-white/90 backdrop-blur-md">
+        <div className="mx-auto flex h-[68px] max-w-[1240px] items-center gap-3 px-4 sm:h-[76px] sm:gap-5 sm:px-8">
+          <ClientLogo logo={logo} brand={cfg.brand} className="h-8 shrink-0 sm:h-10" />
+          {siteObj && !showPicker && tab === "registar" && !single && (
+            <button
+              type="button"
+              onClick={() => setPicking(true)}
+              className="group ml-1 flex min-w-0 items-center gap-2 rounded-full border border-[var(--o-line)] bg-[var(--o-paper)] py-2 pl-3 pr-2.5 text-[15px] font-bold transition hover:border-[var(--o-primary)] sm:ml-2"
+              aria-label={`${siteObj.name}. Mudar de ${cfg.place.one}`}
+            >
+              <MapPin className="h-4 w-4 shrink-0 text-[var(--o-deep)]" />
+              <span className="truncate">
+                <span className="sm:hidden">{siteObj.short}</span>
+                <span className="hidden sm:inline">{siteObj.name}</span>
+              </span>
+              <ChevronDown className="h-4 w-4 shrink-0 text-[var(--o-muted)] transition group-hover:translate-y-0.5" />
+            </button>
+          )}
 
-          <nav className="ml-auto flex rounded-2xl border border-white/10 bg-white/[0.03] p-1" aria-label="Secções">
+          <nav className="ml-auto flex shrink-0 rounded-full bg-[var(--o-paper)] p-1 ring-1 ring-[var(--o-line)]" aria-label="Secções">
             {(
               [
                 { id: "registar", label: "Registar", Icon: PenLine },
@@ -222,22 +283,26 @@ export function OrigemApp({ bootstrap }: { bootstrap: OrigemBootstrap }) {
                 <button
                   key={id}
                   type="button"
-                  onClick={() => setTab(id)}
+                  onClick={() => {
+                    setTab(id);
+                    setSheet(null);
+                    window.scrollTo({ top: 0 });
+                  }}
                   aria-current={on ? "page" : undefined}
-                  className={`relative flex items-center gap-2 rounded-xl px-3.5 py-2 text-sm font-semibold transition sm:px-4 ${
-                    on ? "text-white" : "text-white/50 hover:text-white/80"
+                  aria-label={label}
+                  className={`relative flex items-center gap-2 rounded-full px-3.5 py-2 text-[14px] font-bold transition sm:px-5 ${
+                    on ? "text-[var(--o-ink)]" : "text-[var(--o-muted)] hover:text-[var(--o-ink)]"
                   }`}
                 >
                   {on && (
                     <motion.span
                       layoutId="origem-tab"
-                      className="absolute inset-0 rounded-xl"
-                      style={{ background: "linear-gradient(135deg,rgba(52,62,215,.55),rgba(120,61,245,.55) 55%,rgba(197,53,201,.5))" }}
-                      transition={{ type: "spring", stiffness: 380, damping: 32 }}
+                      className="absolute inset-0 rounded-full bg-white shadow-[0_1px_2px_rgba(23,52,53,0.12),0_4px_14px_-6px_rgba(23,52,53,0.25)]"
+                      transition={{ type: "spring", stiffness: 420, damping: 34 }}
                     />
                   )}
                   <Icon className="relative h-4 w-4" />
-                  <span className="relative">{label}</span>
+                  <span className="relative hidden min-[440px]:inline">{label}</span>
                 </button>
               );
             })}
@@ -245,59 +310,45 @@ export function OrigemApp({ bootstrap }: { bootstrap: OrigemBootstrap }) {
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-4 pb-40 pt-8 sm:px-6 sm:pt-10">
-        {viewer.kind === "team" && (
-          <div className="mb-6 flex flex-wrap items-center gap-2 rounded-2xl border border-white/[0.07] bg-white/[0.03] px-4 py-2.5 text-xs text-white/55">
-            <Eye className="h-3.5 w-3.5 text-violet-300" />
-            {readOnly ? (
-              <span>Equipa WonderAds · só consulta.</span>
-            ) : (
-              <span>
-                Equipa WonderAds · {viewer.name}. Os registos que fizer aqui contam nos números do cliente: use para testar e anule logo a seguir.
-              </span>
-            )}
+      <main className="mx-auto w-full max-w-[1240px] flex-1 px-4 pb-32 pt-7 sm:px-8 sm:pt-10">
+        {tab === "relatorios" ? (
+          <OrigemReports cfg={cfg} history={history} now={now} onRegister={() => setTab("registar")} />
+        ) : !siteReady ? (
+          <div className="flex h-64 items-center justify-center">
+            <Loader2 className="h-6 w-6 animate-spin text-[var(--o-muted)]" />
           </div>
-        )}
-
-        {tab === "registar" ? (
-          !siteReady ? (
-            <div className="flex h-64 items-center justify-center">
-              <Loader2 className="h-6 w-6 animate-spin text-white/40" />
-            </div>
-          ) : !siteObj ? (
-            <SitePicker cfg={cfg} onPick={chooseSite} />
-          ) : (
-            <RegisterView
-              cfg={cfg}
-              site={siteObj}
-              canChangeSite={cfg.sites.length > 1}
-              onChangeSite={() => chooseSite(null)}
-              todayCount={todayCount}
-              source={source}
-              channel={channel}
-              onSource={(id) => {
-                setSource(id);
-                if (toast?.kind === "error") setToast(null);
-              }}
-              onChannel={setChannel}
-              saving={saving}
-              readOnly={readOnly}
-              onSubmit={submit}
-            />
-          )
-        ) : (
-          <OrigemReports cfg={cfg} history={history} now={now} />
-        )}
-
-        <footer className="mt-16 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs text-white/30">
-          <MadeBy />
-          {viewer.kind === "client" && (
-            <button type="button" onClick={signOut} className="inline-flex items-center gap-1 transition hover:text-white/60">
-              <LogOut className="h-3 w-3" /> Terminar sessão neste aparelho
-            </button>
-          )}
-        </footer>
+        ) : showPicker ? (
+          <SitePicker cfg={cfg} now={now} current={siteObj?.id ?? null} onPick={chooseSite} onCancel={siteObj ? () => setPicking(false) : null} />
+        ) : siteObj ? (
+          <RegisterView
+            cfg={cfg}
+            site={siteObj}
+            today={siteToday}
+            now={now}
+            readOnly={readOnly}
+            lastId={toast?.kind === "ok" ? toast.id : null}
+            onPick={(id) => {
+              setSheet({ step: "channel", source: id });
+              if (toast?.kind === "error") setToast(null);
+            }}
+          />
+        ) : null}
       </main>
+
+      <footer className="mx-auto flex w-full max-w-[1240px] flex-wrap items-center justify-between gap-x-6 gap-y-2 border-t border-[var(--o-line)] px-4 py-5 text-[13px] text-[var(--o-muted)] sm:px-8">
+        <MadeBy />
+        {viewer.kind === "client" && (
+          <button type="button" onClick={signOut} className="inline-flex items-center gap-1.5 transition hover:text-[var(--o-ink)]">
+            <LogOut className="h-3.5 w-3.5" /> Terminar sessão neste aparelho
+          </button>
+        )}
+      </footer>
+
+      <AnimatePresence>
+        {sheet && siteObj && tab === "registar" && (
+          <ChannelSheet key="sheet" cfg={cfg} sheet={sheet} saving={saving} onRegister={register} onClose={closeSheet} />
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {toast && tab === "registar" && (
@@ -308,203 +359,420 @@ export function OrigemApp({ bootstrap }: { bootstrap: OrigemBootstrap }) {
   );
 }
 
-function SitePicker({ cfg, onPick }: { cfg: OrigemClient; onPick: (id: string) => void }) {
+/* ───────────────────────── Escolher a clínica ───────────────────────── */
+
+function SitePicker({
+  cfg,
+  now,
+  current,
+  onPick,
+  onCancel,
+}: {
+  cfg: OrigemClient;
+  now: number;
+  current: string | null;
+  onPick: (id: string) => void;
+  onCancel: (() => void) | null;
+}) {
+  const reduce = useReducedMotion();
   return (
-    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="mx-auto max-w-3xl">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#8CC2D0]">Antes de começar</p>
-      <h1 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">Em que {cfg.place.one} está?</h1>
-      <p className="mt-2 text-sm text-white/55">Este aparelho fica a registar para {cfg.place.the} que escolher. Pode mudar quando quiser.</p>
-      <div className="mt-8 grid gap-3 sm:grid-cols-2">
-        {cfg.sites.map((s, i) => (
-          <motion.button
-            key={s.id}
-            type="button"
-            onClick={() => onPick(s.id)}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.05 * i }}
-            whileTap={{ scale: 0.98 }}
-            className="group flex items-center gap-4 rounded-3xl border border-white/10 bg-white/[0.03] p-5 text-left transition hover:border-[#6EC1D6]/50 hover:bg-white/[0.05]"
-          >
-            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#6EC1D6]/12 text-[#8CC2D0]">
-              <MapPin className="h-5 w-5" />
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block text-lg font-semibold leading-tight">{s.name}</span>
-              <span className="mt-0.5 block text-sm text-white/45">{s.short}</span>
-            </span>
-            <ChevronRight className="h-5 w-5 text-white/30 transition group-hover:translate-x-0.5 group-hover:text-white/70" />
-          </motion.button>
-        ))}
+    <div>
+      <div className="grid min-h-[58vh] content-center gap-8 lg:min-h-[62vh] lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:items-center lg:gap-16">
+        <motion.div initial={reduce ? false : { opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}>
+          {onCancel && (
+            <button
+              type="button"
+              onClick={onCancel}
+              className="mb-6 inline-flex items-center gap-2 rounded-full py-1.5 pr-3 text-[15px] font-bold text-[var(--o-deep)] transition hover:gap-2.5"
+            >
+              <ArrowLeft className="h-4 w-4" /> Voltar ao registo
+            </button>
+          )}
+          <p className="text-[19px] font-semibold text-[var(--o-muted)]">{lisbonGreeting(now)}.</p>
+          <h1 className="mt-2 max-w-[13ch] text-[38px] font-extrabold leading-[1.04] tracking-[-0.035em] sm:text-[54px]">
+            Em que {cfg.place.one} fica este tablet?
+          </h1>
+          <p className="mt-5 max-w-[40ch] text-[17px] leading-relaxed text-[var(--o-muted)]">
+            Os registos feitos neste aparelho contam para {cfg.place.the} que escolher. Pode trocar mais tarde, no topo do ecrã.
+          </p>
+        </motion.div>
+
+        <ul className="grid gap-4" role="list">
+          {cfg.sites.map((s, i) => (
+            <motion.li
+              key={s.id}
+              initial={reduce ? false : { opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.55, delay: 0.08 + 0.07 * i, ease: [0.16, 1, 0.3, 1] }}
+            >
+              <SiteCard site={s} brand={cfg.brand} current={s.id === current} onPick={() => onPick(s.id)} />
+            </motion.li>
+          ))}
+        </ul>
       </div>
-    </motion.div>
+    </div>
   );
 }
+
+function SiteCard({ site, brand, current, onPick }: { site: OrigemSite; brand: string; current: boolean; onPick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onPick}
+      className={`group relative flex w-full touch-manipulation items-center gap-5 overflow-hidden rounded-[28px] border-2 bg-white p-6 text-left transition-[border-color,box-shadow,transform] duration-200 active:scale-[0.99] sm:p-8 ${
+        current
+          ? "border-[var(--o-deep)] shadow-[0_18px_40px_-26px_rgba(23,52,53,0.55)]"
+          : "border-transparent shadow-[0_1px_0_var(--o-line),0_14px_34px_-28px_rgba(23,52,53,0.5)] hover:border-[var(--o-primary)]"
+      }`}
+    >
+      <span className="min-w-0 flex-1">
+        <span className="block text-[14px] font-semibold text-[var(--o-muted)]">{brand}</span>
+        <span className="mt-0.5 block text-[30px] font-extrabold leading-[1.08] tracking-[-0.03em] sm:text-[38px]">{site.short}</span>
+        {site.address && (
+          <span className="mt-3 block text-[15px] leading-snug text-[var(--o-muted)]">
+            {site.address.map((line) => (
+              <span key={line} className="block">
+                {line}
+              </span>
+            ))}
+          </span>
+        )}
+      </span>
+      <span className="flex shrink-0 flex-col items-end gap-2">
+        {current && <span className="rounded-full bg-[var(--o-paper)] px-2.5 py-1 text-[12px] font-bold text-[var(--o-deep)]">Atual</span>}
+        <span
+          className={`flex h-14 w-14 items-center justify-center rounded-full transition-all duration-200 ${
+            current
+              ? "bg-[var(--o-deep)] text-white"
+              : "bg-[var(--o-paper)] text-[var(--o-deep)] group-hover:bg-[var(--o-deep)] group-hover:text-white"
+          }`}
+        >
+          {current ? <Check className="h-6 w-6" strokeWidth={3} /> : <ArrowRight className="h-6 w-6 transition group-hover:translate-x-0.5" />}
+        </span>
+      </span>
+    </button>
+  );
+}
+
+/* ───────────────────────────── Registar ───────────────────────────── */
 
 function RegisterView({
   cfg,
   site,
-  canChangeSite,
-  onChangeSite,
-  todayCount,
-  source,
-  channel,
-  onSource,
-  onChannel,
-  saving,
+  today,
+  now,
   readOnly,
-  onSubmit,
+  lastId,
+  onPick,
 }: {
   cfg: OrigemClient;
-  site: OrigemClient["sites"][number];
-  canChangeSite: boolean;
-  onChangeSite: () => void;
-  todayCount: number;
-  source: string | null;
-  channel: string | null;
-  onSource: (id: string) => void;
-  onChannel: (id: string | null) => void;
-  saving: boolean;
+  site: OrigemSite;
+  today: TodayVote[];
+  now: number;
   readOnly: boolean;
-  onSubmit: () => void;
+  lastId: string | null;
+  onPick: (id: string) => void;
 }) {
-  const picked = cfg.sources.find((s) => s.id === source) ?? null;
-  const submitRef = useRef<HTMLButtonElement>(null);
-  const canSubmit = Boolean(picked) && !saving && !readOnly;
+  const main = cfg.sources.filter((s) => s.id !== "outro");
+  const other = cfg.sources.find((s) => s.id === "outro") ?? null;
 
   return (
-    <div>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="inline-flex items-center gap-2 rounded-full border border-[#6EC1D6]/25 bg-[#6EC1D6]/[0.07] py-1.5 pl-3 pr-1.5 text-sm">
-          <MapPin className="h-3.5 w-3.5 text-[#8CC2D0]" />
-          <span className="font-semibold">{site.name}</span>
-          {canChangeSite && (
-            <button type="button" onClick={onChangeSite} className="rounded-full px-2.5 py-0.5 text-xs font-medium text-white/50 transition hover:bg-white/10 hover:text-white">
-              Mudar
+    <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-10">
+      <div>
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h1 className="text-[34px] font-extrabold leading-[1.05] tracking-[-0.035em] sm:text-[48px]">Como nos conheceu?</h1>
+            <p className="mt-2.5 text-[17px] text-[var(--o-muted)]">Pergunte a cada {cfg.person.one} novo e toque na resposta.</p>
+          </div>
+          <TodayChip count={today.length} className="lg:hidden" />
+        </div>
+
+        {readOnly && (
+          <p className="mt-6 rounded-2xl border border-amber-300/60 bg-amber-50 px-4 py-3 text-[15px] text-amber-900">
+            Este perfil só pode consultar: vê o ecrã da receção, mas as teclas não registam.
+          </p>
+        )}
+
+        <fieldset className="mt-7 sm:mt-9" disabled={readOnly}>
+          <legend className="sr-only">Origem do {cfg.person.one}</legend>
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3">
+            {main.map((s) => (
+              <SourceKey key={s.id} source={s} onPick={() => onPick(s.id)} disabled={readOnly} />
+            ))}
+          </div>
+          {other && (
+            <button
+              type="button"
+              onClick={() => onPick(other.id)}
+              disabled={readOnly}
+              className="mt-3 flex w-full touch-manipulation select-none items-center gap-4 rounded-[22px] border border-dashed border-[#BFD5D7] px-5 py-4 text-left transition hover:border-[var(--o-deep)] hover:bg-white active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50 sm:mt-4"
+            >
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white text-[var(--o-muted)] ring-1 ring-[var(--o-line)]">
+                <SourceIcon id={other.id} className="h-5 w-5" />
+              </span>
+              <span className="min-w-0">
+                <span className="block text-[18px] font-bold">Outra resposta</span>
+                <span className="block truncate text-[14px] text-[var(--o-muted)]">{other.hint}</span>
+              </span>
             </button>
           )}
-        </div>
-        <div className="flex items-baseline gap-2 rounded-2xl border border-white/[0.07] bg-white/[0.03] px-4 py-2">
-          <span className="text-xs text-white/45">Hoje {cfg.place.inThis}</span>
-          <BumpNumber value={todayCount} className="text-xl font-semibold" />
-        </div>
+        </fieldset>
       </div>
 
-      <div className="mt-8">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#8CC2D0]">{cap(cfg.person.one)} novo</p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight sm:text-[42px] sm:leading-[1.1]">Como nos conheceu?</h1>
-        <p className="mt-2 text-sm text-white/55 sm:text-base">Pergunte a cada {cfg.person.one} novo e toque na resposta.</p>
-      </div>
-
-      {readOnly && (
-        <p className="mt-5 rounded-2xl border border-amber-300/25 bg-amber-300/[0.06] px-4 py-3 text-sm text-amber-100/90">
-          Este perfil só pode consultar. Os botões ficam visíveis para ver o ecrã da receção.
-        </p>
-      )}
-
-      <fieldset className="mt-7">
-        <legend className="sr-only">Origem do {cfg.person.one}</legend>
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
-          {cfg.sources.map((s, i) => {
-            const Icon = SOURCE_ICONS[s.id] ?? SOURCE_ICONS.outro;
-            const on = source === s.id;
-            return (
-              <motion.button
-                key={s.id}
-                type="button"
-                role="radio"
-                aria-checked={on}
-                onClick={() => {
-                  onSource(s.id);
-                  requestAnimationFrame(() => submitRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" }));
-                }}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.03 * i }}
-                whileTap={{ scale: 0.97 }}
-                className="relative flex min-h-[124px] flex-col items-start gap-3 rounded-3xl border p-4 text-left transition-colors sm:p-5"
-                style={{
-                  borderColor: on ? s.color : "rgba(255,255,255,0.09)",
-                  background: on ? tint(s.color, 0.13) : "rgba(255,255,255,0.025)",
-                  boxShadow: on ? `0 0 0 3px ${tint(s.color, 0.18)}, 0 18px 40px -22px ${tint(s.color, 0.8)}` : undefined,
-                }}
-              >
-                <span className="flex h-11 w-11 items-center justify-center rounded-2xl" style={{ background: tint(s.color, on ? 0.28 : 0.14), color: s.color }}>
-                  <Icon className="h-5 w-5" />
-                </span>
-                <span>
-                  <span className="block text-[16px] font-semibold leading-snug sm:text-[17px]">{s.label}</span>
-                  <span className="mt-0.5 block text-[12.5px] leading-snug text-white/45">{s.hint}</span>
-                </span>
-                <AnimatePresence>
-                  {on && (
-                    <motion.span
-                      initial={{ scale: 0, rotate: -45 }}
-                      animate={{ scale: 1, rotate: 0 }}
-                      exit={{ scale: 0 }}
-                      className="absolute right-3.5 top-3.5 flex h-6 w-6 items-center justify-center rounded-full text-[#07080d]"
-                      style={{ background: s.color }}
-                    >
-                      <Check className="h-3.5 w-3.5" strokeWidth={3} />
-                    </motion.span>
-                  )}
-                </AnimatePresence>
-              </motion.button>
-            );
-          })}
-        </div>
-      </fieldset>
-
-      <fieldset className="mt-8">
-        <legend className="text-sm font-semibold text-white/80">
-          E como fez o contacto? <span className="font-normal text-white/40">(opcional)</span>
-        </legend>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {cfg.channels.map((c) => {
-            const Icon = CHANNEL_ICONS[c.id] ?? CHANNEL_ICONS.online;
-            const on = channel === c.id;
-            return (
-              <button
-                key={c.id}
-                type="button"
-                role="radio"
-                aria-checked={on}
-                onClick={() => onChannel(on ? null : c.id)}
-                className={`inline-flex items-center gap-2 rounded-full border px-4 py-2.5 text-sm font-medium transition ${
-                  on ? "border-[#8CC2D0] bg-[#6EC1D6]/15 text-white" : "border-white/10 bg-white/[0.03] text-white/65 hover:border-white/25 hover:text-white"
-                }`}
-              >
-                <Icon className="h-4 w-4" />
-                {c.label}
-              </button>
-            );
-          })}
-        </div>
-      </fieldset>
-
-      <motion.button
-        ref={submitRef}
-        type="button"
-        onClick={onSubmit}
-        disabled={!canSubmit}
-        whileTap={canSubmit ? { scale: 0.985 } : undefined}
-        className="mt-9 flex h-16 w-full scroll-mb-32 items-center justify-center gap-2 rounded-2xl text-[17px] font-semibold text-white shadow-[0_18px_40px_-16px_rgba(120,61,245,0.8)] transition disabled:cursor-not-allowed disabled:opacity-35 disabled:shadow-none sm:mx-auto sm:max-w-md"
-        style={{ background: WA_GRADIENT }}
-      >
-        {saving ? (
-          <Loader2 className="h-5 w-5 animate-spin" />
-        ) : picked ? (
-          <span>
-            Registar · {picked.label}
-            {channel && <span className="font-normal text-white/75"> · {cfg.channels.find((c) => c.id === channel)?.label}</span>}
-          </span>
-        ) : (
-          "Escolha a origem para registar"
-        )}
-      </motion.button>
+      <TodayPanel cfg={cfg} site={site} today={today} now={now} lastId={lastId} />
     </div>
   );
 }
+
+function SourceIcon({ id, className }: { id: string; className?: string }) {
+  const Icon = SOURCE_ICONS[id] ?? SOURCE_ICONS.outro;
+  return <Icon className={className} />;
+}
+
+function SourceKey({ source, onPick, disabled }: { source: OrigemSource; onPick: () => void; disabled: boolean }) {
+  return (
+    <button
+      type="button"
+      onClick={onPick}
+      disabled={disabled}
+      className="group relative flex min-h-[150px] touch-manipulation select-none flex-col justify-between rounded-[26px] border border-[var(--o-line)] bg-white p-4 text-left shadow-[0_2px_0_var(--o-line),0_16px_30px_-26px_rgba(23,52,53,0.55)] transition-[transform,box-shadow,border-color] duration-150 hover:border-[var(--sc)] active:translate-y-[2px] active:shadow-none disabled:cursor-not-allowed disabled:opacity-60 sm:min-h-[172px] sm:p-6"
+      style={{ ["--sc" as string]: source.color }}
+    >
+      <span
+        className="flex h-12 w-12 items-center justify-center rounded-2xl transition-transform duration-200 group-hover:scale-105 sm:h-14 sm:w-14"
+        style={{ background: tint(source.color, 0.12), color: source.color }}
+      >
+        <SourceIcon id={source.id} className="h-6 w-6 sm:h-7 sm:w-7" />
+      </span>
+      <span className="mt-4 block">
+        <span className="block text-[18px] font-extrabold leading-tight tracking-[-0.01em] sm:text-[22px]">{source.label}</span>
+        <span className="mt-1 block text-[13px] leading-snug text-[var(--o-muted)] sm:text-[14.5px]">{source.hint}</span>
+      </span>
+    </button>
+  );
+}
+
+function TodayChip({ count, className = "" }: { count: number; className?: string }) {
+  return (
+    <span className={`inline-flex items-baseline gap-2 rounded-full bg-white px-4 py-2 text-[14px] font-semibold text-[var(--o-muted)] ring-1 ring-[var(--o-line)] ${className}`}>
+      Hoje
+      <BumpNumber value={count} className="text-[20px] font-extrabold text-[var(--o-ink)]" />
+    </span>
+  );
+}
+
+function TodayPanel({
+  cfg,
+  site,
+  today,
+  now,
+  lastId,
+}: {
+  cfg: OrigemClient;
+  site: OrigemSite;
+  today: TodayVote[];
+  now: number;
+  lastId: string | null;
+}) {
+  const { month, day } = lisbonParts(now);
+  const known = (id: string) => (cfg.sources.some((x) => x.id === id) ? id : "outro");
+  const bySource = cfg.sources
+    .map((o) => ({ o, n: today.filter((v) => known(v.source) === o.id).length }))
+    .filter((x) => x.n > 0);
+  const sourceOf = (id: string) => cfg.sources.find((s) => s.id === known(id)) ?? cfg.sources[cfg.sources.length - 1];
+  const channelOf = (id: string | null) => (id ? cfg.channels.find((c) => c.id === id)?.label ?? null : null);
+
+  return (
+    <aside className="lg:sticky lg:top-[100px] lg:self-start" aria-label="Registos de hoje">
+      <div className="overflow-hidden rounded-[28px] bg-white ring-1 ring-[var(--o-line)]">
+        <div className="relative p-6">
+          <p className="text-[15px] font-bold">Hoje em {site.short}</p>
+          <p className="text-[13px] text-[var(--o-muted)]">{dayLabel(month, day)}</p>
+          <div className="mt-4 flex items-end gap-3">
+            <BumpNumber value={today.length} className="text-[64px] font-extrabold leading-[0.9] tracking-[-0.04em]" />
+            <span className="pb-1.5 text-[15px] font-semibold leading-tight text-[var(--o-muted)]">
+              {today.length === 1 ? `${cfg.person.one} novo` : `${cfg.person.many} novos`}
+            </span>
+          </div>
+          <BrandMark mark={cfg.theme.mark} play={today.length} still={today.length === 0} className="absolute right-5 top-5 h-14 w-14" />
+
+          {bySource.length > 0 && (
+            <div className="mt-5 flex h-2.5 gap-[2px] overflow-hidden rounded-full" aria-hidden>
+              {bySource.map(({ o, n }) => (
+                <motion.span key={o.id} layout className="h-full" style={{ flex: n, background: o.color }} />
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="border-t border-[var(--o-line)]">
+          {today.length === 0 ? (
+            <p className="px-6 py-6 text-[14.5px] leading-relaxed text-[var(--o-muted)]">
+              Ainda sem registos hoje. O primeiro {cfg.person.one} novo aparece aqui.
+            </p>
+          ) : (
+            <ol className="max-h-[360px] overflow-y-auto py-2" aria-label="Últimos registos">
+              <AnimatePresence initial={false}>
+                {today.slice(0, 40).map((v) => {
+                  const s = sourceOf(v.source);
+                  const ch = channelOf(v.channel);
+                  return (
+                    <motion.li
+                      key={v.id}
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.25 }}
+                      className={`flex items-center gap-3 px-6 py-2.5 transition-colors ${v.id === lastId ? "bg-[var(--o-paper)]" : ""}`}
+                    >
+                      <span className="w-11 shrink-0 text-[13px] font-semibold tabular-nums text-[var(--o-muted)]">{lisbonClock(v.at)}</span>
+                      <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: s.color }} />
+                      <span className="min-w-0 flex-1 truncate text-[15px] font-semibold">{s.label}</span>
+                      {ch && <span className="shrink-0 text-[13px] text-[var(--o-muted)]">{ch}</span>}
+                    </motion.li>
+                  );
+                })}
+              </AnimatePresence>
+            </ol>
+          )}
+        </div>
+      </div>
+    </aside>
+  );
+}
+
+/* ────────────────────────── A folha do canal ────────────────────────── */
+
+function ChannelSheet({
+  cfg,
+  sheet,
+  saving,
+  onRegister,
+  onClose,
+}: {
+  cfg: OrigemClient;
+  sheet: SheetState;
+  saving: string | null;
+  onRegister: (channel: string | null) => void;
+  onClose: () => void;
+}) {
+  const source = cfg.sources.find((s) => s.id === sheet.source) ?? cfg.sources[0];
+  const firstRef = useRef<HTMLButtonElement>(null);
+  const reduce = useReducedMotion();
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  useEffect(() => {
+    if (sheet.step === "channel") firstRef.current?.focus({ preventScroll: true });
+  }, [sheet.step]);
+
+  return (
+    <motion.div
+      className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-6"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.18 }}
+    >
+      <button type="button" aria-label="Fechar" onClick={onClose} className="absolute inset-0 cursor-default bg-[#173435]/45" tabIndex={-1} />
+      <motion.div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="origem-sheet-title"
+        className="relative w-full max-w-[600px] rounded-t-[32px] bg-white px-5 pb-[max(24px,env(safe-area-inset-bottom))] pt-6 shadow-[0_40px_80px_-30px_rgba(23,52,53,0.6)] sm:rounded-[32px] sm:p-8"
+        initial={reduce ? { opacity: 0 } : { y: 60, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        exit={reduce ? { opacity: 0 } : { y: 40, opacity: 0 }}
+        transition={{ type: "spring", stiffness: 420, damping: 36 }}
+      >
+        <AnimatePresence mode="wait" initial={false}>
+          {sheet.step === "channel" ? (
+            <motion.div key="channel" exit={{ opacity: 0, scale: 0.98 }} transition={{ duration: 0.12 }}>
+              <div className="flex items-start gap-4">
+                <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl" style={{ background: tint(source.color, 0.12), color: source.color }}>
+                  <SourceIcon id={source.id} className="h-7 w-7" />
+                </span>
+                <div className="min-w-0 flex-1 pt-0.5">
+                  <h2 id="origem-sheet-title" className="text-[26px] font-extrabold leading-tight tracking-[-0.02em]">
+                    {source.label}
+                  </h2>
+                  <p className="text-[15px] text-[var(--o-muted)]">{source.hint}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  disabled={Boolean(saving)}
+                  className="-mr-1 -mt-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[var(--o-muted)] transition hover:bg-[var(--o-paper)] hover:text-[var(--o-ink)]"
+                  aria-label="Cancelar"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <p className="mt-7 text-[18px] font-bold">E como entrou em contacto?</p>
+              <p className="text-[14.5px] text-[var(--o-muted)]">Toque no canal para registar.</p>
+
+              <div className="mt-4 grid grid-cols-2 gap-3">
+                {cfg.channels.map((c, i) => {
+                  const Icon = CHANNEL_ICONS[c.id] ?? CHANNEL_ICONS.online;
+                  const busy = saving === c.id;
+                  return (
+                    <button
+                      key={c.id}
+                      ref={i === 0 ? firstRef : undefined}
+                      type="button"
+                      onClick={() => onRegister(c.id)}
+                      disabled={Boolean(saving)}
+                      className="flex h-[84px] touch-manipulation select-none items-center gap-2.5 rounded-[22px] border border-[var(--o-line)] bg-[var(--o-paper)] px-3 text-left outline-none sm:gap-3 transition hover:border-[var(--o-deep)] hover:bg-white focus-visible:ring-2 focus-visible:ring-[var(--o-deep)] focus-visible:ring-offset-2 active:scale-[0.98] disabled:opacity-60 sm:h-[92px] sm:px-5"
+                    >
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-[var(--o-deep)] ring-1 ring-[var(--o-line)] sm:h-11 sm:w-11">
+                        {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <Icon className="h-5 w-5" />}
+                      </span>
+                      <span className="text-[16px] font-bold leading-tight min-[400px]:text-[17px] sm:text-[18px]">{c.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => onRegister(null)}
+                disabled={Boolean(saving)}
+                className="mt-3 flex h-14 w-full touch-manipulation items-center justify-center gap-2 rounded-[20px] text-[16px] font-bold text-[var(--o-deep)] ring-1 ring-inset ring-[var(--o-line)] transition hover:bg-[var(--o-paper)] disabled:opacity-60"
+              >
+                {saving === "none" ? <Loader2 className="h-5 w-5 animate-spin" /> : "Registar sem indicar o canal"}
+              </button>
+            </motion.div>
+          ) : (
+            <motion.button
+              key="done"
+              type="button"
+              onClick={onClose}
+              className="flex w-full flex-col items-center py-6 text-center sm:py-8"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.15 }}
+            >
+              <BrandMark mark={cfg.theme.mark} play={sheet.n} className="h-28 w-28" />
+              <h2 id="origem-sheet-title" className="mt-6 text-[30px] font-extrabold tracking-[-0.02em]">
+                Registado
+              </h2>
+              <p className="mt-1 text-[17px] text-[var(--o-muted)]">{phraseOf(cfg, sheet.source, sheet.channel)}.</p>
+            </motion.button>
+          )}
+        </AnimatePresence>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+/* ───────────────────────────── O aviso ───────────────────────────── */
 
 function ToastBar({
   toast,
@@ -519,58 +787,47 @@ function ToastBar({
   onUndo: () => void;
   onClose: () => void;
 }) {
-  const src = toast.kind === "ok" ? cfg.sources.find((s) => s.id === toast.source) : null;
-  const ch = toast.kind === "ok" && toast.channel ? cfg.channels.find((c) => c.id === toast.channel) : null;
   const left = toast.kind === "ok" ? Math.max(0, toast.until - now) : 0;
   const frac = left / (UNDO_SECONDS * 1000);
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 40 }}
+      initial={{ opacity: 0, y: 30 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: 40 }}
-      transition={{ type: "spring", stiffness: 300, damping: 28 }}
+      exit={{ opacity: 0, y: 30 }}
+      transition={{ type: "spring", stiffness: 320, damping: 30 }}
       className="fixed inset-x-0 bottom-0 z-40 px-4 pb-[max(16px,env(safe-area-inset-bottom))]"
       role="status"
     >
       <div
-        className={`relative mx-auto flex max-w-xl items-center gap-3 overflow-hidden rounded-3xl border p-3.5 pl-4 shadow-[0_24px_60px_-20px_rgba(0,0,0,0.8)] ${
-          toast.kind === "error" ? "border-rose-400/40 bg-[#1d0f15]" : "border-white/10 bg-[#11131b]"
+        className={`relative mx-auto flex max-w-[560px] items-center gap-3 overflow-hidden rounded-[24px] p-3 pl-4 text-white shadow-[0_24px_50px_-20px_rgba(23,52,53,0.55)] ${
+          toast.kind === "error" ? "bg-[#7A1F2E]" : "bg-[var(--o-ink)]"
         }`}
       >
         {toast.kind === "ok" ? (
           <>
-            <motion.span
-              initial={{ scale: 0, rotate: -90 }}
-              animate={{ scale: 1, rotate: 0 }}
-              transition={{ type: "spring", stiffness: 400, damping: 15 }}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl text-[#07080d]"
-              style={{ background: "linear-gradient(135deg,#8CC2D0,#C9D22B)" }}
-            >
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--o-accent)] text-[var(--o-ink)]">
               <Check className="h-5 w-5" strokeWidth={3} />
-            </motion.span>
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold">Registado</p>
-              <p className="truncate text-xs text-white/55">
-                {src?.label ?? "—"}
-                {ch ? ` · ${ch.label}` : ""}
-              </p>
-            </div>
+            </span>
+            <p className="min-w-0 flex-1 truncate text-[15px]">
+              <strong className="font-bold">Registado:</strong> <span className="text-white/80">{phraseOf(cfg, toast.source, toast.channel)}</span>
+            </p>
             <button
               type="button"
               onClick={onUndo}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-white/12 px-3.5 py-2 text-sm font-semibold text-white/85 transition hover:bg-white/10"
+              className="inline-flex h-11 shrink-0 items-center gap-2 rounded-full bg-white/10 px-4 text-[15px] font-bold transition hover:bg-white/20"
             >
-              <Undo2 className="h-4 w-4" /> Anular <span className="tabular-nums text-white/40">{Math.ceil(left / 1000)}</span>
+              <Undo2 className="h-4 w-4" /> Anular
+              <span className="w-5 text-right tabular-nums text-white/55">{Math.ceil(left / 1000)}</span>
             </button>
-            <span className="absolute bottom-0 left-0 h-[3px] origin-left" style={{ width: `${frac * 100}%`, background: WA_GRADIENT }} />
+            <span className="absolute bottom-0 left-0 h-[3px] bg-[var(--o-accent)]" style={{ width: `${frac * 100}%` }} />
           </>
         ) : toast.kind === "undone" ? (
-          <p className="py-1.5 text-sm text-white/75">Registo anulado.</p>
+          <p className="py-2 pl-1 text-[15px] text-white/85">Registo anulado. Não conta nos números.</p>
         ) : (
           <>
-            <p className="flex-1 py-1 text-sm text-rose-200">{toast.text}</p>
-            <button type="button" onClick={onClose} className="rounded-xl px-3 py-1.5 text-sm text-white/60 hover:bg-white/10">
+            <p className="flex-1 py-1 text-[15px]">{toast.text}</p>
+            <button type="button" onClick={onClose} className="h-10 rounded-full px-4 text-[15px] font-bold text-white/80 hover:bg-white/10">
               Fechar
             </button>
           </>
@@ -578,8 +835,4 @@ function ToastBar({
       </div>
     </motion.div>
   );
-}
-
-function cap(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1);
 }

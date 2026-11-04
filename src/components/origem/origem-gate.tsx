@@ -1,13 +1,17 @@
 "use client";
 
-// O portão da Origem de Pacientes: o logótipo do cliente e um PIN de 6
-// dígitos. Entra sozinho ao 6.º dígito; o aparelho fica com acesso 180 dias.
+// O portão da Origem de Pacientes (v78.69): o logótipo do cliente e um PIN
+// de 6 dígitos num teclado próprio — no tablet da receção não se abre o
+// teclado do sistema por cima do ecrã. Um teclado físico também funciona.
+// Entra sozinho ao 6.º dígito; o aparelho fica com acesso 180 dias.
 
-import { useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AnimatePresence, motion, useAnimationControls } from "motion/react";
-import { Check, Loader2, Lock } from "lucide-react";
-import { BrandBackdrop, LogoPlate, MadeBy, WA_GRADIENT } from "./origem-ui";
+import { motion, useAnimationControls } from "motion/react";
+import { Delete, Loader2 } from "lucide-react";
+import { ClientLogo, MadeBy } from "./origem-ui";
+
+const LENGTH = 6;
 
 export function OrigemGate({
   slug,
@@ -25,129 +29,138 @@ export function OrigemGate({
   const [state, setState] = useState<"idle" | "loading" | "ok" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
   const shake = useAnimationControls();
-  const inputRef = useRef<HTMLInputElement>(null);
+  const busy = useRef(false);
+  const pinRef = useRef("");
 
-  async function submit(value: string) {
-    if (value.length !== 6 || state === "loading" || state === "ok") return;
-    setState("loading");
-    setError(null);
-    try {
-      const res = await fetch(`/api/origem/${slug}/auth`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pin: value }),
-      });
-      if (!res.ok) {
-        const j = (await res.json().catch(() => ({}))) as { error?: string };
-        throw new Error(j.error ?? "Não foi possível entrar.");
+  const submit = useCallback(
+    async (value: string) => {
+      if (busy.current) return;
+      busy.current = true;
+      setState("loading");
+      setError(null);
+      try {
+        const res = await fetch(`/api/origem/${slug}/auth`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ pin: value }),
+        });
+        if (!res.ok) {
+          const j = (await res.json().catch(() => ({}))) as { error?: string };
+          throw new Error(j.error ?? "Não foi possível entrar.");
+        }
+        setState("ok");
+        setTimeout(() => router.refresh(), 700);
+      } catch (err) {
+        busy.current = false;
+        setState("error");
+        setError(err instanceof Error ? err.message : "Não foi possível entrar.");
+        pinRef.current = "";
+        setPin("");
+        void shake.start({ x: [0, -14, 12, -8, 6, -2, 0], transition: { duration: 0.45 } });
       }
-      setState("ok");
-      setTimeout(() => router.refresh(), 600);
-    } catch (err) {
-      setState("error");
-      setError(err instanceof Error ? err.message : "Não foi possível entrar.");
-      setPin("");
-      void shake.start({ x: [0, -12, 10, -8, 6, -3, 0], transition: { duration: 0.5 } });
-      inputRef.current?.focus();
-    }
-  }
+    },
+    [router, shake, slug],
+  );
+
+  const press = useCallback(
+    (key: string) => {
+      if (busy.current) return;
+      const cur = pinRef.current;
+      const next = key === "del" ? cur.slice(0, -1) : cur.length >= LENGTH ? cur : cur + key;
+      pinRef.current = next;
+      setPin(next);
+      if (key !== "del") setState((s) => (s === "error" ? "idle" : s));
+      if (key !== "del" && next.length === LENGTH) void submit(next);
+    },
+    [submit],
+  );
+
+  // Teclado físico (ou o do computador da equipa).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (/^\d$/.test(e.key)) press(e.key);
+      else if (e.key === "Backspace") press("del");
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [press]);
+
+  const keys = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "del"];
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center px-4 py-16 text-white">
-      <BrandBackdrop />
+    <main className="flex min-h-[100dvh] flex-col px-5 pb-[max(20px,env(safe-area-inset-bottom))] pt-[max(20px,env(safe-area-inset-top))] sm:px-10">
       <motion.div
-        className="w-full max-w-[420px]"
-        initial={{ opacity: 0, y: 24 }}
-        animate={state === "ok" ? { opacity: 0, scale: 1.03, filter: "blur(8px)" } : { opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1], delay: state === "ok" ? 0.15 : 0 }}
+        className="mx-auto grid w-full max-w-5xl flex-1 items-center gap-10 py-8 lg:grid-cols-[minmax(0,1fr)_400px] lg:gap-20"
+        animate={state === "ok" ? { opacity: 0, y: -12 } : { opacity: 1, y: 0 }}
+        transition={{ duration: 0.45, delay: state === "ok" ? 0.25 : 0, ease: [0.16, 1, 0.3, 1] }}
       >
-        <div className="flex flex-col items-center text-center">
-          <motion.div initial={{ scale: 0.7, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: "spring", stiffness: 180, damping: 16, delay: 0.1 }}>
-            <LogoPlate logo={logo} brand={brand} size="lg" />
-          </motion.div>
-
-          <span className="mt-9 inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.04] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-white/60">
-            <Lock className="h-3 w-3" /> Acesso da receção
-          </span>
-          <h1 className="mt-4 text-[32px] font-semibold leading-tight tracking-tight">
-            <span className="brand-gradient-text">Origem dos {peopleMany}</span>
+        <div className="text-center lg:text-left">
+          <ClientLogo logo={logo} brand={brand} className="mx-auto h-14 sm:h-[72px] lg:mx-0" />
+          <h1 className="mt-10 text-[36px] font-extrabold leading-[1.02] tracking-[-0.035em] sm:mt-14 sm:text-[56px]">
+            Origem dos
+            <br className="hidden lg:block" /> {peopleMany}
           </h1>
-          <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-white/55">
-            Introduza o PIN de 6 dígitos. Este aparelho fica com acesso durante 6 meses.
+          <p className="mx-auto mt-4 max-w-[34ch] text-[17px] leading-relaxed text-[var(--o-muted)] lg:mx-0">
+            Introduza o PIN da receção. Este aparelho fica com acesso durante 6 meses.
           </p>
+        </div>
 
-          <motion.div animate={shake} className="mt-8 w-full">
-            <label htmlFor="origem-pin" className="relative block cursor-text">
-              <span className="sr-only">PIN</span>
-              <input
-                ref={inputRef}
-                id="origem-pin"
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                pattern="\d*"
-                maxLength={6}
-                autoFocus
-                value={pin}
-                onChange={(e) => {
-                  const v = e.target.value.replace(/\D/g, "").slice(0, 6);
-                  setPin(v);
-                  if (state === "error") setState("idle");
-                  if (v.length === 6) void submit(v);
-                }}
-                className="absolute inset-0 h-full w-full cursor-text opacity-0"
-              />
-              <div className="flex justify-center gap-2.5" aria-hidden>
-                {Array.from({ length: 6 }, (_, i) => {
-                  const filled = i < pin.length;
-                  const active = i === pin.length && state !== "loading" && state !== "ok";
-                  return (
-                    <div
-                      key={i}
-                      className={`flex h-16 w-12 items-center justify-center rounded-2xl border text-2xl font-semibold transition-all duration-200 sm:w-14 ${
-                        state === "error"
-                          ? "border-rose-400/60 bg-rose-500/[0.06]"
-                          : state === "ok"
-                            ? "border-emerald-400/60 bg-emerald-500/10"
-                            : active
-                              ? "border-[#6EC1D6]/70 bg-white/[0.06] shadow-[0_0_0_4px_rgba(110,193,214,0.14)]"
-                              : "border-white/12 bg-white/[0.04]"
-                      }`}
-                    >
-                      <AnimatePresence>
-                        {filled && (
-                          <motion.span
-                            initial={{ scale: 0 }}
-                            animate={{ scale: 1 }}
-                            exit={{ scale: 0 }}
-                            className="h-3 w-3 rounded-full"
-                            style={{ background: WA_GRADIENT }}
-                          />
-                        )}
-                      </AnimatePresence>
-                    </div>
-                  );
-                })}
-              </div>
-            </label>
-
-            <div className="mt-5 flex h-6 items-center justify-center text-sm">
-              {state === "loading" && <Loader2 className="h-5 w-5 animate-spin text-white/60" />}
-              {state === "ok" && (
-                <span className="inline-flex items-center gap-1.5 font-semibold text-emerald-300">
-                  <Check className="h-4 w-4" /> Bem-vindo
-                </span>
-              )}
-              {state === "error" && error && (
-                <span className="text-rose-300" role="alert">
-                  {error}
-                </span>
-              )}
-            </div>
+        <div className="mx-auto w-full max-w-[400px] rounded-[32px] bg-white p-6 shadow-[0_1px_0_var(--o-line),0_30px_60px_-40px_rgba(23,52,53,0.55)] ring-1 ring-[var(--o-line)] sm:p-8">
+          <motion.div animate={shake} className="flex justify-center gap-3.5" role="status" aria-live="polite" aria-label={`${pin.length} de ${LENGTH} dígitos`}>
+            {Array.from({ length: LENGTH }, (_, i) => {
+              const filled = i < pin.length;
+              return (
+                <span
+                  key={i}
+                  className="h-4 w-4 rounded-full border-2 transition-all duration-150"
+                  style={{
+                    borderColor: state === "error" ? "#D2455A" : filled ? "var(--o-deep)" : "var(--o-line)",
+                    background: state === "ok" ? "var(--o-accent)" : filled ? "var(--o-deep)" : "transparent",
+                    transform: filled ? "scale(1.08)" : "scale(1)",
+                  }}
+                />
+              );
+            })}
           </motion.div>
 
-          <MadeBy className="mt-10" />
+          <div className="mt-4 flex h-6 items-center justify-center text-[15px]">
+            {state === "loading" && <Loader2 className="h-5 w-5 animate-spin text-[var(--o-muted)]" aria-label="A verificar" />}
+            {state === "ok" && <span className="font-bold text-[var(--o-deep)]">PIN certo. A abrir…</span>}
+            {state === "error" && error && (
+              <span className="font-semibold text-[#B8364A]" role="alert">
+                {error}
+              </span>
+            )}
+          </div>
+
+          <div className="mt-5 grid grid-cols-3 gap-3">
+            {keys.map((k, i) =>
+              k === "" ? (
+                <span key={i} />
+              ) : (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => press(k)}
+                  aria-label={k === "del" ? "Apagar" : k}
+                  className={`flex h-[68px] touch-manipulation select-none items-center justify-center rounded-[20px] text-[28px] font-bold transition active:scale-[0.96] sm:h-[72px] ${
+                    k === "del"
+                      ? "text-[var(--o-muted)] hover:bg-[var(--o-paper)] hover:text-[var(--o-ink)]"
+                      : "bg-[var(--o-paper)] hover:bg-[var(--o-line)] active:bg-[var(--o-line)]"
+                  }`}
+                >
+                  {k === "del" ? <Delete className="h-7 w-7" /> : k}
+                </button>
+              ),
+            )}
+          </div>
         </div>
       </motion.div>
+
+      <footer className="flex justify-center lg:justify-start">
+        <MadeBy />
+      </footer>
     </main>
   );
 }

@@ -138,3 +138,35 @@ export function lisbonParts(ms: number): { month: string; day: number; date: str
   const month = `${get("year")}-${get("month")}`;
   return { month, day: Number(get("day")), date: `${month}-${get("day")}` };
 }
+
+/** Um registo de hoje, como o ecrã da receção o mostra (sem o aparelho). */
+export type TodayVote = {
+  id: string;
+  site: string;
+  source: string;
+  channel: string | null;
+  at: number;
+};
+
+/** «10:42», em hora de Lisboa. */
+export function lisbonClock(ms: number): string {
+  return new Intl.DateTimeFormat("pt-PT", { timeZone: "Europe/Lisbon", hour: "2-digit", minute: "2-digit", hour12: false }).format(ms);
+}
+
+/** «Bom dia» até às 13h, «Boa tarde» até às 20h, depois «Boa noite». */
+export function lisbonGreeting(ms: number): string {
+  const h = Number(new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Lisbon", hour: "2-digit", hour12: false }).format(ms));
+  return h < 6 ? "Boa noite" : h < 13 ? "Bom dia" : h < 20 ? "Boa tarde" : "Boa noite";
+}
+
+/** «30/11/2026» (DD/MM/AAAA) a partir de um mês e de um dia. */
+export function dayLabel(month: string, day: number): string {
+  const [y, m] = month.split("-");
+  return `${String(day).padStart(2, "0")}/${m}/${y}`;
+}
+
+/** «a», «a e b», «a, b e c». */
+export function joinPt(items: string[]): string {
+  if (items.length <= 1) return items[0] ?? "";
+  return `${items.slice(0, -1).join(", ")} e ${items[items.length - 1]}`;
+}

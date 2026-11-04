@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.69",
+    date: "2026-11-04",
+    title: "Origem dos pacientes: novo design, com a marca da MyMedic",
+    highlights: [
+      "**🎨 A página da receção veste a MyMedic**: fundo claro, a letra Manrope e as cores do site deles (teal, lima e o verde-petróleo do texto). A WonderAds fica na assinatura e na «Pesquisa e IA», o número que o nosso trabalho move.",
+      "**🏥 Escolha da clínica reformulada**: um ecrã de boas-vindas com as duas clínicas em cartões grandes, com a morada. No topo há um botão para trocar de clínica e voltar sem perder nada.",
+      "**👆 Registar em dois toques**: a origem numa tecla grande e o canal numa folha que sobe (ou «sem indicar o canal»). A cruz da MyMedic monta-se a cada registo e o «Anular» fica 20 s no fundo do ecrã.",
+      "**🕒 Coluna «Hoje»** com o total do dia na clínica e a lista dos registos (hora, origem e canal), que se atualiza sozinha entre tablets.",
+      "**🔢 PIN com teclado próprio**, para o teclado do tablet não tapar o ecrã. **📊 Relatórios** com a frase do mês, a barra das origens e cores validadas para daltonismo.",
+    ],
+  },
+  {
     version: "78.68",
     date: "2026-11-03",
     title: "Origem dos pacientes: piloto na MyMedic",
