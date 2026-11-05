@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.76",
+    date: "2026-11-05",
+    title: "Origem dos clientes: a página de registo em todos os clientes de SEO ativos",
+    highlights: [
+      "**🧭 17 clientes novos com a sua página «Origem»** (/<cliente>/origem): Aeger Prima, B-Life, Mimus, Spine Center, Monte Mar, CDT, White Clinic, Sentir Saúde, Clínicas FA, Cidália, Maratona Clube de Portugal, PhysioHub, ATN Medical, Colégio Militar, Medway, António Gaspar e Brancóptica. Os pausados no SEO DPT ficam de fora.",
+      "**🎨 Cada página veste a marca do cliente**: as cores, a letra e o logótipo do site dele, e os cantos (redondos, suaves ou retos). A cada registo salta o símbolo da marca — o globo da Brancóptica, o coração da Aeger, o cronómetro da CDT — ou um visto na cor dela.",
+      "**🏪 Palavras de cada negócio**: pacientes nas clínicas, clientes nas lojas, salões e restaurantes, atletas na Maratona. As origens também mudam: «Guia ou plataforma» no Monte Mar, «Outra prova ou feira» na Maratona, «Viu a nossa frota» na CDT. As cores das origens foram validadas para daltonismo.",
+      "**📍 Todos os locais**: as 17 lojas da Brancóptica, os 14 salões da Cidália, as 10 clínicas da PhysioHub e por aí fora. Com muitos locais, a escolha do tablet é uma grelha com pesquisa, os relatórios filtram por uma lista e cada tablet tem o seu link (?loja=, ?salao=, ?clinica=).",
+      "**🔢 Um PIN de 6 dígitos por cliente**. A equipa WonderAds continua a entrar sem PIN, pelo chip «Origem» na ficha SEO.",
+    ],
+  },
+  {
     version: "78.75",
     date: "2026-11-05",
     title: "Ajustes internos de permissões",

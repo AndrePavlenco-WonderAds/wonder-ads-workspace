@@ -15,8 +15,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { ArrowLeft, ArrowRight, BarChart3, Check, ChevronDown, Eye, Loader2, LogOut, MapPin, PenLine, Undo2, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, BarChart3, Check, ChevronDown, Eye, Loader2, LogOut, MapPin, PenLine, Search, Undo2, X } from "lucide-react";
 import type { OrigemClient, OrigemSite, OrigemSource } from "@/lib/origem/config";
+import { placeWords, siteFromQuery } from "@/lib/origem/words";
 import { dayLabel, lisbonClock, lisbonGreeting, lisbonParts, type MonthStats, type TodayVote } from "@/lib/origem/stats";
 import { OrigemReports } from "./origem-reports";
 import { BrandMark, BumpNumber, CHANNEL_ICONS, ClientLogo, MadeBy, SOURCE_ICONS, tint } from "./origem-ui";
@@ -89,14 +90,13 @@ export function OrigemApp({ bootstrap }: { bootstrap: OrigemBootstrap }) {
   const registered = useRef(0);
   const siteKey = `origem:${slug}:site`;
 
-  // A clínica deste aparelho: o link manda, depois o que ficou guardado.
+  // O local deste aparelho: o link manda (?clinica=, ?loja=, ?salao=…),
+  // depois o que ficou guardado.
   useEffect(() => {
     setNow(Date.now());
     if (single) return;
-    const fromUrl = new URLSearchParams(window.location.search).get("clinica");
-    let chosen: string | null = null;
-    if (fromUrl && cfg.sites.some((s) => s.id === fromUrl)) chosen = fromUrl;
-    else {
+    let chosen = siteFromQuery(cfg, new URLSearchParams(window.location.search));
+    if (!chosen) {
       try {
         const saved = localStorage.getItem(siteKey);
         if (saved && cfg.sites.some((s) => s.id === saved)) chosen = saved;
@@ -106,7 +106,7 @@ export function OrigemApp({ bootstrap }: { bootstrap: OrigemBootstrap }) {
     }
     setSite(chosen);
     setSiteReady(true);
-  }, [cfg.sites, siteKey, single]);
+  }, [cfg, siteKey, single]);
 
   const chooseSite = (id: string) => {
     setSite(id);
@@ -235,7 +235,6 @@ export function OrigemApp({ bootstrap }: { bootstrap: OrigemBootstrap }) {
   }
 
   const showPicker = tab === "registar" && siteReady && (!siteObj || picking);
-  const brandShort = cfg.brand.split(" ")[0];
 
   return (
     <div className="relative isolate flex min-h-[100dvh] flex-col">
@@ -246,7 +245,7 @@ export function OrigemApp({ bootstrap }: { bootstrap: OrigemBootstrap }) {
             <span>Está a ver como equipa WonderAds. Este perfil só pode consultar.</span>
           ) : (
             <span>
-              Está a ver como equipa WonderAds{viewer.name ? ` (${viewer.name})` : ""}. Os registos feitos aqui contam nos números da {brandShort}.
+              Está a ver como equipa WonderAds{viewer.name ? ` (${viewer.name})` : ""}. Os registos feitos aqui contam nos números {cfg.brandOf}.
             </span>
           )}
         </div>
@@ -254,12 +253,22 @@ export function OrigemApp({ bootstrap }: { bootstrap: OrigemBootstrap }) {
 
       <header className="sticky top-0 z-30 border-b border-[var(--o-line)] bg-white/90 backdrop-blur-md">
         <div className="mx-auto flex h-[68px] max-w-[1240px] items-center gap-3 px-4 sm:h-[76px] sm:gap-5 sm:px-8">
-          <ClientLogo logo={logo} brand={cfg.brand} className="h-8 shrink-0 sm:h-10" />
+          {typeof cfg.theme.mark === "object" && !single ? (
+            // No telemóvel, com o botão do local ao lado, um wordmark largo não
+            // cabe: fica o símbolo da marca (o logótipo inteiro volta a 480 px).
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={cfg.theme.mark.src} alt={cfg.brand} className="h-9 w-9 shrink-0 object-contain min-[480px]:hidden" />
+              <ClientLogo logo={logo} brand={cfg.brand} size="header" className="hidden shrink-0 min-[480px]:block" />
+            </>
+          ) : (
+            <ClientLogo logo={logo} brand={cfg.brand} size="header" className="shrink-0" />
+          )}
           {siteObj && !showPicker && tab === "registar" && !single && (
             <button
               type="button"
               onClick={() => setPicking(true)}
-              className="group ml-1 flex min-w-0 items-center gap-2 rounded-full border border-[var(--o-line)] bg-[var(--o-paper)] py-2 pl-3 pr-2.5 text-[15px] font-bold transition hover:border-[var(--o-primary)] sm:ml-2"
+              className="group ml-1 flex min-w-0 items-center gap-2 rounded-[var(--o-pill)] border border-[var(--o-line)] bg-[var(--o-paper)] py-2 pl-3 pr-2.5 text-[15px] font-bold transition hover:border-[var(--o-primary)] sm:ml-2"
               aria-label={`${siteObj.name}. Mudar de ${cfg.place.one}`}
             >
               <MapPin className="h-4 w-4 shrink-0 text-[var(--o-deep)]" />
@@ -271,7 +280,7 @@ export function OrigemApp({ bootstrap }: { bootstrap: OrigemBootstrap }) {
             </button>
           )}
 
-          <nav className="ml-auto flex shrink-0 rounded-full bg-[var(--o-paper)] p-1 ring-1 ring-[var(--o-line)]" aria-label="Secções">
+          <nav className="ml-auto flex shrink-0 rounded-[var(--o-pill)] bg-[var(--o-paper)] p-1 ring-1 ring-[var(--o-line)]" aria-label="Secções">
             {(
               [
                 { id: "registar", label: "Registar", Icon: PenLine },
@@ -290,14 +299,14 @@ export function OrigemApp({ bootstrap }: { bootstrap: OrigemBootstrap }) {
                   }}
                   aria-current={on ? "page" : undefined}
                   aria-label={label}
-                  className={`relative flex items-center gap-2 rounded-full px-3.5 py-2 text-[14px] font-bold transition sm:px-5 ${
+                  className={`relative flex items-center gap-2 rounded-[var(--o-pill)] px-3.5 py-2 text-[14px] font-bold transition sm:px-5 ${
                     on ? "text-[var(--o-ink)]" : "text-[var(--o-muted)] hover:text-[var(--o-ink)]"
                   }`}
                 >
                   {on && (
                     <motion.span
                       layoutId="origem-tab"
-                      className="absolute inset-0 rounded-full bg-white shadow-[0_1px_2px_rgba(23,52,53,0.12),0_4px_14px_-6px_rgba(23,52,53,0.25)]"
+                      className="absolute inset-0 rounded-[var(--o-pill)] bg-white shadow-[0_1px_2px_rgba(var(--o-ink-rgb),0.12),0_4px_14px_-6px_rgba(var(--o-ink-rgb),0.25)]"
                       transition={{ type: "spring", stiffness: 420, damping: 34 }}
                     />
                   )}
@@ -359,7 +368,10 @@ export function OrigemApp({ bootstrap }: { bootstrap: OrigemBootstrap }) {
   );
 }
 
-/* ───────────────────────── Escolher a clínica ───────────────────────── */
+/* ───────────────────────── Escolher o local ───────────────────────── */
+
+/** Sem acentos nem maiúsculas — «evora» encontra «Évora Plaza». */
+const fold = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 
 function SitePicker({
   cfg,
@@ -375,61 +387,127 @@ function SitePicker({
   onCancel: (() => void) | null;
 }) {
   const reduce = useReducedMotion();
-  return (
-    <div>
-      <div className="grid min-h-[58vh] content-center gap-8 lg:min-h-[62vh] lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:items-center lg:gap-16">
-        <motion.div initial={reduce ? false : { opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}>
-          {onCancel && (
-            <button
-              type="button"
-              onClick={onCancel}
-              className="mb-6 inline-flex items-center gap-2 rounded-full py-1.5 pr-3 text-[15px] font-bold text-[var(--o-deep)] transition hover:gap-2.5"
-            >
-              <ArrowLeft className="h-4 w-4" /> Voltar ao registo
-            </button>
-          )}
-          <p className="text-[19px] font-semibold text-[var(--o-muted)]">{lisbonGreeting(now)}.</p>
-          <h1 className="mt-2 max-w-[13ch] text-[38px] font-extrabold leading-[1.04] tracking-[-0.035em] sm:text-[54px]">
-            Em que {cfg.place.one} fica este tablet?
-          </h1>
-          <p className="mt-5 max-w-[40ch] text-[17px] leading-relaxed text-[var(--o-muted)]">
-            Os registos feitos neste aparelho contam para {cfg.place.the} que escolher. Pode trocar mais tarde, no topo do ecrã.
-          </p>
-        </motion.div>
+  // Até 4 locais: o ecrã de boas-vindas com cartões grandes (o da MyMedic).
+  // Mais do que isso (lojas, salões, clínicas de uma rede): uma grelha
+  // compacta e, a partir de 9, uma pesquisa.
+  const many = cfg.sites.length > 4;
+  const [query, setQuery] = useState("");
+  const q = fold(query.trim());
+  const shown = q ? cfg.sites.filter((s) => fold([s.name, s.short, ...(s.address ?? [])].join(" ")).includes(q)) : cfg.sites;
 
+  const intro = (
+    <motion.div initial={reduce ? false : { opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}>
+      {onCancel && (
+        <button
+          type="button"
+          onClick={onCancel}
+          className="mb-6 inline-flex items-center gap-2 rounded-[var(--o-pill)] py-1.5 pr-3 text-[15px] font-bold text-[var(--o-deep)] transition hover:gap-2.5"
+        >
+          <ArrowLeft className="h-4 w-4" /> Voltar ao registo
+        </button>
+      )}
+      <p className="text-[19px] font-semibold text-[var(--o-muted)]">{lisbonGreeting(now)}.</p>
+      <h1 className={`o-display mt-2 text-[38px] leading-[1.04] tracking-[-0.035em] sm:text-[54px] ${many ? "max-w-[20ch]" : "max-w-[13ch]"}`}>
+        Em que {cfg.place.one} fica este tablet?
+      </h1>
+      <p className="mt-5 max-w-[40ch] text-[17px] leading-relaxed text-[var(--o-muted)]">
+        Os registos feitos neste aparelho contam para {cfg.place.the} que escolher. Pode trocar mais tarde, no topo do ecrã.
+      </p>
+    </motion.div>
+  );
+
+  const item = (s: OrigemSite, i: number) => (
+    <motion.li
+      key={s.id}
+      initial={reduce ? false : { opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, delay: 0.06 + (many ? 0.025 : 0.07) * Math.min(i, 14), ease: [0.16, 1, 0.3, 1] }}
+    >
+      <SiteCard site={s} brand={cfg.brand} current={s.id === current} compact={many} onPick={() => onPick(s.id)} />
+    </motion.li>
+  );
+
+  if (!many) {
+    return (
+      <div className="grid min-h-[58vh] content-center gap-8 lg:min-h-[62vh] lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:items-center lg:gap-16">
+        {intro}
         <ul className="grid gap-4" role="list">
-          {cfg.sites.map((s, i) => (
-            <motion.li
-              key={s.id}
-              initial={reduce ? false : { opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.55, delay: 0.08 + 0.07 * i, ease: [0.16, 1, 0.3, 1] }}
-            >
-              <SiteCard site={s} brand={cfg.brand} current={s.id === current} onPick={() => onPick(s.id)} />
-            </motion.li>
-          ))}
+          {cfg.sites.map(item)}
         </ul>
       </div>
+    );
+  }
+
+  return (
+    <div>
+      <div className="flex flex-wrap items-end justify-between gap-x-10 gap-y-6">
+        {intro}
+        {cfg.sites.length > 8 && (
+          <label className="relative block w-full sm:w-[360px]">
+            <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[var(--o-muted)]" aria-hidden />
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={`Procurar ${cfg.place.one}…`}
+              aria-label={`Procurar ${cfg.place.one}`}
+              className="h-14 w-full rounded-[var(--o-pill)] border border-[var(--o-line)] bg-white pl-12 pr-4 text-[17px] outline-none transition placeholder:text-[var(--o-muted)] focus:border-[var(--o-deep)]"
+            />
+          </label>
+        )}
+      </div>
+      <p className="mt-8 text-[14px] font-semibold text-[var(--o-muted)]">
+        {shown.length === cfg.sites.length
+          ? `${cfg.sites.length} ${cfg.place.many} ${cfg.brandShort}`
+          : `${shown.length} de ${cfg.sites.length} ${cfg.place.many}`}
+      </p>
+      {shown.length > 0 ? (
+        <ul className="mt-3 grid gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-3" role="list">
+          {shown.map(item)}
+        </ul>
+      ) : (
+        <p className="mt-6 text-[17px] text-[var(--o-muted)]">
+          {placeWords(cfg).none} {cfg.place.one} com «{query.trim()}».
+        </p>
+      )}
     </div>
   );
 }
 
-function SiteCard({ site, brand, current, onPick }: { site: OrigemSite; brand: string; current: boolean; onPick: () => void }) {
+function SiteCard({
+  site,
+  brand,
+  current,
+  compact,
+  onPick,
+}: {
+  site: OrigemSite;
+  brand: string;
+  current: boolean;
+  compact: boolean;
+  onPick: () => void;
+}) {
   return (
     <button
       type="button"
       onClick={onPick}
-      className={`group relative flex w-full touch-manipulation items-center gap-5 overflow-hidden rounded-[28px] border-2 bg-white p-6 text-left transition-[border-color,box-shadow,transform] duration-200 active:scale-[0.99] sm:p-8 ${
+      className={`group relative flex h-full w-full touch-manipulation items-center overflow-hidden border-2 bg-white text-left transition-[border-color,box-shadow,transform] duration-200 active:scale-[0.99] ${
+        compact ? "gap-4 rounded-[calc(24px*var(--o-rs))] p-5" : "gap-5 rounded-[calc(28px*var(--o-rs))] p-6 sm:p-8"
+      } ${
         current
-          ? "border-[var(--o-deep)] shadow-[0_18px_40px_-26px_rgba(23,52,53,0.55)]"
-          : "border-transparent shadow-[0_1px_0_var(--o-line),0_14px_34px_-28px_rgba(23,52,53,0.5)] hover:border-[var(--o-primary)]"
+          ? "border-[var(--o-deep)] shadow-[0_18px_40px_-26px_rgba(var(--o-ink-rgb),0.55)]"
+          : "border-transparent shadow-[0_1px_0_var(--o-line),0_14px_34px_-28px_rgba(var(--o-ink-rgb),0.5)] hover:border-[var(--o-primary)]"
       }`}
     >
       <span className="min-w-0 flex-1">
-        <span className="block text-[14px] font-semibold text-[var(--o-muted)]">{brand}</span>
-        <span className="mt-0.5 block text-[30px] font-extrabold leading-[1.08] tracking-[-0.03em] sm:text-[38px]">{site.short}</span>
+        {!compact && <span className="block text-[14px] font-semibold text-[var(--o-muted)]">{brand}</span>}
+        <span
+          className={`block font-extrabold leading-[1.08] tracking-[-0.03em] ${compact ? "text-[22px] sm:text-[24px]" : "mt-0.5 text-[30px] sm:text-[38px]"}`}
+        >
+          {compact ? site.name : site.short}
+        </span>
         {site.address && (
-          <span className="mt-3 block text-[15px] leading-snug text-[var(--o-muted)]">
+          <span className={`block leading-snug text-[var(--o-muted)] ${compact ? "mt-1.5 text-[14px]" : "mt-3 text-[15px]"}`}>
             {site.address.map((line) => (
               <span key={line} className="block">
                 {line}
@@ -439,15 +517,19 @@ function SiteCard({ site, brand, current, onPick }: { site: OrigemSite; brand: s
         )}
       </span>
       <span className="flex shrink-0 flex-col items-end gap-2">
-        {current && <span className="rounded-full bg-[var(--o-paper)] px-2.5 py-1 text-[12px] font-bold text-[var(--o-deep)]">Atual</span>}
+        {current && <span className="rounded-[var(--o-pill)] bg-[var(--o-paper)] px-2.5 py-1 text-[12px] font-bold text-[var(--o-deep)]">Atual</span>}
         <span
-          className={`flex h-14 w-14 items-center justify-center rounded-full transition-all duration-200 ${
+          className={`flex items-center justify-center rounded-full transition-all duration-200 ${compact ? "h-11 w-11" : "h-14 w-14"} ${
             current
               ? "bg-[var(--o-deep)] text-white"
               : "bg-[var(--o-paper)] text-[var(--o-deep)] group-hover:bg-[var(--o-deep)] group-hover:text-white"
           }`}
         >
-          {current ? <Check className="h-6 w-6" strokeWidth={3} /> : <ArrowRight className="h-6 w-6 transition group-hover:translate-x-0.5" />}
+          {current ? (
+            <Check className={compact ? "h-5 w-5" : "h-6 w-6"} strokeWidth={3} />
+          ) : (
+            <ArrowRight className={`${compact ? "h-5 w-5" : "h-6 w-6"} transition group-hover:translate-x-0.5`} />
+          )}
         </span>
       </span>
     </button>
@@ -481,23 +563,23 @@ function RegisterView({
       <div>
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <h1 className="text-[34px] font-extrabold leading-[1.05] tracking-[-0.035em] sm:text-[48px]">Como nos conheceu?</h1>
+            <h1 className="o-display text-[34px] leading-[1.05] tracking-[-0.035em] sm:text-[48px]">Como nos conheceu?</h1>
             <p className="mt-2.5 text-[17px] text-[var(--o-muted)]">Pergunte a cada {cfg.person.one} novo e toque na resposta.</p>
           </div>
           <TodayChip count={today.length} className="lg:hidden" />
         </div>
 
         {readOnly && (
-          <p className="mt-6 rounded-2xl border border-amber-300/60 bg-amber-50 px-4 py-3 text-[15px] text-amber-900">
-            Este perfil só pode consultar: vê o ecrã da receção, mas as teclas não registam.
+          <p className="mt-6 rounded-[calc(16px*var(--o-rs))] border border-amber-300/60 bg-amber-50 px-4 py-3 text-[15px] text-amber-900">
+            Este perfil só pode consultar: vê o ecrã de registo, mas as teclas não registam.
           </p>
         )}
 
         <fieldset className="mt-7 sm:mt-9" disabled={readOnly}>
           <legend className="sr-only">Origem do {cfg.person.one}</legend>
-          <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3">
-            {main.map((s) => (
-              <SourceKey key={s.id} source={s} onPick={() => onPick(s.id)} disabled={readOnly} />
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-6">
+            {main.map((s, i) => (
+              <SourceKey key={s.id} source={s} className={keySpan(main.length, i)} onPick={() => onPick(s.id)} disabled={readOnly} />
             ))}
           </div>
           {other && (
@@ -505,9 +587,9 @@ function RegisterView({
               type="button"
               onClick={() => onPick(other.id)}
               disabled={readOnly}
-              className="mt-3 flex w-full touch-manipulation select-none items-center gap-4 rounded-[22px] border border-dashed border-[#BFD5D7] px-5 py-4 text-left transition hover:border-[var(--o-deep)] hover:bg-white active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50 sm:mt-4"
+              className="mt-3 flex w-full touch-manipulation select-none items-center gap-4 rounded-[calc(22px*var(--o-rs))] border border-dashed border-[var(--o-line-strong)] px-5 py-4 text-left transition hover:border-[var(--o-deep)] hover:bg-white active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50 sm:mt-4"
             >
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white text-[var(--o-muted)] ring-1 ring-[var(--o-line)]">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[calc(16px*var(--o-rs))] bg-white text-[var(--o-muted)] ring-1 ring-[var(--o-line)]">
                 <SourceIcon id={other.id} className="h-5 w-5" />
               </span>
               <span className="min-w-0">
@@ -529,17 +611,36 @@ function SourceIcon({ id, className }: { id: string; className?: string }) {
   return <Icon className={className} />;
 }
 
-function SourceKey({ source, onPick, disabled }: { source: OrigemSource; onPick: () => void; disabled: boolean }) {
+/** As teclas das origens em linhas cheias. No ecrã largo (6 colunas): 6 = 3+3,
+ *  5 = 3+2, 4 = 2+2. No telemóvel, duas por linha e a última ocupa a linha
+ *  toda quando sobra. */
+function keySpan(n: number, i: number): string {
+  const lastAlone = n % 2 === 1 && i === n - 1 ? "col-span-2 " : "";
+  const wide = n === 4 || (n === 5 && i >= 3) ? "md:col-span-3" : "md:col-span-2";
+  return lastAlone + wide;
+}
+
+function SourceKey({
+  source,
+  className,
+  onPick,
+  disabled,
+}: {
+  source: OrigemSource;
+  className: string;
+  onPick: () => void;
+  disabled: boolean;
+}) {
   return (
     <button
       type="button"
       onClick={onPick}
       disabled={disabled}
-      className="group relative flex min-h-[150px] touch-manipulation select-none flex-col justify-between rounded-[26px] border border-[var(--o-line)] bg-white p-4 text-left shadow-[0_2px_0_var(--o-line),0_16px_30px_-26px_rgba(23,52,53,0.55)] transition-[transform,box-shadow,border-color] duration-150 hover:border-[var(--sc)] active:translate-y-[2px] active:shadow-none disabled:cursor-not-allowed disabled:opacity-60 sm:min-h-[172px] sm:p-6"
+      className={`${className} group relative flex min-h-[150px] touch-manipulation select-none flex-col justify-between rounded-[calc(26px*var(--o-rs))] border border-[var(--o-line)] bg-white p-4 text-left shadow-[0_2px_0_var(--o-line),0_16px_30px_-26px_rgba(var(--o-ink-rgb),0.55)] transition-[transform,box-shadow,border-color] duration-150 hover:border-[var(--sc)] active:translate-y-[2px] active:shadow-none disabled:cursor-not-allowed disabled:opacity-60 sm:min-h-[172px] sm:p-6`}
       style={{ ["--sc" as string]: source.color }}
     >
       <span
-        className="flex h-12 w-12 items-center justify-center rounded-2xl transition-transform duration-200 group-hover:scale-105 sm:h-14 sm:w-14"
+        className="flex h-12 w-12 items-center justify-center rounded-[calc(16px*var(--o-rs))] transition-transform duration-200 group-hover:scale-105 sm:h-14 sm:w-14"
         style={{ background: tint(source.color, 0.12), color: source.color }}
       >
         <SourceIcon id={source.id} className="h-6 w-6 sm:h-7 sm:w-7" />
@@ -554,7 +655,7 @@ function SourceKey({ source, onPick, disabled }: { source: OrigemSource; onPick:
 
 function TodayChip({ count, className = "" }: { count: number; className?: string }) {
   return (
-    <span className={`inline-flex items-baseline gap-2 rounded-full bg-white px-4 py-2 text-[14px] font-semibold text-[var(--o-muted)] ring-1 ring-[var(--o-line)] ${className}`}>
+    <span className={`inline-flex items-baseline gap-2 rounded-[var(--o-pill)] bg-white px-4 py-2 text-[14px] font-semibold text-[var(--o-muted)] ring-1 ring-[var(--o-line)] ${className}`}>
       Hoje
       <BumpNumber value={count} className="text-[20px] font-extrabold text-[var(--o-ink)]" />
     </span>
@@ -584,12 +685,12 @@ function TodayPanel({
 
   return (
     <aside className="lg:sticky lg:top-[100px] lg:self-start" aria-label="Registos de hoje">
-      <div className="overflow-hidden rounded-[28px] bg-white ring-1 ring-[var(--o-line)]">
+      <div className="overflow-hidden rounded-[calc(28px*var(--o-rs))] bg-white ring-1 ring-[var(--o-line)]">
         <div className="relative p-6">
-          <p className="text-[15px] font-bold">Hoje em {site.short}</p>
+          <p className="text-[15px] font-bold">{cfg.sites.length > 1 ? `Hoje em ${site.short}` : "Hoje"}</p>
           <p className="text-[13px] text-[var(--o-muted)]">{dayLabel(month, day)}</p>
           <div className="mt-4 flex items-end gap-3">
-            <BumpNumber value={today.length} className="text-[64px] font-extrabold leading-[0.9] tracking-[-0.04em]" />
+            <BumpNumber value={today.length} className="o-display text-[64px] leading-[0.9] tracking-[-0.04em]" />
             <span className="pb-1.5 text-[15px] font-semibold leading-tight text-[var(--o-muted)]">
               {today.length === 1 ? `${cfg.person.one} novo` : `${cfg.person.many} novos`}
             </span>
@@ -680,12 +781,12 @@ function ChannelSheet({
       exit={{ opacity: 0 }}
       transition={{ duration: 0.18 }}
     >
-      <button type="button" aria-label="Fechar" onClick={onClose} className="absolute inset-0 cursor-default bg-[#173435]/45" tabIndex={-1} />
+      <button type="button" aria-label="Fechar" onClick={onClose} className="absolute inset-0 cursor-default bg-[rgba(var(--o-ink-rgb),0.45)]" tabIndex={-1} />
       <motion.div
         role="dialog"
         aria-modal="true"
         aria-labelledby="origem-sheet-title"
-        className="relative w-full max-w-[600px] rounded-t-[32px] bg-white px-5 pb-[max(24px,env(safe-area-inset-bottom))] pt-6 shadow-[0_40px_80px_-30px_rgba(23,52,53,0.6)] sm:rounded-[32px] sm:p-8"
+        className="relative w-full max-w-[600px] rounded-t-[calc(32px*var(--o-rs))] bg-white px-5 pb-[max(24px,env(safe-area-inset-bottom))] pt-6 shadow-[0_40px_80px_-30px_rgba(var(--o-ink-rgb),0.6)] sm:rounded-[calc(32px*var(--o-rs))] sm:p-8"
         initial={reduce ? { opacity: 0 } : { y: 60, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         exit={reduce ? { opacity: 0 } : { y: 40, opacity: 0 }}
@@ -695,7 +796,7 @@ function ChannelSheet({
           {sheet.step === "channel" ? (
             <motion.div key="channel" exit={{ opacity: 0, scale: 0.98 }} transition={{ duration: 0.12 }}>
               <div className="flex items-start gap-4">
-                <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl" style={{ background: tint(source.color, 0.12), color: source.color }}>
+                <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[calc(16px*var(--o-rs))]" style={{ background: tint(source.color, 0.12), color: source.color }}>
                   <SourceIcon id={source.id} className="h-7 w-7" />
                 </span>
                 <div className="min-w-0 flex-1 pt-0.5">
@@ -729,7 +830,7 @@ function ChannelSheet({
                       type="button"
                       onClick={() => onRegister(c.id)}
                       disabled={Boolean(saving)}
-                      className="flex h-[84px] touch-manipulation select-none items-center gap-2.5 rounded-[22px] border border-[var(--o-line)] bg-[var(--o-paper)] px-3 text-left outline-none sm:gap-3 transition hover:border-[var(--o-deep)] hover:bg-white focus-visible:ring-2 focus-visible:ring-[var(--o-deep)] focus-visible:ring-offset-2 active:scale-[0.98] disabled:opacity-60 sm:h-[92px] sm:px-5"
+                      className="flex h-[84px] touch-manipulation select-none items-center gap-2.5 rounded-[calc(22px*var(--o-rs))] border border-[var(--o-line)] bg-[var(--o-paper)] px-3 text-left outline-none sm:gap-3 transition hover:border-[var(--o-deep)] hover:bg-white focus-visible:ring-2 focus-visible:ring-[var(--o-deep)] focus-visible:ring-offset-2 active:scale-[0.98] disabled:opacity-60 sm:h-[92px] sm:px-5"
                     >
                       <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-[var(--o-deep)] ring-1 ring-[var(--o-line)] sm:h-11 sm:w-11">
                         {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <Icon className="h-5 w-5" />}
@@ -744,7 +845,7 @@ function ChannelSheet({
                 type="button"
                 onClick={() => onRegister(null)}
                 disabled={Boolean(saving)}
-                className="mt-3 flex h-14 w-full touch-manipulation items-center justify-center gap-2 rounded-[20px] text-[16px] font-bold text-[var(--o-deep)] ring-1 ring-inset ring-[var(--o-line)] transition hover:bg-[var(--o-paper)] disabled:opacity-60"
+                className="mt-3 flex h-14 w-full touch-manipulation items-center justify-center gap-2 rounded-[calc(20px*var(--o-rs))] text-[16px] font-bold text-[var(--o-deep)] ring-1 ring-inset ring-[var(--o-line)] transition hover:bg-[var(--o-paper)] disabled:opacity-60"
               >
                 {saving === "none" ? <Loader2 className="h-5 w-5 animate-spin" /> : "Registar sem indicar o canal"}
               </button>
@@ -760,7 +861,7 @@ function ChannelSheet({
               transition={{ duration: 0.15 }}
             >
               <BrandMark mark={cfg.theme.mark} play={sheet.n} className="h-28 w-28" />
-              <h2 id="origem-sheet-title" className="mt-6 text-[30px] font-extrabold tracking-[-0.02em]">
+              <h2 id="origem-sheet-title" className="o-display mt-6 text-[30px] tracking-[-0.02em]">
                 Registado
               </h2>
               <p className="mt-1 text-[17px] text-[var(--o-muted)]">{phraseOf(cfg, sheet.source, sheet.channel)}.</p>
@@ -800,7 +901,7 @@ function ToastBar({
       role="status"
     >
       <div
-        className={`relative mx-auto flex max-w-[560px] items-center gap-3 overflow-hidden rounded-[24px] p-3 pl-4 text-white shadow-[0_24px_50px_-20px_rgba(23,52,53,0.55)] ${
+        className={`relative mx-auto flex max-w-[560px] items-center gap-3 overflow-hidden rounded-[calc(24px*var(--o-rs))] p-3 pl-4 text-white shadow-[0_24px_50px_-20px_rgba(var(--o-ink-rgb),0.55)] ${
           toast.kind === "error" ? "bg-[#7A1F2E]" : "bg-[var(--o-ink)]"
         }`}
       >
@@ -815,7 +916,7 @@ function ToastBar({
             <button
               type="button"
               onClick={onUndo}
-              className="inline-flex h-11 shrink-0 items-center gap-2 rounded-full bg-white/10 px-4 text-[15px] font-bold transition hover:bg-white/20"
+              className="inline-flex h-11 shrink-0 items-center gap-2 rounded-[var(--o-pill)] bg-white/10 px-4 text-[15px] font-bold transition hover:bg-white/20"
             >
               <Undo2 className="h-4 w-4" /> Anular
               <span className="w-5 text-right tabular-nums text-white/55">{Math.ceil(left / 1000)}</span>
@@ -827,7 +928,7 @@ function ToastBar({
         ) : (
           <>
             <p className="flex-1 py-1 text-[15px]">{toast.text}</p>
-            <button type="button" onClick={onClose} className="h-10 rounded-full px-4 text-[15px] font-bold text-white/80 hover:bg-white/10">
+            <button type="button" onClick={onClose} className="h-10 rounded-[var(--o-pill)] px-4 text-[15px] font-bold text-white/80 hover:bg-white/10">
               Fechar
             </button>
           </>

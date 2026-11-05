@@ -10,8 +10,9 @@
 
 import { useMemo, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
-import { ArrowDownRight, ArrowUpRight, ChevronLeft, ChevronRight, Copy, Download, PenLine } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, ChevronDown, ChevronLeft, ChevronRight, Copy, Download, PenLine } from "lucide-react";
 import type { OrigemClient } from "@/lib/origem/config";
+import { placeWords, whereLabel } from "@/lib/origem/words";
 import {
   NO_CHANNEL,
   dayLabel,
@@ -64,7 +65,8 @@ export function OrigemReports({
   const p = history[prev] ? scopeOf(history[prev], prev, scope) : null;
   const isOpen = shown === current;
   const site = scope ? cfg.sites.find((x) => x.id === scope) ?? null : null;
-  const where = site ? `na ${site.name}` : `nas ${cfg.place.many} ${cfg.brand.split(" ")[0]}`;
+  const words = placeWords(cfg);
+  const where = whereLabel(cfg, site);
   const top = leaders(cfg, s);
   const search = searchCount(cfg, s);
   const change = p && p.total ? Math.round(((s.total - p.total) / p.total) * 100) : null;
@@ -79,7 +81,7 @@ export function OrigemReports({
   function summary(): string {
     const lines = [
       `${cfg.brand}: origem dos ${cfg.person.many}`,
-      `${cap(monthLabel(shown))}${isOpen ? " (em curso)" : ""}, ${site ? site.name : `todas as ${cfg.place.many}`}`,
+      `${cap(monthLabel(shown))}${isOpen ? " (em curso)" : ""}, ${site ? site.name : cfg.sites.length === 1 ? cfg.sites[0].name : `${words.all} ${words.the}s ${cfg.place.many}`}`,
       `Total: ${s.total}${change !== null ? ` (${signed(change, "%")} face a ${monthLabel(prev)})` : ""}`,
       `Pesquisa e IA (Google + IAs): ${search} (${pct(search, s.total)}%)`,
       "",
@@ -133,7 +135,7 @@ export function OrigemReports({
         <div>
           <div className="flex items-center gap-1">
             <MonthArrow dir="prev" disabled={idx <= 0} onClick={() => setMonth(months[idx - 1])} />
-            <h1 className="min-w-0 whitespace-nowrap px-1 text-[26px] font-extrabold tracking-[-0.03em] min-[400px]:text-[30px] sm:text-[40px]">{cap(monthLabel(shown))}</h1>
+            <h1 className="o-display min-w-0 whitespace-nowrap px-1 text-[26px] tracking-[-0.03em] min-[400px]:text-[30px] sm:text-[40px]">{cap(monthLabel(shown))}</h1>
             <MonthArrow dir="next" disabled={idx >= months.length - 1} onClick={() => setMonth(months[idx + 1])} />
           </div>
           <p className="mt-1 flex items-center gap-2 pl-1 text-[15px] text-[var(--o-muted)]">
@@ -148,9 +150,29 @@ export function OrigemReports({
           </p>
         </div>
 
-        {cfg.sites.length > 1 && (
-          <div className="flex max-w-full overflow-x-auto rounded-full bg-white p-1 ring-1 ring-[var(--o-line)]" role="tablist" aria-label={cap(cfg.place.many)}>
-            {[{ id: null as string | null, label: `Todas` }, ...cfg.sites.map((x) => ({ id: x.id as string | null, label: x.short }))].map((o) => {
+        {cfg.sites.length > 5 ? (
+          // Muitos locais (lojas, salões, uma rede de clínicas): uma lista.
+          <label className="relative inline-flex max-w-full">
+            <span className="sr-only">{cap(cfg.place.one)}</span>
+            <select
+              value={scope ?? ""}
+              onChange={(e) => setScope(e.target.value || null)}
+              className="h-12 max-w-full appearance-none truncate rounded-[var(--o-pill)] bg-white pl-5 pr-11 text-[15px] font-bold text-[var(--o-ink)] outline-none ring-1 ring-[var(--o-line)] transition hover:ring-[var(--o-deep)] focus-visible:ring-2 focus-visible:ring-[var(--o-deep)]"
+            >
+              <option value="">
+                {words.allCap} {words.the}s {cfg.place.many}
+              </option>
+              {cfg.sites.map((x) => (
+                <option key={x.id} value={x.id}>
+                  {x.name}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--o-muted)]" aria-hidden />
+          </label>
+        ) : cfg.sites.length > 1 ? (
+          <div className="flex max-w-full overflow-x-auto rounded-[var(--o-pill)] bg-white p-1 ring-1 ring-[var(--o-line)]" role="tablist" aria-label={cap(cfg.place.many)}>
+            {[{ id: null as string | null, label: words.allCap }, ...cfg.sites.map((x) => ({ id: x.id as string | null, label: x.short }))].map((o) => {
               const on = scope === o.id;
               return (
                 <button
@@ -159,7 +181,7 @@ export function OrigemReports({
                   role="tab"
                   aria-selected={on}
                   onClick={() => setScope(o.id)}
-                  className={`whitespace-nowrap rounded-full px-4 py-2 text-[14px] font-bold transition ${
+                  className={`whitespace-nowrap rounded-[var(--o-pill)] px-4 py-2 text-[14px] font-bold transition ${
                     on ? "bg-[var(--o-ink)] text-white" : "text-[var(--o-muted)] hover:text-[var(--o-ink)]"
                   }`}
                 >
@@ -168,25 +190,25 @@ export function OrigemReports({
               );
             })}
           </div>
-        )}
+        ) : null}
       </div>
 
       {/* A frase do mês */}
       <Sheet className="mt-7">
         {s.total === 0 ? (
           <div className="py-4 sm:py-6">
-            <p className="max-w-[24ch] text-[28px] font-extrabold leading-tight tracking-[-0.025em] sm:text-[36px]">
+            <p className="o-display max-w-[24ch] text-[28px] leading-tight tracking-[-0.025em] sm:text-[36px]">
               {isOpen ? `Ainda não há registos em ${monthLabel(shown).split(" ")[0]}.` : `Não houve registos em ${monthLabel(shown).split(" ")[0]}.`}
             </p>
             {isOpen && (
               <>
                 <p className="mt-3 max-w-[48ch] text-[16px] leading-relaxed text-[var(--o-muted)]">
-                  Cada {cfg.person.one} registado na receção aparece aqui no mesmo instante, com a origem e o canal.
+                  Cada {cfg.person.one} registado {cfg.desk.at} aparece aqui no mesmo instante, com a origem e o canal.
                 </p>
                 <button
                   type="button"
                   onClick={onRegister}
-                  className="mt-6 inline-flex h-12 items-center gap-2 rounded-full bg-[var(--o-ink)] px-5 text-[15px] font-bold text-white transition hover:bg-[var(--o-deep)]"
+                  className="mt-6 inline-flex h-12 items-center gap-2 rounded-[var(--o-pill)] bg-[var(--o-ink)] px-5 text-[15px] font-bold text-white transition hover:bg-[var(--o-deep)]"
                 >
                   <PenLine className="h-4 w-4" /> Ir para o registo
                 </button>
@@ -198,7 +220,7 @@ export function OrigemReports({
             <div className="grid gap-6 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] md:gap-10">
               <div>
                 <p className="flex items-end gap-3">
-                  <span className="text-[76px] font-extrabold leading-[0.85] tracking-[-0.05em] tabular-nums sm:text-[96px]">{s.total.toLocaleString("pt-PT")}</span>
+                  <span className="o-display text-[76px] leading-[0.85] tracking-[-0.05em] tabular-nums sm:text-[96px]">{s.total.toLocaleString("pt-PT")}</span>
                   <span className="pb-1 text-[19px] font-bold leading-tight">
                     {s.total === 1 ? `${cfg.person.one} novo` : `${cfg.person.many} novos`}
                     <span className="block text-[15px] font-medium text-[var(--o-muted)]">{where}</span>
@@ -227,9 +249,9 @@ export function OrigemReports({
                 </p>
               </div>
 
-              <div className="relative overflow-hidden rounded-[24px] p-5 sm:p-6" style={{ background: "linear-gradient(120deg,rgba(52,62,215,.07),rgba(120,61,245,.08) 52%,rgba(197,53,201,.07))" }}>
+              <div className="relative overflow-hidden rounded-[calc(24px*var(--o-rs))] p-5 sm:p-6" style={{ background: "linear-gradient(120deg,rgba(52,62,215,.07),rgba(120,61,245,.08) 52%,rgba(197,53,201,.07))" }}>
                 <p className="text-[15px] font-bold">Pesquisa e IA</p>
-                <p className="mt-1 text-[60px] font-extrabold leading-none tracking-[-0.04em] tabular-nums sm:text-[72px]">
+                <p className="o-display mt-1 text-[60px] leading-none tracking-[-0.04em] tabular-nums sm:text-[72px]">
                   <span style={{ background: WA_GRADIENT, WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent" }}>{pct(search, s.total)}%</span>
                 </p>
                 <p className="mt-2 max-w-[38ch] text-[14.5px] leading-snug text-[var(--o-muted)]">
@@ -297,7 +319,7 @@ export function OrigemReports({
                     <li key={c.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1.5 sm:grid-cols-[minmax(0,118px)_minmax(0,1fr)_auto]">
                       <span className={`truncate text-[15px] ${none ? "text-[var(--o-muted)]" : ""}`}>{c.label}</span>
                       <div className="order-3 col-span-2 sm:order-none sm:col-span-1">
-                        <Bar value={n} max={Math.max(1, ...channelRows.map((r) => s.channel[r.id] ?? 0))} color={none ? "#C5D3D4" : "var(--o-deep)"} />
+                        <Bar value={n} max={Math.max(1, ...channelRows.map((r) => s.channel[r.id] ?? 0))} color={none ? "var(--o-line-strong)" : "var(--o-deep)"} />
                       </div>
                       <span className="flex w-[74px] items-baseline justify-end gap-2 tabular-nums">
                         <strong className="text-[16px] font-extrabold">{pct(n, s.total)}%</strong>
@@ -357,14 +379,14 @@ export function OrigemReports({
           <button
             type="button"
             onClick={copy}
-            className="inline-flex h-12 items-center gap-2 rounded-full bg-[var(--o-ink)] px-5 text-[15px] font-bold text-white transition hover:bg-[var(--o-deep)]"
+            className="inline-flex h-12 items-center gap-2 rounded-[var(--o-pill)] bg-[var(--o-ink)] px-5 text-[15px] font-bold text-white transition hover:bg-[var(--o-deep)]"
           >
             <Copy className="h-4 w-4" /> Copiar resumo
           </button>
           <button
             type="button"
             onClick={download}
-            className="inline-flex h-12 items-center gap-2 rounded-full bg-white px-5 text-[15px] font-bold ring-1 ring-[var(--o-line)] transition hover:ring-[var(--o-deep)]"
+            className="inline-flex h-12 items-center gap-2 rounded-[var(--o-pill)] bg-white px-5 text-[15px] font-bold ring-1 ring-[var(--o-line)] transition hover:ring-[var(--o-deep)]"
           >
             <Download className="h-4 w-4" /> Descarregar CSV
           </button>

@@ -4,7 +4,7 @@
 // contagens de cada mês, por clínica: por origem, por canal e por dia.
 
 import type { OrigemClient } from "./config";
-import { sourceIdOf } from "./config";
+import { sourceIdOf } from "./words";
 
 /** Um registo: uma pessoa nova, numa clínica, com uma origem. */
 export type OrigemVote = {

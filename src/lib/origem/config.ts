@@ -3,16 +3,19 @@
 // do mês 2 da Jornada de Cliente: em vez de um Excel que o cliente envia no
 // fim do mês, a receção toca numa origem e os números ficam na ficha.
 //
-// Como o Reviews Hub, é um produto por cliente: só os slugs desta tabela têm
-// página (/<slug>/origem), chip no cabeçalho do SEO e API. Piloto: MyMedic.
+// Como o Reviews Hub, é um produto por cliente: só os slugs de clients.ts têm
+// página (/<slug>/origem), chip no cabeçalho do SEO e API. Piloto: MyMedic;
+// desde a v78.76, todos os clientes de SEO ativos (os pausados não).
 //
 // Módulo puro, sem segredos — vai também para o browser. O PIN de cada
 // cliente vive só em access.ts (salt + hash).
 //
-// REGRA: os `id` de clínicas, origens e canais são a chave guardada em cada
+// REGRA: os `id` de locais, origens e canais são a chave guardada em cada
 // registo. Depois de haver dados, nunca se mudam — muda-se só o `label`. Uma
 // origem retirada sai da lista `sources` mas os registos antigos continuam a
 // contar como «Outra».
+
+import { ORIGEM_CLIENTS } from "./clients";
 
 export type OrigemSite = {
   id: string;
@@ -20,8 +23,8 @@ export type OrigemSite = {
   name: string;
   /** Nome curto para pastilhas e tabelas («Viseu»). */
   short: string;
-  /** A morada, uma linha por elemento — o ecrã de escolha da clínica mostra-a
-   *  para a receção reconhecer a sua. */
+  /** A morada, uma linha por elemento — o ecrã de escolha do local mostra-a
+   *  para a receção reconhecer o seu. */
   address?: string[];
 };
 
@@ -30,7 +33,8 @@ export type OrigemSource = {
   label: string;
   /** Uma linha por baixo do rótulo, para a receção não hesitar. */
   hint: string;
-  /** Cor da origem nos gráficos e no botão selecionado. */
+  /** Cor da origem nos gráficos e no botão selecionado (validada para
+   *  daltonismo na ordem da lista — ver presets.ts). */
   color: string;
   /** Conta para «Pesquisa e IA» — o que o SEO/GEO trabalha. */
   search?: true;
@@ -43,19 +47,31 @@ export type OrigemChannel = {
   phrase: string;
 };
 
+export type OrigemPlace = {
+  one: string;
+  many: string;
+  /** «a clínica» / «o salão». */
+  the: string;
+  /** «nesta clínica» / «neste salão». */
+  inThis: string;
+  /** Para «todas as clínicas» / «todos os salões». */
+  gender: "f" | "m";
+  /** O parâmetro do link que fixa o local no tablet (?clinica=viseu). */
+  param: string;
+};
+
 export type OrigemClient = {
   slug: string;
   brand: string;
+  /** O nome numa frase: «MyMedic», «Monte Mar». */
+  brandShort: string;
+  /** «da MyMedic» / «do Monte Mar». */
+  brandOf: string;
   /** Palavras da página: «paciente(s)» numa clínica, «cliente(s)» num salão. */
   person: { one: string; many: string };
-  place: {
-    one: string;
-    many: string;
-    /** «a clínica» / «o salão». */
-    the: string;
-    /** «nesta clínica» / «neste salão». */
-    inThis: string;
-  };
+  place: OrigemPlace;
+  /** Quem regista: «a receção», «a loja», «a equipa». */
+  desk: { who: string; of: string; at: string };
   sites: OrigemSite[];
   sources: OrigemSource[];
   channels: OrigemChannel[];
@@ -63,7 +79,31 @@ export type OrigemClient = {
   startDay: string;
   /** As cores da marca do cliente — a página inteira veste-as. */
   theme: OrigemTheme;
+  /** O logótipo para fundo claro (public/origem/<slug>/…). Sem ele, o da
+   *  ficha do cliente. `h` = altura no cabeçalho, em px (40 por omissão). */
+  logo?: { src: string; h?: number };
 };
+
+/** As letras disponíveis (fonts.ts) — as do site de cada cliente, ou a
+ *  gratuita mais próxima quando o site usa uma letra paga. */
+export type OrigemFont =
+  | "manrope"
+  | "montserrat"
+  | "dmSans"
+  | "raleway"
+  | "josefin"
+  | "exo2"
+  | "inter"
+  | "jost"
+  | "nunitoSans"
+  | "oswald"
+  | "poppins"
+  | "openSans"
+  | "assistant";
+
+/** O selo que salta a cada registo: a cruz da MyMedic (montada peça a
+ *  peça), o símbolo do logótipo do cliente, ou um visto na cor da marca. */
+export type OrigemMark = "mymedic-cross" | "check" | { src: string };
 
 export type OrigemTheme = {
   /** Fundo da página. */
@@ -80,69 +120,22 @@ export type OrigemTheme = {
   deep: string;
   /** O acento da marca. */
   accent: string;
-  /** A marca gráfica do cliente no ecrã (a cruz da MyMedic). */
-  mark: "mymedic-cross" | "dot";
-};
-
-const MYMEDIC: OrigemClient = {
-  slug: "mymedic",
-  brand: "MyMedic Clínicas",
-  person: { one: "paciente", many: "pacientes" },
-  place: { one: "clínica", many: "clínicas", the: "a clínica", inThis: "nesta clínica" },
-  // As duas clínicas de mymedic.pt/contactos (03/11/2026). Confirmar com o
-  // cliente antes de ligar o tablet.
-  sites: [
-    { id: "viseu", name: "Clínica de Viseu", short: "Viseu", address: ["Rua João Mendes, 143", "3500-142 Viseu"] },
-    {
-      id: "fornos",
-      name: "Clínica de Fornos de Algodres",
-      short: "Fornos de Algodres",
-      address: ["Estrada Nacional 16, n.º 131", "6370-148 Fornos de Algodres"],
-    },
-  ],
-  // As cores vêm das duas marcas (o teal e o lima da MyMedic, o violeta e o
-  // magenta da WonderAds) e foram validadas para fundo branco: distinguem-se
-  // entre vizinhas, também para quem tem daltonismo. «Outra» é cinzenta de
-  // propósito. A ordem é a do ecrã da receção — e a dos gráficos.
-  sources: [
-    { id: "google", label: "Google", hint: "Pesquisa ou Google Maps", color: "#2A9DB5", search: true },
-    { id: "ia", label: "ChatGPT ou outra IA", hint: "Gemini, Copilot, Perplexity…", color: "#7B5CF2", search: true },
-    { id: "redes", label: "Redes sociais", hint: "Facebook, Instagram…", color: "#CC4FB4" },
-    { id: "recomendacao", label: "Recomendação", hint: "Família, amigos, outro paciente", color: "#97A21B" },
-    { id: "medico", label: "Médico ou seguro", hint: "Encaminhado, Médis, ADSE…", color: "#3F5FC8" },
-    { id: "porta", label: "Passagem à porta", hint: "Viu a clínica na rua", color: "#E58A3B" },
-    { id: "outro", label: "Outra", hint: "Rádio, jornal, evento…", color: "#9AA5A6" },
-  ],
-  channels: [
-    { id: "telefone", label: "Telefone", phrase: "por telefone" },
-    { id: "whatsapp", label: "WhatsApp", phrase: "por WhatsApp" },
-    { id: "balcao", label: "Ao balcão", phrase: "ao balcão" },
-    { id: "online", label: "Site ou email", phrase: "pelo site ou email" },
-  ],
-  startDay: "2026-11-03",
-  // As cores de mymedic.pt (teal #5ABDCA, lima #CAD225, texto #173435).
-  theme: {
-    paper: "#F3F9F9",
-    ink: "#173435",
-    muted: "#5E7576",
-    line: "#DCEBEC",
-    primary: "#5ABDCA",
-    deep: "#2E7280",
-    accent: "#CAD225",
-    mark: "mymedic-cross",
-  },
-};
-
-const CLIENTS: Record<string, OrigemClient> = {
-  mymedic: MYMEDIC,
+  mark: OrigemMark;
+  font: OrigemFont;
+  /** Letra dos títulos e dos números grandes (por omissão, a mesma). */
+  display?: OrigemFont;
+  /** Peso dos títulos e dos números grandes (800 por omissão). */
+  heading?: number;
+  /** Os cantos: «round» (os da MyMedic), «soft» ou «square». */
+  shape?: "round" | "soft" | "square";
 };
 
 export function getOrigemConfig(slug: string): OrigemClient | null {
-  return CLIENTS[slug] ?? null;
+  return ORIGEM_CLIENTS[slug] ?? null;
 }
 
 export function origemSlugs(): string[] {
-  return Object.keys(CLIENTS);
+  return Object.keys(ORIGEM_CLIENTS);
 }
 
 /** O caminho da página — o que o chip abre e o que fica no tablet. */
@@ -150,7 +143,6 @@ export function origemPath(slug: string): string {
   return `/${slug}/origem`;
 }
 
-/** O id de origem guardado, ou «outro» se a origem já não existir. */
-export function sourceIdOf(cfg: OrigemClient, id: string): string {
-  return cfg.sources.some((s) => s.id === id) ? id : "outro";
-}
+// As funções de texto vivem em words.ts — sem o registo dos clientes, para
+// os componentes do browser as poderem usar sem levar a configuração toda.
+export { placeWords, siteFromQuery, sourceIdOf, whereLabel } from "./words";

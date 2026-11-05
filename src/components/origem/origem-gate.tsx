@@ -1,6 +1,7 @@
 "use client";
 
-// O portão da Origem de Pacientes (v78.69): o logótipo do cliente e um PIN
+// O portão da Origem de Pacientes (v78.69; v78.76 em todos os clientes, com
+// a letra e o logótipo de cada um): o logótipo do cliente e um PIN
 // de 6 dígitos num teclado próprio — no tablet da receção não se abre o
 // teclado do sistema por cima do ecrã. Um teclado físico também funciona.
 // Entra sozinho ao 6.º dígito; o aparelho fica com acesso 180 dias.
@@ -18,11 +19,14 @@ export function OrigemGate({
   brand,
   logo,
   peopleMany,
+  deskOf,
 }: {
   slug: string;
   brand: string;
   logo: string | null;
   peopleMany: string;
+  /** «da receção» / «da loja» / «da equipa». */
+  deskOf: string;
 }) {
   const router = useRouter();
   const [pin, setPin] = useState("");
@@ -96,17 +100,17 @@ export function OrigemGate({
         transition={{ duration: 0.45, delay: state === "ok" ? 0.25 : 0, ease: [0.16, 1, 0.3, 1] }}
       >
         <div className="text-center lg:text-left">
-          <ClientLogo logo={logo} brand={brand} className="mx-auto h-14 sm:h-[72px] lg:mx-0" />
-          <h1 className="mt-10 text-[36px] font-extrabold leading-[1.02] tracking-[-0.035em] sm:mt-14 sm:text-[56px]">
+          <ClientLogo logo={logo} brand={brand} size="gate" className="mx-auto lg:mx-0" />
+          <h1 className="o-display mt-10 text-[36px] leading-[1.02] tracking-[-0.035em] sm:mt-14 sm:text-[56px]">
             Origem dos
             <br className="hidden lg:block" /> {peopleMany}
           </h1>
           <p className="mx-auto mt-4 max-w-[34ch] text-[17px] leading-relaxed text-[var(--o-muted)] lg:mx-0">
-            Introduza o PIN da receção. Este aparelho fica com acesso durante 6 meses.
+            Introduza o PIN {deskOf}. Este aparelho fica com acesso durante 6 meses.
           </p>
         </div>
 
-        <div className="mx-auto w-full max-w-[400px] rounded-[32px] bg-white p-6 shadow-[0_1px_0_var(--o-line),0_30px_60px_-40px_rgba(23,52,53,0.55)] ring-1 ring-[var(--o-line)] sm:p-8">
+        <div className="mx-auto w-full max-w-[400px] rounded-[calc(32px*var(--o-rs))] bg-white p-6 shadow-[0_1px_0_var(--o-line),0_30px_60px_-40px_rgba(var(--o-ink-rgb),0.55)] ring-1 ring-[var(--o-line)] sm:p-8">
           <motion.div animate={shake} className="flex justify-center gap-3.5" role="status" aria-live="polite" aria-label={`${pin.length} de ${LENGTH} dígitos`}>
             {Array.from({ length: LENGTH }, (_, i) => {
               const filled = i < pin.length;
@@ -144,7 +148,7 @@ export function OrigemGate({
                   type="button"
                   onClick={() => press(k)}
                   aria-label={k === "del" ? "Apagar" : k}
-                  className={`flex h-[68px] touch-manipulation select-none items-center justify-center rounded-[20px] text-[28px] font-bold transition active:scale-[0.96] sm:h-[72px] ${
+                  className={`flex h-[68px] touch-manipulation select-none items-center justify-center rounded-[calc(20px*var(--o-rs))] text-[28px] font-bold transition active:scale-[0.96] sm:h-[72px] ${
                     k === "del"
                       ? "text-[var(--o-muted)] hover:bg-[var(--o-paper)] hover:text-[var(--o-ink)]"
                       : "bg-[var(--o-paper)] hover:bg-[var(--o-line)] active:bg-[var(--o-line)]"

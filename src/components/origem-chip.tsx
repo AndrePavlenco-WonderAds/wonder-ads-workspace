@@ -1,6 +1,7 @@
 // Chip «Origem» no cabeçalho do cliente no SEO (ao lado das Reviews) — só
-// para os clientes com o add-on Origem de Pacientes (v78.68). Mostra quantos
-// pacientes novos a receção registou este mês e abre a página.
+// para os clientes com o add-on Origem de Pacientes (v78.68; v78.76 em todos
+// os clientes de SEO ativos). Mostra quantas pessoas novas foram registadas
+// este mês e abre a página.
 
 import { Users } from "lucide-react";
 import { getOrigemConfig, origemPath } from "@/lib/origem/config";
@@ -19,8 +20,8 @@ export async function OrigemChip({ slug }: { slug: string }) {
   const title = all
     ? `Origem dos ${cfg.person.many} · ${total} registados este mês` +
       (total ? ` · ${pct(search, total)}% pelo Google ou por IAs` : "") +
-      " — a receção entra com PIN"
-    : `Origem dos ${cfg.person.many} — a receção entra com PIN`;
+      ` — ${cfg.desk.who} entra com PIN`
+    : `Origem dos ${cfg.person.many} — ${cfg.desk.who} entra com PIN`;
 
   return (
     <a

@@ -5,8 +5,9 @@
 // mais um paciente, «+1»), o «made by WonderAds» e o número que sobe.
 //
 // As cores vêm das variáveis --o-* que a página define a partir do tema do
-// cliente (config.ts), por isso nada aqui é específico da MyMedic a não ser a
-// própria cruz.
+// cliente (clients.ts), por isso nada aqui é específico de um cliente a não
+// ser a própria cruz da MyMedic. v78.76: o selo dos outros clientes é o
+// símbolo do logótipo deles (ou um visto na cor da marca).
 
 import { useEffect, useRef, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
@@ -15,14 +16,19 @@ import {
   DoorOpen,
   Globe,
   HeartHandshake,
+  Mail,
+  Megaphone,
   MessageCircle,
   MoreHorizontal,
   Phone,
   Search,
   Share2,
   Sparkles,
+  Star,
   Stethoscope,
   Store,
+  Trophy,
+  Truck,
   type LucideIcon,
 } from "lucide-react";
 import type { OrigemTheme } from "@/lib/origem/config";
@@ -34,6 +40,10 @@ export const SOURCE_ICONS: Record<string, LucideIcon> = {
   recomendacao: HeartHandshake,
   medico: Stethoscope,
   porta: DoorOpen,
+  guias: Star,
+  evento: Trophy,
+  publicidade: Megaphone,
+  frota: Truck,
   outro: MoreHorizontal,
 };
 
@@ -42,6 +52,7 @@ export const CHANNEL_ICONS: Record<string, LucideIcon> = {
   whatsapp: MessageCircle,
   balcao: Store,
   online: Globe,
+  email: Mail,
 };
 
 /** O gradiente da WonderAds — só para o que é trabalho da WonderAds
@@ -54,10 +65,27 @@ export function tint(hex: string, alpha: number): string {
   return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${alpha})`;
 }
 
-export function ClientLogo({ logo, brand, className = "" }: { logo: string | null; brand: string; className?: string }) {
-  if (!logo) return <span className={`font-extrabold tracking-tight ${className}`}>{brand}</span>;
+/** A altura vem do tema (--o-logo-h): cada logótipo tem a sua, para que um
+ *  wordmark largo e um logótipo empilhado pesem o mesmo no ecrã. */
+const LOGO_SIZE = {
+  header: "h-[calc(var(--o-logo-h)*0.8)] max-w-[44vw] sm:h-[var(--o-logo-h)] sm:max-w-[300px]",
+  gate: "h-[calc(var(--o-logo-h)*1.4)] max-w-[78vw] sm:h-[calc(var(--o-logo-h)*1.8)] sm:max-w-[440px]",
+} as const;
+
+export function ClientLogo({
+  logo,
+  brand,
+  size,
+  className = "",
+}: {
+  logo: string | null;
+  brand: string;
+  size: keyof typeof LOGO_SIZE;
+  className?: string;
+}) {
+  if (!logo) return <span className={`text-[22px] font-extrabold tracking-tight ${className}`}>{brand}</span>;
   // eslint-disable-next-line @next/next/no-img-element
-  return <img src={logo} alt={brand} className={`w-auto object-contain ${className}`} />;
+  return <img src={logo} alt={brand} className={`w-auto object-contain ${LOGO_SIZE[size]} ${className}`} />;
 }
 
 // As quatro hastes e o centro da cruz do logótipo da MyMedic.
@@ -88,13 +116,8 @@ export function BrandMark({
 }) {
   const reduce = useReducedMotion();
   const animate = !still && !reduce;
-  if (mark !== "mymedic-cross") {
-    return (
-      <svg viewBox="0 0 100 100" className={className} aria-hidden>
-        <circle cx="50" cy="50" r="34" fill="var(--o-primary)" />
-      </svg>
-    );
-  }
+  if (mark === "check") return <CheckMark className={className} play={play} animate={animate} />;
+  if (typeof mark === "object") return <SymbolMark src={mark.src} className={className} play={play} animate={animate} />;
   const arm = (from: { x?: number; y?: number }, delay: number) =>
     animate
       ? {
@@ -121,6 +144,79 @@ export function BrandMark({
         transition={animate ? { type: "spring", stiffness: 320, damping: 18, delay: 0.28 } : undefined}
       />
     </svg>
+  );
+}
+
+const ORIGIN_CENTER = { transformOrigin: "50px 50px", transformBox: "view-box" } as const;
+
+/** Um visto na cor da marca: o círculo salta, o traço desenha-se e um anel
+ *  abre por fora — para as marcas sem símbolo no logótipo. */
+function CheckMark({ className, play, animate }: { className: string; play?: number | string; animate: boolean }) {
+  return (
+    <svg key={play} viewBox="0 0 100 100" className={className} aria-hidden>
+      {animate && (
+        <motion.circle
+          cx="50"
+          cy="50"
+          r="40"
+          fill="none"
+          stroke="var(--o-primary)"
+          strokeWidth="3"
+          style={ORIGIN_CENTER}
+          initial={{ scale: 0.8, opacity: 0.5 }}
+          animate={{ scale: 1.25, opacity: 0 }}
+          transition={{ duration: 0.9, ease: "easeOut", delay: 0.15 }}
+        />
+      )}
+      <motion.circle
+        cx="50"
+        cy="50"
+        r="38"
+        fill="var(--o-primary)"
+        style={ORIGIN_CENTER}
+        initial={animate ? { scale: 0.3, opacity: 0 } : false}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ type: "spring", stiffness: 320, damping: 18 }}
+      />
+      <motion.path
+        d="M32 51 L45 64 L69 38"
+        fill="none"
+        stroke="#fff"
+        strokeWidth="8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        initial={animate ? { pathLength: 0 } : false}
+        animate={{ pathLength: 1 }}
+        transition={{ duration: 0.35, delay: 0.18, ease: "easeOut" }}
+      />
+    </svg>
+  );
+}
+
+/** O símbolo do logótipo do cliente: entra com uma mola e um anel na cor da
+ *  marca abre por trás — «mais um». */
+function SymbolMark({ src, className, play, animate }: { src: string; className: string; play?: number | string; animate: boolean }) {
+  const positioned = /(^|\s)(absolute|fixed|relative)(\s|$)/.test(className);
+  return (
+    <span key={play} className={`${positioned ? "" : "relative "}inline-flex items-center justify-center ${className}`} aria-hidden>
+      {animate && (
+        <motion.span
+          className="absolute inset-[4%] rounded-full border-2 border-[var(--o-primary)]"
+          initial={{ scale: 0.6, opacity: 0.55 }}
+          animate={{ scale: 1.35, opacity: 0 }}
+          transition={{ duration: 0.9, ease: "easeOut", delay: 0.12 }}
+        />
+      )}
+      <motion.img
+        src={src}
+        alt=""
+        draggable={false}
+        className="relative h-full w-full object-contain"
+        initial={animate ? { scale: 0.45, opacity: 0, rotate: -12 } : false}
+        animate={{ scale: 1, opacity: 1, rotate: 0 }}
+        transition={{ type: "spring", stiffness: 300, damping: 16 }}
+      />
+    </span>
   );
 }
 
@@ -183,7 +279,7 @@ export function Sheet({
   className?: string;
 }) {
   return (
-    <section className={`rounded-[28px] border border-[var(--o-line)] bg-white p-5 sm:p-7 ${className}`}>
+    <section className={`rounded-[calc(28px*var(--o-rs))] border border-[var(--o-line)] bg-white p-5 sm:p-7 ${className}`}>
       {(title || aside) && (
         <div className="mb-5 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
           {title && <h2 className="text-[17px] font-bold tracking-tight">{title}</h2>}
