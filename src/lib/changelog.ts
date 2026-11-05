@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.79",
+    date: "2026-11-05",
+    title: "Exames SEO/GEO: entram as perguntas do Núcleo e do Comum aprovadas pelo André",
+    highlights: [
+      "**✅ O Núcleo volta aos exames, só com as perguntas que o André aprovou** no Word revisto de 05/11: 61 das 65, quatro delas com o texto dele (s1-q6, s1-q8, s1-q10 e s2-q9). Ficam de fora a s1-q2, a s1-q4, a s1-q5 e a d60-q3. Cada folha volta a ter 8 perguntas do núcleo da fase.",
+      "**📚 31 perguntas do Comum entram no sorteio dos seis exames** (as aprovadas; ficam de fora a m1-q3, a m1-q8 e a m3-q6), como mais três capítulos com a etiqueta «Comum». A m3-q5 passa a ter duas respostas certas e a m3-q7 a explicação nova, ambas com o texto do André. O Comum continua escondido como especialização.",
+      "**🔁 Continua sem repetições:** em 200 simulações de seis exames seguidos, cada folha tem 35 perguntas (8 do núcleo, 3 do Comum, 24 dos capítulos), nenhuma repetida e nenhuma fora das aprovadas.",
+    ],
+  },
+  {
     version: "78.78",
     date: "2026-11-05",
     title: "Origem dos clientes: o rodapé da WonderAds passa a ser um rodapé a sério",

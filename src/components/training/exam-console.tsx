@@ -57,6 +57,7 @@ export function ExamConsole({
   questionCount,
   chapterCount,
   coreCount,
+  hasCommon,
   passingScore,
   attemptNumber,
   attemptsLeft,
@@ -77,6 +78,8 @@ export function ExamConsole({
   chapterCount: number;
   /** Quantas perguntas vêm do núcleo da fase. */
   coreCount: number;
+  /** Entram perguntas aprovadas do Comum (v78.79)? */
+  hasCommon: boolean;
   passingScore: number;
   attemptNumber: number;
   attemptsLeft: number | null;
@@ -292,6 +295,7 @@ export function ExamConsole({
         questionCount={questionCount}
         chapterCount={chapterCount}
         coreCount={coreCount}
+        hasCommon={hasCommon}
         durationMinutes={durationMinutes}
       />
 
@@ -349,17 +353,26 @@ function PaperBrief({
   questionCount,
   chapterCount,
   coreCount,
+  hasCommon,
   durationMinutes,
 }: {
   questionCount: number;
   chapterCount: number;
   coreCount: number;
+  hasCommon: boolean;
   durationMinutes: number;
 }) {
   const pace = (durationMinutes / Math.max(1, questionCount))
     .toFixed(1)
     .replace(".", ",");
   const fromChapters = Math.max(0, questionCount - coreCount);
+  // De onde vêm as perguntas. Com o Comum (v78.79) as contas por fonte variam
+  // de folha para folha, por isso diz-se só a origem.
+  const sources = hasCommon
+    ? coreCount > 0
+      ? "do núcleo da fase, do Comum e dos capítulos"
+      : "do Comum e dos capítulos da especialização"
+    : null;
   return (
     <div className="mt-6 rounded-xl border border-white/[0.08] bg-white/[0.02] p-4 sm:p-5">
       <p className="readout text-white/40">A tua folha</p>
@@ -367,7 +380,12 @@ function PaperBrief({
         <BriefStat
           icon={<ListOrdered className="h-3.5 w-3.5" />}
           value={`${questionCount} perguntas`}
-          hint={coreCount > 0 ? `${coreCount} do núcleo da fase · ${fromChapters} dos capítulos` : "todas dos capítulos da especialização"}
+          hint={
+            sources ??
+            (coreCount > 0
+              ? `${coreCount} do núcleo da fase · ${fromChapters} dos capítulos`
+              : "todas dos capítulos da especialização")
+          }
         />
         <BriefStat
           icon={<Layers className="h-3.5 w-3.5" />}

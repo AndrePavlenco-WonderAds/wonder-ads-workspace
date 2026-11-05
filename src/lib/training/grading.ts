@@ -117,7 +117,8 @@ export function gradeQuiz(
 export type QuestionTopic = {
   /** Id do módulo, ou "core". */
   key: string;
-  /** N.º do capítulo na track. null no núcleo da fase. */
+  /** N.º do capítulo na track. null no núcleo da fase e nos módulos do
+   *  Comum (v78.79). */
   no: number | null;
   title: string;
 };

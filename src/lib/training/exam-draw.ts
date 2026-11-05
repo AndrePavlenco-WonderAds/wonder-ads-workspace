@@ -12,6 +12,9 @@
 //     `APPROVED_CORE_IDS`; sem nenhuma aprovada, 0) — e o resto, até 35, dos
 //     CAPÍTULOS da especialização DONA DO EXAME
 //     (v78.54: só dela — nem Comum de reserva, nem outra especialização).
+//   • v78.79: nos exames de SEO/GEO entram também as perguntas do COMUM que o
+//     André aprovou (`APPROVED_COMMON_IDS`), como mais três capítulos — um
+//     por módulo do Comum — repartidos da mesma maneira.
 //     TODOS os capítulos entram — à proporção das perguntas que cada um tem,
 //     com pelo menos uma de cada — para que o exame cubra a formação inteira e
 //     não só o tema da semana.
@@ -33,7 +36,11 @@
 // chave de resposta por confirmar não pode chumbar ninguém.
 
 import type { TrainingQuestion, TrainingTrack } from "@/lib/training/catalog";
-import { APPROVED_CORE_IDS, EXAM_QUESTIONS } from "@/lib/training/exam-questions";
+import {
+  APPROVED_COMMON_IDS,
+  APPROVED_CORE_IDS,
+  EXAM_QUESTIONS,
+} from "@/lib/training/exam-questions";
 import type { ExamPhase } from "@/lib/training/exams";
 import {
   seededShuffle,
@@ -54,6 +61,9 @@ export type ExamPool = {
   core: Stratum;
   /** Um estrato por capítulo da especialização dona do exame. */
   chapters: Stratum[];
+  /** v78.79: um estrato por módulo do Comum, só com as perguntas que o André
+   *  aprovou para os exames de SEO/GEO. Sorteados como os capítulos. */
+  common: Stratum[];
   /** Vazio desde a v78.54: as especializações não se misturam, e o Comum já
    *  não enche folhas de exame. Fica no tipo para o sorteio não mudar. */
   reserve: Stratum[];
@@ -70,6 +80,16 @@ export type ExamDraw = { seed: string; questionIds: string[] };
 function coreTopic(exam: ExamPhase): QuestionTopic {
   return { key: "core", no: null, title: `Núcleo · ${exam.label}` };
 }
+
+/** Os módulos do Comum não têm n.º de capítulo (`no: null`): na folha
+ *  aparecem como «Comum», para não se confundirem com o capítulo 1, 2 ou 3 da
+ *  especialização. */
+function commonTopic(module: { id: string; title: string }): QuestionTopic {
+  return { key: module.id, no: null, title: module.title };
+}
+
+/** A especialização cujos exames recebem as perguntas aprovadas do Comum. */
+const COMMON_IN_EXAMS_OF = "seo-geo";
 
 function examEligible(q: TrainingQuestion): boolean {
   return (
@@ -100,12 +120,24 @@ export function examPool(exam: ExamPhase, tracks: TrainingTrack[]): ExamPool {
     questions: (EXAM_QUESTIONS[exam.id] ?? []).filter((q) => examEligible(q) && APPROVED_CORE_IDS.has(q.id)),
   };
   const chapters = tracks.filter((t) => t.slug === exam.trackSlug).flatMap(trackStrata);
-  return { core, chapters, reserve: [] };
+  // v78.79: as perguntas do Comum que o André aprovou para os exames de SEO/GEO.
+  const common: Stratum[] =
+    exam.trackSlug === COMMON_IN_EXAMS_OF
+      ? tracks
+          .filter((t) => t.isCommon)
+          .flatMap((t) => [...t.modules].sort((a, b) => a.order - b.order))
+          .map((m) => ({
+            topic: commonTopic(m),
+            questions: m.quiz.questions.filter((q) => examEligible(q) && APPROVED_COMMON_IDS.has(q.id)),
+          }))
+          .filter((s) => s.questions.length > 0)
+      : [];
+  return { core, chapters, common, reserve: [] };
 }
 
 /** Quantas perguntas a folha vai ter — 35, salvo especialização pequena. */
 export function examPaperSize(pool: ExamPool): number {
-  const available = [pool.core, ...pool.chapters, ...pool.reserve].reduce(
+  const available = [pool.core, ...pool.chapters, ...pool.common, ...pool.reserve].reduce(
     (n, s) => n + s.questions.length,
     0,
   );
@@ -249,7 +281,7 @@ export function drawExamQuestionIds(
 ): string[] {
   const rand = rng(seed);
   const timesSeen = (q: TrainingQuestion) => history.get(q.id) ?? 0;
-  const strata = [pool.core, ...pool.chapters, ...pool.reserve];
+  const strata = [pool.core, ...pool.chapters, ...pool.common, ...pool.reserve];
   // Por estrato: as novas (baralhadas) e as já vistas, das que saíram menos
   // vezes para as que saíram mais (baralhadas dentro de cada contagem).
   const fresh = new Map<string, TrainingQuestion[]>();
@@ -308,12 +340,12 @@ export function drawExamQuestionIds(
   };
 
   take(fresh, pool.core.topic.key, EXAM_CORE_COUNT);
-  freshChapters(pool.chapters);
+  freshChapters([...pool.chapters, ...pool.common]);
   // Especialização pequena demais para 35: o resto do núcleo, depois o Comum.
   take(fresh, pool.core.topic.key, left);
   freshChapters(pool.reserve);
   // Já saíram todas as novas — repete o mínimo possível.
-  roundRobin([pool.core, ...pool.chapters, ...pool.reserve]);
+  roundRobin([pool.core, ...pool.chapters, ...pool.common, ...pool.reserve]);
 
   return interleave(picked, rand);
 }
@@ -403,7 +435,7 @@ export function questionIndex(
   for (const track of tracks) {
     const modules = [...track.modules].sort((a, b) => a.order - b.order);
     modules.forEach((m, i) => {
-      const topic = { key: m.id, no: i + 1, title: m.title };
+      const topic = track.isCommon ? commonTopic(m) : { key: m.id, no: i + 1, title: m.title };
       for (const q of m.quiz.questions) map.set(q.id, { question: q, topic });
     });
   }

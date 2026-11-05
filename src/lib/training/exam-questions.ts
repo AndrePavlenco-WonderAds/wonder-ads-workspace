@@ -1,12 +1,17 @@
 // Perguntas dos SEIS EXAMES DE FASE — o NÚCLEO dos exames de SEO/GEO.
 //
 // ⚠️ v78.58 (André, 30/10/2026): ESTAS PERGUNTAS NÃO SÃO DO ANDRÉ. Foram
-// escritas pelo Claude a 03/08/2026, sem virem de nenhuma aula, e o André
-// nunca as aprovou. Só entram nos exames as que ele aprovar, uma a uma, em
-// `APPROVED_CORE_IDS` (mais abaixo). Enquanto a lista estiver vazia, os
-// exames são feitos só com as perguntas dos capítulos da Especialização
-// SEO/GEO (as 280 do André). As perguntas ficam aqui para os exames já
-// feitos (e o que está a decorrer) continuarem a mostrar a correção.
+// escritas pelo Claude a 03/08/2026, sem virem de nenhuma aula. Só entram nos
+// exames as que ele aprovar, uma a uma, em `APPROVED_CORE_IDS` (mais abaixo).
+//
+// v78.79 (05/11/2026): o André reviu-as no Word «Perguntas que não escreveste
+// - Formação 2». Aprovou 61; mudou ele o texto de 4 (s1-q6, s1-q8, s1-q10,
+// s2-q9 — o texto aqui é o dele, palavra por palavra); deixou de fora 4
+// (s1-q2, s1-q4, s1-q5, d60-q3), que ficam no ficheiro só para a correção dos
+// exames já feitos. No mesmo Word aprovou 31 perguntas dos quizzes do Comum
+// para entrarem também nos exames de SEO/GEO (`APPROVED_COMMON_IDS`). Nunca
+// acrescentar ids a estas listas, nem mudar o texto destas perguntas, sem
+// ele dizer quais.
 //
 // Só a especialização SEO/GEO tem exames, por isso este núcleo é escrito para
 // consultores de SEO/GEO: clientes (clínicas e negócios locais), relatórios,
@@ -185,10 +190,10 @@ const EXAME_S1 = build("exame-s1", [
     "O que significa, em comportamento concreto, \"o cliente contrata uma pessoa, não uma plataforma\"?",
     [
       [
-        "Que o nome associado ao serviço é o teu, e a responsabilidade pelo resultado dele também",
+        "Que o nome associado ao serviço é o teu e da WonderAds, e a responsabilidade pelo resultado dele também",
         true,
       ],
-      ["Que as ferramentas são secundárias e não vale a pena dominá-las, já que o cliente compra a relação", false],
+      ["Que as ferramentas e a WonderAds são secundárias e não vale a pena dominá-las, já que o cliente compra a relação", false],
       ["Que o cliente deve comunicar sempre contigo e nunca com mais ninguém da casa", false],
       ["Que a relação pessoal compensa um mês de resultados fracos, se o cliente confiar em ti", false],
     ],
@@ -205,7 +210,7 @@ const EXAME_S1 = build("exame-s1", [
     "Procurar o padrão mais alto mesmo em contas pequenas é parte da definição. Uma conta que começa a derrapar é o momento em que a intervenção ainda é barata — a estável não está a pedir nada.",
   ),
   mc(
-    "A dada altura percebes que o trabalho de outra pessoa da casa está a atrasar o teu cliente. Qual é a postura esperada?",
+    "A dada altura percebes que o trabalho de outra pessoa da empresa (colega outro DPT, etc.) está a atrasar o teu cliente. Qual é a postura esperada?",
     [
       ["Sinalizas com contexto e ajudas a destravar, porque respondes pelo resultado no cliente", true],
       ["Documentas que a tua parte está feita e dizes ao cliente onde está o bloqueio, para ficar claro que não é teu", false],
@@ -222,7 +227,7 @@ const EXAME_S1 = build("exame-s1", [
   mc(
     "Onde tem de ficar registado o que aconteceu numa conta?",
     [
-      ["No Workspace — se não está lá, para a empresa não aconteceu", true],
+      ["No Workspace Roadmap — se não está lá, para a empresa não aconteceu", true],
       ["Onde for mais rápido no momento, desde que a informação exista algures", false],
       ["Em todos os sítios possíveis, para garantir que ninguém perde o contexto", false],
       ["Na conversa com o cliente, que é a fonte original da informação", false],
@@ -318,7 +323,7 @@ const EXAME_S2 = build("exame-s2", [
     "Feedback que não se diz não desaparece — acumula e sai pior mais tarde. Descreve-se o comportamento e o efeito, não a pessoa; corrige-se em privado; e nunca se guarda uma correção para a avaliação seguinte.",
   ),
   vf(
-    "Cadência combinada e cumprida vale mais do que contacto abundante e irregular.",
+    "Cadência de reuniões combinadas e cumpridas vale mais do que contacto abundante e irregular.",
     true,
     "O cliente não precisa de mais mensagens, precisa de saber quando é a próxima. Previsibilidade é o que faz uma relação parecer sob controlo.",
   ),
@@ -793,8 +798,37 @@ const EXAME_D90 = build("exame-d90", [
 /** Bancos de perguntas por exame. Editáveis aqui — os exames NÃO passam pelo
  *  CMS: uma régua que qualquer pessoa pode baixar deixa de ser régua. */
 /** As perguntas do núcleo que o André aprovou para entrarem nos exames
- *  (v78.58). Só ele as acrescenta — nunca o Claude por iniciativa própria. */
-export const APPROVED_CORE_IDS: ReadonlySet<string> = new Set<string>([]);
+ *  (v78.58). Só ele as acrescenta — nunca o Claude por iniciativa própria.
+ *  v78.79 (05/11/2026): as 61 que ele deixou no Word revisto. */
+export const APPROVED_CORE_IDS: ReadonlySet<string> = new Set<string>([
+  // exame-s1 (8)
+  "exame-s1-q1", "exame-s1-q3", "exame-s1-q6", "exame-s1-q7", "exame-s1-q8", "exame-s1-q9", "exame-s1-q10", "exame-s1-q11",
+  // exame-s2 (11)
+  "exame-s2-q1", "exame-s2-q2", "exame-s2-q3", "exame-s2-q4", "exame-s2-q5", "exame-s2-q6", "exame-s2-q8", "exame-s2-q9", "exame-s2-q10", "exame-s2-q11", "exame-s2-q12",
+  // exame-s3 (10)
+  "exame-s3-q1", "exame-s3-q3", "exame-s3-q4", "exame-s3-q5", "exame-s3-q6", "exame-s3-q7", "exame-s3-q8", "exame-s3-q9", "exame-s3-q10", "exame-s3-q11",
+  // exame-s4 (10)
+  "exame-s4-q3", "exame-s4-q4", "exame-s4-q5", "exame-s4-q6", "exame-s4-q7", "exame-s4-q8", "exame-s4-q9", "exame-s4-q10", "exame-s4-q11", "exame-s4-q12",
+  // exame-d60 (10)
+  "exame-d60-q1", "exame-d60-q2", "exame-d60-q4", "exame-d60-q5", "exame-d60-q6", "exame-d60-q7", "exame-d60-q8", "exame-d60-q9", "exame-d60-q10", "exame-d60-q11",
+  // exame-d90 (12)
+  "exame-d90-q1", "exame-d90-q2", "exame-d90-q3", "exame-d90-q4", "exame-d90-q5", "exame-d90-q6", "exame-d90-q7", "exame-d90-q8", "exame-d90-q9", "exame-d90-q10", "exame-d90-q11", "exame-d90-q12",
+]);
+
+/** As perguntas dos quizzes do Comum que o André aprovou para os exames de
+ *  SEO/GEO (v78.79, Word revisto de 05/11/2026). Entram no sorteio de TODOS os
+ *  exames, como mais três capítulos (um por módulo do Comum); as outras 3
+ *  (comum-m1-q3, comum-m1-q8, comum-m3-q6) ficam de fora. O texto vem do
+ *  catálogo (KV), como o dos capítulos — o Comum continua escondido da
+ *  equipa enquanto especialização (`COMMON_TRACK_HIDDEN`). */
+export const APPROVED_COMMON_IDS: ReadonlySet<string> = new Set<string>([
+  // comum-m1 (10)
+  "comum-m1-q1", "comum-m1-q2", "comum-m1-q4", "comum-m1-q5", "comum-m1-q6", "comum-m1-q7", "comum-m1-q9", "comum-m1-q10", "comum-m1-q11", "comum-m1-q12",
+  // comum-m2 (11)
+  "comum-m2-q1", "comum-m2-q2", "comum-m2-q3", "comum-m2-q4", "comum-m2-q5", "comum-m2-q6", "comum-m2-q7", "comum-m2-q8", "comum-m2-q9", "comum-m2-q10", "comum-m2-q11",
+  // comum-m3 (10)
+  "comum-m3-q1", "comum-m3-q2", "comum-m3-q3", "comum-m3-q4", "comum-m3-q5", "comum-m3-q7", "comum-m3-q8", "comum-m3-q9", "comum-m3-q10", "comum-m3-q11",
+]);
 
 export const EXAM_QUESTIONS: Record<string, TrainingQuestion[]> = {
   "exame-s1": EXAME_S1,

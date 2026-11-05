@@ -55,7 +55,8 @@ const TOPIC_TONES = [
 ];
 
 export function topicTone(topic: QuestionTopic): string {
-  if (topic.no === null) return "#f0a8ee";
+  // O Comum (v78.79) também não tem n.º de capítulo — tem o seu tom.
+  if (topic.no === null) return topic.key === "core" ? "#f0a8ee" : "#93c5fd";
   return TOPIC_TONES[(topic.no - 1) % TOPIC_TONES.length];
 }
 
@@ -67,7 +68,7 @@ export function TopicChip({
   compact?: boolean;
 }) {
   const tone = topicTone(topic);
-  const isCore = topic.no === null;
+  const isCore = topic.key === "core";
   return (
     <span
       className="inline-flex min-w-0 max-w-full items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-medium"
@@ -81,7 +82,9 @@ export function TopicChip({
       {isCore ? (
         <Target className="h-3 w-3 shrink-0" />
       ) : (
-        <span className="tabular shrink-0 font-bold">Cap. {topic.no}</span>
+        <span className="tabular shrink-0 font-bold">
+          {topic.no === null ? "Comum" : `Cap. ${topic.no}`}
+        </span>
       )}
       {!compact && <span className="truncate text-white/70">{topic.title}</span>}
     </span>

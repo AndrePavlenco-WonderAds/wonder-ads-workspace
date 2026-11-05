@@ -342,14 +342,15 @@ const COMUM_M3 = build("comum-m3", [
     "Canal acordado, decisões por escrito, e o aviso antes do prazo — não depois.",
   ),
   mc(
-    "Detetas que o cliente beneficiaria de um serviço que a WonderAds presta mas que ele não contratou. O que fazes?",
+    // v78.79: texto do André (Word revisto de 05/11/2026) — passou a ter duas certas.
+    "Deteta que o cliente beneficiaria de um serviço que a WonderAds presta, mas que ele não contratou. O que fazes? (Seleciona todas as opções corretas)",
     [
-      ["Passas a oportunidade ao Comercial ou ao superior in charge", true],
-      ["Apresentas tu a proposta e o preço ao cliente, já que conheces a conta", false],
+      ["Se o serviço for de outra área, passas a oportunidade ao Comercial, ao superior in charge ou ao departamento responsável", true],
+      ["Se o serviço for da tua área, conduzes tu a proposta junto do cliente, porque já acompanhas a conta", true],
       ["Não dizes nada, para não parecer que estás a vender ao cliente", false],
       ["Fazes o trabalho extra sem cobrar, para mostrar valor", false],
     ],
-    "Todos os consultores devem saber identificar upsell; quem o conduz é o Comercial ou o superior in charge. Ver e não passar é deixar dinheiro e resultado em cima da mesa.",
+    "Todos os consultores devem saber identificar oportunidades de upsell e cross-sell, mas quem as conduz depende do serviço. Se o cliente de SEO beneficiaria de campanhas de Ads, por exemplo, a venda deve ser feita pelo Comercial, pelo superior in charge ou pelo departamento de Ads. Se a oportunidade for dentro de SEO, como alargar as keywords ou fazer o redesign do site, pode ser o próprio consultor de SEO que acompanha a conta a conduzi-la. Ver a oportunidade e não agir é deixar dinheiro e resultados em cima da mesa.",
   ),
   mc(
     "És do Comercial e, numa conversa, detetas uma oportunidade que sai do âmbito comercial normal. A quem a passas?",
@@ -364,7 +365,8 @@ const COMUM_M3 = build("comum-m3", [
   vf(
     "Detetar oportunidades é função exclusiva do departamento Comercial.",
     false,
-    "É função de todos. O Comercial conduz a venda, mas quem está dentro da conta é quem vê primeiro a oportunidade.",
+    // v78.79: explicação do André (Word revisto de 05/11/2026).
+    "É função de todos. Quem está dentro da conta é quem vê primeiro a oportunidade.",
   ),
   mc(
     "O cliente pede algo que está fora do âmbito contratado. Qual é a melhor resposta?",

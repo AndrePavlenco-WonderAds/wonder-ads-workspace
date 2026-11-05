@@ -292,6 +292,7 @@ export default async function ExamPage({
               questionCount={questionCount}
               chapterCount={pool.chapters.length}
               coreCount={Math.min(EXAM_CORE_COUNT, pool.core.questions.length)}
+              hasCommon={pool.common.length > 0}
               passingScore={exam.passingScore}
               attemptNumber={attemptNumber}
               attemptsLeft={state.attemptsLeft}
