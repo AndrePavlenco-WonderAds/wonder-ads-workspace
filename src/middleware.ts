@@ -6,7 +6,8 @@
 // `?next=` so the user lands back where they were going after sign-in.
 //
 // Public surfaces are NOT matched by `config.matcher` below:
-//   • /(public-review)/[slug]/...  — client-facing approval pages
+//   • /(public-review)/[slug]/...  — client-facing approval pages (v78.81:
+//     matched só para o portão dos projetos em pausa, logo no início)
 //   • /api/reviews/...             — the public review API
 //   • /login + /api/auth/...        — the gate itself
 //   • /_next/*, /favicon.ico, /static — assets
@@ -20,6 +21,12 @@ import {
   readSession,
 } from "@/lib/auth/session";
 import { readAccessGate } from "@/lib/access/gate";
+import {
+  PAUSED_PAGE_PREFIX,
+  isProjectPaused,
+  publicProjectApiSlug,
+  publicProjectPageSlug,
+} from "@/lib/paused-projects";
 import { isSessionBlocked } from "@/lib/access/shared";
 import {
   canEditDept,
@@ -177,6 +184,23 @@ function viewerGate(req: NextRequest, dept: DeptSlug): NextResponse | null {
 }
 
 export async function middleware(req: NextRequest) {
+  // PROJETOS EM PAUSA (v78.81). As páginas públicas de um cliente pausado no
+  // SEO DPT (/<slug>/origem, /pendingreview, /preview/…, /onboarding,
+  // /survey, /reviews) mostram /projeto-em-pausa/<slug> — a toda a gente, com
+  // ou sem sessão. Estas rotas só passam por aqui por causa deste portão: fora
+  // da pausa seguem logo, sem sessão nem portões, como sempre seguiram.
+  const pageSlug = publicProjectPageSlug(req.nextUrl.pathname);
+  if (pageSlug) {
+    if (!(await isProjectPaused(pageSlug))) return NextResponse.next();
+    const url = req.nextUrl.clone();
+    url.pathname = `${PAUSED_PAGE_PREFIX}/${encodeURIComponent(pageSlug)}`;
+    url.search = "";
+    const res = NextResponse.rewrite(url);
+    res.headers.set("Cache-Control", "no-store");
+    res.headers.set("X-Robots-Tag", "noindex, nofollow");
+    return res;
+  }
+
   const cookie = req.cookies.get(SESSION_COOKIE)?.value;
   let session = await readSession(cookie);
   // Acessos (v78.72): acesso cancelado, ou sessão de antes de um «terminar
@@ -252,6 +276,15 @@ export async function middleware(req: NextRequest) {
       );
     }
     return NextResponse.next();
+  }
+  // Projetos em pausa (v78.81): sem sessão, as APIs das páginas públicas de
+  // um cliente em pausa recusam — registar, aprovar, comentar, responder.
+  const apiSlug = publicProjectApiSlug(req.nextUrl.pathname);
+  if (apiSlug && (await isProjectPaused(apiSlug))) {
+    return NextResponse.json(
+      { error: "Este projeto está em pausa.", paused: true },
+      { status: 423, headers: { "Cache-Control": "no-store" } },
+    );
   }
   // Sem sessão, um caminho público (/api/reviews, /api/cron, /api/slack…)
   // segue como sempre seguiu.
@@ -348,6 +381,15 @@ export const config = {
     "/api/ga4/:path*",
     "/api/chat/:path*",
     "/api/formacao/:path*",
+    // Projetos em pausa (v78.81) — as páginas públicas de cada cliente. Só
+    // para o portão da pausa: fora dela seguem logo (ver o início do
+    // middleware).
+    "/:slug/origem/:path*",
+    "/:slug/reviews/:path*",
+    "/:slug/pendingreview/:path*",
+    "/:slug/preview/:path*",
+    "/:slug/onboarding/:path*",
+    "/:slug/survey/:path*",
     // Todo o resto do /api — SÓ para o portão dos viewers (v77.32). Sem
     // sessão, ou com sessão de quem não é viewer, estes caminhos seguem sem
     // gates (ver isInternalPath).

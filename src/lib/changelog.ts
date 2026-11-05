@@ -13,6 +13,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.81",
+    date: "2026-11-05",
+    title: "Projetos em pausa: as páginas públicas do cliente fecham, com uma página própria",
+    highlights: [
+      "**⏸ Pausar um cliente no SEO DPT fecha as páginas públicas dele**: registo de leads (Origem), aprovações pendentes, pré-visualizações (relatório, roadmap, keywords, briefing, posts, meta tags), onboarding, inquérito NPS e Reviews Hub. No lugar de cada uma aparece «Parece que este projeto está em pausa», com o logótipo do cliente numa órbita a rodar, as cores dele (nos clientes da Origem) e a assinatura da WonderAds. Reativar (▶) reabre tudo em até 15 segundos; nada se apaga.",
+      "**🔒 As APIs dessas páginas recusam pedidos de fora** enquanto o projeto estiver em pausa (registar leads, aprovar, comentar, responder ao NPS). A equipa, com sessão, continua a trabalhar na app como sempre e vê na página pública o mesmo que o cliente. As propostas (/proposta/…) ficam abertas.",
+    ],
+  },
+  {
     version: "78.80",
     date: "2026-11-05",
     title: "Exames SEO/GEO: «Detetas» na pergunta das oportunidades do Comum",
