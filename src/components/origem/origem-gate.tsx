@@ -10,7 +10,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, useAnimationControls } from "motion/react";
 import { Delete, Loader2 } from "lucide-react";
-import { ClientLogo, MadeBy } from "./origem-ui";
+import { ClientLogo } from "./origem-ui";
+import { WonderAdsSignature } from "./wonder-ads-signature";
 
 const LENGTH = 6;
 
@@ -163,7 +164,7 @@ export function OrigemGate({
       </motion.div>
 
       <footer className="flex justify-center lg:justify-start">
-        <MadeBy />
+        <WonderAdsSignature />
       </footer>
     </main>
   );

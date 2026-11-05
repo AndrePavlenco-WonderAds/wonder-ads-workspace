@@ -2,7 +2,8 @@
 
 // Peças comuns da Origem de Pacientes (v78.69): os ícones das origens, a
 // marca gráfica do cliente (a cruz da MyMedic, que se monta a cada registo —
-// mais um paciente, «+1»), o «made by WonderAds» e o número que sobe.
+// mais um paciente, «+1») e o número que sobe. A assinatura da WonderAds
+// vive em wonder-ads-signature.tsx.
 //
 // As cores vêm das variáveis --o-* que a página define a partir do tema do
 // cliente (clients.ts), por isso nada aqui é específico de um cliente a não
@@ -12,7 +13,6 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import {
-  ArrowUpRight,
   DoorOpen,
   Globe,
   HeartHandshake,
@@ -217,28 +217,6 @@ function SymbolMark({ src, className, play, animate }: { src: string; className:
         transition={{ type: "spring", stiffness: 300, damping: 16 }}
       />
     </span>
-  );
-}
-
-export function MadeBy({ className = "" }: { className?: string }) {
-  return (
-    <a
-      href="https://wonder-ads.com"
-      target="_blank"
-      rel="noopener noreferrer"
-      className={`group inline-flex items-center gap-1 text-[13px] text-[var(--o-muted)] transition-colors hover:text-[var(--o-ink)] ${className}`}
-    >
-      made by
-      <span className="relative font-bold text-[var(--o-ink)]">
-        WonderAds
-        <span
-          className="absolute -bottom-0.5 left-0 h-[2px] w-full origin-left scale-x-0 rounded-full transition-transform duration-300 group-hover:scale-x-100"
-          style={{ background: WA_GRADIENT }}
-          aria-hidden
-        />
-      </span>
-      <ArrowUpRight className="h-3.5 w-3.5 -translate-x-1 opacity-0 transition-all duration-300 group-hover:translate-x-0 group-hover:opacity-100" aria-hidden />
-    </a>
   );
 }
 

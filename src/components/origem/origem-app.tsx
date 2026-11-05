@@ -20,7 +20,8 @@ import type { OrigemClient, OrigemSite, OrigemSource } from "@/lib/origem/config
 import { placeWords, siteFromQuery } from "@/lib/origem/words";
 import { dayLabel, lisbonClock, lisbonGreeting, lisbonParts, type MonthStats, type TodayVote } from "@/lib/origem/stats";
 import { OrigemReports } from "./origem-reports";
-import { BrandMark, BumpNumber, CHANNEL_ICONS, ClientLogo, MadeBy, SOURCE_ICONS, tint } from "./origem-ui";
+import { BrandMark, BumpNumber, CHANNEL_ICONS, ClientLogo, SOURCE_ICONS, tint } from "./origem-ui";
+import { WonderAdsSignature } from "./wonder-ads-signature";
 
 export type OrigemBootstrap = {
   slug: string;
@@ -344,8 +345,8 @@ export function OrigemApp({ bootstrap }: { bootstrap: OrigemBootstrap }) {
         ) : null}
       </main>
 
-      <footer className="mx-auto flex w-full max-w-[1240px] flex-wrap items-center justify-between gap-x-6 gap-y-2 border-t border-[var(--o-line)] px-4 py-5 text-[13px] text-[var(--o-muted)] sm:px-8">
-        <MadeBy />
+      <footer className="mx-auto flex w-full max-w-[1240px] flex-wrap items-center justify-between gap-x-6 gap-y-4 border-t border-[var(--o-line)] px-4 py-6 text-[13px] text-[var(--o-muted)] sm:px-8">
+        <WonderAdsSignature />
         {viewer.kind === "client" && (
           <button type="button" onClick={signOut} className="inline-flex items-center gap-1.5 transition hover:text-[var(--o-ink)]">
             <LogOut className="h-3.5 w-3.5" /> Terminar sessão neste aparelho

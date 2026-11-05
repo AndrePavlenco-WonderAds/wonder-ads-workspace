@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.77",
+    date: "2026-11-05",
+    title: "Origem dos clientes: nova assinatura da WonderAds no rodapé",
+    highlights: [
+      "**🦋 A borboleta da WonderAds no rodapé** das páginas Origem (registo e PIN): a do logótipo oficial, facetada e com brilho, como no site, ao lado do nome e da frase «Parceiro Líder em SEO para Marcas de Saúde e Bem-Estar». As asas batem ao abrir a página e ao passar por cima; o bloco liga a wonder-ads.com.",
+    ],
+  },
+  {
     version: "78.76",
     date: "2026-11-05",
     title: "Origem dos clientes: a página de registo em todos os clientes de SEO ativos",
