@@ -44,6 +44,17 @@ export type CodeDocUpdate = {
 
 export const CODE_DOC_UPDATES: CodeDocUpdate[] = [
   {
+    id: "v78.73-jornada-registo-leads-tablet",
+    page: "jornada-cliente",
+    kind: "add-on",
+    changes: [
+      "Mês 2, «Registo de leads e origem dos clientes»: todos os clientes passam a ter uma página de registo na receção, aberta num tablet ou no computador. A receção regista cada pessoa nova em dois toques (origem e canal) e os números ficam contados por mês e por clínica.",
+      "O passo a passo foi atualizado (pedir a página e o PIN à direção, ligar o aparelho da receção) e traz o exemplo da MyMedic. O modelo de Excel fica como alternativa enquanto a página do cliente não está pronta.",
+    ],
+    at: "2026-11-05T12:00:00+00:00",
+    version: "78.73",
+  },
+  {
     id: "v78.67-jornada-cliente-meses-1-3",
     page: "jornada-cliente",
     kind: "add-on",

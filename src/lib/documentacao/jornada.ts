@@ -62,6 +62,15 @@ export type JourneyGuide = {
   questions: string[];
   /** Como se faz, por ordem. */
   steps: string[];
+  /** A ferramenta que cada cliente recebe para o processo (v78.73: a página
+   *  de registo da Origem de Pacientes), com um exemplo real e o link dele.
+   *  Com ferramenta, a imagem e o ficheiro em baixo passam a ser a alternativa. */
+  tool?: {
+    title: string;
+    intro: string;
+    image: { src: string; width: number; height: number; alt: string; caption: string };
+    example: { href: string; label: string; note: string };
+  };
   image?: { src: string; width: number; height: number; alt: string; caption: string };
   download?: { href: string; label: string; note: string };
 };
@@ -70,31 +79,51 @@ export const JOURNEY_GUIDES: Record<string, JourneyGuide> = {
   "registo-leads": {
     id: "registo-leads",
     title: "Registo de leads e origem dos clientes",
-    lead: "No 2.º mês (semana 8 do roadmap), o consultor pergunta ao cliente se conta quantas pessoas o contactam e vêm à clínica todos os meses, e se pergunta a cada uma de onde vem.",
+    lead: "No 2.º mês (semana 8 do roadmap), o consultor pergunta ao cliente se conta quantas pessoas o contactam e vêm à clínica todos os meses, e se pergunta a cada uma de onde vem. Todos os clientes passam a ter uma página própria para este registo, aberta num tablet ou no computador da receção.",
     why: "É essencial para medir os resultados do projeto. O GA4 não sabe quem ligou, quem mandou mensagem ou quem apareceu ao balcão: só o cliente sabe, se contar e perguntar.",
     questions: [
       "Estão a contar quantas pessoas pedem informação, marcam e vêm à clínica todos os meses?",
       "Perguntam a cada pessoa como vos conheceu? Google, IAs como o ChatGPT, redes sociais, recomendação…",
       "Por que canal chegam: email, telefone, WhatsApp ou ao balcão?",
       "Têm os números do mesmo mês do ano passado, para compararmos?",
+      "Há um tablet ou um computador na receção onde possa ficar aberta a página do registo?",
     ],
     steps: [
       "Na call do 2.º mês (semana 8 do roadmap), explicar porquê: sem estes números não se consegue mostrar o que o SEO trouxe ao negócio.",
-      "Se o cliente ainda não regista, enviar o modelo de Excel e combinar quem o preenche — normalmente a receção.",
-      "Em cada contacto, a receção pergunta «Como nos conheceu?» e soma 1 na origem e no canal certos.",
-      "No fim do mês, o cliente envia o ficheiro; os números entram no Monthly Report, comparados com o mesmo mês do ano anterior.",
+      "Combinar onde se regista (um tablet ou o computador da receção) e quem regista: normalmente a receção.",
+      "Pedir à direção a página de registo do cliente, com as clínicas, as origens e os canais certos, e o PIN de 6 dígitos para a receção.",
+      "No aparelho da receção, abrir a página e escrever o PIN uma vez: fica guardado 180 dias. No tablet, «Adicionar ao ecrã principal» abre-a como uma app.",
+      "Em cada contacto novo, a receção pergunta «Como nos conheceu?» e toca na origem e depois no canal. Um engano desfaz-se no «Anular», durante 20 segundos.",
+      "No fim do mês, os números estão no separador Relatórios da página e no chip «Origem» da ficha do cliente no SEO DPT; entram no Monthly Report, comparados com o mesmo mês do ano anterior.",
     ],
+    tool: {
+      title: "A página de registo na receção",
+      intro:
+        "Cada cliente tem a sua página de registo, com a marca dele, num link próprio (/<cliente>/origem). Abre-se num tablet ou no computador da receção e cada pessoa nova fica registada em dois toques: a origem e o canal. Os números ficam logo contados por mês e por clínica, sem ficheiro para enviar.",
+      image: {
+        src: "/documentacao/registo-leads-tablet-exemplo.png",
+        width: 2360,
+        height: 1640,
+        alt: "A página de registo da MyMedic num tablet: as origens em teclas grandes (Google, ChatGPT ou outra IA, redes sociais, recomendação…) e os registos de hoje à direita",
+        caption: "O exemplo da MyMedic, num tablet: a receção toca na origem, escolhe o canal e o registo aparece em «Hoje». Os registos desta imagem são de exemplo.",
+      },
+      example: {
+        href: "/mymedic/origem",
+        label: "Ver o exemplo: MyMedic",
+        note: "O piloto, desde 03/11/2026. Com a sessão da equipa entra-se sem PIN; é só para ver, porque o que se registar ali conta nos números da clínica.",
+      },
+    },
     image: {
       src: "/documentacao/registo-leads-exemplo.png",
       width: 1914,
       height: 170,
       alt: "Exemplo de registo mensal: funil de curiosos, marcações, depósitos e visitas, e a origem das marcações por canal de contacto",
-      caption: "Um exemplo de uma clínica: o funil do mês comparado com o ano anterior e a origem das marcações por canal. Não precisa de ser mais do que isto.",
+      caption: "Enquanto a página do cliente não está pronta, fica o Excel: o funil do mês comparado com o ano anterior e a origem das marcações por canal. Não precisa de ser mais do que isto.",
     },
     download: {
       href: "/documentacao/modelo-registo-leads.xlsx",
       label: "Modelo de Excel — registo de leads",
-      note: "Um separador por mês, com as contas feitas: o cliente só preenche as células amarelas.",
+      note: "A alternativa sem tablet nem computador: um separador por mês, com as contas feitas. O cliente só preenche as células amarelas e envia-o no fim do mês.",
     },
   },
 };
@@ -108,7 +137,8 @@ export function newJourneyId(prefix: string): string {
 // O caminho de partida — seis meses por preencher pela direção, com um espaço
 // por mês. Tarefas já dadas pelo André: no mês 1, confirmar a medição dos
 // contactos do site (v78.67); no mês 2, o registo de leads (era a semana 8,
-// 2026-10-29); no mês 3, avaliar a reunião presencial (v78.67).
+// 2026-10-29; a página de registo na receção entrou na v78.73); no mês 3,
+// avaliar a reunião presencial (v78.67).
 //
 // Mudar este caminho em código = entrada em CODE_DOC_UPDATES (updates-log.ts)
 // na mesma versão, para o aviso chegar ao sino do SEO DPT. As edições feitas

@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.73",
+    date: "2026-11-05",
+    title: "Jornada de Cliente: o registo de leads passa para o tablet ou o computador da receção",
+    highlights: [
+      "**📲 Mês 2, «Registo de leads e origem dos clientes»**: o processo explica agora que todos os clientes vão ter uma página de registo própria, aberta num tablet ou no computador da receção, onde cada pessoa nova fica registada em dois toques (origem e canal).",
+      "**🖼️ Um exemplo**: uma captura da página da MyMedic num tablet, com um botão para abrir o exemplo verdadeiro. Avisa que é só para ver, porque o que se registar ali conta nos números da clínica.",
+      "**🧭 Passo a passo novo**: combinar o aparelho e quem regista, pedir à direção a página e o PIN, ligar o tablet (o PIN fica guardado 180 dias) e ver os números no separador Relatórios e no chip «Origem» da ficha. Há também uma pergunta nova para o cliente, sobre o tablet ou o computador da receção.",
+      "**📄 O Excel continua**, agora como alternativa enquanto a página do cliente não está pronta. O aviso chega ao sino do SEO DPT.",
+    ],
+  },
+  {
     version: "78.72",
     date: "2026-11-04",
     title: "Acessos à app: a consola do COO",

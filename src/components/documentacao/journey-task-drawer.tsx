@@ -11,7 +11,7 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
-import { Download, FileSpreadsheet, MessageCircleQuestion, Pencil, X } from "lucide-react";
+import { ArrowUpRight, Download, FileSpreadsheet, MessageCircleQuestion, MonitorSmartphone, Pencil, X } from "lucide-react";
 import { JOURNEY_GUIDES, MAX_DETAIL_CHARS, type JourneyBlock, type JourneyGuide } from "@/lib/documentacao/jornada";
 
 export type TaskPanel = {
@@ -259,9 +259,56 @@ function GuideBody({ guide }: { guide: JourneyGuide }) {
         </ol>
       </section>
 
+      {guide.tool && (
+        <section>
+          <h3 className="flex items-center gap-2 text-[15px] font-semibold text-white">
+            <MonitorSmartphone className="h-4 w-4 text-[#c4a6ff]" />
+            {guide.tool.title}
+          </h3>
+          <p className="mt-3 text-[14px] leading-relaxed text-white/70">{guide.tool.intro}</p>
+          <figure className="mt-3">
+            {/* Uma captura de tablet: cabe na largura do painel sem rolar. */}
+            <a
+              href={guide.tool.image.src}
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Abrir em tamanho real"
+              className="block overflow-hidden rounded-2xl border border-white/10 bg-white transition hover:border-white/40"
+            >
+              <Image
+                src={guide.tool.image.src}
+                alt={guide.tool.image.alt}
+                width={guide.tool.image.width}
+                height={guide.tool.image.height}
+                sizes="(min-width: 640px) 560px, 100vw"
+                className="h-auto w-full"
+              />
+            </a>
+            <figcaption className="mt-2 text-[12.5px] leading-relaxed text-white/45">
+              {guide.tool.image.caption} Carrega na imagem para a ver em tamanho real.
+            </figcaption>
+          </figure>
+          <a
+            href={guide.tool.example.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group mt-3 flex items-center gap-4 rounded-2xl border border-[#783DF5]/35 bg-[#783DF5]/[0.09] px-4 py-3.5 transition hover:border-[#c4a6ff]/55 hover:bg-[#783DF5]/[0.14]"
+          >
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#783DF5]/25">
+              <MonitorSmartphone className="h-5 w-5 text-[#d9c7ff]" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-[14px] font-semibold text-white">{guide.tool.example.label}</span>
+              <span className="mt-0.5 block text-[12.5px] leading-snug text-white/55">{guide.tool.example.note}</span>
+            </span>
+            <ArrowUpRight className="h-4 w-4 shrink-0 text-[#d9c7ff]/70 transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-white" />
+          </a>
+        </section>
+      )}
+
       {guide.image && (
         <figure>
-          <h3 className="text-[15px] font-semibold text-white">Um exemplo</h3>
+          <h3 className="text-[15px] font-semibold text-white">{guide.tool ? "Em alternativa: o Excel" : "Um exemplo"}</h3>
           {/* Fundo branco: a tabela é uma folha de Excel. Rola na horizontal
               num ecrã estreito em vez de ficar ilegível. */}
           <a
