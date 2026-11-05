@@ -12,6 +12,7 @@
 // user is a code-deploy away (no cookie purge needed).
 
 import { findEmployeeByUsername, isAdminUsername } from "./credentials";
+import { isTopAdmin } from "./top-admin";
 
 export const SESSION_COOKIE = "wa-session";
 
@@ -222,12 +223,16 @@ export async function readSession(
   // para alguém que já não existe nas credenciais. Só se aceita uma lente
   // que continue a fazer sentido AGORA — a alternativa era cada página
   // lembrar-se de a validar, e uma esquecer-se.
+  //
+  // v78.74: ninguém vê a app como o topo (o André) a não ser ele próprio —
+  // um cookie antigo do Alex ou da Alice com `as: "andre"` perde a lente.
   if (typeof payload.as === "string" && payload.as) {
     const target = payload.as.trim().toLowerCase();
     if (
       target === payload.u ||
       !isAdminUsername(payload.u) ||
-      !findEmployeeByUsername(target)
+      !findEmployeeByUsername(target) ||
+      (isTopAdmin(target) && !isTopAdmin(payload.u))
     ) {
       return { u: payload.u, exp: payload.exp, iat: payload.iat };
     }

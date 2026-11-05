@@ -10,6 +10,7 @@
 
 import "server-only";
 import { unstable_cache } from "next/cache";
+import { TOP_ADMIN_USERNAME } from "@/lib/auth/top-admin";
 import { getSeoClients } from "@/lib/notion";
 import {
   adminRecordKey,
@@ -646,7 +647,7 @@ async function pendingReviewNotifications(
 /** Quem marca as Situation Point Calls. É o fundador, e é só ele: a call é
  *  dele com o cliente, e mandar o aviso a mais gente transformava um lembrete
  *  pessoal em ruído para quem não a pode marcar. */
-const SITUATION_POINT_OWNER = "andre";
+const SITUATION_POINT_OWNER = TOP_ADMIN_USERNAME;
 
 /** A partir de quantos MESES DE CALENDÁRIO cumpridos o cliente entra na
  *  lista. v77.42: deixou de ser «semana 17» — com meses de 4 semanas, os

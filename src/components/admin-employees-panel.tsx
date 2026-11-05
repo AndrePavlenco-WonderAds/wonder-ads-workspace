@@ -351,7 +351,7 @@ export function AdminEmployeesPanel({
                     type="button"
                     onClick={() => toggleAddDept(d)}
                     aria-pressed={on}
-                    className={`rounded-full border px-3 py-1 text-[11.5px] font-semibold transition ${
+                    className={`whitespace-nowrap rounded-full border px-3 py-1 text-[11.5px] font-semibold transition ${
                       on
                         ? DEPT_PILL[d] ??
                           "border-white/30 bg-white/10 text-white"
@@ -377,7 +377,7 @@ export function AdminEmployeesPanel({
                     type="button"
                     onClick={() => setAddStatus(s)}
                     aria-pressed={on}
-                    className={`rounded-full border px-3 py-1 text-[11.5px] font-semibold transition ${
+                    className={`whitespace-nowrap rounded-full border px-3 py-1 text-[11.5px] font-semibold transition ${
                       on
                         ? STATUS_PILL[s]
                         : "border-white/12 bg-white/[0.03] text-white/45 hover:border-white/25 hover:text-white/80"

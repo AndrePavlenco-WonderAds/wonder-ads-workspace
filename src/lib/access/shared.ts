@@ -7,8 +7,11 @@
 // Só UMA pessoa abre a consola: o André (COO), decidido por quem FEZ LOGIN e
 // nunca com o «Ver como» ativo. Os outros SuperAdmins não a veem.
 
-/** O único username que abre /admin/acessos e a API. */
-export const ACCESS_OWNER = "andre";
+import { TOP_ADMIN_USERNAME } from "@/lib/auth/top-admin";
+
+/** O único username que abre /admin/acessos e a API — o topo (v78.74:
+ *  definido em lib/auth/top-admin). */
+export const ACCESS_OWNER = TOP_ADMIN_USERNAME;
 
 /** O endereço que vai na mensagem de acesso. */
 export const ACCESS_LOGIN_URL = "https://workspace.wonder-ads.com/login";

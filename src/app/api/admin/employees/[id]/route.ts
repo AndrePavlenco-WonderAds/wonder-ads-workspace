@@ -13,7 +13,7 @@ import {
   saveEmployeeRecord,
   deleteEmployee,
   EMPLOYEE_STATUSES,
-  EMPLOYEE_DEPARTMENTS,
+  normalizeEmployeeDepartments,
   type EmployeeStatus,
   type AdminEmployeeRecord,
 } from "@/lib/admin-employees-store";
@@ -64,15 +64,8 @@ export async function PUT(
     patch.role = body.role.trim().slice(0, 80);
   }
   if (Array.isArray(body.departments)) {
-    const cleaned = body.departments
-      .filter((d): d is string => typeof d === "string")
-      .map((d) => d.trim())
-      .filter(
-        (d) =>
-          d.length > 0 &&
-          (EMPLOYEE_DEPARTMENTS as readonly string[]).includes(d),
-      );
-    patch.departments = Array.from(new Set(cleaned));
+    // Os nomes antigos (Founder/Operations) entram como «C-Level» (v78.74).
+    patch.departments = normalizeEmployeeDepartments(body.departments, { onlyKnown: true });
   }
   if ("startingDate" in body) {
     const raw = body.startingDate;

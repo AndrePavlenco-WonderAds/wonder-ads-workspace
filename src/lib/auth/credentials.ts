@@ -12,6 +12,7 @@
 // only on Andre's desktop credentials file — never in this repo.
 
 import type { WebDeliveryRights } from "@/lib/web-shared";
+import { isTopAdmin } from "./top-admin";
 
 export type EmployeeCredential = {
   /** URL-safe identifier the user types into the login form. */
@@ -355,7 +356,7 @@ export const EMPLOYEE_CREDENTIALS: EmployeeCredential[] = [
 
 /** Which department dashboards a credential row may open — VIEW access.
  *
- *  - SuperAdmins + Founder ("All") → every department.
+ *  - SuperAdmins / C-Level ("All") → every department.
  *  - SEO consultants → SEO **and** Web (they brief/QA the web builds).
  *  - Web designers → Web (full) **and** SEO (read-only — they can open
  *    the SEO client project pages to see what's shipping, but every
@@ -384,7 +385,7 @@ export function accessibleDepts(
   }
   switch (row.dept) {
     case "All":
-    case "Founder":
+    case "C-Level":
       return [...DEPARTMENTS];
     case "SEO":
       // v77.12: + Comercial — os consultores carregam as suas propostas
@@ -418,7 +419,7 @@ export function editableDepts(
   if (row.viewerOf) return [];
   switch (row.dept) {
     case "All":
-    case "Founder":
+    case "C-Level":
       return [...DEPARTMENTS];
     case "SEO":
       // v77.12: + Comercial — sem isto o botão «Carregar proposta» ficava
@@ -733,6 +734,9 @@ export function findCredentialForRosterRow(
 export type RosterAccess = {
   username: string;
   isAdmin: boolean;
+  /** O topo (v78.74, lib/auth/top-admin): SuperAdmin com a consola de
+   *  acessos e sem «Ver como» por outros. */
+  top: boolean;
   /** Departamentos que abre. Rótulos do roster: "SEO" | "ADS" | "Web" |
    *  "Comercial". */
   view: string[];
@@ -759,6 +763,7 @@ export function rosterAccessFor(
   return {
     username: row.username,
     isAdmin: Boolean(row.isAdmin),
+    top: Boolean(row.isAdmin) && isTopAdmin(row.username),
     view: accessibleDepts(row).map((d) => DEPT_LABEL[d]),
     edit: editableDepts(row).map((d) => DEPT_LABEL[d]),
   };

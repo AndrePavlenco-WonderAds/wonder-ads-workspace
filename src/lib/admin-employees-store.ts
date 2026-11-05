@@ -22,14 +22,43 @@ export const EMPLOYEE_STATUSES = [
 ] as const;
 export type EmployeeStatus = (typeof EMPLOYEE_STATUSES)[number];
 
+// v78.74: «Founder» (André, Alex) e «Operations» (Alice) juntaram-se num só
+// departamento, «C-Level». Os registos antigos em KV continuam com os nomes
+// velhos — `normalizeEmployeeDepartments` converte-os ao ler e ao gravar.
 export const EMPLOYEE_DEPARTMENTS = [
   "SEO",
   "ADS",
   "Web",
-  "Operations",
-  "Founder",
+  "C-Level",
 ] as const;
 export type EmployeeDepartment = (typeof EMPLOYEE_DEPARTMENTS)[number];
+
+/** Os nomes antigos que hoje são «C-Level». */
+const LEGACY_DEPARTMENTS: Record<string, EmployeeDepartment> = {
+  Founder: "C-Level",
+  Operations: "C-Level",
+};
+
+/** A lista de departamentos de um registo, já com os nomes antigos
+ *  convertidos e sem repetidos («Founder» + «Operations» = um «C-Level»).
+ *  Com `onlyKnown`, deita fora o que não for um departamento atual — é o
+ *  que as APIs usam para validar o que chega do browser. */
+export function normalizeEmployeeDepartments(
+  raw: unknown,
+  { onlyKnown = false }: { onlyKnown?: boolean } = {},
+): string[] {
+  if (!Array.isArray(raw)) return [];
+  const out: string[] = [];
+  for (const d of raw) {
+    if (typeof d !== "string") continue;
+    const trimmed = d.trim();
+    if (!trimmed) continue;
+    const name = LEGACY_DEPARTMENTS[trimmed] ?? trimmed;
+    if (onlyKnown && !(EMPLOYEE_DEPARTMENTS as readonly string[]).includes(name)) continue;
+    if (!out.includes(name)) out.push(name);
+  }
+  return out;
+}
 
 export type AdminEmployeeRecord = {
   /** Stable identifier — slugified at creation, never changes after. */
@@ -97,13 +126,13 @@ type SeedEmployee = {
 // app: an empty cell shows up in rose as "Needs salary", which is the honest
 // state. A guessed number would quietly poison the payroll roll-up.
 export const SEED_EMPLOYEES: SeedEmployee[] = [
-  // ── Founder + SuperAdmins ────────────────────────────────────────────
+  // ── C-Level (os três SuperAdmins; o André é o topo — auth/top-admin) ──
   {
     id: "andre",
     name: "André Pavlenco",
     emailHandle: "andre",
     role: "COO",
-    departments: ["Founder"],
+    departments: ["C-Level"],
     startingDate: "2026-05-12",
   },
   {
@@ -111,7 +140,7 @@ export const SEED_EMPLOYEES: SeedEmployee[] = [
     name: "Alex",
     emailHandle: "alex",
     role: "CEO",
-    departments: ["Founder"],
+    departments: ["C-Level"],
     startingDate: "2026-05-12",
   },
   {
@@ -119,7 +148,7 @@ export const SEED_EMPLOYEES: SeedEmployee[] = [
     name: "Alice",
     emailHandle: "alice",
     role: "CMO/CFO",
-    departments: ["Operations"],
+    departments: ["C-Level"],
     startingDate: "2026-05-12",
   },
   // ── SEO ──────────────────────────────────────────────────────────────
@@ -350,7 +379,7 @@ function migrateRecord(raw: LegacyRecord): AdminEmployeeRecord {
   const startingDate = raw.startingDate ?? seed?.startingDate ?? null;
   return {
     ...raw,
-    departments: Array.isArray(raw.departments) ? raw.departments : [],
+    departments: normalizeEmployeeDepartments(raw.departments),
     paymentCadence: validCadence,
     currency: validCurrency,
     status: validStatus,

@@ -19,6 +19,7 @@ import {
 } from "@/lib/auth/session";
 import { readLiveSession } from "@/lib/auth/server";
 import { ACCESS_OWNER } from "@/lib/access/shared";
+import { isTopAdmin } from "@/lib/auth/top-admin";
 import {
   canEditDept,
   getEmployeeDisplay,
@@ -144,10 +145,13 @@ export async function UserChip() {
       producer={producer}
       people={
         realIsAdmin
-          ? listImpersonationTargets().map((p) => ({
-              ...p,
-              avatar: getTeamAvatar(p.username),
-            }))
+          ? listImpersonationTargets()
+              // O topo (v78.74) só aparece no seletor do próprio.
+              .filter((p) => isTopAdmin(session.u) || !isTopAdmin(p.username))
+              .map((p) => ({
+                ...p,
+                avatar: getTeamAvatar(p.username),
+              }))
           : []
       }
     />

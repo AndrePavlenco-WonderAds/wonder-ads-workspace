@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.74",
+    date: "2026-11-05",
+    title: "Team Roster: Founder e Operations passam a C-Level, e o topo fica do COO",
+    highlights: [
+      "**🏛️ Um só departamento C-Level** no Team Roster (/admin/employees): o André, o Alex e a Alice deixam de estar divididos entre «Founder» e «Operations». Os registos antigos são convertidos sozinhos quando são lidos, e quem tinha os dois fica com um só «C-Level».",
+      "**👑 O COO continua no topo**, com as regras todas num só sítio (lib/auth/top-admin): só o André abre os Acessos à app e recebe o Ponto da situação. Na coluna de acesso aparece como «SuperAdmin · topo», em vez de «SuperAdmin · tudo».",
+      "**🕶️ Ninguém vê a app como o André**: o «Ver como» dos outros SuperAdmins deixa de o mostrar, a API recusa o pedido, e um cookie antigo com essa lente perde-a. O André continua a poder ver a app como qualquer pessoa, incluindo o Alex e a Alice.",
+    ],
+  },
+  {
     version: "78.73",
     date: "2026-11-05",
     title: "Jornada de Cliente: o registo de leads passa para o tablet ou o computador da receção",

@@ -5,7 +5,7 @@ import { NextResponse } from "next/server";
 import { isCurrentUserAdmin } from "@/lib/auth/server";
 import {
   addEmployee,
-  EMPLOYEE_DEPARTMENTS,
+  normalizeEmployeeDepartments,
   EMPLOYEE_STATUSES,
   type EmployeeStatus,
 } from "@/lib/admin-employees-store";
@@ -27,19 +27,8 @@ export async function POST(req: Request) {
   const name = typeof body.name === "string" ? body.name.trim() : "";
   const email = typeof body.email === "string" ? body.email.trim() : "";
   const role = typeof body.role === "string" ? body.role.trim() : "";
-  const rawDepts = Array.isArray(body.departments) ? body.departments : [];
-  const departments = Array.from(
-    new Set(
-      rawDepts
-        .filter((d): d is string => typeof d === "string")
-        .map((d) => d.trim())
-        .filter(
-          (d) =>
-            d.length > 0 &&
-            (EMPLOYEE_DEPARTMENTS as readonly string[]).includes(d),
-        ),
-    ),
-  );
+  // Os nomes antigos (Founder/Operations) entram como «C-Level» (v78.74).
+  const departments = normalizeEmployeeDepartments(body.departments, { onlyKnown: true });
 
   if (!name) {
     return NextResponse.json({ error: "Name is required." }, { status: 400 });

@@ -22,6 +22,7 @@ import {
 } from "@/lib/auth/session";
 import { getCurrentSession, isRealUserAdmin } from "@/lib/auth/server";
 import { findEmployeeByUsername } from "@/lib/auth/credentials";
+import { isTopAdmin } from "@/lib/auth/top-admin";
 
 export const runtime = "nodejs";
 
@@ -61,6 +62,14 @@ export async function POST(req: Request) {
     return NextResponse.json(
       { error: "Não há ninguém com esse username." },
       { status: 404 },
+    );
+  }
+
+  // O topo (v78.74): só o André vê a app como o André.
+  if (isTopAdmin(target.username) && !isTopAdmin(session.u)) {
+    return NextResponse.json(
+      { error: "Não é possível ver a app como o COO." },
+      { status: 403 },
     );
   }
 

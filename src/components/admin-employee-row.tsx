@@ -70,8 +70,8 @@ export const DEPT_PILL: Record<string, string> = {
   SEO: "border-[#783DF5]/40 bg-[#783DF5]/12 text-[#d4c4ff]",
   ADS: "border-[#C535C9]/40 bg-[#C535C9]/12 text-[#f4c5f1]",
   Web: "border-cyan-400/45 bg-cyan-500/12 text-cyan-200",
-  Operations: "border-amber-400/35 bg-amber-500/10 text-amber-200",
-  Founder: "border-emerald-400/35 bg-emerald-500/10 text-emerald-200",
+  // v78.74: Founder + Operations → C-Level (a cor do antigo Founder).
+  "C-Level": "border-emerald-400/35 bg-emerald-500/10 text-emerald-200",
 };
 
 function arraysShallowEqual(a: string[], b: string[]): boolean {
@@ -301,7 +301,7 @@ export function AdminEmployeeRow({
                 draft.departments.map((d) => (
                   <span
                     key={d}
-                    className={`rounded border px-1.5 py-px text-[10px] font-bold uppercase tracking-[0.14em] ${
+                    className={`whitespace-nowrap rounded border px-1.5 py-px text-[10px] font-bold uppercase tracking-[0.14em] ${
                       DEPT_PILL[d] ??
                       "border-white/15 bg-white/[0.05] text-white/85"
                     }`}
@@ -390,7 +390,16 @@ export function AdminEmployeeRow({
                 {access.username}
               </span>
             </div>
-            {access.isAdmin ? (
+            {access.top ? (
+              // O topo (v78.74): tudo o que os SuperAdmins têm, mais a
+              // consola de acessos — e ninguém o «vê como».
+              <div
+                title="Tudo o que os SuperAdmins têm, mais a consola Acessos à app. Só ele vê a app como outra pessoa SuperAdmin, e ninguém a vê como ele."
+                className="mt-1.5 inline-flex items-center rounded border border-[#C535C9]/50 bg-[linear-gradient(135deg,rgba(52,62,215,0.22),rgba(120,61,245,0.22)_53%,rgba(197,53,201,0.22))] px-1.5 py-px text-[9.5px] font-bold uppercase tracking-[0.14em] text-[#f1d9ff]"
+              >
+                SuperAdmin · topo
+              </div>
+            ) : access.isAdmin ? (
               <div className="mt-1.5 inline-flex items-center rounded border border-emerald-400/40 bg-emerald-500/10 px-1.5 py-px text-[9.5px] font-bold uppercase tracking-[0.14em] text-emerald-200">
                 SuperAdmin · tudo
               </div>
