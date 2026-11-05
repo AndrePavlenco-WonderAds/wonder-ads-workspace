@@ -50,7 +50,7 @@ const COPY = {
     safe: "Nada se perdeu. Tudo o que foi registado fica guardado e volta a aparecer, tal e qual, quando o projeto for retomado.",
     hint: "Para retomar o projeto, fala connosco.",
     cta: "Falar com a WonderAds",
-    subject: (brand: string) => `Retomar o projeto ${brand}`,
+    message: (brand: string) => `Olá! Gostava de retomar o projeto ${brand} com a WonderAds.`,
   },
   en: {
     kicker: "Project on pause",
@@ -62,11 +62,15 @@ const COPY = {
     safe: "Nothing is lost. Everything recorded so far is kept and will be back, exactly as it was, when the project resumes.",
     hint: "To resume the project, get in touch.",
     cta: "Talk to WonderAds",
-    subject: (brand: string) => `Resuming the ${brand} project`,
+    message: (brand: string) => `Hi! I'd like to resume the ${brand} project with WonderAds.`,
   },
 } as const;
 
 const ITEM_ICONS = [ClipboardList, ListChecks, BarChart3];
+
+/** O botão abre uma conversa de WhatsApp com o André (v78.82), já com a
+ *  mensagem escrita e o nome do projeto. */
+const WHATSAPP_NUMBER = "351936535306";
 
 const STYLES = `
 .pp-spin{animation:pp-spin 3.6s linear infinite}
@@ -153,7 +157,7 @@ export function PausedProjectPage({
   teamNote: boolean;
 }) {
   const t = COPY[lang];
-  const mail = `mailto:info@wonder-ads.com?subject=${encodeURIComponent(t.subject(brand))}`;
+  const whatsapp = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(t.message(brand))}`;
   return (
     <div
       className="flex min-h-[100dvh] flex-col"
@@ -214,7 +218,9 @@ export function PausedProjectPage({
 
           <div className="pp-rise mt-8 flex flex-col items-center gap-2.5" style={{ animationDelay: "300ms" }}>
             <a
-              href={mail}
+              href={whatsapp}
+              target="_blank"
+              rel="noopener noreferrer"
               className="group inline-flex items-center gap-2 rounded-full px-6 py-3 text-[14.5px] font-semibold text-white shadow-[0_14px_30px_-14px_rgba(0,0,0,0.5)] transition hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
               style={{ background: palette.ink }}
             >

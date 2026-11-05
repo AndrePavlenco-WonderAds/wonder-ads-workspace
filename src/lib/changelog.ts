@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.82",
+    date: "2026-11-05",
+    title: "Projeto em pausa: «Falar com a WonderAds» abre o WhatsApp",
+    highlights: [
+      "**💬 O botão da página «Projeto em pausa» abre uma conversa de WhatsApp com o André** (+351 936 535 306), já com a mensagem escrita: «Olá! Gostava de retomar o projeto <cliente> com a WonderAds.» (em inglês para os clientes em inglês).",
+    ],
+  },
+  {
     version: "78.81",
     date: "2026-11-05",
     title: "Projetos em pausa: as páginas públicas do cliente fecham, com uma página própria",
