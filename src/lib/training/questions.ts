@@ -343,7 +343,7 @@ const COMUM_M3 = build("comum-m3", [
   ),
   mc(
     // v78.79: texto do André (Word revisto de 05/11/2026) — passou a ter duas certas.
-    "Deteta que o cliente beneficiaria de um serviço que a WonderAds presta, mas que ele não contratou. O que fazes? (Seleciona todas as opções corretas)",
+    "Detetas que o cliente beneficiaria de um serviço que a WonderAds presta, mas que ele não contratou. O que fazes? (Seleciona todas as opções corretas)",
     [
       ["Se o serviço for de outra área, passas a oportunidade ao Comercial, ao superior in charge ou ao departamento responsável", true],
       ["Se o serviço for da tua área, conduzes tu a proposta junto do cliente, porque já acompanhas a conta", true],

@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.80",
+    date: "2026-11-05",
+    title: "Exames SEO/GEO: «Detetas» na pergunta das oportunidades do Comum",
+    highlights: [
+      "**✏️ comum-m3-q5** passa a começar por «Detetas que o cliente beneficiaria…» (era «Deteta»), como o André pediu — no código e no catálogo.",
+    ],
+  },
+  {
     version: "78.79",
     date: "2026-11-05",
     title: "Exames SEO/GEO: entram as perguntas do Núcleo e do Comum aprovadas pelo André",
