@@ -88,7 +88,12 @@ function Wordmark({ className = "" }: { className?: string }) {
   );
 }
 
-export function WonderAdsSignature({ className = "" }: { className?: string }) {
+/**
+ * O rodapé das páginas Origem: uma faixa escura de ponta a ponta, como o
+ * rodapé de um site, com a assinatura à esquerda e o que a página quiser à
+ * direita (o «Terminar sessão neste aparelho» da receção).
+ */
+export function WonderAdsFooter({ children }: { children?: React.ReactNode }) {
   const reduce = useReducedMotion();
   const controls = useAnimationControls();
   const flap = useCallback(() => {
@@ -103,39 +108,52 @@ export function WonderAdsSignature({ className = "" }: { className?: string }) {
   }, [controls, reduce]);
 
   return (
-    <motion.a
-      href="https://wonder-ads.com"
-      target="_blank"
-      rel="noopener noreferrer"
-      aria-label={`WonderAds — ${WA_TAGLINE}`}
-      onHoverStart={flap}
-      onFocus={flap}
-      className={`group relative isolate inline-flex max-w-full items-center gap-3.5 overflow-hidden rounded-[20px] bg-[#0F0B21] py-2.5 pl-2.5 pr-4 text-left shadow-[0_22px_44px_-26px_rgba(70,52,215,0.8)] ring-1 ring-white/[0.07] transition-transform duration-300 hover:-translate-y-0.5 sm:pr-5 ${className}`}
+    <footer
+      className="relative isolate w-full overflow-hidden bg-[#0F0B21] text-white"
       style={{ fontFamily: "var(--font-be-vietnam-pro), system-ui, sans-serif" }}
     >
-      {/* Os riscos de luz e o brilho de fundo da borboleta do site. */}
-      <span aria-hidden className="pointer-events-none absolute -left-8 top-2.5 h-px w-32 -rotate-[13deg] bg-gradient-to-r from-transparent via-[#8E7CFF]/55 to-transparent" />
-      <span aria-hidden className="pointer-events-none absolute -right-6 bottom-3 h-px w-28 -rotate-[22deg] bg-gradient-to-r from-transparent via-[#C86CFF]/45 to-transparent" />
-      <span aria-hidden className="pointer-events-none absolute -left-10 -top-10 h-32 w-32 rounded-full bg-[radial-gradient(closest-side,rgba(120,61,245,0.35),transparent)]" />
+      {/* O fio de cima no gradiente da marca, o brilho atrás da borboleta e
+          os riscos de luz do site. */}
+      <span aria-hidden className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,#343ED7_18%,#783DF5_50%,#C535C9_82%,transparent)] opacity-70" />
+      <span aria-hidden className="pointer-events-none absolute -left-24 -top-24 h-72 w-72 rounded-full bg-[radial-gradient(closest-side,rgba(120,61,245,0.32),transparent)]" />
+      <span aria-hidden className="pointer-events-none absolute -right-20 -bottom-28 h-72 w-72 rounded-full bg-[radial-gradient(closest-side,rgba(197,53,201,0.16),transparent)]" />
+      <span aria-hidden className="pointer-events-none absolute left-[22%] top-5 hidden h-px w-56 -rotate-[8deg] bg-gradient-to-r from-transparent via-[#8E7CFF]/40 to-transparent sm:block" />
+      <span aria-hidden className="pointer-events-none absolute bottom-4 right-[18%] hidden h-px w-44 -rotate-[14deg] bg-gradient-to-r from-transparent via-[#C86CFF]/35 to-transparent sm:block" />
 
-      <span className="relative grid h-[54px] w-[54px] shrink-0 place-items-center">
-        <motion.span
-          aria-hidden
-          className="absolute inset-0 rounded-full bg-[radial-gradient(closest-side,rgba(140,84,255,0.75),rgba(197,53,201,0.3)_62%,transparent)] blur-[5px]"
-          animate={reduce ? undefined : { opacity: [0.55, 1, 0.55], scale: [0.9, 1.06, 0.9] }}
-          transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut" }}
-        />
-        <WonderAdsButterfly controls={controls} className="relative h-[38px] w-[38px] drop-shadow-[0_0_7px_rgba(150,90,255,0.6)]" />
-      </span>
-
-      <span className="relative min-w-0">
-        <Wordmark className="block h-[15px] w-auto" />
-        <span className="mt-1.5 block text-[12.5px] font-medium leading-snug text-white/65">{WA_TAGLINE}</span>
-      </span>
-      <ArrowUpRight
-        className="relative h-4 w-4 shrink-0 text-white/35 transition duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-white/85"
-        aria-hidden
-      />
-    </motion.a>
+      <div className="relative mx-auto flex max-w-[1240px] flex-wrap items-center justify-between gap-x-8 gap-y-4 px-4 pb-[max(20px,env(safe-area-inset-bottom))] pt-5 sm:px-8">
+        <motion.a
+          href="https://wonder-ads.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={`WonderAds — ${WA_TAGLINE}`}
+          onHoverStart={flap}
+          onFocus={flap}
+          className="group inline-flex min-w-0 max-w-full items-center gap-3.5 rounded-xl text-left outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+        >
+          <span className="relative grid h-[52px] w-[52px] shrink-0 place-items-center">
+            <motion.span
+              aria-hidden
+              className="absolute inset-0 rounded-full bg-[radial-gradient(closest-side,rgba(140,84,255,0.75),rgba(197,53,201,0.3)_62%,transparent)] blur-[5px]"
+              animate={reduce ? undefined : { opacity: [0.55, 1, 0.55], scale: [0.9, 1.06, 0.9] }}
+              transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut" }}
+            />
+            <WonderAdsButterfly controls={controls} className="relative h-[38px] w-[38px] drop-shadow-[0_0_7px_rgba(150,90,255,0.6)]" />
+          </span>
+          <span className="min-w-0">
+            <span className="flex items-center gap-1.5">
+              <Wordmark className="block h-[15px] w-auto" />
+              <ArrowUpRight
+                className="h-3.5 w-3.5 shrink-0 text-white/0 transition duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-white/70"
+                aria-hidden
+              />
+            </span>
+            <span className="mt-1.5 block text-[12.5px] font-medium leading-snug text-white/60 transition-colors group-hover:text-white/80">
+              {WA_TAGLINE}
+            </span>
+          </span>
+        </motion.a>
+        {children}
+      </div>
+    </footer>
   );
 }

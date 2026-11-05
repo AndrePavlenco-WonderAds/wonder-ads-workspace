@@ -11,7 +11,7 @@ import { useRouter } from "next/navigation";
 import { motion, useAnimationControls } from "motion/react";
 import { Delete, Loader2 } from "lucide-react";
 import { ClientLogo } from "./origem-ui";
-import { WonderAdsSignature } from "./wonder-ads-signature";
+import { WonderAdsFooter } from "./wonder-ads-signature";
 
 const LENGTH = 6;
 
@@ -94,78 +94,77 @@ export function OrigemGate({
   const keys = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "del"];
 
   return (
-    <main className="flex min-h-[100dvh] flex-col px-5 pb-[max(20px,env(safe-area-inset-bottom))] pt-[max(20px,env(safe-area-inset-top))] sm:px-10">
-      <motion.div
-        className="mx-auto grid w-full max-w-5xl flex-1 items-center gap-10 py-8 lg:grid-cols-[minmax(0,1fr)_400px] lg:gap-20"
-        animate={state === "ok" ? { opacity: 0, y: -12 } : { opacity: 1, y: 0 }}
-        transition={{ duration: 0.45, delay: state === "ok" ? 0.25 : 0, ease: [0.16, 1, 0.3, 1] }}
-      >
-        <div className="text-center lg:text-left">
-          <ClientLogo logo={logo} brand={brand} size="gate" className="mx-auto lg:mx-0" />
-          <h1 className="o-display mt-10 text-[36px] leading-[1.02] tracking-[-0.035em] sm:mt-14 sm:text-[56px]">
-            Origem dos
-            <br className="hidden lg:block" /> {peopleMany}
-          </h1>
-          <p className="mx-auto mt-4 max-w-[34ch] text-[17px] leading-relaxed text-[var(--o-muted)] lg:mx-0">
-            Introduza o PIN {deskOf}. Este aparelho fica com acesso durante 6 meses.
-          </p>
-        </div>
-
-        <div className="mx-auto w-full max-w-[400px] rounded-[calc(32px*var(--o-rs))] bg-white p-6 shadow-[0_1px_0_var(--o-line),0_30px_60px_-40px_rgba(var(--o-ink-rgb),0.55)] ring-1 ring-[var(--o-line)] sm:p-8">
-          <motion.div animate={shake} className="flex justify-center gap-3.5" role="status" aria-live="polite" aria-label={`${pin.length} de ${LENGTH} dígitos`}>
-            {Array.from({ length: LENGTH }, (_, i) => {
-              const filled = i < pin.length;
-              return (
-                <span
-                  key={i}
-                  className="h-4 w-4 rounded-full border-2 transition-all duration-150"
-                  style={{
-                    borderColor: state === "error" ? "#D2455A" : filled ? "var(--o-deep)" : "var(--o-line)",
-                    background: state === "ok" ? "var(--o-accent)" : filled ? "var(--o-deep)" : "transparent",
-                    transform: filled ? "scale(1.08)" : "scale(1)",
-                  }}
-                />
-              );
-            })}
-          </motion.div>
-
-          <div className="mt-4 flex h-6 items-center justify-center text-[15px]">
-            {state === "loading" && <Loader2 className="h-5 w-5 animate-spin text-[var(--o-muted)]" aria-label="A verificar" />}
-            {state === "ok" && <span className="font-bold text-[var(--o-deep)]">PIN certo. A abrir…</span>}
-            {state === "error" && error && (
-              <span className="font-semibold text-[#B8364A]" role="alert">
-                {error}
-              </span>
-            )}
+    <div className="flex min-h-[100dvh] flex-col">
+      <main className="flex flex-1 flex-col px-5 pb-8 pt-[max(20px,env(safe-area-inset-top))] sm:px-10">
+        <motion.div
+          className="mx-auto grid w-full max-w-5xl flex-1 items-center gap-10 py-8 lg:grid-cols-[minmax(0,1fr)_400px] lg:gap-20"
+          animate={state === "ok" ? { opacity: 0, y: -12 } : { opacity: 1, y: 0 }}
+          transition={{ duration: 0.45, delay: state === "ok" ? 0.25 : 0, ease: [0.16, 1, 0.3, 1] }}
+        >
+          <div className="text-center lg:text-left">
+            <ClientLogo logo={logo} brand={brand} size="gate" className="mx-auto lg:mx-0" />
+            <h1 className="o-display mt-10 text-[36px] leading-[1.02] tracking-[-0.035em] sm:mt-14 sm:text-[56px]">
+              Origem dos
+              <br className="hidden lg:block" /> {peopleMany}
+            </h1>
+            <p className="mx-auto mt-4 max-w-[34ch] text-[17px] leading-relaxed text-[var(--o-muted)] lg:mx-0">
+              Introduza o PIN {deskOf}. Este aparelho fica com acesso durante 6 meses.
+            </p>
           </div>
 
-          <div className="mt-5 grid grid-cols-3 gap-3">
-            {keys.map((k, i) =>
-              k === "" ? (
-                <span key={i} />
-              ) : (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => press(k)}
-                  aria-label={k === "del" ? "Apagar" : k}
-                  className={`flex h-[68px] touch-manipulation select-none items-center justify-center rounded-[calc(20px*var(--o-rs))] text-[28px] font-bold transition active:scale-[0.96] sm:h-[72px] ${
-                    k === "del"
-                      ? "text-[var(--o-muted)] hover:bg-[var(--o-paper)] hover:text-[var(--o-ink)]"
-                      : "bg-[var(--o-paper)] hover:bg-[var(--o-line)] active:bg-[var(--o-line)]"
-                  }`}
-                >
-                  {k === "del" ? <Delete className="h-7 w-7" /> : k}
-                </button>
-              ),
-            )}
-          </div>
-        </div>
-      </motion.div>
+          <div className="mx-auto w-full max-w-[400px] rounded-[calc(32px*var(--o-rs))] bg-white p-6 shadow-[0_1px_0_var(--o-line),0_30px_60px_-40px_rgba(var(--o-ink-rgb),0.55)] ring-1 ring-[var(--o-line)] sm:p-8">
+            <motion.div animate={shake} className="flex justify-center gap-3.5" role="status" aria-live="polite" aria-label={`${pin.length} de ${LENGTH} dígitos`}>
+              {Array.from({ length: LENGTH }, (_, i) => {
+                const filled = i < pin.length;
+                return (
+                  <span
+                    key={i}
+                    className="h-4 w-4 rounded-full border-2 transition-all duration-150"
+                    style={{
+                      borderColor: state === "error" ? "#D2455A" : filled ? "var(--o-deep)" : "var(--o-line)",
+                      background: state === "ok" ? "var(--o-accent)" : filled ? "var(--o-deep)" : "transparent",
+                      transform: filled ? "scale(1.08)" : "scale(1)",
+                    }}
+                  />
+                );
+              })}
+            </motion.div>
 
-      <footer className="flex justify-center lg:justify-start">
-        <WonderAdsSignature />
-      </footer>
-    </main>
+            <div className="mt-4 flex h-6 items-center justify-center text-[15px]">
+              {state === "loading" && <Loader2 className="h-5 w-5 animate-spin text-[var(--o-muted)]" aria-label="A verificar" />}
+              {state === "ok" && <span className="font-bold text-[var(--o-deep)]">PIN certo. A abrir…</span>}
+              {state === "error" && error && (
+                <span className="font-semibold text-[#B8364A]" role="alert">
+                  {error}
+                </span>
+              )}
+            </div>
+
+            <div className="mt-5 grid grid-cols-3 gap-3">
+              {keys.map((k, i) =>
+                k === "" ? (
+                  <span key={i} />
+                ) : (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => press(k)}
+                    aria-label={k === "del" ? "Apagar" : k}
+                    className={`flex h-[68px] touch-manipulation select-none items-center justify-center rounded-[calc(20px*var(--o-rs))] text-[28px] font-bold transition active:scale-[0.96] sm:h-[72px] ${
+                      k === "del"
+                        ? "text-[var(--o-muted)] hover:bg-[var(--o-paper)] hover:text-[var(--o-ink)]"
+                        : "bg-[var(--o-paper)] hover:bg-[var(--o-line)] active:bg-[var(--o-line)]"
+                    }`}
+                  >
+                    {k === "del" ? <Delete className="h-7 w-7" /> : k}
+                  </button>
+                ),
+              )}
+            </div>
+          </div>
+        </motion.div>
+      </main>
+      <WonderAdsFooter />
+    </div>
   );
 }

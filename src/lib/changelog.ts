@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.78",
+    date: "2026-11-05",
+    title: "Origem dos clientes: o rodapé da WonderAds passa a ser um rodapé a sério",
+    highlights: [
+      "**🦋 Faixa escura de ponta a ponta** no fundo das páginas Origem, como o rodapé de um site, em vez do cartão a flutuar: a borboleta com brilho, o nome e «Parceiro Líder em SEO para Marcas de Saúde e Bem-Estar» à esquerda, «Terminar sessão neste aparelho» à direita, e um fio no gradiente da marca a fazer a passagem da página para o rodapé.",
+    ],
+  },
+  {
     version: "78.77",
     date: "2026-11-05",
     title: "Origem dos clientes: nova assinatura da WonderAds no rodapé",
