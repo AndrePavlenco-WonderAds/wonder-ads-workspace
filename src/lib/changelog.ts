@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.83",
+    date: "2026-11-05",
+    title: "Projeto em pausa: novo bloco «Material Valioso para Ranks»",
+    highlights: [
+      "**💎 «Material Valioso para Ranks · em pausa»** passa a ser o primeiro bloco da página «Projeto em pausa», com a linha toda: borda no gradiente da marca a rodar, um brilho que atravessa o cartão, o ícone a pulsar e um gráfico de subida parado no ⏸. Os três de baixo (registo de leads, aprovações, relatórios) ficam como estavam. Em inglês: «Valuable Material for Rankings».",
+    ],
+  },
+  {
     version: "78.82",
     date: "2026-11-05",
     title: "Projeto em pausa: «Falar com a WonderAds» abre o WhatsApp",

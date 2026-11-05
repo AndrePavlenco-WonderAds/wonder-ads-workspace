@@ -11,7 +11,7 @@
 
 import type { CSSProperties } from "react";
 import Link from "next/link";
-import { ArrowUpRight, BarChart3, ClipboardList, ListChecks, Pause, ShieldCheck } from "lucide-react";
+import { ArrowUpRight, BarChart3, ClipboardList, Gem, ListChecks, Pause, ShieldCheck } from "lucide-react";
 import { WonderAdsButterfly, WonderAdsFooter } from "@/components/origem/wonder-ads-signature";
 import type { PublicLang } from "@/lib/public-i18n";
 
@@ -45,6 +45,7 @@ const COPY = {
     title: "Parece que este projeto está em pausa",
     lead: (brand: string) =>
       `As páginas do projeto ${brand} com a WonderAds estão fechadas enquanto o projeto estiver em pausa.`,
+    featured: "Material Valioso para Ranks",
     items: ["Registo de leads", "Aprovações", "Relatórios"],
     paused: "em pausa",
     safe: "Nada se perdeu. Tudo o que foi registado fica guardado e volta a aparecer, tal e qual, quando o projeto for retomado.",
@@ -57,6 +58,7 @@ const COPY = {
     title: "It looks like this project is on pause",
     lead: (brand: string) =>
       `The ${brand} project pages with WonderAds are closed while the project is on pause.`,
+    featured: "Valuable Material for Rankings",
     items: ["Lead tracking", "Approvals", "Reports"],
     paused: "paused",
     safe: "Nothing is lost. Everything recorded so far is kept and will be back, exactly as it was, when the project resumes.",
@@ -82,7 +84,15 @@ const STYLES = `
 @keyframes pp-breathe{0%,100%{opacity:.5;transform:scale(.94)}50%{opacity:.9;transform:scale(1.05)}}
 @keyframes pp-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
 @keyframes pp-rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
-@media (prefers-reduced-motion:reduce){.pp-spin,.pp-spin-slow,.pp-breathe,.pp-float,.pp-rise{animation:none}}
+.pp-border{transform:translate(-50%,-50%);animation:pp-border 5s linear infinite}
+.pp-shine{transform:translateX(0) skewX(-14deg);animation:pp-shine 4.2s ease-in-out 1.2s infinite}
+.pp-grow{transform-origin:bottom;animation:pp-grow .9s cubic-bezier(.2,.8,.2,1) both}
+.pp-pulse{animation:pp-pulse 3.2s ease-in-out infinite}
+@keyframes pp-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
+@keyframes pp-border{to{transform:translate(-50%,-50%) rotate(360deg)}}
+@keyframes pp-shine{0%{transform:translateX(0) skewX(-14deg)}50%,100%{transform:translateX(480%) skewX(-14deg)}}
+@keyframes pp-grow{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+@media (prefers-reduced-motion:reduce){.pp-spin,.pp-spin-slow,.pp-breathe,.pp-float,.pp-rise,.pp-border,.pp-grow,.pp-pulse{animation:none}.pp-shine{display:none}}
 `;
 
 /** #RRGGBB + alfa → rgba(). */
@@ -142,6 +152,76 @@ function PausedOrbit({ logo, brand, palette }: { logo: PausedLogo; brand: string
   );
 }
 
+/** O bloco principal (v78.83): o material que faz o site subir no Google —
+ *  o que mais se perde com a pausa. Ocupa a linha toda, com a borda no
+ *  gradiente da marca a rodar, um brilho que passa e o gráfico de subida
+ *  parado no ⏸. */
+function FeaturedPausedItem({ label, paused, palette }: { label: string; paused: string; palette: PausedPalette }) {
+  return (
+    <li
+      className="relative col-span-3 overflow-hidden rounded-[18px] p-[1.5px]"
+      style={{ boxShadow: `0 20px 40px -26px ${alpha(palette.primary, 0.9)}` }}
+    >
+      <span
+        aria-hidden
+        className="pp-border absolute left-1/2 top-1/2 aspect-square w-[150%]"
+        style={{
+          background: `conic-gradient(from 0deg, ${alpha(palette.primary, 0.12)}, ${palette.primary}, ${palette.accent}, ${alpha(palette.accent, 0.12)} 70%, ${alpha(palette.primary, 0.12)})`,
+        }}
+      />
+      <div className="relative flex items-center gap-3.5 overflow-hidden rounded-[16.5px] bg-white px-4 py-4 text-left sm:gap-4 sm:px-5">
+        <span
+          aria-hidden
+          className="pp-shine pointer-events-none absolute inset-y-0 -left-1/4 w-1/4"
+          style={{ background: `linear-gradient(90deg, transparent, ${alpha(palette.primary, 0.13)}, transparent)` }}
+        />
+        <span
+          className="pp-pulse relative grid h-11 w-11 shrink-0 place-items-center rounded-2xl text-white"
+          style={{
+            background: `linear-gradient(135deg, ${palette.primary}, ${palette.accent})`,
+            boxShadow: `0 10px 24px -10px ${alpha(palette.primary, 0.85)}`,
+          }}
+        >
+          <Gem className="h-5 w-5" />
+        </span>
+        <span className="relative min-w-0 flex-1">
+          <span className="block text-[15px] font-bold leading-snug sm:text-[16.5px]">{label}</span>
+          <span
+            className="mt-1.5 inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11.5px] font-semibold"
+            style={{ background: alpha(palette.accent, 0.1), color: palette.ink }}
+          >
+            <span className="relative flex h-1.5 w-1.5">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-70 motion-reduce:animate-none" style={{ background: palette.accent }} />
+              <span className="relative inline-flex h-1.5 w-1.5 rounded-full" style={{ background: palette.accent }} />
+            </span>
+            {paused}
+          </span>
+        </span>
+        <span aria-hidden className="relative mr-1 flex h-11 shrink-0 items-end gap-[5px]">
+          {[32, 50, 70, 100].map((h, i) => (
+            <span
+              key={h}
+              className="pp-grow w-[7px] rounded-t-[3px]"
+              style={{
+                height: `${h}%`,
+                background: `linear-gradient(180deg, ${palette.accent}, ${palette.primary})`,
+                opacity: 0.4 + i * 0.2,
+                animationDelay: `${450 + i * 120}ms`,
+              }}
+            />
+          ))}
+          <span
+            className="absolute -right-2.5 -top-2.5 grid h-5 w-5 place-items-center rounded-full bg-white shadow-md ring-1"
+            style={{ color: palette.primary, ["--tw-ring-color" as string]: alpha(palette.ink, 0.08) }}
+          >
+            <Pause className="h-2.5 w-2.5" fill="currentColor" strokeWidth={0} />
+          </span>
+        </span>
+      </div>
+    </li>
+  );
+}
+
 export function PausedProjectPage({
   brand,
   logo,
@@ -190,6 +270,7 @@ export function PausedProjectPage({
           </p>
 
           <ul className="pp-rise mx-auto mt-7 grid max-w-[540px] grid-cols-3 gap-2 sm:gap-3" style={{ animationDelay: "180ms" }}>
+            <FeaturedPausedItem label={t.featured} paused={t.paused} palette={palette} />
             {t.items.map((label, i) => {
               const Icon = ITEM_ICONS[i];
               return (
