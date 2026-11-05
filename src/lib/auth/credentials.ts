@@ -12,7 +12,6 @@
 // only on Andre's desktop credentials file — never in this repo.
 
 import type { WebDeliveryRights } from "@/lib/web-shared";
-import { isTopAdmin } from "./top-admin";
 
 export type EmployeeCredential = {
   /** URL-safe identifier the user types into the login form. */
@@ -734,9 +733,6 @@ export function findCredentialForRosterRow(
 export type RosterAccess = {
   username: string;
   isAdmin: boolean;
-  /** O topo (v78.74, lib/auth/top-admin): SuperAdmin com a consola de
-   *  acessos e sem «Ver como» por outros. */
-  top: boolean;
   /** Departamentos que abre. Rótulos do roster: "SEO" | "ADS" | "Web" |
    *  "Comercial". */
   view: string[];
@@ -763,7 +759,6 @@ export function rosterAccessFor(
   return {
     username: row.username,
     isAdmin: Boolean(row.isAdmin),
-    top: Boolean(row.isAdmin) && isTopAdmin(row.username),
     view: accessibleDepts(row).map((d) => DEPT_LABEL[d]),
     edit: editableDepts(row).map((d) => DEPT_LABEL[d]),
   };

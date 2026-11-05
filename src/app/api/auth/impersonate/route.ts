@@ -65,10 +65,11 @@ export async function POST(req: Request) {
     );
   }
 
-  // O topo (v78.74): só o André vê a app como o André.
-  if (isTopAdmin(target.username) && !isTopAdmin(session.u)) {
+  // Só o topo (lib/auth/top-admin) vê a app como outro SuperAdmin (v78.75).
+  // A mensagem é a mesma para qualquer SuperAdmin: a regra não se nota.
+  if (target.isAdmin && !isTopAdmin(session.u)) {
     return NextResponse.json(
-      { error: "Não é possível ver a app como o COO." },
+      { error: "Não é possível ver a app como outro SuperAdmin." },
       { status: 403 },
     );
   }

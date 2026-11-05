@@ -8,7 +8,8 @@ import { NotificationsBell } from "./notifications/notifications-bell";
 import { HeaderMedals } from "./medals/header-medals";
 import { UserChip } from "./user-chip";
 import { ImpersonationBanner } from "./impersonation-banner";
-import { getCurrentEmployee, getImpersonation } from "@/lib/auth/server";
+import { getCurrentEmployee, getCurrentSession, getImpersonation } from "@/lib/auth/server";
+import { isTopAdmin } from "@/lib/auth/top-admin";
 import { getCurrentVersion } from "@/lib/changelog";
 
 /** O sino antes de o servidor saber quantos lembretes há. Mesma caixa, mesmo
@@ -71,6 +72,11 @@ export async function PageShell({
   // qualquer forma; isto é para não as oferecer.
   const isViewer = Boolean(
     (await getCurrentEmployee().catch(() => null))?.viewerOf,
+  );
+  // O changelog é só do topo (v78.75): para os outros a versão fica como
+  // texto, sem link — nada a indicar que há uma página por trás.
+  const changelogLink = isTopAdmin(
+    (await getCurrentSession().catch(() => null))?.u,
   );
   return (
     // `overflow-clip`, não `overflow-hidden` (v77.48): os dois recortam as
@@ -160,13 +166,17 @@ export async function PageShell({
             />
             SuperAdmin Suite · Log in
           </Link>
-          <Link
-            href="/changelog"
-            className="font-mono transition hover:text-white"
-            aria-label={`View changelog — workspace v${version}`}
-          >
-            workspace.v{version}
-          </Link>
+          {changelogLink ? (
+            <Link
+              href="/changelog"
+              className="font-mono transition hover:text-white"
+              aria-label={`View changelog — workspace v${version}`}
+            >
+              workspace.v{version}
+            </Link>
+          ) : (
+            <span className="font-mono">workspace.v{version}</span>
+          )}
           </>
           )}
         </footer>

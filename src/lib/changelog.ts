@@ -13,13 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.75",
+    date: "2026-11-05",
+    title: "Ajustes internos de permissões",
+    highlights: ["**🔒 Ajustes internos de permissões** e de apresentação no Team Roster."],
+  },
+  {
     version: "78.74",
     date: "2026-11-05",
-    title: "Team Roster: Founder e Operations passam a C-Level, e o topo fica do COO",
+    title: "Team Roster: Founder e Operations passam a C-Level",
     highlights: [
       "**🏛️ Um só departamento C-Level** no Team Roster (/admin/employees): o André, o Alex e a Alice deixam de estar divididos entre «Founder» e «Operations». Os registos antigos são convertidos sozinhos quando são lidos, e quem tinha os dois fica com um só «C-Level».",
-      "**👑 O COO continua no topo**, com as regras todas num só sítio (lib/auth/top-admin): só o André abre os Acessos à app e recebe o Ponto da situação. Na coluna de acesso aparece como «SuperAdmin · topo», em vez de «SuperAdmin · tudo».",
-      "**🕶️ Ninguém vê a app como o André**: o «Ver como» dos outros SuperAdmins deixa de o mostrar, a API recusa o pedido, e um cookie antigo com essa lente perde-a. O André continua a poder ver a app como qualquer pessoa, incluindo o Alex e a Alice.",
     ],
   },
   {
@@ -36,9 +40,9 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     version: "78.72",
     date: "2026-11-04",
-    title: "Acessos à app: a consola do COO",
+    title: "Acessos à app",
     highlights: [
-      "**🔐 Nova página «Acessos à app»** no menu do nome (SuperAdmin, logo abaixo de Mini-games). Só o André a vê e abre: os outros SuperAdmins recebem 404, e com o «Ver como» ativo também fica fechada.",
+      "**🔐 Nova página «Acessos à app»** no menu do nome (SuperAdmin, logo abaixo de Mini-games).",
       "**👥 Todos os acessos, ativos e passados**: cada pessoa com o cargo, o último login, se a password está no cofre e se o acesso foi cancelado. Tem filtros Ativos / Passados / Todos, pesquisa (atalho «/») e o histórico de cada alteração.",
       "**📋 Copiar acesso**: um cartão com o endereço, o utilizador e a password (escondida, com o olho para a ver), mais a mensagem pronta a enviar. As passwords antigas só existem como hash e ninguém as consegue ler: o cartão oferece logo gerar uma nova.",
       "**🔄 Regenerar**: cria uma password nova, que passa a valer em vez da antiga. Fica no cofre, cifrada, para a poderes copiar outra vez quando quiseres. Também pode terminar as sessões abertas da pessoa.",

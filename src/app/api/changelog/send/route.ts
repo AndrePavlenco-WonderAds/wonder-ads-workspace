@@ -3,7 +3,8 @@
 // explicit { version } can be passed to re-send an older one.
 
 import { NextResponse } from "next/server";
-import { getCurrentEmployee } from "@/lib/auth/server";
+import { getCurrentSession } from "@/lib/auth/server";
+import { isTopAdmin } from "@/lib/auth/top-admin";
 import { CHANGELOG, type ChangelogEntry } from "@/lib/changelog";
 import {
   changelogSlackConfigured,
@@ -42,9 +43,10 @@ function buildMessage(entry: ChangelogEntry) {
 }
 
 export async function POST(req: Request) {
-  const employee = await getCurrentEmployee();
-  if (!employee || !employee.isAdmin) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  // Só o topo (v78.75), como a página do changelog; 404 neutro para os outros.
+  const session = await getCurrentSession();
+  if (!session || !isTopAdmin(session.u)) {
+    return NextResponse.json({ error: "Não encontrado." }, { status: 404 });
   }
   if (!changelogSlackConfigured()) {
     return NextResponse.json(

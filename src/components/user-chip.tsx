@@ -146,8 +146,8 @@ export async function UserChip() {
       people={
         realIsAdmin
           ? listImpersonationTargets()
-              // O topo (v78.74) só aparece no seletor do próprio.
-              .filter((p) => isTopAdmin(session.u) || !isTopAdmin(p.username))
+              // Os SuperAdmins só aparecem no seletor do topo (v78.75).
+              .filter((p) => isTopAdmin(session.u) || !p.isAdmin)
               .map((p) => ({
                 ...p,
                 avatar: getTeamAvatar(p.username),

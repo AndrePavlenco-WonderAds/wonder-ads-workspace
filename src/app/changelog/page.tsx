@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { ArrowLeft, Sparkles } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
-import { AccessDenied } from "@/components/access-denied";
+import { notFound } from "next/navigation";
 import { ChangelogSlackButton } from "@/components/changelog-slack-button";
 import { CHANGELOG, type ChangelogEntry } from "@/lib/changelog";
-import { getCurrentEmployee } from "@/lib/auth/server";
+import { getCurrentSession } from "@/lib/auth/server";
+import { isTopAdmin } from "@/lib/auth/top-admin";
 
 export const metadata = {
   title: "Changelog — Wonder Ads Workspace",
@@ -23,23 +24,11 @@ function BackToWorkspace() {
 }
 
 export default async function ChangelogPage() {
-  // v74.23: Changelog access is now tied to the workspace SuperAdmin
-  // flag — only andre/alex/alice see it. Other logged-in users hit
-  // Access Denied (middleware already kicked anyone unauthed out at
-  // the door). The old `superadmin` password gate is gone.
-  const employee = await getCurrentEmployee();
-  if (!employee || !employee.isAdmin) {
-    return (
-      <PageShell>
-        <BackToWorkspace />
-        <AccessDenied
-          title="SuperAdmin only"
-          description="The changelog is reserved for the SuperAdmin Control Suite (Andre, Alex, Alice). Consultants can't open it — if you need to see the release notes, ping Andre directly."
-          username={employee?.username ?? null}
-        />
-      </PageShell>
-    );
-  }
+  // v78.75: o changelog é só do topo (lib/auth/top-admin), decidido por
+  // quem FEZ LOGIN. Para toda a gente — os outros SuperAdmins incluídos —
+  // é um 404, sem dizer de quem é.
+  const session = await getCurrentSession();
+  if (!session || !isTopAdmin(session.u)) notFound();
 
   return (
     <PageShell>

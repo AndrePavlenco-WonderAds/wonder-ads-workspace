@@ -21,7 +21,8 @@ const NO_STORE = { "Cache-Control": "no-store" };
 
 export async function POST(req: Request) {
   const me = await accessConsoleUser();
-  if (!me) return NextResponse.json({ error: "Só o COO abre os acessos." }, { status: 403, headers: NO_STORE });
+  // 404 neutro (v78.75): para os outros, esta API não existe.
+  if (!me) return NextResponse.json({ error: "Não encontrado." }, { status: 404, headers: NO_STORE });
 
   let body: { action?: unknown; username?: unknown; endSessions?: unknown };
   try {
