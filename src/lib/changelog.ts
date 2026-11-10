@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.90",
+    date: "2026-11-10",
+    title: "Plugin «IA no site»: teste fiável e meses sem medição",
+    highlights: [
+      "**🧪 «Testar» passa a testar os 4 assistentes** (ChatGPT, Claude, Perplexity, Mistral), 2 pedidos cada, e mostra quantos chegaram ao WordPress. Com 1 só pedido, uma cache de página com a página expirada deixava passar o primeiro e o teste dizia «tudo certo» quando não estava.",
+      "**💾 Guardar testa logo a ligação** — uma chave colada no relatório do cliente errado (ou um site sem o plugin) aparece no momento.",
+      "**📅 Um mês anterior à instalação já não aparece como «0 pedidos»**: fica fora do relatório do cliente (com nota interna). No mês em que o plugin começou, o relatório diz «Contagem desde DD/MM/AAAA».",
+      "**🤖 O teste mostra também os robôs de indexação e treino** (ClaudeBot, GPTBot…) que o plugin já contou este mês — não entram no relatório, mas provam que está a contar.",
+    ],
+  },
+  {
     version: "78.89",
     date: "2026-11-10",
     title: "VeryChaga: tier Lite e folga 0",

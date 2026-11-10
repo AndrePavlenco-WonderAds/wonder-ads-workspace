@@ -1387,6 +1387,14 @@ export function ReportDocument({
                   "How many times an AI assistant opened pages of the site to answer someone — in a conversation on a computer or in the mobile app, even if the person didn't click. It is measured on the site itself, so it also captures app usage that Google Analytics can't see. Gemini and Copilot answer from Google's and Bing's index and don't identify themselves, so they are not included here.",
                 )}
               </p>
+              {aiFOk.since && (
+                <p className="wa-ai-note">
+                  {t(
+                    `Contagem desde ${aiFOk.since.split("-").reverse().join("/")}, o dia em que esta medição começou — os dias antes disso não estão incluídos.`,
+                    `Counted from ${aiFOk.since.split("-").reverse().join("/")}, the day this measurement started — earlier days of the month are not included.`,
+                  )}
+                </p>
+              )}
               <div className="wa-ai-total">
                 <span className="wa-ai-total-v">{formatRaw(aiFOk.total, "count", lang)}</span>
                 <span className="wa-ai-total-l">

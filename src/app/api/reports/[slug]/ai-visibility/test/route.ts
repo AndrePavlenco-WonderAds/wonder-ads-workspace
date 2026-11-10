@@ -12,7 +12,7 @@ import { getReportConfig } from "@/lib/report/report-config-store";
 import { testAiPlugin } from "@/lib/report/wp-ai-visibility";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 export async function POST(
   _req: Request,

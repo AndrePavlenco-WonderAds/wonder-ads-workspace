@@ -15,7 +15,10 @@ type TestResult = {
   plugin: string | null;
   cache: string[];
   cacheHeaders: Record<string, string>;
+  agents?: { key: string; reached: number; attempts: number; cacheStatus: (string | null)[] }[];
   thisMonth: Record<string, number> | null;
+  crawlersThisMonth?: Record<string, number> | null;
+  since?: string | null;
 };
 
 const LABEL: Record<string, string> = {
@@ -45,10 +48,11 @@ export function ReportAiPluginConfig({
   const [err, setErr] = useState<string | null>(null);
   const [test, setTest] = useState<TestResult | null>(null);
 
-  async function put(body: Record<string, unknown>, kind: "save" | "clear") {
+  async function put(body: Record<string, unknown>, kind: "save" | "clear"): Promise<boolean> {
     setBusy(kind);
     setErr(null);
     setSaved(false);
+    setTest(null);
     try {
       const res = await fetch(`/api/reports/${slug}/config`, {
         method: "PUT",
@@ -60,18 +64,23 @@ export function ReportAiPluginConfig({
       setKey("");
       setSaved(true);
       router.refresh();
+      return true;
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Falhou");
+      return false;
     } finally {
       setBusy(null);
     }
   }
 
-  function save() {
+  async function save() {
     const body: Record<string, unknown> = { aiVisibilitySite: url.trim() || null };
     // A chave só vai quando foi escrita — guardar sem mexer no campo não a apaga.
     if (key.trim()) body.aiVisibilityKey = key.trim();
-    void put(body, "save");
+    const willBeConnected = Boolean(url.trim()) && (keySet || Boolean(key.trim()));
+    // Testa logo a seguir: uma chave colada no cliente errado (ou um site sem
+    // o plugin) aparece aqui, e não só no relatório do mês seguinte.
+    if ((await put(body, "save")) && willBeConnected) await runTest();
   }
 
   async function runTest() {
@@ -144,7 +153,7 @@ export function ReportAiPluginConfig({
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <button
           type="button"
-          onClick={save}
+          onClick={() => void save()}
           disabled={busy !== null}
           className="inline-flex items-center gap-1.5 rounded-lg bg-[#783DF5] px-3 py-1.5 text-[12px] font-semibold text-white transition hover:brightness-110 disabled:opacity-50"
         >
@@ -196,11 +205,43 @@ export function ReportAiPluginConfig({
                   .join(" · ")}`}
             </p>
           )}
+          {test.agents && test.agents.length > 0 && (
+            <ul className="mt-2 flex flex-wrap gap-1.5">
+              {test.agents.map((a) => {
+                const all = a.attempts > 0 && a.reached === a.attempts;
+                return (
+                  <li
+                    key={a.key}
+                    title={a.cacheStatus.map((c, i) => `pedido ${i + 1}: ${c ?? "sem cabeçalho de cache"}`).join(" · ")}
+                    className={`rounded-md border px-2 py-0.5 text-[11px] ${
+                      all
+                        ? "border-emerald-400/30 text-emerald-200/90"
+                        : a.reached > 0
+                          ? "border-amber-400/30 text-amber-200/90"
+                          : "border-red-400/30 text-red-200/85"
+                    }`}
+                  >
+                    {LABEL[a.key] ?? a.key} {a.reached}/{a.attempts} chegaram
+                  </li>
+                );
+              })}
+            </ul>
+          )}
           {test.thisMonth && (
-            <p className="mt-1 text-white/55">
+            <p className="mt-2 text-white/55">
               Este mês:{" "}
               {Object.entries(test.thisMonth)
                 .map(([k, n]) => `${LABEL[k] ?? k} ${n}`)
+                .join(" · ")}
+              {test.since && ` · a contar desde ${test.since.split("-").reverse().join("/")}`}
+            </p>
+          )}
+          {test.crawlersThisMonth && Object.keys(test.crawlersThisMonth).length > 0 && (
+            <p className="mt-1 text-white/40">
+              Robôs de indexação/treino este mês (não entram no relatório):{" "}
+              {Object.entries(test.crawlersThisMonth)
+                .sort((a, b) => b[1] - a[1])
+                .map(([k, n]) => `${k} ${n}`)
                 .join(" · ")}
             </p>
           )}

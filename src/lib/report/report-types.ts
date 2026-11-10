@@ -851,9 +851,13 @@ export type AiFetchKey = (typeof AI_FETCH_ASSISTANTS)[number];
  *  responder a alguém — na web ou na app, mesmo que a pessoa não clique. */
 export type AiFetchBlock = {
   source: "wp-plugin";
-  status: "ok" | "error";
-  /** Porque é que falhou (interno). */
+  /** «pending» = o plugin ainda não contava neste mês (instalado depois). */
+  status: "ok" | "error" | "pending";
+  /** Porque é que falhou ou ainda não há números (interno). */
   message?: string | null;
+  /** AAAA-MM-DD — só quando o plugin começou a contar A MEIO do mês: o
+   *  relatório diz que a contagem é desde esse dia (v78.89). */
+  since?: string | null;
   byAssistant: Record<AiFetchKey, { value: number; previous: number | null }>;
   total: number;
   previousTotal: number | null;
