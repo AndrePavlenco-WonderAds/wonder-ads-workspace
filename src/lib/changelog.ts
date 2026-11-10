@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.89",
+    date: "2026-11-10",
+    title: "VeryChaga: tier Lite e folga 0",
+    highlights: [
+      "**🏷️ VeryChaga passa a Lite** — no board, na ficha e em tudo o que se ordena por tier.",
+      "**💶 Folga mensal 0** — o bloco da folga aparece já «esgotado» e os extras são cobrados ao cliente.",
+      "**📋 Valor mensal na tabela de Clients do SuperAdmin** preenchido.",
+    ],
+  },
+  {
     version: "78.88",
     date: "2026-11-10",
     title: "Relatório mensal: plugin WordPress «WonderAds — IA no site»",

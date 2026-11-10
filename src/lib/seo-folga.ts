@@ -25,6 +25,9 @@ export const FOLGA_START = "2026-10";
 /** Folga mensal por projeto, em euros (tabela do André, 28/10/2026). */
 export const FOLGA_DEFAULTS: Record<string, number> = {
   "atn-medical": 35,
+  // v78.89: VeryChaga — Lite, folga 0 (dito pelo André; explícito para não
+  // depender só do tier).
+  verychaga: 0,
   "cidalia-cabeleireiros": 272.5,
   medway: 695,
   "physio-hub": 426.67,

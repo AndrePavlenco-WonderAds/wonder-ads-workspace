@@ -14,6 +14,8 @@ const TIERS: Record<string, ClientTier> = {
   "b-life": "lite",
   "kings-gyms": "lite",
   "clinica-medica-dentaria-colegio-militar": "lite",
+  // v78.89: VeryChaga — Lite, dito pelo André.
+  verychaga: "lite",
   "insync-design": "lite",
   "safe-away": "lite",
   "clinica-em-casa": "lite",
