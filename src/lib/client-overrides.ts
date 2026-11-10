@@ -83,9 +83,11 @@ const JOAO_B = new Set([
 // slug «atn-medical» (formulário por preencher). Fixado aqui para a coluna
 // do board e o email das entregas a reconhecerem sem depender do registo.
 // v78.0: + Clínica Médica Dentária Colégio Militar (entrou pelo onboarding).
+// v78.87: + VeryChaga (entrou pelo onboarding, registo já com a Maria).
 const MARIA_A = new Set([
   "atn-medical",
   "clinica-medica-dentaria-colegio-militar",
+  "verychaga",
 ]);
 
 /** Os consultores de SEO que podem ter carteira — nome de exibição (tem de

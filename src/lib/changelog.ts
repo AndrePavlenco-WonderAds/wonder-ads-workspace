@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.87",
+    date: "2026-11-10",
+    title: "VeryChaga: ficha do cliente completa",
+    highlights: [
+      "**🍄 Logótipo da VeryChaga** — o wordmark do cabeçalho de verychaga.com (VERYCHAGA · Functional Mushrooms), com o brilho nas cores da marca (caramelo → castanho → bordô).",
+      "**🔗 Site fixado no topo da ficha:** verychaga.com — também serve de domínio ao Keyword Research.",
+      "**📅 Onboarded a 16/11/2026** (segunda-feira) — a mesma data na ficha, no board e na tabela de Clients.",
+      "**👤 Carteira da Maria Assena fixada em código**, para a coluna do board e o email das entregas não dependerem só do registo de onboarding.",
+    ],
+  },
+  {
     version: "78.86",
     date: "2026-11-10",
     title: "Relatório mensal: AI Visibility explica o que fica de fora",

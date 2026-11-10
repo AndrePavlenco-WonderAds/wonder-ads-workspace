@@ -60,6 +60,9 @@ const PALETTES: Record<string, ClientPalette> = {
   // atnmedical.pt — os azuis do logótipo (ciano-claro do monograma → azul da
   // marca #00B2F4 → azul profundo).
   "atn-medical": { from: "#7FE3FF", via: "#00B2F4", to: "#0B4F8A" },
+  // verychaga.com — as cores secundárias do manual de marca (formulário de
+  // onboarding): caramelo #BA7A45 → castanho #7B371B → bordô #510603.
+  verychaga: { from: "#BA7A45", via: "#7B371B", to: "#510603" },
 };
 
 const DEFAULT_PALETTE: ClientPalette = {

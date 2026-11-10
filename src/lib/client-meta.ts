@@ -56,6 +56,11 @@ export const CLIENT_LOGOS: Record<string, string> = {
   // completo tem ≈5:1 e no chip ficava com 7px de altura.
   "clinica-medica-dentaria-colegio-militar":
     "/logos/clinica-medica-dentaria-colegio-militar.png",
+  // VeryChaga (v78.87) — o logótipo do cabeçalho de verychaga.com (Shopify,
+  // «verychaga-vector-01.svg»): wordmark VERYCHAGA + «Functional Mushrooms»,
+  // preto sobre transparente. O site não tem outro ativo de marca (o favicon
+  // é um símbolo de 32px), por isso fica o wordmark, em «tight».
+  verychaga: "/logos/verychaga.svg",
 };
 
 export function getClientLogo(slug: string): string | null {
@@ -107,6 +112,8 @@ const LOGO_SIZING_OVERRIDES: Record<string, LogoSizing> = {
   "real-hotels-group": "tight",
   // Wordmark largo (≈3:1), azul sobre branco — o mesmo caso da Medway.
   "atn-medical": "tight",
+  // Wordmark de duas linhas (≈6:1), preto sobre branco.
+  verychaga: "tight",
 };
 
 export function getLogoSizing(slug: string): LogoSizing {
@@ -145,6 +152,8 @@ export const CLIENT_WEBSITES: Record<string, string> = {
   // v78.0: o formulário de onboarding trouxe um link do Gmail no campo do
   // website — sem isto o Keyword Research não tinha domínio onde ancorar.
   "clinica-medica-dentaria-colegio-militar": "https://clinicacolegiomilitar.com/",
+  // v78.87: VeryChaga — loja Shopify de tinturas de cogumelos funcionais.
+  verychaga: "https://verychaga.com/",
   // ADS-only — not known yet
   "clinica-empatia": "",
 };
