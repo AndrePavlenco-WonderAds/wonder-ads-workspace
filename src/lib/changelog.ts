@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.88",
+    date: "2026-11-10",
+    title: "Relatório mensal: plugin WordPress «WonderAds — IA no site»",
+    highlights: [
+      "**🔌 Plugin WordPress novo, «WonderAds — IA no site»** (download na configuração do cliente do relatório mensal): conta, no próprio site, as vezes que o ChatGPT, o Claude, o Perplexity e o Mistral abrem páginas para responder a alguém — também nas apps do telemóvel, que o GA4 não consegue ver. Não guarda dados de pessoas, só contagens por dia, assistente e página.",
+      "**📊 Secção AI Visibility ganha o bloco «As IAs a ler o site»**: total de pedidos com variação face ao mês anterior, um cartão por assistente (mesmo a 0) e as páginas que as IAs mais abriram. Entra nos relatórios gerados depois de o plugin estar ligado; o Gemini e o Copilot ficam de fora (respondem do índice da Google e do Bing e não se identificam) e o texto diz isso ao cliente.",
+      "**🧪 Configuração do cliente → «IA no site (plugin WordPress)»**: colar a chave que o plugin mostra em Definições → WonderAds IA, Guardar e Testar. O teste confirma que o plugin responde e que um pedido de IA chega ao WordPress — se a cache de página o servir antes (WP Engine, por exemplo), avisa. A chave nunca volta ao browser.",
+    ],
+  },
+  {
     version: "78.87",
     date: "2026-11-10",
     title: "VeryChaga: ficha do cliente completa",
