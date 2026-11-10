@@ -18,6 +18,7 @@ import { googleAuthConfigured } from "@/lib/google-auth";
 import type { DateRange } from "./report-dates";
 import type { LeadEventMap } from "./report-config-store";
 import type { CustomLeadEvent } from "./report-types";
+import { AI_ASSISTANT_PATTERNS } from "./ai-assistants";
 
 /** A month value with its prior-month counterpart (null when unavailable). */
 export type MetricPair = { value: number; previous: number | null };
@@ -405,7 +406,9 @@ export async function getGa4MonthlyReport(
     // dos clientes: `perplexity` (sem domínio) cai em Unassigned, e
     // `chatgpt.com / organic` cai em Organic Search. Sem a segunda rede,
     // essas sessões desapareciam do relatório.
-    const matchers = llmRegex
+    // Os padrões dos assistentes acompanhados entram sempre, por cima da
+    // lista do cliente: essa fica congelada no KV ao gravar a config (v78.84).
+    const matchers = [...new Set([...llmRegex, ...AI_ASSISTANT_PATTERNS])]
       .map((s) => {
         try {
           return new RegExp(s, "i");

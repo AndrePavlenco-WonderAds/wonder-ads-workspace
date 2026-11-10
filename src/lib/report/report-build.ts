@@ -32,6 +32,7 @@ import {
   type ReportPeriod,
 } from "./report-dates";
 import type { ReportConfig } from "./report-config-store";
+import { aiAssistantOf } from "./ai-assistants";
 import {
   hasKwCsv,
   kwCsvChange,
@@ -214,19 +215,7 @@ function sumConsolidated(channels: LeadChannel[]): ReportMetric {
 
 /** Human-friendly AI source label from a GA4 sessionSource host. */
 function aiLabel(source: string): string {
-  const s = source.toLowerCase();
-  if (s.includes("chatgpt") || s.includes("openai")) return "ChatGPT";
-  if (s.includes("gemini")) return "Gemini";
-  if (s.includes("claude")) return "Claude";
-  if (s.includes("perplexity")) return "Perplexity";
-  if (s.includes("copilot")) return "Copilot";
-  if (s.includes("bing")) return "Bing Chat";
-  if (s.includes("deepseek")) return "DeepSeek";
-  if (s.includes("grok")) return "Grok";
-  if (s.includes("mistral")) return "Mistral";
-  if (s.includes("you.com")) return "You.com";
-  if (s.includes("phind")) return "Phind";
-  return source;
+  return aiAssistantOf(source)?.label ?? source;
 }
 
 /** Executive summary — POSITIVE highlights only, never a negative. Aims for

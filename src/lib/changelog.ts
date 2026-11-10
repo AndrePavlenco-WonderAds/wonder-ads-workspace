@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.84",
+    date: "2026-11-10",
+    title: "Relatório mensal: AI Visibility mostra todos os assistentes acompanhados",
+    highlights: [
+      "**🤖 A secção AI Visibility mostra sempre os 6 assistentes acompanhados** — ChatGPT, Gemini, Copilot, Perplexity, Claude e Mistral —, cada um com o seu cartão, mesmo a 0 (cartão tracejado e mais apagado, para o olho ir primeiro aos que trouxeram visitas). Outros assistentes (DeepSeek, Grok…) continuam a ser contados e ganham cartão quando trazem visitas.",
+      "**📝 O texto da secção diz quais são os assistentes acompanhados**, numa linha própria por cima dos cartões (também em inglês nos relatórios em inglês).",
+      "**🔗 Origens do mesmo assistente somam num só cartão** (ex.: chatgpt.com + openai → ChatGPT; perplexity.ai + perplexity → Perplexity). Vale também para os relatórios já gerados e finalizados — não é preciso regenerar.",
+      "**🔍 Deteção:** os 6 são sempre procurados no GA4, mesmo nos clientes com a lista antiga guardada na configuração; o Copilot no Edge (edgeservices.bing.com) passa a contar como Copilot.",
+    ],
+  },
+  {
     version: "78.83",
     date: "2026-11-05",
     title: "Projeto em pausa: novo bloco «Material Valioso para Ranks»",
