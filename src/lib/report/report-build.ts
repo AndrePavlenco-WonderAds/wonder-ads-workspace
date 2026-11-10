@@ -33,6 +33,7 @@ import {
 } from "./report-dates";
 import type { ReportConfig } from "./report-config-store";
 import { aiAssistantOf } from "./ai-assistants";
+import { fetchAiFetchBlock } from "./wp-ai-visibility";
 import {
   hasKwCsv,
   kwCsvChange,
@@ -1024,9 +1025,19 @@ export async function buildMonthlyReport(
   // mês vem do CSV colado. O MoM e o histórico são automáticos nos dois
   // casos, e no dia em que a API abrir o bloco preenche-se sozinho sem
   // mexer em código.
-  const [prevSnap, aiPull] = await Promise.all([
+  const [prevSnap, aiPull, aiFetches] = await Promise.all([
     getReport(slug, trailingMonths(period.key, 2)[0].key).catch(() => null),
     fetchGscAiBlock(slug, windows.current, config.gscSiteUrl),
+    // Pedidos das IAs ao site (plugin WordPress, v78.87). Só quando o
+    // cliente o tem ligado; nunca derruba o relatório.
+    config.aiVisibilitySite && config.aiVisibilityKey
+      ? fetchAiFetchBlock(
+          config.aiVisibilitySite,
+          config.aiVisibilityKey,
+          windows.current,
+          windows.prevMonth,
+        ).catch(() => null)
+      : Promise.resolve(null),
   ]);
   const prevAiImpr = prevSnap?.gscAi?.impressions;
   const aiHistory = prevAiImpr
@@ -1341,6 +1352,7 @@ export async function buildMonthlyReport(
     kind: isEcom ? "ecommerce" : "standard",
     ...(ecom ? { ecom } : {}),
     gscAi,
+    ...(aiFetches ? { aiFetches } : {}),
     leads: {
       total: leadsTotal,
       website: websiteLeadTotal(channels),

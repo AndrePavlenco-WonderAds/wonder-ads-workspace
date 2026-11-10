@@ -8,6 +8,7 @@ import {
   ChevronDown,
   FileDown,
   MapPin,
+  PlugZap,
   Store,
   Tags,
   BarChart3,
@@ -34,6 +35,7 @@ import { ReportShopifyCsv } from "@/components/report/report-shopify-csv";
 import { ReportLeadEvents } from "@/components/report/report-lead-events";
 import { ReportGbpProfiles } from "@/components/report/report-gbp-profiles";
 import { ReportGa4Property } from "@/components/report/report-ga4-property";
+import { ReportAiPluginConfig } from "@/components/report/report-ai-plugin-config";
 import {
   ReportKeywordsCuration,
   type CurationRow,
@@ -691,6 +693,22 @@ export default async function ReportPage({
                   extraGbpProfiles={reportConfig.extraGbpProfiles}
                   discovered={gbpDiscovered}
                   bare
+                />
+              </ConfigDisclosure>
+              <ConfigDisclosure
+                icon={PlugZap}
+                title="IA no site (plugin WordPress)"
+                hint={
+                  reportConfig.aiVisibilitySite && reportConfig.aiVisibilityKey
+                    ? `ligado · ${reportConfig.aiVisibilitySite.replace(/^https?:\/\//, "")}`
+                    : "por ligar"
+                }
+              >
+                <ReportAiPluginConfig
+                  slug={slug}
+                  site={reportConfig.aiVisibilitySite}
+                  defaultSite={getClientWebsite(slug)}
+                  keySet={Boolean(reportConfig.aiVisibilityKey)}
                 />
               </ConfigDisclosure>
               {snapshot.kind === "ecommerce" && (

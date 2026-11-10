@@ -35,7 +35,16 @@ import {
   type KwCsvSource,
   type KwRankSource,
   type KwRankValue,
+  AI_FETCH_ASSISTANTS,
+  type AiFetchKey,
 } from "@/lib/report/report-types";
+
+const AI_FETCH_LABEL: Record<AiFetchKey, string> = {
+  chatgpt: "ChatGPT",
+  claude: "Claude",
+  perplexity: "Perplexity",
+  mistral: "Mistral",
+};
 import { kwCsvFileName, kwResultsCsv, serpstatCsv } from "@/lib/report/kw-csv";
 import {
   aiAssistantCards,
@@ -725,8 +734,12 @@ export function ReportDocument({
       k.m.manualNa,
   );
 
+  // Pedidos das IAs ao site (plugin WordPress, v78.87).
+  const aiF = snapshot.aiFetches;
+  const aiFOk = aiF?.status === "ok" ? aiF : null;
   const showAi =
-    !hidden.has("ai") && (ai.sources.length > 0 || variant === "internal");
+    !hidden.has("ai") &&
+    (ai.sources.length > 0 || (aiFOk?.total ?? 0) > 0 || variant === "internal");
   const showNotes =
     !hidden.has("notes") &&
     (Boolean(snapshot.notes.trim()) || variant === "internal");
@@ -1362,6 +1375,85 @@ export function ReportDocument({
               </p>
             </>
           )}
+
+          {/* As IAs a ler o site — contado no próprio site pelo plugin
+              WordPress (v78.87). Apanha o uso das apps, que o GA4 não vê. */}
+          {aiFOk ? (
+            <div className="wa-aif">
+              <h4 className="wa-aif-h">{t("As IAs a ler o site", "AI assistants reading the site")}</h4>
+              <p className="wa-method">
+                {t(
+                  "Quantas vezes um assistente de IA abriu páginas do site para responder a alguém — numa conversa no computador ou na app do telemóvel, mesmo que a pessoa não tenha clicado. É medido no próprio site, por isso apanha também o uso das apps que o Google Analytics não vê. O Gemini e o Copilot respondem a partir do índice da Google e do Bing e não se identificam, por isso não entram aqui.",
+                  "How many times an AI assistant opened pages of the site to answer someone — in a conversation on a computer or in the mobile app, even if the person didn't click. It is measured on the site itself, so it also captures app usage that Google Analytics can't see. Gemini and Copilot answer from Google's and Bing's index and don't identify themselves, so they are not included here.",
+                )}
+              </p>
+              <div className="wa-ai-total">
+                <span className="wa-ai-total-v">{formatRaw(aiFOk.total, "count", lang)}</span>
+                <span className="wa-ai-total-l">
+                  {t("pedidos das IAs ao site", "AI requests to the site")}
+                </span>
+                {showDeltas && (
+                  <DeltaChip
+                    delta={metricDelta(
+                      {
+                        value: aiFOk.total,
+                        previous: aiFOk.previousTotal,
+                        source: "na",
+                        instrumented: true,
+                        unit: "count",
+                      },
+                      lang,
+                    )}
+                  />
+                )}
+              </div>
+              <div className="wa-ai-grid">
+                {AI_FETCH_ASSISTANTS.map((k) => ({ k, ...aiFOk.byAssistant[k] }))
+                  .sort(
+                    (a, b) =>
+                      b.value - a.value ||
+                      AI_FETCH_ASSISTANTS.indexOf(a.k) - AI_FETCH_ASSISTANTS.indexOf(b.k),
+                  )
+                  .map((c) => {
+                    const growth =
+                      showDeltas && c.value > 0 && typeof c.previous === "number" && c.previous > 0
+                        ? ((c.value - c.previous) / c.previous) * 100
+                        : null;
+                    return (
+                      <div className={`wa-ai-card${c.value === 0 ? " is-zero" : ""}`} key={c.k}>
+                        <div className="wa-ai-src">◆ {AI_FETCH_LABEL[c.k]}</div>
+                        <div className="wa-ai-sess">{formatRaw(c.value, "count", lang)}</div>
+                        {growth !== null && Math.abs(growth) >= 1 && (
+                          <span className={`wa-delta ${growth > 0 ? "up" : "down"}`}>
+                            {growth > 0 ? "▲" : "▼"} {Math.abs(growth).toFixed(0)}%
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
+              </div>
+              {aiFOk.topPages.length > 0 && (
+                <div className="wa-aif-pages">
+                  <div className="wa-aif-pages-h">
+                    {t("Páginas que as IAs mais abriram", "Pages AI assistants opened most")}
+                  </div>
+                  <ol>
+                    {aiFOk.topPages.slice(0, 5).map((p) => (
+                      <li key={p.path}>
+                        <span className="wa-aif-path">{p.path}</span>
+                        <span className="wa-aif-n">{formatRaw(p.count, "count", lang)}</span>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              )}
+            </div>
+          ) : aiF && variant === "internal" ? (
+            <p className="wa-pending" style={{ marginTop: ".8rem" }}>
+              {t("Plugin «IA no site»: ", "“AI on site” plugin: ")}
+              {aiF.message ?? t("sem dados.", "no data.")}
+            </p>
+          ) : null}
         </section>
       )}
 
@@ -2254,6 +2346,14 @@ const CSS = GEO_CSS + PRINT_CSS + `
 .wa-ai-sess{font-size:1.4rem;font-weight:800;color:var(--ink);line-height:1.1;margin:.15rem 0 .1rem;font-variant-numeric:tabular-nums;}
 .wa-ai-native{margin:-.45rem 0 .85rem;font-size:.76rem;color:var(--muted);}
 .wa-ai-tracked{margin:0 0 .6rem;font-size:.76rem;color:#45435c;font-weight:600;}
+.wa-aif{margin-top:1.4rem;padding-top:1.1rem;border-top:1px dashed rgba(120,61,245,.22);}
+.wa-aif-h{margin:0 0 .35rem;font-size:.86rem;font-weight:700;color:var(--ink);letter-spacing:-.01em;}
+.wa-aif-pages{margin-top:.85rem;}
+.wa-aif-pages-h{font-size:.7rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#6b34c9;margin-bottom:.35rem;}
+.wa-aif-pages ol{margin:0;padding:0;list-style:none;display:grid;gap:.25rem;}
+.wa-aif-pages li{display:flex;justify-content:space-between;gap:.75rem;font-size:.76rem;color:#45435c;border-bottom:1px solid rgba(23,22,45,.06);padding:.2rem 0;}
+.wa-aif-path{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.wa-aif-n{font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums;}
 .wa-ai-note{margin:.85rem 0 0;padding:.6rem .8rem;border-left:3px solid rgba(120,61,245,.35);background:#f8f6fe;border-radius:0 8px 8px 0;font-size:.74rem;line-height:1.5;color:#45435c;}
 .wa-ai-note b{color:var(--ink);}
 .wa-ai-card.is-zero{background:#faf9fd;border-style:dashed;border-color:rgba(120,61,245,.2);box-shadow:none;}

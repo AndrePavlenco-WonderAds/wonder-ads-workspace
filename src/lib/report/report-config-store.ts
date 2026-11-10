@@ -116,6 +116,11 @@ export type ReportConfig = {
   keywordsPicked: string[];
   /** Regex source strings matched against GA4 sessionSource for AI Visibility. */
   llmRegex: string[];
+  /** Plugin WordPress «WonderAds — IA no site» (v78.87): o endereço do site
+   *  e a chave que o plugin mostra em Definições → WonderAds IA. A chave
+   *  nunca volta ao browser (como o token da Shopify). */
+  aiVisibilitySite: string | null;
+  aiVisibilityKey: string | null;
   sectionsEnabled: Record<ReportSection, boolean>;
   updatedAt: number;
 };
@@ -222,6 +227,8 @@ export function defaultReportConfig(slug: string, currency = "EUR"): ReportConfi
     keywordsTableMode: "all",
     keywordsPicked: [],
     llmRegex: [...DEFAULT_LLM_REGEX],
+    aiVisibilitySite: null,
+    aiVisibilityKey: null,
     sectionsEnabled: Object.fromEntries(
       ALL_SECTIONS.map((s) => [s, true]),
     ) as Record<ReportSection, boolean>,
@@ -343,6 +350,25 @@ export function normalizeKeywordList(v: unknown): string[] {
   return out;
 }
 
+/** «https://www.site.pt/qualquer/coisa» → «https://www.site.pt». */
+export function normalizeSiteOrigin(v: unknown): string | null {
+  if (typeof v !== "string" || !v.trim()) return null;
+  const raw = v.trim();
+  try {
+    const u = new URL(/^https?:\/\//i.test(raw) ? raw : `https://${raw}`);
+    return u.protocol === "https:" || u.protocol === "http:" ? u.origin : null;
+  } catch {
+    return null;
+  }
+}
+
+/** A chave do plugin: 32–64 letras e números. */
+export function normalizeAiKey(v: unknown): string | null {
+  if (typeof v !== "string") return null;
+  const k = v.trim();
+  return /^[A-Za-z0-9]{32,64}$/.test(k) ? k : null;
+}
+
 function normalizeConfig(raw: unknown, slug: string): ReportConfig {
   const base = defaultReportConfig(slug, "EUR");
   if (!raw || typeof raw !== "object") return base;
@@ -384,6 +410,8 @@ function normalizeConfig(raw: unknown, slug: string): ReportConfig {
       regex && regex.length && !sameList(regex, LEGACY_LLM_REGEX)
         ? regex
         : base.llmRegex,
+    aiVisibilitySite: normalizeSiteOrigin(o.aiVisibilitySite),
+    aiVisibilityKey: normalizeAiKey(o.aiVisibilityKey),
     sectionsEnabled: sections,
     updatedAt: typeof o.updatedAt === "number" ? o.updatedAt : 0,
   };

@@ -16,7 +16,9 @@ import { getCurrentEmployee } from "@/lib/auth/server";
 import { editableDepts } from "@/lib/auth/credentials";
 import {
   getReportConfig,
+  normalizeAiKey,
   normalizeKeywordList,
+  normalizeSiteOrigin,
   saveReportConfig,
   LEAD_EVENT_KEYS,
   MAX_EVENT_ALIASES,
@@ -47,8 +49,14 @@ async function guard() {
 
 /** O token da Shopify NUNCA volta ao browser — só o facto de existir. */
 function maskConfig(config: ReportConfig) {
-  const { shopifyAccessToken, ...rest } = config;
-  return { ...rest, shopifyAccessToken: null, shopifyTokenSet: Boolean(shopifyAccessToken) };
+  const { shopifyAccessToken, aiVisibilityKey, ...rest } = config;
+  return {
+    ...rest,
+    shopifyAccessToken: null,
+    shopifyTokenSet: Boolean(shopifyAccessToken),
+    aiVisibilityKey: null,
+    aiVisibilityKeySet: Boolean(aiVisibilityKey),
+  };
 }
 
 export async function GET(
@@ -101,6 +109,8 @@ export async function PUT(
     ecommerce?: unknown;
     shopifyShopDomain?: unknown;
     shopifyAccessToken?: unknown;
+    aiVisibilitySite?: unknown;
+    aiVisibilityKey?: unknown;
     currency?: unknown;
     keywordsHidden?: unknown;
     keywordsHideUnranked?: unknown;
@@ -122,6 +132,8 @@ export async function PUT(
     ecommerce?: boolean;
     shopifyShopDomain?: string | null;
     shopifyAccessToken?: string | null;
+    aiVisibilitySite?: string | null;
+    aiVisibilityKey?: string | null;
     currency?: string;
     keywordsHidden?: string[];
     keywordsHideUnranked?: boolean;
@@ -236,6 +248,29 @@ export async function PUT(
     patch.shopifyShopDomain = body.shopifyShopDomain.trim() || null;
   } else if (body.shopifyShopDomain === null) {
     patch.shopifyShopDomain = null;
+  }
+  // Plugin «WonderAds — IA no site»: null/"" apaga; uma chave inválida é
+  // recusada em vez de gravada (o teste falharia sem dizer porquê).
+  if (body.aiVisibilitySite === null || body.aiVisibilitySite === "") {
+    patch.aiVisibilitySite = null;
+  } else if (typeof body.aiVisibilitySite === "string") {
+    const site = normalizeSiteOrigin(body.aiVisibilitySite);
+    if (!site) {
+      return NextResponse.json({ error: "Endereço do site inválido." }, { status: 400 });
+    }
+    patch.aiVisibilitySite = site;
+  }
+  if (body.aiVisibilityKey === null) {
+    patch.aiVisibilityKey = null;
+  } else if (typeof body.aiVisibilityKey === "string" && body.aiVisibilityKey.trim()) {
+    const k = normalizeAiKey(body.aiVisibilityKey);
+    if (!k) {
+      return NextResponse.json(
+        { error: "Chave inválida — copia-a de Definições → WonderAds IA no WordPress." },
+        { status: 400 },
+      );
+    }
+    patch.aiVisibilityKey = k;
   }
   if (typeof body.shopifyAccessToken === "string" && body.shopifyAccessToken.trim()) {
     patch.shopifyAccessToken = body.shopifyAccessToken.trim();

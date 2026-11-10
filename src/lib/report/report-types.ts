@@ -840,6 +840,27 @@ export type ReportSectionKey = (typeof REPORT_SECTION_KEYS)[number];
 
 export type ReportStatus = "draft" | "ready" | "sent";
 
+/** Os assistentes que se identificam ao abrir uma página para responder a
+ *  alguém (ChatGPT-User, Claude-User, Perplexity-User, MistralAI-User). O
+ *  Gemini e o Copilot respondem do índice da Google/Bing e não aparecem. */
+export const AI_FETCH_ASSISTANTS = ["chatgpt", "claude", "perplexity", "mistral"] as const;
+export type AiFetchKey = (typeof AI_FETCH_ASSISTANTS)[number];
+
+/** Pedidos das IAs ao site, contados pelo plugin WordPress «WonderAds — IA no
+ *  site» (v78.87). Não são visitas nem leads: é a IA a abrir a página para
+ *  responder a alguém — na web ou na app, mesmo que a pessoa não clique. */
+export type AiFetchBlock = {
+  source: "wp-plugin";
+  status: "ok" | "error";
+  /** Porque é que falhou (interno). */
+  message?: string | null;
+  byAssistant: Record<AiFetchKey, { value: number; previous: number | null }>;
+  total: number;
+  previousTotal: number | null;
+  /** As páginas que as IAs mais abriram no mês (só os assistentes acima). */
+  topPages: { path: string; count: number }[];
+};
+
 export const REPORT_SCHEMA_VERSION = 3;
 
 export type MonthlyReportSnapshot = {
@@ -970,6 +991,9 @@ export type MonthlyReportSnapshot = {
   /** As 15 keywords escolhidas e as posições verificadas à mão (v77.82).
    *  Ausente nos relatórios gerados antes — esses não exigem nada. */
   kwTracking?: KeywordTrackingBlock;
+  /** Pedidos das IAs ao site (plugin WordPress). Ausente quando o cliente
+   *  não tem o plugin ligado, e em todos os relatórios antes da v78.87. */
+  aiFetches?: AiFetchBlock;
   /** Per-source fetch provenance (internal only, stripped from the PDF). */
   fetch: { ga4: FetchStatus; gsc: FetchStatus; gbp: FetchStatus };
   pdfBlobUrl: string | null;
