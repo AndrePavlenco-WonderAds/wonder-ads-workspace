@@ -1344,6 +1344,22 @@ export function ReportDocument({
                   );
                 })}
               </div>
+              {/* O que fica de fora (v78.86, pedido do André): as apps de
+                  telemóvel de vários assistentes abrem o site sem origem, e
+                  essas visitas caem em «Direto». Os leads são contados no
+                  site inteiro, por isso os contactos delas já lá estão. */}
+              <p className="wa-ai-note">
+                <b>{t("Este número é um mínimo.", "This figure is a minimum.")}</b>{" "}
+                {t(
+                  "O ChatGPT identifica todos os links que dá (também na app de telemóvel) e por isso conta sempre. Já as apps de telemóvel de outros assistentes — Gemini, Claude, Copilot… — abrem muitas vezes o site sem dizer de onde vem a visita: essas pessoas chegam ao Google Analytics como tráfego «Direto» e nenhuma ferramenta as consegue atribuir a uma IA. Existem, mas ficam fora desta contagem.",
+                  "ChatGPT tags every link it gives (in its mobile app too), so it is always counted. The mobile apps of other assistants — Gemini, Claude, Copilot… — often open the site without saying where the visit came from: those people reach Google Analytics as “Direct” traffic and no tool can attribute them to an AI. They exist, but fall outside this count.",
+                )}
+                {showLeads &&
+                  ` ${t(
+                    "Os contactos que fazem contam na mesma nos leads deste relatório («Leads por canal»), só sem a etiqueta de IA.",
+                    "The contacts they make still count in this report's leads (“Leads by channel”), just without the AI label.",
+                  )}`}
+              </p>
             </>
           )}
         </section>
@@ -2238,6 +2254,8 @@ const CSS = GEO_CSS + PRINT_CSS + `
 .wa-ai-sess{font-size:1.4rem;font-weight:800;color:var(--ink);line-height:1.1;margin:.15rem 0 .1rem;font-variant-numeric:tabular-nums;}
 .wa-ai-native{margin:-.45rem 0 .85rem;font-size:.76rem;color:var(--muted);}
 .wa-ai-tracked{margin:0 0 .6rem;font-size:.76rem;color:#45435c;font-weight:600;}
+.wa-ai-note{margin:.85rem 0 0;padding:.6rem .8rem;border-left:3px solid rgba(120,61,245,.35);background:#f8f6fe;border-radius:0 8px 8px 0;font-size:.74rem;line-height:1.5;color:#45435c;}
+.wa-ai-note b{color:var(--ink);}
 .wa-ai-card.is-zero{background:#faf9fd;border-style:dashed;border-color:rgba(120,61,245,.2);box-shadow:none;}
 .wa-ai-card.is-zero .wa-ai-src{color:#9a8fb5;}
 .wa-ai-card.is-zero .wa-ai-sess{color:#b9b3cc;}

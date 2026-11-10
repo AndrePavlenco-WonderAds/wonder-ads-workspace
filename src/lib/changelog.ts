@@ -13,6 +13,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.86",
+    date: "2026-11-10",
+    title: "Relatório mensal: AI Visibility explica o que fica de fora",
+    highlights: [
+      "**📱 Nota «Este número é um mínimo» na secção AI Visibility** (relatório do cliente, PDF e vista interna; PT e EN): o ChatGPT identifica todos os links (também na app) e conta sempre; as apps de telemóvel do Gemini, Claude, Copilot… abrem muitas vezes o site sem dizer de onde vem a visita, que chega ao GA4 como «Direto» e nenhuma ferramenta consegue atribuir a uma IA.",
+      "**✅ Os contactos dessas visitas já contam nos leads do relatório** — os eventos de lead são contados no site inteiro, venham de onde vierem; a nota diz isso ao cliente (só quando a secção «Leads por canal» está no relatório).",
+    ],
+  },
+  {
     version: "78.85",
     date: "2026-11-10",
     title: "Relatório mensal: deteção dos assistentes de IA mais exata",
