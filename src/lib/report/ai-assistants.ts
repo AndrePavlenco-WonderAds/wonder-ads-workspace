@@ -1,6 +1,7 @@
 // Os assistentes de IA do AI Visibility (secção 5 do relatório mensal).
-// Módulo puro (sem GA4, sem KV): o gerador usa-o para dar nome às origens e o
-// documento para desenhar os cartões, incluindo nos relatórios já gravados.
+// Módulo puro (sem GA4, sem KV): a camada GA4 usa-o para DETETAR as visitas
+// (filtro no próprio GA4, v78.85), o gerador para lhes dar nome e o documento
+// para desenhar os cartões, incluindo nos relatórios já gravados.
 //
 // PORQUE É QUE HÁ UMA LISTA FIXA (v78.84, pedido do André): o relatório só
 // mostrava os assistentes que trouxeram visitas. Com só o ChatGPT no ecrã, o
@@ -18,58 +19,114 @@ export type AiAssistantKey =
   | "mistral"
   | "deepseek"
   | "grok"
+  | "meta"
   | "you"
   | "phind";
 
 type AiAssistant = {
   key: AiAssistantKey;
   label: string;
-  /** Testados contra a origem da sessão no GA4 (`sessionSource`, um host).
-   *  Também entram na deteção por domínio, por cima da lista guardada na
-   *  config do cliente — essa lista fica congelada no KV ao gravar e não
-   *  pode tirar nenhum destes do relatório. */
-  patterns: string[];
+  /** DETEÇÃO — o que conta como visita deste assistente. Testados contra a
+   *  origem da sessão no GA4 (`sessionSource`: um host, ou o utm_source
+   *  quando o link o traz). Ancorados ao host inteiro (v78.85): «chatgpt»
+   *  solto apanhava `chatgpt.co` e `<qualquer-coisa>.chatgpt.site`, que não
+   *  são o ChatGPT. Sintaxe RE2 — vão também no filtro do próprio GA4. */
+  detect: string[];
+  /** AGRUPAMENTO — a que cartão pertence uma origem que já foi dada como
+   *  assistente (pelo canal da Google ou pela deteção). Mais largo de
+   *  propósito, para os relatórios antigos continuarem a juntar-se bem. */
+  match: string[];
 };
+
+/** Host exato ou subdomínio dele: `chatgpt.com`, `m.chatgpt.com`. */
+const host = (h: string) => `(^|\\.)${h.replace(/\./g, "\\.")}$`;
+/** O valor exato (utm_source=perplexity, sem domínio). */
+const exact = (v: string) => `^${v.replace(/\./g, "\\.")}$`;
 
 /** Os seis que aparecem SEMPRE no relatório, por esta ordem quando estão
  *  empatados (a zero, tipicamente). */
 export const TRACKED_AI_ASSISTANTS: readonly AiAssistant[] = [
-  { key: "chatgpt", label: "ChatGPT", patterns: ["chatgpt", "openai"] },
-  { key: "gemini", label: "Gemini", patterns: ["gemini"] },
+  {
+    key: "chatgpt",
+    label: "ChatGPT",
+    // O ChatGPT põe utm_source=chatgpt.com nos links que dá.
+    detect: [host("chatgpt.com"), exact("chatgpt"), host("chat.openai.com"), exact("openai")],
+    match: ["chatgpt", "openai"],
+  },
+  {
+    key: "gemini",
+    label: "Gemini",
+    detect: [host("gemini.google.com"), exact("gemini"), host("bard.google.com")],
+    match: ["gemini", "bard"],
+  },
   {
     key: "copilot",
     label: "Copilot",
     // O Copilot no Edge chega como `edgeservices.bing.com`; o antigo Bing
     // Chat é o mesmo produto, com outro nome.
-    patterns: ["copilot", "edgeservices\\.bing\\.com", "\\.bing\\.com/chat"],
+    detect: [
+      host("copilot.microsoft.com"),
+      host("copilot.com"),
+      exact("copilot"),
+      exact("edgeservices.bing.com"),
+    ],
+    match: ["copilot", "bing"],
   },
-  // Sem exigir o domínio: o GA4 regista muitas vezes `perplexity / (not set)`.
-  { key: "perplexity", label: "Perplexity", patterns: ["perplexity"] },
-  { key: "claude", label: "Claude", patterns: ["claude\\.ai"] },
-  // O Le Chat da Mistral vive em chat.mistral.ai.
-  { key: "mistral", label: "Mistral", patterns: ["mistral\\.ai"] },
+  {
+    key: "perplexity",
+    label: "Perplexity",
+    // Sem domínio também: o GA4 regista muitas vezes `perplexity / (not set)`.
+    detect: [host("perplexity.ai"), exact("perplexity")],
+    match: ["perplexity"],
+  },
+  {
+    key: "claude",
+    label: "Claude",
+    detect: [host("claude.ai"), exact("claude")],
+    match: ["claude"],
+  },
+  {
+    key: "mistral",
+    label: "Mistral",
+    // O Le Chat da Mistral vive em chat.mistral.ai.
+    detect: [host("mistral.ai"), exact("mistral")],
+    match: ["mistral"],
+  },
 ];
 
 /** Contados na mesma; só têm cartão quando trazem visitas. */
 const OTHER_AI_ASSISTANTS: readonly AiAssistant[] = [
-  { key: "deepseek", label: "DeepSeek", patterns: ["deepseek"] },
-  { key: "grok", label: "Grok", patterns: ["grok"] },
-  // Ancorado ao início do host ou a um ponto: sem isto apanhava «peekyou.com».
-  { key: "you", label: "You.com", patterns: ["(^|\\.)you\\.com"] },
-  { key: "phind", label: "Phind", patterns: ["phind"] },
+  { key: "deepseek", label: "DeepSeek", detect: [host("deepseek.com"), exact("deepseek")], match: ["deepseek"] },
+  { key: "grok", label: "Grok", detect: [host("grok.com"), exact("grok")], match: ["grok"] },
+  { key: "meta", label: "Meta AI", detect: [host("meta.ai")], match: ["meta.ai"] },
+  { key: "you", label: "You.com", detect: [host("you.com")], match: ["you.com"] },
+  { key: "phind", label: "Phind", detect: [host("phind.com"), exact("phind")], match: ["phind"] },
 ];
 
 const ALL_AI_ASSISTANTS = [...TRACKED_AI_ASSISTANTS, ...OTHER_AI_ASSISTANTS];
 
-/** Padrões de deteção por domínio que têm de estar sempre ativos. */
-export const AI_ASSISTANT_PATTERNS: string[] = ALL_AI_ASSISTANTS.flatMap(
-  (a) => a.patterns,
+/** Os padrões de deteção, todos. */
+export const AI_DETECT_PATTERNS: string[] = ALL_AI_ASSISTANTS.flatMap(
+  (a) => a.detect,
 );
+
+/** Um só regex para o filtro `PARTIAL_REGEXP` do GA4 (RE2, sem maiúsculas). */
+export function aiDetectRegex(extra: string[] = []): string {
+  return [...AI_DETECT_PATTERNS, ...extra].map((p) => `(?:${p})`).join("|");
+}
+
+const DETECT_RES = AI_DETECT_PATTERNS.map((p) => new RegExp(p, "i"));
+
+/** A origem é de um dos assistentes conhecidos (deteção estrita). */
+export function isAiSource(source: string): boolean {
+  const s = source.trim();
+  return DETECT_RES.some((re) => re.test(s));
+}
 
 const COMPILED = ALL_AI_ASSISTANTS.map((a) => ({
   key: a.key,
   label: a.label,
-  res: a.patterns.map((p) => new RegExp(p, "i")),
+  match: a.match,
 }));
 
 /** O assistente de uma origem do GA4, ou null quando não é nenhum dos
@@ -77,13 +134,11 @@ const COMPILED = ALL_AI_ASSISTANTS.map((a) => ({
 export function aiAssistantOf(
   source: string,
 ): { key: AiAssistantKey; label: string } | null {
-  // «bing» sozinho só chega aqui depois de a origem já ter sido dada como
-  // assistente (canal da Google ou lista de domínios) — é o Copilot.
+  // «bing» só chega aqui depois de a origem já ter sido dada como assistente
+  // (canal da Google ou deteção) — é o Copilot.
   const s = source.toLowerCase();
-  const hit = COMPILED.find((a) => a.res.some((re) => re.test(s)));
-  if (hit) return { key: hit.key, label: hit.label };
-  if (s.includes("bing")) return { key: "copilot", label: "Copilot" };
-  return null;
+  const hit = COMPILED.find((a) => a.match.some((m) => s.includes(m)));
+  return hit ? { key: hit.key, label: hit.label } : null;
 }
 
 /** «ChatGPT, Gemini, Copilot, Perplexity, Claude e Mistral». */

@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.85",
+    date: "2026-11-10",
+    title: "Relatório mensal: deteção dos assistentes de IA mais exata",
+    highlights: [
+      "**🎯 Já não se perdem visitas pequenas de IA:** o GA4 passa a devolver só as origens de assistentes, todas — antes vinham as ~125 maiores origens do site e só depois se filtrava, por isso 1–2 visitas do Claude ou do Mistral num site com muitas origens podiam ficar de fora.",
+      "**🧹 Sem falsos positivos:** cada assistente é reconhecido pelo domínio exato (chatgpt.com, gemini.google.com, claude.ai, perplexity.ai, copilot.microsoft.com, chat.mistral.ai…). Sites como «chatgpt.co» ou páginas alojadas em «chatgpt.site» deixam de contar como ChatGPT.",
+      "**🔍 Auditoria interna (só leitura):** compara a deteção antiga com a nova no GA4 real de cada cliente e lista as origens com cara de IA que escapam. Vale a partir dos próximos relatórios gerados; os finalizados não mudam.",
+    ],
+  },
+  {
     version: "78.84",
     date: "2026-11-10",
     title: "Relatório mensal: AI Visibility mostra todos os assistentes acompanhados",

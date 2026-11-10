@@ -16,9 +16,9 @@
 import { resolveGa4Property, runReport } from "@/lib/ga4";
 import { googleAuthConfigured } from "@/lib/google-auth";
 import type { DateRange } from "./report-dates";
-import type { LeadEventMap } from "./report-config-store";
+import { customLlmRegex, type LeadEventMap } from "./report-config-store";
 import type { CustomLeadEvent } from "./report-types";
-import { AI_ASSISTANT_PATTERNS } from "./ai-assistants";
+import { aiDetectRegex, isAiSource } from "./ai-assistants";
 
 /** A month value with its prior-month counterpart (null when unavailable). */
 export type MetricPair = { value: number; previous: number | null };
@@ -161,6 +161,52 @@ const dateRanges = (current: DateRange, previous: DateRange) => [
   { startDate: previous.startDate, endDate: previous.endDate },
 ];
 
+/** As origens de IA do mês e do mês anterior.
+ *
+ *  v78.85 — O FILTRO ESTÁ NO GA4. Até aqui pedia-se o top 250 de TODAS as
+ *  origens (≈125 por mês, com os dois meses) e filtrava-se cá: num site com
+ *  muitas origens, as visitas de 1–2 sessões vindas do Claude ou do Mistral
+ *  ficavam abaixo do corte e desapareciam. Agora o GA4 só devolve as origens
+ *  de assistentes, todas. Se a propriedade recusar o regex, cai-se no pedido
+ *  antigo — nunca se perde o relatório por causa disto. */
+export async function aiSourceRows(
+  token: string,
+  propertyId: string,
+  current: DateRange,
+  previous: DateRange,
+  extra: string[] = [],
+): Promise<Row[]> {
+  const base = {
+    dateRanges: dateRanges(current, previous),
+    dimensions: [{ name: "sessionSource" }],
+    metrics: [
+      { name: "sessions" },
+      { name: "totalUsers" },
+      { name: "engagedSessions" },
+    ],
+    orderBys: [{ metric: { metricName: "sessions" }, desc: true }],
+  };
+  try {
+    return await runReport(token, propertyId, {
+      ...base,
+      dimensionFilter: {
+        filter: {
+          fieldName: "sessionSource",
+          stringFilter: {
+            matchType: "PARTIAL_REGEXP",
+            value: aiDetectRegex(extra),
+            caseSensitive: false,
+          },
+        },
+      },
+      limit: 1000,
+    });
+  } catch (err) {
+    console.error("GA4 AI regex filter failed, falling back to top 250:", err);
+    return runReport(token, propertyId, { ...base, limit: 250 });
+  }
+}
+
 /** Pull the full GA4 slice of a monthly report for one client. */
 export async function getGa4MonthlyReport(
   slug: string,
@@ -184,6 +230,7 @@ export async function getGa4MonthlyReport(
   const { token, propertyId } = resolved;
 
   const { current, previous, eventMap, llmRegex } = opts;
+  const customExtras = customLlmRegex(llmRegex);
   const extraEvents = opts.extraEvents ?? [];
   // Unique event names to query (two lead types could share a name).
   // Flattened alias list — one GA4 filter covering every name across types,
@@ -273,17 +320,7 @@ export async function getGa4MonthlyReport(
         }),
         // AI Visibility — sessions by source, mês e mês anterior (v77.4: o
         // bloco passou a ter variação, que antes não tinha).
-        runReport(token, propertyId, {
-          dateRanges: dateRanges(current, previous),
-          dimensions: [{ name: "sessionSource" }],
-          metrics: [
-            { name: "sessions" },
-            { name: "totalUsers" },
-            { name: "engagedSessions" },
-          ],
-          orderBys: [{ metric: { metricName: "sessions" }, desc: true }],
-          limit: 250,
-        }),
+        aiSourceRows(token, propertyId, current, previous, customExtras),
         // CANAL NATIVO DE IA (v77.4). Desde maio de 2026 a Google classifica
         // o tráfego de assistentes num canal próprio do Default Channel
         // Group — é a classificação DELA, e por isso a autoritativa. Puxa-se
@@ -406,9 +443,9 @@ export async function getGa4MonthlyReport(
     // dos clientes: `perplexity` (sem domínio) cai em Unassigned, e
     // `chatgpt.com / organic` cai em Organic Search. Sem a segunda rede,
     // essas sessões desapareciam do relatório.
-    // Os padrões dos assistentes acompanhados entram sempre, por cima da
-    // lista do cliente: essa fica congelada no KV ao gravar a config (v78.84).
-    const matchers = [...new Set([...llmRegex, ...AI_ASSISTANT_PATTERNS])]
+    // Deteção estrita dos assistentes (`ai-assistants.ts`, v78.85) + o que
+    // alguém tenha acrescentado à mão à lista do cliente.
+    const matchers = customExtras
       .map((s) => {
         try {
           return new RegExp(s, "i");
@@ -460,7 +497,7 @@ export async function getGa4MonthlyReport(
     // 2) O que a nossa lista apanha e a Google ainda não classificou.
     for (const [source, v] of allMap) {
       if (seenSource.has(source)) continue;
-      if (!matchers.some((re) => re.test(source))) continue;
+      if (!isAiSource(source) && !matchers.some((re) => re.test(source))) continue;
       aiSources.push({
         source,
         sessions: v.cur,

@@ -164,6 +164,16 @@ const LEGACY_LLM_REGEX = [
   "\\.bing\\.com/chat",
 ];
 
+/** Os padrões que alguém acrescentou à mão à lista de um cliente — tudo o
+ *  que não vem da lista por defeito nem da antiga. Desde a v78.85 a deteção
+ *  dos assistentes vive em `ai-assistants.ts` (ancorada ao host); as listas
+ *  guardadas no KV são cópias congeladas da lista por defeito e só valem
+ *  pelo que tiverem a mais. */
+export function customLlmRegex(list: string[]): string[] {
+  const known = new Set([...DEFAULT_LLM_REGEX, ...LEGACY_LLM_REGEX]);
+  return list.filter((p) => !known.has(p));
+}
+
 const sameList = (a: string[], b: string[]) =>
   a.length === b.length && [...a].sort().join("|") === [...b].sort().join("|");
 
