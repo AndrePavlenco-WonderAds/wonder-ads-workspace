@@ -19,6 +19,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     highlights: [
       "**🎯 Já não se perdem visitas pequenas de IA:** o GA4 passa a devolver só as origens de assistentes, todas — antes vinham as ~125 maiores origens do site e só depois se filtrava, por isso 1–2 visitas do Claude ou do Mistral num site com muitas origens podiam ficar de fora.",
       "**🧹 Sem falsos positivos:** cada assistente é reconhecido pelo domínio exato (chatgpt.com, gemini.google.com, claude.ai, perplexity.ai, copilot.microsoft.com, chat.mistral.ai…). Sites como «chatgpt.co» ou páginas alojadas em «chatgpt.site» deixam de contar como ChatGPT.",
+      "**📱 Apps Android contam:** quando a app do ChatGPT, Claude, Gemini, Perplexity, Copilot ou Mistral abre o link com o pacote da app como origem (ex.: com.anthropic.claude), a visita passa a contar no assistente certo. O ChatGPT já contava sempre (põe utm_source=chatgpt.com nos links, também na app).",
       "**🔍 Auditoria interna (só leitura):** compara a deteção antiga com a nova no GA4 real de cada cliente e lista as origens com cara de IA que escapam. Vale a partir dos próximos relatórios gerados; os finalizados não mudam.",
     ],
   },

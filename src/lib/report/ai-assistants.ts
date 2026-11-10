@@ -40,6 +40,10 @@ type AiAssistant = {
 
 /** Host exato ou subdomínio dele: `chatgpt.com`, `m.chatgpt.com`. */
 const host = (h: string) => `(^|\\.)${h.replace(/\./g, "\\.")}$`;
+/** A app Android (o GA4 regista o pacote como origem quando a app abre o
+ *  link com referrer `android-app://<pacote>`). Sem âncoras: o pacote pode
+ *  vir sozinho ou com o prefixo. */
+const app = (pkg: string) => pkg.replace(/\./g, "\\.");
 /** O valor exato (utm_source=perplexity, sem domínio). */
 const exact = (v: string) => `^${v.replace(/\./g, "\\.")}$`;
 
@@ -50,13 +54,13 @@ export const TRACKED_AI_ASSISTANTS: readonly AiAssistant[] = [
     key: "chatgpt",
     label: "ChatGPT",
     // O ChatGPT põe utm_source=chatgpt.com nos links que dá.
-    detect: [host("chatgpt.com"), exact("chatgpt"), host("chat.openai.com"), exact("openai")],
+    detect: [host("chatgpt.com"), exact("chatgpt"), host("chat.openai.com"), exact("openai"), app("com.openai.chatgpt")],
     match: ["chatgpt", "openai"],
   },
   {
     key: "gemini",
     label: "Gemini",
-    detect: [host("gemini.google.com"), exact("gemini"), host("bard.google.com")],
+    detect: [host("gemini.google.com"), exact("gemini"), host("bard.google.com"), app("com.google.android.apps.bard")],
     match: ["gemini", "bard"],
   },
   {
@@ -69,6 +73,7 @@ export const TRACKED_AI_ASSISTANTS: readonly AiAssistant[] = [
       host("copilot.com"),
       exact("copilot"),
       exact("edgeservices.bing.com"),
+      app("com.microsoft.copilot"),
     ],
     match: ["copilot", "bing"],
   },
@@ -76,27 +81,27 @@ export const TRACKED_AI_ASSISTANTS: readonly AiAssistant[] = [
     key: "perplexity",
     label: "Perplexity",
     // Sem domínio também: o GA4 regista muitas vezes `perplexity / (not set)`.
-    detect: [host("perplexity.ai"), exact("perplexity")],
+    detect: [host("perplexity.ai"), exact("perplexity"), app("ai.perplexity.app")],
     match: ["perplexity"],
   },
   {
     key: "claude",
     label: "Claude",
-    detect: [host("claude.ai"), exact("claude")],
+    detect: [host("claude.ai"), exact("claude"), app("com.anthropic.claude")],
     match: ["claude"],
   },
   {
     key: "mistral",
     label: "Mistral",
     // O Le Chat da Mistral vive em chat.mistral.ai.
-    detect: [host("mistral.ai"), exact("mistral")],
+    detect: [host("mistral.ai"), exact("mistral"), app("ai.mistral.chat")],
     match: ["mistral"],
   },
 ];
 
 /** Contados na mesma; só têm cartão quando trazem visitas. */
 const OTHER_AI_ASSISTANTS: readonly AiAssistant[] = [
-  { key: "deepseek", label: "DeepSeek", detect: [host("deepseek.com"), exact("deepseek")], match: ["deepseek"] },
+  { key: "deepseek", label: "DeepSeek", detect: [host("deepseek.com"), exact("deepseek"), app("com.deepseek.chat")], match: ["deepseek"] },
   { key: "grok", label: "Grok", detect: [host("grok.com"), exact("grok")], match: ["grok"] },
   { key: "meta", label: "Meta AI", detect: [host("meta.ai")], match: ["meta.ai"] },
   { key: "you", label: "You.com", detect: [host("you.com")], match: ["you.com"] },

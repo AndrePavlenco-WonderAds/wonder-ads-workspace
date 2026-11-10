@@ -13,7 +13,7 @@ import { editableDepts } from "@/lib/auth/credentials";
 import { resolveGa4Property, runReport } from "@/lib/ga4";
 import { getReportConfig } from "@/lib/report/report-config-store";
 import { aiSourceRows } from "@/lib/report/ga4-report";
-import { aiAssistantOf, isAiSource } from "@/lib/report/ai-assistants";
+import { aiAssistantOf, aiDetectRegex, isAiSource } from "@/lib/report/ai-assistants";
 import { isValidPeriodKey, monthRange, trailingMonths } from "@/lib/report/report-dates";
 
 export const runtime = "nodejs";
@@ -103,7 +103,7 @@ export async function GET(req: Request) {
         })
         .filter((re): re is RegExp => re !== null);
 
-      const [oldRows, newRows, nativeRows, allMonthRows] = await Promise.all([
+      const [oldRows, newRows, nativeRows, allMonthRows, deviceRows] = await Promise.all([
         // Antigo: top 250 linhas de todas as origens, dois meses.
         runReport(token, propertyId, {
           dateRanges: ranges,
@@ -135,6 +135,28 @@ export async function GET(req: Request) {
           orderBys: [{ metric: { metricName: "sessions" }, desc: true }],
           limit: 10000,
         }) as Promise<Row[]>,
+        // De onde vêm as visitas de IA: sistema + browser. «Safari (in-app)»
+        // e «Android Webview» são visitas abertas DENTRO de uma app.
+        runReport(token, propertyId, {
+          dateRanges: [ranges[0]],
+          dimensions: [
+            { name: "sessionSource" },
+            { name: "operatingSystem" },
+            { name: "browser" },
+          ],
+          metrics,
+          dimensionFilter: {
+            filter: {
+              fieldName: "sessionSource",
+              stringFilter: {
+                matchType: "PARTIAL_REGEXP",
+                value: `${aiDetectRegex()}|${LOOKS_LIKE_AI.source}`,
+                caseSensitive: false,
+              },
+            },
+          },
+          limit: 2000,
+        }).catch((e) => [{ error: String(e) }] as unknown as Row[]) as Promise<Row[]>,
       ]);
 
       const native = currentBySource(nativeRows);
@@ -152,9 +174,23 @@ export async function GET(req: Request) {
         .filter(([s]) => !newSet.has(s) && LOOKS_LIKE_AI.test(s))
         .map(([source, sessions]) => ({ source, sessions }));
 
+      // Por assistente: sessões por sistema e quantas abriram dentro de uma app.
+      const devices: Record<string, { bySystem: Record<string, number>; inApp: number; browsers: Record<string, number> }> = {};
+      for (const r of deviceRows) {
+        const [src, os, browser] = (r.dimensionValues ?? []).map((d) => d.value ?? "");
+        if (!src) continue;
+        const label = aiAssistantOf(src)?.label ?? src;
+        const n = sessionsOf(r);
+        const d = (devices[label] ??= { bySystem: {}, inApp: 0, browsers: {} });
+        d.bySystem[os] = (d.bySystem[os] ?? 0) + n;
+        d.browsers[browser] = (d.browsers[browser] ?? 0) + n;
+        if (/in-app|webview/i.test(browser)) d.inApp += n;
+      }
+
       results.push({
         slug,
         propertyId,
+        devices,
         sourcesThisMonth: allMonth.size,
         oldCapCovered: oldAll.size,
         old: { total: sum(oldSet), byAssistant: byAssistant(oldSet) },
