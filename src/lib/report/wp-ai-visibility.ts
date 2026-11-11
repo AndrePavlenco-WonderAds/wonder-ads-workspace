@@ -6,8 +6,9 @@
 // das APPS dos assistentes: a visita de quem clica na app chega ao GA4 sem
 // origem («Direto»), mas o pedido da IA a ler a página chega ao site sempre.
 //
-// Fonte: o código do plugin está em `wordpress-plugins/wonderads-ia-no-site`
-// e o .zip em /seo/plugin/ (refazer com scripts/wordpress-zip-ia-plugin.sh).
+// Fonte: o código do plugin está em `wordpress-plugins/wonderads-ia-no-site`;
+// o .zip é público em /wp-plugin/ e os sites atualizam-se sozinhos a partir
+// de /api/wp-plugin/ia-no-site (ver lib/report/wp-plugin-release.ts).
 
 import "server-only";
 import { randomUUID } from "node:crypto";
@@ -17,6 +18,7 @@ import {
   type AiFetchBlock,
   type AiFetchKey,
 } from "./report-types";
+import { IA_PLUGIN_RELEASE } from "./wp-plugin-release";
 
 /** O nome com que cada assistente se identifica no pedido. */
 export const AI_FETCH_AGENT: Record<AiFetchKey, string> = {
@@ -40,8 +42,35 @@ type PluginPayload = {
   pages?: { month: string; agent: string; path: string; count: number }[];
   lastTest?: { nonce?: string; agent?: string; path?: string; at?: number } | null;
   cache?: string[];
-  /** AAAA-MM-DD do primeiro dia de contagem (versões futuras do plugin). */
+  /** AAAA-MM-DD do primeiro dia de contagem (plugin 1.1.0+). */
   since?: string;
+  // ── plugin 1.1.0+ ──
+  storage?: "table" | "option";
+  /** Cada cache que o plugin reconhece e o que fez com ela. */
+  caches?: PluginCacheStatus[];
+  /** A última verificação que o site fez a si próprio (diária). */
+  check?: PluginSelfCheck | null;
+  env?: { wp?: string; php?: string; server?: string; multisite?: boolean; autoUpdate?: boolean };
+  plugins?: string[];
+};
+
+export type PluginCacheStatus = {
+  name: string;
+  /** auto = o plugin ajusta sozinho · host = só o alojamento · manual = à mão. */
+  handled: "auto" | "host" | "manual";
+  applied: boolean;
+  note?: string | null;
+};
+
+export type PluginSelfCheck = {
+  at: number;
+  verdict?: "ok" | "cache" | "blocked" | "error" | null;
+  error?: string | null;
+  agents?: Record<string, { reached: number; attempts: number; status: number[] }>;
+  blocks?: {
+    file: boolean;
+    lines: { line: number; text: string; block: string | null; kind: "exclusion" | "possible-block" }[];
+  };
 };
 
 export type PluginRead =
@@ -219,23 +248,47 @@ export type AiPluginTestAgent = {
   attempts: number;
   /** O `x-cache` (ou equivalente) de cada pedido — HIT = servido pela cache. */
   cacheStatus: (string | null)[];
+  /** O código HTTP de cada pedido (403 = o site recusa esta IA). */
+  httpStatus: number[];
 };
+
+/** Os robôs de pesquisa e de treino das IAs — só para ver se o site os deixa
+ *  entrar (bloquear os de PESQUISA tira o site das respostas). */
+export const CRAWLER_TEST_UA = {
+  "OAI-SearchBot": { kind: "search", ua: "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko); compatible; OAI-SearchBot/1.0; +https://openai.com/searchbot" },
+  "Claude-SearchBot": { kind: "search", ua: "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Claude-SearchBot/1.0; +https://www.anthropic.com)" },
+  PerplexityBot: { kind: "search", ua: "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; PerplexityBot/1.0; +https://perplexity.ai/perplexitybot)" },
+  GPTBot: { kind: "training", ua: "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko); compatible; GPTBot/1.2; +https://openai.com/gptbot" },
+  ClaudeBot: { kind: "training", ua: "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; ClaudeBot/1.0; +claudebot@anthropic.com)" },
+} as const;
+
+export type CrawlerAccess = { name: string; kind: "search" | "training"; status: number | null };
 
 export type AiPluginTest = {
   ok: boolean;
   /** TODOS os pedidos de teste chegaram ao WordPress. */
   reachedWordPress: boolean;
+  /** Algum assistente levou 401/403/429… — o site recusa-o. */
+  blocked: boolean;
   message: string;
   plugin: string | null;
+  /** Há uma versão mais nova do plugin publicada no workspace. */
+  latestPlugin: string;
   cache: string[];
   /** Cabeçalhos de cache do último pedido de teste — o que o serviu. */
   cacheHeaders: Record<string, string>;
   agents: AiPluginTestAgent[];
+  crawlers: CrawlerAccess[];
   thisMonth: Record<AiFetchKey, number> | null;
   /** Robôs de indexação e treino este mês (não entram no relatório). */
   crawlersThisMonth: Record<string, number> | null;
   /** AAAA-MM-DD — desde quando o plugin conta. */
   since: string | null;
+  // ── o que o plugin 1.1.0+ diz de si próprio ──
+  caches: PluginCacheStatus[];
+  selfCheck: PluginSelfCheck | null;
+  storage: "table" | "option" | null;
+  env: PluginPayload["env"] | null;
 };
 
 /** O pedido de cada assistente, como chega a um site (formato público). */
@@ -261,19 +314,33 @@ const CACHE_HEADERS = [
   "x-powered-by",
 ];
 
+/** Códigos com que um site recusa um robô. */
+export const BLOCK_STATUSES = new Set([401, 403, 406, 429, 444]);
+
 /** Teste ponta a ponta: (1) o plugin responde com esta chave; (2) cada um dos
  *  4 assistentes pede a página inicial DUAS vezes, sem truques anti-cache, e
  *  vê-se se o pedido chegou ao WordPress. Duas, porque uma cache de página
  *  com a página expirada deixa passar o PRIMEIRO pedido (revalida em fundo
  *  com ele) e serve os seguintes — um teste de um só pedido dava «tudo
- *  certo» no WP Engine (visto a 10/11/2026). Os pedidos de teste levam um
- *  cabeçalho que o plugin regista à parte: não entram nas contagens. */
+ *  certo» no WP Engine (visto a 10/11/2026); (3) os robôs de pesquisa e de
+ *  treino das IAs entram no site? Todos os pedidos levam o cabeçalho de
+ *  teste, que o plugin regista à parte: não entram nas contagens. */
 export async function testAiPlugin(site: string, key: string): Promise<AiPluginTest> {
   const first = await readPlugin(site, key);
+  const base = {
+    latestPlugin: IA_PLUGIN_RELEASE.version,
+    caches: [] as PluginCacheStatus[],
+    selfCheck: null,
+    storage: null,
+    env: null,
+    crawlers: [] as CrawlerAccess[],
+  };
   if (!first.ok) {
     return {
+      ...base,
       ok: false,
       reachedWordPress: false,
+      blocked: false,
       message: first.message,
       plugin: null,
       cache: [],
@@ -291,7 +358,7 @@ export async function testAiPlugin(site: string, key: string): Promise<AiPluginT
   let failed: string | null = null;
 
   for (const k of AI_FETCH_ASSISTANTS) {
-    const row: AiPluginTestAgent = { key: k, reached: 0, attempts: 0, cacheStatus: [] };
+    const row: AiPluginTestAgent = { key: k, reached: 0, attempts: 0, cacheStatus: [], httpStatus: [] };
     for (let i = 0; i < 2; i++) {
       const nonce = randomUUID();
       try {
@@ -313,6 +380,7 @@ export async function testAiPlugin(site: string, key: string): Promise<AiPluginT
             res.headers.get("x-cache-status") ??
             null,
         );
+        row.httpStatus.push(res.status);
         await res.arrayBuffer().catch(() => null);
       } catch (err) {
         failed = err instanceof Error ? err.message : String(err);
@@ -324,6 +392,25 @@ export async function testAiPlugin(site: string, key: string): Promise<AiPluginT
     }
     agents.push(row);
   }
+
+  // Os robôs de pesquisa e de treino: um pedido cada, em paralelo (com o
+  // cabeçalho de teste, para não entrarem nas contagens).
+  const crawlers: CrawlerAccess[] = await Promise.all(
+    Object.entries(CRAWLER_TEST_UA).map(async ([name, c]) => {
+      try {
+        const res = await fetch(new URL("/", site), {
+          headers: { "User-Agent": c.ua, "X-WA-IA-Test": `crawler-${randomUUID()}` },
+          cache: "no-store",
+          redirect: "follow",
+          signal: AbortSignal.timeout(TIMEOUT_MS),
+        });
+        await res.arrayBuffer().catch(() => null);
+        return { name, kind: c.kind, status: res.status };
+      } catch {
+        return { name, kind: c.kind, status: null };
+      }
+    }),
+  );
 
   const today = new Date().toISOString().slice(0, 10);
   const monthStart = `${today.slice(0, 7)}-01`;
@@ -341,35 +428,51 @@ export async function testAiPlugin(site: string, key: string): Promise<AiPluginT
       }
     }
   }
-  const cache = (month.ok ? month.payload.cache : first.payload.cache) ?? [];
+  const latest = month.ok ? month.payload : first.payload;
+  const cache = latest.cache ?? [];
 
   const attempts = agents.reduce((t, a) => t + a.attempts, 0);
   const reached = agents.reduce((t, a) => t + a.reached, 0);
   const all = attempts > 0 && reached === attempts && attempts === AI_FETCH_ASSISTANTS.length * 2;
+  const blockedAgents = agents.filter((a) => a.httpStatus.some((c) => BLOCK_STATUSES.has(c)));
   const via = cache.length ? ` (${cache.join(", ")})` : "";
   const names = AI_FETCH_ASSISTANTS.map((k) => AI_FETCH_AGENT[k]).join(", ");
+  const htaccessBlocks = (latest.check?.blocks?.lines ?? []).filter((l) => l.kind === "possible-block");
 
   let message: string;
   if (attempts === 0) {
     message = `O plugin responde, mas os pedidos de teste à página inicial falharam (${failed ?? "sem resposta"}).`;
+  } else if (blockedAgents.length > 0) {
+    const who = blockedAgents.map((a) => AI_FETCH_AGENT[a.key]).join(", ");
+    const where = htaccessBlocks.length
+      ? ` A regra está no .htaccess (linha ${htaccessBlocks.map((l) => l.line).join(", ")}) — ver em Definições → WonderAds IA.`
+      : " Não há regra no .htaccess: o bloqueio está no alojamento ou numa firewall — pede para deixarem entrar estes nomes.";
+    message = `O site RECUSA os pedidos de ${who} (${[...new Set(blockedAgents.flatMap((a) => a.httpStatus.filter((c) => BLOCK_STATUSES.has(c))))].join("/")}): essa IA não consegue ler o site — nem para responder a quem pergunta por ele. Isto prejudica a visibilidade nas IAs, além da contagem.${where}`;
   } else if (all) {
     message = "Tudo certo — os pedidos dos 4 assistentes chegam ao WordPress e vão ser contados.";
   } else if (reached === 0) {
-    message = `O plugin responde, mas a cache de página${via} serve os pedidos das IAs sem chegarem ao WordPress. Só são contados quando a página expira na cache, por isso os números vão ficar abaixo do real. Para contar tudo, o alojamento tem de tirar da cache: ${names}.`;
+    message = `O plugin responde, mas a cache de página${via} serve os pedidos das IAs sem chegarem ao WordPress. Só são contados quando a página expira na cache, por isso os números vão ficar abaixo do real. Para contar tudo, a cache tem de deixar passar: ${names}.`;
   } else {
-    message = `O plugin responde, mas só ${reached} de ${attempts} pedidos de teste chegaram ao WordPress — a cache de página${via} serve os outros. Os pedidos das IAs só são contados quando a página expira na cache, por isso os números vão ficar abaixo do real. Para contar tudo, o alojamento tem de tirar da cache: ${names}.`;
+    message = `O plugin responde, mas só ${reached} de ${attempts} pedidos de teste chegaram ao WordPress — a cache de página${via} serve os outros. Os pedidos das IAs só são contados quando a página expira na cache, por isso os números vão ficar abaixo do real. Para contar tudo, a cache tem de deixar passar: ${names}.`;
   }
 
   return {
-    ok: all,
+    ok: all && blockedAgents.length === 0,
     reachedWordPress: all,
+    blocked: blockedAgents.length > 0,
     message,
     plugin: first.payload.plugin ?? null,
+    latestPlugin: IA_PLUGIN_RELEASE.version,
     cache,
     cacheHeaders,
     agents,
+    crawlers,
     thisMonth,
     crawlersThisMonth,
     since: firstCountedDay(first.payload),
+    caches: latest.caches ?? [],
+    selfCheck: latest.check ?? null,
+    storage: latest.storage ?? null,
+    env: latest.env ?? null,
   };
 }

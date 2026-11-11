@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.91",
+    date: "2026-11-11",
+    title: "Plugin «IA no site» 1.1: tira as IAs da cache sozinho e atualiza-se sozinho",
+    highlights: [
+      "**🧹 O plugin tira o ChatGPT, o Claude, o Perplexity e o Mistral da cache** do LiteSpeed Cache, WP Rocket, WP Fastest Cache, WP Super Cache e WP-Optimize — pelas definições de cada um, sem tocar em regras de outros — e desfaz tudo se for desativado. A cache do alojamento (WP Engine, Kinsta, SiteGround) continua a precisar de um pedido ao suporte; o plugin diz qual.",
+      "**🩺 Verifica-se sozinho todos os dias**: pede a página ao próprio site como cada IA e mostra, em Definições → WonderAds IA, se os pedidos chegam, se a cache os serve e se há regras no .htaccess a bloquear IAs (com a linha).",
+      "**🔄 Atualiza-se sozinho** a partir do workspace (/api/wp-plugin/ia-no-site). Quem tem a 1.0.0 carrega o .zip uma última vez.",
+      "**🧪 «Testar» no workspace** passa a mostrar se o site RECUSA alguma IA (403 — como o Mimus e a Sentir Saúde fazem ao ChatGPT), se os robôs de pesquisa das IAs entram, e o diagnóstico que o próprio plugin fez.",
+      "**🔢 Contagem sem perdas**: tabela própria com soma atómica (antes, dois pedidos ao mesmo tempo podiam anular-se) e registo logo no arranque do WordPress.",
+    ],
+  },
+  {
     version: "78.90",
     date: "2026-11-10",
     title: "Plugin «IA no site»: teste fiável e meses sem medição",

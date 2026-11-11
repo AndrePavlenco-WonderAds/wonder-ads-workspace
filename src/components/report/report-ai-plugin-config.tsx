@@ -7,19 +7,9 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Download, Loader2, PlugZap, Trash2 } from "lucide-react";
+import type { AiPluginTest } from "@/lib/report/wp-ai-visibility";
 
-type TestResult = {
-  ok: boolean;
-  reachedWordPress: boolean;
-  message: string;
-  plugin: string | null;
-  cache: string[];
-  cacheHeaders: Record<string, string>;
-  agents?: { key: string; reached: number; attempts: number; cacheStatus: (string | null)[] }[];
-  thisMonth: Record<string, number> | null;
-  crawlersThisMonth?: Record<string, number> | null;
-  since?: string | null;
-};
+type TestResult = AiPluginTest;
 
 const LABEL: Record<string, string> = {
   chatgpt: "ChatGPT",
@@ -113,7 +103,7 @@ export function ReportAiPluginConfig({
       <ol className="mb-4 list-decimal space-y-1 pl-5 text-[12px] leading-relaxed text-white/55">
         <li>
           <a
-            href="/seo/plugin/wonderads-ia-no-site.zip"
+            href="/wp-plugin/wonderads-ia-no-site.zip"
             download
             className="inline-flex items-center gap-1 text-[#c9b2ff] underline-offset-2 hover:underline"
           >
@@ -122,7 +112,11 @@ export function ReportAiPluginConfig({
           </a>
         </li>
         <li>No WordPress do cliente: Plugins → Adicionar novo → Carregar plugin → Ativar.</li>
-        <li>Definições → WonderAds IA → copiar a chave e colá-la aqui → Guardar → Testar.</li>
+        <li>Definições → WonderAds IA → copiar a chave e colá-la aqui → Guardar (testa logo).</li>
+        <li className="list-none text-white/40">
+          O plugin tira as IAs da cache dos plugins de cache conhecidos, verifica-se todos os dias e
+          atualiza-se sozinho. O que precisar de mão humana aparece no teste.
+        </li>
       </ol>
 
       <div className="grid gap-2.5 sm:grid-cols-[1fr_1fr]">
@@ -186,66 +180,154 @@ export function ReportAiPluginConfig({
 
       {err && <p className="mt-2.5 text-[12px] text-red-300/90">{err}</p>}
 
-      {test && (
-        <div
-          className={`mt-3 rounded-lg border px-3 py-2.5 text-[12px] leading-relaxed ${
-            test.ok
-              ? "border-emerald-400/25 bg-emerald-500/[0.07] text-emerald-100/85"
-              : "border-amber-400/25 bg-amber-500/[0.07] text-amber-100/85"
-          }`}
-        >
-          <p>{test.message}</p>
-          {test.plugin && (
-            <p className="mt-1 text-white/45">
-              Plugin {test.plugin}
-              {test.cache.length > 0 && ` · cache: ${test.cache.join(", ")}`}
-              {Object.keys(test.cacheHeaders).length > 0 &&
-                ` · ${Object.entries(test.cacheHeaders)
-                  .map(([k, v]) => `${k}: ${v}`)
-                  .join(" · ")}`}
-            </p>
+      {test && <TestResultBox test={test} />}
+    </div>
+  );
+}
+
+const BLOCK = new Set([401, 403, 406, 429, 444]);
+const ddmmyyyy = (iso: string) => iso.split("-").reverse().join("/");
+
+function Chip({ tone, children, title }: { tone: "ok" | "warn" | "bad" | "mute"; children: React.ReactNode; title?: string }) {
+  const cls = {
+    ok: "border-emerald-400/30 text-emerald-200/90",
+    warn: "border-amber-400/30 text-amber-200/90",
+    bad: "border-red-400/35 text-red-200/90",
+    mute: "border-white/15 text-white/50",
+  }[tone];
+  return (
+    <li title={title} className={`rounded-md border px-2 py-0.5 text-[11px] ${cls}`}>
+      {children}
+    </li>
+  );
+}
+
+function TestResultBox({ test }: { test: TestResult }) {
+  const tone = test.blocked ? "bad" : test.ok ? "ok" : "warn";
+  const box = {
+    ok: "border-emerald-400/25 bg-emerald-500/[0.07] text-emerald-100/85",
+    warn: "border-amber-400/25 bg-amber-500/[0.07] text-amber-100/85",
+    bad: "border-red-400/30 bg-red-500/[0.08] text-red-100/90",
+  }[tone];
+  const outdated =
+    test.plugin && test.latestPlugin && test.plugin.localeCompare(test.latestPlugin, undefined, { numeric: true }) < 0;
+  const blockLines = (test.selfCheck?.blocks?.lines ?? []).filter((l) => l.kind === "possible-block");
+  return (
+    <div className={`mt-3 rounded-lg border px-3 py-2.5 text-[12px] leading-relaxed ${box}`}>
+      <p>{test.message}</p>
+
+      {test.plugin && (
+        <p className="mt-1 text-white/45">
+          Plugin {test.plugin}
+          {outdated && (
+            <span className="text-amber-200/90">
+              {" "}
+              · há a {test.latestPlugin}
+              {test.plugin === "1.0.0"
+                ? " — a 1.0.0 não se atualiza sozinha: carrega o .zip outra vez no WordPress (Plugins → Adicionar novo → Carregar → «Substituir»). Daí em diante é automático."
+                : " — atualiza-se sozinho nas próximas horas."}
+            </span>
           )}
-          {test.agents && test.agents.length > 0 && (
-            <ul className="mt-2 flex flex-wrap gap-1.5">
-              {test.agents.map((a) => {
-                const all = a.attempts > 0 && a.reached === a.attempts;
-                return (
-                  <li
-                    key={a.key}
-                    title={a.cacheStatus.map((c, i) => `pedido ${i + 1}: ${c ?? "sem cabeçalho de cache"}`).join(" · ")}
-                    className={`rounded-md border px-2 py-0.5 text-[11px] ${
-                      all
-                        ? "border-emerald-400/30 text-emerald-200/90"
-                        : a.reached > 0
-                          ? "border-amber-400/30 text-amber-200/90"
-                          : "border-red-400/30 text-red-200/85"
-                    }`}
-                  >
-                    {LABEL[a.key] ?? a.key} {a.reached}/{a.attempts} chegaram
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-          {test.thisMonth && (
-            <p className="mt-2 text-white/55">
-              Este mês:{" "}
-              {Object.entries(test.thisMonth)
-                .map(([k, n]) => `${LABEL[k] ?? k} ${n}`)
-                .join(" · ")}
-              {test.since && ` · a contar desde ${test.since.split("-").reverse().join("/")}`}
-            </p>
-          )}
-          {test.crawlersThisMonth && Object.keys(test.crawlersThisMonth).length > 0 && (
-            <p className="mt-1 text-white/40">
-              Robôs de indexação/treino este mês (não entram no relatório):{" "}
-              {Object.entries(test.crawlersThisMonth)
-                .sort((a, b) => b[1] - a[1])
-                .map(([k, n]) => `${k} ${n}`)
-                .join(" · ")}
-            </p>
-          )}
+          {test.cache.length > 0 && ` · cache: ${test.cache.join(", ")}`}
+          {Object.keys(test.cacheHeaders).length > 0 &&
+            ` · ${Object.entries(test.cacheHeaders)
+              .map(([k, v]) => `${k}: ${v}`)
+              .join(" · ")}`}
+        </p>
+      )}
+
+      {test.agents.length > 0 && (
+        <ul className="mt-2 flex flex-wrap gap-1.5">
+          {test.agents.map((a) => {
+            const refused = a.httpStatus.some((c) => BLOCK.has(c));
+            const all = a.attempts > 0 && a.reached === a.attempts;
+            return (
+              <Chip
+                key={a.key}
+                tone={refused ? "bad" : all ? "ok" : a.reached > 0 ? "warn" : "bad"}
+                title={a.cacheStatus.map((c, i) => `pedido ${i + 1}: HTTP ${a.httpStatus[i] ?? "?"} · ${c ?? "sem cabeçalho de cache"}`).join(" · ")}
+              >
+                {LABEL[a.key] ?? a.key} {refused ? `recusado (${a.httpStatus.join("/")})` : `${a.reached}/${a.attempts} chegaram`}
+              </Chip>
+            );
+          })}
+        </ul>
+      )}
+
+      {test.crawlers.length > 0 && (
+        <div className="mt-2">
+          <p className="text-white/45">Os robôs das IAs entram no site?</p>
+          <ul className="mt-1 flex flex-wrap gap-1.5">
+            {test.crawlers.map((c) => {
+              const refused = c.status !== null && BLOCK.has(c.status);
+              return (
+                <Chip
+                  key={c.name}
+                  tone={c.status === null ? "mute" : refused ? (c.kind === "search" ? "bad" : "warn") : "ok"}
+                  title={c.kind === "search" ? "Pesquisa: indexa o site para as respostas da IA" : "Treino: recolhe para treinar modelos (bloquear pode ser uma escolha)"}
+                >
+                  {c.name} {c.status ?? "sem resposta"}
+                  {c.kind === "training" ? " · treino" : ""}
+                </Chip>
+              );
+            })}
+          </ul>
         </div>
+      )}
+
+      {test.caches.length > 0 && (
+        <ul className="mt-2 space-y-0.5 text-white/60">
+          {test.caches.map((c) => (
+            <li key={c.name}>
+              {c.handled === "auto" && c.applied ? "✓" : "✗"} <strong className="font-semibold text-white/75">{c.name}</strong>
+              {": "}
+              {c.handled === "auto" && c.applied ? "o plugin tirou os 4 assistentes desta cache." : c.note}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {blockLines.length > 0 && (
+        <div className="mt-2 text-white/60">
+          <p>Regras no .htaccess que mencionam robôs de IA:</p>
+          <ul className="mt-1 space-y-0.5 font-mono text-[11px] text-red-200/80">
+            {blockLines.slice(0, 6).map((l) => (
+              <li key={l.line} className="truncate" title={l.text}>
+                linha {l.line}
+                {l.block ? ` (${l.block})` : ""}: {l.text}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {test.selfCheck?.at && (
+        <p className="mt-2 text-white/40">
+          O site verificou-se a si próprio a {new Date(test.selfCheck.at * 1000).toLocaleString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+          {test.selfCheck.verdict === "ok" && " — tudo a chegar ao WordPress."}
+          {test.selfCheck.verdict === "cache" && " — a cache ainda serve parte dos pedidos."}
+          {test.selfCheck.verdict === "blocked" && " — o site recusa pelo menos uma IA."}
+          {test.selfCheck.verdict === "error" && ` — não conseguiu pedir a si próprio${test.selfCheck.error ? ` (${test.selfCheck.error})` : ""}.`}
+        </p>
+      )}
+
+      {test.thisMonth && (
+        <p className="mt-2 text-white/55">
+          Este mês:{" "}
+          {Object.entries(test.thisMonth)
+            .map(([k, n]) => `${LABEL[k] ?? k} ${n}`)
+            .join(" · ")}
+          {test.since && ` · a contar desde ${ddmmyyyy(test.since)}`}
+        </p>
+      )}
+      {test.crawlersThisMonth && Object.keys(test.crawlersThisMonth).length > 0 && (
+        <p className="mt-1 text-white/40">
+          Robôs de indexação/treino este mês (não entram no relatório):{" "}
+          {Object.entries(test.crawlersThisMonth)
+            .sort((a, b) => b[1] - a[1])
+            .map(([k, n]) => `${k} ${n}`)
+            .join(" · ")}
+        </p>
       )}
     </div>
   );
