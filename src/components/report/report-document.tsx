@@ -1440,6 +1440,33 @@ export function ReportDocument({
                     );
                   })}
               </div>
+              {aiFOk.partial && (
+                <p className="wa-ai-note">
+                  {t(
+                    "Este número é um mínimo: a cache do alojamento ainda entrega parte das páginas antes de o pedido poder ser contado. O uso real é maior.",
+                    "This number is a minimum: the host's cache still serves some pages before the request can be counted. Real usage is higher.",
+                  )}
+                </p>
+              )}
+              {(aiFOk.searchCrawls?.value ?? 0) > 0 && (
+                <p className="wa-aif-crawl">
+                  <strong>{formatRaw(aiFOk.searchCrawls!.value, "count", lang)}</strong>{" "}
+                  {t(
+                    "páginas lidas pelos robôs de pesquisa das IAs (ChatGPT Search, Perplexity, Claude) — é assim que o site entra nas respostas delas.",
+                    "pages read by the AI search crawlers (ChatGPT Search, Perplexity, Claude) — this is how the site gets into their answers.",
+                  )}
+                  {showDeltas &&
+                    typeof aiFOk.searchCrawls!.previous === "number" &&
+                    aiFOk.searchCrawls!.previous > 0 && (() => {
+                      const g = ((aiFOk.searchCrawls!.value - aiFOk.searchCrawls!.previous!) / aiFOk.searchCrawls!.previous!) * 100;
+                      return Math.abs(g) >= 1 ? (
+                        <span className={`wa-delta ${g > 0 ? "up" : "down"}`} style={{ marginLeft: ".4rem" }}>
+                          {g > 0 ? "▲" : "▼"} {Math.abs(g).toFixed(0)}%
+                        </span>
+                      ) : null;
+                    })()}
+                </p>
+              )}
               {aiFOk.topPages.length > 0 && (
                 <div className="wa-aif-pages">
                   <div className="wa-aif-pages-h">
@@ -2357,6 +2384,8 @@ const CSS = GEO_CSS + PRINT_CSS + `
 .wa-aif{margin-top:1.4rem;padding-top:1.1rem;border-top:1px dashed rgba(120,61,245,.22);}
 .wa-aif-h{margin:0 0 .35rem;font-size:.86rem;font-weight:700;color:var(--ink);letter-spacing:-.01em;}
 .wa-aif-pages{margin-top:.85rem;}
+.wa-aif-crawl{margin:.75rem 0 0;font-size:.78rem;color:#45435c;line-height:1.5;}
+.wa-aif-crawl strong{color:var(--ink);font-weight:800;}
 .wa-aif-pages-h{font-size:.7rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#6b34c9;margin-bottom:.35rem;}
 .wa-aif-pages ol{margin:0;padding:0;list-style:none;display:grid;gap:.25rem;}
 .wa-aif-pages li{display:flex;justify-content:space-between;gap:.75rem;font-size:.76rem;color:#45435c;border-bottom:1px solid rgba(23,22,45,.06);padding:.2rem 0;}

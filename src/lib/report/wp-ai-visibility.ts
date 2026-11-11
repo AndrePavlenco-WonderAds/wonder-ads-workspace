@@ -148,6 +148,34 @@ function sumRange(
 
 const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
 
+/** Os robôs de PESQUISA das IAs — indexam o site para as respostas. */
+const SEARCH_CRAWLERS = new Set(["OAI-SearchBot", "Claude-SearchBot", "PerplexityBot"]);
+/** Caches do alojamento: ficam antes do WordPress e só o suporte as ajusta. */
+const HOST_CACHES = new Set(["WP Engine", "Kinsta", "SiteGround Optimizer"]);
+
+/** Soma, no intervalo, os pedidos dos robôs indicados. */
+function sumAgents(days: PluginPayload["days"], range: DateRange, agents: Set<string>): number {
+  if (!days || Array.isArray(days)) return 0;
+  let n = 0;
+  for (const [day, counts] of Object.entries(days)) {
+    if (day < range.startDate || day > range.endDate || !counts) continue;
+    for (const [agent, v] of Object.entries(counts)) {
+      if (agents.has(agent) && typeof v === "number" && Number.isFinite(v)) n += v;
+    }
+  }
+  return n;
+}
+
+/** O total é um mínimo? Sim se a verificação diária do plugin viu a cache a
+ *  servir pedidos — ou, sem verificação (plugin 1.0.0), se há uma cache de
+ *  alojamento à frente. */
+function isPartial(payload: PluginPayload): boolean {
+  const verdict = payload.check?.verdict;
+  if (verdict === "ok") return false;
+  if (verdict === "cache") return true;
+  return (payload.cache ?? []).some((c) => HOST_CACHES.has(c));
+}
+
 /** «2026-11-10» → «10/11/2026», sem passar por Date (sem fusos). */
 export function isoDayToPt(day: string): string {
   const [y, m, d] = day.split("-");
@@ -229,6 +257,8 @@ export async function fetchAiFetchBlock(
   const previousTotal = prevKnown
     ? AI_FETCH_ASSISTANTS.reduce((t, k) => t + prev[k], 0)
     : null;
+  const searchNow = sumAgents(payload.days, current, SEARCH_CRAWLERS);
+  const searchPrev = prevKnown ? sumAgents(payload.days, previous, SEARCH_CRAWLERS) : null;
   return {
     source: "wp-plugin",
     status: "ok",
@@ -238,6 +268,8 @@ export async function fetchAiFetchBlock(
     total,
     previousTotal,
     topPages,
+    searchCrawls: { value: searchNow, previous: searchPrev },
+    partial: isPartial(payload),
   };
 }
 

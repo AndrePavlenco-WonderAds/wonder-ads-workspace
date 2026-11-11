@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, PauseCircle, Users } from "lucide-react";
+import { ArrowRight, Bot, PauseCircle, Users } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { AccessDenied } from "@/components/access-denied";
 import { getCurrentEmployee } from "@/lib/auth/server";
@@ -195,8 +195,20 @@ export default async function SeoPage() {
       <div className="mx-auto mt-12 w-full max-w-[1880px] lg:mt-16">
         <section aria-label="Clients by Head Consultant">
           {/* A direção abre todos os consultores numa página só (v78.44). */}
-          {!notionError && employee.isAdmin && (
-            <div className="mb-4 flex justify-end">
+          {!notionError && (employee.isAdmin || !readOnly) && (
+            <div className="mb-4 flex flex-wrap justify-end gap-2">
+              {/* Painel «IA no site» (v78.92): as IAs leem cada site? */}
+              <Link
+                href="/seo/ia-no-site"
+                className="group inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.03] py-1 pl-1 pr-3 text-[12.5px] text-white/65 transition hover:border-white/25 hover:text-white"
+              >
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/[0.08]">
+                  <Bot className="h-3.5 w-3.5" />
+                </span>
+                IA no site
+                <ArrowRight className="h-3.5 w-3.5 text-white/40 transition group-hover:translate-x-0.5 group-hover:text-white" />
+              </Link>
+              {employee.isAdmin && (
               <Link
                 href="/seo/roadmaps"
                 className="group inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.03] py-1 pl-1 pr-3 text-[12.5px] text-white/65 transition hover:border-white/25 hover:text-white"
@@ -207,6 +219,7 @@ export default async function SeoPage() {
                 Todos os consultores
                 <ArrowRight className="h-3.5 w-3.5 text-white/40 transition group-hover:translate-x-0.5 group-hover:text-white" />
               </Link>
+              )}
             </div>
           )}
           {notionError ? (

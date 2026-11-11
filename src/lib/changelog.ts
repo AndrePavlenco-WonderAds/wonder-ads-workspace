@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.92",
+    date: "2026-11-11",
+    title: "Painel «IA no site»: as IAs conseguem ler o site de cada cliente?",
+    highlights: [
+      "**🤖 SEO DPT → «IA no site»** (/seo/ia-no-site): todos os clientes SEO ativos numa tabela — plataforma, se o ChatGPT, o Claude, o Perplexity, o Mistral e os robôs de pesquisa deles conseguem ler o site, e o estado do plugin nos WordPress. Um botão verifica os 22 em ≈1 min.",
+      "**🚫 Encontra sites que recusam IAs**: na primeira verificação, a Clínica Mimus recusa o ChatGPT e os robôs de pesquisa do ChatGPT e do Perplexity, e a Sentir Saúde recusa o ChatGPT e o robô de pesquisa do Claude — confirmado pelo próprio ChatGPT («403 Forbidden»).",
+      "**📊 Relatório mensal**: o bloco «As IAs a ler o site» passa a mostrar quantas páginas os robôs de pesquisa das IAs leram (é assim que o site entra nas respostas) e avisa quando o total é um mínimo porque a cache do alojamento ainda esconde pedidos.",
+    ],
+  },
+  {
     version: "78.91",
     date: "2026-11-11",
     title: "Plugin «IA no site» 1.1: tira as IAs da cache sozinho e atualiza-se sozinho",

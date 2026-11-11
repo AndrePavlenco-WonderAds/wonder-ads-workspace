@@ -863,6 +863,12 @@ export type AiFetchBlock = {
   previousTotal: number | null;
   /** As páginas que as IAs mais abriram no mês (só os assistentes acima). */
   topPages: { path: string; count: number }[];
+  /** Robôs de PESQUISA das IAs (OAI-SearchBot, Claude-SearchBot,
+   *  PerplexityBot) no mês — é assim que o site entra nas respostas (v78.92). */
+  searchCrawls?: { value: number; previous: number | null } | null;
+  /** A cache do alojamento ainda serve parte dos pedidos: o total é um
+   *  mínimo (v78.92). */
+  partial?: boolean;
 };
 
 export const REPORT_SCHEMA_VERSION = 3;

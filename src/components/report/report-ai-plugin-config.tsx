@@ -5,6 +5,7 @@
 // report-config (KV) e NUNCA volta ao browser — aqui só se sabe se existe.
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Check, Download, Loader2, PlugZap, Trash2 } from "lucide-react";
 import type { AiPluginTest } from "@/lib/report/wp-ai-visibility";
@@ -115,7 +116,10 @@ export function ReportAiPluginConfig({
         <li>Definições → WonderAds IA → copiar a chave e colá-la aqui → Guardar (testa logo).</li>
         <li className="list-none text-white/40">
           O plugin tira as IAs da cache dos plugins de cache conhecidos, verifica-se todos os dias e
-          atualiza-se sozinho. O que precisar de mão humana aparece no teste.
+          atualiza-se sozinho. O que precisar de mão humana aparece no teste.{" "}
+          <Link href="/seo/ia-no-site" className="text-[#c9b2ff] underline-offset-2 hover:underline">
+            Ver todos os clientes →
+          </Link>
         </li>
       </ol>
 
