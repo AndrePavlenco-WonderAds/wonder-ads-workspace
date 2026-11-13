@@ -37,7 +37,7 @@ Sugestão de regra de aprovação: 80% para desbloquear o módulo seguinte, tent
 | # | Módulo | Aulas | Perguntas | Vídeos a gravar |
 |---|--------|-------|-----------|-----------------|
 | 1 | Boas-vindas, Mindset e Ferramentas Internas | 6 | 19 | 0 |
-| 2 | Rotinas de Reporting e Comunicação com o Cliente | 8 | 12 | 1 |
+| 2 | Rotinas de Reporting e Comunicação com o Cliente | 9 | 21 | 1 |
 | 3 | Gestão de Situações com o Cliente | 4 | 24 | 0 |
 | 4 | Auditoria Técnica e Keyword Research | 6 | 35 | 0 |
 | 5 | Roadmap e Onboarding de Cliente Novo | 5 | 37 | 0 |
@@ -47,7 +47,7 @@ Sugestão de regra de aprovação: 80% para desbloquear o módulo seguinte, tent
 | 9 | Local SEO — Google Business Profile | 4 | 15 | 0 |
 | 10 | Off-Page SEO — Backlinks | 5 | 35 | 0 |
 | 11 | Crescimento de Conta: Cross-sell, Up-sell e Renovação | 4 | 21 | 0 |
-| | Total | 54 | 280 | 1 |
+| | Total | 55 | 289 | 1 |
 
 ---
 
@@ -168,8 +168,9 @@ Objetivo: dominar o ciclo diário → semanal → mensal de comunicação, o NPS
 | 2.6 | Roleplay: Como enviar Surprise News ao cliente | https://youtu.be/v4BX2Z_8Fno | COM | — | OK |
 | 2.7 | Como enviar NPS Form ao cliente (SMS, 1 semana de espera, 1 follow-up e 1 semana depois call) | https://youtu.be/5WWjo9BsXbY | COM | — | OK |
 | 2.8 | Roleplay: Follow-up call de NPS Form a cliente que ainda não respondeu | https://youtu.be/sJsGrgB-GcA | COM | — | OK |
+| 2.9 | Como responder a um NPS (mensagem de protocolo obrigatório) | https://youtu.be/VU4J1c9M6aw | COM | Copy box com o template da mensagem (texto do André, 13/11/2026). Formador: André Pavlenco | OK |
 
-### Quiz Módulo 2 (12 perguntas)
+### Quiz Módulo 2 (21 perguntas)
 
 Protocolos gerais (aulas 2.1–2.3)
 
@@ -229,6 +230,54 @@ Q12 [single] Quanto tempo leva o NPS form da WonderAds?
 - [x] 5-10 minutos
 - [ ] 15 minutos
 - [ ] 15-20 minutos
+
+Aula 2.9 — Responder a um NPS (mensagem de protocolo obrigatório)
+
+<!-- Q13–Q21 (13/11/2026): as 9 que o André aprovou (fundo verde) no Word «Perguntas propostas - Aula resposta ao NPS (SEO-GEO)», texto sem alterações. -->
+
+Q13 [single] Quando é que devo enviar a mensagem de apoio ao NPS ao cliente?
+- [x] Logo que recebo o NPS
+- [ ] Na próxima reunião, para responder já com o relatório na mão
+- [ ] Depois de o André ler o NPS e me dar luz verde
+- [ ] Quando o cliente voltar a escrever no grupo, para não parecer insistente
+
+Q14 [vf] Só tenho de enviar a mensagem de apoio quando o cliente dá uma nota baixa no NPS. → F
+
+Q15 [vf] A mensagem de apoio ao NPS é um protocolo obrigatório: envio-a sempre, sem falta. → V
+
+Q16 [single] Porque é que a mensagem de apoio ao NPS tem de ser enviada dentro do template?
+- [x] Porque é crua: mostra que lemos o feedback e queremos ajudar
+- [ ] Porque assim sai igual para todos os clientes e ninguém se engana
+- [ ] Porque o template já responde a cada crítica que vem no formulário
+- [ ] Porque é a forma mais rápida de convencer o cliente a subir a nota
+
+Q17 [single] Com a mensagem de apoio ao NPS, o objetivo do consultor é mostrar ao cliente que:
+- [x] Estamos aqui para ajudar
+- [ ] O projeto está a correr como previsto no roadmap
+- [ ] A nota que deu não reflete o trabalho que foi feito
+- [ ] Vamos analisar o feedback internamente e depois damos notícias
+
+Q18 [multi] Que partes tem a mensagem de apoio ao NPS? (Seleciona todas as opções corretas)
+- [x] O nome do cliente
+- [x] «Diz-me o que precisas por favor, eu gostaria de ajudar»
+- [x] A pergunta «As tuas dúvidas são com…?», personalizada
+- [x] A proposta de uma reunião só sobre esse tema
+- [ ] Um resumo dos resultados do mês
+- [ ] Um pedido para o cliente rever a nota
+
+Q19 [single] Cenário: no NPS form o cliente escreveu «estamos a ver pouco progresso, gostaríamos que fosse mais». No fim da mensagem pergunto:
+- [x] «As tuas dúvidas são com perceber o retorno que estás a ter com o projeto?»
+- [ ] «As tuas dúvidas são com a quantidade de artigos que publicámos este mês?»
+- [ ] «Queres que te volte a enviar o último relatório mensal com os números?»
+- [ ] «Achas que podemos rever a nota quando os resultados começarem a aparecer?»
+
+Q20 [single] Chega um NPS. Qual é a ordem certa?
+- [x] Ler o NPS → personalizar o template com a dúvida atual do cliente → enviar
+- [ ] Ler o NPS → esperar pela próxima reunião → falar da nota com o cliente
+- [ ] Mostrar o NPS ao André → esperar pela resposta dele → enviar o template
+- [ ] Enviar o template igual para todos → ler o NPS → personalizar na reunião seguinte
+
+Q21 [vf] Na reunião proposta na mensagem, aproveito para falar de todos os temas do projeto, já que tenho o cliente comigo. → F
 
 Sem perguntas: aulas 2.1, 2.2 (cobertas pela Q1), 2.5 (a gravar).
 

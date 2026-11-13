@@ -86,6 +86,15 @@ import {
   docUpdateTarget,
 } from "@/lib/documentacao/updates";
 import { listDocUpdates } from "@/lib/documentacao/updates-store";
+import { listTrainingUpdates } from "@/lib/training/updates-store";
+import {
+  TRAINING_UPDATE_WINDOW_MS,
+  trainingUpdateDone,
+  trainingUpdateReaches,
+} from "@/lib/training/updates";
+import { getEnrollments, resolveTrackSlugs } from "@/lib/training/enrollments-store";
+import { WATCHED_THRESHOLD, getTrainingProgress } from "@/lib/training/progress-store";
+import { DEFAULT_TRAINING_TRACKS } from "@/lib/training/catalog";
 import { eurCents, toCents } from "@/lib/seo-folga";
 import { getNotificationRules } from "@/lib/notifications/rules-store";
 import {
@@ -1533,6 +1542,72 @@ async function docUpdateNotifications(
   }
 }
 
+/** Novidades na Formação (v78.93): uma aula nova (CMS ou versão nova da
+ *  app). Vai a quem tem a especialização e já passou pelo capítulo — ver
+ *  training/updates.ts. Sai sozinho quando as aulas ficam vistas. As leituras
+ *  de inscrições e progresso só se fazem quando há alguma novidade na
+ *  janela, para não pesar no sino de toda a gente. */
+async function trainingUpdateNotifications(
+  viewer: Viewer,
+  state: NotificationState,
+  now: Date,
+): Promise<UserNotification[]> {
+  const cred = findEmployeeByUsername(viewer.username);
+  if (!cred || cred.viewerOf) return [];
+  try {
+    const recent = (await listTrainingUpdates()).filter(
+      (u) => now.getTime() - u.at <= TRAINING_UPDATE_WINDOW_MS,
+    );
+    if (recent.length === 0) return [];
+    const trackSlugs = resolveTrackSlugs(viewer.username, cred.dept, await getEnrollments());
+    const mine = recent.filter((u) => trackSlugs.includes(u.track as (typeof trackSlugs)[number]));
+    if (mine.length === 0) return [];
+    const progress = await getTrainingProgress(viewer.username);
+    const watched = (id: string) => (progress.lessons[id]?.percent ?? 0) >= WATCHED_THRESHOLD;
+
+    return mine
+      .filter((u) => trainingUpdateReaches(u, { trackSlugs, viewerOf: cred.viewerOf ?? null }, watched))
+      .map((u) => {
+        const id = `training-update:${u.id}`;
+        const entry = state[id];
+        const done = trainingUpdateDone(u, watched);
+        const resolved = done || Boolean(entry && entry.resolvedAt >= u.at);
+        const trackName =
+          DEFAULT_TRAINING_TRACKS.find((t) => t.slug === u.track)?.name ?? "Formação";
+        const one = u.lessons.length === 1;
+        const lines = [
+          ...u.lessons.map(
+            (l) =>
+              `• Aula ${l.ref ? `${l.ref} · ` : ""}«${l.title}»${l.presenter ? ` — com ${l.presenter}` : ""}`,
+          ),
+          ...u.extra.map((e) => `• ${e}`),
+        ];
+        return {
+          id,
+          ruleId: "training-update",
+          title: one
+            ? `🎓 Aula nova na Formação — ${u.lessons[0].title}`
+            : `🎓 ${u.lessons.length} aulas novas na Formação`,
+          body: [
+            `A direção acrescentou ${one ? "uma aula" : `${u.lessons.length} aulas`} à ${trackName}${u.version ? ` (v${u.version})` : ""}. ` +
+              `É o teu próximo passo na Formação e não tranca nada do que já fizeste. Este aviso sai sozinho quando ${one ? "a aula ficar vista" : "as aulas ficarem vistas"}.`,
+            ...lines,
+          ].join("\n"),
+          periodLabel: `Formação · ${docUpdateWhen(u.at)}`,
+          dueAt: u.at,
+          client: null,
+          actionLabel: one ? "Ver a aula" : "Ver as aulas",
+          actionHref: `/formacao/${u.track}/aula/${u.lessons[0].id}`,
+          resolved,
+          resolvedAt: resolved ? (entry?.resolvedAt ?? u.at) : null,
+        };
+      });
+  } catch (err) {
+    console.error("Notificações: novidades da Formação falharam:", err instanceof Error ? err.message : "erro");
+    return [];
+  }
+}
+
 /** Um cliente clicou em «Confirmar a renovação» numa proposta pública. Vai
  *  ao sino do SuperAdmin (o André) à cabeça de tudo: é dinheiro à espera de
  *  resposta, não um lembrete de calendário. */
@@ -1614,7 +1689,7 @@ export async function getUserNotifications(
       ? ((await seoBooksByConsultant(needsStartDates)).get(viewer.name) ?? [])
       : [];
 
-  const [ending, situationPoints, nps, absences, reviews, proposals, probation, ineficacias, folga, suggestions, docUpdates] =
+  const [ending, situationPoints, nps, absences, reviews, proposals, probation, ineficacias, folga, suggestions, docUpdates, trainingUpdates] =
     await Promise.all([
       roadmapEndingNotifications(viewer, book, state, now),
       situationPointNotifications(viewer, state, now),
@@ -1627,6 +1702,7 @@ export async function getUserNotifications(
       folgaNotifications(viewer, state, now),
       protocolSuggestionNotifications(viewer, state, now),
       docUpdateNotifications(viewer, state, now),
+      trainingUpdateNotifications(viewer, state, now),
     ]);
 
   // Ausências à cabeça: um pedido por decidir (ou uma resposta por ler) é
@@ -1639,6 +1715,7 @@ export async function getUserNotifications(
       ...folga,
       ...suggestions,
       ...docUpdates,
+      ...trainingUpdates,
       ...probation,
       ...ineficacias,
       ...absences,
@@ -1655,6 +1732,7 @@ export async function getUserNotifications(
     ...folga,
     ...suggestions,
     ...docUpdates,
+    ...trainingUpdates,
     ...probation,
     ...ineficacias,
     ...absences,

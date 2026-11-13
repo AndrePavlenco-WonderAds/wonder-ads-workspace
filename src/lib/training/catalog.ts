@@ -131,6 +131,14 @@ export type TrainingLesson = {
   attachments?: TrainingAttachment[];
   /** Prompts e outros textos para copiar. Ausente = nenhum. */
   copyBoxes?: TrainingCopyBox[];
+  /** Quando a aula passou a estar disponível (vídeo + publicada), em ms —
+   *  v78.93. Só existe nas aulas acrescentadas DEPOIS de a equipa já ir a
+   *  meio: quem já tinha concluído o capítulo antes disto não volta a ficar
+   *  com ele aberto (nem com os seguintes trancados) — a aula nova passa a
+   *  ser o próximo passo, sem bloquear nada (ver `moduleState` em
+   *  progress.ts). O CMS carimba-o sozinho ao gravar (content-store.ts);
+   *  numa aula nova em código, põe-se no seed. */
+  availableSince?: number;
   isPublished: boolean;
 };
 
@@ -191,6 +199,8 @@ type LessonSeed = {
   keyPoints?: string[];
   attachments?: TrainingAttachment[];
   copyBoxes?: TrainingCopyBox[];
+  /** ISO com fuso — ver `TrainingLesson.availableSince`. */
+  availableSince?: string;
 };
 
 function lessons(seeds: LessonSeed[]): TrainingLesson[] {
@@ -207,6 +217,7 @@ function lessons(seeds: LessonSeed[]): TrainingLesson[] {
     keyPoints: s.keyPoints ?? [],
     ...(s.attachments?.length ? { attachments: s.attachments } : {}),
     ...(s.copyBoxes?.length ? { copyBoxes: s.copyBoxes } : {}),
+    ...(s.availableSince ? { availableSince: Date.parse(s.availableSince) } : {}),
     isPublished: true,
   }));
 }
@@ -612,6 +623,26 @@ const SEO_TRACK: TrainingTrack = {
           type: "scenario",
           presenter: "André",
           videoUrl: "https://youtu.be/sJsGrgB-GcA",
+        },
+        {
+          // v78.93 (13/11/2026): aula 2.9, gravada pelo André. Perguntas
+          // Q13–Q21 do Módulo 2 = as 9 que ele aprovou no Word revisto. O
+          // template da copy box é o texto dele, tal e qual.
+          id: "seo-com-nps-resposta",
+          title: "Como responder a um NPS (mensagem de protocolo obrigatório)",
+          description:
+            "Como funciona o envio de uma mensagem logo a seguir a recebermos um NPS.",
+          presenter: "André Pavlenco",
+          videoUrl: "https://youtu.be/VU4J1c9M6aw",
+          copyBoxes: [
+            {
+              label: "Mensagem de protocolo obrigatório (template)",
+              text:
+                "Bom dia (cliente) 😊 tudo bem?\n" +
+                "Já li o teu feedback e quero tentar ajudar. Para além dos temas que falámos e já temos em andamento para crescermos, diz-me o que precisas por favor. As tuas dúvidas são com (personalizar ao cliente, ex. \"Faturação de leads de Chatgpt, Gemini etc.\") ?",
+            },
+          ],
+          availableSince: "2026-11-13T15:00:00+00:00",
         },
       ]),
       quiz: quizFor("seo-02-reporting", "Quiz — Reporting e comunicação"),
@@ -1964,6 +1995,9 @@ function normalizeLesson(raw: unknown, i: number): TrainingLesson | null {
       .filter((k) => k.length > 0),
     ...(attachments.length ? { attachments } : {}),
     ...(copyBoxes.length ? { copyBoxes } : {}),
+    ...(typeof o.availableSince === "number" && Number.isFinite(o.availableSince) && o.availableSince > 0
+      ? { availableSince: Math.round(o.availableSince) }
+      : {}),
     isPublished: bool(o.isPublished, true),
   };
 }

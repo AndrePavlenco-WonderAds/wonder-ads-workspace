@@ -14,6 +14,7 @@
 // Os números são tabulares (`.tabular`) para que 8% e 100% ocupem a mesma
 // largura e as leituras não dancem ao atualizar.
 
+import { isNewLesson } from "@/lib/training/updates";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
@@ -500,6 +501,11 @@ function ModuleStation({
                           {l.lesson.title}
                         </span>
                         <LessonTypeBadge type={l.lesson.type} />
+                        {!l.watched && !l.comingSoon && isNewLesson(l.lesson, Date.now()) && (
+                          <span className="rounded-full border border-emerald-400/30 bg-emerald-500/[0.1] px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-[0.1em] text-emerald-200">
+                            Nova
+                          </span>
+                        )}
                         {l.comingSoon && (
                           <span className="rounded-full border border-amber-400/25 bg-amber-500/[0.07] px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-[0.1em] text-amber-200/70">
                             Brevemente

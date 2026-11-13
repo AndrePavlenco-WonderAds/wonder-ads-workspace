@@ -961,13 +961,16 @@ const RESOLVE_LABELS: Record<string, string> = {
   "seo-review-call": "Confirmo que telefonei ao cliente",
   "protocol-suggestion": "Lida",
   "doc-update": "Lida",
+  // Sai sozinho quando a aula fica vista; à mão é para quem já a viu noutro
+  // sítio (v78.93).
+  "training-update": "Já vi a aula",
 };
 
 /** Avisos que ficam lidos ao abrir o botão — ir ver a página É lê-los. */
 const RESOLVE_ON_OPEN = new Set(["doc-update"]);
 
 /** Avisos que vão sempre à cabeça do painel (ver `groupOf`). */
-const PINNED_RULES = new Set(["doc-update"]);
+const PINNED_RULES = new Set(["doc-update", "training-update"]);
 
 function NotificationRow({
   n,

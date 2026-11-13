@@ -62,6 +62,7 @@ const LESSON_IDS = {
   "2.6": "seo-com-news-rp",
   "2.7": "seo-com-nps",
   "2.8": "seo-com-nps-rp",
+  "2.9": "seo-com-nps-resposta",
   "3.1": "seo-com-aprov",
   "3.2": "seo-com-admin",
   "3.3": "seo-cd-tecnico",
@@ -221,7 +222,7 @@ for (const raw of lines) {
 closeQuestion();
 
 // ---- validação ----
-const EXPECTED = { 1: 19, 2: 12, 3: 24, 4: 35, 5: 37, 6: 31, 7: 20, 8: 31, 9: 15, 10: 35, 11: 21 };
+const EXPECTED = { 1: 19, 2: 21, 3: 24, 4: 35, 5: 37, 6: 31, 7: 20, 8: 31, 9: 15, 10: 35, 11: 21 };
 let total = 0;
 let review = 0;
 for (const [num, { questions }] of modules) {
@@ -249,7 +250,7 @@ for (const [num, { questions }] of modules) {
     if (q.note) review += 1;
   }
 }
-if (total !== 280) throw new Error(`Total ${total}, esperava 280`);
+if (total !== 289) throw new Error(`Total ${total}, esperava 289`);
 
 // ---- emissão ----
 const esc = (s) => JSON.stringify(s);

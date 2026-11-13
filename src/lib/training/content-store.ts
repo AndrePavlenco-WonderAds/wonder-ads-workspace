@@ -12,6 +12,8 @@ import {
   normalizeCatalog,
   type TrainingTrack,
 } from "@/lib/training/catalog";
+import { newlyAvailable, stampAvailability } from "@/lib/training/updates";
+import { recordTrainingUpdates } from "@/lib/training/updates-store";
 
 const CATALOG_KEY = "training-course";
 
@@ -54,8 +56,30 @@ export async function saveTrainingCatalog(
       "Estrutura do catálogo inválida (falta a track comum, ou há ids de aula repetidos).",
     );
   }
-  await kv.set(CATALOG_KEY, normalized);
-  return normalized;
+
+  // v78.93 — aulas que passam a estar disponíveis nesta gravação: carimbo
+  // `availableSince` (quem já tinha o capítulo feito não fica trancado) e
+  // aviso no sino de quem as tem de ver. O «antes» lê-se DIRETAMENTE do KV:
+  // se a leitura falhar, não se compara com os defaults do código (dava
+  // todas as aulas feitas no CMS como novas) — grava-se tal e qual.
+  const now = Date.now();
+  let before: TrainingTrack[] | null = null;
+  try {
+    const stored = await kv.get<unknown>(CATALOG_KEY);
+    before = stored == null ? DEFAULT_TRAINING_TRACKS : normalizeCatalog(stored);
+  } catch (err) {
+    console.error("KV training-course read (antes de gravar) falhou:", err);
+  }
+  const toSave = before ? stampAvailability(before, normalized, now) : normalized;
+  await kv.set(CATALOG_KEY, toSave);
+  if (before) {
+    try {
+      await recordTrainingUpdates(newlyAvailable(before, toSave, now));
+    } catch (err) {
+      console.error("Formação: registo de aulas novas falhou:", err);
+    }
+  }
+  return toSave;
 }
 
 /** Repõe o catálogo original (apaga o override). */

@@ -1,4 +1,4 @@
-// Banco de perguntas da Especialização SEO/GEO — 11 módulos, 280 perguntas.
+// Banco de perguntas da Especialização SEO/GEO — 11 módulos, 289 perguntas.
 //
 // FICHEIRO GERADO por scripts/formacao/build-seo-geo-questions.mjs a partir
 // de docs/formacao/especializacao-seo-geo.md. Não editar à mão: corrige o
@@ -229,7 +229,7 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       a: true,
     },
   ]),
-  // Módulo 2 · 12 perguntas
+  // Módulo 2 · 21 perguntas
   "seo-02-reporting": bank("seo-02-reporting", [
     {
       l: "seo-cd-daily",
@@ -337,6 +337,92 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
         ["15 minutos", false],
         ["15-20 minutos", false],
       ],
+    },
+    {
+      l: "seo-com-nps-resposta",
+      t: "mc",
+      p: "Quando é que devo enviar a mensagem de apoio ao NPS ao cliente?",
+      o: [
+        ["Logo que recebo o NPS", true],
+        ["Na próxima reunião, para responder já com o relatório na mão", false],
+        ["Depois de o André ler o NPS e me dar luz verde", false],
+        ["Quando o cliente voltar a escrever no grupo, para não parecer insistente", false],
+      ],
+    },
+    {
+      l: "seo-com-nps-resposta",
+      t: "vf",
+      p: "Só tenho de enviar a mensagem de apoio quando o cliente dá uma nota baixa no NPS.",
+      a: false,
+    },
+    {
+      l: "seo-com-nps-resposta",
+      t: "vf",
+      p: "A mensagem de apoio ao NPS é um protocolo obrigatório: envio-a sempre, sem falta.",
+      a: true,
+    },
+    {
+      l: "seo-com-nps-resposta",
+      t: "mc",
+      p: "Porque é que a mensagem de apoio ao NPS tem de ser enviada dentro do template?",
+      o: [
+        ["Porque é crua: mostra que lemos o feedback e queremos ajudar", true],
+        ["Porque assim sai igual para todos os clientes e ninguém se engana", false],
+        ["Porque o template já responde a cada crítica que vem no formulário", false],
+        ["Porque é a forma mais rápida de convencer o cliente a subir a nota", false],
+      ],
+    },
+    {
+      l: "seo-com-nps-resposta",
+      t: "mc",
+      p: "Com a mensagem de apoio ao NPS, o objetivo do consultor é mostrar ao cliente que:",
+      o: [
+        ["Estamos aqui para ajudar", true],
+        ["O projeto está a correr como previsto no roadmap", false],
+        ["A nota que deu não reflete o trabalho que foi feito", false],
+        ["Vamos analisar o feedback internamente e depois damos notícias", false],
+      ],
+    },
+    {
+      l: "seo-com-nps-resposta",
+      t: "ms",
+      p: "Que partes tem a mensagem de apoio ao NPS? (Seleciona todas as opções corretas)",
+      o: [
+        ["O nome do cliente", true],
+        ["«Diz-me o que precisas por favor, eu gostaria de ajudar»", true],
+        ["A pergunta «As tuas dúvidas são com…?», personalizada", true],
+        ["A proposta de uma reunião só sobre esse tema", true],
+        ["Um resumo dos resultados do mês", false],
+        ["Um pedido para o cliente rever a nota", false],
+      ],
+    },
+    {
+      l: "seo-com-nps-resposta",
+      t: "mc",
+      p: "Cenário: no NPS form o cliente escreveu «estamos a ver pouco progresso, gostaríamos que fosse mais». No fim da mensagem pergunto:",
+      o: [
+        ["«As tuas dúvidas são com perceber o retorno que estás a ter com o projeto?»", true],
+        ["«As tuas dúvidas são com a quantidade de artigos que publicámos este mês?»", false],
+        ["«Queres que te volte a enviar o último relatório mensal com os números?»", false],
+        ["«Achas que podemos rever a nota quando os resultados começarem a aparecer?»", false],
+      ],
+    },
+    {
+      l: "seo-com-nps-resposta",
+      t: "mc",
+      p: "Chega um NPS. Qual é a ordem certa?",
+      o: [
+        ["Ler o NPS → personalizar o template com a dúvida atual do cliente → enviar", true],
+        ["Ler o NPS → esperar pela próxima reunião → falar da nota com o cliente", false],
+        ["Mostrar o NPS ao André → esperar pela resposta dele → enviar o template", false],
+        ["Enviar o template igual para todos → ler o NPS → personalizar na reunião seguinte", false],
+      ],
+    },
+    {
+      l: "seo-com-nps-resposta",
+      t: "vf",
+      p: "Na reunião proposta na mensagem, aproveito para falar de todos os temas do projeto, já que tenho o cliente comigo.",
+      a: false,
     },
   ]),
   // Módulo 3 · 24 perguntas

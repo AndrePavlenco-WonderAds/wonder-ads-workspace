@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.93",
+    date: "2026-11-13",
+    title: "Formação SEO/GEO: aula 2.9 «Como responder a um NPS» + avisos de aulas novas",
+    highlights: [
+      "**🎓 Aula nova 2.9 — Como responder a um NPS (mensagem de protocolo obrigatório)**, com o André Pavlenco. Por baixo do vídeo fica o template da mensagem, pronto a copiar.",
+      "**✅ 9 perguntas novas no quiz do capítulo 2** — as que o André aprovou, com o texto dele.",
+      "**🔓 Uma aula nova não tranca ninguém**: quem já tinha o capítulo concluído continua com tudo aberto. A aula nova passa a ser o próximo passo («Continuar») e mostra o chip «Nova» durante 30 dias.",
+      "**🔔 Aviso no sino** a quem tem a especialização e já passou por esse capítulo, com o botão «Ver a aula». Sai sozinho quando a aula fica vista. Daqui para a frente, uma aula que a direção acrescente no CMS (ou um vídeo que passe de «Brevemente» a gravado) avisa a equipa sem mais nada.",
+    ],
+  },
+  {
     version: "78.92",
     date: "2026-11-11",
     title: "Painel «IA no site»: as IAs conseguem ler o site de cada cliente?",

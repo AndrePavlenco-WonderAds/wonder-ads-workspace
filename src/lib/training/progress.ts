@@ -14,6 +14,11 @@
 //     sai do denominador; teste sem perguntas dá-se por cumprido. Sem isto, a
 //     formação inteira ficaria presa no primeiro módulo até tudo estar gravado
 //     — e ninguém começava. O que falta aparece sinalizado no admin.
+//  5. AULA NOVA NUM CAPÍTULO JÁ CONCLUÍDO NÃO TRANCA NINGUÉM (v78.93). Quem
+//     já tinha o capítulo feito antes de a aula aparecer (`availableSince`)
+//     continua com ele concluído e com os seguintes abertos; a aula nova fica
+//     por ver e passa a ser o próximo passo («Continuar»). Quem chega ao
+//     capítulo depois vê-a como outra aula qualquer.
 
 import {
   COMMON_TRACK_HIDDEN,
@@ -70,6 +75,9 @@ export type ModuleState = {
   hasContent: boolean;
   /** Minutos estimados que faltam neste módulo. */
   minutesLeft: number;
+  /** Aulas acrescentadas depois de a pessoa já ter concluído o capítulo
+   *  (regra 5): por ver, mas sem contar para o desbloqueio. */
+  catchUp: LessonState[];
 };
 
 export type TrackState = {
@@ -134,7 +142,27 @@ function moduleState(
     (a) => a.quizId === module.quiz.id,
   ).length;
 
-  const allWatched = totalLessons === 0 || watchedLessons >= totalLessons;
+  // Regra 5: uma aula que apareceu depois de a pessoa já ter o capítulo
+  // feito não o volta a abrir. «Já feito» = todas as aulas que existiam antes
+  // dela vistas E (havendo teste) o teste passado antes dela aparecer. Duas
+  // aulas acrescentadas juntas não contam uma para a outra.
+  const catchUp = lessons.filter((l) => {
+    const since = l.lesson.availableSince;
+    if (!since || l.comingSoon || l.watched) return false;
+    const before = lessons.filter(
+      (o) => o !== l && !o.comingSoon && !((o.lesson.availableSince ?? 0) >= since),
+    );
+    if (before.length === 0 || !before.every((o) => o.watched)) return false;
+    if (quizRequired) {
+      return attempts.some(
+        (a) => a.quizId === module.quiz.id && a.passed && a.submittedAt < since,
+      );
+    }
+    return before.every((o) => o.completedAt != null && o.completedAt < since);
+  });
+
+  const allWatched =
+    totalLessons === 0 || watchedLessons + catchUp.length >= totalLessons;
   const completed = allWatched && quizPassed;
 
   // A percentagem inclui o teste como um "passo" a mais, quando existe —
@@ -165,6 +193,7 @@ function moduleState(
     completed,
     hasContent: totalLessons > 0 || quizRequired,
     minutesLeft,
+    catchUp,
   };
 }
 
@@ -217,7 +246,16 @@ export function computeTrackState(
   if (unlocked) {
     for (const m of modules) {
       if (m.status === "locked") break;
-      if (m.status === "completed") continue;
+      if (m.status === "completed") {
+        // Regra 5: a aula nova de um capítulo já feito vem primeiro — é curta
+        // e é o que a direção acabou de acrescentar.
+        const fresh = m.catchUp[0];
+        if (fresh) {
+          nextLesson = { module: m.module, lesson: fresh.lesson };
+          break;
+        }
+        continue;
+      }
       const pending = m.lessons.find((l) => !l.comingSoon && !l.watched);
       if (pending) {
         nextLesson = { module: m.module, lesson: pending.lesson };
