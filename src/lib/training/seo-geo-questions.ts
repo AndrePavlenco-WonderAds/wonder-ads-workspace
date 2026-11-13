@@ -389,7 +389,7 @@ export const SEO_GEO_QUESTIONS: Record<string, TrainingQuestion[]> = {
       p: "Que partes tem a mensagem de apoio ao NPS? (Seleciona todas as opções corretas)",
       o: [
         ["O nome do cliente", true],
-        ["«Diz-me o que precisas por favor, eu gostaria de ajudar»", true],
+        ["«Diz-me o que precisas por favor, quero tentar ajudar»", true],
         ["A pergunta «As tuas dúvidas são com…?», personalizada", true],
         ["A proposta de uma reunião só sobre esse tema", true],
         ["Um resumo dos resultados do mês", false],

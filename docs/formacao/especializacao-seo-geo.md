@@ -259,7 +259,7 @@ Q17 [single] Com a mensagem de apoio ao NPS, o objetivo do consultor é mostrar 
 
 Q18 [multi] Que partes tem a mensagem de apoio ao NPS? (Seleciona todas as opções corretas)
 - [x] O nome do cliente
-- [x] «Diz-me o que precisas por favor, eu gostaria de ajudar»
+- [x] «Diz-me o que precisas por favor, quero tentar ajudar»
 - [x] A pergunta «As tuas dúvidas são com…?», personalizada
 - [x] A proposta de uma reunião só sobre esse tema
 - [ ] Um resumo dos resultados do mês

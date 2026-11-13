@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.94",
+    date: "2026-11-13",
+    title: "Formação SEO/GEO: pergunta da aula 2.9 acertada com o template",
+    highlights: [
+      "**✏️ Quiz do capítulo 2, pergunta «Que partes tem a mensagem de apoio ao NPS?»**: a opção certa passa a dizer «Diz-me o que precisas por favor, quero tentar ajudar», como no template (antes: «eu gostaria de ajudar»).",
+    ],
+  },
+  {
     version: "78.93",
     date: "2026-11-13",
     title: "Formação SEO/GEO: aula 2.9 «Como responder a um NPS» + avisos de aulas novas",
