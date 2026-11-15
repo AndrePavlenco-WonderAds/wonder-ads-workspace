@@ -639,7 +639,8 @@ const SEO_TRACK: TrainingTrack = {
               label: "Mensagem de protocolo obrigatório (template)",
               text:
                 "Bom dia (cliente) 😊 tudo bem?\n" +
-                "Já li o teu feedback e quero tentar ajudar. Para além dos temas que falámos e já temos em andamento para crescermos, diz-me o que precisas por favor. As tuas dúvidas são com (personalizar ao cliente, ex. \"Faturação de leads de Chatgpt, Gemini etc.\") ?",
+                "Já li o teu feedback e quero tentar ajudar. Para além dos temas que falámos e já temos em andamento para crescermos, diz-me o que precisas por favor. As tuas dúvidas são com (personalizar ao cliente, ex. \"Faturação de leads de Chatgpt, Gemini etc.\") ?\n" +
+                "Podemos agendar uma reunião para falar sobre isso, apenas deste tema.",
             },
           ],
           availableSince: "2026-11-13T15:00:00+00:00",

@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.95",
+    date: "2026-11-15",
+    title: "Formação SEO/GEO: template da aula 2.9 com a frase da reunião",
+    highlights: [
+      "**✏️ Aula 2.9 — template da mensagem de apoio ao NPS**: acaba agora com «Podemos agendar uma reunião para falar sobre isso, apenas deste tema.», como no vídeo. O quiz já pedia esta parte.",
+    ],
+  },
+  {
     version: "78.94",
     date: "2026-11-13",
     title: "Formação SEO/GEO: pergunta da aula 2.9 acertada com o template",

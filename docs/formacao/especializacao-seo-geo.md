@@ -168,7 +168,7 @@ Objetivo: dominar o ciclo diário → semanal → mensal de comunicação, o NPS
 | 2.6 | Roleplay: Como enviar Surprise News ao cliente | https://youtu.be/v4BX2Z_8Fno | COM | — | OK |
 | 2.7 | Como enviar NPS Form ao cliente (SMS, 1 semana de espera, 1 follow-up e 1 semana depois call) | https://youtu.be/5WWjo9BsXbY | COM | — | OK |
 | 2.8 | Roleplay: Follow-up call de NPS Form a cliente que ainda não respondeu | https://youtu.be/sJsGrgB-GcA | COM | — | OK |
-| 2.9 | Como responder a um NPS (mensagem de protocolo obrigatório) | https://youtu.be/VU4J1c9M6aw | COM | Copy box com o template da mensagem (texto do André, 13/11/2026). Formador: André Pavlenco | OK |
+| 2.9 | Como responder a um NPS (mensagem de protocolo obrigatório) | https://youtu.be/VU4J1c9M6aw | COM | Copy box com o template da mensagem (texto do André, 13/11/2026; frase da reunião acrescentada a 15/11/2026, palavras do André no vídeo, 3:24). Formador: André Pavlenco | OK |
 
 ### Quiz Módulo 2 (21 perguntas)
 
