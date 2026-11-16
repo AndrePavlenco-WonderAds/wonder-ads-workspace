@@ -80,7 +80,12 @@ function PluginCell({ client, row, latest }: { client: Client; row: FleetRow | u
         {old ? " ↑" : ""}
       </Pill>
       {p.verdict === "ok" && <Pill tone="ok">a contar tudo</Pill>}
-      {p.verdict === "cache" && (
+      {p.logsUntil && (
+        <Pill tone="ok" title="Registos do servidor do WP Engine: o relatório conta também as visitas que a cache serviu e deixa de fora os pedidos falsos.">
+          registos até {p.logsUntil.split("-").reverse().slice(0, 2).join("/")}
+        </Pill>
+      )}
+      {p.verdict === "cache" && !p.logsUntil && (
         <Pill tone="warn" title={hostCache?.note ?? manual.map((m) => `${m.name}: ${m.note}`).join(" · ")}>
           cache {hostCache ? `(${hostCache.name})` : ""}
         </Pill>
@@ -117,7 +122,7 @@ export function AiFleetView({ clients, initial, latestPlugin }: { clients: Clien
   const blockedSites = rows.filter((r) => r.agents.some((a) => a.kind === "user" && r.blocked.includes(a.name)));
   const wpRows = rows.filter((r) => r.platform === "WordPress");
   const connected = clients.filter((c) => c.connected).length;
-  const counting = rows.filter((r) => r.plugin.verdict === "ok").length;
+  const counting = rows.filter((r) => r.plugin.verdict === "ok" || Boolean(r.plugin.logsUntil)).length;
 
   return (
     <div className="mt-6">

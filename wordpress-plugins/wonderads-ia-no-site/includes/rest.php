@@ -93,6 +93,8 @@ function wa_ia_rest( $request ) {
 				'server'     => isset( $_SERVER['SERVER_SOFTWARE'] ) ? substr( sanitize_text_field( wp_unslash( $_SERVER['SERVER_SOFTWARE'] ) ), 0, 80 ) : '',
 				'multisite'  => is_multisite(),
 				'autoUpdate' => ! ( defined( 'WA_IA_NO_AUTO_UPDATE' ) && WA_IA_NO_AUTO_UPDATE ),
+				// 1.2.0: a pasta dos registos do servidor (WP Engine → S3).
+				'wpeInstall' => wa_ia_wpe_install(),
 			),
 			'plugins'  => wa_ia_active_plugin_slugs(),
 		)

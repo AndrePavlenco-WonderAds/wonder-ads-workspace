@@ -19,6 +19,7 @@ import {
   type AiFetchKey,
 } from "./report-types";
 import { IA_PLUGIN_RELEASE } from "./wp-plugin-release";
+import { readWpeLogs, wpeLogsCreds, wpeLogsLastDay, type WpeLogCounts } from "./wpe-logs";
 
 /** O nome com que cada assistente se identifica no pedido. */
 export const AI_FETCH_AGENT: Record<AiFetchKey, string> = {
@@ -50,7 +51,16 @@ type PluginPayload = {
   caches?: PluginCacheStatus[];
   /** A última verificação que o site fez a si próprio (diária). */
   check?: PluginSelfCheck | null;
-  env?: { wp?: string; php?: string; server?: string; multisite?: boolean; autoUpdate?: boolean };
+  env?: {
+    wp?: string;
+    php?: string;
+    server?: string;
+    multisite?: boolean;
+    autoUpdate?: boolean;
+    /** Nome da instalação no WP Engine (plugin 1.2.0+) — a pasta dos
+     *  registos no S3. */
+    wpeInstall?: string | null;
+  };
   plugins?: string[];
 };
 
@@ -232,8 +242,15 @@ export async function fetchAiFetchBlock(
       message: `o plugin só começou a contar a ${isoDayToPt(since)} — este mês é anterior.`,
     };
   }
-  const cur = sumRange(payload.days, current);
-  const prev = sumRange(payload.days, previous);
+  // Registos do servidor (WP Engine): nos dias que cobrem, substituem a
+  // contagem do plugin — têm também o que a cache serviu, e sem os falsos.
+  const install = payload.env?.wpeInstall?.trim() || null;
+  const logs = install
+    ? await readWpeLogs(install, payload.timezone ?? "UTC", previous.startDate, current.endDate).catch(() => null)
+    : null;
+  const days = mergeLogDays(payload.days, logs);
+  const cur = sumRange(days, current);
+  const prev = sumRange(days, previous);
   // Sem um dia registado antes do mês anterior começar, o «mês anterior» não
   // é zero, é desconhecido — e o relatório não pode inventar uma subida de 0 para N.
   const prevKnown = since <= previous.startDate;
@@ -248,6 +265,17 @@ export async function fetchAiFetchBlock(
     if (p.month !== month || !AGENT_TO_KEY.has(p.agent)) continue;
     pageTotals.set(p.path, (pageTotals.get(p.path) ?? 0) + (Number(p.count) || 0));
   }
+  // As páginas do plugin são do mês inteiro e não se partem por dia: com
+  // registos, fica o maior dos dois por página (os registos veem tudo o
+  // que o plugin viu, nos dias que cobrem).
+  if (logs) {
+    const fromLogs = new Map<string, number>();
+    for (const p of logs.pages) {
+      if (p.month !== month || !AGENT_TO_KEY.has(p.agent)) continue;
+      fromLogs.set(p.path, (fromLogs.get(p.path) ?? 0) + p.count);
+    }
+    for (const [path, n] of fromLogs) pageTotals.set(path, Math.max(pageTotals.get(path) ?? 0, n));
+  }
   const topPages = [...pageTotals]
     .map(([path, count]) => ({ path, count }))
     .sort((a, b) => b.count - a.count || a.path.localeCompare(b.path))
@@ -257,8 +285,9 @@ export async function fetchAiFetchBlock(
   const previousTotal = prevKnown
     ? AI_FETCH_ASSISTANTS.reduce((t, k) => t + prev[k], 0)
     : null;
-  const searchNow = sumAgents(payload.days, current, SEARCH_CRAWLERS);
-  const searchPrev = prevKnown ? sumAgents(payload.days, previous, SEARCH_CRAWLERS) : null;
+  const searchNow = sumAgents(days, current, SEARCH_CRAWLERS);
+  const searchPrev = prevKnown ? sumAgents(days, previous, SEARCH_CRAWLERS) : null;
+  const logBlock = logSummary(logs, current, since);
   return {
     source: "wp-plugin",
     status: "ok",
@@ -269,8 +298,64 @@ export async function fetchAiFetchBlock(
     previousTotal,
     topPages,
     searchCrawls: { value: searchNow, previous: searchPrev },
-    partial: isPartial(payload),
+    // Com os registos a cobrir todos os dias medidos do mês, nada ficou na
+    // cache por contar.
+    partial: logBlock?.complete ? false : isPartial(payload),
+    serverLogs: logBlock ? { from: logBlock.from, days: logBlock.days, fakes: logBlock.fakes } : null,
   };
+}
+
+/** Os dias do plugin, com os dias cobertos pelos registos substituídos
+ *  (só os robôs que os registos leem; os de treino ficam do plugin). */
+function mergeLogDays(
+  pluginDays: PluginPayload["days"],
+  logs: WpeLogCounts | null,
+): Record<string, Record<string, number>> {
+  const base: Record<string, Record<string, number>> =
+    pluginDays && !Array.isArray(pluginDays) ? { ...pluginDays } : {};
+  if (!logs) return base;
+  const logAgents = new Set([...AGENT_TO_KEY.keys(), ...SEARCH_CRAWLERS]);
+  for (const day of logs.covered) {
+    const kept = Object.fromEntries(
+      Object.entries(base[day] ?? {}).filter(([agent]) => !logAgents.has(agent)),
+    );
+    base[day] = { ...kept, ...(logs.days[day] ?? {}) };
+  }
+  return base;
+}
+
+/** Quantos dias do mês os registos cobriram — e se cobriram todos os dias
+ *  medidos (desde a instalação até ontem, ou até ao fim do mês). */
+function logSummary(
+  logs: WpeLogCounts | null,
+  current: DateRange,
+  since: string,
+): { from: string; days: number; fakes: number; complete: boolean } | null {
+  if (!logs) return null;
+  const inMonth = logs.covered.filter((d) => d >= current.startDate && d <= current.endDate).sort();
+  if (!inMonth.length) return null;
+  const today = new Date().toISOString().slice(0, 10);
+  const lastMeasured = current.endDate < today ? current.endDate : prevIsoDay(today);
+  const firstMeasured = since > current.startDate ? since : current.startDate;
+  let complete = firstMeasured <= lastMeasured;
+  const set = new Set(inMonth);
+  for (let d = firstMeasured; complete && d <= lastMeasured; d = nextIsoDay(d)) {
+    if (!set.has(d)) complete = false;
+  }
+  const fakes = inMonth.reduce((n, d) => n + (logs.fakes[d] ?? 0), 0);
+  return { from: inMonth[0], days: inMonth.length, fakes, complete };
+}
+
+function nextIsoDay(day: string): string {
+  const d = new Date(`${day}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + 1);
+  return d.toISOString().slice(0, 10);
+}
+
+function prevIsoDay(day: string): string {
+  const d = new Date(`${day}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() - 1);
+  return d.toISOString().slice(0, 10);
 }
 
 export type AiPluginTestAgent = {
@@ -287,11 +372,11 @@ export type AiPluginTestAgent = {
 /** Os robôs de pesquisa e de treino das IAs — só para ver se o site os deixa
  *  entrar (bloquear os de PESQUISA tira o site das respostas). */
 export const CRAWLER_TEST_UA = {
-  "OAI-SearchBot": { kind: "search", ua: "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko); compatible; OAI-SearchBot/1.0; +https://openai.com/searchbot" },
-  "Claude-SearchBot": { kind: "search", ua: "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Claude-SearchBot/1.0; +https://www.anthropic.com)" },
-  PerplexityBot: { kind: "search", ua: "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; PerplexityBot/1.0; +https://perplexity.ai/perplexitybot)" },
-  GPTBot: { kind: "training", ua: "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko); compatible; GPTBot/1.2; +https://openai.com/gptbot" },
-  ClaudeBot: { kind: "training", ua: "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; ClaudeBot/1.0; +claudebot@anthropic.com)" },
+  "OAI-SearchBot": { kind: "search", ua: "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko); compatible; OAI-SearchBot/1.0; +https://openai.com/searchbot WonderAds-Test/1.0" },
+  "Claude-SearchBot": { kind: "search", ua: "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Claude-SearchBot/1.0; +https://www.anthropic.com) WonderAds-Test/1.0" },
+  PerplexityBot: { kind: "search", ua: "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; PerplexityBot/1.0; +https://perplexity.ai/perplexitybot) WonderAds-Test/1.0" },
+  GPTBot: { kind: "training", ua: "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko); compatible; GPTBot/1.2; +https://openai.com/gptbot WonderAds-Test/1.0" },
+  ClaudeBot: { kind: "training", ua: "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; ClaudeBot/1.0; +claudebot@anthropic.com) WonderAds-Test/1.0" },
 } as const;
 
 export type CrawlerAccess = { name: string; kind: "search" | "training"; status: number | null };
@@ -321,18 +406,20 @@ export type AiPluginTest = {
   selfCheck: PluginSelfCheck | null;
   storage: "table" | "option" | null;
   env: PluginPayload["env"] | null;
+  /** WP Engine (plugin 1.2.0+): os registos do servidor estão a ser lidos? */
+  serverLogs: { install: string; configured: boolean; lastDay: string | null } | null;
 };
 
 /** O pedido de cada assistente, como chega a um site (formato público). */
 const TEST_UA: Record<AiFetchKey, string> = {
   chatgpt:
-    "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko); compatible; ChatGPT-User/1.0; +https://openai.com/bot",
+    "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko); compatible; ChatGPT-User/1.0; +https://openai.com/bot WonderAds-Test/1.0",
   claude:
-    "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Claude-User/1.0; +Claude-User@anthropic.com)",
+    "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Claude-User/1.0; +Claude-User@anthropic.com) WonderAds-Test/1.0",
   perplexity:
-    "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Perplexity-User/1.0; +https://perplexity.ai/perplexity-user)",
+    "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Perplexity-User/1.0; +https://perplexity.ai/perplexity-user) WonderAds-Test/1.0",
   mistral:
-    "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; MistralAI-User/1.0; +https://docs.mistral.ai/robots)",
+    "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; MistralAI-User/1.0; +https://docs.mistral.ai/robots) WonderAds-Test/1.0",
 };
 
 const CACHE_HEADERS = [
@@ -365,6 +452,7 @@ export async function testAiPlugin(site: string, key: string): Promise<AiPluginT
     selfCheck: null,
     storage: null,
     env: null,
+    serverLogs: null,
     crawlers: [] as CrawlerAccess[],
   };
   if (!first.ok) {
@@ -506,5 +594,16 @@ export async function testAiPlugin(site: string, key: string): Promise<AiPluginT
     selfCheck: latest.check ?? null,
     storage: latest.storage ?? null,
     env: latest.env ?? null,
+    serverLogs: await serverLogsStatus(latest.env?.wpeInstall ?? first.payload.env?.wpeInstall, latest.timezone),
   };
+}
+
+async function serverLogsStatus(
+  install: string | null | undefined,
+  tz: string | undefined,
+): Promise<AiPluginTest["serverLogs"]> {
+  const name = install?.trim();
+  if (!name) return null;
+  const configured = Boolean(wpeLogsCreds());
+  return { install: name, configured, lastDay: configured ? await wpeLogsLastDay(name, tz ?? "UTC") : null };
 }

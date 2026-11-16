@@ -18,10 +18,10 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 function wa_ia_test_user_agents() {
 	return array(
-		'ChatGPT-User'    => 'Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko); compatible; ChatGPT-User/1.0; +https://openai.com/bot',
-		'Claude-User'     => 'Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Claude-User/1.0; +Claude-User@anthropic.com)',
-		'Perplexity-User' => 'Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Perplexity-User/1.0; +https://perplexity.ai/perplexity-user)',
-		'MistralAI-User'  => 'Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; MistralAI-User/1.0; +https://docs.mistral.ai/robots)',
+		'ChatGPT-User'    => 'Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko); compatible; ChatGPT-User/1.0; +https://openai.com/bot ' . WA_IA_TEST_MARK . '/1.0',
+		'Claude-User'     => 'Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Claude-User/1.0; +Claude-User@anthropic.com) ' . WA_IA_TEST_MARK . '/1.0',
+		'Perplexity-User' => 'Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Perplexity-User/1.0; +https://perplexity.ai/perplexity-user) ' . WA_IA_TEST_MARK . '/1.0',
+		'MistralAI-User'  => 'Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; MistralAI-User/1.0; +https://docs.mistral.ai/robots) ' . WA_IA_TEST_MARK . '/1.0',
 	);
 }
 

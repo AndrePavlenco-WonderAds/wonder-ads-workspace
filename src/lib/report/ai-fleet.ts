@@ -2,7 +2,9 @@
 // ler cada site? Que plataforma é? O plugin WordPress está ligado e a contar?
 //
 // Para cada site, pedidos à página inicial como um browser normal e como
-// cada IA (os 4 assistentes + os 3 robôs de pesquisa). Um 401/403/429/… a
+// cada IA (os 4 assistentes + os 3 robôs de pesquisa). Os User-Agents levam
+// «WonderAds-Test» no fim (v78.96): o plugin e os registos do servidor
+// reconhecem o teste e não o contam como visita. Um 401/403/429/… a
 // uma IA quando o browser entra = o site recusa essa IA — ela não consegue
 // ler o site nem para responder a quem pergunta por ele (visto no Mimus e na
 // Sentir Saúde a 11/11/2026, confirmado pelo próprio ChatGPT). Os pedidos
@@ -14,6 +16,7 @@ import "server-only";
 import { kv } from "@vercel/kv";
 import { randomUUID } from "node:crypto";
 import { readPlugin, BLOCK_STATUSES, type PluginCacheStatus } from "./wp-ai-visibility";
+import { wpeLogsLastDay } from "./wpe-logs";
 
 const KEY = "ai-fleet:last";
 const TIMEOUT_MS = 12_000;
@@ -24,13 +27,13 @@ const BROWSER_UA =
 /** Quem testamos: os 4 assistentes (abrem a página quando alguém pergunta)
  *  e os robôs de pesquisa (indexam o site para as respostas). */
 export const FLEET_AGENTS = [
-  { name: "ChatGPT-User", label: "ChatGPT", kind: "user", ua: "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko); compatible; ChatGPT-User/1.0; +https://openai.com/bot" },
-  { name: "Claude-User", label: "Claude", kind: "user", ua: "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Claude-User/1.0; +Claude-User@anthropic.com)" },
-  { name: "Perplexity-User", label: "Perplexity", kind: "user", ua: "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Perplexity-User/1.0; +https://perplexity.ai/perplexity-user)" },
-  { name: "MistralAI-User", label: "Mistral", kind: "user", ua: "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; MistralAI-User/1.0; +https://docs.mistral.ai/robots)" },
-  { name: "OAI-SearchBot", label: "ChatGPT Search", kind: "search", ua: "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko); compatible; OAI-SearchBot/1.0; +https://openai.com/searchbot" },
-  { name: "PerplexityBot", label: "Perplexity (pesquisa)", kind: "search", ua: "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; PerplexityBot/1.0; +https://perplexity.ai/perplexitybot)" },
-  { name: "Claude-SearchBot", label: "Claude (pesquisa)", kind: "search", ua: "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Claude-SearchBot/1.0; +https://www.anthropic.com)" },
+  { name: "ChatGPT-User", label: "ChatGPT", kind: "user", ua: "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko); compatible; ChatGPT-User/1.0; +https://openai.com/bot WonderAds-Test/1.0" },
+  { name: "Claude-User", label: "Claude", kind: "user", ua: "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Claude-User/1.0; +Claude-User@anthropic.com) WonderAds-Test/1.0" },
+  { name: "Perplexity-User", label: "Perplexity", kind: "user", ua: "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Perplexity-User/1.0; +https://perplexity.ai/perplexity-user) WonderAds-Test/1.0" },
+  { name: "MistralAI-User", label: "Mistral", kind: "user", ua: "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; MistralAI-User/1.0; +https://docs.mistral.ai/robots) WonderAds-Test/1.0" },
+  { name: "OAI-SearchBot", label: "ChatGPT Search", kind: "search", ua: "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko); compatible; OAI-SearchBot/1.0; +https://openai.com/searchbot WonderAds-Test/1.0" },
+  { name: "PerplexityBot", label: "Perplexity (pesquisa)", kind: "search", ua: "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; PerplexityBot/1.0; +https://perplexity.ai/perplexitybot) WonderAds-Test/1.0" },
+  { name: "Claude-SearchBot", label: "Claude (pesquisa)", kind: "search", ua: "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Claude-SearchBot/1.0; +https://www.anthropic.com) WonderAds-Test/1.0" },
 ] as const;
 
 export type FleetPlatform = "WordPress" | "Shopify" | "Squarespace" | "Wix" | "Webflow" | "outra" | "?";
@@ -53,6 +56,8 @@ export type FleetRow = {
     caches: PluginCacheStatus[];
     since: string | null;
     message: string | null;
+    /** WP Engine: até que dia os registos do servidor já foram lidos (v78.96). */
+    logsUntil?: string | null;
   };
   checkedAt: number;
 };
@@ -135,6 +140,8 @@ export async function checkFleetClient(c: FleetClient): Promise<FleetRow> {
       row.plugin.verdict = read.payload.check?.verdict ?? null;
       row.plugin.caches = read.payload.caches ?? [];
       row.plugin.since = read.payload.since ?? null;
+      const install = read.payload.env?.wpeInstall?.trim();
+      row.plugin.logsUntil = install ? await wpeLogsLastDay(install, read.payload.timezone ?? "UTC") : null;
     } else {
       row.plugin.message = read.message;
     }

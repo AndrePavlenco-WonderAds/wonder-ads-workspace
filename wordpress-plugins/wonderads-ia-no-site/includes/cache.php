@@ -117,6 +117,22 @@ add_filter( 'wpo_cache_update_config', 'wa_ia_wpo_config' );
  * --------------------------------------------------------------------- */
 
 /**
+ * O nome da instalação no WP Engine (a pasta dos registos do servidor no S3:
+ * wpe_logs/<nome>/), ou null fora do WP Engine.
+ *
+ * @return string|null
+ */
+function wa_ia_wpe_install() {
+	if ( defined( 'PWP_NAME' ) && is_string( PWP_NAME ) && preg_match( '/^[a-z0-9-]{1,64}$/i', PWP_NAME ) ) {
+		return PWP_NAME;
+	}
+	if ( defined( 'ABSPATH' ) && preg_match( '#/nas/content/(?:live|staging|development)/([a-z0-9-]{1,64})/#i', ABSPATH, $m ) ) {
+		return $m[1];
+	}
+	return null;
+}
+
+/**
  * As caches que este site tem (nomes para pessoas).
  *
  * @return string[]

@@ -3,7 +3,7 @@
  * Plugin Name:       WonderAds — IA no site
  * Plugin URI:        https://wonder-ads.com
  * Description:       Conta as vezes que assistentes de IA (ChatGPT, Claude, Perplexity, Mistral) abrem páginas deste site para responder a alguém — no computador ou na app do telemóvel. Os números entram no relatório mensal da WonderAds. Não guarda dados de pessoas: só a contagem por dia, por assistente e por página.
- * Version:           1.1.0
+ * Version:           1.2.0
  * Requires at least: 5.3
  * Requires PHP:      7.2
  * Author:            WonderAds
@@ -29,7 +29,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WA_IA_VERSION', '1.1.0' );
+define( 'WA_IA_VERSION', '1.2.0' );
+// O sinal que os pedidos de teste levam no User-Agent (fica nos registos do servidor).
+define( 'WA_IA_TEST_MARK', 'WonderAds-Test' );
 define( 'WA_IA_FILE', __FILE__ );
 define( 'WA_IA_DB_VERSION', '1' );
 define( 'WA_IA_OPT_COUNTS', 'wa_ia_counts' ); // 1.0.0 — agora só leitura (ou recurso).

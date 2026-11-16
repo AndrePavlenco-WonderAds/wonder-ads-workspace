@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.96",
+    date: "2026-11-16",
+    title: "IA no site: registos do servidor do WP Engine contam tudo + plugin 1.2.0 sem falsos",
+    highlights: [
+      "**🧾 Registos do servidor (WP Engine)**: o WP Engine copia todas as noites os registos NGINX para o nosso S3; um cron às 04:30 UTC lê-os e o relatório passa a contar TODAS as visitas das IAs nesses dias, também as que a cache serviu (antes só o que chegava ao WordPress).",
+      "**🛡️ Pedidos falsos de fora**: endereço confrontado com as listas oficiais da OpenAI e da Perplexity — um scanner a fingir ser o ChatGPT não conta (visto no wonder-ads.com a 15/11). O relatório diz quantos ficaram de fora.",
+      "**🔌 Plugin 1.2.0**: só conta quando o site responde com a página (fora 404, ficheiros escondidos, .json/.xml e redirecionamentos que contavam a dobrar); os testes identificam-se no User-Agent; no WP Engine diz ao workspace o nome da instalação. Atualiza-se sozinho.",
+      "**📊 Cartão e painel «IA no site»**: mostram até que dia os registos do servidor já foram lidos.",
+    ],
+  },
+  {
     version: "78.95",
     date: "2026-11-15",
     title: "Formação SEO/GEO: template da aula 2.9 com a frase da reunião",

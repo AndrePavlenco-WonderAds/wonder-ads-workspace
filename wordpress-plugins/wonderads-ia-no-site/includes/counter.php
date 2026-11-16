@@ -147,26 +147,19 @@ function wa_ia_record() {
 	}
 
 	$uri  = isset( $_SERVER['REQUEST_URI'] ) ? (string) wp_unslash( $_SERVER['REQUEST_URI'] ) : '/';
-	$path = wp_parse_url( $uri, PHP_URL_PATH );
-	if ( ! is_string( $path ) || '' === $path ) {
-		$path = '/';
-	}
-	// O que não é uma página: a API, o login, o robots.txt (que o robô lê
-	// antes da página e contaria o mesmo pedido duas vezes).
-	if ( false !== strpos( $uri, 'rest_route=' ) || false !== strpos( $path, '/wp-json' ) ) {
-		return;
-	}
-	$base = strtolower( basename( $path ) );
-	if ( in_array( $base, array( 'robots.txt', 'wp-login.php', 'xmlrpc.php', 'wp-cron.php', 'favicon.ico', 'admin-ajax.php' ), true ) ) {
-		return;
-	}
-	if ( 0 === strpos( $path, '/wp-admin' ) ) {
+	$path = wa_ia_page_path( $uri );
+	if ( null === $path ) {
 		return;
 	}
 
 	// Pedido de teste (workspace ou verificação do próprio plugin): fica
-	// registado à parte e nunca conta.
+	// registado à parte e nunca conta. Desde a 1.2.0 o teste também se
+	// identifica no User-Agent («WonderAds-Test»), que fica nos registos do
+	// servidor — um cabeçalho não fica.
 	$test = isset( $_SERVER['HTTP_X_WA_IA_TEST'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_X_WA_IA_TEST'] ) ) : '';
+	if ( '' === $test && false !== stripos( $ua, WA_IA_TEST_MARK ) ) {
+		$test = 'ua-' . substr( md5( $ua . microtime() ), 0, 12 );
+	}
 	if ( '' !== $test ) {
 		update_option(
 			WA_IA_OPT_TEST,
@@ -181,7 +174,102 @@ function wa_ia_record() {
 		return;
 	}
 
-	wa_ia_increment( $agent, substr( $path, 0, 191 ) );
+	wa_ia_queue( $agent, $path );
+}
+
+/**
+ * O caminho de uma PÁGINA (sem query string, ≤ 191), ou null se o pedido não
+ * é uma página que alguém pediria à IA para ler: a API, o login, o
+ * robots.txt (que o robô lê antes da página e contaria o mesmo pedido duas
+ * vezes), ficheiros escondidos («/.env», «/.git/…») e ficheiros que não são
+ * páginas (.json, .xml, .js, imagens…) — é o que os scanners pedem a fingir
+ * ser o ChatGPT (visto nos registos do wonder-ads.com a 15/11/2026).
+ * As mesmas regras estão no workspace (lib/report/wpe-logs.ts, isPagePath).
+ *
+ * @param string $uri REQUEST_URI.
+ * @return string|null
+ */
+function wa_ia_page_path( $uri ) {
+	if ( false !== strpos( $uri, 'rest_route=' ) ) {
+		return null;
+	}
+	$path = wp_parse_url( $uri, PHP_URL_PATH );
+	if ( ! is_string( $path ) || '' === $path ) {
+		$path = '/';
+	}
+	if ( 0 === strpos( $path, '/wp-json' ) || 0 === strpos( $path, '/wp-admin' ) ) {
+		return null;
+	}
+	$segments = array_values( array_filter( explode( '/', $path ), 'strlen' ) );
+	foreach ( $segments as $seg ) {
+		if ( '.' === $seg[0] ) {
+			return null;
+		}
+	}
+	$base = strtolower( (string) end( $segments ) );
+	if ( in_array( $base, array( 'robots.txt', 'wp-login.php', 'xmlrpc.php', 'wp-cron.php', 'favicon.ico', 'admin-ajax.php' ), true ) ) {
+		return null;
+	}
+	$dot = strrpos( $base, '.' );
+	if ( false !== $dot && $dot > 0 && ! in_array( substr( $base, $dot + 1 ), array( 'html', 'htm', 'php', 'pdf' ), true ) ) {
+		return null;
+	}
+	return substr( $path, 0, 191 );
+}
+
+/**
+ * Guarda o pedido para contar no fim, quando já se sabe a resposta: só conta
+ * se o site respondeu com a página (2xx/304). Um 404 é um scanner; um 301 é
+ * o WordPress a corrigir o endereço («/mimus» → «/mimus/») e o pedido
+ * seguinte é que conta — antes da 1.2.0 contava duas vezes.
+ *
+ * @param string $agent Nome do robô.
+ * @param string $path  Caminho da página.
+ */
+function wa_ia_queue( $agent, $path ) {
+	if ( ! isset( $GLOBALS['wa_ia_queue'] ) ) {
+		$GLOBALS['wa_ia_queue'] = array();
+		// Função de fim do PHP, não o «shutdown» do WordPress: corre mesmo
+		// quando um plugin de cache serve a página e sai a meio do arranque.
+		register_shutdown_function( 'wa_ia_flush' );
+	}
+	$GLOBALS['wa_ia_queue'][] = array( $agent, $path );
+}
+
+/**
+ * O código da resposta que o site deu (filtrável nos testes).
+ *
+ * @return int
+ */
+function wa_ia_response_status() {
+	$code = function_exists( 'http_response_code' ) ? http_response_code() : false;
+	if ( ! is_int( $code ) || $code <= 0 ) {
+		$code = 200;
+	}
+	return (int) apply_filters( 'wa_ia_response_status', $code );
+}
+
+/**
+ * Conta o que ficou em espera, se a resposta foi uma página.
+ */
+function wa_ia_flush() {
+	$queue = isset( $GLOBALS['wa_ia_queue'] ) && is_array( $GLOBALS['wa_ia_queue'] ) ? $GLOBALS['wa_ia_queue'] : array();
+	$GLOBALS['wa_ia_queue'] = array();
+	if ( ! $queue ) {
+		return;
+	}
+	$status = wa_ia_response_status();
+	if ( ! ( ( $status >= 200 && $status < 300 ) || 304 === $status ) ) {
+		return;
+	}
+	foreach ( $queue as $item ) {
+		try {
+			wa_ia_increment( $item[0], $item[1] );
+		} catch ( Throwable $e ) {
+			// a contagem nunca pode partir a página
+			unset( $e );
+		}
+	}
 }
 
 /**

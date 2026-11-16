@@ -1440,12 +1440,33 @@ export function ReportDocument({
                     );
                   })}
               </div>
-              {aiFOk.partial && (
+              {aiFOk.partial && !aiFOk.serverLogs && (
                 <p className="wa-ai-note">
                   {t(
                     "Este número é um mínimo: a cache do alojamento ainda entrega parte das páginas antes de o pedido poder ser contado. O uso real é maior.",
                     "This number is a minimum: the host's cache still serves some pages before the request can be counted. Real usage is higher.",
                   )}
+                </p>
+              )}
+              {/* v78.96: dias contados nos registos do servidor (WP Engine →
+                  S3) — veem também o que a cache entregou, e os pedidos
+                  falsos (endereço fora da lista oficial) ficam de fora. */}
+              {aiFOk.serverLogs && (
+                <p className="wa-ai-note">
+                  {aiFOk.partial
+                    ? t(
+                        `Desde ${aiFOk.serverLogs.from.split("-").reverse().join("/")}, a contagem vem dos registos do servidor do alojamento e inclui também as páginas que a cache entregou; os dias antes disso são um mínimo.`,
+                        `From ${aiFOk.serverLogs.from.split("-").reverse().join("/")}, the count comes from the host's server logs and also includes pages served from cache; earlier days are a minimum.`,
+                      )
+                    : t(
+                        "Contado nos registos do servidor do alojamento: inclui também as páginas que a cache entregou.",
+                        "Counted from the host's server logs: this also includes pages served from cache.",
+                      )}
+                  {aiFOk.serverLogs.fakes > 0 &&
+                    ` ${t(
+                      `${aiFOk.serverLogs.fakes} ${aiFOk.serverLogs.fakes === 1 ? "pedido que fingia" : "pedidos que fingiam"} ser uma IA (endereço fora da lista oficial) ficaram de fora.`,
+                      `${aiFOk.serverLogs.fakes} ${aiFOk.serverLogs.fakes === 1 ? "request pretending" : "requests pretending"} to be an AI (address outside the official list) were left out.`,
+                    )}`}
                 </p>
               )}
               {(aiFOk.searchCrawls?.value ?? 0) > 0 && (

@@ -13,7 +13,7 @@ cp -R "$HERE/../wonderads-ia-no-site" "$ROOT/wp-content/plugins/"
 export WA_IA_FAKEROOT="$ROOT"
 PD="$ROOT/wp-content/plugins/wonderads-ia-no-site"
 fail=0
-for sc in fresh-install-and-count skips early-record-at-load fallback-legacy-option upgrade-from-100 rest-permission self-check htaccess-scan updater prune-and-uninstall cache-wpfc cache-litespeed cache-wpo cache-rocket cache-wpsc cache-status-hosts cache-apply-isolated admin-render; do
+for sc in fresh-install-and-count skips only-pages-that-answer env-wpe-install early-record-at-load fallback-legacy-option upgrade-from-100 rest-permission self-check htaccess-scan updater prune-and-uninstall cache-wpfc cache-litespeed cache-wpo cache-rocket cache-wpsc cache-status-hosts cache-apply-isolated admin-render; do
   out=$(php "$HERE/run.php" "$sc" "$PD" 2>&1) || fail=1
   bad=$(echo "$out" | grep -c "✗\|Fatal" || true)
   printf "  %-26s %s\n" "$sc" "$([ "$bad" = 0 ] && echo ok || echo FALHOU)"

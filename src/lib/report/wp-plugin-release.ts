@@ -10,12 +10,20 @@
 
 export const IA_PLUGIN_RELEASE = {
   slug: "wonderads-ia-no-site",
-  version: "1.1.0",
+  version: "1.2.0",
   requires: "5.3",
   requiresPhp: "7.2",
   tested: "7.1",
-  lastUpdated: "2026-11-11",
+  lastUpdated: "2026-11-16",
   changes: [
+    {
+      version: "1.2.0",
+      items: [
+        "Só conta quando o site responde com a página: deixa de contar scanners que fingem ser o ChatGPT (404, ficheiros escondidos, .json/.xml) e os redirecionamentos que contavam duas vezes.",
+        "Os pedidos de teste identificam-se no User-Agent, para ficarem de fora também nos registos do servidor.",
+        "No WP Engine, diz ao workspace o nome da instalação — o workspace conta as visitas também nos registos do servidor, incluindo as que a cache serviu.",
+      ],
+    },
     {
       version: "1.1.0",
       items: [

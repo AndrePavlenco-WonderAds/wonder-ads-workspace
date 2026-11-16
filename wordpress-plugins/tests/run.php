@@ -18,7 +18,7 @@ switch ( $scenario ) {
 		load_plugin();
 		call_user_func( $GLOBALS['__activate'] );
 		ok( wa_ia_table_ready(), 'tabela criada e marcada como pronta' );
-		ok( '1.1.0' === get_option( 'wa_ia_version' ), 'versão gravada' );
+		ok( WA_IA_VERSION === get_option( 'wa_ia_version' ), 'versão gravada' );
 		ok( strlen( get_option( 'wa_ia_key' ) ) === 40, 'chave de 40 caracteres' );
 		ok( $day === get_option( 'wa_ia_since' ), 'since = hoje' );
 		ok( isset( $GLOBALS['__cron']['wa_ia_daily'] ) && isset( $GLOBALS['__cron']['wa_ia_check_soon'] ), 'cron diário + verificação daqui a 1 min' );
@@ -58,13 +58,16 @@ switch ( $scenario ) {
 		$GLOBALS['__opts']['wa_ia_db'] = '1';
 		$GLOBALS['wpdb']->tables['wp_wa_ia_hits'] = true;
 		load_plugin();
-		ok( 1 === $GLOBALS['wpdb']->rows[ "$day|ChatGPT-User|/contactos/" ], 'contado ao carregar o ficheiro do plugin' );
+		ok( empty( $GLOBALS['wpdb']->rows ), 'ao carregar só fica em espera (ainda não se sabe a resposta)' );
+		wa_ia_flush(); // o fim do pedido
+		ok( 1 === $GLOBALS['wpdb']->rows[ "$day|ChatGPT-User|/contactos/" ], 'reconhecido ao carregar o plugin, contado no fim com resposta 200' );
 		break;
 
 	case 'fallback-legacy-option':
 		// Sem tabela (ex.: sem permissão para CREATE): conta na option como na 1.0.0.
 		req( $CGPT, '/a/' );
 		load_plugin();
+		wa_ia_flush();
 		ok( ! wa_ia_table_ready(), 'tabela não está pronta' );
 		$c = get_option( 'wa_ia_counts' );
 		ok( 1 === $c['days'][ $day ]['ChatGPT-User'], 'contou na option antiga' );
@@ -84,7 +87,7 @@ switch ( $scenario ) {
 		req( 'Mozilla/5.0 Chrome', '/' );
 		load_plugin();
 		do_action( 'plugins_loaded' ); // a atualização corre aqui (não há hook de ativação)
-		ok( wa_ia_table_ready() && '1.1.0' === get_option( 'wa_ia_version' ), 'atualizou: tabela + versão' );
+		ok( wa_ia_table_ready() && WA_IA_VERSION === get_option( 'wa_ia_version' ), 'atualizou: tabela + versão' );
 		ok( str_repeat( 'k', 40 ) === get_option( 'wa_ia_key' ), 'a chave antiga manteve-se (o workspace continua ligado)' );
 		ok( '2026-11-10' === get_option( 'wa_ia_since' ), 'since = primeiro dia da 1.0.0' );
 		// conta mais 1 ChatGPT na tabela hoje e lê tudo pelo endpoint
@@ -100,6 +103,52 @@ switch ( $scenario ) {
 		ok( 4 + ( substr( $day, 0, 7 ) === '2026-11' ? 1 : 0 ) === $pg['2026-11 ChatGPT-User /servicos/'], 'páginas somam option + tabela' );
 		ok( '2026-11-10' === $r->data['since'] && 'table' === $r->data['storage'], 'since e storage no endpoint' );
 		ok( 'no-store, max-age=0' === $r->headers['Cache-Control'], 'resposta sem cache' );
+		break;
+
+	case 'only-pages-that-answer':
+		// 1.2.0: só conta quando o site responde com uma página.
+		load_plugin();
+		call_user_func( $GLOBALS['__activate'] );
+		$status = 200;
+		add_filter( 'wa_ia_response_status', function () use ( &$status ) { return $status; } );
+		$cases = array(
+			array( '/nao-existe/', 404, false, '404 (scanner)' ),
+			array( '/mimus', 301, false, '301 (o WordPress corrige para /mimus/)' ),
+			array( '/mimus/', 200, true, '200 conta' ),
+			array( '/pagina/', 304, true, '304 conta' ),
+			array( '/erro/', 500, false, '500 não conta' ),
+			array( '/nx.json', 200, false, '.json não é página' ),
+			array( '/product-sitemap.xml', 200, false, 'sitemap .xml não é página' ),
+			array( '/.firebaserc', 200, false, 'ficheiro escondido' ),
+			array( '/.git/config', 200, false, 'pasta escondida' ),
+			array( '/wp-content/themes/x/app.js', 200, false, '.js não é página' ),
+			array( '/docs/precos.pdf', 200, true, 'PDF conta (alguém pediu à IA para o ler)' ),
+			array( '/index.php', 200, true, '.php conta' ),
+		);
+		foreach ( $cases as $c ) {
+			$GLOBALS['wpdb']->rows = array();
+			$status = $c[1];
+			req( $CGPT, $c[0] ); wa_ia_increment_for_test();
+			ok( $c[2] === ! empty( $GLOBALS['wpdb']->rows ), ( $c[2] ? 'contou: ' : 'não contou: ' ) . $c[3] );
+		}
+		// teste marcado no User-Agent (sem cabeçalho): à parte, não conta
+		$GLOBALS['wpdb']->rows = array(); $status = 200;
+		req( $CGPT . ' WonderAds-Test/1.0', '/' ); wa_ia_increment_for_test();
+		$t = get_option( 'wa_ia_last_test' );
+		ok( empty( $GLOBALS['wpdb']->rows ) && 'ChatGPT-User' === $t['agent'] && 0 === strpos( $t['nonce'], 'ua-' ), 'teste pelo User-Agent: registado à parte, não contado' );
+		// os pedidos da verificação diária levam o sinal
+		foreach ( wa_ia_test_user_agents() as $agent => $ua ) {
+			ok( false !== strpos( $ua, 'WonderAds-Test' ) && $agent === wa_ia_match_agent( $ua ), "verificação diária marcada: $agent" );
+		}
+		break;
+
+	case 'env-wpe-install':
+		define( 'PWP_NAME', 'wonderads' );
+		$GLOBALS['__opts']['wa_ia_key'] = str_repeat( 'a', 40 );
+		load_plugin();
+		ok( 'wonderads' === wa_ia_wpe_install(), 'nome da instalação do WP Engine' );
+		$r = wa_ia_rest( new WP_REST_Request( array( 'x-wa-key' => str_repeat( 'a', 40 ) ), array() ) );
+		ok( 'wonderads' === $r->data['env']['wpeInstall'], 'o endpoint manda o nome ao workspace' );
 		break;
 
 	case 'rest-permission':
@@ -169,16 +218,16 @@ switch ( $scenario ) {
 		load_plugin();
 		$GLOBALS['__http_handler'] = function ( $url, $args ) {
 			return array( 'response' => array( 'code' => 200 ), 'headers' => array(), 'body' => json_encode( array(
-				'version' => '1.2.0', 'download_url' => 'https://workspace.wonder-ads.com/wp-plugin/wonderads-ia-no-site-1.2.0.zip',
+				'version' => '9.9.0', 'download_url' => 'https://workspace.wonder-ads.com/wp-plugin/wonderads-ia-no-site-9.9.0.zip',
 				'requires' => '5.3', 'requires_php' => '7.2', 'tested' => '7.1', 'sections' => array( 'changelog' => '<p>x</p>' ),
 			) ) );
 		};
 		$t = apply_filters( 'pre_set_site_transient_update_plugins', (object) array( 'response' => array(), 'no_update' => array() ) );
 		$b = 'wonderads-ia-no-site/wonderads-ia-no-site.php';
-		ok( isset( $t->response[ $b ] ) && '1.2.0' === $t->response[ $b ]->new_version, 'há atualização para 1.2.0' );
+		ok( isset( $t->response[ $b ] ) && '9.9.0' === $t->response[ $b ]->new_version, 'há atualização para 9.9.0' );
 		ok( 0 === strpos( $t->response[ $b ]->package, 'https://workspace.wonder-ads.com/' ), 'pacote vem do workspace' );
 		$info = apply_filters( 'plugins_api', false, 'plugin_information', (object) array( 'slug' => 'wonderads-ia-no-site' ) );
-		ok( is_object( $info ) && '1.2.0' === $info->version, 'ficha do plugin (Ver detalhes)' );
+		ok( is_object( $info ) && '9.9.0' === $info->version, 'ficha do plugin (Ver detalhes)' );
 		ok( false === apply_filters( 'plugins_api', false, 'plugin_information', (object) array( 'slug' => 'outro' ) ), 'não mexe na ficha de outros plugins' );
 		ok( true === apply_filters( 'auto_update_plugin', false, (object) array( 'plugin' => $b ) ), 'atualização automática ligada para este plugin' );
 		ok( false === apply_filters( 'auto_update_plugin', false, (object) array( 'plugin' => 'outro/outro.php' ) ), 'não liga a de outros plugins' );
@@ -316,14 +365,14 @@ switch ( $scenario ) {
 		$GLOBALS['__opts']['wa_ia_db'] = '1'; $GLOBALS['wpdb']->tables['wp_wa_ia_hits'] = true;
 		$GLOBALS['wpdb']->rows = array( gmdate( 'Y-m-d' ) . '|ChatGPT-User|/' => 3, gmdate( 'Y-m-d' ) . '|ClaudeBot|/x/' => 9 );
 		$GLOBALS['__opts']['wa_ia_check'] = array( 'at' => time(), 'error' => null, 'agents' => array( 'ChatGPT-User' => array( 'reached' => 0, 'attempts' => 2, 'status' => array( 403, 403 ), 'cache' => array( null, null ) ) ), 'blocks' => array( 'file' => true, 'lines' => array( array( 'line' => 12, 'text' => 'RewriteCond %{HTTP_USER_AGENT} (GPTBot|ChatGPT-User) [NC]', 'block' => null, 'kind' => 'possible-block' ) ) ) );
-		set_site_transient( 'wa_ia_update_info', (object) array( 'version' => '1.2.0', 'download_url' => 'https://workspace.wonder-ads.com/x.zip' ) );
+		set_site_transient( 'wa_ia_update_info', (object) array( 'version' => '9.9.0', 'download_url' => 'https://workspace.wonder-ads.com/x.zip' ) );
 		ob_start(); wa_ia_settings_page(); $html = ob_get_clean();
 		ok( false !== strpos( $html, 'O site recusa os pedidos de pelo menos uma IA' ), 'admin: mostra o bloqueio' );
 		ok( false !== strpos( $html, 'linha' ) || false !== strpos( $html, '<td>12</td>' ), 'admin: mostra a linha do .htaccess' );
 		ok( false !== strpos( $html, 'suporte do WP Engine' ), 'admin: diz o que pedir ao WP Engine' );
 		ok( false !== strpos( $html, 'ChatGPT-User</td><td style="text-align:right;"><strong>3' ), 'admin: ChatGPT 3 este mês' );
 		ok( false !== strpos( $html, 'ClaudeBot 9' ), 'admin: robôs de treino à parte' );
-		ok( false !== strpos( $html, 'disponível: <strong>1.2.0' ), 'admin: versão nova disponível' );
+		ok( false !== strpos( $html, 'disponível: <strong>9.9.0' ), 'admin: versão nova disponível' );
 		
 		break;
 }
@@ -345,4 +394,5 @@ function wa_ia_increment_for_test() {
 		$fn   = eval( 'return function () {' . $body . '};' );
 	}
 	$fn();
+	wa_ia_flush(); // o fim do pedido (no site é a função de fim do PHP)
 }

@@ -869,6 +869,11 @@ export type AiFetchBlock = {
   /** A cache do alojamento ainda serve parte dos pedidos: o total é um
    *  mínimo (v78.92). */
   partial?: boolean;
+  /** Os registos do servidor (WP Engine → S3) cobriram dias deste mês: esses
+   *  dias contam TODAS as visitas, também as servidas pela cache, e os
+   *  pedidos falsos (nome de IA, endereço fora da lista oficial) ficam de
+   *  fora (v78.96). `from` = primeiro dia coberto no mês. */
+  serverLogs?: { from: string; days: number; fakes: number } | null;
 };
 
 export const REPORT_SCHEMA_VERSION = 3;

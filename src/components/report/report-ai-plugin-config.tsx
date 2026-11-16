@@ -315,6 +315,17 @@ function TestResultBox({ test }: { test: TestResult }) {
         </p>
       )}
 
+      {test.serverLogs && (
+        <p className="mt-2 text-white/55">
+          Registos do servidor do WP Engine ({test.serverLogs.install}):{" "}
+          {test.serverLogs.lastDay
+            ? `lidos até ${ddmmyyyy(test.serverLogs.lastDay)} — o relatório conta também as visitas que a cache serviu e deixa de fora os pedidos falsos.`
+            : test.serverLogs.configured
+              ? "à espera da primeira cópia noturna (o suporte do WP Engine tem de ligar a exportação para o nosso S3)."
+              : "por ligar (variáveis WPE_LOGS_* na Vercel)."}
+        </p>
+      )}
+
       {test.thisMonth && (
         <p className="mt-2 text-white/55">
           Este mês:{" "}
