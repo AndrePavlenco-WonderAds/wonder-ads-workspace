@@ -29,8 +29,8 @@ export async function GET(req: Request) {
     return NextResponse.json({ ok: true, skipped: "WPE_LOGS_* por configurar na Vercel." });
   }
   try {
-    const installs = await syncWpeLogs();
-    return NextResponse.json({ ok: true, installs });
+    const report = await syncWpeLogs();
+    return NextResponse.json({ ok: true, ...report });
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
     return NextResponse.json({ ok: false, error: message }, { status: 500 });

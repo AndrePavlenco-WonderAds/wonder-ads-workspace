@@ -5,7 +5,8 @@
 // só vê as visitas que a cache não serviu. Os registos NGINX têm TODOS os
 // pedidos, servidos pela cache ou não — e o WP Engine copia-os todas as
 // noites (~02:00 UTC, o dia anterior) para um bucket S3 nosso
-// (`wpe_logs/<instalação>/nginx/…`, ver o LargeFS na doc do WP Engine).
+// (a doc do LargeFS diz `wpe_logs/<instalação>/nginx/…`; a cópia real veio
+// em `wpe_logs/nginx/…` — ver wpeLogKeyInfo).
 //
 // O cron diário (/api/cron/wpe-logs) lê cada ficheiro novo uma vez e guarda
 // em KV só as visitas das IAs (assistentes + robôs de pesquisa), já filtradas:
@@ -261,24 +262,67 @@ export type WpeSyncResult = {
   error?: string;
 };
 
+const NOT_INSTALL = new Set(["wpe_logs", "nginx", "apache", "error", "errors", "access", "logs", ""]);
+
+/** A instalação e se é um registo de acessos NGINX, a partir da chave S3.
+ *  A doc do WP Engine diz `wpe_logs/<instalação>/nginx/<data>-<instalação>-apachestyle.log.gz`,
+ *  mas a cópia real (17/11/2026) veio em `wpe_logs/nginx/…` — por isso aceita-se
+ *  a instalação na pasta (antes ou depois de «nginx») ou no nome do ficheiro. */
+export function wpeLogKeyInfo(key: string): { install: string | null; access: boolean } {
+  const parts = key.replace(/^\/+/, "").split("/");
+  const file = parts[parts.length - 1] ?? "";
+  const dirs = parts.slice(0, -1);
+  const access =
+    dirs.includes("nginx") &&
+    !/error/i.test(file) &&
+    /\.log(\.\d+)?(\.gz)?$/.test(file);
+  const at = dirs.indexOf("nginx");
+  const fromDirs = [...dirs.slice(at + 1), ...dirs.slice(0, at).reverse()].find((d) => !NOT_INSTALL.has(d.toLowerCase()) && !/^\d+$/.test(d));
+  const fromName =
+    file.match(/^\d{8,14}-(.+?)-(?:apachestyle|access)\.log/i)?.[1] ??
+    file.match(/^(.+?)[._-](?:apachestyle|access|nginx)/i)?.[1] ??
+    null;
+  const install = fromDirs ?? (fromName && !/^\d+$/.test(fromName) ? fromName : null);
+  return { install: install ? install.toLowerCase() : null, access };
+}
+
+export type WpeSyncReport = {
+  installs: WpeSyncResult[];
+  /** Objetos no bucket e quantos são registos de acessos NGINX. */
+  scanned: { objects: number; access: number };
+  /** Registos NGINX sem instalação reconhecível (nomes só, até 5). */
+  unmatched: string[];
+};
+
 /** Lê os ficheiros novos de todas as instalações do bucket. */
-export async function syncWpeLogs(opts: { maxFilesPerInstall?: number } = {}): Promise<WpeSyncResult[]> {
+export async function syncWpeLogs(opts: { maxFilesPerInstall?: number } = {}): Promise<WpeSyncReport> {
+  const empty: WpeSyncReport = { installs: [], scanned: { objects: 0, access: 0 }, unmatched: [] };
   const creds = wpeLogsCreds();
-  if (!creds) return [];
+  if (!creds) return empty;
   const max = opts.maxFilesPerInstall ?? 40;
-  const { folders } = await s3List(creds, ROOT, { delimiter: "/" });
-  const installs = folders.map((f) => f.slice(ROOT.length).replace(/\/$/, "")).filter(Boolean);
-  const ipLists = installs.length ? await loadIpLists() : {};
+  const { keys: all } = await s3List(creds, ROOT, { max: 50_000 });
+  const byInstall = new Map<string, string[]>();
+  const unmatched: string[] = [];
+  let access = 0;
+  for (const { key } of all) {
+    const info = wpeLogKeyInfo(key);
+    if (!info.access) continue;
+    access++;
+    if (!info.install) {
+      if (unmatched.length < 5) unmatched.push(key);
+      continue;
+    }
+    byInstall.set(info.install, [...(byInstall.get(info.install) ?? []), key]);
+  }
+  const ipLists = byInstall.size ? await loadIpLists() : {};
   const out: WpeSyncResult[] = [];
-  for (const install of installs) {
+  for (const [install, keys] of byInstall) {
     const res: WpeSyncResult = { install, added: 0, files: 0, events: 0 };
     try {
       const index = (await kv.get<LogIndex>(KEY_INDEX(install))) ?? { files: [], updatedAt: 0 };
       const done = new Set(index.files.map((f) => f.k));
-      const { keys } = await s3List(creds, `${ROOT}${install}/nginx/`);
       const todo = keys
-        .map((k) => k.key)
-        .filter((k) => !done.has(k) && /\.log(\.gz)?$/.test(k))
+        .filter((k) => !done.has(k))
         .sort()
         .slice(0, max);
       for (const k of todo) {
@@ -300,7 +344,7 @@ export async function syncWpeLogs(opts: { maxFilesPerInstall?: number } = {}): P
     }
     out.push(res);
   }
-  return out;
+  return { installs: out, scanned: { objects: all.length, access }, unmatched };
 }
 
 // ── leitura para o relatório ────────────────────────────────────────────

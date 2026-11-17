@@ -13,6 +13,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.97",
+    date: "2026-11-17",
+    title: "IA no site: registos do WP Engine lidos onde a cópia real os põe",
+    highlights: [
+      "**🧾 Registos do servidor**: a primeira cópia noturna do WP Engine veio numa pasta diferente da da documentação deles (`wpe_logs/nginx/…`); o cron passa a reconhecer o site pela pasta ou pelo nome do ficheiro, em qualquer das arrumações.",
+      "**🔎 Diagnóstico**: o cron diz quantos ficheiros viu no bucket e quais não conseguiu atribuir a um site.",
+    ],
+  },
+  {
     version: "78.96",
     date: "2026-11-16",
     title: "IA no site: registos do servidor do WP Engine contam tudo + plugin 1.2.0 sem falsos",
