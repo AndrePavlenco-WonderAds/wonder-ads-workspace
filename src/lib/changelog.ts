@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.98",
+    date: "2026-11-17",
+    title: "IA no site: nome do site certo nos ficheiros do WP Engine",
+    highlights: [
+      "**🧾 Registos do servidor**: os ficheiros reais chamam-se `20261110-0017-wonderads.apachestyle.log.gz` — o site sai do nome sem a data; só se lê o formato «apachestyle» (a cópia `.access.log` tem os mesmos pedidos e contaria a dobrar).",
+    ],
+  },
+  {
     version: "78.97",
     date: "2026-11-17",
     title: "IA no site: registos do WP Engine lidos onde a cópia real os põe",

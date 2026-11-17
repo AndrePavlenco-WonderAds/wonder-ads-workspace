@@ -272,16 +272,19 @@ export function wpeLogKeyInfo(key: string): { install: string | null; access: bo
   const parts = key.replace(/^\/+/, "").split("/");
   const file = parts[parts.length - 1] ?? "";
   const dirs = parts.slice(0, -1);
+  // Só o formato «apachestyle» (o que parseAccessLog lê): a pasta nginx traz
+  // também `….access.log.gz` com OS MESMOS pedidos noutro formato — lê-lo
+  // contaria a dobrar se um dia o formato coincidisse.
   const access =
     dirs.includes("nginx") &&
-    !/error/i.test(file) &&
+    /apachestyle/i.test(file) &&
     /\.log(\.\d+)?(\.gz)?$/.test(file);
   const at = dirs.indexOf("nginx");
   const fromDirs = [...dirs.slice(at + 1), ...dirs.slice(0, at).reverse()].find((d) => !NOT_INSTALL.has(d.toLowerCase()) && !/^\d+$/.test(d));
-  const fromName =
-    file.match(/^\d{8,14}-(.+?)-(?:apachestyle|access)\.log/i)?.[1] ??
-    file.match(/^(.+?)[._-](?:apachestyle|access|nginx)/i)?.[1] ??
-    null;
+  // «20261110-0017-wonderads.apachestyle.log.gz» (real) ou
+  // «201807051234-wonderads-apachestyle.log.gz» (doc): fora a data à frente.
+  const stem = file.replace(/^(?:\d+[-_.])+/, "");
+  const fromName = stem.match(/^(.+?)[._-](?:apachestyle|access|nginx)/i)?.[1] ?? null;
   const install = fromDirs ?? (fromName && !/^\d+$/.test(fromName) ? fromName : null);
   return { install: install ? install.toLowerCase() : null, access };
 }
