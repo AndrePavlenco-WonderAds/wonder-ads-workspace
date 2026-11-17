@@ -488,7 +488,8 @@ export async function wpeLogsLastDay(install: string, tz = "UTC"): Promise<strin
   try {
     const index = await kv.get<LogIndex>(KEY_INDEX(install));
     const last = index?.files.reduce((m, f) => Math.max(m, f.to), 0) ?? 0;
-    return last ? makeDayFn(tz)(last) : null;
+    // O último dia INTEIRO: o ficheiro acaba ~00:15 do dia seguinte.
+    return last ? makeDayFn(tz)(last + EDGE_SEC - 86400) : null;
   } catch {
     return null;
   }

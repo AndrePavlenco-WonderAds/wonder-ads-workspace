@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "79.0",
+    date: "2026-11-17",
+    title: "IA no site: «registos até» mostra o último dia inteiro",
+    highlights: [
+      "**🧾 Painel «IA no site»**: «registos até 16/11» em vez de 17/11 — o ficheiro do WP Engine acaba poucos minutos depois da meia-noite, e esse dia ainda não está lido.",
+    ],
+  },
+  {
     version: "78.99",
     date: "2026-11-17",
     title: "IA no site: scanners apanhados também quando fingem ser o Claude ou a Mistral",
