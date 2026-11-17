@@ -19,7 +19,7 @@ import {
   type AiFetchKey,
 } from "./report-types";
 import { IA_PLUGIN_RELEASE } from "./wp-plugin-release";
-import { readWpeLogs, wpeLogsCreds, wpeLogsLastDay, type WpeLogCounts } from "./wpe-logs";
+import { isPagePath, readWpeLogs, wpeLogsCreds, wpeLogsLastDay, type WpeLogCounts } from "./wpe-logs";
 
 /** O nome com que cada assistente se identifica no pedido. */
 export const AI_FETCH_AGENT: Record<AiFetchKey, string> = {
@@ -260,24 +260,50 @@ export async function fetchAiFetchBlock(
   ) as AiFetchBlock["byAssistant"];
 
   const month = current.startDate.slice(0, 7);
-  const pageTotals = new Map<string, number>();
+  // Uma página = uma linha, com ou sem «/» no fim: até à 1.1.0 o plugin
+  // contava também o redirecionamento «/x» → «/x/» (a mesma visita duas
+  // vezes) — fica a variante maior, não a soma.
+  const pageKey = (p: string) => (p.length > 1 ? p.replace(/\/+$/, "") || "/" : p);
+  // Fora também o que não é página (contado pelas versões antigas do plugin:
+  // «/.firebaserc», «…/credentials.json»), o que os registos apanharam como
+  // falso e — com os registos a cobrir o mês todo — o que eles nunca viram
+  // responder (sondas que deram 404; uma página vista só hoje entra amanhã,
+  // com os registos de hoje).
+  const logBlock = logSummary(logs, current, since);
+  const fakePaths = new Set(logs?.fakePaths ?? []);
+  const realLogPaths = new Set((logs?.pages ?? []).filter((p) => p.month === month).map((p) => pageKey(p.path)));
+  const pluginVariants = new Map<string, Map<string, number>>();
   for (const p of payload.pages ?? []) {
     if (p.month !== month || !AGENT_TO_KEY.has(p.agent)) continue;
-    pageTotals.set(p.path, (pageTotals.get(p.path) ?? 0) + (Number(p.count) || 0));
+    if (!isPagePath(p.path)) continue;
+    const seenByLogs = realLogPaths.has(pageKey(p.path));
+    if (!seenByLogs && (logBlock?.complete || fakePaths.has(p.path))) continue;
+    const v = pluginVariants.get(pageKey(p.path)) ?? new Map<string, number>();
+    v.set(p.path, (v.get(p.path) ?? 0) + (Number(p.count) || 0));
+    pluginVariants.set(pageKey(p.path), v);
+  }
+  const pageTotals = new Map<string, { path: string; count: number }>();
+  for (const [key, variants] of pluginVariants) {
+    const [path, count] = [...variants].sort((a, b) => b[1] - a[1] || b[0].length - a[0].length)[0];
+    pageTotals.set(key, { path, count });
   }
   // As páginas do plugin são do mês inteiro e não se partem por dia: com
   // registos, fica o maior dos dois por página (os registos veem tudo o
   // que o plugin viu, nos dias que cobrem).
   if (logs) {
-    const fromLogs = new Map<string, number>();
+    const fromLogs = new Map<string, { path: string; count: number }>();
     for (const p of logs.pages) {
       if (p.month !== month || !AGENT_TO_KEY.has(p.agent)) continue;
-      fromLogs.set(p.path, (fromLogs.get(p.path) ?? 0) + p.count);
+      const cur = fromLogs.get(pageKey(p.path));
+      fromLogs.set(pageKey(p.path), { path: cur?.path ?? p.path, count: (cur?.count ?? 0) + p.count });
     }
-    for (const [path, n] of fromLogs) pageTotals.set(path, Math.max(pageTotals.get(path) ?? 0, n));
+    for (const [key, l] of fromLogs) {
+      const pl = pageTotals.get(key);
+      pageTotals.set(key, { path: l.path, count: Math.max(pl?.count ?? 0, l.count) });
+    }
   }
-  const topPages = [...pageTotals]
-    .map(([path, count]) => ({ path, count }))
+  const topPages = [...pageTotals.values()]
+    .map(({ path, count }) => ({ path, count }))
     .sort((a, b) => b.count - a.count || a.path.localeCompare(b.path))
     .slice(0, 8);
 
@@ -287,7 +313,6 @@ export async function fetchAiFetchBlock(
     : null;
   const searchNow = sumAgents(days, current, SEARCH_CRAWLERS);
   const searchPrev = prevKnown ? sumAgents(days, previous, SEARCH_CRAWLERS) : null;
-  const logBlock = logSummary(logs, current, since);
   return {
     source: "wp-plugin",
     status: "ok",

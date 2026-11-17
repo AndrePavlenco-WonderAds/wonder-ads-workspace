@@ -1464,8 +1464,8 @@ export function ReportDocument({
                       )}
                   {aiFOk.serverLogs.fakes > 0 &&
                     ` ${t(
-                      `${aiFOk.serverLogs.fakes} ${aiFOk.serverLogs.fakes === 1 ? "pedido que fingia" : "pedidos que fingiam"} ser uma IA (endereço fora da lista oficial) ficaram de fora.`,
-                      `${aiFOk.serverLogs.fakes} ${aiFOk.serverLogs.fakes === 1 ? "request pretending" : "requests pretending"} to be an AI (address outside the official list) were left out.`,
+                      `${aiFOk.serverLogs.fakes} ${aiFOk.serverLogs.fakes === 1 ? "pedido que fingia" : "pedidos que fingiam"} ser uma IA (endereço fora da lista oficial, ou o mesmo endereço já apanhado a fingir) ficaram de fora.`,
+                      `${aiFOk.serverLogs.fakes} ${aiFOk.serverLogs.fakes === 1 ? "request pretending" : "requests pretending"} to be an AI (address outside the official list, or one already caught pretending) were left out.`,
                     )}`}
                 </p>
               )}

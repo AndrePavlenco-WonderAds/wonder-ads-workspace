@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "78.99",
+    date: "2026-11-17",
+    title: "IA no site: scanners apanhados também quando fingem ser o Claude ou a Mistral",
+    highlights: [
+      "**🛡️ Endereço mentiroso = tudo falso**: um endereço que fingiu ser o ChatGPT/Perplexity (fora da lista oficial) deixa de contar também quando usa o nome do Claude ou da Mistral, que não publicam listas — no wonder-ads.com, 73 de 104 desses pedidos (9–16/11) eram de 5 scanners.",
+      "**📄 Páginas mais lidas limpas**: uma página = uma linha, com ou sem «/» no fim (até à 1.1.0 o redirecionamento contava a dobrar); fora o que não é página e, com os registos a cobrir o mês, as sondas que nunca responderam.",
+      "**🧾 Primeira semana do WP Engine lida**: 09–16/11 no wonder-ads.com — 47 visitas verdadeiras (14 ChatGPT, 33 Claude), 106 falsas de fora.",
+    ],
+  },
+  {
     version: "78.98",
     date: "2026-11-17",
     title: "IA no site: nome do site certo nos ficheiros do WP Engine",

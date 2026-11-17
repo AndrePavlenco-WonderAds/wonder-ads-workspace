@@ -16,7 +16,8 @@
 //     (User-Agent com «WonderAds-Test»);
 //   - o endereço IP confrontado com as listas oficiais da OpenAI e da
 //     Perplexity: fora da lista = falso, não conta. (A Anthropic e a Mistral
-//     não publicam listas — essas ficam «não verificáveis» e contam.)
+//     não publicam listas — essas contam, exceto se o mesmo endereço foi
+//     apanhado a fingir ser outra IA: ver `liars` em readWpeLogs.)
 // No relatório, cada dia coberto pelos registos usa os registos; os outros
 // usam o plugin (wp-ai-visibility.ts).
 
@@ -382,6 +383,8 @@ export type WpeLogCounts = {
   /** Por dia: pedidos com nome de IA vindos de fora das listas oficiais
    *  (ignorados). */
   fakes: Record<string, number>;
+  /** Caminhos pedidos pelos falsos (para limpar as páginas antigas do plugin). */
+  fakePaths: string[];
 };
 
 /** Gaps maiores do que isto entre ficheiros = buraco na cobertura. */
@@ -442,10 +445,18 @@ export async function readWpeLogs(
   }
   const coveredSet = new Set(covered);
 
+  // Um endereço apanhado a fingir ser o ChatGPT/Perplexity (fora da lista
+  // oficial) é um scanner: os pedidos dele em nome do Claude ou da Mistral
+  // (que não publicam listas) também são falsos. No wonder-ads.com (9–16/11)
+  // foram 73 de 104 — os scanners pedem as mesmas páginas com cada nome.
+  const liars = new Set<string>();
+  for (const f of files) for (const e of f.events) if (e[3] === -1) liars.add(e[4]);
+
   const seen = new Set<string>();
   const days: WpeLogCounts["days"] = {};
   const pageMap = new Map<string, number>();
   const fakes: Record<string, number> = {};
+  const fakePaths = new Set<string>();
   for (const f of files) {
     for (const [t, a, path, v, h] of f.events) {
       const id = `${t}|${h}|${path}|${a}`;
@@ -453,8 +464,9 @@ export async function readWpeLogs(
       seen.add(id);
       const day = dayOf(t);
       if (!coveredSet.has(day)) continue;
-      if (v === -1) {
+      if (v === -1 || (v === 0 && liars.has(h))) {
         fakes[day] = (fakes[day] ?? 0) + 1;
+        fakePaths.add(path);
         continue;
       }
       const agent = LOG_AGENTS[a];
@@ -468,7 +480,7 @@ export async function readWpeLogs(
     const [month, agent, path] = k.split("\u0000");
     return { month, agent, path, count };
   });
-  return { days, pages, covered, fakes };
+  return { days, pages, covered, fakes, fakePaths: [...fakePaths] };
 }
 
 /** O último dia coberto pelos registos (para o painel «IA no site»). */
