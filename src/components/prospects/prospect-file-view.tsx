@@ -472,7 +472,7 @@ function Hero({
             {ctx.onBoard && (
               <Link
                 href={`/seo/${ctx.slug}`}
-                className="group inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-white/12 bg-white/[0.04] px-3 py-2 text-[12px] font-medium text-white/75 transition hover:border-white/25 hover:text-white"
+                className="group inline-flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border border-white/12 bg-white/[0.04] px-3 py-2 text-[12px] font-medium text-white/75 transition hover:border-white/25 hover:text-white"
               >
                 Ficha no SEO DPT
                 <ArrowRight className="h-3.5 w-3.5 transition group-hover:translate-x-0.5" />
@@ -587,7 +587,7 @@ function CopyOnboardingLink({ path }: { path: string }) {
         }
       }}
       title="Copia o link público do onboarding (o que se envia ao cliente)"
-      className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-white/12 bg-white/[0.04] px-3 py-2 text-[12px] font-medium text-white/75 transition hover:border-white/25 hover:text-white"
+      className="inline-flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border border-white/12 bg-white/[0.04] px-3 py-2 text-[12px] font-medium text-white/75 transition hover:border-white/25 hover:text-white"
     >
       {copied ? <Check className="h-3.5 w-3.5 text-emerald-300" /> : <Copy className="h-3.5 w-3.5" />}
       {copied ? "Copiado" : "Link do onboarding"}

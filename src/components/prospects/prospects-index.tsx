@@ -240,7 +240,9 @@ export function ProspectsIndex({
                       {i.ownerName ?? "Sem comercial"}
                       {i.consultant ? ` → ${i.consultant}` : ""}
                     </span>
+                    {/* Lida / por ler só quando já há alguma coisa para ler. */}
                     {i.consultant &&
+                      i.pct > 0 &&
                       (i.consultantRead ? (
                         <Check className="h-3.5 w-3.5 shrink-0 text-emerald-300" aria-label="Lida pelo consultor" />
                       ) : (

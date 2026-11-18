@@ -13,6 +13,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "80.1",
+    date: "2026-11-18",
+    title: "Ficha do prospect: acertos de leitura",
+    highlights: [
+      "Na lista de fichas, o «por ler / lida» do consultor só aparece quando a ficha já tem conteúdo.",
+      "Os botões do topo da ficha («Ficha no SEO DPT», «Link do onboarding») ficam numa linha só.",
+    ],
+  },
+  {
     version: "80.0",
     date: "2026-11-18",
     title: "Ficha do prospect: o que o Comercial sabe do cliente, passado ao consultor",
