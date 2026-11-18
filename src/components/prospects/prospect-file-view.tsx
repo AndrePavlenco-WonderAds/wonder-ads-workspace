@@ -288,7 +288,7 @@ export function ProspectFileView({
         </div>
       </nav>
 
-      <div className="mx-auto mt-5 max-w-5xl" role="tabpanel">
+      <div className="mx-auto mt-5 w-full max-w-5xl" role="tabpanel">
         {tab === "geral" && (
           <div className="space-y-5">
             <Card id="resumo" tone="brand">
@@ -381,7 +381,7 @@ export function ProspectFileView({
         )}
 
         {tab === "historico" && (
-          <div className="mx-auto max-w-2xl">
+          <div className="mx-auto w-full max-w-2xl">
             {file.activity.length > 0 ? (
               <ActivityCard />
             ) : (

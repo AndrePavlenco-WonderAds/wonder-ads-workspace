@@ -13,6 +13,12 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "80.3",
+    date: "2026-11-18",
+    title: "Ficha do prospect: separadores na largura certa",
+    highlights: ["O conteúdo de cada separador ocupa a largura toda da página (estava encolhido ao centro)."],
+  },
+  {
     version: "80.2",
     date: "2026-11-18",
     title: "Ficha do prospect: menos coisas à vista",
