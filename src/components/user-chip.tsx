@@ -28,7 +28,9 @@ import {
 } from "@/lib/auth/credentials";
 import { getTeamAvatar } from "@/lib/team-avatars";
 import {
+  colorForNumber,
   dailyNumberFor,
+  dailyRoster,
   describeDay,
   lisbonISODate,
 } from "@/lib/seo-daily-number";
@@ -81,6 +83,16 @@ export async function UserChip() {
         hex: mine.color.hex,
         label: mine.color.label,
         day: describeDay(iso),
+        // v79.3: a ordem de hoje da roda toda, para o hover do azulejo —
+        // nome, retrato e número de cada colega, do 1 ao 5.
+        roster: (dailyRoster(iso) ?? []).map((r) => ({
+          username: r.username,
+          name: getEmployeeDisplay(r.username)?.name ?? r.username,
+          avatar: getTeamAvatar(r.username),
+          number: r.number,
+          hex: colorForNumber(r.number).hex,
+          isSelf: r.username === viewingUsername,
+        })),
       }
     : null;
 

@@ -13,6 +13,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "79.3",
+    date: "2026-11-18",
+    title: "Número do dia: o hover mostra a ordem de hoje",
+    highlights: [
+      "**🔢 Ordem de hoje no hover.** Passar o rato pelo número do dia, no chip do topo, abre uma caixa com os consultores SEO do 1 ao 5: número na cor dele, retrato e nome, com a própria pessoa realçada («tu»).",
+      "A caixa só aparece com o menu da conta fechado e não interfere com o clique no chip.",
+    ],
+  },
+  {
     version: "79.2",
     date: "2026-11-18",
     title: "Help Kids: a folga de custos só começa em dezembro",

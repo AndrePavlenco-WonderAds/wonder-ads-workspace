@@ -84,7 +84,63 @@ export type DailyNumberView = {
   label: string;
   /** «quinta-feira, 10/09/2026» — para o tooltip. */
   day: string;
+  /** A roda de hoje por ordem crescente de número (v79.3) — o hover do
+   *  azulejo mostra a ordem dos colegas. */
+  roster: DailyRosterRow[];
 };
+
+export type DailyRosterRow = {
+  username: string;
+  name: string;
+  avatar: string | null;
+  number: number;
+  hex: string;
+  /** A pessoa VISTA — a linha fica realçada e leva «tu». */
+  isSelf: boolean;
+};
+
+/** Caixa do hover do azulejo: a ordem de hoje, do 1 ao último. Só spans —
+ *  vive dentro do <button> do chip. Informativa: não apanha o rato. */
+function DailyRosterPopover({ day, roster }: { day: string; roster: DailyRosterRow[] }) {
+  return (
+    <span
+      aria-hidden
+      className="pointer-events-none invisible absolute right-0 top-full z-40 mt-3 block w-[15rem] translate-y-[-4px] rounded-2xl border border-white/12 bg-[#0b0b12]/95 p-2 text-left opacity-0 shadow-[0_24px_70px_-16px_rgba(0,0,0,0.85),0_0_0_1px_rgba(120,61,245,0.08)] backdrop-blur-xl transition duration-200 group-hover/num:visible group-hover/num:translate-y-0 group-hover/num:opacity-100 motion-reduce:transition-none"
+    >
+      <span className="block px-2 pb-2 pt-1">
+        <span className="block text-[11px] font-semibold uppercase tracking-[0.14em] text-white/45">
+          Ordem de hoje
+        </span>
+        <span className="mt-0.5 block text-[11.5px] text-white/55">{day}</span>
+      </span>
+      <span className="flex flex-col gap-0.5">
+        {roster.map((r) => (
+          <span
+            key={r.username}
+            className={`flex items-center gap-2.5 rounded-xl px-2 py-1.5 ${
+              r.isSelf ? "bg-white/[0.06] ring-1 ring-inset ring-white/10" : ""
+            }`}
+          >
+            <NumberTile number={r.number} hex={r.hex} />
+            <AvatarCircle avatar={r.avatar} name={r.name} className="h-6 w-6 text-[10px]" />
+            <span
+              className={`min-w-0 flex-1 truncate text-[12.5px] ${
+                r.isSelf ? "font-semibold text-white" : "font-medium text-white/80"
+              }`}
+            >
+              {r.name}
+            </span>
+            {r.isSelf && (
+              <span className="shrink-0 rounded-full bg-white/10 px-1.5 py-px text-[10px] font-semibold text-white/70">
+                tu
+              </span>
+            )}
+          </span>
+        ))}
+      </span>
+    </span>
+  );
+}
 
 /** Azulejo de 22 px com o número do dia. Cores em estilo inline: vêm de
  *  uma tabela, e o Tailwind só gera as classes que vê escritas no código. */
@@ -372,17 +428,22 @@ export function UserChipMenu({
         </span>
         {/* «Número do dia» — dentro do chip, entre o cargo e a seta, com um
             separador fino para ler como parte da identidade e não como um
-            botão à parte. Só o número: o painel com a roda toda no menu
-            (v77.22) saiu a pedido do André. */}
+            botão à parte. O painel com a roda toda no menu (v77.22) saiu a
+            pedido do André; desde a v79.3 a ordem de hoje aparece no hover
+            do próprio azulejo (escondida enquanto o menu está aberto). */}
         {dailyNumber && (
           <span
             role="img"
-            aria-label={`Número do dia: ${dailyNumber.number} (${dailyNumber.label})`}
-            title={`Número do dia · ${dailyNumber.day}`}
-            className="inline-flex items-center gap-2.5"
+            aria-label={`Número do dia: ${dailyNumber.number} (${dailyNumber.label}). Ordem de hoje: ${dailyNumber.roster
+              .map((r) => `${r.number} ${r.name}`)
+              .join(", ")}`}
+            className="group/num relative inline-flex items-center gap-2.5"
           >
             <span aria-hidden className="hidden h-5 w-px bg-white/10 sm:block" />
             <NumberTile number={dailyNumber.number} hex={dailyNumber.hex} />
+            {!open && dailyNumber.roster.length > 0 && (
+              <DailyRosterPopover day={dailyNumber.day} roster={dailyNumber.roster} />
+            )}
           </span>
         )}
         <ChevronDown
