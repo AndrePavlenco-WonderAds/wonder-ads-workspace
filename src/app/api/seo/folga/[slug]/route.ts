@@ -24,6 +24,7 @@ import {
   FOLGA_START,
   allowanceFor,
   baseAllowance,
+  folgaMonthName,
   folgaStartFor,
   monthOf,
   shiftFolgaMonth,
@@ -123,6 +124,10 @@ export async function POST(req: Request, ctx: Ctx) {
   const allowance = allowanceFor(monthOf(date), record, baseAllowance(slug, tier));
   if (b.kind === "folga" && tier === "lite" && !allowance) {
     return bad("Cliente Lite: não tem folga — este extra tem de ser cobrado.");
+  }
+  const folgaFrom = folgaStartFor(slug);
+  if (b.kind === "folga" && monthOf(date) < folgaFrom) {
+    return bad(`A folga deste projeto só começa em ${folgaMonthName(folgaFrom)} — até lá, os extras são cobrados.`);
   }
   if (b.kind === "folga" && allowance === null) {
     return bad("A folga deste projeto ainda está por definir — até lá, os extras são cobrados.");

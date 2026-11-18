@@ -20,6 +20,7 @@ const STATE_PILL: Record<FolgaSummary["state"], string> = {
   over: "border-rose-400/50 bg-rose-500/20 text-rose-100",
   lite: "border-amber-400/40 bg-amber-500/15 text-amber-200",
   unset: "border-white/15 bg-white/[0.06] text-white/65",
+  soon: "border-sky-400/35 bg-sky-500/12 text-sky-200",
 };
 
 const GLOW: Record<FolgaSummary["state"], string> = {
@@ -29,12 +30,13 @@ const GLOW: Record<FolgaSummary["state"], string> = {
   over: "linear-gradient(135deg,#f43f5e,#be123c)",
   lite: "linear-gradient(135deg,#f59e0b,#783DF5)",
   unset: "linear-gradient(135deg,#475569,#783DF5)",
+  soon: "linear-gradient(135deg,#38bdf8,#783DF5)",
 };
 
 export function FolgaHero({ s, daysLeft }: { s: FolgaSummary; daysLeft: number }) {
   const month = folgaMonthName(s.current.key);
   const prev = s.months.length > 1 ? s.months[s.months.length - 2] : null;
-  const noFolga = s.state === "lite" || s.state === "unset";
+  const noFolga = s.state === "lite" || s.state === "unset" || s.state === "soon";
 
   return (
     <section className="relative overflow-hidden rounded-[32px] border border-white/10 bg-[#0f0d19] p-6 sm:p-9">
@@ -54,13 +56,17 @@ export function FolgaHero({ s, daysLeft }: { s: FolgaSummary; daysLeft: number }
                 s.remaining < 0 ? "text-rose-200" : "text-white"
               }`}
             >
-              {noFolga ? (s.state === "lite" ? "Cobrar tudo" : "Por definir") : eurCents(s.remaining)}
+              {noFolga ? (s.state === "unset" ? "Por definir" : "Cobrar tudo") : eurCents(s.remaining)}
             </p>
             <p className="mt-3 text-[14px] text-white/55">
               {s.state === "lite"
                 ? "Cliente Lite: não tem folga. Todos os extras pedidos são cobrados ao cliente."
                 : s.state === "unset"
                   ? "A direção ainda não definiu a folga mensal deste projeto."
+                  : s.state === "soon" && s.startsIn
+                    ? `A folga deste projeto começa em ${folgaMonthName(s.startsIn)}${
+                        s.allowanceNow ? `: ${eurCents(Math.round(s.allowanceNow * 100))} por mês` : ""
+                      }. Até lá, os extras são cobrados ao cliente.`
                   : `de ${eurCents(s.available)}${
                       s.current.opening !== 0 && prev
                         ? ` · ${eurCents(s.current.opening)} ${s.current.opening > 0 ? "transitaram" : "em falta"} de ${folgaMonthName(prev.key)}`
@@ -99,7 +105,7 @@ function Meter({ s }: { s: FolgaSummary }) {
       </div>
     );
   }
-  if (s.state === "unset") {
+  if (s.state === "unset" || s.state === "soon") {
     return (
       <div className="mt-8">
         <div
@@ -110,7 +116,9 @@ function Meter({ s }: { s: FolgaSummary }) {
           }}
         />
         <p className="mt-2 text-[12.5px] text-white/45">
-          Até a direção definir a folga, os extras deste projeto são cobrados ao cliente.
+          {s.state === "soon" && s.startsIn
+            ? `Lança os extras de ${folgaMonthName(s.current.key)} como «cobrado ao cliente». A folga entra a 1 de ${folgaMonthName(s.startsIn)}.`
+            : "Até a direção definir a folga, os extras deste projeto são cobrados ao cliente."}
         </p>
       </div>
     );
@@ -229,7 +237,7 @@ function MonthSteps({ s }: { s: FolgaSummary }) {
             {st.kind === "past"
               ? `fechou ${eurCents(st.value)}`
               : st.kind === "now"
-                ? s.state === "lite" || s.state === "unset"
+                ? s.state === "lite" || s.state === "unset" || s.state === "soon"
                   ? "—"
                   : eurCents(st.value)
                 : s.state === "lite" && st.value === 0

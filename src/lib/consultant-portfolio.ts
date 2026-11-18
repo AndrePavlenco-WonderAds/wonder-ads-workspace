@@ -42,8 +42,10 @@ export type PortfolioRow = {
     /** Cêntimos — o que fica este mês (pode ser negativo). */
     remaining: number;
     available: number;
-    /** 0–100, ou negativo acima da folga; null sem folga (Lite / por definir). */
+    /** 0–100, ou negativo acima da folga; null sem folga (Lite / por definir / a começar). */
     pctFree: number | null;
+    /** «2026-12» — quando a folga ainda não começou. */
+    startsIn: string | null;
   };
 };
 
@@ -71,7 +73,7 @@ export async function getConsultantPortfolio(
     const record = npsRecords[slug];
     const status = record ? npsMonthStatus(record, now).state : "por-enviar";
     const f = summarizeFolga(folgas[i], baseAllowance(slug, tier), tier, nowKey, folgaStartFor(slug));
-    const noFolga = f.state === "lite" || f.state === "unset";
+    const noFolga = f.state === "lite" || f.state === "unset" || f.state === "soon";
     out[slug] = {
       slug,
       tier,
@@ -91,6 +93,7 @@ export async function getConsultantPortfolio(
         remaining: f.remaining,
         available: f.available,
         pctFree: noFolga || f.available <= 0 ? null : Math.round((f.remaining / f.available) * 100),
+        startsIn: f.startsIn,
       },
     };
   });

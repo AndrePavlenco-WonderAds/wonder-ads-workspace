@@ -178,7 +178,7 @@ export default async function FolgaPage({ params }: { params: Promise<{ slug: st
               tickets={tickets}
               remaining={s.remaining}
               available={s.available}
-              chargeOnly={s.state === "lite" || s.allowanceNow === null}
+              chargeOnly={s.state === "lite" || s.state === "soon" || s.allowanceNow === null}
               today={today}
               prices={priceList.prices}
             />

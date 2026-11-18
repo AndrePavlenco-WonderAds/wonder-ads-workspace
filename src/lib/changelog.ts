@@ -13,6 +13,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "79.2",
+    date: "2026-11-18",
+    title: "Help Kids: a folga de custos só começa em dezembro",
+    highlights: [
+      "**🗓️ Folga a começar.** A folga da Help Kids (117 €/mês) entra a 1 de dezembro, o primeiro mês inteiro depois do onboarding a 19/11. Até lá a página diz «Folga a começar» e «Cobrar tudo», o chip da ficha mostra «DEZ» e a vista do consultor «a partir de dez».",
+      "**🔒 Em novembro só entram extras cobrados.** A página só deixa lançar «cobrado ao cliente», e a API recusa um «oferecido» antes do mês em que a folga começa.",
+    ],
+  },
+  {
     version: "79.1",
     date: "2026-11-18",
     title: "Help Kids: logótipo do site, onboarding a 19/11 e folga de 117 €/mês",

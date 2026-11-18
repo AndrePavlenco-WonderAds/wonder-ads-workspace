@@ -35,7 +35,7 @@ import type { RoadmapPillar, RoadmapStatus } from "@/lib/roadmap-store";
 import type { PortfolioRow } from "@/lib/consultant-portfolio";
 import { TIER_LABEL } from "@/lib/client-tiers";
 import { npsScoreColor } from "@/lib/nps-questions";
-import { eurCents } from "@/lib/seo-folga";
+import { eurCents, folgaMonthName, folgaMonthShort } from "@/lib/seo-folga";
 
 const HEALTH: Record<ConsultantWeekClient["health"], { label: string; chip: string; rank: number }> = {
   critical: { label: "Crítico", chip: "border-rose-400/40 bg-rose-500/15 text-rose-200", rank: 0 },
@@ -68,6 +68,7 @@ const FOLGA_TONE: Record<PortfolioRow["folga"]["state"], { text: string; bar: st
   over: { text: "text-rose-200", bar: "bg-rose-400" },
   lite: { text: "text-white/45", bar: "bg-white/20" },
   unset: { text: "text-white/45", bar: "bg-white/20" },
+  soon: { text: "text-sky-200/70", bar: "bg-sky-300/40" },
 };
 
 const score = (n: number) => n.toFixed(1).replace(".", ",");
@@ -575,7 +576,13 @@ function FolgaCell({ slug, f }: { slug: string; f: PortfolioRow["folga"] }) {
   if (f.pctFree === null) {
     return (
       <Link href={`/seo/${slug}/folga`} className="text-[12.5px] text-white/45 hover:text-white">
-        {f.state === "lite" ? "Lite · extras cobrados" : f.remaining < 0 ? eurCents(f.remaining) : "por definir"}
+        {f.state === "lite"
+          ? "Lite · extras cobrados"
+          : f.remaining < 0
+            ? eurCents(f.remaining)
+            : f.state === "soon" && f.startsIn
+              ? `começa em ${folgaMonthName(f.startsIn)}`
+              : "por definir"}
       </Link>
     );
   }
@@ -745,7 +752,13 @@ function ClientWeekCard({ client, p }: { client: ConsultantWeekClient; p: Portfo
             className={`ml-auto inline-flex items-center gap-1 text-[12px] tabular-nums hover:text-white ${FOLGA_TONE[p.folga.state].text}`}
           >
             <Wallet className="h-3.5 w-3.5" />
-            {p.folga.pctFree === null ? (p.folga.state === "lite" ? "Lite" : "por definir") : eurCents(p.folga.remaining)}
+            {p.folga.pctFree === null
+              ? p.folga.state === "lite"
+                ? "Lite"
+                : p.folga.state === "soon" && p.folga.startsIn
+                  ? `a partir de ${folgaMonthShort(p.folga.startsIn).toLowerCase()}`
+                  : "por definir"
+              : eurCents(p.folga.remaining)}
           </Link>
         </div>
       )}

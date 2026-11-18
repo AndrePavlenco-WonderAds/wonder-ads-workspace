@@ -8,7 +8,7 @@ import Link from "next/link";
 import { Wallet } from "lucide-react";
 import { getClientTier } from "@/lib/client-tiers";
 import { lisbonMonthKey } from "@/lib/dates";
-import { baseAllowance, folgaStartFor, summarizeFolga, type FolgaState } from "@/lib/seo-folga";
+import { baseAllowance, folgaMonthName, folgaMonthShort, folgaStartFor, summarizeFolga, type FolgaState } from "@/lib/seo-folga";
 import { getFolga } from "@/lib/seo-folga-store";
 
 const TONE: Record<FolgaState, { pill: string; bar: string }> = {
@@ -18,6 +18,7 @@ const TONE: Record<FolgaState, { pill: string; bar: string }> = {
   over: { pill: "border-rose-400/50 bg-rose-500/25 text-rose-100", bar: "bg-rose-400" },
   lite: { pill: "border-amber-400/40 bg-amber-500/15 text-amber-100", bar: "bg-amber-300" },
   unset: { pill: "border-white/15 bg-white/[0.06] text-white/60", bar: "bg-white/30" },
+  soon: { pill: "border-sky-400/35 bg-sky-500/15 text-sky-100", bar: "bg-sky-300" },
 };
 
 export async function FolgaChip({ slug, hidden = false }: { slug: string; hidden?: boolean }) {
@@ -28,7 +29,8 @@ export async function FolgaChip({ slug, hidden = false }: { slug: string; hidden
   const left = s.available > 0 ? Math.max(0, Math.min(1, s.remaining / s.available)) : 0;
   // Acima da folga a percentagem fica negativa: −30% = gastou-se 30% a mais.
   const pct = s.available > 0 ? Math.round((s.remaining / s.available) * 100) : s.remaining < 0 ? -100 : 0;
-  const value = s.state === "unset" ? "—" : `${pct}%`.replace("-", "−");
+  const value =
+    s.state === "unset" ? "—" : s.state === "soon" && s.startsIn ? folgaMonthShort(s.startsIn) : `${pct}%`.replace("-", "−");
 
   return (
     <Link
@@ -38,13 +40,15 @@ export async function FolgaChip({ slug, hidden = false }: { slug: string; hidden
           ? "Folga de custos: cliente Lite, sem folga — os extras são cobrados"
           : s.state === "unset"
             ? "Folga de custos: por definir"
-            : `Folga de custos: ${pct}% da folga deste mês ainda livre`
+            : s.state === "soon" && s.startsIn
+              ? `Folga de custos: começa em ${folgaMonthName(s.startsIn)} — até lá, os extras são cobrados`
+              : `Folga de custos: ${pct}% da folga deste mês ainda livre`
       }
       className="inline-flex items-center gap-1.5 rounded-full border border-white/12 bg-white/[0.04] px-3 py-1 text-[11px] font-medium text-white/75 transition hover:border-white/30 hover:bg-white/[0.08] hover:text-white"
     >
       <Wallet className="h-3 w-3" />
       <span>Folga</span>
-      {s.state !== "lite" && s.state !== "unset" && (
+      {s.state !== "lite" && s.state !== "unset" && s.state !== "soon" && (
         <span aria-hidden className="ml-0.5 h-1 w-9 overflow-hidden rounded-full bg-white/10">
           <span className={`block h-full rounded-full ${tone.bar}`} style={{ width: `${left * 100}%` }} />
         </span>

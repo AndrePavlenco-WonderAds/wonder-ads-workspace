@@ -40,15 +40,17 @@ export const FOLGA_DEFAULTS: Record<string, number> = {
   "sentir-saude": 125,
   "monte-mar": 76.67,
   "maratona-clube-de-portugal": 60,
-  // v79.1: Help Kids — 117 €/mês (dito pelo André), a contar de novembro.
+  // v79.1: Help Kids — 117 €/mês (dito pelo André); começa em dezembro (v79.2).
   "help-kids": 117,
 };
 
 /** Projetos que entraram depois de FOLGA_START: a folga só começa a entrar
- *  no mês do onboarding — sem isto, um cliente novo nascia com os meses
- *  anteriores já acumulados. */
+ *  no mês aqui marcado — sem isto, um cliente novo nascia com os meses
+ *  anteriores já acumulados. Antes desse mês o projeto fica «a começar»
+ *  (state "soon") e os extras são todos cobrados. */
 export const FOLGA_PROJECT_START: Record<string, string> = {
-  "help-kids": "2026-11",
+  // v79.2: onboarding a 19/11 — a folga começa no primeiro mês inteiro (André).
+  "help-kids": "2026-12",
 };
 
 /** O primeiro mês em que entra folga neste projeto. */
@@ -194,7 +196,7 @@ export type FolgaMonth = {
   closing: number;
 };
 
-export type FolgaState = "ok" | "low" | "out" | "over" | "lite" | "unset";
+export type FolgaState = "ok" | "low" | "out" | "over" | "lite" | "unset" | "soon";
 
 export type FolgaSummary = {
   months: FolgaMonth[];
@@ -208,6 +210,8 @@ export type FolgaSummary = {
   allowanceNow: number | null;
   allowanceNext: number | null;
   nextKey: string;
+  /** O mês em que a folga começa, enquanto ainda não começou (state "soon"). */
+  startsIn: string | null;
   state: FolgaState;
   /** Oferecido por categoria, desde o início (cêntimos). */
   byCategory: Array<{ id: FolgaCategory; label: string; cents: number }>;
@@ -225,7 +229,10 @@ export function summarizeFolga(
 ): FolgaSummary {
   const live = record.entries.filter((e) => !e.voided);
   const firstEntry = live.map((e) => monthOf(e.date)).sort()[0];
-  const start = firstEntry && firstEntry < creditFrom ? firstEntry : creditFrom;
+  let start = firstEntry && firstEntry < creditFrom ? firstEntry : creditFrom;
+  // Projeto cuja folga ainda não começou: mostra-se só o mês em curso, a 0.
+  if (nowKey < start) start = nowKey;
+  const startsIn = nowKey < creditFrom ? creditFrom : null;
   const months: FolgaMonth[] = [];
   let carry = 0;
   for (let key = start; key <= nowKey; key = shiftFolgaMonth(key, 1)) {
@@ -242,10 +249,11 @@ export function summarizeFolga(
   const remaining = current.closing;
   const allowanceNow = allowanceFor(nowKey, record, base);
   const nextKey = shiftFolgaMonth(nowKey, 1);
-  const allowanceNext = allowanceFor(nextKey, record, base);
+  const allowanceNext = nextKey >= creditFrom ? allowanceFor(nextKey, record, base) : 0;
 
   let state: FolgaState;
-  if (allowanceNow === null && remaining >= 0) state = "unset";
+  if (startsIn && allowanceNow !== null && remaining >= 0) state = "soon";
+  else if (allowanceNow === null && remaining >= 0) state = "unset";
   else if (tier === "lite" && allowanceNow === 0 && available <= 0 && remaining >= 0) state = "lite";
   else if (remaining < 0) state = "over";
   else if (remaining === 0) state = "out";
@@ -269,6 +277,7 @@ export function summarizeFolga(
     allowanceNow,
     allowanceNext,
     nextKey,
+    startsIn,
     state,
     byCategory,
     totalOffered: live.filter((e) => e.kind === "folga").reduce((s, e) => s + toCents(e.eur), 0),
@@ -306,6 +315,7 @@ export const FOLGA_STATE_LABEL: Record<FolgaState, string> = {
   over: "Acima da folga",
   lite: "Sem folga · Lite",
   unset: "Folga por definir",
+  soon: "Folga a começar",
 };
 
 export function categoryLabel(id: FolgaCategory): string {
