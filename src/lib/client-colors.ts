@@ -63,6 +63,9 @@ const PALETTES: Record<string, ClientPalette> = {
   // verychaga.com — as cores secundárias do manual de marca (formulário de
   // onboarding): caramelo #BA7A45 → castanho #7B371B → bordô #510603.
   verychaga: { from: "#BA7A45", via: "#7B371B", to: "#510603" },
+  // helpkids.pt — os azuis do logótipo: bolinha azul-clara #ABDFEC → azul do
+  // wordmark #66A0E0 → azul profundo.
+  "help-kids": { from: "#ABDFEC", via: "#66A0E0", to: "#2C5A94" },
 };
 
 const DEFAULT_PALETTE: ClientPalette = {

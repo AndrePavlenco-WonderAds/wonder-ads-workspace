@@ -61,6 +61,10 @@ export const CLIENT_LOGOS: Record<string, string> = {
   // preto sobre transparente. O site não tem outro ativo de marca (o favicon
   // é um símbolo de 32px), por isso fica o wordmark, em «tight».
   verychaga: "/logos/verychaga.svg",
+  // Help Kids (v79.1) — o logótipo do canto superior esquerdo de helpkids.pt
+  // («logohelp1.png»): wordmark HelpKids azul + bolinhas + «clínica médica».
+  // Recortado às margens, branco → transparente. ≈3,2:1, por isso «tight».
+  "help-kids": "/logos/help-kids.png",
 };
 
 export function getClientLogo(slug: string): string | null {
@@ -114,6 +118,8 @@ const LOGO_SIZING_OVERRIDES: Record<string, LogoSizing> = {
   "atn-medical": "tight",
   // Wordmark de duas linhas (≈6:1), preto sobre branco.
   verychaga: "tight",
+  // Wordmark + «clínica médica» (≈3,2:1) — o mesmo caso da Medway.
+  "help-kids": "tight",
 };
 
 export function getLogoSizing(slug: string): LogoSizing {
@@ -154,6 +160,8 @@ export const CLIENT_WEBSITES: Record<string, string> = {
   "clinica-medica-dentaria-colegio-militar": "https://clinicacolegiomilitar.com/",
   // v78.87: VeryChaga — loja Shopify de tinturas de cogumelos funcionais.
   verychaga: "https://verychaga.com/",
+  // v79.1: Help Kids (João B.) — clínica médica pediátrica.
+  "help-kids": "https://www.helpkids.pt/",
   // ADS-only — not known yet
   "clinica-empatia": "",
 };

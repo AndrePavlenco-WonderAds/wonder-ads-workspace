@@ -24,6 +24,7 @@ import {
   FOLGA_START,
   allowanceFor,
   baseAllowance,
+  folgaStartFor,
   monthOf,
   shiftFolgaMonth,
   summarizeFolga,
@@ -131,7 +132,7 @@ export async function POST(req: Request, ctx: Ctx) {
 
   const nowKey = lisbonMonthKey(Date.now());
   const base = baseAllowance(slug, tier);
-  const before = summarizeFolga(record, base, tier, nowKey).remaining;
+  const before = summarizeFolga(record, base, tier, nowKey, folgaStartFor(slug)).remaining;
   const { record: next, entry } = await addFolgaEntry(slug, {
     date,
     eur,
@@ -145,7 +146,7 @@ export async function POST(req: Request, ctx: Ctx) {
 
   // Saldo negativo depois deste extra → aviso no sino da direção. Um aviso
   // por extra: o primeiro diz que passou a folga, os seguintes que continua.
-  const after = summarizeFolga(next, base, tier, nowKey).remaining;
+  const after = summarizeFolga(next, base, tier, nowKey, folgaStartFor(slug)).remaining;
   if (entry.kind === "folga" && after < 0) {
     const client = (await getClientBySlug(slug).catch(() => null))?.title ?? slug;
     await pushFolgaAlert({

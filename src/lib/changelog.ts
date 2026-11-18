@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "79.1",
+    date: "2026-11-18",
+    title: "Help Kids: logótipo do site, onboarding a 19/11 e folga de 117 €/mês",
+    highlights: [
+      "**🧸 Help Kids com cara própria.** O logótipo do canto superior esquerdo de helpkids.pt (HelpKids + bolinhas + «clínica médica») passa a ser o do cliente no SEO DPT, com os azuis da marca no cartão e o site ligado.",
+      "**📅 Onboarding a 19/11/2026.** A pastilha «Onboarded» da ficha e a tabela de Clients mostram a data de amanhã.",
+      "**💶 Folga de custos: 117 €/mês, a contar de novembro.** Um projeto que entra depois de outubro já não nasce com os meses anteriores acumulados: a folga começa no mês do onboarding.",
+    ],
+  },
+  {
     version: "79.0",
     date: "2026-11-17",
     title: "IA no site: «registos até» mostra o último dia inteiro",

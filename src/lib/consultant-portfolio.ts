@@ -17,7 +17,7 @@ import { getClientTier, type ClientTier } from "@/lib/client-tiers";
 import { lisbonMonthKey, shiftMonthKey } from "@/lib/dates";
 import { NPS_BONUS_EXCLUDED_SLUGS } from "@/lib/documentacao/nps-bonus";
 import { getNpsRecordsFor, npsMonthStatus, type NpsRecord } from "@/lib/nps-store";
-import { baseAllowance, folgaMonthShort, summarizeFolga, type FolgaState } from "@/lib/seo-folga";
+import { baseAllowance, folgaMonthShort, folgaStartFor, summarizeFolga, type FolgaState } from "@/lib/seo-folga";
 import { getFolga } from "@/lib/seo-folga-store";
 
 export type PortfolioNpsMonth = {
@@ -70,7 +70,7 @@ export async function getConsultantPortfolio(
     const tier = getClientTier(slug);
     const record = npsRecords[slug];
     const status = record ? npsMonthStatus(record, now).state : "por-enviar";
-    const f = summarizeFolga(folgas[i], baseAllowance(slug, tier), tier, nowKey);
+    const f = summarizeFolga(folgas[i], baseAllowance(slug, tier), tier, nowKey, folgaStartFor(slug));
     const noFolga = f.state === "lite" || f.state === "unset";
     out[slug] = {
       slug,

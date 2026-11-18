@@ -40,7 +40,22 @@ export const FOLGA_DEFAULTS: Record<string, number> = {
   "sentir-saude": 125,
   "monte-mar": 76.67,
   "maratona-clube-de-portugal": 60,
+  // v79.1: Help Kids — 117 €/mês (dito pelo André), a contar de novembro.
+  "help-kids": 117,
 };
+
+/** Projetos que entraram depois de FOLGA_START: a folga só começa a entrar
+ *  no mês do onboarding — sem isto, um cliente novo nascia com os meses
+ *  anteriores já acumulados. */
+export const FOLGA_PROJECT_START: Record<string, string> = {
+  "help-kids": "2026-11",
+};
+
+/** O primeiro mês em que entra folga neste projeto. */
+export function folgaStartFor(slug: string): string {
+  const own = FOLGA_PROJECT_START[slug];
+  return own && own > FOLGA_START ? own : FOLGA_START;
+}
 
 export const FOLGA_CATEGORIES = [
   { id: "conteudo", label: "Conteúdo extra" },
@@ -205,14 +220,16 @@ export function summarizeFolga(
   base: number | null,
   tier: ClientTier | null,
   nowKey: string,
+  /** O mês em que a folga começa a entrar (folgaStartFor); por omissão FOLGA_START. */
+  creditFrom = FOLGA_START,
 ): FolgaSummary {
   const live = record.entries.filter((e) => !e.voided);
   const firstEntry = live.map((e) => monthOf(e.date)).sort()[0];
-  const start = firstEntry && firstEntry < FOLGA_START ? firstEntry : FOLGA_START;
+  const start = firstEntry && firstEntry < creditFrom ? firstEntry : creditFrom;
   const months: FolgaMonth[] = [];
   let carry = 0;
   for (let key = start; key <= nowKey; key = shiftFolgaMonth(key, 1)) {
-    const credit = key >= FOLGA_START ? toCents(allowanceFor(key, record, base) ?? 0) : 0;
+    const credit = key >= creditFrom ? toCents(allowanceFor(key, record, base) ?? 0) : 0;
     const inMonth = live.filter((e) => monthOf(e.date) === key);
     const spent = inMonth.filter((e) => e.kind === "folga").reduce((s, e) => s + toCents(e.eur), 0);
     const charged = inMonth.filter((e) => e.kind === "cobrado").reduce((s, e) => s + toCents(e.eur), 0);

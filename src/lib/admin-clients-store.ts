@@ -99,6 +99,8 @@ export const DEFAULT_STARTING_DATES: Record<string, string> = {
   "clinica-medica-dentaria-colegio-militar": "2026-10-21",
   // v78.87: VeryChaga (Maria Assena) — onboarding na segunda, 16/11/2026.
   verychaga: "2026-11-16",
+  // v79.1: Help Kids (João B.) — onboarding a 19/11/2026.
+  "help-kids": "2026-11-19",
 };
 
 /** Full agency consultant roster — drives the multi-select dropdown on

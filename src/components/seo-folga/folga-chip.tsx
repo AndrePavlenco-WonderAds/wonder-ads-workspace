@@ -8,7 +8,7 @@ import Link from "next/link";
 import { Wallet } from "lucide-react";
 import { getClientTier } from "@/lib/client-tiers";
 import { lisbonMonthKey } from "@/lib/dates";
-import { baseAllowance, summarizeFolga, type FolgaState } from "@/lib/seo-folga";
+import { baseAllowance, folgaStartFor, summarizeFolga, type FolgaState } from "@/lib/seo-folga";
 import { getFolga } from "@/lib/seo-folga-store";
 
 const TONE: Record<FolgaState, { pill: string; bar: string }> = {
@@ -23,7 +23,7 @@ const TONE: Record<FolgaState, { pill: string; bar: string }> = {
 export async function FolgaChip({ slug, hidden = false }: { slug: string; hidden?: boolean }) {
   if (hidden) return null;
   const tier = getClientTier(slug);
-  const s = summarizeFolga(await getFolga(slug), baseAllowance(slug, tier), tier, lisbonMonthKey(Date.now()));
+  const s = summarizeFolga(await getFolga(slug), baseAllowance(slug, tier), tier, lisbonMonthKey(Date.now()), folgaStartFor(slug));
   const tone = TONE[s.state];
   const left = s.available > 0 ? Math.max(0, Math.min(1, s.remaining / s.available)) : 0;
   // Acima da folga a percentagem fica negativa: −30% = gastou-se 30% a mais.

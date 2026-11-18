@@ -24,6 +24,7 @@ import {
   baseAllowance,
   eurCents,
   folgaMonthName,
+  folgaStartFor,
   summarizeFolga,
   toCents,
   type FolgaCategory,
@@ -96,7 +97,7 @@ export default async function FolgaPage({ params }: { params: Promise<{ slug: st
     readOnly ? Promise.resolve([]) : ticketOptions(slug),
   ]);
   const nowKey = lisbonMonthKey(Date.now());
-  const s = summarizeFolga(record, baseAllowance(slug, tier), tier, nowKey);
+  const s = summarizeFolga(record, baseAllowance(slug, tier), tier, nowKey, folgaStartFor(slug));
   const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Lisbon" }).format(Date.now());
   const [y, m, d] = today.split("-").map(Number);
   const daysLeft = new Date(Date.UTC(y, m, 0)).getUTCDate() - d;
