@@ -3,7 +3,7 @@
 // Gated by the /admin layout (isAdmin).
 
 import Link from "next/link";
-import { ArrowLeft, Pencil, Users } from "lucide-react";
+import { ArrowLeft, ClipboardList, Pencil, Users } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { NewOnboardingClient } from "@/components/new-onboarding-client";
 import { CopyPublicLinkButton } from "@/components/copy-public-link-button";
@@ -11,6 +11,11 @@ import { DeleteOnboardingButton } from "@/components/delete-onboarding-button";
 import { getOnboardingClients } from "@/lib/onboarding-clients-store";
 import { servicesLabel } from "@/lib/onboarding-tracks";
 import { formatDate } from "@/lib/dates";
+import { prospectPeople } from "@/lib/prospects/access";
+import { listProspectFiles } from "@/lib/prospects/store";
+import { prospectCompleteness, prospectPath } from "@/lib/prospects/shared";
+
+const OWNER_GROUP = ["Comercial", "Direção", "Consultores"];
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -21,6 +26,15 @@ export const metadata = {
 
 export default async function AdminOnboardingPage() {
   const clients = await getOnboardingClients();
+  // Ficha do prospect (v80.0): quem pode ser comercial responsável, e quão
+  // preenchida está a ficha de cada onboarding.
+  const owners = prospectPeople()
+    .filter((p) => p.canOwn)
+    .sort((a, b) => a.rank - b.rank || a.name.localeCompare(b.name, "pt"))
+    .map((p) => ({ username: p.username, name: p.name, group: OWNER_GROUP[p.rank] ?? "Equipa" }));
+  const filePct = new Map(
+    (await listProspectFiles()).map((f) => [f.slug, prospectCompleteness(f).pct] as const),
+  );
 
   return (
     <PageShell wide>
@@ -52,7 +66,7 @@ export default async function AdminOnboardingPage() {
       </div>
 
       <div className="animate-fade-up mt-8">
-        <NewOnboardingClient />
+        <NewOnboardingClient owners={owners} />
       </div>
 
       {/* Onboarding clients list */}
@@ -98,6 +112,19 @@ export default async function AdminOnboardingPage() {
                     Novo
                   </span>
                 ) : null}
+                {/* Ficha do prospect (v80.0) — existe para todos os
+                    onboardings; os de antes da v80 nascem na 1.ª escrita. */}
+                <Link
+                  href={prospectPath(c.slug)}
+                  title="Ficha do prospect — interesses, prioridades, oportunidades e notas das reuniões"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-[#783DF5]/30 bg-[#783DF5]/[0.08] px-2.5 py-1.5 text-[11.5px] font-semibold text-violet-100 transition hover:border-[#783DF5]/55 hover:bg-[#783DF5]/[0.14]"
+                >
+                  <ClipboardList className="h-3.5 w-3.5" />
+                  Ficha
+                  <span className="tabular-nums text-violet-200/60">
+                    {filePct.get(c.slug) ?? 0}%
+                  </span>
+                </Link>
                 <CopyPublicLinkButton path={`/${c.slug}/onboarding`} />
                 <DeleteOnboardingButton slug={c.slug} title={c.title} />
               </div>

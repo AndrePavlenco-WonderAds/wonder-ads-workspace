@@ -16,6 +16,9 @@ import { ProjectSectionNav } from "@/components/project-section-nav";
 import { LogoChip } from "@/components/logo-chip";
 import { ReviewsHubChip } from "@/components/reviews-hub-chip";
 import { OrigemChip } from "@/components/origem-chip";
+import { ProspectFileChip } from "@/components/prospects/prospect-file-chip";
+import { resolveConsultant } from "@/lib/consultant-assignments";
+import { findEmployeeByName } from "@/lib/proposals/consultant";
 import {
   getCurrentRoadmap,
   resolveOnboardingDate,
@@ -99,6 +102,13 @@ export default async function ClientPage({
   const gradient = paletteToGradient(getClientPalette(slug));
   const shared = isSharedWithSeo(slug);
   const npsRecord = await getNpsRecord(slug);
+  // Ficha do prospect (v80.0): o consultor em vigor — para o chip dizer
+  // «Nova» só a ele, até a abrir.
+  const consultantName = await resolveConsultant(slug, client.consultant).catch(() => null);
+  const consultantUsername =
+    consultantName && consultantName !== "Unassigned"
+      ? (findEmployeeByName(consultantName)?.username ?? null)
+      : null;
   // Data de onboarding — a mesma que o board mostra. Resolvida aqui para o
   // cabeçalho a poder mostrar sem carregar o roadmap inteiro.
   const onboardingDate = await resolveOnboardingDate(
@@ -182,6 +192,13 @@ export default async function ClientPage({
                   </span>
                 </span>
               )}
+              {/* Ficha do prospect (v80.0) — o que o Comercial sabe do
+                  cliente, passado ao consultor. Só aparece com ficha. */}
+              <ProspectFileChip
+                slug={slug}
+                viewerUsername={employee?.username ?? null}
+                consultantUsername={consultantUsername}
+              />
               {latestProposal && (
                 <a
                   href={proposalPath(latestProposal.slug)}

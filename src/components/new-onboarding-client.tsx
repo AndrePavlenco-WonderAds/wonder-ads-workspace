@@ -6,13 +6,22 @@
 // promoted onto it automatically when they submit the onboarding form.
 
 import { useState } from "react";
-import { Check, Link as LinkIcon, Loader2, Rocket } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { ArrowRight, Check, ClipboardList, Link as LinkIcon, Loader2, Rocket } from "lucide-react";
 import { ONBOARDING_SERVICES, type OnbService } from "@/lib/onboarding-tracks";
 import { CONSULTANT_ORDER } from "@/lib/client-overrides";
+import { prospectPath } from "@/lib/prospects/shared";
 
-export function NewOnboardingClient() {
+/** Quem pode ser o comercial responsável — vem do servidor (v80.0). */
+export type OnboardingOwnerOption = { username: string; name: string; group: string };
+
+export function NewOnboardingClient({ owners = [] }: { owners?: OnboardingOwnerOption[] }) {
+  const router = useRouter();
   const [title, setTitle] = useState("");
   const [consultant, setConsultant] = useState("");
+  const [owner, setOwner] = useState("");
+  const [createdSlug, setCreatedSlug] = useState("");
   const [services, setServices] = useState<OnbService[]>([]);
   const [ecommerce, setEcommerce] = useState(false);
   const hasAds =
@@ -43,6 +52,7 @@ export function NewOnboardingClient() {
           consultant,
           services,
           ecommerce: hasAds ? ecommerce : false,
+          owner: owner || null,
         }),
       });
       const data = await res.json();
@@ -52,7 +62,10 @@ export function NewOnboardingClient() {
         window.location.origin,
       ).toString();
       setLink(url);
+      setCreatedSlug(data.slug);
       setState("done");
+      // A lista de baixo ganha a linha nova (com o botão da ficha).
+      router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro ao criar.");
       setState("error");
@@ -171,6 +184,31 @@ export function NewOnboardingClient() {
             </option>
           ))}
         </select>
+        {/* Comercial responsável (v80.0) — quem fechou o cliente; fica na
+            Ficha do prospect como a pessoa a quem o consultor pergunta. */}
+        {owners.length > 0 && (
+          <select
+            value={owner}
+            onChange={(e) => setOwner(e.target.value)}
+            aria-label="Comercial responsável"
+            className={`rounded-lg border border-white/12 bg-white/[0.04] px-3 py-2 text-sm outline-none transition focus:border-[#783DF5]/60 focus:bg-white/[0.06] sm:w-52 ${
+              owner ? "text-white" : "text-white/45"
+            }`}
+          >
+            <option value="">Comercial (opcional)</option>
+            {[...new Set(owners.map((o) => o.group))].map((group) => (
+              <optgroup key={group} label={group}>
+                {owners
+                  .filter((o) => o.group === group)
+                  .map((o) => (
+                    <option key={o.username} value={o.username}>
+                      {o.name}
+                    </option>
+                  ))}
+              </optgroup>
+            ))}
+          </select>
+        )}
         <button
           type="button"
           onClick={create}
@@ -209,6 +247,29 @@ export function NewOnboardingClient() {
             {copied ? "Copiado" : "Copiar"}
           </button>
         </div>
+      )}
+
+      {/* A ficha nasce com o onboarding (v80.0) — o passo seguinte é o
+          Comercial deixar lá o que sabe do cliente. */}
+      {state === "done" && createdSlug && (
+        <Link
+          href={prospectPath(createdSlug)}
+          className="group mt-2 flex items-center gap-3 rounded-lg border border-[#783DF5]/30 bg-[#783DF5]/[0.08] px-3 py-2.5 transition hover:border-[#783DF5]/55 hover:bg-[#783DF5]/[0.13]"
+        >
+          <span className="brand-gradient-bg flex h-7 w-7 shrink-0 items-center justify-center rounded-md">
+            <ClipboardList className="h-3.5 w-3.5 text-white" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[12.5px] font-semibold text-white">Ficha do prospect criada</span>
+            <span className="block text-[11px] text-white/50">
+              Interesses, prioridades, cross-sells, upsells e notas das reuniões, para o consultor
+            </span>
+          </span>
+          <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-violet-200">
+            Abrir
+            <ArrowRight className="h-3.5 w-3.5 transition group-hover:translate-x-0.5" />
+          </span>
+        </Link>
       )}
     </div>
   );

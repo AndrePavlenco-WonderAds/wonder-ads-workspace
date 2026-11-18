@@ -75,6 +75,9 @@ const INTERNAL_PREFIXES = [
   "/probation",
   "/ineficacias",
   "/documentacao",
+  // Ficha do prospect (v80.0) — privada à workspace: só com sessão.
+  "/prospects",
+  "/api/prospects",
   "/api/absences",
   "/api/ineficacias",
   "/api/tools",
@@ -152,6 +155,15 @@ function viewerGate(req: NextRequest, dept: DeptSlug): NextResponse | null {
   const { pathname } = req.nextUrl;
   // Login, logout e o «voltar a ser eu» do SuperAdmin a ver como o viewer.
   if (underPrefix(pathname, "/api/auth")) return null;
+
+  // FICHA DO PROSPECT (v80.0) — a única porta aberta a TODOS os viewers,
+  // páginas e API, também para escrever: os comerciais são viewers do SEO e
+  // são eles que preenchem as fichas. Quem pode escrever decide-o a própria
+  // rota (`canWriteProspects`), com a sessão lida de novo — a Gabi lê, não
+  // escreve. O «Ver como» continua só de leitura (portão mais abaixo).
+  if (underPrefix(pathname, "/prospects") || underPrefix(pathname, "/api/prospects")) {
+    return null;
+  }
 
   // Nenhuma escrita, em caminho nenhum — também numa página (uma server
   // action faz POST ao próprio URL da página, não a /api).
@@ -356,6 +368,9 @@ export const config = {
     // tudo; cada página decide quem entra (em construção: só o André) e que
     // blocos mostra.
     "/documentacao/:path*",
+    // Ficha do prospect (v80.0) — página e API privadas à workspace.
+    "/prospects/:path*",
+    "/api/prospects/:path*",
     // Comercial — templates, upload e decisões das propostas. Sessão para
     // tudo; a escrita exige poder editar o departamento (gate abaixo).
     "/api/commercial/:path*",

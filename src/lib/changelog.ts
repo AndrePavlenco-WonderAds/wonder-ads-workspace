@@ -13,6 +13,20 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "80.0",
+    date: "2026-11-18",
+    title: "Ficha do prospect: o que o Comercial sabe do cliente, passado ao consultor",
+    highlights: [
+      "**📋 Uma ficha por cliente novo.** Iniciar um onboarding no C-Suite cria a Ficha do prospect em /prospects/<cliente>. É privada à workspace: abre para toda a gente com sessão (todos os departamentos e os comerciais) e nunca vai para o cliente.",
+      "**🎯 Tudo o que interessa ao consultor.** «Em 30 segundos», interesses no programa (com etiquetas rápidas), prioridades por ordem, cross-sells e upsells (com potencial, quando propor e estado, de ideia a ganho), expectativas, cuidados e sensibilidades, concorrência e o perfil (setor, decisor, origem do lead, acordo fechado).",
+      "**🗓️ Reuniões e notas.** A linha do tempo das conversas com o cliente: discovery call, reunião introdutória, proposta, fecho, follow-up. Cada nota pode ter um guião, o link opcional da gravação (Fathom, Meet, Zoom…) e anexos arrastados para a página. Há também um cartão próprio para links das calls e outro para anexos.",
+      "**✍️ Os comerciais escrevem.** Os comerciais, a direção e os consultores de SEO e ADS editam a ficha. Os comerciais continuam só de leitura no resto do SEO. Cada nota, link e anexo fica assinado, e a atividade mostra quem mexeu e quando.",
+      "**🤝 Passagem ao consultor.** Quando o cliente entra no SEO DPT, a ficha aparece num chip no topo da página do cliente. Para o consultor, o chip diz «Nova» até ele a abrir, e «Novidades» quando o Comercial acrescenta alguma coisa depois. O hover mostra o resumo, as prioridades e as oportunidades em aberto, e o Comercial vê na ficha se o consultor já a leu.",
+      "**📈 Quão completa está.** Cada ficha mostra a percentagem preenchida e o que falta. A lista /prospects tem pesquisa, filtro por etapa e o destaque «Nova» para o consultor. No C-Suite, cada onboarding ganha o botão «Ficha» com a percentagem, e o formulário tem agora o campo «Comercial responsável».",
+      "**🧭 Onde encontrar.** «Fichas do prospect» no menu do nome (para toda a gente) e no topo do SEO DPT.",
+    ],
+  },
+  {
     version: "79.3",
     date: "2026-11-18",
     title: "Número do dia: o hover mostra a ordem de hoje",

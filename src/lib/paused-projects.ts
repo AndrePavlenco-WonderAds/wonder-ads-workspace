@@ -69,6 +69,8 @@ const RESERVED_FIRST_SEGMENTS = new Set([
   "probation",
   "ineficacias",
   "documentacao",
+  // Ficha do prospect (v80.0) — /prospects/<slug> nunca é um cliente.
+  "prospects",
   "login",
   "api",
   "proposta",

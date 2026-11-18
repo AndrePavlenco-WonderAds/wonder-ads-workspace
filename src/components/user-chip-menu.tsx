@@ -17,6 +17,7 @@ import {
   ChevronDown,
   ChevronRight,
   ClipboardCheck,
+  ClipboardList,
   Eye,
   FilePlus2,
   Gamepad2,
@@ -545,6 +546,13 @@ export function UserChipMenu({
           )}
 
           <div className="max-h-[min(70vh,34rem)] overflow-y-auto">
+            {/* Fichas do prospect (v80.0) — para TODA a gente com sessão,
+                também os comerciais (viewers do SEO): são eles que as
+                preenchem, e é por aqui que lá chegam. */}
+            <MenuSection label="Clientes">
+              <MenuLink href="/prospects" icon={ClipboardList} label="Fichas do prospect" hint="O que o Comercial sabe de cada cliente novo" index={1} onPick={close} />
+            </MenuSection>
+
             {!isViewer && (
               <MenuSection label="Atalhos">
                 {/* Tools em 1.º lugar a pedido do André — é o item do menu
