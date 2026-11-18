@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "80.2",
+    date: "2026-11-18",
+    title: "Ficha do prospect: menos coisas à vista",
+    highlights: [
+      "**🗂️ Separadores.** Visão geral (resumo, prioridades, interesses, oportunidades e a última reunião) · Reuniões · Contexto · Ficheiros · Histórico. Só se vê uma parte de cada vez, e o separador fica no endereço.",
+      "**🧘 Topo compacto.** Etapa, Comercial → Consultor e a percentagem com só o próximo passo em falta (um clique leva lá).",
+      "**✏️ Menos botões.** Os campos vazios ocupam uma linha («+ Escrever…»), o texto edita-se com um clique e as explicações passam para os tooltips. As etiquetas de interesse ficam atrás de «+ Etiqueta».",
+    ],
+  },
+  {
     version: "80.1",
     date: "2026-11-18",
     title: "Ficha do prospect: acertos de leitura",

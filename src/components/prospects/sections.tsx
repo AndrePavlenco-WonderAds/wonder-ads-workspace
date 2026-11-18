@@ -4,7 +4,7 @@
 // texto (resumo, interesses, expectativas, cuidados, concorrência), as
 // etiquetas, as prioridades, o perfil, os links das calls e a atividade.
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import {
   ArrowDown,
   ArrowUp,
@@ -60,15 +60,6 @@ import {
 
 // ── Bloco de texto ──────────────────────────────────────────────────────
 
-/** A última pessoa que mexeu neste campo, tirada da atividade. */
-function useLastEdit(field: ProspectTextField) {
-  const { file } = useProspect();
-  return useMemo(() => {
-    const label = `«${PROSPECT_TEXT_LABEL[field]}»`;
-    return file.activity.find((a) => a.text.endsWith(label)) ?? null;
-  }, [file.activity, field]);
-}
-
 export function TextBlock({
   field,
   placeholder,
@@ -82,12 +73,11 @@ export function TextBlock({
   large?: boolean;
   minRows?: number;
 }) {
-  const { file, viewer, send, now } = useProspect();
+  const { file, viewer, send } = useProspect();
   const value = file[field];
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value);
   const [busy, setBusy] = useState(false);
-  const last = useLastEdit(field);
   const dirty = editing && draft !== value;
   useDirtyFlag(`text:${field}`, dirty);
 
@@ -116,10 +106,7 @@ export function TextBlock({
           ariaLabel={PROSPECT_TEXT_LABEL[field]}
           className={large ? "text-[14.5px]" : ""}
         />
-        <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-          <span className="text-[10.5px] text-white/30">
-            Listas com «- » no início da linha · {draft.length}/{LIMITS.text}
-          </span>
+        <div className="mt-2 flex flex-wrap items-center justify-end gap-2">
           <div className="flex items-center gap-2">
             <KeyHint />
             <GhostButton onClick={() => setEditing(false)}>Cancelar</GhostButton>
@@ -133,23 +120,32 @@ export function TextBlock({
   }
 
   if (!value.trim()) {
-    return <EmptyHint onClick={viewer.canWrite ? start : undefined}>{viewer.canWrite ? emptyCta : "Ainda por preencher."}</EmptyHint>;
+    return <EmptyHint onClick={viewer.canWrite ? start : undefined}>{emptyCta}</EmptyHint>;
   }
 
+  const body = <RichText text={value} className={large ? "text-[15px] leading-[1.7] text-white/90" : ""} />;
+  if (!viewer.canWrite) return body;
+
+  // Quem escreve edita com um clique no próprio texto (fora dos links) —
+  // sem botões «Editar» à vista em cada bloco.
   return (
-    <div className="group/text relative">
-      <RichText text={value} className={large ? "text-[15px] leading-[1.7] text-white/90" : ""} />
-      <div className="mt-3 flex items-center justify-between gap-2">
-        {last ? (
-          <span className="inline-flex items-center gap-1.5 text-[10.5px] text-white/35">
-            <PersonChip username={last.by} size={14} />
-            <span>· {relTime(last.at, now)}</span>
-          </span>
-        ) : (
-          <span />
-        )}
-        {viewer.canWrite && <EditButton onClick={start} />}
-      </div>
+    <div
+      role="button"
+      tabIndex={0}
+      title="Clica para editar"
+      onClick={(e) => {
+        if ((e.target as HTMLElement).closest("a")) return;
+        start();
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" && e.target === e.currentTarget) {
+          e.preventDefault();
+          start();
+        }
+      }}
+      className="-mx-2 cursor-text rounded-xl px-2 py-1 transition hover:bg-white/[0.035] focus-visible:bg-white/[0.05] focus-visible:outline-none"
+    >
+      {body}
     </div>
   );
 }
@@ -160,6 +156,7 @@ export function InterestTags() {
   const { file, viewer, send } = useProspect();
   const [custom, setCustom] = useState("");
   const [busy, setBusy] = useState(false);
+  const [picking, setPicking] = useState(false);
   const tags = file.interestTags;
   const lower = new Set(tags.map((t) => t.toLowerCase()));
 
@@ -176,9 +173,11 @@ export function InterestTags() {
 
   const suggestions = INTEREST_SUGGESTIONS.filter((s) => !lower.has(s.toLowerCase()));
 
+  if (tags.length === 0 && !viewer.canWrite) return null;
+
   return (
-    <div className="mb-4">
-      <div className="flex flex-wrap gap-1.5">
+    <div className="mb-3">
+      <div className="flex flex-wrap items-center gap-1.5">
         {tags.map((t) => (
           <span
             key={t}
@@ -200,12 +199,27 @@ export function InterestTags() {
             )}
           </span>
         ))}
-        {tags.length === 0 && !viewer.canWrite && (
-          <span className="text-[12px] italic text-white/35">Sem etiquetas.</span>
+        {viewer.canWrite && !picking && tags.length < LIMITS.tags && (
+          <button
+            type="button"
+            onClick={() => setPicking(true)}
+            className="inline-flex items-center gap-1 rounded-full border border-dashed border-white/15 px-2.5 py-0.5 text-[11.5px] text-white/45 transition hover:border-[#783DF5]/50 hover:text-white"
+          >
+            <Plus className="h-3 w-3" />
+            Etiqueta
+          </button>
         )}
       </div>
-      {viewer.canWrite && (
-        <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+      {viewer.canWrite && picking && (
+        <div className="mt-2 flex flex-wrap items-center gap-1.5 rounded-xl border border-white/[0.08] bg-white/[0.02] p-2">
+          <button
+            type="button"
+            onClick={() => setPicking(false)}
+            aria-label="Fechar sugestões"
+            className="rounded-full p-1 text-white/40 transition hover:bg-white/10 hover:text-white"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
           {suggestions.map((s) => (
             <button
               key={s}
@@ -353,7 +367,7 @@ export function PrioritiesList() {
             onChange={(e) => setAdding(e.target.value.slice(0, LIMITS.priority))}
             placeholder={
               list.length === 0
-                ? "O que é mais importante para o cliente? (ex.: encher a agenda da nova clínica até março) ↵"
+                ? "Qual é a prioridade nº 1 do cliente? ↵"
                 : "Acrescentar prioridade ↵"
             }
             aria-label="Nova prioridade"
@@ -460,9 +474,7 @@ export function ProfileCard() {
               : undefined
           }
         >
-          {viewer.canWrite
-            ? "Setor, localização, decisor, origem do lead e o acordo fechado — 1 minuto a preencher."
-            : "Ainda por preencher."}
+          Preencher perfil
         </EmptyHint>
       ) : (
         <dl className="space-y-2.5">
@@ -585,7 +597,7 @@ export function LinksCard() {
       )}
       {file.links.length === 0 && fromNotes.length === 0 && !adding ? (
         <EmptyHint onClick={viewer.canWrite ? () => setAdding(true) : undefined}>
-          {viewer.canWrite ? "Cola aqui o link da gravação da call (opcional)." : "Sem links."}
+          Acrescentar link
         </EmptyHint>
       ) : (
         <ul className="space-y-1.5">

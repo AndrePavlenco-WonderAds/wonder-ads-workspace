@@ -1,20 +1,28 @@
 "use client";
 
-// FICHA DO PROSPECT (v80.0) — a página. Estado da ficha, envio das operações
-// à API, aviso de edições por gravar, atualização sozinha quando outra pessoa
-// grava, e o esqueleto: topo (identidade, etapa, passagem ao consultor, quão
-// completa está) + coluna principal + coluna lateral.
+// FICHA DO PROSPECT — a página. Estado da ficha, envio das operações à API,
+// aviso de edições por gravar e atualização sozinha quando outra pessoa grava.
+//
+// v80.2 — MENOS PARA O OLHO (pedido do André: «está muita coisa para o
+// olho»). A v80.0 tinha 12 cartões seguidos em duas colunas. Agora:
+//   • um topo compacto (quem é, etapa, Comercial → Consultor, % e o próximo
+//     passo — uma só linha de «o que falta»);
+//   • SEPARADORES: Visão geral (o essencial da passagem) · Reuniões ·
+//     Contexto · Ficheiros · Histórico — só se vê uma coisa de cada vez;
+//   • secções vazias numa linha «+ Escrever…», explicações nos tooltips.
+// O separador fica no endereço (#reunioes…) para se poder partilhar.
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import {
+  AlertTriangle,
   ArrowRight,
   BadgeCheck,
-  CircleDashed,
+  CalendarDays,
+  Check,
   ClipboardList,
   Copy,
-  Check,
-  ExternalLink,
+  Eye,
   Hourglass,
   Lightbulb,
   ListOrdered,
@@ -23,12 +31,11 @@ import {
   ShieldAlert,
   Swords,
   Target,
-  AlertTriangle,
-  Eye,
 } from "lucide-react";
 import {
+  NOTE_TYPE_COLOR,
+  NOTE_TYPE_LABEL,
   STAGE_LABEL,
-  cleanUrl,
   prospectCompleteness,
   type ProspectFile,
   type ProspectStage,
@@ -67,14 +74,36 @@ export type ProspectContextView = {
 
 export type OwnerOption = { username: string; name: string; group: string };
 
-const STAGE_STYLE: Record<ProspectStage, string> = {
-  onboarding: "border-amber-400/35 bg-amber-500/[0.1] text-amber-200",
-  unassigned: "border-sky-400/35 bg-sky-500/[0.1] text-sky-200",
-  assigned: "border-emerald-400/35 bg-emerald-500/[0.1] text-emerald-200",
-  archived: "border-white/15 bg-white/[0.05] text-white/55",
+const STAGE_DOT: Record<ProspectStage, string> = {
+  onboarding: "#FBBF24",
+  unassigned: "#38BDF8",
+  assigned: "#34D399",
+  archived: "#94A3B8",
 };
 
 const POLL_MS = 45_000;
+
+type TabKey = "geral" | "reunioes" | "contexto" | "ficheiros" | "historico";
+const TABS: Array<{ key: TabKey; label: string }> = [
+  { key: "geral", label: "Visão geral" },
+  { key: "reunioes", label: "Reuniões" },
+  { key: "contexto", label: "Contexto" },
+  { key: "ficheiros", label: "Ficheiros" },
+  { key: "historico", label: "Histórico" },
+];
+const TAB_KEYS = new Set<string>(TABS.map((t) => t.key));
+
+/** Onde vive cada item do «o que falta» — separador + secção. */
+const MISSING_TARGET: Record<string, [TabKey, string]> = {
+  summary: ["geral", "resumo"],
+  interests: ["geral", "interesses"],
+  priorities: ["geral", "prioridades"],
+  opportunities: ["geral", "oportunidades"],
+  notes: ["reunioes", "reunioes"],
+  profile: ["contexto", "perfil"],
+  expectations: ["contexto", "sucesso"],
+  concerns: ["contexto", "cuidados"],
+};
 
 export function ProspectFileView({
   ctx,
@@ -103,6 +132,7 @@ export function ProspectFileView({
   const [saving, setSaving] = useState(0);
   const [savedAt, setSavedAt] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [tab, setTab] = useState<TabKey>("geral");
   const dirty = useRef(new Set<string>());
 
   // Relógio para os «há 5 min» — de minuto a minuto chega.
@@ -110,6 +140,21 @@ export function ProspectFileView({
     setNow(Date.now());
     const t = setInterval(() => setNow(Date.now()), 60_000);
     return () => clearInterval(t);
+  }, []);
+
+  // O separador vem do endereço (#reunioes…) e volta para lá a cada troca.
+  useEffect(() => {
+    const h = window.location.hash.slice(1);
+    if (TAB_KEYS.has(h)) setTab(h as TabKey);
+  }, []);
+  const goTo = useCallback((next: TabKey, anchor?: string) => {
+    setTab(next);
+    window.history.replaceState(null, "", `#${next}`);
+    if (anchor) {
+      window.setTimeout(() => {
+        document.getElementById(anchor)?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 60);
+    }
   }, []);
 
   // Aviso ao sair com uma edição por gravar.
@@ -190,96 +235,160 @@ export function ProspectFileView({
     [ctx.slug, file, viewer, people, send, setDirty, now],
   );
 
+  const fileCount =
+    file.links.length +
+    file.files.length +
+    file.notes.reduce((n, x) => n + x.attachments.length + (x.callUrl ? 1 : 0), 0);
+  const counts: Partial<Record<TabKey, number>> = {
+    reunioes: file.notes.length,
+    ficheiros: fileCount,
+  };
+
   return (
     <ProspectCtx.Provider value={value}>
       <SaveToast saving={saving > 0} savedAt={savedAt} error={error} onClose={() => setError(null)} />
-      <Hero ctx={ctx} logo={logo} owners={owners} reads={reads} loadFailed={loadFailed} />
+      <Hero ctx={ctx} logo={logo} owners={owners} reads={reads} loadFailed={loadFailed} goTo={goTo} />
 
-      <SectionNav />
-
-      <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(300px,380px)]">
-        <div className="min-w-0 space-y-6">
-          <Card id="resumo" tone="brand">
-            <SectionHead
-              icon={Lightbulb}
-              title="Em 30 segundos"
-              tone="brand"
-              hint="O essencial para o consultor arrancar sem voltar a perguntar ao cliente"
-            />
-            <TextBlock
-              field="summary"
-              large
-              minRows={4}
-              placeholder="Quem é o cliente, porque nos escolheu, o que tem de correr bem nos primeiros 90 dias e o que nunca pode acontecer."
-              emptyCta="Escreve o resumo que gostavas de receber se fosses tu o consultor: quem é, porque nos escolheu, o que tem de correr bem."
-            />
-          </Card>
-
-          <Card id="interesses">
-            <SectionHead
-              icon={Target}
-              title="Interesses no programa"
-              hint="O que o cliente quer tirar do programa — com as palavras dele"
-            />
-            <InterestTags />
-            <TextBlock
-              field="interests"
-              placeholder="ex.: quer aparecer no Google Maps em Cascais para «fisioterapia desportiva»; ficou entusiasmado com a parte das IAs…"
-              emptyCta="Que partes do programa o entusiasmaram? Que resultados espera ver?"
-            />
-          </Card>
-
-          <Card id="prioridades">
-            <SectionHead
-              icon={ListOrdered}
-              title="Prioridades"
-              hint="Por ordem — a 1 é a que o consultor ataca primeiro"
-            />
-            <PrioritiesList />
-          </Card>
-
-          <OpportunitiesCard />
-          <TimelineCard />
+      {/* Separadores — só uma parte da ficha de cada vez. */}
+      <nav
+        aria-label="Partes da ficha"
+        className="sticky top-[4.5rem] z-20 mt-5 flex justify-center sm:top-[5.25rem]"
+      >
+        <div
+          role="tablist"
+          className="flex max-w-full gap-0.5 overflow-x-auto rounded-2xl border border-white/[0.08] bg-[#0b0b12]/90 p-1 shadow-[0_10px_30px_-18px_rgba(0,0,0,0.9)] [scrollbar-width:none]"
+        >
+          {TABS.map((t) => {
+            const active = tab === t.key;
+            const n = counts[t.key];
+            return (
+              <button
+                key={t.key}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                onClick={() => goTo(t.key)}
+                className={`inline-flex shrink-0 items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-[12.5px] font-medium transition ${
+                  active ? "bg-white/[0.1] text-white" : "text-white/50 hover:text-white"
+                }`}
+              >
+                {t.label}
+                {n ? (
+                  <span
+                    className={`rounded-full px-1.5 text-[10px] font-semibold tabular-nums ${
+                      active ? "bg-white/15 text-white/80" : "bg-white/[0.07] text-white/45"
+                    }`}
+                  >
+                    {n}
+                  </span>
+                ) : null}
+              </button>
+            );
+          })}
         </div>
+      </nav>
 
-        <aside className="min-w-0 space-y-6">
-          <ProfileCard />
-          <Card id="sucesso">
-            <SectionHead icon={BadgeCheck} title="Expectativas e sucesso" hint="O que, para o cliente, conta como ter corrido bem" />
-            <TextBlock
-              field="expectations"
-              minRows={3}
-              placeholder="ex.: +30% de marcações em 6 meses; ficar à frente da clínica X em «osteopatia lisboa»…"
-              emptyCta="Que números ou sinais vão fazer o cliente dizer que valeu a pena?"
-            />
-          </Card>
-          <Card id="cuidados" tone="amber">
-            <SectionHead
-              icon={ShieldAlert}
-              title="Cuidados e sensibilidades"
-              tone="amber"
-              hint="Objeções, más experiências com outras agências, temas a evitar"
-            />
-            <TextBlock
-              field="concerns"
-              minRows={3}
-              placeholder="ex.: teve uma má experiência com outra agência — quer relatórios simples e reuniões curtas; não falar em preços por email…"
-              emptyCta="Há alguma coisa que o consultor tem de saber para não pisar o risco?"
-            />
-          </Card>
-          <Card id="concorrencia">
-            <SectionHead icon={Swords} title="Concorrência e referências" hint="Quem o cliente vê como concorrente ou como exemplo" />
-            <TextBlock
-              field="competitors"
-              minRows={3}
-              placeholder="ex.: Clínica X (cliniquex.pt) — referência; Y está sempre à frente no Maps…"
-              emptyCta="Quem são os concorrentes que o cliente mencionou?"
-            />
-          </Card>
-          <LinksCard />
-          <FilesCard />
-          <ActivityCard />
-        </aside>
+      <div className="mx-auto mt-5 max-w-5xl" role="tabpanel">
+        {tab === "geral" && (
+          <div className="space-y-5">
+            <Card id="resumo" tone="brand">
+              <SectionHead
+                icon={Lightbulb}
+                title="Em 30 segundos"
+                tone="brand"
+                hint="O essencial para o consultor arrancar sem voltar a perguntar ao cliente"
+              />
+              <TextBlock
+                field="summary"
+                large
+                minRows={4}
+                placeholder="Quem é o cliente, porque nos escolheu, o que tem de correr bem nos primeiros 90 dias e o que nunca pode acontecer."
+                emptyCta="Escrever o resumo"
+              />
+            </Card>
+
+            <div className="grid gap-5 lg:grid-cols-2">
+              <Card id="prioridades">
+                <SectionHead icon={ListOrdered} title="Prioridades" hint="Por ordem — a 1 é a que o consultor ataca primeiro" />
+                <PrioritiesList />
+              </Card>
+              <Card id="interesses">
+                <SectionHead icon={Target} title="Interesses" hint="O que o cliente quer tirar do programa — com as palavras dele" />
+                <InterestTags />
+                <TextBlock
+                  field="interests"
+                  placeholder="ex.: quer aparecer no Google Maps em Cascais para «fisioterapia desportiva»; ficou entusiasmado com a parte das IAs…"
+                  emptyCta="Descrever os interesses"
+                />
+              </Card>
+            </div>
+
+            <OpportunitiesCard />
+
+            <LatestMeeting onOpen={() => goTo("reunioes")} />
+          </div>
+        )}
+
+        {tab === "reunioes" && (
+          <TimelineCard />
+        )}
+
+        {tab === "contexto" && (
+          <div className="grid items-start gap-5 lg:grid-cols-2">
+            <ProfileCard />
+            <Card>
+              <div id="sucesso" className="scroll-mt-32">
+                <SectionHead icon={BadgeCheck} title="Expectativas e sucesso" hint="O que, para o cliente, conta como ter corrido bem" />
+                <TextBlock
+                  field="expectations"
+                  minRows={3}
+                  placeholder="ex.: +30% de marcações em 6 meses; ficar à frente da clínica X em «osteopatia lisboa»…"
+                  emptyCta="Escrever as expectativas"
+                />
+              </div>
+              <div id="cuidados" className="mt-5 scroll-mt-32 border-t border-white/[0.06] pt-5">
+                <SectionHead
+                  icon={ShieldAlert}
+                  title="Cuidados e sensibilidades"
+                  tone="amber"
+                  hint="Objeções, más experiências com outras agências, temas a evitar"
+                />
+                <TextBlock
+                  field="concerns"
+                  minRows={3}
+                  placeholder="ex.: teve uma má experiência com outra agência — quer relatórios simples e reuniões curtas…"
+                  emptyCta="Escrever os cuidados"
+                />
+              </div>
+              <div id="concorrencia" className="mt-5 scroll-mt-32 border-t border-white/[0.06] pt-5">
+                <SectionHead icon={Swords} title="Concorrência" hint="Quem o cliente vê como concorrente ou como exemplo" />
+                <TextBlock
+                  field="competitors"
+                  minRows={3}
+                  placeholder="ex.: Clínica X (cliniquex.pt) — referência; Y está sempre à frente no Maps…"
+                  emptyCta="Escrever a concorrência"
+                />
+              </div>
+            </Card>
+          </div>
+        )}
+
+        {tab === "ficheiros" && (
+          <div className="grid items-start gap-5 lg:grid-cols-2">
+            <LinksCard />
+            <FilesCard />
+          </div>
+        )}
+
+        {tab === "historico" && (
+          <div className="mx-auto max-w-2xl">
+            {file.activity.length > 0 ? (
+              <ActivityCard />
+            ) : (
+              <p className="py-10 text-center text-[13px] text-white/35">Ainda sem alterações.</p>
+            )}
+          </div>
+        )}
       </div>
     </ProspectCtx.Provider>
   );
@@ -293,258 +402,209 @@ function Hero({
   owners,
   reads,
   loadFailed,
+  goTo,
 }: {
   ctx: ProspectContextView;
   logo: ReactNode;
   owners: OwnerOption[];
   reads: Record<string, number>;
   loadFailed: boolean;
+  goTo: (tab: TabKey, anchor?: string) => void;
 }) {
   const { file, viewer, people, send, now } = useProspect();
   const { pct, items } = prospectCompleteness(file);
-  const missing = items.filter((i) => !i.done);
+  const next = items.find((i) => !i.done) ?? null;
   const [ownerBusy, setOwnerBusy] = useState(false);
   const owner = file.owner ? personOf(people, file.owner) : null;
-  const website = cleanUrl(file.profile.website);
 
-  // Quem já abriu a ficha, mais recente primeiro.
   const readers = Object.entries(reads).sort((a, b) => b[1] - a[1]);
   const consultantRead = ctx.consultantUsername ? reads[ctx.consultantUsername] ?? null : null;
-  const unreadUpdate = consultantRead !== null && file.updatedAt > consultantRead && file.updatedBy !== ctx.consultantUsername;
+  const unreadUpdate =
+    consultantRead !== null && file.updatedAt > consultantRead && file.updatedBy !== ctx.consultantUsername;
 
   return (
-    <section className="animate-fade-up relative mt-4 overflow-hidden rounded-3xl border border-white/10 bg-[linear-gradient(135deg,rgba(52,62,215,0.14),rgba(120,61,245,0.10)_45%,rgba(197,53,201,0.08))] p-5 sm:mt-6 sm:p-7">
+    <section className="animate-fade-up relative mt-4 overflow-hidden rounded-3xl border border-white/10 bg-[linear-gradient(135deg,rgba(52,62,215,0.12),rgba(120,61,245,0.08)_45%,rgba(197,53,201,0.06))] p-5 sm:mt-6 sm:p-6">
       <span
         aria-hidden
-        className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-[radial-gradient(closest-side,rgba(120,61,245,0.35),transparent)] blur-2xl"
+        className="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full bg-[radial-gradient(closest-side,rgba(120,61,245,0.3),transparent)] blur-2xl"
       />
       {loadFailed && (
         <div className="relative mb-4 flex items-center gap-2 rounded-xl border border-rose-400/30 bg-rose-500/10 px-3 py-2 text-[12.5px] text-rose-100">
           <AlertTriangle className="h-4 w-4 shrink-0" />
-          Não foi possível ler a ficha agora — o que vês pode estar incompleto. Recarrega daqui a pouco.
+          Não foi possível ler a ficha agora — recarrega daqui a pouco.
         </div>
       )}
-      <div className="relative flex flex-wrap items-start justify-between gap-6">
-        <div className="flex min-w-0 items-start gap-4 sm:gap-5">
+
+      <div className="relative flex flex-wrap items-center gap-x-6 gap-y-4">
+        <div className="flex min-w-0 flex-1 items-center gap-4 sm:gap-5">
           <div className="shrink-0">{logo}</div>
           <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-1.5">
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/[0.06] px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/75">
-                <ClipboardList className="h-3 w-3" />
+            <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11.5px] text-white/45">
+              <span className="inline-flex items-center gap-1 font-semibold uppercase tracking-[0.14em] text-white/55">
+                <ClipboardList className="h-3.5 w-3.5" />
                 Ficha do prospect
               </span>
-              <span className={`rounded-full border px-2.5 py-0.5 text-[10.5px] font-semibold ${STAGE_STYLE[ctx.stage]}`}>
-                {ctx.stage === "assigned" && ctx.consultant ? `Cliente · ${ctx.consultant}` : STAGE_LABEL[ctx.stage]}
+              <span aria-hidden className="text-white/20">·</span>
+              <span className="inline-flex items-center gap-1.5 text-white/70">
+                <span aria-hidden className="h-1.5 w-1.5 rounded-full" style={{ background: STAGE_DOT[ctx.stage] }} />
+                {STAGE_LABEL[ctx.stage]}
               </span>
-              <span
-                title="Só abre com sessão na workspace da WonderAds — nunca é enviada ao cliente."
-                className="inline-flex items-center gap-1 rounded-full border border-white/10 px-2 py-0.5 text-[10.5px] text-white/45"
-              >
-                <Lock className="h-3 w-3" />
-                Privada · equipa WonderAds
+              {ctx.servicesLabel && (
+                <>
+                  <span aria-hidden className="text-white/20">·</span>
+                  <span>{ctx.servicesLabel}</span>
+                </>
+              )}
+              <span title="Privada — só abre com sessão na workspace da WonderAds, nunca vai para o cliente.">
+                <Lock className="h-3 w-3 text-white/35" />
               </span>
               {!viewer.canWrite && (
-                <span className="inline-flex items-center gap-1 rounded-full border border-white/10 px-2 py-0.5 text-[10.5px] text-white/45">
+                <span className="inline-flex items-center gap-1 text-white/40">
                   <Eye className="h-3 w-3" />
-                  {viewer.impersonating ? "Vista só de leitura" : "Só leitura"}
+                  só leitura
                 </span>
               )}
-            </div>
-            <h1 className="mt-2 text-3xl font-semibold leading-[1.05] tracking-tight sm:text-[2.6rem]">
+            </p>
+            <h1 className="mt-1 truncate text-3xl font-semibold leading-[1.1] tracking-tight sm:text-4xl">
               <span className="brand-gradient-text">{ctx.title}</span>
             </h1>
-            <div className="mt-2.5 flex flex-wrap items-center gap-1.5 text-[12px] text-white/55">
-              {ctx.servicesLabel && (
-                <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-0.5">{ctx.servicesLabel}</span>
-              )}
-              {website && (
-                <a
-                  href={website}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-0.5 transition hover:border-white/25 hover:text-white"
-                >
-                  {file.profile.website.replace(/^https?:\/\//, "").replace(/\/$/, "")}
-                  <ExternalLink className="h-3 w-3" />
-                </a>
-              )}
-              {ctx.onboardingCreatedAt && (
-                <span className="px-1 text-white/40">Onboarding iniciado a {formatDate(ctx.onboardingCreatedAt)}</span>
-              )}
-            </div>
 
-            {/* Pessoas: quem vendeu → quem recebe. */}
-            <div className="mt-4 flex flex-wrap items-center gap-2">
-              <div className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-[#0b0b12]/40 py-1.5 pl-1.5 pr-3">
-                {owner ? <Avatar person={owner} size={26} /> : <span className="flex h-[26px] w-[26px] items-center justify-center rounded-full border border-dashed border-white/20 text-white/30">?</span>}
-                <span className="leading-tight">
-                  <span className="block text-[9.5px] font-semibold uppercase tracking-[0.14em] text-white/40">Comercial</span>
-                  {viewer.canWrite ? (
-                    <select
-                      value={file.owner ?? ""}
-                      disabled={ownerBusy}
-                      onChange={async (e) => {
-                        setOwnerBusy(true);
-                        await send({ op: "owner", owner: e.target.value || null });
-                        setOwnerBusy(false);
-                      }}
-                      aria-label="Comercial responsável"
-                      className="-ml-1 cursor-pointer appearance-none bg-transparent pr-1 text-[12.5px] font-semibold text-white outline-none"
-                    >
-                      <option value="" className="bg-[#0b0b12]">Por definir</option>
-                      {[...new Set(owners.map((o) => o.group))].map((g) => (
-                        <optgroup key={g} label={g} className="bg-[#0b0b12]">
-                          {owners
-                            .filter((o) => o.group === g)
-                            .map((o) => (
-                              <option key={o.username} value={o.username} className="bg-[#0b0b12]">
-                                {o.name}
-                              </option>
-                            ))}
-                        </optgroup>
-                      ))}
-                    </select>
-                  ) : (
-                    <span className="block text-[12.5px] font-semibold text-white">{owner?.name ?? "Por definir"}</span>
-                  )}
-                </span>
-                {ownerBusy && <Loader2 className="h-3.5 w-3.5 animate-spin text-white/50" />}
-              </div>
-              <ArrowRight className="h-4 w-4 text-white/25" />
-              <div className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-[#0b0b12]/40 py-1.5 pl-1.5 pr-3">
-                {ctx.consultantUsername ? (
-                  <Avatar person={personOf(people, ctx.consultantUsername)} size={26} />
+            {/* Quem vendeu → quem recebe. */}
+            <div className="mt-3 flex flex-wrap items-center gap-1.5 text-[12px]">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-[#0b0b12]/40 py-0.5 pl-0.5 pr-2.5">
+                {owner ? (
+                  <Avatar person={owner} size={22} />
                 ) : (
-                  <span className="flex h-[26px] w-[26px] items-center justify-center rounded-full border border-dashed border-white/20 text-white/30">?</span>
+                  <span className="flex h-[22px] w-[22px] items-center justify-center rounded-full border border-dashed border-white/20 text-[10px] text-white/30">?</span>
                 )}
-                <span className="leading-tight">
-                  <span className="block text-[9.5px] font-semibold uppercase tracking-[0.14em] text-white/40">Consultor</span>
-                  <span className="block text-[12.5px] font-semibold text-white">{ctx.consultant ?? "Por atribuir"}</span>
-                </span>
+                <span className="text-white/40">Comercial</span>
+                {viewer.canWrite ? (
+                  <select
+                    value={file.owner ?? ""}
+                    disabled={ownerBusy}
+                    onChange={async (e) => {
+                      setOwnerBusy(true);
+                      await send({ op: "owner", owner: e.target.value || null });
+                      setOwnerBusy(false);
+                    }}
+                    aria-label="Comercial responsável"
+                    className="cursor-pointer appearance-none bg-transparent font-semibold text-white outline-none hover:text-violet-100"
+                  >
+                    <option value="" className="bg-[#0b0b12]">por definir ▾</option>
+                    {[...new Set(owners.map((o) => o.group))].map((g) => (
+                      <optgroup key={g} label={g} className="bg-[#0b0b12]">
+                        {owners
+                          .filter((o) => o.group === g)
+                          .map((o) => (
+                            <option key={o.username} value={o.username} className="bg-[#0b0b12]">
+                              {o.name}
+                            </option>
+                          ))}
+                      </optgroup>
+                    ))}
+                  </select>
+                ) : (
+                  <span className="font-semibold text-white">{owner?.name ?? "por definir"}</span>
+                )}
+                {ownerBusy && <Loader2 className="h-3 w-3 animate-spin text-white/50" />}
+              </span>
+              <ArrowRight className="h-3.5 w-3.5 text-white/25" />
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-[#0b0b12]/40 py-0.5 pl-0.5 pr-2.5">
+                {ctx.consultantUsername ? (
+                  <Avatar person={personOf(people, ctx.consultantUsername)} size={22} />
+                ) : (
+                  <span className="flex h-[22px] w-[22px] items-center justify-center rounded-full border border-dashed border-white/20 text-[10px] text-white/30">?</span>
+                )}
+                <span className="text-white/40">Consultor</span>
+                <span className="font-semibold text-white">{ctx.consultant ?? "por atribuir"}</span>
                 {ctx.consultantUsername &&
                   (consultantRead === null ? (
-                    <span title="O consultor ainda não abriu a ficha" className="ml-1 inline-flex items-center gap-1 rounded-full border border-amber-400/30 bg-amber-500/10 px-2 py-0.5 text-[10.5px] font-semibold text-amber-200">
+                    <span title="O consultor ainda não abriu a ficha" className="inline-flex items-center gap-1 text-amber-200">
                       <Hourglass className="h-3 w-3" />
-                      Por ler
+                      por ler
                     </span>
                   ) : unreadUpdate ? (
-                    <span title={`Leu a ${formatDateTime(consultantRead)} — houve alterações depois`} className="ml-1 inline-flex items-center gap-1 rounded-full border border-sky-400/30 bg-sky-500/10 px-2 py-0.5 text-[10.5px] font-semibold text-sky-200">
+                    <span title={`Leu a ${formatDateTime(consultantRead)} — houve alterações depois`} className="inline-flex items-center gap-1 text-sky-200">
                       <Hourglass className="h-3 w-3" />
-                      Novidades por ler
+                      novidades por ler
                     </span>
                   ) : (
-                    <span title={`Leu a ${formatDateTime(consultantRead)}`} className="ml-1 inline-flex items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-500/10 px-2 py-0.5 text-[10.5px] font-semibold text-emerald-200">
+                    <span title={`Leu a ${formatDateTime(consultantRead)}`} className="inline-flex items-center gap-1 text-emerald-200">
                       <Check className="h-3 w-3" />
-                      Lida
+                      lida
                     </span>
                   ))}
-              </div>
+              </span>
             </div>
           </div>
         </div>
 
-        {/* Quão completa está + atalhos. */}
-        <div className="flex w-full flex-col gap-3 sm:w-auto sm:min-w-[250px]">
-          <div className="flex items-center gap-3.5 rounded-2xl border border-white/10 bg-[#0b0b12]/45 p-3.5">
-            <Ring pct={pct} />
-            <div className="min-w-0">
-              <p className="text-[12.5px] font-semibold text-white">
-                {pct === 100 ? "Ficha completa" : `Ficha ${pct}% preenchida`}
-              </p>
-              {missing.length > 0 ? (
-                <ul className="mt-1 space-y-0.5">
-                  {missing.slice(0, 3).map((m) => (
-                    <li key={m.key}>
-                      <a href={`#${anchorFor(m.key)}`} className="inline-flex items-center gap-1.5 text-[11px] text-white/45 transition hover:text-white">
-                        <CircleDashed className="h-3 w-3 shrink-0" />
-                        {m.label}
-                      </a>
-                    </li>
-                  ))}
-                  {missing.length > 3 && <li className="pl-[18px] text-[11px] text-white/30">+ {missing.length - 3}</li>}
-                </ul>
-              ) : (
-                <p className="mt-0.5 text-[11px] text-emerald-200/80">Tudo o que o consultor precisa está cá.</p>
-              )}
-            </div>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {ctx.onBoard && (
-              <Link
-                href={`/seo/${ctx.slug}`}
-                className="group inline-flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border border-white/12 bg-white/[0.04] px-3 py-2 text-[12px] font-medium text-white/75 transition hover:border-white/25 hover:text-white"
+        {/* Quão completa está — e só o próximo passo, não a lista toda. */}
+        <div className="flex items-center gap-3">
+          <Ring pct={pct} />
+          <div className="leading-tight">
+            <p className="text-[13px] font-semibold text-white">{pct === 100 ? "Ficha completa" : `Ficha ${pct}%`}</p>
+            {next ? (
+              <button
+                type="button"
+                onClick={() => {
+                  const target = MISSING_TARGET[next.key];
+                  if (target) goTo(target[0], target[1]);
+                }}
+                className="mt-0.5 inline-flex items-center gap-1 text-[11.5px] text-white/45 transition hover:text-white"
               >
-                Ficha no SEO DPT
-                <ArrowRight className="h-3.5 w-3.5 transition group-hover:translate-x-0.5" />
-              </Link>
+                Próximo: {next.label}
+                <ArrowRight className="h-3 w-3" />
+              </button>
+            ) : (
+              <p className="mt-0.5 text-[11.5px] text-emerald-200/80">Pronta para o consultor</p>
             )}
-            {ctx.onboardingPublicPath && <CopyOnboardingLink path={ctx.onboardingPublicPath} />}
           </div>
         </div>
       </div>
 
-      {/* Rodapé do topo: criação, última alteração, quem leu. */}
-      <div className="relative mt-5 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-white/[0.07] pt-3.5 text-[11.5px] text-white/40">
-        {file.createdAt > 0 ? (
-          <span>
-            Criada a {formatDate(file.createdAt)}
-            {file.createdBy && people[file.createdBy] ? ` por ${people[file.createdBy].name}` : ""}
-          </span>
-        ) : (
-          <span>Ficha ainda em branco — começa por onde souberes mais.</span>
-        )}
-        {file.updatedBy && (
-          <span>
-            Última alteração {relTime(file.updatedAt, now)} por {personOf(people, file.updatedBy).name}
-          </span>
-        )}
-        {readers.length > 0 && (
-          <span className="inline-flex items-center gap-2">
-            Lida por
-            <span className="flex -space-x-1.5">
-              {readers.slice(0, 8).map(([u, at]) => (
-                <span key={u} title={`${personOf(people, u).name} · ${formatDateTime(at)}`}>
-                  <Avatar person={personOf(people, u)} size={20} ring />
-                </span>
-              ))}
+      {/* Rodapé do topo: alteração, quem leu, atalhos. */}
+      <div className="relative mt-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-white/[0.07] pt-3 text-[11.5px] text-white/40">
+        <span>
+          {file.updatedBy
+            ? `Atualizada ${relTime(file.updatedAt, now)} por ${personOf(people, file.updatedBy).name}`
+            : file.createdAt > 0
+              ? `Criada a ${formatDate(file.createdAt)}`
+              : "Ficha em branco"}
+        </span>
+        <span className="flex flex-wrap items-center gap-3">
+          {readers.length > 0 && (
+            <span className="inline-flex items-center gap-1.5">
+              Lida por
+              <span className="flex -space-x-1.5">
+                {readers.slice(0, 6).map(([u, at]) => (
+                  <span key={u} title={`${personOf(people, u).name} · ${formatDateTime(at)}`}>
+                    <Avatar person={personOf(people, u)} size={18} ring />
+                  </span>
+                ))}
+              </span>
+              {readers.length > 6 && <span>+{readers.length - 6}</span>}
             </span>
-            {readers.length > 8 && <span>+{readers.length - 8}</span>}
-          </span>
-        )}
+          )}
+          {ctx.onBoard && (
+            <Link href={`/seo/${ctx.slug}`} className="inline-flex items-center gap-1 transition hover:text-white">
+              SEO DPT
+              <ArrowRight className="h-3 w-3" />
+            </Link>
+          )}
+          {ctx.onboardingPublicPath && <CopyOnboardingLink path={ctx.onboardingPublicPath} />}
+        </span>
       </div>
     </section>
   );
 }
 
-function anchorFor(key: string): string {
-  switch (key) {
-    case "summary":
-      return "resumo";
-    case "interests":
-      return "interesses";
-    case "priorities":
-      return "prioridades";
-    case "opportunities":
-      return "oportunidades";
-    case "notes":
-      return "reunioes";
-    case "profile":
-      return "perfil";
-    case "expectations":
-      return "sucesso";
-    case "concerns":
-      return "cuidados";
-    default:
-      return "resumo";
-  }
-}
-
 function Ring({ pct }: { pct: number }) {
-  const r = 22;
+  const r = 19;
   const c = 2 * Math.PI * r;
   return (
-    <span className="relative flex h-14 w-14 shrink-0 items-center justify-center">
-      <svg viewBox="0 0 56 56" className="absolute inset-0 -rotate-90">
+    <span className="relative flex h-12 w-12 shrink-0 items-center justify-center">
+      <svg viewBox="0 0 48 48" className="absolute inset-0 -rotate-90">
         <defs>
           <linearGradient id="prospect-ring" x1="0" y1="0" x2="1" y2="1">
             <stop offset="0%" stopColor="#343ED7" />
@@ -552,21 +612,21 @@ function Ring({ pct }: { pct: number }) {
             <stop offset="100%" stopColor="#C535C9" />
           </linearGradient>
         </defs>
-        <circle cx="28" cy="28" r={r} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="5" />
+        <circle cx="24" cy="24" r={r} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="4.5" />
         <circle
-          cx="28"
-          cy="28"
+          cx="24"
+          cy="24"
           r={r}
           fill="none"
           stroke={pct === 100 ? "#34D399" : "url(#prospect-ring)"}
-          strokeWidth="5"
+          strokeWidth="4.5"
           strokeLinecap="round"
           strokeDasharray={c}
           strokeDashoffset={c * (1 - pct / 100)}
           className="transition-[stroke-dashoffset] duration-700"
         />
       </svg>
-      <span className="text-[13px] font-bold tabular-nums text-white">{pct}%</span>
+      <span className="text-[11.5px] font-bold tabular-nums text-white">{pct}%</span>
     </span>
   );
 }
@@ -587,53 +647,51 @@ function CopyOnboardingLink({ path }: { path: string }) {
         }
       }}
       title="Copia o link público do onboarding (o que se envia ao cliente)"
-      className="inline-flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border border-white/12 bg-white/[0.04] px-3 py-2 text-[12px] font-medium text-white/75 transition hover:border-white/25 hover:text-white"
+      className="inline-flex items-center gap-1 transition hover:text-white"
     >
-      {copied ? <Check className="h-3.5 w-3.5 text-emerald-300" /> : <Copy className="h-3.5 w-3.5" />}
+      {copied ? <Check className="h-3 w-3 text-emerald-300" /> : <Copy className="h-3 w-3" />}
       {copied ? "Copiado" : "Link do onboarding"}
     </button>
   );
 }
 
-// ── Navegação das secções ───────────────────────────────────────────────
+// ── A última reunião, na visão geral ────────────────────────────────────
 
-const NAV = [
-  ["resumo", "Resumo"],
-  ["interesses", "Interesses"],
-  ["prioridades", "Prioridades"],
-  ["oportunidades", "Oportunidades"],
-  ["reunioes", "Reuniões"],
-  ["perfil", "Perfil"],
-  ["cuidados", "Cuidados"],
-  ["anexos", "Anexos"],
-] as const;
-
-function SectionNav() {
-  const { file } = useProspect();
-  const count: Record<string, number> = {
-    prioridades: file.priorities.length,
-    oportunidades: file.opportunities.length,
-    reunioes: file.notes.length,
-    anexos: file.files.length + file.notes.reduce((n, x) => n + x.attachments.length, 0),
-  };
+function LatestMeeting({ onOpen }: { onOpen: () => void }) {
+  const { file, people } = useProspect();
+  const latest = [...file.notes].sort(
+    (a, b) => (b.date || "").localeCompare(a.date || "") || b.createdAt - a.createdAt,
+  )[0];
+  if (!latest) return null;
+  const color = NOTE_TYPE_COLOR[latest.type];
   return (
-    <nav
-      aria-label="Secções da ficha"
-      className="sticky top-[4.5rem] z-20 sm:top-[5.25rem] -mx-1 mt-5 flex gap-1 overflow-x-auto rounded-2xl border border-white/[0.08] bg-[#0b0b12]/85 p-1 [scrollbar-width:none]"
+    <button
+      type="button"
+      onClick={onOpen}
+      className="group flex w-full items-start gap-3 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4 text-left transition hover:border-white/20"
     >
-      {NAV.map(([id, label]) => (
-        <a
-          key={id}
-          href={`#${id}`}
-          className="inline-flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-1.5 text-[12px] font-medium text-white/55 transition hover:bg-white/[0.06] hover:text-white"
-        >
-          {label}
-          {count[id] ? (
-            <span className="rounded-full bg-white/[0.08] px-1.5 text-[10px] font-semibold tabular-nums text-white/60">{count[id]}</span>
-          ) : null}
-        </a>
-      ))}
-    </nav>
+      <span aria-hidden className="mt-1.5 h-2 w-2 shrink-0 rounded-full" style={{ background: color }} />
+      <span className="min-w-0 flex-1">
+        <span className="flex flex-wrap items-center gap-x-2 text-[11.5px] text-white/45">
+          <span className="font-semibold uppercase tracking-[0.12em] text-white/60">Última reunião</span>
+          <span>· {NOTE_TYPE_LABEL[latest.type]}</span>
+          {latest.date && (
+            <span className="inline-flex items-center gap-1">
+              · <CalendarDays className="h-3 w-3" /> {formatDate(`${latest.date}T12:00:00`)}
+            </span>
+          )}
+          <span>· {personOf(people, latest.author).name}</span>
+        </span>
+        <span className="mt-1 line-clamp-2 block text-[13px] leading-relaxed text-white/70">
+          {latest.title ? `${latest.title} — ` : ""}
+          {latest.body.replace(/\s+/g, " ").trim() || "(sem texto)"}
+        </span>
+      </span>
+      <span className="mt-0.5 inline-flex shrink-0 items-center gap-1 text-[11.5px] font-medium text-violet-200/70 transition group-hover:text-white">
+        {file.notes.length > 1 ? `Ver as ${file.notes.length}` : "Abrir"}
+        <ArrowRight className="h-3.5 w-3.5 transition group-hover:translate-x-0.5" />
+      </span>
+    </button>
   );
 }
 

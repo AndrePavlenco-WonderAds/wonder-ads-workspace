@@ -317,15 +317,16 @@ function Column({ kind }: { kind: OpportunityKind }) {
         >
           <Icon className="h-3.5 w-3.5" />
         </span>
-        <h3 className="text-[12.5px] font-semibold uppercase tracking-[0.12em] text-white/75">
+        <h3 title={OPPORTUNITY_KIND_HINT[kind]} className="text-[12px] font-semibold text-white/75">
           {OPPORTUNITY_KIND_LABEL[kind]}s
         </h3>
-        <span className="rounded-full bg-white/[0.06] px-1.5 text-[10.5px] font-semibold tabular-nums text-white/55">
-          {list.length}
-        </span>
+        {list.length > 0 && (
+          <span className="rounded-full bg-white/[0.06] px-1.5 text-[10.5px] font-semibold tabular-nums text-white/55">
+            {list.length}
+          </span>
+        )}
         {open > 0 && <span className="text-[10.5px] text-white/35">· {open} em aberto</span>}
       </div>
-      <p className="mb-2.5 text-[11px] text-white/35">{OPPORTUNITY_KIND_HINT[kind]}</p>
       <div className="space-y-2">
         {list.map((o) => (
           <OpportunityCard key={o.id} o={o} />
@@ -336,13 +337,13 @@ function Column({ kind }: { kind: OpportunityKind }) {
           <button
             type="button"
             onClick={() => setAdding(true)}
-            className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-white/12 py-2.5 text-[12px] font-medium text-white/45 transition hover:border-[#783DF5]/45 hover:bg-[#783DF5]/[0.05] hover:text-white"
+            className="inline-flex items-center gap-1.5 rounded-lg px-1 py-1 text-[12.5px] text-white/40 transition hover:text-white"
           >
             <Plus className="h-3.5 w-3.5" />
-            {kind === "upsell" ? "Possível upsell" : "Possível cross-sell"}
+            {kind === "upsell" ? "Acrescentar upsell" : "Acrescentar cross-sell"}
           </button>
         ) : list.length === 0 ? (
-          <p className="text-[12px] italic text-white/30">Nenhum registado.</p>
+          <p className="text-[12.5px] text-white/25">—</p>
         ) : null}
       </div>
     </div>
@@ -356,7 +357,7 @@ export function OpportunitiesCard() {
     <Card id="oportunidades">
       <SectionHead
         icon={Layers}
-        title="Oportunidades futuras"
+        title="Oportunidades"
         hint="O que o cliente pode vir a comprar — para o consultor saber quando abrir a porta"
         right={
           won > 0 ? (
@@ -367,7 +368,7 @@ export function OpportunitiesCard() {
           ) : null
         }
       />
-      <div className="grid gap-5 md:grid-cols-2">
+      <div className="grid gap-x-6 gap-y-4 md:grid-cols-2">
         <Column kind="cross-sell" />
         <Column kind="upsell" />
       </div>

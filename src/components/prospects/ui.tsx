@@ -13,7 +13,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { Loader2, Pencil, Trash2, X, Check } from "lucide-react";
+import { Loader2, Pencil, Plus, Trash2, X, Check } from "lucide-react";
 import type { ProspectFile } from "@/lib/prospects/shared";
 import type { ProspectOp } from "@/lib/prospects/ops";
 import { formatDate } from "@/lib/dates";
@@ -137,17 +137,19 @@ export function Card({
 }) {
   const toneClass =
     tone === "brand"
-      ? "border-[#783DF5]/30 bg-[linear-gradient(160deg,rgba(120,61,245,0.10),rgba(255,255,255,0.02)_55%)]"
+      ? "border-[#783DF5]/25 bg-[linear-gradient(160deg,rgba(120,61,245,0.08),rgba(255,255,255,0.015)_55%)]"
       : tone === "amber"
-        ? "border-amber-400/20 bg-[linear-gradient(160deg,rgba(251,191,36,0.06),rgba(255,255,255,0.015)_60%)]"
-        : "border-white/10 bg-white/[0.025]";
+        ? "border-amber-400/15 bg-white/[0.02]"
+        : "border-white/[0.08] bg-white/[0.02]";
   return (
-    <section id={id} className={`scroll-mt-24 rounded-2xl border p-5 sm:p-6 ${toneClass} ${className}`}>
+    <section id={id} className={`scroll-mt-32 rounded-2xl border p-5 ${toneClass} ${className}`}>
       {children}
     </section>
   );
 }
 
+/** Cabeçalho discreto de secção (v80.2): ícone pequeno + título em
+ *  versaletes. A explicação vai para o tooltip — menos texto à vista. */
 export function SectionHead({
   icon: Icon,
   title,
@@ -157,26 +159,24 @@ export function SectionHead({
 }: {
   icon: React.ComponentType<{ className?: string }>;
   title: string;
-  hint?: ReactNode;
+  hint?: string;
   right?: ReactNode;
   tone?: "default" | "brand" | "amber";
 }) {
-  const tile =
-    tone === "brand"
-      ? "brand-gradient-bg text-white"
-      : tone === "amber"
-        ? "border border-amber-400/25 bg-amber-400/10 text-amber-200"
-        : "border border-white/10 bg-white/[0.05] text-violet-200";
+  const iconColor =
+    tone === "brand" ? "text-violet-300" : tone === "amber" ? "text-amber-300/80" : "text-white/40";
   return (
-    <header className="mb-4 flex items-start gap-3">
-      <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${tile}`}>
-        <Icon className="h-4 w-4" />
-      </span>
-      <div className="min-w-0 flex-1">
-        <h2 className="text-[14.5px] font-semibold tracking-tight text-white">{title}</h2>
-        {hint && <p className="mt-0.5 text-[11.5px] leading-snug text-white/45">{hint}</p>}
-      </div>
-      {right && <div className="flex shrink-0 items-center gap-1.5">{right}</div>}
+    <header className="mb-3 flex min-h-[28px] items-center gap-2">
+      <Icon className={`h-4 w-4 shrink-0 ${iconColor}`} />
+      <h2
+        title={hint}
+        className={`min-w-0 flex-1 truncate text-[12px] font-semibold uppercase tracking-[0.14em] ${
+          tone === "amber" ? "text-amber-100/80" : "text-white/70"
+        }`}
+      >
+        {title}
+      </h2>
+      {right && <div className="flex shrink-0 items-center gap-1">{right}</div>}
     </header>
   );
 }
@@ -445,7 +445,8 @@ export function RichText({ text, className = "" }: { text: string; className?: s
   return <div className={`text-[13.5px] leading-relaxed text-white/80 ${className}`}>{blocks}</div>;
 }
 
-/** O convite de um campo vazio — clicável para quem escreve. */
+/** Um campo vazio (v80.2): uma linha discreta «+ Escrever…» para quem
+ *  escreve, um traço para quem só lê — nada de caixas grandes vazias. */
 export function EmptyHint({
   children,
   onClick,
@@ -454,14 +455,15 @@ export function EmptyHint({
   onClick?: () => void;
 }) {
   if (!onClick) {
-    return <p className="text-[12.5px] italic text-white/35">{children}</p>;
+    return <p className="text-[12.5px] text-white/25">—</p>;
   }
   return (
     <button
       type="button"
       onClick={onClick}
-      className="w-full rounded-xl border border-dashed border-white/12 px-4 py-3.5 text-left text-[12.5px] text-white/40 transition hover:border-[#783DF5]/45 hover:bg-[#783DF5]/[0.05] hover:text-white/70"
+      className="inline-flex items-center gap-1.5 rounded-lg px-1 py-1 text-[12.5px] text-white/40 transition hover:text-white"
     >
+      <Plus className="h-3.5 w-3.5" />
       {children}
     </button>
   );

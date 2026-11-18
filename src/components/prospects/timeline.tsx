@@ -434,18 +434,15 @@ export function TimelineCard() {
           <button
             type="button"
             onClick={() => setComposing(true)}
-            className="group flex w-full flex-col items-center gap-2 rounded-2xl border border-dashed border-white/12 px-6 py-8 text-center transition hover:border-[#783DF5]/45 hover:bg-[#783DF5]/[0.04]"
+            className="flex w-full items-center gap-3 rounded-xl border border-dashed border-white/12 px-4 py-3 text-left transition hover:border-[#783DF5]/45 hover:bg-[#783DF5]/[0.04]"
           >
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-violet-200 transition group-hover:scale-105">
-              <NotebookPen className="h-5 w-5" />
-            </span>
-            <span className="text-[13px] font-semibold text-white/80">Regista a primeira reunião</span>
-            <span className="max-w-sm text-[12px] text-white/40">
-              Discovery call, reunião introdutória, apresentação da proposta… com o link da gravação e os anexos.
+            <NotebookPen className="h-4 w-4 shrink-0 text-violet-300" />
+            <span className="text-[12.5px] text-white/55">
+              Regista a primeira reunião — notas, link da gravação e anexos
             </span>
           </button>
         ) : (
-          <p className="text-[12.5px] italic text-white/35">Ainda sem reuniões registadas.</p>
+          <p className="text-[12.5px] text-white/30">Ainda sem reuniões registadas.</p>
         )
       ) : (
         <ol className="space-y-[18px]">
