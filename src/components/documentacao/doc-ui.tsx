@@ -221,11 +221,14 @@ export function ExecutiveSummary({
   title,
   paragraphs,
   updatedAt,
+  signedBy,
 }: {
   title: string;
   paragraphs: ReactNode[];
   /** YYYY-MM-DD — a data do bloco. */
   updatedAt: string;
+  /** Quem assina por cima de «Direção WonderAds» (v80.9, SOP de Comunicação). */
+  signedBy?: string;
 }) {
   return (
     <section id="resumo" data-doc-section className="scroll-mt-40 border-t border-white/[0.07] pt-10 sm:pt-12">
@@ -239,8 +242,19 @@ export function ExecutiveSummary({
           ))}
         </div>
         <footer className="mt-8 border-t border-white/10 pt-5">
-          <p className="text-[15px] font-semibold text-white">Direção WonderAds</p>
-          <p className="mt-0.5 text-[13px] text-white/50">Última atualização a {formatDate(updatedAt)}</p>
+          {signedBy ? (
+            <>
+              <p className="text-[15px] font-semibold text-white">{signedBy}</p>
+              <p className="mt-0.5 text-[13px] text-white/50">
+                Direção WonderAds · Última atualização a {formatDate(updatedAt)}
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="text-[15px] font-semibold text-white">Direção WonderAds</p>
+              <p className="mt-0.5 text-[13px] text-white/50">Última atualização a {formatDate(updatedAt)}</p>
+            </>
+          )}
         </footer>
       </div>
     </section>

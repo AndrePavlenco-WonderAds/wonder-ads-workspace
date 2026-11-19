@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "80.9",
+    date: "2026-11-19",
+    title: "SOP de Comunicação: revisão do André",
+    highlights: [
+      "**🔔 «Alteração recente»** passa a botão pequeno no topo de todas as páginas da Documentação; o que mudou aparece ao passar o rato.",
+      "**📅 A semana em vista de calendário**, como no Google Calendar: horas de lado, manhã incluída, as três reuniões da equipa, reuniões com clientes, almoço, Daily Update e o resto como foco.",
+      "**✅ A encenação do «ok/obrigado»:** a mesma conversa em 5 mensagens e, ao lado, como os Consultores Wonder fazem (2 mensagens e 1 reação), com as mensagens a entrar uma a uma.",
+      "O teste da reunião, o ODE «em qualquer pedido» e a autonomia ganham moldura animada. O Meet rápido (ligar e entrar) separa-se da reunião agendada, e a urgência fica só em três casos: cliente a ponto de sair, urgência grave, acessos comprometidos.",
+      "Sem nomes de pessoas (passa a «chefia»), «Cliente X» em vez de «Clínica X», e o resumo executivo reescrito e assinado.",
+    ],
+  },
+  {
     version: "80.8",
     date: "2026-11-19",
     title: "SOP de Comunicação: um capítulo de cada vez",

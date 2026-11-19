@@ -31,6 +31,8 @@ import { PageShell } from "@/components/page-shell";
 import { DocHero, DocsClosed, ExecutiveSummary, Rows, Strong } from "@/components/documentacao/doc-ui";
 import { CopyTextButton } from "@/components/documentacao/copy-text-button";
 import { SopChapters } from "@/components/documentacao/sop-chapters";
+import { SopChatRoleplay } from "@/components/documentacao/sop-chat-roleplay";
+import { SopWeekCalendar } from "@/components/documentacao/sop-week-calendar";
 import { formatDate } from "@/lib/dates";
 import { getDocsContext } from "@/lib/documentacao/server";
 
@@ -55,18 +57,19 @@ const REQUEST_TEMPLATE = [
   "Prazo: preciso de resposta até …",
 ].join("\n");
 
+// v80.9: sem nomes de pessoas nem «Clínica» — «Cliente X» serve qualquer setor.
 const DAILY_EXAMPLE = [
-  "Daily update – Maria 19/11",
+  "Daily update – [o teu nome] 19/11",
   "",
-  "Clínica X:",
+  "Cliente X:",
   "• Publicados os 2 artigos do mês",
   "• Corrigidas as metas das 6 páginas de serviço",
   "",
-  "Clínica Y:",
+  "Cliente Y:",
   "• Auditoria técnica: 14 erros 404 listados",
   "",
   "Por fazer (e porquê):",
-  "• Checklist da Clínica Z (prazo hoje às 17h): faltam os acessos ao WordPress. Programado para amanhã às 10h.",
+  "• Checklist do Cliente Z (prazo hoje às 17h): faltam os acessos ao WordPress. Programado para amanhã às 10h.",
 ].join("\n");
 
 /* ------------------------------------------------------------------ */
@@ -82,7 +85,7 @@ function Slide({
   children,
 }: {
   eyebrow?: string;
-  title: string;
+  title: ReactNode;
   lead?: ReactNode;
   takeaway?: ReactNode;
   children: ReactNode;
@@ -107,6 +110,22 @@ function Takeaway({ lead, children }: { lead: string; children?: ReactNode }) {
       <span className="font-semibold text-white">{lead}</span>
       {children ? <> {children}</> : null}
     </p>
+  );
+}
+
+/** A frase-chave de um slide, com mais peso do que a faixa normal: moldura no
+ *  gradiente da marca que corre devagar e o início em texto animado (v80.9 —
+ *  o «teste», o ODE, a autonomia). */
+function HighlightRule({ lead, children }: { lead: string; children?: ReactNode }) {
+  return (
+    <div className="sop-glow">
+      <div className="rounded-[16.5px] bg-[#0c0a18] px-6 py-5 sm:px-7">
+        <p className="text-[18px] leading-snug text-white/80 sm:text-[21px]">
+          <span className="docs-brand-flow-text font-bold">{lead}</span>
+          {children ? <> {children}</> : null}
+        </p>
+      </div>
+    </div>
   );
 }
 
@@ -180,15 +199,20 @@ function ChapterIntro() {
         <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] px-6 py-5">
           <span aria-hidden className="absolute inset-y-0 left-0 w-1" style={{ background: "var(--brand-gradient)" }} />
           <p className="max-w-3xl text-[15.5px] leading-relaxed text-white/70">
-            A direção pede-a sempre. Não há perguntas, dúvidas ou pedidos sem a proposta do consultor: é assim que se ganha
-            capacidade de decisão. <Strong>Pensas no problema, escolhes um caminho e a direção só valida.</Strong>
+            A direção pede-a sempre. Não há perguntas, dúvidas ou pedidos sem a proposta do consultor.{" "}
+            <Strong>
+              Pensas no problema, escolhes uma proposta de solução (no máximo duas) e a direção valida e apoia. É assim que se
+              constrói autonomia.
+            </Strong>
           </p>
         </div>
       </Slide>
 
       <Slide
         title="Cada interrupção tem um custo"
-        takeaway={<Takeaway lead="Não são 23 minutos parados.">É o tempo médio até voltar à tarefa interrompida.</Takeaway>}
+        takeaway={
+          <Takeaway lead="Não são 23 minutos parados.">É o tempo médio até voltar ao foco total na tarefa interrompida.</Takeaway>
+        }
       >
         <div className="flex flex-wrap items-start gap-x-10 gap-y-4">
           <p className="leading-none">
@@ -203,16 +227,6 @@ function ChapterIntro() {
 
       <Slide
         title="O SOP responde a quatro perguntas"
-        lead={
-          <>
-            Para o SEO DPT: a comunidade de WhatsApp e o Slack com os outros departamentos. A comunicação com os clientes está
-            nos{" "}
-            <Link href="/documentacao/protocolos-obrigatorios" className={linkCls}>
-              Protocolos Obrigatórios
-            </Link>
-            .
-          </>
-        }
         takeaway={
           <Takeaway lead="Conta como ineficácia.">
             Falhar uma regra deste SOP é «Processo não seguido», desde o dia em que é publicado à equipa.
@@ -240,13 +254,27 @@ function ChapterIntro() {
 function ChapterChannels() {
   const formats: Array<{ icon: LucideIcon; title: string; sub: string; d: string; time: string }> = [
     { icon: MessageSquareText, title: "Mensagem", sub: "O normal", d: "Tudo o que não te bloqueia. Fica escrito e não interrompe.", time: "Até ao fim do dia útil" },
-    { icon: Video, title: "Link do Meet", sub: "Chamada rápida", d: "Estás parado e não consegues avançar sozinho.", time: "Na hora" },
+    // v80.9: o Meet rápido é ligar e entrar na hora; a reunião é agendada
+    // para debater uma decisão. Não se confundem.
+    {
+      icon: Video,
+      title: "Meet rápido",
+      sub: "Ligar e entrar, sem agendar",
+      d: "Ligar para entrar num Meet rápido, quando estás parado e não consegues avançar sozinho.",
+      time: "Na hora",
+    },
     { icon: PlayCircle, title: "Loom", sub: "Vídeo do ecrã", d: "É preciso ver um ecrã ou um processo. Fica guardado.", time: "48h úteis" },
-    { icon: Users, title: "Reunião", sub: "Último recurso", d: "Debate ou decisão com impacto. No Google Calendar.", time: "Marcada" },
+    {
+      icon: Users,
+      title: "Reunião",
+      sub: "Agendada, último recurso",
+      d: "Para debater uma decisão com impacto. Agenda-se no Google Calendar, com convite.",
+      time: "Agendada",
+    },
   ];
   const groups: Array<{ emoji: string; title: string; sub: string; d: ReactNode }> = [
-    { emoji: "🔍", title: "Pedidos à Direção", sub: "Consultor → André e Alex", d: <>Aprovações, revisões e decisões. Com o template e <Strong>a tua proposta</Strong>.</> },
-    { emoji: "📥", title: "Pedidos à Equipa", sub: "Direção → equipa", d: <>Entregáveis com prazo e extras. Sempre em <Strong>ODE</Strong>; confirma-se com ✅.</> },
+    { emoji: "🔍", title: "Pedidos à Direção", sub: "Consultor → chefia", d: <>Aprovações, revisões e decisões. Com o template e <Strong>a tua proposta</Strong>.</> },
+    { emoji: "📥", title: "Pedidos à Equipa", sub: "Chefia → equipa", d: <>Entregáveis com prazo e extras. Sempre em <Strong>ODE</Strong>; confirma-se com ✅.</> },
     { emoji: "📊", title: "Daily Updates", sub: "Toda a equipa, todos os dias", d: "O que fizeste por cliente e o que ficou por fazer." },
     { emoji: "💬", title: "WonderAds SEO DPT", sub: "Toda a equipa", d: "Dúvidas entre colegas, partilhas e preparação das reuniões." },
     { emoji: "📢", title: "Announcements", sub: "Só a direção escreve", d: "Avisos, mudanças e regras novas. Não se responde lá." },
@@ -255,7 +283,7 @@ function ChapterChannels() {
     <>
       <Slide
         title="Mensagem primeiro, reunião em último recurso"
-        takeaway={<Takeaway lead="O teste:">se cabe numa mensagem escrita com contexto, não é reunião.</Takeaway>}
+        takeaway={<HighlightRule lead="O teste:">se cabe numa mensagem escrita com contexto, não é reunião.</HighlightRule>}
       >
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {formats.map((f) => (
@@ -309,14 +337,6 @@ function ChapterChannels() {
 }
 
 function ChapterMoments() {
-  const days = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta"];
-  const meetings: Record<string, { time: string; label: string } | null> = {
-    Segunda: { time: "15h30", label: "Bloqueios e calls" },
-    Terça: null,
-    Quarta: { time: "14h00", label: "Deep dive" },
-    Quinta: null,
-    Sexta: { time: "15h30", label: "Fecho da semana" },
-  };
   const agendas = [
     {
       day: "Segunda · 15h30",
@@ -338,44 +358,15 @@ function ChapterMoments() {
     <>
       <Slide
         title="Se não está no calendário, não existe"
-        lead="A semana-tipo do SEO DPT. Reuniões no Google Meet, gravadas com o Google Workspace."
+        lead="Um exemplo de semana de um consultor. Reuniões no Google Meet, gravadas com o Google Workspace."
         takeaway={<Takeaway lead="Cada momento tem dia e hora.">Nada de reuniões soltas.</Takeaway>}
       >
-        <div className="overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <div className="grid min-w-[560px] grid-cols-[5.5rem_repeat(5,1fr)] gap-2 text-center text-[13px]">
-            <span />
-            {days.map((d) => (
-              <span key={d} className="pb-1 font-semibold text-white/60">
-                {d}
-              </span>
-            ))}
-            <span className="self-center text-left text-white/45">Tarde</span>
-            {days.map((d) => {
-              const m = meetings[d];
-              return m ? (
-                <span key={d} className="rounded-lg bg-[#c4a6ff] px-2 py-2.5 font-semibold leading-tight text-[#120f24]">
-                  {m.time}
-                  <span className="block text-[12px] font-medium">{m.label}</span>
-                </span>
-              ) : (
-                <span key={d} className="flex items-center justify-center rounded-lg bg-[#783DF5]/[0.14] px-2 py-2.5 text-white/60">
-                  Foco
-                </span>
-              );
-            })}
-            <span className="self-center text-left text-white/45">Fim do dia</span>
-            {days.map((d) => (
-              <span key={d} className="rounded-lg border border-[#783DF5]/35 px-2 py-2.5 text-white/75">
-                Daily Update
-              </span>
-            ))}
-          </div>
-        </div>
+        <SopWeekCalendar />
       </Slide>
 
       <Slide
         title="Três reuniões, cada uma com a sua estrutura"
-        lead="Todas abrem com os avisos à navegação do Team Leader (enquanto não houver, o COO)."
+        lead="Todas abrem com os avisos à navegação do Team Leader (enquanto não houver, da chefia)."
         takeaway={<Takeaway lead="✋ Levantar a mão.">Para perguntar a meio da fala de um colega, usa sempre «Levantar a mão» no Meet.</Takeaway>}
       >
         <div className="grid gap-3 md:grid-cols-3">
@@ -428,7 +419,10 @@ function ChapterMoments() {
       <Slide
         title="Sem janelas de envio: o prazo é da resposta"
         takeaway={
-          <Takeaway lead="Estás bloqueado?">Manda um link do Meet a quem te pode desbloquear, na hora.</Takeaway>
+          <Takeaway lead="Estás bloqueado?">
+            Liga para entrar num Meet rápido com um colega que te possa desbloquear. A chefia só se interrompe nos três casos de
+            urgência.
+          </Takeaway>
         }
       >
         <div className="grid gap-3 md:grid-cols-3">
@@ -444,11 +438,13 @@ function ChapterMoments() {
           </Card>
           <div className="rounded-2xl border border-amber-300/30 bg-amber-400/[0.07] p-5">
             <p className="text-[18px] font-semibold leading-tight text-white">Urgência</p>
-            <p className="mt-1 text-[12.5px] font-semibold text-amber-200">Interrompe na hora, a qualquer hora</p>
-            <p className="mt-2 text-[14px] leading-relaxed text-white/65">
-              Só um <Strong>cliente a ponto de sair</Strong>, ou <Strong>dados, acessos ou pagamentos</Strong>. Liga ou manda um
-              Meet ao André ou ao Alex.
-            </p>
+            <p className="mt-1 text-[12.5px] font-semibold text-amber-200">Só isto interrompe a chefia, a qualquer hora</p>
+            <ul className="mt-3 space-y-1.5 text-[14px] font-semibold text-white">
+              <li>⚠️ Cliente a ponto de sair</li>
+              <li>⚠️ Urgência grave</li>
+              <li>⚠️ Acessos comprometidos</li>
+            </ul>
+            <p className="mt-3 text-[13px] leading-relaxed text-white/55">Só estes três, mais nenhum. Liga à chefia.</p>
           </div>
         </div>
       </Slide>
@@ -462,7 +458,6 @@ function ChapterWriting() {
       <Slide
         title="Regras base para qualquer mensagem"
         lead="No WhatsApp e no Slack."
-        takeaway={<Takeaway lead="O ✅ chega.">Ninguém leva a mal que não escrevas «ok» nem «obrigado».</Takeaway>}
       >
         <Numbered
           items={[
@@ -486,12 +481,31 @@ function ChapterWriting() {
         />
       </Slide>
 
+      {/* v80.9: o ✅ encenado — o André quer isto com ênfase e animação. */}
       <Slide
-        title="ODE: objetivo, data e estrutura em qualquer pedido"
+        eyebrow="O ✅ chega"
+        title="Cinco mensagens que podiam ser duas e um ✅"
+        lead="Ninguém leva a mal que não escrevas «ok», «obrigado» ou «de nada». O objetivo é ser proativo: menos mensagens, mais trabalho feito."
         takeaway={
-          <Takeaway lead="Vale nos dois sentidos.">
-            A direção usa-o no 📥 Pedidos à Equipa; a equipa usa-o quando pede a um colega ou a outro departamento.
-          </Takeaway>
+          <HighlightRule lead="Parabéns a quem consegue:">
+            transformar 5 mensagens (ok, obrigado, de nada…) em apenas 2 mensagens e 1 reação.
+          </HighlightRule>
+        }
+      >
+        <SopChatRoleplay />
+      </Slide>
+
+      <Slide
+        title={
+          <>
+            ODE: objetivo, data e estrutura <span className="docs-brand-flow-text">em qualquer pedido</span>
+          </>
+        }
+        lead="Obrigatório. Sem O, D e E, não é um pedido."
+        takeaway={
+          <HighlightRule lead="Em qualquer pedido, nos dois sentidos.">
+            A chefia usa-o no 📥 Pedidos à Equipa; a equipa usa-o quando pede a um colega ou a outro departamento.
+          </HighlightRule>
         }
       >
         <div className="grid gap-6 md:grid-cols-2 md:items-start">
@@ -514,7 +528,7 @@ function ChapterWriting() {
           </ul>
           <div className="rounded-2xl border border-[#c4a6ff]/45 bg-[#783DF5]/[0.1] p-5">
             <p className="text-[12.5px] font-semibold text-[#c4a6ff]">Sem ODE</p>
-            <p className="mt-1 text-[15px] italic text-white/75">«Faz um artigo para a Clínica X.»</p>
+            <p className="mt-1 text-[15px] italic text-white/75">«Faz um artigo para o Cliente X.»</p>
             <p className="mt-5 text-[12.5px] font-semibold text-[#c4a6ff]">Com ODE</p>
             <div className="mt-1 space-y-1.5 text-[14px] leading-relaxed text-white/65">
               <p>
@@ -540,14 +554,14 @@ function ChapterRequests() {
       <Slide
         title="Antes de pedir ajuda, três passos"
         takeaway={
-          <Takeaway lead="Autonomia não é desenrascar sozinho.">É chegar à direção com o trabalho pensado.</Takeaway>
+          <HighlightRule lead="Autonomia não é desenrascar sozinho.">É chegar à chefia com o trabalho pensado.</HighlightRule>
         }
       >
         <div className="grid gap-3 md:grid-cols-4">
           {[
             { n: "1", t: "Procura", d: "Na Documentação, na Formação, num Loom ou no histórico do grupo." },
             { n: "2", t: "Pergunta a um colega", d: "No 💬 WonderAds SEO DPT. Se alguém já resolveu, não precisa da direção." },
-            { n: "3", t: "Prepara a proposta", d: "Cinco minutos para juntar contexto, opções e recomendação." },
+            { n: "3", t: "Prepara a proposta", d: "Cinco minutos para juntar o contexto e a tua solução: uma, no máximo duas." },
           ].map((s) => (
             <Card key={s.n}>
               <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#783DF5]/45 text-[14px] font-semibold text-white">
@@ -567,14 +581,14 @@ function ChapterRequests() {
 
       <Slide
         title="Todo o pedido à direção tem cinco partes"
-        takeaway={<Takeaway lead="Fixado no 🔍 Pedidos à Direção">e na descrição do grupo. Resposta do André ou do Alex até ao fim do dia útil.</Takeaway>}
+        takeaway={<Takeaway lead="Fixado no 🔍 Pedidos à Direção">e na descrição do grupo. A chefia responde até ao fim do dia útil.</Takeaway>}
       >
         <div className="grid gap-6 md:grid-cols-[1fr_1fr] md:items-start">
           <ol className="space-y-4">
             {[
               { t: "Tipo de pedido", d: "Validar (preciso de uma decisão), debater (preciso de discutir) ou informar (um ✅ basta)." },
               { t: "Contexto", d: "Uma ou duas frases, e o que já tentaste." },
-              { t: "Opções", d: "Duas hipóteses concretas. Nunca «o que faço?»." },
+              { t: "Opções", d: "Uma hipótese concreta, no máximo duas. Nunca «o que faço?»." },
               { t: "Recomendação e risco", d: "Qual escolhes e porquê. É aqui que deixas de executar e começas a decidir." },
               { t: "Prazo", d: "Até quando precisas de resposta." },
             ].map((x, i) => (
@@ -602,21 +616,21 @@ function ChapterRequests() {
       <Slide
         title="A diferença está no trabalho feito antes de perguntar"
         takeaway={
-          <Takeaway lead="Pedido sem proposta volta para trás.">A direção pede a tua sugestão, e conta como ineficácia.</Takeaway>
+          <Takeaway lead="Pedido sem proposta volta para trás.">A chefia pede a tua sugestão, e conta como ineficácia.</Takeaway>
         }
       >
         <div className="grid gap-3 md:grid-cols-2">
           <Card>
-            <p className="text-[12.5px] font-semibold text-white/45">Como chega hoje</p>
-            <p className="mt-2 text-[16px] font-semibold italic text-white/85">«A Clínica X não aprovou os artigos do mês. O que faço?»</p>
+            <p className="text-[12.5px] font-semibold text-rose-200/80">Um exemplo errado</p>
+            <p className="mt-2 text-[16px] font-semibold italic text-white/85">«O Cliente X não aprovou os artigos do mês. O que faço?»</p>
             <ul className="mt-4 space-y-1.5 text-[13.5px] leading-relaxed text-white/55">
-              <li>• A direção pergunta desde quando.</li>
-              <li>• Pergunta o que já foi dito ao cliente.</li>
+              <li>• A chefia tem de perguntar desde quando.</li>
+              <li>• Tem de perguntar o que já foi dito ao cliente.</li>
               <li>• Decide por ti, e da próxima vez é igual.</li>
             </ul>
           </Card>
           <div className="rounded-2xl border border-[#c4a6ff]/45 bg-[#783DF5]/[0.1] p-5">
-            <p className="text-[12.5px] font-semibold text-[#c4a6ff]">Como deve chegar</p>
+            <p className="text-[12.5px] font-semibold text-[#c4a6ff]">Como os Consultores Wonder fazem</p>
             <div className="mt-2 space-y-1.5 text-[13.5px] leading-relaxed text-white/70">
               <p>
                 <Strong>Tipo:</Strong> validar
@@ -658,13 +672,14 @@ function ChapterSummary({ updatedAt }: { updatedAt: string }) {
           rows={[
             { term: "Uma dúvida de trabalho", detail: "Pergunta a um colega no 💬 WonderAds SEO DPT.", value: "Fim do dia útil" },
             { term: "Aprovação, revisão ou decisão", detail: "🔍 Pedidos à Direção, com o template e a tua proposta.", value: "Fim do dia útil" },
-            { term: "Estou bloqueado", detail: "Link do Meet a quem te pode desbloquear.", value: "Na hora" },
+            { term: "Estou bloqueado", detail: "Liga para entrar num Meet rápido com um colega que te possa desbloquear.", value: "Na hora" },
+            { term: "Debater uma decisão", detail: "Reunião agendada no Google Calendar, com convite.", value: "Agendada" },
             { term: "Mostrar um ecrã", detail: "Um Loom, no grupo certo, com contexto escrito.", value: "48h úteis" },
             { term: "Pedido a outro departamento", detail: "Canal do cliente no Slack, com @ e em ODE.", value: "Fim do dia útil" },
             {
-              term: "Cliente a ponto de sair; dados, acessos ou pagamentos",
+              term: "Cliente a ponto de sair, urgência grave ou acessos comprometidos",
               tone: "amber",
-              detail: "Chamada ou Meet ao André ou ao Alex, a qualquer hora.",
+              detail: "Só estes três casos interrompem a chefia: liga, a qualquer hora.",
               value: "Na hora",
             },
             { term: "O que fiz hoje", detail: "📊 Daily Updates, com o «Por fazer» no fim.", value: "Fim do teu dia" },
@@ -699,37 +714,44 @@ function ChapterSummary({ updatedAt }: { updatedAt: string }) {
 
       <ExecutiveSummary
         updatedAt={updatedAt}
+        signedBy="André Pavlenco"
         title="O SOP de Comunicação, por extenso"
         paragraphs={[
           <>
-            O SOP de Comunicação define onde, quando e como o SEO DPT comunica, entre colegas e com a direção. Existe porque cada
-            interrupção custa, em média, 23 minutos a quem a recebe, e porque uma equipa que pergunta tudo nunca aprende a decidir.
-            A regra que não falha é esta: nenhum pedido à direção chega sem a sugestão de solução do consultor. A direção pede-a
-            sempre, e é assim que cada consultor ganha capacidade de decisão.
+            O SOP de Comunicação define onde, quando e como a equipa comunica, entre colegas e com a chefia. Existe porque cada
+            interrupção custa, em média, 23 minutos até voltar ao foco total na tarefa interrompida, e porque uma equipa que
+            pergunta tudo nunca aprende a decidir. A regra que não falha é esta: nenhum pedido à direção chega sem a sugestão de
+            solução do consultor. Pensa-se no problema, escolhe-se uma proposta de solução, no máximo duas, e a direção valida e
+            apoia. É assim que se constrói autonomia.
           </>,
           <>
             A comunicação interna faz-se por escrito, na comunidade de WhatsApp WonderAds SEO DPT. No Announcements só a direção
-            escreve. O grupo WonderAds SEO DPT é para as dúvidas entre colegas, as partilhas e a preparação das reuniões. O Pedidos à
-            Direção leva as aprovações, revisões e decisões, sempre com o template e uma proposta, e tem resposta do André ou do
-            Alex até ao fim do dia útil. O Pedidos à Equipa leva os entregáveis que a direção pede, sempre em ODE, e quem recebe
-            confirma com ✅. O Daily Updates recebe, até ao fim do dia de cada um, o que se fez por cliente e o que ficou por fazer.
-            Com os outros departamentos fala-se no Slack, num canal por cliente, com as mesmas regras. As mensagens privadas ficam
-            para o que é pessoal ou sensível.
+            escreve. O grupo WonderAds SEO DPT é para as dúvidas entre colegas, as partilhas e a preparação das reuniões. O Pedidos
+            à Direção leva as aprovações, revisões e decisões, sempre com o template e a proposta do consultor, e a chefia responde
+            até ao fim do dia útil. O Pedidos à Equipa leva os entregáveis que a chefia pede, sempre em ODE, e quem recebe confirma
+            com ✅. O Daily Updates recebe, até ao fim do dia de cada um, o que se fez por cliente e o que ficou por fazer. Com os
+            outros departamentos fala-se no Slack, num canal por cliente, com as mesmas regras. As mensagens privadas ficam para o
+            que é pessoal ou sensível.
           </>,
           <>
-            A mensagem escrita é o formato normal. Um Loom serve para mostrar um ecrã e tem resposta em até 48 horas úteis; um link
-            do Google Meet serve para quem está bloqueado e tem resposta na hora; a reunião é o último recurso e marca-se no Google
-            Calendar. Há três momentos fixos por semana, no Meet: segunda às 15h30, quarta às 14h e sexta às 15h30. Não há janelas
-            de envio: escreve-se quando é preciso, e o que tem prazo é a resposta. Fora de horas pode-se enviar, mas ninguém tem de
-            responder até ao dia útil seguinte. Só duas coisas interrompem a direção na hora: um cliente a ponto de sair, e dados,
-            acessos ou pagamentos.
+            A mensagem escrita é o formato normal. Um Loom serve para mostrar um ecrã e tem resposta em até 48 horas úteis. Quem
+            está parado liga para entrar num Meet rápido com quem o pode desbloquear, e isso é diferente de uma reunião: a reunião
+            é o último recurso, agenda-se no Google Calendar e serve para debater uma decisão. Há três momentos fixos por semana, no
+            Meet: segunda às 15h30, quarta às 14h e sexta às 15h30, e o resto da agenda protege o foco. Não há janelas de envio:
+            escreve-se quando é preciso, e o que tem prazo é a resposta. Fora de horas pode-se enviar, mas ninguém tem de
+            responder até ao dia útil seguinte. Só três casos interrompem a chefia, a qualquer hora: um cliente a ponto de sair,
+            uma urgência grave ou acessos comprometidos.
           </>,
           <>
             Cada mensagem segue cinco regras: contexto total, listas e frases curtas, nada de áudios, @ de quem tem de agir e ✅
-            para confirmar, sem «ok» nem «obrigado», que ninguém leva a mal. Antes de pedir ajuda, procura-se a resposta,
-            pergunta-se a um colega e prepara-se a proposta. O pedido à direção tem cinco partes: o tipo, o contexto, duas opções, a
-            recomendação com o risco e o prazo. Falhar uma regra deste SOP conta como ineficácia, «Processo não seguido», desde o
-            dia em que é publicado à equipa.
+            para confirmar. Ninguém leva a mal que não se escreva «ok» nem «obrigado»: o objetivo é ser proativo, e parabenizamos
+            quem consegue transformar cinco mensagens em duas e uma reação. Qualquer pedido leva ODE: objetivo, data e estrutura.
+          </>,
+          <>
+            Antes de pedir ajuda, procura-se a resposta, pergunta-se a um colega e prepara-se a proposta, porque autonomia não é
+            desenrascar sozinho: é chegar à chefia com o trabalho pensado. O pedido à direção tem cinco partes: o tipo, o contexto,
+            as opções, a recomendação com o risco e o prazo. Um pedido sem proposta volta para trás, e falhar uma regra deste SOP
+            conta como ineficácia, «Processo não seguido», desde o dia em que é publicado à equipa.
           </>,
         ]}
       />
@@ -764,8 +786,7 @@ export default async function SopComunicacaoPage() {
         pageId="sop-comunicacao"
         lead={
           <>
-            Onde, quando e como o SEO DPT comunica. Menos interrupções, respostas a horas certas e consultores que{" "}
-            <Strong>chegam com a decisão pensada</Strong>.
+            Onde, quando e como a equipa comunica.
           </>
         }
         meta={`Atualizado a ${formatDate(block.updatedAt)}. Em revisão: só os SuperAdmins veem esta página.`}

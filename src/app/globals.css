@@ -1301,6 +1301,46 @@ body {
   .docs-brand-flow-text { animation: none; }
 }
 
+/* SOP de Comunicação (v80.9) — as frases-chave levam uma moldura no
+   gradiente da marca que corre devagar (o «teste», o ODE, a autonomia). */
+.sop-glow {
+  border-radius: 18px;
+  padding: 1.5px;
+  background-image: linear-gradient(90deg, #343ed7, #783df5, #c535c9, #783df5, #343ed7);
+  background-size: 200% 100%;
+  animation: sop-border-flow 6s ease-in-out infinite alternate;
+}
+@keyframes sop-border-flow {
+  from { background-position: 0% 0; }
+  to   { background-position: 100% 0; }
+}
+
+/* A encenação do ✅: as mensagens entram uma a uma quando o bloco aparece
+   no ecrã (data-play="1"), e a reação salta por cima da mensagem. */
+.sop-chat .sop-msg { opacity: 0; transform: translateY(8px); }
+.sop-chat .sop-react { opacity: 0; transform: scale(0.3); }
+.sop-chat[data-play="1"] .sop-msg {
+  animation: sop-msg-in 0.4s ease-out forwards;
+  animation-delay: var(--d, 0s);
+}
+.sop-chat[data-play="1"] .sop-react {
+  animation: sop-pop 0.5s cubic-bezier(0.2, 1.6, 0.4, 1) forwards;
+  animation-delay: var(--d, 0s);
+}
+@keyframes sop-msg-in {
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes sop-pop {
+  0%   { opacity: 0; transform: scale(0.3); }
+  70%  { opacity: 1; transform: scale(1.18); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sop-glow { animation: none; }
+  .sop-chat .sop-msg,
+  .sop-chat .sop-react { opacity: 1; transform: none; animation: none !important; }
+}
+
 /* Folga de custos (v78.37) — a barra enche ao abrir a página e a bolha da
    percentagem chega depois dela. É o único movimento da página. */
 @keyframes folga-fill {
