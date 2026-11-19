@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "80.4",
+    date: "2026-11-19",
+    title: "Origem dos clientes: apagar registos e repor",
+    highlights: [
+      "**🗑️ Apagar um registo.** Com sessão da equipa (quem edita o SEO), cada linha de «Hoje» tem um lixo. A receção, com o PIN, não o vê.",
+      "**🧽 Apagar registos.** Botão na faixa da equipa: hoje, este mês ou desde o início, numa clínica ou em todas, com a contagem antes. Pede sempre «Confirmar» escrito.",
+      "**↩️ Histórico (só SuperAdmin).** Tudo o que se apagou fica guardado, com quem e quando. «Repor» devolve os registos aos números tal como estavam.",
+    ],
+  },
+  {
     version: "80.3",
     date: "2026-11-18",
     title: "Ficha do prospect: separadores na largura certa",

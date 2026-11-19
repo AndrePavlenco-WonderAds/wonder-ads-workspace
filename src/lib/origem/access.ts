@@ -15,7 +15,7 @@
 import "server-only";
 import { createHmac, scryptSync, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
-import { editableDepts } from "@/lib/auth/credentials";
+import { editableDepts, isAdminUsername } from "@/lib/auth/credentials";
 import { getCurrentEmployee, getImpersonation } from "@/lib/auth/server";
 import { getOrigemConfig } from "./config";
 
@@ -100,8 +100,18 @@ const KEY_LENGTH = 64;
 export const ORIGEM_COOKIE_MAX_AGE_SECONDS = 180 * 24 * 60 * 60;
 
 export type OrigemViewer =
-  | { kind: "client"; canWrite: true; username: null }
-  | { kind: "team"; name: string; username: string; canWrite: boolean };
+  | { kind: "client"; canWrite: true; canManage: false; isSuperAdmin: false; username: null }
+  | {
+      kind: "team";
+      name: string;
+      username: string;
+      canWrite: boolean;
+      /** v80.4: apagar registos e dar reset aos números — só a equipa que
+       *  edita o SEO (a receção, com o PIN, nunca). */
+      canManage: boolean;
+      /** v80.4: vê o histórico do que se apagou e repõe. Nunca no «ver como». */
+      isSuperAdmin: boolean;
+    };
 
 export function origemCookieName(slug: string): string {
   return `orig_${slug.replace(/[^a-z0-9-]/gi, "")}`;
@@ -155,16 +165,19 @@ export async function getOrigemViewer(slug: string): Promise<OrigemViewer | null
   const employee = await getCurrentEmployee().catch(() => null);
   if (employee) {
     const impersonating = Boolean(await getImpersonation().catch(() => null));
+    const canWrite = !impersonating && !employee.viewerOf && editableDepts(employee).includes("seo");
     return {
       kind: "team",
       name: employee.name,
       username: employee.username,
-      canWrite: !impersonating && !employee.viewerOf && editableDepts(employee).includes("seo"),
+      canWrite,
+      canManage: canWrite,
+      isSuperAdmin: !impersonating && isAdminUsername(employee.username),
     };
   }
   const store = await cookies();
   if (readCookie(slug, store.get(origemCookieName(slug))?.value)) {
-    return { kind: "client", canWrite: true, username: null };
+    return { kind: "client", canWrite: true, canManage: false, isSuperAdmin: false, username: null };
   }
   return null;
 }

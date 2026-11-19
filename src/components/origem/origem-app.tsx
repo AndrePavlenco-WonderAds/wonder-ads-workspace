@@ -15,11 +15,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { ArrowLeft, ArrowRight, BarChart3, Check, ChevronDown, Eye, Loader2, LogOut, MapPin, PenLine, Search, Undo2, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, BarChart3, Check, ChevronDown, Eraser, Eye, History, Loader2, LogOut, MapPin, PenLine, Search, Trash2, Undo2, X } from "lucide-react";
 import type { OrigemClient, OrigemSite, OrigemSource } from "@/lib/origem/config";
 import { placeWords, siteFromQuery } from "@/lib/origem/words";
 import { dayLabel, lisbonClock, lisbonGreeting, lisbonParts, type MonthStats, type TodayVote } from "@/lib/origem/stats";
 import { OrigemReports } from "./origem-reports";
+import { DeleteVoteSheet, HistorySheet, ResetSheet, type ManageSnapshot } from "./origem-manage";
 import { BrandMark, BumpNumber, CHANNEL_ICONS, ClientLogo, SOURCE_ICONS, tint } from "./origem-ui";
 import { WonderAdsFooter } from "./wonder-ads-signature";
 
@@ -27,7 +28,7 @@ export type OrigemBootstrap = {
   slug: string;
   cfg: OrigemClient;
   logo: string | null;
-  viewer: { kind: "client" | "team"; name: string | null; canWrite: boolean };
+  viewer: { kind: "client" | "team"; name: string | null; canWrite: boolean; canManage: boolean; isSuperAdmin: boolean };
   history: MonthStats[];
   today: TodayVote[];
   serverNow: number;
@@ -41,7 +42,10 @@ type Tab = "registar" | "relatorios";
 type Toast =
   | { kind: "ok"; id: string; source: string; channel: string | null; until: number }
   | { kind: "undone" }
+  | { kind: "info"; text: string }
   | { kind: "error"; text: string };
+/** v80.4 — os painéis da equipa: apagar um registo, apagar por período, o histórico. */
+type Manage = { kind: "delete"; vote: TodayVote } | { kind: "reset" } | { kind: "history" } | null;
 type SheetState =
   | { step: "channel"; source: string }
   | { step: "done"; source: string; channel: string | null; n: number };
@@ -88,6 +92,7 @@ export function OrigemApp({ bootstrap }: { bootstrap: OrigemBootstrap }) {
   const [saving, setSaving] = useState<string | null>(null);
   const [toast, setToast] = useState<Toast | null>(null);
   const [now, setNow] = useState(bootstrap.serverNow);
+  const [manage, setManage] = useState<Manage>(null);
   const registered = useRef(0);
   const siteKey = `origem:${slug}:site`;
 
@@ -230,6 +235,20 @@ export function OrigemApp({ bootstrap }: { bootstrap: OrigemBootstrap }) {
     }
   }
 
+  // Depois de apagar ou repor: todos os meses e os registos de hoje de novo.
+  function afterManage(snap: ManageSnapshot, text: string) {
+    const months = snap.history;
+    if (Array.isArray(months)) setHistory((h) => ({ ...h, ...Object.fromEntries(months.map((m) => [m.month, m])) }));
+    if (Array.isArray(snap.today)) {
+      const ids = new Set(snap.today.map((v) => v.id));
+      setToday(snap.today);
+      // O «Anular» de um registo que já foi apagado deixa de fazer sentido.
+      setToast((t) => (t?.kind === "ok" && !ids.has(t.id) ? null : t));
+    }
+    setToast({ kind: "info", text });
+    setTimeout(() => setToast((t) => (t?.kind === "info" && t.text === text ? null : t)), 4000);
+  }
+
   async function signOut() {
     await fetch(`/api/origem/${slug}/auth`, { method: "DELETE" }).catch(() => null);
     router.refresh();
@@ -240,13 +259,37 @@ export function OrigemApp({ bootstrap }: { bootstrap: OrigemBootstrap }) {
   return (
     <div className="relative isolate flex min-h-[100dvh] flex-col">
       {viewer.kind === "team" && (
-        <div className="flex items-center justify-center gap-2 bg-[var(--o-ink)] px-4 py-2 text-center text-[13px] text-white/85">
-          <Eye className="h-3.5 w-3.5 shrink-0 text-[#B9A6FF]" />
-          {readOnly ? (
-            <span>Está a ver como equipa WonderAds. Este perfil só pode consultar.</span>
-          ) : (
-            <span>
-              Está a ver como equipa WonderAds{viewer.name ? ` (${viewer.name})` : ""}. Os registos feitos aqui contam nos números {cfg.brandOf}.
+        <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 bg-[var(--o-ink)] px-4 py-2 text-center text-[13px] text-white/85">
+          <span className="inline-flex items-center gap-2">
+            <Eye className="h-3.5 w-3.5 shrink-0 text-[#B9A6FF]" />
+            {readOnly ? (
+              <span>Está a ver como equipa WonderAds. Este perfil só pode consultar.</span>
+            ) : (
+              <span>
+                Está a ver como equipa WonderAds{viewer.name ? ` (${viewer.name})` : ""}. Os registos feitos aqui contam nos números {cfg.brandOf}.
+              </span>
+            )}
+          </span>
+          {(viewer.canManage || viewer.isSuperAdmin) && (
+            <span className="inline-flex items-center gap-1.5">
+              {viewer.canManage && (
+                <button
+                  type="button"
+                  onClick={() => setManage({ kind: "reset" })}
+                  className="inline-flex h-8 items-center gap-1.5 rounded-full bg-white/10 px-3 text-[12.5px] font-bold text-white transition hover:bg-white/20"
+                >
+                  <Eraser className="h-3.5 w-3.5" /> Apagar registos
+                </button>
+              )}
+              {viewer.isSuperAdmin && (
+                <button
+                  type="button"
+                  onClick={() => setManage({ kind: "history" })}
+                  className="inline-flex h-8 items-center gap-1.5 rounded-full bg-white/10 px-3 text-[12.5px] font-bold text-white transition hover:bg-white/20"
+                >
+                  <History className="h-3.5 w-3.5" /> Histórico
+                </button>
+              )}
             </span>
           )}
         </div>
@@ -336,6 +379,7 @@ export function OrigemApp({ bootstrap }: { bootstrap: OrigemBootstrap }) {
             today={siteToday}
             now={now}
             readOnly={readOnly}
+            onDelete={viewer.canManage ? (vote) => setManage({ kind: "delete", vote }) : null}
             lastId={toast?.kind === "ok" ? toast.id : null}
             onPick={(id) => {
               setSheet({ step: "channel", source: id });
@@ -360,7 +404,48 @@ export function OrigemApp({ bootstrap }: { bootstrap: OrigemBootstrap }) {
       </AnimatePresence>
 
       <AnimatePresence>
-        {toast && tab === "registar" && (
+        {manage?.kind === "delete" && (
+          <DeleteVoteSheet
+            key="delete"
+            cfg={cfg}
+            slug={slug}
+            vote={manage.vote}
+            onClose={() => setManage(null)}
+            onDone={(snap) => {
+              setManage(null);
+              afterManage(snap, "Registo apagado. Fica no histórico.");
+            }}
+          />
+        )}
+        {manage?.kind === "reset" && (
+          <ResetSheet
+            key="reset"
+            cfg={cfg}
+            slug={slug}
+            site={site}
+            history={history}
+            today={today}
+            now={now}
+            onClose={() => setManage(null)}
+            onDone={(snap, n) => {
+              setManage(null);
+              afterManage(snap, n === 1 ? "1 registo apagado. Fica no histórico." : `${n} registos apagados. Ficam no histórico.`);
+            }}
+          />
+        )}
+        {manage?.kind === "history" && (
+          <HistorySheet
+            key="history"
+            cfg={cfg}
+            slug={slug}
+            onClose={() => setManage(null)}
+            onDone={(snap, n) => afterManage(snap, n === 1 ? "1 registo reposto." : `${n} registos repostos.`)}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {toast && (tab === "registar" || toast.kind === "info") && (
           <ToastBar key={toast.kind === "ok" ? toast.id : toast.kind} toast={toast} cfg={cfg} now={now} onUndo={undo} onClose={() => setToast(null)} />
         )}
       </AnimatePresence>
@@ -544,6 +629,7 @@ function RegisterView({
   today,
   now,
   readOnly,
+  onDelete,
   lastId,
   onPick,
 }: {
@@ -552,6 +638,7 @@ function RegisterView({
   today: TodayVote[];
   now: number;
   readOnly: boolean;
+  onDelete: ((vote: TodayVote) => void) | null;
   lastId: string | null;
   onPick: (id: string) => void;
 }) {
@@ -601,7 +688,7 @@ function RegisterView({
         </fieldset>
       </div>
 
-      <TodayPanel cfg={cfg} site={site} today={today} now={now} lastId={lastId} />
+      <TodayPanel cfg={cfg} site={site} today={today} now={now} lastId={lastId} onDelete={onDelete} />
     </div>
   );
 }
@@ -668,12 +755,15 @@ function TodayPanel({
   today,
   now,
   lastId,
+  onDelete,
 }: {
   cfg: OrigemClient;
   site: OrigemSite;
   today: TodayVote[];
   now: number;
   lastId: string | null;
+  /** Só a equipa (v80.4): o lixo em cada linha. */
+  onDelete: ((vote: TodayVote) => void) | null;
 }) {
   const { month, day } = lisbonParts(now);
   const known = (id: string) => (cfg.sources.some((x) => x.id === id) ? id : "outro");
@@ -724,12 +814,22 @@ function TodayPanel({
                       animate={{ opacity: 1, height: "auto" }}
                       exit={{ opacity: 0, height: 0 }}
                       transition={{ duration: 0.25 }}
-                      className={`flex items-center gap-3 px-6 py-2.5 transition-colors ${v.id === lastId ? "bg-[var(--o-paper)]" : ""}`}
+                      className={`flex items-center gap-3 py-2.5 pl-6 transition-colors ${onDelete ? "pr-3" : "pr-6"} ${v.id === lastId ? "bg-[var(--o-paper)]" : ""}`}
                     >
                       <span className="w-11 shrink-0 text-[13px] font-semibold tabular-nums text-[var(--o-muted)]">{lisbonClock(v.at)}</span>
                       <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: s.color }} />
                       <span className="min-w-0 flex-1 truncate text-[15px] font-semibold">{s.label}</span>
                       {ch && <span className="shrink-0 text-[13px] text-[var(--o-muted)]">{ch}</span>}
+                      {onDelete && (
+                        <button
+                          type="button"
+                          onClick={() => onDelete(v)}
+                          aria-label={`Apagar o registo das ${lisbonClock(v.at)} (${s.label})`}
+                          className="-my-1 flex h-9 w-9 shrink-0 touch-manipulation items-center justify-center rounded-full text-[var(--o-muted)] transition hover:bg-[#FEF3F2] hover:text-[#B42318]"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      )}
                     </motion.li>
                   );
                 })}
@@ -925,6 +1025,10 @@ function ToastBar({
           </>
         ) : toast.kind === "undone" ? (
           <p className="py-2 pl-1 text-[15px] text-white/85">Registo anulado. Não conta nos números.</p>
+        ) : toast.kind === "info" ? (
+          <p className="flex items-center gap-2.5 py-2 pl-1 text-[15px] text-white/90">
+            <Check className="h-4 w-4 shrink-0 text-[var(--o-accent)]" strokeWidth={3} /> {toast.text}
+          </p>
         ) : (
           <>
             <p className="flex-1 py-1 text-[15px]">{toast.text}</p>

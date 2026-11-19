@@ -9,7 +9,10 @@ import { origemStoreReady } from "./store";
 
 export type OrigemGateOk = { cfg: OrigemClient; viewer: OrigemViewer };
 
-export async function origemGate(slug: string, opts: { write?: boolean } = {}): Promise<OrigemGateOk | NextResponse> {
+export async function origemGate(
+  slug: string,
+  opts: { write?: boolean; manage?: boolean; superAdmin?: boolean } = {},
+): Promise<OrigemGateOk | NextResponse> {
   const cfg = getOrigemConfig(slug);
   if (!cfg) return NextResponse.json({ error: "Não encontrado." }, { status: 404 });
   if (!origemStoreReady) return NextResponse.json({ error: "Armazenamento indisponível." }, { status: 503 });
@@ -17,6 +20,12 @@ export async function origemGate(slug: string, opts: { write?: boolean } = {}): 
   if (!viewer) return NextResponse.json({ error: "Sessão expirada. Volte a introduzir o PIN." }, { status: 401 });
   if (opts.write && !viewer.canWrite) {
     return NextResponse.json({ error: "Este perfil só pode consultar." }, { status: 403 });
+  }
+  if (opts.manage && !viewer.canManage) {
+    return NextResponse.json({ error: "Só a equipa WonderAds pode apagar registos." }, { status: 403 });
+  }
+  if (opts.superAdmin && !viewer.isSuperAdmin) {
+    return NextResponse.json({ error: "Só um SuperAdmin vê o histórico." }, { status: 403 });
   }
   return { cfg, viewer };
 }
@@ -48,3 +57,6 @@ export async function overLimit(key: string, max: number, windowSeconds: number)
 }
 
 export const DEVICE_RE = /^d[a-z0-9]{6,20}$/;
+
+/** A palavra que se escreve para apagar (v80.4) — maiúsculas e espaços não contam. */
+export const isConfirmWord = (v: unknown) => typeof v === "string" && v.trim().toLowerCase() === "confirmar";
