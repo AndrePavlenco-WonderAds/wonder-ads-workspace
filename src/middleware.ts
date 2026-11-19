@@ -13,7 +13,7 @@
 //   • /_next/*, /favicon.ico, /static — assets
 // → They never reach this middleware.
 
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse, type NextFetchEvent, type NextRequest } from "next/server";
 import {
   SESSION_COOKIE,
   effectiveUsername,
@@ -28,6 +28,12 @@ import {
   publicProjectPageSlug,
 } from "@/lib/paused-projects";
 import { isSessionBlocked } from "@/lib/access/shared";
+import {
+  isPresenceRequest,
+  presenceCookie,
+  presenceIsFresh,
+  writePresence,
+} from "@/lib/access/presence";
 import {
   canEditDept,
   docsOnlyBlocksOf,
@@ -229,7 +235,27 @@ function docsOnlyGate(req: NextRequest, blockIds: string[]): NextResponse {
   return NextResponse.redirect(url);
 }
 
-export async function middleware(req: NextRequest) {
+// Presença na app (v80.12): depois dos portões, qualquer página aberta com uma
+// sessão válida conta como «esteve na app» (ver lib/access/presence.ts). Fica
+// fora de `gateRequest` para não tocar em nenhuma das decisões de acesso.
+export async function middleware(req: NextRequest, event: NextFetchEvent) {
+  const ctx: GateContext = { user: null };
+  const res = await gateRequest(req, ctx);
+  if (ctx.user && isPresenceRequest(req)) {
+    const now = Date.now();
+    if (!presenceIsFresh(req, ctx.user, now)) {
+      res.cookies.set(presenceCookie(ctx.user, now));
+      event.waitUntil(writePresence(ctx.user, now));
+    }
+  }
+  return res;
+}
+
+/** O que os portões descobriram e a presença precisa: quem tem a sessão
+ *  válida (a pessoa real, também em «Ver como»). */
+type GateContext = { user: string | null };
+
+async function gateRequest(req: NextRequest, ctx: GateContext): Promise<NextResponse> {
   // PROJETOS EM PAUSA (v78.81). As páginas públicas de um cliente pausado no
   // SEO DPT (/<slug>/origem, /pendingreview, /preview/…, /onboarding,
   // /survey, /reviews) mostram /projeto-em-pausa/<slug> — a toda a gente, com
@@ -264,6 +290,7 @@ export async function middleware(req: NextRequest) {
   // sessões» → como se não houvesse sessão (volta ao login, cookie limpo).
   // O portão vive em memória 30 s por instância e falha aberto.
   if (session && isSessionBlocked(session, await readAccessGate())) session = null;
+  ctx.user = session?.u ?? null;
   const internal = isInternalPath(req.nextUrl.pathname);
   if (session) {
     // Perfil «só Documentação» (v80.10) — vem antes de tudo e não deixa

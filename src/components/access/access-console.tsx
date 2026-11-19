@@ -383,8 +383,8 @@ export function AccessConsole({
               <li>Um cancelamento chega a todas as sessões em até 30 segundos.</li>
               <li>O último login regista-se a partir de 04/11/2026.</li>
               <li>
-                As entradas na app registam-se a partir de 19/11/2026: um login, ou o regresso depois de 30 min sem
-                atividade. As tuas não aparecem na lista.
+                As visitas registam-se a partir de 19/11/2026: qualquer página aberta conta. Uma entrada é um login, ou
+                o regresso depois de 30 min sem atividade. As tuas não aparecem na lista.
               </li>
             </ul>
           </div>
@@ -556,8 +556,10 @@ function AccessRow({
                   Cancelado a {formatDateTime(row.revokedAt)}
                 </span>
               )}
-              {/* v80.11: a última vez que esteve na app, e o login à parte. */}
-              {row.lastSeenAt && (
+              {/* v80.11: a última vez que esteve na app, e o login à parte.
+                  v80.12: só com uma visita registada; o login já não serve de
+                  «Na app», porque as sessões duram 7 dias sem novo login. */}
+              {row.lastSeenAt ? (
                 <span
                   suppressHydrationWarning
                   title={`Esteve na app a ${formatDateTime(row.lastSeenAt)}`}
@@ -566,6 +568,16 @@ function AccessRow({
                   <DoorOpen className="h-3 w-3" />
                   {now - row.lastSeenAt < 10 * 60 * 1000 ? "Na app agora" : `Na app ${relative(row.lastSeenAt, now)}`}
                 </span>
+              ) : (
+                row.status === "ativo" && (
+                  <span
+                    className="inline-flex items-center gap-1 text-white/35"
+                    title="As visitas contam desde 19/11/2026. Ainda não abriu nenhuma página desde então."
+                  >
+                    <DoorOpen className="h-3 w-3" />
+                    Sem visitas registadas
+                  </span>
+                )
               )}
               <span suppressHydrationWarning title={row.lastLoginAt ? formatDateTime(row.lastLoginAt) : undefined} className="inline-flex items-center gap-1">
                 <LogOut className="h-3 w-3 rotate-180" />

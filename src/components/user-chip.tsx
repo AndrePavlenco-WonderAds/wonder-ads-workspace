@@ -12,7 +12,6 @@
 // oferecer o caminho de volta.
 
 import { cookies } from "next/headers";
-import { after } from "next/server";
 import {
   SESSION_COOKIE,
   SESSION_MAX_AGE_MS,
@@ -42,7 +41,6 @@ import { INEFICACIAS_OPEN_TO_TEAM } from "@/lib/ineficacias/access";
 import { DOCS_OPEN_TO_TEAM, docsAvailable } from "@/lib/documentacao/access";
 import { producerMonthLabel } from "@/lib/producer/shared";
 import { getElectionSummaries } from "@/lib/producer/store";
-import { recordPresence } from "@/lib/access/store";
 import { UserChipMenu, type DailyNumberView, type ProducerMenuView } from "./user-chip-menu";
 
 export async function UserChip() {
@@ -50,10 +48,8 @@ export async function UserChip() {
   const cookieValue = cookieStore.get(SESSION_COOKIE)?.value;
   const session = await readLiveSession(cookieValue);
   if (!session) return null;
-  // Presença na app (v80.11) — para «Últimas entradas» em /admin/acessos.
-  // Depois da resposta, com limite por pessoa: nunca atrasa a página. Conta
-  // quem FEZ LOGIN (com o «Ver como» ativo continua a ser o SuperAdmin).
-  after(() => recordPresence(session.u));
+  // A presença na app (/admin/acessos) regista-se no middleware desde a
+  // v80.12, em qualquer página — ver lib/access/presence.ts.
   const viewingUsername = effectiveUsername(session);
   const display = viewingUsername ? getEmployeeDisplay(viewingUsername) : null;
   if (!display) return null;

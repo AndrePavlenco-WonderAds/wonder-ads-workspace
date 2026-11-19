@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "80.12",
+    date: "2026-11-19",
+    title: "Acessos: a presença conta em todas as páginas",
+    highlights: [
+      "**🚪 Presença na app** passa a ser registada à entrada de cada página aberta com sessão (o documento, a navegação dentro da app e as ações no ecrã), e não só nas páginas com o chip do nome. Prefetches, APIs e ficheiros não contam.",
+      "O limite de uma escrita a cada 5 minutos passa a ser por pessoa e por browser (cookie), e não por instância do servidor.",
+      "**«Na app há X»** só aparece com uma visita registada. Quem ainda não abriu nenhuma página desde 19/11 mostra «Sem visitas registadas», em vez de usar o último login: as sessões duram 7 dias sem novo login, e por isso o login dizia «há 2 dias» a quem esteve cá hoje.",
+      "Na lista das entradas, duas entradas da mesma pessoa a menos de 30 min contam como uma só.",
+    ],
+  },
+  {
     version: "80.11",
     date: "2026-11-19",
     title: "Acessos: quem veio à app e quando",
