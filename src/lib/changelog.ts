@@ -13,6 +13,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "80.8",
+    date: "2026-11-19",
+    title: "SOP de Comunicação: um capítulo de cada vez",
+    highlights: [
+      "**📑 O SOP de Comunicação lê-se como a apresentação da Scale Labs.** Uma barra de capítulos no topo (Objetivo · 1 Canais e formatos · 2 Momentos e horários · 3 Regras de escrita · 4 Pedidos à direção · Resumo) mostra um capítulo de cada vez, e no fim de cada um há o botão «Seguinte».",
+      "Dentro de cada capítulo, cada bloco tem uma só ideia: um título que já diz a regra, um visual (cartões com a resposta esperada, a semana-tipo, o exemplo do daily) e a conclusão numa faixa por baixo.",
+    ],
+  },
+  {
     version: "80.7",
     date: "2026-11-19",
     title: "SOP de Comunicação (em revisão)",
