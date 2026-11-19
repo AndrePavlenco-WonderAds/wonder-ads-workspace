@@ -181,6 +181,26 @@ export const DOCS_BLOCKS: DocsBlock[] = [
     ],
   },
   {
+    id: "sop-comunicacao",
+    title: "SOP de Comunicação",
+    // v80.7: escrito a partir da sessão Road to CEO (Scale Labs, 16/11/2026)
+    // e das respostas do André. EM REVISÃO — sem departamentos nem etiquetas,
+    // só os SuperAdmins o veem. Para abrir ao SEO DPT: depts ["SEO"], tirar o
+    // `restricted` e acrescentar uma entrada em CODE_DOC_UPDATES.
+    audience: { depts: [] },
+    audienceLabel: "SuperAdmins (em revisão)",
+    updatedAt: "2026-11-19",
+    pages: [
+      {
+        id: "sop-comunicacao",
+        href: "/documentacao/sop-comunicacao",
+        label: "SOP de Comunicação",
+        tag: "Onde, quando e como se comunica",
+        restricted: "Em revisão: só SuperAdmins",
+      },
+    ],
+  },
+  {
     id: "matriz-talento",
     title: "Matriz de Talento Wonder",
     // Só direção e treinadores (os buddies): é a grelha com que se avalia a

@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "80.7",
+    date: "2026-11-19",
+    title: "SOP de Comunicação (em revisão)",
+    highlights: [
+      "**💬 SOP de Comunicação** entra como bloco novo na Documentação, **só para SuperAdmins** enquanto está em revisão. Tem o objetivo e a regra que não falha (nenhum pedido à direção sem proposta), os canais da comunidade do SEO DPT e do Slack com o tempo de resposta de cada um, e as reuniões de segunda, quarta e sexta.",
+      "Inclui também o Daily Update com «Por fazer (e porquê)», as cinco regras de escrita, o ODE, o template de pedido à direção (com botão «Copiar»), a tabela de consulta rápida e o histórico de versões.",
+      "O estúdio de Weekly Reports passa a parar no «Por fazer» do daily update: o que lá está é interno e nunca vai para o cliente.",
+    ],
+  },
+  {
     version: "80.6",
     date: "2026-11-19",
     title: "Ficha do prospect: dentro dos ficheiros do cliente",

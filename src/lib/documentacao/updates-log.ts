@@ -44,6 +44,17 @@ export type CodeDocUpdate = {
 
 export const CODE_DOC_UPDATES: CodeDocUpdate[] = [
   {
+    // Bloco em revisão: o sino só chega a quem o lê (os SuperAdmins).
+    id: "v80.7-sop-comunicacao-nova",
+    page: "sop-comunicacao",
+    kind: "nova",
+    changes: [
+      "Página nova, em revisão (só SuperAdmins): o SOP de Comunicação do SEO DPT. Inclui os canais da comunidade de WhatsApp e do Slack com o tempo de resposta de cada um, as reuniões de segunda, quarta e sexta, o Daily Update com «Por fazer», as cinco regras de escrita, o ODE e o template de pedido à direção.",
+    ],
+    at: "2026-11-19T18:00:00+00:00",
+    version: "80.7",
+  },
+  {
     id: "v78.73-jornada-registo-leads-tablet",
     page: "jornada-cliente",
     kind: "add-on",

@@ -64,6 +64,12 @@ export type ParsedClientWork = {
 const HEADER_RE =
   /^(daily\s*update|update\s*di[áa]rio|resumo\s*do\s*dia|daily)\b/i;
 
+/** «Por fazer (e porquê):» — o fecho interno do daily update (SOP de
+ *  Comunicação, v80.7): os pedidos da direção que ficaram por fazer e para
+ *  quando estão programados. É para a equipa, nunca para o cliente: fecha o
+ *  cliente anterior e o que vem a seguir não entra nos weekly reports. */
+const INTERNAL_SECTION_RE = /^[^\p{L}]*por\s+fazer\b/iu;
+
 const BULLET_RE = /^\s*(?:[•·▪◦*\-–—]|\d+[.)])\s+/;
 
 /** Uma linha que é só uma data («11/08», «📅 11/08», «17-08-2026»). Nos
@@ -310,7 +316,7 @@ export function parseDailyUpdates(
       const line = rawLine.trim();
       if (!line) continue;
 
-      if (HEADER_RE.test(line) || DATE_LINE_RE.test(line)) {
+      if (HEADER_RE.test(line) || DATE_LINE_RE.test(line) || INTERNAL_SECTION_RE.test(line)) {
         // Um cabeçalho de dia (ou uma data solta) fecha o cliente anterior —
         // o que vem a seguir pertence a outro dia, não ao último cliente do
         // dia anterior.
