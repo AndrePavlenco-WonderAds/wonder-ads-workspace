@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "80.11",
+    date: "2026-11-19",
+    title: "Acessos: quem veio à app e quando",
+    highlights: [
+      "**🚪 Últimas entradas** em /admin/acessos: quem entrou na app e a que horas, agrupado por dia (Hoje, Ontem, …). Uma entrada é um login, ou o regresso depois de 30 min sem atividade. As tuas não aparecem.",
+      "Cada pessoa mostra **«Na app há X»** (ou «Na app agora»), além do último login, e o número «Vieram à app nos últimos 7 dias» passa a contar as visitas e não só os logins.",
+      "O registo é feito depois de cada página ser enviada, no máximo uma vez a cada 5 minutos por pessoa: não atrasa nada. Começa a contar hoje, 19/11/2026.",
+    ],
+  },
+  {
     version: "80.10",
     date: "2026-11-19",
     title: "SOP de Comunicação aberto ao SEO DPT + acesso externo só à Documentação",

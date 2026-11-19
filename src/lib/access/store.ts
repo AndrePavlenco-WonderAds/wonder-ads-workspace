@@ -22,16 +22,23 @@ import { forgetAccessGateCache } from "./gate";
 import {
   ACCESS_GATE_KEY,
   ACCESS_LAST_LOGIN_KEY,
+  ACCESS_LAST_SEEN_KEY,
   ACCESS_LOG_KEY,
   ACCESS_LOG_MAX,
   ACCESS_OWNER,
+  ACCESS_VISITS_KEY,
+  ACCESS_VISITS_MAX,
+  ACCESS_VISIT_GAP_MS,
   FORMER_ACCOUNTS,
   accessCredKey,
   hydrateGateEntry,
+  hydrateVisit,
   type AccessAction,
   type AccessGateEntry,
   type AccessLogEvent,
   type AccessRowView,
+  type AccessVisit,
+  type AccessVisitView,
 } from "./shared";
 
 export const accessConfigured = Boolean(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
@@ -136,11 +143,50 @@ export async function revealPassword(username: string): Promise<string | null> {
   return rec ? decrypt(rec) : null;
 }
 
-/** Último login (melhor esforço — nunca atrasa nem estraga um login). */
+/** Último login (melhor esforço — nunca atrasa nem estraga um login).
+ *  v80.11: o login é também uma «entrada» na app, e conta como presença. */
 export async function recordLogin(username: string): Promise<void> {
   if (!accessConfigured) return;
+  const now = Date.now();
   try {
-    await kv.hset(ACCESS_LAST_LOGIN_KEY, { [username]: { at: Date.now() } });
+    await Promise.all([
+      kv.hset(ACCESS_LAST_LOGIN_KEY, { [username]: { at: now } }),
+      kv.hset(ACCESS_LAST_SEEN_KEY, { [username]: { at: now } }),
+      pushVisit({ id: randomUUID(), username, at: now, kind: "login" }),
+    ]);
+    presenceWrittenAt.set(username, now);
+  } catch {
+    /* sem registo desta vez */
+  }
+}
+
+async function pushVisit(v: AccessVisit): Promise<void> {
+  await kv.lpush(ACCESS_VISITS_KEY, v);
+  await kv.ltrim(ACCESS_VISITS_KEY, 0, ACCESS_VISITS_MAX - 1);
+}
+
+/** Presença na app (v80.11) — chamada ao abrir qualquer página com sessão
+ *  (via `after()` no chip do nome), por isso NUNCA atrasa a página.
+ *
+ *  Para não escrever no KV a cada clique: cada instância guarda em memória a
+ *  última escrita por pessoa e só volta a escrever passados 5 minutos. Quando
+ *  escreve, compara com a presença anterior: se a pessoa esteve fora pelo menos
+ *  30 minutos, é uma «entrada» nova e fica no registo das entradas. */
+const PRESENCE_THROTTLE_MS = 5 * 60 * 1000;
+const presenceWrittenAt = new Map<string, number>();
+
+export async function recordPresence(username: string): Promise<void> {
+  if (!accessConfigured || !username) return;
+  const now = Date.now();
+  const last = presenceWrittenAt.get(username);
+  if (last && now - last < PRESENCE_THROTTLE_MS) return;
+  presenceWrittenAt.set(username, now);
+  try {
+    const prev = atOf(await kv.hget<unknown>(ACCESS_LAST_SEEN_KEY, username));
+    await kv.hset(ACCESS_LAST_SEEN_KEY, { [username]: { at: now } });
+    if (!prev || now - prev >= ACCESS_VISIT_GAP_MS) {
+      await pushVisit({ id: randomUUID(), username, at: now, kind: "entrada" });
+    }
   } catch {
     /* sem registo desta vez */
   }
@@ -162,6 +208,7 @@ function rowFor(
   gate: AccessGateEntry | null,
   lastLoginAt: number | null,
   vaultSetAt: number | null,
+  lastSeenAt: number | null = null,
 ): AccessRowView | null {
   const c = findEmployeeByUsername(username);
   if (!c) return null;
@@ -180,6 +227,7 @@ function rowFor(
     revokedAt: gate?.revoked ? gate.revokedAt : null,
     sessionsResetAt: gate?.validAfter ?? null,
     lastLoginAt,
+    lastSeenAt: lastSeenAt ?? lastLoginAt,
     vaultSetAt,
     startedAt: c.startedAt ?? null,
     isSelf: c.username === ACCESS_OWNER,
@@ -224,7 +272,13 @@ function hydrateEvent(raw: unknown): AccessLogEvent | null {
   };
 }
 
-export type AccessOverview = { rows: AccessRowView[]; events: AccessLogEvent[]; trackingSince: number | null };
+export type AccessOverview = {
+  rows: AccessRowView[];
+  events: AccessLogEvent[];
+  /** As entradas na app, da mais recente para a mais antiga (v80.11). */
+  visits: AccessVisitView[];
+  trackingSince: number | null;
+};
 
 export async function loadAccessOverview(): Promise<AccessOverview> {
   // v80.10: as contas externas (Beatriz Lamares) também aparecem aqui, para
@@ -232,14 +286,18 @@ export async function loadAccessOverview(): Promise<AccessOverview> {
   const usernames = [...EMPLOYEE_CREDENTIALS, ...EXTERNAL_CREDENTIALS].map((c) => c.username);
   let gateRaw: Record<string, unknown> | null = null;
   let loginsRaw: Record<string, unknown> | null = null;
+  let seenRaw: Record<string, unknown> | null = null;
   let vaultRaw: unknown[] = [];
   let logRaw: unknown[] = [];
+  let visitsRaw: unknown[] = [];
   if (accessConfigured) {
-    [gateRaw, loginsRaw, vaultRaw, logRaw] = await Promise.all([
+    [gateRaw, loginsRaw, seenRaw, vaultRaw, logRaw, visitsRaw] = await Promise.all([
       kv.hgetall<Record<string, unknown>>(ACCESS_GATE_KEY),
       kv.hgetall<Record<string, unknown>>(ACCESS_LAST_LOGIN_KEY),
+      kv.hgetall<Record<string, unknown>>(ACCESS_LAST_SEEN_KEY),
       kv.mget<unknown[]>(...usernames.map(accessCredKey)),
       kv.lrange<unknown>(ACCESS_LOG_KEY, 0, 199),
+      kv.lrange<unknown>(ACCESS_VISITS_KEY, 0, ACCESS_VISITS_MAX - 1),
     ]);
   }
   const rows = usernames
@@ -249,6 +307,7 @@ export async function loadAccessOverview(): Promise<AccessOverview> {
         hydrateGateEntry(gateRaw?.[u]),
         atOf(loginsRaw?.[u]),
         hydrateVault(vaultRaw?.[i])?.setAt || null,
+        atOf(seenRaw?.[u]),
       ),
     )
     .filter((r): r is AccessRowView => Boolean(r));
@@ -270,6 +329,7 @@ export async function loadAccessOverview(): Promise<AccessOverview> {
       revokedAt: Date.parse(`${f.until}T12:00:00Z`),
       sessionsResetAt: null,
       lastLoginAt: null,
+      lastSeenAt: null,
       vaultSetAt: null,
       startedAt: f.from,
       isSelf: false,
@@ -285,7 +345,14 @@ export async function loadAccessOverview(): Promise<AccessOverview> {
 
   const events = (logRaw ?? []).map(hydrateEvent).filter((e): e is AccessLogEvent => Boolean(e));
   const loginTimes = Object.values(loginsRaw ?? {}).map(atOf).filter((x): x is number => x !== null);
-  return { rows, events, trackingSince: loginTimes.length ? Math.min(...loginTimes) : null };
+  const visits: AccessVisitView[] = (visitsRaw ?? [])
+    .map(hydrateVisit)
+    .filter((v): v is AccessVisit => Boolean(v))
+    .flatMap((v) => {
+      const c = findEmployeeByUsername(v.username);
+      return c ? [{ ...v, name: c.fullName ?? c.name, avatar: getTeamAvatar(c.username) }] : [];
+    });
+  return { rows, events, visits, trackingSince: loginTimes.length ? Math.min(...loginTimes) : null };
 }
 
 // ---------------------------------------------------------------------------
@@ -383,11 +450,12 @@ export async function applyAccessAction(
   };
   await pushEvent(event);
 
-  const [gateAfter, loginRaw, vaultAfter] = await Promise.all([
+  const [gateAfter, loginRaw, vaultAfter, seenRaw] = await Promise.all([
     readGateEntryFresh(username),
     kv.hget<unknown>(ACCESS_LAST_LOGIN_KEY, username),
     kv.get<unknown>(accessCredKey(username)),
+    kv.hget<unknown>(ACCESS_LAST_SEEN_KEY, username),
   ]);
-  const row = rowFor(username, gateAfter, atOf(loginRaw), hydrateVault(vaultAfter)?.setAt || null)!;
+  const row = rowFor(username, gateAfter, atOf(loginRaw), hydrateVault(vaultAfter)?.setAt || null, atOf(seenRaw))!;
   return { row, event, password };
 }

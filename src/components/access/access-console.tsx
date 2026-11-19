@@ -19,6 +19,7 @@ import {
   History,
   KeyRound,
   Link2,
+  LogIn,
   Loader2,
   LockKeyhole,
   LogOut,
@@ -27,6 +28,7 @@ import {
   Search,
   ShieldCheck,
   Sparkles,
+  DoorOpen,
   User,
   UserCheck,
   UserX,
@@ -42,6 +44,7 @@ import {
   type AccessAction,
   type AccessLogEvent,
   type AccessRowView,
+  type AccessVisitView,
 } from "@/lib/access/shared";
 
 type Tab = "ativos" | "passados" | "todos";
@@ -115,10 +118,13 @@ async function post<T>(body: Record<string, unknown>): Promise<T> {
 export function AccessConsole({
   initialRows,
   initialEvents,
+  initialVisits = [],
   configured,
 }: {
   initialRows: AccessRowView[];
   initialEvents: AccessLogEvent[];
+  /** As entradas na app, da mais recente para a mais antiga (v80.11). */
+  initialVisits?: AccessVisitView[];
   configured: boolean;
 }) {
   const [rows, setRows] = useState(initialRows);
@@ -158,7 +164,11 @@ export function AccessConsole({
   const active = rows.filter((r) => r.status === "ativo");
   const past = rows.filter((r) => r.status !== "ativo");
   const inVault = active.filter((r) => r.vaultSetAt).length;
-  const recent = active.filter((r) => r.lastLoginAt && now - r.lastLoginAt < 7 * DAY).length;
+  // v80.11: conta quem ESTEVE na app (páginas abertas), não só quem fez login.
+  const recent = active.filter((r) => {
+    const seen = r.lastSeenAt ?? r.lastLoginAt;
+    return seen && now - seen < 7 * DAY;
+  }).length;
 
   const visible = useMemo(() => {
     const q = query
@@ -283,7 +293,7 @@ export function AccessConsole({
           label="Passwords copiáveis"
           tone="text-[#c3aaff]"
         />
-        <Stat icon={Users} value={recent} label="Entraram nos últimos 7 dias" tone="text-sky-300" />
+        <Stat icon={Users} value={recent} label="Vieram à app nos últimos 7 dias" tone="text-sky-300" />
       </section>
 
       <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
@@ -360,6 +370,7 @@ export function AccessConsole({
         </section>
 
         <aside className="animate-fade-up min-w-0 space-y-4">
+          <VisitsPanel visits={initialVisits} byUser={byUser} now={now} />
           <HistoryPanel events={events} now={now} />
           <div className="rounded-2xl border border-white/[0.06] bg-white/[0.015] px-4 py-3.5 text-[11.5px] leading-relaxed text-white/40">
             <p className="flex items-center gap-1.5 font-semibold text-white/55">
@@ -371,6 +382,10 @@ export function AccessConsole({
               <li>As passwords novas ficam no cofre, cifradas. Só tu as abres, aqui.</li>
               <li>Um cancelamento chega a todas as sessões em até 30 segundos.</li>
               <li>O último login regista-se a partir de 04/11/2026.</li>
+              <li>
+                As entradas na app registam-se a partir de 19/11/2026: um login, ou o regresso depois de 30 min sem
+                atividade. As tuas não aparecem na lista.
+              </li>
             </ul>
           </div>
         </aside>
@@ -541,6 +556,17 @@ function AccessRow({
                   Cancelado a {formatDateTime(row.revokedAt)}
                 </span>
               )}
+              {/* v80.11: a última vez que esteve na app, e o login à parte. */}
+              {row.lastSeenAt && (
+                <span
+                  suppressHydrationWarning
+                  title={`Esteve na app a ${formatDateTime(row.lastSeenAt)}`}
+                  className={`inline-flex items-center gap-1 ${now - row.lastSeenAt < 10 * 60 * 1000 ? "text-emerald-300/90" : "text-sky-200/75"}`}
+                >
+                  <DoorOpen className="h-3 w-3" />
+                  {now - row.lastSeenAt < 10 * 60 * 1000 ? "Na app agora" : `Na app ${relative(row.lastSeenAt, now)}`}
+                </span>
+              )}
               <span suppressHydrationWarning title={row.lastLoginAt ? formatDateTime(row.lastLoginAt) : undefined} className="inline-flex items-center gap-1">
                 <LogOut className="h-3 w-3 rotate-180" />
                 {row.lastLoginAt ? `Último login ${relative(row.lastLoginAt, now)}` : "Sem login registado"}
@@ -604,6 +630,100 @@ const EVENT_TONE: Record<AccessAction, { icon: LucideIcon; cls: string }> = {
   reativar: { icon: RotateCcw, cls: "border-emerald-400/30 bg-emerald-400/10 text-emerald-300" },
   "terminar-sessoes": { icon: LogOut, cls: "border-amber-400/30 bg-amber-400/10 text-amber-200" },
 };
+
+/** «Hoje», «Ontem» ou a data — o cabeçalho de cada dia nas entradas. */
+function dayLabel(ms: number, now: number): string {
+  const key = (t: number) => new Date(t).toLocaleDateString("en-GB", { timeZone: "Europe/Lisbon" });
+  if (key(ms) === key(now)) return "Hoje";
+  if (key(ms) === key(now - DAY)) return "Ontem";
+  return formatDate(ms);
+}
+
+function timeOf(ms: number): string {
+  return new Date(ms).toLocaleTimeString("en-GB", { timeZone: "Europe/Lisbon", hour: "2-digit", minute: "2-digit" });
+}
+
+/** Últimas entradas na app (v80.11) — quem veio e quando, agrupado por dia.
+ *  Sem as do próprio André (a lista é para ver os outros). */
+function VisitsPanel({
+  visits,
+  byUser,
+  now,
+}: {
+  visits: AccessVisitView[];
+  byUser: Map<string, AccessRowView>;
+  now: number;
+}) {
+  const [all, setAll] = useState(false);
+  const others = visits.filter((v) => !byUser.get(v.username)?.isSelf);
+  const shown = all ? others : others.slice(0, 15);
+  const days: Array<{ label: string; items: AccessVisitView[] }> = [];
+  for (const v of shown) {
+    const label = dayLabel(v.at, now);
+    const last = days[days.length - 1];
+    if (last && last.label === label) last.items.push(v);
+    else days.push({ label, items: [v] });
+  }
+  return (
+    <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4">
+      <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-white/35">
+        <DoorOpen className="h-3.5 w-3.5" />
+        Últimas entradas
+      </p>
+      {others.length === 0 ? (
+        <p className="mt-3 text-[12px] leading-relaxed text-white/40">
+          Ainda nada. A partir de agora, cada vez que alguém entra na app fica aqui, com a hora.
+        </p>
+      ) : (
+        <div className="mt-3 space-y-3.5">
+          {days.map((d) => (
+            <div key={d.label}>
+              <p suppressHydrationWarning className="mb-1.5 text-[10.5px] font-semibold text-white/35">
+                {d.label}
+              </p>
+              <ul className="space-y-2">
+                {d.items.map((v) => {
+                  const row = byUser.get(v.username);
+                  return (
+                    <li key={v.id} className="flex items-center gap-2.5">
+                      {row ? (
+                        <Avatar row={row} size={26} />
+                      ) : (
+                        <span className="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-[10px] font-bold text-white/60">
+                          {v.name.charAt(0).toUpperCase()}
+                        </span>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-[12.5px] font-medium leading-tight text-white/85">{v.name}</p>
+                        <p className="mt-0.5 flex items-center gap-1 text-[10.5px] text-white/40">
+                          {v.kind === "login" ? <LogIn className="h-3 w-3" /> : <DoorOpen className="h-3 w-3" />}
+                          {v.kind === "login" ? "Fez login" : "Entrou"}
+                        </p>
+                      </div>
+                      <span
+                        suppressHydrationWarning
+                        title={formatDateTime(v.at)}
+                        className="shrink-0 text-right text-[11px] tabular-nums text-white/55"
+                      >
+                        {timeOf(v.at)}
+                        <span className="block text-[10px] text-white/30">{relative(v.at, now)}</span>
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ))}
+        </div>
+      )}
+      {others.length > 15 && (
+        <button type="button" onClick={() => setAll((v) => !v)} className="mt-3 text-[11.5px] font-semibold text-white/45 transition hover:text-white">
+          {all ? "Mostrar menos" : `Ver tudo (${others.length})`}
+        </button>
+      )}
+    </div>
+  );
+}
 
 function HistoryPanel({ events, now }: { events: AccessLogEvent[]; now: number }) {
   const [all, setAll] = useState(false);

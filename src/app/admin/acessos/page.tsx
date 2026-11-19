@@ -32,7 +32,12 @@ export default async function AcessosPage() {
   return (
     <PageShell backHref="/admin" backLabel="Control Suite">
       {overview ? (
-        <AccessConsole initialRows={overview.rows} initialEvents={overview.events} configured={accessConfigured} />
+        <AccessConsole
+          initialRows={overview.rows}
+          initialEvents={overview.events}
+          initialVisits={overview.visits}
+          configured={accessConfigured}
+        />
       ) : (
         <p className="mt-10 rounded-xl border border-rose-400/30 bg-rose-500/10 px-4 py-3 text-[12.5px] text-rose-100">
           Não foi possível ler os acessos agora (o KV não respondeu). Tenta daqui a pouco.

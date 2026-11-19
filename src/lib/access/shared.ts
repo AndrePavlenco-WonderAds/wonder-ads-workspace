@@ -23,6 +23,42 @@ export const ACCESS_LAST_LOGIN_KEY = "access:lastlogin";
 /** KV — o registo de alterações (LPUSH, guarda os últimos 500). */
 export const ACCESS_LOG_KEY = "access:log";
 export const ACCESS_LOG_MAX = 500;
+/** KV — a última vez que cada pessoa esteve na app (v80.11): username → {at}.
+ *  Escrito ao abrir páginas, no máximo uma vez a cada 5 min por pessoa. */
+export const ACCESS_LAST_SEEN_KEY = "access:lastseen";
+/** KV — as entradas na app (v80.11, LPUSH, guarda as últimas 500): um login,
+ *  ou o regresso depois de pelo menos `ACCESS_VISIT_GAP_MS` sem atividade. */
+export const ACCESS_VISITS_KEY = "access:visits";
+export const ACCESS_VISITS_MAX = 500;
+/** Quanto tempo sem atividade faz da próxima página uma «entrada» nova. */
+export const ACCESS_VISIT_GAP_MS = 30 * 60 * 1000;
+
+/** Uma entrada na app (v80.11). */
+export type AccessVisit = {
+  id: string;
+  username: string;
+  at: number;
+  /** «login» = entrou com a password; «entrada» = voltou com a sessão aberta. */
+  kind: "login" | "entrada";
+};
+
+/** A entrada como a consola a mostra (com o nome e a foto). */
+export type AccessVisitView = AccessVisit & { name: string; avatar: string | null };
+
+export function hydrateVisit(raw: unknown): AccessVisit | null {
+  let v: unknown = raw;
+  if (typeof v === "string") {
+    try {
+      v = JSON.parse(v);
+    } catch {
+      return null;
+    }
+  }
+  if (!v || typeof v !== "object") return null;
+  const o = v as Record<string, unknown>;
+  if (typeof o.id !== "string" || typeof o.username !== "string" || typeof o.at !== "number") return null;
+  return { id: o.id, username: o.username, at: o.at, kind: o.kind === "login" ? "login" : "entrada" };
+}
 /** KV — a password do cofre de uma pessoa (hash + cópia cifrada). */
 export const accessCredKey = (username: string) => `access:cred:${username}`;
 
@@ -143,6 +179,8 @@ export type AccessRowView = {
   revokedAt: number | null;
   sessionsResetAt: number | null;
   lastLoginAt: number | null;
+  /** A última vez que esteve na app (v80.11) — páginas abertas, com a sessão. */
+  lastSeenAt: number | null;
   /** A password está no cofre (copiável) desde… */
   vaultSetAt: number | null;
   startedAt: string | null;
