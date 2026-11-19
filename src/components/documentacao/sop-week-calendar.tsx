@@ -21,7 +21,7 @@ const DAYS: Array<{ day: string; events: Ev[] }> = [
       { start: 10, end: 11, title: "Reunião com Cliente A", kind: "cliente" },
       { start: 13, end: 13.5, title: "Almoço", kind: "almoco" },
       { start: 15.5, end: 16.5, title: "Bloqueios e calls", kind: "equipa" },
-      { start: 18, end: 18.25, title: "Daily Update", kind: "daily" },
+      { start: 18, end: 18.5, title: "Daily Update", kind: "daily" },
     ],
   },
   {
@@ -29,7 +29,7 @@ const DAYS: Array<{ day: string; events: Ev[] }> = [
     events: [
       { start: 11.5, end: 12.5, title: "Reunião com Cliente B", kind: "cliente" },
       { start: 13, end: 13.5, title: "Almoço", kind: "almoco" },
-      { start: 18, end: 18.25, title: "Daily Update", kind: "daily" },
+      { start: 18, end: 18.5, title: "Daily Update", kind: "daily" },
       { start: 18.5, end: 20, title: "Gym", kind: "gym" },
     ],
   },
@@ -39,7 +39,7 @@ const DAYS: Array<{ day: string; events: Ev[] }> = [
       { start: 9.5, end: 10.25, title: "Reunião com Cliente C", kind: "cliente" },
       { start: 13, end: 13.5, title: "Almoço", kind: "almoco" },
       { start: 14, end: 15.5, title: "Deep dive", kind: "equipa" },
-      { start: 18, end: 18.25, title: "Daily Update", kind: "daily" },
+      { start: 18, end: 18.5, title: "Daily Update", kind: "daily" },
     ],
   },
   {
@@ -47,7 +47,7 @@ const DAYS: Array<{ day: string; events: Ev[] }> = [
     events: [
       { start: 13, end: 13.5, title: "Almoço", kind: "almoco" },
       { start: 15, end: 16, title: "Reunião com Cliente D", kind: "cliente" },
-      { start: 18, end: 18.25, title: "Daily Update", kind: "daily" },
+      { start: 18, end: 18.5, title: "Daily Update", kind: "daily" },
       { start: 18.5, end: 20, title: "Gym", kind: "gym" },
     ],
   },
@@ -57,7 +57,7 @@ const DAYS: Array<{ day: string; events: Ev[] }> = [
       { start: 11, end: 11.75, title: "Reunião com Cliente E", kind: "cliente" },
       { start: 13, end: 13.5, title: "Almoço", kind: "almoco" },
       { start: 15.5, end: 16.25, title: "Fecho da semana", kind: "equipa" },
-      { start: 18, end: 18.25, title: "Daily Update", kind: "daily" },
+      { start: 18, end: 18.5, title: "Daily Update", kind: "daily" },
       { start: 18.5, end: 20, title: "Gym", kind: "gym" },
     ],
   },
