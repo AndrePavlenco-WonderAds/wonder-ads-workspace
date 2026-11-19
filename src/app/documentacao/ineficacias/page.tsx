@@ -114,6 +114,9 @@ export default async function IneficaciasDocPage() {
         tabs={{ pages: block.pages, current: "/documentacao/ineficacias" }}
       />
 
+      {/* v80.10: as contas «só Documentação» (externos) não têm para onde ir
+          — o RH-03 e o painel são da equipa. */}
+      {!reader.docsOnly && (
       <div className="mt-6 flex flex-wrap gap-2.5">
         {admin ? (
           <>
@@ -131,6 +134,7 @@ export default async function IneficaciasDocPage() {
           </>
         )}
       </div>
+      )}
 
       <SectionNav items={nav} />
 

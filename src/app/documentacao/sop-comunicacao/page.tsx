@@ -11,7 +11,8 @@
 // um de cada vez (SopChapters), e em cada capítulo blocos curtos com UMA
 // ideia: título-afirmação, um visual, e a conclusão numa faixa por baixo.
 //
-// EM REVISÃO: o bloco não tem público (só SuperAdmins).
+// v80.10: aberto ao SEO DPT (e à conta externa da Beatriz Lamares, que só lê
+// a Documentação — ver `docsOnly` em credentials.ts).
 
 import type { ReactNode } from "react";
 import Link from "next/link";
@@ -705,7 +706,7 @@ function ChapterSummary({ updatedAt }: { updatedAt: string }) {
           rows={[
             {
               term: "v1 · 19/11/2026",
-              detail: "Primeira versão, a partir da sessão Road to CEO da Scale Labs, adaptada à WonderAds. Em revisão pela direção.",
+              detail: "Primeira versão, a partir da sessão Road to CEO da Scale Labs, adaptada à WonderAds. Revista pela direção e publicada ao SEO DPT.",
               value: "André Pavlenco",
             },
           ]}
@@ -776,7 +777,7 @@ export default async function SopComunicacaoPage() {
       </PageShell>
     );
   }
-  const { block } = ctx;
+  const { reader, block } = ctx;
 
   return (
     <PageShell backHref="/documentacao" backLabel="Documentação">
@@ -789,7 +790,7 @@ export default async function SopComunicacaoPage() {
             Onde, quando e como a equipa comunica.
           </>
         }
-        meta={`Atualizado a ${formatDate(block.updatedAt)}. Em revisão: só os SuperAdmins veem esta página.`}
+        meta={`Atualizado a ${formatDate(block.updatedAt)}.${reader.isAdmin ? ` Visível para SuperAdmin e ${block.audienceLabel}.` : ""}`}
       />
 
       <SopChapters

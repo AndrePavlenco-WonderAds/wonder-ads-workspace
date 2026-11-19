@@ -2,7 +2,7 @@
 // páginas.
 // Cada um declara o seu público; o hub e as páginas leem daqui.
 
-import { readerSees, type BlockAudience, type DocsReader } from "./access";
+import { readerSeesBlock, type BlockAudience, type DocsReader } from "./access";
 
 export type DocsPage = {
   /** Chave da página — o hub usa-a para mostrar o resumo vivo dela. */
@@ -72,21 +72,23 @@ export const DOCS_BLOCKS: DocsBlock[] = [
     ],
   },
   {
-    id: "folga-custos",
-    title: "Folga de custos",
-    // O protocolo dos extras oferecidos por projeto (v78.40): é do SEO, que é
-    // quem tem a folga por projeto.
+    id: "sop-comunicacao",
+    title: "SOP de Comunicação",
+    // v80.7: escrito a partir da sessão Road to CEO (Scale Labs, 16/11/2026)
+    // e das respostas do André. v80.10: aberto ao SEO DPT, com a capa dada
+    // pelo André, e lido também pela conta externa da Beatriz Lamares
+    // (credentials.ts, `docsOnly`).
     audience: { depts: ["SEO"] },
     audienceLabel: "SEO DPT",
-    updatedAt: "2026-10-28",
+    updatedAt: "2026-11-19",
     pages: [
       {
-        id: "folga-custos",
-        href: "/documentacao/folga-custos",
-        label: "Folga de custos",
-        // Capa dada pelo André (2026-10-28).
-        image: "/documentacao/folga-custos-capa.jpg",
-        tag: "Como atribuir extras",
+        id: "sop-comunicacao",
+        href: "/documentacao/sop-comunicacao",
+        label: "SOP de Comunicação",
+        // Capa dada pelo André (2026-11-19).
+        image: "/documentacao/sop-comunicacao-capa.jpg",
+        tag: "Onde, quando e como se comunica",
       },
     ],
   },
@@ -181,22 +183,21 @@ export const DOCS_BLOCKS: DocsBlock[] = [
     ],
   },
   {
-    id: "sop-comunicacao",
-    title: "SOP de Comunicação",
-    // v80.7: escrito a partir da sessão Road to CEO (Scale Labs, 16/11/2026)
-    // e das respostas do André. EM REVISÃO — sem departamentos nem etiquetas,
-    // só os SuperAdmins o veem. Para abrir ao SEO DPT: depts ["SEO"], tirar o
-    // `restricted` e acrescentar uma entrada em CODE_DOC_UPDATES.
-    audience: { depts: [] },
-    audienceLabel: "SuperAdmins (em revisão)",
-    updatedAt: "2026-11-19",
+    id: "folga-custos",
+    title: "Folga de custos",
+    // O protocolo dos extras oferecidos por projeto (v78.40): é do SEO, que é
+    // quem tem a folga por projeto.
+    audience: { depts: ["SEO"] },
+    audienceLabel: "SEO DPT",
+    updatedAt: "2026-10-28",
     pages: [
       {
-        id: "sop-comunicacao",
-        href: "/documentacao/sop-comunicacao",
-        label: "SOP de Comunicação",
-        tag: "Onde, quando e como se comunica",
-        restricted: "Em revisão: só SuperAdmins",
+        id: "folga-custos",
+        href: "/documentacao/folga-custos",
+        label: "Folga de custos",
+        // Capa dada pelo André (2026-10-28).
+        image: "/documentacao/folga-custos-capa.jpg",
+        tag: "Como atribuir extras",
       },
     ],
   },
@@ -221,7 +222,7 @@ export const DOCS_BLOCKS: DocsBlock[] = [
 ];
 
 export function blocksFor(reader: DocsReader): DocsBlock[] {
-  return DOCS_BLOCKS.filter((b) => readerSees(reader, b.audience));
+  return DOCS_BLOCKS.filter((b) => readerSeesBlock(reader, b));
 }
 
 export function getBlock(id: string): DocsBlock | null {

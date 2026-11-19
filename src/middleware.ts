@@ -30,9 +30,11 @@ import {
 import { isSessionBlocked } from "@/lib/access/shared";
 import {
   canEditDept,
+  docsOnlyBlocksOf,
   viewerDeptOf,
   type DeptSlug,
 } from "@/lib/auth/credentials";
+import { DOCS_BLOCKS } from "@/lib/documentacao/blocks";
 
 // Mutating HTTP methods — a request using one of these is trying to
 // CHANGE something, so it must clear the per-dept write-gate below.
@@ -195,6 +197,38 @@ function viewerGate(req: NextRequest, dept: DeptSlug): NextResponse | null {
   return NextResponse.redirect(url);
 }
 
+/** O portão das contas «só Documentação» (v80.10, consultores externos).
+ *  Lista branca, nada mais:
+ *    - /api/auth (entrar, sair, «Voltar a mim») — e mais nenhuma API (403);
+ *    - nenhuma escrita (403);
+ *    - o hub /documentacao e as páginas dos blocos da conta;
+ *    - os ficheiros estáticos da Documentação (capas, imagens);
+ *  Qualquer outra página volta ao hub. Devolve SEMPRE uma resposta: para esta
+ *  conta não há mais portões nem caminhos depois deste. */
+function docsOnlyGate(req: NextRequest, blockIds: string[]): NextResponse {
+  const { pathname } = req.nextUrl;
+  // Entrar/sair e o «Voltar a mim» de um SuperAdmin que está a ver a app
+  // como esta conta (a rota do «Ver como» só aceita SuperAdmins).
+  if (underPrefix(pathname, "/api/auth")) return NextResponse.next();
+  if (pathname.startsWith("/api/")) {
+    return NextResponse.json({ error: "Este perfil não tem acesso a esta área." }, { status: 403 });
+  }
+  if (WRITE_METHODS.has(req.method)) {
+    return NextResponse.json({ error: "Acesso só de leitura." }, { status: 403 });
+  }
+  if (pathname === "/documentacao") return NextResponse.next();
+  // Capas e imagens em public/documentacao/ (um ficheiro com extensão).
+  if (underPrefix(pathname, "/documentacao") && /\.[a-z0-9]{2,5}$/i.test(pathname)) {
+    return NextResponse.next();
+  }
+  const allowed = DOCS_BLOCKS.filter((b) => blockIds.includes(b.id)).flatMap((b) => b.pages.map((p) => p.href));
+  if (allowed.some((href) => underPrefix(pathname, href))) return NextResponse.next();
+  const url = req.nextUrl.clone();
+  url.pathname = "/documentacao";
+  url.search = "";
+  return NextResponse.redirect(url);
+}
+
 export async function middleware(req: NextRequest) {
   // PROJETOS EM PAUSA (v78.81). As páginas públicas de um cliente pausado no
   // SEO DPT (/<slug>/origem, /pendingreview, /preview/…, /onboarding,
@@ -203,6 +237,17 @@ export async function middleware(req: NextRequest) {
   // da pausa seguem logo, sem sessão nem portões, como sempre seguiram.
   const pageSlug = publicProjectPageSlug(req.nextUrl.pathname);
   if (pageSlug) {
+    // Contas «só Documentação» (v80.10): as páginas dos clientes tratam
+    // qualquer sessão como equipa (Origem, Reviews Hub saltam o PIN), por isso
+    // estas contas nunca lá chegam — voltam ao hub da Documentação.
+    const pre = req.cookies.get(SESSION_COOKIE)?.value;
+    const preSession = pre ? await readSession(pre) : null;
+    if (preSession && docsOnlyBlocksOf(effectiveUsername(preSession))) {
+      const home = req.nextUrl.clone();
+      home.pathname = "/documentacao";
+      home.search = "";
+      return NextResponse.redirect(home);
+    }
     if (!(await isProjectPaused(pageSlug))) return NextResponse.next();
     const url = req.nextUrl.clone();
     url.pathname = `${PAUSED_PAGE_PREFIX}/${encodeURIComponent(pageSlug)}`;
@@ -221,6 +266,10 @@ export async function middleware(req: NextRequest) {
   if (session && isSessionBlocked(session, await readAccessGate())) session = null;
   const internal = isInternalPath(req.nextUrl.pathname);
   if (session) {
+    // Perfil «só Documentação» (v80.10) — vem antes de tudo e não deixa
+    // passar nada que não esteja na lista dele.
+    const docsBlocks = docsOnlyBlocksOf(effectiveUsername(session));
+    if (docsBlocks) return docsOnlyGate(req, docsBlocks);
     const viewerDept = viewerDeptOf(effectiveUsername(session));
     if (viewerDept) {
       const blocked = viewerGate(req, viewerDept);

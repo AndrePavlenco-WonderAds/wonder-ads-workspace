@@ -17,7 +17,6 @@ import {
   ChevronDown,
   ChevronRight,
   ClipboardCheck,
-  ClipboardList,
   Eye,
   FilePlus2,
   Gamepad2,
@@ -228,6 +227,7 @@ export function UserChipMenu({
   dept,
   isAdmin = false,
   isViewer = false,
+  docsOnly = false,
   canWeeklyReports = false,
   expiresLabel,
   sessionLeft = 1,
@@ -257,6 +257,9 @@ export function UserChipMenu({
   /** Perfil viewer (só leitura, um departamento) — o menu fica só com o
    *  logout: Tools, Medalhas, Ausências e Formação estão fechadas a ele. */
   isViewer?: boolean;
+  /** Conta «só Documentação» (v80.10, externos): o menu só tem a
+   *  Documentação e o logout. */
+  docsOnly?: boolean;
   /** Quem edita SEO vê o estúdio de Weekly Reports no menu. */
   canWeeklyReports?: boolean;
   /** «6 dias» / «20 h» — o servidor escolhe a unidade. */
@@ -546,12 +549,13 @@ export function UserChipMenu({
           )}
 
           <div className="max-h-[min(70vh,34rem)] overflow-y-auto">
-            {/* Fichas do prospect (v80.0) — para TODA a gente com sessão,
-                também os comerciais (viewers do SEO): são eles que as
-                preenchem, e é por aqui que lá chegam. */}
-            <MenuSection label="Clientes">
-              <MenuLink href="/prospects" icon={ClipboardList} label="Fichas do prospect" hint="O que o Comercial sabe de cada cliente novo" index={1} onPick={close} />
-            </MenuSection>
+            {/* v80.10: as Fichas do prospect saíram do menu do nome (pedido do
+                André) — vivem só no cartão Client Files de cada projeto. */}
+            {docsOnly && (
+              <MenuSection label="Documentação">
+                <MenuLink href="/documentacao" icon={BookOpen} label="Documentação" hint="SOPs, ineficácias, probation e protocolos" index={1} onPick={close} />
+              </MenuSection>
+            )}
 
             {!isViewer && (
               <MenuSection label="Atalhos">

@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "80.10",
+    date: "2026-11-19",
+    title: "SOP de Comunicação aberto ao SEO DPT + acesso externo só à Documentação",
+    highlights: [
+      "**💬 SOP de Comunicação** sai da revisão: aberto ao SEO DPT, com a capa nova e aviso no sino («Documento novo»). Na Documentação troca de lugar com a Folga de custos: o SOP fica antes das Ineficácias e a Folga passa para o fim (a Matriz continua em último para quem a vê).",
+      "**🔐 Perfil «só Documentação»** para consultores externos. A Beatriz Lamares entra e só vê o SOP de Comunicação, as Ineficácias, o Probation e os três Protocolos. Tudo o resto da app (departamentos, clientes, páginas públicas dos clientes, menus, sino, APIs) é recusado no servidor e volta à Documentação. Não pode sugerir nem alterar nada. Aparece em /admin/acessos para lhe cortar o acesso, e no «Ver como».",
+      "**🗂️ Fichas do prospect** saem do menu do nome de toda a gente. Ficam só no cartão Client Files de cada projeto.",
+    ],
+  },
+  {
     version: "80.9",
     date: "2026-11-19",
     title: "SOP de Comunicação: revisão do André",

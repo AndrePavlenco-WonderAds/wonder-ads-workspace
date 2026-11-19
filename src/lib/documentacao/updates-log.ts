@@ -44,15 +44,17 @@ export type CodeDocUpdate = {
 
 export const CODE_DOC_UPDATES: CodeDocUpdate[] = [
   {
-    // Bloco em revisão: o sino só chega a quem o lê (os SuperAdmins).
-    id: "v80.7-sop-comunicacao-nova",
+    // v80.10: o SOP sai da revisão e abre ao SEO DPT — é esta a entrada que
+    // a equipa recebe no sino (a da v80.7, só para SuperAdmins, saiu).
+    id: "v80.10-sop-comunicacao-publicado",
     page: "sop-comunicacao",
     kind: "nova",
     changes: [
-      "Página nova, em revisão (só SuperAdmins): o SOP de Comunicação do SEO DPT. Inclui os canais da comunidade de WhatsApp e do Slack com o tempo de resposta de cada um, as reuniões de segunda, quarta e sexta, o Daily Update com «Por fazer», as cinco regras de escrita, o ODE e o template de pedido à direção.",
+      "Documento novo: o SOP de Comunicação do SEO DPT. Onde, quando e como a equipa comunica: os grupos da comunidade de WhatsApp e o Slack com o tempo de resposta de cada um, a semana-tipo com as três reuniões, o Daily Update com «Por fazer», as cinco regras de escrita, o ODE em qualquer pedido e o template de pedido à direção.",
+      "A regra que não falha: nenhum pedido à direção chega sem a tua sugestão de solução. Falhar uma regra do SOP conta como ineficácia («Processo não seguido»).",
     ],
-    at: "2026-11-19T18:00:00+00:00",
-    version: "80.7",
+    at: "2026-11-19T19:05:00+00:00",
+    version: "80.10",
   },
   {
     id: "v78.73-jornada-registo-leads-tablet",

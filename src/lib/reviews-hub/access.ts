@@ -74,7 +74,8 @@ function readHubCookie(slug: string, value: string | undefined): boolean {
 export async function getHubViewer(slug: string): Promise<HubViewer | null> {
   if (!getHubConfig(slug)) return null;
   const employee = await getCurrentEmployee().catch(() => null);
-  if (employee) {
+  // Contas «só Documentação» (v80.10, externos) nunca contam como equipa.
+  if (employee && !employee.docsOnly) {
     // As mesmas regras do SEO: escreve quem edita o departamento, e o «ver
     // como» de um SuperAdmin é sempre só leitura.
     const impersonating = Boolean(await getImpersonation().catch(() => null));

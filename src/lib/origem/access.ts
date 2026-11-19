@@ -163,7 +163,8 @@ function readCookie(slug: string, value: string | undefined): boolean {
 export async function getOrigemViewer(slug: string): Promise<OrigemViewer | null> {
   if (!getOrigemConfig(slug)) return null;
   const employee = await getCurrentEmployee().catch(() => null);
-  if (employee) {
+  // Contas «só Documentação» (v80.10, externos) nunca contam como equipa.
+  if (employee && !employee.docsOnly) {
     const impersonating = Boolean(await getImpersonation().catch(() => null));
     const canWrite = !impersonating && !employee.viewerOf && editableDepts(employee).includes("seo");
     return {

@@ -15,7 +15,7 @@
 import "server-only";
 import { createCipheriv, createDecipheriv, hkdfSync, randomBytes, randomInt, randomUUID } from "node:crypto";
 import { kv } from "@vercel/kv";
-import { EMPLOYEE_CREDENTIALS, findEmployeeByUsername } from "@/lib/auth/credentials";
+import { EMPLOYEE_CREDENTIALS, EXTERNAL_CREDENTIALS, findEmployeeByUsername } from "@/lib/auth/credentials";
 import { scryptHash } from "@/lib/auth/password";
 import { getTeamAvatar } from "@/lib/team-avatars";
 import { forgetAccessGateCache } from "./gate";
@@ -227,7 +227,9 @@ function hydrateEvent(raw: unknown): AccessLogEvent | null {
 export type AccessOverview = { rows: AccessRowView[]; events: AccessLogEvent[]; trackingSince: number | null };
 
 export async function loadAccessOverview(): Promise<AccessOverview> {
-  const usernames = EMPLOYEE_CREDENTIALS.map((c) => c.username);
+  // v80.10: as contas externas (Beatriz Lamares) também aparecem aqui, para
+  // o André lhes poder cancelar o acesso ou trocar a password.
+  const usernames = [...EMPLOYEE_CREDENTIALS, ...EXTERNAL_CREDENTIALS].map((c) => c.username);
   let gateRaw: Record<string, unknown> | null = null;
   let loginsRaw: Record<string, unknown> | null = null;
   let vaultRaw: unknown[] = [];

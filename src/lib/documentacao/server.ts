@@ -5,7 +5,7 @@
 import "server-only";
 import { getCurrentEmployee, getCurrentSession } from "@/lib/auth/server";
 import { getEmployeeDisplay } from "@/lib/auth/credentials";
-import { docsAvailable, readerSees, type DocsReader } from "./access";
+import { docsAvailable, readerSeesBlock, type DocsReader } from "./access";
 import { getBlock, type DocsBlock } from "./blocks";
 
 export type DocsContext =
@@ -26,9 +26,11 @@ export async function getDocsContext(blockId?: string): Promise<DocsContext> {
     isAdmin: employee.isAdmin,
     viewerOf: employee.viewerOf,
     tags: getEmployeeDisplay(employee.username)?.tags ?? [],
+    // v80.10: contas «só Documentação» (externos) — só os blocos da lista.
+    docsOnly: employee.docsOnly,
   };
   if (!blockId) return { state: "ok", reader, block: null };
   const block = getBlock(blockId);
-  if (!block || !readerSees(reader, block.audience)) return { state: "forbidden", reader };
+  if (!block || !readerSeesBlock(reader, block)) return { state: "forbidden", reader };
   return { state: "ok", reader, block };
 }

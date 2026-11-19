@@ -79,6 +79,14 @@ export type EmployeeCredential = {
   /** O cargo por extenso (v77.85), para onde há espaço — o cabeçalho do menu
    *  do nome. O chip e as listas apertadas ficam com o `role` curto («COO»). */
   roleFull?: string;
+  /** PERFIL «SÓ DOCUMENTAÇÃO» (v80.10) — os ids dos blocos da Documentação
+   *  (`DOCS_BLOCKS`) que a pessoa pode ler, e NADA mais na app. Para
+   *  consultores externos. O middleware recusa qualquer outra página (manda
+   *  para /documentacao), qualquer API além do login/logout e qualquer
+   *  escrita; o hub e as páginas só mostram estes blocos. Ganha a `viewerOf`
+   *  e a `dept`. Estas contas vivem em `EXTERNAL_CREDENTIALS`, nunca na lista
+   *  da equipa. */
+  docsOnly?: string[];
 };
 
 /** Department slugs used across the workspace router. */
@@ -352,6 +360,29 @@ export const EMPLOYEE_CREDENTIALS: EmployeeCredential[] = [
   },
 ];
 
+/** CONTAS EXTERNAS (v80.10) — pessoas de fora da equipa com um login muito
+ *  restrito (`docsOnly`). Ficam FORA de `EMPLOYEE_CREDENTIALS` de propósito:
+ *  tudo o que lista a equipa (roster, «Ver como», notificações, Formação,
+ * ineficácias, propostas…) itera essa lista e não as vê. Só o login, a
+ *  sessão (`findEmployeeByUsername`) e a consola de Acessos as conhecem.
+ *  Passwords geradas fora do repo e guardadas no Desktop do André. */
+export const EXTERNAL_CREDENTIALS: EmployeeCredential[] = [
+  {
+    // Beatriz Lamares — consultora externa (Scale Labs, Road to CEO). Lê o
+    // SOP de Comunicação, as Ineficácias + Probation e os três Protocolos.
+    username: "beatriz",
+    name: "Beatriz Lamares",
+    fullName: "Beatriz Lamares",
+    role: "Consultora externa",
+    dept: "Externo",
+    assignable: false,
+    startedAt: "2026-11-19",
+    docsOnly: ["sop-comunicacao", "ineficacias", "protocolos", "protocolos-proibidos"],
+    salt: "0ed9edf1739086cbb8be01fd309467fc",
+    hash: "a9e67ac1db1ca5fdbb55e9f06c7998c8f9d4fb3d1a8fb74aee026ca7fa83d5e45916ddc3f6a2eff5b251b53cff7d4bb44e466f8535da5695a70e1ea7aad1c155",
+  },
+];
+
 
 /** Which department dashboards a credential row may open — VIEW access.
  *
@@ -605,7 +636,21 @@ export function findEmployeeByUsername(
   username: string,
 ): EmployeeCredential | null {
   const u = username.trim().toLowerCase();
-  return EMPLOYEE_CREDENTIALS.find((c) => c.username === u) ?? null;
+  return (
+    EMPLOYEE_CREDENTIALS.find((c) => c.username === u) ??
+    EXTERNAL_CREDENTIALS.find((c) => c.username === u) ??
+    null
+  );
+}
+
+/** Os blocos da Documentação de uma conta «só Documentação» (v80.10), ou
+ *  null para toda a gente com o acesso normal. SuperAdmin nunca é restrito.
+ *  Edge-safe — o middleware usa-a. */
+export function docsOnlyBlocksOf(username: string | null | undefined): string[] | null {
+  if (!username) return null;
+  const row = findEmployeeByUsername(username);
+  if (!row || row.isAdmin || !row.docsOnly) return null;
+  return row.docsOnly;
 }
 
 /** Lookup by username for the post-login session — used by PageShell
@@ -620,6 +665,7 @@ export function getEmployeeDisplay(username: string): {
   viewerOf: DeptSlug | null;
   readOnlyDepts: DeptSlug[];
   tags: string[];
+  docsOnly: string[] | null;
 } | null {
   const row = findEmployeeByUsername(username);
   return row
@@ -632,6 +678,7 @@ export function getEmployeeDisplay(username: string): {
         viewerOf: row.viewerOf ?? null,
         readOnlyDepts: row.readOnlyDepts ?? [],
         tags: row.tags ?? [],
+        docsOnly: row.isAdmin ? null : (row.docsOnly ?? null),
       }
     : null;
 }
@@ -664,7 +711,9 @@ export function listImpersonationTargets(): Array<{
   tags: string[];
 }> {
   const deptOrder = ["All", "SEO", "ADS", "Web", "Commercial"];
-  return EMPLOYEE_CREDENTIALS.map((c) => ({
+  // v80.10: as contas externas entram no fim (dept «Externo»), para a direção
+  // poder ver a app exatamente como a Beatriz a vê.
+  return [...EMPLOYEE_CREDENTIALS, ...EXTERNAL_CREDENTIALS].map((c) => ({
     username: c.username,
     name: c.name,
     role: c.role,

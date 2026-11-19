@@ -166,7 +166,7 @@ export async function ProtocolPage({ list }: { list: ProtocolList }) {
         }
       />
 
-      <SectionNav items={NAV} />
+      <SectionNav items={reader.docsOnly ? NAV.filter((n) => n.id !== "sugerir") : NAV} />
 
       <div className="mt-8 space-y-14 pb-10">
         <DocSection id="lista" title="A lista" lead={copy.listLead}>
@@ -184,6 +184,8 @@ export async function ProtocolPage({ list }: { list: ProtocolList }) {
 
         <ExecutiveSummary updatedAt={updated} title={copy.summaryTitle} paragraphs={copy.summary} />
 
+        {/* v80.10: as contas «só Documentação» (externos) só leem. */}
+        {!reader.docsOnly && (
         <DocSection id="sugerir" title="Sugerir à direção">
           <ProtocolSuggest
             doc={`protocolos-${list}`}
@@ -198,6 +200,7 @@ export async function ProtocolPage({ list }: { list: ProtocolList }) {
             }
           />
         </DocSection>
+        )}
 
         <p className="border-t border-white/[0.07] pt-6 text-[13px] text-white/40">
           Estes protocolos podem ser revistos pela direção. Dúvidas: Diretor de Operações.

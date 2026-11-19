@@ -102,7 +102,7 @@ export async function UserChip() {
   // por isso nenhum dos dois gasta a leitura. Para os restantes é um LRANGE
   // ao índice do próprio — vazio para quem não tem plano.
   const probation =
-    viewingUsername && !display.isAdmin && !display.viewerOf
+    viewingUsername && !display.isAdmin && !display.viewerOf && !display.docsOnly
       ? probationMenuView(
           await listPublishedForUser(viewingUsername),
           todayLisbonISO(),
@@ -112,7 +112,7 @@ export async function UserChip() {
   // Producer of the Month (v78.58) — o pódio da última eleição da direção,
   // por baixo da sessão. Leitura em cache (invalidada ao eleger); os viewers
   // não o veem.
-  const latest = display.viewerOf ? null : ((await getElectionSummaries())[0] ?? null);
+  const latest = display.viewerOf || display.docsOnly ? null : ((await getElectionSummaries())[0] ?? null);
   const producer: ProducerMenuView | null = latest
     ? {
         month: producerMonthLabel(latest.month).replace(/^./, (c) => c.toUpperCase()),
@@ -129,11 +129,14 @@ export async function UserChip() {
       tags={display.tags}
       dept={display.dept}
       isAdmin={display.isAdmin}
-      isViewer={Boolean(display.viewerOf)}
+      isViewer={Boolean(display.viewerOf || display.docsOnly)}
+      // v80.10: conta «só Documentação» (externos) — o menu só tem a
+      // Documentação (o middleware fecha o resto de qualquer forma).
+      docsOnly={Boolean(display.docsOnly)}
       // Quem edita SEO tem o estúdio de Weekly Reports no menu. Segue a
       // pessoa que está a ser VISTA, como o resto do chip: com lente ativa,
       // o menu tem de parecer o dela.
-      canWeeklyReports={canEditDept(viewingUsername, "seo")}
+      canWeeklyReports={!display.docsOnly && canEditDept(viewingUsername, "seo")}
       expiresLabel={expiresLabel}
       sessionLeft={sessionLeft}
       canImpersonate={realIsAdmin}
@@ -145,7 +148,7 @@ export async function UserChip() {
       // na secção SuperAdmin e os viewers não o veem. Sem leitura nenhuma:
       // o estado (PA/NO) vive na página e no sino, não no menu.
       ineficacias={
-        !display.isAdmin && !display.viewerOf ? { construction: !INEFICACIAS_OPEN_TO_TEAM } : null
+        !display.isAdmin && !display.viewerOf && !display.docsOnly ? { construction: !INEFICACIAS_OPEN_TO_TEAM } : null
       }
       // Documentação da empresa (v78.5) — decidido com quem FEZ LOGIN: em
       // construção só o André e o Alex entram, e continuam a vê-la quando

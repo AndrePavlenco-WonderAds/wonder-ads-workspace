@@ -65,6 +65,8 @@ type EmployeeView = Pick<
   viewerOf: DeptSlug | null;
   /** Departamentos extra só de leitura (v77.35). Vazio para quase todos. */
   readOnlyDepts: DeptSlug[];
+  /** Perfil «só Documentação» (v80.10): os blocos que lê. null para a equipa. */
+  docsOnly: string[] | null;
 };
 
 function toView(username: string | null): EmployeeView | null {

@@ -70,9 +70,10 @@ export async function PageShell({
   // Perfil viewer: header e rodapé sem as portas que ele não pode abrir
   // (medalhas, lembretes, SuperAdmin, changelog). O middleware fecha-as de
   // qualquer forma; isto é para não as oferecer.
-  const isViewer = Boolean(
-    (await getCurrentEmployee().catch(() => null))?.viewerOf,
-  );
+  // v80.10: as contas «só Documentação» (externos) levam o mesmo header
+  // despido, e ainda menos (o menu só tem a Documentação).
+  const me = await getCurrentEmployee().catch(() => null);
+  const isViewer = Boolean(me?.viewerOf || me?.docsOnly);
   // O changelog é só do topo (v78.75): para os outros a versão fica como
   // texto, sem link — nada a indicar que há uma página por trás.
   const changelogLink = isTopAdmin(
