@@ -69,9 +69,8 @@ const JOAO_B = new Set([
   // para `getConsultantEmailForSlug` também a reconhecer — sem isto, as
   // entregas em PDF/DOCX saíam com o alias seo@ em vez do email dele.
   "brancoptica",
-  // v77.44: Real Hotels Group — onboarding 24/09/2026, formulário ainda por
-  // preencher (slug sem «santa-eulalia» desde a v77.45).
-  "real-hotels-group",
+  // v80.5: o Real Hotels Group passou para a Maria Assena (na board já
+  // estava migrado desde 09/11; agora também em código).
 ]);
 
 // v75.4: uma consultora de SEO saiu e a carteira dela foi redistribuída:
@@ -84,10 +83,12 @@ const JOAO_B = new Set([
 // do board e o email das entregas a reconhecerem sem depender do registo.
 // v78.0: + Clínica Médica Dentária Colégio Militar (entrou pelo onboarding).
 // v78.87: + VeryChaga (entrou pelo onboarding, registo já com a Maria).
+// v80.5: + Real Hotels Group (vindo do João B.) — onboarding a 20/11/2026.
 const MARIA_A = new Set([
   "atn-medical",
   "clinica-medica-dentaria-colegio-militar",
   "verychaga",
+  "real-hotels-group",
 ]);
 
 /** Os consultores de SEO que podem ter carteira — nome de exibição (tem de

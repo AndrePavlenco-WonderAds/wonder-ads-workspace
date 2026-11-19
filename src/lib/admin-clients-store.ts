@@ -90,8 +90,9 @@ export const DEFAULT_STARTING_DATES: Record<string, string> = {
   "antonio-gaspar": "2026-09-23",
   // v77.44: PhysioHub — a mesma data de onboarding do António Gaspar.
   "physio-hub": "2026-09-23",
-  // v77.44: Real Hotels Group — onboarding a 24/09/2026.
-  "real-hotels-group": "2026-09-24",
+  // v80.5: Real Hotels Group (Maria Assena) — o onboarding passou para
+  // 20/11/2026 (estava 24/09/2026, o dia em que entrou no registo).
+  "real-hotels-group": "2026-11-20",
   // v77.47.1: ATN Medical (Maria Assena) — onboarding a 01/10/2026.
   "atn-medical": "2026-10-01",
   // v78.0: Clínica Médica Dentária Colégio Militar (Maria Assena) —

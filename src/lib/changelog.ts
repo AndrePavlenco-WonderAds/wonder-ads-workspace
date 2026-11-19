@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "80.5",
+    date: "2026-11-19",
+    title: "Real Hotels Group: onboarding a 20/11",
+    highlights: [
+      "**🏨 Real Hotels Group** começa o onboarding a **20/11/2026** (estava 24/09). O roadmap de 3 meses arranca nesse dia: mês 1 de 20/11 a 19/12, fim a 19/02/2027. As tarefas ficam nas mesmas semanas, já com as datas novas.",
+      "A Starting date nos Clients e a pastilha «Onboarded» mostram 20/11/2026. A tarefa da semana 12 passa a «plano para o trimestre seguinte (fev.–mai. 2027)».",
+      "O cliente fica na carteira da **Maria Assena** também em código (a board já o mostrava com ela).",
+    ],
+  },
+  {
     version: "80.4",
     date: "2026-11-19",
     title: "Origem dos clientes: apagar registos e repor",
