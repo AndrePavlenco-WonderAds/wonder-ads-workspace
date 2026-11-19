@@ -16,7 +16,7 @@ import { ProjectSectionNav } from "@/components/project-section-nav";
 import { LogoChip } from "@/components/logo-chip";
 import { ReviewsHubChip } from "@/components/reviews-hub-chip";
 import { OrigemChip } from "@/components/origem-chip";
-import { ProspectFileChip } from "@/components/prospects/prospect-file-chip";
+import { ProspectFileTile } from "@/components/prospects/prospect-file-tile";
 import { resolveConsultant } from "@/lib/consultant-assignments";
 import { findEmployeeByName } from "@/lib/proposals/consultant";
 import {
@@ -192,13 +192,6 @@ export default async function ClientPage({
                   </span>
                 </span>
               )}
-              {/* Ficha do prospect (v80.0) — o que o Comercial sabe do
-                  cliente, passado ao consultor. Só aparece com ficha. */}
-              <ProspectFileChip
-                slug={slug}
-                viewerUsername={employee?.username ?? null}
-                consultantUsername={consultantUsername}
-              />
               {latestProposal && (
                 <a
                   href={proposalPath(latestProposal.slug)}
@@ -290,7 +283,19 @@ export default async function ClientPage({
           slug={slug}
           clientName={client.title}
         />
-        <ClientFiles slug={slug} clientName={client.title} />
+        <ClientFiles
+          slug={slug}
+          clientName={client.title}
+          pinned={
+            // Ficha do prospect (v80.6: saiu da fila de pastilhas do topo) —
+            // linha fixa no cimo dos ficheiros. Só aparece com ficha.
+            <ProspectFileTile
+              slug={slug}
+              viewerUsername={employee?.username ?? null}
+              consultantUsername={consultantUsername}
+            />
+          }
+        />
       </div>
 
       <div className="animate-fade-up mt-6">

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Bot, ClipboardList, PauseCircle, Users } from "lucide-react";
+import { ArrowRight, Bot, PauseCircle, Users } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { AccessDenied } from "@/components/access-denied";
 import { getCurrentEmployee } from "@/lib/auth/server";
@@ -197,18 +197,8 @@ export default async function SeoPage() {
           {/* A direção abre todos os consultores numa página só (v78.44). */}
           {!notionError && (
             <div className="mb-4 flex flex-wrap justify-end gap-2">
-              {/* Fichas do prospect (v80.0) — para toda a gente, também os
-                  comerciais (viewers do SEO): é aqui que eles aterram. */}
-              <Link
-                href="/prospects"
-                className="group inline-flex items-center gap-2 rounded-full border border-[#783DF5]/35 bg-[#783DF5]/[0.07] py-1 pl-1 pr-3 text-[12.5px] text-white/75 transition hover:border-[#783DF5]/60 hover:text-white"
-              >
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#783DF5]/25 text-violet-100">
-                  <ClipboardList className="h-3.5 w-3.5" />
-                </span>
-                Fichas do prospect
-                <ArrowRight className="h-3.5 w-3.5 text-white/40 transition group-hover:translate-x-0.5 group-hover:text-white" />
-              </Link>
+              {/* v80.6: as Fichas do prospect saíram daqui — vivem no menu do
+                  nome e no cartão Client Files de cada cliente. */}
               {(employee.isAdmin || !readOnly) && (
               <>
               {/* Painel «IA no site» (v78.92): as IAs leem cada site? */}

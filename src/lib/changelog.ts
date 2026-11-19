@@ -13,6 +13,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "80.6",
+    date: "2026-11-19",
+    title: "Ficha do prospect: dentro dos ficheiros do cliente",
+    highlights: [
+      "**🗂️ Ficha do prospect** sai do topo do SEO DPT e da fila de pastilhas da página do cliente. Passa a ser a primeira linha do cartão **Client Files**, com o resumo numa linha e a percentagem preenchida.",
+      "Continua a dizer **Nova** / **Novidades** ao consultor do cliente. Já não tem pop-up no hover a tapar a página. A lista de todas as fichas fica no menu do nome («Fichas do prospect»).",
+    ],
+  },
+  {
     version: "80.5",
     date: "2026-11-19",
     title: "Real Hotels Group: onboarding a 20/11",

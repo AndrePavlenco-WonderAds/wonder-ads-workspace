@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, type ReactNode } from "react";
 import Link from "next/link";
 import {
   FolderOpen,
@@ -34,12 +34,16 @@ export function ClientFiles({
   slug,
   clientName,
   creativesHref,
+  pinned,
 }: {
   slug: string;
   clientName: string;
   /** When set (ADS DPT), shows a prominent "Gerar Creatives" button that
    *  links to the Creatives Studio for this client. */
   creativesHref?: string;
+  /** Linha fixa no cimo do cartão, antes dos ficheiros (SEO: a Ficha do
+   *  prospect, v80.6). Vem renderizada do servidor. */
+  pinned?: ReactNode;
 }) {
   const readOnly = useSeoReadOnly();
   const [files, setFiles] = useState<ClientFile[]>([]);
@@ -297,6 +301,7 @@ export function ClientFiles({
       )}
 
       <div className="brand-gradient-border flex flex-1 flex-col rounded-2xl bg-white/[0.035] p-5 backdrop-blur-md">
+        {pinned}
         {!loaded ? (
           <div className="flex flex-1 items-center justify-center">
             <p className="text-sm text-white/35">Loading…</p>
