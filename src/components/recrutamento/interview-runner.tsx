@@ -64,6 +64,7 @@ const SECTION_TINT: Record<SectionId, string> = {
   soft: "#f9a8d4",
   detail: "#fcd34d",
   questions: "#86efac",
+  pessoal: "#fdba74",
 };
 
 function mmss(ms: number): string {
@@ -462,7 +463,7 @@ function Progress({
                   label={`${q.code} · ${q.title}`}
                   short={qs.length > 1 ? q.code : undefined}
                   active={step === i + 1}
-                  done={isScored(answers[q.id])}
+                  done={q.unscored ? Boolean(answers[q.id]?.notes.trim()) : isScored(answers[q.id])}
                   flagged={(answers[q.id]?.flags.length ?? 0) > 0}
                   onClick={() => onJump(i + 1)}
                   tint={SECTION_TINT[sec.id]}
@@ -736,7 +737,17 @@ function QuestionScreen({
         </div>
       </section>
 
-      {/* Direita: pontuação */}
+      {/* Direita: pontuação (as perguntas da secção Pessoal não têm — v80.17) */}
+      {q.unscored ? (
+        <aside className="min-w-0">
+          <div className="rounded-3xl border border-white/[0.08] bg-white/[0.02] p-5 lg:sticky lg:top-24">
+            <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/40">Sem pontuação</p>
+            <p className="mt-2 text-[13px] leading-relaxed text-white/60">
+              Só notas. Não conta para o Fit Cultural nem para a Capacidade Técnica.
+            </p>
+          </div>
+        </aside>
+      ) : (
       <aside className="min-w-0">
         <div className="rounded-3xl border border-white/[0.08] bg-white/[0.02] p-5 lg:sticky lg:top-24">
           <div className="flex items-center gap-4">
@@ -827,6 +838,7 @@ function QuestionScreen({
           )}
         </div>
       </aside>
+      )}
     </div>
   );
 }

@@ -62,7 +62,7 @@ import {
   practicalStage,
   type PracticalSubmission,
 } from "@/lib/recrutamento/practical";
-import { PracticalReviewPanel, PracticalStageChip } from "./practical-review";
+import { PracticalReviewPanel } from "./practical-review";
 import { accessMessage } from "@/lib/access/shared";
 import { Field, inputCls, Modal } from "./hub";
 import { GradeBadge, GradeMatrix, Initials, scoreColor, ScoreBar, StageChip, TONE } from "./ui";
@@ -110,7 +110,7 @@ export function CandidateFile({
   const router = useRouter();
   const [c, setC] = useState<Candidate>(initial);
   const head = headlineInterview(c);
-  const [selected, setSelected] = useState<string | null>(head?.id ?? null);
+  const [selected, setSelected] = useState<string | null>(head?.id ?? c.practicals[c.practicals.length - 1]?.id ?? null);
   // Uma prática selecionada (v80.16) toma o lugar do resumo da entrevista.
   const practical = c.practicals.find((p) => p.id === selected) ?? null;
   const interview = practical ? null : (c.interviews.find((i) => i.id === selected) ?? head);
@@ -301,10 +301,6 @@ export function CandidateFile({
 
       {practical ? (
         <>
-          <div className="mt-4 flex flex-wrap items-center gap-2 text-[12px] text-white/45">
-            <PracticalStageChip stage={practicalStage(practical, subs[practical.id] ?? null)} />
-            {practical.date && <span>marcada para {fmtDay(practical.date)}</span>}
-          </div>
           <PracticalReviewPanel
             key={practical.id}
             candidate={c}
@@ -931,7 +927,7 @@ function QuestionsSection({ template, interview }: { template: InterviewTemplate
             <ul>
               {qs.map((q) => {
                 const a = interview.answers[q.id];
-                const scored = isScored(a);
+                const scored = !q.unscored && isScored(a);
                 const score = scored ? questionScore(q, a) : null;
                 const flagged = (a?.flags.length ?? 0) > 0;
                 const isOpen = open === q.id;
@@ -947,14 +943,20 @@ function QuestionsSection({ template, interview }: { template: InterviewTemplate
                       <span className="min-w-0 flex-1 truncate text-[13px] text-white/80">{q.title}</span>
                       {flagged && <Flag className="h-3.5 w-3.5 shrink-0 text-rose-300" />}
                       {a?.notes && <PenLine className="h-3.5 w-3.5 shrink-0 text-white/30" />}
-                      <span className="hidden w-28 shrink-0 sm:block">
-                        <span className="block h-1.5 overflow-hidden rounded-full bg-white/[0.06]">
-                          <span className="block h-full rounded-full" style={{ width: `${(score ?? 0) * 10}%`, background: scoreColor(score) }} />
-                        </span>
-                      </span>
-                      <span className="w-10 shrink-0 text-right text-[13px] font-bold tabular-nums" style={{ color: scoreColor(score) }}>
-                        {fmtScore(score)}
-                      </span>
+                      {q.unscored ? (
+                        <span className="w-[10.5rem] shrink-0 text-right text-[11px] text-white/30 max-sm:w-auto">só notas</span>
+                      ) : (
+                        <>
+                          <span className="hidden w-28 shrink-0 sm:block">
+                            <span className="block h-1.5 overflow-hidden rounded-full bg-white/[0.06]">
+                              <span className="block h-full rounded-full" style={{ width: `${(score ?? 0) * 10}%`, background: scoreColor(score) }} />
+                            </span>
+                          </span>
+                          <span className="w-10 shrink-0 text-right text-[13px] font-bold tabular-nums" style={{ color: scoreColor(score) }}>
+                            {fmtScore(score)}
+                          </span>
+                        </>
+                      )}
                       <ChevronDown className={`h-4 w-4 shrink-0 text-white/30 transition ${isOpen ? "rotate-180" : ""}`} />
                     </button>
                     {isOpen && (

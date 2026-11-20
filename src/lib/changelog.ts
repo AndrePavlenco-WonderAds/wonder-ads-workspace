@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "80.17",
+    date: "2026-11-20",
+    title: "Recrutamento: secção «Pessoal» no fim da entrevista (Fase 2 · Parte 1)",
+    highlights: [
+      "**🙂 Secção nova «Pessoal»**, a última da entrevista, com 7 perguntas: o que faz depois do trabalho, ginásio, namorada/o e há quanto tempo, religião, com quem vive, onde se vê daqui a cinco anos e se quer ter filhos.",
+      "**Sem pontos**: só notas, fora do Fit Cultural, da Capacidade Técnica e da grade. As perguntas sobre a relação, a religião, com quem vive e os filhos trazem a nota «Só se o candidato quiser responder — não conta para a decisão». Aparece também nas entrevistas já feitas, por preencher.",
+      "Prática: um candidato sem entrevista abre logo na prática, e o estado deixou de aparecer duas vezes.",
+    ],
+  },
+  {
     version: "80.16",
     date: "2026-11-20",
     title: "Recrutamento: a prova prática (Fase 2 · Parte 2) com link para o candidato e avaliação na ficha",

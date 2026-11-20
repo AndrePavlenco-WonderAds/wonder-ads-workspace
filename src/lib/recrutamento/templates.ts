@@ -7,7 +7,7 @@
 // (ver a memória «never author training content»): um template novo vem
 // sempre de um guião dado pela direção.
 
-export type SectionId = "hard" | "coach" | "soft" | "detail" | "questions";
+export type SectionId = "hard" | "coach" | "soft" | "detail" | "questions" | "pessoal";
 
 export type Criterion = {
   id: string;
@@ -40,6 +40,9 @@ export type Question = {
   penalties: Penalty[];
   /** Cabeçalho da primeira coluna da tabela («O que procurar», …). */
   criteriaLabel?: string;
+  /** Pergunta sem pontuação — só notas; fora das contas (secção Pessoal,
+   *  v80.17). */
+  unscored?: true;
 };
 
 export type ZoneLabels = { low: string; mid: string; high: string };
@@ -61,9 +64,29 @@ export type InterviewTemplate = {
 
 const RF = (label: string, pts = 3): Penalty => ({ kind: "minus", id: "rf", label, pts });
 
+/** As perguntas da vida pessoal que tocam no art. 17.º/24.º do Código do
+ *  Trabalho (vida privada, situação familiar, religião) — o André escolheu
+ *  mantê-las com esta nota (20/11/2026). */
+const SO_SE_QUISER: ScriptBlock[] = [
+  { kind: "note", text: "Só se o candidato quiser responder — não conta para a decisão." },
+];
+
+const pessoal = (id: string, code: string, title: string, prompt: string, sensitive = false): Question => ({
+  id,
+  section: "pessoal",
+  code,
+  title,
+  prompt,
+  ...(sensitive ? { script: SO_SE_QUISER } : {}),
+  criteria: [],
+  penalties: [],
+  unscored: true,
+});
+
 const SEO_FASE2_P1: InterviewTemplate = {
   id: "seo-analista-fase2-p1",
-  version: 1,
+  // v2 (v80.17): + secção Pessoal no fim, pedida pelo André.
+  version: 2,
   title: "Entrevista Analista de SEO WonderAds",
   role: "Consultor de SEO",
   phase: "Fase 2 · Parte 1",
@@ -78,6 +101,7 @@ const SEO_FASE2_P1: InterviewTemplate = {
     { id: "soft", label: "Soft Skills", short: "Soft" },
     { id: "detail", label: "Atenção ao detalhe", short: "Detalhe" },
     { id: "questions", label: "Perguntas do candidato", short: "Perguntas" },
+    { id: "pessoal", label: "Pessoal", short: "Pessoal" },
   ],
   questions: [
     // ── Hard Skills ─────────────────────────────────────────────────────
@@ -428,6 +452,16 @@ const SEO_FASE2_P1: InterviewTemplate = {
         { kind: "cap", id: "sem-perguntas", label: "Sem perguntas → nota máx. 2", max: 2 },
       ],
     },
+    // ── Pessoal (v80.17) ────────────────────────────────────────────────
+    // As perguntas do André, tal e qual. Sem pontos: só notas, fora do Fit e
+    // da Técnica.
+    pessoal("pe1", "V1", "Depois do trabalho", "O que fazes depois do trabalho?"),
+    pessoal("pe2", "V2", "Ginásio", "Vais ao ginásio?"),
+    pessoal("pe3", "V3", "Relação", "Tens namorada/o? Há quanto tempo?", true),
+    pessoal("pe4", "V4", "Religião", "Tens religião?", true),
+    pessoal("pe5", "V5", "Com quem vive", "Vives sozinho/a, com amigos ou com a família?", true),
+    pessoal("pe6", "V6", "Daqui a cinco anos", "Onde te vês daqui a cinco anos?"),
+    pessoal("pe7", "V7", "Filhos", "Queres ter filhos um dia?", true),
   ],
   fit: {
     label: "Fit Cultural",

@@ -176,8 +176,9 @@ export function summarize(
     tech,
     fit,
     cell: fz && tz ? GRADE_GRID[fz][tz] : null,
-    scored: t.questions.filter((q) => isScored(answers[q.id])).length,
-    total: t.questions.length,
+    // As perguntas sem pontos (secção Pessoal, v80.17) ficam fora da contagem.
+    scored: t.questions.filter((q) => !q.unscored && isScored(answers[q.id])).length,
+    total: t.questions.filter((q) => !q.unscored).length,
   };
 }
 
