@@ -15,7 +15,13 @@
 import "server-only";
 import { createCipheriv, createDecipheriv, hkdfSync, randomBytes, randomInt, randomUUID } from "node:crypto";
 import { kv } from "@vercel/kv";
-import { EMPLOYEE_CREDENTIALS, EXTERNAL_CREDENTIALS, findEmployeeByUsername } from "@/lib/auth/credentials";
+import {
+  EMPLOYEE_CREDENTIALS,
+  EXTERNAL_CREDENTIALS,
+  findEmployeeByUsername,
+  runtimeCredentials,
+} from "@/lib/auth/credentials";
+import { ensureHiredAccounts } from "@/lib/auth/hired-accounts";
 import { scryptHash } from "@/lib/auth/password";
 import { getTeamAvatar } from "@/lib/team-avatars";
 import { forgetAccessGateCache } from "./gate";
@@ -137,6 +143,19 @@ export async function readGateEntryFresh(username: string): Promise<AccessGateEn
 }
 
 /** A password em claro, para o «Copiar acesso». null = não está no cofre. */
+/** Password nova no cofre para uma conta acabada de criar (v80.13 —
+ *  Recrutamento). Devolve-a para se poder copiar logo; fica também
+ *  revelável em /admin/acessos, cifrada como as outras. */
+export async function createVaultPassword(username: string, by: string): Promise<string> {
+  if (!accessConfigured) throw new AccessError("O armazenamento (KV) não está configurado neste ambiente.", 503);
+  const password = generatePassword();
+  const salt = randomBytes(16).toString("hex");
+  const now = Date.now();
+  const rec: VaultRecord = { salt, hash: scryptHash(password, salt), ...encrypt(password), setAt: now, setBy: by };
+  await kv.set(accessCredKey(username), rec);
+  return password;
+}
+
 export async function revealPassword(username: string): Promise<string | null> {
   if (!accessConfigured) return null;
   const rec = hydrateVault(await kv.get<unknown>(accessCredKey(username)));
@@ -274,7 +293,9 @@ function dedupeVisits(list: AccessVisit[]): AccessVisit[] {
 export async function loadAccessOverview(): Promise<AccessOverview> {
   // v80.10: as contas externas (Beatriz Lamares) também aparecem aqui, para
   // o André lhes poder cancelar o acesso ou trocar a password.
-  const usernames = [...EMPLOYEE_CREDENTIALS, ...EXTERNAL_CREDENTIALS].map((c) => c.username);
+  // v80.13: e as contas criadas na app (aceites no Recrutamento).
+  await ensureHiredAccounts().catch(() => null);
+  const usernames = [...EMPLOYEE_CREDENTIALS, ...runtimeCredentials(), ...EXTERNAL_CREDENTIALS].map((c) => c.username);
   let gateRaw: Record<string, unknown> | null = null;
   let loginsRaw: Record<string, unknown> | null = null;
   let seenRaw: Record<string, unknown> | null = null;

@@ -10,6 +10,7 @@
 
 import "server-only";
 import { findEmployeeByUsername } from "@/lib/auth/credentials";
+import { ensureHiredAccounts } from "@/lib/auth/hired-accounts";
 import { matchesHash, verifyEmployeeLogin } from "@/lib/auth/password";
 import { getVaultHash, readGateEntryFresh } from "./store";
 import type { AccessGateEntry } from "./shared";
@@ -19,7 +20,13 @@ export type LoginCheck =
   | { ok: false; reason: "invalid" | "revoked" };
 
 export async function verifyLoginLive(usernameRaw: string, passwordRaw: string): Promise<LoginCheck> {
-  const row = findEmployeeByUsername(usernameRaw);
+  let row = findEmployeeByUsername(usernameRaw);
+  // v80.13: uma conta acabada de criar no Recrutamento pode ainda não estar
+  // na memória desta instância — uma leitura fresca antes de dizer que não.
+  if (!row) {
+    await ensureHiredAccounts({ fresh: true }).catch(() => null);
+    row = findEmployeeByUsername(usernameRaw);
+  }
   if (!row) {
     // Corre o scrypt-isco de sempre (mesmo tempo de resposta).
     verifyEmployeeLogin(usernameRaw, passwordRaw);

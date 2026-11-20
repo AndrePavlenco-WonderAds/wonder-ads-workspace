@@ -44,7 +44,7 @@ import { ClientCard, type NpsMonthScore } from "./client-card";
 import { LogoChip } from "./logo-chip";
 import { TierBadge } from "./tier-badge";
 import { SeoPauseToggle } from "./seo-pause-toggle";
-import { SeoConsultantMigrate } from "./seo-consultant-migrate";
+import { ExtraConsultantsContext, SeoConsultantMigrate } from "./seo-consultant-migrate";
 
 export type SeoBoardCard = {
   slug: string;
@@ -72,6 +72,9 @@ export type SeoBoardColumn = {
   avatar?: string | null;
   /** A carteira de quem está a ver — a lane ganha o realce. */
   isMine?: boolean;
+  /** Colega novo, aceite no Recrutamento (v80.13): a coluna aparece mesmo
+   *  sem clientes, com o selo «Novo» e o dia de entrada. */
+  newcomer?: { startedAt: string | null } | null;
   clients: SeoBoardCard[];
 };
 
@@ -103,9 +106,13 @@ export function SeoBoard({
   isAdmin,
   canReorder = false,
   paused = false,
+  extraConsultants = [],
 }: {
   columns: SeoBoardColumn[];
   isAdmin: boolean;
+  /** Consultores criados na app (Recrutamento, v80.13) — entram na lista do
+   *  «Migrar para…» a seguir aos do código. */
+  extraConsultants?: string[];
   /** Quem está a ver pode reordenar a própria lane (v78.4) — só consultores
    *  de SEO na sua sessão; a ordem fica só para eles. */
   canReorder?: boolean;
@@ -149,6 +156,7 @@ export function SeoBoard({
   if (columns.length === 0) return null;
 
   return (
+    <ExtraConsultantsContext.Provider value={extraConsultants}>
     <div className="relative">
       {/* Faixa de atalhos — só quando as lanes não cabem todas (< xl), e só
           na board ativa: a dos pausados é pequena e não precisa. */}
@@ -210,6 +218,7 @@ export function SeoBoard({
         ))}
       </div>
     </div>
+    </ExtraConsultantsContext.Provider>
   );
 }
 
@@ -428,6 +437,19 @@ function Lane({
             </div>
             {!compact && (
               <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                {column.newcomer && (
+                  <span
+                    className="inline-flex items-center gap-1 rounded-full border border-emerald-300/30 bg-emerald-400/[0.1] px-1.5 py-0.5 text-[9.5px] font-bold uppercase tracking-[0.12em] text-emerald-200"
+                    title="Aceite no Recrutamento"
+                  >
+                    Novo
+                    {column.newcomer.startedAt && (
+                      <span className="font-semibold normal-case tracking-normal text-emerald-100/70">
+                        · entra a {column.newcomer.startedAt.split("-").reverse().join("/")}
+                      </span>
+                    )}
+                  </span>
+                )}
                 {avg !== null ? (
                   <span
                     title={`Média de satisfação (NPS) da carteira — ${rated} cliente${rated === 1 ? "" : "s"} com inquérito`}

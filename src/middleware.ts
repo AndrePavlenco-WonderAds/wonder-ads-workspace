@@ -21,6 +21,7 @@ import {
   readSession,
 } from "@/lib/auth/session";
 import { readAccessGate } from "@/lib/access/gate";
+import { ensureHiredAccounts } from "@/lib/auth/hired-accounts";
 import {
   PAUSED_PAGE_PREFIX,
   isProjectPaused,
@@ -289,7 +290,12 @@ async function gateRequest(req: NextRequest, ctx: GateContext): Promise<NextResp
   // Acessos (v78.72): acesso cancelado, ou sessão de antes de um «terminar
   // sessões» → como se não houvesse sessão (volta ao login, cookie limpo).
   // O portão vive em memória 30 s por instância e falha aberto.
-  if (session && isSessionBlocked(session, await readAccessGate())) session = null;
+  // v80.13: as contas criadas na app (Recrutamento) têm de ser conhecidas
+  // antes dos portões — senão um consultor novo não escrevia no SEO.
+  if (session) {
+    const [gate] = await Promise.all([readAccessGate(), ensureHiredAccounts()]);
+    if (isSessionBlocked(session, gate)) session = null;
+  }
   ctx.user = session?.u ?? null;
   const internal = isInternalPath(req.nextUrl.pathname);
   if (session) {

@@ -1,10 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { ArrowRightLeft, Check, Loader2, X } from "lucide-react";
 import { CONSULTANT_ORDER } from "@/lib/client-overrides";
+
+/** Os consultores criados na app (Recrutamento, v80.13), dados pela board. */
+export const ExtraConsultantsContext = createContext<string[]>([]);
 
 /** SuperAdmin-only overlay button on an SEO client card, ao lado do botão de
  *  pausa. Abre um modal para passar o cliente para outro consultor (PUT
@@ -62,7 +65,10 @@ function MigrateModal({
   onClose: () => void;
 }) {
   const router = useRouter();
-  const options = CONSULTANT_ORDER.filter((n) => n !== currentConsultant);
+  const extra = useContext(ExtraConsultantsContext);
+  const options = [...CONSULTANT_ORDER, ...extra.filter((n) => !(CONSULTANT_ORDER as readonly string[]).includes(n))].filter(
+    (n) => n !== currentConsultant,
+  );
   const [target, setTarget] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);

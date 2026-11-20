@@ -629,6 +629,22 @@ export function linkifySlackMentions(text: string): string {
   return out;
 }
 
+/** CONTAS CRIADAS NA APP (v80.13) — quem foi aceite no Recrutamento. Vivem
+ *  no KV e chegam aqui por `ensureHiredAccounts()` (lib/auth/hired-accounts),
+ *  em memória por instância. Nunca têm salt/hash: a password está só no
+ *  cofre dos Acessos. Uma conta do código com o mesmo username ganha sempre. */
+let RUNTIME_CREDENTIALS: EmployeeCredential[] = [];
+
+export function setRuntimeCredentials(list: EmployeeCredential[]): void {
+  const taken = new Set([...EMPLOYEE_CREDENTIALS, ...EXTERNAL_CREDENTIALS].map((c) => c.username));
+  RUNTIME_CREDENTIALS = list.filter((c) => !taken.has(c.username));
+}
+
+/** As contas criadas na app que esta instância conhece agora. */
+export function runtimeCredentials(): EmployeeCredential[] {
+  return RUNTIME_CREDENTIALS;
+}
+
 /** Return the credential row for a username, normalised to lowercase
  *  + trimmed so trailing whitespace from a copy/paste doesn't lock
  *  someone out. */
@@ -639,6 +655,7 @@ export function findEmployeeByUsername(
   return (
     EMPLOYEE_CREDENTIALS.find((c) => c.username === u) ??
     EXTERNAL_CREDENTIALS.find((c) => c.username === u) ??
+    RUNTIME_CREDENTIALS.find((c) => c.username === u) ??
     null
   );
 }
@@ -713,7 +730,8 @@ export function listImpersonationTargets(): Array<{
   const deptOrder = ["All", "SEO", "ADS", "Web", "Commercial"];
   // v80.10: as contas externas entram no fim (dept «Externo»), para a direção
   // poder ver a app exatamente como a Beatriz a vê.
-  return [...EMPLOYEE_CREDENTIALS, ...EXTERNAL_CREDENTIALS].map((c) => ({
+  // v80.13: e as contas criadas na app (Recrutamento) entram com a equipa.
+  return [...EMPLOYEE_CREDENTIALS, ...RUNTIME_CREDENTIALS, ...EXTERNAL_CREDENTIALS].map((c) => ({
     username: c.username,
     name: c.name,
     role: c.role,
@@ -757,8 +775,10 @@ export function findCredentialForRosterRow(
   id: string | null | undefined,
   name: string | null | undefined,
 ): EmployeeCredential | null {
+  // v80.13: as contas criadas na app também têm linha no roster (id = username).
+  const pool = [...EMPLOYEE_CREDENTIALS, ...RUNTIME_CREDENTIALS];
   if (id) {
-    const byId = EMPLOYEE_CREDENTIALS.find(
+    const byId = pool.find(
       (c) => c.username === id.trim().toLowerCase(),
     );
     if (byId) return byId;
@@ -767,7 +787,7 @@ export function findCredentialForRosterRow(
   const key = nameKey(name);
   if (!key) return null;
   return (
-    EMPLOYEE_CREDENTIALS.find(
+    pool.find(
       (c) => nameKey(c.name) === key || (c.fullName && nameKey(c.fullName) === key),
     ) ?? null
   );

@@ -13,6 +13,7 @@ import { revalidatePath } from "next/cache";
 import { getCurrentEmployee, isCurrentUserAdmin } from "@/lib/auth/server";
 import { CONSULTANT_ORDER, EXCLUDED_SLUGS } from "@/lib/client-overrides";
 import { assignConsultant } from "@/lib/consultant-assignments";
+import { listSeoHires } from "@/lib/recrutamento/store";
 import { getClientBySlug } from "@/lib/notion";
 import { getAdminRecord, saveAdminRecord } from "@/lib/admin-clients-store";
 import { getDepartmentOverrides } from "@/lib/admin-client-departments-store";
@@ -41,7 +42,12 @@ export async function PUT(
   const body = (await req.json().catch(() => ({}))) as { consultant?: unknown };
   const consultant =
     typeof body.consultant === "string" ? body.consultant.trim() : "";
-  if (!(CONSULTANT_ORDER as readonly string[]).includes(consultant)) {
+  // v80.13: e os colegas aceites no Recrutamento (contas criadas na app).
+  const hires = await listSeoHires().catch(() => []);
+  if (
+    !(CONSULTANT_ORDER as readonly string[]).includes(consultant) &&
+    !hires.some((h) => h.name === consultant)
+  ) {
     return NextResponse.json(
       { error: "Escolhe um consultor da lista." },
       { status: 400 },

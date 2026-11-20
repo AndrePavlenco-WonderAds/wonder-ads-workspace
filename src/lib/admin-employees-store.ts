@@ -495,3 +495,29 @@ export async function deleteEmployee(id: string): Promise<void> {
     await saveRosterIndex(roster.filter((r) => r !== id));
   }
 }
+
+/** Contratação vinda do Recrutamento (v80.13): a linha do roster usa o
+ *  USERNAME da conta como id — é a ponte que `findCredentialForRosterRow`
+ *  usa para juntar o roster à conta (exames, coluna «Access»). Se já existir
+ *  uma linha com esse id, é atualizada em vez de duplicada. */
+export async function addEmployeeWithId(input: {
+  id: string;
+  name: string;
+  email: string;
+  role?: string;
+  departments?: string[];
+  startingDate?: string | null;
+  status?: EmployeeStatus;
+  notes?: string;
+}): Promise<AdminEmployeeRecord> {
+  if (!employeesStorageConfigured) {
+    throw new Error("KV storage not configured on this deployment.");
+  }
+  const roster = await loadRosterIndex();
+  const record = newEmployeeRecord(input);
+  await kv.set(`${KEY_PREFIX}${input.id}`, record);
+  if (!roster.includes(input.id) && !SEED_EMPLOYEES.some((s) => s.id === input.id)) {
+    await saveRosterIndex([...roster, input.id]);
+  }
+  return record;
+}

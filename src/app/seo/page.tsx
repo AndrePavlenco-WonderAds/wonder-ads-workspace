@@ -22,6 +22,7 @@ import { buildNpsBonusMonths } from "@/lib/documentacao/nps-bonus-server";
 import { NPS_BONUS_EXCLUDED_SLUGS, monthLabel, type NpsBonusMonth } from "@/lib/documentacao/nps-bonus";
 import { lisbonMonthKey, shiftMonthKey } from "@/lib/dates";
 import { CONSULTANT_ORDER } from "@/lib/client-overrides";
+import { listSeoHires } from "@/lib/recrutamento/store";
 import {
   getConsultantResolver,
   type ConsultantResolver,
@@ -92,6 +93,8 @@ export default async function SeoPage() {
   const pausedP = getPausedSlugSet().catch(() => new Set<string>());
   const logosP = getLogoOverrides().catch(() => ({}) as Record<string, string>);
   const orderP = canReorder ? getBoardOrder(employee.username) : Promise.resolve<string[]>([]);
+  // Colegas aceites no Recrutamento (v80.13) — coluna própria no board.
+  const hiresP = listSeoHires().catch(() => []);
 
   let clients: NotionClient[] = [];
   let notionError: string | null = null;
@@ -121,18 +124,20 @@ export default async function SeoPage() {
   // O NPS de cada cliente (índice de satisfação global), lido numa única
   // operação KV (mget) para toda a board — nunca um get por cartão. O cartão
   // mostra o mês anterior e o atual (v78.33); a lane, a média do último.
-  const [organic, npsRecords, consultants, order, logoOverrides] = await Promise.all([
+  const [organic, npsRecords, consultants, order, logoOverrides, hires] = await Promise.all([
     getSeoOrganicVisitors30d(activeClients.map((c) => c.slug)),
     getNpsRecordsFor(clients.map((c) => c.slug)),
     resolverP,
     orderP,
     logosP,
+    hiresP,
   ]);
+  const hireCols = hires.map((h) => ({ name: h.name, startedAt: h.startedAt }));
   const organicTeam = buildOrganicTeamStats(organic, activeClients);
   const npsCardMonths = [shiftMonthKey(npsMonthNow, -1), npsMonthNow];
 
   // Carteiras com as migrações do SuperAdmin aplicadas (uma leitura KV).
-  const consultantColumns = buildConsultantColumns(activeClients, consultants);
+  const consultantColumns = buildConsultantColumns(activeClients, consultants, hireCols);
 
   // Ordem pessoal da carteira (v78.4): só na lane de quem está a ver, e só
   // para ele — os outros continuam a ver a ordem por tier. Em «Ver como» o
@@ -142,7 +147,9 @@ export default async function SeoPage() {
       if (col.name === employee.name) col.clients = applyBoardOrder(col.clients, order);
     }
   }
-  const pausedColumns = buildConsultantColumns(pausedClients, consultants);
+  const pausedColumns = buildConsultantColumns(pausedClients, consultants, hireCols).filter(
+    (col) => col.clients.length > 0,
+  );
 
   const npsTeam = toNpsTeamChip(await npsMonths);
 
@@ -244,6 +251,7 @@ export default async function SeoPage() {
               )}
               isAdmin={employee.isAdmin}
               canReorder={canReorder}
+              extraConsultants={hireCols.map((h) => h.name)}
             />
           )}
         </section>
@@ -276,6 +284,7 @@ export default async function SeoPage() {
               )}
               isAdmin={employee.isAdmin}
               paused
+              extraConsultants={hireCols.map((h) => h.name)}
             />
           </section>
         </div>
@@ -298,7 +307,11 @@ export default async function SeoPage() {
   );
 }
 
-type ConsultantColumn = { name: string; clients: NotionClient[] };
+type ConsultantColumn = {
+  name: string;
+  clients: NotionClient[];
+  newcomer?: { startedAt: string | null };
+};
 
 /** Group clients by consultant, then sort each column by tier
  *  (growth → core → lite).
@@ -315,6 +328,7 @@ type ConsultantColumn = { name: string; clients: NotionClient[] };
 function buildConsultantColumns(
   clients: NotionClient[],
   consultants: ConsultantResolver,
+  hires: Array<{ name: string; startedAt: string | null }> = [],
 ): ConsultantColumn[] {
   const grouped: Record<string, NotionClient[]> = {};
   for (const c of clients) {
@@ -334,6 +348,12 @@ function buildConsultantColumns(
     name: name as string,
     clients: grouped[name] ?? [],
   })).filter((col) => col.clients.length > 0);
+  // Colegas novos (Recrutamento, v80.13): a coluna aparece logo, mesmo sem
+  // clientes, até o SuperAdmin lhes migrar a carteira.
+  for (const h of hires) {
+    if ((CONSULTANT_ORDER as readonly string[]).includes(h.name)) continue;
+    columns.push({ name: h.name, clients: grouped[h.name] ?? [], newcomer: { startedAt: h.startedAt } });
+  }
 
   // NENHUM CLIENTE PODE DESAPARECER DA BOARD (v76.47). As colunas eram
   // exatamente os nomes do `CONSULTANT_ORDER`, e tudo o que resolvesse para
@@ -345,7 +365,7 @@ function buildConsultantColumns(
   //
   // Agora sobra sempre uma coluna com quem não coube. É feia de propósito:
   // um cliente aqui é uma atribuição por resolver, não um estado normal.
-  const known = new Set<string>(CONSULTANT_ORDER);
+  const known = new Set<string>([...CONSULTANT_ORDER, ...hires.map((h) => h.name)]);
   const orphans = Object.entries(grouped)
     .filter(([name]) => !known.has(name))
     .flatMap(([, list]) => list);
@@ -377,6 +397,7 @@ function toBoardColumns(
         : null,
     // A lane realçada é a de quem está a ver; o SuperAdmin não tem carteira.
     isMine: !isAdmin && employeeName === col.name,
+    newcomer: col.newcomer ?? null,
     // Retrato do consultor (v77.49) — pelo nome da coluna até à credencial e
     // daí ao ficheiro em public/team/avatar; null → inicial.
     avatar: getTeamAvatar(findEmployeeByName(col.name)?.username),

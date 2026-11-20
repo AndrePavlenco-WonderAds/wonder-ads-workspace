@@ -37,6 +37,7 @@ import {
   type EmployeeCredential,
 } from "./credentials";
 import { readAccessGate } from "@/lib/access/gate";
+import { ensureHiredAccounts } from "./hired-accounts";
 import { isSessionBlocked } from "@/lib/access/shared";
 
 /** readSession + o portão dos acessos (v78.72): uma sessão de alguém com o
@@ -48,7 +49,10 @@ export async function readLiveSession(
 ): Promise<SessionPayload | null> {
   const session = await readSession(cookieValue);
   if (!session) return null;
-  return isSessionBlocked(session, await readAccessGate()) ? null : session;
+  // v80.13: as contas criadas na app ficam conhecidas antes de qualquer
+  // `findEmployeeByUsername` desta página.
+  const [gate] = await Promise.all([readAccessGate(), ensureHiredAccounts()]);
+  return isSessionBlocked(session, gate) ? null : session;
 }
 
 export async function getCurrentSession(): Promise<SessionPayload | null> {

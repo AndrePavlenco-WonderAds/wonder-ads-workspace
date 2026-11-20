@@ -25,14 +25,17 @@ import { CONSULTANT_ORDER } from "@/lib/client-overrides";
 import { slugify } from "@/lib/notion";
 import { getConsultantWeekView } from "@/lib/roadmap-admin-helpers";
 import { getConsultantPortfolio } from "@/lib/consultant-portfolio";
+import { listSeoHires } from "@/lib/recrutamento/store";
 
 export const dynamic = "force-dynamic";
 
-/** Resolve the canonical consultant name from a URL slug. */
-function consultantFromSlug(consultantSlug: string): string | null {
-  return (
-    CONSULTANT_ORDER.find((name) => slugify(name) === consultantSlug) ?? null
-  );
+/** Resolve the canonical consultant name from a URL slug. v80.13: também
+ *  os colegas aceites no Recrutamento (contas criadas na app). */
+async function consultantFromSlug(consultantSlug: string): Promise<string | null> {
+  const fromCode = CONSULTANT_ORDER.find((name) => slugify(name) === consultantSlug);
+  if (fromCode) return fromCode;
+  const hires = await listSeoHires().catch(() => []);
+  return hires.find((h) => slugify(h.name) === consultantSlug)?.name ?? null;
 }
 
 export async function generateMetadata({
@@ -41,7 +44,7 @@ export async function generateMetadata({
   params: Promise<{ consultant: string }>;
 }) {
   const { consultant } = await params;
-  const name = consultantFromSlug(consultant);
+  const name = await consultantFromSlug(consultant);
   return {
     title: name
       ? `${name} — A Minha Semana · Wonder Ads`
@@ -55,7 +58,7 @@ export default async function ConsultantWeekPage({
   params: Promise<{ consultant: string }>;
 }) {
   const { consultant } = await params;
-  const consultantName = consultantFromSlug(consultant);
+  const consultantName = await consultantFromSlug(consultant);
   if (!consultantName) notFound();
 
   const employee = await getCurrentEmployee();

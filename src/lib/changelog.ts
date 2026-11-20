@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "80.13",
+    date: "2026-11-20",
+    title: "Recrutamento: entrevistas pergunta a pergunta, ficha do candidato e contratação direta para o SEO DPT",
+    highlights: [
+      "**💼 Recrutamento** no menu do nome (SuperAdmin): os candidatos com estado, grade D–A, Fit e Técnica, filtros e pesquisa. Cada candidato pode ter várias fases, cada uma com o seu template. O primeiro é a «Entrevista Analista de SEO — Fase 2 Parte 1», tal e qual o guião.",
+      "**🎙️ Modo entrevista**: a abertura, depois uma pergunta por ecrã, com os critérios para marcar (✓), a red flag (−3), as notas e a nota /10 ao vivo. Atalhos: ← → muda de ecrã, 1–9 marca critérios, F é a red flag. A nota pode ser ajustada à mão, conta o tempo por pergunta e grava sozinha.",
+      "**🧮 Fecho**: pontos fortes e fracos, como me lembro dele/a, frase que me ficou, dúvidas por esclarecer, e o Fit Cultural e a Capacidade Técnica. O calculado é Técnica = Hard Skills + Detalhe e Fit = Soft Skills + Coachability + Perguntas; a tua nota ganha. A grade final usa a grelha D–A.",
+      "**🗂️ Ficha do candidato**: perfil com contactos, zona onde vive, valor mensal pretendido, focos e gostos pessoais, formações, experiências passadas e anotações que gravam sozinhas. Tem ainda a grade, as médias por bloco, a matriz D–A e cada pergunta com os ✓, as red flags e as notas.",
+      "**✅ «confirmar e aceitar»** cria a conta na app nesse momento: login com a password no cofre dos Acessos (copiável logo ali), uma linha na equipa do C-Suite e uma coluna nova no SEO DPT com o selo «Novo», pronta para receber clientes pelo «Migrar para…».",
+    ],
+  },
+  {
     version: "80.12",
     date: "2026-11-19",
     title: "Acessos: a presença conta em todas as páginas",

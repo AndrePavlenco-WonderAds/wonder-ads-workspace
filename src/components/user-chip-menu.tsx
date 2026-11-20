@@ -13,6 +13,7 @@ import {
   ArrowLeft,
   ArrowUpRight,
   BookOpen,
+  Briefcase,
   CalendarOff,
   ChevronDown,
   ChevronRight,
@@ -709,6 +710,11 @@ export function UserChipMenu({
                 )}
                 {isAdmin && (
                   <MenuLink href="/admin/probation" icon={ClipboardCheck} label="Plano de Probation" hint="Planos de 30 dias e avaliações (RH)" tone="amber" index={10} onPick={close} />
+                )}
+                {/* Recrutamento (v80.13) — candidatos, entrevistas pergunta a
+                    pergunta e a grade D–A; aceitar cria a conta no SEO DPT. */}
+                {isAdmin && (
+                  <MenuLink href="/admin/recrutamento" icon={Briefcase} label="Recrutamento" hint="Candidatos, entrevistas e grade D–A (RH)" tone="amber" index={11} onPick={close} />
                 )}
                 {isAdmin && (
                   <MenuLink href="/admin/producer" icon={Trophy} label="Producer of the Month" hint="Levantamento do mês e eleição do pódio" tone="amber" index={11} onPick={close} />
