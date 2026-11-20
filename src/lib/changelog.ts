@@ -13,6 +13,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "80.15",
+    date: "2026-11-20",
+    title: "Origem dos clientes: «Campanha de publicidade» na Brancóptica",
+    highlights: [
+      "**📣 Botão novo, só na Brancóptica**: «Campanha de publicidade» (folheto, cartaz, rádio, anúncio…), nos tablets das 17 lojas, antes de «Outra». Conta nos relatórios e na exportação como as outras origens, com a sua cor.",
+      "Os botões arrumam-se em 4 + 3 no tablet. A «Outra» da Brancóptica passa a sugerir «Evento, parceria, outra…», porque a rádio está agora na campanha. Os outros clientes ficam exatamente como estavam.",
+    ],
+  },
+  {
     version: "80.14",
     date: "2026-11-20",
     title: "Sentir Saúde com a data de onboarding certa; Real Hotels Group dividido em dois projetos",

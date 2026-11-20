@@ -722,6 +722,10 @@ const BRANCOPTICA: OrigemClient = {
     recomendacao: "Família, amigos, outro cliente",
     medico: "Oftalmologista, Médis, ADSE…",
     porta: "Viu a loja na rua",
+    // v80.14: um botão só da Brancóptica, em todas as lojas. A rádio passa
+    // para a campanha, por isso a «Outra» deixa de a sugerir.
+    campanha: "Folheto, cartaz, rádio, anúncio…",
+    outro: "Evento, parceria, outra…",
   }),
   channels: DESK_CHANNELS,
   startDay: START,

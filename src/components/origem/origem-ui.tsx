@@ -43,6 +43,7 @@ export const SOURCE_ICONS: Record<string, LucideIcon> = {
   guias: Star,
   evento: Trophy,
   publicidade: Megaphone,
+  campanha: Megaphone,
   frota: Truck,
   outro: MoreHorizontal,
 };

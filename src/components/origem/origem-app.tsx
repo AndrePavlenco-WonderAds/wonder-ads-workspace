@@ -664,7 +664,7 @@ function RegisterView({
 
         <fieldset className="mt-7 sm:mt-9" disabled={readOnly}>
           <legend className="sr-only">Origem do {cfg.person.one}</legend>
-          <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-6">
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-12">
             {main.map((s, i) => (
               <SourceKey key={s.id} source={s} className={keySpan(main.length, i)} onPick={() => onPick(s.id)} disabled={readOnly} />
             ))}
@@ -698,12 +698,19 @@ function SourceIcon({ id, className }: { id: string; className?: string }) {
   return <Icon className={className} />;
 }
 
-/** As teclas das origens em linhas cheias. No ecrã largo (6 colunas): 6 = 3+3,
- *  5 = 3+2, 4 = 2+2. No telemóvel, duas por linha e a última ocupa a linha
- *  toda quando sobra. */
+/** As teclas das origens em linhas cheias. No ecrã largo (12 colunas): 6 = 3+3,
+ *  5 = 3+2, 4 = 2+2, 7 = 4+3 (a Brancóptica, com a campanha — v80.14). No
+ *  telemóvel, duas por linha e a última ocupa a linha toda quando sobra. */
 function keySpan(n: number, i: number): string {
   const lastAlone = n % 2 === 1 && i === n - 1 ? "col-span-2 " : "";
-  const wide = n === 4 || (n === 5 && i >= 3) ? "md:col-span-3" : "md:col-span-2";
+  const wide =
+    n === 7
+      ? i < 4
+        ? "md:col-span-3"
+        : "md:col-span-4"
+      : n === 4 || (n === 5 && i >= 3)
+        ? "md:col-span-6"
+        : "md:col-span-4";
   return lastAlone + wide;
 }
 

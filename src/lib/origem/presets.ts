@@ -24,6 +24,10 @@ const C = {
   publicidade: "#3F5FC8",
   evento: "#008300",
   frota: "#EDA100",
+  // v80.14: «Campanha de publicidade», só na Brancóptica — carmim, validado
+  // contra TODAS as origens dela (o pior par, com «Redes sociais»: ΔE 15,1
+  // daltonismo / 16,0 visão normal).
+  campanha: "#B5384A",
 } as const;
 
 const google = (hint = "Pesquisa ou Google Maps"): OrigemSource => ({ id: "google", label: "Google", hint, color: C.google, search: true });
@@ -34,8 +38,12 @@ const medico = (hint: string, label = "Médico ou seguro"): OrigemSource => ({ i
 const porta = (hint: string): OrigemSource => ({ id: "porta", label: "Passagem à porta", hint, color: C.porta });
 const outro = (hint = "Rádio, jornal, evento…"): OrigemSource => ({ id: "outro", label: "Outra", hint, color: C.outro });
 
-/** Clínicas: a lista da MyMedic (validada nesta ordem). */
-export function clinicSources(o: { recomendacao?: string; medico?: string; medicoLabel?: string; porta?: string } = {}): OrigemSource[] {
+/** Clínicas: a lista da MyMedic (validada nesta ordem). `campanha` (o hint)
+ *  acrescenta «Campanha de publicidade» antes de «Outra» — v80.14, só a
+ *  Brancóptica a usa. */
+export function clinicSources(
+  o: { recomendacao?: string; medico?: string; medicoLabel?: string; porta?: string; campanha?: string; outro?: string } = {},
+): OrigemSource[] {
   return [
     google(),
     ia,
@@ -43,7 +51,8 @@ export function clinicSources(o: { recomendacao?: string; medico?: string; medic
     recomendacao(o.recomendacao ?? "Família, amigos, outro paciente"),
     medico(o.medico ?? "Encaminhado, Médis, ADSE…", o.medicoLabel),
     porta(o.porta ?? "Viu a clínica na rua"),
-    outro(),
+    ...(o.campanha ? [{ id: "campanha", label: "Campanha de publicidade", hint: o.campanha, color: C.campanha }] : []),
+    outro(o.outro),
   ];
 }
 
