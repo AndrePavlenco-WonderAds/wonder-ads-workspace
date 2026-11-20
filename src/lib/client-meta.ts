@@ -45,6 +45,8 @@ export const CLIENT_LOGOS: Record<string, string> = {
   // (apple-touch-icon, branco sobre preto). O wordmark do cabeçalho é um
   // SVG de 8:1 que num chip quadrado ficava reduzido a um traço.
   "real-hotels-group": "/logos/real-hotels-group.png",
+  // v80.14: o Santa Eulália é um hotel do grupo — o mesmo monograma.
+  "real-hotels-group-santa-eulalia": "/logos/real-hotels-group.png",
   // ATN Medical (v77.49) — o logótipo do cabeçalho de atnmedical.pt
   // («Ativo-1-1.png», 140×47): monograma + wordmark ATN MEDICAL, azul sobre
   // transparente. O ícone quadrado azul do site (v77.47) ficava um borrão
@@ -92,6 +94,7 @@ const LOGO_BG_OVERRIDES: Record<string, LogoBgMode> = {
   "physio-hub": "dark",
   // Real Hotels Group — o monograma vem no seu próprio quadrado preto.
   "real-hotels-group": "dark",
+  "real-hotels-group-santa-eulalia": "dark",
 };
 
 export function getLogoBgMode(slug: string): LogoBgMode {
@@ -114,6 +117,7 @@ const LOGO_SIZING_OVERRIDES: Record<string, LogoSizing> = {
   "physio-hub": "tight",
   // Quadrado preto de canto a canto — o preenchimento é o próprio painel.
   "real-hotels-group": "tight",
+  "real-hotels-group-santa-eulalia": "tight",
   // Wordmark largo (≈3:1), azul sobre branco — o mesmo caso da Medway.
   "atn-medical": "tight",
   // Wordmark de duas linhas (≈6:1), preto sobre branco.
@@ -154,6 +158,9 @@ export const CLIENT_WEBSITES: Record<string, string> = {
   "antonio-gaspar": "https://antoniogaspar.pt/",
   "physio-hub": "https://www.physiohub.pt/",
   "real-hotels-group": "https://realhotelsgroup.com/",
+  // v80.14: o site do hotel, o «outro website» do formulário do grupo.
+  "real-hotels-group-santa-eulalia":
+    "https://www.granderealsantaeulalia.realhotelsgroup.com/pt-pt/",
   "atn-medical": "https://atnmedical.pt/",
   // v78.0: o formulário de onboarding trouxe um link do Gmail no campo do
   // website — sem isto o Keyword Research não tinha domínio onde ancorar.

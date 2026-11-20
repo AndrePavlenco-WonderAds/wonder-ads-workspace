@@ -32,6 +32,8 @@ const TIERS: Record<string, ClientTier> = {
   "fisio-restelo": "core",
   // v77.44: Real Hotels Group — «Core size», dito pelo André.
   "real-hotels-group": "core",
+  // v80.14: o Santa Eulália nasce do RHG — o mesmo tier.
+  "real-hotels-group-santa-eulalia": "core",
 
   // 3. Growth — premium tier
   brancoptica: "growth",

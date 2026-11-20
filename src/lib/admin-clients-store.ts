@@ -78,7 +78,9 @@ export const DEFAULT_STARTING_DATES: Record<string, string> = {
   "fisio-restelo": "2026-02-12",
   "monte-mar": "2026-03-23",
   cdt: "2026-03-23",
-  "sentir-saude": "2026-06-15",
+  // v80.14: Sentir Saúde — onboarding a 17/06/2026 (estava 15/06 aqui e
+  // 27/05 gravado no KV).
+  "sentir-saude": "2026-06-17",
   "clinica-fernando-almeida": "2026-06-15",
   // v76.39: Maratona Clube de Portugal — onboarding e arranque a 01/09/2026.
   "maratona-clube-de-portugal": "2026-09-01",
@@ -93,6 +95,9 @@ export const DEFAULT_STARTING_DATES: Record<string, string> = {
   // v80.5: Real Hotels Group (Maria Assena) — o onboarding passou para
   // 20/11/2026 (estava 24/09/2026, o dia em que entrou no registo).
   "real-hotels-group": "2026-11-20",
+  // v80.14: o RHG dividiu-se em dois projetos — o Santa Eulália arranca no
+  // mesmo dia que o grupo.
+  "real-hotels-group-santa-eulalia": "2026-11-20",
   // v77.47.1: ATN Medical (Maria Assena) — onboarding a 01/10/2026.
   "atn-medical": "2026-10-01",
   // v78.0: Clínica Médica Dentária Colégio Militar (Maria Assena) —

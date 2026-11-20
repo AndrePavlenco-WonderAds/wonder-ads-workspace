@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "80.14",
+    date: "2026-11-20",
+    title: "Sentir Saúde com a data de onboarding certa; Real Hotels Group dividido em dois projetos",
+    highlights: [
+      "**💆 Sentir Saúde**: onboarding a **17/06/2026** (estava 27/05). A pastilha «Onboarded», o roadmap e a Starting date dos Clients mostram a data nova.",
+      "**🏨 Real Hotels Group** passa a ser dois projetos na carteira da **Maria Assena**: **Real Hotels Group** e **Real Hotels Group Santa Eulália** (granderealsantaeulalia.realhotelsgroup.com), ambos Core e com onboarding a 20/11/2026.",
+      "**📝 Um formulário de onboarding para cada um**: o processo do Real Hotels Group recomeça do zero (o formulário anterior fica guardado), e o Santa Eulália tem o seu link próprio. Roadmap, keywords e brief do grupo ficam onde estavam.",
+    ],
+  },
+  {
     version: "80.13",
     date: "2026-11-20",
     title: "Recrutamento: entrevistas pergunta a pergunta, ficha do candidato e contratação direta para o SEO DPT",

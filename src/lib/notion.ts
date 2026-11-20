@@ -104,6 +104,14 @@ const EXTRA_SEO_CLIENTS: Array<{
   // onboarding chamava-se «(Santa Eulália)»; passou a ser o grupo, sem a
   // unidade no nome nem no slug.
   { title: "Real Hotels Group", slug: "real-hotels-group", icon: "🏨" },
+  // v80.14: o Real Hotels Group dividiu-se em dois projetos da Maria Assena —
+  // o grupo (acima) e o Grande Real Santa Eulália (Albufeira), cada um com o
+  // seu formulário de onboarding.
+  {
+    title: "Real Hotels Group Santa Eulália",
+    slug: "real-hotels-group-santa-eulalia",
+    icon: "🏨",
+  },
   // ATN Medical (atnmedical.pt, v77.47) — o primeiro cliente da Maria Assena.
   // Já existia no registo do fluxo de onboarding com este slug (formulário
   // por preencher); fica aqui para aparecer na coluna dela desde já.
@@ -126,7 +134,8 @@ const EXTRA_SEO_CLIENTS: Array<{
 // v17: os clientes do onboarding saem da cache e passam a ser juntados a cada
 // pedido (v77.86) — o bump deita fora a lista que ficou em cache sem eles
 // durante a falha do KV de 12/10/2026.
-const SEO_CLIENTS_CACHE_KEY = "seo-clients-v17";
+// v18: o Real Hotels Group divide-se — entra o Santa Eulália (v80.14).
+const SEO_CLIENTS_CACHE_KEY = "seo-clients-v18";
 
 /** Última lista que a Notion devolveu inteira (v77.83). Quando o
  *  unstable_cache falha (cache miss — p.ex. depois de um revalidatePath da

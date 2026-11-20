@@ -89,6 +89,8 @@ const MARIA_A = new Set([
   "clinica-medica-dentaria-colegio-militar",
   "verychaga",
   "real-hotels-group",
+  // v80.14: o RHG dividiu-se em dois projetos — + Santa Eulália.
+  "real-hotels-group-santa-eulalia",
 ]);
 
 /** Os consultores de SEO que podem ter carteira — nome de exibição (tem de
