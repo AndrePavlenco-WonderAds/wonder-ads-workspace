@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "80.18",
+    date: "2026-11-20",
+    title: "Recrutamento: prova prática passa a 240 min",
+    highlights: [
+      "**⏱ Relógio da prática (Fase 2 · Parte 2) de 120 para 240 min.** Vale também para os links já enviados; a ficha só marca ⚠︎ acima dos 240 min.",
+    ],
+  },
+  {
     version: "80.17",
     date: "2026-11-20",
     title: "Recrutamento: secção «Pessoal» no fim da entrevista (Fase 2 · Parte 1)",

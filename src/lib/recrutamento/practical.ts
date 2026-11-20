@@ -78,10 +78,10 @@ export const SEO_GEO_PRATICA: PracticalTemplate = {
   id: PRACTICAL_TEMPLATE_ID,
   version: 1,
   title: "Entrevista Fase 2 — Prática Parte 2",
-  subtitle: "SEO/GEO Consultant · WonderAds SEO/GEO DPT · Duração total: 120 min.",
+  subtitle: "SEO/GEO Consultant · WonderAds SEO/GEO DPT · Duração total: 240 min.",
   phase: "Fase 2 · Parte 2",
   role: "Consultor de SEO",
-  durationMin: 120,
+  durationMin: 240,
   intro: [
     "Ao longo do exercício, podes usar o teu pc e qualquer ferramenta (Ahrefs, SEMrush, Screaming Frog, GSC público, etc.).",
     "O que interessa é como pensas e como priorizas as coisas, não cobrir tudo com demasiado textos de ChatGPT, etc..",

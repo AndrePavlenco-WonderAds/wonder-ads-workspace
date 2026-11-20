@@ -2,7 +2,7 @@
 
 // A prova prática do lado do CANDIDATO (Recrutamento, Fase 2 · Parte 2,
 // v80.16) — /candidatura/<token>. Ecrã de boas-vindas → «Começar» (arranca
-// o relógio de 120 min) → os 4 pontos do guião com as respostas → «Entregar».
+// o relógio de 240 min) → os 4 pontos do guião com as respostas → «Entregar».
 //
 // Grava sozinha: 800 ms depois da última mudança, e ao sair da página
 // (pagehide / separador escondido) vai o que faltar com keepalive — a lição
@@ -315,7 +315,7 @@ export function PracticalCandidate({
             className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-semibold tabular-nums ${
               over ? "bg-amber-100 text-amber-800" : left < 15 * 60_000 ? "bg-rose-50 text-rose-700" : "bg-black/[0.05] text-black/75"
             }`}
-            title={over ? "Passaste os 120 min previstos — podes acabar e entregar na mesma." : "Tempo que falta dos 120 min"}
+            title={over ? `Passaste os ${template.durationMin} min previstos — podes acabar e entregar na mesma.` : `Tempo que falta dos ${template.durationMin} min`}
           >
             <Clock className="h-3.5 w-3.5" />
             {over ? `+${fmtClock(-left)}` : fmtClock(left)}
