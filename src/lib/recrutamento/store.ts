@@ -4,13 +4,18 @@
 // hr:candidate:<id>      o candidato inteiro (perfil + entrevistas + decisão)
 // hr:accounts            HASH username → conta criada na app (ver
 //                        lib/auth/hired-accounts.ts) — escrita ao aceitar
+// hr:practical-token:<t> o link público de uma prática (v80.16) →
+//                        { candidateId, practicalId }
+// hr:practical-sub:<id>  o que o candidato escreve na prática (só a API
+//                        pública /api/candidatura escreve aqui, mais o
+//                        «deixar voltar a editar» da ficha)
 //
 // Todas as escritas leem o registo fresco e aplicam a operação por cima (como
 // as fichas do prospect). Uma só pessoa pontua uma entrevista de cada vez, e
 // o browser manda os pedidos em fila, por isso não há corridas a sério.
 
 import "server-only";
-import { randomUUID } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import { kv } from "@vercel/kv";
 import { findEmployeeByUsername, runtimeCredentials } from "@/lib/auth/credentials";
 import {
@@ -29,6 +34,8 @@ import {
   ACCEPT_PHRASE,
   CANDIDATE_KEY,
   CANDIDATES_INDEX_KEY,
+  PRACTICAL_SUB_KEY,
+  PRACTICAL_TOKEN_KEY,
   hydrateAnswer,
   hydrateCandidate,
   hydrateClosing,
@@ -42,6 +49,16 @@ import {
   type Interview,
 } from "./shared";
 import { DEFAULT_TEMPLATE_ID, getTemplate } from "./templates";
+import {
+  emptyReview,
+  getPracticalTemplate,
+  hydrateAnswers,
+  hydrateReview,
+  hydrateSubmission,
+  PRACTICAL_TEMPLATE_ID,
+  type Practical,
+  type PracticalSubmission,
+} from "./practical";
 
 export const recruitmentConfigured = Boolean(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
 
@@ -130,6 +147,7 @@ export async function createCandidate(input: CandidateInput, by: string): Promis
     status: "pipeline",
     decision: null,
     interviews: [newInterview(templateId, isoDay(input.date))],
+    practicals: [],
     createdAt: now,
     createdBy: by,
     updatedAt: now,
@@ -155,7 +173,41 @@ export type CandidateOp =
   | { op: "reopen"; interviewId: string }
   | { op: "delete-interview"; interviewId: string }
   | { op: "reject"; note?: string }
-  | { op: "undo-reject" };
+  | { op: "undo-reject" }
+  // Prática — Fase 2 · Parte 2 (v80.16)
+  | { op: "new-practical"; site: string; date?: string | null }
+  | { op: "practical-meta"; practicalId: string; site?: string; date?: string | null }
+  | { op: "practical-review"; practicalId: string; review: unknown }
+  | { op: "practical-close"; practicalId: string }
+  | { op: "practical-reopen"; practicalId: string }
+  | { op: "practical-unlock"; practicalId: string }
+  | { op: "practical-new-link"; practicalId: string }
+  | { op: "delete-practical"; practicalId: string };
+
+function practicalOf(c: Candidate, id: string): Practical {
+  const p = c.practicals.find((x) => x.id === id);
+  if (!p) throw new RecruitError("Esta prática já não existe.", 404);
+  return p;
+}
+
+/** O segredo do link do candidato: 24 caracteres, impossível de adivinhar. */
+function newPracticalToken(): string {
+  return randomBytes(18).toString("base64url");
+}
+
+/** «site.pt» → «https://site.pt/». Vazio = erro (o guião pede o site). */
+function cleanSite(v: unknown): string {
+  const raw = clean(v, 400);
+  if (!raw) throw new RecruitError("Falta o site que o candidato vai auditar.");
+  const withProto = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+  try {
+    const u = new URL(withProto);
+    if (!/^https?:$/.test(u.protocol) || !u.hostname.includes(".")) throw new Error("bad");
+    return u.toString();
+  } catch {
+    throw new RecruitError("Esse site não parece um endereço válido.");
+  }
+}
 
 function interviewOf(c: Candidate, id: string): Interview {
   const i = c.interviews.find((x) => x.id === id);
@@ -255,6 +307,74 @@ export async function applyCandidateOp(id: string, op: CandidateOp, by: string):
       c.decision = null;
       break;
     }
+    case "new-practical": {
+      if (c.status === "aceite") throw new RecruitError("Este candidato já foi aceite.", 409);
+      const t = getPracticalTemplate(PRACTICAL_TEMPLATE_ID)!;
+      const p: Practical = {
+        id: randomUUID().slice(0, 8),
+        templateId: t.id,
+        templateVersion: t.version,
+        token: newPracticalToken(),
+        site: cleanSite(op.site),
+        date: isoDay(op.date),
+        createdAt: now,
+        createdBy: by,
+        review: emptyReview(),
+        reviewer: null,
+        reviewedAt: null,
+      };
+      await kv.set(PRACTICAL_TOKEN_KEY(p.token), { candidateId: c.id, practicalId: p.id });
+      c.practicals.push(p);
+      break;
+    }
+    case "practical-meta": {
+      const p = practicalOf(c, op.practicalId);
+      if (op.site !== undefined) p.site = cleanSite(op.site);
+      if (op.date !== undefined) p.date = isoDay(op.date);
+      break;
+    }
+    case "practical-review": {
+      const p = practicalOf(c, op.practicalId);
+      p.review = hydrateReview(op.review);
+      p.reviewer ??= by;
+      break;
+    }
+    case "practical-close": {
+      const p = practicalOf(c, op.practicalId);
+      p.reviewedAt = now;
+      p.reviewer ??= by;
+      break;
+    }
+    case "practical-reopen": {
+      if (c.status === "aceite") throw new RecruitError("Este candidato já foi aceite.", 409);
+      practicalOf(c, op.practicalId).reviewedAt = null;
+      break;
+    }
+    case "practical-unlock": {
+      // O candidato volta a poder mexer na entrega (e a avaliação reabre).
+      if (c.status === "aceite") throw new RecruitError("Este candidato já foi aceite.", 409);
+      const p = practicalOf(c, op.practicalId);
+      const sub = await getPracticalSubmission(p.id);
+      sub.submittedAt = null;
+      sub.updatedAt = now;
+      await kv.set(PRACTICAL_SUB_KEY(p.id), sub);
+      p.reviewedAt = null;
+      break;
+    }
+    case "practical-new-link": {
+      const p = practicalOf(c, op.practicalId);
+      const old = p.token;
+      p.token = newPracticalToken();
+      await kv.set(PRACTICAL_TOKEN_KEY(p.token), { candidateId: c.id, practicalId: p.id });
+      await kv.del(PRACTICAL_TOKEN_KEY(old));
+      break;
+    }
+    case "delete-practical": {
+      const p = practicalOf(c, op.practicalId);
+      c.practicals = c.practicals.filter((x) => x.id !== p.id);
+      await kv.del(PRACTICAL_TOKEN_KEY(p.token), PRACTICAL_SUB_KEY(p.id));
+      break;
+    }
     default:
       throw new RecruitError("Operação desconhecida.");
   }
@@ -266,8 +386,95 @@ export async function deleteCandidate(id: string): Promise<void> {
   const c = await getCandidate(id);
   if (!c) return;
   if (c.status === "aceite") throw new RecruitError("Um candidato aceite já tem conta na app — não se apaga daqui.", 409);
-  await kv.del(CANDIDATE_KEY(id));
+  const practicalKeys = c.practicals.flatMap((p) => [PRACTICAL_TOKEN_KEY(p.token), PRACTICAL_SUB_KEY(p.id)]);
+  await kv.del(CANDIDATE_KEY(id), ...practicalKeys);
   await kv.srem(CANDIDATES_INDEX_KEY, id);
+}
+
+// ---------------------------------------------------------------------------
+// Prática — o lado do candidato (link público /candidatura/<token>)
+// ---------------------------------------------------------------------------
+
+export async function getPracticalSubmission(practicalId: string): Promise<PracticalSubmission> {
+  return hydrateSubmission(await kv.get<unknown>(PRACTICAL_SUB_KEY(practicalId)));
+}
+
+export async function getPracticalSubmissions(ids: string[]): Promise<Record<string, PracticalSubmission>> {
+  const out: Record<string, PracticalSubmission> = {};
+  if (!recruitmentConfigured || !ids.length) return out;
+  const raws = await kv.mget<unknown[]>(...ids.map(PRACTICAL_SUB_KEY));
+  ids.forEach((id, i) => {
+    out[id] = hydrateSubmission(raws?.[i]);
+  });
+  return out;
+}
+
+const TOKEN_RE = /^[A-Za-z0-9_-]{16,80}$/;
+
+/** O candidato e a prática de um link. null = link inválido ou revogado. */
+export async function resolvePracticalToken(
+  token: string,
+): Promise<{ candidate: Candidate; practical: Practical } | null> {
+  if (!recruitmentConfigured || !TOKEN_RE.test(token)) return null;
+  const ref = await kv.get<{ candidateId?: unknown; practicalId?: unknown }>(PRACTICAL_TOKEN_KEY(token));
+  if (!ref || typeof ref.candidateId !== "string" || typeof ref.practicalId !== "string") return null;
+  const candidate = await getCandidate(ref.candidateId);
+  const practical = candidate?.practicals.find((p) => p.id === ref.practicalId && p.token === token);
+  if (!candidate || !practical) return null;
+  return { candidate, practical };
+}
+
+/** Um link que já não recebe nada: candidato recusado. */
+export function practicalLinkClosed(c: Candidate): boolean {
+  return c.status === "recusado";
+}
+
+export type CandidatePracticalAction =
+  | { action: "open" }
+  | { action: "start" }
+  | { action: "save"; answers: unknown }
+  | { action: "submit"; answers?: unknown };
+
+export async function candidatePracticalAction(token: string, act: CandidatePracticalAction): Promise<PracticalSubmission> {
+  ensureConfigured();
+  const r = await resolvePracticalToken(token);
+  if (!r || practicalLinkClosed(r.candidate)) throw new RecruitError("Este link já não está ativo.", 404);
+  const key = PRACTICAL_SUB_KEY(r.practical.id);
+  const sub = await getPracticalSubmission(r.practical.id);
+  const now = Date.now();
+  switch (act.action) {
+    case "open": {
+      if (sub.openedAt) return sub;
+      sub.openedAt = now;
+      break;
+    }
+    case "start": {
+      if (sub.startedAt) return sub;
+      sub.openedAt ??= now;
+      sub.startedAt = now;
+      break;
+    }
+    case "save": {
+      if (sub.submittedAt) throw new RecruitError("A prova já foi entregue — já não dá para mudar.", 409);
+      sub.openedAt ??= now;
+      sub.startedAt ??= now;
+      sub.answers = hydrateAnswers(act.answers);
+      break;
+    }
+    case "submit": {
+      if (sub.submittedAt) return sub;
+      if (act.answers !== undefined) sub.answers = hydrateAnswers(act.answers);
+      sub.openedAt ??= now;
+      sub.startedAt ??= now;
+      sub.submittedAt = now;
+      break;
+    }
+    default:
+      throw new RecruitError("Pedido inválido.");
+  }
+  sub.updatedAt = now;
+  await kv.set(key, sub);
+  return sub;
 }
 
 // ---------------------------------------------------------------------------

@@ -55,6 +55,14 @@ import {
   type Interview,
 } from "@/lib/recrutamento/shared";
 import { getTemplate, INTERVIEW_TEMPLATES, type InterviewTemplate } from "@/lib/recrutamento/templates";
+import {
+  getPracticalTemplate,
+  PRACTICAL_TEMPLATES,
+  practicalScore,
+  practicalStage,
+  type PracticalSubmission,
+} from "@/lib/recrutamento/practical";
+import { PracticalReviewPanel, PracticalStageChip } from "./practical-review";
 import { accessMessage } from "@/lib/access/shared";
 import { Field, inputCls, Modal } from "./hub";
 import { GradeBadge, GradeMatrix, Initials, scoreColor, ScoreBar, StageChip, TONE } from "./ui";
@@ -89,8 +97,11 @@ export function CandidateFile({
   initial,
   canSeeAccess,
   names,
+  subs = {},
 }: {
   initial: Candidate;
+  /** O que o candidato já escreveu em cada prática (v80.16), por id. */
+  subs?: Record<string, PracticalSubmission>;
   /** Quem está a ver abre /admin/acessos (só o André). */
   canSeeAccess: boolean;
   /** username → nome de quem entrevistou/decidiu. */
@@ -100,7 +111,9 @@ export function CandidateFile({
   const [c, setC] = useState<Candidate>(initial);
   const head = headlineInterview(c);
   const [selected, setSelected] = useState<string | null>(head?.id ?? null);
-  const interview = c.interviews.find((i) => i.id === selected) ?? head;
+  // Uma prática selecionada (v80.16) toma o lugar do resumo da entrevista.
+  const practical = c.practicals.find((p) => p.id === selected) ?? null;
+  const interview = practical ? null : (c.interviews.find((i) => i.id === selected) ?? head);
   const template = interview ? getTemplate(interview.templateId) : null;
   const sum = useMemo(
     () => (interview && template ? summarize(template, interview.answers, interview.closing) : null),
@@ -221,7 +234,7 @@ export function CandidateFile({
       <ProfileSection candidate={c} onPatch={(patch, key) => op({ op: "profile", patch }, key)} busyKey={busy} />
 
       {/* Fases */}
-      {c.interviews.length > 0 && (
+      {(c.interviews.length > 0 || c.practicals.length > 0) && (
         <div className="mt-6 flex flex-wrap items-center gap-2">
           {c.interviews.map((i) => {
             const t = getTemplate(i.templateId);
@@ -241,6 +254,38 @@ export function CandidateFile({
               </button>
             );
           })}
+          {c.practicals.map((p) => {
+            const t = getPracticalTemplate(p.templateId);
+            const on = practical?.id === p.id;
+            const st = practicalStage(p, subs[p.id] ?? null);
+            const sc = practicalScore(p.review).final;
+            return (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => setSelected(p.id)}
+                className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[12px] font-semibold transition ${
+                  on ? "border-white/30 bg-white/[0.08] text-white" : "border-white/10 text-white/50 hover:text-white/80"
+                }`}
+              >
+                {st === "avaliada" ? (
+                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-300" />
+                ) : st === "entregue" ? (
+                  <CheckCircle2 className="h-3.5 w-3.5 text-violet-300" />
+                ) : (
+                  <Clock className="h-3.5 w-3.5 text-amber-300/80" />
+                )}
+                {t ? t.phase : "Prática"} · prática
+                {sc !== null ? (
+                  <span className="font-normal tabular-nums" style={{ color: scoreColor(sc) }}>
+                    {fmtScore(sc)}
+                  </span>
+                ) : (
+                  p.date && <span className="font-normal text-white/40">{fmtDay(p.date)}</span>
+                )}
+              </button>
+            );
+          })}
           {c.status !== "aceite" && (
             <button
               type="button"
@@ -254,7 +299,24 @@ export function CandidateFile({
         </div>
       )}
 
-      {interview && template && sum ? (
+      {practical ? (
+        <>
+          <div className="mt-4 flex flex-wrap items-center gap-2 text-[12px] text-white/45">
+            <PracticalStageChip stage={practicalStage(practical, subs[practical.id] ?? null)} />
+            {practical.date && <span>marcada para {fmtDay(practical.date)}</span>}
+          </div>
+          <PracticalReviewPanel
+            key={practical.id}
+            candidate={c}
+            practical={practical}
+            initialSub={subs[practical.id] ?? null}
+            op={op}
+            busy={busy}
+            onCandidate={setC}
+            nameOf={nameOf}
+          />
+        </>
+      ) : interview && template && sum ? (
         <>
           {/* Resumo: grade + eixos + matriz */}
           <section className="animate-fade-up mt-5 grid grid-cols-1 gap-5 xl:grid-cols-[340px_minmax(0,1fr)_minmax(0,1.1fr)]">
@@ -419,8 +481,19 @@ export function CandidateFile({
         <PhaseModal
           busy={busy === "phase"}
           onClose={() => setModal(null)}
-          onCreate={async (templateId, date) => {
-            const n = await op({ op: "new-interview", templateId, date }, "phase");
+          error={error}
+          onCreate={async (choice, date, site) => {
+            if (choice.startsWith("pratica:")) {
+              const n = await op({ op: "new-practical", site, date }, "phase");
+              if (n) {
+                setModal(null);
+                const last = n.practicals[n.practicals.length - 1];
+                if (last) setSelected(last.id);
+                router.refresh();
+              }
+              return;
+            }
+            const n = await op({ op: "new-interview", templateId: choice, date }, "phase");
             if (n) {
               setModal(null);
               const last = n.interviews[n.interviews.length - 1];
@@ -1235,25 +1308,57 @@ function EditModal({
   );
 }
 
-function PhaseModal({ busy, onClose, onCreate }: { busy: boolean; onClose: () => void; onCreate: (templateId: string, date: string | null) => void }) {
-  const [templateId, setTemplateId] = useState(INTERVIEW_TEMPLATES[0]?.id ?? "");
+function PhaseModal({
+  busy,
+  error,
+  onClose,
+  onCreate,
+}: {
+  busy: boolean;
+  error: string | null;
+  onClose: () => void;
+  /** `choice` = id de um template de entrevista, ou «pratica:<id>». */
+  onCreate: (choice: string, date: string | null, site: string) => void;
+}) {
+  const [choice, setChoice] = useState(INTERVIEW_TEMPLATES[0]?.id ?? "");
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [site, setSite] = useState("");
+  const isPractical = choice.startsWith("pratica:");
   return (
     <Modal onClose={() => !busy && onClose()}>
-      <ModalHead title="Nova fase" sub="Uma entrevista nova para este candidato, com o seu template." onClose={onClose} />
+      <ModalHead
+        title="Nova fase"
+        sub={
+          isPractical
+            ? "A prova prática: o candidato faz num link teu, e a avaliação fica aqui na ficha."
+            : "Uma entrevista nova para este candidato, com o seu template."
+        }
+        onClose={onClose}
+      />
       <div className="space-y-4 px-6 py-5">
         <Field label="Template">
-          <select value={templateId} onChange={(e) => setTemplateId(e.target.value)} className={inputCls}>
+          <select value={choice} onChange={(e) => setChoice(e.target.value)} className={inputCls}>
             {INTERVIEW_TEMPLATES.map((t) => (
               <option key={t.id} value={t.id} className="bg-[#11111a]">
                 {t.title} — {t.phase}
               </option>
             ))}
+            {PRACTICAL_TEMPLATES.map((t) => (
+              <option key={t.id} value={`pratica:${t.id}`} className="bg-[#11111a]">
+                {t.title} — link para o candidato
+              </option>
+            ))}
           </select>
         </Field>
+        {isPractical && (
+          <Field label="Site a auditar" hint="O ponto 1 do guião — o candidato vê-o no link.">
+            <input value={site} onChange={(e) => setSite(e.target.value)} placeholder="https://…" className={inputCls} autoFocus />
+          </Field>
+        )}
         <Field label="Data">
           <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={`${inputCls} [color-scheme:dark]`} />
         </Field>
+        {error && <p className="text-[12px] text-rose-300">{error}</p>}
       </div>
       <div className="flex justify-end gap-2 border-t border-white/[0.06] px-6 py-4">
         <button type="button" onClick={onClose} className="rounded-full px-4 py-2 text-[12.5px] font-semibold text-white/55 hover:text-white">
@@ -1261,8 +1366,8 @@ function PhaseModal({ busy, onClose, onCreate }: { busy: boolean; onClose: () =>
         </button>
         <button
           type="button"
-          disabled={busy}
-          onClick={() => onCreate(templateId, date || null)}
+          disabled={busy || (isPractical && !site.trim())}
+          onClick={() => onCreate(choice, date || null, site)}
           className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-[12.5px] font-semibold text-black hover:bg-[#ede4ff] disabled:opacity-50"
         >
           {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CalendarDays className="h-3.5 w-3.5" />}

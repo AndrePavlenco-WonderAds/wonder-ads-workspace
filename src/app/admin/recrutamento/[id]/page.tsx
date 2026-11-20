@@ -7,7 +7,7 @@ import { CandidateFile } from "@/components/recrutamento/candidate-file";
 import { accessConsoleUser } from "@/lib/access/guard";
 import { getEmployeeDisplay } from "@/lib/auth/credentials";
 import { recruitmentUser } from "@/lib/recrutamento/guard";
-import { getCandidate } from "@/lib/recrutamento/store";
+import { getCandidate, getPracticalSubmissions } from "@/lib/recrutamento/store";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -26,6 +26,7 @@ export default async function CandidatoPage({ params }: { params: Promise<{ id: 
 
   const usernames = new Set<string>([candidate.createdBy]);
   for (const i of candidate.interviews) if (i.interviewer) usernames.add(i.interviewer);
+  for (const p of candidate.practicals) if (p.reviewer) usernames.add(p.reviewer);
   if (candidate.decision?.by) usernames.add(candidate.decision.by);
   const names: Record<string, string> = {};
   for (const u of usernames) {
@@ -33,10 +34,12 @@ export default async function CandidatoPage({ params }: { params: Promise<{ id: 
     names[u] = getEmployeeDisplay(u)?.name ?? u;
   }
   const canSeeAccess = Boolean(await accessConsoleUser().catch(() => null));
+  // Prática (v80.16): o que o candidato já escreveu em cada uma.
+  const subs = await getPracticalSubmissions(candidate.practicals.map((p) => p.id)).catch(() => ({}));
 
   return (
     <PageShell backHref="/admin/recrutamento" backLabel="Recrutamento">
-      <CandidateFile initial={candidate} canSeeAccess={canSeeAccess} names={names} />
+      <CandidateFile initial={candidate} canSeeAccess={canSeeAccess} names={names} subs={subs} />
     </PageShell>
   );
 }

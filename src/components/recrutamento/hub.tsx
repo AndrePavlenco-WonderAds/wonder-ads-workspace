@@ -28,6 +28,7 @@ import { fmtScore, summarize } from "@/lib/recrutamento/scoring";
 import { fmtEuros, headlineInterview, stageOf, type Candidate, type CandidateStage } from "@/lib/recrutamento/shared";
 import { DEFAULT_TEMPLATE_ID, getTemplate, INTERVIEW_TEMPLATES } from "@/lib/recrutamento/templates";
 import { GradeBadge, Initials, scoreColor, StageChip } from "./ui";
+import { practicalScore } from "@/lib/recrutamento/practical";
 
 type Filter = "todos" | "pipeline" | "entrevistados" | "aceites" | "recusados";
 
@@ -218,7 +219,21 @@ export function RecruitmentHub({ initial }: { initial: Candidate[] }) {
                 <div className="mt-auto flex items-center justify-between pt-4 text-[11.5px] text-white/40">
                   <span>
                     {sum ? `${sum.scored}/${sum.total} perguntas pontuadas` : "Sem entrevista"}
-                    {c.interviews.length > 1 ? ` · ${c.interviews.length} fases` : ""}
+                    {c.interviews.length + c.practicals.length > 1 ? ` · ${c.interviews.length + c.practicals.length} fases` : ""}
+                    {(() => {
+                      // Prática (v80.16): a nota da última, quando já tem.
+                      const last = c.practicals[c.practicals.length - 1];
+                      const sc = last ? practicalScore(last.review).final : null;
+                      if (!last) return null;
+                      return (
+                        <>
+                          {" · prática "}
+                          <b className="tabular-nums" style={{ color: scoreColor(sc) }}>
+                            {sc === null ? "por avaliar" : fmtScore(sc)}
+                          </b>
+                        </>
+                      );
+                    })()}
                   </span>
                   <ArrowRight className="h-3.5 w-3.5 transition group-hover:translate-x-0.5 group-hover:text-white/80" />
                 </div>

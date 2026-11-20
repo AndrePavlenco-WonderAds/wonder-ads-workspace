@@ -3,6 +3,7 @@
 
 import { emptyAnswer, emptyClosing, type Answer, type Closing } from "./scoring";
 import { DEFAULT_TEMPLATE_ID } from "./templates";
+import { hydratePractical, type Practical } from "./practical";
 
 export type CandidateStatus = "pipeline" | "aceite" | "recusado";
 
@@ -59,12 +60,20 @@ export type Candidate = {
   status: CandidateStatus;
   decision: CandidateDecision | null;
   interviews: Interview[];
+  /** Fase 2 · Parte 2 (v80.16): as provas práticas, cada uma com o seu link
+   *  para o candidato. As respostas vivem à parte (hr:practical-sub:<id>). */
+  practicals: Practical[];
   createdAt: number;
   createdBy: string;
   updatedAt: number;
 };
 
 export const CANDIDATE_KEY = (id: string) => `hr:candidate:${id}`;
+/** Link público da prática → { candidateId, practicalId }. */
+export const PRACTICAL_TOKEN_KEY = (token: string) => `hr:practical-token:${token}`;
+/** O que o candidato escreve na prática (separado da ficha: o candidato grava
+ *  ao mesmo tempo que o André avalia, e um nunca pisa o outro). */
+export const PRACTICAL_SUB_KEY = (practicalId: string) => `hr:practical-sub:${practicalId}`;
 export const CANDIDATES_INDEX_KEY = "hr:candidates";
 
 const str = (v: unknown, max = 4000) => (typeof v === "string" ? v.slice(0, max) : "");
@@ -181,6 +190,9 @@ export function hydrateCandidate(raw: unknown): Candidate | null {
     interviews: (Array.isArray(o.interviews) ? o.interviews : [])
       .map(hydrateInterview)
       .filter((i): i is Interview => Boolean(i)),
+    practicals: (Array.isArray(o.practicals) ? o.practicals : [])
+      .map(hydratePractical)
+      .filter((p): p is Practical => Boolean(p)),
     createdAt: num(o.createdAt) ?? 0,
     createdBy: str(o.createdBy, 100),
     updatedAt: num(o.updatedAt) ?? 0,

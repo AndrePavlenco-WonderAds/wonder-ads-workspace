@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "80.16",
+    date: "2026-11-20",
+    title: "Recrutamento: a prova prática (Fase 2 · Parte 2) com link para o candidato e avaliação na ficha",
+    highlights: [
+      "**🧪 Fase nova: «Entrevista Fase 2 — Prática Parte 2»**, tal e qual o guião: auditoria + vídeos Loom, prioridades em PDF, resolver uma prioridade em WordPress/Elementor, keyword research (até 35, com as premium assinaladas e o critério), roadmap de 3 meses e a análise do snippet de código. Em «Nova fase» escolhes a prática e defines o site a auditar.",
+      "**🔗 Link para o candidato** (/candidatura/…), sem login, nas cores da WonderAds: «Começar» arranca o relógio de 120 min, tudo grava sozinho, o PDF carrega-se ali e dá para colar as keywords de uma folha de cálculo. Depois de «Entregar» fica fechado. Só a ficha o pode reabrir («Deixar o candidato voltar a editar»), e há «Gerar link novo» para revogar o antigo.",
+      "**📋 Avaliação na ficha**: cada ponto com o que o candidato entregou (os Loom e o PDF abrem ali mesmo), uma nota de 0 a 10 e notas. A nota da prática é a média, ou «a minha nota». Enquanto a prova decorre, a ficha acompanha ao vivo, a cada 15 s. A nota aparece também na lista de candidatos.",
+    ],
+  },
+  {
     version: "80.15",
     date: "2026-11-20",
     title: "Origem dos clientes: «Campanha de publicidade» na Brancóptica",
