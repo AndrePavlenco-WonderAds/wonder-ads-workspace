@@ -24,10 +24,10 @@ import {
   X,
   type LucideIcon,
 } from "lucide-react";
-import { fmtScore, summarize } from "@/lib/recrutamento/scoring";
+import { ADVANCE_META, fmtScore, summarize } from "@/lib/recrutamento/scoring";
 import { fmtEuros, headlineInterview, stageOf, type Candidate, type CandidateStage } from "@/lib/recrutamento/shared";
-import { DEFAULT_TEMPLATE_ID, getTemplate, INTERVIEW_TEMPLATES } from "@/lib/recrutamento/templates";
-import { GradeBadge, Initials, scoreColor, StageChip } from "./ui";
+import { FIRST_TEMPLATE_ID, getTemplate, INTERVIEW_TEMPLATES, isScreening } from "@/lib/recrutamento/templates";
+import { GradeBadge, Initials, scoreColor, StageChip, TONE } from "./ui";
 import { practicalScore } from "@/lib/recrutamento/practical";
 
 type Filter = "todos" | "pipeline" | "entrevistados" | "aceites" | "recusados";
@@ -62,10 +62,14 @@ export function RecruitmentHub({ initial }: { initial: Candidate[] }) {
   const rows = useMemo(
     () =>
       initial.map((c) => {
-        const i = headlineInterview(c);
+        // A grade vem das entrevistas com pontuação; a Fase 1 (triagem,
+        // v80.22) só dá o selo «avança / não avança».
+        const graded = c.interviews.filter((x) => !isScreening(getTemplate(x.templateId)));
+        const i = headlineInterview({ ...c, interviews: graded });
         const t = i ? getTemplate(i.templateId) : null;
         const sum = i && t ? summarize(t, i.answers, i.closing) : null;
-        return { c, stage: stageOf(c), interview: i, sum };
+        const fase1 = [...c.interviews].reverse().find((x) => isScreening(getTemplate(x.templateId))) ?? null;
+        return { c, stage: stageOf(c), interview: i ?? headlineInterview(c), sum, fase1 };
       }),
     [initial],
   );
@@ -174,7 +178,7 @@ export function RecruitmentHub({ initial }: { initial: Candidate[] }) {
         </div>
       ) : (
         <ul className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {visible.map(({ c, stage, interview, sum }) => (
+          {visible.map(({ c, stage, interview, sum, fase1 }) => (
             <li key={c.id}>
               <Link
                 href={`/admin/recrutamento/${c.id}`}
@@ -190,6 +194,14 @@ export function RecruitmentHub({ initial }: { initial: Candidate[] }) {
                     </p>
                     <div className="mt-2 flex flex-wrap items-center gap-1.5">
                       <StageChip stage={stage} />
+                      {fase1?.closing.advance && (
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-[10.5px] font-semibold ${TONE[ADVANCE_META[fase1.closing.advance].tone].bg} ${TONE[ADVANCE_META[fase1.closing.advance].tone].text}`}
+                          title={fase1.closing.advanceWhy || undefined}
+                        >
+                          Fase 1 · {ADVANCE_META[fase1.closing.advance].short}
+                        </span>
+                      )}
                       {interview?.date && (
                         <span className="inline-flex items-center gap-1 text-[11px] text-white/40">
                           <CalendarDays className="h-3 w-3" />
@@ -218,7 +230,13 @@ export function RecruitmentHub({ initial }: { initial: Candidate[] }) {
                 </div>
                 <div className="mt-auto flex items-center justify-between pt-4 text-[11.5px] text-white/40">
                   <span>
-                    {sum ? `${sum.scored}/${sum.total} perguntas pontuadas` : "Sem entrevista"}
+                    {sum
+                      ? `${sum.scored}/${sum.total} perguntas pontuadas`
+                      : fase1
+                        ? fase1.finishedAt
+                          ? "Fase 1 feita"
+                          : "Fase 1 por fazer"
+                        : "Sem entrevista"}
                     {c.interviews.length + c.practicals.length > 1 ? ` · ${c.interviews.length + c.practicals.length} fases` : ""}
                     {(() => {
                       // Prática (v80.16): a nota da última, quando já tem.
@@ -345,8 +363,8 @@ function NewCandidateModal({ onClose }: { onClose: () => void }) {
     phone: "",
     linkedin: "",
     source: "",
-    templateId: DEFAULT_TEMPLATE_ID,
-    role: getTemplate(DEFAULT_TEMPLATE_ID)?.role ?? "",
+    templateId: FIRST_TEMPLATE_ID,
+    role: getTemplate(FIRST_TEMPLATE_ID)?.role ?? "",
     date: new Date().toISOString().slice(0, 10),
     notes: "",
     location: "",

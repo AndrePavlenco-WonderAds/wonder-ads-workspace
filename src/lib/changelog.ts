@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "80.22",
+    date: "2026-11-23",
+    title: "Recrutamento: Fase 1 · Parte 1, a reunião de apresentação",
+    highlights: [
+      "**🎙️ Nova fase: «Reunião de apresentação — Fase 1 · Parte 1».** São as 9 perguntas da conversa curta: objetivo salarial, zona, formato de contrato, o que faz agora e o que fazia antes, SEO/Web/marketing, trabalho remoto, liderar projetos de 6/12 meses e hobbies. É a primeira da lista na «Nova fase» e é a fase com que nasce um candidato novo.",
+      "**Sem pontos: só notas.** O salário, a zona, o percurso, as formações e os hobbies escrevem-se ao lado da pergunta e ficam logo no perfil da ficha.",
+      "**No fim, uma só decisão:** «Avança para a Fase 2», «Em dúvida» ou «Não avança», com o porquê. A ficha mostra a decisão no lugar da grade e oferece «Marcar a fase seguinte» ou «Recusar candidato». Na lista aparece o selo «Fase 1 · Avança».",
+    ],
+  },
+  {
     version: "80.21",
     date: "2026-11-23",
     title: "Medical Skin Clinic: Growth e folga de custos de 445 €",

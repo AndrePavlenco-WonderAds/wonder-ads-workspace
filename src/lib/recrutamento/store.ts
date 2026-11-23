@@ -48,7 +48,7 @@ import {
   type Candidate,
   type Interview,
 } from "./shared";
-import { DEFAULT_TEMPLATE_ID, getTemplate } from "./templates";
+import { closingScreens, DEFAULT_TEMPLATE_ID, getTemplate } from "./templates";
 import {
   emptyReview,
   getPracticalTemplate,
@@ -158,7 +158,7 @@ export async function createCandidate(input: CandidateInput, by: string): Promis
 }
 
 export type CandidateOp =
-  | { op: "profile"; patch: Partial<Record<ProfileField, string>> & { salaryMonthly?: number | string | null } }
+  | { op: "profile"; patch: ProfilePatch }
   | { op: "new-interview"; templateId?: string; date?: string | null }
   | { op: "interview-date"; interviewId: string; date: string | null }
   | { op: "start"; interviewId: string }
@@ -168,6 +168,9 @@ export type CandidateOp =
       answers?: Record<string, unknown>;
       closing?: unknown;
       step?: number;
+      /** Fase 1 (v80.22): os campos do perfil escritos no ecrã da pergunta.
+       *  Vão na mesma fila da entrevista para os dois nunca se pisarem. */
+      profile?: ProfilePatch;
     }
   | { op: "finish"; interviewId: string }
   | { op: "reopen"; interviewId: string }
@@ -209,6 +212,25 @@ function cleanSite(v: unknown): string {
   }
 }
 
+type ProfilePatch = Partial<Record<ProfileField, string>> & { salaryMonthly?: number | string | null };
+
+function applyProfilePatch(c: Candidate, patch: unknown) {
+  const p = (patch && typeof patch === "object" ? patch : {}) as Record<string, unknown>;
+  for (const field of PROFILE_FIELDS) {
+    if (p[field] === undefined) continue;
+    const v = clean(p[field], PROFILE_MAX[field]);
+    if (field === "name") {
+      if (!v) throw new RecruitError("O nome não pode ficar vazio.");
+      c.name = v;
+    } else if (field === "role") {
+      c.role = v || c.role;
+    } else {
+      c[field] = v;
+    }
+  }
+  if (p.salaryMonthly !== undefined) c.salaryMonthly = parseEuros(p.salaryMonthly);
+}
+
 function interviewOf(c: Candidate, id: string): Interview {
   const i = c.interviews.find((x) => x.id === id);
   if (!i) throw new RecruitError("Esta entrevista já não existe.", 404);
@@ -223,20 +245,7 @@ export async function applyCandidateOp(id: string, op: CandidateOp, by: string):
 
   switch (op.op) {
     case "profile": {
-      const p = (op.patch ?? {}) as Record<string, unknown>;
-      for (const field of PROFILE_FIELDS) {
-        if (p[field] === undefined) continue;
-        const v = clean(p[field], PROFILE_MAX[field]);
-        if (field === "name") {
-          if (!v) throw new RecruitError("O nome não pode ficar vazio.");
-          c.name = v;
-        } else if (field === "role") {
-          c.role = v || c.role;
-        } else {
-          c[field] = v;
-        }
-      }
-      if (p.salaryMonthly !== undefined) c.salaryMonthly = parseEuros(p.salaryMonthly);
+      applyProfilePatch(c, op.patch);
       break;
     }
     case "new-interview": {
@@ -275,7 +284,15 @@ export async function applyCandidateOp(id: string, op: CandidateOp, by: string):
       }
       if (op.closing !== undefined) i.closing = hydrateClosing(op.closing) as Closing;
       if (typeof op.step === "number" && Number.isFinite(op.step)) {
-        i.step = Math.max(0, Math.min(t.questions.length + 3, Math.floor(op.step)));
+        i.step = Math.max(0, Math.min(t.questions.length + closingScreens(t), Math.floor(op.step)));
+      }
+      if (op.profile !== undefined) {
+        // Só os campos que as perguntas da entrevista preenchem.
+        const allowed = new Set<string>(
+          t.questions.flatMap((q) => (q.profile === "salary" ? ["salaryMonthly", "salaryNote"] : q.profile ? [q.profile] : [])),
+        );
+        const raw = (op.profile && typeof op.profile === "object" ? op.profile : {}) as Record<string, unknown>;
+        applyProfilePatch(c, Object.fromEntries(Object.entries(raw).filter(([k]) => allowed.has(k))));
       }
       break;
     }

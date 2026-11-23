@@ -7,7 +7,11 @@
 // (ver a memória «never author training content»): um template novo vem
 // sempre de um guião dado pela direção.
 
-export type SectionId = "hard" | "coach" | "soft" | "detail" | "questions" | "pessoal";
+export type SectionId = "hard" | "coach" | "soft" | "detail" | "questions" | "pessoal" | "condicoes" | "percurso";
+
+/** Campo do perfil do candidato que uma pergunta preenche ao vivo (Fase 1,
+ *  v80.22): o que se escreve no ecrã da pergunta fica logo na ficha. */
+export type ProfileLink = "salary" | "location" | "experience" | "education" | "interests";
 
 export type Criterion = {
   id: string;
@@ -43,6 +47,8 @@ export type Question = {
   /** Pergunta sem pontuação — só notas; fora das contas (secção Pessoal,
    *  v80.17). */
   unscored?: true;
+  /** O campo do perfil que esta pergunta preenche (v80.22). */
+  profile?: ProfileLink;
 };
 
 export type ZoneLabels = { low: string; mid: string; high: string };
@@ -50,6 +56,10 @@ export type ZoneLabels = { low: string; mid: string; high: string };
 export type InterviewTemplate = {
   id: string;
   version: number;
+  /** «screening» = conversa de triagem (Fase 1): sem pontos nem grade; o
+   *  fecho é um só ecrã, «avança para a Fase 2?». Omisso = entrevista com
+   *  pontuação, Fit/Técnica e grade D–A. */
+  kind?: "screening";
   title: string;
   /** A vaga que aparece no cabeçalho («Consultor de SEO»). */
   role: string;
@@ -58,8 +68,9 @@ export type InterviewTemplate = {
   scoringNote: string;
   sections: Array<{ id: SectionId; label: string; short: string }>;
   questions: Question[];
-  fit: { label: string; signals: string; zones: ZoneLabels };
-  tech: { label: string; signals: string; zones: ZoneLabels };
+  /** Só nas entrevistas com pontuação. */
+  fit?: { label: string; signals: string; zones: ZoneLabels };
+  tech?: { label: string; signals: string; zones: ZoneLabels };
 };
 
 const RF = (label: string, pts = 3): Penalty => ({ kind: "minus", id: "rf", label, pts });
@@ -475,10 +486,97 @@ const SEO_FASE2_P1: InterviewTemplate = {
   },
 };
 
-export const INTERVIEW_TEMPLATES: InterviewTemplate[] = [SEO_FASE2_P1];
+
+// ── Fase 1 · Parte 1 (v80.22) ─────────────────────────────────────────────
+// Reunião curta de apresentação, para perceber se vale a pena seguir para a
+// Fase 2. As 9 perguntas são as do André (23/11/2026), tal e qual. Sem
+// pontos: só notas, e as respostas de salário, zona, percurso e hobbies
+// ficam logo no perfil do candidato.
+const triagem = (
+  id: string,
+  code: string,
+  section: SectionId,
+  title: string,
+  prompt: string,
+  profile?: ProfileLink,
+): Question => ({
+  id,
+  section,
+  code,
+  title,
+  prompt,
+  criteria: [],
+  penalties: [],
+  unscored: true,
+  ...(profile ? { profile } : {}),
+});
+
+const SEO_FASE1_P1: InterviewTemplate = {
+  id: "seo-fase1-p1",
+  version: 1,
+  kind: "screening",
+  title: "Reunião de apresentação",
+  role: "Consultor de SEO",
+  phase: "Fase 1 · Parte 1",
+  opening: ["Reunião curta de apresentação: conhecer o candidato e perceber se vale a pena seguir para a Fase 2."],
+  scoringNote: "Sem pontos: só notas. No fim decides se avança para a Fase 2.",
+  sections: [
+    { id: "condicoes", label: "Condições", short: "Condições" },
+    { id: "percurso", label: "Percurso", short: "Percurso" },
+    { id: "pessoal", label: "Pessoal", short: "Pessoal" },
+  ],
+  questions: [
+    triagem("f1", "1", "condicoes", "Objetivo salarial", "Qual é o teu objetivo salarial (uma baliza)?", "salary"),
+    triagem("f2", "2", "condicoes", "Zona", "Estás onde (zona mesmo)?", "location"),
+    triagem(
+      "f3",
+      "3",
+      "condicoes",
+      "Formato de contrato",
+      "Queres que formato de contrato (precisas de já efetivo? termo certo? incerto?)",
+    ),
+    triagem("f4", "4", "percurso", "O que faz atualmente", "O que fazes atualmente?", "experience"),
+    triagem("f5", "5", "percurso", "O que fazia antes", "O que fazias antes?", "experience"),
+    triagem(
+      "f6",
+      "6",
+      "percurso",
+      "SEO, Web e marketing",
+      "Já estudaste/interagiste com SEO/Web ou até marketing em geral?",
+      "education",
+    ),
+    triagem("f7", "7", "percurso", "Trabalho remoto", "Já trabalhaste remotamente?"),
+    triagem(
+      "f8",
+      "8",
+      "percurso",
+      "Liderar projetos e clientes",
+      "Já alguma vez lideraste um projeto ou clientes contínuos de 6/12 meses?",
+    ),
+    triagem("f9", "9", "pessoal", "Hobbies", "Quais são os teus hobbies?", "interests"),
+  ],
+};
+
+/** Pela ordem do processo: é a ordem das listas («Nova fase», novo
+ *  candidato). */
+export const INTERVIEW_TEMPLATES: InterviewTemplate[] = [SEO_FASE1_P1, SEO_FASE2_P1];
 
 export function getTemplate(id: string): InterviewTemplate | null {
   return INTERVIEW_TEMPLATES.find((t) => t.id === id) ?? null;
 }
 
+/** O template das entrevistas antigas sem `templateId` — fica a Fase 2. */
 export const DEFAULT_TEMPLATE_ID = SEO_FASE2_P1.id;
+
+/** Um candidato novo começa pela Fase 1 (v80.22). */
+export const FIRST_TEMPLATE_ID = SEO_FASE1_P1.id;
+
+export function isScreening(t: InterviewTemplate | null | undefined): boolean {
+  return t?.kind === "screening";
+}
+
+/** Quantos ecrãs de fecho tem a entrevista: a triagem só tem a decisão;
+ *  as outras têm fortes/fracos, Fit e Técnica e a grade. */
+export function closingScreens(t: InterviewTemplate): number {
+  return isScreening(t) ? 1 : 3;
+}

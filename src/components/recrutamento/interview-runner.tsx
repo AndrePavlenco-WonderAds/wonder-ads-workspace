@@ -4,7 +4,9 @@
 // em grande, os critérios do guião para ir marcando (✓) e a nota ao vivo.
 //
 // Ecrãs: 0 = abertura · 1…N = perguntas · N+1 = pontos fortes/fracos ·
-// N+2 = Fit e Técnica · N+3 = grade final.
+// N+2 = Fit e Técnica · N+3 = grade final. Na triagem (Fase 1, v80.22) o
+// fecho é um só ecrã, N+1 = «avança para a Fase 2?», e as perguntas com
+// `profile` escrevem no perfil do candidato ao vivo (na mesma fila).
 //
 // Atalhos: ← → muda de ecrã · 1–9 e 0 marcam critérios · F red flag ·
 // N vai às notas · Esc sai do campo de texto.
@@ -39,6 +41,7 @@ import {
   ThumbsUp,
 } from "lucide-react";
 import {
+  ADVANCE_META,
   computedScore,
   emptyAnswer,
   fmtScore,
@@ -47,16 +50,36 @@ import {
   questionScore,
   summarize,
   zoneOf,
+  type Advance,
   type Answer,
   type Closing,
 } from "@/lib/recrutamento/scoring";
-import type { Candidate, Interview } from "@/lib/recrutamento/shared";
-import type { InterviewTemplate, Question, ScriptBlock, SectionId } from "@/lib/recrutamento/templates";
+import { fmtEuros, parseEuros, type Candidate, type Interview } from "@/lib/recrutamento/shared";
+import {
+  closingScreens,
+  isScreening,
+  type InterviewTemplate,
+  type ProfileLink,
+  type Question,
+  type ScriptBlock,
+  type SectionId,
+} from "@/lib/recrutamento/templates";
 import { GradeBadge, GradeMatrix, Initials, scoreColor, ScoreRing, TONE } from "./ui";
 
 type SaveState = "idle" | "dirty" | "saving" | "saved" | "error";
 
-type Pending = { answers: Record<string, Answer>; closing?: Closing; step?: number };
+/** Os campos do perfil que a Fase 1 preenche (v80.22). */
+type ProfileDraft = {
+  location: string;
+  interests: string;
+  education: string;
+  experience: string;
+  salaryMonthly: string;
+  salaryNote: string;
+};
+type ProfileKey = keyof ProfileDraft;
+
+type Pending = { answers: Record<string, Answer>; closing?: Closing; step?: number; profile?: Partial<ProfileDraft> };
 
 const SECTION_TINT: Record<SectionId, string> = {
   hard: "#c4a6ff",
@@ -65,6 +88,17 @@ const SECTION_TINT: Record<SectionId, string> = {
   detail: "#fcd34d",
   questions: "#86efac",
   pessoal: "#fdba74",
+  condicoes: "#6ee7b7",
+  percurso: "#93c5fd",
+};
+
+/** Os campos do perfil por trás de cada `profile` de uma pergunta. */
+const PROFILE_KEYS: Record<ProfileLink, ProfileKey[]> = {
+  salary: ["salaryMonthly", "salaryNote"],
+  location: ["location"],
+  experience: ["experience"],
+  education: ["education"],
+  interests: ["interests"],
 };
 
 function mmss(ms: number): string {
@@ -86,11 +120,20 @@ export function InterviewRunner({
 }) {
   const router = useRouter();
   const N = template.questions.length;
-  const LAST = N + 3;
+  const screening = isScreening(template);
+  const LAST = N + closingScreens(template);
   const locked = Boolean(interview.finishedAt) || candidate.status === "aceite";
 
   const [answers, setAnswers] = useState<Record<string, Answer>>(interview.answers);
   const [closing, setClosing] = useState<Closing>(interview.closing);
+  const [profile, setProfile] = useState<ProfileDraft>(() => ({
+    location: candidate.location,
+    interests: candidate.interests,
+    education: candidate.education,
+    experience: candidate.experience,
+    salaryMonthly: candidate.salaryMonthly === null ? "" : String(candidate.salaryMonthly),
+    salaryNote: candidate.salaryNote,
+  }));
   const [step, setStep] = useState<number>(Math.min(interview.step, LAST));
   const [startedAt, setStartedAt] = useState<number | null>(interview.startedAt);
   const [save, setSave] = useState<SaveState>("idle");
@@ -112,7 +155,7 @@ export function InterviewRunner({
   // ── gravação ────────────────────────────────────────────────────────────
   const hasPending = () => {
     const p = pending.current;
-    return Object.keys(p.answers).length > 0 || p.closing !== undefined || p.step !== undefined;
+    return Object.keys(p.answers).length > 0 || p.closing !== undefined || p.step !== undefined || p.profile !== undefined;
   };
 
   const flush = useCallback(
@@ -147,6 +190,7 @@ export function InterviewRunner({
           answers: { ...p.answers, ...q.answers },
           closing: q.closing ?? p.closing,
           step: q.step ?? p.step,
+          profile: p.profile || q.profile ? { ...p.profile, ...q.profile } : undefined,
         };
         setSave("error");
         if (!keepalive) timer.current = window.setTimeout(() => void flush(), 3000);
@@ -200,6 +244,26 @@ export function InterviewRunner({
       schedule();
     },
     [schedule],
+  );
+
+  const putProfile = useCallback(
+    (key: ProfileKey, value: string) => {
+      if (locked) return;
+      setProfile((prev) => ({ ...prev, [key]: value }));
+      pending.current.profile = { ...pending.current.profile, [key]: value };
+      schedule();
+    },
+    [schedule, locked],
+  );
+
+  /** Uma pergunta está feita quando tem notas, ou o campo do perfil dela. */
+  const isDone = useCallback(
+    (q: Question) => {
+      if (!q.unscored) return isScored(answers[q.id]);
+      if (answers[q.id]?.notes.trim()) return true;
+      return q.profile ? PROFILE_KEYS[q.profile].some((k) => profile[k].trim() !== "") : false;
+    },
+    [answers, profile],
   );
 
   // ── navegação ───────────────────────────────────────────────────────────
@@ -336,7 +400,7 @@ export function InterviewRunner({
         </div>
       </div>
 
-      <Progress template={template} step={step} answers={answers} onJump={goTo} />
+      <Progress template={template} step={step} answers={answers} isDone={isDone} onJump={goTo} />
 
       <div key={step} className="animate-fade-up mt-6">
         {step === 0 && <Opening candidate={candidate} interview={interview} template={template} started={Boolean(startedAt)} locked={locked} onStart={() => goTo(Math.max(1, interview.step || 1))} />}
@@ -350,11 +414,27 @@ export function InterviewRunner({
             locked={locked}
             notesRef={notesRef}
             elapsed={qElapsed}
+            profile={profile}
+            onProfile={putProfile}
           />
         )}
-        {step === N + 1 && <StrengthsScreen template={template} answers={answers} closing={closing} onChange={putClosing} locked={locked} />}
-        {step === N + 2 && <FitTechScreen template={template} summary={summary} closing={closing} onChange={putClosing} locked={locked} />}
-        {step === N + 3 && (
+        {screening && step === N + 1 && (
+          <DecisionScreen
+            template={template}
+            isDone={isDone}
+            profile={profile}
+            closing={closing}
+            onChange={putClosing}
+            locked={locked}
+            finishing={finishing}
+            finishError={finishError}
+            onFinish={finish}
+            fichaHref={`/admin/recrutamento/${candidate.id}`}
+          />
+        )}
+        {!screening && step === N + 1 && <StrengthsScreen template={template} answers={answers} closing={closing} onChange={putClosing} locked={locked} />}
+        {!screening && step === N + 2 && <FitTechScreen template={template} summary={summary} closing={closing} onChange={putClosing} locked={locked} />}
+        {!screening && step === N + 3 && (
           <GradeScreen
             summary={summary}
             closing={closing}
@@ -432,15 +512,18 @@ function Progress({
   template,
   step,
   answers,
+  isDone,
   onJump,
 }: {
   template: InterviewTemplate;
   step: number;
   answers: Record<string, Answer>;
+  isDone: (q: Question) => boolean;
   onJump: (s: number) => void;
 }) {
   const N = template.questions.length;
-  const pct = Math.round((step / (N + 3)) * 100);
+  const pct = Math.round((step / (N + closingScreens(template))) * 100);
+  const closingLabels = isScreening(template) ? ["Decisão"] : ["Pontos fortes e fracos", "Fit e Técnica", "Grade final"];
   return (
     <div className="mt-5 rounded-2xl border border-white/[0.07] bg-white/[0.02] px-3 py-3 sm:px-4">
       <div className="flex items-center gap-3 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -463,7 +546,7 @@ function Progress({
                   label={`${q.code} · ${q.title}`}
                   short={qs.length > 1 ? q.code : undefined}
                   active={step === i + 1}
-                  done={q.unscored ? Boolean(answers[q.id]?.notes.trim()) : isScored(answers[q.id])}
+                  done={isDone(q)}
                   flagged={(answers[q.id]?.flags.length ?? 0) > 0}
                   onClick={() => onJump(i + 1)}
                   tint={SECTION_TINT[sec.id]}
@@ -474,7 +557,7 @@ function Progress({
         })}
         <div className="flex shrink-0 items-center gap-1.5">
           <span className={`text-[10px] font-bold uppercase tracking-[0.14em] ${step > N ? "text-white" : "text-white/30"}`}>Fecho</span>
-          {["Pontos fortes e fracos", "Fit e Técnica", "Grade final"].map((label, k) => (
+          {closingLabels.map((label, k) => (
             <StepDot key={label} label={label} active={step === N + 1 + k} done={step > N + 1 + k} onClick={() => onJump(N + 1 + k)} tint="#ffffff" />
           ))}
         </div>
@@ -608,7 +691,9 @@ function Opening({
           <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/40">Pontuação</p>
           <p className="mt-2 text-[13px] leading-relaxed text-white/75">{template.scoringNote}</p>
           <p className="mt-2 text-[12px] leading-relaxed text-white/45">
-            Cada pergunta vale 10. No fim, o Fit Cultural e a Capacidade Técnica dão a grade D–A.
+            {isScreening(template)
+              ? "O salário, a zona, o percurso e os hobbies ficam logo no perfil do candidato."
+              : "Cada pergunta vale 10. No fim, o Fit Cultural e a Capacidade Técnica dão a grade D–A."}
           </p>
         </div>
         <div className="rounded-3xl border border-white/[0.08] bg-white/[0.02] p-5">
@@ -618,8 +703,12 @@ function Opening({
           </p>
           <ul className="mt-3 space-y-2 text-[12.5px] text-white/65">
             <Shortcut keys={["←", "→"]}>Pergunta anterior / seguinte</Shortcut>
-            <Shortcut keys={["1", "…", "9"]}>Marcar ou desmarcar um critério</Shortcut>
-            <Shortcut keys={["F"]}>Red flag</Shortcut>
+            {!isScreening(template) && (
+              <>
+                <Shortcut keys={["1", "…", "9"]}>Marcar ou desmarcar um critério</Shortcut>
+                <Shortcut keys={["F"]}>Red flag</Shortcut>
+              </>
+            )}
             <Shortcut keys={["N"]}>Escrever nas notas</Shortcut>
             <Shortcut keys={["Esc"]}>Sair do campo de texto</Shortcut>
           </ul>
@@ -661,6 +750,8 @@ function QuestionScreen({
   locked,
   notesRef,
   elapsed,
+  profile,
+  onProfile,
 }: {
   template: InterviewTemplate;
   question: Question;
@@ -670,6 +761,8 @@ function QuestionScreen({
   locked: boolean;
   notesRef: React.RefObject<HTMLTextAreaElement | null>;
   elapsed: number;
+  profile: ProfileDraft;
+  onProfile: (key: ProfileKey, value: string) => void;
 }) {
   const section = template.sections.find((s) => s.id === q.section)!;
   const secQs = template.questions.filter((x) => x.section === q.section);
@@ -740,11 +833,16 @@ function QuestionScreen({
       {/* Direita: pontuação (as perguntas da secção Pessoal não têm — v80.17) */}
       {q.unscored ? (
         <aside className="min-w-0">
-          <div className="rounded-3xl border border-white/[0.08] bg-white/[0.02] p-5 lg:sticky lg:top-24">
-            <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/40">Sem pontuação</p>
-            <p className="mt-2 text-[13px] leading-relaxed text-white/60">
-              Só notas. Não conta para o Fit Cultural nem para a Capacidade Técnica.
-            </p>
+          <div className="space-y-4 lg:sticky lg:top-24">
+            {q.profile && <ProfileAside link={q.profile} profile={profile} onProfile={onProfile} locked={locked} tint={tint} />}
+            <div className="rounded-3xl border border-white/[0.08] bg-white/[0.02] p-5">
+              <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/40">Sem pontuação</p>
+              <p className="mt-2 text-[13px] leading-relaxed text-white/60">
+                {isScreening(template)
+                  ? "Só notas. A Fase 1 não tem pontos: no fim decides se avança."
+                  : "Só notas. Não conta para o Fit Cultural nem para a Capacidade Técnica."}
+              </p>
+            </div>
           </div>
         </aside>
       ) : (
@@ -927,6 +1025,242 @@ function RevealAnswer({ answer, tint }: { answer: string; tint: string }) {
 }
 
 // ---------------------------------------------------------------------------
+// Fase 1 — o campo do perfil ao lado da pergunta (v80.22)
+// ---------------------------------------------------------------------------
+
+const fieldCls =
+  "w-full rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-[13.5px] text-white placeholder:text-white/25 focus:border-white/25 focus:outline-none";
+
+function ProfileAside({
+  link,
+  profile,
+  onProfile,
+  locked,
+  tint,
+}: {
+  link: ProfileLink;
+  profile: ProfileDraft;
+  onProfile: (key: ProfileKey, value: string) => void;
+  locked: boolean;
+  tint: string;
+}) {
+  const head = (title: string, hint?: string) => (
+    <>
+      <p className="text-[11px] font-bold uppercase tracking-[0.16em]" style={{ color: tint }}>
+        Fica no perfil
+      </p>
+      <p className="mt-1 text-[14px] font-semibold text-white">{title}</p>
+      {hint && <p className="mt-0.5 text-[11.5px] leading-snug text-white/40">{hint}</p>}
+    </>
+  );
+  const area = (key: ProfileKey, placeholder: string, rows = 4) => (
+    <textarea
+      value={profile[key]}
+      readOnly={locked}
+      onChange={(e) => onProfile(key, e.target.value)}
+      rows={rows}
+      placeholder={placeholder}
+      className={`mt-3 resize-y leading-relaxed ${fieldCls}`}
+    />
+  );
+  return (
+    <div className="rounded-3xl border p-5" style={{ borderColor: `${tint}40`, background: `linear-gradient(160deg, ${tint}12, transparent 60%)` }}>
+      {link === "salary" && (
+        <>
+          {head("Valor mensal pretendido", "O valor de referência em número; a baliza e o bruto/líquido vão por baixo.")}
+          <div className="mt-3 flex items-center gap-2">
+            <input
+              value={profile.salaryMonthly}
+              readOnly={locked}
+              inputMode="numeric"
+              onChange={(e) => onProfile("salaryMonthly", e.target.value.replace(/[^0-9.,\s]/g, ""))}
+              placeholder="1.300"
+              className={`${fieldCls} w-32 text-[18px] font-bold tabular-nums`}
+            />
+            <span className="text-[13px] text-white/45">€ / mês</span>
+          </div>
+          <input
+            value={profile.salaryNote}
+            readOnly={locked}
+            onChange={(e) => onProfile("salaryNote", e.target.value)}
+            placeholder="Ex.: entre 1.200 e 1.400, líquido"
+            className={`mt-2 ${fieldCls}`}
+          />
+        </>
+      )}
+      {link === "location" && (
+        <>
+          {head("Zona onde vive")}
+          <input
+            value={profile.location}
+            readOnly={locked}
+            onChange={(e) => onProfile("location", e.target.value)}
+            placeholder="Ex.: Almada"
+            className={`mt-3 ${fieldCls}`}
+          />
+        </>
+      )}
+      {link === "experience" && (
+        <>
+          {head("Experiências passadas", "Uma por linha. É o mesmo campo nas duas perguntas: o atual e o de antes.")}
+          {area("experience", "Ex.:\nSEO numa agência (2022–2025): 12 clientes, saúde", 5)}
+        </>
+      )}
+      {link === "education" && (
+        <>
+          {head("Formações", "Uma por linha.")}
+          {area("education", "Ex.:\nLicenciatura em Marketing (2019)\nCurso de SEO (2023)")}
+        </>
+      )}
+      {link === "interests" && (
+        <>
+          {head("Focos e gostos pessoais")}
+          {area("interests", "Hobbies, o que lhe dá energia…")}
+        </>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Fase 1 — fecho: avança para a Fase 2? (v80.22)
+// ---------------------------------------------------------------------------
+
+function DecisionScreen({
+  template,
+  isDone,
+  profile,
+  closing,
+  onChange,
+  locked,
+  finishing,
+  finishError,
+  onFinish,
+  fichaHref,
+}: {
+  template: InterviewTemplate;
+  isDone: (q: Question) => boolean;
+  profile: ProfileDraft;
+  closing: Closing;
+  onChange: (p: Partial<Closing>) => void;
+  locked: boolean;
+  finishing: boolean;
+  finishError: string | null;
+  onFinish: () => void;
+  fichaHref: string;
+}) {
+  const missing = template.questions.filter((q) => !isDone(q)).length;
+  const salary = parseEuros(profile.salaryMonthly);
+  const recap: Array<[string, string]> = [
+    ["Valor pretendido", [salary === null ? "" : `${fmtEuros(salary)} / mês`, profile.salaryNote.trim()].filter(Boolean).join(" · ")],
+    ["Zona", profile.location.trim()],
+  ];
+  return (
+    <div>
+      <ScreenTitle eyebrow="Fecho" title="Avança para a Fase 2?" />
+      <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            {(Object.keys(ADVANCE_META) as Advance[]).map((k) => {
+              const m = ADVANCE_META[k];
+              const t = TONE[m.tone];
+              const on = closing.advance === k;
+              const Icon = k === "sim" ? ThumbsUp : k === "nao" ? ThumbsDown : AlertTriangle;
+              return (
+                <button
+                  key={k}
+                  type="button"
+                  disabled={locked}
+                  aria-pressed={on}
+                  onClick={() => onChange({ advance: on ? null : k })}
+                  className={`flex items-center gap-3 rounded-3xl border px-5 py-4 text-left transition disabled:cursor-default ${
+                    on ? `${t.border} ${t.bg}` : "border-white/[0.08] bg-white/[0.02] hover:border-white/25"
+                  }`}
+                  style={on ? { boxShadow: `0 14px 50px -18px ${t.glow}` } : undefined}
+                >
+                  <span
+                    className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${on ? "text-black" : t.text}`}
+                    style={{ background: on ? t.solid : "rgba(255,255,255,0.05)" }}
+                  >
+                    <Icon className="h-5 w-5" />
+                  </span>
+                  <span className={`text-[15px] font-semibold ${on ? t.text : "text-white/75"}`}>{m.label}</span>
+                </button>
+              );
+            })}
+          </div>
+          <TextCard label="Porquê" value={closing.advanceWhy} onChange={(v) => onChange({ advanceWhy: v })} locked={locked} rows={4} />
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <TextCard label="Dúvidas por esclarecer" value={closing.doubts} onChange={(v) => onChange({ doubts: v })} locked={locked} rows={3} />
+            <label className="block rounded-3xl border border-white/[0.08] bg-white/[0.02] p-5">
+              <span className="text-[13px] font-semibold text-white/80">Próximo passo</span>
+              <input
+                value={closing.nextStep}
+                readOnly={locked}
+                onChange={(e) => onChange({ nextStep: e.target.value })}
+                placeholder="Ex.: marcar a Fase 2 para quinta"
+                className={`mt-2 ${fieldCls}`}
+              />
+            </label>
+          </div>
+        </div>
+        <aside className="rounded-3xl border border-white/[0.08] bg-white/[0.02] p-5">
+          <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/40">Ficou no perfil</p>
+          <dl className="mt-3 space-y-3">
+            {recap.map(([label, value]) => (
+              <div key={label}>
+                <dt className="text-[11px] text-white/40">{label}</dt>
+                <dd className={`text-[14px] ${value ? "text-white/85" : "text-white/25"}`}>{value || "—"}</dd>
+              </div>
+            ))}
+          </dl>
+          <p className="mt-4 border-t border-white/[0.06] pt-3 text-[11.5px] leading-relaxed text-white/40">
+            O percurso, as formações e os hobbies também ficaram na ficha.
+          </p>
+        </aside>
+      </div>
+
+      {!locked && (
+        <div className="mt-8 flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-white/[0.08] bg-white/[0.02] p-5">
+          <div className="text-[13px] text-white/60">
+            {!closing.advance ? (
+              <span className="inline-flex items-center gap-2 text-amber-200/90">
+                <AlertTriangle className="h-4 w-4" />
+                Ainda sem decisão. Podes terminar na mesma e decidir depois.
+              </span>
+            ) : missing > 0 ? (
+              <span className="inline-flex items-center gap-2 text-white/55">
+                {missing} pergunta{missing === 1 ? "" : "s"} sem notas.
+              </span>
+            ) : (
+              "Ao terminar, a ficha fica com a decisão e as notas."
+            )}
+            {finishError && <p className="mt-1 text-rose-300">{finishError}</p>}
+          </div>
+          <button
+            type="button"
+            onClick={onFinish}
+            disabled={finishing}
+            className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-[13.5px] font-semibold text-black shadow-[0_18px_60px_-18px_rgba(196,166,255,0.9)] transition hover:bg-[#ede4ff] disabled:opacity-60"
+          >
+            {finishing ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+            Terminar a Fase 1
+          </button>
+        </div>
+      )}
+      {locked && (
+        <p className="mt-8 text-center text-[12.5px] text-white/45">
+          Fase 1 terminada.{" "}
+          <Link href={fichaHref} className="underline underline-offset-2 hover:text-white">
+            Voltar à ficha
+          </Link>
+        </p>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Fecho 1 — pontos fortes vs fracos
 // ---------------------------------------------------------------------------
 
@@ -1103,9 +1437,9 @@ function FitTechScreen({
       </ScreenTitle>
       <div className="mt-6 grid grid-cols-1 gap-4 xl:grid-cols-2">
         <AxisCard
-          label={template.fit.label}
-          signals={template.fit.signals}
-          zones={template.fit.zones}
+          label={template.fit?.label ?? "Fit Cultural"}
+          signals={template.fit?.signals ?? ""}
+          zones={template.fit?.zones ?? { low: "Baixo", mid: "Médio", high: "Alto" }}
           calc={summary.fitCalc}
           mine={closing.fitMine}
           parts={[
@@ -1117,9 +1451,9 @@ function FitTechScreen({
           locked={locked}
         />
         <AxisCard
-          label={template.tech.label}
-          signals={template.tech.signals}
-          zones={template.tech.zones}
+          label={template.tech?.label ?? "Capacidade Técnica"}
+          signals={template.tech?.signals ?? ""}
+          zones={template.tech?.zones ?? { low: "Baixa", mid: "Média", high: "Alta" }}
           calc={summary.techCalc}
           mine={closing.techMine}
           parts={[

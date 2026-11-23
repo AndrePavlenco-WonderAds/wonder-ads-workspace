@@ -119,6 +119,15 @@ export const GRADE_GRID: Record<Zone, Record<Zone, GradeCell>> = {
   },
 };
 
+/** A decisão da Fase 1 (v80.22): segue para a Fase 2 ou não. */
+export type Advance = "sim" | "talvez" | "nao";
+
+export const ADVANCE_META: Record<Advance, { label: string; short: string; tone: "emerald" | "amber" | "rose" }> = {
+  sim: { label: "Avança para a Fase 2", short: "Avança", tone: "emerald" },
+  talvez: { label: "Em dúvida", short: "Em dúvida", tone: "amber" },
+  nao: { label: "Não avança", short: "Não avança", tone: "rose" },
+};
+
 export type Closing = {
   strengths: string[];
   weaknesses: string[];
@@ -128,10 +137,24 @@ export type Closing = {
   fitMine: number | null;
   techMine: number | null;
   nextStep: string;
+  /** Fase 1 (v80.22): avança para a Fase 2? E porquê. */
+  advance: Advance | null;
+  advanceWhy: string;
 };
 
 export function emptyClosing(): Closing {
-  return { strengths: ["", "", "", ""], weaknesses: ["", "", "", ""], remember: "", quote: "", doubts: "", fitMine: null, techMine: null, nextStep: "" };
+  return {
+    strengths: ["", "", "", ""],
+    weaknesses: ["", "", "", ""],
+    remember: "",
+    quote: "",
+    doubts: "",
+    fitMine: null,
+    techMine: null,
+    nextStep: "",
+    advance: null,
+    advanceWhy: "",
+  };
 }
 
 export type InterviewSummary = {

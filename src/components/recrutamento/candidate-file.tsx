@@ -41,7 +41,7 @@ import {
   UserCheck,
   X,
 } from "lucide-react";
-import { fmtScore, isScored, questionScore, summarize } from "@/lib/recrutamento/scoring";
+import { ADVANCE_META, fmtScore, isScored, questionScore, summarize } from "@/lib/recrutamento/scoring";
 import {
   ACCEPT_PHRASE,
   fmtEuros,
@@ -54,7 +54,7 @@ import {
   type Candidate,
   type Interview,
 } from "@/lib/recrutamento/shared";
-import { getTemplate, INTERVIEW_TEMPLATES, type InterviewTemplate } from "@/lib/recrutamento/templates";
+import { getTemplate, INTERVIEW_TEMPLATES, isScreening, type InterviewTemplate } from "@/lib/recrutamento/templates";
 import {
   getPracticalTemplate,
   PRACTICAL_TEMPLATES,
@@ -120,6 +120,13 @@ export function CandidateFile({
     [interview, template],
   );
   const stage = stageOf(c);
+  // «Nova fase» sugere a primeira fase do processo que o candidato ainda não
+  // tem (Fase 1 → Fase 2 · Parte 1 → prática), v80.22.
+  const nextPhase = useMemo(() => {
+    const have = new Set([...c.interviews.map((i) => i.templateId), ...c.practicals.map((p) => `pratica:${p.templateId}`)]);
+    const order = [...INTERVIEW_TEMPLATES.map((t) => t.id), ...PRACTICAL_TEMPLATES.map((t) => `pratica:${t.id}`)];
+    return order.find((id) => !have.has(id)) ?? order[0] ?? "";
+  }, [c.interviews, c.practicals]);
   const [modal, setModal] = useState<null | "accept" | "reject" | "delete" | "edit" | "phase">(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -314,6 +321,19 @@ export function CandidateFile({
         </>
       ) : interview && template && sum ? (
         <>
+          {isScreening(template) ? (
+            <ScreeningSummary
+              interview={interview}
+              interviewer={nameOf(interview.interviewer)}
+              answered={template.questions.filter((q) => interview.answers[q.id]?.notes.trim()).length}
+              total={template.questions.length}
+              canAdvance={c.status === "pipeline" && nextPhase !== "" && nextPhase !== interview.templateId}
+              canReject={c.status === "pipeline"}
+              onNewPhase={() => setModal("phase")}
+              onReject={() => setModal("reject")}
+            />
+          ) : (
+          <>
           {/* Resumo: grade + eixos + matriz */}
           <section className="animate-fade-up mt-5 grid grid-cols-1 gap-5 xl:grid-cols-[340px_minmax(0,1fr)_minmax(0,1.1fr)]">
             <GradeCard sum={sum} finished={Boolean(interview.finishedAt)} closingNext={interview.closing.nextStep} />
@@ -345,6 +365,8 @@ export function CandidateFile({
 
           {/* Fecho do entrevistador */}
           <ClosingSection interview={interview} />
+          </>
+          )}
 
           {/* Pergunta a pergunta */}
           <QuestionsSection template={template} interview={interview} />
@@ -475,6 +497,7 @@ export function CandidateFile({
       )}
       {modal === "phase" && (
         <PhaseModal
+          initialChoice={nextPhase}
           busy={busy === "phase"}
           onClose={() => setModal(null)}
           error={error}
@@ -839,6 +862,91 @@ function GradeCard({ sum, finished, closingNext }: { sum: ReturnType<typeof summ
       {closingNext && <p className="mt-3 text-[12px] text-white/60">Próximo passo: {closingNext}</p>}
       {!finished && <p className="mt-3 text-[11px] text-amber-200/70">Entrevista ainda não terminada: a grade pode mudar.</p>}
     </div>
+  );
+}
+
+/** Fase 1 (v80.22): sem grade — a decisão «avança para a Fase 2?» e o porquê. */
+function ScreeningSummary({
+  interview,
+  interviewer,
+  answered,
+  total,
+  canAdvance,
+  canReject,
+  onNewPhase,
+  onReject,
+}: {
+  interview: Interview;
+  interviewer: string;
+  answered: number;
+  total: number;
+  canAdvance: boolean;
+  canReject: boolean;
+  onNewPhase: () => void;
+  onReject: () => void;
+}) {
+  const cl = interview.closing;
+  const m = cl.advance ? ADVANCE_META[cl.advance] : null;
+  const t = m ? TONE[m.tone] : null;
+  return (
+    <section className="animate-fade-up mt-5 grid grid-cols-1 gap-5 lg:grid-cols-[340px_minmax(0,1fr)]">
+      <div
+        className={`relative overflow-hidden rounded-3xl border p-5 ${t ? t.border : "border-white/[0.08]"}`}
+        style={t ? { background: `radial-gradient(120% 100% at 0% 0%, ${t.glow}, transparent 62%)` } : undefined}
+      >
+        <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/40">Fase 1 · decisão</p>
+        <p className={`mt-2 flex items-center gap-2 text-[22px] font-bold ${t ? t.text : "text-white/45"}`}>
+          {cl.advance === "sim" ? <ThumbsUp className="h-5 w-5" /> : cl.advance === "nao" ? <ThumbsDown className="h-5 w-5" /> : null}
+          {m ? m.label : "Por decidir"}
+        </p>
+        {cl.advanceWhy && <p className="mt-2 whitespace-pre-wrap text-[13px] leading-relaxed text-white/75">{cl.advanceWhy}</p>}
+        {cl.nextStep && <p className="mt-3 text-[12px] text-white/60">Próximo passo: {cl.nextStep}</p>}
+        {!interview.finishedAt && <p className="mt-3 text-[11px] text-amber-200/70">Fase 1 ainda não terminada.</p>}
+        {(cl.advance === "sim" && canAdvance) || (cl.advance === "nao" && canReject) ? (
+          <div className="mt-4">
+            {cl.advance === "sim" ? (
+              <button
+                type="button"
+                onClick={onNewPhase}
+                className="inline-flex items-center gap-1.5 rounded-full bg-white px-3.5 py-1.5 text-[12px] font-semibold text-black hover:bg-[#ede4ff]"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Marcar a fase seguinte
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={onReject}
+                className="inline-flex items-center gap-1.5 rounded-full border border-rose-300/30 px-3.5 py-1.5 text-[12px] font-semibold text-rose-200/90 hover:bg-rose-500/10"
+              >
+                <Ban className="h-3.5 w-3.5" />
+                Recusar candidato
+              </button>
+            )}
+          </div>
+        ) : null}
+        <div className="mt-5 grid grid-cols-2 gap-3 border-t border-white/[0.06] pt-4 text-[11.5px] text-white/45">
+          <span>
+            <Mic className="mr-1 inline h-3 w-3" />
+            {interviewer}
+          </span>
+          <span className="text-right">{duration(interview) ?? (interview.startedAt ? "Em curso" : "Por começar")}</span>
+          <span>
+            {answered}/{total} com notas
+          </span>
+          <span className="text-right">{interview.finishedAt ? fmtWhen(interview.finishedAt) : fmtDay(interview.date)}</span>
+        </div>
+      </div>
+      <div className="space-y-3">
+        {cl.doubts ? (
+          <TextBox title="Dúvidas por esclarecer" text={cl.doubts} />
+        ) : (
+          <div className="rounded-3xl border border-dashed border-white/[0.08] px-5 py-4 text-[12.5px] text-white/35">
+            Sem dúvidas anotadas. O salário, a zona, o percurso e os hobbies ditos na conversa estão no perfil, em cima.
+          </div>
+        )}
+      </div>
+    </section>
   );
 }
 
@@ -1311,18 +1419,20 @@ function EditModal({
 }
 
 function PhaseModal({
+  initialChoice,
   busy,
   error,
   onClose,
   onCreate,
 }: {
+  initialChoice: string;
   busy: boolean;
   error: string | null;
   onClose: () => void;
   /** `choice` = id de um template de entrevista, ou «pratica:<id>». */
   onCreate: (choice: string, date: string | null, site: string) => void;
 }) {
-  const [choice, setChoice] = useState(INTERVIEW_TEMPLATES[0]?.id ?? "");
+  const [choice, setChoice] = useState(initialChoice || (INTERVIEW_TEMPLATES[0]?.id ?? ""));
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [site, setSite] = useState("");
   const isPractical = choice.startsWith("pratica:");

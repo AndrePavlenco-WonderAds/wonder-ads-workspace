@@ -127,6 +127,8 @@ export function hydrateClosing(raw: unknown): Closing {
     fitMine: mine(o.fitMine),
     techMine: mine(o.techMine),
     nextStep: str(o.nextStep, 1000),
+    advance: o.advance === "sim" || o.advance === "talvez" || o.advance === "nao" ? o.advance : null,
+    advanceWhy: str(o.advanceWhy, 2000),
   };
 }
 
