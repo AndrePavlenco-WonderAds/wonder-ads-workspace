@@ -228,7 +228,15 @@ export const INTERNAL_CLIENT = "Interno";
 
 /** Um cliente no dropdown da folha RH-03 (v77.91). */
 export type ClientChoice = { slug: string; title: string; icon: string | null; depts: string[] };
-export type ClientChoices = { mine: ClientChoice[]; others: ClientChoice[] };
+/** v80.26: só a carteira do próprio consultor (mais «Interno», no picker). */
+export type ClientChoices = { mine: ClientChoice[] };
+
+/** O cliente de uma ocorrência é um dos projetos do consultor ou «Interno»
+ *  (v80.26) — o servidor confirma o que o dropdown já limita. */
+export function clientAllowed(client: string, choices: ClientChoices): boolean {
+  const v = client.trim();
+  return v === INTERNAL_CLIENT || choices.mine.some((c) => c.title === v);
+}
 
 /* ------------------------------------------------------------------ */
 /*  Tipos dos registos                                                 */

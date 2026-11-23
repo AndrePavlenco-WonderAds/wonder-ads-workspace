@@ -14,7 +14,9 @@ import { getCurrentEmployee, isRealUserAdmin } from "@/lib/auth/server";
 import { ineficaciasAvailable } from "@/lib/ineficacias/access";
 import { fail, guardConsultantWrite, NO_STORE, requestFingerprint } from "@/lib/ineficacias/api-guard";
 import { loadConsultantForSelf, submitReport } from "@/lib/ineficacias/store";
+import { clientChoicesFor } from "@/lib/ineficacias/clients";
 import {
+  clientAllowed,
   cleanItems,
   normalizeName,
   validateReport,
@@ -86,6 +88,10 @@ export async function POST(req: Request) {
   const today = todayLisbonISO();
   const problem = validateReport(draft, { todayISO: today, expectedName: fullName });
   if (problem) return fail(problem, 400);
+  // v80.26: só os projetos do próprio consultor ou «Interno».
+  const choices = await clientChoicesFor(actor.name);
+  const off = draft.items.findIndex((it) => !clientAllowed(it.client, choices));
+  if (off >= 0) return fail(`Erro ${off + 1}: escolhe um dos teus projetos ou «Interno».`, 400);
 
   const { ip, userAgent } = await requestFingerprint();
   try {

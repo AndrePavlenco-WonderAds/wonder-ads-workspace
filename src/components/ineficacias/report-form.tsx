@@ -159,7 +159,7 @@ export function IneficaciaReportForm({
 }: {
   employee: { username: string; name: string; fullName: string; role: string; dept: string; avatar?: string | null };
   today: string;
-  /** A carteira do consultor + os outros clientes, para o dropdown. */
+  /** A carteira do consultor, para o dropdown (mais «Interno»). */
   clients: ClientChoices;
   /** «Ver como» ativo — a folha mostra-se, mas não assina. */
   readOnly?: boolean;

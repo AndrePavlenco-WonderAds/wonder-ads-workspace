@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "80.26",
+    date: "2026-11-23",
+    title: "Ineficácias: só os teus projetos ou «Interno»",
+    highlights: [
+      "**🎯 No relatório de ineficácias, «Cliente ou projeto» só mostra os teus projetos e «Interno»** (um problema ou projeto interno). Saíram os clientes dos colegas e o texto livre; o servidor confirma a escolha.",
+    ],
+  },
+  {
     version: "80.25",
     date: "2026-11-23",
     title: "Ineficácias: reportar antes do team leader + o porquê no topo",
