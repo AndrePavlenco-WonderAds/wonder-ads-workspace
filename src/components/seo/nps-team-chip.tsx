@@ -14,7 +14,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { ArrowDownRight, ArrowUpRight, CheckCircle2, Clock, Smile } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, CheckCircle2, Clock, Smile, Sparkles } from "lucide-react";
 import { formatLisbonDate } from "@/lib/dates";
 
 export type NpsTeamMonth = {
@@ -41,12 +41,17 @@ export type NpsTeamChipProps = {
   current: NpsTeamMonth;
   /** Os projetos do mês em curso. */
   projects: NpsTeamProject[];
+  /** Arrancaram este mês e ainda não responderam — não contam para a %
+   *  (v80.19). */
+  newClients: Array<{ slug: string; name: string; startedAt: string }>;
 };
 
 const CLOSE_DELAY_MS = 180;
 const avg = (n: number | null) => (n === null ? "—" : n.toFixed(2).replace(".", ","));
 const pct = (m: NpsTeamMonth) => (m.total ? Math.round((m.filled / m.total) * 100) : 0);
 const first = (name: string) => name.trim().split(/\s+/)[0] ?? name;
+/** «2026-11-16» → «16/11/2026», sem passar por Date (fuso do browser). */
+const formatIsoDate = (iso: string) => iso.slice(0, 10).split("-").reverse().join("/");
 
 function scoreTone(score: number): string {
   if (score >= 9) return "bg-emerald-400/15 text-emerald-200 border-emerald-400/30";
@@ -192,6 +197,7 @@ function NpsTeamPanel({
   previous,
   current,
   projects,
+  newClients,
   anchor,
   onEnter,
   onLeave,
@@ -267,6 +273,25 @@ function NpsTeamPanel({
                   </li>
                 ))}
               </ul>
+            )}
+            {newClients.length > 0 && (
+              <div className="mt-4">
+                <p className="flex items-center gap-1.5 text-[12.5px] font-semibold text-white/60">
+                  <Sparkles className="h-3.5 w-3.5 text-[#b28bff]" />
+                  Entraram em {current.name} · não contam para a %
+                </p>
+                <ul className="mt-1.5 flex flex-wrap gap-1.5">
+                  {newClients.map((c) => (
+                    <li
+                      key={c.slug}
+                      title={`Arranque a ${formatIsoDate(c.startedAt)} — o primeiro NPS que conta é o do próximo mês`}
+                      className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-0.5 text-[12px] text-white/55"
+                    >
+                      {c.name}
+                    </li>
+                  ))}
+                </ul>
+              </div>
             )}
           </div>
         </div>

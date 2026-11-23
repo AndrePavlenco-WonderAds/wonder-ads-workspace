@@ -113,9 +113,29 @@ export type NpsBonusMonth = {
   consultants: ConsultantMonth[];
   /** Soma do que a casa paga neste mês. */
   totalEur: number;
+  /** Clientes que só arrancaram neste mês (ou depois) e ainda não
+   *  responderam: ficam fora das taxas de preenchimento (v80.19). Continuam
+   *  a contar como carteira para a regra dos N+ projetos. Quem responde no
+   *  mês em que entrou conta normalmente. */
+  newClients: NewClientSkipped[];
 };
 
-export function computeNpsBonusMonth(month: string, consultants: ConsultantInput[]): NpsBonusMonth {
+export type NewClientSkipped = {
+  slug: string;
+  name: string;
+  /** Username do consultor. */
+  owner: string;
+  /** Nome de exibição do consultor. */
+  consultant: string;
+  /** yyyy-mm-dd. */
+  startedAt: string;
+};
+
+export function computeNpsBonusMonth(
+  month: string,
+  consultants: ConsultantInput[],
+  newClients: NewClientSkipped[] = [],
+): NpsBonusMonth {
   const allScores = consultants.flatMap((c) =>
     c.projects.map((p) => p.score).filter((s): s is number => s !== null),
   );
@@ -124,22 +144,31 @@ export function computeNpsBonusMonth(month: string, consultants: ConsultantInput
   const teamFillRate = teamProjects ? allScores.length / teamProjects : null;
   const teamFillOk = teamFillRate !== null && teamFillRate >= MIN_FILL_RATE;
   const teamTier = teamFillOk ? tierFor(teamAverage, TEAM_TIERS) : null;
+  const newByOwner = new Map<string, number>();
+  for (const n of newClients) newByOwner.set(n.owner, (newByOwner.get(n.owner) ?? 0) + 1);
 
   const rows: ConsultantMonth[] = consultants.map((c) => {
     const scores = c.projects.map((p) => p.score).filter((s): s is number => s !== null);
     const total = c.projects.length;
+    // Os clientes que entraram neste mês não pesam na taxa, mas continuam a
+    // ser carteira para a regra dos N+ projetos (v80.19): ninguém perde
+    // elegibilidade por ter ganho um cliente.
+    const portfolio = total + (newByOwner.get(c.username) ?? 0);
     const filled = scores.length;
     const fillRate = total ? filled / total : null;
     const average = bonusAverage(scores);
     const fillOk = fillRate !== null && fillRate >= MIN_FILL_RATE;
+    const onlyNew = total === 0 && portfolio > 0;
 
     let individual: BonusLine;
-    if (total < INDIVIDUAL_MIN_PROJECTS) {
+    if (portfolio < INDIVIDUAL_MIN_PROJECTS) {
       individual = {
         eligible: false,
-        reason: `${total} projeto${total === 1 ? "" : "s"} — precisa de ${INDIVIDUAL_MIN_PROJECTS}+`,
+        reason: `${portfolio} projeto${portfolio === 1 ? "" : "s"} — precisa de ${INDIVIDUAL_MIN_PROJECTS}+`,
         eur: 0,
       };
+    } else if (onlyNew) {
+      individual = { eligible: false, reason: "Só clientes que entraram este mês", eur: 0 };
     } else if (!fillOk) {
       individual = { eligible: false, reason: "Preenchimento abaixo de 50%", eur: 0 };
     } else {
@@ -150,8 +179,10 @@ export function computeNpsBonusMonth(month: string, consultants: ConsultantInput
     }
 
     let team: BonusLine;
-    if (total === 0) {
+    if (portfolio === 0) {
       team = { eligible: false, reason: "Sem projetos", eur: 0 };
+    } else if (onlyNew) {
+      team = { eligible: false, reason: "Só clientes que entraram este mês", eur: 0 };
     } else if (!fillOk) {
       team = { eligible: false, reason: "Preenchimento abaixo de 50%", eur: 0 };
     } else if (!teamFillOk) {
@@ -192,6 +223,7 @@ export function computeNpsBonusMonth(month: string, consultants: ConsultantInput
     teamTier,
     consultants: rows,
     totalEur: rows.reduce((n, r) => n + r.individual.eur + r.team.eur, 0),
+    newClients,
   };
 }
 

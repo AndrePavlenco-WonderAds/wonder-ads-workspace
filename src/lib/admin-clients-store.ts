@@ -107,6 +107,9 @@ export const DEFAULT_STARTING_DATES: Record<string, string> = {
   verychaga: "2026-11-16",
   // v79.1: Help Kids (João B.) — onboarding a 19/11/2026.
   "help-kids": "2026-11-19",
+  // v80.19: Medical Skin Clinic — confirmou contrato e pagamento no
+  // onboarding a 23/11/2026.
+  "medical-skin-clinic": "2026-11-23",
 };
 
 /** Full agency consultant roster — drives the multi-select dropdown on

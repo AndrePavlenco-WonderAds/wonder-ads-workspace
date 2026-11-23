@@ -12,11 +12,7 @@ import "server-only";
 import { unstable_cache } from "next/cache";
 import { TOP_ADMIN_USERNAME } from "@/lib/auth/top-admin";
 import { getSeoClients } from "@/lib/notion";
-import {
-  adminRecordKey,
-  getAdminRecords,
-  DEFAULT_STARTING_DATES,
-} from "@/lib/admin-clients-store";
+import { getSeoStartDates } from "@/lib/seo-start-dates";
 import { getConsultantResolver } from "@/lib/consultant-assignments";
 import { getPausedSlugSet } from "@/lib/admin-paused-clients-store";
 import { getNpsRecord } from "@/lib/nps-store";
@@ -187,44 +183,6 @@ async function seoBooksByConsultant(
   }
   return out;
 }
-
-/** Data de início de cada cliente SEO, por slug.
- *
- *  Vem do registo do SuperAdmin (que já cai para `DEFAULT_STARTING_DATES`
- *  quando ninguém lhe mexeu), atrás de uma cache de 30 minutos: é uma leitura
- *  por cliente e a data de arranque de um contrato muda uma vez na vida.
- *  Bumpar a chave da cache ao mudar a forma do valor. */
-const getSeoStartDates = unstable_cache(
-  async (): Promise<Record<string, string | null>> => {
-    const out: Record<string, string | null> = {};
-    let all: Awaited<ReturnType<typeof getSeoClients>>;
-    try {
-      all = await getSeoClients();
-    } catch {
-      return out;
-    }
-    const rows = all.map((c) => ({
-      slug: c.slug,
-      departments: ["SEO" as const],
-    }));
-    try {
-      const records = await getAdminRecords(rows);
-      for (const c of all) {
-        out[c.slug] =
-          records[adminRecordKey(c.slug, "SEO")]?.startingDate ??
-          DEFAULT_STARTING_DATES[c.slug] ??
-          null;
-      }
-    } catch {
-      // KV em baixo — os defaults em código ainda dão uma janela certa para
-      // a maioria dos clientes.
-      for (const c of all) out[c.slug] = DEFAULT_STARTING_DATES[c.slug] ?? null;
-    }
-    return out;
-  },
-  ["notifications-seo-start-dates-v2"],
-  { revalidate: 1800 },
-);
 
 /** Data de entrada de cada pessoa (override do Team Roster em KV, senão o
  *  default da credencial) — o chão pessoal das notificações de regra. É uma

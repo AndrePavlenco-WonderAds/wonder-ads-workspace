@@ -23,9 +23,12 @@ import {
   useState,
 } from "react";
 import { createPortal } from "react-dom";
+import Link from "next/link";
 import {
   ArrowDownRight,
+  ArrowLeft,
   ArrowUpRight,
+  ListChecks,
   TrendingUp,
   Trophy,
   Users,
@@ -48,6 +51,19 @@ export type OrganicPulseProps = {
   /** …entre os que têm período anterior comparável. */
   comparable: number;
   topClimber: { name: string; pct: number } | null;
+  /** Os clientes que entram na soma, do maior para o menor (v80.19). */
+  counted: OrganicClientRow[];
+  /** Clientes ativos que ficam de fora — sem GA4 ligado ou ainda sem dados. */
+  notCounted: Array<{ slug: string; name: string }>;
+};
+
+export type OrganicClientRow = {
+  slug: string;
+  name: string;
+  users: number;
+  prevUsers: number;
+  /** Valor transportado de uma leitura anterior (o GA4 falhou agora). */
+  stale: boolean;
 };
 
 const fmt = (n: number) => Math.round(n).toLocaleString("en-GB");
@@ -213,6 +229,8 @@ function OrganicPanel({
   growing,
   comparable,
   topClimber,
+  counted,
+  notCounted,
   anchor,
   onEnter,
   onLeave,
@@ -229,6 +247,23 @@ function OrganicPanel({
   const pct = delta !== null ? (delta / prevTotal) * 100 : null;
   const yesterday = daily.length ? daily[daily.length - 1] : 0;
   const peak = daily.length ? Math.max(...daily) : 0;
+
+  // Segundo hover (v80.19): por cima do «N clientes com GA4 ligado» abre a
+  // lista de quem entra na soma. Um pequeno atraso para não abrir quando o
+  // rato só está de passagem; clicar (ou tocar) abre logo.
+  const [showClients, setShowClients] = useState(false);
+  const intentTimer = useRef<number | null>(null);
+  const clearIntent = useCallback(() => {
+    if (intentTimer.current !== null) {
+      window.clearTimeout(intentTimer.current);
+      intentTimer.current = null;
+    }
+  }, []);
+  const openClientsSoon = useCallback(() => {
+    clearIntent();
+    intentTimer.current = window.setTimeout(() => setShowClients(true), 220);
+  }, [clearIntent]);
+  useEffect(() => clearIntent, [clearIntent]);
 
   return (
     <div
@@ -315,8 +350,22 @@ function OrganicPanel({
             className="organic-rise mt-5 text-xs text-white/40"
             style={{ animationDelay: "400ms" }}
           >
-            {clientsWithData} {clientsWithData === 1 ? "cliente" : "clientes"}{" "}
-            com GA4 ligado · soma real, nunca estimada
+            <button
+              type="button"
+              onMouseEnter={openClientsSoon}
+              onMouseLeave={clearIntent}
+              onClick={() => {
+                clearIntent();
+                setShowClients(true);
+              }}
+              aria-expanded={showClients}
+              className="inline-flex cursor-pointer items-center gap-1 text-white/55 underline decoration-white/25 decoration-dotted underline-offset-[3px] transition hover:text-emerald-200 hover:decoration-emerald-300/60 focus:outline-none focus-visible:text-emerald-200"
+            >
+              <ListChecks className="h-3 w-3" strokeWidth={2.25} />
+              {clientsWithData} {clientsWithData === 1 ? "cliente" : "clientes"}{" "}
+              com GA4 ligado
+            </button>{" "}
+            · soma real, nunca estimada
             {clientsStale > 0 && (
               <>
                 {" "}
@@ -377,6 +426,114 @@ function OrganicPanel({
           </div>
         </div>
       </div>
+
+      {showClients && (
+        <ClientsLayer
+          total={total}
+          counted={counted}
+          notCounted={notCounted}
+          onBack={() => setShowClients(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+/** A camada do segundo hover: cobre o painel inteiro com a lista dos
+ *  clientes que contam (visitantes · variação) e os que ficam de fora. Em
+ *  três colunas cabe a carteira toda sem scroll. */
+function ClientsLayer({
+  total,
+  counted,
+  notCounted,
+  onBack,
+}: {
+  total: number;
+  counted: OrganicClientRow[];
+  notCounted: Array<{ slug: string; name: string }>;
+  onBack: () => void;
+}) {
+  return (
+    <div
+      role="region"
+      aria-label="Clientes contabilizados no tráfego orgânico"
+      className="organic-panel-in absolute inset-0 z-10 overflow-y-auto bg-[#0c1117]/[0.97] p-6 sm:p-7"
+    >
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-emerald-200/85">
+          <ListChecks className="h-3.5 w-3.5" strokeWidth={2.25} />
+          Contam para a soma · {counted.length}{" "}
+          {counted.length === 1 ? "cliente" : "clientes"}
+          <span className="font-medium normal-case tracking-normal text-white/40">
+            = {fmt(total)} visitantes
+          </span>
+        </p>
+        <button
+          type="button"
+          onClick={onBack}
+          className="inline-flex items-center gap-1.5 rounded-full border border-white/12 bg-white/[0.04] px-3 py-1 text-[12px] text-white/65 transition hover:border-white/25 hover:text-white"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" />
+          Voltar
+        </button>
+      </div>
+
+      <ul className="mt-4 grid gap-x-7 sm:grid-cols-2 lg:grid-cols-3">
+        {counted.map((c) => {
+          const pct = c.prevUsers > 0 ? ((c.users - c.prevUsers) / c.prevUsers) * 100 : null;
+          return (
+            <li
+              key={c.slug}
+              className="flex items-center justify-between gap-3 border-b border-white/[0.06] py-1.5 text-[13px]"
+            >
+              <Link
+                href={`/seo/${c.slug}`}
+                title={c.name}
+                className="flex min-w-0 items-center gap-1.5 text-white/80 hover:text-white hover:underline"
+              >
+                <span className="truncate">{c.name}</span>
+                {c.stale && (
+                  <span
+                    title="O GA4 não respondeu na última leitura — é o último valor conhecido"
+                    className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-300/80"
+                  />
+                )}
+              </Link>
+              <span className="flex shrink-0 items-baseline gap-2 tabular-nums">
+                <span className="font-semibold text-white">{fmt(c.users)}</span>
+                <span
+                  className={`w-12 text-right text-[11.5px] ${
+                    pct === null ? "text-white/35" : pct >= 0 ? "text-emerald-300" : "text-rose-300"
+                  }`}
+                >
+                  {pct === null ? "novo" : `${pct >= 0 ? "+" : "−"}${pctLabel(pct)}`}
+                </span>
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+
+      {notCounted.length > 0 && (
+        <div className="mt-5">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/40">
+            Fora da soma · {notCounted.length}{" "}
+            <span className="font-normal normal-case tracking-normal text-white/30">
+              — sem GA4 ligado ou ainda sem dados
+            </span>
+          </p>
+          <ul className="mt-2 flex flex-wrap gap-1.5">
+            {notCounted.map((c) => (
+              <li
+                key={c.slug}
+                className="rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-0.5 text-[12px] text-white/50"
+              >
+                {c.name}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }

@@ -16,7 +16,7 @@ import {
   getSeoOrganicVisitors30d,
   type SeoOrganicRollup,
 } from "@/lib/seo-organic-rollup";
-import { OrganicPulse } from "@/components/seo/organic-pulse";
+import { OrganicPulse, type OrganicClientRow } from "@/components/seo/organic-pulse";
 import { NpsTeamChip, type NpsTeamChipProps } from "@/components/seo/nps-team-chip";
 import { buildNpsBonusMonths } from "@/lib/documentacao/nps-bonus-server";
 import { NPS_BONUS_EXCLUDED_SLUGS, monthLabel, type NpsBonusMonth } from "@/lib/documentacao/nps-bonus";
@@ -184,6 +184,8 @@ export default async function SeoPage() {
               growing={organicTeam.growing}
               comparable={organicTeam.comparable}
               topClimber={organicTeam.topClimber}
+              counted={organicTeam.counted}
+              notCounted={organicTeam.notCounted}
             />
           ) : null}
           {npsTeam && <NpsTeamChip {...npsTeam} />}
@@ -452,9 +454,20 @@ function buildOrganicTeamStats(
   growing: number;
   comparable: number;
   topClimber: { name: string; pct: number } | null;
+  counted: OrganicClientRow[];
+  notCounted: Array<{ slug: string; name: string }>;
 } {
   const MIN_PREV = 100;
   const names = new Map(clients.map((c) => [c.slug, c.title]));
+  // Quem entra na soma e quem fica de fora — o segundo hover (v80.19).
+  const counted: OrganicClientRow[] = rollup.perClient
+    .map((c) => ({ ...c, name: names.get(c.slug) ?? c.slug }))
+    .sort((a, b) => b.users - a.users);
+  const withData = new Set(rollup.perClient.map((c) => c.slug));
+  const notCounted = clients
+    .filter((c) => !withData.has(c.slug))
+    .map((c) => ({ slug: c.slug, name: c.title }))
+    .sort((a, b) => a.name.localeCompare(b.name, "pt"));
   const comparable = rollup.perClient.filter((c) => c.prevUsers > 0);
   const growing = comparable.filter((c) => c.users > c.prevUsers).length;
   let topClimber: { name: string; pct: number } | null = null;
@@ -466,7 +479,7 @@ function buildOrganicTeamStats(
       topClimber = { name: names.get(c.slug) ?? c.slug, pct };
     }
   }
-  return { growing, comparable: comparable.length, topClimber };
+  return { growing, comparable: comparable.length, topClimber, counted, notCounted };
 }
 
 /** A última resposta de cada mês — a mesma regra do bónus NPS: as
@@ -503,5 +516,7 @@ function toNpsTeamChip(months: NpsBonusMonth[] | null): NpsTeamChipProps | null 
     projects: now.consultants.flatMap((c) =>
       c.projects.map((p) => ({ slug: p.slug, name: p.name, consultant: c.name, score: p.score, answeredAt: p.answeredAt })),
     ),
+    // Entraram este mês e ainda não responderam: fora da % (v80.19).
+    newClients: now.newClients.map((c) => ({ slug: c.slug, name: c.name, startedAt: c.startedAt })),
   };
 }

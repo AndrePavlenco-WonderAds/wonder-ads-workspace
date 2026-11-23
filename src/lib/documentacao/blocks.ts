@@ -34,7 +34,7 @@ export const DOCS_BLOCKS: DocsBlock[] = [
     title: "Bónus & Comissões",
     audience: { depts: ["SEO"] },
     audienceLabel: "SEO DPT",
-    updatedAt: "2026-10-28",
+    updatedAt: "2026-11-23",
     pages: [
       {
         id: "bonus-nps",

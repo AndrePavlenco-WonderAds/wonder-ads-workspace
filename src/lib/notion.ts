@@ -116,6 +116,10 @@ const EXTRA_SEO_CLIENTS: Array<{
   // Já existia no registo do fluxo de onboarding com este slug (formulário
   // por preencher); fica aqui para aparecer na coluna dela desde já.
   { title: "ATN Medical", slug: "atn-medical", icon: "🏥" },
+  // Medical Skin Clinic (v80.19) — ainda no onboarding do C-Suite (registo
+  // «medical-skin-clinic», sem consultor). Entra já como cartão para ter
+  // Client Files; cai em «Por atribuir» até o SuperAdmin o migrar no cartão.
+  { title: "Medical Skin Clinic", slug: "medical-skin-clinic", icon: "🧴" },
 ];
 
 // v5 cache key — bumped for André Pereira joining as a new consultant
@@ -135,7 +139,8 @@ const EXTRA_SEO_CLIENTS: Array<{
 // pedido (v77.86) — o bump deita fora a lista que ficou em cache sem eles
 // durante a falha do KV de 12/10/2026.
 // v18: o Real Hotels Group divide-se — entra o Santa Eulália (v80.14).
-const SEO_CLIENTS_CACHE_KEY = "seo-clients-v18";
+// v19: entra o Medical Skin Clinic (v80.19).
+const SEO_CLIENTS_CACHE_KEY = "seo-clients-v19";
 
 /** Última lista que a Notion devolveu inteira (v77.83). Quando o
  *  unstable_cache falha (cache miss — p.ex. depois de um revalidatePath da

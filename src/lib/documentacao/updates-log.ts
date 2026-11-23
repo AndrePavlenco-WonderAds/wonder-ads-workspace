@@ -44,6 +44,17 @@ export type CodeDocUpdate = {
 
 export const CODE_DOC_UPDATES: CodeDocUpdate[] = [
   {
+    id: "v80.19-bonus-nps-clientes-novos",
+    page: "bonus-nps",
+    kind: "regra",
+    changes: [
+      "Clientes novos: um cliente que arrancou no próprio mês já não conta para a taxa de preenchimento (da equipa e tua), a menos que responda. Continua a contar para o mínimo de projetos do bónus individual.",
+    ],
+    at: "2026-11-23T12:00:00+00:00",
+    version: "80.19",
+    anchor: "como-se-mede",
+  },
+  {
     // v80.10: o SOP sai da revisão e abre ao SEO DPT — é esta a entrada que
     // a equipa recebe no sino (a da v80.7, só para SuperAdmins, saiu).
     id: "v80.10-sop-comunicacao-publicado",

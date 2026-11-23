@@ -7,6 +7,12 @@
 // A carteira é a de HOJE (ativos atribuídos agora): a app não guarda o
 // histórico de atribuições por mês. Um cliente que mudou de consultor a meio
 // do mês conta para quem o tem agora.
+//
+// v80.19: um cliente só pesa na taxa de preenchimento de um mês se arrancou
+// ANTES desse mês (data de arranque do C-Suite › Clients). Quem entrou no
+// próprio mês ainda não teve trabalho para avaliar: fica fora da %, a não
+// ser que tenha respondido (aí conta normalmente). Continua a contar como
+// carteira para a regra dos N+ projetos.
 
 import "server-only";
 import { getConsultantResolver } from "@/lib/consultant-assignments";
@@ -14,27 +20,30 @@ import { getSeoClients } from "@/lib/notion";
 import { getNpsRecordsFor } from "@/lib/nps-store";
 import { findEmployeeByName } from "@/lib/proposals/consultant";
 import { getInactiveSeoSlugSet } from "@/lib/seo-inactive-clients";
+import { getSeoStartDates } from "@/lib/seo-start-dates";
 import { seoConsultants } from "./people";
 import {
   NPS_BONUS_EXCLUDED_SLUGS,
   computeNpsBonusMonth,
   lisbonMonthKey,
   type ConsultantInput,
+  type NewClientSkipped,
   type NpsBonusMonth,
 } from "./nps-bonus";
 
 type Portfolio = {
   /** Clientes SEO ativos já com o dono resolvido (sem pausados nem a WonderAds). */
-  owned: Array<{ slug: string; title: string; owner: string }>;
+  owned: Array<{ slug: string; title: string; owner: string; startedAt: string | null }>;
   records: Awaited<ReturnType<typeof getNpsRecordsFor>>;
   consultants: ReturnType<typeof seoConsultants>;
 };
 
 /** Uma leitura para tudo: a carteira de hoje e o NPS de todos os clientes. */
 async function loadPortfolio(): Promise<Portfolio> {
-  const [clients, resolver] = await Promise.all([
+  const [clients, resolver, startDates] = await Promise.all([
     getSeoClients().catch(() => []),
     getConsultantResolver(),
+    getSeoStartDates().catch((): Record<string, string | null> => ({})),
   ]);
   const inactive = await getInactiveSeoSlugSet(clients.map((c) => c.slug));
   // A WonderAds é a própria agência, não um cliente: não conta.
@@ -45,17 +54,39 @@ async function loadPortfolio(): Promise<Portfolio> {
   const owned: Portfolio["owned"] = [];
   for (const client of active) {
     const owner = findEmployeeByName(resolver.resolve(client.slug, client.consultant));
-    if (owner && known.has(owner.username)) owned.push({ slug: client.slug, title: client.title, owner: owner.username });
+    if (owner && known.has(owner.username)) {
+      owned.push({
+        slug: client.slug,
+        title: client.title,
+        owner: owner.username,
+        startedAt: startDates[client.slug] ?? null,
+      });
+    }
   }
   return { owned, records, consultants };
 }
 
 function monthFrom(p: Portfolio, month: string): NpsBonusMonth {
   const byUser = new Map<string, ConsultantInput>(p.consultants.map((c) => [c.username, { ...c, projects: [] }]));
+  const newClients: NewClientSkipped[] = [];
   for (const client of p.owned) {
     // Submissões guardadas da mais recente para a mais antiga: a primeira
     // do mês é a última resposta desse mês.
     const answer = (p.records[client.slug]?.submissions ?? []).find((s) => lisbonMonthKey(s.submittedAt) === month);
+    // Arrancou neste mês (ou depois) e não respondeu → ainda não conta.
+    if (!answer && client.startedAt && client.startedAt.slice(0, 7) >= month) {
+      const row = byUser.get(client.owner);
+      if (row) {
+        newClients.push({
+          slug: client.slug,
+          name: client.title,
+          owner: row.username,
+          consultant: row.name,
+          startedAt: client.startedAt,
+        });
+      }
+      continue;
+    }
     byUser.get(client.owner)?.projects.push({
       slug: client.slug,
       name: client.title,
@@ -66,7 +97,8 @@ function monthFrom(p: Portfolio, month: string): NpsBonusMonth {
   for (const row of byUser.values()) {
     row.projects.sort((a, b) => a.name.localeCompare(b.name, "pt"));
   }
-  return computeNpsBonusMonth(month, Array.from(byUser.values()));
+  newClients.sort((a, b) => a.name.localeCompare(b.name, "pt"));
+  return computeNpsBonusMonth(month, Array.from(byUser.values()), newClients);
 }
 
 export async function buildNpsBonusMonth(month: string): Promise<NpsBonusMonth> {

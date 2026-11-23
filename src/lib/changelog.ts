@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "80.19",
+    date: "2026-11-23",
+    title: "SEO DPT: Medical Skin Clinic no quadro, lista dos clientes do orgânico e NPS sem os clientes do mês",
+    highlights: [
+      "**🧴 Medical Skin Clinic entra no SEO DPT** como cartão (com Client Files), ainda em onboarding no C-Suite. Fica em «Por atribuir» até um SuperAdmin o passar a um consultor no cartão. Arranque a 23/11/2026.",
+      "**📋 Orgânico: segundo hover.** No painel do «organic», passar o rato (ou clicar) em «N clientes com GA4 ligado» mostra quem entra na soma, com os visitantes de 30 dias e a variação de cada cliente, e quem fica de fora (sem GA4 ligado ou ainda sem dados).",
+      "**🙂 NPS: quem entrou no mês já não conta para a %.** Um cliente só conta a partir do mês seguinte ao arranque (data do C-Suite › Clients). Se responder no próprio mês, conta normalmente. No painel do NPS estes clientes aparecem à parte, em «Entraram em novembro · não contam para a %». A regra vale também para o Bónus NPS.",
+    ],
+  },
+  {
     version: "80.18",
     date: "2026-11-20",
     title: "Recrutamento: prova prática passa a 240 min",
