@@ -45,7 +45,7 @@ const cachedSeoStartDates = unstable_cache(
     }
     return out;
   },
-  ["seo-start-dates-v3"],
+  ["seo-start-dates-v4"],
   { revalidate: 1800 },
 );
 

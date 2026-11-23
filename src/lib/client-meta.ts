@@ -67,6 +67,10 @@ export const CLIENT_LOGOS: Record<string, string> = {
   // («logohelp1.png»): wordmark HelpKids azul + bolinhas + «clínica médica».
   // Recortado às margens, branco → transparente. ≈3,2:1, por isso «tight».
   "help-kids": "/logos/help-kids.png",
+  // Medical Skin Clinic (v80.20) — o monograma «MS» dourado de
+  // medicalskinclinics.com («MSC_Logo-02»), recortado às margens. O wordmark
+  // do site é ≈7:1 e ficava ilegível no chip, por isso vai o monograma.
+  "medical-skin-clinic": "/logos/medical-skin-clinic.png",
 };
 
 export function getClientLogo(slug: string): string | null {
@@ -169,6 +173,8 @@ export const CLIENT_WEBSITES: Record<string, string> = {
   verychaga: "https://verychaga.com/",
   // v79.1: Help Kids (João B.) — clínica médica pediátrica.
   "help-kids": "https://www.helpkids.pt/",
+  // v80.20: Medical Skin Clinic — clínica de dermatologia médica e estética.
+  "medical-skin-clinic": "https://medicalskinclinics.com/",
   // ADS-only — not known yet
   "clinica-empatia": "",
 };

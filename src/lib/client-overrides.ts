@@ -53,6 +53,8 @@ const ANDRE_PEREIRA = new Set([
   "white-clinic",
   "spine-center",
   "cdt",
+  // v80.20: Medical Skin Clinic — o consultor escolhido no C-Suite › Clients.
+  "medical-skin-clinic",
 ]);
 
 // João B. — new SEO consultant (v75.4). First book: two clients still in

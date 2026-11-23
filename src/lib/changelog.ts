@@ -13,6 +13,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "80.20",
+    date: "2026-11-23",
+    title: "Medical Skin Clinic: logótipo, website e onboarding a 24/11",
+    highlights: [
+      "**🧴 Medical Skin Clinic** com o monograma «MS» dourado de medicalskinclinics.com no cartão e o website ligado.",
+      "Onboarding a **24/11/2026**. Fica na carteira do **André Pereira**, o consultor escolhido no C-Suite › Clients.",
+    ],
+  },
+  {
     version: "80.19",
     date: "2026-11-23",
     title: "SEO DPT: Medical Skin Clinic no quadro, lista dos clientes do orgânico e NPS sem os clientes do mês",
