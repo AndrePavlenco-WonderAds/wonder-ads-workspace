@@ -123,7 +123,7 @@ export const DOCS_BLOCKS: DocsBlock[] = [
     // As duas listas do SEO DPT (v78.46), editadas pela direção na página.
     audience: { depts: ["SEO"] },
     audienceLabel: "SEO DPT",
-    updatedAt: "2026-10-29",
+    updatedAt: "2026-11-23",
     pages: [
       {
         id: "protocolos-obrigatorios",
@@ -150,7 +150,7 @@ export const DOCS_BLOCKS: DocsBlock[] = [
     // isso é um bloco à parte dos protocolos do SEO DPT.
     audience: { depts: ["SEO", "ADS", "Web", "Commercial"] },
     audienceLabel: "toda a equipa",
-    updatedAt: "2026-10-29",
+    updatedAt: "2026-11-23",
     pages: [
       {
         id: "protocolos-proibidos",

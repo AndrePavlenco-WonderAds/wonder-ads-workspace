@@ -44,6 +44,29 @@ export type CodeDocUpdate = {
 
 export const CODE_DOC_UPDATES: CodeDocUpdate[] = [
   {
+    id: "v80.24-obrigatorio-gravacao-sexta",
+    page: "protocolos-obrigatorios",
+    kind: "regra",
+    changes: [
+      "Protocolo novo: todas as sextas-feiras, até ao fim do dia, envia ao team leader a gravação de uma reunião da semana (sem reuniões, vai uma de semanas anteriores). Serve para a equipa aprender com as que correm bem e com as que correm menos bem.",
+    ],
+    at: "2026-11-23T14:30:00+00:00",
+    version: "80.24",
+    anchor: "lista",
+  },
+  {
+    id: "v80.24-proibidos-reunioes-e-respostas",
+    page: "protocolos-proibidos",
+    kind: "regra",
+    changes: [
+      "Proibido: reuniões sobrepostas no calendário, aceites ou apenas propostas, com clientes ou internas.",
+      "Proibido: um cliente mais de 1 hora sem resposta no grupo durante o horário do consultor da conta (exceção: o consultor está em reunião).",
+    ],
+    at: "2026-11-23T14:30:00+00:00",
+    version: "80.24",
+    anchor: "lista",
+  },
+  {
     id: "v80.19-bonus-nps-clientes-novos",
     page: "bonus-nps",
     kind: "regra",

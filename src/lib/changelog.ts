@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "80.24",
+    date: "2026-11-23",
+    title: "Protocolos: 1 obrigatório e 2 proibidos novos",
+    highlights: [
+      "**📼 Obrigatório: gravação de uma reunião ao team leader todas as sextas-feiras**, até ao fim do dia, para a equipa aprender a comunicar melhor.",
+      "**🚫 Proibido: reuniões sobrepostas no calendário** (aceites ou só propostas, com clientes ou internas).",
+      "**🚫 Proibido: um cliente mais de 1 hora sem resposta no grupo** durante o horário do consultor, salvo se estiver em reunião.",
+      "O sino avisa a equipa das três regras novas.",
+    ],
+  },
+  {
     version: "80.23",
     date: "2026-11-23",
     title: "Notificações com o logótipo do cliente",

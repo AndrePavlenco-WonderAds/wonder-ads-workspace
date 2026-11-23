@@ -69,9 +69,23 @@ export const DEFAULT_PROTOCOLS: Record<ProtocolList, ProtocolDoc> = {
       },
       {
         id: "monthly-report",
-        title: "Monthly Report até dia 2 do mês seguinte",
+        title: "Monthly Report até dia 5 do mês seguinte",
         cadence: "Mensal",
-        detail: "Um relatório por cliente, feito na app e enviado em vídeo, sobre o mês que fechou.",
+        detail: "Um relatório por cliente, feito na app e enviado, sobre o mês que fechou.",
+      },
+      {
+        id: "p-z8gluvz",
+        title: "Daily Update no Grupo do DPT",
+        cadence: "Diário",
+        detail: "Tudo o que foi feito durante o dia deve ser enviado no grupo do whatsapp do departamento ao fim do dia.",
+      },
+      // v80.24, dado pelo André (2026-11-23).
+      {
+        id: "gravacao-sexta",
+        title: "Gravação de uma reunião ao team leader todas as sextas-feiras",
+        cadence: "Semanal",
+        detail:
+          "Até ao fim do dia de sexta-feira, envia-se ao team leader a gravação de uma reunião dessa semana; se não houve reuniões, vai uma de semanas anteriores. As reuniões que correm bem são analisadas pelos colegas para aprendermos a comunicar melhor. As que correm menos bem são igualmente importantes: com a ajuda do team leader, mostram à equipa como se devia ter falado naquele momento. Recomendamos muito ter um bloco no calendário à sexta-feira só para isto.",
       },
     ],
   },
@@ -102,8 +116,8 @@ export const DEFAULT_PROTOCOLS: Record<ProtocolList, ProtocolDoc> = {
       },
     ],
   },
-  // Só o primeiro, dado pelo André (2026-10-29); os outros acrescenta-os a
-  // direção na página.
+  // Espelho da lista guardada em KV (é essa que vale em produção); a direção
+  // acrescenta mais na própria página.
   proibidos: {
     updatedAt: 0,
     updatedBy: null,
@@ -113,7 +127,22 @@ export const DEFAULT_PROTOCOLS: Record<ProtocolList, ProtocolDoc> = {
         title: "Enviar áudios de trabalho",
         cadence: "",
         detail:
-          "Tudo o que é de trabalho comunica-se por escrito: mensagens, emails, comentários nas tarefas. Um texto lê-se em segundos, pesquisa-se mais tarde e fica registado; um áudio não.",
+          "Tudo o que é de trabalho comunica-se por escrito: mensagens, emails, comentários nas tarefas. Um texto lê-se em segundos, pesquisa-se mais tarde e fica registado; um áudio não. Quando o cliente mandar áudio, nós resumimos SEMPRE o pedido por escrito na tarefa/chat e continua a conversa.",
+      },
+      // v80.24, dados pelo André (2026-11-23).
+      {
+        id: "reunioes-sobrepostas",
+        title: "Ter reuniões sobrepostas no calendário",
+        cadence: "",
+        detail:
+          "Nunca pode haver duas reuniões à mesma hora no calendário, estejam aceites ou apenas propostas: cliente com cliente, cliente com reunião interna ou interna com interna. Antes de aceitar ou propor um horário, confirma-se o calendário. Um calendário sem choques mostra que gerimos bem o nosso tempo e dá à equipa e aos clientes o exemplo de responsabilidade que esperamos de todos.",
+      },
+      {
+        id: "cliente-sem-resposta",
+        title: "Deixar um cliente mais de 1 hora sem resposta no grupo",
+        cadence: "",
+        detail:
+          "Durante o horário de trabalho do consultor da conta, nenhuma mensagem do cliente fica mais de 1 hora sem resposta no grupo. A única exceção é o consultor estar em reunião nesse período. Uma resposta rápida dá segurança ao cliente, mostra que o projeto está a ser acompanhado de perto e evita que uma dúvida pequena se torne num problema maior.",
       },
     ],
   },
