@@ -18,6 +18,7 @@
 // sem arrastar os outros.
 
 import { getCurrentRoadmap, taskCoversWeek, currentWeekIndex, roadmapWeeks, type RoadmapTask } from "@/lib/roadmap-store";
+import { isInternalFixedTask } from "@/lib/roadmap-fixed-blocks";
 import { reportLangFor, type ReportLang } from "@/lib/weekly-report-format";
 import {
   parseDailyUpdates,
@@ -82,7 +83,13 @@ export async function readNextWeek(
   const currentWeek = Math.min(Math.max(currentWeekIndex(roadmap, now), 1), total);
   const nextWeek = currentWeek + 1;
   const tasks = roadmap.tasks
-    .filter((t) => taskCoversWeek(t, nextWeek) && t.status !== "implemented")
+    // Blocos fixos internos (renovação…) não se prometem ao cliente.
+    .filter(
+      (t) =>
+        taskCoversWeek(t, nextWeek) &&
+        t.status !== "implemented" &&
+        !isInternalFixedTask(t),
+    )
     .sort((a, b) => a.week - b.week || a.order - b.order)
     .map(describeTask);
   return { currentWeek, nextWeek, totalWeeks: total, tasks };

@@ -42,6 +42,7 @@ import { getCurrentEmployee } from "@/lib/auth/server";
 import {
   archiveAndReplace,
   getCurrentRoadmap,
+  hasArchivedRoadmaps,
   MIN_ROADMAP_MONTHS,
   ROADMAP_GENERATE_MONTHS,
   WEEK_MODEL_MONTH_QUARTERS,
@@ -53,10 +54,12 @@ import {
   type Roadmap,
   type RoadmapTask,
 } from "@/lib/roadmap-store";
+import { buildFixedTasks, isFixedTask } from "@/lib/roadmap-fixed-blocks";
 import {
   SYSTEM_PROMPT,
   buildRoadmapSchema,
   designRules,
+  formatFixedBlocks,
   formatMonthCalendar,
   outputTokenBudget,
   retryInstructions,
@@ -156,14 +159,27 @@ export async function POST(
   const lastDay = roadmapLastDay(horizon);
   const RoadmapSchema = buildRoadmapSchema(totalWeeks);
 
+  // v80.27 — blocos fixos do arranque. Um roadmap que já os tem mantém-nos
+  // (estado e notas de cada um preservados; as semanas recalculam-se para o
+  // comprimento novo). O primeiro roadmap de um cliente nasce com eles. Os
+  // roadmaps antigos regenerados continuam sem eles.
+  const seedFixed = previous
+    ? previous.tasks.some(isFixedTask) ||
+      (previous.tasks.length === 0 && !(await hasArchivedRoadmaps(slug)))
+    : !(await hasArchivedRoadmaps(slug));
+  const fixedTasks = seedFixed
+    ? buildFixedTasks(months, Date.now(), previous?.tasks ?? [])
+    : [];
+
   const briefBlock = formatBrief(brief);
   const historyBlock = formatHistory(history);
   const targetsBlock = formatTargets(targets);
   const onboardingBlock = onboarding?.extractedText
     ? `## Onboarding form (extracted text)\n\`\`\`\n${onboarding.extractedText.slice(0, 2000)}${onboarding.extractedText.length > 2000 ? "\n…[truncated]" : ""}\n\`\`\``
     : "";
-  const previousBlock = previous
-    ? `## Previous roadmap (just ran out / being replaced)\nStart date: ${previous.startDate}\nTasks (only those already 'implemented' should be credited as done):\n${previous.tasks
+  const previousPlanned = previous?.tasks.filter((t) => !isFixedTask(t)) ?? [];
+  const previousBlock = previous && previousPlanned.length > 0
+    ? `## Previous roadmap (just ran out / being replaced)\nStart date: ${previous.startDate}\nTasks (only those already 'implemented' should be credited as done):\n${previousPlanned
         .map(
           (t) => `- W${t.week} · [${t.status}] ${t.title} (${t.pillar})`,
         )
@@ -197,6 +213,7 @@ export async function POST(
     historyBlock,
     targetsBlock,
     previousBlock,
+    formatFixedBlocks(fixedTasks),
     "\n## How to think (think like an SEO pro before you plan)",
     "1. **Diagnose first.** Read the homepage title/meta/H1/nav/body text + every uploaded photo. Form a 2-sentence verdict on what this business actually does, who it serves, and the 2-3 biggest gaps blocking organic growth. Put that in `auditSummary`.",
     "2. **Sequence to first principles.** Foundations (indexation, tracking, schema, NAP) → on-page + content + GMB → off-page + AI/entity work → measurement. Don't propose link-building before the site is crawlable. Don't propose content scale before pillar pages exist.",
@@ -204,7 +221,7 @@ export async function POST(
     "4. **YMYL discipline.** Health & Wellness clients can't promise cures or guaranteed outcomes. Skip any task whose deliverable would force a non-compliant claim.",
     "5. **Honour the brief.** Client Don'ts are NEVER violated. Client Do's bias every choice. Notes are context — integrate them.",
     "\n## Design rules",
-    ...designRules(totalWeeks, months),
+    ...designRules(totalWeeks, months, fixedTasks.length > 0),
   ]
     .filter(Boolean)
     .join("\n");
@@ -307,6 +324,9 @@ export async function POST(
     );
   }
 
+  // Os blocos fixos vão à frente; o quadro desenha-os à parte, por cima.
+  const allTasks = [...fixedTasks, ...tasks];
+
   const next: Roadmap = {
     id: newRoadmapId(),
     clientSlug: slug,
@@ -318,7 +338,7 @@ export async function POST(
     weekModel: WEEK_MODEL_MONTH_QUARTERS,
     startDate,
     generatedAt: now,
-    tasks,
+    tasks: allTasks,
     dismissedWarnings: [],
     auditSummary: parsed.auditSummary.trim(),
     sourcePhotos: photos.map((p) => ({ url: p.url, name: p.originalName })),

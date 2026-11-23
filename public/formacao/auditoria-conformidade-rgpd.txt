@@ -1,0 +1,112 @@
+# Auditoria de Conformidade RGPD | Portugal e União Europeia
+
+Quero que realizes uma auditoria completa ao website que está aberto no navegador dentro do claude, com o objetivo de verificar se está em conformidade com o RGPD (Regulamento Geral sobre a Proteção de Dados), legislação portuguesa aplicável e restantes normas europeias relevantes em matéria de privacidade e proteção de dados.
+
+Age como um especialista sénior em RGPD, privacidade digital, legislação portuguesa e compliance de websites.
+
+## 1. Auditoria RGPD e Privacidade
+
+Analisa o website e verifica os seguintes elementos:
+
+- Política de Privacidade: existência, acessibilidade, clareza e conformidade legal.
+- Política de Cookies: existência, informação disponibilizada e conformidade.
+- Banner de consentimento de cookies: verifica se permite aceitar, rejeitar e personalizar cookies com a mesma facilidade.
+- Gestão de consentimento: verifica se os cookies não essenciais são bloqueados antes do consentimento.
+- Formulários de contacto: verifica se existe informação adequada sobre o tratamento dos dados pessoais.
+- Formulários de marcação, pedidos de orçamento, subscrição de newsletters e outros pontos de recolha de dados.
+- Identificação da entidade responsável pelo tratamento dos dados.
+- Finalidades e fundamentos legais do tratamento de dados.
+- Direitos dos titulares dos dados e respetivos mecanismos de exercício.
+- Prazos de conservação dos dados pessoais.
+- Partilha de dados com terceiros e utilização de serviços externos.
+- Ferramentas de tracking e analytics, como Google Analytics, Google Tag Manager, Meta Pixel e outras semelhantes.
+- Integrações externas, como sistemas CRM, plataformas de email marketing e ferramentas de publicidade.
+- Segurança e transmissão de dados através de HTTPS.
+- Existência de mecanismos para retirar ou alterar o consentimento.
+
+Considera o RGPD (Regulamento UE 2016/679), a Lei n.º 58/2019, a Lei n.º 41/2004, na sua redação atual, e as orientações aplicáveis da CNPD e do Comité Europeu para a Proteção de Dados.
+
+## 2. Auditoria aos contactos telefónicos
+
+Quero uma verificação específica de todos os números de telefone apresentados no website.
+
+Verifica:
+- Se os números de telefone estão acompanhados da indicação legalmente aplicável sobre o custo da chamada.
+- Se é utilizada a indicação correta:
+  - "Chamada para a rede fixa nacional"
+  - "Chamada para a rede móvel nacional"
+- Se a indicação está presente em todas as páginas onde aparecem números de telefone.
+- Se está presente no header, footer, páginas de contacto, páginas de serviços e outros locais relevantes.
+- Se existem números apresentados sem qualquer indicação.
+- Se a indicação está correta de acordo com o tipo de número apresentado.
+
+Não assumas que todos os números têm a mesma classificação. Identifica cada número e verifica individualmente.
+
+## 3. Identificação de problemas e soluções
+
+Por cada problema encontrado, apresenta:
+
+1. Página ou URL exata onde foi identificado.
+2. Elemento específico que está incorreto ou em falta.
+3. Qual a obrigação legal ou recomendação aplicável.
+4. Nível de prioridade: Crítico, Alto, Médio ou Baixo.
+5. Solução prática e rápida para corrigir o problema.
+6. Exemplo concreto do texto ou alteração que deve ser implementada.
+
+Evita recomendações genéricas. Quero instruções específicas que possam ser entregues diretamente à equipa responsável pelo website.
+
+## 4. Plano de correção rápida
+
+No final, cria um plano de ação organizado por prioridade:
+
+- **Prioridade 1:** Problemas que podem representar incumprimentos legais relevantes e devem ser corrigidos imediatamente.
+- **Prioridade 2:** Problemas importantes que devem ser resolvidos a curto prazo.
+- **Prioridade 3:** Melhorias complementares e boas práticas.
+
+Sempre que possível, indica se a correção pode ser feita diretamente no WordPress, através do plugin de cookies, no código do website ou através de alterações simples de conteúdo.
+
+## 5. Formato do relatório final
+
+Apresenta os resultados com a seguinte estrutura:
+
+### A. Resumo executivo
+- Estado geral de conformidade.
+- Principais problemas encontrados.
+- Número total de problemas identificados.
+- Avaliação global de risco.
+
+### B. Auditoria detalhada
+Tabela com:
+- Problema identificado.
+- Página/URL.
+- Prioridade.
+- Estado atual.
+- Solução recomendada.
+
+### C. Auditoria telefónica
+Tabela com:
+- Número de telefone.
+- Tipo de rede (fixa ou móvel).
+- Página onde aparece.
+- Aviso presente (Sim/Não).
+- Correção necessária.
+
+### D. Textos prontos a implementar
+Fornece os textos exatos que devem ser adicionados ou corrigidos, incluindo avisos telefónicos, informações de privacidade e outros elementos necessários.
+
+### E. Plano de implementação
+Lista de tarefas ordenadas por prioridade, com uma estimativa de dificuldade (Fácil, Média ou Complexa).
+
+## 6. Regras importantes da auditoria
+
+- Analisa efetivamente o website e não te limites a avaliar a homepage.
+- Percorre todas as páginas públicas acessíveis, incluindo páginas de serviços, contactos, formulários, landing pages, blog e páginas institucionais.
+- Não assumas que um elemento está em conformidade apenas porque existe.
+- Distingue incumprimentos legais confirmados de boas práticas e situações que necessitam de validação adicional.
+- Não inventes problemas nem assumas que determinada ferramenta está instalada sem evidências.
+- Se não conseguires verificar algum elemento tecnicamente, indica essa limitação.
+- Fundamenta os problemas legais com referências a legislação e fontes oficiais, preferencialmente CNPD, EUR-Lex e Comissão Europeia.
+- Não confundas recomendações de boas práticas com obrigações legais.
+- Privilegia soluções simples, rápidas e económicas, sem necessidade de reconstruir o website.
+
+**Objetivo final:** Quero um relatório de auditoria que me permita identificar rapidamente tudo o que está em falta ou incorreto no website e entregar à equipa de desenvolvimento uma lista clara de alterações necessárias para melhorar a conformidade legal e corrigir os avisos dos contactos telefónicos.

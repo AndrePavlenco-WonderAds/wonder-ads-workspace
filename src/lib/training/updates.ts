@@ -82,6 +82,13 @@ type CodeTrainingUpdate = {
 
 export const TRAINING_CODE_UPDATES: CodeTrainingUpdate[] = [
   {
+    id: "v80.27-seo-conformidade-inicial",
+    track: "seo-geo",
+    lessonIds: ["seo-conformidade-inicial"],
+    at: "2026-11-23T18:30:00+00:00",
+    version: "80.27",
+  },
+  {
     id: "v78.93-seo-nps-resposta",
     track: "seo-geo",
     lessonIds: ["seo-com-nps-resposta"],

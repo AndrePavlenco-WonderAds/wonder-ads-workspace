@@ -9,7 +9,8 @@
 // client's roadmap.
 
 import { z } from "zod";
-import { roadmapMonths, type Roadmap } from "./roadmap-store";
+import { roadmapMonths, type Roadmap, type RoadmapTask } from "./roadmap-store";
+import { FIXED_GROUPS, FIXED_GROUP_IDS } from "./roadmap-fixed-blocks";
 import { formatDate } from "./dates";
 
 // Forgiving pillar parser — Sonnet occasionally renders the same value
@@ -133,11 +134,17 @@ export function formatMonthCalendar(
 /** Sequencing guidance that scales with the plan: a quarter is
  *  foundations → execution → strategic; anything longer repeats a monthly
  *  cadence and closes every quarter with a review. */
-export function designRules(totalWeeks: number, months: number): string[] {
+export function designRules(
+  totalWeeks: number,
+  months: number,
+  hasFixedBlocks = false,
+): string[] {
   const budget = taskBudget(totalWeeks);
   const finalMonthStart = Math.max(3, totalWeeks - 3);
   const rules = [
-    "- Weeks 1-2: deep audit + GA4/GSC/GMB tracking setup + E-E-A-T scaffolding + fix anything broken the audit surfaces.",
+    hasFixedBlocks
+      ? "- Weeks 1-2: the setup checklist (baseline, backup, tracking, consent) is already on the board as fixed blocks — plan the work the audit points to: fix what is broken, E-E-A-T scaffolding, first on-page quick wins. Keep week 1 light (2-3 tasks): it already carries the fixed checklist."
+      : "- Weeks 1-2: deep audit + GA4/GSC/GMB tracking setup + E-E-A-T scaffolding + fix anything broken the audit surfaces.",
     `- Weeks 3-${finalMonthStart - 1}: content (1-2 articles/week tied to onboarding-form themes), backlink batches (relevance > raw DR), weekly GMB posts (cadence the photos may already show is missing), on-page passes, landing pages.`,
     `- Weeks ${finalMonthStart}-${totalWeeks} (the final month): AI/entity/schema work, follow-up linkbuilding, content insights, AI Overview / LLM-mention monitoring, the end-of-package report and the renewal conversation.`,
   ];
@@ -153,6 +160,23 @@ export function designRules(totalWeeks: number, months: number): string[] {
     "- If the previous roadmap just shipped an audit, propose the next step instead.",
   );
   return rules;
+}
+
+/** v80.27 — os blocos fixos do arranque que já estão no quadro (presos às
+ *  suas semanas). O modelo não os repete nem propõe quase-duplicados; o
+ *  que planeia vive à volta deles. Vazio quando o roadmap não os tem. */
+export function formatFixedBlocks(fixed: RoadmapTask[]): string {
+  if (fixed.length === 0) return "";
+  const lines: string[] = [];
+  for (const id of FIXED_GROUP_IDS) {
+    const items = fixed.filter((t) => t.fixed?.group === id);
+    if (items.length === 0) continue;
+    const week = items[0].week;
+    const where = week === 0 ? "before week 1 (before the onboarding meeting)" : `week ${week}`;
+    lines.push(`### ${FIXED_GROUPS[id].docLabel} — ${where}`);
+    for (const t of items) lines.push(`- ${t.title}`);
+  }
+  return `## Fixed blocks already on the board (locked — do NOT add these or near-duplicates)\nEvery new client's roadmap carries this fixed checklist in fixed weeks. It is already planned and the team cannot move or delete it, so your tasks must NOT repeat any of it (no GA4/GSC/GTM tracking setup, no event creation, no cookie/consent work, no site backup, no baseline snapshot, no access requests, no keyword research or site audit before the meeting, no quarterly report in week 12, no renewal document/proposal/meeting). Plan the SEO work around it.\n${lines.join("\n")}`;
 }
 
 /** The retry nudge appended when the first attempt fails schema

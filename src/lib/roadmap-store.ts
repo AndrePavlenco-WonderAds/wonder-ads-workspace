@@ -12,6 +12,11 @@
 
 import { kv } from "@vercel/kv";
 import { getAdminRecord } from "./admin-clients-store";
+import {
+  buildFixedTasks,
+  parseFixedMark,
+  type FixedMark,
+} from "./roadmap-fixed-blocks";
 
 const CURRENT_PREFIX = "roadmap:current:";
 const ARCHIVE_PREFIX = "roadmap:archive:";
@@ -293,6 +298,9 @@ export function migrateWeekModel(roadmap: Roadmap): Roadmap {
     Math.max(1, Math.min(total, weekIndexAt(roadmap, ms) || 1));
   const tasks = (Array.isArray(roadmap.tasks) ? roadmap.tasks : []).map(
     (t) => {
+      // Blocos fixos já nascem no modelo novo (semana 0, 1, 12…) — um
+      // remapeamento por data atirava os da semana 0 para a semana 1.
+      if (t.fixed) return t;
       const week = clampIdx(legacyWeekDateMs(roadmap.startDate, t.week));
       let endWeek: number | undefined;
       if (
@@ -375,6 +383,10 @@ export type RoadmapTask = {
    *  stuck in pending_review). */
   statusChangedAt: number;
   createdAt: number;
+  /** v80.27 — bloco fixo do arranque (ver roadmap-fixed-blocks.ts): não se
+   *  apaga, não muda de semana, o título não se edita. Só os blocos fixos
+   *  podem viver na semana 0 («antes da reunião de onboarding»). */
+  fixed?: FixedMark;
 };
 
 /** Last week a task spans through (inclusive). Falls back to the task's
@@ -510,13 +522,43 @@ export async function getCurrentRoadmap(slug: string): Promise<Roadmap | null> {
 }
 
 /** Like getCurrentRoadmap but always returns a usable Roadmap — when no
- *  roadmap is on file yet, an empty one (12 blank weeks, today as
- *  startDate, no tasks) is created and persisted so the board renders
- *  immediately. Consultants click Generate to have Claude fill it in,
- *  but the grid works manually without any AI call too. */
-export async function ensureRoadmap(slug: string): Promise<Roadmap> {
+ *  roadmap is on file yet, an empty one (today as startDate, no planned
+ *  tasks) is created and persisted so the board renders immediately.
+ *  Consultants click Generate to have Claude fill it in, but the grid
+ *  works manually without any AI call too.
+ *
+ *  v80.27 — um roadmap NOVO nasce com os blocos fixos do arranque (antes da
+ *  reunião, primeira semana, mês 3, renovação) e com o comprimento do
+ *  contrato (`termMonths`, 6 por defeito) em vez de um trimestre. «Novo» =
+ *  não havia roadmap, ou o quadro está vazio e o cliente nunca teve outro
+ *  (sem arquivo). Os roadmaps que já existiam não levam blocos. */
+export async function ensureRoadmap(
+  slug: string,
+  termMonths?: number,
+): Promise<Roadmap> {
+  const months = Math.max(
+    MIN_ROADMAP_MONTHS,
+    Math.min(MAX_ROADMAP_MONTHS, Math.round(Number(termMonths) || 6)),
+  );
   const existing = await getCurrentRoadmap(slug);
-  if (existing) return existing;
+  if (existing) {
+    if (existing.tasks.length > 0 || !roadmapStorageConfigured) return existing;
+    if (await hasArchivedRoadmaps(slug)) return existing;
+    const seeded: Roadmap = {
+      ...existing,
+      months,
+      weeks: roadmapWeeks({ months }),
+      weekModel: WEEK_MODEL_MONTH_QUARTERS,
+      tasks: buildFixedTasks(months, Date.now()),
+    };
+    try {
+      await kv.set(currentKey(slug), seeded);
+    } catch (err) {
+      console.error("roadmap fixed-blocks seed failed:", err);
+      return existing;
+    }
+    return seeded;
+  }
   const now = new Date();
   const today = new Date(
     Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
@@ -526,13 +568,13 @@ export async function ensureRoadmap(slug: string): Promise<Roadmap> {
   const blank: Roadmap = {
     id: newRoadmapId(),
     clientSlug: slug,
-    months: MIN_ROADMAP_MONTHS,
-    weeks: roadmapWeeks({ months: MIN_ROADMAP_MONTHS }),
+    months,
+    weeks: roadmapWeeks({ months }),
     weekModel: WEEK_MODEL_MONTH_QUARTERS,
     startDate: today,
     onboardingDate: await resolveOnboardingDate(slug, undefined),
     generatedAt: Date.now(),
-    tasks: [],
+    tasks: buildFixedTasks(months, Date.now()),
     dismissedWarnings: [],
   };
   if (roadmapStorageConfigured) {
@@ -543,6 +585,18 @@ export async function ensureRoadmap(slug: string): Promise<Roadmap> {
     }
   }
   return blank;
+}
+
+/** True quando o cliente já teve pelo menos um roadmap arquivado. */
+export async function hasArchivedRoadmaps(slug: string): Promise<boolean> {
+  if (!roadmapStorageConfigured) return false;
+  try {
+    const v = await kv.get<Roadmap[]>(archiveKey(slug));
+    return Array.isArray(v) && v.length > 0;
+  } catch {
+    // Na dúvida, trata-se como cliente antigo: não se semeia nada.
+    return true;
+  }
 }
 
 export async function saveCurrentRoadmap(roadmap: Roadmap): Promise<Roadmap> {
@@ -677,7 +731,14 @@ function normaliseTask(
 ): RoadmapTask | null {
   const raw = (input ?? {}) as Partial<RoadmapTask>;
   if (!raw.title || typeof raw.title !== "string") return null;
-  const week = Math.max(1, Math.min(maxWeek, Math.floor(Number(raw.week) || 1)));
+  const fixed = parseFixedMark(raw.fixed);
+  // Só um bloco fixo vive na semana 0 (antes da reunião de onboarding); o
+  // PUT confirma depois contra o roadmap gravado (lockFixedTasks).
+  const minWeek = fixed && Number(raw.week) === 0 ? 0 : 1;
+  const week = Math.max(
+    minWeek,
+    Math.min(maxWeek, Math.floor(Number(raw.week) || minWeek)),
+  );
   // endWeek is only kept when it's a real span (strictly after the start
   // week). Anything ≤ week collapses back to a single-week task (undefined)
   // so the "single vs multi" distinction is unambiguous downstream.
@@ -714,5 +775,6 @@ function normaliseTask(
     statusChangedAt:
       typeof raw.statusChangedAt === "number" ? raw.statusChangedAt : now,
     createdAt: typeof raw.createdAt === "number" ? raw.createdAt : now,
+    ...(fixed ? { fixed } : {}),
   };
 }

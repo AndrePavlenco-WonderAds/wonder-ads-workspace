@@ -16,6 +16,7 @@ import {
   normaliseRoadmap,
   saveCurrentRoadmap,
 } from "@/lib/roadmap-store";
+import { lockFixedTasks } from "@/lib/roadmap-fixed-blocks";
 import { diffRoadmaps } from "@/lib/roadmap-changelog";
 import { appendRoadmapLog } from "@/lib/roadmap-changelog-store";
 import { getCurrentEmployee } from "@/lib/auth/server";
@@ -46,7 +47,9 @@ export async function PUT(
     );
   }
   const prev = await getCurrentRoadmap(slug);
-  const next = normaliseRoadmap(body, slug);
+  // v80.27: os blocos fixos do arranque ficam onde estão, com o mesmo
+  // título — daqui só lhes muda o estado e as notas.
+  const next = lockFixedTasks(prev, normaliseRoadmap(body, slug));
   await saveCurrentRoadmap(next);
   // Record meaningful changes to the changelog (best-effort, never blocks
   // the save). Order-only saves diff to [] → zero extra KV ops.

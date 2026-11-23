@@ -14,6 +14,7 @@ import {
   type RoadmapPillar,
   type RoadmapStatus,
 } from "@/lib/roadmap-store";
+import { isInternalFixedTask } from "@/lib/roadmap-fixed-blocks";
 import { formatDate } from "@/lib/dates";
 
 type Lang = "pt" | "en";
@@ -111,6 +112,9 @@ export function RoadmapReportBody({
   type Cell = { task: Roadmap["tasks"][number]; isStart: boolean };
   const byWeek = new Map<number, Cell[]>();
   for (const t of roadmap.tasks) {
+    // v80.27: blocos fixos internos (antes da reunião, renovação) são
+    // trabalho da equipa — o cliente não os vê.
+    if (isInternalFixedTask(t)) continue;
     const end = taskEndWeek(t);
     for (let w = t.week; w <= end; w++) {
       if (!weekSet.has(w)) continue;

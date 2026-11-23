@@ -18,8 +18,11 @@ import {
   ChevronLeft,
   ChevronRight,
   CornerDownRight,
+  ExternalLink,
+  GraduationCap,
   ImagePlus,
   Loader2,
+  Lock,
   Pencil,
   Plus,
   RefreshCw,
@@ -54,6 +57,13 @@ import {
   type RoadmapStatus,
   type RoadmapTask,
 } from "@/lib/roadmap-store";
+import {
+  FIXED_GROUPS,
+  FIXED_GROUP_IDS,
+  minMonthsForFixed,
+  plannedTasks,
+  type FixedGroupId,
+} from "@/lib/roadmap-fixed-blocks";
 import { formatDate } from "@/lib/dates";
 import { RoadmapRenewalChip } from "./roadmap-renewal-chip";
 import { useSeoReadOnly } from "./seo-readonly";
@@ -144,6 +154,23 @@ const REMOVE_CONFIRM_WORD = "DELETE";
  *  editable, draggable card) and a slim read-only continuation bar on each
  *  later week. */
 type WeekCell = { task: RoadmapTask; isStart: boolean };
+
+/** v80.27 — os blocos fixos de uma semana, por grupo, na ordem do PDF. */
+type FixedGroupCells = { group: FixedGroupId; tasks: RoadmapTask[] };
+
+/** Menor comprimento a que o plano pode encolher: um trimestre, ou o que
+ *  for preciso para não cortar um bloco fixo (a renovação, tipicamente). */
+function removeFloor(roadmap: Roadmap): number {
+  return Math.max(MIN_ROADMAP_MONTHS, minMonthsForFixed(roadmap.tasks));
+}
+
+/** Dia anterior a uma data ISO — o fim da «Week 0». */
+function dayBeforeISO(iso: string): string {
+  const d = new Date(`${iso}T00:00:00Z`);
+  if (Number.isNaN(d.getTime())) return iso;
+  d.setUTCDate(d.getUTCDate() - 1);
+  return d.toISOString().slice(0, 10);
+}
 
 type Props = {
   clientSlug: string;
@@ -245,6 +272,7 @@ export function RoadmapBoard({
     const map = new Map<number, WeekCell[]>();
     for (let w = 1; w <= totalWeeks; w++) map.set(w, []);
     for (const t of roadmap.tasks) {
+      if (t.fixed) continue; // desenhados à parte (fixedByWeek)
       const start = Math.max(1, Math.min(totalWeeks, t.week));
       const end = Math.min(totalWeeks, taskEndWeek(t));
       for (let w = start; w <= end; w++) {
@@ -260,6 +288,31 @@ export function RoadmapBoard({
     }
     return map;
   }, [roadmap, totalWeeks]);
+  // v80.27 — blocos fixos do arranque, por semana e por grupo. Vivem por
+  // cima das tarefas planeadas e não entram no arrastar.
+  const fixedByWeek = useMemo(() => {
+    const map = new Map<number, FixedGroupCells[]>();
+    for (const group of FIXED_GROUP_IDS) {
+      const tasks = roadmap.tasks
+        .filter((t) => t.fixed?.group === group)
+        .sort((a, b) => a.order - b.order);
+      if (tasks.length === 0) continue;
+      const w = Math.max(0, Math.min(totalWeeks, tasks[0].week));
+      const list = map.get(w) ?? [];
+      list.push({ group, tasks });
+      map.set(w, list);
+    }
+    return map;
+  }, [roadmap, totalWeeks]);
+  const fixedCount = useMemo(
+    () => roadmap.tasks.filter((t) => t.fixed).length,
+    [roadmap],
+  );
+  const fixedDone = useMemo(
+    () =>
+      roadmap.tasks.filter((t) => t.fixed && t.status === "implemented").length,
+    [roadmap],
+  );
 
   // ----- Generate -----
   const generate = useCallback(async () => {
@@ -418,7 +471,8 @@ export function RoadmapBoard({
   const deleteTask = useCallback((taskId: string) => {
     setRoadmap((prev) => ({
       ...prev,
-      tasks: prev.tasks.filter((t) => t.id !== taskId),
+      // Um bloco fixo não se apaga (o servidor repõe-no de qualquer forma).
+      tasks: prev.tasks.filter((t) => t.id !== taskId || t.fixed),
     }));
   }, []);
   const addTask = useCallback((week: number) => {
@@ -450,7 +504,7 @@ export function RoadmapBoard({
     setRoadmap((prev) => {
       const total = roadmapWeeks(prev);
       const tasks = prev.tasks.map((t) => {
-        if (t.id !== taskId) return t;
+        if (t.id !== taskId || t.fixed) return t; // blocos fixos não se movem
         const span = taskEndWeek(t) - t.week; // 0 for a single-week task
         let start = Math.max(1, Math.min(total, Math.round(targetWeek)));
         let end = start + span;
@@ -496,11 +550,12 @@ export function RoadmapBoard({
   const removeMonths = useCallback((remove: number) => {
     setRoadmap((prev) => {
       const current = roadmapMonthCount(prev);
-      const next = monthsAfterRemove(current, remove);
+      // Nunca abaixo de um bloco fixo (ex.: a renovação na semana 19).
+      const next = Math.max(removeFloor(prev), monthsAfterRemove(current, remove));
       if (next >= current) return prev;
       const keepWeeks = roadmapWeeks({ ...prev, months: next });
       const tasks = prev.tasks
-        .filter((t) => t.week <= keepWeeks)
+        .filter((t) => t.fixed || t.week <= keepWeeks)
         .map((t) =>
           taskEndWeek(t) > keepWeeks
             ? { ...t, endWeek: keepWeeks > t.week ? keepWeeks : undefined }
@@ -510,8 +565,16 @@ export function RoadmapBoard({
     });
   }, []);
 
-  const isEmpty = roadmap.tasks.length === 0;
-  const canRemoveMonths = totalMonths > MIN_ROADMAP_MONTHS;
+  // «Vazio» = sem tarefas planeadas: um roadmap novo só com os blocos fixos
+  // continua a pedir «Fill with AI».
+  const plannedCount = useMemo(
+    () => plannedTasks(roadmap.tasks).length,
+    [roadmap],
+  );
+  const isEmpty = plannedCount === 0;
+  const minMonths = removeFloor(roadmap);
+  const canRemoveMonths = totalMonths > minMonths;
+  const week0Groups = fixedByWeek.get(0) ?? [];
 
   return (
     <div className="space-y-5">
@@ -572,7 +635,15 @@ export function RoadmapBoard({
           <span className="font-medium text-white/75">{formatDate(lastDay)}</span>
         </span>
         <span className="text-[11px] text-white/45">
-          {roadmap.tasks.length} task{roadmap.tasks.length === 1 ? "" : "s"}
+          {plannedCount} task{plannedCount === 1 ? "" : "s"}
+          {fixedCount > 0 && (
+            <span
+              className="ml-1.5 text-sky-200/60"
+              title="Blocos fixos do arranque — presos às suas semanas, não se apagam nem se movem"
+            >
+              · {fixedDone}/{fixedCount} blocos fixos
+            </span>
+          )}
         </span>
         <span className="ml-auto inline-flex items-center gap-3">
           {saving && !readOnly && (
@@ -591,7 +662,9 @@ export function RoadmapBoard({
               title={
                 canRemoveMonths
                   ? "Cut months off the end of this roadmap (asks for a typed confirmation)"
-                  : `A roadmap can't be shorter than ${MIN_ROADMAP_MONTHS} months.`
+                  : minMonths > MIN_ROADMAP_MONTHS
+                    ? `Os blocos fixos (renovação) seguram este plano em ${minMonths} meses.`
+                    : `A roadmap can't be shorter than ${MIN_ROADMAP_MONTHS} months.`
               }
               className="inline-flex items-center gap-1.5 rounded-md border border-rose-400/25 bg-rose-500/[0.07] px-2.5 py-1.5 text-[11px] font-medium text-rose-100/85 transition hover:border-rose-400/55 hover:bg-rose-500/15 hover:text-rose-50 disabled:cursor-not-allowed disabled:opacity-35"
             >
@@ -678,6 +751,46 @@ export function RoadmapBoard({
           can tell at a glance "we're in Week 6, Month 2" without doing
           the maths from the date pills. */}
       <div className="space-y-8">
+        {/* v80.27 — «Week 0»: o que se faz antes da reunião de onboarding /
+            sessão de estratégia n.º 1 (a semana 1 começa com ela). Só
+            existe nos roadmaps com blocos fixos. */}
+        {week0Groups.length > 0 && (
+          <div>
+            <div className="relative flex items-center">
+              <span className={`h-px flex-1 ${week === 0 ? "bg-white/25" : "bg-white/10"}`} />
+              <span
+                className={`mx-3 inline-flex items-center gap-1.5 rounded-md px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] ${
+                  week === 0
+                    ? "brand-gradient-bg text-white ring-2 ring-[color:var(--brand-purple)]/40"
+                    : "border border-sky-400/30 bg-sky-500/10 text-sky-100/75"
+                }`}
+                title="Antes da reunião de onboarding / sessão de estratégia n.º 1"
+              >
+                Week 0
+                <span className="ml-1 text-[9.5px] font-medium normal-case tracking-[0.04em] opacity-80">
+                  Antes da reunião · até {formatDate(dayBeforeISO(roadmap.startDate))}
+                </span>
+                {week === 0 && (
+                  <span className="ml-1 rounded-full bg-white/20 px-1.5 py-px text-[9px] font-bold tracking-wider">
+                    NOW
+                  </span>
+                )}
+              </span>
+              <span className={`h-px flex-1 ${week === 0 ? "bg-white/25" : "bg-white/10"}`} />
+            </div>
+            <ul className="mt-4 space-y-2">
+              {week0Groups.map((g) => (
+                <FixedGroupBlock
+                  key={g.group}
+                  group={g.group}
+                  tasks={g.tasks}
+                  onUpdate={updateTask}
+                  wide
+                />
+              ))}
+            </ul>
+          </div>
+        )}
         {months.map((m) => {
           const monthIsCurrent = m.weeks.includes(week);
           return (
@@ -735,6 +848,7 @@ export function RoadmapBoard({
                     weekEnd={weekEndDate(roadmap, w)}
                     weekDays={weekDayCount(roadmap, w)}
                     cells={cells}
+                    fixedGroups={fixedByWeek.get(w) ?? []}
                     isCurrent={isCurrent}
                     editingTaskId={editingTaskId}
                     onStartEdit={(id) => setEditingTaskId(id)}
@@ -859,7 +973,8 @@ function RemoveMonthsDialog({
 }) {
   const totalMonths = roadmapMonthCount(roadmap);
   const totalWeeks = roadmapWeeks(roadmap);
-  const maxRemovable = Math.max(0, totalMonths - MIN_ROADMAP_MONTHS);
+  const floor = removeFloor(roadmap);
+  const maxRemovable = Math.max(0, totalMonths - floor);
   const [remove, setRemove] = useState(1);
   const [typed, setTyped] = useState("");
 
@@ -867,7 +982,7 @@ function RemoveMonthsDialog({
   const keepWeeks = roadmapWeeks({ ...roadmap, months: nextMonths });
   const nextLastDay = roadmapLastDay({ ...roadmap, months: nextMonths });
   const doomed = roadmap.tasks
-    .filter((t) => t.week > keepWeeks)
+    .filter((t) => !t.fixed && t.week > keepWeeks)
     .sort((a, b) => a.week - b.week || a.order - b.order);
   const trimmed = roadmap.tasks.filter(
     (t) => t.week <= keepWeeks && taskEndWeek(t) > keepWeeks,
@@ -912,6 +1027,8 @@ function RemoveMonthsDialog({
               {clientName} · {totalMonths} months today ({totalWeeks} weeks,
               ends {formatDate(roadmapLastDay(roadmap))}). A roadmap can&apos;t
               go below {MIN_ROADMAP_MONTHS} months.
+              {floor > MIN_ROADMAP_MONTHS &&
+                ` Os blocos fixos (renovação) seguram-no em ${floor} meses.`}
             </p>
           </div>
           <button
@@ -1267,6 +1384,7 @@ function WeekColumn({
   weekEnd,
   weekDays,
   cells,
+  fixedGroups,
   isCurrent,
   editingTaskId,
   onStartEdit,
@@ -1288,6 +1406,8 @@ function WeekColumn({
   weekEnd: string;
   weekDays: number;
   cells: WeekCell[];
+  /** Blocos fixos desta semana, por grupo — desenhados por cima. */
+  fixedGroups: FixedGroupCells[];
   isCurrent: boolean;
   editingTaskId: string | null;
   onStartEdit: (id: string) => void;
@@ -1394,6 +1514,14 @@ function WeekColumn({
         )}
       </div>
       <ul className="mt-2 space-y-2">
+        {fixedGroups.map((g) => (
+          <FixedGroupBlock
+            key={g.group}
+            group={g.group}
+            tasks={g.tasks}
+            onUpdate={onUpdate}
+          />
+        ))}
         {cells.map((cell) =>
           cell.isStart ? (
             <TaskCard
@@ -1420,7 +1548,7 @@ function WeekColumn({
             />
           ),
         )}
-        {cells.length === 0 && (
+        {cells.length === 0 && fixedGroups.length === 0 && (
           <li
             className={
               isDragActive
@@ -1443,6 +1571,162 @@ function WeekColumn({
         </button>
       )}
     </div>
+  );
+}
+
+/** v80.27 — um grupo de blocos fixos do arranque (ex.: «Conformidade
+ *  básica»), preso à sua semana: não se apaga, não se arrasta, o título não
+ *  se edita. A caixa marca feito / por fazer; clicar no texto abre o estado
+ *  completo e as notas. Um grupo com aula da Formação mostra o link. */
+function FixedGroupBlock({
+  group,
+  tasks,
+  onUpdate,
+  wide = false,
+}: {
+  group: FixedGroupId;
+  tasks: RoadmapTask[];
+  onUpdate: (id: string, patch: Partial<RoadmapTask>) => void;
+  /** Week 0: a lista é longa e o bloco ocupa a largura toda. */
+  wide?: boolean;
+}) {
+  const readOnly = useSeoReadOnly();
+  const meta = FIXED_GROUPS[group];
+  const done = tasks.filter((t) => t.status === "implemented").length;
+  const [openId, setOpenId] = useState<string | null>(null);
+  return (
+    <li className="overflow-hidden rounded-lg border border-sky-400/30 bg-sky-500/[0.05]">
+      <div
+        className="flex items-center gap-1.5 border-b border-sky-400/20 bg-sky-500/[0.08] px-2.5 py-1.5"
+        title={`${meta.docLabel} — bloco fixo do arranque: não se apaga nem muda de semana. Só o estado e as notas mudam.`}
+      >
+        <Lock className="h-3 w-3 shrink-0 text-sky-200/75" />
+        <span className="min-w-0 flex-1 truncate text-[11px] font-semibold text-sky-50">
+          {meta.label}
+        </span>
+        <span
+          className={`shrink-0 text-[10px] font-semibold tabular-nums ${
+            done === tasks.length ? "text-emerald-300" : "text-sky-100/60"
+          }`}
+        >
+          {done}/{tasks.length}
+        </span>
+      </div>
+      {meta.lesson && (
+        <a
+          href={meta.lesson.href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1.5 border-b border-sky-400/15 px-2.5 py-1.5 text-[10.5px] font-medium text-sky-100/85 transition hover:bg-sky-500/10 hover:text-white"
+        >
+          <GraduationCap className="h-3.5 w-3.5 shrink-0" />
+          <span className="min-w-0 flex-1 truncate">{meta.lesson.label}</span>
+          <ExternalLink className="h-3 w-3 shrink-0 opacity-60" />
+        </a>
+      )}
+      <ul
+        className={
+          wide
+            ? "grid gap-x-4 gap-y-0.5 px-1.5 py-1.5 sm:grid-cols-2 xl:grid-cols-3"
+            : "space-y-0.5 px-1.5 py-1.5"
+        }
+      >
+        {tasks.map((t) => {
+          const isDone = t.status === "implemented";
+          const isOpen = openId === t.id;
+          const showChip =
+            t.status === "in_progress" || t.status === "pending_review";
+          return (
+            <li key={t.id}>
+              <div className="flex items-start gap-2 rounded-md px-1 py-1 transition hover:bg-white/[0.03]">
+                <button
+                  type="button"
+                  disabled={readOnly}
+                  onClick={() =>
+                    onUpdate(t.id, {
+                      status: isDone ? "not_started" : "implemented",
+                    })
+                  }
+                  aria-label={isDone ? "Marcar como por fazer" : "Marcar como feito"}
+                  title={isDone ? "Feito — clicar para desmarcar" : "Marcar como feito"}
+                  className={`mt-[2px] flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-[4px] border transition disabled:cursor-default ${
+                    isDone
+                      ? "border-emerald-400/70 bg-emerald-500/40 text-white"
+                      : "border-sky-300/50 bg-transparent hover:border-sky-200"
+                  }`}
+                >
+                  {isDone && <Check className="h-2.5 w-2.5" />}
+                </button>
+                <button
+                  type="button"
+                  disabled={readOnly}
+                  onClick={() => setOpenId(isOpen ? null : t.id)}
+                  className={`min-w-0 flex-1 text-left text-[11px] leading-snug disabled:cursor-default ${
+                    isDone ? "text-white/45 line-through decoration-white/30" : "text-white/85"
+                  }`}
+                >
+                  {t.title}
+                  {showChip && (
+                    <span
+                      className={`ml-1.5 inline-flex items-center rounded-full border px-1.5 py-px align-middle text-[8.5px] font-semibold uppercase tracking-[0.08em] no-underline ${STATUS_META[t.status].chipClass}`}
+                    >
+                      {STATUS_META[t.status].label}
+                    </span>
+                  )}
+                  {t.description && !isOpen && (
+                    <span className="mt-0.5 block text-[10px] text-white/45 no-underline">
+                      {t.description}
+                    </span>
+                  )}
+                </button>
+              </div>
+              {isOpen && !readOnly && (
+                <div className="mb-1.5 ml-6 mr-1 space-y-1.5 rounded-md border border-white/10 bg-black/20 p-2">
+                  <label className="block text-[9.5px] uppercase tracking-[0.1em] text-white/45">
+                    Status
+                    <select
+                      value={t.status}
+                      onChange={(e) =>
+                        onUpdate(t.id, { status: e.target.value as RoadmapStatus })
+                      }
+                      className="mt-0.5 w-full rounded-md border border-white/10 bg-white/[0.06] px-1.5 py-1 text-[11px] text-white focus:border-white/30"
+                    >
+                      {ROADMAP_STATUSES.map((s) => (
+                        <option key={s} value={s}>
+                          {STATUS_META[s].label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <textarea
+                    value={t.description ?? ""}
+                    onChange={(e) =>
+                      onUpdate(t.id, { description: e.target.value || undefined })
+                    }
+                    rows={2}
+                    placeholder="Notas (opcional)"
+                    className="w-full rounded-md border border-white/10 bg-white/[0.06] px-2 py-1 text-[11px] text-white outline-none placeholder:text-white/35 focus:border-white/30"
+                  />
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="inline-flex items-center gap-1 text-[9.5px] text-sky-100/55">
+                      <Lock className="h-2.5 w-2.5" /> Bloco fixo — não se apaga nem muda de semana
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setOpenId(null)}
+                      className="inline-flex items-center gap-1 rounded-md border border-white/20 bg-white/[0.06] px-2 py-0.5 text-[10.5px] font-semibold text-white transition hover:bg-white/[0.12]"
+                    >
+                      <Check className="h-3 w-3" />
+                      Done
+                    </button>
+                  </div>
+                </div>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </li>
   );
 }
 

@@ -107,6 +107,7 @@ const CAST: Record<string, TrainingInstructor> = {
   "fran rosa": SEO_FRAN,
   "joao b": SEO_JOAO,
   "joao batista": SEO_JOAO,
+  "joao baptista": SEO_JOAO,
   "andre pereira": SEO_ANDRE_PEREIRA,
 };
 

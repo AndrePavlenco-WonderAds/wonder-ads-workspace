@@ -30,6 +30,7 @@ import {
   roadmapMonthsElapsed,
   roadmapWeeks,
 } from "@/lib/roadmap-store";
+import { plannedTasks } from "@/lib/roadmap-fixed-blocks";
 import {
   EMPLOYEE_CREDENTIALS,
   findEmployeeByUsername,
@@ -387,7 +388,7 @@ const getRoadmapHorizons = unstable_cache(
       all.map(async (c) => {
         try {
           const roadmap = await getCurrentRoadmap(c.slug);
-          if (!roadmap || roadmap.tasks.length === 0) return;
+          if (!roadmap || plannedTasks(roadmap.tasks).length === 0) return;
           out[c.slug] = {
             week: currentWeekIndex(roadmap),
             totalWeeks: roadmapWeeks(roadmap),
@@ -674,7 +675,7 @@ const getSituationPointCandidates = unstable_cache(
         if (paused.has(c.slug)) return;
         try {
           const roadmap = await getCurrentRoadmap(c.slug);
-          if (!roadmap || roadmap.tasks.length === 0) return;
+          if (!roadmap || plannedTasks(roadmap.tasks).length === 0) return;
           if (roadmapMonthsElapsed(roadmap) < SITUATION_POINT_MONTHS) return;
           const week = currentWeekIndex(roadmap);
           out.push({ slug: c.slug, title: c.title, icon: c.icon, week });

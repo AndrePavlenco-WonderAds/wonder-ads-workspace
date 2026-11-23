@@ -19,6 +19,7 @@ import {
   roadmapMonthCount,
   roadmapWeeks,
 } from "@/lib/roadmap-store";
+import { plannedTasks } from "@/lib/roadmap-fixed-blocks";
 import { formatDate } from "@/lib/dates";
 import { getRoadmapLog } from "@/lib/roadmap-changelog-store";
 import { getClientRenewal } from "@/lib/client-renewal-store";
@@ -56,12 +57,13 @@ export default async function RoadmapPage({
   const logoSizing = getLogoSizing(slug);
   const gradient = paletteToGradient(getClientPalette(slug));
 
-  const roadmap = await ensureRoadmap(slug);
-  // Renovação: chave própria, para sobreviver a um reinício do roadmap.
+  // Renovação: chave própria, para sobreviver a um reinício do roadmap. Lida
+  // primeiro porque um roadmap novo nasce com o comprimento do contrato.
   const renewal = await getClientRenewal(slug).catch(() => ({
     renewalDate: null,
     termMonths: 6 as const,
   }));
+  const roadmap = await ensureRoadmap(slug, renewal.termMonths);
   const totalWeeks = roadmapWeeks(roadmap);
   const totalMonths = roadmapMonthCount(roadmap);
   const lastDay = roadmapLastDay(roadmap);
@@ -115,7 +117,7 @@ export default async function RoadmapPage({
             carteira toda, feito de uma sentada a partir dos daily updates —
             não é uma ação sobre este cliente, e ter o botão em cada roadmap
             sugeria o contrário. */}
-        {!readOnly && roadmap.tasks.length > 0 && (
+        {!readOnly && plannedTasks(roadmap.tasks).length > 0 && (
           <div className="flex flex-wrap items-center gap-2">
             <SendToReviewButton
               variant="default"

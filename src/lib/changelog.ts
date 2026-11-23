@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "80.27",
+    date: "2026-11-23",
+    title: "Roadmaps novos com blocos fixos do arranque + aula de conformidade inicial",
+    highlights: [
+      "**🔒 Os roadmaps novos nascem com blocos fixos**, a checklist do «Arranque de projeto de SEO». Não se apagam nem mudam de semana, e o título não se edita: só se marcam como feitos (com notas, se precisares). Os roadmaps que já existiam ficam como estavam.",
+      "**🗓️ Week 0, antes da reunião de onboarding:** Do's/Don'ts/Notes, Site Audit, Keyword Research, Roadmap Client, pedidos de acesso (site, GMB, GA4, GSC, GTM), fotos e materiais, registo dos acessos e prompts no Searchable.",
+      "**Semana 1:** arranque, tracking e conformidade básica. **Semana 12:** reporte trimestral. **Semana 19** (mês 5 + 2 semanas): renovação, com o documento de 7 pontos, a proposta de roadmap e a reunião. Week 0 e renovação são internas: o cliente não as vê na pré-visualização nem no weekly report.",
+      "**🎓 Aula nova na Formação (capítulo 5):** «Como fazer a conformidade inicial de um site», do João Baptista, com o prompt da auditoria RGPD para copiar ou descarregar. O bloco «Conformidade básica» do roadmap tem o link.",
+      "O «Fill with AI» já não repete o que está nos blocos fixos.",
+    ],
+  },
+  {
     version: "80.26",
     date: "2026-11-23",
     title: "Ineficácias: só os teus projetos ou «Interno»",
