@@ -51,6 +51,8 @@ import {
   X,
 } from "lucide-react";
 import { formatDate } from "@/lib/dates";
+import { LogoChip } from "@/components/logo-chip";
+import type { LogoBgMode, LogoSizing } from "@/lib/client-meta";
 import type { OverloadState } from "@/lib/notifications/overload";
 import {
   OverloadBanner,
@@ -65,7 +67,14 @@ export type DrawerNotification = {
   body: string;
   periodLabel: string;
   dueAt: number;
-  client: { slug: string; title: string; icon: string | null } | null;
+  client: {
+    slug: string;
+    title: string;
+    icon: string | null;
+    logo?: string | null;
+    logoBg?: LogoBgMode;
+    logoSizing?: LogoSizing;
+  } | null;
   actionLabel: string;
   actionHref: string;
   resolved: boolean;
@@ -994,12 +1003,26 @@ function NotificationRow({
   return (
     <div className="group rounded-xl border border-white/[0.08] bg-white/[0.02] p-3 transition hover:border-[#783DF5]/35 hover:bg-white/[0.045]">
       <div className="flex items-center gap-2.5">
-        <span
-          aria-hidden
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] text-[15px]"
-        >
-          {n.client?.icon ?? "•"}
-        </span>
+        {n.client?.logo ? (
+          // O logótipo do cliente, com o fundo e o ajuste de cada marca
+          // (v80.23) — antes ia o emoji do Notion.
+          <LogoChip
+            logo={n.client.logo}
+            emoji={n.client.icon}
+            alt={n.client.title}
+            gradient="transparent"
+            size="sm"
+            bgMode={n.client.logoBg}
+            sizing={n.client.logoSizing}
+          />
+        ) : (
+          <span
+            aria-hidden
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] text-[15px]"
+          >
+            {n.client?.icon ?? "•"}
+          </span>
+        )}
         {/* O título do lembrete e o período vivem no cabeçalho do grupo — a
             linha só precisa de dizer SOBRE QUEM é. Repeti-los aqui era ruído
             cinco vezes seguidas. */}

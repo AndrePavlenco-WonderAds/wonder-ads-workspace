@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "80.23",
+    date: "2026-11-23",
+    title: "Notificações com o logótipo do cliente",
+    highlights: [
+      "**🔔 As notificações de um cliente mostram o logótipo dele** (NPS preenchido, Pending Review, roadmap a acabar…), com o mesmo fundo e o mesmo ajuste do SEO DPT. Antes aparecia o ícone do Notion.",
+    ],
+  },
+  {
     version: "80.22",
     date: "2026-11-23",
     title: "Recrutamento: Fase 1 · Parte 1, a reunião de apresentação",

@@ -16,6 +16,14 @@ import { getSeoStartDates } from "@/lib/seo-start-dates";
 import { getConsultantResolver } from "@/lib/consultant-assignments";
 import { getPausedSlugSet } from "@/lib/admin-paused-clients-store";
 import { getNpsRecord } from "@/lib/nps-store";
+import { getLogoOverrides } from "@/lib/admin-client-logos-store";
+import {
+  getClientLogo,
+  getLogoBgMode,
+  getLogoSizing,
+  type LogoBgMode,
+  type LogoSizing,
+} from "@/lib/client-meta";
 import {
   currentWeekIndex,
   getCurrentRoadmap,
@@ -122,8 +130,17 @@ export type UserNotification = {
   periodLabel: string;
   /** Quando passou a estar em aberto. */
   dueAt: number;
-  /** Cliente, quando a notificação é por cliente. */
-  client: { slug: string; title: string; icon: string | null } | null;
+  /** Cliente, quando a notificação é por cliente. O logótipo (v80.23) junta-se
+   *  no fim, em `withClientLogos` — as regras só põem o slug, o nome e o
+   *  emoji do Notion. */
+  client: {
+    slug: string;
+    title: string;
+    icon: string | null;
+    logo?: string | null;
+    logoBg?: LogoBgMode;
+    logoSizing?: LogoSizing;
+  } | null;
   actionLabel: string;
   /** Já com o slug substituído. Vazio = notificação sem botão. */
   actionHref: string;
@@ -1616,9 +1633,45 @@ async function proposalConfirmationNotifications(
   return out;
 }
 
+/** Os logótipos carregados na ficha do cliente (Blob). Cache de 10 min: o
+ *  sino corre em todas as páginas e um logótipo novo não tem pressa. */
+const getCachedLogoOverrides = unstable_cache(
+  () => getLogoOverrides(),
+  ["notifications-client-logos-v1"],
+  { revalidate: 600 },
+);
+
+/** O sino mostrava o emoji do Notion em vez do logótipo do cliente (v80.23):
+ *  junta o logótipo (carregado › estático) e o fundo/ajuste do chip, como
+ *  no resto da app. */
+async function withClientLogos(list: UserNotification[]): Promise<UserNotification[]> {
+  if (!list.some((n) => n.client)) return list;
+  const overrides = await getCachedLogoOverrides().catch(() => ({}) as Record<string, string>);
+  return list.map((n) =>
+    n.client
+      ? {
+          ...n,
+          client: {
+            ...n.client,
+            logo: overrides[n.client.slug] ?? getClientLogo(n.client.slug),
+            logoBg: getLogoBgMode(n.client.slug),
+            logoSizing: getLogoSizing(n.client.slug),
+          },
+        }
+      : n,
+  );
+}
+
 export async function getUserNotifications(
   viewer: Viewer,
   now: Date = new Date(),
+): Promise<UserNotification[]> {
+  return withClientLogos(await buildUserNotifications(viewer, now));
+}
+
+async function buildUserNotifications(
+  viewer: Viewer,
+  now: Date,
 ): Promise<UserNotification[]> {
   const [rules, state, startDates] = await Promise.all([
     getNotificationRules(),
