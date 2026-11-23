@@ -13,6 +13,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "80.21",
+    date: "2026-11-23",
+    title: "Medical Skin Clinic: Growth e folga de custos de 445 €",
+    highlights: [
+      "**🧴 Medical Skin Clinic passa a Growth** no SEO DPT.",
+      "**Folga de custos: 445,00 € por mês.** Começa em dezembro, o primeiro mês inteiro depois do onboarding a 24/11 (a mesma regra da Help Kids). Até lá os extras são cobrados.",
+    ],
+  },
+  {
     version: "80.20",
     date: "2026-11-23",
     title: "Medical Skin Clinic: logótipo, website e onboarding a 24/11",

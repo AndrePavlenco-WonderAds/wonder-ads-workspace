@@ -43,6 +43,8 @@ const TIERS: Record<string, ClientTier> = {
   medway: "growth",
   "physio-hub": "growth",
   "antonio-gaspar": "growth",
+  // v80.21: Medical Skin Clinic — Growth, dito pelo André.
+  "medical-skin-clinic": "growth",
   "a-domingos": "growth",
 
   // ADS-only clients

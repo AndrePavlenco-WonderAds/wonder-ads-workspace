@@ -42,6 +42,8 @@ export const FOLGA_DEFAULTS: Record<string, number> = {
   "maratona-clube-de-portugal": 60,
   // v79.1: Help Kids — 117 €/mês (dito pelo André); começa em dezembro (v79.2).
   "help-kids": 117,
+  // v80.21: Medical Skin Clinic — 445 €/mês (dito pelo André).
+  "medical-skin-clinic": 445,
 };
 
 /** Projetos que entraram depois de FOLGA_START: a folga só começa a entrar
@@ -51,6 +53,8 @@ export const FOLGA_DEFAULTS: Record<string, number> = {
 export const FOLGA_PROJECT_START: Record<string, string> = {
   // v79.2: onboarding a 19/11 — a folga começa no primeiro mês inteiro (André).
   "help-kids": "2026-12",
+  // v80.21: onboarding a 24/11 — a mesma regra da Help Kids.
+  "medical-skin-clinic": "2026-12",
 };
 
 /** O primeiro mês em que entra folga neste projeto. */
