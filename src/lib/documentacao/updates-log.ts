@@ -44,6 +44,17 @@ export type CodeDocUpdate = {
 
 export const CODE_DOC_UPDATES: CodeDocUpdate[] = [
   {
+    id: "v80.25-ineficacias-reportar-antes-do-tl",
+    page: "ineficacias",
+    kind: "regra",
+    changes: [
+      "Tens até o team leader registar a ineficácia para a reportares tu: é sempre melhor admitires o erro antes de ser ele a registá-lo na app. Mão no peito e transparência quando erramos.",
+    ],
+    at: "2026-11-23T15:00:00+00:00",
+    version: "80.25",
+    anchor: "reportar",
+  },
+  {
     id: "v80.24-obrigatorio-gravacao-sexta",
     page: "protocolos-obrigatorios",
     kind: "regra",

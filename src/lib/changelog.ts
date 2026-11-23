@@ -13,6 +13,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "80.25",
+    date: "2026-11-23",
+    title: "Ineficácias: reportar antes do team leader + o porquê no topo",
+    highlights: [
+      "**✋ Regra nova: tens até o team leader registar a ineficácia para a reportares tu.** Admitir o erro primeiro é mão no peito e transparência. Está em «Como se reporta» e no resumo, e o sino avisa a equipa.",
+      "**No topo da página, o porquê:** «As ineficácias protegem quem cumpre os processos e a cultura», com a analogia do CR7 e da 3.ª divisão.",
+    ],
+  },
+  {
     version: "80.24",
     date: "2026-11-23",
     title: "Protocolos: 1 obrigatório e 2 proibidos novos",

@@ -98,7 +98,7 @@ export const DOCS_BLOCKS: DocsBlock[] = [
     // Toda a equipa: as ineficácias e o probation aplicam-se a todos.
     audience: { depts: ["SEO", "ADS", "Web", "Commercial"] },
     audienceLabel: "toda a equipa",
-    updatedAt: "2026-10-28",
+    updatedAt: "2026-11-23",
     pages: [
       // As duas capas foram dadas pelo André (2026-10-27).
       {

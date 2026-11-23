@@ -114,6 +114,8 @@ export default async function IneficaciasDocPage() {
         tabs={{ pages: block.pages, current: "/documentacao/ineficacias" }}
       />
 
+      <Manifesto />
+
       {/* v80.10: as contas «só Documentação» (externos) não têm para onde ir
           — o RH-03 e o painel são da equipa. */}
       {!reader.docsOnly && (
@@ -175,11 +177,17 @@ export default async function IneficaciasDocPage() {
         <DocSection id="reportar" title="Como se reporta" lead="Reportar primeiro conta a teu favor.">
           <StageFlow
             stages={[
-              { title: "Reportas", body: `No RH-03, quando quiseres. Erros dos últimos ${REPORT_LOOKBACK_DAYS} dias.` },
+              { title: "Reportas", body: `No RH-03, antes de o team leader o registar. Erros dos últimos ${REPORT_LOOKBACK_DAYS} dias.` },
               { title: "A direção pontua", body: `De 0 a ${MAX_POINTS} pontos. Recebes um aviso no sino.` },
               { title: "Conta no PA e NO", body: "Um erro com 0 pontos não conta." },
             ]}
           />
+
+          {/* v80.25, pedido do André (2026-11-23). */}
+          <Note title="Reporta antes do team leader">
+            Tens até o team leader registar a ineficácia para a reportares tu. É sempre melhor admitires o erro antes de ser
+            o team leader a registá-lo na app: quando erramos, é importante pôr a mão no peito e ser transparente.
+          </Note>
 
           <div>
             <SubHeading>Por cada erro</SubHeading>
@@ -371,7 +379,9 @@ export default async function IneficaciasDocPage() {
               recorrência que o sistema existe para tornar visível e corrigir cedo.
             </>,
             <>
-              O registo começa no próprio consultor. Quando quiser, e sobre erros dos últimos {REPORT_LOOKBACK_DAYS} dias, assina
+              O registo começa no próprio consultor, que tem até o team leader registar a ineficácia para a reportar por si:
+              é sempre melhor admitir o erro antes de ser o team leader a registá-lo na app, porque quando erramos é
+              importante pôr a mão no peito e ser transparente. Sobre erros dos últimos {REPORT_LOOKBACK_DAYS} dias, assina
               um relatório (RH-03) em que descreve, por cada erro, o que aconteceu, em que cliente, o motivo, como devia ter
               feito, se foi a primeira vez, a data, quem deu pelo erro e a gravidade na sua própria avaliação, de 0 a{" "}
               {MAX_POINTS}. O relatório fica assinado com o nome completo e não se altera depois; só o próprio e a direção o
@@ -409,6 +419,41 @@ export default async function IneficaciasDocPage() {
         />
       </div>
     </PageShell>
+  );
+}
+
+// O porquê das ineficácias, logo por baixo do título (v80.25, texto do André).
+const UNDERLINE = {
+  backgroundImage: "linear-gradient(90deg, #783DF5, #C535C9)",
+  backgroundSize: "100% 0.14em",
+  backgroundPosition: "0 96%",
+  backgroundRepeat: "no-repeat",
+  WebkitBoxDecorationBreak: "clone",
+  boxDecorationBreak: "clone",
+} as const;
+
+function Manifesto() {
+  return (
+    <section
+      aria-label="Porque existem as ineficácias"
+      className="relative mt-8 overflow-hidden rounded-[28px] border border-white/10 px-6 py-7 sm:px-10 sm:py-10"
+      style={{
+        background:
+          "radial-gradient(120% 140% at 0% 0%, rgba(120,61,245,0.28), transparent 55%), radial-gradient(90% 120% at 100% 100%, rgba(197,53,201,0.2), transparent 60%), rgba(255,255,255,0.02)",
+      }}
+    >
+      <p className="max-w-4xl text-[1.55rem] font-semibold leading-[1.22] tracking-[-0.02em] text-white sm:text-[2.2rem]">
+        As ineficácias <span style={UNDERLINE}>protegem quem cumpre</span> os processos e a cultura.
+      </p>
+      <p className="mt-3 max-w-3xl text-[1.1rem] font-medium leading-snug text-white/80 sm:text-[1.3rem]">
+        Porque quem não cumpre e serve de exemplo chateia, acima de tudo, quem cumpre.
+      </p>
+      <p className="mt-6 max-w-3xl border-t border-white/10 pt-5 text-[14px] leading-relaxed text-white/60 sm:text-[15px]">
+        O CR7 fica muito chateado, mais do que quem erra, se quem estiver sempre a errar estiver sempre a fazer o mesmo erro
+        e não o admitir. É por isso que hoje em dia ele se recusa a jogar na 3.ª divisão. E o nosso objetivo é estarmos longe
+        da 3.ª divisão, apenas com champions que sabem admitir os erros e seguir em frente.
+      </p>
+    </section>
   );
 }
 
