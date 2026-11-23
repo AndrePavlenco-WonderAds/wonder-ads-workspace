@@ -69,7 +69,7 @@ export type FixedGroup = {
 export const FIXED_GROUPS: Record<FixedGroupId, FixedGroup> = {
   antes: {
     id: "antes",
-    label: "Antes da reunião",
+    label: "Antes da reunião de onboarding",
     docLabel: "Antes da reunião",
     pillar: "research",
     internal: true,
@@ -196,6 +196,40 @@ const TEMPLATES: FixedTemplate[] = [
       `Fazer a reunião de renovação com o documento, a proposta de roadmap e as abas de analytics abertas. A conversa é sobre como correram os ${m} meses e o que propomos para os próximos 6.`,
   },
 ];
+
+/** Títulos em inglês dos blocos que o CLIENTE vê (pré-visualização do
+ *  roadmap e weekly report), para os clientes EN (IHN, Kings Gym…). Os
+ *  grupos internos (antes da reunião, renovação) nunca lhe aparecem. A
+ *  equipa trabalha sempre com os títulos em português. */
+const TITLES_EN: Record<string, string> = {
+  "ponto-partida": "Save the starting point: GSC, GA4, Semrush and Searchable",
+  "backup": "Make a backup of the website",
+  "wonderflow": "Install Wonderflow (plan 0)",
+  "ga4-gsc": "Link GA4 to GSC",
+  "ga4-retencao": "Set GA4 data retention to 14 months",
+  "ga4-trafego-interno": "Exclude internal traffic in GA4",
+  "gtm-formulario": 'Create the "form submitted" event in GTM',
+  "gtm-ligar": 'Create the "click to call" event in GTM',
+  "gtm-email": 'Create the "email click" event in GTM',
+  "gtm-whatsapp": 'Create the "WhatsApp click" event in GTM',
+  "gmb-utm": "Add UTM tags to the website link on the GMB profile",
+  "testar-eventos": "Test all events",
+  "banner-cookies": 'Review the cookie banner ("reject" as visible as "accept")',
+  "consentimento": "Confirm analytics and advertising only start after consent",
+  "consent-mode": "Enable Consent Mode v2",
+  "custo-chamada": "Add the call cost next to every phone number on the website",
+  "reporte": "Quarterly report: quarterly results, AI visibility progress and overall numbers",
+};
+
+/** Título de uma tarefa na língua do cliente: os blocos fixos visíveis
+ *  saem em inglês para clientes EN; o resto fica como está escrito. */
+export function clientTaskTitle(
+  t: Pick<RoadmapTask, "title" | "fixed">,
+  lang: "pt" | "en",
+): string {
+  if (lang === "en" && t.fixed) return TITLES_EN[t.fixed.key] ?? t.title;
+  return t.title;
+}
 
 /** Semana onde vive um grupo num plano de `months` meses (0 = antes da
  *  reunião de onboarding). Quatro semanas por mês: o mês k tem as semanas

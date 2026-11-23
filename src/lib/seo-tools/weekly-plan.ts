@@ -18,7 +18,7 @@
 // sem arrastar os outros.
 
 import { getCurrentRoadmap, taskCoversWeek, currentWeekIndex, roadmapWeeks, type RoadmapTask } from "@/lib/roadmap-store";
-import { isInternalFixedTask } from "@/lib/roadmap-fixed-blocks";
+import { clientTaskTitle, isInternalFixedTask } from "@/lib/roadmap-fixed-blocks";
 import { reportLangFor, type ReportLang } from "@/lib/weekly-report-format";
 import {
   parseDailyUpdates,
@@ -59,9 +59,11 @@ export type WeeklyPlanClient = {
   warnings: string[];
 };
 
-export function describeTask(t: RoadmapTask): string {
+export function describeTask(t: RoadmapTask, lang: ReportLang = "pt"): string {
   const desc = t.description?.trim();
-  return desc ? `${t.title} — ${desc}` : t.title;
+  // Blocos fixos visíveis ao cliente saem em inglês para os clientes EN.
+  const title = clientTaskTitle(t, lang);
+  return desc ? `${title} — ${desc}` : title;
 }
 
 /** O que o cliente tem programado para a semana seguinte, lido do roadmap.
@@ -91,7 +93,7 @@ export async function readNextWeek(
         !isInternalFixedTask(t),
     )
     .sort((a, b) => a.week - b.week || a.order - b.order)
-    .map(describeTask);
+    .map((t) => describeTask(t, reportLangFor(slug)));
   return { currentWeek, nextWeek, totalWeeks: total, tasks };
 }
 

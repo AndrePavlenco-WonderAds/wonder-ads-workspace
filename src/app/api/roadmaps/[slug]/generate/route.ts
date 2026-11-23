@@ -108,7 +108,7 @@ export async function POST(
 
   if (!process.env.ANTHROPIC_API_KEY) {
     return NextResponse.json(
-      { error: "ANTHROPIC_API_KEY is not configured." },
+      { error: "A chave da IA (ANTHROPIC_API_KEY) não está configurada." },
       { status: 503 },
     );
   }
@@ -122,7 +122,7 @@ export async function POST(
 
   const client = await getClientBySlug(slug).catch(() => null);
   if (!client) {
-    return NextResponse.json({ error: "Unknown client" }, { status: 404 });
+    return NextResponse.json({ error: "Cliente desconhecido." }, { status: 404 });
   }
 
   const website = getClientWebsite(slug);
@@ -293,10 +293,10 @@ export async function POST(
     const baseMessage =
       lastError instanceof Error ? lastError.message : String(lastError);
     const hint = lastRawText
-      ? ` Last raw output snippet: "${lastRawText.replace(/\s+/g, " ").slice(0, 200)}…". Try regenerating, or add a Strategic focus / Constraints to anchor the plan.`
-      : " Try regenerating, or add a Strategic focus / Constraints to anchor the plan.";
+      ? ` Excerto da última resposta: "${lastRawText.replace(/\s+/g, " ").slice(0, 200)}…". Tenta regenerar, ou acrescenta um Foco estratégico / Restrições para orientar o plano.`
+      : " Tenta regenerar, ou acrescenta um Foco estratégico / Restrições para orientar o plano.";
     return NextResponse.json(
-      { error: `Claude call failed after 2 attempts: ${baseMessage}.${hint}` },
+      { error: `O Claude falhou 2 vezes: ${baseMessage}.${hint}` },
       { status: 502 },
     );
   }
@@ -318,7 +318,7 @@ export async function POST(
     return NextResponse.json(
       {
         error:
-          "Claude returned an empty task list. Try regenerating, or add a Strategic focus to anchor the plan.",
+          "O Claude devolveu uma lista de tarefas vazia. Tenta regenerar, ou acrescenta um Foco estratégico para orientar o plano.",
       },
       { status: 502 },
     );

@@ -14,7 +14,10 @@ import {
   type RoadmapPillar,
   type RoadmapStatus,
 } from "@/lib/roadmap-store";
-import { isInternalFixedTask } from "@/lib/roadmap-fixed-blocks";
+import {
+  clientTaskTitle,
+  isInternalFixedTask,
+} from "@/lib/roadmap-fixed-blocks";
 import { formatDate } from "@/lib/dates";
 
 type Lang = "pt" | "en";
@@ -341,7 +344,7 @@ export function RoadmapReportBody({
                                     color: "#64748b",
                                   }}
                                 >
-                                  ↳ {t.title}
+                                  ↳ {clientTaskTitle(t, lang)}
                                 </span>
                                 <span
                                   style={{
@@ -391,7 +394,7 @@ export function RoadmapReportBody({
                                     color: "#1e293b",
                                   }}
                                 >
-                                  {t.title}
+                                  {clientTaskTitle(t, lang)}
                                 </span>
                                 <span
                                   style={{

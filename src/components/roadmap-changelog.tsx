@@ -22,10 +22,18 @@ import {
   CalendarMinus,
 } from "lucide-react";
 import {
-  ROADMAP_STATUS_LABELS,
   type RoadmapLogEntry,
   type RoadmapLogKind,
 } from "@/lib/roadmap-changelog";
+import type { RoadmapStatus } from "@/lib/roadmap-store";
+
+// v80.29 — o separador do roadmap é todo em português.
+const STATUS_PT: Record<RoadmapStatus, string> = {
+  not_started: "Por iniciar",
+  in_progress: "Em curso",
+  pending_review: "À espera do cliente",
+  implemented: "Implementado",
+};
 import { formatDateTime } from "@/lib/dates";
 
 const KIND_META: Record<
@@ -47,41 +55,41 @@ const KIND_META: Record<
 function describe(e: RoadmapLogEntry): string {
   switch (e.kind) {
     case "add":
-      return `Added “${e.title ?? "task"}” to week ${e.week ?? "?"}`;
+      return `Acrescentou «${e.title ?? "tarefa"}» à semana ${e.week ?? "?"}`;
     case "remove":
-      return `Removed “${e.title ?? "task"}”`;
+      return `Apagou «${e.title ?? "tarefa"}»`;
     case "status":
-      return `“${e.title ?? "task"}” · ${
-        e.fromStatus ? ROADMAP_STATUS_LABELS[e.fromStatus] : "?"
-      } → ${e.toStatus ? ROADMAP_STATUS_LABELS[e.toStatus] : "?"}`;
+      return `«${e.title ?? "tarefa"}» · ${
+        e.fromStatus ? STATUS_PT[e.fromStatus] : "?"
+      } → ${e.toStatus ? STATUS_PT[e.toStatus] : "?"}`;
     case "move":
-      return `Moved “${e.title ?? "task"}” to week ${e.week ?? "?"}${
-        e.fromWeek ? ` (from week ${e.fromWeek})` : ""
+      return `Moveu «${e.title ?? "tarefa"}» para a semana ${e.week ?? "?"}${
+        e.fromWeek ? ` (estava na semana ${e.fromWeek})` : ""
       }`;
     case "edit":
-      return `Renamed a task to “${e.title ?? "task"}”`;
+      return `Mudou o nome de uma tarefa para «${e.title ?? "tarefa"}»`;
     case "generated":
-      return `Generated roadmap${e.count != null ? ` · ${e.count} tasks` : ""}`;
+      return `Gerou o roadmap${e.count != null ? ` · ${e.count} tarefas` : ""}`;
     case "reset":
-      return "Reset roadmap";
+      return "Reiniciou o roadmap";
     case "extend":
       // v77.42+ entries carry the new length in calendar months; older
       // ones carry the 4-week total (`count`), kept readable as-is.
-      return `Extended roadmap${
+      return `Estendeu o roadmap${
         e.months != null
-          ? ` to ${e.months} months`
+          ? ` para ${e.months} meses`
           : e.count != null
-            ? ` to ${e.count} weeks (${e.count / 4} months)`
-            : " by 3 months"
+            ? ` para ${e.count} semanas (${e.count / 4} meses)`
+            : " em 3 meses"
       }`;
     case "shrink":
-      return `Shortened roadmap${
-        e.months != null ? ` to ${e.months} months` : ""
-      } — tasks in the removed weeks were deleted`;
+      return `Encurtou o roadmap${
+        e.months != null ? ` para ${e.months} meses` : ""
+      } — as tarefas das semanas removidas foram apagadas`;
     case "weekly":
-      return "Weekly update sent";
+      return "Weekly update enviado";
     default:
-      return "Updated roadmap";
+      return "Atualizou o roadmap";
   }
 }
 
@@ -122,7 +130,7 @@ export function RoadmapChangelog({
           className="group inline-flex items-center gap-2 text-[12px] font-bold uppercase tracking-[0.16em] text-white/55 transition hover:text-white"
         >
           <History className="h-4 w-4" />
-          Changelog
+          Histórico
           <span className="rounded-full border border-white/12 bg-white/[0.05] px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-white/60">
             {entries.length}
           </span>
@@ -140,7 +148,7 @@ export function RoadmapChangelog({
             <RefreshCw
               className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`}
             />
-            Refresh
+            Atualizar
           </button>
         )}
       </div>
@@ -149,8 +157,9 @@ export function RoadmapChangelog({
         <div className="border-t border-white/8 px-4 py-3">
           {entries.length === 0 ? (
             <p className="py-4 text-center text-[12px] text-white/40">
-              No changes recorded yet. Edits to tasks (status, week, add/remove)
-              and roadmap generations will show up here.
+              Ainda não há alterações registadas. As mudanças às tarefas
+              (estado, semana, acrescentar/apagar) e as gerações do roadmap
+              aparecem aqui.
             </p>
           ) : (
             <ol className="space-y-1.5">

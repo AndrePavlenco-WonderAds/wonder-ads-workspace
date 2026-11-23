@@ -16,6 +16,7 @@ export function SendToReviewButton({
   sourceType,
   variant = "default",
   label,
+  pt = false,
 }: {
   clientSlug: string;
   task: string;
@@ -24,6 +25,8 @@ export function SendToReviewButton({
    *  states keep their own wording. Ignored for the `compact` variant,
    *  which stays icon-led + tiny. */
   label?: string;
+  /** Textos do botão em português (separador do roadmap, v80.29). */
+  pt?: boolean;
   /** External URL the review row should link to. Usually the result
    *  page (PDF for SEO Audit, KW dashboard for Keyword Research,
    *  GMB batch view for GMB Posts, etc.). When the docLink is a
@@ -98,7 +101,9 @@ export function SendToReviewButton({
       title={
         state === "error" && errorMsg
           ? errorMsg
-          : "Send this to the client's Pending Review table for approval."
+          : pt
+            ? "Envia isto para a tabela Pending Review do cliente, para aprovação."
+            : "Send this to the client's Pending Review table for approval."
       }
       className={`${baseClasses} ${sizeClasses}`}
       style={
@@ -120,11 +125,11 @@ export function SendToReviewButton({
       {variant === "compact" ? (
         state === "sent" ? "Sent" : state === "error" ? "Retry" : "Approval"
       ) : state === "sent" ? (
-        "Sent for approval"
+        pt ? "Enviado para aprovação" : "Sent for approval"
       ) : state === "error" ? (
-        "Failed — retry"
+        pt ? "Falhou — tentar de novo" : "Failed — retry"
       ) : (
-        label ?? "Send for Approval"
+        label ?? (pt ? "Enviar para aprovação" : "Send for Approval")
       )}
     </button>
   );

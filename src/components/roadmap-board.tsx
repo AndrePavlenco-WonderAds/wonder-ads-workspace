@@ -92,13 +92,13 @@ const STATUS_META: Record<
   { label: string; bgClass: string; chipClass: string; dotClass: string }
 > = {
   not_started: {
-    label: "Not started",
+    label: "Por iniciar",
     bgClass: "bg-white/[0.04] border border-white/12 text-white/85",
     chipClass: "border-white/20 bg-white/[0.06] text-white/65",
     dotClass: "bg-white/45",
   },
   in_progress: {
-    label: "In progress",
+    label: "Em curso",
     bgClass: "bg-amber-500/15 border border-amber-400/45 text-white",
     chipClass: "border-amber-400/40 bg-amber-500/15 text-amber-100",
     dotClass: "bg-amber-400",
@@ -108,13 +108,13 @@ const STATUS_META: Record<
     // closer to the FigJam VIOLET swatch (purple-blue) instead of
     // reading as straight cyan. Same intensity, just shifted up the
     // hue wheel.
-    label: "Pending client review",
+    label: "À espera do cliente",
     bgClass: "bg-violet-500/15 border border-violet-400/45 text-white",
     chipClass: "border-violet-400/40 bg-violet-500/20 text-violet-100",
     dotClass: "bg-violet-400",
   },
   implemented: {
-    label: "Implemented",
+    label: "Implementado",
     bgClass: "bg-emerald-500/15 border border-emerald-400/45 text-white",
     chipClass: "border-emerald-400/40 bg-emerald-500/15 text-emerald-100",
     dotClass: "bg-emerald-400",
@@ -122,32 +122,32 @@ const STATUS_META: Record<
 };
 
 const PILLAR_LABEL: Record<RoadmapPillar, string> = {
-  technical: "Technical",
+  technical: "Técnico",
   "on-page": "On-Page",
   "off-page": "Off-Page",
   local: "Local",
-  content: "Content",
-  research: "Research",
+  content: "Conteúdo",
+  research: "Pesquisa",
 };
 
 // Paced "what's happening" messages displayed while the generate call is
 // pending. The endpoint is one-shot (no server-side progress events) so
 // this is a UX-only cycle — the bar itself is indeterminate.
 const GENERATE_PHASES = [
-  "Loading client brief, onboarding form, and target keywords…",
-  "Pulling the last 15 actions we ran on this account…",
-  "Crawling the homepage + about page for a live mini-audit…",
-  "Sending your reference photos to Claude (vision)…",
-  "Diagnosing gaps like an SEO pro before sequencing tasks…",
-  "Drafting the plan week by week with Claude Sonnet (30–90s)…",
-  "Sequencing tasks across the calendar months…",
-  "Saving to your workspace and archiving the previous roadmap…",
+  "A carregar o brief, o formulário de onboarding e as keywords…",
+  "A ler as últimas 15 ações feitas nesta conta…",
+  "A analisar a homepage e a página «sobre» (mini-auditoria)…",
+  "A enviar as fotos de referência ao Claude…",
+  "A diagnosticar as falhas antes de ordenar as tarefas…",
+  "A escrever o plano semana a semana com o Claude Sonnet (30–90 s)…",
+  "A distribuir as tarefas pelos meses…",
+  "A guardar e a arquivar o roadmap anterior…",
 ];
 
 /** The typed word that unlocks "Remove months". Deleting weeks of planned
  *  work is the one destructive thing on this board, so it costs a word,
  *  not a click. */
-const REMOVE_CONFIRM_WORD = "DELETE";
+const REMOVE_CONFIRM_WORD = "APAGAR";
 
 /** One rendered slot inside a week column. A multi-week task produces one
  *  cell per week it covers: `isStart` on its first week (the full,
@@ -360,7 +360,7 @@ export function RoadmapBoard({
       if (!data?.roadmap) {
         throw new Error(
           data?.error ??
-            "Server returned an unexpected response. Try regenerating.",
+            "O servidor devolveu uma resposta inesperada. Tenta regenerar.",
         );
       }
       skipNextSave.current = true;
@@ -429,7 +429,7 @@ export function RoadmapBoard({
                   ? {
                       ...p,
                       uploading: false,
-                      error: err instanceof Error ? err.message : "Upload failed",
+                      error: err instanceof Error ? err.message : "O envio falhou",
                     }
                   : p,
               ),
@@ -484,7 +484,7 @@ export function RoadmapBoard({
       const newTask: RoadmapTask = {
         id: newTaskId(),
         week,
-        title: "New task",
+        title: "Nova tarefa",
         status: "not_started",
         pillar: "technical",
         order: maxOrder + 1,
@@ -582,11 +582,11 @@ export function RoadmapBoard({
       <div className="brand-gradient-border flex flex-wrap items-center gap-3 rounded-xl bg-white/[0.03] px-4 py-3 text-sm text-white/75 backdrop-blur-md">
         <label
           className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.04] px-3 py-1 text-[11px] text-white/75"
-          title="Starting date — week 1 begins here. Editable inline."
+          title="Data de início — a semana 1 começa aqui. Edita-se aqui mesmo."
         >
           <Calendar className="h-3.5 w-3.5 text-white/55" />
           <span className="text-[10px] uppercase tracking-[0.13em] text-white/55">
-            Starts
+            Início
           </span>
           <input
             type="date"
@@ -598,10 +598,10 @@ export function RoadmapBoard({
         {roadmap.onboardingDate && (
           <span
             className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.02] px-2.5 py-1 text-[10px] text-white/55"
-            title="When the client originally onboarded with the agency — pinned even after the roadmap is reset"
+            title="Quando o cliente fez o onboarding com a agência — fica mesmo depois de o roadmap ser reiniciado"
           >
             <span className="text-[9px] uppercase tracking-[0.13em] text-white/40">
-              Onboarded
+              Onboarding
             </span>
             <span className="font-medium text-white/75">
               {formatDate(roadmap.onboardingDate)}
@@ -619,23 +619,23 @@ export function RoadmapBoard({
             "Month 5 of 6" is the number they actually reason about. */}
         <span
           className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.02] px-2.5 py-1 text-[10px] text-white/55"
-          title={`${totalMonths} calendar months from ${formatDate(roadmap.startDate)} · ${totalWeeks} weeks · ends ${formatDate(lastDay)}`}
+          title={`${totalMonths} meses a partir de ${formatDate(roadmap.startDate)} · ${totalWeeks} semanas · acaba a ${formatDate(lastDay)}`}
         >
           <span className="font-medium text-white/75">
             {inHorizon
-              ? `Week ${week} of ${totalWeeks} · Month ${monthNow} of ${totalMonths}`
+              ? `Semana ${week} de ${totalWeeks} · Mês ${monthNow} de ${totalMonths}`
               : week < 1
-                ? `${totalMonths} months · ${totalWeeks} weeks · starts ${formatDate(roadmap.startDate)}`
-                : `${totalMonths} months · ${totalWeeks} weeks · past the last week`}
+                ? `${totalMonths} meses · ${totalWeeks} semanas · começa a ${formatDate(roadmap.startDate)}`
+                : `${totalMonths} meses · ${totalWeeks} semanas · já passou a última semana`}
           </span>
           <span className="text-white/35">·</span>
           <span className="text-[9px] uppercase tracking-[0.13em] text-white/40">
-            ends
+            acaba
           </span>
           <span className="font-medium text-white/75">{formatDate(lastDay)}</span>
         </span>
         <span className="text-[11px] text-white/45">
-          {plannedCount} task{plannedCount === 1 ? "" : "s"}
+          {plannedCount} tarefa{plannedCount === 1 ? "" : "s"}
           {fixedCount > 0 && (
             <span
               className="ml-1.5 text-sky-200/60"
@@ -648,7 +648,7 @@ export function RoadmapBoard({
         <span className="ml-auto inline-flex items-center gap-3">
           {saving && !readOnly && (
             <span className="inline-flex items-center gap-1.5 text-[11px] text-white/45">
-              <Loader2 className="h-3 w-3 animate-spin" /> Saving…
+              <Loader2 className="h-3 w-3 animate-spin" /> A guardar…
             </span>
           )}
           {!readOnly && !isEmpty && (
@@ -661,15 +661,15 @@ export function RoadmapBoard({
               onClick={() => setRemoveDialogOpen(true)}
               title={
                 canRemoveMonths
-                  ? "Cut months off the end of this roadmap (asks for a typed confirmation)"
+                  ? "Cortar meses ao fim deste roadmap (pede uma confirmação escrita)"
                   : minMonths > MIN_ROADMAP_MONTHS
                     ? `Os blocos fixos (renovação) seguram este plano em ${minMonths} meses.`
-                    : `A roadmap can't be shorter than ${MIN_ROADMAP_MONTHS} months.`
+                    : `Um roadmap não pode ter menos de ${MIN_ROADMAP_MONTHS} meses.`
               }
               className="inline-flex items-center gap-1.5 rounded-md border border-rose-400/25 bg-rose-500/[0.07] px-2.5 py-1.5 text-[11px] font-medium text-rose-100/85 transition hover:border-rose-400/55 hover:bg-rose-500/15 hover:text-rose-50 disabled:cursor-not-allowed disabled:opacity-35"
             >
               <CalendarMinus className="h-3.5 w-3.5" />
-              Remove months
+              Remover meses
             </button>
           )}
           {!readOnly && (
@@ -687,7 +687,7 @@ export function RoadmapBoard({
               ) : (
                 <RefreshCw className="h-3.5 w-3.5" />
               )}
-              {isEmpty ? "Fill with AI" : "Regenerate"}
+              {isEmpty ? "Preencher com IA" : "Regenerar"}
               <ChevronDown
                 className={`h-3 w-3 transition ${generatePanelOpen ? "rotate-180" : ""}`}
               />
@@ -766,13 +766,13 @@ export function RoadmapBoard({
                 }`}
                 title="Antes da reunião de onboarding / sessão de estratégia n.º 1"
               >
-                Week 0
+                Semana 0
                 <span className="ml-1 text-[9.5px] font-medium normal-case tracking-[0.04em] opacity-80">
-                  Antes da reunião · até {formatDate(dayBeforeISO(roadmap.startDate))}
+                  Antes da reunião de onboarding · até {formatDate(dayBeforeISO(roadmap.startDate))}
                 </span>
                 {week === 0 && (
                   <span className="ml-1 rounded-full bg-white/20 px-1.5 py-px text-[9px] font-bold tracking-wider">
-                    NOW
+                    AGORA
                   </span>
                 )}
               </span>
@@ -807,7 +807,7 @@ export function RoadmapBoard({
                     ? "brand-gradient-bg text-white shadow-[0_8px_28px_-6px_rgba(120,61,245,0.55)] ring-2 ring-[color:var(--brand-purple)]/40"
                     : "brand-gradient-border bg-[color:var(--brand-purple)]/15 text-white/65"
                 }`}
-                title={`Calendar month ${m.index + 1} of the plan · ${formatDate(m.start)} – ${formatDate(m.end)}`}
+                title={`Mês ${m.index + 1} do plano · ${formatDate(m.start)} – ${formatDate(m.end)}`}
               >
                 {monthIsCurrent && (
                   <span
@@ -815,7 +815,7 @@ export function RoadmapBoard({
                     className="inline-flex h-1.5 w-1.5 animate-pulse rounded-full bg-white shadow-[0_0_10px_rgba(255,255,255,0.9)]"
                   />
                 )}
-                {m.name}
+                Mês {m.index + 1}
                 <span
                   className={`ml-1 text-[9.5px] font-medium normal-case tracking-[0.04em] tabular-nums ${
                     monthIsCurrent ? "text-white/85" : "text-white/45"
@@ -825,7 +825,7 @@ export function RoadmapBoard({
                 </span>
                 {monthIsCurrent && (
                   <span className="ml-1 rounded-full bg-white/20 px-1.5 py-px text-[9px] font-bold tracking-wider">
-                    NOW
+                    AGORA
                   </span>
                 )}
               </span>
@@ -902,10 +902,10 @@ function ExtendControl({
     return (
       <span
         className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-white/12 bg-white/[0.03] px-3 py-1.5 text-[11px] font-medium text-white/45"
-        title={`This roadmap is at the ${MAX_ROADMAP_MONTHS}-month maximum.`}
+        title={`Este roadmap já está no máximo de ${MAX_ROADMAP_MONTHS} meses.`}
       >
         <CalendarPlus className="h-3.5 w-3.5" />
-        Max {MAX_ROADMAP_MONTHS} months
+        Máx. {MAX_ROADMAP_MONTHS} meses
       </span>
     );
   }
@@ -915,7 +915,7 @@ function ExtendControl({
     <span className="inline-flex shrink-0 items-center gap-1 rounded-md border border-white/12 bg-white/[0.03] px-1.5 py-1">
       <span className="inline-flex items-center gap-1.5 pl-1 pr-0.5 text-[11px] font-medium text-white/65">
         <CalendarPlus className="h-3.5 w-3.5" />
-        Extend
+        Estender
       </span>
       {ROADMAP_EXTEND_MONTHS.map((m) => {
         const fits = m <= roomMonths;
@@ -928,12 +928,12 @@ function ExtendControl({
             onClick={() => onExtend(m)}
             title={
               fits
-                ? `Add ${m} calendar month${m === 1 ? "" : "s"} — ${
+                ? `Acrescentar ${m} ${m === 1 ? "mês" : "meses"} — ${
                     totalMonths + m
-                  } months in total. The new weeks land as empty columns.`
-                : `Only ${roomMonths} more month${
-                    roomMonths === 1 ? "" : "s"
-                  } fit before the ${MAX_ROADMAP_MONTHS}-month ceiling.`
+                  } meses no total. As semanas novas entram vazias.`
+                : `Só cabe${roomMonths === 1 ? "" : "m"} mais ${roomMonths} ${
+                    roomMonths === 1 ? "mês" : "meses"
+                  } antes do máximo de ${MAX_ROADMAP_MONTHS}.`
             }
             className={`rounded px-2 py-0.5 text-[11px] font-semibold tabular-nums transition disabled:cursor-not-allowed disabled:opacity-35 ${
               featured
@@ -1021,12 +1021,12 @@ function RemoveMonthsDialog({
               id="remove-months-title"
               className="text-[15px] font-semibold leading-tight"
             >
-              Remove months from the end of this roadmap
+              Remover meses ao fim deste roadmap
             </h2>
             <p className="mt-1 text-[12px] leading-relaxed text-white/60">
-              {clientName} · {totalMonths} months today ({totalWeeks} weeks,
-              ends {formatDate(roadmapLastDay(roadmap))}). A roadmap can&apos;t
-              go below {MIN_ROADMAP_MONTHS} months.
+              {clientName} · {totalMonths} meses hoje ({totalWeeks} semanas,
+              acaba a {formatDate(roadmapLastDay(roadmap))}). Um roadmap não
+              pode ter menos de {MIN_ROADMAP_MONTHS} meses.
               {floor > MIN_ROADMAP_MONTHS &&
                 ` Os blocos fixos (renovação) seguram-no em ${floor} meses.`}
             </p>
@@ -1034,7 +1034,7 @@ function RemoveMonthsDialog({
           <button
             type="button"
             onClick={onClose}
-            aria-label="Close"
+            aria-label="Fechar"
             className="rounded-md p-1 text-white/50 transition hover:bg-white/[0.08] hover:text-white"
           >
             <X className="h-4 w-4" />
@@ -1044,7 +1044,7 @@ function RemoveMonthsDialog({
         {/* How many months to cut */}
         <div className="mt-4">
           <p className="text-[10px] uppercase tracking-[0.13em] text-white/50">
-            Months to remove
+            Meses a remover
           </p>
           <div className="mt-1.5 flex flex-wrap gap-1.5">
             {Array.from({ length: maxRemovable }, (_, i) => i + 1).map((n) => (
@@ -1067,32 +1067,33 @@ function RemoveMonthsDialog({
         {/* The consequence, spelled out */}
         <div className="mt-4 rounded-xl border border-white/10 bg-white/[0.03] p-3.5 text-[12px] leading-relaxed">
           <p className="text-white/85">
-            <span className="font-semibold">{totalMonths} → {nextMonths} months.</span>{" "}
-            The plan will end on{" "}
+            <span className="font-semibold">{totalMonths} → {nextMonths} meses.</span>{" "}
+            O plano passa a acabar a{" "}
             <span className="font-semibold">{formatDate(nextLastDay)}</span>{" "}
-            instead of {formatDate(roadmapLastDay(roadmap))}.{" "}
+            em vez de {formatDate(roadmapLastDay(roadmap))}.{" "}
             {totalWeeks > keepWeeks && (
               <>
-                Week{totalWeeks - keepWeeks === 1 ? "" : "s"}{" "}
+                {totalWeeks - keepWeeks === 1 ? "A semana" : "As semanas"}{" "}
                 <span className="font-semibold tabular-nums">
                   {keepWeeks + 1}
                   {totalWeeks - keepWeeks === 1 ? "" : `–${totalWeeks}`}
                 </span>{" "}
-                disappear.
+                {totalWeeks - keepWeeks === 1 ? "desaparece" : "desaparecem"}.
               </>
             )}
           </p>
           {doomed.length > 0 ? (
             <div className="mt-2.5">
               <p className="font-semibold text-rose-200">
-                {doomed.length} task{doomed.length === 1 ? "" : "s"} will be
-                deleted:
+                {doomed.length === 1
+                  ? "1 tarefa vai ser apagada:"
+                  : `${doomed.length} tarefas vão ser apagadas:`}
               </p>
               <ul className="mt-1 max-h-40 space-y-0.5 overflow-y-auto pr-1 text-white/70">
                 {doomed.map((t) => (
                   <li key={t.id} className="flex items-baseline gap-2">
                     <span className="shrink-0 text-[10px] uppercase tracking-[0.1em] text-white/40">
-                      Wk {t.week}
+                      Sem. {t.week}
                     </span>
                     <span className="min-w-0 flex-1 truncate">{t.title}</span>
                     <span className="shrink-0 text-[10px] uppercase tracking-[0.08em] text-white/40">
@@ -1104,20 +1105,22 @@ function RemoveMonthsDialog({
             </div>
           ) : (
             <p className="mt-2 text-emerald-200/85">
-              No tasks are planned in the removed weeks — nothing gets deleted.
+              Não há tarefas nas semanas removidas — nada é apagado.
             </p>
           )}
           {trimmed.length > 0 && (
             <p className="mt-2 text-amber-200/85">
-              {trimmed.length} multi-week task{trimmed.length === 1 ? "" : "s"}{" "}
-              will be cut short at week {keepWeeks}.
+              {trimmed.length === 1
+                ? "1 tarefa de várias semanas fica cortada"
+                : `${trimmed.length} tarefas de várias semanas ficam cortadas`}{" "}
+              na semana {keepWeeks}.
             </p>
           )}
         </div>
 
         {/* Typed confirmation */}
         <label className="mt-4 block text-[10px] uppercase tracking-[0.13em] text-white/50">
-          Type {REMOVE_CONFIRM_WORD} to confirm
+          Escreve {REMOVE_CONFIRM_WORD} para confirmar
           <input
             type="text"
             autoFocus
@@ -1139,7 +1142,7 @@ function RemoveMonthsDialog({
             onClick={onClose}
             className="rounded-md border border-white/15 bg-white/[0.04] px-3 py-1.5 text-[11.5px] font-medium text-white/80 transition hover:border-white/30 hover:text-white"
           >
-            Cancel
+            Cancelar
           </button>
           <button
             type="button"
@@ -1148,9 +1151,9 @@ function RemoveMonthsDialog({
             className="inline-flex items-center gap-1.5 rounded-md border border-rose-400/50 bg-rose-500/25 px-3 py-1.5 text-[11.5px] font-semibold text-rose-50 transition hover:bg-rose-500/40 disabled:cursor-not-allowed disabled:opacity-40"
           >
             <Trash2 className="h-3.5 w-3.5" />
-            Remove {remove} month{remove === 1 ? "" : "s"}
+            Remover {remove} {remove === 1 ? "mês" : "meses"}
             {doomed.length > 0
-              ? ` · delete ${doomed.length} task${doomed.length === 1 ? "" : "s"}`
+              ? ` · apagar ${doomed.length} tarefa${doomed.length === 1 ? "" : "s"}`
               : ""}
           </button>
         </div>
@@ -1209,7 +1212,7 @@ function GeneratePanel({
       <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
         <label className="block text-xs">
           <span className="text-[11px] uppercase tracking-[0.13em] text-white/55">
-            Start date (any day — week 1 begins here)
+            Data de início (qualquer dia — a semana 1 começa aqui)
           </span>
           <input
             type="date"
@@ -1223,7 +1226,7 @@ function GeneratePanel({
             choice. */}
         <label className="block text-xs">
           <span className="text-[11px] uppercase tracking-[0.13em] text-white/55">
-            Plan length
+            Duração do plano
           </span>
           <select
             value={months}
@@ -1232,33 +1235,33 @@ function GeneratePanel({
           >
             {ROADMAP_GENERATE_MONTHS.map((m) => (
               <option key={m} value={m}>
-                {m} months · {roadmapWeeks({ months: m })} weeks
+                {m} meses · {roadmapWeeks({ months: m })} semanas
               </option>
             ))}
           </select>
         </label>
         <label className="block text-xs md:col-span-2">
           <span className="text-[11px] uppercase tracking-[0.13em] text-white/55">
-            Strategic focus (optional)
+            Foco estratégico (opcional)
           </span>
           <input
             type="text"
             value={focus}
             onChange={(e) => setFocus(e.target.value)}
-            placeholder='e.g. "push local SEO hard for the new Lisbon clinic"'
+            placeholder='ex.: «apostar forte no SEO local da nova clínica de Lisboa»'
             className="mt-1 w-full rounded-md border border-white/10 bg-white/[0.03] px-2.5 py-1.5 text-xs text-white outline-none placeholder:text-white/35 focus:border-white/30"
           />
         </label>
       </div>
       <label className="mt-3 block text-xs">
         <span className="text-[11px] uppercase tracking-[0.13em] text-white/55">
-          Constraints (optional)
+          Restrições (opcional)
         </span>
         <textarea
           value={constraints}
           onChange={(e) => setConstraints(e.target.value)}
           rows={2}
-          placeholder="e.g. no link-building Q3, content team capped at 2 articles/week"
+          placeholder="ex.: sem link-building no 3.º trimestre, no máximo 2 artigos por semana"
           className="mt-1 w-full rounded-md border border-white/10 bg-white/[0.03] px-2.5 py-1.5 text-xs text-white outline-none placeholder:text-white/35 focus:border-white/30"
         />
       </label>
@@ -1269,10 +1272,10 @@ function GeneratePanel({
       <div className="mt-3">
         <div className="flex items-baseline justify-between gap-2">
           <span className="text-[11px] uppercase tracking-[0.13em] text-white/55">
-            Reference photos (optional · up to {MAX_PHOTOS})
+            Fotos de referência (opcional · até {MAX_PHOTOS})
           </span>
           <span className="text-[10px] text-white/40">
-            Clinic interior · GMB screenshot · competitor SERP · GSC graph — Claude sees these natively
+            Interior da clínica · captura do GMB · SERP da concorrência · gráfico do GSC — o Claude vê as imagens
           </span>
         </div>
         <div className="mt-2 flex flex-wrap items-stretch gap-2">
@@ -1301,7 +1304,7 @@ function GeneratePanel({
               <button
                 type="button"
                 onClick={() => onRemovePhoto(p.id)}
-                aria-label={`Remove ${p.name}`}
+                aria-label={`Remover ${p.name}`}
                 className="absolute right-1 top-1 hidden rounded-full border border-white/20 bg-black/60 p-0.5 text-white/80 transition hover:border-white/50 hover:text-white group-hover:block"
               >
                 <X className="h-3 w-3" />
@@ -1316,7 +1319,7 @@ function GeneratePanel({
               className="flex h-20 w-20 flex-col items-center justify-center gap-1 rounded-md border border-dashed border-white/15 bg-white/[0.02] text-[10px] text-white/55 transition hover:border-white/35 hover:bg-white/[0.05] hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
             >
               <ImagePlus className="h-4 w-4" />
-              Add photo
+              Adicionar foto
             </button>
           )}
           <input
@@ -1346,17 +1349,17 @@ function GeneratePanel({
             <Sparkles className="h-3.5 w-3.5" />
           )}
           {generating
-            ? "Generating roadmap…"
+            ? "A gerar o roadmap…"
             : anyUploading
-              ? "Waiting for photo upload…"
+              ? "À espera do envio das fotos…"
               : mode === "create"
-                ? "Generate roadmap"
-                : "Generate new roadmap"}
+                ? "Gerar roadmap"
+                : "Gerar novo roadmap"}
         </button>
         {!generating && mode === "regenerate" && (
           <span className="text-[11px] text-white/45">
-            Old roadmap will be archived. New one starts blank — you can keep
-            editing right after.
+            O roadmap atual fica arquivado. O novo começa do zero — podes
+            continuar a editar logo a seguir.
           </span>
         )}
       </div>
@@ -1486,11 +1489,11 @@ function WeekColumn({
                 ▶
               </span>
             )}
-            Week {week}
+            Semana {week}
           </h3>
           <span
             className="text-[10px] uppercase tracking-[0.13em] text-white/40"
-            title={`${formatDate(weekDate)} – ${formatDate(weekEnd)} · ${weekDays} days`}
+            title={`${formatDate(weekDate)} – ${formatDate(weekEnd)} · ${weekDays} dias`}
           >
             {formatDate(weekDate)}
             {/* The 4th week of a month absorbs the month's remaining days
@@ -1509,7 +1512,7 @@ function WeekColumn({
               aria-hidden
               className="h-1 w-1 animate-pulse rounded-full bg-white"
             />
-            This Week
+            Esta semana
           </span>
         )}
       </div>
@@ -1556,7 +1559,7 @@ function WeekColumn({
                 : "rounded-lg border border-dashed border-white/10 bg-white/[0.01] px-2.5 py-2 text-center text-[10.5px] text-white/35"
             }
           >
-            {isDragActive ? "Drop to move here" : "No tasks"}
+            {isDragActive ? "Larga aqui para mover" : "Sem tarefas"}
           </li>
         )}
       </ul>
@@ -1567,7 +1570,7 @@ function WeekColumn({
           className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-md border border-dashed border-white/15 bg-white/[0.02] px-2 py-1.5 text-[11px] text-white/55 transition hover:border-white/30 hover:bg-white/[0.05] hover:text-white"
         >
           <Plus className="h-3 w-3" />
-          Add task
+          Adicionar tarefa
         </button>
       )}
     </div>
@@ -1657,7 +1660,7 @@ function FixedGroupBlock({
         {isOpen && !readOnly && (
           <div className="mb-1.5 ml-6 mr-1 space-y-1.5 rounded-md border border-white/10 bg-black/20 p-2">
             <label className="block text-[9.5px] uppercase tracking-[0.1em] text-white/45">
-              Status
+              Estado
               <select
                 value={t.status}
                 onChange={(e) =>
@@ -1691,7 +1694,7 @@ function FixedGroupBlock({
                 className="inline-flex items-center gap-1 rounded-md border border-white/20 bg-white/[0.06] px-2 py-0.5 text-[10.5px] font-semibold text-white transition hover:bg-white/[0.12]"
               >
                 <Check className="h-3 w-3" />
-                Done
+                Feito
               </button>
             </div>
           </div>
@@ -1748,7 +1751,7 @@ function FixedGroupBlock({
           <CirclePlay className="h-4 w-4 shrink-0" />
           <span className="min-w-0 flex-1 truncate">{meta.lesson.label}</span>
           <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-white/20 px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-[0.1em] transition group-hover/aula:bg-white/30">
-            Ver aula
+            Ver conformidade
             <ArrowUpRight className="h-3 w-3" />
           </span>
         </a>
@@ -1799,7 +1802,7 @@ function ContinuationChip({
   return (
     <li
       className="relative flex items-center gap-1.5 overflow-hidden rounded-lg border border-dashed border-white/12 bg-white/[0.015] py-1.5 pl-2 pr-2 text-white/55"
-      title={`Multi-week task — runs Week ${task.week}–${end}. Edit or move it from Week ${task.week}.`}
+      title={`Tarefa de várias semanas — semanas ${task.week}–${end}. Edita-a ou move-a na semana ${task.week}.`}
     >
       <span
         aria-hidden
@@ -1810,7 +1813,7 @@ function ContinuationChip({
         {task.title}
       </span>
       <span className="shrink-0 text-[8.5px] font-bold uppercase tracking-[0.12em] text-white/40">
-        {isLast ? "ends" : "cont."}
+        {isLast ? "acaba" : "cont."}
       </span>
     </li>
   );
@@ -1854,7 +1857,7 @@ function TaskCard({
   const spanBadge =
     span > 1 ? (
       <span className="inline-flex items-center rounded-full border border-[color:var(--brand-purple)]/45 bg-[color:var(--brand-purple)]/15 px-1.5 py-0.5 font-semibold text-white/85">
-        Wk {task.week}–{end}
+        Sem. {task.week}–{end}
       </span>
     ) : null;
 
@@ -1917,8 +1920,8 @@ function TaskCard({
             type="button"
             onClick={() => onSlide(-1)}
             disabled={!canSlideLeft}
-            aria-label="Move one week earlier"
-            title="Move one week earlier"
+            aria-label="Uma semana antes"
+            title="Uma semana antes"
             className="rounded-md border border-white/10 bg-black/40 p-1 text-white/70 transition hover:border-white/30 hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
           >
             <ChevronLeft className="h-3 w-3" />
@@ -1927,8 +1930,8 @@ function TaskCard({
             type="button"
             onClick={() => onSlide(1)}
             disabled={!canSlideRight}
-            aria-label="Move one week later"
-            title="Move one week later"
+            aria-label="Uma semana depois"
+            title="Uma semana depois"
             className="rounded-md border border-white/10 bg-black/40 p-1 text-white/70 transition hover:border-white/30 hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
           >
             <ChevronRight className="h-3 w-3" />
@@ -1936,7 +1939,7 @@ function TaskCard({
           <button
             type="button"
             onClick={onStartEdit}
-            aria-label="Edit"
+            aria-label="Editar"
             className="rounded-md border border-white/10 bg-black/40 p-1 text-white/70 transition hover:border-white/30 hover:text-white"
           >
             <Pencil className="h-3 w-3" />
@@ -1953,7 +1956,7 @@ function TaskCard({
           value={task.title}
           onChange={(e) => onUpdate({ title: e.target.value })}
           className="w-full rounded-md border border-white/10 bg-white/[0.06] px-2 py-1 text-[12px] text-white outline-none focus:border-white/30"
-          placeholder="Task title"
+          placeholder="Título da tarefa"
         />
         <textarea
           value={task.description ?? ""}
@@ -1961,12 +1964,12 @@ function TaskCard({
             onUpdate({ description: e.target.value || undefined })
           }
           rows={2}
-          placeholder="Notes / what this means in practice (optional)"
+          placeholder="Notas / o que isto quer dizer na prática (opcional)"
           className="w-full rounded-md border border-white/10 bg-white/[0.06] px-2 py-1 text-[11px] text-white outline-none placeholder:text-white/35 focus:border-white/30"
         />
         <div className="grid grid-cols-2 gap-1.5">
           <label className="block text-[9.5px] uppercase tracking-[0.1em] text-white/45">
-            Status
+            Estado
             <select
               value={task.status}
               onChange={(e) =>
@@ -1982,7 +1985,7 @@ function TaskCard({
             </select>
           </label>
           <label className="block text-[9.5px] uppercase tracking-[0.1em] text-white/45">
-            Pillar
+            Pilar
             <select
               value={task.pillar}
               onChange={(e) =>
@@ -2002,7 +2005,7 @@ function TaskCard({
             spans; leaving it on "Just this week" keeps it single-week. */}
         <div className="grid grid-cols-2 gap-1.5">
           <label className="block text-[9.5px] uppercase tracking-[0.1em] text-white/45">
-            Week (start)
+            Semana (início)
             <select
               value={task.week}
               onChange={(e) => {
@@ -2019,13 +2022,13 @@ function TaskCard({
             >
               {Array.from({ length: totalWeeks }, (_, i) => i + 1).map((w) => (
                 <option key={w} value={w}>
-                  Week {w}
+                  Semana {w}
                 </option>
               ))}
             </select>
           </label>
           <label className="block text-[9.5px] uppercase tracking-[0.1em] text-white/45">
-            Through
+            Até
             <select
               value={end}
               onChange={(e) => {
@@ -2034,13 +2037,13 @@ function TaskCard({
               }}
               className="mt-0.5 w-full rounded-md border border-white/10 bg-white/[0.06] px-1.5 py-1 text-[11px] text-white focus:border-white/30"
             >
-              <option value={task.week}>Just this week</option>
+              <option value={task.week}>Só esta semana</option>
               {Array.from(
                 { length: Math.max(0, totalWeeks - task.week) },
                 (_, i) => task.week + 1 + i,
               ).map((w) => (
                 <option key={w} value={w}>
-                  Through Week {w}
+                  Até à semana {w}
                 </option>
               ))}
             </select>
@@ -2053,7 +2056,7 @@ function TaskCard({
             className="inline-flex items-center gap-1 rounded-md border border-rose-400/30 bg-rose-500/10 px-2 py-1 text-[10.5px] font-medium text-rose-200 transition hover:border-rose-400/60 hover:bg-rose-500/20"
           >
             <Trash2 className="h-3 w-3" />
-            Delete
+            Apagar
           </button>
           <button
             type="button"
@@ -2061,7 +2064,7 @@ function TaskCard({
             className="inline-flex items-center gap-1 rounded-md border border-white/20 bg-white/[0.06] px-2 py-1 text-[10.5px] font-semibold text-white transition hover:bg-white/[0.12]"
           >
             <Check className="h-3 w-3" />
-            Done
+            Feito
           </button>
         </div>
       </div>
@@ -2093,11 +2096,11 @@ function CollapsibleAuditSummary({
       >
         <Sparkles className="h-3 w-3 text-[color:var(--brand-purple)]" />
         <span className="uppercase tracking-[0.16em]">
-          SEO diagnosis (Claude)
+          Diagnóstico SEO (Claude)
         </span>
         {photoCount > 0 && (
           <span className="rounded-full bg-white/[0.08] px-1.5 py-0.5 text-[9px] font-bold tracking-wider text-white/65">
-            {photoCount} photo{photoCount === 1 ? "" : "s"}
+            {photoCount} foto{photoCount === 1 ? "" : "s"}
           </span>
         )}
         <ChevronDown
@@ -2128,7 +2131,7 @@ function AuditSummaryCard({
       <div className="flex items-center gap-2">
         <Sparkles className="h-3.5 w-3.5 text-[color:var(--brand-purple)]" />
         <h3 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/75">
-          SEO diagnosis (Claude)
+          Diagnóstico SEO (Claude)
         </h3>
       </div>
       <p className="mt-2 whitespace-pre-line text-[12.5px] leading-relaxed text-white/80">
@@ -2137,8 +2140,8 @@ function AuditSummaryCard({
       {sourcePhotos.length > 0 && (
         <div className="mt-3">
           <p className="text-[10px] uppercase tracking-[0.13em] text-white/40">
-            Grounded in {sourcePhotos.length} reference photo
-            {sourcePhotos.length === 1 ? "" : "s"}
+            Com base em {sourcePhotos.length}{" "}
+            {sourcePhotos.length === 1 ? "foto de referência" : "fotos de referência"}
           </p>
           <div className="mt-1.5 flex flex-wrap gap-1.5">
             {sourcePhotos.map((p) => (

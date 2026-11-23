@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "80.29",
+    date: "2026-11-23",
+    title: "Separador do roadmap todo em português",
+    highlights: [
+      "**🇵🇹 O separador do roadmap passa a estar todo em português**, em todos os clientes de SEO: botões, semanas e meses, estados («Por iniciar», «Em curso», «À espera do cliente», «Implementado»), pilares, o «Preencher com IA», o «Remover meses» (confirma-se com APAGAR), o histórico e os botões «Enviar mês atual» / «Enviar roadmap completo».",
+      "**O que o cliente recebe continua na língua dele.** Clientes EN (IHN, Kings Gym…) recebem o roadmap em inglês, e os blocos fixos que lhes aparecem saem em inglês. O nome do envio na Pending Review também segue a língua do cliente.",
+      "**«Ver aula» passa a «Ver conformidade»**, e o bloco da semana 0 chama-se «Antes da reunião de onboarding». O botão da aula, a semana 0 e a renovação nunca aparecem ao cliente.",
+    ],
+  },
+  {
     version: "80.28",
     date: "2026-11-23",
     title: "Roadmap: blocos fixos encolhem à medida que se fazem",
