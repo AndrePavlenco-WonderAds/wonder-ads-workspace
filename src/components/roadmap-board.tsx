@@ -17,9 +17,9 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  CirclePlay,
+  ArrowUpRight,
   CornerDownRight,
-  ExternalLink,
-  GraduationCap,
   ImagePlus,
   Loader2,
   Lock,
@@ -1577,7 +1577,11 @@ function WeekColumn({
 /** v80.27 — um grupo de blocos fixos do arranque (ex.: «Conformidade
  *  básica»), preso à sua semana: não se apaga, não se arrasta, o título não
  *  se edita. A caixa marca feito / por fazer; clicar no texto abre o estado
- *  completo e as notas. Um grupo com aula da Formação mostra o link. */
+ *  completo e as notas. Um grupo com aula da Formação mostra o botão.
+ *
+ *  v80.28 — o que já está feito sai da lista: fica recolhido em
+ *  «Realizadas (N)», que se abre com um clique. A semana 1 tem 16 blocos e
+ *  a lista inteira, sempre aberta, ocupava a coluna toda. */
 function FixedGroupBlock({
   group,
   tasks,
@@ -1592,140 +1596,187 @@ function FixedGroupBlock({
 }) {
   const readOnly = useSeoReadOnly();
   const meta = FIXED_GROUPS[group];
-  const done = tasks.filter((t) => t.status === "implemented").length;
+  const pending = tasks.filter((t) => t.status !== "implemented");
+  const done = tasks.filter((t) => t.status === "implemented");
+  const allDone = pending.length === 0;
   const [openId, setOpenId] = useState<string | null>(null);
+  const [showDone, setShowDone] = useState(false);
+  const listCls = wide
+    ? "grid gap-x-4 gap-y-0.5 sm:grid-cols-2 xl:grid-cols-3"
+    : "space-y-0.5";
+
+  const row = (t: RoadmapTask) => {
+    const isDone = t.status === "implemented";
+    const isOpen = openId === t.id;
+    const showChip =
+      t.status === "in_progress" || t.status === "pending_review";
+    return (
+      <li key={t.id}>
+        <div className="flex items-start gap-2 rounded-md px-1 py-1 transition hover:bg-white/[0.03]">
+          <button
+            type="button"
+            disabled={readOnly}
+            onClick={() =>
+              onUpdate(t.id, {
+                status: isDone ? "not_started" : "implemented",
+              })
+            }
+            aria-label={isDone ? "Marcar como por fazer" : "Marcar como feito"}
+            title={isDone ? "Feito — clicar para desmarcar" : "Marcar como feito"}
+            className={`mt-[2px] flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-[4px] border transition disabled:cursor-default ${
+              isDone
+                ? "border-emerald-400/70 bg-emerald-500/40 text-white"
+                : "border-sky-300/50 bg-transparent hover:border-sky-200"
+            }`}
+          >
+            {isDone && <Check className="h-2.5 w-2.5" />}
+          </button>
+          <button
+            type="button"
+            disabled={readOnly}
+            onClick={() => setOpenId(isOpen ? null : t.id)}
+            className={`min-w-0 flex-1 text-left text-[11px] leading-snug disabled:cursor-default ${
+              isDone ? "text-white/45 line-through decoration-white/30" : "text-white/85"
+            }`}
+          >
+            {t.title}
+            {showChip && (
+              <span
+                className={`ml-1.5 inline-flex items-center rounded-full border px-1.5 py-px align-middle text-[8.5px] font-semibold uppercase tracking-[0.08em] no-underline ${STATUS_META[t.status].chipClass}`}
+              >
+                {STATUS_META[t.status].label}
+              </span>
+            )}
+            {t.description && !isOpen && (
+              <span className="mt-0.5 block text-[10px] text-white/45 no-underline">
+                {t.description}
+              </span>
+            )}
+          </button>
+        </div>
+        {isOpen && !readOnly && (
+          <div className="mb-1.5 ml-6 mr-1 space-y-1.5 rounded-md border border-white/10 bg-black/20 p-2">
+            <label className="block text-[9.5px] uppercase tracking-[0.1em] text-white/45">
+              Status
+              <select
+                value={t.status}
+                onChange={(e) =>
+                  onUpdate(t.id, { status: e.target.value as RoadmapStatus })
+                }
+                className="mt-0.5 w-full rounded-md border border-white/10 bg-white/[0.06] px-1.5 py-1 text-[11px] text-white focus:border-white/30"
+              >
+                {ROADMAP_STATUSES.map((s) => (
+                  <option key={s} value={s}>
+                    {STATUS_META[s].label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <textarea
+              value={t.description ?? ""}
+              onChange={(e) =>
+                onUpdate(t.id, { description: e.target.value || undefined })
+              }
+              rows={2}
+              placeholder="Notas (opcional)"
+              className="w-full rounded-md border border-white/10 bg-white/[0.06] px-2 py-1 text-[11px] text-white outline-none placeholder:text-white/35 focus:border-white/30"
+            />
+            <div className="flex items-center justify-between gap-2">
+              <span className="inline-flex items-center gap-1 text-[9.5px] text-sky-100/55">
+                <Lock className="h-2.5 w-2.5" /> Bloco fixo — não se apaga nem muda de semana
+              </span>
+              <button
+                type="button"
+                onClick={() => setOpenId(null)}
+                className="inline-flex items-center gap-1 rounded-md border border-white/20 bg-white/[0.06] px-2 py-0.5 text-[10.5px] font-semibold text-white transition hover:bg-white/[0.12]"
+              >
+                <Check className="h-3 w-3" />
+                Done
+              </button>
+            </div>
+          </div>
+        )}
+      </li>
+    );
+  };
+
   return (
-    <li className="overflow-hidden rounded-lg border border-sky-400/30 bg-sky-500/[0.05]">
+    <li
+      className={`overflow-hidden rounded-lg border ${
+        allDone
+          ? "border-emerald-400/30 bg-emerald-500/[0.04]"
+          : "border-sky-400/30 bg-sky-500/[0.05]"
+      }`}
+    >
       <div
-        className="flex items-center gap-1.5 border-b border-sky-400/20 bg-sky-500/[0.08] px-2.5 py-1.5"
+        className={`flex items-center gap-1.5 px-2.5 py-1.5 ${
+          allDone
+            ? "bg-emerald-500/[0.07]"
+            : "border-b border-sky-400/20 bg-sky-500/[0.08]"
+        }`}
         title={`${meta.docLabel} — bloco fixo do arranque: não se apaga nem muda de semana. Só o estado e as notas mudam.`}
       >
-        <Lock className="h-3 w-3 shrink-0 text-sky-200/75" />
-        <span className="min-w-0 flex-1 truncate text-[11px] font-semibold text-sky-50">
+        {allDone ? (
+          <Check className="h-3 w-3 shrink-0 text-emerald-300" />
+        ) : (
+          <Lock className="h-3 w-3 shrink-0 text-sky-200/75" />
+        )}
+        <span
+          className={`min-w-0 flex-1 truncate text-[11px] font-semibold ${
+            allDone ? "text-emerald-100" : "text-sky-50"
+          }`}
+        >
           {meta.label}
         </span>
         <span
           className={`shrink-0 text-[10px] font-semibold tabular-nums ${
-            done === tasks.length ? "text-emerald-300" : "text-sky-100/60"
+            allDone ? "text-emerald-300" : "text-sky-100/60"
           }`}
         >
-          {done}/{tasks.length}
+          {done.length}/{tasks.length}
         </span>
       </div>
       {meta.lesson && (
+        // Botão a sério: gradiente da marca, «Ver aula» e seta — antes era
+        // uma linha de texto que ninguém percebia que se podia clicar.
         <a
           href={meta.lesson.href}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-1.5 border-b border-sky-400/15 px-2.5 py-1.5 text-[10.5px] font-medium text-sky-100/85 transition hover:bg-sky-500/10 hover:text-white"
+          className="group/aula mx-1.5 mt-1.5 flex items-center gap-2 rounded-md border border-[color:var(--brand-purple)]/60 bg-gradient-to-r from-[#343ED7]/35 via-[#783DF5]/35 to-[#C535C9]/30 px-2.5 py-1.5 text-[11px] font-semibold text-white shadow-[0_6px_18px_-8px_rgba(120,61,245,0.9)] transition hover:border-[color:var(--brand-purple)] hover:brightness-125"
         >
-          <GraduationCap className="h-3.5 w-3.5 shrink-0" />
+          <CirclePlay className="h-4 w-4 shrink-0" />
           <span className="min-w-0 flex-1 truncate">{meta.lesson.label}</span>
-          <ExternalLink className="h-3 w-3 shrink-0 opacity-60" />
+          <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-white/20 px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-[0.1em] transition group-hover/aula:bg-white/30">
+            Ver aula
+            <ArrowUpRight className="h-3 w-3" />
+          </span>
         </a>
       )}
-      <ul
-        className={
-          wide
-            ? "grid gap-x-4 gap-y-0.5 px-1.5 py-1.5 sm:grid-cols-2 xl:grid-cols-3"
-            : "space-y-0.5 px-1.5 py-1.5"
-        }
-      >
-        {tasks.map((t) => {
-          const isDone = t.status === "implemented";
-          const isOpen = openId === t.id;
-          const showChip =
-            t.status === "in_progress" || t.status === "pending_review";
-          return (
-            <li key={t.id}>
-              <div className="flex items-start gap-2 rounded-md px-1 py-1 transition hover:bg-white/[0.03]">
-                <button
-                  type="button"
-                  disabled={readOnly}
-                  onClick={() =>
-                    onUpdate(t.id, {
-                      status: isDone ? "not_started" : "implemented",
-                    })
-                  }
-                  aria-label={isDone ? "Marcar como por fazer" : "Marcar como feito"}
-                  title={isDone ? "Feito — clicar para desmarcar" : "Marcar como feito"}
-                  className={`mt-[2px] flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-[4px] border transition disabled:cursor-default ${
-                    isDone
-                      ? "border-emerald-400/70 bg-emerald-500/40 text-white"
-                      : "border-sky-300/50 bg-transparent hover:border-sky-200"
-                  }`}
-                >
-                  {isDone && <Check className="h-2.5 w-2.5" />}
-                </button>
-                <button
-                  type="button"
-                  disabled={readOnly}
-                  onClick={() => setOpenId(isOpen ? null : t.id)}
-                  className={`min-w-0 flex-1 text-left text-[11px] leading-snug disabled:cursor-default ${
-                    isDone ? "text-white/45 line-through decoration-white/30" : "text-white/85"
-                  }`}
-                >
-                  {t.title}
-                  {showChip && (
-                    <span
-                      className={`ml-1.5 inline-flex items-center rounded-full border px-1.5 py-px align-middle text-[8.5px] font-semibold uppercase tracking-[0.08em] no-underline ${STATUS_META[t.status].chipClass}`}
-                    >
-                      {STATUS_META[t.status].label}
-                    </span>
-                  )}
-                  {t.description && !isOpen && (
-                    <span className="mt-0.5 block text-[10px] text-white/45 no-underline">
-                      {t.description}
-                    </span>
-                  )}
-                </button>
-              </div>
-              {isOpen && !readOnly && (
-                <div className="mb-1.5 ml-6 mr-1 space-y-1.5 rounded-md border border-white/10 bg-black/20 p-2">
-                  <label className="block text-[9.5px] uppercase tracking-[0.1em] text-white/45">
-                    Status
-                    <select
-                      value={t.status}
-                      onChange={(e) =>
-                        onUpdate(t.id, { status: e.target.value as RoadmapStatus })
-                      }
-                      className="mt-0.5 w-full rounded-md border border-white/10 bg-white/[0.06] px-1.5 py-1 text-[11px] text-white focus:border-white/30"
-                    >
-                      {ROADMAP_STATUSES.map((s) => (
-                        <option key={s} value={s}>
-                          {STATUS_META[s].label}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <textarea
-                    value={t.description ?? ""}
-                    onChange={(e) =>
-                      onUpdate(t.id, { description: e.target.value || undefined })
-                    }
-                    rows={2}
-                    placeholder="Notas (opcional)"
-                    className="w-full rounded-md border border-white/10 bg-white/[0.06] px-2 py-1 text-[11px] text-white outline-none placeholder:text-white/35 focus:border-white/30"
-                  />
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="inline-flex items-center gap-1 text-[9.5px] text-sky-100/55">
-                      <Lock className="h-2.5 w-2.5" /> Bloco fixo — não se apaga nem muda de semana
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setOpenId(null)}
-                      className="inline-flex items-center gap-1 rounded-md border border-white/20 bg-white/[0.06] px-2 py-0.5 text-[10.5px] font-semibold text-white transition hover:bg-white/[0.12]"
-                    >
-                      <Check className="h-3 w-3" />
-                      Done
-                    </button>
-                  </div>
-                </div>
-              )}
-            </li>
-          );
-        })}
-      </ul>
+      {pending.length > 0 && (
+        <ul className={`${listCls} px-1.5 pt-1.5 ${done.length > 0 ? "" : "pb-1.5"}`}>
+          {pending.map(row)}
+        </ul>
+      )}
+      {done.length > 0 && (
+        <div className="px-1.5 py-1">
+          <button
+            type="button"
+            onClick={() => setShowDone((v) => !v)}
+            aria-expanded={showDone}
+            className="flex w-full items-center gap-1.5 rounded-md px-1 py-1 text-[10.5px] font-medium text-emerald-200/75 transition hover:bg-white/[0.04] hover:text-emerald-100"
+          >
+            <Check className="h-3 w-3 shrink-0" />
+            <span className="flex-1 text-left">
+              {allDone ? "Todas realizadas" : "Realizadas"} ({done.length})
+            </span>
+            <ChevronDown
+              className={`h-3 w-3 shrink-0 transition ${showDone ? "rotate-180" : ""}`}
+            />
+          </button>
+          {showDone && <ul className={`${listCls} pb-0.5`}>{done.map(row)}</ul>}
+        </div>
+      )}
     </li>
   );
 }

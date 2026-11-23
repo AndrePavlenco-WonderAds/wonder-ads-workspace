@@ -13,6 +13,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "80.28",
+    date: "2026-11-23",
+    title: "Roadmap: blocos fixos encolhem à medida que se fazem",
+    highlights: [
+      "**✅ Nos blocos fixos, o que marcas como feito sai da lista** e fica recolhido em «Realizadas (N)», que abres com um clique. Um grupo todo feito fica só com o título, a verde.",
+      "**▶️ A aula do bloco «Conformidade básica» é agora um botão** com o gradiente da marca e «Ver aula», para se perceber que se clica.",
+    ],
+  },
+  {
     version: "80.27",
     date: "2026-11-23",
     title: "Roadmaps novos com blocos fixos do arranque + aula de conformidade inicial",

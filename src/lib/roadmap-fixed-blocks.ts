@@ -96,7 +96,7 @@ export const FIXED_GROUPS: Record<FixedGroupId, FixedGroup> = {
     internal: false,
     lesson: {
       href: CONFORMIDADE_LESSON_HREF,
-      label: "Aula: conformidade inicial de um site",
+      label: "Conformidade inicial de um site",
     },
   },
   trimestral: {
