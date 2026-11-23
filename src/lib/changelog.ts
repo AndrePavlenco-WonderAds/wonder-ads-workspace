@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "80.30",
+    date: "2026-11-23",
+    title: "Roadmap: «Voltar a» no cabeçalho",
+    highlights: [
+      "**No separador do roadmap, o botão do cabeçalho passa a dizer «Voltar a …»** em vez de «Back to …». Era o último texto em inglês do separador.",
+    ],
+  },
+  {
     version: "80.29",
     date: "2026-11-23",
     title: "Separador do roadmap todo em português",

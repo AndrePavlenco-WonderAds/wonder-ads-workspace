@@ -87,7 +87,12 @@ export default async function RoadmapPage({
 
   return (
     <SeoReadOnlyProvider value={readOnly}>
-    <PageShell wide backHref={`/seo/${slug}`} backLabel={client.title}>
+    <PageShell
+      wide
+      backHref={`/seo/${slug}`}
+      backLabel={client.title}
+      backPrefix="Voltar a"
+    >
       {readOnly && <ReadOnlyBanner />}
       <header className="animate-fade-up mt-4 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">

@@ -31,6 +31,7 @@ export async function PageShell({
   sessionTimer = false,
   backHref,
   backLabel,
+  backPrefix = "Back to",
   transparentHeader = false,
   hideFooter = false,
 }: {
@@ -47,6 +48,9 @@ export async function PageShell({
    *  visible escape hatch without scrolling. */
   backHref?: string;
   backLabel?: string;
+  /** Texto antes do nome no botão de voltar («Voltar a» nas páginas em
+   *  português, como o separador do roadmap — v80.29). */
+  backPrefix?: string;
   /** Landing-page variant — drops the header's bottom border and
    *  background panel so the logo + clock sit cleanly on the starfield
    *  instead of inside a card-like strip. Used only on the department
@@ -113,7 +117,7 @@ export async function PageShell({
             >
               <ArrowLeft className="h-3.5 w-3.5 transition-transform group-hover:-translate-x-0.5" />
               <span>
-                Back to <span className="font-semibold">{backLabel}</span>
+                {backPrefix} <span className="font-semibold">{backLabel}</span>
               </span>
             </Link>
           )}
