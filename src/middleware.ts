@@ -84,6 +84,9 @@ const INTERNAL_PREFIXES = [
   "/probation",
   "/ineficacias",
   "/documentacao",
+  // Acionar o Botão (v80.34) — pedido de apoio à direção.
+  "/botao",
+  "/api/botao",
   // Ficha do prospect (v80.0) — privada à workspace: só com sessão.
   "/prospects",
   "/api/prospects",
@@ -450,6 +453,10 @@ export const config = {
     // tudo; cada página decide quem entra (em construção: só o André) e que
     // blocos mostra.
     "/documentacao/:path*",
+    // Acionar o Botão (v80.34) — o formulário do consultor e a caixa da
+    // direção. Sessão para tudo; a API decide quem escreve o quê.
+    "/botao/:path*",
+    "/api/botao/:path*",
     // Ficha do prospect (v80.0) — página e API privadas à workspace.
     "/prospects/:path*",
     "/api/prospects/:path*",

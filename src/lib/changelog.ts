@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "80.34",
+    date: "2026-11-24",
+    title: "«Acionar o Botão» com página própria",
+    highlights: [
+      "**🔴 O «Acionar o Botão» do menu passa a abrir uma página própria (/botao).** Em 3 passos: o cliente (só os teus) ou «Problema interno», o problema em 2 linhas e 1 ou 2 sugestões de solução.",
+      "**Depois, «Enviar para análise» ou «Enviar e marcar reunião».** Na reunião, a marcação do Google Calendar abre logo ali, embutida na página.",
+      "**A direção recebe cada pedido no sino** e fecha-o em «Botões acionados» (o mesmo item do menu), com uma resposta que chega ao consultor na página e no sino.",
+    ],
+  },
+  {
     version: "80.33",
     date: "2026-11-24",
     title: "Comissões: a Consultoria Comercial paga como os outros cross-sells",

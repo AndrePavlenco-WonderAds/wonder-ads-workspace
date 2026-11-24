@@ -11,7 +11,6 @@ import { useRouter } from "next/navigation";
 import type { ProbationMenuView } from "@/lib/probation/menu";
 import {
   ArrowLeft,
-  ArrowUpRight,
   BookOpen,
   Briefcase,
   CalendarOff,
@@ -38,9 +37,6 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-/** «Pedir apoio» (v77.87) — página de marcações do Google Calendar do
- *  André Pavlenco, o team leader dos consultores. */
-const SUPPORT_BOOKING_URL = "https://calendar.app.google/v7aHJquTD3KkWeKBA";
 
 export type ImpersonationTarget = {
   username: string;
@@ -629,10 +625,10 @@ export function UserChipMenu({
               </MenuSection>
             )}
 
-            {/* Apoio — a Formação (aulas, testes e exames) e, para os
-                consultores, o botão de pedir apoio ao team leader (v77.87,
-                v77.89). Os SuperAdmins não veem o botão: são eles que dão o
-                apoio. Segue a pessoa VISTA, como o resto do menu. */}
+            {/* Apoio — a Formação (aulas, testes e exames) e o botão de
+                pedir apoio à direção (v77.87, v77.89; página própria desde a
+                v80.34). Aos SuperAdmins o mesmo item abre a caixa dos
+                pedidos. Segue a pessoa VISTA, como o resto do menu. */}
             {!isViewer && (
               <MenuSection label="Apoio">
                 {/* Documentação da empresa (v78.5) — documentação e SOPs. Os
@@ -651,7 +647,7 @@ export function UserChipMenu({
                   />
                 )}
                 <MenuLink href="/formacao" icon={GraduationCap} label="Formação" hint="Aulas, testes e exames" index={6} onPick={close} />
-                {!isAdmin && <SupportLink index={7} onPick={close} />}
+                <SupportLink index={7} onPick={close} admin={isAdmin} />
               </MenuSection>
             )}
 
@@ -884,16 +880,14 @@ function PushButtonIcon({ className = "" }: { className?: string }) {
   );
 }
 
-/** «Acionar o Botão» (v77.89) — o pedido de apoio ao team leader. Não é uma
- *  página da app: abre a marcação no Google Calendar numa aba nova. Com o
- *  mesmo material dos outros itens (azulejo e linha iguais); só a seta de
- *  «sai da app» o distingue. */
-function SupportLink({ index, onPick }: { index: number; onPick: () => void }) {
+/** «Acionar o Botão» — o pedido de apoio à direção. v77.89 abria só a
+ *  marcação no Google Calendar; desde a v80.34 tem página própria (/botao):
+ *  o consultor escreve o problema e as sugestões e depois envia ou marca
+ *  reunião. Para a direção, o mesmo item abre a caixa dos pedidos. */
+function SupportLink({ index, onPick, admin = false }: { index: number; onPick: () => void; admin?: boolean }) {
   return (
-    <a
-      href={SUPPORT_BOOKING_URL}
-      target="_blank"
-      rel="noopener noreferrer"
+    <Link
+      href="/botao"
       role="menuitem"
       onClick={onPick}
       style={{ animationDelay: `${40 + index * 25}ms` }}
@@ -901,11 +895,14 @@ function SupportLink({ index, onPick }: { index: number; onPick: () => void }) {
     >
       <IconTile icon={PushButtonIcon} />
       <span className="min-w-0 flex-1">
-        <span className="block text-[12.5px] font-medium text-white/85 group-hover:text-white">Acionar o Botão</span>
-        <span className="block truncate text-[10.5px] text-white/40">Marca uma conversa com o André</span>
+        <span className="block text-[12.5px] font-medium text-white/85 group-hover:text-white">
+          {admin ? "Botões acionados" : "Acionar o Botão"}
+        </span>
+        <span className="block truncate text-[10.5px] text-white/40">
+          {admin ? "Os pedidos de apoio da equipa" : "O problema por escrito, com a tua solução"}
+        </span>
       </span>
-      <ArrowUpRight className="h-3.5 w-3.5 shrink-0 text-white/30 transition duration-300 group-hover:-translate-y-px group-hover:translate-x-px group-hover:text-white/70" />
-    </a>
+    </Link>
   );
 }
 

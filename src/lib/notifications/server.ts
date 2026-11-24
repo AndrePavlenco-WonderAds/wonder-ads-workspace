@@ -45,6 +45,8 @@ import {
 } from "@/lib/training/start-dates-store";
 import { listTrainingFeedback } from "@/lib/training/feedback-store";
 import { listAbsences } from "@/lib/absences-store";
+import { listBotaoRequests } from "@/lib/botao/store";
+import { botaoClientLabel } from "@/lib/botao/shared";
 import { listReviewItems } from "@/lib/review-store";
 import {
   absenceDurationLine,
@@ -1000,6 +1002,67 @@ async function absenceNotifications(
   return out.sort((a, b) => b.dueAt - a.dueAt);
 }
 
+/** «Acionar o Botão» → sino (v80.34). Aos SuperAdmins, cada pedido por
+ *  analisar (sai quando alguém o fecha em /botao ou quando o limpam no sino).
+ *  A quem acionou, a resposta da direção, até carregar em «Entendido». */
+async function botaoNotifications(
+  viewer: Viewer,
+  state: NotificationState,
+): Promise<UserNotification[]> {
+  let all: Awaited<ReturnType<typeof listBotaoRequests>>;
+  try {
+    all = await listBotaoRequests();
+  } catch (err) {
+    console.error("Notificações: botão falhou:", err instanceof Error ? err.message : "erro");
+    return [];
+  }
+  if (all.length === 0) return [];
+  const out: UserNotification[] = [];
+
+  if (isAdminUsername(viewer.username)) {
+    for (const r of all) {
+      if (r.status !== "novo") continue;
+      const id = `botao-novo:${r.id}`;
+      const entry = state[id];
+      out.push({
+        id,
+        ruleId: "botao-novo",
+        title: `🔴 ${r.name} acionou o botão${r.meeting ? " e vai marcar reunião" : ""}`,
+        body:
+          `${botaoClientLabel(r)} · «${r.problem}»` +
+          (r.solutions.length > 0 ? ` Sugestão: ${r.solutions[0]}${r.solutions.length > 1 ? " (+1)" : ""}` : ""),
+        periodLabel: "Acionar o Botão",
+        dueAt: r.createdAt,
+        client: null,
+        actionLabel: "Analisar",
+        actionHref: `/botao#${r.id}`,
+        resolved: Boolean(entry),
+        resolvedAt: entry?.resolvedAt ?? null,
+      });
+    }
+  }
+
+  for (const r of all) {
+    if (r.username !== viewer.username || r.status !== "resolvido") continue;
+    const id = `botao-resposta:${r.id}`;
+    const entry = state[id];
+    out.push({
+      id,
+      ruleId: "botao-resposta",
+      title: "A direção respondeu ao teu botão ✅",
+      body: `${botaoClientLabel(r)} · «${r.problem}»` + (r.reply ? ` Resposta: ${r.reply}` : " Marcado como resolvido."),
+      periodLabel: "Acionar o Botão",
+      dueAt: r.resolvedAt ?? r.createdAt,
+      client: null,
+      actionLabel: "Ver o pedido",
+      actionHref: "/botao",
+      resolved: Boolean(entry),
+      resolvedAt: entry?.resolvedAt ?? null,
+    });
+  }
+  return out.sort((a, b) => b.dueAt - a.dueAt);
+}
+
 /** Janela em que uma confirmação de leitura do consultor aparece no sino do
  *  SuperAdmin. Depois disso vive só no plano (separador «Envios»). */
 const PROBATION_ACK_WINDOW_MS = 14 * 24 * 60 * 60 * 1000;
@@ -1701,7 +1764,7 @@ async function buildUserNotifications(
       ? ((await seoBooksByConsultant(needsStartDates)).get(viewer.name) ?? [])
       : [];
 
-  const [ending, situationPoints, nps, absences, reviews, proposals, probation, ineficacias, folga, suggestions, docUpdates, trainingUpdates] =
+  const [ending, situationPoints, nps, absences, reviews, proposals, probation, ineficacias, folga, suggestions, docUpdates, trainingUpdates, botao] =
     await Promise.all([
       roadmapEndingNotifications(viewer, book, state, now),
       situationPointNotifications(viewer, state, now),
@@ -1715,6 +1778,7 @@ async function buildUserNotifications(
       protocolSuggestionNotifications(viewer, state, now),
       docUpdateNotifications(viewer, state, now),
       trainingUpdateNotifications(viewer, state, now),
+      botaoNotifications(viewer, state),
     ]);
 
   // Ausências à cabeça: um pedido por decidir (ou uma resposta por ler) é
@@ -1723,6 +1787,7 @@ async function buildUserNotifications(
   // espera, e cada dia que passa custa mais do que um lembrete de calendário.
   if (applicable.length === 0) {
     return [
+      ...botao,
       ...proposals,
       ...folga,
       ...suggestions,
@@ -1740,6 +1805,7 @@ async function buildUserNotifications(
   }
 
   return [
+    ...botao,
     ...proposals,
     ...folga,
     ...suggestions,
