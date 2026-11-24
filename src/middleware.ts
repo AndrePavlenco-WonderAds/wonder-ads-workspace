@@ -24,8 +24,11 @@ import { readAccessGate } from "@/lib/access/gate";
 import { ensureHiredAccounts } from "@/lib/auth/hired-accounts";
 import {
   PAUSED_PAGE_PREFIX,
-  isProjectPaused,
+  isPublicApiOpen,
+  isPublicPageOpen,
+  publicProjectApiName,
   publicProjectApiSlug,
+  publicProjectPageSection,
   publicProjectPageSlug,
 } from "@/lib/paused-projects";
 import { isSessionBlocked } from "@/lib/access/shared";
@@ -278,7 +281,11 @@ async function gateRequest(req: NextRequest, ctx: GateContext): Promise<NextResp
       home.search = "";
       return NextResponse.redirect(home);
     }
-    if (!(await isProjectPaused(pageSlug))) return NextResponse.next();
+    // v80.36: aberta se o projeto não está em pausa, ou se a parte desta
+    // página foi desbloqueada por um SuperAdmin e ainda está no prazo.
+    if (await isPublicPageOpen(pageSlug, publicProjectPageSection(req.nextUrl.pathname))) {
+      return NextResponse.next();
+    }
     const url = req.nextUrl.clone();
     url.pathname = `${PAUSED_PAGE_PREFIX}/${encodeURIComponent(pageSlug)}`;
     url.search = "";
@@ -376,8 +383,9 @@ async function gateRequest(req: NextRequest, ctx: GateContext): Promise<NextResp
   }
   // Projetos em pausa (v78.81): sem sessão, as APIs das páginas públicas de
   // um cliente em pausa recusam — registar, aprovar, comentar, responder.
+  // v80.36: as de uma parte desbloqueada continuam a responder.
   const apiSlug = publicProjectApiSlug(req.nextUrl.pathname);
-  if (apiSlug && (await isProjectPaused(apiSlug))) {
+  if (apiSlug && !(await isPublicApiOpen(apiSlug, publicProjectApiName(req.nextUrl.pathname)))) {
     return NextResponse.json(
       { error: "Este projeto está em pausa.", paused: true },
       { status: 423, headers: { "Cache-Control": "no-store" } },

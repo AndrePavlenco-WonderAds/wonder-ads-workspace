@@ -20,6 +20,10 @@
 // de um cliente em pausa abrir durante uma falha do KV do que fechar as de
 // todos.
 
+// v80.36: a mesma leitura traz os desbloqueios (paused-unlocks-shared.ts) —
+// partes de um projeto em pausa que um SuperAdmin reabriu durante algum tempo.
+import { UNLOCKS_KEY, isGrantActive, parseUnlocks, unitForApi, unitForSection, type UnlocksMap } from "./paused-unlocks-shared";
+
 const KEY = "seo-paused-clients";
 const TTL_MS = 15_000;
 const KV_TIMEOUT_MS = 1500;
@@ -98,6 +102,19 @@ export function publicProjectPageSlug(pathname: string): string | null {
   return decode(slug);
 }
 
+/** A secção de uma página pública (/<slug>/<secção>/…), ou null. */
+export function publicProjectPageSection(pathname: string): string | null {
+  const [, slug = "", section = ""] = pathname.split("/");
+  if (RESERVED_FIRST_SEGMENTS.has(slug)) return null;
+  return PUBLIC_PROJECT_SECTIONS.includes(section) ? section : null;
+}
+
+/** O nome de uma API dessas páginas (/api/<nome>/<slug>/…), ou null. */
+export function publicProjectApiName(pathname: string): string | null {
+  const [, api, name = ""] = pathname.split("/");
+  return api === "api" && PUBLIC_PROJECT_APIS.includes(name) ? name : null;
+}
+
 /** O cliente de uma API dessas páginas (/api/<nome>/<slug>/…), ou null. */
 export function publicProjectApiSlug(pathname: string): string | null {
   const [, api, name = "", slug = ""] = pathname.split("/");
@@ -134,44 +151,48 @@ function parseSlugs(raw: unknown): string[] {
   return Array.isArray(value) ? value.filter((s): s is string => typeof s === "string") : [];
 }
 
-async function readFromKv(): Promise<string[]> {
+type PausedState = { slugs: Set<string>; unlocks: UnlocksMap };
+
+async function readFromKv(): Promise<{ slugs: string[]; unlocks: UnlocksMap }> {
   const env = kvEnv();
-  if (!env) return [];
+  if (!env) return { slugs: [], unlocks: {} };
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), KV_TIMEOUT_MS);
   try {
     const res = await fetch(env.url, {
       method: "POST",
       headers: { Authorization: `Bearer ${env.token}`, "Content-Type": "application/json" },
-      body: JSON.stringify(["GET", KEY]),
+      body: JSON.stringify(["MGET", KEY, UNLOCKS_KEY]),
       cache: "no-store",
       signal: ctrl.signal,
     });
     if (!res.ok) throw new Error(`KV ${res.status}`);
     const json = (await res.json()) as { result?: unknown; error?: string };
     if (json.error) throw new Error(json.error);
-    return parseSlugs(json.result ?? null);
+    const [slugs, unlocks] = Array.isArray(json.result) ? json.result : [null, null];
+    return { slugs: parseSlugs(slugs ?? null), unlocks: parseUnlocks(unlocks ?? null) };
   } finally {
     clearTimeout(timer);
   }
 }
 
-let cached: { at: number; slugs: Set<string> } | null = null;
-let inflight: Promise<Set<string>> | null = null;
+let cached: { at: number; state: PausedState } | null = null;
+let inflight: Promise<PausedState> | null = null;
 
-/** Os clientes em pausa — em cache por instância durante 15 s. */
-export async function pausedProjectSlugs(): Promise<Set<string>> {
+/** Os clientes em pausa e os desbloqueios — em cache por instância 15 s. */
+async function pausedState(): Promise<PausedState> {
   const now = Date.now();
-  if (cached && now - cached.at < TTL_MS) return cached.slugs;
+  if (cached && now - cached.at < TTL_MS) return cached.state;
   if (!inflight) {
     inflight = (async () => {
       try {
-        const slugs = new Set([...(await readFromKv()), ...devPausedSlugs()]);
-        cached = { at: Date.now(), slugs };
-        return slugs;
+        const kv = await readFromKv();
+        const state = { slugs: new Set([...kv.slugs, ...devPausedSlugs()]), unlocks: kv.unlocks };
+        cached = { at: Date.now(), state };
+        return state;
       } catch (err) {
         console.error("paused-projects: leitura do KV falhou (fica aberto):", err);
-        return cached?.slugs ?? new Set(devPausedSlugs());
+        return cached?.state ?? { slugs: new Set(devPausedSlugs()), unlocks: {} };
       } finally {
         inflight = null;
       }
@@ -180,6 +201,28 @@ export async function pausedProjectSlugs(): Promise<Set<string>> {
   return inflight;
 }
 
+/** Os clientes em pausa — em cache por instância durante 15 s. */
+export async function pausedProjectSlugs(): Promise<Set<string>> {
+  return (await pausedState()).slugs;
+}
+
 export async function isProjectPaused(slug: string): Promise<boolean> {
   return (await pausedProjectSlugs()).has(slug);
+}
+
+/** A página /<slug>/<secção> abre? Sim se o projeto não está em pausa, ou se
+ *  a parte a que a secção pertence está desbloqueada e dentro do prazo. */
+export async function isPublicPageOpen(slug: string, section: string | null): Promise<boolean> {
+  const { slugs, unlocks } = await pausedState();
+  if (!slugs.has(slug)) return true;
+  const unit = section ? unitForSection(section) : null;
+  return Boolean(unit && isGrantActive(unlocks[slug]?.[unit.id]));
+}
+
+/** O mesmo para as APIs dessas páginas (/api/<nome>/<slug>). */
+export async function isPublicApiOpen(slug: string, api: string | null): Promise<boolean> {
+  const { slugs, unlocks } = await pausedState();
+  if (!slugs.has(slug)) return true;
+  const unit = api ? unitForApi(api) : null;
+  return Boolean(unit && isGrantActive(unlocks[slug]?.[unit.id]));
 }

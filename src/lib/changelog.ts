@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "80.36",
+    date: "2026-11-24",
+    title: "Projetos em pausa: desbloquear partes por 30, 60, 90 dias ou sem prazo",
+    highlights: [
+      "**🔓 Nos «Pausados / Suspensos» do SEO DPT, cada cartão tem um botão novo (SuperAdmin)** que abre um pop-up: escolhes o que reabrir ao cliente (Pending Review e pré-visualizações, Origem, Reviews Hub, Onboarding, NPS) e durante quanto tempo (30, 60, 90 dias ou sem prazo).",
+      "**No fim do prazo fecha sozinho**, sem ninguém ter de o bloquear. O cartão mostra o que está aberto e quanto falta («Pending Review · 29 d»), e o pop-up mostra as datas, quem abriu e «Fechar já».",
+      "**O cliente vê o prazo**: nas páginas desbloqueadas aparece uma pastilha com «disponível até DD/MM/AAAA · faltam N dias», e a página «Projeto em pausa» passa a listar o que continua disponível, com o tempo a contar e o botão «Abrir». Se o prazo acabar com a página aberta, ela recarrega e fecha.",
+      "Reativar o projeto limpa os desbloqueios.",
+    ],
+  },
+  {
     version: "80.35",
     date: "2026-11-24",
     title: "Acionar o Botão: só projetos ativos",

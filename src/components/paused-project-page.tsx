@@ -11,9 +11,18 @@
 
 import type { CSSProperties } from "react";
 import Link from "next/link";
-import { ArrowUpRight, BarChart3, ClipboardList, Gem, ListChecks, Pause, ShieldCheck } from "lucide-react";
+import { ArrowUpRight, BarChart3, ClipboardList, Gem, ListChecks, LockOpen, Pause, ShieldCheck } from "lucide-react";
 import { WonderAdsButterfly, WonderAdsFooter } from "@/components/origem/wonder-ads-signature";
+import { UnlockCountdown } from "@/components/project-unlock-banner";
+import { formatDate } from "@/lib/dates";
 import type { PublicLang } from "@/lib/public-i18n";
+import type { UnlockUnitId } from "@/lib/paused-unlocks-shared";
+
+/** Uma parte do projeto que um SuperAdmin deixou aberta (v80.36). */
+export type PausedOpenPart = { unit: UnlockUnitId; label: string; href: string; until: number | null };
+
+/** As três peças da grelha, pela ordem de `items`: a que parte pertencem. */
+const ITEM_UNITS: UnlockUnitId[] = ["origem", "aprovacoes", "aprovacoes"];
 
 export type PausedPalette = {
   paper: string;
@@ -45,6 +54,13 @@ const COPY = {
     title: "Parece que este projeto está em pausa",
     lead: (brand: string) =>
       `As páginas do projeto ${brand} com a WonderAds estão fechadas enquanto o projeto estiver em pausa.`,
+    leadPartial: (brand: string) =>
+      `Enquanto o projeto ${brand} estiver em pausa, as páginas com a WonderAds estão fechadas, exceto as que continuam disponíveis aqui em baixo.`,
+    stillOpen: "Continua disponível",
+    until: (d: string) => `até ${d}`,
+    noEnd: "sem prazo",
+    open: "Abrir",
+    available: "disponível",
     featured: "Material Valioso para Ranks",
     items: ["Registo de leads", "Aprovações", "Relatórios"],
     paused: "em pausa",
@@ -58,6 +74,13 @@ const COPY = {
     title: "It looks like this project is on pause",
     lead: (brand: string) =>
       `The ${brand} project pages with WonderAds are closed while the project is on pause.`,
+    leadPartial: (brand: string) =>
+      `While the ${brand} project is on pause, its WonderAds pages are closed, except the ones still available below.`,
+    stillOpen: "Still available",
+    until: (d: string) => `until ${d}`,
+    noEnd: "no end date",
+    open: "Open",
+    available: "available",
     featured: "Valuable Material for Rankings",
     items: ["Lead tracking", "Approvals", "Reports"],
     paused: "paused",
@@ -228,11 +251,14 @@ export function PausedProjectPage({
   palette,
   lang,
   teamNote,
+  openParts = [],
 }: {
   brand: string;
   logo: PausedLogo;
   palette: PausedPalette;
   lang: PublicLang;
+  /** v80.36 — o que continua aberto, com o prazo. */
+  openParts?: PausedOpenPart[];
   /** Só com sessão da equipa: é isto que o cliente vê, e como se reabre. */
   teamNote: boolean;
 }) {
@@ -266,13 +292,54 @@ export function PausedProjectPage({
             {t.title}
           </h1>
           <p className="pp-rise mx-auto mt-4 max-w-[480px] text-pretty text-[15.5px] leading-relaxed" style={{ color: palette.muted, animationDelay: "120ms" }}>
-            {t.lead(brand)}
+            {openParts.length > 0 ? t.leadPartial(brand) : t.lead(brand)}
           </p>
+
+          {openParts.length > 0 && (
+            <div
+              className="pp-rise mx-auto mt-7 max-w-[540px] rounded-2xl border bg-white/85 p-4 text-left sm:p-5"
+              style={{ borderColor: alpha(palette.primary, 0.3), animationDelay: "150ms" }}
+            >
+              <p className="flex items-center gap-2 text-[12px] font-semibold uppercase tracking-[0.14em]" style={{ color: palette.primary }}>
+                <LockOpen className="h-3.5 w-3.5" />
+                {t.stillOpen}
+              </p>
+              <ul className="mt-2 divide-y" style={{ borderColor: palette.line }}>
+                {openParts.map((p) => (
+                  <li key={p.unit} className="flex items-center justify-between gap-3 py-2.5" style={{ borderColor: palette.line }}>
+                    <div className="min-w-0">
+                      <p className="text-[14.5px] font-semibold leading-tight">{p.label}</p>
+                      <p className="mt-0.5 text-[12.5px]" style={{ color: palette.muted }}>
+                        {p.until === null ? t.noEnd : t.until(formatDate(p.until))}
+                        {p.until !== null && (
+                          <>
+                            {" · "}
+                            <strong style={{ color: palette.ink }}>
+                              <UnlockCountdown until={p.until} lang={lang} />
+                            </strong>
+                          </>
+                        )}
+                      </p>
+                    </div>
+                    <a
+                      href={p.href}
+                      className="inline-flex shrink-0 items-center gap-1 rounded-full px-3.5 py-1.5 text-[13px] font-semibold text-white transition hover:-translate-y-px"
+                      style={{ background: palette.primary }}
+                    >
+                      {t.open}
+                      <ArrowUpRight className="h-3.5 w-3.5" />
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           <ul className="pp-rise mx-auto mt-7 grid max-w-[540px] grid-cols-3 gap-2 sm:gap-3" style={{ animationDelay: "180ms" }}>
             <FeaturedPausedItem label={t.featured} paused={t.paused} palette={palette} />
             {t.items.map((label, i) => {
               const Icon = ITEM_ICONS[i];
+              const isOpen = openParts.some((p) => p.unit === ITEM_UNITS[i]);
               return (
                 <li
                   key={label}
@@ -283,10 +350,17 @@ export function PausedProjectPage({
                     <Icon className="h-[18px] w-[18px]" />
                   </span>
                   <span className="text-balance text-[12.5px] font-semibold leading-tight sm:text-[13.5px]">{label}</span>
-                  <span className="-mt-0.5 inline-flex items-center gap-1 text-[11px] sm:text-[11.5px]" style={{ color: palette.muted }}>
-                    <Pause className="h-2.5 w-2.5" fill="currentColor" strokeWidth={0} />
-                    {t.paused}
-                  </span>
+                  {isOpen ? (
+                    <span className="-mt-0.5 inline-flex items-center gap-1 text-[11px] font-semibold sm:text-[11.5px]" style={{ color: palette.primary }}>
+                      <LockOpen className="h-2.5 w-2.5" />
+                      {t.available}
+                    </span>
+                  ) : (
+                    <span className="-mt-0.5 inline-flex items-center gap-1 text-[11px] sm:text-[11.5px]" style={{ color: palette.muted }}>
+                      <Pause className="h-2.5 w-2.5" fill="currentColor" strokeWidth={0} />
+                      {t.paused}
+                    </span>
+                  )}
                 </li>
               );
             })}
@@ -323,7 +397,8 @@ export function PausedProjectPage({
               <Link href="/seo" className="font-semibold underline underline-offset-2" style={{ color: palette.ink }}>
                 SEO DPT
               </Link>{" "}
-              (botão ▶ no cartão do cliente).
+              (botão ▶ no cartão do cliente). Para abrir só uma parte durante algum tempo, usa o 🔓 no mesmo
+              cartão.
             </p>
           )}
         </div>

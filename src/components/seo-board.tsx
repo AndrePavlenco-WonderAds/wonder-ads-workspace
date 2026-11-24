@@ -44,6 +44,8 @@ import { ClientCard, type NpsMonthScore } from "./client-card";
 import { LogoChip } from "./logo-chip";
 import { TierBadge } from "./tier-badge";
 import { SeoPauseToggle } from "./seo-pause-toggle";
+import { SeoUnlockButton, UnlockChips } from "./seo-unlock-button";
+import type { UnlocksMap } from "@/lib/paused-unlocks-shared";
 import { ExtraConsultantsContext, SeoConsultantMigrate } from "./seo-consultant-migrate";
 
 export type SeoBoardCard = {
@@ -106,6 +108,7 @@ export function SeoBoard({
   isAdmin,
   canReorder = false,
   paused = false,
+  unlocks,
   extraConsultants = [],
 }: {
   columns: SeoBoardColumn[];
@@ -119,6 +122,8 @@ export function SeoBoard({
   /** Secção de pausados: versão compacta (lanes estreitas, linhas em vez
    *  de cartões, tudo mais apagado). */
   paused?: boolean;
+  /** Desbloqueios dos projetos em pausa (v80.36): pastilhas + botão 🔓. */
+  unlocks?: UnlocksMap;
 }) {
   const compact = paused;
   const trackRef = useRef<HTMLDivElement>(null);
@@ -214,6 +219,7 @@ export function SeoBoard({
             isAdmin={isAdmin}
             canReorder={canReorder}
             compact={compact}
+            unlocks={unlocks}
           />
         ))}
       </div>
@@ -277,12 +283,14 @@ function Lane({
   isAdmin,
   canReorder,
   compact,
+  unlocks,
 }: {
   id: string;
   column: SeoBoardColumn;
   isAdmin: boolean;
   canReorder: boolean;
   compact: boolean;
+  unlocks?: UnlocksMap;
 }) {
   const router = useRouter();
   const { avg, rated } = averageNps(column.clients);
@@ -509,7 +517,7 @@ function Lane({
               <Link
                 href={`/seo/${c.slug}`}
                 className={`flex items-center gap-2.5 rounded-xl border border-white/[0.06] bg-white/[0.02] py-2 pl-2.5 transition hover:border-white/15 hover:bg-white/[0.05] ${
-                  isAdmin ? "pr-[4.75rem]" : "pr-2.5"
+                  isAdmin ? "pr-[7rem]" : "pr-2.5"
                 }`}
               >
                 <LogoChip
@@ -528,10 +536,12 @@ function Lane({
                   <span className="mt-0.5 flex items-center gap-1.5">
                     <TierBadge tier={c.tier} />
                   </span>
+                  <UnlockChips unlocks={unlocks?.[c.slug]} />
                 </span>
               </Link>
               {isAdmin && (
                 <>
+                  <SeoUnlockButton slug={c.slug} title={c.title} unlocks={unlocks?.[c.slug]} />
                   <SeoConsultantMigrate
                     slug={c.slug}
                     title={c.title}

@@ -6,6 +6,7 @@ import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { isCurrentUserAdmin } from "@/lib/auth/server";
 import { addPausedSlug, removePausedSlug } from "@/lib/admin-paused-clients-store";
+import { revokeUnlock } from "@/lib/paused-unlocks-store";
 
 export const runtime = "nodejs";
 
@@ -54,6 +55,9 @@ export async function DELETE(
   }
   try {
     await removePausedSlug(slug);
+    // v80.36: reativado, o projeto abre tudo — os desbloqueios deixam de
+    // fazer sentido e não ficam à espera de uma próxima pausa.
+    await revokeUnlock(slug).catch(() => undefined);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     return NextResponse.json({ error: message }, { status: 500 });

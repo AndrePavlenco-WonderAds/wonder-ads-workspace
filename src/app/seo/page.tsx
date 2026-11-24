@@ -40,6 +40,7 @@ import { getLogoOverrides } from "@/lib/admin-client-logos-store";
 import { getTeamAvatar } from "@/lib/team-avatars";
 import { findEmployeeByName } from "@/lib/proposals/consultant";
 import { getPausedSlugSet } from "@/lib/admin-paused-clients-store";
+import { getAllUnlocks } from "@/lib/paused-unlocks-store";
 import { getNpsRecordsFor, type NpsRecord } from "@/lib/nps-store";
 import type { NpsMonthScore } from "@/components/client-card";
 
@@ -91,6 +92,8 @@ export default async function SeoPage() {
   const resolverP = getConsultantResolver();
   resolverP.catch(() => {});
   const pausedP = getPausedSlugSet().catch(() => new Set<string>());
+  // Desbloqueios dos projetos em pausa (v80.36) — as pastilhas 🔓 e o pop-up.
+  const unlocksP = getAllUnlocks();
   const logosP = getLogoOverrides().catch(() => ({}) as Record<string, string>);
   const orderP = canReorder ? getBoardOrder(employee.username) : Promise.resolve<string[]>([]);
   // Colegas aceites no Recrutamento (v80.13) — coluna própria no board.
@@ -286,6 +289,7 @@ export default async function SeoPage() {
               )}
               isAdmin={employee.isAdmin}
               paused
+              unlocks={await unlocksP}
               extraConsultants={hireCols.map((h) => h.name)}
             />
           </section>

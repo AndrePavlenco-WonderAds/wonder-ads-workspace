@@ -13,11 +13,14 @@ import { getLogoOverride } from "@/lib/admin-client-logos-store";
 import { getOrigemConfig } from "@/lib/origem/config";
 import { isProjectPaused } from "@/lib/paused-projects";
 import { pickLang } from "@/lib/public-i18n";
+import { getProjectUnlocks } from "@/lib/paused-unlocks-store";
+import { activeUnlocks, unlockUnit } from "@/lib/paused-unlocks-shared";
 import { getCurrentSession } from "@/lib/auth/server";
 import {
   NEUTRAL_PALETTE,
   PausedProjectPage,
   type PausedLogo,
+  type PausedOpenPart,
   type PausedPalette,
 } from "@/components/paused-project-page";
 
@@ -53,11 +56,18 @@ export default async function PausedProject({
   if (!(await isProjectPaused(slug))) notFound();
 
   const cfg = getOrigemConfig(slug);
-  const [client, override, session] = await Promise.all([
+  const [client, override, session, unlocks] = await Promise.all([
     getClientBySlug(slug).catch(() => null),
     getLogoOverride(slug).catch(() => null),
     getCurrentSession().catch(() => null),
+    getProjectUnlocks(slug).catch(() => ({})),
   ]);
+  const lang = pickLang(slug);
+  // v80.36 — as partes que um SuperAdmin deixou abertas, com o prazo.
+  const openParts: PausedOpenPart[] = activeUnlocks(unlocks).map((u) => {
+    const unit = unlockUnit(u.unit)!;
+    return { unit: u.unit, label: unit.client[lang], href: `/${encodeURIComponent(slug)}${unit.path}`, until: u.until };
+  });
   const brand = cfg?.brand ?? client?.title ?? fromSlug(slug);
 
   // O símbolo da Origem (feito para fundo claro) e, sem ele, o logótipo do
@@ -86,8 +96,9 @@ export default async function PausedProject({
       brand={brand}
       logo={logo}
       palette={palette}
-      lang={pickLang(slug)}
+      lang={lang}
       teamNote={Boolean(session)}
+      openParts={openParts}
     />
   );
 }
