@@ -16,6 +16,10 @@
     {
       "path": "/api/cron/wpe-logs",
       "schedule": "30 4 * * *"
+    },
+    {
+      "path": "/api/cron/bonus-summary",
+      "schedule": "0 9 1 * *"
     }
   ]
 }

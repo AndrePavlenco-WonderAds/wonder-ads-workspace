@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "80.37",
+    date: "2026-11-24",
+    title: "Slack: cada botão acionado e o resumo dos bónus do mês",
+    highlights: [
+      "**🔴 Cada «Acionar o Botão» chega a um canal próprio do Slack** com tudo: quem, o cliente (ou problema interno), a data e hora, o problema, as sugestões de solução, se vai marcar reunião e o botão «Analisar e responder na app».",
+      "**💰 No dia 1 de cada mês sai o resumo dos bónus do mês que fechou** noutro canal: o total, quanto recebe cada pessoa, o Bónus NPS por consultor (média, respostas, individual e equipa, com o motivo quando não há), as comissões de cada fecho (cliente, valor, % e comissão) e, em junho e dezembro, o bónus semestral.",
+      "Os canais ligam-se com dois webhooks na Vercel (SLACK_BOTAO_WEBHOOK_URL e SLACK_BONUS_WEBHOOK_URL). Um SuperAdmin pode pré-visualizar ou reenviar qualquer mês em /api/cron/bonus-summary.",
+    ],
+  },
+  {
     version: "80.36",
     date: "2026-11-24",
     title: "Projetos em pausa: desbloquear partes por 30, 60, 90 dias ou sem prazo",

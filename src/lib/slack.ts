@@ -123,6 +123,37 @@ export async function postIneficaciasToSlack(payload: {
   return postToWebhook(ineficaciasWebhookUrl(), payload);
 }
 
+/** Webhook do canal do «Acionar o Botão» (v80.37) — cada pedido de apoio à
+ *  direção, com tudo o que o consultor escreveu. Sem fallback; sem
+ *  SLACK_BOTAO_WEBHOOK_URL no Vercel, cada post é um no-op silencioso e o
+ *  sino continua a avisar. */
+function botaoWebhookUrl(): string | undefined {
+  return process.env.SLACK_BOTAO_WEBHOOK_URL || undefined;
+}
+
+export function botaoSlackConfigured(): boolean {
+  return Boolean(botaoWebhookUrl());
+}
+
+export async function postBotaoToSlack(payload: { text: string; blocks?: unknown[] }): Promise<boolean> {
+  return postToWebhook(botaoWebhookUrl(), payload);
+}
+
+/** Webhook do canal dos bónus (v80.37) — o resumo de fim de mês com todos os
+ *  bónus a atribuir. São valores de remuneração: sem fallback para nenhum
+ *  outro canal; sem SLACK_BONUS_WEBHOOK_URL, no-op silencioso. */
+function bonusWebhookUrl(): string | undefined {
+  return process.env.SLACK_BONUS_WEBHOOK_URL || undefined;
+}
+
+export function bonusSlackConfigured(): boolean {
+  return Boolean(bonusWebhookUrl());
+}
+
+export async function postBonusToSlack(payload: { text: string; blocks?: unknown[] }): Promise<boolean> {
+  return postToWebhook(bonusWebhookUrl(), payload);
+}
+
 async function postToWebhook(
   url: string | undefined,
   payload: { text: string; blocks?: unknown[] },

@@ -6,7 +6,7 @@
 // envia (re-resolvida aqui, nunca confiada ao browser). O «Ver como» não
 // escreve: o middleware recusa qualquer escrita com a lente ativa.
 
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { getCurrentEmployee } from "@/lib/auth/server";
 import {
   BOTAO_INTERNAL,
@@ -16,6 +16,7 @@ import {
   BOTAO_SOLUTION_MAX,
 } from "@/lib/botao/shared";
 import { botaoClientsOf, botaoConfigured, createBotaoRequest, resolveBotaoRequest } from "@/lib/botao/store";
+import { announceBotaoRequest } from "@/lib/botao/slack";
 
 export const runtime = "nodejs";
 
@@ -66,6 +67,9 @@ export async function POST(req: Request) {
     solutions,
     meeting: body.meeting === true,
   });
+  // v80.37: a mensagem no canal do botão sai depois da resposta — o Slack
+  // nunca atrasa nem impede o pedido.
+  after(() => announceBotaoRequest(record));
   return NextResponse.json({ ok: true, request: record });
 }
 
