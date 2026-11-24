@@ -15,7 +15,7 @@
 
 import { NextResponse } from "next/server";
 import { getCurrentEmployee } from "@/lib/auth/server";
-import { getPassagem, passagemConfigured, savePassagem, seoPortfolios } from "@/lib/passagem/store";
+import { getPassagem, getPassagemIndex, passagemConfigured, savePassagem, seoPortfolios } from "@/lib/passagem/store";
 import { EXIT_CHECKLIST, isISODate, type ExitItemId, type PassagemStatus } from "@/lib/passagem/shared";
 
 export const runtime = "nodejs";
@@ -49,6 +49,8 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
       const portfolios = await seoPortfolios();
       const person = portfolios.find((x) => x.username === body.incoming && x.username !== p.outgoing.username);
       if (!person) return bad("Escolhe um consultor SEO.");
+      const leaving = (await getPassagemIndex()).some((e) => e.status === "ativa" && e.outgoing === person.username);
+      if (leaving) return bad(`${person.name} também está de saída: não pode receber projetos.`);
       project.incoming = { username: person.username, name: person.name };
       break;
     }

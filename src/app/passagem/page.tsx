@@ -9,14 +9,14 @@
 
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowRight, MessageCircleQuestion, Sparkles } from "lucide-react";
+import { ArrowRight, Check, MessageCircleQuestion } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
-import { HealthDot, PageHeader, PersonAvatar, ProgressRing, StageChip, Timeline } from "@/components/passagem/ui";
+import { HealthDot, PageHeader, PersonAvatar, ProgressRing, StageChip, StepDots, Timeline } from "@/components/passagem/ui";
 import { getCurrentEmployee } from "@/lib/auth/server";
 import { getTeamAvatar } from "@/lib/team-avatars";
 import { passagemOverview, type PassagemOverview, type ProjectView } from "@/lib/passagem/overview";
 import { activePassagemOf, getPassagem, incomingPassagensOf } from "@/lib/passagem/store";
-import { dayOf, formatISODate, phaseFor, totalDaysOf } from "@/lib/passagem/shared";
+import { ACCESS_ITEMS, FICHA_SECTIONS, dayOf, formatISODate, phaseFor, sectionFilled, totalDaysOf } from "@/lib/passagem/shared";
 import { todayLisbonISO } from "@/lib/probation/progress";
 
 export const dynamic = "force-dynamic";
@@ -37,9 +37,10 @@ function ProjectCard({ id, x, incomingSide }: { id: string; x: ProjectView; inco
             <HealthDot health={x.ficha.health} />
             <span className="truncate">{x.title}</span>
           </p>
-          <div className="mt-1.5">
+          <div className="mt-1.5 flex flex-wrap items-center gap-2">
             <StageChip stage={x.stage} />
           </div>
+          <StepDots steps={x.steps} className="mt-2.5" />
         </div>
       </div>
       <p className="mt-4 text-[13px] leading-relaxed text-white/55">
@@ -50,7 +51,7 @@ function ProjectCard({ id, x, incomingSide }: { id: string; x: ProjectView; inco
               ? "A ficha está pronta: lê e assume."
               : "A ficha ainda está a ser escrita. Já podes ler e perguntar."
           : x.progress.next
-            ? `Próximo: ${x.progress.next.label}`
+            ? `Próximo: ${x.progress.next.todo.charAt(0).toLowerCase()}${x.progress.next.todo.slice(1)}`
             : "Tudo feito."}
       </p>
       <div className="mt-auto flex items-center gap-3 border-t border-white/[0.06] pt-3 text-[12.5px] text-white/50">
@@ -75,21 +76,64 @@ function ProjectCard({ id, x, incomingSide }: { id: string; x: ProjectView; inco
   );
 }
 
+/** O que falta a um projeto NA FASE de hoje, com o capítulo da ficha certo. */
+function phaseTask(phase: number, x: ProjectView): { label: string; done: boolean; anchor: string } {
+  const f = x.ficha;
+  if (phase === 1) {
+    const decided = ACCESS_ITEMS.filter((a) => f.accesses[a.id]).length;
+    const missing = ACCESS_ITEMS.filter((a) => f.accesses[a.id] === "falta").length;
+    const parts = [`Acessos ${decided}/${ACCESS_ITEMS.length}${missing ? ` · ${missing} em falta` : ""}`, f.health ? "semáforo feito" : "semáforo por definir"];
+    return { label: parts.join(" · "), done: x.steps[0].done && x.steps[1].done, anchor: decided < ACCESS_ITEMS.length || missing ? "acessos" : "semaforo" };
+  }
+  if (phase === 2) {
+    const firstMissing = FICHA_SECTIONS.find((s) => !sectionFilled(f.sections[s.id]));
+    const filled = FICHA_SECTIONS.filter((s) => sectionFilled(f.sections[s.id])).length;
+    return {
+      label: firstMissing ? `Ficha ${filled}/${FICHA_SECTIONS.length} · a seguir: ${firstMissing.title.toLowerCase()}` : `Ficha ${filled}/${FICHA_SECTIONS.length} escrita`,
+      done: !firstMissing,
+      anchor: firstMissing ? `s-${firstMissing.id}` : "s-onde",
+    };
+  }
+  if (phase === 3) {
+    const parts = [f.clientInformed ? "cliente avisado" : "cliente por avisar", f.meetingDone ? "reunião feita" : f.meetingDate ? `reunião a ${formatISODate(f.meetingDate)}` : "reunião por marcar"];
+    if (x.openQuestions) parts.push(`${x.openQuestions} pergunta${x.openQuestions === 1 ? "" : "s"} por responder`);
+    const label = parts.join(" · ");
+    return { label: label.charAt(0).toUpperCase() + label.slice(1), done: f.clientInformed && f.meetingDone && x.openQuestions === 0, anchor: x.openQuestions ? "perguntas" : "cliente" };
+  }
+  return {
+    label: x.sign ? `Assumido por ${x.sign.by.name}` : f.readyAt ? `Pronta · à espera de ${x.incoming?.name ?? "quem entra"}` : "Falta marcar a ficha como pronta",
+    done: Boolean(x.sign),
+    anchor: "perguntas",
+  };
+}
+
 function OutgoingView({ o, today, firstName }: { o: PassagemOverview; today: string; firstName: string }) {
   const p = o.passagem;
   const total = totalDaysOf(p);
   const day = dayOf(p, today);
-  const phase = day > 0 ? phaseFor(day, total) : null;
+  const phase = day > 0 ? phaseFor(day, Math.max(total, 1)) : null;
   const left = Math.max(0, total - day);
+  const tasks = phase ? o.projects.map((x) => ({ x, t: phaseTask(phase.n, x) })) : [];
+  const doneTasks = tasks.filter((r) => r.t.done).length;
   return (
     <>
       <PageHeader
         eyebrow="A tua passagem"
         title={`${firstName}, vamos passar os teus projetos`}
-        lead={`Tens até ${formatISODate(p.endDate)} para deixar cada projeto pronto para quem entra: acessos garantidos, ficha escrita, cliente avisado e uma reunião a três. ${
-          o.totals.ready
-        } de ${o.totals.projects} fichas prontas.`}
-      />
+        lead={`Tens até ${formatISODate(p.endDate)} para deixar cada projeto pronto para quem entra: acessos garantidos, ficha escrita, cliente avisado e uma reunião a três.`}
+      >
+        <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.02] px-4 py-3">
+          <ProgressRing pct={o.totals.pct} size={56} />
+          <div>
+            <p className="text-[15px] font-semibold text-white">
+              {o.totals.ready} de {o.totals.projects} fichas prontas
+            </p>
+            <p className="text-[12.5px] text-white/50">
+              {day <= 0 ? `Começa a ${formatISODate(p.startDate)}` : day > total ? "Prazo terminado" : left === 0 ? "Hoje é o último dia" : `Faltam ${left} dia${left === 1 ? "" : "s"}`}
+            </p>
+          </div>
+        </div>
+      </PageHeader>
       <div className="mt-6 space-y-6 pb-14">
         {p.note && (
           <p className="rounded-2xl border border-amber-300/25 bg-amber-300/[0.07] px-5 py-3.5 text-[14px] leading-relaxed text-white/80">
@@ -97,15 +141,64 @@ function OutgoingView({ o, today, firstName }: { o: PassagemOverview; today: str
           </p>
         )}
         <Timeline day={day} totalDays={total} startDate={p.startDate} endDate={p.endDate} />
+
+        {o.totals.open > 0 && (() => {
+          const waiting = o.projects.filter((x) => x.openQuestions > 0);
+          return (
+            <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-amber-300/30 bg-amber-300/[0.07] px-5 py-3.5">
+              <MessageCircleQuestion className="h-5 w-5 shrink-0 text-amber-200" />
+              <p className="min-w-0 flex-1 text-[14px] leading-relaxed text-white/75">
+                <span className="font-semibold text-white">
+                  {o.totals.open} pergunta{o.totals.open === 1 ? "" : "s"} à tua espera
+                </span>{" "}
+                — {waiting.map((x) => x.title).join(", ")}.
+              </p>
+              <Link
+                href={`/passagem/${p.id}/${waiting[0].slug}#perguntas`}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-white px-3.5 py-1.5 text-[12.5px] font-semibold text-[#07080d]"
+              >
+                Responder <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+            </div>
+          );
+        })()}
+
         {phase && day <= total && (
-          <div className="flex items-start gap-3 rounded-2xl border border-[#783DF5]/30 bg-[#783DF5]/[0.08] px-5 py-4">
-            <Sparkles className="mt-0.5 h-5 w-5 shrink-0 text-[#c4a6ff]" />
-            <p className="text-[14px] leading-relaxed text-white/80">
-              <span className="font-semibold text-white">Agora: {phase.title}.</span> {phase.detail}{" "}
-              <span className="text-white/50">{left === 0 ? "Hoje é o último dia." : `${left} dia${left === 1 ? "" : "s"} até ao fim.`}</span>
-            </p>
-          </div>
+          <section className="rounded-2xl border border-[#783DF5]/30 bg-[#783DF5]/[0.06] p-5 sm:p-6">
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#c4a6ff]">Esta fase · {phase.title}</p>
+                <h2 className="mt-1 text-[19px] font-semibold text-white">{phase.detail}</h2>
+              </div>
+              <p className="text-[13px] tabular-nums text-white/55">
+                {doneTasks}/{tasks.length} projetos em dia
+              </p>
+            </div>
+            <ul className="mt-4 divide-y divide-white/[0.06] overflow-hidden rounded-xl border border-white/10 bg-black/20">
+              {tasks.map(({ x, t }) => (
+                <li key={x.slug}>
+                  <Link href={`/passagem/${p.id}/${x.slug}#${t.anchor}`} className="group flex items-center gap-3 px-4 py-3 transition hover:bg-white/[0.04]">
+                    <span
+                      className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full ${t.done ? "bg-emerald-500 text-white" : "border border-white/25"}`}
+                    >
+                      {t.done && <Check className="h-3 w-3" />}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[14px] font-medium text-white">{x.title}</span>
+                      <span className={`block truncate text-[12.5px] ${t.done ? "text-white/40" : "text-white/60"}`}>{t.label}</span>
+                    </span>
+                    {!t.done && (
+                      <span className="inline-flex shrink-0 items-center gap-1 text-[12.5px] text-[#c4a6ff] transition group-hover:text-white">
+                        Continuar <ArrowRight className="h-3.5 w-3.5" />
+                      </span>
+                    )}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
         )}
+
         <section>
           <h2 className="mb-3 text-[18px] font-semibold text-white">Os teus projetos</h2>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">

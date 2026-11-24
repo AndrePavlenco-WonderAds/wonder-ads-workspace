@@ -8,10 +8,10 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Check, CheckCircle2, FileText, Loader2, MessageCircleQuestion, Plus, Trash2 } from "lucide-react";
-import { HealthDot, ProgressRing, StageChip } from "./ui";
+import { AlertTriangle, ArrowRight, Check, CheckCircle2, Clock, FileText, Loader2, MessageCircleQuestion, Plus, Trash2, UserRoundPlus } from "lucide-react";
+import { HealthDot, ProgressRing, StageChip, StepDots } from "./ui";
 import { formatDate } from "@/lib/dates";
-import { formatISODate, type ExitItem, type Passagem, type ProjectStage } from "@/lib/passagem/shared";
+import { STAGE_LABEL, formatISODate, type ExitItem, type Passagem, type ProjectStage } from "@/lib/passagem/shared";
 
 export type CockpitProject = {
   slug: string;
@@ -26,6 +26,10 @@ export type CockpitProject = {
   transferred: boolean;
   owner: string;
   openQuestions: number;
+  steps: Array<{ id: string; label: string; done: boolean }>;
+  readyAt: number | null;
+  /** Última gravação da ficha (0 = nunca). */
+  updatedAt: number;
 };
 
 type Props = {
@@ -34,6 +38,8 @@ type Props = {
   candidates: Array<{ username: string; name: string; count: number }>;
   addable: Array<{ slug: string; title: string }>;
   exitItems: ExitItem[];
+  /** Dias até ao fim (negativo = prazo passado). */
+  daysLeft: number;
 };
 
 async function patch(id: string, body: Record<string, unknown>): Promise<string | null> {
@@ -50,12 +56,13 @@ async function patch(id: string, body: Record<string, unknown>): Promise<string 
 const btn =
   "inline-flex items-center gap-1.5 rounded-lg border border-white/12 px-3 py-1.5 text-[12.5px] text-white/75 transition hover:border-white/30 hover:text-white disabled:cursor-not-allowed disabled:opacity-40";
 
-export function AdminCockpit({ passagem: p, projects, candidates, addable, exitItems }: Props) {
+export function AdminCockpit({ passagem: p, projects, candidates, addable, exitItems, daysLeft }: Props) {
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<string | null>(null);
   const [note, setNote] = useState(p.note);
+  const [filter, setFilter] = useState<ProjectStage | "todos">("todos");
   const closed = p.status !== "ativa";
 
   async function run(key: string, fn: () => Promise<string | null>) {
@@ -81,6 +88,40 @@ export function AdminCockpit({ passagem: p, projects, candidates, addable, exitI
       return data.error ?? "Não foi possível passar o projeto.";
     });
 
+  const assumedPending = projects.filter((x) => x.signedAt && !x.transferred && x.incoming);
+  const transferAssumed = () =>
+    run("transfer:all", async () => {
+      for (const proj of assumedPending) {
+        const res = await fetch(`/api/admin/seo-consultant/${proj.slug}`, {
+          method: "PUT",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ consultant: proj.incoming!.name }),
+        });
+        if (!res.ok) {
+          const data = (await res.json().catch(() => ({}))) as { error?: string };
+          return `${proj.title}: ${data.error ?? "não foi possível passar."}`;
+        }
+      }
+      return null;
+    });
+
+  // «Precisa de ti»: o que só a direção desbloqueia, do mais urgente para o resto.
+  const todo: Array<{ key: string; icon: "risk" | "pass" | "who" | "late"; text: string; slug?: string }> = [];
+  if (!closed) {
+    for (const x of projects) if (x.health === "vermelho" && !x.transferred) todo.push({ key: `r:${x.slug}`, icon: "risk", text: `${x.title} em risco${x.healthWhy ? `: ${x.healthWhy}` : ""}`, slug: x.slug });
+    for (const x of assumedPending) todo.push({ key: `p:${x.slug}`, icon: "pass", text: `${x.incoming!.name} assumiu ${x.title} — falta passar no SEO DPT`, slug: x.slug });
+    for (const x of projects) if (!x.incoming && !x.transferred) todo.push({ key: `w:${x.slug}`, icon: "who", text: `${x.title} ainda não tem quem entra`, slug: x.slug });
+    const notReady = projects.filter((x) => !x.readyAt).length;
+    if (daysLeft <= 5 && notReady > 0)
+      todo.push({
+        key: "late",
+        icon: "late",
+        text: daysLeft < 0 ? `O prazo passou há ${-daysLeft} dia${daysLeft === -1 ? "" : "s"} e há ${notReady} ficha${notReady === 1 ? "" : "s"} por fechar` : `Faltam ${daysLeft} dia${daysLeft === 1 ? "" : "s"} e há ${notReady} ficha${notReady === 1 ? "" : "s"} por fechar`,
+      });
+  }
+  const stageCounts = projects.reduce<Record<string, number>>((m, x) => ((m[x.stage] = (m[x.stage] ?? 0) + 1), m), {});
+  const shown = filter === "todos" ? projects : projects.filter((x) => x.stage === filter);
+
   const transferredAll = projects.length > 0 && projects.every((x) => x.transferred);
   const exitDone = exitItems.filter((i) => p.exit[i.id]).length;
 
@@ -88,18 +129,77 @@ export function AdminCockpit({ passagem: p, projects, candidates, addable, exitI
     <div className="space-y-8">
       {error && <p className="rounded-xl border border-rose-400/30 bg-rose-400/10 px-4 py-2.5 text-[13.5px] text-rose-200">{error}</p>}
 
+      {todo.length > 0 && (
+        <section className="rounded-2xl border border-amber-300/25 bg-amber-300/[0.05] p-5 sm:p-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-[17px] font-semibold text-white">Precisa de ti</h2>
+            {assumedPending.length > 1 && (
+              <button
+                type="button"
+                disabled={busy !== null}
+                onClick={transferAssumed}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-white px-3.5 py-1.5 text-[12.5px] font-semibold text-[#07080d] disabled:opacity-40"
+              >
+                {busy === "transfer:all" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                Passar os {assumedPending.length} assumidos no SEO DPT
+              </button>
+            )}
+          </div>
+          <ul className="mt-3 space-y-1.5">
+            {todo.map((item) => {
+              const Icon = item.icon === "risk" ? AlertTriangle : item.icon === "pass" ? CheckCircle2 : item.icon === "who" ? UserRoundPlus : Clock;
+              const tone = item.icon === "risk" || item.icon === "late" ? "text-rose-300" : item.icon === "pass" ? "text-emerald-300" : "text-amber-200";
+              return (
+                <li key={item.key}>
+                  <a
+                    href={item.slug ? `#p-${item.slug}` : undefined}
+                    className="flex items-start gap-2.5 rounded-lg px-2 py-1.5 text-[13.5px] text-white/80 transition hover:bg-white/[0.04]"
+                  >
+                    <Icon className={`mt-0.5 h-4 w-4 shrink-0 ${tone}`} />
+                    {item.text}
+                  </a>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
+
       <section>
-        <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
-          <h2 className="text-[18px] font-semibold text-white">Projetos</h2>
-          <p className="text-[12.5px] text-white/45">
-            Passa cada projeto depois de quem entra o assumir. O SEO DPT, os roadmaps, as páginas públicas e o NPS passam a mostrar o novo consultor.
-          </p>
+        <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 className="text-[18px] font-semibold text-white">Projetos</h2>
+            <p className="mt-0.5 text-[12.5px] text-white/45">
+              Passa cada projeto depois de quem entra o assumir: o SEO DPT, os roadmaps, as páginas públicas e o NPS passam a mostrar o novo consultor.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-1.5" role="tablist" aria-label="Filtrar por fase">
+            {(["todos", "por-comecar", "em-escrita", "pronta", "assumido", "passado"] as const).map((s) => {
+              const n = s === "todos" ? projects.length : (stageCounts[s] ?? 0);
+              if (s !== "todos" && n === 0) return null;
+              const on = filter === s;
+              return (
+                <button
+                  key={s}
+                  type="button"
+                  role="tab"
+                  aria-selected={on}
+                  onClick={() => setFilter(s)}
+                  className={`rounded-full border px-2.5 py-1 text-[12px] transition ${
+                    on ? "border-[#783DF5]/70 bg-[#783DF5]/20 text-white" : "border-white/10 text-white/55 hover:border-white/25 hover:text-white"
+                  }`}
+                >
+                  {s === "todos" ? "Todos" : STAGE_LABEL[s].replace(/ —.*$/, "")} · {n}
+                </button>
+              );
+            })}
+          </div>
         </div>
         <ul className="space-y-2.5">
-          {projects.map((proj) => {
+          {shown.map((proj) => {
             const key = `transfer:${proj.slug}`;
             return (
-              <li key={proj.slug} className="rounded-2xl border border-white/10 bg-white/[0.02] p-4 sm:p-5">
+              <li key={proj.slug} id={`p-${proj.slug}`} className="scroll-mt-24 rounded-2xl border border-white/10 bg-white/[0.02] p-4 sm:p-5">
                 <div className="flex flex-wrap items-center gap-3">
                   <ProgressRing pct={proj.pct} size={42} />
                   <div className="min-w-0 flex-1">
@@ -113,11 +213,17 @@ export function AdminCockpit({ passagem: p, projects, candidates, addable, exitI
                         </span>
                       )}
                     </div>
-                    <p className="mt-0.5 text-[12.5px] text-white/45">
+                    <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+                      <StepDots steps={proj.steps} />
+                      <span className="text-[11.5px] text-white/35">
+                        {proj.updatedAt ? `ficha mexida a ${formatDate(proj.updatedAt)}` : "ficha por começar"}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-[12.5px] text-white/45">
                       {proj.transferred
                         ? `No SEO DPT com ${proj.owner}.`
                         : proj.next
-                          ? `Próximo: ${proj.next}`
+                          ? `Próximo: ${proj.next.charAt(0).toLowerCase()}${proj.next.slice(1)}`
                           : "Tudo feito do lado da ficha."}
                       {proj.health === "vermelho" && proj.healthWhy ? ` · Em risco: ${proj.healthWhy}` : ""}
                     </p>
@@ -166,9 +272,24 @@ export function AdminCockpit({ passagem: p, projects, candidates, addable, exitI
                         disabled={closed || !proj.incoming || busy !== null}
                         onClick={() => setConfirm(key)}
                         title={!proj.incoming ? "Escolhe primeiro quem fica com o projeto" : !proj.signedAt ? "Ainda não foi assumido por quem entra" : undefined}
-                        className={`${btn} ${proj.signedAt ? "border-emerald-300/40 text-emerald-200" : ""}`}
+                        className={
+                          proj.signedAt
+                            ? "inline-flex items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-[12.5px] font-semibold text-[#07080d] transition hover:bg-white/90 disabled:opacity-40"
+                            : btn
+                        }
                       >
                         Passar no SEO DPT
+                      </button>
+                    )}
+                    {!closed && !proj.transferred && projects.length > 1 && confirm !== `rm:${proj.slug}` && (
+                      <button
+                        type="button"
+                        onClick={() => setConfirm(`rm:${proj.slug}`)}
+                        title="Tirar da passagem"
+                        aria-label={`Tirar ${proj.title} da passagem`}
+                        className="rounded-lg p-1.5 text-white/30 transition hover:bg-white/[0.05] hover:text-white/75"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
                       </button>
                     )}
                   </div>
@@ -178,9 +299,9 @@ export function AdminCockpit({ passagem: p, projects, candidates, addable, exitI
                     {proj.incoming?.name ?? "Quem entra"} ainda não assinou «Li e assumo». Podes passar na mesma.
                   </p>
                 )}
-                {!closed && !proj.transferred && projects.length > 1 && (
+                {confirm === `rm:${proj.slug}` && (
                   <div className="mt-2 text-right">
-                    {confirm === `rm:${proj.slug}` ? (
+                    {
                       <span className="inline-flex items-center gap-2 text-[12px]">
                         <span className="text-white/55">Tirar da passagem? A ficha fica guardada.</span>
                         <button
@@ -194,11 +315,7 @@ export function AdminCockpit({ passagem: p, projects, candidates, addable, exitI
                           Não
                         </button>
                       </span>
-                    ) : (
-                      <button type="button" onClick={() => setConfirm(`rm:${proj.slug}`)} className="inline-flex items-center gap-1 text-[11.5px] text-white/30 hover:text-white/70">
-                        <Trash2 className="h-3 w-3" /> Tirar da passagem
-                      </button>
-                    )}
+                    }
                   </div>
                 )}
               </li>

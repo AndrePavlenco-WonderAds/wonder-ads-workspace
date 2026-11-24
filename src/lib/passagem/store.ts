@@ -13,7 +13,7 @@
 
 import "server-only";
 import { cache } from "react";
-import { kv } from "@vercel/kv";
+import { PASSAGEM_DEV_FIXTURE, db } from "./db";
 import { getSeoClients } from "@/lib/notion";
 import { getConsultantResolver } from "@/lib/consultant-assignments";
 import { getPausedSlugSet } from "@/lib/admin-paused-clients-store";
@@ -31,7 +31,8 @@ import {
   type Sign,
 } from "./shared";
 
-export const passagemConfigured = Boolean(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
+export const passagemConfigured =
+  PASSAGEM_DEV_FIXTURE || Boolean(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
 
 const INDEX_KEY = "passagem:index";
 const metaKey = (id: string) => `passagem:${id}`;
@@ -51,7 +52,7 @@ function newId(): string {
 export const getPassagemIndex = cache(async (): Promise<PassagemIndexEntry[]> => {
   if (!passagemConfigured) return [];
   try {
-    const raw = await kv.get<PassagemIndexEntry[]>(INDEX_KEY);
+    const raw = await db.get<PassagemIndexEntry[]>(INDEX_KEY);
     return Array.isArray(raw) ? raw : [];
   } catch (err) {
     console.error("passagem: índice falhou:", err instanceof Error ? err.message : err);
@@ -75,14 +76,14 @@ function hydratePassagem(raw: unknown): Passagem | null {
 
 export async function getPassagem(id: string): Promise<Passagem | null> {
   if (!passagemConfigured || !/^[a-z0-9-]{4,40}$/.test(id)) return null;
-  return hydratePassagem(await kv.get(metaKey(id)));
+  return hydratePassagem(await db.get(metaKey(id)));
 }
 
 /** Todas, das mais recentes para as mais antigas. */
 export async function listPassagens(): Promise<Passagem[]> {
   const index = await getPassagemIndex();
   if (index.length === 0) return [];
-  const raws = await kv.mget<unknown[]>(...index.map((e) => metaKey(e.id)));
+  const raws = await db.mget<unknown[]>(...index.map((e) => metaKey(e.id)));
   return raws
     .map(hydratePassagem)
     .filter((p): p is Passagem => p !== null)
@@ -92,10 +93,10 @@ export async function listPassagens(): Promise<Passagem[]> {
 /** Grava a passagem e a linha dela no índice. Só a direção chega aqui. */
 export async function savePassagem(p: Passagem): Promise<Passagem> {
   const next = { ...p, updatedAt: Date.now() };
-  await kv.set(metaKey(p.id), next);
-  const raw = await kv.get<PassagemIndexEntry[]>(INDEX_KEY);
+  await db.set(metaKey(p.id), next);
+  const raw = await db.get<PassagemIndexEntry[]>(INDEX_KEY);
   const index = Array.isArray(raw) ? raw.filter((e) => e.id !== p.id) : [];
-  await kv.set(INDEX_KEY, [indexEntryOf(next), ...index]);
+  await db.set(INDEX_KEY, [indexEntryOf(next), ...index]);
   return next;
 }
 
@@ -130,32 +131,32 @@ export async function incomingPassagensOf(username: string): Promise<PassagemInd
 export async function getFichas(id: string, slugs: string[]): Promise<Record<string, Ficha>> {
   const out: Record<string, Ficha> = {};
   if (slugs.length === 0) return out;
-  const raws = await kv.mget<unknown[]>(...slugs.map((s) => fichaKey(id, s)));
+  const raws = await db.mget<unknown[]>(...slugs.map((s) => fichaKey(id, s)));
   slugs.forEach((s, i) => (out[s] = hydrateFicha(raws[i])));
   return out;
 }
 
 export async function getFicha(id: string, slug: string): Promise<Ficha> {
-  return hydrateFicha(await kv.get(fichaKey(id, slug)));
+  return hydrateFicha(await db.get(fichaKey(id, slug)));
 }
 
 export async function saveFicha(id: string, slug: string, ficha: Ficha): Promise<Ficha> {
   const next = { ...ficha, updatedAt: Date.now() };
-  await kv.set(fichaKey(id, slug), next);
+  await db.set(fichaKey(id, slug), next);
   return next;
 }
 
 export async function getSigns(id: string, slugs: string[]): Promise<Record<string, Sign | null>> {
   const out: Record<string, Sign | null> = {};
   if (slugs.length === 0) return out;
-  const raws = await kv.mget<Array<Sign | null>>(...slugs.map((s) => signKey(id, s)));
+  const raws = await db.mget<Array<Sign | null>>(...slugs.map((s) => signKey(id, s)));
   slugs.forEach((s, i) => (out[s] = raws[i] && typeof raws[i]?.at === "number" ? raws[i] : null));
   return out;
 }
 
 export async function setSign(id: string, slug: string, sign: Sign | null): Promise<void> {
-  if (sign) await kv.set(signKey(id, slug), sign);
-  else await kv.del(signKey(id, slug));
+  if (sign) await db.set(signKey(id, slug), sign);
+  else await db.del(signKey(id, slug));
 }
 
 /* ------------------------------------------------------------------ */
@@ -163,9 +164,9 @@ export async function setSign(id: string, slug: string, sign: Sign | null): Prom
 /* ------------------------------------------------------------------ */
 
 export async function listQuestions(id: string): Promise<Question[]> {
-  const ids = await kv.lrange<string>(qidsKey(id), 0, 499);
+  const ids = await db.lrange<string>(qidsKey(id), 0, 499);
   if (!ids || ids.length === 0) return [];
-  const raws = await kv.mget<Array<Question | null>>(...ids.map((q) => qKey(id, q)));
+  const raws = await db.mget<Array<Question | null>>(...ids.map((q) => qKey(id, q)));
   return raws.filter((q): q is Question => Boolean(q && typeof q.id === "string")).sort((a, b) => a.at - b.at);
 }
 
@@ -180,17 +181,17 @@ export async function askQuestion(id: string, slug: string, q: string, by: Perso
     aBy: null,
     aAt: null,
   };
-  await kv.set(qKey(id, question.id), question);
-  await kv.lpush(qidsKey(id), question.id);
+  await db.set(qKey(id, question.id), question);
+  await db.lpush(qidsKey(id), question.id);
   return question;
 }
 
 export async function answerQuestion(id: string, qid: string, a: string, by: Person): Promise<Question | null> {
   if (!/^[a-z0-9-]{4,40}$/.test(qid)) return null;
-  const current = await kv.get<Question>(qKey(id, qid));
+  const current = await db.get<Question>(qKey(id, qid));
   if (!current) return null;
   const next: Question = { ...current, a: a.trim().slice(0, ANSWER_MAX), aBy: by, aAt: Date.now() };
-  await kv.set(qKey(id, qid), next);
+  await db.set(qKey(id, qid), next);
   return next;
 }
 

@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "80.40",
+    date: "2026-11-24",
+    title: "Passagem de consultor: desenho novo, mais claro a cada passo",
+    highlights: [
+      "**A ficha escreve-se um capítulo de cada vez:** acessos, semáforo, as 7 secções, cliente e reunião, perguntas. Tem «Anterior / Seguinte» e o progresso sempre à vista. Um clique numa pista («Reuniões já marcadas»…) acrescenta-a como linha a preencher. «Ver como documento» mostra o que quem entra vai ler.",
+      "**Quem entra lê a ficha como um documento:** resumo no topo (semáforo, acessos, reunião), as secções numeradas e uma barra em baixo com «Perguntar» e «Li e assumo».",
+      "**Quem sai tem o cartão «Esta fase»:** em cada projeto diz o que falta na fase de hoje e abre a ficha no capítulo certo. As perguntas por responder aparecem em destaque.",
+      "**Cockpit da direção:** indicadores no topo, um painel «Precisa de ti» (riscos, assumidos por passar, projetos sem destino, prazo a acabar), filtros por fase, os 7 passos de cada projeto e «Passar os assumidos» de uma vez.",
+      "**Nova passagem numa página própria,** com o resumo ao vivo e a carga de cada colega antes e depois. Quem também está de saída deixa de poder receber projetos.",
+    ],
+  },
+  {
     version: "80.39",
     date: "2026-11-24",
     title: "Passagem de consultor: o offboarding em 30 dias, projeto a projeto",

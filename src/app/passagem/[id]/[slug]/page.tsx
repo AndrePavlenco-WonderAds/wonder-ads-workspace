@@ -78,7 +78,7 @@ export default async function FichaPage({ params }: { params: Promise<{ id: stri
         </div>
       </PageHeader>
 
-      <div className="mt-6 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+      <div className={`mt-6 grid grid-cols-2 gap-2.5 sm:grid-cols-4 ${access.role === "incoming" ? "mx-auto max-w-3xl" : ""}`}>
         <Fact label="Plano" value={facts.tier ?? "—"} />
         <Fact label="Cliente desde" value={formatISODate(facts.startedAt)} />
         <Fact label="Último NPS" value={facts.lastNps ? `${String(facts.lastNps.score).replace(".", ",")} · ${formatDate(facts.lastNps.at)}` : "Sem respostas"} />

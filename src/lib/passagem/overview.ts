@@ -6,7 +6,9 @@ import "server-only";
 import { currentOwners, getFichas, getSigns, listQuestions } from "./store";
 import {
   fichaProgress,
+  fichaSteps,
   stageOf,
+  type FichaStep,
   type Ficha,
   type Passagem,
   type PassagemProjectRef,
@@ -24,6 +26,7 @@ export type ProjectView = PassagemProjectRef & {
   owner: string;
   stage: ProjectStage;
   progress: ReturnType<typeof fichaProgress>;
+  steps: FichaStep[];
   openQuestions: number;
   questions: number;
 };
@@ -59,6 +62,7 @@ export async function passagemOverview(p: Passagem, onlySlugs?: string[]): Promi
       owner,
       stage: stageOf(ficha, sign, transferred),
       progress: fichaProgress(ficha, sign),
+      steps: fichaSteps(ficha, sign),
       openQuestions: mine.filter((q) => !q.a).length,
       questions: mine.length,
     };

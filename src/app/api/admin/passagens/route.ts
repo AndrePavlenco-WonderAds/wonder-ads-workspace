@@ -7,7 +7,7 @@
 
 import { NextResponse } from "next/server";
 import { getCurrentEmployee } from "@/lib/auth/server";
-import { activePassagemOf, createPassagem, passagemConfigured, seoPortfolios } from "@/lib/passagem/store";
+import { activePassagemOf, createPassagem, getPassagemIndex, passagemConfigured, seoPortfolios } from "@/lib/passagem/store";
 import {
   PASSAGEM_DAYS,
   PASSAGEM_REASONS,
@@ -46,7 +46,11 @@ export async function POST(req: Request) {
   const endDate = isISODate(body.endDate) && body.endDate > startDate ? body.endDate : addDaysISO(startDate, PASSAGEM_DAYS - 1);
 
   const owned = new Map(outgoing.clients.map((c) => [c.slug, c]));
-  const people = new Map(portfolios.filter((p) => p.username !== outgoing.username).map((p) => [p.username, p]));
+  // Quem está a sair noutra passagem não recebe projetos.
+  const leaving = new Set((await getPassagemIndex()).filter((e) => e.status === "ativa").map((e) => e.outgoing));
+  const people = new Map(
+    portfolios.filter((p) => p.username !== outgoing.username && !leaving.has(p.username)).map((p) => [p.username, p]),
+  );
   const rawProjects = Array.isArray(body.projects) ? body.projects : [];
   const projects: PassagemProjectRef[] = [];
   for (const raw of rawProjects) {

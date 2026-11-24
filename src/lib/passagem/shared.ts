@@ -381,7 +381,9 @@ export type Question = {
 /*  Progresso                                                          */
 /* ------------------------------------------------------------------ */
 
-export type FichaStep = { id: string; label: string; done: boolean };
+/** `label` diz o estado («Acessos verificados (5/10)»); `todo` diz o que
+ *  fazer a seguir («Verificar os acessos (5/10)»). */
+export type FichaStep = { id: string; label: string; todo: string; done: boolean };
 
 /** Os passos de um projeto, pela ordem em que se fazem. */
 export function fichaSteps(f: Ficha, sign: Sign | null): FichaStep[] {
@@ -397,18 +399,23 @@ export function fichaSteps(f: Ficha, sign: Sign | null): FichaStep[] {
           : missingAccess > 0
             ? `${missingAccess} acesso${missingAccess === 1 ? "" : "s"} em falta`
             : "Acessos garantidos",
+      todo:
+        decided < ACCESS_ITEMS.length
+          ? `Verificar os acessos (${decided}/${ACCESS_ITEMS.length})`
+          : `Resolver ${missingAccess} acesso${missingAccess === 1 ? "" : "s"} em falta`,
       done: decided === ACCESS_ITEMS.length && missingAccess === 0,
     },
-    { id: "semaforo", label: "Semáforo do projeto", done: f.health !== null },
+    { id: "semaforo", label: "Semáforo do projeto", todo: "Definir o semáforo", done: f.health !== null },
     {
       id: "ficha",
       label: `Ficha escrita (${filled}/${FICHA_SECTIONS.length})`,
+      todo: `Escrever a ficha (${filled}/${FICHA_SECTIONS.length})`,
       done: filled === FICHA_SECTIONS.length,
     },
-    { id: "cliente", label: "Cliente avisado", done: f.clientInformed },
-    { id: "reuniao", label: "Reunião a três feita", done: f.meetingDone },
-    { id: "pronta", label: "Ficha marcada como pronta", done: f.readyAt !== null },
-    { id: "assumido", label: "Novo consultor assumiu", done: sign !== null },
+    { id: "cliente", label: "Cliente avisado", todo: "Avisar o cliente", done: f.clientInformed },
+    { id: "reuniao", label: "Reunião a três feita", todo: "Fazer a reunião a três", done: f.meetingDone },
+    { id: "pronta", label: "Ficha marcada como pronta", todo: "Marcar a ficha como pronta", done: f.readyAt !== null },
+    { id: "assumido", label: "Novo consultor assumiu", todo: "Quem entra ler e assumir", done: sign !== null },
   ];
 }
 

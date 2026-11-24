@@ -164,6 +164,43 @@ export function Timeline({
   );
 }
 
+/** Os 7 passos de um projeto numa linha de traços (verde = feito). */
+export function StepDots({ steps, className = "" }: { steps: Array<{ id: string; label: string; done: boolean }>; className?: string }) {
+  const done = steps.filter((s) => s.done).length;
+  return (
+    <span className={`inline-flex items-center gap-1 ${className}`} role="img" aria-label={`${done} de ${steps.length} passos feitos`}>
+      {steps.map((s) => (
+        <span
+          key={s.id}
+          title={`${s.done ? "✓" : "·"} ${s.label}`}
+          className={`h-1.5 w-5 rounded-full transition ${s.done ? "bg-emerald-400" : "bg-white/[0.12]"}`}
+        />
+      ))}
+    </span>
+  );
+}
+
+export function KpiTile({
+  label,
+  value,
+  sub,
+  tone = "default",
+}: {
+  label: string;
+  value: React.ReactNode;
+  sub?: string;
+  tone?: "default" | "good" | "warn" | "bad";
+}) {
+  const color = tone === "good" ? "text-emerald-300" : tone === "warn" ? "text-amber-200" : tone === "bad" ? "text-rose-300" : "text-white";
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/[0.02] px-4 py-3.5">
+      <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-white/40">{label}</p>
+      <p className={`mt-1 text-[24px] font-semibold leading-none tabular-nums ${color}`}>{value}</p>
+      {sub && <p className="mt-1.5 text-[12px] text-white/45">{sub}</p>}
+    </div>
+  );
+}
+
 export function PageHeader({ eyebrow, title, lead, children }: { eyebrow: string; title: string; lead?: React.ReactNode; children?: React.ReactNode }) {
   return (
     <header className="animate-fade-up mt-2 flex flex-wrap items-end justify-between gap-4">
