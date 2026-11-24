@@ -53,7 +53,6 @@ export type ExitItemId =
   | "ferramentas"
   | "passwords"
   | "email"
-  | "equipamento"
   | "conta"
   | "conversa";
 
@@ -61,7 +60,8 @@ export type ExitItem = { id: ExitItemId; label: string; hint: string; onlyWhenLe
 
 /** A checklist da direção. Os itens `onlyWhenLeaving` só aparecem quando a
  *  pessoa sai da empresa (numa mudança de equipa continua a precisar da
- *  conta, do email e do portátil). */
+ *  conta e do email). Sem «equipamento»: a WonderAds não dá equipamento
+ *  (André, 24/11/2026). */
 export const EXIT_CHECKLIST: ExitItem[] = [
   { id: "equipa", label: "Equipa avisada", hint: "Quem sai, quando e quem fica com cada projeto." },
   {
@@ -91,7 +91,6 @@ export const EXIT_CHECKLIST: ExitItem[] = [
     hint: "Para o novo consultor ou para seo@, com resposta automática.",
     onlyWhenLeaving: true,
   },
-  { id: "equipamento", label: "Equipamento recolhido", hint: "Portátil, telemóvel e o resto.", onlyWhenLeaving: true },
   { id: "conta", label: "Conta na app desativada", hint: "No último dia.", onlyWhenLeaving: true },
   {
     id: "conversa",

@@ -13,6 +13,12 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "80.42",
+    date: "2026-11-24",
+    title: "Passagem de consultor: sem «Equipamento recolhido»",
+    highlights: ["A checklist de saída da direção deixa de pedir o equipamento: a WonderAds não dá equipamento."],
+  },
+  {
     version: "80.41",
     date: "2026-11-24",
     title: "Passagem de consultor: acertos depois do primeiro teste",
