@@ -7,7 +7,8 @@
 // ganha, quando se recebe, como se sobe, o que vender. O tracking lê as
 // propostas aceites do COMMERCIAL DPT (lib/documentacao/commissions-server.ts).
 
-import { ArrowUpRight, ChevronDown, Lock, Mail, Search, Tv } from "lucide-react";
+import Link from "next/link";
+import { ArrowRight, ArrowUpRight, ChevronDown, Lock, Mail, Search, Tv } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { Bullets, DocHero, DocSection, DocsClosed, ExecutiveSummary, Note, Rows, Strong, SubHeading } from "@/components/documentacao/doc-ui";
 import { SectionNav } from "@/components/documentacao/section-nav";
@@ -238,7 +239,46 @@ export default async function ComissoesPage() {
           </div>
 
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {CROSS_SELLS.map((s) => (
+            {CROSS_SELLS.map((s) => s.page ? (
+              // v80.32 — um serviço com página própria: cartão a toda a
+              // largura, com a entrada para a página bem à vista.
+              <article
+                key={s.id}
+                className="relative overflow-hidden rounded-2xl border border-[#783DF5]/35 bg-[#783DF5]/[0.06] p-5 md:col-span-2 xl:col-span-3 sm:p-6"
+              >
+                <span aria-hidden className="absolute inset-x-0 top-0 h-[3px]" style={{ background: "var(--brand-gradient)" }} />
+                <div className="grid gap-6 lg:grid-cols-[1fr_18.5rem] lg:items-start">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2.5">
+                      <h3 className="text-[18px] font-semibold text-white">{s.name}</h3>
+                      <span className="rounded-full border border-[#c4a6ff]/35 bg-[#783DF5]/20 px-2.5 py-0.5 text-[12px] text-[#e4d6ff]">Novo</span>
+                    </div>
+                    <p className="mt-3 text-[1.5rem] font-semibold leading-none tracking-[-0.02em] text-white">{s.minimum}</p>
+                    {s.minimumNote && <p className="mt-1 text-[12.5px] text-white/45">{s.minimumNote}</p>}
+                    <div className="mt-4">
+                      <Bullets items={s.points} />
+                    </div>
+                  </div>
+                  <Link
+                    href={s.page.href}
+                    className="group flex flex-col justify-between gap-6 rounded-2xl p-5 text-white shadow-[0_18px_40px_-22px_rgba(120,61,245,0.9)] transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 lg:min-h-[12.5rem]"
+                    style={{ background: "var(--brand-gradient)" }}
+                  >
+                    <span>
+                      <span className="block text-[12.5px] font-medium text-white/75">Página própria</span>
+                      <span className="mt-1 block text-[17px] font-semibold leading-snug">{s.page.label}</span>
+                      <span className="mt-2 block text-[13px] leading-relaxed text-white/80">
+                        As fases, as 10 sessões com exemplos, os guiões, os KPIs, as perguntas do cliente e os valores.
+                      </span>
+                    </span>
+                    <span className="inline-flex items-center gap-2 self-start rounded-full bg-white px-3.5 py-1.5 text-[13px] font-semibold text-[#120f24]">
+                      Abrir
+                      <ArrowRight className="h-3.5 w-3.5 transition group-hover:translate-x-0.5" />
+                    </span>
+                  </Link>
+                </div>
+              </article>
+            ) : (
               <article
                 key={s.id}
                 className={`rounded-2xl border border-white/10 bg-white/[0.02] p-5 ${s.id === "websites" ? "md:col-span-2 xl:col-span-3" : ""}`}

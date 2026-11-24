@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "80.32",
+    date: "2026-11-24",
+    title: "Comissões: cross-sell «Consultoria Comercial», com página própria",
+    highlights: [
+      "**💼 Nos cross-sells das Comissões entra a Consultoria Comercial**: 3 meses, 10 sessões online, 1 dia presencial e revisão semanal de chamadas, a 7.500 € a pronto ou 9.000 € em 3 prestações (+ IVA).",
+      "**📘 O serviço todo tem página própria** (Documentação → Comissões → Cross-sells → «Ver a consultoria por extenso»), em capítulos: o serviço, fases, plano de sessões, revisão de chamadas, o guia, sessão a sessão com exemplos, adaptar e medir, respostas ao cliente e valores.",
+      "O sino do SEO DPT avisa a equipa do acrescento.",
+    ],
+  },
+  {
     version: "80.31",
     date: "2026-11-24",
     title: "Roadmap: a IA escreve as tarefas na língua do cliente",

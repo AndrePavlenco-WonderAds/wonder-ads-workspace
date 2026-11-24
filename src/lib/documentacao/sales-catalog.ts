@@ -13,6 +13,8 @@ export type CrossSell = {
   points: string[];
   /** Clientes onde já fizemos este serviço. */
   references: string[];
+  /** Página da Documentação com o serviço por extenso (v80.32). */
+  page?: { href: string; label: string };
 };
 
 export const CROSS_SELLS: CrossSell[] = [
@@ -54,6 +56,24 @@ export const CROSS_SELLS: CrossSell[] = [
       "Caso forte: na White Clinic ligámos o Newsoft ao CRM e todas as leads passaram a estar num só sistema. Usa-o quando o cliente não sabe de onde vêm as leads nem o que lhes acontece.",
     ],
     references: ["White Clinic", "IFA", "IHN", "Abbey Dental Supplies"],
+  },
+  {
+    // v80.32 — «Consultoria Comercial WonderAds — Estrutura do Serviço»
+    // (PDF do André, 24/11/2026). O serviço todo vive na sua página.
+    id: "consultoria-comercial",
+    name: "Consultoria Comercial",
+    minimum: "7.500 € a pronto",
+    minimumNote: "ou 9.000 € em 3 prestações de 3.000 € · + IVA · 1 localização · sem descontos",
+    freeAudit: false,
+    points: [
+      "Programa de 3 meses: 10 sessões online, 1 dia presencial e revisão semanal de guiões e chamadas.",
+      "Para quem não tem falta de clientes, mas os perde pelo caminho: contactos sem resposta, consultas ou exames que não acontecem, orçamentos sem follow-up.",
+      "Clínicas, óticas e outras redes de saúde e bem-estar, de uma localização a dezenas de lojas.",
+      "Medimos 6 KPIs na sessão 2 e comparamos na sessão 10, com os números reais do negócio.",
+      "Várias localizações, mais tempo ou só acompanhamento de números: sob consulta com o Alex.",
+    ],
+    references: [],
+    page: { href: "/documentacao/consultoria-comercial", label: "Ver a consultoria por extenso" },
   },
   {
     id: "websites",

@@ -44,6 +44,18 @@ export type CodeDocUpdate = {
 
 export const CODE_DOC_UPDATES: CodeDocUpdate[] = [
   {
+    id: "v80.32-comissoes-consultoria-comercial",
+    page: "comissoes",
+    kind: "add-on",
+    changes: [
+      "Cross-sell novo: Consultoria Comercial. Programa de 3 meses com 10 sessões online, 1 dia presencial e revisão semanal de chamadas, a 7.500 € a pronto ou 9.000 € em 3 prestações (+ IVA).",
+      "O serviço todo (fases, sessões com exemplos, guiões, KPIs, perguntas do cliente e valores) está na página própria, que se abre a partir do cartão.",
+    ],
+    at: "2026-11-24T12:00:00+00:00",
+    version: "80.32",
+    anchor: "cross-sells",
+  },
+  {
     id: "v80.25-ineficacias-reportar-antes-do-tl",
     page: "ineficacias",
     kind: "regra",
