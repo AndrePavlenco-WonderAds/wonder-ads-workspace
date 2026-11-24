@@ -83,7 +83,7 @@ function monthFrom(p: Portfolio, month: string): NpsBonusMonth {
     if (!answer && startMonth && startMonth > month) continue;
     // Arrancou neste mês e não respondeu → não conta no mês (nem para a %
     // nem para os N+ projetos — v80.38).
-    if (!answer && startMonth === month) {
+    if (!answer && client.startedAt && startMonth === month) {
       const row = byUser.get(client.owner);
       if (row) {
         newClients.push({
