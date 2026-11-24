@@ -4,7 +4,9 @@
 // marcada «registada pela direção», e recebe o aviso no sino.
 //   POST { username, what, client, reason, reasonOther, shouldHave,
 //          firstTime, lastTime, occurredOn, noticed, errorType, impacts,
-//          points, note }
+//          points, note, showCalc }
+// v80.45: `showCalc` — o consultor vê o porquê dos pontos (as parcelas da
+// calculadora) ou não. Por omissão, não vê.
 // A sugestão da calculadora volta a ser calculada aqui (não se confia na do
 // browser) e fica gravada ao lado da pontuação dada.
 
@@ -85,6 +87,7 @@ export async function POST(req: Request) {
       errorType,
       impacts,
       suggestedPoints,
+      showCalc: body.showCalc === true,
       score: { points: pts, by: actor.username, byName: actor.name, at: Date.now(), note: note(body.note) },
     });
     const bundle = await loadConsultant(username, today);

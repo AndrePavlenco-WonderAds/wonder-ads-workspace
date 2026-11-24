@@ -146,9 +146,14 @@ function sanitizeItem(raw: unknown): IneficaciaItem | null {
 
 /** A calculadora da direção (v77.93 nas diretas, v77.94 nos relatórios) —
  *  os registos antigos não a têm. */
-function sanitizeAssessment(r: Record<string, unknown>): Pick<DirectOccurrence, "errorType" | "impacts" | "suggestedPoints"> {
+function sanitizeAssessment(
+  r: Record<string, unknown>,
+): Pick<DirectOccurrence, "errorType" | "impacts" | "suggestedPoints" | "showCalc"> {
+  const errorType = ERROR_TYPE_IDS.has(str(r.errorType)) ? (r.errorType as IneficaciaErrorType) : null;
   return {
-    errorType: ERROR_TYPE_IDS.has(str(r.errorType)) ? (r.errorType as IneficaciaErrorType) : null,
+    errorType,
+    // v80.45 — sem avaliação gravada não há cálculo para mostrar.
+    showCalc: r.showCalc === true && errorType !== null,
     impacts: Array.isArray(r.impacts) ? [...new Set(r.impacts.filter((i): i is IneficaciaImpact => IMPACT_IDS.has(str(i))))] : [],
     suggestedPoints:
       typeof r.suggestedPoints === "number" && Number.isInteger(r.suggestedPoints) && r.suggestedPoints >= 0 && r.suggestedPoints <= MAX_POINTS
@@ -422,8 +427,17 @@ export type ScoreResult =
  *  browser. */
 export type AssessmentInput = { errorType: IneficaciaErrorType; impacts: IneficaciaImpact[] };
 
+type AssessmentTarget = Pick<DirectOccurrence, "reason" | "firstTime" | "noticed" | "errorType" | "impacts" | "suggestedPoints" | "showCalc">;
+
+/** v80.45: mostrar (ou não) o porquê dos pontos ao consultor. Só pega com
+ *  uma avaliação gravada — sem ela não há parcelas para mostrar. */
+function applyVisibility(target: AssessmentTarget, showCalc: boolean | undefined) {
+  if (showCalc !== undefined) target.showCalc = showCalc;
+  if (!target.errorType) target.showCalc = false;
+}
+
 function applyAssessment(
-  target: Pick<DirectOccurrence, "reason" | "firstTime" | "noticed" | "errorType" | "impacts" | "suggestedPoints">,
+  target: AssessmentTarget,
   a: AssessmentInput,
 ) {
   target.errorType = a.errorType;
@@ -442,6 +456,7 @@ export async function scoreItem(
   itemId: string,
   score: Omit<IneficaciaScore, "at">,
   assessment: AssessmentInput | null = null,
+  showCalc?: boolean,
 ): Promise<ScoreResult> {
   assertConfigured();
   return withLock(reportKey(reportId), async () => {
@@ -452,6 +467,7 @@ export async function scoreItem(
     const at = Date.now();
     item.score = { ...score, at };
     if (assessment) applyAssessment(item, assessment);
+    applyVisibility(item, showCalc);
     report.rev += 1;
     if (!report.review && report.items.every((it) => it.score)) {
       report.review = { by: score.by, byName: score.byName, at, note: "" };
@@ -514,6 +530,7 @@ export async function rescoreDirect(
   occurrenceId: string,
   score: Omit<IneficaciaScore, "at">,
   assessment: AssessmentInput | null = null,
+  showCalc?: boolean,
 ): Promise<IneficaciaLedger | null> {
   assertConfigured();
   return withLock(ledgerKey(username), async () => {
@@ -522,8 +539,39 @@ export async function rescoreDirect(
     if (!d) return null;
     d.score = { ...score, at: Date.now() };
     if (assessment) applyAssessment(d, assessment);
+    applyVisibility(d, showCalc);
     await saveLedger(ledger);
     return ledger;
+  });
+}
+
+/** v80.45: só muda se o consultor vê o porquê dos pontos — sem tocar na
+ *  pontuação (nem na hora em que foi dada). */
+export async function setCalcVisibility(
+  target: { reportId: string; itemId: string } | { username: string; occurrenceId: string },
+  showCalc: boolean,
+): Promise<{ ok: true; username: string } | { ok: false; reason: "not-found" | "no-assessment" }> {
+  assertConfigured();
+  if ("reportId" in target) {
+    return withLock(reportKey(target.reportId), async () => {
+      const report = await getReport(target.reportId);
+      const item = report?.items.find((it) => it.id === target.itemId);
+      if (!report || !item) return { ok: false, reason: "not-found" } as const;
+      if (showCalc && !item.errorType) return { ok: false, reason: "no-assessment" } as const;
+      item.showCalc = showCalc;
+      report.rev += 1;
+      await kv.set(reportKey(report.id), report);
+      return { ok: true, username: report.username } as const;
+    });
+  }
+  return withLock(ledgerKey(target.username), async () => {
+    const ledger = await getLedger(target.username);
+    const d = ledger.direct.find((x) => x.id === target.occurrenceId);
+    if (!d) return { ok: false, reason: "not-found" } as const;
+    if (showCalc && !d.errorType) return { ok: false, reason: "no-assessment" } as const;
+    d.showCalc = showCalc;
+    await saveLedger(ledger);
+    return { ok: true, username: target.username } as const;
   });
 }
 

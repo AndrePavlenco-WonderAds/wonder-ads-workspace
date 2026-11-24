@@ -6,17 +6,20 @@
 // A CALCULADORA (v77.94) — a mesma da folha RH-04: o motivo, a primeira vez
 // e quem deu pelo erro vêm do que está escrito; a direção junta o tipo de
 // erro e o que o erro causou, e a sugestão aplica-se com um clique. Só existe
-// nas páginas da direção; o consultor nunca recebe estes dados
-// (loadConsultantForSelf).
+// nas páginas da direção; o consultor só recebe estes dados quando a direção
+// liga «O consultor vê o porquê destes pontos» (v80.45, `showCalc`) — senão
+// loadConsultantForSelf apaga-os.
 // Cada gravação pede ao servidor e faz router.refresh() — a página volta a
 // derivar o estado (PA, NO, nível) com os dados frescos.
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Calculator, Check, GraduationCap, Loader2, Repeat, Save, Wand2 } from "lucide-react";
+import { Calculator, Check, Eye, EyeOff, GraduationCap, Loader2, Repeat, Save, Wand2 } from "lucide-react";
 import { BAND_TONES } from "@/components/ineficacias/report-view";
+import { CalcBreakdownView } from "@/components/ineficacias/calc-breakdown";
 import {
   bandOf,
+  calcBreakdown,
   ERROR_TYPES,
   IMPACTS,
   MAX_POINTS,
@@ -99,6 +102,8 @@ export type CalcBasis = {
   noticed: IneficaciaNoticed;
   errorType: IneficaciaErrorType | null;
   impacts: IneficaciaImpact[];
+  /** O consultor vê o porquê dos pontos (v80.45). */
+  showCalc: boolean;
 };
 
 function sameSet(a: string[], b: string[]): boolean {
@@ -119,16 +124,25 @@ export function ItemScoreControl({
   const [note, setNote] = useState(initial?.note ?? "");
   const [errorType, setErrorType] = useState<IneficaciaErrorType | null>(calc?.errorType ?? null);
   const [impacts, setImpacts] = useState<IneficaciaImpact[]>(calc?.impacts ?? []);
+  const [showCalc, setShowCalc] = useState(calc?.showCalc ?? false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [pending, startTransition] = useTransition();
   const suggestion = calc
     ? suggestScore({ impacts, reason: calc.reason, firstTime: calc.firstTime, errorType, noticed: calc.noticed })
     : null;
-  const dirty =
+  const scoreDirty =
     points !== (initial?.points ?? null) ||
     note !== (initial?.note ?? "") ||
     (calc ? errorType !== calc.errorType || !sameSet(impacts, calc.impacts) : false);
+  const visibilityDirty = calc ? showCalc !== calc.showCalc : false;
+  const dirty = scoreDirty || visibilityDirty;
+  // Sem «aprendizagem ou recorrência» não há cálculo para mostrar.
+  const canShow = Boolean(calc && errorType);
+  const preview =
+    calc && errorType && points !== null && points > 0
+      ? calcBreakdown({ impacts, reason: calc.reason, firstTime: calc.firstTime, errorType, noticed: calc.noticed }, points)
+      : null;
 
   async function save() {
     if (points === null) {
@@ -136,10 +150,16 @@ export function ItemScoreControl({
       return;
     }
     setError(null);
+    // Só mudou a visibilidade: não se repontua (a hora da pontuação fica).
+    const onlyVisibility = Boolean(initial) && !scoreDirty && visibilityDirty;
     const res = await fetch("/api/admin/ineficacias/score", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ ...target, points, note, ...(calc ? { errorType, impacts } : {}) }),
+      body: JSON.stringify(
+        onlyVisibility
+          ? { ...target, op: "visibility", showCalc }
+          : { ...target, points, note, ...(calc ? { errorType, impacts, showCalc: showCalc && canShow } : {}) },
+      ),
     });
     const data = (await res.json().catch(() => ({}))) as { error?: string };
     if (!res.ok) {
@@ -162,6 +182,7 @@ export function ItemScoreControl({
           impacts={impacts}
           suggestion={suggestion}
           points={points}
+          visible={showCalc && canShow}
           disabled={pending}
           onErrorType={(t) => { setErrorType(t); setSaved(false); }}
           onToggleImpact={(id) => {
@@ -170,6 +191,44 @@ export function ItemScoreControl({
           }}
           onApply={() => { setPoints(suggestion.points); setSaved(false); }}
         />
+      )}
+      {calc && (
+        <div className="mt-2.5 rounded-lg border border-white/10 bg-black/20 p-2.5">
+          <button
+            type="button"
+            role="switch"
+            aria-checked={showCalc && canShow}
+            disabled={pending || !canShow}
+            onClick={() => { setShowCalc((v) => !v); setSaved(false); }}
+            title={canShow ? undefined : "Escolhe primeiro aprendizagem ou recorrência na calculadora."}
+            className="flex w-full items-center gap-2.5 text-left disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <span
+              className={`relative h-5 w-9 shrink-0 rounded-full transition ${showCalc && canShow ? "bg-[#783DF5]" : "bg-white/15"}`}
+            >
+              <span
+                className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-all ${showCalc && canShow ? "left-[18px]" : "left-0.5"}`}
+              />
+            </span>
+            {showCalc && canShow ? <Eye className="h-3.5 w-3.5 shrink-0 text-[#c3aaff]" /> : <EyeOff className="h-3.5 w-3.5 shrink-0 text-white/40" />}
+            <span className="min-w-0">
+              <span className="block text-[12px] font-semibold text-white/85">O consultor vê o porquê destes pontos</span>
+              <span className="block text-[10.5px] text-white/45">
+                {!canShow
+                  ? "Escolhe aprendizagem ou recorrência na calculadora para o poderes mostrar."
+                  : showCalc
+                    ? "No painel do consultor aparecem as parcelas e a pontuação final."
+                    : "Oculto: o consultor vê só a pontuação e a nota."}
+              </span>
+            </span>
+          </button>
+          {showCalc && canShow && preview && (
+            <div className="mt-2 border-t border-white/[0.06] pt-2">
+              <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.14em] text-white/35">O que o consultor vê</p>
+              <CalcBreakdownView breakdown={preview} compact />
+            </div>
+          )}
+        </div>
       )}
       <div className="mt-2.5">
         <ScorePicker
@@ -197,7 +256,17 @@ export function ItemScoreControl({
           style={{ background: "var(--brand-gradient)" }}
         >
           {pending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : saved ? <Check className="h-3.5 w-3.5" /> : <Save className="h-3.5 w-3.5" />}
-          {pending ? "A gravar…" : saved ? "Gravado" : initial ? "Atualizar pontuação" : "Guardar pontuação"}
+          {pending
+            ? "A gravar…"
+            : saved
+              ? "Gravado"
+              : initial && !scoreDirty && visibilityDirty
+                ? showCalc
+                  ? "Mostrar ao consultor"
+                  : "Ocultar ao consultor"
+                : initial
+                  ? "Atualizar pontuação"
+                  : "Guardar pontuação"}
         </button>
         {initial && !dirty && (
           <span className="text-[11px] text-white/40">Já pontuada — podes corrigir.</span>
@@ -221,6 +290,7 @@ function CalculatorPanel({
   impacts,
   suggestion,
   points,
+  visible,
   disabled,
   onErrorType,
   onToggleImpact,
@@ -231,6 +301,8 @@ function CalculatorPanel({
   impacts: IneficaciaImpact[];
   suggestion: ReturnType<typeof suggestScore>;
   points: number | null;
+  /** O consultor vê as parcelas (v80.45). */
+  visible: boolean;
   disabled: boolean;
   onErrorType: (t: IneficaciaErrorType) => void;
   onToggleImpact: (id: IneficaciaImpact) => void;
@@ -248,7 +320,9 @@ function CalculatorPanel({
         <p className="flex items-center gap-1.5 text-[10.5px] font-bold uppercase tracking-[0.16em] text-white/55">
           <Calculator className="h-3.5 w-3.5 text-[#c3aaff]" />
           Calculadora
-          <span className="font-semibold normal-case tracking-normal text-white/30">· só a direção vê</span>
+          <span className={`font-semibold normal-case tracking-normal ${visible ? "text-[#c3aaff]/80" : "text-white/30"}`}>
+            {visible ? "· o consultor vê" : "· só a direção vê"}
+          </span>
         </p>
         <div className="flex items-center gap-2">
           <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-white/40">{provisional ? "Provisória" : "Sugestão"}</span>

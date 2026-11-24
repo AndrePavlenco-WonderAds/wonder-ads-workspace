@@ -290,11 +290,15 @@ export type IneficaciaItem = {
   /** A pontuação da direção — null enquanto está por pontuar. */
   score: IneficaciaScore | null;
   /** A calculadora da direção ao pontuar (v77.94) — null/[] até a direção
-   *  a usar. Fora do conteúdo assinado e NUNCA mostrada ao consultor (ver
+   *  a usar. Fora do conteúdo assinado; só chega ao consultor quando a
+   *  direção escolhe mostrar o cálculo (`showCalc`, v80.45 — ver
    *  redactForConsultant). */
   errorType: IneficaciaErrorType | null;
   impacts: IneficaciaImpact[];
   suggestedPoints: number | null;
+  /** v80.45: a direção escolhe, ocorrência a ocorrência, se o consultor vê o
+   *  porquê dos pontos (as parcelas da calculadora). false nos antigos. */
+  showCalc: boolean;
 };
 
 export type IneficaciaSignature = {
@@ -356,6 +360,8 @@ export type DirectOccurrence = {
   impacts: IneficaciaImpact[];
   /** A pontuação que a calculadora sugeriu (null nos registos antigos). */
   suggestedPoints: number | null;
+  /** O consultor vê o porquê dos pontos (v80.45; false nos antigos). */
+  showCalc: boolean;
   score: IneficaciaScore;
   createdAt: number;
 };
@@ -601,6 +607,7 @@ export function cleanItems(items: IneficaciaItemDraft[], newId: () => string): I
     errorType: null,
     impacts: [],
     suggestedPoints: null,
+    showCalc: false,
   }));
 }
 
@@ -697,16 +704,53 @@ export function occurrencesOf(reports: IneficaciaReport[], ledger: IneficaciaLed
 }
 
 /** A avaliação da direção — o tipo de erro, os impactos e a sugestão da
- *  calculadora — é só da direção: o consultor vê o erro e a pontuação, nunca
- *  a calculadora. Tudo o que chega ao consultor passa por aqui. */
+ *  calculadora — é da direção: o consultor vê o erro e a pontuação e, desde
+ *  a v80.45, as parcelas SÓ nas ocorrências em que a direção escolheu
+ *  mostrar o cálculo (`showCalc`). Tudo o que chega ao consultor passa por
+ *  aqui. */
 export function redactForConsultant(reports: IneficaciaReport[], ledger: IneficaciaLedger): {
   reports: IneficaciaReport[];
   ledger: IneficaciaLedger;
 } {
-  const clean = { errorType: null, impacts: [], suggestedPoints: null };
+  const clean = { errorType: null, impacts: [], suggestedPoints: null, showCalc: false };
+  const keep = <T extends { showCalc: boolean; errorType: IneficaciaErrorType | null }>(x: T): T =>
+    x.showCalc && x.errorType ? x : { ...x, ...clean };
   return {
-    reports: reports.map((r) => ({ ...r, items: r.items.map((it) => ({ ...it, ...clean })) })),
-    ledger: { ...ledger, direct: ledger.direct.map((d) => ({ ...d, ...clean })) },
+    reports: reports.map((r) => ({ ...r, items: r.items.map(keep) })),
+    ledger: { ...ledger, direct: ledger.direct.map(keep) },
+  };
+}
+
+/** O porquê dos pontos, como o consultor o lê (v80.45): as parcelas da
+ *  calculadora que pesam, as que não mexem, e o que liga a sugestão à
+ *  pontuação final — o limite da escala e o ajuste da direção. A soma das
+ *  linhas dá SEMPRE `total`. Recalcula-se com os dados gravados, para as
+ *  parcelas baterem certo mesmo que a sugestão gravada seja antiga. */
+export type CalcBreakdown = {
+  lines: { label: string; value: number; base?: boolean }[];
+  /** As parcelas que valem 0 («Primeira vez», …). */
+  neutral: string[];
+  /** O que a calculadora dá (1–10). */
+  suggested: number;
+  /** A escala vai de 1 a 10: pontos tirados (−) ou postos (+) pelo limite. */
+  clamp: number;
+  /** A diferença entre a pontuação final e a sugestão. */
+  adjust: number;
+  total: number;
+};
+
+export function calcBreakdown(
+  basis: { impacts: IneficaciaImpact[]; reason: IneficaciaReason; firstTime: boolean | null; errorType: IneficaciaErrorType; noticed: IneficaciaNoticed },
+  finalPoints: number,
+): CalcBreakdown {
+  const s = suggestScore(basis);
+  return {
+    lines: s.lines.filter((l) => l.base || l.value !== 0),
+    neutral: s.lines.filter((l) => !l.base && l.value === 0).map((l) => l.label),
+    suggested: s.points,
+    clamp: s.points - s.raw,
+    adjust: finalPoints - s.points,
+    total: finalPoints,
   };
 }
 

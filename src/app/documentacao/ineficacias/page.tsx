@@ -337,6 +337,11 @@ export default async function IneficaciasDocPage() {
                     ).join(" · ")}. O cliente conta também como «chegou ao cliente».`,
                   },
                   { term: "Total", detail: `Entre 1 e ${MAX_POINTS}. A direção pode dar outro valor, incluindo 0.` },
+                  {
+                    term: "O consultor vê?",
+                    detail:
+                      "A direção escolhe em cada ineficácia, ao registar ou ao pontuar: «Mostrar o cálculo» põe as parcelas e o ajuste da direção no painel do consultor; «Ocultar» mostra só a pontuação e a nota.",
+                  },
                 ]}
               />
               <div className="rounded-3xl border border-white/10 bg-white/[0.02] p-5 sm:p-6">

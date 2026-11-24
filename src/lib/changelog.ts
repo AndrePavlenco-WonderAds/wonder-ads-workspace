@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "80.45",
+    date: "2026-11-24",
+    title: "Ineficácias: o painel do consultor refeito, e o porquê dos pontos à escolha da direção",
+    highlights: [
+      "**«O meu painel» foi refeito.** Mostra o nível em grande com a régua dos 4 níveis, o que falta para o próximo (PA e NO contra o limiar) e o próximo reset.",
+      "**A tua avaliação vs. a da direção:** cada erro mostra, numa régua de 0 a 10, a gravidade que deste e a pontuação da direção, com a diferença. Há também um resumo da calibração.",
+      "**Histórico completo, por mês e com filtros:** a contar agora, por pontuar, fases anteriores e não contaram. Juntam-se o percurso na escala (subidas, resets, 1:1) e os relatórios assinados.",
+      "**A direção escolhe, em cada ineficácia, se o consultor vê o porquê dos pontos:** ao registar (RH-04) ou ao pontuar, «Mostrar o cálculo» põe no painel do consultor as parcelas (gravidade, motivo, repetido, quem deu pelo erro…) e o ajuste da direção. Por omissão fica oculto.",
+    ],
+  },
+  {
     version: "80.44",
     date: "2026-11-24",
     title: "SOP de Comunicação em vídeo",

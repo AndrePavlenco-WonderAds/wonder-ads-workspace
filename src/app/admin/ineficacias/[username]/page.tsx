@@ -153,7 +153,7 @@ export default async function IneficaciasConsultantPage({
                           key={it.id}
                           target={{ reportId: r.id, itemId: it.id }}
                           initial={it.score}
-                          calc={{ reason: it.reason, firstTime: it.firstTime, noticed: it.noticed, errorType: it.errorType, impacts: it.impacts }}
+                          calc={{ reason: it.reason, firstTime: it.firstTime, noticed: it.noticed, errorType: it.errorType, impacts: it.impacts, showCalc: it.showCalc }}
                         />,
                       ]),
                     )}
@@ -201,7 +201,7 @@ export default async function IneficaciasConsultantPage({
                       <ItemScoreControl
                         target={{ username, occurrenceId: d.id }}
                         initial={d.score}
-                        calc={{ reason: d.reason, firstTime: d.firstTime, noticed: d.noticed, errorType: d.errorType, impacts: d.impacts }}
+                        calc={{ reason: d.reason, firstTime: d.firstTime, noticed: d.noticed, errorType: d.errorType, impacts: d.impacts, showCalc: d.showCalc }}
                       />
                     </div>
                   </article>

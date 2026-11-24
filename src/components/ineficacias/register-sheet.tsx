@@ -14,6 +14,9 @@
 // vez, aprendizagem/recorrência e quem deu pelo erro dão uma pontuação
 // sugerida (`suggestScore`, a mesma que o servidor grava). A direção aplica-a
 // com um clique ou escolhe outra — a decisão continua a ser dela.
+//
+// v80.45: a direção escolhe se o consultor vê o porquê dos pontos (as
+// parcelas da calculadora, no painel do consultor) ou só a pontuação e a nota.
 
 import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
@@ -25,6 +28,8 @@ import {
   Calculator,
   Check,
   CheckCircle2,
+  Eye,
+  EyeOff,
   GraduationCap,
   Loader2,
   PenLine,
@@ -47,6 +52,7 @@ import {
   REASONS,
   SCORE_BANDS,
   bandOf,
+  calcBreakdown,
   isISODate,
   suggestScore,
   type IneficaciaErrorType,
@@ -121,6 +127,7 @@ export function RegisterIneficaciaSheet({
   const [shouldHave, setShouldHave] = useState("");
   const [points, setPoints] = useState<number | null>(null);
   const [note, setNote] = useState("");
+  const [showCalc, setShowCalc] = useState(false);
   const [phase, setPhase] = useState<Phase>("fill");
   const [error, setError] = useState<string | null>(null);
   const [showStamp, setShowStamp] = useState(false);
@@ -210,6 +217,7 @@ export function RegisterIneficaciaSheet({
           shouldHave,
           points,
           note,
+          showCalc,
         }),
       });
       const data = (await res.json().catch(() => ({}))) as { error?: string };
@@ -260,6 +268,7 @@ export function RegisterIneficaciaSheet({
     setShouldHave("");
     setPoints(null);
     setNote("");
+    setShowCalc(false);
     setShowStamp(false);
     setError(null);
     setDoneFor(null);
@@ -693,6 +702,17 @@ export function RegisterIneficaciaSheet({
                 className="sheet-input mt-1"
               />
             </label>
+
+            <CalcVisibility
+              on={showCalc}
+              onChange={setShowCalc}
+              disabled={signing}
+              preview={
+                errorType && reason && points !== null && points > 0
+                  ? calcBreakdown({ impacts, reason, firstTime, errorType, noticed: noticed ?? "equipa" }, points)
+                  : null
+              }
+            />
           </SheetSection>
 
           {/* 4 — Impacto + assinatura */}
@@ -846,6 +866,61 @@ function ScoreCalculator({
           )}
         </button>
       </div>
+    </div>
+  );
+}
+
+/** v80.45 — o consultor vê o porquê dos pontos, ou não. */
+function CalcVisibility({
+  on,
+  onChange,
+  disabled,
+  preview,
+}: {
+  on: boolean;
+  onChange: (v: boolean) => void;
+  disabled: boolean;
+  preview: ReturnType<typeof calcBreakdown> | null;
+}) {
+  const opt = (value: boolean, label: string, hint: string, Icon: typeof Eye) => (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={() => onChange(value)}
+      aria-pressed={on === value}
+      className={`flex items-start gap-2.5 rounded-xl border-2 px-3 py-2.5 text-left transition ${
+        on === value ? "border-[#783DF5] bg-[#783DF5]/[0.07]" : "border-black/10 bg-white/60 hover:bg-white"
+      }`}
+    >
+      <Icon className={`mt-0.5 h-4 w-4 shrink-0 ${on === value ? "text-[#5b2bd0]" : "text-black/35"}`} />
+      <span>
+        <span className="block text-[12.5px] font-bold text-black/80">{label}</span>
+        <span className="block text-[10.5px] leading-snug text-black/50">{hint}</span>
+      </span>
+    </button>
+  );
+  const signedV = (v: number) => (v > 0 ? `+${v}` : v < 0 ? `−${Math.abs(v)}` : "±0");
+  return (
+    <div className="mt-4">
+      <p className="sheet-label mb-1.5">O consultor vê o porquê destes pontos?</p>
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+        {opt(true, "Mostrar o cálculo", "No painel do consultor aparecem as parcelas: gravidade, motivo, repetido, quem deu pelo erro… e a pontuação final.", Eye)}
+        {opt(false, "Ocultar", "Vê só a pontuação e a nota.", EyeOff)}
+      </div>
+      {on && preview && (
+        <p className="mt-2 rounded-lg bg-[#783DF5]/[0.06] px-3 py-2 text-[11px] leading-relaxed text-black/60">
+          <span className="font-bold text-[#5b2bd0]">O consultor vê: </span>
+          {preview.lines.map((l, i) => (
+            <span key={i}>
+              {i > 0 && " · "}
+              {l.base ? `Gravidade: ${l.label.charAt(0).toLowerCase()}${l.label.slice(1)} ${l.value}` : `${l.label} ${signedV(l.value)}`}
+            </span>
+          ))}
+          {preview.clamp !== 0 && ` · Limite da escala ${signedV(preview.clamp)}`}
+          {preview.adjust !== 0 && ` · Ajuste da direção ${signedV(preview.adjust)}`}
+          <span className="font-bold text-black/80">{` = ${preview.total} ${preview.total === 1 ? "ponto" : "pontos"}`}</span>
+        </p>
+      )}
     </div>
   );
 }
