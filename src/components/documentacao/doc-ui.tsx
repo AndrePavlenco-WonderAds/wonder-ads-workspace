@@ -11,6 +11,7 @@ import type { ReactNode } from "react";
 import { ArrowLeft, ChevronRight, Construction, Lock } from "lucide-react";
 import { formatDate } from "@/lib/dates";
 import { DocUpdatesNote } from "./doc-updates-note";
+import { DocVideoButton, type DocVideo } from "./doc-video";
 
 export function DocHero({
   block,
@@ -19,6 +20,7 @@ export function DocHero({
   meta,
   tabs,
   pageId,
+  video,
 }: {
   /** Nome do bloco — vai para o trilho «Documentação › bloco». */
   block: string;
@@ -28,6 +30,8 @@ export function DocHero({
   tabs?: { pages: Array<{ href: string; label: string }>; current: string };
   /** A página (`DocsPage.id`) — mostra a «Alteração recente» (v78.62). */
   pageId?: string;
+  /** Vídeo de apresentação da página (v80.44) — cartão «Ver o vídeo» no topo. */
+  video?: DocVideo;
 }) {
   return (
     <header className="mt-4 sm:mt-6">
@@ -48,6 +52,7 @@ export function DocHero({
           {pageId && <DocUpdatesNote pageId={pageId} />}
         </div>
         {tabs && <BlockTabs pages={tabs.pages} current={tabs.current} />}
+        {video && <DocVideoButton video={video} />}
       </div>
     </header>
   );

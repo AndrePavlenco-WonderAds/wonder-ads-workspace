@@ -13,6 +13,9 @@
 //
 // v80.10: aberto ao SEO DPT (e à conta externa da Beatriz Lamares, que só lê
 // a Documentação — ver `docsOnly` em credentials.ts).
+//
+// v80.44: vídeo de apresentação gravado pelo André (Objetivo + capítulos 1 a
+// 4) no topo da página — cartão «Ver o vídeo de apresentação» no DocHero.
 
 import type { ReactNode } from "react";
 import Link from "next/link";
@@ -36,6 +39,7 @@ import { SopChatRoleplay } from "@/components/documentacao/sop-chat-roleplay";
 import { SopWeekCalendar } from "@/components/documentacao/sop-week-calendar";
 import { formatDate } from "@/lib/dates";
 import { getDocsContext } from "@/lib/documentacao/server";
+import type { DocVideo } from "@/components/documentacao/doc-video";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -72,6 +76,21 @@ const DAILY_EXAMPLE = [
   "Por fazer (e porquê):",
   "• Checklist do Cliente Z (prazo hoje às 17h): faltam os acessos ao WordPress. Programado para amanhã às 10h.",
 ].join("\n");
+
+// O vídeo cobre o Objetivo e os capítulos 1 a 4 (a parte interna).
+const VIDEO: DocVideo = {
+  youtubeId: "34zwzH6nZ6Q",
+  title: "SOP de Comunicação · Parte interna (1 a 4)",
+  covers: "Objetivo e capítulos 1 a 4",
+  poster: "/documentacao/sop-comunicacao-capa.jpg",
+  chapters: [
+    { label: "Objetivo", href: "#objetivo" },
+    { label: "1 · Canais e formatos", href: "#canais" },
+    { label: "2 · Momentos e horários", href: "#momentos" },
+    { label: "3 · Regras de escrita", href: "#escrita" },
+    { label: "4 · Pedidos à direção", href: "#pedidos" },
+  ],
+};
 
 /* ------------------------------------------------------------------ */
 /*  Peças visuais (o vocabulário da apresentação)                       */
@@ -709,6 +728,11 @@ function ChapterSummary({ updatedAt }: { updatedAt: string }) {
               detail: "Primeira versão, a partir da sessão Road to CEO da Scale Labs, adaptada à WonderAds. Revista pela direção e publicada ao SEO DPT.",
               value: "André Pavlenco",
             },
+            {
+              term: "v1.1 · 24/11/2026",
+              detail: "Vídeo de apresentação do Objetivo e dos capítulos 1 a 4, no topo da página.",
+              value: "André Pavlenco",
+            },
           ]}
         />
       </Slide>
@@ -785,6 +809,7 @@ export default async function SopComunicacaoPage() {
         block={block.title}
         title="SOP de Comunicação"
         pageId="sop-comunicacao"
+        video={VIDEO}
         lead={
           <>
             Onde, quando e como a equipa comunica.

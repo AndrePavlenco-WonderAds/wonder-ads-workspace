@@ -44,6 +44,17 @@ export type CodeDocUpdate = {
 
 export const CODE_DOC_UPDATES: CodeDocUpdate[] = [
   {
+    id: "v80.44-sop-comunicacao-video",
+    page: "sop-comunicacao",
+    kind: "add-on",
+    changes: [
+      "Vídeo de apresentação: o Objetivo e os capítulos 1 a 4 do SOP explicados em vídeo. Está no topo da página, em «Ver o vídeo de apresentação».",
+    ],
+    at: "2026-11-24T17:30:00+00:00",
+    version: "80.44",
+    anchor: "video",
+  },
+  {
     id: "v80.33-comissoes-consultoria-base",
     page: "comissoes",
     kind: "regra",

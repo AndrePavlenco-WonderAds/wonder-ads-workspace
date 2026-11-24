@@ -13,6 +13,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "80.44",
+    date: "2026-11-24",
+    title: "SOP de Comunicação em vídeo",
+    highlights: [
+      "**O SOP de Comunicação tem vídeo de apresentação no topo da página:** o Objetivo e os capítulos 1 a 4 explicados em vídeo, em «Ver o vídeo de apresentação». Abre por cima da página, sem sair dela.",
+      "Por baixo do vídeo, um clique leva a cada capítulo para ler. O link da página com `#video` abre o vídeo logo.",
+    ],
+  },
+  {
     version: "80.43",
     date: "2026-11-24",
     title: "Passagem de consultor: para quem ainda vai entrar, e para sempre no cliente",

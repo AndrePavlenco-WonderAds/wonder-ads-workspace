@@ -80,7 +80,7 @@ export const DOCS_BLOCKS: DocsBlock[] = [
     // (credentials.ts, `docsOnly`).
     audience: { depts: ["SEO"] },
     audienceLabel: "SEO DPT",
-    updatedAt: "2026-11-19",
+    updatedAt: "2026-11-24",
     pages: [
       {
         id: "sop-comunicacao",
