@@ -139,7 +139,13 @@ export function DocVideoButton({ video }: { video: DocVideo }) {
                       <a
                         key={c.href}
                         href={c.href}
-                        onClick={() => setOpen(false)}
+                        onClick={(e) => {
+                          // Fechar o modal tira o link do DOM antes da
+                          // navegação por defeito — muda-se o hash à mão.
+                          e.preventDefault();
+                          setOpen(false);
+                          window.location.hash = c.href;
+                        }}
                         className="rounded-full border border-[#783DF5]/30 bg-[#783DF5]/[0.1] px-2.5 py-1 text-[12px] font-medium text-white/80 transition hover:border-[#c4a6ff]/60 hover:text-white"
                       >
                         {c.label}
