@@ -7,6 +7,7 @@ import "server-only";
 import { kv } from "@vercel/kv";
 import { getSeoClients } from "@/lib/notion";
 import { getConsultantResolver } from "@/lib/consultant-assignments";
+import { getPausedSlugSet } from "@/lib/admin-paused-clients-store";
 import {
   BOTAO_MAX_SOLUTIONS,
   BOTAO_PROBLEM_MAX,
@@ -51,12 +52,13 @@ function hydrate(raw: unknown): BotaoRequest | null {
   };
 }
 
-/** Os clientes SEO de quem tem este nome (o consultor re-resolvido a partir
- *  do slug, como no board e no sino). Ordenados pelo nome. */
+/** Os clientes SEO ativos de quem tem este nome (o consultor re-resolvido a
+ *  partir do slug, como no board e no sino). Os projetos em pausa ou
+ *  suspensos não entram (v80.35). Ordenados pelo nome. */
 export async function botaoClientsOf(name: string): Promise<BotaoClientOption[]> {
-  const [all, resolver] = await Promise.all([getSeoClients(), getConsultantResolver()]);
+  const [all, resolver, paused] = await Promise.all([getSeoClients(), getConsultantResolver(), getPausedSlugSet()]);
   return all
-    .filter((c) => resolver.resolve(c.slug, c.consultant) === name)
+    .filter((c) => !paused.has(c.slug) && resolver.resolve(c.slug, c.consultant) === name)
     .map((c) => ({ slug: c.slug, title: c.title, icon: c.icon }))
     .sort((a, b) => a.title.localeCompare(b.title, "pt"));
 }

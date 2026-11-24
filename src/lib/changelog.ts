@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "80.35",
+    date: "2026-11-24",
+    title: "Acionar o Botão: só projetos ativos",
+    highlights: [
+      "**No passo 1 do «Acionar o Botão» deixam de aparecer os projetos em pausa ou suspensos.** Só os clientes ativos do consultor, e o «Problema interno».",
+    ],
+  },
+  {
     version: "80.34",
     date: "2026-11-24",
     title: "«Acionar o Botão» com página própria",
