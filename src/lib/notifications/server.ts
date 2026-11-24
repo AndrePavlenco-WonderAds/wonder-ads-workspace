@@ -123,6 +123,9 @@ import {
 } from "@/lib/notifications/rules";
 import { overloadAppliesTo, type OverloadState } from "@/lib/notifications/overload";
 import { getOverloadMany } from "@/lib/notifications/overload-store";
+import { getPassagem, getPassagemIndex } from "@/lib/passagem/store";
+import { passagemOverview } from "@/lib/passagem/overview";
+import { dayOf, formatISODate, totalDaysOf } from "@/lib/passagem/shared";
 
 export type UserNotification = {
   id: string;
@@ -1063,6 +1066,122 @@ async function botaoNotifications(
   return out.sort((a, b) => b.dueAt - a.dueAt);
 }
 
+/** Passagem de consultor (v80.39) — quem sai (fichas por fechar, perguntas
+ *  por responder), quem entra (ficha pronta para assumir, respostas) e a
+ *  direção (assumidos por passar no SEO DPT, projetos em risco). Uma leitura
+ *  ao índice para toda a gente; só quem está numa passagem ativa lê mais. */
+async function passagemNotifications(
+  viewer: Viewer,
+  state: NotificationState,
+): Promise<UserNotification[]> {
+  try {
+    const index = (await getPassagemIndex()).filter((e) => e.status === "ativa");
+    if (index.length === 0) return [];
+    const admin = isAdminUsername(viewer.username);
+    const relevant = admin
+      ? index
+      : index.filter((e) => e.outgoing === viewer.username || e.incoming.includes(viewer.username));
+    if (relevant.length === 0) return [];
+    const today = todayLisbonISO();
+    const out: UserNotification[] = [];
+    const push = (n: Omit<UserNotification, "resolved" | "resolvedAt" | "client" | "periodLabel">) => {
+      const entry = state[n.id];
+      out.push({ ...n, periodLabel: "Passagem de consultor", client: null, resolved: Boolean(entry), resolvedAt: entry?.resolvedAt ?? null });
+    };
+
+    for (const e of relevant) {
+      const p = await getPassagem(e.id);
+      if (!p) continue;
+      const o = await passagemOverview(p);
+      const titleOf = (slug: string) => o.projects.find((x) => x.slug === slug)?.title ?? slug;
+
+      if (p.outgoing.username === viewer.username) {
+        const pending = o.projects.filter((x) => !x.ficha.readyAt);
+        if (pending.length > 0) {
+          const left = Math.max(0, totalDaysOf(p) - dayOf(p, today));
+          push({
+            id: `passagem-fichas:${p.id}`,
+            ruleId: "passagem-fichas",
+            title: `🤝 Passagem: ${pending.length} ficha${pending.length === 1 ? "" : "s"} por fechar`,
+            body: `${pending.map((x) => x.title).join(", ")} · ${left === 0 ? "hoje é o último dia" : `faltam ${left} dia${left === 1 ? "" : "s"}`} (até ${formatISODate(p.endDate)}).`,
+            dueAt: p.createdAt,
+            actionLabel: "Abrir a passagem",
+            actionHref: "/passagem",
+          });
+        }
+        for (const q of o.questions) {
+          if (q.a) continue;
+          push({
+            id: `passagem-pergunta:${q.id}`,
+            ruleId: "passagem-pergunta",
+            title: `❓ ${q.by.name} perguntou sobre ${titleOf(q.slug)}`,
+            body: `«${q.q}»`,
+            dueAt: q.at,
+            actionLabel: "Responder",
+            actionHref: `/passagem/${p.id}/${q.slug}#perguntas`,
+          });
+        }
+      }
+
+      for (const x of o.projects) {
+        if (x.incoming?.username !== viewer.username || !x.ficha.readyAt || x.sign) continue;
+        push({
+          id: `passagem-pronta:${p.id}:${x.slug}`,
+          ruleId: "passagem-pronta",
+          title: `📄 A ficha de ${x.title} está pronta`,
+          body: `Escrita por ${p.outgoing.name}. Lê, pergunta o que faltar e assina «Li e assumo».`,
+          dueAt: x.ficha.readyAt,
+          actionLabel: "Ler a ficha",
+          actionHref: `/passagem/${p.id}/${x.slug}`,
+        });
+      }
+      for (const q of o.questions) {
+        if (q.by.username !== viewer.username || !q.a) continue;
+        push({
+          id: `passagem-resposta:${q.id}`,
+          ruleId: "passagem-resposta",
+          title: `💬 ${q.aBy?.name ?? p.outgoing.name} respondeu sobre ${titleOf(q.slug)}`,
+          body: `«${q.a}»`,
+          dueAt: q.aAt ?? q.at,
+          actionLabel: "Ver na ficha",
+          actionHref: `/passagem/${p.id}/${q.slug}#perguntas`,
+        });
+      }
+
+      if (admin) {
+        for (const x of o.projects) {
+          if (x.sign && !x.transferred && x.incoming) {
+            push({
+              id: `passagem-passar:${p.id}:${x.slug}`,
+              ruleId: "passagem-passar",
+              title: `✅ ${x.incoming.name} assumiu ${x.title}`,
+              body: `Passagem de ${p.outgoing.name}. Falta passar o projeto no SEO DPT.`,
+              dueAt: x.sign.at,
+              actionLabel: "Abrir o cockpit",
+              actionHref: `/admin/passagens/${p.id}`,
+            });
+          }
+          if (x.ficha.health === "vermelho" && !x.transferred) {
+            push({
+              id: `passagem-risco:${p.id}:${x.slug}`,
+              ruleId: "passagem-risco",
+              title: `🔴 ${x.title} em risco na passagem de ${p.outgoing.name}`,
+              body: x.ficha.healthWhy || "Marcado como «Em risco» na ficha.",
+              dueAt: x.ficha.updatedAt || p.createdAt,
+              actionLabel: "Ver a ficha",
+              actionHref: `/passagem/${p.id}/${x.slug}`,
+            });
+          }
+        }
+      }
+    }
+    return out.sort((a, b) => b.dueAt - a.dueAt);
+  } catch (err) {
+    console.error("Notificações: passagem falhou:", err instanceof Error ? err.message : "erro");
+    return [];
+  }
+}
+
 /** Janela em que uma confirmação de leitura do consultor aparece no sino do
  *  SuperAdmin. Depois disso vive só no plano (separador «Envios»). */
 const PROBATION_ACK_WINDOW_MS = 14 * 24 * 60 * 60 * 1000;
@@ -1764,7 +1883,7 @@ async function buildUserNotifications(
       ? ((await seoBooksByConsultant(needsStartDates)).get(viewer.name) ?? [])
       : [];
 
-  const [ending, situationPoints, nps, absences, reviews, proposals, probation, ineficacias, folga, suggestions, docUpdates, trainingUpdates, botao] =
+  const [ending, situationPoints, nps, absences, reviews, proposals, probation, ineficacias, folga, suggestions, docUpdates, trainingUpdates, botao, passagem] =
     await Promise.all([
       roadmapEndingNotifications(viewer, book, state, now),
       situationPointNotifications(viewer, state, now),
@@ -1779,6 +1898,7 @@ async function buildUserNotifications(
       docUpdateNotifications(viewer, state, now),
       trainingUpdateNotifications(viewer, state, now),
       botaoNotifications(viewer, state),
+      passagemNotifications(viewer, state),
     ]);
 
   // Ausências à cabeça: um pedido por decidir (ou uma resposta por ler) é
@@ -1788,6 +1908,7 @@ async function buildUserNotifications(
   if (applicable.length === 0) {
     return [
       ...botao,
+      ...passagem,
       ...proposals,
       ...folga,
       ...suggestions,
@@ -1806,6 +1927,7 @@ async function buildUserNotifications(
 
   return [
     ...botao,
+    ...passagem,
     ...proposals,
     ...folga,
     ...suggestions,

@@ -90,6 +90,8 @@ const INTERNAL_PREFIXES = [
   // Acionar o Botão (v80.34) — pedido de apoio à direção.
   "/botao",
   "/api/botao",
+  "/passagem",
+  "/api/passagem",
   // Ficha do prospect (v80.0) — privada à workspace: só com sessão.
   "/prospects",
   "/api/prospects",
@@ -465,6 +467,8 @@ export const config = {
     // direção. Sessão para tudo; a API decide quem escreve o quê.
     "/botao/:path*",
     "/api/botao/:path*",
+    "/passagem/:path*",
+    "/api/passagem/:path*",
     // Ficha do prospect (v80.0) — página e API privadas à workspace.
     "/prospects/:path*",
     "/api/prospects/:path*",

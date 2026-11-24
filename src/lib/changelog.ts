@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "80.39",
+    date: "2026-11-24",
+    title: "Passagem de consultor: o offboarding em 30 dias, projeto a projeto",
+    highlights: [
+      "**🤝 Nova entrada SuperAdmin «Passagem de consultor»:** escolhes quem sai, o motivo, as datas (30 dias por defeito) e quem fica com cada projeto. O botão «Distribuir pela carga» sugere quem recebe, dando primeiro a quem tem menos projetos.",
+      "**Quem sai tem «A minha passagem» no menu:** a linha dos 30 dias em 4 fases (inventário, fichas, apresentação, fecho) e uma ficha por projeto com 7 secções: onde está o projeto, objetivos, pessoas, próximos passos, histórico, riscos e onde está tudo. Grava sozinha.",
+      "**Acessos sem passwords:** 10 contas a verificar por projeto (Search Console, GA4, Business Profile, site, alojamento, Semrush/SE Ranking, Ads, WhatsApp, Slack, Drive), cada uma garantida, em falta ou não aplicável. As passwords ficam no cofre do cliente.",
+      "**Semáforo por projeto, aviso ao cliente e reunião a três:** com rascunho da mensagem na língua do cliente para copiar.",
+      "**Quem entra lê, pergunta e assina «Li e assumo».** A direção passa cada projeto no SEO DPT a partir do cockpit e fecha a checklist de saída (grupos, documentos, ferramentas, passwords, email, equipamento, conta e conversa de saída). Tudo chega ao sino de quem precisa de agir.",
+    ],
+  },
+  {
     version: "80.38",
     date: "2026-11-24",
     title: "Bónus NPS: os clientes novos já não contam para os 3+ projetos",

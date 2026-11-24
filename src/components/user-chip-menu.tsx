@@ -9,6 +9,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { ProbationMenuView } from "@/lib/probation/menu";
+import type { PassagemMenuView } from "@/lib/passagem/menu";
 import {
   ArrowLeft,
   BookOpen,
@@ -22,6 +23,7 @@ import {
   Gamepad2,
   Gauge,
   GraduationCap,
+  Handshake,
   KeyRound,
   LayoutDashboard,
   ListChecks,
@@ -233,6 +235,7 @@ export function UserChipMenu({
   viewingAs = null,
   dailyNumber = null,
   probation = null,
+  passagem = null,
   ineficacias = null,
   docs = null,
   producer = null,
@@ -274,6 +277,9 @@ export function UserChipMenu({
   /** «O meu probation» — só enquanto o probation está a correr (ver
    *  `probationMenuView`); null esconde o item. */
   probation?: ProbationMenuView | null;
+  /** «A minha passagem» / «Projetos a receber» (v80.39) — só com uma
+   *  passagem de consultor ativa; null esconde o item. */
+  passagem?: PassagemMenuView | null;
   /** «Ineficácias» (v77.88) — o relatório do próprio. `construction`
    *  põe a pastilha «em construção» enquanto o módulo está fechado à equipa;
    *  null esconde o item (direção e viewers). */
@@ -587,6 +593,11 @@ export function UserChipMenu({
                     onPick={close}
                   />
                 )}
+                {/* Passagem de consultor (v80.39) — temporário: só com uma
+                    passagem ativa em que a pessoa sai ou recebe projetos. */}
+                {passagem && (
+                  <MenuLink href="/passagem" icon={Handshake} label={passagem.label} hint={passagem.hint} index={4} onPick={close} />
+                )}
                 {/* Ineficácias (v77.88; «Registar Ineficácia» na v78.57,
                     «Ineficácias» desde a v78.66) — o relatório do próprio,
                     o PA/NO e a escala.
@@ -709,6 +720,12 @@ export function UserChipMenu({
                 )}
                 {/* Recrutamento (v80.13) — candidatos, entrevistas pergunta a
                     pergunta e a grade D–A; aceitar cria a conta no SEO DPT. */}
+                {/* Passagem de consultor (v80.39) — offboarding de um consultor
+                    em 30 dias: ficha por projeto, acessos, reunião a três,
+                    «Li e assumo» e a passagem no SEO DPT. */}
+                {isAdmin && (
+                  <MenuLink href="/admin/passagens" icon={Handshake} label="Passagem de consultor" hint="Offboarding: 30 dias, projeto a projeto" tone="amber" index={11} onPick={close} />
+                )}
                 {isAdmin && (
                   <MenuLink href="/admin/recrutamento" icon={Briefcase} label="Recrutamento" hint="Candidatos, entrevistas e grade D–A (RH)" tone="amber" index={11} onPick={close} />
                 )}

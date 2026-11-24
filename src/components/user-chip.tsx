@@ -37,6 +37,7 @@ import {
 import { listPublishedForUser } from "@/lib/probation/store";
 import { probationMenuView } from "@/lib/probation/menu";
 import { todayLisbonISO } from "@/lib/probation/progress";
+import { passagemMenuView } from "@/lib/passagem/menu";
 import { INEFICACIAS_OPEN_TO_TEAM } from "@/lib/ineficacias/access";
 import { DOCS_OPEN_TO_TEAM, docsAvailable } from "@/lib/documentacao/access";
 import { producerMonthLabel } from "@/lib/producer/shared";
@@ -111,6 +112,14 @@ export async function UserChip() {
         )
       : null;
 
+  // Passagem de consultor (v80.39) — «A minha passagem» para quem sai,
+  // «Projetos a receber» para quem entra. Só com uma passagem ativa; uma
+  // leitura ao índice. SuperAdmins têm a entrada deles na secção SuperAdmin.
+  const passagem =
+    viewingUsername && !display.isAdmin && !display.viewerOf && !display.docsOnly
+      ? await passagemMenuView(viewingUsername, todayLisbonISO()).catch(() => null)
+      : null;
+
   // Producer of the Month (v78.58) — o pódio da última eleição da direção,
   // por baixo da sessão. Leitura em cache (invalidada ao eleger); os viewers
   // não o veem.
@@ -146,6 +155,7 @@ export async function UserChip() {
       viewingAs={session.as ?? null}
       dailyNumber={dailyNumber}
       probation={probation}
+      passagem={passagem}
       // Ineficácias (v77.88) — item para os consultores; a direção tem o seu
       // na secção SuperAdmin e os viewers não o veem. Sem leitura nenhuma:
       // o estado (PA/NO) vive na página e no sino, não no menu.
