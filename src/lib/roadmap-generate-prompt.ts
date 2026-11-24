@@ -94,7 +94,7 @@ export function buildRoadmapSchema(totalWeeks: number) {
       .min(2)
       .max(240)
       .describe(
-        "Short imperative task title — what the team will actually do. Examples: 'Website Deep Audit', '2 Blog Articles (all-on-4 cluster)', 'GMB Post 1', 'Scan and Optimize Header Tags'. No vague verbs like 'improve SEO'. Aim for under 120 chars; we'll truncate gracefully at 240.",
+        "Short imperative task title — what the team will actually do, written in the language the prompt's Language section asks for. Examples: 'Website Deep Audit', '2 Blog Articles (all-on-4 cluster)', 'GMB Post 1', 'Scan and Optimize Header Tags'. No vague verbs like 'improve SEO'. Aim for under 120 chars; we'll truncate gracefully at 240.",
       ),
     pillar: PillarSchema,
   });
@@ -177,6 +177,24 @@ export function formatFixedBlocks(fixed: RoadmapTask[]): string {
     for (const t of items) lines.push(`- ${t.title}`);
   }
   return `## Fixed blocks already on the board (locked — do NOT add these or near-duplicates)\nEvery new client's roadmap carries this fixed checklist in fixed weeks. It is already planned and the team cannot move or delete it, so your tasks must NOT repeat any of it (no GA4/GSC/GTM tracking setup, no event creation, no cookie/consent work, no site backup, no baseline snapshot, no access requests, no keyword research or site audit before the meeting, no quarterly report in week 12, no renewal document/proposal/meeting). Plan the SEO work around it.\n${lines.join("\n")}`;
+}
+
+/** v80.31 — língua da saída. Os títulos das tarefas vão ao cliente (envio
+ *  do mês / roadmap completo, plano semanal), por isso seguem a língua do
+ *  cliente; o diagnóstico (auditSummary) só o consultor lê, por isso é
+ *  sempre PT-PT, como o resto do separador. */
+export function languageRules(lang: "pt" | "en"): string {
+  const titles =
+    lang === "pt"
+      ? "- Write EVERY task `title` in European Portuguese (PT-PT, Portugal) — this client reads the roadmap in Portuguese. Use Portugal vocabulary and spelling (equipa, utilizador, ficheiro, telemóvel, otimizar, artigos), never Brazilian forms (time, usuário, arquivo, celular) nor gerunds ('otimizando'). Good: 'Otimizar H1 e headings da homepage', '2 artigos de blogue (cluster all-on-4)', 'Publicação GBP n.º 1', 'Adicionar schema MedicalClinic às páginas /servicos'."
+      : "- Write EVERY task `title` in English — this client reads the roadmap in English.";
+  return [
+    "## Language",
+    titles,
+    "- Keep tool names, acronyms and technical terms as the industry writes them (GA4, GSC, GBP/GMB, schema, backlinks, H1, Core Web Vitals, FAQPage), and keep URLs, page paths and target keywords exactly as they appear.",
+    "- Write `auditSummary` in European Portuguese (PT-PT) regardless of the client's language — only the Wonder Ads consultant reads it.",
+    "- The example titles elsewhere in this prompt are in English for illustration only; follow the language rules above, not the examples.",
+  ].join("\n");
 }
 
 /** The retry nudge appended when the first attempt fails schema

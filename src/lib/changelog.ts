@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "80.31",
+    date: "2026-11-24",
+    title: "Roadmap: a IA escreve as tarefas na língua do cliente",
+    highlights: [
+      "**🇵🇹 O «Preencher com IA» passa a escrever os títulos das tarefas em português de Portugal** nos clientes PT. Nos clientes EN (IHN, Kings Gym…) continuam em inglês, porque é isso que o cliente recebe.",
+      "**O diagnóstico SEO da IA sai sempre em português**, já que só o consultor o lê.",
+      "Os roadmaps já gerados não mudam: vale para a próxima vez que se gerar ou regenerar.",
+    ],
+  },
+  {
     version: "80.30",
     date: "2026-11-23",
     title: "Roadmap: «Voltar a» no cabeçalho",

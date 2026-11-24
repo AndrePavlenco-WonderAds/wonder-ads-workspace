@@ -55,11 +55,13 @@ import {
   type RoadmapTask,
 } from "@/lib/roadmap-store";
 import { buildFixedTasks, isFixedTask } from "@/lib/roadmap-fixed-blocks";
+import { reportLangFor } from "@/lib/weekly-report-format";
 import {
   SYSTEM_PROMPT,
   buildRoadmapSchema,
   designRules,
   formatFixedBlocks,
+  languageRules,
   formatMonthCalendar,
   outputTokenBudget,
   retryInstructions,
@@ -222,6 +224,8 @@ export async function POST(
     "5. **Honour the brief.** Client Don'ts are NEVER violated. Client Do's bias every choice. Notes are context — integrate them.",
     "\n## Design rules",
     ...designRules(totalWeeks, months, fixedTasks.length > 0),
+    "",
+    languageRules(reportLangFor(slug)),
   ]
     .filter(Boolean)
     .join("\n");
