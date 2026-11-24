@@ -113,10 +113,10 @@ export type NpsBonusMonth = {
   consultants: ConsultantMonth[];
   /** Soma do que a casa paga neste mês. */
   totalEur: number;
-  /** Clientes que só arrancaram neste mês (ou depois) e ainda não
-   *  responderam: ficam fora das taxas de preenchimento (v80.19). Continuam
-   *  a contar como carteira para a regra dos N+ projetos. Quem responde no
-   *  mês em que entrou conta normalmente. */
+  /** Clientes que arrancaram NESTE mês e ainda não responderam: não contam
+   *  no mês — nem para a taxa de preenchimento nem para os N+ projetos
+   *  (v80.38). Quem responde no mês em que entrou conta normalmente. Os que
+   *  arrancaram depois do mês não existem para ele e não aparecem aqui. */
   newClients: NewClientSkipped[];
 };
 
@@ -150,25 +150,27 @@ export function computeNpsBonusMonth(
   const rows: ConsultantMonth[] = consultants.map((c) => {
     const scores = c.projects.map((p) => p.score).filter((s): s is number => s !== null);
     const total = c.projects.length;
-    // Os clientes que entraram neste mês não pesam na taxa, mas continuam a
-    // ser carteira para a regra dos N+ projetos (v80.19): ninguém perde
-    // elegibilidade por ter ganho um cliente.
-    const portfolio = total + (newByOwner.get(c.username) ?? 0);
+    // v80.38: os projetos que contam no mês são OS MESMOS para as duas
+    // regras. Um cliente que arrancou neste mês e não respondeu não conta
+    // para a taxa NEM para os N+ projetos — na v80.19 contava para os N+ e
+    // não para a %, e um consultor com 2 projetos + 3 clientes novos passava
+    // nas duas portas com 1 resposta (Maria, novembro 2026).
+    const portfolio = total;
     const filled = scores.length;
     const fillRate = total ? filled / total : null;
     const average = bonusAverage(scores);
     const fillOk = fillRate !== null && fillRate >= MIN_FILL_RATE;
-    const onlyNew = total === 0 && portfolio > 0;
+    const onlyNew = total === 0 && (newByOwner.get(c.username) ?? 0) > 0;
 
     let individual: BonusLine;
-    if (portfolio < INDIVIDUAL_MIN_PROJECTS) {
+    if (onlyNew) {
+      individual = { eligible: false, reason: "Só clientes que entraram este mês", eur: 0 };
+    } else if (portfolio < INDIVIDUAL_MIN_PROJECTS) {
       individual = {
         eligible: false,
-        reason: `${portfolio} projeto${portfolio === 1 ? "" : "s"} — precisa de ${INDIVIDUAL_MIN_PROJECTS}+`,
+        reason: `${portfolio} projeto${portfolio === 1 ? "" : "s"} no mês — precisa de ${INDIVIDUAL_MIN_PROJECTS}+`,
         eur: 0,
       };
-    } else if (onlyNew) {
-      individual = { eligible: false, reason: "Só clientes que entraram este mês", eur: 0 };
     } else if (!fillOk) {
       individual = { eligible: false, reason: "Preenchimento abaixo de 50%", eur: 0 };
     } else {
@@ -179,10 +181,10 @@ export function computeNpsBonusMonth(
     }
 
     let team: BonusLine;
-    if (portfolio === 0) {
-      team = { eligible: false, reason: "Sem projetos", eur: 0 };
-    } else if (onlyNew) {
+    if (onlyNew) {
       team = { eligible: false, reason: "Só clientes que entraram este mês", eur: 0 };
+    } else if (portfolio === 0) {
+      team = { eligible: false, reason: "Sem projetos", eur: 0 };
     } else if (!fillOk) {
       team = { eligible: false, reason: "Preenchimento abaixo de 50%", eur: 0 };
     } else if (!teamFillOk) {

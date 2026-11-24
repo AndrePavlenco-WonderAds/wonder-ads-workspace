@@ -131,7 +131,7 @@ export default async function BonusNpsPage({
               },
               {
                 term: "Clientes novos",
-                detail: `Um cliente que arrancou no próprio mês ainda não conta para a taxa de preenchimento, a menos que responda. Conta para os ${INDIVIDUAL_MIN_PROJECTS}+ projetos.`,
+                detail: `Um cliente que arrancou no próprio mês ainda não conta nesse mês, nem para a taxa de preenchimento nem para os ${INDIVIDUAL_MIN_PROJECTS}+ projetos, a menos que responda.`,
               },
               { term: "Média", detail: "Com 2 casas decimais, sem arredondar: 8,49 não chega aos 8,50." },
               { term: "Apuramento", detail: "O mês fecha no último dia e apura-se no mês seguinte." },

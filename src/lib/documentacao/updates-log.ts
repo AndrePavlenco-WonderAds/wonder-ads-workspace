@@ -101,6 +101,17 @@ export const CODE_DOC_UPDATES: CodeDocUpdate[] = [
     anchor: "lista",
   },
   {
+    id: "v80.38-bonus-nps-clientes-novos-3-projetos",
+    page: "bonus-nps",
+    kind: "regra",
+    changes: [
+      "Clientes novos: um cliente que arrancou no próprio mês e não respondeu já não conta nesse mês, nem para a taxa de preenchimento nem para os 3+ projetos do bónus individual. Os projetos que contam são os mesmos para as duas regras.",
+    ],
+    at: "2026-11-24T14:00:00+00:00",
+    version: "80.38",
+    anchor: "como-se-mede",
+  },
+  {
     id: "v80.19-bonus-nps-clientes-novos",
     page: "bonus-nps",
     kind: "regra",

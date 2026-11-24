@@ -8,11 +8,15 @@
 // histórico de atribuições por mês. Um cliente que mudou de consultor a meio
 // do mês conta para quem o tem agora.
 //
-// v80.19: um cliente só pesa na taxa de preenchimento de um mês se arrancou
-// ANTES desse mês (data de arranque do C-Suite › Clients). Quem entrou no
-// próprio mês ainda não teve trabalho para avaliar: fica fora da %, a não
-// ser que tenha respondido (aí conta normalmente). Continua a contar como
-// carteira para a regra dos N+ projetos.
+// v80.19 → v80.38: um cliente só conta num mês se arrancou ANTES desse mês
+// (data de arranque do C-Suite › Clients). Quem entrou no próprio mês ainda
+// não teve trabalho para avaliar: fica fora do mês — da % e dos N+ projetos
+// —, a não ser que tenha respondido (aí conta normalmente). Quem arrancou
+// depois do mês não existe para esse mês.
+//
+// Limite conhecido: pausas e mudanças de consultor não têm data guardada, por
+// isso um mês passado é recalculado com a carteira de HOJE. O resumo do dia 1
+// (bonus-summary) corre logo a seguir ao fecho, quando isto quase não pesa.
 
 import "server-only";
 import { getConsultantResolver } from "@/lib/consultant-assignments";
@@ -73,8 +77,13 @@ function monthFrom(p: Portfolio, month: string): NpsBonusMonth {
     // Submissões guardadas da mais recente para a mais antiga: a primeira
     // do mês é a última resposta desse mês.
     const answer = (p.records[client.slug]?.submissions ?? []).find((s) => lisbonMonthKey(s.submittedAt) === month);
-    // Arrancou neste mês (ou depois) e não respondeu → ainda não conta.
-    if (!answer && client.startedAt && client.startedAt.slice(0, 7) >= month) {
+    const startMonth = client.startedAt ? client.startedAt.slice(0, 7) : null;
+    // Arrancou DEPOIS deste mês → ainda não era cliente: fica fora de tudo
+    // (v80.38; antes contava para os N+ projetos de meses passados).
+    if (!answer && startMonth && startMonth > month) continue;
+    // Arrancou neste mês e não respondeu → não conta no mês (nem para a %
+    // nem para os N+ projetos — v80.38).
+    if (!answer && startMonth === month) {
       const row = byUser.get(client.owner);
       if (row) {
         newClients.push({

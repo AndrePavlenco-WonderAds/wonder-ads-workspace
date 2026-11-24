@@ -278,7 +278,7 @@ function NpsTeamPanel({
               <div className="mt-4">
                 <p className="flex items-center gap-1.5 text-[12.5px] font-semibold text-white/60">
                   <Sparkles className="h-3.5 w-3.5 text-[#b28bff]" />
-                  Entraram em {current.name} · não contam para a %
+                  Entraram em {current.name} · não contam este mês
                 </p>
                 <ul className="mt-1.5 flex flex-wrap gap-1.5">
                   {newClients.map((c) => (

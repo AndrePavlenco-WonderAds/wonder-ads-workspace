@@ -13,6 +13,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "80.38",
+    date: "2026-11-24",
+    title: "Bónus NPS: os clientes novos já não contam para os 3+ projetos",
+    highlights: [
+      "**Um cliente que arrancou no próprio mês e não respondeu já não conta nesse mês, para nada.** Até aqui saía da taxa de preenchimento mas contava para os 3+ projetos, e um consultor com 2 projetos e 3 clientes novos passava as duas regras com 1 resposta.",
+      "Os meses passados deixam de contar clientes que só arrancaram depois. Os meses calculados de novo mudam na página do Bónus NPS, no chip do SEO DPT e no resumo do Slack.",
+    ],
+  },
+  {
     version: "80.37",
     date: "2026-11-24",
     title: "Slack: cada botão acionado e o resumo dos bónus do mês",

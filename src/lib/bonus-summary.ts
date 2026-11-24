@@ -198,7 +198,7 @@ export function bonusSlackPayload(s: BonusSummary): { text: string; blocks: unkn
       elements: [
         {
           type: "mrkdwn",
-          text: `Fora da taxa de preenchimento (arrancaram este mês e não responderam): ${nps.newClients.map((n) => `${n.name} (${n.consultant})`).join(", ")}.`,
+          text: `Não contam este mês (arrancaram no mês e não responderam): ${nps.newClients.map((n) => `${n.name} (${n.consultant})`).join(", ")}.`,
         },
       ],
     });
