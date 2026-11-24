@@ -148,6 +148,7 @@ export default async function ComissoesPage() {
                 { term: "Meta Ads", detail: "Fee de agência faturada. O ad spend não conta. Com criativos externos, desconta-se o custo da produção.", value: RANGE },
                 { term: "CRM", detail: "Margem: valor faturado menos o custo de execução.", value: RANGE },
                 { term: "Websites", detail: "Valor faturado.", value: RANGE },
+                { term: "Consultoria Comercial", detail: "Valor faturado ao cliente, sem IVA.", value: RANGE },
                 { term: "Apps / plataformas", detail: "Margem: valor faturado menos o custo do parceiro.", value: RANGE },
                 { term: "PR / Imprensa, Wikipedia", detail: "Margem: valor faturado menos o custo do parceiro.", value: RANGE },
                 { term: "Expansão do programa", detail: "Valor faturado. Mais keywords, localizações ou content pillars.", value: RANGE },
@@ -478,7 +479,7 @@ export default async function ComissoesPage() {
               — e todos os negócios contam para subir, renovações incluídas. Cada negócio paga a percentagem do patamar em que
               estás no momento em que o fechas; quando sobes, a nova percentagem vale só para os negócios seguintes, nunca para
               trás. A base de cálculo depende do serviço: nos anúncios conta a fee de agência e não o investimento em media; no
-              CRM, nas apps e na imprensa conta a margem; nos websites e na expansão do programa conta o valor faturado.
+              CRM, nas apps e na imprensa conta a margem; nos websites, na consultoria comercial e na expansão do programa conta o valor faturado.
             </>,
             <>
               O pagamento segue o dinheiro. Há sempre 30 dias de período de reembolso antes da primeira comissão. Depois disso,

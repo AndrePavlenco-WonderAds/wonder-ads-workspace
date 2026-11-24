@@ -71,6 +71,7 @@ export const CROSS_SELLS: CrossSell[] = [
       "Clínicas, óticas e outras redes de saúde e bem-estar, de uma localização a dezenas de lojas.",
       "Medimos 6 KPIs na sessão 2 e comparamos na sessão 10, com os números reais do negócio.",
       "Várias localizações, mais tempo ou só acompanhamento de números: sob consulta com o Alex.",
+      "Comissão como nos outros cross-sells: a % do teu patamar sobre o valor faturado ao cliente, sem IVA.",
     ],
     references: [],
     page: { href: "/documentacao/consultoria-comercial", label: "Ver a consultoria por extenso" },

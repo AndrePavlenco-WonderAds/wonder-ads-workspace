@@ -13,6 +13,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "80.33",
+    date: "2026-11-24",
+    title: "Comissões: a Consultoria Comercial paga como os outros cross-sells",
+    highlights: [
+      "**A Consultoria Comercial entra no «Quanto ganhas» e no simulador**: a % do teu patamar sobre o valor faturado ao cliente, sem IVA, como nos outros cross-sells.",
+      "A regra aparece também no cartão do serviço e nos Valores da página da consultoria. O sino do SEO DPT avisa a equipa.",
+    ],
+  },
+  {
     version: "80.32",
     date: "2026-11-24",
     title: "Comissões: cross-sell «Consultoria Comercial», com página própria",

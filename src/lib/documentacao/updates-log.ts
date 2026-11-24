@@ -44,6 +44,17 @@ export type CodeDocUpdate = {
 
 export const CODE_DOC_UPDATES: CodeDocUpdate[] = [
   {
+    id: "v80.33-comissoes-consultoria-base",
+    page: "comissoes",
+    kind: "regra",
+    changes: [
+      "Consultoria Comercial: a comissão é a % do teu patamar sobre o valor faturado ao cliente, sem IVA, como nos outros cross-sells. Já está no «Quanto ganhas» e no simulador.",
+    ],
+    at: "2026-11-24T13:00:00+00:00",
+    version: "80.33",
+    anchor: "quanto-ganhas",
+  },
+  {
     id: "v80.32-comissoes-consultoria-comercial",
     page: "comissoes",
     kind: "add-on",

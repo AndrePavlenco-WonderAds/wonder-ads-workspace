@@ -1310,6 +1310,14 @@ function ChapterPricing() {
         eyebrow="Valores · a última coisa"
         title={<Split a="Primeiro, o que é e como vai ser feito." b="Só depois, o valor." />}
         lead="Sem descontos. Tudo o que não é o programa de 1 localização passa pelo Alex e fica sempre acima de 7.500 € a pronto e de 9.000 € em prestações. Valores + IVA; em prestações, 3.000 € no início de cada mês."
+        takeaway={
+          <Takeaway lead="A tua comissão:">
+            a % do teu patamar sobre o valor faturado ao cliente, sem IVA, como nos outros cross-sells.{" "}
+            <Link href="/documentacao/comissoes#quanto-ganhas" className="text-[#c4a6ff] underline-offset-4 hover:underline">
+              Ver nas Comissões
+            </Link>
+          </Takeaway>
+        }
       >
         <div className="relative overflow-hidden rounded-[24px] border border-white/10 bg-[#0c0a18]">
           <span aria-hidden className="absolute inset-x-0 top-0 h-1" style={{ background: "var(--brand-gradient)" }} />

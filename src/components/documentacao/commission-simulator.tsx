@@ -14,6 +14,7 @@ const SERVICES: Array<{ id: string; label: string; base: BaseKind; hint: string;
   { id: "meta", label: "Meta Ads", base: "fee", hint: "Conta só a fee de agência, menos os criativos externos.", creatives: true },
   { id: "crm", label: "CRM", base: "margin", hint: "Conta a margem: valor faturado menos o custo de execução." },
   { id: "website", label: "Website", base: "value", hint: "Conta o valor faturado sem IVA." },
+  { id: "consultoria", label: "Consultoria Comercial", base: "value", hint: "Conta o valor faturado ao cliente sem IVA." },
   { id: "app", label: "App / plataforma", base: "margin", hint: "Conta a margem: valor faturado menos o custo do parceiro." },
   { id: "pr", label: "PR / Imprensa", base: "margin", hint: "Conta a margem: valor faturado menos o custo do parceiro." },
   { id: "wikipedia", label: "Wikipedia", base: "margin", hint: "Conta a margem: valor faturado menos o custo do parceiro." },
