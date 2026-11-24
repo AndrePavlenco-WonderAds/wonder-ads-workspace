@@ -59,7 +59,8 @@ import {
   type Sign,
 } from "@/lib/passagem/shared";
 
-type Role = "admin" | "outgoing" | "incoming";
+/** «leitor» (v80.43): quem tem o cliente hoje — só lê. */
+type Role = "admin" | "outgoing" | "incoming" | "leitor";
 
 type Props = {
   passagemId: string;
@@ -160,9 +161,9 @@ function AccessPill({ state }: { state: AccessState | undefined }) {
 export function FichaWorkspace(props: Props) {
   const { passagemId, slug, role, closed, outgoing, incoming, sign, questions, vaultCount, lang } = props;
   const router = useRouter();
-  const canEdit = role !== "incoming" && !closed;
-  const canAsk = role !== "outgoing" && !closed;
-  const canAnswer = role !== "incoming" && !closed;
+  const canEdit = (role === "admin" || role === "outgoing") && !closed;
+  const canAsk = (role === "admin" || role === "incoming") && !closed;
+  const canAnswer = (role === "admin" || role === "outgoing") && !closed;
   const canSign = role === "incoming" && incoming?.username === props.meUsername && !closed;
 
   const [ficha, setFicha] = useState<Ficha>(props.initialFicha);

@@ -18,6 +18,7 @@ import { getSeoClients } from "@/lib/notion";
 import { getConsultantResolver } from "@/lib/consultant-assignments";
 import { getPausedSlugSet } from "@/lib/admin-paused-clients-store";
 import { seoConsultants } from "@/lib/documentacao/people";
+import { listSeoHires } from "@/lib/recrutamento/store";
 import {
   ANSWER_MAX,
   QUESTION_MAX,
@@ -203,14 +204,19 @@ export type PortfolioClient = { slug: string; title: string; icon: string | null
 
 /** Os consultores SEO e a carteira ATIVA de cada um (sem pausados), numa
  *  só leitura. O projeto da própria WonderAds entra: também tem dono e
- *  também tem de passar. */
+ *  também tem de passar. Inclui quem foi aceite no Recrutamento (conta
+ *  criada na app, mesmo antes do dia 1) — v80.43: pode receber projetos. */
 export async function seoPortfolios(): Promise<Array<Person & { clients: PortfolioClient[] }>> {
-  const [all, resolver, paused] = await Promise.all([
+  const [all, resolver, paused, hires] = await Promise.all([
     getSeoClients().catch(() => []),
     getConsultantResolver(),
     getPausedSlugSet().catch(() => new Set<string>()),
+    listSeoHires().catch(() => []),
   ]);
-  return seoConsultants().map((c) => ({
+  const team: Person[] = seoConsultants().map((c) => ({ username: c.username, name: c.name }));
+  const known = new Set(team.map((c) => c.username));
+  for (const h of hires) if (!known.has(h.username)) team.push({ username: h.username, name: h.name });
+  return team.map((c) => ({
     username: c.username,
     name: c.name,
     clients: all
@@ -228,11 +234,21 @@ export async function currentOwners(slugs: string[]): Promise<Record<string, str
   return Object.fromEntries(slugs.map((s) => [s, resolver.resolve(s, fallback.get(s))]));
 }
 
+/** As passagens (ativas ou concluídas, nunca as canceladas) que incluem
+ *  este projeto, da mais recente para a mais antiga — o cartão do cliente
+ *  no SEO DPT mostra a ficha da última (v80.43). */
+export async function passagensForSlug(slug: string): Promise<Passagem[]> {
+  return (await listPassagens()).filter((p) => p.status !== "cancelada" && p.projects.some((x) => x.slug === slug));
+}
+
 /* ------------------------------------------------------------------ */
 /*  Quem pode ver o quê                                                */
 /* ------------------------------------------------------------------ */
 
-export type PassagemRole = "admin" | "outgoing" | "incoming";
+/** «leitor» (v80.43): quem tem o cliente HOJE no SEO DPT lê a ficha, mesmo
+ *  depois de a passagem fechar — só leitura, nunca escreve (as APIs usam
+ *  `roleIn`, que não dá este papel). */
+export type PassagemRole = "admin" | "outgoing" | "incoming" | "leitor";
 
 /** O papel de alguém numa passagem e os projetos que pode abrir. */
 export function roleIn(

@@ -17,6 +17,7 @@ import { LogoChip } from "@/components/logo-chip";
 import { ReviewsHubChip } from "@/components/reviews-hub-chip";
 import { OrigemChip } from "@/components/origem-chip";
 import { ProspectFileTile } from "@/components/prospects/prospect-file-tile";
+import { PassagemFileTile } from "@/components/passagem/passagem-file-tile";
 import { resolveConsultant } from "@/lib/consultant-assignments";
 import { findEmployeeByName } from "@/lib/proposals/consultant";
 import {
@@ -289,11 +290,29 @@ export default async function ClientPage({
           pinned={
             // Ficha do prospect (v80.6: saiu da fila de pastilhas do topo) —
             // linha fixa no cimo dos ficheiros. Só aparece com ficha.
-            <ProspectFileTile
-              slug={slug}
-              viewerUsername={employee?.username ?? null}
-              consultantUsername={consultantUsername}
-            />
+            <>
+              <ProspectFileTile
+                slug={slug}
+                viewerUsername={employee?.username ?? null}
+                consultantUsername={consultantUsername}
+              />
+              {/* Ficha de passagem (v80.43) — a que quem saiu escreveu,
+                  para quem tem o cliente hoje (e a direção), para sempre. */}
+              <PassagemFileTile
+                slug={slug}
+                viewer={
+                  employee
+                    ? {
+                        username: employee.username,
+                        name: employee.name,
+                        isAdmin: employee.isAdmin,
+                        viewer: Boolean(employee.viewerOf || employee.docsOnly),
+                      }
+                    : null
+                }
+                ownerName={consultantName}
+              />
+            </>
           }
         />
       </div>

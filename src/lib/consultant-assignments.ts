@@ -18,6 +18,7 @@
 import "server-only";
 import { cache } from "react";
 import { kv } from "@vercel/kv";
+import { ensureHiredAccounts } from "@/lib/auth/hired-accounts";
 import {
   CONSULTANT_ORDER,
   consultantEmailByName,
@@ -129,7 +130,12 @@ export async function assignConsultant(
     throw new Error("KV storage not configured on this deployment.");
   }
   if (!(CONSULTANT_ORDER as readonly string[]).includes(consultant)) {
-    throw new Error(`Consultor desconhecido: ${consultant}`);
+    // v80.43: e as pessoas aceites no Recrutamento (contas criadas na app) —
+    // a rota já as aceitava, mas aqui caía em «Consultor desconhecido».
+    const hires = await ensureHiredAccounts().catch(() => []);
+    if (!hires.some((h) => h.dept === "SEO" && h.name === consultant)) {
+      throw new Error(`Consultor desconhecido: ${consultant}`);
+    }
   }
   // Lido direto (sem a cache do pedido) — escrita a seguir.
   const raw = await kv.get<Record<string, ConsultantAssignment>>(KEY);

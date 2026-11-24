@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "80.43",
+    date: "2026-11-24",
+    title: "Passagem de consultor: para quem ainda vai entrar, e para sempre no cliente",
+    highlights: [
+      "**Quem é aceite no Recrutamento já pode receber projetos numa passagem**, logo que a conta é criada e mesmo antes do dia 1. Entra na app, vê «Projetos a receber», lê as fichas, pergunta e assume.",
+      "**Passar um cliente para alguém contratado pelo Recrutamento já funciona** (no cockpit e no SEO DPT). Antes dava «Consultor desconhecido».",
+      "**A «Ficha de passagem» fica no cartão Client Files de cada cliente no SEO DPT, para sempre:** quem tiver o cliente nesse momento lê-a, também depois de a passagem fechar. A direção vê-a sempre.",
+    ],
+  },
+  {
     version: "80.42",
     date: "2026-11-24",
     title: "Passagem de consultor: sem «Equipamento recolhido»",

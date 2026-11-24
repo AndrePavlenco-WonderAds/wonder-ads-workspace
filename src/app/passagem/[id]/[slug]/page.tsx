@@ -12,7 +12,7 @@ import { getCurrentEmployee } from "@/lib/auth/server";
 import { formatDate } from "@/lib/dates";
 import { getTeamAvatar } from "@/lib/team-avatars";
 import { projectFacts } from "@/lib/passagem/facts";
-import { getFicha, getPassagem, getSigns, listQuestions, roleIn } from "@/lib/passagem/store";
+import { currentOwners, getFicha, getPassagem, getSigns, listQuestions, roleIn } from "@/lib/passagem/store";
 import { firstName, formatISODate } from "@/lib/passagem/shared";
 
 export const dynamic = "force-dynamic";
@@ -35,7 +35,13 @@ export default async function FichaPage({ params }: { params: Promise<{ id: stri
   const { id, slug } = await params;
   const p = await getPassagem(id);
   if (!p) notFound();
-  const access = roleIn(p, { username: me.username, isAdmin: me.isAdmin });
+  let access = roleIn(p, { username: me.username, isAdmin: me.isAdmin });
+  // v80.43: quem tem o cliente HOJE no SEO DPT lê a ficha (só leitura),
+  // também depois de a passagem fechar — chega pelo cartão do cliente.
+  if ((!access || !access.slugs.includes(slug)) && p.status !== "cancelada" && p.projects.some((x) => x.slug === slug)) {
+    const owner = (await currentOwners([slug]))[slug];
+    if (owner === me.name) access = { role: "leitor", slugs: [slug] };
+  }
   if (!access || !access.slugs.includes(slug)) notFound();
   const project = p.projects.find((x) => x.slug === slug)!;
 
@@ -49,7 +55,10 @@ export default async function FichaPage({ params }: { params: Promise<{ id: stri
   const back =
     access.role === "admin"
       ? { href: `/admin/passagens/${p.id}`, label: "cockpit", prefix: "Voltar ao" }
-      : { href: "/passagem", label: "passagem", prefix: "Voltar à" };
+      : access.role === "leitor"
+        ? { href: `/seo/${slug}`, label: "cliente", prefix: "Voltar ao" }
+        : { href: "/passagem", label: "passagem", prefix: "Voltar à" };
+  const reading = access.role === "incoming" || access.role === "leitor";
 
   return (
     <PageShell backHref={back.href} backLabel={back.label} backPrefix={back.prefix}>
@@ -59,7 +68,9 @@ export default async function FichaPage({ params }: { params: Promise<{ id: stri
         lead={
           access.role === "incoming"
             ? `Escrita por ${p.outgoing.name}. Lê tudo, pergunta o que não estiver claro e assume quando estiveres pronto.`
-            : `Tudo o que quem entra tem de saber para continuar sem perder nada. Prazo: ${formatISODate(p.endDate)}.`
+            : access.role === "leitor"
+              ? `Escrita por ${p.outgoing.name} na passagem de ${formatISODate(p.startDate)} a ${formatISODate(p.endDate)}.`
+              : `Tudo o que quem entra tem de saber para continuar sem perder nada. Prazo: ${formatISODate(p.endDate)}.`
         }
       >
         <div className="flex items-center gap-2.5 rounded-2xl border border-white/10 bg-white/[0.02] px-4 py-3">
@@ -78,13 +89,13 @@ export default async function FichaPage({ params }: { params: Promise<{ id: stri
         </div>
       </PageHeader>
 
-      <div className={`mt-6 grid grid-cols-2 gap-2.5 sm:grid-cols-4 ${access.role === "incoming" ? "mx-auto max-w-3xl" : ""}`}>
+      <div className={`mt-6 grid grid-cols-2 gap-2.5 sm:grid-cols-4 ${reading ? "mx-auto max-w-3xl" : ""}`}>
         <Fact label="Plano" value={facts.tier ?? "—"} />
         <Fact label="Cliente desde" value={formatISODate(facts.startedAt)} />
         <Fact label="Último NPS" value={facts.lastNps ? `${String(facts.lastNps.score).replace(".", ",")} · ${formatDate(facts.lastNps.at)}` : "Sem respostas"} />
         <Fact label="Língua" value={facts.lang === "en" ? "Inglês" : "Português"} />
       </div>
-      {p.note && access.role !== "incoming" && (
+      {p.note && !reading && (
         <p className="mt-4 rounded-2xl border border-amber-300/25 bg-amber-300/[0.07] px-5 py-3.5 text-[14px] leading-relaxed text-white/80">
           <span className="font-semibold text-amber-200">Nota da direção:</span> {p.note}
         </p>
