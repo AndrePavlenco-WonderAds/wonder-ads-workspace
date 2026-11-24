@@ -46,6 +46,7 @@ import {
   SECTION_MAX,
   clientMessageDraft,
   fichaProgress,
+  firstName,
   fichaSteps,
   formatISODate,
   healthOf,
@@ -293,7 +294,7 @@ export function FichaWorkspace(props: Props) {
         done: sectionFilled(ficha.sections[s.id]),
       })),
       { id: "cliente", group: "Apresentação", title: "Cliente e reunião", done: ficha.clientInformed && ficha.meetingDone },
-    { id: "perguntas", group: "Apresentação", title: open > 0 ? `Perguntas (${open})` : "Perguntas", done: open === 0 },
+    { id: "perguntas", group: "Apresentação", title: open > 0 ? `Perguntas (${open})` : "Perguntas", done: questions.length > 0 && open === 0 },
   ];
   const idx = Math.max(0, chapters.findIndex((c) => c.id === chapter));
   const current = chapters[idx];
@@ -331,7 +332,7 @@ export function FichaWorkspace(props: Props) {
                 ? "Passagem fechada"
                 : "Só leitura";
 
-  const firstOut = outgoing.name.split(" ")[0];
+  const firstOut = firstName(outgoing.name);
   const missingBeforeReady = steps.slice(0, 5).filter((s) => !s.done);
 
   /* ----------------------------- vistas ----------------------------- */

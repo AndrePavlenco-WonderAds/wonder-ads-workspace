@@ -13,7 +13,7 @@ import { formatDate } from "@/lib/dates";
 import { getTeamAvatar } from "@/lib/team-avatars";
 import { projectFacts } from "@/lib/passagem/facts";
 import { getFicha, getPassagem, getSigns, listQuestions, roleIn } from "@/lib/passagem/store";
-import { formatISODate } from "@/lib/passagem/shared";
+import { firstName, formatISODate } from "@/lib/passagem/shared";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -73,7 +73,7 @@ export default async function FichaPage({ params }: { params: Promise<{ id: stri
             </span>
           )}
           <span className="ml-1 text-[13px] leading-tight text-white/70">
-            {p.outgoing.name.split(" ")[0]} → {project.incoming?.name ?? "por decidir"}
+            {firstName(p.outgoing.name)} → {project.incoming?.name ?? "por decidir"}
           </span>
         </div>
       </PageHeader>

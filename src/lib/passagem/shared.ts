@@ -503,6 +503,11 @@ export function clientMessageDraft(lang: "pt" | "en", incomingName: string | nul
     : `Olá! Queria partilhar uma novidade: a partir de ${dateLabel}, o acompanhamento do vosso projeto de SEO passa a ser feito por ${who}, que já está a par de todo o trabalho. Até lá continuo convosco e vamos marcar uma chamada rápida a três para vos apresentar. Qualquer dúvida, estou por aqui.`;
 }
 
+/** O primeiro nome, sem o ponto de abreviaturas («Fran. Rosa» → «Fran»). */
+export function firstName(name: string): string {
+  return (name.trim().split(/\s+/)[0] ?? name).replace(/\.$/, "");
+}
+
 /** «24/11/2026». */
 export function formatISODate(iso: string | null | undefined): string {
   if (!iso || !isISODate(iso)) return "—";

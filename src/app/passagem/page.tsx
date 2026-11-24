@@ -16,7 +16,7 @@ import { getCurrentEmployee } from "@/lib/auth/server";
 import { getTeamAvatar } from "@/lib/team-avatars";
 import { passagemOverview, type PassagemOverview, type ProjectView } from "@/lib/passagem/overview";
 import { activePassagemOf, getPassagem, incomingPassagensOf } from "@/lib/passagem/store";
-import { ACCESS_ITEMS, FICHA_SECTIONS, dayOf, formatISODate, phaseFor, sectionFilled, totalDaysOf } from "@/lib/passagem/shared";
+import { ACCESS_ITEMS, FICHA_SECTIONS, dayOf, firstName, formatISODate, phaseFor, sectionFilled, totalDaysOf } from "@/lib/passagem/shared";
 import { todayLisbonISO } from "@/lib/probation/progress";
 
 export const dynamic = "force-dynamic";
@@ -107,7 +107,7 @@ function phaseTask(phase: number, x: ProjectView): { label: string; done: boolea
   };
 }
 
-function OutgoingView({ o, today, firstName }: { o: PassagemOverview; today: string; firstName: string }) {
+function OutgoingView({ o, today, first }: { o: PassagemOverview; today: string; first: string }) {
   const p = o.passagem;
   const total = totalDaysOf(p);
   const day = dayOf(p, today);
@@ -119,7 +119,7 @@ function OutgoingView({ o, today, firstName }: { o: PassagemOverview; today: str
     <>
       <PageHeader
         eyebrow="A tua passagem"
-        title={`${firstName}, vamos passar os teus projetos`}
+        title={`${first}, vamos passar os teus projetos`}
         lead={`Tens até ${formatISODate(p.endDate)} para deixar cada projeto pronto para quem entra: acessos garantidos, ficha escrita, cliente avisado e uma reunião a três.`}
       >
         <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.02] px-4 py-3">
@@ -234,11 +234,11 @@ export default async function PassagemPage() {
     )
   ).filter((x): x is PassagemOverview => x !== null);
 
-  const firstName = me.name.split(" ")[0] ?? me.name;
+  const first = firstName(me.name);
 
   return (
     <PageShell backHref="/" backLabel="workspace" backPrefix="Voltar a">
-      {mineOverview && <OutgoingView o={mineOverview} today={today} firstName={firstName} />}
+      {mineOverview && <OutgoingView o={mineOverview} today={today} first={first} />}
 
       {incoming.length > 0 && (
         <>

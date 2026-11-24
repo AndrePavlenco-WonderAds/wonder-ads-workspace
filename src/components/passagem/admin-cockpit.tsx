@@ -11,7 +11,7 @@ import { useRouter } from "next/navigation";
 import { AlertTriangle, ArrowRight, Check, CheckCircle2, Clock, FileText, Loader2, MessageCircleQuestion, Plus, Trash2, UserRoundPlus } from "lucide-react";
 import { HealthDot, ProgressRing, StageChip, StepDots } from "./ui";
 import { formatDate } from "@/lib/dates";
-import { STAGE_LABEL, formatISODate, type ExitItem, type Passagem, type ProjectStage } from "@/lib/passagem/shared";
+import { STAGE_LABEL, firstName, formatISODate, type ExitItem, type Passagem, type ProjectStage } from "@/lib/passagem/shared";
 
 export type CockpitProject = {
   slug: string;
@@ -110,7 +110,10 @@ export function AdminCockpit({ passagem: p, projects, candidates, addable, exitI
   if (!closed) {
     for (const x of projects) if (x.health === "vermelho" && !x.transferred) todo.push({ key: `r:${x.slug}`, icon: "risk", text: `${x.title} em risco${x.healthWhy ? `: ${x.healthWhy}` : ""}`, slug: x.slug });
     for (const x of assumedPending) todo.push({ key: `p:${x.slug}`, icon: "pass", text: `${x.incoming!.name} assumiu ${x.title} — falta passar no SEO DPT`, slug: x.slug });
-    for (const x of projects) if (!x.incoming && !x.transferred) todo.push({ key: `w:${x.slug}`, icon: "who", text: `${x.title} ainda não tem quem entra`, slug: x.slug });
+    const noDest = projects.filter((x) => !x.incoming && !x.transferred);
+    if (noDest.length === 1) todo.push({ key: "w", icon: "who", text: `${noDest[0].title} ainda não tem quem entra`, slug: noDest[0].slug });
+    else if (noDest.length > 1)
+      todo.push({ key: "w", icon: "who", text: `${noDest.length} projetos ainda sem quem entra: ${noDest.map((x) => x.title).join(", ")}`, slug: noDest[0].slug });
     const notReady = projects.filter((x) => !x.readyAt).length;
     if (daysLeft <= 5 && notReady > 0)
       todo.push({
@@ -260,7 +263,7 @@ export function AdminCockpit({ passagem: p, projects, candidates, addable, exitI
                           className="inline-flex items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-[12.5px] font-semibold text-[#07080d] disabled:opacity-40"
                         >
                           {busy === key ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
-                          Passar para {proj.incoming?.name.split(" ")[0]}
+                          Passar para {(proj.incoming ? firstName(proj.incoming.name) : "")}
                         </button>
                         <button type="button" onClick={() => setConfirm(null)} className="text-[12px] text-white/45 hover:text-white">
                           Cancelar
@@ -324,7 +327,7 @@ export function AdminCockpit({ passagem: p, projects, candidates, addable, exitI
         </ul>
         {!closed && addable.length > 0 && (
           <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl border border-dashed border-white/12 p-3">
-            <span className="text-[12.5px] text-white/50">Na carteira de {p.outgoing.name.split(" ")[0]} e fora da passagem:</span>
+            <span className="text-[12.5px] text-white/50">Na carteira de {firstName(p.outgoing.name)} e fora da passagem:</span>
             {addable.map((c) => (
               <button
                 key={c.slug}
@@ -400,7 +403,7 @@ export function AdminCockpit({ passagem: p, projects, candidates, addable, exitI
             />
           </label>
           <label className="block">
-            <span className="mb-1.5 block text-[12.5px] text-white/55">Nota para {p.outgoing.name.split(" ")[0]}</span>
+            <span className="mb-1.5 block text-[12.5px] text-white/55">Nota para {firstName(p.outgoing.name)}</span>
             <textarea
               value={note}
               disabled={closed}

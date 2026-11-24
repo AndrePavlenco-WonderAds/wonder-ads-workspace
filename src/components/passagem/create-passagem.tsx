@@ -10,7 +10,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, ArrowRight, Check, Loader2, Shuffle } from "lucide-react";
 import { PersonAvatar } from "./ui";
-import { PASSAGEM_DAYS, PASSAGEM_REASONS, addDaysISO, daysBetweenISO, formatISODate, reasonLabel, type PassagemReason } from "@/lib/passagem/shared";
+import { PASSAGEM_DAYS, PASSAGEM_REASONS, addDaysISO, daysBetweenISO, firstName, formatISODate, reasonLabel, type PassagemReason } from "@/lib/passagem/shared";
 
 export type CreateConsultant = {
   username: string;
@@ -335,11 +335,11 @@ export function CreatePassagem({ consultants, today }: { consultants: CreateCons
             style={{ background: "linear-gradient(90deg,#783DF5,#E040A0)" }}
           >
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
-            {who ? `Abrir a passagem de ${who.name.split(" ")[0]}` : "Abrir passagem"}
+            {who ? `Abrir a passagem de ${firstName(who.name)}` : "Abrir passagem"}
           </button>
           {who && (
             <p className="mt-2.5 text-[12px] leading-relaxed text-white/45">
-              {who.name.split(" ")[0]} passa a ver «A minha passagem» no menu do nome. Quem entra vê a ficha de cada projeto que recebe.
+              {firstName(who.name)} passa a ver «A minha passagem» no menu do nome. Quem entra vê a ficha de cada projeto que recebe.
             </p>
           )}
           {error && <p className="mt-2 text-[13px] text-rose-300">{error}</p>}

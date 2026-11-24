@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "80.41",
+    date: "2026-11-24",
+    title: "Passagem de consultor: acertos depois do primeiro teste",
+    highlights: [
+      "Os nomes abreviados já não levam o ponto a meio da frase («Abrir a passagem de Fran», não «de Fran.»).",
+      "No «Precisa de ti», os projetos sem destino aparecem numa só linha em vez de uma por projeto.",
+      "O capítulo «Perguntas» só fica com o visto quando houve perguntas e estão todas respondidas.",
+    ],
+  },
+  {
     version: "80.40",
     date: "2026-11-24",
     title: "Passagem de consultor: desenho novo, mais claro a cada passo",

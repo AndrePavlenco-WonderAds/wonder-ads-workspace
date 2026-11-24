@@ -155,7 +155,7 @@ export default async function PassagensAdminPage() {
         {overviews.length === 0 && (
           <div className="rounded-2xl border border-dashed border-white/15 px-6 py-8 text-center">
             <p className="text-[15px] font-semibold text-white">Nenhuma passagem a decorrer</p>
-            <p className="mt-1 text-[13.5px] text-white/50">Quando um consultor for sair, abre aqui a passagem dele: tem 30 dias para entregar cada projeto.</p>
+            <p className="mt-1 text-[13.5px] text-white/50">Quando um consultor for sair, abre aqui a passagem: são 30 dias para entregar cada projeto.</p>
           </div>
         )}
 
