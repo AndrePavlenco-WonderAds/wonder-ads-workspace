@@ -675,6 +675,17 @@ body {
   color: #fff;
 }
 
+/* Pesquisa dentro de uma página da Documentação (v80.46) — CSS Custom
+   Highlight API: realça sem tocar no HTML. */
+::highlight(docs-q) {
+  background-color: rgba(196, 166, 255, 0.3);
+  color: #fff;
+}
+::highlight(docs-q-now) {
+  background-color: #c4a6ff;
+  color: #120f24;
+}
+
 /* ------------------------------------------------------------------ */
 /* Inquérito de satisfação (NPS) — página pública do cliente           */
 /* ------------------------------------------------------------------ */

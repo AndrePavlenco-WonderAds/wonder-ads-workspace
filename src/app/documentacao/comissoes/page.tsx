@@ -25,7 +25,7 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export const metadata = {
-  title: "Comissões — Documentação",
+  title: "Comissões & Cross-sells — Documentação",
 };
 
 const BLOCK_ID = "remuneracao-variavel";
@@ -75,12 +75,15 @@ export default async function ComissoesPage() {
     <PageShell backHref="/documentacao" backLabel="Documentação">
       <DocHero
         block={block.title}
-        title="Comissões"
+        title="Comissões & Cross-sells"
         pageId="comissoes"
         lead={
           <>
             Ganhas sobre o que fechas. Renovações: <Strong>{RENEWAL} fixos</Strong>. Cross-sells e upsells:{" "}
-            <Strong>{LOW} a {HIGH}</Strong>, conforme o teu patamar.
+            <Strong>{LOW} a {HIGH}</Strong>, conforme o teu patamar.{" "}
+            <a href="#cross-sells" className={LINK}>
+              Os outros serviços que vendemos estão em Cross-sells.
+            </a>
           </>
         }
         meta={`Atualizado a ${formatDate(block.updatedAt)}.${reader.isAdmin ? ` Visível para SuperAdmin e ${block.audienceLabel}.` : ""}`}
@@ -90,7 +93,7 @@ export default async function ComissoesPage() {
       <SectionNav items={NAV} />
 
       <div className="mt-8 space-y-14 pb-10">
-        <section id="onde-estas" data-doc-section className="scroll-mt-40">
+        <section id="onde-estas" data-doc-section data-docs-search="skip" className="scroll-mt-40">
           <CommissionsTracker board={board} people={seoConsultants()} viewAll={reader.isAdmin} username={reader.username} />
         </section>
 
@@ -224,7 +227,7 @@ export default async function ComissoesPage() {
 
         <DocSection
           id="cross-sells"
-          title="Cross-sells"
+          title="Cross-sells: os outros serviços que vendemos"
           lead="Em cada renovação, vê se o cliente tem potencial para um destes. Todos contam para a comissão e para o patamar. Usa os casos de referência, sobretudo os do mesmo setor do cliente."
         >
           <div className="flex gap-4 rounded-2xl border border-[#783DF5]/30 bg-[#783DF5]/[0.08] p-5">

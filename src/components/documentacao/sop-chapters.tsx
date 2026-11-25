@@ -85,6 +85,7 @@ export function SopChapters({ chapters }: { chapters: SopChapter[] }) {
                 type="button"
                 role="tab"
                 data-id={c.id}
+                data-label={name(c)}
                 aria-selected={on}
                 onClick={() => go(c.id)}
                 className={`flex shrink-0 items-center gap-2 rounded-xl border px-3.5 py-2 text-[13px] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#783DF5] ${

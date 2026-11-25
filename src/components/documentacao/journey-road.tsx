@@ -141,6 +141,19 @@ export function JourneyRoad({ initial, canEdit }: { initial: Journey; canEdit: b
   const openTask = (month: number, where: string, block: JourneyBlock | null) =>
     setPanel({ month, where, blockId: block?.id ?? null, editing: !block || Boolean(block.placeholder) });
 
+  // v80.46 — a pesquisa da Documentação leva a uma tarefa: ?tarefa=<id> abre
+  // logo o painel dela.
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get("tarefa");
+    if (!id) return;
+    const mi = months.findIndex((m) => m.blocks.some((b) => b.id === id));
+    if (mi < 0) return;
+    const m = months[mi];
+    setPanel({ month: mi, where: m.title ? `Mês ${mi + 1} · ${m.title}` : `Mês ${mi + 1}`, blockId: id, editing: false });
+    // Só ao abrir a página.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // ---- A estrada ---------------------------------------------------------
   const wrapRef = useRef<HTMLDivElement>(null);
   const measureRef = useRef<SVGPathElement>(null);
@@ -347,7 +360,7 @@ export function JourneyRoad({ initial, canEdit }: { initial: Journey; canEdit: b
             const lit = passed > 1 + mi;
             const where = m.title ? `Mês ${n} · ${m.title}` : `Mês ${n}`;
             return (
-              <li key={m.id} id={`mes-${n}`} className={`${ROW} scroll-mt-40 pt-10 lg:pt-12`}>
+              <li key={m.id} id={`mes-${n}`} data-doc-section data-doc-label={where} className={`${ROW} scroll-mt-40 pt-10 lg:pt-12`}>
                 <div className={`${STOP_COL} ${lane === "l" ? "lg:justify-start lg:pl-10" : "lg:justify-end lg:pr-10"}`}>
                   {/* O fio da paragem até ao cartão das tarefas. */}
                   <span
@@ -408,6 +421,9 @@ export function JourneyRoad({ initial, canEdit }: { initial: Journey; canEdit: b
                 >
                   <section
                     aria-label={`Tarefas do mês ${n}`}
+                    // A pesquisa do hub lê as tarefas por inteiro na API (com a
+                    // explicação do painel): aqui não entram no índice.
+                    data-docs-index="skip"
                     className={`rounded-[22px] border p-4 transition duration-500 sm:p-5 ${
                       lit
                         ? "border-[#783DF5]/40 bg-[#783DF5]/[0.05] shadow-[0_24px_60px_-36px_rgba(120,61,245,0.7)]"

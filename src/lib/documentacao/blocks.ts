@@ -16,6 +16,9 @@ export type DocsPage = {
   tag?: string;
   /** Aviso de acesso restrito por baixo do título, com cadeado (v78.30). */
   restricted?: string;
+  /** Uma entrada direta para uma parte da página, no cartão do hub (v80.46:
+   *  os cross-sells das Comissões). `items` = os nomes que a acompanham. */
+  spotlight?: { label: string; href: string; items?: string[] };
 };
 
 export type DocsBlock = {
@@ -26,6 +29,8 @@ export type DocsBlock = {
   audienceLabel: string;
   updatedAt: string;
   pages: DocsPage[];
+  /** Páginas do bloco sem cartão no hub, mas que a pesquisa lê (v80.46). */
+  searchOnly?: DocsPage[];
 };
 
 export const DOCS_BLOCKS: DocsBlock[] = [
@@ -34,7 +39,7 @@ export const DOCS_BLOCKS: DocsBlock[] = [
     title: "Bónus & Comissões",
     audience: { depts: ["SEO"] },
     audienceLabel: "SEO DPT",
-    updatedAt: "2026-11-24",
+    updatedAt: "2026-11-25",
     pages: [
       {
         id: "bonus-nps",
@@ -46,9 +51,25 @@ export const DOCS_BLOCKS: DocsBlock[] = [
       {
         id: "comissoes",
         href: "/documentacao/comissoes",
-        label: "Comissões",
+        // v80.46: os cross-sells no nome, para o SEO DPT saber onde estudar os
+        // outros serviços que a WonderAds vende.
+        label: "Comissões & Cross-sells",
         image: "/documentacao/comissoes-percent.jpg",
         tag: "Empreender dentro da WonderAds",
+        spotlight: {
+          label: "Os outros serviços que vendemos",
+          href: "/documentacao/comissoes#cross-sells",
+        },
+      },
+    ],
+    // O cross-sell «Consultoria Comercial» por extenso (v80.32): entra-se
+    // pelo cartão do serviço nas Comissões.
+    searchOnly: [
+      {
+        id: "consultoria-comercial",
+        href: "/documentacao/consultoria-comercial",
+        label: "Consultoria Comercial",
+        image: "/documentacao/comissoes-percent.jpg",
       },
     ],
   },

@@ -95,7 +95,7 @@ export default async function BonusSemestralPage() {
       <SectionNav items={NAV} />
 
       <div className="mt-8 space-y-14 pb-10">
-        <section id="o-semestre" data-doc-section className="scroll-mt-40">
+        <section id="o-semestre" data-doc-section data-docs-search="skip" className="scroll-mt-40">
           <SemesterTracker board={board} viewAll={reader.isAdmin} />
         </section>
 

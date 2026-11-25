@@ -8,16 +8,24 @@
 //
 // v78.62 — um cartão cuja página mudou nos últimos 14 dias leva a pastilha
 // «Atualizado» na capa (as alterações vêm de updates-store.ts).
+//
+// v80.46 — a barra de pesquisa por cima dos cartões procura DENTRO de todas
+// as páginas que a pessoa lê e nas aulas da Formação dela
+// (components/documentacao/docs-search.tsx). O cartão das Comissões leva a
+// entrada direta para os cross-sells.
 
 import Image from "next/image";
 import Link from "next/link";
-import { BookOpen, Lock, Sparkles } from "lucide-react";
+import { ArrowRight, BookOpen, Lock, Sparkles } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { DocsClosed } from "@/components/documentacao/doc-ui";
+import { DocsSearch } from "@/components/documentacao/docs-search";
 import { DOCS_OPEN_TO_TEAM } from "@/lib/documentacao/access";
 import { blocksFor } from "@/lib/documentacao/blocks";
 import { getDocsContext } from "@/lib/documentacao/server";
 import { listDocUpdates } from "@/lib/documentacao/updates-store";
+import { CROSS_SELLS } from "@/lib/documentacao/sales-catalog";
+import type { CrawlPage } from "@/lib/documentacao/search-crawl";
 import type { DocUpdate } from "@/lib/documentacao/updates";
 
 export const dynamic = "force-dynamic";
@@ -34,7 +42,10 @@ function shortDate(ms: number): string {
   return new Date(ms).toLocaleDateString("en-GB", { timeZone: "Europe/Lisbon", day: "2-digit", month: "2-digit" });
 }
 
-export default async function DocumentacaoPage() {
+/** Muda a cada deploy — o índice da pesquisa guardado no browser renova-se. */
+const BUILD = process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 8) ?? "dev";
+
+export default async function DocumentacaoPage({ searchParams }: { searchParams: Promise<{ q?: string | string[] }> }) {
   const ctx = await getDocsContext();
   if (ctx.state === "no-session") return null;
   if (ctx.state !== "ok") {
@@ -45,17 +56,36 @@ export default async function DocumentacaoPage() {
     );
   }
 
-  const cards = blocksFor(ctx.reader).flatMap((b) => b.pages);
+  const blocks = blocksFor(ctx.reader);
+  const cards = blocks.flatMap((b) => b.pages);
   const updates = await listDocUpdates().catch((err): DocUpdate[] => {
     console.error("docs hub updates read failed:", err instanceof Error ? err.message : err);
     return [];
   });
   const now = Date.now();
   const freshByPage = new Map<string, DocUpdate>();
+  const lastByPage = new Map<string, number>();
   for (const u of updates) {
+    lastByPage.set(u.page, Math.max(lastByPage.get(u.page) ?? 0, u.updatedAt));
     if (now - u.updatedAt > UPDATED_PILL_MS || freshByPage.has(u.page)) continue;
     freshByPage.set(u.page, u);
   }
+
+  // O que a pesquisa lê: as páginas dos cartões + as que só se abrem por
+  // dentro de outra (Consultoria Comercial), cada uma com a sua versão.
+  const searchPages: CrawlPage[] = blocks.flatMap((b) =>
+    [...b.pages, ...(b.searchOnly ?? [])].map((p) => ({
+      id: p.id,
+      label: p.label,
+      href: p.href,
+      block: b.title,
+      image: p.image,
+      version: `${BUILD}|${b.updatedAt}|${lastByPage.get(p.id) ?? 0}`,
+    })),
+  );
+  const rawQ = (await searchParams).q;
+  const initialQuery = (Array.isArray(rawQ) ? rawQ[0] : rawQ)?.slice(0, 120) ?? "";
+  const crossSellNames = CROSS_SELLS.map((c) => c.name);
 
   return (
     <PageShell backHref="/" backLabel="workspace">
@@ -70,12 +100,18 @@ export default async function DocumentacaoPage() {
         )}
       </header>
 
+      <DocsSearch
+        pages={searchPages}
+        user={`${ctx.reader.username}${ctx.reader.isAdmin ? ":admin" : ""}`}
+        build={BUILD}
+        initialQuery={initialQuery}
+      >
       {cards.length === 0 ? (
         <p className="mt-10 rounded-2xl border border-dashed border-white/15 p-8 text-center text-[14px] text-white/50">
           Ainda não há documentação para o teu departamento.
         </p>
       ) : (
-        <ul className="mt-10 grid gap-5 pb-10 sm:grid-cols-2 lg:grid-cols-3">
+        <ul className="mt-8 grid gap-5 pb-10 sm:grid-cols-2 lg:grid-cols-3">
           {cards.map((c, i) => (
             <li
               key={c.id}
@@ -119,6 +155,28 @@ export default async function DocumentacaoPage() {
                   // por elas de tempos a tempos.
                   <p className="docs-brand-flow-text mt-1.5 text-[13.5px] font-semibold tracking-[0.01em]">{c.tag}</p>
                 )}
+                {c.spotlight && (
+                  <Link
+                    href={c.spotlight.href}
+                    className="group/spot mt-3 block rounded-2xl border border-[#783DF5]/35 bg-[#783DF5]/[0.08] px-3.5 py-3 transition hover:border-[#c4a6ff]/60 hover:bg-[#783DF5]/[0.14]"
+                  >
+                    <span className="flex items-center justify-between gap-2 text-[13.5px] font-semibold text-white">
+                      <span>
+                        <span className="text-[#c4a6ff]">Cross-sells</span> · {c.spotlight.label}
+                      </span>
+                      <ArrowRight className="h-4 w-4 shrink-0 text-[#c4a6ff] transition group-hover/spot:translate-x-0.5" />
+                    </span>
+                    {c.id === "comissoes" && (
+                      <span className="mt-2 flex flex-wrap gap-1.5">
+                        {crossSellNames.map((n) => (
+                          <span key={n} className="rounded-full border border-white/12 bg-white/[0.04] px-2 py-0.5 text-[11.5px] text-white/70">
+                            {n}
+                          </span>
+                        ))}
+                      </span>
+                    )}
+                  </Link>
+                )}
                 {c.restricted && (
                   <p className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-white/12 bg-white/[0.04] px-2.5 py-1 text-[12px] font-medium text-white/70">
                     <Lock className="h-3 w-3" />
@@ -136,6 +194,7 @@ export default async function DocumentacaoPage() {
           ))}
         </ul>
       )}
+      </DocsSearch>
     </PageShell>
   );
 }

@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "80.46",
+    date: "2026-11-25",
+    title: "Documentação: pesquisa dentro de todas as páginas e das aulas, e os cross-sells à vista",
+    highlights: [
+      "**Barra de pesquisa no topo da Documentação.** Procura dentro de todas as páginas que lês (cada capítulo e secção, as tarefas da Jornada, a Consultoria Comercial) e nas tuas aulas da Formação, ao mesmo tempo. Ignora acentos e plurais e aceita palavras a meio e um erro de escrita.",
+      "**Os resultados levam ao sítio exato:** o capítulo certo do SOP abre-se, a tarefa da Jornada abre-se no painel e as palavras ficam realçadas. As aulas mostram se têm vídeo, quanto duram e se já as viste. A tecla «/» vai para a barra e as setas e o Enter escolhem.",
+      "**«Procurar nesta página» em cada página da Documentação:** encontra também o que está nos capítulos fechados, com «1 de N» e as setas para andar entre os resultados.",
+      "**«Comissões & Cross-sells»:** o cartão mostra os outros serviços que a WonderAds vende (Google Ads, Meta Ads, CRM, Consultoria Comercial, Websites e apps) e leva direto a eles, para estudares antes de os propores aos clientes.",
+    ],
+  },
+  {
     version: "80.45",
     date: "2026-11-24",
     title: "Ineficácias: o painel do consultor refeito, e o porquê dos pontos à escolha da direção",

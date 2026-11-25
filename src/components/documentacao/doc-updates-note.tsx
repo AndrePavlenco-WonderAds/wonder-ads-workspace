@@ -54,7 +54,7 @@ export async function DocUpdatesNote({ pageId }: { pageId: string }) {
   if (recent.length === 0) return null;
   const [latest, ...older] = recent;
   return (
-    <div className="group/upd relative mt-4 inline-block">
+    <div data-docs-search="skip" className="group/upd relative mt-4 inline-block">
       <button
         type="button"
         aria-haspopup="true"

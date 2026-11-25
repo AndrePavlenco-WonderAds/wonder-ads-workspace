@@ -108,7 +108,7 @@ export default async function BonusNpsPage({
       <SectionNav items={NAV} />
 
       <div className="mt-8 space-y-14 pb-10">
-        <section id="o-mes" data-doc-section className="scroll-mt-40">
+        <section id="o-mes" data-doc-section data-docs-search="skip" className="scroll-mt-40">
           <NpsBonusTracker
             data={data}
             prev={prev}

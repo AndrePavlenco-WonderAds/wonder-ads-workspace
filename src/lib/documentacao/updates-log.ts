@@ -44,6 +44,17 @@ export type CodeDocUpdate = {
 
 export const CODE_DOC_UPDATES: CodeDocUpdate[] = [
   {
+    id: "v80.46-comissoes-cross-sells-no-titulo",
+    page: "comissoes",
+    kind: "add-on",
+    changes: [
+      "A página passa a chamar-se «Comissões & Cross-sells». É aqui que estudas os outros serviços que a WonderAds vende (Google Ads, Meta Ads, CRM, Consultoria Comercial, Websites e apps), para os propores aos teus clientes.",
+    ],
+    at: "2026-11-25T12:00:00+00:00",
+    version: "80.46",
+    anchor: "cross-sells",
+  },
+  {
     id: "v80.44-sop-comunicacao-video",
     page: "sop-comunicacao",
     kind: "add-on",

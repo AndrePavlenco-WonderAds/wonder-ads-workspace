@@ -10,6 +10,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { ArrowLeft, ChevronRight, Construction, Lock } from "lucide-react";
 import { formatDate } from "@/lib/dates";
+import { DocPageSearch } from "./doc-page-search";
 import { DocUpdatesNote } from "./doc-updates-note";
 import { DocVideoButton, type DocVideo } from "./doc-video";
 
@@ -48,8 +49,16 @@ export function DocHero({
             {title}
           </h1>
           <p className="mt-3 text-[15.5px] leading-relaxed text-white/65 sm:text-[17px]">{lead}</p>
-          {meta && <p className="mt-3 text-[12px] text-white/35">{meta}</p>}
-          {pageId && <DocUpdatesNote pageId={pageId} />}
+          {meta && (
+            <p data-docs-search="skip" className="mt-3 text-[12px] text-white/35">
+              {meta}
+            </p>
+          )}
+          <div className="flex flex-wrap items-center gap-x-2">
+            {pageId && <DocUpdatesNote pageId={pageId} />}
+            {/* v80.46 — procurar dentro da página (capítulos fechados incluídos). */}
+            <DocPageSearch />
+          </div>
         </div>
         {tabs && <BlockTabs pages={tabs.pages} current={tabs.current} />}
         {video && <DocVideoButton video={video} />}
@@ -274,7 +283,7 @@ export function Strong({ children }: { children: ReactNode }) {
 export function DocsClosed({ kind, name }: { kind: "closed" | "forbidden"; name: string }) {
   const Icon = kind === "closed" ? Construction : Lock;
   return (
-    <section className="mt-10 flex justify-center sm:mt-16">
+    <section data-docs-closed className="mt-10 flex justify-center sm:mt-16">
       <div className="w-full max-w-md rounded-3xl border border-white/10 bg-white/[0.03] p-8 text-center">
         <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04]">
           <Icon className="h-5 w-5 text-white/60" />
