@@ -17,8 +17,8 @@ export type DocsPage = {
   /** Aviso de acesso restrito por baixo do título, com cadeado (v78.30). */
   restricted?: string;
   /** Uma entrada direta para uma parte da página, no cartão do hub (v80.46:
-   *  os cross-sells das Comissões). `items` = os nomes que a acompanham. */
-  spotlight?: { label: string; href: string; items?: string[] };
+   *  os cross-sells das Comissões). Uma linha só (v80.48). */
+  spotlight?: { label: string; href: string };
 };
 
 export type DocsBlock = {
@@ -57,7 +57,7 @@ export const DOCS_BLOCKS: DocsBlock[] = [
         image: "/documentacao/comissoes-percent.jpg",
         tag: "Empreender dentro da WonderAds",
         spotlight: {
-          label: "Os outros serviços que vendemos",
+          label: "Ver os outros serviços WonderAds",
           href: "/documentacao/comissoes#cross-sells",
         },
       },

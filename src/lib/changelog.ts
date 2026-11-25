@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "80.48",
+    date: "2026-11-25",
+    title: "Pesquisa da Documentação: uma linha por página",
+    highlights: [
+      "**Os resultados ficam mais simples:** uma linha por página e por aula que menciona o que procuraste, com um excerto, sem contagens nem sítios repetidos. Abrir leva ao melhor sítio da página, e lá o «Procurar nesta página» anda pelos outros.",
+      "Nos excertos, os links e os botões já não aparecem colados ao texto.",
+      "O cartão «Comissões & Cross-sells» fica com uma só linha: «Ver os outros serviços WonderAds».",
+    ],
+  },
+  {
     version: "80.47",
     date: "2026-11-25",
     title: "Pesquisa da Documentação: excertos mais limpos",

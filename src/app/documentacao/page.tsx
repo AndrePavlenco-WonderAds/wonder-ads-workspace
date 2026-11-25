@@ -24,7 +24,6 @@ import { DOCS_OPEN_TO_TEAM } from "@/lib/documentacao/access";
 import { blocksFor } from "@/lib/documentacao/blocks";
 import { getDocsContext } from "@/lib/documentacao/server";
 import { listDocUpdates } from "@/lib/documentacao/updates-store";
-import { CROSS_SELLS } from "@/lib/documentacao/sales-catalog";
 import type { CrawlPage } from "@/lib/documentacao/search-crawl";
 import type { DocUpdate } from "@/lib/documentacao/updates";
 
@@ -85,7 +84,6 @@ export default async function DocumentacaoPage({ searchParams }: { searchParams:
   );
   const rawQ = (await searchParams).q;
   const initialQuery = (Array.isArray(rawQ) ? rawQ[0] : rawQ)?.slice(0, 120) ?? "";
-  const crossSellNames = CROSS_SELLS.map((c) => c.name);
 
   return (
     <PageShell backHref="/" backLabel="workspace">
@@ -156,25 +154,13 @@ export default async function DocumentacaoPage({ searchParams }: { searchParams:
                   <p className="docs-brand-flow-text mt-1.5 text-[13.5px] font-semibold tracking-[0.01em]">{c.tag}</p>
                 )}
                 {c.spotlight && (
+                  // v80.48: uma linha só (pedido do André).
                   <Link
                     href={c.spotlight.href}
-                    className="group/spot mt-3 block rounded-2xl border border-[#783DF5]/35 bg-[#783DF5]/[0.08] px-3.5 py-3 transition hover:border-[#c4a6ff]/60 hover:bg-[#783DF5]/[0.14]"
+                    className="group/spot mt-3 flex items-center justify-between gap-2 rounded-xl border border-[#783DF5]/35 bg-[#783DF5]/[0.08] px-3.5 py-2.5 text-[13.5px] font-semibold text-white transition hover:border-[#c4a6ff]/60 hover:bg-[#783DF5]/[0.14]"
                   >
-                    <span className="flex items-center justify-between gap-2 text-[13.5px] font-semibold text-white">
-                      <span>
-                        <span className="text-[#c4a6ff]">Cross-sells</span> · {c.spotlight.label}
-                      </span>
-                      <ArrowRight className="h-4 w-4 shrink-0 text-[#c4a6ff] transition group-hover/spot:translate-x-0.5" />
-                    </span>
-                    {c.id === "comissoes" && (
-                      <span className="mt-2 flex flex-wrap gap-1.5">
-                        {crossSellNames.map((n) => (
-                          <span key={n} className="rounded-full border border-white/12 bg-white/[0.04] px-2 py-0.5 text-[11.5px] text-white/70">
-                            {n}
-                          </span>
-                        ))}
-                      </span>
-                    )}
+                    <span className="truncate">{c.spotlight.label}</span>
+                    <ArrowRight className="h-4 w-4 shrink-0 text-[#c4a6ff] transition group-hover/spot:translate-x-0.5" />
                   </Link>
                 )}
                 {c.restricted && (

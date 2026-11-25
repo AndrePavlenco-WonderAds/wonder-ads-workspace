@@ -26,6 +26,9 @@ export type CrawlPage = {
 const BLOCK_TAGS = new Set([
   "P", "DIV", "LI", "UL", "OL", "SECTION", "ARTICLE", "HEADER", "TR", "TD", "TH", "TABLE", "BLOCKQUOTE",
   "DT", "DD", "DL", "FIGCAPTION", "FIGURE", "ASIDE", "BR", "SUMMARY", "DETAILS", "H1", "H2", "H3", "H4", "H5", "H6",
+  // Links e botões a seguir a uma frase («Página própria» + «Ver a
+  // consultoria») não se podem colar.
+  "A", "BUTTON", "LABEL",
 ]);
 const HEADINGS = new Set(["H2", "H3", "H4"]);
 const MAX_CHUNK = 2400;
@@ -33,7 +36,11 @@ const MAX_CHUNK = 2400;
 type Anchor = { id: string | null; label: string };
 
 function clean(s: string): string {
-  return s.replace(/\s+/g, " ").trim();
+  return s
+    .replace(/\s+/g, " ")
+    .replace(/ ([.,;:!?»)])/g, "$1")
+    .replace(/([«(]) /g, "$1")
+    .trim();
 }
 
 export function extractPage(html: string, page: CrawlPage): SearchDoc[] {

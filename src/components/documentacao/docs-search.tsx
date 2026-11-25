@@ -8,7 +8,8 @@
 // (lib/documentacao/search-crawl.ts) e fica guardada neste browser até a
 // página mudar (versão) ou passarem 6 horas. As aulas e as tarefas da
 // Jornada vêm de /api/documentacao/pesquisa. Sem pesquisa escrita, mostra os
-// cartões de sempre (children).
+// cartões de sempre (children). Desde a v80.48, uma linha por página e por
+// aula, sem contar quantas vezes a palavra aparece.
 
 import Image from "next/image";
 import Link from "next/link";
@@ -33,7 +34,6 @@ import { crawlPage, type CrawlPage } from "@/lib/documentacao/search-crawl";
 const CACHE_KEY = "docs-search:v1";
 const RECENT_KEY = "docs-search:recent";
 const TTL = 6 * 60 * 60 * 1000;
-const PER_PAGE = 3;
 
 type Cache = {
   v: 1;
@@ -105,7 +105,8 @@ function Marks({ segs }: { segs: Segment[] }) {
 
 type Tab = "tudo" | "docs" | "aulas";
 
-type Group = { id: string; label: string; block: string; image?: string; href: string; hits: SearchHit[] };
+/** Uma página que menciona a pesquisa — com o melhor sítio para onde levar. */
+type Group = { id: string; label: string; block: string; image?: string; best: SearchHit };
 
 export function DocsSearch({
   pages,
@@ -128,7 +129,6 @@ export function DocsSearch({
   const [progress, setProgress] = useState({ done: 0, failed: 0, loading: true });
   const [tab, setTab] = useState<Tab>("tudo");
   const [active, setActive] = useState(-1);
-  const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [showAllAulas, setShowAllAulas] = useState(false);
   const [focused, setFocused] = useState(false);
   const [recent, setRecent] = useState<string[]>([]);
@@ -223,32 +223,33 @@ export function DocsSearch({
   const result = useMemo(() => (trimmed.length >= 2 ? search(index, trimmed, 150) : null), [index, trimmed]);
 
   const pageById = useMemo(() => new Map(pages.map((p) => [p.id, p])), [pages]);
+  // v80.48: uma linha por PÁGINA (o André achou confusa a lista de sítios
+  // repetidos). Leva ao melhor sítio; dentro da página, o «Procurar nesta
+  // página» anda pelos outros.
   const groups = useMemo(() => {
     const m = new Map<string, Group>();
+    const hasMark = (h: SearchHit) => h.snippet.some((x) => x.mark) || Boolean(h.heading?.some((x) => x.mark));
     for (const h of result?.hits ?? []) {
       if (h.doc.kind !== "doc") continue;
-      let g = m.get(h.doc.group);
+      const g = m.get(h.doc.group);
       if (!g) {
         const p = pageById.get(h.doc.group);
-        g = {
+        m.set(h.doc.group, {
           id: h.doc.group,
           label: p?.label ?? h.doc.groupLabel,
           block: p?.block ?? h.doc.block,
           image: p?.image ?? h.doc.meta?.image,
-          href: p?.href ?? h.doc.href.split("?")[0],
-          hits: [],
-        };
-        m.set(h.doc.group, g);
-      }
-      // O mesmo sítio duas vezes (pedaços partidos) não se repete.
-      if (!g.hits.some((x) => x.doc.anchor === h.doc.anchor && x.doc.heading === h.doc.heading && x.doc.href === h.doc.href)) {
-        g.hits.push(h);
+          best: h,
+        });
+      } else if (!hasMark(g.best) && hasMark(h)) {
+        // Prefere-se um sítio onde a palavra se vê no texto.
+        g.best = h;
       }
     }
     return [...m.values()];
   }, [result, pageById]);
   const aulas = useMemo(() => (result?.hits ?? []).filter((h) => h.doc.kind === "aula"), [result]);
-  const docCount = groups.reduce((s, g) => s + g.hits.length, 0);
+  const docCount = groups.length;
 
   const showDocs = tab !== "aulas";
   const showAulas = tab !== "docs";
@@ -257,14 +258,10 @@ export function DocsSearch({
   // A lista por onde as setas andam, pela ordem em que se vê.
   const flat = useMemo(() => {
     const out: string[] = [];
-    if (showDocs)
-      for (const g of groups) {
-        const shown = expanded.has(g.id) ? g.hits : g.hits.slice(0, PER_PAGE);
-        for (const h of shown) out.push(hitHref(h.doc, trimmed));
-      }
+    if (showDocs) for (const g of groups) out.push(hitHref(g.best.doc, trimmed));
     if (showAulas) for (const h of visibleAulas) out.push(hitHref(h.doc, trimmed));
     return out;
-  }, [groups, visibleAulas, expanded, showDocs, showAulas, trimmed]);
+  }, [groups, visibleAulas, showDocs, showAulas, trimmed]);
 
   useEffect(() => setActive(-1), [trimmed, tab]);
   useEffect(() => {
@@ -451,84 +448,46 @@ export function DocsSearch({
               }`}
             >
               {showDocs && groups.length > 0 && (
-                <section aria-label="Na documentação" className="min-w-0 space-y-4">
+                <section aria-label="Na documentação" className="min-w-0">
                   <h2 className="flex items-center gap-2 px-1 text-[13px] font-semibold text-white/55">
                     <BookOpen className="h-4 w-4" /> Na documentação
                   </h2>
-                  {groups.map((g) => {
-                    const open = expanded.has(g.id);
-                    const shown = open ? g.hits : g.hits.slice(0, PER_PAGE);
-                    return (
-                      <article key={g.id} className="rounded-[22px] border border-white/10 bg-white/[0.03] p-2.5">
-                        <Link
-                          href={g.href}
-                          onClick={() => pushRecent(trimmed)}
-                          className="flex items-center gap-3 rounded-xl px-2 py-1.5 transition hover:bg-white/[0.04]"
-                        >
-                          <span className="relative h-11 w-14 shrink-0 overflow-hidden rounded-lg bg-white/[0.05]">
-                            {g.image ? (
-                              <Image src={g.image} alt="" fill sizes="56px" className="object-cover" />
-                            ) : (
-                              <FileText className="absolute inset-0 m-auto h-5 w-5 text-white/35" />
-                            )}
-                          </span>
-                          <span className="min-w-0 flex-1">
-                            <span className="block truncate text-[15.5px] font-semibold text-white">{g.label}</span>
-                            <span className="block truncate text-[12px] text-white/45">
-                              {g.block} · {g.hits.length} {g.hits.length === 1 ? "sítio" : "sítios"}
-                            </span>
-                          </span>
-                          <ArrowRight className="h-4 w-4 shrink-0 text-white/30" />
-                        </Link>
-                        <ul className="mt-1 space-y-0.5">
-                          {shown.map((h) => {
-                            idx += 1;
-                            const i = idx;
-                            const href = hitHref(h.doc, trimmed);
-                            return (
-                              <li key={h.doc.key}>
-                                <Link
-                                  href={href}
-                                  data-idx={i}
-                                  onClick={() => pushRecent(trimmed)}
-                                  onMouseEnter={() => setActive(i)}
-                                  className={itemClass(i)}
-                                >
-                                  <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px]">
-                                    <span className="rounded-full border border-white/12 px-2 py-0.5 text-white/55">{h.doc.section}</span>
-                                    {h.heading && h.doc.heading !== h.doc.section && (
-                                      <span className="min-w-0 font-medium text-white/85">
-                                        <Marks segs={h.heading} />
-                                      </span>
-                                    )}
-                                  </span>
-                                  <span className="mt-1 block text-[13.5px] leading-relaxed text-white/60">
-                                    <Marks segs={h.snippet} />
-                                  </span>
-                                </Link>
-                              </li>
-                            );
-                          })}
-                        </ul>
-                        {g.hits.length > PER_PAGE && (
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setExpanded((s) => {
-                                const n = new Set(s);
-                                if (n.has(g.id)) n.delete(g.id);
-                                else n.add(g.id);
-                                return n;
-                              })
-                            }
-                            className="mt-1 px-3 py-1.5 text-[12.5px] font-medium text-[#c4a6ff] transition hover:text-white"
+                  <ul className="mt-4 space-y-1 rounded-[22px] border border-white/10 bg-white/[0.03] p-2.5">
+                    {groups.map((g) => {
+                      idx += 1;
+                      const i = idx;
+                      const h = g.best;
+                      return (
+                        <li key={g.id}>
+                          <Link
+                            href={hitHref(h.doc, trimmed)}
+                            data-idx={i}
+                            onClick={() => pushRecent(trimmed)}
+                            onMouseEnter={() => setActive(i)}
+                            className={`${itemClass(i)} flex items-start gap-3.5`}
                           >
-                            {open ? "Mostrar menos" : `Mais ${g.hits.length - PER_PAGE} nesta página`}
-                          </button>
-                        )}
-                      </article>
-                    );
-                  })}
+                            <span className="relative mt-0.5 h-12 w-16 shrink-0 overflow-hidden rounded-lg bg-white/[0.05]">
+                              {g.image ? (
+                                <Image src={g.image} alt="" fill sizes="64px" className="object-cover" />
+                              ) : (
+                                <FileText className="absolute inset-0 m-auto h-5 w-5 text-white/35" />
+                              )}
+                            </span>
+                            <span className="min-w-0 flex-1">
+                              <span className="flex flex-wrap items-baseline gap-x-2">
+                                <span className="text-[15px] font-semibold text-white">{g.label}</span>
+                                <span className="text-[12px] text-white/40">{g.block}</span>
+                              </span>
+                              <span className="mt-1 line-clamp-2 block text-[13px] leading-relaxed text-white/55">
+                                <Marks segs={h.snippet} />
+                              </span>
+                            </span>
+                            <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-white/30 transition group-hover/hit:translate-x-0.5 group-hover/hit:text-white/70" />
+                          </Link>
+                        </li>
+                      );
+                    })}
+                  </ul>
                 </section>
               )}
 
@@ -601,7 +560,7 @@ export function DocsSearch({
                       onClick={() => setShowAllAulas((v) => !v)}
                       className="mt-2 px-3 py-1.5 text-[12.5px] font-medium text-[#c4a6ff] transition hover:text-white"
                     >
-                      {showAllAulas ? "Mostrar menos" : `Mais ${aulas.length - 8} aulas`}
+                      {showAllAulas ? "Mostrar menos" : "Ver mais aulas"}
                     </button>
                   )}
                 </section>
