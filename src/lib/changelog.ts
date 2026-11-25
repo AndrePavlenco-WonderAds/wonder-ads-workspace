@@ -13,6 +13,12 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "80.49",
+    date: "2026-11-25",
+    title: "Pesquisa da Documentação: excertos sem palavras coladas",
+    highlights: ["Os textos de cartões e botões já não aparecem colados uns aos outros nos excertos («Página própriaVer a consultoria…»)."],
+  },
+  {
     version: "80.48",
     date: "2026-11-25",
     title: "Pesquisa da Documentação: uma linha por página",

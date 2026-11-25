@@ -31,6 +31,9 @@ const BLOCK_TAGS = new Set([
   "A", "BUTTON", "LABEL",
 ]);
 const HEADINGS = new Set(["H2", "H3", "H4"]);
+/** O leitor não vê CSS: um <span className="block"> (ou flex/grid) também
+ *  separa o texto do que vem a seguir. */
+const DISPLAY_CLASS = /(^|\s)([\w-]+:)?(block|flex|inline-flex|inline-block|grid|table)(\s|$)/;
 const MAX_CHUNK = 2400;
 
 type Anchor = { id: string | null; label: string };
@@ -147,7 +150,7 @@ export function extractPage(html: string, page: CrawlPage): SearchDoc[] {
       }
       return;
     }
-    const block = BLOCK_TAGS.has(tag);
+    const block = BLOCK_TAGS.has(tag) || DISPLAY_CLASS.test(el.getAttribute("class") ?? "");
     if (block) push(a, headingOf.get(a.id) ?? null, " ");
     for (const child of Array.from(el.childNodes)) walk(child, a);
     if (block) push(a, headingOf.get(a.id) ?? null, " ");
