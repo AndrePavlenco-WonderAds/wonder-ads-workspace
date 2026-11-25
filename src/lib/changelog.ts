@@ -13,6 +13,12 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "80.47",
+    date: "2026-11-25",
+    title: "Pesquisa da Documentação: excertos mais limpos",
+    highlights: ["Os nomes da barra de secções deixam de aparecer colados nos excertos dos resultados («Onde estásSimulador…»)."],
+  },
+  {
     version: "80.46",
     date: "2026-11-25",
     title: "Documentação: pesquisa dentro de todas as páginas e das aulas, e os cross-sells à vista",

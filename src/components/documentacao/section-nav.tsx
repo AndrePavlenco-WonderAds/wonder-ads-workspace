@@ -33,7 +33,10 @@ export function SectionNav({ items }: { items: Array<{ id: string; label: string
   }, [active]);
 
   return (
-    <div className="sticky top-[72px] z-20 -mx-6 mt-8 border-b border-white/[0.06] bg-[color:var(--background)]/80 px-6 backdrop-blur-md sm:top-[81px] sm:-mx-10 sm:px-10">
+    <div
+      data-docs-search="skip"
+      className="sticky top-[72px] z-20 -mx-6 mt-8 border-b border-white/[0.06] bg-[color:var(--background)]/80 px-6 backdrop-blur-md sm:top-[81px] sm:-mx-10 sm:px-10"
+    >
       <div ref={barRef} className="flex gap-1 overflow-x-auto py-2.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {items.map((it) => {
           const on = it.id === active;
