@@ -280,7 +280,7 @@ export function ItemScoreControl({
           </Step>
 
           <Step n={2} title="O que é que o erro causou?" aside="podes marcar vários">
-            <div className="flex flex-wrap gap-1.5">
+            <div className="grid grid-cols-1 gap-1.5 [&>button]:w-full [&>button]:py-1.5">
               <button
                 type="button"
                 disabled={pending || clientImplied}
@@ -292,8 +292,13 @@ export function ItemScoreControl({
                 title="Recuperável no próprio dia"
                 className={chip(impacts.length === 0 && !clientImplied)}
               >
-                Nada de grave
-                <span className="tabular text-[10.5px] font-bold text-white/40">{SCORE_RULES.noImpactBase}</span>
+                <span
+                  className={`flex h-3.5 w-3.5 items-center justify-center rounded-full border ${impacts.length === 0 && !clientImplied ? "border-[#c3aaff] bg-[#783DF5]" : "border-white/30"}`}
+                >
+                  {impacts.length === 0 && !clientImplied && <span className="h-1.5 w-1.5 rounded-full bg-white" />}
+                </span>
+                Nada de grave — recuperável no próprio dia
+                <span className="tabular ml-auto text-[10.5px] font-bold text-white/40">{SCORE_RULES.noImpactBase}</span>
               </button>
               {IMPACTS.map((i) => {
                 const implied = i.id === "cliente" && clientImplied;
@@ -318,7 +323,7 @@ export function ItemScoreControl({
                       {on && <Check className="h-2.5 w-2.5" strokeWidth={3} />}
                     </span>
                     {i.label}
-                    <span className="tabular text-[10.5px] font-bold text-white/40">{i.base}</span>
+                    <span className="tabular ml-auto text-[10.5px] font-bold text-white/40">{i.base}</span>
                   </button>
                 );
               })}

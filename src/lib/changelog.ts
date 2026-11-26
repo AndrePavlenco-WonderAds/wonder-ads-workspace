@@ -13,6 +13,12 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "80.54",
+    date: "2026-11-26",
+    title: "Ineficácias (direção): passo 2 alinhado",
+    highlights: ["«O que é que o erro causou?» passa a ser uma lista alinhada, com os pontos de cada opção à direita."],
+  },
+  {
     version: "80.53",
     date: "2026-11-26",
     title: "Ineficácias (direção): pontuar em 4 passos",
