@@ -96,7 +96,7 @@ function EntryRow({
       >
         <span className="tabular w-[58px] text-[11.5px] text-white/45">{shortDate(e.occurredOn)}</span>
         <span className="min-w-0">
-          <span className={`block text-[12.5px] text-white/85 ${open ? "" : "truncate"}`}>
+          <span className="block truncate text-[12.5px] text-white/85">
             <span className="font-semibold">{e.client}</span>
             <span className="text-white/35"> · </span>
             {e.what}

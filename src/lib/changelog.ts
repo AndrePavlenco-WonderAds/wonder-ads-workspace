@@ -13,6 +13,12 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "80.52",
+    date: "2026-11-26",
+    title: "Ineficácias (direção): o relato aparece uma vez",
+    highlights: ["No histórico, ao abrir uma linha, o texto do erro já não aparece repetido."],
+  },
+  {
     version: "80.51",
     date: "2026-11-26",
     title: "Ineficácias (direção): listas mais limpas",
