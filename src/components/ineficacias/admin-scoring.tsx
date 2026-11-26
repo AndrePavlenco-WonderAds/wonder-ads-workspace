@@ -14,7 +14,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Calculator, Check, Eye, EyeOff, GraduationCap, Loader2, Repeat, Save, Wand2 } from "lucide-react";
+import { ArrowRight, Calculator, Check, Eye, EyeOff, GraduationCap, Loader2, Repeat, Save, AlertTriangle, Wand2 } from "lucide-react";
 import { BAND_TONES } from "@/components/ineficacias/report-view";
 import { CalcBreakdownView } from "@/components/ineficacias/calc-breakdown";
 import {
@@ -106,6 +106,58 @@ export type CalcBasis = {
   showCalc: boolean;
 };
 
+/** O que a pontuação faz aos contadores de hoje (v80.50): o PA e o NO da
+ *  fase corrente e o limiar do próximo nível. */
+export type ScoreImpact = {
+  pa: number;
+  no: number;
+  next: { level: 1 | 2 | 3; pa: number; no: number } | null;
+  /** A ocorrência é da fase corrente (conta no PA/NO de hoje)? */
+  inPhase: boolean;
+  /** «a subida ao nível 1 (12/10/2026)» — para as que ficam fora da fase. */
+  phaseLabel: string | null;
+  who: string;
+};
+
+function ImpactLine({ impact, points, initial }: { impact: ScoreImpact; points: number | null; initial: IneficaciaScore | null }) {
+  if (points === null) return null;
+  const base = "mt-2 flex items-start gap-1.5 rounded-lg px-2.5 py-2 text-[11.5px] leading-snug";
+  if (!impact.inPhase) {
+    return (
+      <p className={`${base} border border-white/10 bg-black/20 text-white/55`}>
+        Aconteceu antes da fase atual{impact.phaseLabel ? ` (${impact.phaseLabel})` : ""}: não mexe no PA nem no NO de hoje.
+      </p>
+    );
+  }
+  const cur = initial && initial.points > 0 ? initial.points : 0;
+  const pa = impact.pa - cur + (points > 0 ? points : 0);
+  const no = impact.no - (cur > 0 ? 1 : 0) + (points > 0 ? 1 : 0);
+  if (points === 0) {
+    return (
+      <p className={`${base} border border-white/10 bg-black/20 text-white/55`}>
+        0 = não conta: PA {pa} e NO {no} {cur > 0 ? "(sai das contas)" : "ficam iguais"}.
+      </p>
+    );
+  }
+  const n = impact.next;
+  const crosses = n !== null && (pa >= n.pa || no >= n.no);
+  return (
+    <p className={`${base} border ${crosses ? "border-rose-400/40 bg-rose-500/10 text-rose-100" : "border-white/10 bg-black/20 text-white/65"}`}>
+      {crosses ? <AlertTriangle className="mt-px h-3.5 w-3.5 shrink-0 text-rose-300" /> : <ArrowRight className="mt-px h-3.5 w-3.5 shrink-0 text-white/35" />}
+      <span>
+        Com {points} {points === 1 ? "ponto" : "pontos"}: PA <span className="tabular font-bold text-white">{impact.pa}→{pa}</span>
+        {n ? <span className="text-white/40"> de {n.pa}</span> : null} · NO <span className="tabular font-bold text-white">{impact.no}→{no}</span>
+        {n ? <span className="text-white/40"> de {n.no}</span> : null}
+        {crosses && n ? (
+          <span className="font-semibold"> — passa o limiar: {impact.who} sobe ao nível {n.level} e os contadores voltam a zero.</span>
+        ) : !n ? (
+          <span className="text-white/45"> · nível 3, sem limiar acima.</span>
+        ) : null}
+      </span>
+    </p>
+  );
+}
+
 function sameSet(a: string[], b: string[]): boolean {
   return a.length === b.length && a.every((x) => b.includes(x));
 }
@@ -114,10 +166,13 @@ export function ItemScoreControl({
   target,
   initial,
   calc,
+  impact,
 }: {
   target: Target;
   initial: IneficaciaScore | null;
   calc?: CalcBasis;
+  /** Mostra o que a pontuação faz ao PA/NO de hoje (v80.50). */
+  impact?: ScoreImpact;
 }) {
   const router = useRouter();
   const [points, setPoints] = useState<number | null>(initial?.points ?? null);
@@ -237,6 +292,7 @@ export function ItemScoreControl({
           disabled={pending}
           suggested={suggestion?.points ?? null}
         />
+        {impact && <ImpactLine impact={impact} points={points} initial={initial} />}
       </div>
       <input
         type="text"

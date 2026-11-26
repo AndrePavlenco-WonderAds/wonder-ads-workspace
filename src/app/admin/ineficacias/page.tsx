@@ -5,16 +5,18 @@
 // layout de /admin sozinho não chega — ver feedback-layout-gate).
 
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, CheckCheck, ClipboardList, Gauge, Hourglass, Plus, Scale, Users } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCheck, ClipboardList, Gauge, History, Hourglass, Plus, Scale, Users } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { LevelChip } from "@/components/ineficacias/level-gauge";
-import { ReportStatusChip } from "@/components/ineficacias/report-view";
+import { ScoreBadge } from "@/components/ineficacias/report-view";
+import { shortDate, SourceChip, StatusChip } from "@/components/ineficacias/admin-status";
 import { getCurrentEmployee } from "@/lib/auth/server";
 import { listImpersonationTargets, viewerDeptOf } from "@/lib/auth/credentials";
 import { getTeamAvatar } from "@/lib/team-avatars";
 import { INEFICACIAS_OPEN_TO_TEAM } from "@/lib/ineficacias/access";
 import { ineficaciasConfigured, loadTeam, type ConsultantBundle } from "@/lib/ineficacias/store";
-import { formatISODayMonth, formatLisbonDateTime, phaseOpenLabel } from "@/lib/ineficacias/shared";
+import { buildAdminView, type AdminEntry } from "@/lib/ineficacias/admin-view";
+import { formatISODayMonth, phaseOpenLabel } from "@/lib/ineficacias/shared";
 import { todayLisbonISO } from "@/lib/probation/progress";
 
 export const dynamic = "force-dynamic";
@@ -32,13 +34,14 @@ function roster(): Person[] {
     .map((p) => ({ username: p.username, name: p.name, role: p.role, dept: p.dept }));
 }
 
-function Avatar({ username, name }: { username: string; name: string }) {
+function Avatar({ username, name, small = false }: { username: string; name: string; small?: boolean }) {
   const src = getTeamAvatar(username);
+  const box = small ? "h-6 w-6 text-[10px]" : "h-9 w-9 text-[12px]";
   return src ? (
     // eslint-disable-next-line @next/next/no-img-element
-    <img src={src} alt="" className="h-9 w-9 shrink-0 rounded-full border border-white/10 object-cover" />
+    <img src={src} alt="" className={`${box} shrink-0 rounded-full border border-white/10 object-cover`} />
   ) : (
-    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.05] text-[12px] font-bold text-white/70">
+    <span className={`${box} flex shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.05] font-bold text-white/70`}>
       {name.trim().charAt(0).toUpperCase()}
     </span>
   );
@@ -61,12 +64,31 @@ export default async function IneficaciasAdminPage() {
   const people = roster();
   const team = await loadTeam(people.map((p) => p.username), today);
 
-  const bundles = people.map((p) => ({ person: p, bundle: team.get(p.username) })).filter((x): x is { person: Person; bundle: ConsultantBundle } => Boolean(x.bundle));
-  const allReports = bundles.flatMap((b) => b.bundle.reports.map((r) => ({ r, person: b.person })));
-  const toReview = allReports.filter((x) => !x.r.review).sort((a, b) => a.r.createdAt - b.r.createdAt);
-  const unscored = allReports.reduce((s, x) => s + x.r.items.filter((it) => !it.score).length, 0);
-  const pendingMeasures = bundles.filter((b) => b.bundle.state.pendingMeasure);
-  const escalated = bundles.filter((b) => b.bundle.state.reached >= 1).length;
+  const all = people
+    .map((p) => ({ person: p, bundle: team.get(p.username) }))
+    .filter((x): x is { person: Person; bundle: ConsultantBundle } => Boolean(x.bundle))
+    .map((x) => ({ ...x, view: buildAdminView(x.person.username, x.bundle.reports, x.bundle.ledger, x.bundle.state) }));
+  const toReview = all.flatMap((b) => b.bundle.reports.filter((r) => !r.review));
+  // v80.50: a fila é de OCORRÊNCIAS (o que há para pontuar), não de relatórios.
+  const queue = all
+    .flatMap((b) => b.view.pending.map((d) => ({ e: d.entry, person: b.person })))
+    .sort((a, b) => a.e.occurredOn.localeCompare(b.e.occurredOn));
+  const unscored = queue.length;
+  const pendingMeasures = all.filter((b) => b.bundle.state.pendingMeasure);
+  const escalated = all.filter((b) => b.bundle.state.reached >= 1).length;
+  // Quem pede atenção primeiro: por pontuar, medida por aplicar, nível, PA/NO.
+  const heat = (b: (typeof all)[number]) => {
+    const s = b.bundle.state;
+    const ratio = s.next ? Math.max(s.pa / s.next.pa, s.no / s.next.no) : 1;
+    return b.view.pending.length * 100 + (s.pendingMeasure ? 50 : 0) + s.level * 10 + ratio;
+  };
+  const active = all.filter((b) => b.view.entries.length > 0 || b.bundle.state.level > 0).sort((a, b) => heat(b) - heat(a));
+  const quiet = all.filter((b) => !active.includes(b));
+  // O passado da equipa: as últimas ocorrências de toda a gente.
+  const recent: { e: AdminEntry; person: Person }[] = all
+    .flatMap((b) => b.view.entries.map((e) => ({ e, person: b.person })))
+    .sort((a, b) => b.e.occurredOn.localeCompare(a.e.occurredOn) || (b.e.score?.at ?? 0) - (a.e.score?.at ?? 0))
+    .slice(0, 12);
 
   return (
     <PageShell>
@@ -134,12 +156,14 @@ export default async function IneficaciasAdminPage() {
           <p className="mb-3 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-white/35">
             <Users className="h-3.5 w-3.5" />
             Equipa · {people.length}
+            <span className="font-normal normal-case tracking-normal text-white/30">· quem pede atenção primeiro</span>
           </p>
           <div className="overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.02]">
-            {bundles.map(({ person, bundle }, i) => {
+            {active.length === 0 && <p className="px-4 py-5 text-[12.5px] text-white/45">Ninguém tem ocorrências registadas.</p>}
+            {active.map(({ person, bundle, view }, i) => {
               const s = bundle.state;
               const last = bundle.reports[0];
-              const pendingItems = bundle.reports.reduce((n, r) => n + r.items.filter((it) => !it.score).length, 0);
+              const pendingItems = view.pending.length;
               return (
                 <Link
                   key={person.username}
@@ -197,33 +221,95 @@ export default async function IneficaciasAdminPage() {
                 </Link>
               );
             })}
+            {quiet.length > 0 && (
+              <div className={`flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 ${active.length ? "border-t border-white/[0.05]" : ""}`}>
+                <span className="text-[11px] text-white/40">Sem ocorrências · nível 0:</span>
+                {quiet.map(({ person }) => (
+                  <Link
+                    key={person.username}
+                    href={`/admin/ineficacias/${encodeURIComponent(person.username)}`}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.08] bg-white/[0.03] py-0.5 pl-0.5 pr-2.5 text-[11.5px] text-white/60 transition hover:text-white"
+                  >
+                    <Avatar username={person.username} name={person.name} small />
+                    {person.name}
+                  </Link>
+                ))}
+              </div>
+            )}
           </div>
+
+          {recent.length > 0 && (
+            <div className="mt-8">
+              <p className="mb-3 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-white/35">
+                <History className="h-3.5 w-3.5" />
+                Últimas ocorrências da equipa
+              </p>
+              <ul className="divide-y divide-white/[0.05] overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.02]">
+                {recent.map(({ e, person }) => (
+                  <li key={e.id}>
+                    <Link
+                      href={
+                        e.status === "pontuar"
+                          ? `/admin/ineficacias/${encodeURIComponent(person.username)}#oc-${e.id}`
+                          : `/admin/ineficacias/${encodeURIComponent(person.username)}?oc=${e.id}`
+                      }
+                      className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3 px-4 py-2.5 transition hover:bg-white/[0.04]"
+                    >
+                      <span className="tabular w-[58px] text-[11.5px] text-white/45">{shortDate(e.occurredOn)}</span>
+                      <span className="min-w-0">
+                        <span className="block truncate text-[12.5px] text-white/85">
+                          <span className="font-semibold">{person.name}</span>
+                          <span className="text-white/35"> · </span>
+                          {e.client}
+                          <span className="text-white/35"> · </span>
+                          <span className="text-white/65">{e.what}</span>
+                        </span>
+                        <span className="mt-1 flex flex-wrap items-center gap-1">
+                          <StatusChip status={e.status} />
+                          <SourceChip source={e.source} reportRef={e.reportRef} />
+                          <span className="text-[10.5px] text-white/40">{e.reason}</span>
+                        </span>
+                      </span>
+                      <ScoreBadge score={e.score} size="sm" />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </section>
 
         {/* a fila */}
         <aside className="animate-fade-up space-y-6">
           <div>
-            <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.2em] text-white/35">Por rever · {toReview.length}</p>
+            <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.2em] text-white/35">Por pontuar · {queue.length}</p>
             <div className="overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.02]">
-              {toReview.length === 0 ? (
+              {queue.length === 0 ? (
                 <p className="flex items-center gap-2 px-4 py-5 text-[12.5px] text-white/45">
                   <CheckCheck className="h-4 w-4 text-emerald-300/70" />
-                  Nenhum relatório à espera.
+                  Nada por pontuar.
                 </p>
               ) : (
-                toReview.map(({ r, person }, i) => (
+                queue.map(({ e, person }, i) => (
                   <Link
-                    key={r.id}
-                    href={`/admin/ineficacias/${encodeURIComponent(person.username)}?relatorio=${r.id}`}
-                    className={`flex items-center gap-3 px-4 py-3 transition hover:bg-white/[0.04] ${i ? "border-t border-white/[0.05]" : ""}`}
+                    key={e.id}
+                    href={`/admin/ineficacias/${encodeURIComponent(person.username)}#oc-${e.id}`}
+                    className={`group flex items-start gap-3 px-4 py-3 transition hover:bg-white/[0.04] ${i ? "border-t border-white/[0.05]" : ""}`}
                   >
+                    <Avatar username={person.username} name={person.name} />
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-[12.5px] font-semibold text-white/85">{person.name}</span>
-                      <span className="block truncate text-[11px] text-white/45">
-                        {r.ref} · {r.items.length} {r.items.length === 1 ? "ocorrência" : "ocorrências"} · {formatLisbonDateTime(r.signature.signedAt)}
+                      <span className="flex items-baseline justify-between gap-2">
+                        <span className="truncate text-[12.5px] font-semibold text-white/85">{person.name}</span>
+                        <span className="tabular shrink-0 text-[10.5px] text-white/35">{shortDate(e.occurredOn)}</span>
+                      </span>
+                      <span className="mt-0.5 line-clamp-2 text-[11.5px] leading-snug text-white/55">
+                        <span className="font-semibold text-white/70">{e.client}</span> · {e.what}
+                      </span>
+                      <span className="mt-1 inline-flex items-center gap-1 text-[10.5px] font-semibold text-[#c3aaff] opacity-80 group-hover:opacity-100">
+                        Pontuar com o histórico ao lado
+                        <ArrowRight className="h-3 w-3" />
                       </span>
                     </span>
-                    <ReportStatusChip report={r} />
                   </Link>
                 ))
               )}

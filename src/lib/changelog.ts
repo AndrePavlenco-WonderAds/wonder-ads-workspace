@@ -13,6 +13,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "80.50",
+    date: "2026-11-26",
+    title: "Ineficácias (direção): pontuar com o histórico ao lado",
+    highlights: [
+      "**A página do consultor lê-se de cima a baixo:** o ponto da situação numa faixa (PA, NO, por pontuar, desde quando contam) e a escala completa num «ver mais».",
+      "**Mesa de pontuação:** cada ocorrência por pontuar tem ao lado o passado da pessoa: o mesmo cliente, o mesmo motivo e as parecidas, com um aviso quando diz que é a primeira vez e há parecidas. Ao escolher os pontos vês o que acontece ao PA e ao NO e se passa o limiar.",
+      "**Histórico numa linha por ocorrência:** relatórios e registos da direção juntos, por mês, com as subidas de nível, os resets e as medidas pelo meio. Filtros por estado e cliente, pesquisa no texto e «Corrigir pontuação» em cada linha.",
+      "Os relatórios assinados ficam compactos, com a assinatura e a integridade ao abrir.",
+      "**Painel da equipa:** a fila é das ocorrências por pontuar (com o relato), a equipa vem ordenada por quem pede atenção, quem não tem ocorrências fica numa linha, e há a lista das últimas ocorrências da equipa.",
+    ],
+  },
+  {
     version: "80.49",
     date: "2026-11-25",
     title: "Pesquisa da Documentação: excertos sem palavras coladas",

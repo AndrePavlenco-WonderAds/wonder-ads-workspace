@@ -1,31 +1,44 @@
-// Direção → um consultor: o seu lugar na escala, as ações (medida por
-// aplicar, nível à mão, ocorrência direta), o histórico de eventos, e todos
-// os relatórios dele com a pontuação por ocorrência e a assinatura completa
-// (IP, user-agent, hash e verificação de integridade).
+// Direção → um consultor (v80.50, refeita para se ler de cima a baixo):
+//   1. o ponto da situação numa faixa (PA, NO, por pontuar, desde quando
+//      contam) — a escala inteira fica num «ver mais»;
+//   2. POR PONTUAR: uma mesa por ocorrência, com o passado que interessa ao
+//      lado (mesmo cliente, mesmo motivo, parecidas) e o efeito da pontuação
+//      no PA/NO de hoje;
+//   3. o HISTÓRICO: tudo numa linha cada, por mês, com filtros e pesquisa, e
+//      o percurso na escala pelo meio;
+//   4. os RELATÓRIOS ASSINADOS: a prova (hash, IP, user-agent, integridade),
+//      compactos.
+// A coluna lateral tem as ações da escala e os padrões da pessoa.
 
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ClipboardCheck, History, PlusCircle, ShieldAlert, Wand2 } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowLeft,
+  ArrowRight,
+  CheckCheck,
+  ClipboardCheck,
+  Gauge,
+  Hourglass,
+  ListTree,
+  PlusCircle,
+  RotateCcw,
+  Sigma,
+  Wand2,
+} from "lucide-react";
 import { PageShell } from "@/components/page-shell";
-import { LevelChip, LevelGauge } from "@/components/ineficacias/level-gauge";
-import { ReportView, ScoreBadge } from "@/components/ineficacias/report-view";
-import { ItemScoreControl } from "@/components/ineficacias/admin-scoring";
+import { LevelChip, LevelGauge, LEVEL_TONES } from "@/components/ineficacias/level-gauge";
+import { ReportStatusChip, ScoreBadge, SignatureBlock } from "@/components/ineficacias/report-view";
 import { MeasureForm, SetLevelForm } from "@/components/ineficacias/admin-ledger-actions";
+import { PendingDeskCard } from "@/components/ineficacias/admin-desk";
+import { AdminHistory } from "@/components/ineficacias/admin-history";
+import { shortDate } from "@/components/ineficacias/admin-status";
 import { getCurrentEmployee } from "@/lib/auth/server";
 import { findEmployeeByUsername } from "@/lib/auth/credentials";
 import { getTeamAvatar } from "@/lib/team-avatars";
 import { loadConsultant, verifyIntegrity } from "@/lib/ineficacias/store";
-import {
-  firstName,
-  formatISODate,
-  levelStepTitle,
-  phaseOpenLabel,
-  formatLisbonDateTime,
-  errorTypeLabel,
-  noticedLabel,
-  reasonLabel,
-  type LedgerEvent,
-} from "@/lib/ineficacias/shared";
+import { buildAdminView } from "@/lib/ineficacias/admin-view";
+import { firstName, formatISODate, phaseOpenLabel, REASONS } from "@/lib/ineficacias/shared";
 import { todayLisbonISO } from "@/lib/probation/progress";
 
 export const dynamic = "force-dynamic";
@@ -35,11 +48,24 @@ export const metadata = {
   title: "Ineficácias do consultor — SuperAdmin Control Suite",
 };
 
-function eventTitle(e: LedgerEvent): string {
-  if (e.kind === "measure") {
-    return e.level === 3 ? "Probation iniciado (nível 3)" : `1:1 do nível ${e.level} realizado`;
-  }
-  return `Nível definido à mão: ${e.level}`;
+function Meter({ label, value, limit, icon: Icon, tone }: { label: string; value: number; limit: number | null; icon: typeof Sigma; tone: string }) {
+  const hot = limit !== null && value >= limit;
+  const ratio = limit ? Math.min(1, value / limit) : 0;
+  return (
+    <div className="rounded-2xl border border-white/[0.08] bg-white/[0.025] px-4 py-3">
+      <p className="flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-[0.16em] text-white/40">
+        <Icon className="h-3.5 w-3.5" />
+        {label}
+      </p>
+      <p className={`mt-1 text-[24px] font-bold leading-none tabular-nums ${hot ? "text-rose-300" : "text-white"}`}>
+        {value}
+        {limit !== null && <span className="ml-1 text-[12px] font-medium text-white/35">/ {limit}</span>}
+      </p>
+      <div className="mt-2 h-1 overflow-hidden rounded-full bg-white/[0.07]">
+        <div className={`h-full rounded-full ${hot ? "bg-rose-400" : tone}`} style={{ width: `${Math.max(ratio * 100, value > 0 ? 6 : 0)}%` }} />
+      </div>
+    </div>
+  );
 }
 
 export default async function IneficaciasConsultantPage({
@@ -47,7 +73,7 @@ export default async function IneficaciasConsultantPage({
   searchParams,
 }: {
   params: Promise<{ username: string }>;
-  searchParams: Promise<{ relatorio?: string }>;
+  searchParams: Promise<{ relatorio?: string; oc?: string }>;
 }) {
   const employee = await getCurrentEmployee();
   if (!employee?.isAdmin) return null;
@@ -56,23 +82,40 @@ export default async function IneficaciasConsultantPage({
   if (!row || row.isAdmin || row.viewerOf) notFound();
   const username = row.username;
   const today = todayLisbonISO();
-  const bundle = await loadConsultant(username, today);
-  const { state, reports, ledger } = bundle;
-  const openId = (await searchParams).relatorio ?? reports.find((r) => !r.review)?.id ?? reports[0]?.id ?? null;
-  // O histórico junta os registos da direção às mudanças automáticas: as
-  // subidas de nível (PA e NO a zero), a recuperação do probation e o reset do
-  // fim do semestre (v78.57). No mesmo dia: a subida vem primeiro, depois a
-  // direção, depois a recuperação, e o reset do semestre fecha o dia.
-  const STEP_RANK = { subida: 0, direcao: 1, recuperado: 2, semestre: 3 } as const;
-  const history = [
-    ...ledger.events.map((e) => ({ key: e.id, at: e.at, rank: 1, tie: e.createdAt, event: e, step: null })),
-    ...state.steps
-      .filter((st) => st.reason !== "direcao")
-      .map((st, i) => ({ key: `step-${i}`, at: st.at, rank: STEP_RANK[st.reason], tie: i, event: null, step: st })),
-  ].sort((a, b) => b.at.localeCompare(a.at) || b.rank - a.rank || b.tie - a.tie);
-  const direct = ledger.direct.slice().sort((a, b) => b.occurredOn.localeCompare(a.occurredOn));
+  const { state, reports, ledger } = await loadConsultant(username, today);
+  const view = buildAdminView(username, reports, ledger, state);
   const avatar = getTeamAvatar(username);
   const who = firstName(row.fullName ?? row.name) || row.name;
+
+  // De onde se chega: o sino/Slack/painel apontam para um relatório
+  // (?relatorio=) ou para uma ocorrência (?oc=). As por pontuar ficam
+  // realçadas na mesa; as outras abrem-se no histórico.
+  const sp = await searchParams;
+  const focusReport = sp.relatorio ? reports.find((r) => r.id === sp.relatorio) : undefined;
+  const focusAll = new Set<string>([...(focusReport?.items.map((it) => it.id) ?? []), ...(sp.oc ? [sp.oc] : [])]);
+  const pendingIds = new Set(view.pending.map((p) => p.entry.id));
+  const historyFocus = [...focusAll].filter((id) => !pendingIds.has(id));
+
+  const impactBase = {
+    pa: state.pa,
+    no: state.no,
+    next: state.next,
+    phaseLabel: state.phaseOpen ? `${phaseOpenLabel(state.phaseOpen)}, a ${formatISODate(state.phaseOpen.at)}` : null,
+    who,
+  };
+
+  // Os padrões da pessoa, para a coluna lateral.
+  const scored = view.entries.filter((e) => e.score);
+  const byReason = REASONS.map((r) => ({ ...r, n: view.entries.filter((e) => e.reasonId === r.id).length })).filter((r) => r.n > 0);
+  const maxReason = Math.max(1, ...byReason.map((r) => r.n));
+  const topClients = view.clients
+    .map((c) => ({ c, n: view.entries.filter((e) => e.client === c).length }))
+    .sort((a, b) => b.n - a.n)
+    .slice(0, 3);
+  const both = scored.filter((e) => e.selfScore !== null);
+  const avg = (xs: number[]) => (xs.length ? (xs.reduce((s, x) => s + x, 0) / xs.length).toFixed(1).replace(".", ",") : "—");
+  const repeated = view.entries.filter((e) => e.firstTime === false).length;
+  const tone = LEVEL_TONES[state.level];
 
   return (
     <PageShell>
@@ -97,134 +140,196 @@ export default async function IneficaciasConsultantPage({
             <LevelChip state={state} />
           </h1>
           <p className="mt-1 text-[12.5px] text-white/45">
-            {row.role} · {row.dept} · {reports.length} {reports.length === 1 ? "relatório" : "relatórios"}
-            {state.phaseOpen ? ` · contadores desde ${phaseOpenLabel(state.phaseOpen)} a ${formatISODate(state.phaseOpen.at)}` : ""}
+            {row.role} · {row.dept} · {view.counts.todas} {view.counts.todas === 1 ? "ocorrência" : "ocorrências"} no registo · {reports.length}{" "}
+            {reports.length === 1 ? "relatório assinado" : "relatórios assinados"}
           </p>
         </div>
+        <Link
+          href={`/admin/ineficacias/registar?consultor=${encodeURIComponent(username)}`}
+          className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-[12.5px] font-semibold text-white shadow-[0_8px_22px_-8px_rgba(120,61,245,0.7)] transition hover:-translate-y-px"
+          style={{ background: "var(--brand-gradient)" }}
+        >
+          <PlusCircle className="h-3.5 w-3.5" />
+          Registar ineficácia de {who}
+        </Link>
       </header>
 
-      <div className="animate-fade-up mt-6">
-        <LevelGauge state={state} who={who} />
-      </div>
+      {state.pendingMeasure && (
+        <a
+          href="#medida"
+          className="animate-fade-up mt-5 flex items-center gap-3 rounded-2xl border border-rose-400/35 bg-rose-500/10 px-4 py-3 text-[12.5px] text-rose-100 transition hover:bg-rose-500/15"
+        >
+          <AlertTriangle className="h-4 w-4 shrink-0 text-rose-300" />
+          <span className="min-w-0 flex-1">
+            <span className="font-semibold">Medida do nível {state.pendingMeasure.level} por aplicar</span> — atingido a{" "}
+            {formatISODate(state.pendingMeasure.since)} (PA {state.pendingMeasure.pa} · NO {state.pendingMeasure.no}).
+          </span>
+          <ArrowRight className="h-4 w-4 shrink-0 text-rose-200/70" />
+        </a>
+      )}
 
-      <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_360px]">
+      {/* o ponto da situação */}
+      <section aria-label="Ponto da situação" className="animate-fade-up mt-5 grid grid-cols-2 gap-2.5 lg:grid-cols-4">
+        <Meter label="PA · pontos" value={state.pa} limit={state.next?.pa ?? null} icon={Sigma} tone={tone.dot} />
+        <Meter label="NO · ocorrências" value={state.no} limit={state.next?.no ?? null} icon={Gauge} tone={tone.dot} />
+        <a
+          href={view.pending.length ? "#por-pontuar" : "#historico"}
+          className={`rounded-2xl border px-4 py-3 transition ${
+            view.pending.length ? "border-[#a78bfa]/40 bg-[#783DF5]/10 hover:bg-[#783DF5]/15" : "border-white/[0.08] bg-white/[0.025]"
+          }`}
+        >
+          <p className="flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-[0.16em] text-white/40">
+            <Hourglass className="h-3.5 w-3.5" />
+            Por pontuar
+          </p>
+          <p className={`mt-1 text-[24px] font-bold leading-none tabular-nums ${view.pending.length ? "text-[#c3aaff]" : "text-white/40"}`}>
+            {view.pending.length}
+          </p>
+          <p className="mt-2 text-[10.5px] text-white/40">{view.pending.length ? "Ver a mesa de pontuação ↓" : "Tudo pontuado"}</p>
+        </a>
+        <div className="rounded-2xl border border-white/[0.08] bg-white/[0.025] px-4 py-3">
+          <p className="flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-[0.16em] text-white/40">
+            <RotateCcw className="h-3.5 w-3.5" />
+            Contam desde
+          </p>
+          <p className="mt-1 text-[14px] font-semibold leading-snug text-white/85">
+            {state.phaseStart ? formatISODate(state.phaseStart) : "o início"}
+          </p>
+          <p className="mt-1 text-[10.5px] leading-snug text-white/40">
+            {state.phaseOpen ? `Depois de ${phaseOpenLabel(state.phaseOpen)}.` : "Nunca houve reset."}
+            {state.nextReset ? ` Reset a ${formatISODate(state.nextReset.at)}.` : ""}
+          </p>
+        </div>
+      </section>
+
+      <details className="animate-fade-up group mt-3">
+        <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 text-[11.5px] font-semibold text-white/45 transition hover:text-white/80 [&::-webkit-details-marker]:hidden">
+          <ListTree className="h-3.5 w-3.5" />
+          <span className="group-open:hidden">Ver a escala completa e as regras</span>
+          <span className="hidden group-open:inline">Esconder a escala</span>
+        </summary>
+        <div className="mt-3">
+          <LevelGauge state={state} who={who} />
+        </div>
+      </details>
+
+      <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
         {/* coluna principal */}
         <div className="min-w-0 space-y-10">
-          {state.counted.length > 0 && (
-            <section className="animate-fade-up rounded-2xl border border-white/[0.08] bg-white/[0.02] px-4 py-3.5">
-              <p className="readout text-white/35">Desde a última subida de nível · {state.counted.length} {state.counted.length === 1 ? "ocorrência" : "ocorrências"} · PA {state.pa} · NO {state.no}</p>
-              <ul className="mt-2 divide-y divide-white/[0.05]">
-                {state.counted.map((o) => (
-                  <li key={o.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2 text-[12.5px]">
-                    <span className="tabular w-20 shrink-0 text-white/45">{formatISODate(o.occurredOn)}</span>
-                    <span className="min-w-0 flex-1 truncate text-white/80">
-                      <span className="font-semibold">{o.client}</span> · {o.what}
-                      {o.source === "direcao" && <span className="ml-1.5 text-[10.5px] uppercase tracking-[0.12em] text-amber-200/70">direção</span>}
-                    </span>
-                    <ScoreBadge score={o.score} size="sm" />
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
+          <section id="por-pontuar" aria-label="Por pontuar" className="animate-fade-up scroll-mt-24">
+            <h2 className="flex items-center gap-2 text-[17px] font-semibold tracking-tight text-white">
+              <Hourglass className="h-4 w-4 text-[#c3aaff]" />
+              Por pontuar
+              <span className="tabular rounded-full bg-white/[0.08] px-2 text-[12px] text-white/60">{view.pending.length}</span>
+            </h2>
+            {view.pending.length === 0 ? (
+              <p className="mt-3 flex items-center gap-2 rounded-2xl border border-white/[0.08] bg-white/[0.02] px-4 py-3.5 text-[12.5px] text-white/50">
+                <CheckCheck className="h-4 w-4 text-emerald-300/70" />
+                Nada por pontuar — o histórico de {who} está todo em baixo.
+              </p>
+            ) : (
+              <>
+                <p className="mt-1 text-[12px] text-white/45">
+                  Da mais antiga para a mais recente. Ao lado de cada uma, o passado de {who}: o mesmo cliente, o mesmo motivo e as
+                  parecidas. Ao escolher os pontos vês o que acontece ao PA e ao NO.
+                </p>
+                <div className="mt-4 space-y-5">
+                  {view.pending.map((desk) => (
+                    <PendingDeskCard
+                      key={desk.entry.id}
+                      desk={desk}
+                      who={who}
+                      impact={{ ...impactBase, inPhase: desk.entry.inPhase }}
+                      focused={focusAll.has(desk.entry.id)}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
+          </section>
 
-          <section className="animate-fade-up" aria-label="Relatórios semanais">
+          <section id="historico" aria-label="Histórico" className="animate-fade-up scroll-mt-24">
+            <h2 className="mb-1 flex items-center gap-2 text-[17px] font-semibold tracking-tight text-white">
+              <ListTree className="h-4 w-4 text-[color:var(--brand-purple)]" />
+              Histórico de {who}
+            </h2>
+            <p className="mb-3 text-[12px] text-white/45">
+              Todas as ocorrências (reportadas e registadas pela direção), uma por linha, com as subidas de nível, os resets e as
+              medidas pelo meio. Toca numa linha para ver tudo.
+            </p>
+            <AdminHistory
+              entries={view.entries}
+              journey={view.journey}
+              counts={view.counts}
+              clients={view.clients}
+              who={who}
+              impactBase={impactBase}
+              focusIds={historyFocus}
+            />
+          </section>
+
+          <section id="relatorios" aria-label="Relatórios assinados" className="animate-fade-up scroll-mt-24">
             <h2 className="flex items-center gap-2 text-[17px] font-semibold tracking-tight text-white">
               <ClipboardCheck className="h-4 w-4 text-[color:var(--brand-purple)]" />
-              Relatórios semanais
+              Relatórios assinados
+              <span className="tabular rounded-full bg-white/[0.08] px-2 text-[12px] text-white/60">{reports.length}</span>
             </h2>
+            <p className="mt-1 text-[12px] text-white/45">A prova do que {who} declarou: assinatura, hash e verificação de integridade.</p>
             {reports.length === 0 ? (
               <p className="mt-3 rounded-2xl border border-dashed border-white/12 px-5 py-6 text-[12.5px] text-white/45">
                 {who} ainda não assinou nenhum relatório.
               </p>
             ) : (
-              <div className="mt-3 space-y-3">
-                {reports.map((r) => (
-                  <ReportView
-                    key={r.id}
-                    report={r}
-                    audience="direcao"
-                    integrity={verifyIntegrity(r)}
-                    defaultOpen={r.id === openId}
-                    itemExtras={Object.fromEntries(
-                      r.items.map((it) => [
-                        it.id,
-                        <ItemScoreControl
-                          key={it.id}
-                          target={{ reportId: r.id, itemId: it.id }}
-                          initial={it.score}
-                          calc={{ reason: it.reason, firstTime: it.firstTime, noticed: it.noticed, errorType: it.errorType, impacts: it.impacts, showCalc: it.showCalc }}
-                        />,
-                      ]),
-                    )}
-                    footer={
-                      !r.review ? (
-                        <p className="text-[11.5px] text-white/40">
-                          A revisão fecha-se sozinha quando todas as ocorrências estiverem pontuadas — e {who} recebe o aviso no sino.
-                        </p>
-                      ) : (
-                        <p className="text-[11.5px] text-white/40">
-                          Revisto por {r.review.byName || r.review.by} a {formatLisbonDateTime(r.review.at)}.
-                        </p>
-                      )
-                    }
-                  />
-                ))}
+              <div className="mt-3 divide-y divide-white/[0.05] overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.02]">
+                {reports.map((r) => {
+                  const ok = verifyIntegrity(r);
+                  return (
+                    <details key={r.id} id={`relatorio-${r.id}`} open={focusReport?.id === r.id && Boolean(r.review)} className="group scroll-mt-24">
+                      <summary className="flex cursor-pointer list-none flex-wrap items-center gap-x-3 gap-y-1.5 px-4 py-3 transition hover:bg-white/[0.03] [&::-webkit-details-marker]:hidden">
+                        <span className="font-mono text-[11px] font-bold tracking-[0.06em] text-white/45">{r.ref}</span>
+                        <span className="text-[12.5px] font-semibold text-white/85">Assinado a {formatISODate(r.submittedOn)}</span>
+                        <span className="text-[11.5px] text-white/40">
+                          {r.items.length} {r.items.length === 1 ? "ocorrência" : "ocorrências"}
+                        </span>
+                        <span className="ml-auto flex items-center gap-2">
+                          {!ok && <span className="rounded-full border border-rose-400/40 bg-rose-500/10 px-2 py-0.5 text-[10.5px] font-semibold text-rose-200">Hash NÃO confere</span>}
+                          <ReportStatusChip report={r} />
+                        </span>
+                      </summary>
+                      <div className="space-y-3 border-t border-white/[0.06] px-4 pb-4 pt-3">
+                        <ul className="space-y-1">
+                          {r.items.map((it) => (
+                            <li key={it.id}>
+                              <a
+                                href={it.score ? `#h-${it.id}` : `#oc-${it.id}`}
+                                className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-[12px] transition hover:bg-white/[0.04]"
+                              >
+                                <span className="tabular shrink-0 text-white/40">{shortDate(it.occurredOn)}</span>
+                                <span className="min-w-0 flex-1 truncate text-white/80">
+                                  <span className="font-semibold">{it.client}</span> · {it.what}
+                                </span>
+                                <ScoreBadge score={it.score} size="sm" />
+                              </a>
+                            </li>
+                          ))}
+                        </ul>
+                        {r.review?.note && (
+                          <p className="rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-[12px] text-white/70">
+                            <span className="font-semibold text-white/85">Nota da direção ({r.review.byName || "direção"}):</span> {r.review.note}
+                          </p>
+                        )}
+                        <SignatureBlock report={r} audience="direcao" integrity={ok} />
+                      </div>
+                    </details>
+                  );
+                })}
               </div>
             )}
           </section>
-
-          {direct.length > 0 && (
-            <section className="animate-fade-up" aria-label="Ocorrências registadas pela direção">
-              <h2 className="flex items-center gap-2 text-[17px] font-semibold tracking-tight text-white">
-                <ShieldAlert className="h-4 w-4 text-amber-300" />
-                Ocorrências registadas pela direção
-              </h2>
-              <div className="mt-3 space-y-3">
-                {direct.map((d) => (
-                  <article key={d.id} className="rounded-2xl border border-amber-400/20 bg-amber-400/[0.04] p-4">
-                    <header className="flex flex-wrap items-center justify-between gap-2">
-                      <p className="text-[12.5px] text-white/80">
-                        <span className="font-semibold">{d.client}</span>
-                        <span className="text-white/40">
-                          {" "}
-                          · {formatISODate(d.occurredOn)} · {reasonLabel(d.reason, d.reasonOther)} · {noticedLabel(d.noticed)}
-                          {d.firstTime === true ? " · primeira vez" : d.firstTime === false ? ` · repetido (última vez: ${d.lastTime || "—"})` : ""}
-                          {d.errorType ? ` · ${errorTypeLabel(d.errorType).toLowerCase()}` : ""}
-                        </span>
-                      </p>
-                      <ScoreBadge score={d.score} size="sm" />
-                    </header>
-                    <p className="mt-2 whitespace-pre-wrap text-[13px] leading-relaxed text-white/80">{d.what}</p>
-                    {d.shouldHave && <p className="mt-2 text-[12px] text-white/55">Como deveria ter sido: {d.shouldHave}</p>}
-                    <div className="mt-3">
-                      <ItemScoreControl
-                        target={{ username, occurrenceId: d.id }}
-                        initial={d.score}
-                        calc={{ reason: d.reason, firstTime: d.firstTime, noticed: d.noticed, errorType: d.errorType, impacts: d.impacts, showCalc: d.showCalc }}
-                      />
-                    </div>
-                  </article>
-                ))}
-              </div>
-            </section>
-          )}
         </div>
 
-        {/* coluna lateral — ações + histórico */}
+        {/* coluna lateral — ações da escala + padrões */}
         <aside className="animate-fade-up space-y-4">
-          <Link
-            href={`/admin/ineficacias/registar?consultor=${encodeURIComponent(username)}`}
-            className="group flex items-center gap-3 rounded-2xl border border-[#783DF5]/35 bg-[linear-gradient(135deg,rgba(52,62,215,0.14),rgba(120,61,245,0.14)_54%,rgba(197,53,201,0.14))] px-4 py-3.5 transition hover:border-[#783DF5]/60 hover:shadow-[0_10px_30px_-14px_rgba(120,61,245,0.9)]"
-          >
-            <span className="brand-gradient-bg flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-white">
-              <PlusCircle className="h-4 w-4" />
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block text-[13px] font-semibold text-white">Registar ineficácia de {who}</span>
-              <span className="block text-[11px] text-white/50">Erro cometido, primeira vez, gravidade e pontuação</span>
-            </span>
-          </Link>
           <div id="medida" className="scroll-mt-24 space-y-3">
             {state.pendingMeasure && (
               <MeasureForm username={username} pending={state.pendingMeasure} today={today} defaultConductedBy={employee.name} />
@@ -232,51 +337,50 @@ export default async function IneficaciasConsultantPage({
             <SetLevelForm username={username} currentLevel={state.level} today={today} />
           </div>
 
-          <section className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4">
-            <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-white/35">
-              <History className="h-3.5 w-3.5" />
-              Histórico da escala
-            </p>
-            {history.length === 0 ? (
-              <p className="mt-2 text-[12px] text-white/40">Sem mudanças de nível — {who} está no nível 0 desde o início.</p>
-            ) : (
-              <ol className="mt-3 space-y-3">
-                {history.map(({ key, event: e, step: st }) =>
-                  st ? (
-                    <li key={key} className="relative pl-5 text-[12px]">
-                      <span
-                        className={`absolute left-0 top-1.5 h-2.5 w-2.5 rounded-full ${st.reason === "subida" ? "bg-rose-300" : "bg-emerald-300"}`}
-                      />
-                      <p className="font-semibold text-white/85">{levelStepTitle(st)}</p>
-                      <p className="text-white/45">{formatISODate(st.at)} · automático</p>
-                    </li>
-                  ) : e ? (
-                  <li key={key} className="relative pl-5 text-[12px]">
-                    <span className={`absolute left-0 top-1.5 h-2.5 w-2.5 rounded-full ${e.kind === "measure" ? "bg-[#a78bfa]" : "bg-amber-300"}`} />
-                    <p className="font-semibold text-white/85">{eventTitle(e)}</p>
-                    <p className="text-white/45">
-                      {formatISODate(e.at)} · por {e.byName || e.by}
-                      {e.kind === "measure" && e.conductedBy ? ` · conduziu: ${e.conductedBy}` : ""}
-                    </p>
-                    {e.kind === "measure" && e.actions.length > 0 && (
-                      <ul className="mt-1 list-disc space-y-0.5 pl-4 text-white/60">
-                        {e.actions.map((a, i) => (
-                          <li key={i}>{a}</li>
-                        ))}
-                      </ul>
-                    )}
-                    {e.note && <p className="mt-1 text-white/55">{e.note}</p>}
+          {view.entries.length > 0 && (
+            <section className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/35">Padrões de {who}</p>
+              <ul className="mt-3 space-y-2">
+                {byReason.map((r) => (
+                  <li key={r.id} className="text-[11.5px]">
+                    <span className="flex items-baseline justify-between gap-2 text-white/60">
+                      <span className="truncate">
+                        {r.letter} · {r.label}
+                      </span>
+                      <span className="tabular font-semibold text-white/85">{r.n}</span>
+                    </span>
+                    <span className="mt-1 block h-1 overflow-hidden rounded-full bg-white/[0.07]">
+                      <span className="block h-full rounded-full bg-[#a78bfa]" style={{ width: `${(r.n / maxReason) * 100}%` }} />
+                    </span>
                   </li>
-                  ) : null,
+                ))}
+              </ul>
+              <dl className="mt-3.5 space-y-1.5 border-t border-white/[0.06] pt-3 text-[11.5px]">
+                <div className="flex justify-between gap-2">
+                  <dt className="text-white/45">Clientes com mais</dt>
+                  <dd className="truncate text-right text-white/75">{topClients.map((t) => `${t.c} (${t.n})`).join(" · ")}</dd>
+                </div>
+                <div className="flex justify-between gap-2">
+                  <dt className="text-white/45">Diz que já tinha acontecido</dt>
+                  <dd className="tabular text-white/75">
+                    {repeated} de {view.entries.length}
+                  </dd>
+                </div>
+                {both.length > 0 && (
+                  <div className="flex justify-between gap-2">
+                    <dt className="text-white/45">Gravidade média</dt>
+                    <dd className="tabular text-right text-white/75">
+                      {who} {avg(both.map((e) => e.selfScore!))} · direção {avg(both.map((e) => e.score!.points))}
+                    </dd>
+                  </div>
                 )}
-              </ol>
-            )}
-          </section>
-
+              </dl>
+            </section>
+          )}
 
           <p className="flex items-start gap-2 rounded-2xl border border-white/[0.06] bg-black/20 px-4 py-3 text-[11px] leading-relaxed text-white/40">
             <Wand2 className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-            Pontuar a 0 significa «não conta» — a ocorrência fica registada, mas não entra no PA nem no NO.
+            Pontuar a 0 significa «não conta»: a ocorrência fica registada, mas não entra no PA nem no NO.
           </p>
         </aside>
       </div>
