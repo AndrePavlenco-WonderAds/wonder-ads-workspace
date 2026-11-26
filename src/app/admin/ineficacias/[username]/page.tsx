@@ -6,9 +6,9 @@
 //      no PA/NO de hoje;
 //   3. o HISTÓRICO: tudo numa linha cada, por mês, com filtros e pesquisa, e
 //      o percurso na escala pelo meio;
-//   4. os RELATÓRIOS ASSINADOS: a prova (hash, IP, user-agent, integridade),
-//      compactos.
-// A coluna lateral tem as ações da escala e os padrões da pessoa.
+// A coluna lateral tem as ações da escala, os padrões da pessoa e, no fundo,
+// os RELATÓRIOS ASSINADOS num cartão mínimo (v80.57): uma linha por relatório
+// com o escudo da integridade; a prova (hash, IP, user-agent) abre-se ao tocar.
 
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -23,22 +23,22 @@ import {
   ListTree,
   PlusCircle,
   RotateCcw,
+  ShieldCheck,
+  ShieldX,
   Sigma,
   Wand2,
 } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { LevelChip, LevelGauge, LEVEL_TONES } from "@/components/ineficacias/level-gauge";
-import { ReportStatusChip, ScoreBadge, SignatureBlock } from "@/components/ineficacias/report-view";
 import { MeasureForm, SetLevelForm } from "@/components/ineficacias/admin-ledger-actions";
 import { PendingDeskCard } from "@/components/ineficacias/admin-desk";
 import { AdminHistory } from "@/components/ineficacias/admin-history";
-import { shortDate } from "@/components/ineficacias/admin-status";
 import { getCurrentEmployee } from "@/lib/auth/server";
 import { findEmployeeByUsername } from "@/lib/auth/credentials";
 import { getTeamAvatar } from "@/lib/team-avatars";
 import { loadConsultant, verifyIntegrity } from "@/lib/ineficacias/store";
 import { buildAdminView } from "@/lib/ineficacias/admin-view";
-import { firstName, formatISODate, phaseOpenLabel, REASONS } from "@/lib/ineficacias/shared";
+import { firstName, formatISODate, formatLisbonDateTime, phaseOpenLabel, REASONS } from "@/lib/ineficacias/shared";
 import { todayLisbonISO } from "@/lib/probation/progress";
 
 export const dynamic = "force-dynamic";
@@ -267,65 +267,6 @@ export default async function IneficaciasConsultantPage({
               focusIds={historyFocus}
             />
           </section>
-
-          <section id="relatorios" aria-label="Relatórios assinados" className="animate-fade-up scroll-mt-24">
-            <h2 className="flex items-center gap-2 text-[17px] font-semibold tracking-tight text-white">
-              <ClipboardCheck className="h-4 w-4 text-[color:var(--brand-purple)]" />
-              Relatórios assinados
-              <span className="tabular rounded-full bg-white/[0.08] px-2 text-[12px] text-white/60">{reports.length}</span>
-            </h2>
-            <p className="mt-1 text-[12px] text-white/45">A prova do que {who} declarou: assinatura, hash e verificação de integridade.</p>
-            {reports.length === 0 ? (
-              <p className="mt-3 rounded-2xl border border-dashed border-white/12 px-5 py-6 text-[12.5px] text-white/45">
-                {who} ainda não assinou nenhum relatório.
-              </p>
-            ) : (
-              <div className="mt-3 divide-y divide-white/[0.05] overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.02]">
-                {reports.map((r) => {
-                  const ok = verifyIntegrity(r);
-                  return (
-                    <details key={r.id} id={`relatorio-${r.id}`} open={focusReport?.id === r.id && Boolean(r.review)} className="group scroll-mt-24">
-                      <summary className="flex cursor-pointer list-none flex-wrap items-center gap-x-3 gap-y-1.5 px-4 py-3 transition hover:bg-white/[0.03] [&::-webkit-details-marker]:hidden">
-                        <span className="font-mono text-[11px] font-bold tracking-[0.06em] text-white/45">{r.ref}</span>
-                        <span className="text-[12.5px] font-semibold text-white/85">Assinado a {formatISODate(r.submittedOn)}</span>
-                        <span className="text-[11.5px] text-white/40">
-                          {r.items.length} {r.items.length === 1 ? "ocorrência" : "ocorrências"}
-                        </span>
-                        <span className="ml-auto flex items-center gap-2">
-                          {!ok && <span className="rounded-full border border-rose-400/40 bg-rose-500/10 px-2 py-0.5 text-[10.5px] font-semibold text-rose-200">Hash NÃO confere</span>}
-                          <ReportStatusChip report={r} />
-                        </span>
-                      </summary>
-                      <div className="space-y-3 border-t border-white/[0.06] px-4 pb-4 pt-3">
-                        <ul className="space-y-1">
-                          {r.items.map((it) => (
-                            <li key={it.id}>
-                              <a
-                                href={it.score ? `#h-${it.id}` : `#oc-${it.id}`}
-                                className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-[12px] transition hover:bg-white/[0.04]"
-                              >
-                                <span className="tabular shrink-0 text-white/40">{shortDate(it.occurredOn)}</span>
-                                <span className="min-w-0 flex-1 truncate text-white/80">
-                                  <span className="font-semibold">{it.client}</span> · {it.what}
-                                </span>
-                                <ScoreBadge score={it.score} size="sm" />
-                              </a>
-                            </li>
-                          ))}
-                        </ul>
-                        {r.review?.note && (
-                          <p className="rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-[12px] text-white/70">
-                            <span className="font-semibold text-white/85">Nota da direção ({r.review.byName || "direção"}):</span> {r.review.note}
-                          </p>
-                        )}
-                        <SignatureBlock report={r} audience="direcao" integrity={ok} />
-                      </div>
-                    </details>
-                  );
-                })}
-              </div>
-            )}
-          </section>
         </div>
 
         {/* coluna lateral — ações da escala + padrões */}
@@ -382,6 +323,65 @@ export default async function IneficaciasConsultantPage({
             <Wand2 className="mt-0.5 h-3.5 w-3.5 shrink-0" />
             Pontuar a 0 significa «não conta»: a ocorrência fica registada, mas não entra no PA nem no NO.
           </p>
+          {reports.length > 0 && (
+            <section id="relatorios" aria-label="Relatórios assinados" className="scroll-mt-24 rounded-2xl border border-white/[0.06] bg-black/20 px-3 py-2.5">
+              <p className="flex items-center gap-1.5 px-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/30">
+                <ClipboardCheck className="h-3 w-3" />
+                Relatórios assinados · {reports.length}
+              </p>
+              <ul className="mt-1.5 space-y-0.5">
+                {reports.map((r) => {
+                  const ok = verifyIntegrity(r);
+                  const s = r.signature;
+                  return (
+                    <li key={r.id}>
+                      <details id={`relatorio-${r.id}`} open={focusReport?.id === r.id} className="group scroll-mt-24">
+                        <summary className="flex cursor-pointer list-none items-center gap-2 rounded-lg px-1 py-1 text-[11px] text-white/45 transition hover:bg-white/[0.04] hover:text-white/75 [&::-webkit-details-marker]:hidden">
+                          <span className="font-mono text-[10.5px] text-white/35">{r.ref}</span>
+                          <span className="tabular">{formatISODate(r.submittedOn)}</span>
+                          {ok ? (
+                            <ShieldCheck className="ml-auto h-3.5 w-3.5 shrink-0 text-emerald-300/60" aria-label="Integridade verificada" />
+                          ) : (
+                            <span className="ml-auto inline-flex items-center gap-1 font-semibold text-rose-300">
+                              <ShieldX className="h-3.5 w-3.5" />
+                              Hash NÃO confere
+                            </span>
+                          )}
+                        </summary>
+                        <dl className="mb-1.5 ml-1 mt-1 space-y-0.5 border-l border-white/[0.08] pl-2.5 text-[10px] text-white/40">
+                          <div className="flex gap-1.5">
+                            <dt className="shrink-0">Assinado</dt>
+                            <dd className="text-white/60">{formatLisbonDateTime(s.signedAt)}</dd>
+                          </div>
+                          <div className="flex gap-1.5">
+                            <dt className="shrink-0">SHA-256</dt>
+                            <dd className="truncate font-mono text-white/60" title={s.hash}>
+                              {s.hash ? `${s.hash.slice(0, 10)}…${s.hash.slice(-6)}` : "—"}
+                            </dd>
+                          </div>
+                          <div className="flex gap-1.5">
+                            <dt className="shrink-0">IP</dt>
+                            <dd className="font-mono text-white/60">{s.ip || "—"}</dd>
+                          </div>
+                          <div className="flex gap-1.5">
+                            <dt className="shrink-0">Browser</dt>
+                            <dd className="truncate font-mono text-white/60" title={s.userAgent}>
+                              {s.userAgent || "—"}
+                            </dd>
+                          </div>
+                          {r.review?.note && (
+                            <div className="pt-0.5 text-white/55">
+                              <span className="text-white/40">Nota da direção:</span> {r.review.note}
+                            </div>
+                          )}
+                        </dl>
+                      </details>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          )}
         </aside>
       </div>
     </PageShell>

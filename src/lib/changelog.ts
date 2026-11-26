@@ -13,6 +13,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "80.57",
+    date: "2026-11-26",
+    title: "Ineficácias (direção): relatórios assinados num canto",
+    highlights: [
+      "Na página do consultor, os relatórios assinados passam para um cartão pequeno no fundo da coluna lateral: uma linha por relatório com o escudo da integridade, e a prova (hash, IP, browser) abre-se ao tocar. Se o hash não conferir, aparece a vermelho.",
+    ],
+  },
+  {
     version: "80.56",
     date: "2026-11-26",
     title: "Recrutamento: o PDF dentro da página usa a largura toda",
