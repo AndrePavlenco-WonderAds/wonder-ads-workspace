@@ -7,6 +7,8 @@
 // (ver a memória «never author training content»): um template novo vem
 // sempre de um guião dado pela direção.
 
+import type { MaterialId } from "./materials";
+
 export type SectionId = "hard" | "coach" | "soft" | "detail" | "questions" | "pessoal" | "condicoes" | "percurso";
 
 /** Campo do perfil do candidato que uma pergunta preenche ao vivo (Fase 1,
@@ -17,6 +19,8 @@ export type Criterion = {
   id: string;
   label: string;
   pts: number;
+  /** Onde está, para o entrevistador (o teste de detalhe, v80.55). */
+  hint?: string;
 };
 
 /** O que corta a nota de uma pergunta além dos ✓. */
@@ -49,6 +53,8 @@ export type Question = {
   unscored?: true;
   /** O campo do perfil que esta pergunta preenche (v80.22). */
   profile?: ProfileLink;
+  /** Os PDFs de apoio (o teste de detalhe, v80.55 — lib/recrutamento/materials). */
+  materials?: MaterialId[];
 };
 
 export type ZoneLabels = { low: string; mid: string; high: string };
@@ -429,17 +435,19 @@ const SEO_FASE2_P1: InterviewTemplate = {
       title: "Atenção ao detalhe",
       prompt: "Doc com 10 erros plantados, encontrar na call, sem AI. 1 ponto por erro encontrado.",
       criteriaLabel: "Erro plantado",
+      materials: ["teste-detalhe-candidato", "teste-detalhe-marcado", "teste-detalhe-solucoes"],
+      // As pistas «onde está» vêm da folha de soluções (o mesmo n.º no PDF marcado).
       criteria: [
-        { id: "a", label: "Title com mais de 60 caracteres", pts: 1 },
-        { id: "b", label: "Meta description duplicada noutra página", pts: 1 },
-        { id: "c", label: "Canonical a apontar para a página errada", pts: 1 },
-        { id: "d", label: "Noindex numa página importante", pts: 1 },
-        { id: "e", label: "Dois H1 na mesma página", pts: 1 },
-        { id: "f", label: "Link partido (404)", pts: 1 },
-        { id: "g", label: "Telefone diferente entre unidades (NAP)", pts: 1 },
-        { id: "h", label: "Erro ortográfico", pts: 1 },
-        { id: "i", label: "Data ou ano errado", pts: 1 },
-        { id: "j", label: "Percentagem mal calculada", pts: 1 },
+        { id: "a", label: "Title com mais de 60 caracteres", pts: 1, hint: "Secção 2 · /ortodontia: o title tem 86 caracteres" },
+        { id: "b", label: "Meta description duplicada noutra página", pts: 1, hint: "Secção 2 · /branqueamento-dentario e /higiene-oral" },
+        { id: "c", label: "Canonical a apontar para a página errada", pts: 1, hint: "Secção 2 · /branqueamento-dentario aponta para /ortodontia" },
+        { id: "d", label: "Noindex numa página importante", pts: 1, hint: "Secção 2 · /implantes-dentarios: «noindex, follow»" },
+        { id: "e", label: "Dois H1 na mesma página", pts: 1, hint: "Secção 2 · /equipa: «H1: Higiene oral» devia ser H2" },
+        { id: "f", label: "Link partido (404)", pts: 1, hint: "Secção 3 · /contactos → /unidades/cascais dá 404" },
+        { id: "g", label: "Telefone diferente entre unidades (NAP)", pts: 1, hint: "Secção 4 · Cascais: site 214 830 112, Google 214 830 121" },
+        { id: "h", label: "Erro ortográfico", pts: 1, hint: "Secção 1, 2.º parágrafo: «concorência»" },
+        { id: "i", label: "Data ou ano errado", pts: 1, hint: "Cabeçalho: «Data do rastreio: 31/11/2026» (novembro tem 30 dias)" },
+        { id: "j", label: "Percentagem mal calculada", pts: 1, hint: "Secção 1, 1.º parágrafo: 1.200 → 1.500 é +25%, não +20%" },
       ],
       penalties: [RF("Usa AI ou diz «parece-me tudo bem».")],
     },

@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "80.55",
+    date: "2026-11-26",
+    title: "Recrutamento: os PDFs do teste de detalhe dentro da entrevista",
+    highlights: [
+      "**Na pergunta «Atenção ao detalhe» (Fase 2 · Parte 1) estão os 3 documentos:** o do candidato, para enviar na call, e dois só para quem entrevista, o documento com os erros marcados e as soluções. Abrem-se ou descarregam-se, e os dois do entrevistador também se veem dentro da página.",
+      "**Novo documento com os erros marcados:** é igual ao do candidato página a página, com os 10 erros a amarelo, sublinhados a vermelho e com o número da grelha.",
+      "Cada erro da grelha diz onde está («Secção 2 · /ortodontia: o title tem 86 caracteres»), com o mesmo número do documento marcado.",
+      "Os PDFs só abrem para SuperAdmins: o marcado e as soluções nunca chegam a um candidato.",
+    ],
+  },
+  {
     version: "80.54",
     date: "2026-11-26",
     title: "Ineficácias (direção): passo 2 alinhado",

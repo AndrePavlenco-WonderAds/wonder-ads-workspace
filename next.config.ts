@@ -16,6 +16,11 @@ const LEGACY_HOST = "wonder-ads-workspace.vercel.app";
 const NEW_ORIGIN = "https://workspace.wonder-ads.com";
 
 const nextConfig: NextConfig = {
+  /** Os PDFs do Recrutamento (v80.55) são lidos com fs pela rota dos
+   *  materiais — sem isto não entram no bundle da função na Vercel. */
+  outputFileTracingIncludes: {
+    "/api/admin/recrutamento/materiais/[id]": ["./private/recrutamento/**/*"],
+  },
   async redirects() {
     if (process.env.LEGACY_HOST_REDIRECT !== "1") return [];
     return [

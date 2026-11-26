@@ -65,6 +65,7 @@ import {
   type SectionId,
 } from "@/lib/recrutamento/templates";
 import { GradeBadge, GradeMatrix, Initials, scoreColor, ScoreRing, TONE } from "./ui";
+import { QuestionMaterials } from "./materials";
 
 type SaveState = "idle" | "dirty" | "saving" | "saved" | "error";
 
@@ -813,6 +814,8 @@ function QuestionScreen({
 
         {q.script && <Script blocks={q.script} tint={tint} />}
 
+        {q.materials && q.materials.length > 0 && <QuestionMaterials ids={q.materials} tint={tint} />}
+
         <div className="mt-5">
           <label className="text-[11.5px] font-semibold text-white/50" htmlFor={`notes-${q.id}`}>
             Notas
@@ -893,7 +896,17 @@ function QuestionScreen({
                     >
                       <Check className="h-3.5 w-3.5" strokeWidth={3} />
                     </span>
-                    <span className={`min-w-0 flex-1 text-[13px] leading-snug ${on ? "text-white" : "text-white/70"}`}>{c.label}</span>
+                    <span className="min-w-0 flex-1">
+                      <span className={`block text-[13px] leading-snug ${on ? "text-white" : "text-white/70"}`}>{c.label}</span>
+                      {c.hint && (
+                        <span className="mt-1 flex items-start gap-1.5 text-[11px] leading-snug text-white/40">
+                          <span className="tabular-nums mt-px inline-flex h-3.5 min-w-3.5 shrink-0 items-center justify-center rounded-full bg-[#e0312b] px-1 text-[9px] font-bold text-white">
+                            {i + 1}
+                          </span>
+                          {c.hint}
+                        </span>
+                      )}
+                    </span>
                     <span className="flex shrink-0 items-center gap-1.5">
                       <span className={`tabular-nums rounded-full px-1.5 py-0.5 text-[10.5px] font-bold ${on ? "bg-emerald-300/20 text-emerald-200" : "bg-white/[0.06] text-white/45"}`}>
                         {c.pts} pt{c.pts === 1 ? "" : "s"}
