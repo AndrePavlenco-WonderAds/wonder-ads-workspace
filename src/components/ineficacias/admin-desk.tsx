@@ -140,7 +140,7 @@ export function PendingDeskCard({
                             {tags.map((t) => (
                               <RelatedTagChip key={t} tag={t} />
                             ))}
-                            {o.status !== "pontuar" && <StatusChip status={o.status} />}
+                            {(o.status === "conta" || o.status === "anterior") && <StatusChip status={o.status} />}
                           </span>
                         </summary>
                         <div className="space-y-2 border-t border-white/[0.06] px-3 py-2.5 text-[12px] leading-relaxed text-white/70">

@@ -13,6 +13,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "80.51",
+    date: "2026-11-26",
+    title: "Ineficácias (direção): listas mais limpas",
+    highlights: [
+      "Nas listas, «Por pontuar» e «Não contou» aparecem uma só vez (na pontuação); a pastilha de estado fica só para «A contar agora» e «Fase anterior».",
+      "Os motivos «Outro» compridos ficam numa linha, e a lupa da pesquisa do histórico já não tapa o texto.",
+    ],
+  },
+  {
     version: "80.50",
     date: "2026-11-26",
     title: "Ineficácias (direção): pontuar com o histórico ao lado",

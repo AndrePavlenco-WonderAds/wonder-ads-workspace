@@ -265,9 +265,9 @@ export default async function IneficaciasAdminPage() {
                           <span className="text-white/65">{e.what}</span>
                         </span>
                         <span className="mt-1 flex flex-wrap items-center gap-1">
-                          <StatusChip status={e.status} />
+                          {(e.status === "conta" || e.status === "anterior") && <StatusChip status={e.status} />}
                           <SourceChip source={e.source} reportRef={e.reportRef} />
-                          <span className="text-[10.5px] text-white/40">{e.reason}</span>
+                          <span className="max-w-[260px] truncate text-[10.5px] text-white/40">{e.reason}</span>
                         </span>
                       </span>
                       <ScoreBadge score={e.score} size="sm" />

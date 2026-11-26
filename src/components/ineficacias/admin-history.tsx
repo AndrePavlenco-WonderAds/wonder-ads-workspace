@@ -102,9 +102,9 @@ function EntryRow({
             {e.what}
           </span>
           <span className="mt-1 flex flex-wrap items-center gap-1">
-            <StatusChip status={e.status} />
+            {(e.status === "conta" || e.status === "anterior") && <StatusChip status={e.status} />}
             <SourceChip source={e.source} reportRef={e.reportRef} />
-            <span className="text-[10.5px] text-white/40">{e.reason}</span>
+            <span className="max-w-[260px] truncate text-[10.5px] text-white/40">{e.reason}</span>
             {e.firstTime === false && <span className="text-[10.5px] font-semibold text-rose-200/80">· repetido</span>}
           </span>
         </span>
@@ -329,7 +329,8 @@ export function AdminHistory({
               value={q}
               onChange={(ev) => setQ(ev.target.value)}
               placeholder="Procurar no histórico"
-              className="modal-input h-8 w-full py-0 pl-8 pr-7 text-[12px]"
+              className="modal-input h-8 w-full py-0 pr-7 text-[12px]"
+              style={{ paddingLeft: 30 }}
             />
             {q && (
               <button type="button" onClick={() => setQ("")} aria-label="Limpar" className="absolute right-2 text-white/40 hover:text-white">
