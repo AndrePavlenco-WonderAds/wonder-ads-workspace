@@ -102,7 +102,7 @@ export function QuestionMaterials({ ids, tint }: { ids: MaterialId[]; tint: stri
             <ShieldAlert className="h-3.5 w-3.5" />
             {shown.label} — não partilhes o ecrã com isto aberto.
           </p>
-          <iframe title={shown.label} src={`${materialHref(shown.id)}#view=FitH`} className="block h-[72vh] w-full" />
+          <iframe title={shown.label} src={`${materialHref(shown.id)}#navpanes=0&view=FitH`} className="block h-[72vh] w-full" />
         </div>
       )}
 

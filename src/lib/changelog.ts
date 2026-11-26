@@ -13,6 +13,12 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "80.56",
+    date: "2026-11-26",
+    title: "Recrutamento: o PDF dentro da página usa a largura toda",
+    highlights: ["No «Ver aqui» da entrevista, o PDF abre sem a coluna das miniaturas, com a página à largura toda."],
+  },
+  {
     version: "80.55",
     date: "2026-11-26",
     title: "Recrutamento: os PDFs do teste de detalhe dentro da entrevista",
