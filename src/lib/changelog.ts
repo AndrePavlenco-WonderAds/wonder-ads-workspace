@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "80.53",
+    date: "2026-11-26",
+    title: "Ineficácias (direção): pontuar em 4 passos",
+    highlights: [
+      "**Pontuar passa a ser um passo a passo:** 1. que tipo de erro é (aprendizagem ou recorrência), 2. o que o erro causou, 3. a pontuação, 4. nota e gravar.",
+      "A pontuação segue a calculadora sozinha, com a conta à vista linha a linha (já não há «Usar» à parte). Clicar noutro número ajusta à mão, e «voltar à sugestão» desfaz.",
+      "No passo 1 aparecem as pistas do histórico: diz que já aconteceu, ou diz que é a primeira vez mas há parecidas.",
+      "O botão diz o que grava («Guardar · 3 pontos»), e a escala 0–10 mostra as bandas por baixo. O que acontece ao PA/NO fica logo ao lado.",
+    ],
+  },
+  {
     version: "80.52",
     date: "2026-11-26",
     title: "Ineficácias (direção): o relato aparece uma vez",

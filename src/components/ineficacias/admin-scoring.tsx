@@ -1,29 +1,29 @@
 "use client";
 
-// Os controlos da direção sobre um relatório: a pontuação de 0 a 10 de cada
-// ocorrência (com nota). A revisão fecha-se sozinha quando todas estiverem
-// pontuadas.
-// A CALCULADORA (v77.94) — a mesma da folha RH-04: o motivo, a primeira vez
-// e quem deu pelo erro vêm do que está escrito; a direção junta o tipo de
-// erro e o que o erro causou, e a sugestão aplica-se com um clique. Só existe
-// nas páginas da direção; o consultor só recebe estes dados quando a direção
-// liga «O consultor vê o porquê destes pontos» (v80.45, `showCalc`) — senão
-// loadConsultantForSelf apaga-os.
-// Cada gravação pede ao servidor e faz router.refresh() — a página volta a
-// derivar o estado (PA, NO, nível) com os dados frescos.
+// Pontuar uma ocorrência (direção) — v80.53, refeito como um passo a passo:
+//   1. Que tipo de erro é? (aprendizagem ou recorrência)
+//   2. O que é que o erro causou? (nada, refazer, prazo, cliente, negócio)
+//   3. A pontuação — segue a calculadora sozinha, com a conta à vista; um
+//      clique noutro número ajusta à mão (e «voltar à sugestão» desfaz). Por
+//      baixo, o que acontece ao PA/NO de hoje e se passa o limiar.
+//   4. Nota para o consultor, se ele vê o cálculo, e gravar.
+// O motivo, a primeira vez e quem deu pelo erro vêm do que está escrito. A
+// avaliação (tipo de erro e impactos) só chega ao consultor quando a direção
+// liga «vê o cálculo» (`showCalc`, v80.45) — senão loadConsultantForSelf
+// apaga-a. Cada gravação faz router.refresh(): a página volta a derivar o
+// estado (PA, NO, nível) com os dados frescos.
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Calculator, Check, Eye, EyeOff, GraduationCap, Loader2, Repeat, Save, AlertTriangle, Wand2 } from "lucide-react";
+import { AlertTriangle, ArrowRight, Check, Eye, EyeOff, GraduationCap, Info, Loader2, Repeat, RotateCcw, Save } from "lucide-react";
 import { BAND_TONES } from "@/components/ineficacias/report-view";
-import { CalcBreakdownView } from "@/components/ineficacias/calc-breakdown";
 import {
   bandOf,
-  calcBreakdown,
   ERROR_TYPES,
+  formatLisbonDateTime,
   IMPACTS,
   MAX_POINTS,
-  SCORE_BANDS,
+  SCORE_RULES,
   suggestScore,
   type IneficaciaErrorType,
   type IneficaciaImpact,
@@ -31,66 +31,6 @@ import {
   type IneficaciaReason,
   type IneficaciaScore,
 } from "@/lib/ineficacias/shared";
-
-const BAND_BTN: Record<string, { on: string; off: string }> = {
-  zero: { on: "border-white/40 bg-white/20 text-white", off: "border-white/10 text-white/50 hover:bg-white/[0.06]" },
-  baixo: { on: "border-emerald-300 bg-emerald-400/30 text-white", off: "border-emerald-400/20 text-emerald-200/70 hover:bg-emerald-400/10" },
-  medio: { on: "border-amber-300 bg-amber-400/30 text-white", off: "border-amber-400/20 text-amber-200/70 hover:bg-amber-400/10" },
-  alto: { on: "border-orange-300 bg-orange-400/30 text-white", off: "border-orange-400/25 text-orange-200/70 hover:bg-orange-400/10" },
-  critico: { on: "border-rose-300 bg-rose-500/35 text-white", off: "border-rose-400/25 text-rose-200/70 hover:bg-rose-500/10" },
-};
-
-/** O seletor 0–10, com as bandas da escala. */
-export function ScorePicker({
-  value,
-  onChange,
-  disabled = false,
-  suggested = null,
-}: {
-  value: number | null;
-  onChange: (points: number) => void;
-  disabled?: boolean;
-  /** A sugestão da calculadora — leva um ponto no canto. */
-  suggested?: number | null;
-}) {
-  const band = value === null ? null : bandOf(value);
-  return (
-    <div>
-      <div className="flex flex-wrap gap-1.5">
-        {Array.from({ length: MAX_POINTS + 1 }, (_, p) => {
-          const b = bandOf(p);
-          const on = value === p;
-          const cls = BAND_BTN[b.id];
-          return (
-            <button
-              key={p}
-              type="button"
-              disabled={disabled}
-              onClick={() => onChange(p)}
-              aria-pressed={on}
-              title={`${p} · ${b.label}${p === suggested ? " · sugestão da calculadora" : ""}`}
-              className={`tabular relative h-8 w-8 rounded-lg border text-[12.5px] font-bold transition disabled:opacity-50 ${on ? cls.on : cls.off}`}
-            >
-              {p}
-              {p === suggested && (
-                <span aria-hidden className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full border-2 border-[#15121f] bg-[#a78bfa]" />
-              )}
-            </button>
-          );
-        })}
-      </div>
-      <p className="mt-1.5 text-[11px] text-white/45">
-        {band ? (
-          <>
-            <span className="font-semibold text-white/75">{band.label}</span> · {band.hint}
-          </>
-        ) : (
-          SCORE_BANDS.map((b) => `${b.min === b.max ? b.min : `${b.min}–${b.max}`} ${b.label.toLowerCase()}`).join(" · ")
-        )}
-      </p>
-    </div>
-  );
-}
 
 type Target = { reportId: string; itemId: string } | { username: string; occurrenceId: string };
 
@@ -114,17 +54,59 @@ export type ScoreImpact = {
   next: { level: 1 | 2 | 3; pa: number; no: number } | null;
   /** A ocorrência é da fase corrente (conta no PA/NO de hoje)? */
   inPhase: boolean;
-  /** «a subida ao nível 1 (12/10/2026)» — para as que ficam fora da fase. */
+  /** «a subida ao nível 1, a 12/10/2026» — para as que ficam fora da fase. */
   phaseLabel: string | null;
   who: string;
 };
 
+/* ------------------------------------------------------------------ */
+
+const BAND_BTN: Record<string, { on: string; off: string }> = {
+  zero: { on: "border-white/50 bg-white/25 text-white", off: "border-white/10 text-white/55 hover:bg-white/[0.07]" },
+  baixo: { on: "border-emerald-300 bg-emerald-400/35 text-white", off: "border-emerald-400/20 text-emerald-200/75 hover:bg-emerald-400/10" },
+  medio: { on: "border-amber-300 bg-amber-400/35 text-white", off: "border-amber-400/20 text-amber-200/75 hover:bg-amber-400/10" },
+  alto: { on: "border-orange-300 bg-orange-400/35 text-white", off: "border-orange-400/25 text-orange-200/75 hover:bg-orange-400/10" },
+  critico: { on: "border-rose-300 bg-rose-500/40 text-white", off: "border-rose-400/25 text-rose-200/75 hover:bg-rose-500/10" },
+};
+
+const BAND_STRIP = [
+  { span: 1, label: "0", cls: "text-white/35" },
+  { span: 3, label: "Baixo", cls: "text-emerald-200/60" },
+  { span: 3, label: "Médio", cls: "text-amber-200/60" },
+  { span: 2, label: "Alto", cls: "text-orange-200/60" },
+  { span: 2, label: "Crítico", cls: "text-rose-200/60" },
+];
+
+function signed(v: number): string {
+  if (v > 0) return `+${v}`;
+  if (v < 0) return `−${Math.abs(v)}`;
+  return "±0";
+}
+
+function sameSet(a: string[], b: string[]): boolean {
+  return a.length === b.length && a.every((x) => b.includes(x));
+}
+
+function Step({ n, title, aside, children }: { n: number; title: string; aside?: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <div>
+      <p className="flex items-center gap-2">
+        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/[0.1] text-[10.5px] font-bold text-white/80">{n}</span>
+        <span className="text-[12.5px] font-semibold text-white/90">{title}</span>
+        {aside && <span className="ml-auto text-[10.5px] text-white/40">{aside}</span>}
+      </p>
+      <div className="mt-2 pl-7">{children}</div>
+    </div>
+  );
+}
+
 function ImpactLine({ impact, points, initial }: { impact: ScoreImpact; points: number | null; initial: IneficaciaScore | null }) {
   if (points === null) return null;
-  const base = "mt-2 flex items-start gap-1.5 rounded-lg px-2.5 py-2 text-[11.5px] leading-snug";
+  const base = "flex items-start gap-1.5 rounded-lg px-2.5 py-2 text-[11.5px] leading-snug";
   if (!impact.inPhase) {
     return (
       <p className={`${base} border border-white/10 bg-black/20 text-white/55`}>
+        <Info className="mt-px h-3.5 w-3.5 shrink-0 text-white/35" />
         Aconteceu antes da fase atual{impact.phaseLabel ? ` (${impact.phaseLabel})` : ""}: não mexe no PA nem no NO de hoje.
       </p>
     );
@@ -135,6 +117,7 @@ function ImpactLine({ impact, points, initial }: { impact: ScoreImpact; points: 
   if (points === 0) {
     return (
       <p className={`${base} border border-white/10 bg-black/20 text-white/55`}>
+        <Info className="mt-px h-3.5 w-3.5 shrink-0 text-white/35" />
         0 = não conta: PA {pa} e NO {no} {cur > 0 ? "(sai das contas)" : "ficam iguais"}.
       </p>
     );
@@ -145,7 +128,7 @@ function ImpactLine({ impact, points, initial }: { impact: ScoreImpact; points: 
     <p className={`${base} border ${crosses ? "border-rose-400/40 bg-rose-500/10 text-rose-100" : "border-white/10 bg-black/20 text-white/65"}`}>
       {crosses ? <AlertTriangle className="mt-px h-3.5 w-3.5 shrink-0 text-rose-300" /> : <ArrowRight className="mt-px h-3.5 w-3.5 shrink-0 text-white/35" />}
       <span>
-        Com {points} {points === 1 ? "ponto" : "pontos"}: PA <span className="tabular font-bold text-white">{impact.pa}→{pa}</span>
+        PA <span className="tabular font-bold text-white">{impact.pa}→{pa}</span>
         {n ? <span className="text-white/40"> de {n.pa}</span> : null} · NO <span className="tabular font-bold text-white">{impact.no}→{no}</span>
         {n ? <span className="text-white/40"> de {n.no}</span> : null}
         {crosses && n ? (
@@ -158,62 +141,71 @@ function ImpactLine({ impact, points, initial }: { impact: ScoreImpact; points: 
   );
 }
 
-function sameSet(a: string[], b: string[]): boolean {
-  return a.length === b.length && a.every((x) => b.includes(x));
-}
+/* ------------------------------------------------------------------ */
 
 export function ItemScoreControl({
   target,
   initial,
   calc,
   impact,
+  hints = [],
 }: {
   target: Target;
   initial: IneficaciaScore | null;
-  calc?: CalcBasis;
+  calc: CalcBasis;
   /** Mostra o que a pontuação faz ao PA/NO de hoje (v80.50). */
   impact?: ScoreImpact;
+  /** Pistas para o tipo de erro («diz que já aconteceu», «1 parecida»…). */
+  hints?: { text: string; warn?: boolean }[];
 }) {
   const router = useRouter();
-  const [points, setPoints] = useState<number | null>(initial?.points ?? null);
+  const who = impact?.who ?? "o consultor";
+  const [errorType, setErrorType] = useState<IneficaciaErrorType | null>(calc.errorType);
+  const [impacts, setImpacts] = useState<IneficaciaImpact[]>(calc.impacts);
+  // null = segue a calculadora; um número = escolhido à mão.
+  const [manual, setManual] = useState<number | null>(initial?.points ?? null);
   const [note, setNote] = useState(initial?.note ?? "");
-  const [errorType, setErrorType] = useState<IneficaciaErrorType | null>(calc?.errorType ?? null);
-  const [impacts, setImpacts] = useState<IneficaciaImpact[]>(calc?.impacts ?? []);
-  const [showCalc, setShowCalc] = useState(calc?.showCalc ?? false);
+  const [showCalc, setShowCalc] = useState(calc.showCalc);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [pending, startTransition] = useTransition();
-  const suggestion = calc
-    ? suggestScore({ impacts, reason: calc.reason, firstTime: calc.firstTime, errorType, noticed: calc.noticed })
-    : null;
+
+  const suggestion = suggestScore({ impacts, reason: calc.reason, firstTime: calc.firstTime, errorType, noticed: calc.noticed });
+  const points = manual ?? (errorType ? suggestion.points : null);
+  const adjusted = manual !== null && errorType !== null && manual !== suggestion.points;
+  const band = points === null ? null : bandOf(points);
+  const clientImplied = calc.noticed === "cliente";
+
   const scoreDirty =
     points !== (initial?.points ?? null) ||
     note !== (initial?.note ?? "") ||
-    (calc ? errorType !== calc.errorType || !sameSet(impacts, calc.impacts) : false);
-  const visibilityDirty = calc ? showCalc !== calc.showCalc : false;
+    errorType !== calc.errorType ||
+    !sameSet(impacts, calc.impacts);
+  const canShow = Boolean(errorType);
+  const visibilityDirty = (showCalc && canShow) !== calc.showCalc;
   const dirty = scoreDirty || visibilityDirty;
-  // Sem «aprendizagem ou recorrência» não há cálculo para mostrar.
-  const canShow = Boolean(calc && errorType);
-  const preview =
-    calc && errorType && points !== null && points > 0
-      ? calcBreakdown({ impacts, reason: calc.reason, firstTime: calc.firstTime, errorType, noticed: calc.noticed }, points)
-      : null;
+  const onlyVisibility = Boolean(initial) && !scoreDirty && visibilityDirty;
+
+  const touch = () => setSaved(false);
+  const pick = (p: number) => {
+    // Escolher o número que a calculadora dá volta a segui-la.
+    setManual(errorType && p === suggestion.points ? null : p);
+    touch();
+  };
 
   async function save() {
     if (points === null) {
-      setError("Escolhe a pontuação (0 a 10).");
+      setError("Escolhe o tipo de erro (1) ou uma pontuação (3).");
       return;
     }
     setError(null);
-    // Só mudou a visibilidade: não se repontua (a hora da pontuação fica).
-    const onlyVisibility = Boolean(initial) && !scoreDirty && visibilityDirty;
     const res = await fetch("/api/admin/ineficacias/score", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(
         onlyVisibility
-          ? { ...target, op: "visibility", showCalc }
-          : { ...target, points, note, ...(calc ? { errorType, impacts, showCalc: showCalc && canShow } : {}) },
+          ? { ...target, op: "visibility", showCalc: showCalc && canShow }
+          : { ...target, points, note, errorType, impacts, showCalc: showCalc && canShow },
       ),
     });
     const data = (await res.json().catch(() => ({}))) as { error?: string };
@@ -225,248 +217,301 @@ export function ItemScoreControl({
     startTransition(() => router.refresh());
   }
 
-  return (
-    <div className="rounded-xl border border-[#783DF5]/25 bg-[#783DF5]/[0.06] p-3.5">
-      <p className="text-[10.5px] font-bold uppercase tracking-[0.18em] text-[#c3aaff]">
-        {initial ? "Pontuação da direção" : "Pontuar esta ocorrência"}
-      </p>
-      {calc && suggestion && (
-        <CalculatorPanel
-          calc={calc}
-          errorType={errorType}
-          impacts={impacts}
-          suggestion={suggestion}
-          points={points}
-          visible={showCalc && canShow}
-          disabled={pending}
-          onErrorType={(t) => { setErrorType(t); setSaved(false); }}
-          onToggleImpact={(id) => {
-            setImpacts((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]));
-            setSaved(false);
-          }}
-          onApply={() => { setPoints(suggestion.points); setSaved(false); }}
-        />
-      )}
-      {calc && (
-        <div className="mt-2.5 rounded-lg border border-white/10 bg-black/20 p-2.5">
-          <button
-            type="button"
-            role="switch"
-            aria-checked={showCalc && canShow}
-            disabled={pending || !canShow}
-            onClick={() => { setShowCalc((v) => !v); setSaved(false); }}
-            title={canShow ? undefined : "Escolhe primeiro aprendizagem ou recorrência na calculadora."}
-            className="flex w-full items-center gap-2.5 text-left disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <span
-              className={`relative h-5 w-9 shrink-0 rounded-full transition ${showCalc && canShow ? "bg-[#783DF5]" : "bg-white/15"}`}
-            >
-              <span
-                className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-all ${showCalc && canShow ? "left-[18px]" : "left-0.5"}`}
-              />
-            </span>
-            {showCalc && canShow ? <Eye className="h-3.5 w-3.5 shrink-0 text-[#c3aaff]" /> : <EyeOff className="h-3.5 w-3.5 shrink-0 text-white/40" />}
-            <span className="min-w-0">
-              <span className="block text-[12px] font-semibold text-white/85">O consultor vê o porquê destes pontos</span>
-              <span className="block text-[10.5px] text-white/45">
-                {!canShow
-                  ? "Escolhe aprendizagem ou recorrência na calculadora para o poderes mostrar."
-                  : showCalc
-                    ? "No painel do consultor aparecem as parcelas e a pontuação final."
-                    : "Oculto: o consultor vê só a pontuação e a nota."}
-              </span>
-            </span>
-          </button>
-          {showCalc && canShow && preview && (
-            <div className="mt-2 border-t border-white/[0.06] pt-2">
-              <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.14em] text-white/35">O que o consultor vê</p>
-              <CalcBreakdownView breakdown={preview} compact />
-            </div>
-          )}
-        </div>
-      )}
-      <div className="mt-2.5">
-        <ScorePicker
-          value={points}
-          onChange={(p) => { setPoints(p); setSaved(false); }}
-          disabled={pending}
-          suggested={suggestion?.points ?? null}
-        />
-        {impact && <ImpactLine impact={impact} points={points} initial={initial} />}
-      </div>
-      <input
-        type="text"
-        value={note}
-        onChange={(e) => { setNote(e.target.value); setSaved(false); }}
-        maxLength={1000}
-        placeholder="Nota (opcional) — o consultor vê-a"
-        className="modal-input mt-2.5 w-full text-[12.5px]"
-      />
-      {error && <p className="mt-2 text-[11.5px] font-semibold text-rose-300">{error}</p>}
-      <div className="mt-2.5 flex items-center gap-3">
-        <button
-          type="button"
-          disabled={pending || points === null || (!dirty && Boolean(initial))}
-          onClick={() => void save()}
-          className="inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-[12px] font-semibold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
-          style={{ background: "var(--brand-gradient)" }}
-        >
-          {pending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : saved ? <Check className="h-3.5 w-3.5" /> : <Save className="h-3.5 w-3.5" />}
-          {pending
-            ? "A gravar…"
-            : saved
-              ? "Gravado"
-              : initial && !scoreDirty && visibilityDirty
-                ? showCalc
-                  ? "Mostrar ao consultor"
-                  : "Ocultar ao consultor"
-                : initial
-                  ? "Atualizar pontuação"
-                  : "Guardar pontuação"}
-        </button>
-        {initial && !dirty && (
-          <span className="text-[11px] text-white/40">Já pontuada — podes corrigir.</span>
-        )}
-      </div>
-    </div>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-
-function signed(v: number): string {
-  if (v > 0) return `+${v}`;
-  if (v < 0) return `−${Math.abs(v)}`;
-  return "±0";
-}
-
-function CalculatorPanel({
-  calc,
-  errorType,
-  impacts,
-  suggestion,
-  points,
-  visible,
-  disabled,
-  onErrorType,
-  onToggleImpact,
-  onApply,
-}: {
-  calc: CalcBasis;
-  errorType: IneficaciaErrorType | null;
-  impacts: IneficaciaImpact[];
-  suggestion: ReturnType<typeof suggestScore>;
-  points: number | null;
-  /** O consultor vê as parcelas (v80.45). */
-  visible: boolean;
-  disabled: boolean;
-  onErrorType: (t: IneficaciaErrorType) => void;
-  onToggleImpact: (id: IneficaciaImpact) => void;
-  onApply: () => void;
-}) {
-  const applied = points === suggestion.points;
-  const provisional = suggestion.missing.length > 0;
   const chip = (on: boolean) =>
-    `inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[11.5px] font-semibold transition disabled:opacity-50 ${
-      on ? "border-[#a78bfa]/70 bg-[#783DF5]/25 text-white" : "border-white/10 bg-white/[0.03] text-white/60 hover:bg-white/[0.07]"
+    `inline-flex items-center gap-1.5 rounded-xl border px-3 py-2 text-left text-[12px] font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${
+      on ? "border-[#a78bfa]/80 bg-[#783DF5]/25 text-white" : "border-white/10 bg-white/[0.03] text-white/65 hover:bg-white/[0.07] hover:text-white"
     }`;
+
   return (
-    <div className="mt-2.5 rounded-lg border border-white/10 bg-black/25 p-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="flex items-center gap-1.5 text-[10.5px] font-bold uppercase tracking-[0.16em] text-white/55">
-          <Calculator className="h-3.5 w-3.5 text-[#c3aaff]" />
-          Calculadora
-          <span className={`font-semibold normal-case tracking-normal ${visible ? "text-[#c3aaff]/80" : "text-white/30"}`}>
-            {visible ? "· o consultor vê" : "· só a direção vê"}
-          </span>
+    <div className="rounded-2xl border border-[#783DF5]/25 bg-[#783DF5]/[0.05]">
+      <header className="flex flex-wrap items-center gap-2 border-b border-white/[0.06] px-4 py-3">
+        <p className="text-[10.5px] font-bold uppercase tracking-[0.18em] text-[#c3aaff]">
+          {initial ? "Pontuação da direção" : "Pontuar esta ocorrência"}
         </p>
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-white/40">{provisional ? "Provisória" : "Sugestão"}</span>
-          <span className={`tabular rounded-full border px-2.5 py-0.5 text-[11.5px] font-bold ${BAND_TONES[suggestion.band.id]}`}>
-            {suggestion.points} pts · {suggestion.band.label}
+        {initial && (
+          <span className="text-[11px] text-white/40">
+            · {initial.byName || "direção"}, {formatLisbonDateTime(initial.at)}
           </span>
-          <button
-            type="button"
-            onClick={onApply}
-            disabled={disabled || applied}
-            className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-[11px] font-bold transition ${
-              applied ? "border border-emerald-400/30 bg-emerald-400/10 text-emerald-200" : "text-white hover:brightness-110"
-            } disabled:cursor-default`}
-            style={applied ? undefined : { background: "var(--brand-gradient)" }}
-          >
-            {applied ? <Check className="h-3 w-3" /> : <Wand2 className="h-3 w-3" />}
-            {applied ? "Aplicada" : "Usar"}
-          </button>
-        </div>
-      </div>
+        )}
+      </header>
 
-      <div className="mt-2.5 space-y-2">
-        <div className="flex flex-wrap gap-1.5">
-          {ERROR_TYPES.map((t) => {
-            const Icon = t.id === "aprendizagem" ? GraduationCap : Repeat;
-            return (
+      <div className="grid grid-cols-1 gap-6 p-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] md:gap-5">
+        {/* 1 e 2 — a avaliação */}
+        <div className="min-w-0 space-y-5">
+          <Step n={1} title="Que tipo de erro é?">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              {ERROR_TYPES.map((t) => {
+                const Icon = t.id === "aprendizagem" ? GraduationCap : Repeat;
+                const on = errorType === t.id;
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    disabled={pending}
+                    onClick={() => {
+                      setErrorType(t.id);
+                      touch();
+                    }}
+                    aria-pressed={on}
+                    className={`${chip(on)} flex-col items-start`}
+                  >
+                    <span className="flex w-full items-center gap-1.5">
+                      <Icon className="h-3.5 w-3.5" />
+                      {t.id === "aprendizagem" ? "Aprendizagem" : "Recorrência"}
+                      <span className={`tabular ml-auto text-[11px] font-bold ${SCORE_RULES.errorType[t.id] > 0 ? "text-rose-300" : "text-emerald-300"}`}>
+                        {signed(SCORE_RULES.errorType[t.id])}
+                      </span>
+                    </span>
+                    <span className="text-[10.5px] font-normal leading-snug text-white/45">{t.hint}</span>
+                  </button>
+                );
+              })}
+            </div>
+            {hints.length > 0 && (
+              <ul className="mt-2 space-y-1 text-[11px] leading-snug">
+                {hints.map((h) => (
+                  <li key={h.text} className={`flex items-start gap-1.5 ${h.warn ? "text-amber-200/90" : "text-white/50"}`}>
+                    {h.warn ? <AlertTriangle className="mt-px h-3 w-3 shrink-0" /> : <Info className="mt-px h-3 w-3 shrink-0" />}
+                    {h.text}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Step>
+
+          <Step n={2} title="O que é que o erro causou?" aside="podes marcar vários">
+            <div className="flex flex-wrap gap-1.5">
               <button
-                key={t.id}
                 type="button"
-                disabled={disabled}
-                onClick={() => onErrorType(t.id)}
-                aria-pressed={errorType === t.id}
-                title={t.hint}
-                className={chip(errorType === t.id)}
+                disabled={pending || clientImplied}
+                onClick={() => {
+                  setImpacts([]);
+                  touch();
+                }}
+                aria-pressed={impacts.length === 0 && !clientImplied}
+                title="Recuperável no próprio dia"
+                className={chip(impacts.length === 0 && !clientImplied)}
               >
-                <Icon className="h-3.5 w-3.5" />
-                {t.label}
+                Nada de grave
+                <span className="tabular text-[10.5px] font-bold text-white/40">{SCORE_RULES.noImpactBase}</span>
               </button>
-            );
-          })}
+              {IMPACTS.map((i) => {
+                const implied = i.id === "cliente" && clientImplied;
+                const on = implied || impacts.includes(i.id);
+                return (
+                  <button
+                    key={i.id}
+                    type="button"
+                    role="checkbox"
+                    aria-checked={on}
+                    disabled={pending || implied}
+                    onClick={() => {
+                      setImpacts((cur) => (cur.includes(i.id) ? cur.filter((x) => x !== i.id) : [...cur, i.id]));
+                      touch();
+                    }}
+                    title={implied ? "Foi o cliente que deu pelo erro." : i.hint}
+                    className={chip(on)}
+                  >
+                    <span
+                      className={`flex h-3.5 w-3.5 items-center justify-center rounded border ${on ? "border-[#c3aaff] bg-[#783DF5] text-white" : "border-white/30"}`}
+                    >
+                      {on && <Check className="h-2.5 w-2.5" strokeWidth={3} />}
+                    </span>
+                    {i.label}
+                    <span className="tabular text-[10.5px] font-bold text-white/40">{i.base}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </Step>
         </div>
-        <div className="flex flex-wrap gap-1.5">
-          {IMPACTS.map((i) => {
-            const implied = i.id === "cliente" && calc.noticed === "cliente";
-            const on = implied || impacts.includes(i.id);
-            return (
-              <button
-                key={i.id}
-                type="button"
-                role="checkbox"
-                aria-checked={on}
-                disabled={disabled || implied}
-                onClick={() => onToggleImpact(i.id)}
-                title={implied ? "Foi o cliente que deu pelo erro." : i.hint}
-                className={chip(on)}
-              >
-                <span
-                  className={`flex h-3.5 w-3.5 items-center justify-center rounded border ${
-                    on ? "border-[#c3aaff] bg-[#783DF5] text-white" : "border-white/30"
-                  }`}
+
+        {/* 3 — a pontuação */}
+        <div className="min-w-0">
+          <Step
+            n={3}
+            title="Pontuação"
+            aside={
+              adjusted ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setManual(null);
+                    touch();
+                  }}
+                  className="inline-flex items-center gap-1 font-semibold text-[#c3aaff] hover:text-white"
                 >
-                  {on && <Check className="h-2.5 w-2.5" strokeWidth={3} />}
+                  <RotateCcw className="h-3 w-3" />
+                  voltar à sugestão ({suggestion.points})
+                </button>
+              ) : errorType ? (
+                "segue a calculadora"
+              ) : null
+            }
+          >
+            <div className="rounded-xl border border-white/[0.08] bg-black/25">
+              {/* a conta */}
+              <ul className="divide-y divide-white/[0.04] px-3 py-1 text-[11.5px]">
+                {suggestion.lines.map((l, i) => (
+                  <li key={i} className="flex items-baseline justify-between gap-3 py-1">
+                    <span className={l.base ? "text-white/75" : "text-white/50"}>{l.label}</span>
+                    <span
+                      className={`tabular shrink-0 font-bold ${
+                        l.base ? "text-white/80" : l.value > 0 ? "text-rose-300" : l.value < 0 ? "text-emerald-300" : "text-white/30"
+                      }`}
+                    >
+                      {l.base ? l.value : signed(l.value)}
+                    </span>
+                  </li>
+                ))}
+                {!errorType && (
+                  <li className="flex items-baseline justify-between gap-3 py-1">
+                    <span className="font-semibold text-amber-200/85">Tipo de erro — escolhe em 1</span>
+                    <span className="tabular font-bold text-amber-200/60">?</span>
+                  </li>
+                )}
+                {suggestion.raw !== suggestion.points && (
+                  <li className="flex items-baseline justify-between gap-3 py-1">
+                    <span className="text-white/40">Limite da escala (1 a 10)</span>
+                    <span className="tabular font-bold text-white/40">{signed(suggestion.points - suggestion.raw)}</span>
+                  </li>
+                )}
+                {adjusted && manual !== null && (
+                  <li className="flex items-baseline justify-between gap-3 py-1">
+                    <span className="text-white/60">Ajuste da direção</span>
+                    <span className={`tabular font-bold ${manual - suggestion.points > 0 ? "text-rose-300" : "text-emerald-300"}`}>
+                      {signed(manual - suggestion.points)}
+                    </span>
+                  </li>
+                )}
+              </ul>
+              <div className="flex items-center justify-between gap-3 border-t border-white/[0.08] px-3 py-2">
+                <span className="text-[11.5px] font-semibold text-white/55">
+                  {points === null
+                    ? `Provisória: ${suggestion.points}`
+                    : !errorType
+                      ? "Escolhida à mão"
+                      : adjusted
+                        ? "Pontuação final"
+                        : "Sugestão da calculadora"}
                 </span>
-                {i.label}
-                <span className="tabular text-[10px] font-bold text-white/35">{i.base}</span>
-              </button>
-            );
-          })}
+                {points !== null && band ? (
+                  <span className={`tabular rounded-full border px-3 py-1 text-[13px] font-extrabold ${BAND_TONES[band.id]}`}>
+                    {points} {points === 1 ? "ponto" : "pontos"} · {band.label}
+                  </span>
+                ) : (
+                  <span className="rounded-full border border-dashed border-white/20 px-3 py-1 text-[12px] font-semibold text-white/40">falta o passo 1</span>
+                )}
+              </div>
+            </div>
+
+            {/* ajustar à mão */}
+            <div className="mt-3">
+              <div className="grid grid-cols-11 gap-1">
+                {Array.from({ length: MAX_POINTS + 1 }, (_, p) => {
+                  const b = bandOf(p);
+                  const on = points === p;
+                  const sug = p === suggestion.points;
+                  return (
+                    <button
+                      key={p}
+                      type="button"
+                      disabled={pending}
+                      onClick={() => pick(p)}
+                      aria-pressed={on}
+                      title={`${p} · ${b.label} — ${b.hint}${sug ? " · sugestão da calculadora" : ""}`}
+                      className={`tabular relative h-8 rounded-lg border text-[12.5px] font-bold transition disabled:opacity-50 ${on ? BAND_BTN[b.id].on : BAND_BTN[b.id].off}`}
+                    >
+                      {p}
+                      {sug && !on && (
+                        <span aria-hidden className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full border border-[#15121f] bg-[#a78bfa]" />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="mt-1 grid grid-cols-11 gap-1 text-center text-[9.5px] font-semibold uppercase tracking-wide">
+                {BAND_STRIP.map((s) => (
+                  <span key={s.label} className={s.cls} style={{ gridColumn: `span ${s.span} / span ${s.span}` }}>
+                    {s.label}
+                  </span>
+                ))}
+              </div>
+              <p className="mt-1.5 text-[10.5px] text-white/35">Clica noutro número para ajustar à mão · 0 = não conta.</p>
+            </div>
+
+            {impact && points !== null && (
+              <div className="mt-2.5">
+                <ImpactLine impact={impact} points={points} initial={initial} />
+              </div>
+            )}
+          </Step>
         </div>
       </div>
 
-      <p className="mt-2.5 text-[11px] leading-relaxed text-white/45">
-        {suggestion.lines.map((l, i) => (
-          <span key={i}>
-            {i > 0 && <span className="text-white/20"> · </span>}
-            {l.label}{" "}
-            <span
-              className={`tabular font-bold ${
-                l.base ? "text-white/75" : l.value > 0 ? "text-rose-300" : l.value < 0 ? "text-emerald-300" : "text-white/35"
-              }`}
+      {/* 4 — nota e gravar */}
+      <div className="border-t border-white/[0.06] px-4 pb-4 pt-3.5">
+        <Step n={4} title={`Nota para ${who}`} aside="opcional">
+          <textarea
+            value={note}
+            onChange={(e) => {
+              setNote(e.target.value);
+              touch();
+            }}
+            rows={2}
+            maxLength={1000}
+            placeholder={`O que ${who} deve tirar daqui — ${who} lê esta nota.`}
+            className="modal-input w-full resize-y text-[12.5px]"
+          />
+          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-3">
+            <button
+              type="button"
+              disabled={pending || points === null || (!dirty && Boolean(initial))}
+              onClick={() => void save()}
+              className="inline-flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-[12.5px] font-semibold text-white shadow-[0_8px_22px_-10px_rgba(120,61,245,0.9)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-45"
+              style={{ background: "var(--brand-gradient)" }}
             >
-              {l.base ? l.value : signed(l.value)}
-            </span>
-          </span>
-        ))}
-        {suggestion.raw !== suggestion.points && <span> · a soma dá {suggestion.raw}, fica {suggestion.points}</span>}
-        {provisional && <span className="font-semibold text-amber-200/80"> · falta: {suggestion.missing.join(", ")}</span>}
-      </p>
+              {pending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : saved ? <Check className="h-3.5 w-3.5" /> : <Save className="h-3.5 w-3.5" />}
+              {pending
+                ? "A gravar…"
+                : saved
+                  ? "Gravado"
+                  : points === null
+                    ? "Escolhe o tipo de erro"
+                    : onlyVisibility
+                      ? showCalc
+                        ? `Mostrar o cálculo a ${who}`
+                        : `Ocultar o cálculo a ${who}`
+                      : `${initial ? "Atualizar" : "Guardar"} · ${points} ${points === 1 ? "ponto" : "pontos"}`}
+            </button>
+
+            <button
+              type="button"
+              role="switch"
+              aria-checked={showCalc && canShow}
+              disabled={pending || !canShow}
+              onClick={() => {
+                setShowCalc((v) => !v);
+                touch();
+              }}
+              title={canShow ? undefined : "Escolhe primeiro o tipo de erro (1)."}
+              className="flex items-center gap-2 text-left disabled:cursor-not-allowed disabled:opacity-45"
+            >
+              <span className={`relative h-5 w-9 shrink-0 rounded-full transition ${showCalc && canShow ? "bg-[#783DF5]" : "bg-white/15"}`}>
+                <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-all ${showCalc && canShow ? "left-[18px]" : "left-0.5"}`} />
+              </span>
+              {showCalc && canShow ? <Eye className="h-3.5 w-3.5 shrink-0 text-[#c3aaff]" /> : <EyeOff className="h-3.5 w-3.5 shrink-0 text-white/40" />}
+              <span className="text-[11.5px] text-white/70">
+                {who} vê a conta
+                <span className="text-white/35"> {showCalc && canShow ? "· vê as parcelas e o total" : "· vê só os pontos e a nota"}</span>
+              </span>
+            </button>
+
+            {initial && !dirty && <span className="text-[11px] text-white/40">Já pontuada — podes corrigir.</span>}
+          </div>
+          {error && <p className="mt-2 text-[11.5px] font-semibold text-rose-300">{error}</p>}
+        </Step>
+      </div>
     </div>
   );
 }

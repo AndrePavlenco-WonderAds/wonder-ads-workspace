@@ -5,7 +5,7 @@
 // pontuação faz ao PA/NO de hoje. Server-safe; o controlo de pontuação é
 // cliente.
 
-import { ArrowDown, History, MessageSquareQuote, Sparkles } from "lucide-react";
+import { ArrowDown, History, MessageSquareQuote } from "lucide-react";
 import { ItemScoreControl, type ScoreImpact } from "@/components/ineficacias/admin-scoring";
 import { ScoreBadge } from "@/components/ineficacias/report-view";
 import { CalcBreakdownView } from "@/components/ineficacias/calc-breakdown";
@@ -35,7 +35,16 @@ export function PendingDeskCard({
 }) {
   const e = desk.entry;
   const self = e.selfScore;
-  const firstClaimWrong = e.firstTime === true && desk.similar > 0;
+  // As pistas para o passo 1 (aprendizagem ou recorrência).
+  const parecidas = `${desk.similar} ${desk.similar === 1 ? "ocorrência parecida" : "ocorrências parecidas"}`;
+  const hints: { text: string; warn?: boolean }[] =
+    e.firstTime === false
+      ? [{ text: `${who} diz que já aconteceu (última vez: ${e.lastTime || "—"}) — aponta para recorrência.`, warn: true }]
+      : e.firstTime === true && desk.similar > 0
+        ? [{ text: `${who} diz que é a primeira vez, mas há ${parecidas} no histórico — vê se é recorrência.`, warn: true }]
+        : e.firstTime === true
+          ? [{ text: `${who} diz que é a primeira vez e não há nada parecido no histórico.` }]
+          : [];
 
   return (
     <article
@@ -85,7 +94,7 @@ export function PendingDeskCard({
         </div>
 
         {/* o passado que interessa */}
-        <aside className="min-w-0 rounded-2xl border border-white/[0.08] bg-black/25 p-4">
+        <aside className="min-w-0 self-start rounded-2xl border border-white/[0.08] bg-black/25 p-4">
           <p className="flex items-center gap-1.5 text-[10.5px] font-bold uppercase tracking-[0.16em] text-white/55">
             <History className="h-3.5 w-3.5 text-[#c3aaff]" />
             O passado de {who}
@@ -113,13 +122,6 @@ export function PendingDeskCard({
                   <span className="tabular font-semibold text-white/80">{desk.sameReason}</span> com o mesmo motivo
                 </span>
               </p>
-
-              {firstClaimWrong && (
-                <p className="mt-2.5 flex items-start gap-1.5 rounded-lg border border-amber-400/30 bg-amber-400/10 px-2.5 py-2 text-[11.5px] leading-snug text-amber-100">
-                  <Sparkles className="mt-px h-3.5 w-3.5 shrink-0 text-amber-300" />
-                  Diz que é a primeira vez, mas há {desk.similar} {desk.similar === 1 ? "ocorrência parecida" : "ocorrências parecidas"} no histórico — vê se é recorrência.
-                </p>
-              )}
 
               {desk.related.length === 0 ? (
                 <p className="mt-3 text-[12px] text-white/45">Nada no mesmo cliente, com o mesmo motivo ou parecido.</p>
@@ -176,7 +178,7 @@ export function PendingDeskCard({
       </div>
 
       <div className="border-t border-white/[0.06] px-5 pb-5 pt-4">
-        <ItemScoreControl target={e.target} initial={e.score} calc={e.calc} impact={impact} />
+        <ItemScoreControl target={e.target} initial={e.score} calc={e.calc} impact={impact} hints={hints} />
       </div>
     </article>
   );
