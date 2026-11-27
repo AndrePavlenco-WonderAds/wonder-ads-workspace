@@ -163,8 +163,12 @@ export function ClientCard({
             </div>
           </div>
         ) : (
-          <div className="mt-2.5 flex items-center justify-between gap-2">
-            <div className="flex min-w-0 items-center gap-1.5">
+          // Rodapé do cartão da board (v80.58): NPS à esquerda, garantia +
+          // tier à direita. `flex-wrap` em vez de encolher — numa lane
+          // estreita o tier desce para a linha de baixo em vez de se pôr por
+          // cima das pastilhas do NPS.
+          <div className="mt-2.5 flex flex-wrap items-end justify-between gap-x-2 gap-y-2">
+            <div className="flex items-center gap-1.5">
               {npsMonths ? (
                 npsMonths.length > 0 && <NpsByMonth months={npsMonths} />
               ) : npsOverall !== null ? (
@@ -175,7 +179,7 @@ export function ClientCard({
                 </span>
               )}
             </div>
-            <div className="flex shrink-0 items-center gap-1.5">
+            <div className="ml-auto flex shrink-0 items-center gap-1.5">
               {keywordGuarantee && <KeywordGuaranteeChip />}
               <TierBadge tier={tier} />
             </div>

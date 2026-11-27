@@ -7,12 +7,15 @@
 // equipa — a Maria ficava «debaixo» do João B. em vez de ao lado. Agora a
 // equipa lê-se sempre numa só linha, como estão sentados:
 //
-//   • ≥ xl (1280px): a board ocupa a largura toda da página e as N lanes
-//     dividem-na em partes iguais. Cinco, seis, sete consultores — continua
-//     a ser uma linha; cada lane fica só mais estreita.
-//   • < xl: as lanes têm largura fixa e a fila desliza na horizontal com
-//     snap. A faixa de atalhos por cima diz onde se está e salta para a
-//     lane de cada consultor.
+//   • v80.58 — LARGURA MÍNIMA EM VEZ DE PARTES IGUAIS. Com o 6.º consultor
+//     (Diogo) as partes iguais desciam a ~218px num portátil: nomes cortados
+//     («Fran…»), pastilhas do NPS por cima do tier. Agora cada lane tem
+//     pelo menos LANE_MIN px e as que cabem dividem a largura (minmax(…, 1fr));
+//     quando não cabem todas, a fila desliza na horizontal — setas e um
+//     esbatido nas pontas (≥ lg), atalhos por consultor (< lg).
+//   • Quem é consultor abre a board JÁ na sua lane: ao montar, a fila desliza
+//     sozinha até ela se não estiver toda à vista (sem animação). O
+//     SuperAdmin não tem carteira e abre no início.
 //
 // O cabeçalho de cada lane é o retrato + o nome (grande) + o total no canto,
 // e NÃO é sticky (v77.49, a pedido do André: ao descer, a lista é que manda).
@@ -25,12 +28,14 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   ArrowDown,
   ArrowUp,
   ArrowUpDown,
   ArrowUpRight,
+  ChevronLeft,
+  ChevronRight,
   GripVertical,
   Loader2,
   Star,
@@ -90,6 +95,14 @@ function laneId(name: string, compact: boolean): string {
     .replace(/^-|-$/g, "");
   return `${compact ? "paused" : "lane"}-${slug || "x"}`;
 }
+
+/** Largura mínima de uma lane (px). Abaixo disto o cartão já não respira:
+ *  o nome do consultor corta e as pastilhas do rodapé encavalitam-se. */
+const LANE_MIN = 280;
+const LANE_MIN_COMPACT = 220;
+
+/** useLayoutEffect no browser, useEffect no servidor (sem aviso no SSR). */
+const useIsoLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
 
 /** Média de NPS de uma carteira — só sobre quem respondeu. */
 function averageNps(clients: SeoBoardCard[]): {
@@ -153,22 +166,76 @@ export function SeoBoard({
     return () => io.disconnect();
   }, [columns.length]);
 
+  // Pode deslizar para cada lado? Decide as setas e o esbatido das pontas.
+  const [edges, setEdges] = useState({ left: false, right: false });
+  const measure = useCallback(() => {
+    const track = trackRef.current;
+    if (!track) return;
+    const max = track.scrollWidth - track.clientWidth;
+    const left = track.scrollLeft > 2;
+    const right = track.scrollLeft < max - 2;
+    setEdges((e) => (e.left === left && e.right === right ? e : { left, right }));
+  }, []);
+
+  useEffect(() => {
+    const track = trackRef.current;
+    if (!track) return;
+    measure();
+    track.addEventListener("scroll", measure, { passive: true });
+    const ro = new ResizeObserver(measure);
+    ro.observe(track);
+    return () => {
+      track.removeEventListener("scroll", measure);
+      ro.disconnect();
+    };
+  }, [measure, columns.length]);
+
+  // A lane de quem está a ver, à vista logo ao abrir: se não couber inteira,
+  // a fila desliza (sem animação, antes de pintar) até ela ficar no início —
+  // ou o mais perto disso que o fim da fila deixar.
+  useIsoLayoutEffect(() => {
+    const track = trackRef.current;
+    const lane = track?.querySelector<HTMLElement>("[data-mine]");
+    if (!track || !lane) return;
+    const t = track.getBoundingClientRect();
+    const l = lane.getBoundingClientRect();
+    const pad = parseFloat(getComputedStyle(track).paddingLeft) || 0;
+    const fullyVisible = l.left >= t.left + pad - 1 && l.right <= t.right - pad + 1;
+    if (fullyVisible) return;
+    track.scrollLeft += l.left - t.left - pad;
+    measure();
+  }, [measure]);
+
   function jumpTo(id: string) {
+    const track = trackRef.current;
     const el = document.getElementById(id);
-    el?.scrollIntoView({ behavior: "smooth", inline: "start", block: "nearest" });
+    if (!track || !el) return;
+    const pad = parseFloat(getComputedStyle(track).paddingLeft) || 0;
+    const left = track.scrollLeft + el.getBoundingClientRect().left - track.getBoundingClientRect().left - pad;
+    track.scrollTo({ left, behavior: "smooth" });
+  }
+
+  /** Uma lane para a esquerda ou para a direita. */
+  function step(dir: -1 | 1) {
+    const track = trackRef.current;
+    const first = track?.querySelector<HTMLElement>("[data-lane]");
+    if (!track || !first) return;
+    const gap = parseFloat(getComputedStyle(track).columnGap) || 16;
+    track.scrollBy({ left: dir * (first.getBoundingClientRect().width + gap), behavior: "smooth" });
   }
 
   if (columns.length === 0) return null;
+  const laneMin = compact ? LANE_MIN_COMPACT : LANE_MIN;
 
   return (
     <ExtraConsultantsContext.Provider value={extraConsultants}>
     <div className="relative">
-      {/* Faixa de atalhos — só quando as lanes não cabem todas (< xl), e só
-          na board ativa: a dos pausados é pequena e não precisa. */}
+      {/* Faixa de atalhos — no telemóvel e no tablet (< lg), onde a fila
+          desliza sempre; e só na board ativa: a dos pausados é pequena. */}
       {!compact && (
         <nav
           aria-label="Consultores"
-          className="mb-4 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] xl:hidden [&::-webkit-scrollbar]:hidden"
+          className="mb-4 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] lg:hidden [&::-webkit-scrollbar]:hidden"
         >
           {columns.map((col) => {
             const id = laneId(col.name, compact);
@@ -199,32 +266,81 @@ export function SeoBoard({
         </nav>
       )}
 
-      {/* A fila. < xl: flex deslizante com snap, a sangrar até às margens da
-          página; ≥ xl: grelha de N partes iguais, sem scroll. */}
-      <div
-        ref={trackRef}
-        className={`-mx-6 flex snap-x snap-mandatory overflow-x-auto overflow-y-hidden px-6 pt-2 [scrollbar-width:none] sm:-mx-10 sm:px-10 xl:mx-0 xl:grid xl:snap-none xl:overflow-visible xl:px-0 xl:pb-0 [&::-webkit-scrollbar]:hidden ${
-          compact ? "gap-3 pb-3" : "gap-4 pb-5 2xl:gap-5"
-        }`}
-        style={{
-          gridTemplateColumns: `repeat(${columns.length}, minmax(0, 1fr))`,
-          scrollPaddingInline: "1.5rem",
-        }}
-      >
-        {columns.map((col) => (
-          <Lane
-            key={col.name}
-            id={laneId(col.name, compact)}
-            column={col}
-            isAdmin={isAdmin}
-            canReorder={canReorder}
-            compact={compact}
-            unlocks={unlocks}
-          />
-        ))}
+      {/* A fila: uma grelha de N lanes com LARGURA MÍNIMA — as que cabem
+          dividem o espaço, as que não cabem deslizam. Sangra até às margens
+          da página para as lanes não serem cortadas a meio da coluna. */}
+      <div className="relative -mx-6 sm:-mx-10">
+        <div
+          ref={trackRef}
+          className={`grid snap-x snap-mandatory overflow-x-auto overflow-y-hidden scroll-px-6 px-6 pt-2 [scrollbar-width:none] sm:scroll-px-10 sm:px-10 lg:snap-none [&::-webkit-scrollbar]:hidden ${
+            compact ? "gap-3 pb-3" : "gap-4 pb-5 2xl:gap-5"
+          }`}
+          style={{
+            gridTemplateColumns: `repeat(${columns.length}, minmax(min(${laneMin}px, 84vw), 1fr))`,
+          }}
+        >
+          {columns.map((col) => (
+            <Lane
+              key={col.name}
+              id={laneId(col.name, compact)}
+              column={col}
+              isAdmin={isAdmin}
+              canReorder={canReorder}
+              compact={compact}
+              unlocks={unlocks}
+            />
+          ))}
+        </div>
+
+        {/* Há mais para um lado: esbatido + seta (≥ lg). A seta acompanha o
+            scroll da página (sticky) para estar à mão a meio de uma lane. */}
+        <EdgeArrow side="left" show={edges.left} compact={compact} onClick={() => step(-1)} />
+        <EdgeArrow side="right" show={edges.right} compact={compact} onClick={() => step(1)} />
       </div>
     </div>
     </ExtraConsultantsContext.Provider>
+  );
+}
+
+/** A ponta da fila quando há lanes escondidas desse lado: um esbatido para a
+ *  cor da página e uma seta redonda que avança uma lane. Só ≥ lg — no
+ *  telemóvel desliza-se com o dedo e há a faixa de atalhos. */
+function EdgeArrow({
+  side,
+  show,
+  compact,
+  onClick,
+}: {
+  side: "left" | "right";
+  show: boolean;
+  compact: boolean;
+  onClick: () => void;
+}) {
+  const Icon = side === "left" ? ChevronLeft : ChevronRight;
+  return (
+    <div
+      aria-hidden={!show}
+      className={`pointer-events-none absolute inset-y-0 z-10 hidden w-16 transition-opacity duration-300 lg:block ${
+        side === "left" ? "left-0" : "right-0"
+      } ${show ? "opacity-100" : "opacity-0"}`}
+      style={{
+        background: `linear-gradient(${side === "left" ? "90deg" : "270deg"}, var(--background) 15%, transparent)`,
+      }}
+    >
+      <div className={`sticky flex justify-center ${compact ? "top-24 mt-6" : "top-[42vh] mt-24"}`}>
+        <button
+          type="button"
+          onClick={onClick}
+          tabIndex={show ? 0 : -1}
+          aria-label={side === "left" ? "Ver os consultores à esquerda" : "Ver os consultores à direita"}
+          className={`inline-flex items-center justify-center rounded-full border border-white/15 bg-[#0d0e16]/90 text-white/70 shadow-[0_10px_30px_-10px_rgba(0,0,0,0.9)] transition hover:border-[#783DF5]/60 hover:bg-[#783DF5]/25 hover:text-white ${
+            compact ? "h-8 w-8" : "h-10 w-10"
+          } ${show ? "pointer-events-auto" : "pointer-events-none"}`}
+        >
+          <Icon className={compact ? "h-4 w-4" : "h-5 w-5"} />
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -241,7 +357,7 @@ function ConsultantAvatar({
   size: "md" | "sm";
   ring: string;
 }) {
-  const dim = size === "md" ? "h-11 w-11 text-[15px]" : "h-7 w-7 text-[11px]";
+  const dim = size === "md" ? "h-10 w-10 text-[15px]" : "h-7 w-7 text-[11px]";
   return (
     <span
       aria-hidden
@@ -372,7 +488,7 @@ function Lane({
       </span>
       <ArrowUpRight
         className={`shrink-0 text-white/40 transition group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-white ${
-          compact ? "h-3 w-3" : "h-4 w-4"
+          compact ? "h-3 w-3" : "h-3.5 w-3.5"
         }`}
       />
     </Link>
@@ -384,9 +500,10 @@ function Lane({
     <section
       id={id}
       data-lane={id}
+      data-mine={mine ? "" : undefined}
       aria-label={`Carteira de ${column.name}`}
-      className={`relative flex shrink-0 snap-start flex-col rounded-3xl border xl:w-auto xl:min-w-0 xl:shrink ${laneTone} ${
-        compact ? "w-[224px] p-2 opacity-80 transition hover:opacity-100" : "w-[276px] p-3"
+      className={`relative flex min-w-0 snap-start flex-col rounded-3xl border ${laneTone} ${
+        compact ? "p-2 opacity-80 transition hover:opacity-100" : "p-3"
       }`}
     >
       {/* Fio de luz no topo — assina a lane sem lhe pôr moldura a mais. */}
@@ -404,11 +521,11 @@ function Lane({
 
       {/* Cabeçalho: retrato + nome (grande) + total no canto. */}
       <header
-        className={`flex items-start justify-between gap-3 ${
+        className={`flex items-center justify-between gap-2.5 ${
           compact ? "px-1 pb-2 pt-1" : "px-1.5 pb-3.5 pt-1.5"
         }`}
       >
-        <div className="flex min-w-0 items-center gap-3">
+        <div className="flex min-w-0 flex-1 items-center gap-3">
           <ConsultantAvatar
             avatar={column.avatar}
             name={column.name}
@@ -418,10 +535,10 @@ function Lane({
           <div className="min-w-0">
             <div className="flex min-w-0 items-center gap-1">
               <h3
-                className={`truncate tracking-tight text-white ${
+                className={`min-w-0 truncate tracking-tight text-white ${
                   compact
                     ? "text-[13px] font-semibold"
-                    : "text-[18px] font-bold leading-tight"
+                    : "text-[17px] font-bold leading-tight"
                 }`}
               >
                 {nameNode}
@@ -447,13 +564,17 @@ function Lane({
               <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                 {column.newcomer && (
                   <span
-                    className="inline-flex items-center gap-1 rounded-full border border-emerald-300/30 bg-emerald-400/[0.1] px-1.5 py-0.5 text-[9.5px] font-bold uppercase tracking-[0.12em] text-emerald-200"
-                    title="Aceite no Recrutamento"
+                    className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-emerald-300/30 bg-emerald-400/[0.1] px-1.5 py-0.5 text-[9.5px] font-bold uppercase tracking-[0.12em] text-emerald-200"
+                    title={
+                      column.newcomer.startedAt
+                        ? `Aceite no Recrutamento · entra a ${column.newcomer.startedAt.split("-").reverse().join("/")}`
+                        : "Aceite no Recrutamento"
+                    }
                   >
                     Novo
                     {column.newcomer.startedAt && (
                       <span className="font-semibold normal-case tracking-normal text-emerald-100/70">
-                        · entra a {column.newcomer.startedAt.split("-").reverse().join("/")}
+                        · {column.newcomer.startedAt.split("-").reverse().slice(0, 2).join("/")}
                       </span>
                     )}
                   </span>
@@ -488,7 +609,7 @@ function Lane({
         </div>
         <span
           className={`tabular inline-flex shrink-0 items-center justify-center rounded-full font-bold ${countTone} ${
-            compact ? "h-6 min-w-6 px-1.5 text-[11px]" : "mt-0.5 h-8 min-w-8 px-2 text-[13px]"
+            compact ? "h-6 min-w-6 px-1.5 text-[11px]" : "h-7 min-w-7 px-2 text-[12.5px]"
           }`}
           title={`${column.clients.length} cliente${column.clients.length === 1 ? "" : "s"}`}
         >

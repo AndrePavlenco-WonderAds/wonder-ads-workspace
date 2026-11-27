@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "80.58",
+    date: "2026-11-27",
+    title: "SEO DPT: lanes com largura a sério e a tua carteira à vista",
+    highlights: [
+      "**Cada lane do SEO DPT tem agora uma largura mínima:** com seis consultores os nomes já não cortam e as pastilhas do NPS deixam de ficar por cima do tier. Quando não cabem todas, a fila desliza para o lado, com setas e um esbatido nas pontas.",
+      "**Cada consultor abre a board já na sua lane,** sem ter de deslizar.",
+      "No rodapé do cartão, se não houver espaço, o tier passa para a linha de baixo em vez de ficar por cima do NPS.",
+    ],
+  },
+  {
     version: "80.57",
     date: "2026-11-26",
     title: "Ineficácias (direção): relatórios assinados num canto",
