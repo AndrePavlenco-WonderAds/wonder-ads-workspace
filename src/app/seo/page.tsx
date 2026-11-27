@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { ArrowRight, Bot, PauseCircle, Users } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { AccessDenied } from "@/components/access-denied";
@@ -8,6 +9,8 @@ import { DepartmentHeader } from "@/components/department-header";
 import { KpisCard } from "@/components/kpis-card";
 import { SeoDirectoriesCard } from "@/components/seo-directories-card";
 import { SeoBoard, type SeoBoardColumn } from "@/components/seo-board";
+import { SeoBoardViews } from "@/components/seo-board-views";
+import { SEO_VIEW_COOKIE, type SeoBoardView } from "@/lib/seo-board-view";
 import { hasKeywordGuarantee } from "@/lib/keyword-guarantee";
 import { WorldMap } from "@/components/world-map";
 import { TypewriterPrompt } from "@/components/typewriter-prompt";
@@ -136,6 +139,12 @@ export default async function SeoPage() {
     hiresP,
   ]);
   const hireCols = hires.map((h) => ({ name: h.name, startedAt: h.startedAt }));
+  // Retratos dos colegas criados na app (v80.59): a coluna → o username.
+  const hireUsers = new Map(hires.map((h) => [h.name, h.username]));
+  // A vista da board (v80.59): a escolhida (cookie) ou a do perfil.
+  const savedView = (await cookies()).get(SEO_VIEW_COOKIE)?.value;
+  const boardView: SeoBoardView =
+    savedView === "atual" || savedView === "plantel" ? savedView : employee.isAdmin ? "atual" : "plantel";
   const organicTeam = buildOrganicTeamStats(organic, activeClients);
   const npsCardMonths = [shiftMonthKey(npsMonthNow, -1), npsMonthNow];
 
@@ -206,46 +215,15 @@ export default async function SeoPage() {
           ecrãs ultra-largos não esticarem os cartões até ao ridículo. */}
       <div className="mx-auto mt-12 w-full max-w-[1880px] lg:mt-16">
         <section aria-label="Clients by Head Consultant">
-          {/* A direção abre todos os consultores numa página só (v78.44). */}
-          {!notionError && (
-            <div className="mb-4 flex flex-wrap justify-end gap-2">
-              {/* v80.6: as Fichas do prospect saíram daqui — vivem no menu do
-                  nome e no cartão Client Files de cada cliente. */}
-              {(employee.isAdmin || !readOnly) && (
-              <>
-              {/* Painel «IA no site» (v78.92): as IAs leem cada site? */}
-              <Link
-                href="/seo/ia-no-site"
-                className="group inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.03] py-1 pl-1 pr-3 text-[12.5px] text-white/65 transition hover:border-white/25 hover:text-white"
-              >
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/[0.08]">
-                  <Bot className="h-3.5 w-3.5" />
-                </span>
-                IA no site
-                <ArrowRight className="h-3.5 w-3.5 text-white/40 transition group-hover:translate-x-0.5 group-hover:text-white" />
-              </Link>
-              {employee.isAdmin && (
-              <Link
-                href="/seo/roadmaps"
-                className="group inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.03] py-1 pl-1 pr-3 text-[12.5px] text-white/65 transition hover:border-white/25 hover:text-white"
-              >
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/[0.08]">
-                  <Users className="h-3.5 w-3.5" />
-                </span>
-                Todos os consultores
-                <ArrowRight className="h-3.5 w-3.5 text-white/40 transition group-hover:translate-x-0.5 group-hover:text-white" />
-              </Link>
-              )}
-              </>
-              )}
-            </div>
-          )}
           {notionError ? (
             <div className="mx-auto max-w-7xl">
               <NotionFallback message={notionError} />
             </div>
           ) : (
-            <SeoBoard
+            // v80.59: duas vistas — Atual (lanes) e Plantel (cartas). O
+            // consultor abre no Plantel, o SuperAdmin na Atual; a escolha
+            // fica no cookie ws_seo_view.
+            <SeoBoardViews
               columns={toBoardColumns(
                 consultantColumns,
                 logoOverrides,
@@ -253,10 +231,42 @@ export default async function SeoPage() {
                 npsCardMonths,
                 employee.isAdmin,
                 employee.name,
+                hireUsers,
               )}
               isAdmin={employee.isAdmin}
               canReorder={canReorder}
               extraConsultants={hireCols.map((h) => h.name)}
+              initialView={boardView}
+              actions={
+                (employee.isAdmin || !readOnly) && (
+                  <>
+                    {/* Painel «IA no site» (v78.92): as IAs leem cada site? */}
+                    <Link
+                      href="/seo/ia-no-site"
+                      className="group inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.03] py-1 pl-1 pr-3 text-[12.5px] text-white/65 transition hover:border-white/25 hover:text-white"
+                    >
+                      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/[0.08]">
+                        <Bot className="h-3.5 w-3.5" />
+                      </span>
+                      IA no site
+                      <ArrowRight className="h-3.5 w-3.5 text-white/40 transition group-hover:translate-x-0.5 group-hover:text-white" />
+                    </Link>
+                    {/* A direção abre todos os consultores numa página só (v78.44). */}
+                    {employee.isAdmin && (
+                      <Link
+                        href="/seo/roadmaps"
+                        className="group inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.03] py-1 pl-1 pr-3 text-[12.5px] text-white/65 transition hover:border-white/25 hover:text-white"
+                      >
+                        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/[0.08]">
+                          <Users className="h-3.5 w-3.5" />
+                        </span>
+                        Todos os consultores
+                        <ArrowRight className="h-3.5 w-3.5 text-white/40 transition group-hover:translate-x-0.5 group-hover:text-white" />
+                      </Link>
+                    )}
+                  </>
+                )
+              }
             />
           )}
         </section>
@@ -394,6 +404,7 @@ function toBoardColumns(
   npsMonths: string[],
   isAdmin: boolean,
   employeeName: string,
+  hireUsers: Map<string, string> = new Map(),
 ): SeoBoardColumn[] {
   return columns.map((col) => ({
     name: col.name,
@@ -406,7 +417,7 @@ function toBoardColumns(
     newcomer: col.newcomer ?? null,
     // Retrato do consultor (v77.49) — pelo nome da coluna até à credencial e
     // daí ao ficheiro em public/team/avatar; null → inicial.
-    avatar: getTeamAvatar(findEmployeeByName(col.name)?.username),
+    avatar: getTeamAvatar(findEmployeeByName(col.name)?.username ?? hireUsers.get(col.name)),
     clients: col.clients.map((c) => {
       const website = getClientWebsite(c.slug);
       const noNps = NPS_BONUS_EXCLUDED_SLUGS.has(c.slug);

@@ -13,6 +13,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "80.59",
+    date: "2026-11-27",
+    title: "SEO DPT: a vista Plantel, com uma carta por consultor",
+    highlights: [
+      "**A board tem agora duas vistas, «Atual» e «Plantel»,** que se trocam no seletor em cima. A escolha fica guardada.",
+      "**No Plantel, cada consultor é uma carta** com o retrato grande, o nome e o NPS médio. Ao tocar numa carta, os projetos abrem-se numa gaveta por baixo da fila, em cartões grandes, e só fica uma gaveta aberta de cada vez. Assim a página aguenta mais consultores sem ficar comprida.",
+      "**Os consultores abrem no Plantel, já com a sua carteira aberta.** A direção abre na vista Atual e, no Plantel, começa com tudo fechado; os botões de migrar e pausar estão nos cartões das duas vistas.",
+      "O Diogo Vales já tem retrato na board.",
+    ],
+  },
+  {
     version: "80.58",
     date: "2026-11-27",
     title: "SEO DPT: lanes com largura a sério e a tua carteira à vista",

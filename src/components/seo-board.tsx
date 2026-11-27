@@ -105,7 +105,7 @@ const LANE_MIN_COMPACT = 220;
 const useIsoLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
 
 /** Média de NPS de uma carteira — só sobre quem respondeu. */
-function averageNps(clients: SeoBoardCard[]): {
+export function averageNps(clients: SeoBoardCard[]): {
   avg: number | null;
   rated: number;
 } {
@@ -346,7 +346,7 @@ function EdgeArrow({
 
 /** Retrato do consultor no topo da lane — a foto do roster, ou a inicial
  *  sobre o degradê da marca quando ainda não há retrato publicado. */
-function ConsultantAvatar({
+export function ConsultantAvatar({
   avatar,
   name,
   size,

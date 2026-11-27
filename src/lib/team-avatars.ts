@@ -22,6 +22,8 @@ const AVATARS: Record<string, string> = {
   cylas: "/team/avatar/cylas.jpg",
   "manuel-s": "/team/avatar/manuel-s.jpg",
   "maria-a": "/team/avatar/maria-a.jpg",
+  // Diogo Vales — conta criada no Recrutamento (v80.59).
+  "diogo-v": "/team/avatar/diogo-v.jpg",
 };
 
 /** Caminho do retrato para um username de login, ou null se não há foto. */
